@@ -2,44 +2,26 @@ import {
   EvaluatedItem,
   MockComp,
   Recommendation,
-  Decision,
 } from "@/types";
 
 const COMP_POOLS = [
   {
-    titles: [
-      "Vintage Levi's 501 Jeans",
-      "Classic Denim Straight Leg",
-      "Retro Levi's Button Fly",
-    ],
+    titles: ["Vintage Levi's 501 Jeans", "Classic Denim Straight Leg", "Retro Levi's Button Fly"],
     platform: "eBay",
     baseRange: [28, 85],
   },
   {
-    titles: [
-      "Coach Leather Purse",
-      "Coach Signature Bag",
-      "Coach Mini Crossbody",
-    ],
+    titles: ["Coach Leather Purse", "Coach Signature Bag", "Coach Mini Crossbody"],
     platform: "Poshmark",
     baseRange: [35, 120],
   },
   {
-    titles: [
-      "Ralph Lauren Polo Shirt",
-      "RL Oxford Button Down",
-      "Polo Chino Shorts",
-    ],
+    titles: ["Ralph Lauren Polo Shirt", "RL Oxford Button Down", "Polo Chino Shorts"],
     platform: "eBay",
     baseRange: [18, 55],
   },
   {
-    titles: [
-      "Nike Air Max 90",
-      "Nike Dunk Low",
-      "Air Force 1 White",
-      "Jordan 1 Retro",
-    ],
+    titles: ["Nike Air Max 90", "Nike Dunk Low", "Air Force 1 White", "Jordan 1 Retro"],
     platform: "StockX",
     baseRange: [70, 220],
   },
@@ -49,42 +31,23 @@ const COMP_POOLS = [
     baseRange: [60, 350],
   },
   {
-    titles: [
-      "Patagonia Fleece Jacket",
-      "Patagonia Nano Puff",
-      "Synchilla Snap-T",
-    ],
+    titles: ["Patagonia Fleece Jacket", "Patagonia Nano Puff", "Synchilla Snap-T"],
     platform: "Poshmark",
     baseRange: [45, 110],
   },
   {
-    titles: [
-      "Tommy Hilfiger Windbreaker",
-      "Tommy 90s Jacket",
-      "Hilfiger Colorblock",
-    ],
+    titles: ["Tommy Hilfiger Windbreaker", "Tommy 90s Jacket", "Hilfiger Colorblock"],
     platform: "eBay",
     baseRange: [25, 75],
   },
   {
-    titles: [
-      "Vintage Band Tee",
-      "Nirvana Graphic Tee",
-      "80s Concert Shirt",
-    ],
+    titles: ["Vintage Band Tee", "Nirvana Graphic Tee", "80s Concert Shirt"],
     platform: "Depop",
     baseRange: [20, 90],
   },
 ];
 
-const CONDITIONS = [
-  "Like New",
-  "Very Good",
-  "Good",
-  "Acceptable",
-  "Good",
-  "Very Good",
-];
+const CONDITIONS = ["Like New", "Very Good", "Good", "Acceptable", "Good", "Very Good"];
 
 function seededRandom(seed: number): () => number {
   let s = seed;
@@ -102,17 +65,14 @@ export function generateMockEvaluation(
   enteredCost: number,
   imageDataUrl: string
 ): Omit<EvaluatedItem, "id" | "createdAt" | "decision"> {
-  // Use image length + cost as a seed for determinism
   const seed = Math.floor(
     (imageDataUrl.length * 0.0001 + enteredCost * 37) % 2147483647
   );
   const rand = seededRandom(seed);
 
-  // Pick a comp pool
   const pool = COMP_POOLS[Math.floor(rand() * COMP_POOLS.length)];
   const [baseMin, baseMax] = pool.baseRange;
 
-  // Generate 4 comps with some variance
   const comps: MockComp[] = Array.from({ length: 4 }, (_, i) => {
     const variance = 0.75 + rand() * 0.55;
     const price = Math.round(baseMin + rand() * (baseMax - baseMin) * variance);
@@ -128,13 +88,9 @@ export function generateMockEvaluation(
   const prices = comps.map((c) => c.price);
   const mockCompLow = Math.min(...prices);
   const mockCompHigh = Math.max(...prices);
-
-  // Suggested list is 15% below high
   const suggestedListPrice = Math.round(mockCompHigh * 0.85);
-
-  // Fees: ~13% eBay/Poshmark average
   const estimatedFees = Math.round(suggestedListPrice * 0.13);
-  const estimatedShipping = 6; // flat mock
+  const estimatedShipping = 6;
 
   const profitLow = mockCompLow - enteredCost - estimatedFees - estimatedShipping;
   const profitHigh = suggestedListPrice - enteredCost - estimatedFees - estimatedShipping;
@@ -142,9 +98,8 @@ export function generateMockEvaluation(
   const estimatedProfitLow = Math.round(profitLow);
   const estimatedProfitHigh = Math.round(profitHigh);
 
-  // Recommendation logic
-  let recommendation: Recommendation;
   const margin = profitHigh / (enteredCost || 1);
+  let recommendation: Recommendation;
 
   if (estimatedProfitHigh >= 20 && margin >= 1.5) {
     recommendation = "strong-buy";

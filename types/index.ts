@@ -7,6 +7,8 @@ export interface MockComp {
   price: number;
   condition: string;
   daysAgo: number;
+  url?: string;
+  imageUrl?: string;
 }
 
 export interface EvaluatedItem {

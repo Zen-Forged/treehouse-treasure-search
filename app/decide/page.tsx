@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ShoppingBag, X, ChevronDown, ChevronUp } from "lucide-react";
+import { ShoppingBag, X, ChevronDown, ChevronUp, Search, RefreshCw } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { PrimaryButton, SecondaryButton } from "@/components/Buttons";
 import { PriceInput } from "@/components/PriceInput";
@@ -12,7 +12,10 @@ import { PricingBreakdown } from "@/components/PricingBreakdown";
 import { useScanSession } from "@/hooks/useScanSession";
 import { useSavedItems } from "@/hooks/useSavedItems";
 import { generateMockEvaluation } from "@/lib/mockIntelligence";
-import { EvaluatedItem } from "@/types";
+import { calculatePricing } from "@/lib/pricingLogic";
+import { EvaluatedItem, MockComp } from "@/types";
+
+type FetchState = "idle" | "loading" | "success" | "error";
 
 export default function DecidePage() {
   const router = useRouter();
@@ -20,45 +23,80 @@ export default function DecidePage() {
   const { saveItem } = useSavedItems();
 
   const [costStr, setCostStr] = useState("0");
-  const [evaluation, setEvaluation] = useState<Omit<EvaluatedItem, "id" | "createdAt" | "decision"> | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [comps, setComps] = useState<MockComp[]>([]);
+  const [fetchState, setFetchState] = useState<FetchState>("idle");
+  const [usingMock, setUsingMock] = useState(false);
   const [showComps, setShowComps] = useState(false);
   const [deciding, setDeciding] = useState(false);
+  const didInitialFetch = useRef(false);
 
-  // Redirect if no session
   useEffect(() => {
-    if (!sessionData) {
-      router.replace("/scan");
-    }
+    if (!sessionData) router.replace("/scan");
   }, [sessionData, router]);
 
-  // Regenerate evaluation when cost changes
+  const fetchComps = useCallback(
+    async (query: string) => {
+      if (!query.trim()) return;
+      setFetchState("loading");
+      setUsingMock(false);
+
+      try {
+        const res = await fetch(`/api/ebay?q=${encodeURIComponent(query.trim())}`);
+        if (!res.ok) throw new Error("API error");
+        const data = await res.json();
+        if (!data.comps || data.comps.length === 0) throw new Error("No results");
+        setComps(data.comps);
+        setFetchState("success");
+        setShowComps(true);
+      } catch {
+        if (sessionData) {
+          const mock = generateMockEvaluation(
+            parseFloat(costStr) || 0,
+            sessionData.imageDataUrl
+          );
+          setComps(mock.mockComps);
+        }
+        setUsingMock(true);
+        setFetchState("error");
+      }
+    },
+    [sessionData, costStr]
+  );
+
   useEffect(() => {
-    if (!sessionData) return;
-    const cost = parseFloat(costStr) || 0;
-    const eval_ = generateMockEvaluation(cost, sessionData.imageDataUrl);
-    setEvaluation(eval_);
-    setSessionData({ ...sessionData, enteredCost: cost });
-  }, [costStr, sessionData?.imageDataUrl]); // eslint-disable-line
+    if (!sessionData || didInitialFetch.current) return;
+    didInitialFetch.current = true;
+    const defaultQuery = "vintage clothing thrift";
+    setSearchQuery(defaultQuery);
+    fetchComps(defaultQuery);
+  }, [sessionData, fetchComps]);
+
+  const enteredCost = parseFloat(costStr) || 0;
+  const pricing = calculatePricing(comps, enteredCost);
 
   const handleDecision = useCallback(
     async (decision: "purchased" | "passed") => {
-      if (!sessionData || !evaluation || deciding) return;
+      if (!sessionData || deciding || comps.length === 0) return;
       setDeciding(true);
 
       const item: EvaluatedItem = {
         id: `tts_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
         createdAt: new Date().toISOString(),
         decision,
-        ...evaluation,
+        imageDataUrl: sessionData.imageDataUrl,
+        enteredCost,
+        mockComps: comps,
+        ...pricing,
       };
 
       saveItem(item);
       router.push(`/item/${item.id}`);
     },
-    [sessionData, evaluation, deciding, saveItem, router]
+    [sessionData, deciding, comps, enteredCost, pricing, saveItem, router]
   );
 
-  if (!sessionData || !evaluation) {
+  if (!sessionData) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-bark-600 text-sm">Loading...</div>
@@ -66,89 +104,112 @@ export default function DecidePage() {
     );
   }
 
+  const isLoading = fetchState === "loading";
+  const canDecide = comps.length > 0 && !isLoading;
+
   return (
     <div className="flex flex-col min-h-screen">
-      <AppHeader
-        title="Decision"
-        showBack
-        onBack={() => router.back()}
-      />
+      <AppHeader title="Decision" showBack onBack={() => router.back()} />
 
       <main className="flex-1 overflow-y-auto pb-32">
         <div className="px-5 py-5 space-y-5">
-          {/* Image + cost row */}
+
           <div className="flex gap-3 animate-fade-up">
             <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-forest-900 border border-forest-800">
-              <img
-                src={sessionData.imageDataUrl}
-                alt="Item"
-                className="w-full h-full object-cover"
-              />
+              <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover" />
             </div>
             <div className="flex-1">
-              <PriceInput
-                value={costStr}
-                onChange={setCostStr}
-                label="What did you pay?"
-                placeholder="0.00"
-              />
+              <PriceInput value={costStr} onChange={setCostStr} label="What did you pay?" placeholder="0.00" />
             </div>
           </div>
 
-          {/* Recommendation Meter */}
-          <div className="animate-fade-up-delay-1">
-            <RecommendationMeter recommendation={evaluation.recommendation} />
-          </div>
-
-          {/* Pricing Breakdown */}
-          <div className="animate-fade-up-delay-2">
-            <PricingBreakdown item={evaluation} />
-          </div>
-
-          {/* Comps toggle */}
-          <div className="animate-fade-up-delay-3">
-            <button
-              onClick={() => setShowComps((v) => !v)}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-forest-900/30 border border-forest-800/40 text-bark-300 hover:border-forest-700 transition-all"
-            >
-              <span className="text-sm font-medium">
-                Comparable Sales ({evaluation.mockComps.length})
-              </span>
-              {showComps ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </button>
-
-            {showComps && (
-              <div className="mt-2 space-y-2">
-                {evaluation.mockComps.map((comp, i) => (
-                  <CompCard key={i} comp={comp} />
-                ))}
-                <p className="text-center text-bark-700 text-[10px] py-1">
-                  Mock data · V1 · Real comps coming soon
-                </p>
+          <div className="animate-fade-up-delay-1 space-y-1.5">
+            <label className="block text-xs font-medium text-bark-400 uppercase tracking-widest">
+              Search Term
+            </label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-bark-600" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && fetchComps(searchQuery)}
+                  placeholder="e.g. Levi's 501 jeans"
+                  className="w-full pl-9 pr-3 py-3 bg-forest-900/60 border border-forest-700/60 rounded-xl text-bark-100 text-sm placeholder:text-bark-700 focus:outline-none focus:border-forest-500 focus:ring-1 focus:ring-forest-500/40 transition-all"
+                />
               </div>
+              <button
+                onClick={() => fetchComps(searchQuery)}
+                disabled={isLoading || !searchQuery.trim()}
+                className="flex items-center justify-center w-11 h-11 rounded-xl bg-forest-700 hover:bg-forest-600 disabled:opacity-40 disabled:pointer-events-none transition-all active:scale-95"
+              >
+                {isLoading
+                  ? <RefreshCw size={16} className="text-white animate-spin" />
+                  : <Search size={16} className="text-white" />
+                }
+              </button>
+            </div>
+            {usingMock && fetchState === "error" && (
+              <p className="text-amber-500/80 text-xs pt-0.5">eBay unavailable — showing mock comps</p>
+            )}
+            {fetchState === "success" && (
+              <p className="text-forest-500 text-xs pt-0.5">✓ Live eBay comps loaded</p>
             )}
           </div>
+
+          {isLoading && (
+            <div className="space-y-3">
+              <div className="h-24 rounded-2xl bg-forest-900/40 border border-forest-800/40 animate-pulse" />
+              <div className="h-32 rounded-2xl bg-forest-900/40 border border-forest-800/40 animate-pulse" />
+              <div className="text-center text-bark-600 text-xs py-2">Fetching eBay comps…</div>
+            </div>
+          )}
+
+          {!isLoading && comps.length > 0 && (
+            <>
+              <div className="animate-fade-up-delay-2">
+                <RecommendationMeter recommendation={pricing.recommendation} />
+              </div>
+              <div className="animate-fade-up-delay-3">
+                <PricingBreakdown item={{ ...pricing, enteredCost }} />
+              </div>
+              <div className="animate-fade-up-delay-4">
+                <button
+                  onClick={() => setShowComps((v) => !v)}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-forest-900/30 border border-forest-800/40 text-bark-300 hover:border-forest-700 transition-all"
+                >
+                  <span className="text-sm font-medium">Comparable Sales ({comps.length})</span>
+                  {showComps ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
+                {showComps && (
+                  <div className="mt-2 space-y-2">
+                    {comps.map((comp, i) => <CompCard key={i} comp={comp} />)}
+                    <p className="text-center text-bark-700 text-[10px] py-1">
+                      {usingMock ? "Mock data · Real comps coming soon" : "Live data from eBay"}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {!isLoading && fetchState === "error" && comps.length === 0 && (
+            <div className="rounded-2xl bg-forest-900/30 border border-forest-800/40 p-6 text-center space-y-2">
+              <p className="text-bark-400 text-sm">No comps found</p>
+              <p className="text-bark-600 text-xs">Try a different search term</p>
+            </div>
+          )}
+
         </div>
       </main>
 
-      {/* Fixed bottom action bar */}
       <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-5 py-4 bg-forest-950/95 backdrop-blur-sm border-t border-forest-800/50 safe-bottom space-y-2.5">
-        <PrimaryButton
-          fullWidth
-          size="lg"
-          onClick={() => handleDecision("purchased")}
-          disabled={deciding}
-          className="gap-3"
-        >
+        <PrimaryButton fullWidth size="lg" onClick={() => handleDecision("purchased")} disabled={deciding || !canDecide} className="gap-3">
           <ShoppingBag size={20} />
           Purchase
         </PrimaryButton>
-        <SecondaryButton
-          fullWidth
-          onClick={() => handleDecision("passed")}
-          disabled={deciding}
-          className="gap-2"
-        >
+        <SecondaryButton fullWidth onClick={() => handleDecision("passed")} disabled={deciding || !canDecide} className="gap-2">
           <X size={18} />
           Pass on This
         </SecondaryButton>

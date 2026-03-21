@@ -2,6 +2,7 @@
 
 import { MockComp } from "@/types";
 import { formatCurrency } from "@/lib/mockIntelligence";
+import { ExternalLink } from "lucide-react";
 
 interface CompCardProps {
   comp: MockComp;
@@ -11,9 +12,19 @@ export function CompCard({ comp }: CompCardProps) {
   return (
     <div className="flex items-center justify-between py-3 px-3 rounded-xl bg-forest-900/50 border border-forest-800/40">
       <div className="flex-1 min-w-0">
-        <div className="text-bark-200 text-sm font-medium truncate">
-          {comp.title}
-        </div>
+        {comp.url ? (
+          <a
+            href={comp.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 text-bark-200 text-sm font-medium hover:text-forest-400 transition-colors"
+          >
+            <span className="truncate">{comp.title}</span>
+            <ExternalLink size={11} className="flex-shrink-0 opacity-50" />
+          </a>
+        ) : (
+          <div className="text-bark-200 text-sm font-medium truncate">{comp.title}</div>
+        )}
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-forest-500 text-xs">{comp.platform}</span>
           <span className="text-bark-600 text-xs">·</span>
