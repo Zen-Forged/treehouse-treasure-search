@@ -75,10 +75,10 @@ function normalizeCondition(condition?: string): string {
 export async function getEbaySoldComps(query: string): Promise<MockComp[]> {
   const token = await getAccessToken();
 
-  const params = new URLSearchParams({
+const params = new URLSearchParams({
     q: query,
-    filter: "buyingOptions:{FIXED_PRICE}",
-    sort: "endTimeSoonest",
+    filter: "buyingOptions:{FIXED_PRICE},conditions:{USED|VERY_GOOD|GOOD|ACCEPTABLE|LIKE_NEW}",
+    sort: "price",
     limit: "10",
   });
 

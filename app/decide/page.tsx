@@ -19,7 +19,7 @@ type FetchState = "idle" | "loading" | "success" | "error";
 
 export default function DecidePage() {
   const router = useRouter();
-  const { sessionData, setSessionData } = useScanSession();
+  const { sessionData } = useScanSession();
   const { saveItem } = useSavedItems();
 
   const [costStr, setCostStr] = useState("0");
@@ -29,11 +29,17 @@ export default function DecidePage() {
   const [usingMock, setUsingMock] = useState(false);
   const [showComps, setShowComps] = useState(false);
   const [deciding, setDeciding] = useState(false);
-  const didInitialFetch = useRef(false);
+  const didInit = useRef(false);
 
   useEffect(() => {
     if (!sessionData) router.replace("/scan");
   }, [sessionData, router]);
+
+  useEffect(() => {
+    if (!sessionData || didInit.current) return;
+    didInit.current = true;
+    setFetchState("idle");
+  }, [sessionData]);
 
   const fetchComps = useCallback(
     async (query: string) => {
@@ -63,14 +69,6 @@ export default function DecidePage() {
     },
     [sessionData, costStr]
   );
-
-  useEffect(() => {
-    if (!sessionData || didInitialFetch.current) return;
-    didInitialFetch.current = true;
-    const defaultQuery = "vintage clothing thrift";
-    setSearchQuery(defaultQuery);
-    fetchComps(defaultQuery);
-  }, [sessionData, fetchComps]);
 
   const enteredCost = parseFloat(costStr) || 0;
   const pricing = calculatePricing(comps, enteredCost);
@@ -114,18 +112,29 @@ export default function DecidePage() {
       <main className="flex-1 overflow-y-auto pb-32">
         <div className="px-5 py-5 space-y-5">
 
+          {/* Image + cost row */}
           <div className="flex gap-3 animate-fade-up">
             <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-forest-900 border border-forest-800">
-              <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover" />
+              <img
+                src={sessionData.imageDataUrl}
+                alt="Item"
+                className="w-full h-full object-cover"
+              />
             </div>
             <div className="flex-1">
-              <PriceInput value={costStr} onChange={setCostStr} label="What did you pay?" placeholder="0.00" />
+              <PriceInput
+                value={costStr}
+                onChange={setCostStr}
+                label="What did you pay?"
+                placeholder="0.00"
+              />
             </div>
           </div>
 
+          {/* Search input */}
           <div className="animate-fade-up-delay-1 space-y-1.5">
             <label className="block text-xs font-medium text-bark-400 uppercase tracking-widest">
-              Search Term
+              Search eBay Comps
             </label>
             <div className="flex gap-2">
               <div className="relative flex-1">
@@ -135,7 +144,7 @@ export default function DecidePage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && fetchComps(searchQuery)}
-                  placeholder="e.g. Levi's 501 jeans"
+                  placeholder="What is this item? e.g. Levi's 501"
                   className="w-full pl-9 pr-3 py-3 bg-forest-900/60 border border-forest-700/60 rounded-xl text-bark-100 text-sm placeholder:text-bark-700 focus:outline-none focus:border-forest-500 focus:ring-1 focus:ring-forest-500/40 transition-all"
                 />
               </div>
@@ -150,22 +159,37 @@ export default function DecidePage() {
                 }
               </button>
             </div>
+
+            {/* Status messages */}
+            {fetchState === "idle" && (
+              <p className="text-bark-600 text-xs pt-0.5">
+                Type what the item is, then tap search to pull comps
+              </p>
+            )}
             {usingMock && fetchState === "error" && (
-              <p className="text-amber-500/80 text-xs pt-0.5">eBay unavailable — showing mock comps</p>
+              <p className="text-amber-500/80 text-xs pt-0.5">
+                eBay unavailable — showing mock comps
+              </p>
             )}
             {fetchState === "success" && (
-              <p className="text-forest-500 text-xs pt-0.5">✓ Live eBay comps loaded</p>
+              <p className="text-forest-500 text-xs pt-0.5">
+                ✓ Live eBay comps loaded
+              </p>
             )}
           </div>
 
+          {/* Loading skeleton */}
           {isLoading && (
             <div className="space-y-3">
               <div className="h-24 rounded-2xl bg-forest-900/40 border border-forest-800/40 animate-pulse" />
               <div className="h-32 rounded-2xl bg-forest-900/40 border border-forest-800/40 animate-pulse" />
-              <div className="text-center text-bark-600 text-xs py-2">Fetching eBay comps…</div>
+              <div className="text-center text-bark-600 text-xs py-2">
+                Fetching eBay comps…
+              </div>
             </div>
           )}
 
+          {/* Results */}
           {!isLoading && comps.length > 0 && (
             <>
               <div className="animate-fade-up-delay-2">
@@ -179,12 +203,16 @@ export default function DecidePage() {
                   onClick={() => setShowComps((v) => !v)}
                   className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-forest-900/30 border border-forest-800/40 text-bark-300 hover:border-forest-700 transition-all"
                 >
-                  <span className="text-sm font-medium">Comparable Sales ({comps.length})</span>
+                  <span className="text-sm font-medium">
+                    Comparable Sales ({comps.length})
+                  </span>
                   {showComps ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </button>
                 {showComps && (
                   <div className="mt-2 space-y-2">
-                    {comps.map((comp, i) => <CompCard key={i} comp={comp} />)}
+                    {comps.map((comp, i) => (
+                      <CompCard key={i} comp={comp} />
+                    ))}
                     <p className="text-center text-bark-700 text-[10px] py-1">
                       {usingMock ? "Mock data · Real comps coming soon" : "Live data from eBay"}
                     </p>
@@ -194,6 +222,7 @@ export default function DecidePage() {
             </>
           )}
 
+          {/* No results */}
           {!isLoading && fetchState === "error" && comps.length === 0 && (
             <div className="rounded-2xl bg-forest-900/30 border border-forest-800/40 p-6 text-center space-y-2">
               <p className="text-bark-400 text-sm">No comps found</p>
@@ -204,12 +233,24 @@ export default function DecidePage() {
         </div>
       </main>
 
+      {/* Bottom action bar */}
       <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-5 py-4 bg-forest-950/95 backdrop-blur-sm border-t border-forest-800/50 safe-bottom space-y-2.5">
-        <PrimaryButton fullWidth size="lg" onClick={() => handleDecision("purchased")} disabled={deciding || !canDecide} className="gap-3">
+        <PrimaryButton
+          fullWidth
+          size="lg"
+          onClick={() => handleDecision("purchased")}
+          disabled={deciding || !canDecide}
+          className="gap-3"
+        >
           <ShoppingBag size={20} />
           Purchase
         </PrimaryButton>
-        <SecondaryButton fullWidth onClick={() => handleDecision("passed")} disabled={deciding || !canDecide} className="gap-2">
+        <SecondaryButton
+          fullWidth
+          onClick={() => handleDecision("passed")}
+          disabled={deciding || !canDecide}
+          className="gap-2"
+        >
           <X size={18} />
           Pass on This
         </SecondaryButton>
