@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ShoppingBag, X, ChevronDown, ChevronUp, Search, RefreshCw } from "lucide-react";
+import { ShoppingBag, X, ChevronDown, ChevronUp, Search, RefreshCw, Sparkles } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { PrimaryButton, SecondaryButton } from "@/components/Buttons";
 import { PriceInput } from "@/components/PriceInput";
@@ -29,16 +29,41 @@ export default function DecidePage() {
   const [usingMock, setUsingMock] = useState(false);
   const [showComps, setShowComps] = useState(false);
   const [deciding, setDeciding] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
   const didInit = useRef(false);
 
   useEffect(() => {
     if (!sessionData) router.replace("/scan");
   }, [sessionData, router]);
 
+  // Auto-suggest search term from image on load
   useEffect(() => {
     if (!sessionData || didInit.current) return;
     didInit.current = true;
-    setFetchState("idle");
+    suggestSearchTerm();
+  }, [sessionData]);
+
+  const suggestSearchTerm = useCallback(async () => {
+    if (!sessionData) return;
+    setSuggesting(true);
+
+    try {
+      const res = await fetch("/api/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageDataUrl: sessionData.imageDataUrl }),
+      });
+
+      if (!res.ok) throw new Error("Suggest API error");
+      const data = await res.json();
+      if (data.suggestion) {
+        setSearchQuery(data.suggestion);
+      }
+    } catch {
+      // Silently fail — user can type manually
+    } finally {
+      setSuggesting(false);
+    }
   }, [sessionData]);
 
   const fetchComps = useCallback(
@@ -138,19 +163,23 @@ export default function DecidePage() {
             </label>
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-bark-600" />
+                {suggesting ? (
+                  <RefreshCw size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-forest-500 animate-spin" />
+                ) : (
+                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-bark-600" />
+                )}
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && fetchComps(searchQuery)}
-                  placeholder="What is this item? e.g. Levi's 501"
+                  placeholder="Analyzing image..."
                   className="w-full pl-9 pr-3 py-3 bg-forest-900/60 border border-forest-700/60 rounded-xl text-bark-100 text-sm placeholder:text-bark-700 focus:outline-none focus:border-forest-500 focus:ring-1 focus:ring-forest-500/40 transition-all"
                 />
               </div>
               <button
                 onClick={() => fetchComps(searchQuery)}
-                disabled={isLoading || !searchQuery.trim()}
+                disabled={isLoading || !searchQuery.trim() || suggesting}
                 className="flex items-center justify-center w-11 h-11 rounded-xl bg-forest-700 hover:bg-forest-600 disabled:opacity-40 disabled:pointer-events-none transition-all active:scale-95"
               >
                 {isLoading
@@ -161,9 +190,20 @@ export default function DecidePage() {
             </div>
 
             {/* Status messages */}
-            {fetchState === "idle" && (
+            {suggesting && (
+              <p className="text-forest-500/80 text-xs pt-0.5 flex items-center gap-1">
+                <Sparkles size={11} />
+                Analyzing image to suggest search term…
+              </p>
+            )}
+            {!suggesting && fetchState === "idle" && searchQuery && (
               <p className="text-bark-600 text-xs pt-0.5">
-                Type what the item is, then tap search to pull comps
+                ✦ AI suggested — edit if needed, then tap search
+              </p>
+            )}
+            {!suggesting && fetchState === "idle" && !searchQuery && (
+              <p className="text-bark-600 text-xs pt-0.5">
+                Type what the item is, then tap search
               </p>
             )}
             {usingMock && fetchState === "error" && (
