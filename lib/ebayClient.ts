@@ -2,6 +2,17 @@ import { MockComp } from "@/types";
 
 const EBAY_API_BASE = "https://api.ebay.com";
 
+// eBay category IDs for common reseller categories
+const CATEGORY_MAP: Record<string, string> = {
+  clothing: "11450",
+  shoes: "63889",
+  electronics: "consumer_electronics",
+  handbag: "169291",
+  jewelry: "281",
+  collectible: "1",
+  other: "",
+};
+
 interface TokenCache {
   token: string;
   expiresAt: number;
@@ -72,15 +83,26 @@ function normalizeCondition(condition?: string): string {
   return condition;
 }
 
-export async function getEbaySoldComps(query: string): Promise<MockComp[]> {
+export async function getEbaySoldComps(
+  query: string,
+  category?: string
+): Promise<MockComp[]> {
   const token = await getAccessToken();
 
+  const categoryId = category ? CATEGORY_MAP[category.toLowerCase()] : "";
+
+  const negativeKeywords = "-sticker -decal -lot -bundle -case -cover -poster -print -art";
+
   const params = new URLSearchParams({
-    q: `${query} -sticker -decal -lot -bundle -case -cover -accessory`,
+    q: `${query} ${negativeKeywords}`,
     filter: "buyingOptions:{FIXED_PRICE}",
     sort: "price",
     limit: "20",
   });
+
+  if (categoryId) {
+    params.append("category_ids", categoryId);
+  }
 
   const res = await fetch(
     `${EBAY_API_BASE}/buy/browse/v1/item_summary/search?${params}`,
@@ -102,9 +124,6 @@ export async function getEbaySoldComps(query: string): Promise<MockComp[]> {
   const items: EbayItem[] = data.itemSummaries ?? [];
 
   if (items.length === 0) throw new Error("No eBay results found");
-
-  // Debug — log all prices
- console.log("[eBay] Raw prices:", items.map(i => i.price?.value));
 
   const filtered = items
     .filter((item) => {

@@ -24,6 +24,7 @@ export default function DecidePage() {
 
   const [costStr, setCostStr] = useState("0");
   const [searchQuery, setSearchQuery] = useState("");
+  const [itemCategory, setItemCategory] = useState<string | null>(null);
   const [comps, setComps] = useState<MockComp[]>([]);
   const [fetchState, setFetchState] = useState<FetchState>("idle");
   const [usingMock, setUsingMock] = useState(false);
@@ -55,10 +56,15 @@ export default function DecidePage() {
 
       if (!res.ok) throw new Error("Suggest API error");
       const data = await res.json();
+
       if (data.suggestion) {
         setSearchQuery(data.suggestion);
       } else {
         setSearchQuery("thrift store item");
+      }
+
+      if (data.itemData?.category) {
+        setItemCategory(data.itemData.category);
       }
     } catch {
       setSearchQuery("thrift store item");
@@ -68,13 +74,16 @@ export default function DecidePage() {
   }, [sessionData]);
 
   const fetchComps = useCallback(
-    async (query: string) => {
+    async (query: string, category?: string) => {
       if (!query.trim()) return;
       setFetchState("loading");
       setUsingMock(false);
 
       try {
-        const res = await fetch(`/api/ebay?q=${encodeURIComponent(query.trim())}`);
+        const categoryParam = category ? `&category=${category}` : "";
+        const res = await fetch(
+          `/api/ebay?q=${encodeURIComponent(query.trim())}${categoryParam}`
+        );
         if (!res.ok) throw new Error("API error");
         const data = await res.json();
         if (!data.comps || data.comps.length === 0) throw new Error("No results");
@@ -173,13 +182,16 @@ export default function DecidePage() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && fetchComps(searchQuery)}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" &&
+                    fetchComps(searchQuery, itemCategory ?? undefined)
+                  }
                   placeholder="Analyzing image..."
                   className="w-full pl-9 pr-3 py-3 bg-forest-900/60 border border-forest-700/60 rounded-xl text-bark-100 text-sm placeholder:text-bark-700 focus:outline-none focus:border-forest-500 focus:ring-1 focus:ring-forest-500/40 transition-all"
                 />
               </div>
               <button
-                onClick={() => fetchComps(searchQuery)}
+                onClick={() => fetchComps(searchQuery, itemCategory ?? undefined)}
                 disabled={isLoading || !searchQuery.trim() || suggesting}
                 className="flex items-center justify-center w-11 h-11 rounded-xl bg-forest-700 hover:bg-forest-600 disabled:opacity-40 disabled:pointer-events-none transition-all active:scale-95"
               >

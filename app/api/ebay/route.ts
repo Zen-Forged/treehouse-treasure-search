@@ -3,6 +3,7 @@ import { getEbaySoldComps } from "@/lib/ebayClient";
 
 export async function GET(req: NextRequest) {
   const query = req.nextUrl.searchParams.get("q");
+  const category = req.nextUrl.searchParams.get("category") ?? undefined;
 
   if (!query || query.trim().length === 0) {
     return NextResponse.json(
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const comps = await getEbaySoldComps(query.trim());
+    const comps = await getEbaySoldComps(query.trim(), category);
     return NextResponse.json({ comps });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
