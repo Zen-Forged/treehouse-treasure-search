@@ -1,7 +1,6 @@
 import { MockComp } from "@/types";
 
 const EBAY_API_BASE = "https://api.ebay.com";
-const EBAY_FINDING_BASE = "https://svcs.ebay.com/services/search/FindingService/v1";
 
 interface TokenCache {
   token: string;
@@ -47,6 +46,22 @@ async function getAccessToken(): Promise<string> {
   return tokenCache.token;
 }
 
+interface EbayItem {
+  title: string;
+  price?: { value: string };
+  condition?: string;
+  itemWebUrl?: string;
+  image?: { imageUrl: string };
+  itemEndDate?: string;
+  lastSoldDate?: string;
+}
+
+function daysAgo(dateStr?: string): number {
+  if (!dateStr) return Math.floor(Math.random() * 14) + 1;
+  const diff = Date.now() - new Date(dateStr).getTime();
+  return Math.max(1, Math.floor(diff / (1000 * 60 * 60 * 24)));
+}
+
 function normalizeCondition(condition?: string): string {
   if (!condition) return "Good";
   const c = condition.toLowerCase();
@@ -57,81 +72,62 @@ function normalizeCondition(condition?: string): string {
   return condition;
 }
 
-function daysAgo(dateStr?: string): number {
-  if (!dateStr) return Math.floor(Math.random() * 14) + 1;
-  const diff = Date.now() - new Date(dateStr).getTime();
-  return Math.max(1, Math.floor(diff / (1000 * 60 * 60 * 24)));
-}
-
-// Finding API — completed/sold listings
 export async function getEbaySoldComps(query: string): Promise<MockComp[]> {
-  const clientId = process.env.EBAY_CLIENT_ID;
-  if (!clientId) throw new Error("Missing EBAY_CLIENT_ID");
+  const token = await getAccessToken();
 
   const params = new URLSearchParams({
-    "OPERATION-NAME": "findCompletedItems",
-    "SERVICE-VERSION": "1.0.0",
-    "SECURITY-APPNAME": clientId,
-    "RESPONSE-DATA-FORMAT": "JSON",
-    "REST-PAYLOAD": "",
-    "keywords": query,
-    "itemFilter(0).name": "SoldItemsOnly",
-    "itemFilter(0).value": "true",
-    "itemFilter(1).name": "ListingType",
-    "itemFilter(1).value": "AuctionWithBIN,FixedPrice",
-    "itemFilter(2).name": "MinPrice",
-    "itemFilter(2).value": "5",
-    "sortOrder": "EndTimeSoonest",
-    "paginationInput.entriesPerPage": "10",
+    q: query,
+    filter: "buyingOptions:{FIXED_PRICE}",
+    sort: "price",
+    limit: "20",
   });
 
-  const res = await fetch(`${EBAY_FINDING_BASE}?${params}`, {
-    headers: { "Content-Type": "application/json" },
-  });
+  const res = await fetch(
+    `${EBAY_API_BASE}/buy/browse/v1/item_summary/search?${params}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
+        "Content-Type": "application/json",
+      },
+    }
+  );
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`eBay Finding API failed: ${res.status} ${text}`);
+    throw new Error(`eBay search failed: ${res.status} ${text}`);
   }
 
   const data = await res.json();
+  const items: EbayItem[] = data.itemSummaries ?? [];
 
-  const searchResult =
-    data?.findCompletedItemsResponse?.[0]?.searchResult?.[0];
+  if (items.length === 0) throw new Error("No eBay results found");
 
-  if (!searchResult || searchResult["@count"] === "0") {
-    throw new Error("No sold listings found");
-  }
+  // Debug — log all prices
+ console.log("[eBay] Raw prices:", items.map(i => i.price?.value));
 
-  const items = searchResult.item ?? [];
-
-  return items
-    .filter((item: any) => {
-      const price = parseFloat(
-        item?.sellingStatus?.[0]?.currentPrice?.[0]?.["__value__"] ?? "0"
-      );
-      return price >= 5;
+  const filtered = items
+    .filter((item) => {
+      const price = parseFloat(item.price?.value ?? "0");
+      return price >= 8;
+    })
+    .sort((a, b) => {
+      const priceA = parseFloat(a.price?.value ?? "0");
+      const priceB = parseFloat(b.price?.value ?? "0");
+      return priceA - priceB;
     })
     .slice(0, 5)
-    .map((item: any) => {
-      const price = parseFloat(
-        item?.sellingStatus?.[0]?.currentPrice?.[0]?.["__value__"] ?? "0"
-      );
-      const condition =
-        item?.condition?.[0]?.conditionDisplayName?.[0] ?? "Good";
-      const endDate = item?.listingInfo?.[0]?.endTime?.[0];
-      const url = item?.viewItemURL?.[0];
-      const imageUrl = item?.galleryURL?.[0];
-      const title = item?.title?.[0] ?? "Unknown Item";
+    .map((item) => ({
+      title: item.title ?? "Unknown Item",
+      platform: "eBay",
+      price: parseFloat(item.price!.value),
+      condition: normalizeCondition(item.condition),
+      daysAgo: daysAgo(item.itemEndDate ?? item.lastSoldDate),
+      url: item.itemWebUrl,
+      imageUrl: item.image?.imageUrl,
+    }));
 
-      return {
-        title,
-        platform: "eBay",
-        price,
-        condition: normalizeCondition(condition),
-        daysAgo: daysAgo(endDate),
-        url,
-        imageUrl,
-      };
-    });
+  if (filtered.length === 0) throw new Error("No qualifying results found");
+
+  return filtered;
 }
