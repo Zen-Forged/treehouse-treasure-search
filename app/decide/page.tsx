@@ -36,7 +36,6 @@ export default function DecidePage() {
     if (!sessionData) router.replace("/scan");
   }, [sessionData, router]);
 
-  // Auto-suggest search term from image on load
   useEffect(() => {
     if (!sessionData || didInit.current) return;
     didInit.current = true;
@@ -58,9 +57,11 @@ export default function DecidePage() {
       const data = await res.json();
       if (data.suggestion) {
         setSearchQuery(data.suggestion);
+      } else {
+        setSearchQuery("thrift store item");
       }
     } catch {
-      // Silently fail — user can type manually
+      setSearchQuery("thrift store item");
     } finally {
       setSuggesting(false);
     }
