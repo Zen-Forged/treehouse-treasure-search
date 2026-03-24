@@ -76,7 +76,7 @@ export async function getEbaySoldComps(query: string): Promise<MockComp[]> {
   const token = await getAccessToken();
 
   const params = new URLSearchParams({
-    q: query,
+    q: `${query} -sticker -decal -lot -bundle -case -cover -accessory`,
     filter: "buyingOptions:{FIXED_PRICE}",
     sort: "price",
     limit: "20",
