@@ -8,11 +8,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing imageDataUrl" }, { status: 400 });
     }
 
-    // Strip the data:image/jpeg;base64, prefix
     const base64Data = imageDataUrl.split(",")[1];
     const mediaType = imageDataUrl.split(";")[0].split(":")[1];
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    // Step 1 — extract structured item data from image
+    const extractRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "x-api-key": process.env.ANTHROPIC_API_KEY!,
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         model: "claude-opus-4-6",
-        max_tokens: 100,
+        max_tokens: 200,
         messages: [
           {
             role: "user",
@@ -36,26 +36,18 @@ export async function POST(req: NextRequest) {
               },
               {
                 type: "text",
-                text: `You are a reseller assistant. Look at this item and generate the best eBay search query to find comparable sold listings.
+                text: `You are an expert reseller. Analyze this item image and extract structured data.
 
-Return ONLY the search query, nothing else. No explanation, no punctuation at the end.
-
-Rules:
-- Be specific: include brand, model, size, color if visible
-- For electronics: include model number and storage/specs if visible
-- For clothing: include brand, style, size if visible
-- For shoes: include brand, model, size if visible
-- For collectibles: include brand, series, character
-- Avoid generic terms like "vintage" or "used" unless clearly relevant
-- Keep it under 8 words
-- Format it exactly as you would type it into eBay search
-
-Examples:
-- Apple iPhone 15 128GB unlocked
-- Levi's 501 original fit jeans mens 32x32
-- Nike Air Max 90 mens size 10
-- Coach leather crossbody bag brown
-- Nintendo Switch OLED white console`,
+Respond ONLY with a JSON object, no explanation:
+{
+  "category": "clothing|shoes|electronics|handbag|jewelry|collectible|other",
+  "brand": "brand name or null",
+  "model": "specific model or style name or null",
+  "color": "primary color or null",
+  "size": "size if visible or null",
+  "condition": "new|like new|good|fair",
+  "keyFeatures": ["up to 3 specific distinguishing features"]
+}`,
               },
             ],
           },
@@ -63,17 +55,47 @@ Examples:
       }),
     });
 
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Claude API error: ${response.status} ${text}`);
+    if (!extractRes.ok) {
+      const text = await extractRes.text();
+      throw new Error(`Claude API error: ${extractRes.status} ${text}`);
     }
 
-    const data = await response.json();
-    const suggestion = data.content?.[0]?.text?.trim();
+    const extractData = await extractRes.json();
+    const rawText = extractData.content?.[0]?.text?.trim() ?? "";
 
-    if (!suggestion) throw new Error("No suggestion returned");
+    // Parse the structured data
+    let itemData: any = {};
+    try {
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        itemData = JSON.parse(jsonMatch[0]);
+      }
+    } catch {
+      // Fall through to basic query
+    }
 
-    return NextResponse.json({ suggestion });
+    // Step 2 — build optimized eBay search query from structured data
+    const parts: string[] = [];
+
+    if (itemData.brand) parts.push(itemData.brand);
+    if (itemData.model) parts.push(itemData.model);
+    if (itemData.color && parts.length < 3) parts.push(itemData.color);
+    if (itemData.size && parts.length < 4) parts.push(itemData.size);
+    if (itemData.keyFeatures?.[0] && parts.length < 3) {
+      parts.push(itemData.keyFeatures[0]);
+    }
+
+    // Fallback if we couldn't extract much
+    if (parts.length === 0) {
+      parts.push(itemData.category ?? "item");
+    }
+
+    const suggestion = parts.join(" ").trim().slice(0, 80);
+
+    return NextResponse.json({
+      suggestion,
+      itemData, // pass back for potential future use
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[Suggest API]", message);
