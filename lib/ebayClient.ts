@@ -91,11 +91,22 @@ export async function getEbaySoldComps(
 
   const categoryId = category ? CATEGORY_MAP[category.toLowerCase()] : "";
 
-  const negativeKeywords = "-sticker -decal -lot -bundle -case -cover -poster -print -art";
+  // Price floors by category to filter out accessories
+  const PRICE_FLOORS: Record<string, number> = {
+    electronics: 50,
+    shoes: 10,
+    clothing: 8,
+    handbag: 20,
+    jewelry: 10,
+    collectible: 8,
+    other: 8,
+  };
+
+  const priceFloor = category ? (PRICE_FLOORS[category.toLowerCase()] ?? 8) : 8;
 
   const params = new URLSearchParams({
-    q: `${query} ${negativeKeywords}`,
-    filter: "buyingOptions:{FIXED_PRICE}",
+    q: query,
+    filter: `buyingOptions:{FIXED_PRICE},price:[${priceFloor}..],priceCurrency:USD`,
     sort: "price",
     limit: "20",
   });

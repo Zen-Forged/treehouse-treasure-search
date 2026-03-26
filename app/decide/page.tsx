@@ -2,7 +2,10 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ShoppingBag, X, ChevronDown, ChevronUp, Search, RefreshCw, Sparkles } from "lucide-react";
+import {
+  ShoppingBag, X, ChevronDown, ChevronUp,
+  Search, RefreshCw, Sparkles, TrendingUp
+} from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { PrimaryButton, SecondaryButton } from "@/components/Buttons";
 import { PriceInput } from "@/components/PriceInput";
@@ -13,9 +16,21 @@ import { useScanSession } from "@/hooks/useScanSession";
 import { useSavedItems } from "@/hooks/useSavedItems";
 import { generateMockEvaluation } from "@/lib/mockIntelligence";
 import { calculatePricing } from "@/lib/pricingLogic";
+import { getCachedResult, setCachedResult } from "@/lib/searchCache";
 import { EvaluatedItem, MockComp } from "@/types";
 
-type FetchState = "idle" | "loading" | "success" | "error";
+type FetchState = "idle" | "loading" | "success" | "error" | "cached";
+
+interface SoldSummary {
+  recommendedPrice: number;
+  priceRangeLow: number;
+  priceRangeHigh: number;
+  marketVelocity: string;
+  demandLevel: string;
+  quickTake: string;
+  confidence: string;
+  avgDaysToSell: number;
+}
 
 export default function DecidePage() {
   const router = useRouter();
@@ -26,6 +41,7 @@ export default function DecidePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [itemCategory, setItemCategory] = useState<string | null>(null);
   const [comps, setComps] = useState<MockComp[]>([]);
+  const [soldSummary, setSoldSummary] = useState<SoldSummary | null>(null);
   const [fetchState, setFetchState] = useState<FetchState>("idle");
   const [usingMock, setUsingMock] = useState(false);
   const [showComps, setShowComps] = useState(false);
@@ -74,23 +90,41 @@ export default function DecidePage() {
   }, [sessionData]);
 
   const fetchComps = useCallback(
-    async (query: string, category?: string) => {
+    async (query: string) => {
       if (!query.trim()) return;
       setFetchState("loading");
       setUsingMock(false);
 
+      // Check cache first
+      const cached = getCachedResult(query.trim());
+      if (cached) {
+        setComps(cached.comps);
+        setSoldSummary(cached.summary);
+        setFetchState("cached");
+        setShowComps(true);
+        return;
+      }
+
       try {
-        const categoryParam = category ? `&category=${category}` : "";
         const res = await fetch(
-          `/api/ebay?q=${encodeURIComponent(query.trim())}${categoryParam}`
+          `/api/sold-comps?q=${encodeURIComponent(query.trim())}`
         );
         if (!res.ok) throw new Error("API error");
         const data = await res.json();
-        if (!data.comps || data.comps.length === 0) throw new Error("No results");
+
+        if (!data.comps || data.comps.length === 0) {
+          throw new Error("No results");
+        }
+
+        // Cache the result
+        setCachedResult(query.trim(), data);
+
         setComps(data.comps);
+        setSoldSummary(data.summary);
         setFetchState("success");
         setShowComps(true);
       } catch {
+        // Fallback to mock
         if (sessionData) {
           const mock = generateMockEvaluation(
             parseFloat(costStr) || 0,
@@ -169,7 +203,7 @@ export default function DecidePage() {
           {/* Search input */}
           <div className="animate-fade-up-delay-1 space-y-1.5">
             <label className="block text-xs font-medium text-bark-400 uppercase tracking-widest">
-              Search eBay Comps
+              Search Sold Comps
             </label>
             <div className="flex gap-2">
               <div className="relative flex-1">
@@ -183,15 +217,14 @@ export default function DecidePage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) =>
-                    e.key === "Enter" &&
-                    fetchComps(searchQuery, itemCategory ?? undefined)
+                    e.key === "Enter" && fetchComps(searchQuery)
                   }
                   placeholder="Analyzing image..."
                   className="w-full pl-9 pr-3 py-3 bg-forest-900/60 border border-forest-700/60 rounded-xl text-bark-100 text-sm placeholder:text-bark-700 focus:outline-none focus:border-forest-500 focus:ring-1 focus:ring-forest-500/40 transition-all"
                 />
               </div>
               <button
-                onClick={() => fetchComps(searchQuery, itemCategory ?? undefined)}
+                onClick={() => fetchComps(searchQuery)}
                 disabled={isLoading || !searchQuery.trim() || suggesting}
                 className="flex items-center justify-center w-11 h-11 rounded-xl bg-forest-700 hover:bg-forest-600 disabled:opacity-40 disabled:pointer-events-none transition-all active:scale-95"
               >
@@ -206,7 +239,7 @@ export default function DecidePage() {
             {suggesting && (
               <p className="text-forest-500/80 text-xs pt-0.5 flex items-center gap-1">
                 <Sparkles size={11} />
-                Analyzing image to suggest search term…
+                Analyzing image…
               </p>
             )}
             {!suggesting && fetchState === "idle" && searchQuery && (
@@ -219,26 +252,46 @@ export default function DecidePage() {
                 Type what the item is, then tap search
               </p>
             )}
-            {usingMock && fetchState === "error" && (
-              <p className="text-amber-500/80 text-xs pt-0.5">
-                eBay unavailable — showing mock comps
+            {isLoading && (
+              <p className="text-bark-600 text-xs pt-0.5">
+                Searching eBay sold listings — this takes ~30 seconds…
+              </p>
+            )}
+            {fetchState === "cached" && (
+              <p className="text-forest-500 text-xs pt-0.5">
+                ✓ Loaded from cache — saved you a search
               </p>
             )}
             {fetchState === "success" && (
               <p className="text-forest-500 text-xs pt-0.5">
-                ✓ Live eBay comps loaded
+                ✓ Live eBay sold comps loaded
+              </p>
+            )}
+            {usingMock && fetchState === "error" && (
+              <p className="text-amber-500/80 text-xs pt-0.5">
+                Search unavailable — showing mock comps
               </p>
             )}
           </div>
 
-          {/* Loading skeleton */}
+          {/* Loading state */}
           {isLoading && (
             <div className="space-y-3">
               <div className="h-24 rounded-2xl bg-forest-900/40 border border-forest-800/40 animate-pulse" />
               <div className="h-32 rounded-2xl bg-forest-900/40 border border-forest-800/40 animate-pulse" />
               <div className="text-center text-bark-600 text-xs py-2">
-                Fetching eBay comps…
+                Fetching real sold listings…
               </div>
+            </div>
+          )}
+
+          {/* Quick take from Apify */}
+          {!isLoading && soldSummary?.quickTake && (
+            <div className="rounded-xl bg-forest-900/40 border border-forest-700/40 px-4 py-3 flex gap-2 animate-fade-up-delay-1">
+              <TrendingUp size={14} className="text-forest-400 flex-shrink-0 mt-0.5" />
+              <p className="text-bark-300 text-xs leading-relaxed">
+                {soldSummary.quickTake}
+              </p>
             </div>
           )}
 
@@ -257,7 +310,7 @@ export default function DecidePage() {
                   className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-forest-900/30 border border-forest-800/40 text-bark-300 hover:border-forest-700 transition-all"
                 >
                   <span className="text-sm font-medium">
-                    Comparable Sales ({comps.length})
+                    Sold Comps ({comps.length})
                   </span>
                   {showComps ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </button>
@@ -267,7 +320,7 @@ export default function DecidePage() {
                       <CompCard key={i} comp={comp} />
                     ))}
                     <p className="text-center text-bark-700 text-[10px] py-1">
-                      {usingMock ? "Mock data · Real comps coming soon" : "Live data from eBay"}
+                      {usingMock ? "Mock data" : "Real eBay sold listings"}
                     </p>
                   </div>
                 )}
