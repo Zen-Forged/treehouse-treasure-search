@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ShoppingBag, X, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
-import { AppHeader } from "@/components/AppHeader";
+import { ArrowLeft, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import Image from "next/image";
 import { useScanSession } from "@/hooks/useScanSession";
 import { useSavedItems } from "@/hooks/useSavedItems";
 import { generateMockEvaluation } from "@/lib/mockIntelligence";
@@ -45,41 +45,36 @@ function getROI(profit: number, cost: number): string {
   return Math.round((profit / cost) * 100) + "%";
 }
 
-function getVerdict(recommendation: string, profit: number, velocity: string) {
+function getVerdict(recommendation: string, profit: number) {
   if (recommendation === "strong-buy") {
     return {
-      cardClass: "buy",
-      eyebrow: "🌿 Treasure Found",
-      eyebrowColor: "text-forest-300",
+      chipClass: "bg-forest-900/40 border-forest-600/40 text-forest-300",
+      chipLabel: "🌿 Strong Buy",
       headline: "This one's worth the story",
       emoji: "🛍",
-      line: `Good margin, moves fast, low risk. The hunt paid off on this one.`,
-      scoutTake: profit > 0
-        ? `Grab it. The margin is solid and this category moves reliably. After fees and shipping you're looking at roughly $${profit} profit. Check condition carefully before the register — that's where the money lives.`
-        : `The numbers look promising. Check condition carefully and make sure it matches what's selling.`,
-      buyLabel: "🛍 I'm buying this",
+      line: "Good margin, moves fast, low risk. The hunt paid off on this one.",
+      scoutTake: `Grab it. The margin is solid and this category moves reliably. After fees you're looking at roughly $${profit} profit. Check condition carefully before the register — that's where the money lives.`,
+      buyLabel: "I'm buying this",
     };
   }
   if (recommendation === "maybe") {
     return {
-      cardClass: "maybe",
-      eyebrow: "🍂 Worth a Closer Look",
-      eyebrowColor: "text-amber-400",
-      headline: "Could be a find — dig a little deeper",
+      chipClass: "bg-amber-900/20 border-amber-700/30 text-amber-400",
+      chipLabel: "🍂 Worth a Closer Look",
+      headline: "Could be a find — dig deeper",
       emoji: "🔎",
       line: "The margin is there but it's tight. Condition and timing will make or break this one.",
-      scoutTake: `The prices are real but there's not a lot of cushion. At your cost, you're looking at maybe $${profit} profit if it sells cleanly. Check condition carefully — only pull the trigger if it's in solid shape.`,
-      buyLabel: "🛍 I'll take the chance",
+      scoutTake: `The prices are real but there's not a lot of cushion. You're looking at maybe $${profit} profit if it sells cleanly. Check condition carefully — only pull the trigger if it's in solid shape.`,
+      buyLabel: "I'll take the chance",
     };
   }
   return {
-    cardClass: "pass",
-    eyebrow: "🪵 Leave It Behind",
-    eyebrowColor: "text-red-400",
+    chipClass: "bg-red-950/30 border-red-900/40 text-red-400",
+    chipLabel: "🪵 Leave It Behind",
     headline: "Not your treasure today",
     emoji: "👋",
-    line: "The numbers don't leave enough room. There's a better find waiting somewhere on this floor.",
-    scoutTake: `Pass on this one. After fees and shipping you'd clear very little — and that assumes it sells right away. Your time and shelf space are worth more than this. Keep hunting.`,
+    line: "The numbers don't leave enough room. There's a better find waiting on this floor.",
+    scoutTake: "Pass on this one. After fees you'd clear very little — and that assumes it sells right away. Your time and shelf space are worth more. Keep hunting.",
     buyLabel: "Save it anyway",
   };
 }
@@ -95,14 +90,14 @@ export default function DecidePage() {
   const [fetchState, setFetchState] = useState<FetchState>("idle");
   const [usingMock, setUsingMock] = useState(false);
   const [showComps, setShowComps] = useState(false);
+  const [showMath, setShowMath] = useState(false);
   const [deciding, setDeciding] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const didInit = useRef(false);
 
   const [steps, setSteps] = useState<Step[]>([
     { id: "identify", icon: "👁", title: "Identified your find", desc: "We looked at the photo so you didn't have to type a thing.", state: "pending" },
     { id: "search", icon: "🗺", title: "Searching what treasure hunters paid", desc: "Real sold prices — not what sellers are asking, but what buyers actually paid.", state: "pending" },
-    { id: "calculate", icon: "💰", title: "Running the numbers", desc: "Fees, shipping, your cost — tallying up what actually lands in your pocket.", state: "pending" },
+    { id: "calculate", icon: "💰", title: "Running the numbers", desc: "Fees, your cost — tallying up what actually lands in your pocket.", state: "pending" },
     { id: "recommend", icon: "🎯", title: "Is this your score?", desc: "We'll tell you straight — buy it, pass on it, or dig deeper.", state: "pending" },
   ]);
 
@@ -123,9 +118,8 @@ export default function DecidePage() {
   const runFullAnalysis = useCallback(async () => {
     if (!sessionData) return;
     setFetchState("analyzing");
-
-    // Step 1 — identify
     updateStep(0, "active");
+
     let query = "thrift store item";
     let category: string | undefined;
 
@@ -142,16 +136,13 @@ export default function DecidePage() {
       }
     } catch {}
 
-    setSearchQuery(query);
     updateStep(0, "done");
     updateStep(1, "active");
     setFetchState("searching");
 
-    // Step 2 — search sold comps
     let fetchedComps: MockComp[] = [];
     let fetchedSummary: SoldSummary | null = null;
 
-    // Check cache first
     const cached = getCachedResult(query);
     if (cached) {
       fetchedComps = cached.comps;
@@ -170,7 +161,6 @@ export default function DecidePage() {
       } catch {}
     }
 
-    // Fallback to mock
     if (fetchedComps.length === 0) {
       const mock = generateMockEvaluation(parseFloat(costStr) || 0, sessionData.imageDataUrl);
       fetchedComps = mock.mockComps;
@@ -183,7 +173,6 @@ export default function DecidePage() {
     updateStep(2, "active");
     setFetchState("calculating");
 
-    // Brief pause for UX
     await new Promise(r => setTimeout(r, 1200));
     updateStep(2, "done");
     updateStep(3, "active");
@@ -196,14 +185,13 @@ export default function DecidePage() {
 
   const enteredCost = parseFloat(costStr) || 0;
   const pricing = calculatePricing(comps, enteredCost);
-  const verdict = getVerdict(pricing.recommendation, pricing.estimatedProfitHigh, soldSummary?.marketVelocity ?? "");
+  const verdict = getVerdict(pricing.recommendation, pricing.estimatedProfitHigh);
   const velocityLabel = getVelocityLabel(soldSummary?.marketVelocity ?? "", soldSummary?.avgDaysToSell ?? 0);
   const roiLabel = getROI(pricing.estimatedProfitHigh, enteredCost);
 
   const handleDecision = useCallback(async (decision: "purchased" | "passed") => {
     if (!sessionData || deciding) return;
     setDeciding(true);
-
     const item: EvaluatedItem = {
       id: `tts_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       createdAt: new Date().toISOString(),
@@ -213,7 +201,6 @@ export default function DecidePage() {
       mockComps: comps,
       ...pricing,
     };
-
     saveItem(item);
     router.push(`/item/${item.id}`);
   }, [sessionData, deciding, comps, enteredCost, pricing, saveItem, router]);
@@ -231,32 +218,40 @@ export default function DecidePage() {
   // ── ANALYZING SCREEN ──
   if (isAnalyzing) {
     return (
-      <div className="flex flex-col min-h-screen">
-        <AppHeader title="🌲 Treehouse" showBack onBack={() => router.back()} />
+      <div className="flex flex-col min-h-screen bg-forest-950">
+
+        {/* Nav */}
+        <header className="sticky top-0 z-50 flex items-center justify-between px-4 py-3 bg-forest-950/90 backdrop-blur-sm border-b border-forest-800/40">
+          <button
+            onClick={() => router.back()}
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-forest-900/50 border border-forest-800/40 text-bark-400"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <div className="flex items-center gap-2">
+            <Image src="/logo.png" alt="Treehouse Search" width={22} height={22} className="drop-shadow-[0_0_4px_rgba(200,180,126,0.4)]" />
+            <div className="flex flex-col">
+              <span className="font-display text-sm font-bold text-bark-100 leading-none">Treehouse Search</span>
+              <span className="text-[8px] text-bark-600 uppercase tracking-widest leading-none mt-0.5">Embrace the search</span>
+            </div>
+          </div>
+          <div className="w-9" />
+        </header>
 
         <main className="flex-1 flex flex-col px-5 py-6 pb-32 gap-5">
-
-          {/* Hunt header */}
           <div className="text-center pt-2">
-            <div className="text-xs text-forest-400 uppercase tracking-widest mb-2">
-              🔎 The Hunt Is On
-            </div>
-            <h1 className="font-display text-xl text-bark-50 font-bold leading-snug">
-              Checking if this is your treasure
-            </h1>
-            <p className="text-bark-500 text-xs mt-2 leading-relaxed">
-              Give us a moment — we're searching the market so you don't have to guess at the register.
-            </p>
+            <div className="text-xs text-forest-400 uppercase tracking-widest mb-2">🔎 The Hunt Is On</div>
+            <h1 className="font-display text-xl text-bark-50 font-bold leading-snug">Checking if this is your treasure</h1>
+            <p className="text-bark-500 text-xs mt-2 leading-relaxed">Give us a moment — we're searching the market so you don't have to guess at the register.</p>
           </div>
 
-          {/* Item + cost */}
           <div className="flex gap-3 items-center px-4 py-3 rounded-2xl bg-forest-900/40 border border-forest-800/40">
             <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-forest-900 border border-forest-800">
               <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover" />
             </div>
             <div className="flex-1">
               <div className="text-[10px] text-bark-600 uppercase tracking-widest mb-1">You're holding it for</div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <span className="text-bark-500 text-lg font-light">$</span>
                 <input
                   type="number"
@@ -279,39 +274,23 @@ export default function DecidePage() {
             </div>
           </div>
 
-          {/* Steps */}
           <div className="flex flex-col gap-2.5">
             {steps.map((step) => (
-              <div
-                key={step.id}
-                className={clsx(
-                  "flex items-start gap-3 px-4 py-3.5 rounded-2xl border transition-all duration-500",
-                  step.state === "done" && "bg-forest-900/30 border-forest-800/40 opacity-100",
-                  step.state === "active" && "bg-forest-900/50 border-forest-600/40 opacity-100",
-                  step.state === "pending" && "bg-forest-950/30 border-forest-900/30 opacity-35"
-                )}
-              >
+              <div key={step.id} className={clsx(
+                "flex items-start gap-3 px-4 py-3.5 rounded-2xl border transition-all duration-500",
+                step.state === "done" && "bg-forest-900/30 border-forest-800/40 opacity-100",
+                step.state === "active" && "bg-forest-900/50 border-forest-600/40 opacity-100",
+                step.state === "pending" && "bg-forest-950/30 border-forest-900/30 opacity-35"
+              )}>
                 <div className={clsx(
                   "w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0 border",
                   step.state === "done" && "bg-forest-800/50 border-forest-700/40",
                   step.state === "active" && "bg-forest-700/50 border-forest-600/50",
                   step.state === "pending" && "bg-forest-950/50 border-forest-900/30"
-                )}>
-                  {step.icon}
-                </div>
+                )}>{step.icon}</div>
                 <div className="flex-1 min-w-0">
-                  <div className={clsx(
-                    "text-sm font-semibold mb-0.5",
-                    step.state === "pending" ? "text-bark-600" : "text-bark-100"
-                  )}>
-                    {step.title}
-                  </div>
-                  <div className={clsx(
-                    "text-xs leading-relaxed",
-                    step.state === "active" ? "text-bark-300" : "text-bark-600"
-                  )}>
-                    {step.desc}
-                  </div>
+                  <div className={clsx("text-sm font-semibold mb-0.5", step.state === "pending" ? "text-bark-600" : "text-bark-100")}>{step.title}</div>
+                  <div className={clsx("text-xs leading-relaxed", step.state === "active" ? "text-bark-300" : "text-bark-600")}>{step.desc}</div>
                 </div>
                 <div className="flex-shrink-0 mt-1">
                   {step.state === "done" && <span className="text-forest-400 text-sm">✓</span>}
@@ -323,24 +302,14 @@ export default function DecidePage() {
           </div>
         </main>
 
-        {/* Progress bar */}
         <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-5 py-4 bg-forest-950/97 backdrop-blur-sm border-t border-forest-900/60 safe-bottom">
           <div className="h-0.5 bg-forest-900 rounded-full overflow-hidden mb-2.5">
-            <div
-              className="h-full bg-forest-500 rounded-full transition-all duration-700"
-              style={{
-                width:
-                  fetchState === "analyzing" ? "20%" :
-                  fetchState === "searching" ? "50%" :
-                  fetchState === "calculating" ? "80%" :
-                  fetchState === "recommending" ? "93%" : "100%"
-              }}
-            />
+            <div className="h-full bg-forest-500 rounded-full transition-all duration-700" style={{
+              width: fetchState === "analyzing" ? "20%" : fetchState === "searching" ? "50%" : fetchState === "calculating" ? "80%" : fetchState === "recommending" ? "93%" : "100%"
+            }} />
           </div>
           <div className="text-center text-[11px] text-bark-600">
-            {fetchState === "searching"
-              ? "Searching real sold listings — takes about 30 seconds"
-              : "Your verdict is almost ready 🌲"}
+            {fetchState === "searching" ? "Searching real sold listings — takes about 30 seconds" : "Your verdict is almost ready 🌲"}
           </div>
         </div>
       </div>
@@ -349,133 +318,182 @@ export default function DecidePage() {
 
   // ── RESULTS SCREEN ──
   return (
-    <div className="flex flex-col min-h-screen">
-      <AppHeader title="🌲 Treehouse" showBack onBack={() => router.back()} />
+    <div className="flex flex-col min-h-screen bg-forest-950">
+
+      {/* Nav */}
+      <header className="sticky top-0 z-50 flex items-center justify-between px-4 py-3 bg-forest-950/90 backdrop-blur-sm border-b border-forest-800/40">
+        <button
+          onClick={() => router.back()}
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-forest-900/50 border border-forest-800/40 text-bark-400"
+        >
+          <ArrowLeft size={18} />
+        </button>
+        <div className="flex items-center gap-2">
+          <Image src="/logo.png" alt="Treehouse Search" width={22} height={22} className="drop-shadow-[0_0_4px_rgba(200,180,126,0.4)]" />
+          <div className="flex flex-col">
+            <span className="font-display text-sm font-bold text-bark-100 leading-none">Treehouse Search</span>
+            <span className="text-[8px] text-bark-600 uppercase tracking-widest leading-none mt-0.5">Embrace the search</span>
+          </div>
+        </div>
+        <div className="w-9" />
+      </header>
 
       <main className="flex-1 overflow-y-auto pb-36">
-        <div className="px-5 py-5 flex flex-col gap-4">
 
-          {/* Verdict card */}
-          <div className={clsx(
-            "rounded-2xl p-5 border",
-            verdict.cardClass === "buy" && "bg-forest-900/30 border-forest-700/40",
-            verdict.cardClass === "maybe" && "bg-bark-900/20 border-bark-700/30",
-            verdict.cardClass === "pass" && "bg-red-950/20 border-red-900/30",
-          )}>
-            <div className={clsx("text-[10px] uppercase tracking-widest mb-3 font-medium", verdict.eyebrowColor)}>
-              {verdict.eyebrow}
+        {/* Hero image */}
+        <div className="relative w-full bg-forest-900" style={{ height: 240 }}>
+          <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover" style={{ filter: "brightness(0.9) saturate(0.85)" }} />
+          {/* fade bottom */}
+          <div className="absolute bottom-0 left-0 right-0 h-24" style={{ background: "linear-gradient(to bottom, transparent, #050f05)" }} />
+          {/* cost input overlay */}
+          <div className="absolute bottom-0 left-0 right-0 px-4 pb-3 flex items-end justify-between">
+            <div>
+              <div className="text-[9px] text-bark-600 uppercase tracking-widest mb-1">You paid</div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-bark-500 text-base">$</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={costStr}
+                  onChange={e => setCostStr(e.target.value)}
+                  className="bg-transparent text-2xl font-mono font-bold text-bark-50 w-20 focus:outline-none"
+                  placeholder="0.00"
+                />
+              </div>
             </div>
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <h2 className="font-display text-xl text-bark-50 font-bold leading-snug flex-1">
-                {verdict.headline}
-              </h2>
-              <span className="text-3xl flex-shrink-0">{verdict.emoji}</span>
+            <div className="px-3 py-1.5 rounded-full bg-forest-900/70 border border-forest-700/40 backdrop-blur-sm">
+              <span className="text-[10px] text-forest-300 font-medium">High confidence</span>
             </div>
-            <p className="text-bark-400 text-sm leading-relaxed border-t border-forest-900/60 pt-3">
-              {verdict.line}
-            </p>
           </div>
+        </div>
 
-          {/* Numbers row */}
-          <div className="grid grid-cols-3 gap-2.5">
-            <div className="rounded-xl bg-forest-900/40 border border-forest-800/30 p-3 text-center">
-              <div className={clsx(
-                "font-mono text-xl font-bold mb-1",
+        <div className="px-4 py-4 flex flex-col gap-4">
+
+          {/* PRIMARY VALUE CARD */}
+          <div className="rounded-2xl p-5 relative overflow-hidden"
+            style={{ background: "linear-gradient(160deg, rgba(17,37,17,0.9), rgba(9,21,9,0.95))", border: "1px solid rgba(109,188,109,0.14)" }}>
+            {/* top shimmer line */}
+            <div className="absolute top-0 left-[15%] right-[15%] h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(200,180,126,0.3), transparent)" }} />
+
+            <div className="text-[9px] text-bark-600 uppercase tracking-widest mb-1">Estimated Resell Price</div>
+            <div className="flex items-start gap-1 mb-1" style={{ fontFamily: "Georgia, serif" }}>
+              <span className="text-bark-400 text-2xl font-semibold mt-1">$</span>
+              <span className="text-bark-50 font-bold leading-none" style={{ fontSize: 64, letterSpacing: -2 }}>
+                {pricing.medianSoldPrice.toFixed(2)}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 pt-3 mt-1 border-t border-forest-900/60">
+              <span className={clsx(
+                "text-2xl font-bold font-mono",
                 pricing.estimatedProfitHigh > 15 ? "text-forest-400" :
                 pricing.estimatedProfitHigh > 5 ? "text-amber-400" : "text-bark-500"
               )}>
-                {pricing.estimatedProfitHigh > 0 ? "+" : ""}${pricing.estimatedProfitHigh}
+                {pricing.estimatedProfitHigh >= 0 ? "+" : ""}${pricing.estimatedProfitHigh.toFixed(2)}
+              </span>
+              <div className="flex flex-col">
+                <span className="text-[9px] text-bark-600 uppercase tracking-widest">Estimated Profit</span>
+                {enteredCost > 0 && <span className="text-[11px] text-forest-400 font-semibold">{roiLabel} ROI</span>}
               </div>
-              <div className="text-[9px] text-bark-600 uppercase tracking-wider">Est. Profit</div>
             </div>
-            <div className="rounded-xl bg-forest-900/40 border border-forest-800/30 p-3 text-center">
-              <div className="font-mono text-xl font-bold mb-1 text-amber-400">{roiLabel}</div>
-              <div className="text-[9px] text-bark-600 uppercase tracking-wider">ROI</div>
-            </div>
-            <div className="rounded-xl bg-forest-900/40 border border-forest-800/30 p-3 text-center">
-              <div className="font-mono text-lg font-bold mb-1 text-bark-200">{velocityLabel}</div>
-              <div className="text-[9px] text-bark-600 uppercase tracking-wider">Sell Speed</div>
+
+            <div className="flex items-center gap-3 pt-3 mt-3 border-t border-forest-900/40">
+              <span className={clsx("text-xs font-semibold px-3 py-1.5 rounded-full border flex-shrink-0", verdict.chipClass)}>
+                {verdict.chipLabel}
+              </span>
+              <span className="text-xs text-bark-500 leading-snug">{verdict.line}</span>
             </div>
           </div>
 
-          {/* Scout's take */}
-          <div className="rounded-2xl bg-forest-900/30 border border-forest-800/30 p-4">
+          {/* SCOUT'S TAKE */}
+          <div className="rounded-2xl p-4" style={{ background: "rgba(13,31,13,0.55)", border: "1px solid rgba(200,180,126,0.1)" }}>
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-xs">🌲</span>
-              <span className="text-[10px] text-forest-400 uppercase tracking-widest font-medium">The Scout's Take</span>
+              <Image src="/logo.png" alt="" width={16} height={16} className="opacity-70" />
+              <span className="text-[9px] text-bark-400 uppercase tracking-widest font-semibold">The Scout's Take</span>
             </div>
-            <p className="text-bark-300 text-sm leading-relaxed italic">
+            <p className="text-bark-300 text-sm leading-relaxed italic" style={{ fontFamily: "Georgia, serif", fontSize: 15 }}>
               "{soldSummary?.quickTake || verdict.scoutTake}"
             </p>
           </div>
 
-          {/* The math */}
-          <div className="rounded-2xl bg-forest-900/30 border border-forest-800/30 overflow-hidden">
-            <div className="px-4 py-3 border-b border-forest-900/60">
-              <span className="text-[10px] text-bark-600 uppercase tracking-widest">💵 The math</span>
-            </div>
-            {[
-              { label: "Median sold price", val: `$${pricing.medianSoldPrice.toFixed(2)}`, color: "" },
-              { label: "Your cost", val: `– $${enteredCost.toFixed(2)}`, color: "text-red-400/70" },
-              { label: "eBay fees (~13%)", val: `– $${pricing.estimatedFees.toFixed(2)}`, color: "text-red-400/70" },
-              { label: "Shipping (est.)", val: `– $${pricing.estimatedShipping.toFixed(2)}`, color: "text-red-400/70" },
-            ].map(row => (
-              <div key={row.label} className="flex justify-between px-4 py-2.5 border-b border-forest-900/40">
-                <span className="text-xs text-bark-500">{row.label}</span>
-                <span className={clsx("text-xs font-mono font-semibold text-bark-200", row.color)}>{row.val}</span>
+          {/* THE MATH — collapsible */}
+          <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(109,188,109,0.1)" }}>
+            <button
+              onClick={() => setShowMath(v => !v)}
+              className="w-full flex items-center justify-between px-4 py-3.5 text-left transition-all"
+              style={{ background: "rgba(13,31,13,0.55)" }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm">💵</span>
+                <span className="text-sm font-semibold text-bark-200">The Math</span>
               </div>
-            ))}
-            <div className="flex justify-between px-4 py-3 bg-forest-900/30">
-              <span className="text-sm text-bark-200 font-semibold">In your pocket</span>
-              <span className={clsx(
-                "text-sm font-mono font-bold",
-                pricing.estimatedProfitHigh > 0 ? "text-forest-400" : "text-red-400"
-              )}>
-                {pricing.estimatedProfitHigh > 0 ? "+" : ""}${pricing.estimatedProfitHigh.toFixed(2)}
-              </span>
-            </div>
+              {showMath ? <ChevronUp size={14} className="text-bark-600" /> : <ChevronDown size={14} className="text-bark-600" />}
+            </button>
+
+            {showMath && (
+              <div>
+                {[
+                  { label: "Median sold price", val: `$${pricing.medianSoldPrice.toFixed(2)}`, sub: false },
+                  { label: "Your cost", val: `– $${enteredCost.toFixed(2)}`, sub: true },
+                  { label: "eBay fees (~13%)", val: `– $${pricing.estimatedFees.toFixed(2)}`, sub: true },
+                ].map(row => (
+                  <div key={row.label} className="flex justify-between px-4 py-2.5" style={{ borderTop: "1px solid rgba(109,188,109,0.07)", background: "rgba(9,21,9,0.5)" }}>
+                    <span className="text-xs text-bark-600">{row.label}</span>
+                    <span className={clsx("text-xs font-mono font-semibold", row.sub ? "text-red-400/70" : "text-bark-200")}>{row.val}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between px-4 py-3" style={{ borderTop: "1px solid rgba(109,188,109,0.15)", background: "rgba(45,125,45,0.1)" }}>
+                  <span className="text-sm font-semibold text-bark-100">In your pocket</span>
+                  <span className={clsx("text-sm font-mono font-bold", pricing.estimatedProfitHigh >= 0 ? "text-forest-400" : "text-red-400")}>
+                    {pricing.estimatedProfitHigh >= 0 ? "+" : ""}${pricing.estimatedProfitHigh.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Comps */}
+          {/* WHAT SOLD RECENTLY */}
           <div>
             <button
               onClick={() => setShowComps(v => !v)}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-forest-900/30 border border-forest-800/30 text-bark-300 transition-all"
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl mb-2"
+              style={{ background: "rgba(13,31,13,0.4)", border: "1px solid rgba(109,188,109,0.09)" }}
             >
               <div className="flex items-center gap-2">
-                <span className="text-sm">📋</span>
-                <span className="text-sm font-medium">What sold recently</span>
-                <span className="text-[10px] text-forest-400 bg-forest-900/60 px-2 py-0.5 rounded-full">
+                <span className="text-sm font-semibold text-bark-200">What sold recently</span>
+                <span className="text-[10px] text-forest-400 font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(45,125,45,0.16)" }}>
                   {comps.length} sales
                 </span>
               </div>
-              {showComps ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+              {showComps ? <ChevronUp size={14} className="text-bark-600" /> : <ChevronDown size={14} className="text-bark-600" />}
             </button>
 
             {showComps && (
-              <div className="mt-2 flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5">
                 {comps.map((comp, i) => (
-                  <a
-                    key={i}
-                    href={comp.url ?? "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-forest-900/30 border border-forest-800/20 active:scale-98 transition-all"
+                  <a key={i} href={comp.url ?? "#"} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl active:scale-[0.98] transition-all"
+                    style={{ background: "rgba(13,31,13,0.45)", border: "1px solid rgba(109,188,109,0.09)" }}
                   >
                     {comp.imageUrl ? (
-                      <img src={comp.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-forest-800/30" />
+                      <img src={comp.imageUrl} alt="" className="w-11 h-11 rounded-lg object-cover flex-shrink-0" style={{ border: "1px solid rgba(109,188,109,0.1)" }} />
                     ) : (
-                      <div className="w-10 h-10 rounded-lg bg-forest-900 flex-shrink-0 border border-forest-800/30" />
+                      <div className="w-11 h-11 rounded-lg flex-shrink-0" style={{ background: "rgba(17,37,17,0.6)", border: "1px solid rgba(109,188,109,0.1)" }} />
                     )}
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs text-bark-300 truncate mb-0.5">{comp.title}</div>
-                      <div className="text-[10px] text-bark-600">{comp.condition} · {comp.daysAgo}d ago</div>
+                      <div className="text-xs text-bark-300 truncate mb-1 font-medium">{comp.title}</div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-bark-600 px-1.5 py-0.5 rounded" style={{ background: "rgba(45,125,45,0.1)" }}>{comp.condition}</span>
+                        <span className="text-[10px] text-bark-700">{comp.daysAgo}d ago</span>
+                      </div>
                     </div>
-                    <div className="font-mono text-sm font-bold text-bark-100 flex-shrink-0">${comp.price.toFixed(2)}</div>
-                    <span className="text-bark-700 text-xs flex-shrink-0">↗</span>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <span className="text-sm font-bold font-mono text-bark-100">${comp.price.toFixed(2)}</span>
+                      <span className="text-[10px] text-bark-700">↗</span>
+                    </div>
                   </a>
                 ))}
-                <p className="text-center text-bark-700 text-[10px] py-1">
+                <p className="text-center text-[10px] py-1" style={{ color: "rgba(61,48,24,0.8)" }}>
                   {usingMock ? "Mock data · Real comps coming soon" : "Real eBay sold listings · Tap to view"}
                 </p>
               </div>
@@ -485,24 +503,29 @@ export default function DecidePage() {
         </div>
       </main>
 
-      {/* Bottom bar */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-5 py-4 bg-forest-950/97 backdrop-blur-sm border-t border-forest-800/40 safe-bottom flex flex-col gap-2.5">
-        <button
-          onClick={() => handleDecision("purchased")}
-          disabled={deciding}
-          className="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-forest-600 hover:bg-forest-500 text-white font-bold text-base active:scale-97 transition-all disabled:opacity-40"
-        >
-          <ShoppingBag size={18} />
-          {verdict.buyLabel}
-        </button>
-        <button
-          onClick={() => handleDecision("passed")}
-          disabled={deciding}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border border-forest-800/50 text-bark-400 font-medium text-sm active:scale-97 transition-all disabled:opacity-40"
-        >
-          <X size={15} />
-          Leave it on the shelf
-        </button>
+      {/* BOTTOM BAR */}
+      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-4 py-3 safe-bottom"
+        style={{ background: "rgba(5,15,5,0.97)", backdropFilter: "blur(24px)", borderTop: "1px solid rgba(200,180,126,0.08)" }}>
+        {/* top glow */}
+        <div className="absolute top-0 left-[20%] right-[20%] h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(200,180,126,0.18), transparent)" }} />
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={() => handleDecision("purchased")}
+            disabled={deciding}
+            className="w-full py-4 rounded-2xl text-bark-50 text-base font-bold flex items-center justify-center gap-2 active:scale-[0.97] transition-all disabled:opacity-40"
+            style={{ background: "linear-gradient(135deg, #2d7d2d, #3d9c3d)", boxShadow: "0 2px 24px rgba(45,125,45,0.28)" }}
+          >
+            🛍 {verdict.buyLabel}
+          </button>
+          <button
+            onClick={() => handleDecision("passed")}
+            disabled={deciding}
+            className="w-full py-3.5 rounded-xl text-bark-500 text-sm font-medium flex items-center justify-center gap-2 active:scale-[0.97] transition-all disabled:opacity-40"
+            style={{ border: "1px solid rgba(109,188,109,0.14)" }}
+          >
+            Leave it on the shelf
+          </button>
+        </div>
       </div>
     </div>
   );
