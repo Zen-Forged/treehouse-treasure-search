@@ -62,7 +62,7 @@ export function PricingBreakdown({ item }: PricingBreakdownProps) {
   return (
     <div className="rounded-2xl bg-forest-900/40 border border-forest-800/40 p-4 space-y-2.5">
       <div className="text-xs font-medium text-bark-500 uppercase tracking-widest mb-3">
-        Pricing Breakdown
+        The Math
       </div>
 
       <Row
@@ -80,7 +80,7 @@ export function PricingBreakdown({ item }: PricingBreakdownProps) {
 
       <div className="border-t border-forest-800/60 pt-2.5">
         <Row
-          label="Est. Profit Range"
+          label="In your pocket"
           value={`${item.estimatedProfitLow < 0 ? "-" : "+"}${formatCurrency(item.estimatedProfitLow)} to +${formatCurrency(item.estimatedProfitHigh)}`}
           accent={profitPositive}
           negative={!profitPositive}
