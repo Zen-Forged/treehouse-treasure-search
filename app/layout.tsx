@@ -3,12 +3,12 @@ import "./globals.css";
 import { ScanProvider } from "@/hooks/useScanSession";
 
 export const metadata: Metadata = {
-  title: "Treehouse Treasure Search",
-  description: "Know if it's worth buying before you check out.",
+  title: "Treehouse Search",
+  description: "Embrace the search. Treasure the find.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Treehouse",
+    title: "Treehouse Search",
   },
 };
 
@@ -17,7 +17,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#061406",
+  themeColor: "#050f05",
 };
 
 export default function RootLayout({

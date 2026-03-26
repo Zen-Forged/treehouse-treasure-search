@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 
 interface AppHeaderProps {
@@ -48,10 +49,21 @@ export function AppHeader({
           </span>
         ) : (
           <Link href="/" className="inline-flex items-center gap-2">
-            <span className="text-forest-400 text-lg">🌲</span>
-            <span className="font-display text-bark-100 text-base font-semibold tracking-wide">
-              Treehouse
-            </span>
+            <Image
+              src="/logo.png"
+              alt="Treehouse Search"
+              width={24}
+              height={24}
+              className="drop-shadow-[0_0_4px_rgba(200,180,126,0.4)]"
+            />
+            <div className="flex flex-col items-start gap-0">
+              <span className="font-display text-bark-100 text-sm font-semibold tracking-wide leading-none">
+                Treehouse Search
+              </span>
+              <span className="text-[8px] text-bark-600 uppercase tracking-widest leading-none mt-0.5">
+                Embrace the search
+              </span>
+            </div>
           </Link>
         )}
       </div>

@@ -2,9 +2,9 @@
 
 import { useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Camera, ImagePlus, Archive, TrendingUp } from "lucide-react";
-import { AppHeader } from "@/components/AppHeader";
+import { Camera, ImagePlus, Archive } from "lucide-react";
 import { useScanSession } from "@/hooks/useScanSession";
 
 export default function HomePage() {
@@ -31,9 +31,6 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <AppHeader />
-
-      {/* Hidden file inputs */}
       <input
         ref={cameraInputRef}
         type="file"
@@ -52,21 +49,28 @@ export default function HomePage() {
 
       <main className="flex-1 flex flex-col px-5 py-8">
         <div className="flex-1 flex flex-col justify-center space-y-10">
+
           {/* Brand block */}
-          <div className="space-y-4 animate-fade-up">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-forest-900/60 border border-forest-700/40 text-forest-400 text-xs font-medium">
-              <TrendingUp size={12} />
-              Reseller Intelligence · V1
+          <div className="space-y-5 animate-fade-up">
+            <div className="flex items-center gap-3">
+              <Image
+                src="/logo.png"
+                alt="Treehouse Search"
+                width={52}
+                height={52}
+                className="drop-shadow-[0_0_12px_rgba(200,180,126,0.35)]"
+              />
+              <div>
+                <h1 className="font-display text-2xl font-bold text-bark-50 leading-tight tracking-wide">
+                  Treehouse Search
+                </h1>
+                <p className="text-[10px] text-bark-600 uppercase tracking-widest mt-0.5">
+                  Embrace the search · Treasure the find
+                </p>
+              </div>
             </div>
-            <h1 className="font-display text-4xl font-bold text-bark-50 leading-tight">
-              Treehouse
-              <br />
-              <span className="text-forest-400">Treasure</span>
-              <br />
-              Search
-            </h1>
             <p className="text-bark-400 text-base leading-relaxed max-w-xs">
-              Know if it&apos;s worth buying before you check out.
+              Know if it's worth buying before you check out.
             </p>
           </div>
 
@@ -93,7 +97,6 @@ export default function HomePage() {
 
           {/* CTAs */}
           <div className="space-y-3 animate-fade-up-delay-2">
-            {/* Take Photo / From Library — same style as scan page */}
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => cameraInputRef.current?.click()}
@@ -120,9 +123,8 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="pt-8 text-center text-bark-700 text-xs animate-fade-up-delay-3">
-          Mock intelligence · V1 · For resellers
+          Treehouse Search · V1 · For resellers
         </div>
       </main>
     </div>
