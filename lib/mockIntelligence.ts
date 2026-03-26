@@ -115,6 +115,7 @@ export function generateMockEvaluation(
     mockComps: comps,
     mockCompLow,
     mockCompHigh,
+    medianSoldPrice: suggestedListPrice,
     suggestedListPrice,
     estimatedFees,
     estimatedShipping,

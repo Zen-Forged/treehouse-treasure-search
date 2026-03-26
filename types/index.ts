@@ -19,6 +19,7 @@ export interface EvaluatedItem {
   mockComps: MockComp[];
   mockCompLow: number;
   mockCompHigh: number;
+  medianSoldPrice: number;
   suggestedListPrice: number;
   estimatedFees: number;
   estimatedShipping: number;

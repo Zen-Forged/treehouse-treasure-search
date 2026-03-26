@@ -415,7 +415,7 @@ export default function DecidePage() {
               <span className="text-[10px] text-bark-600 uppercase tracking-widest">💵 The math</span>
             </div>
             {[
-              { label: "Median sold price", val: `$${pricing.mockCompHigh.toFixed(2)}`, color: "" },
+              { label: "Median sold price", val: `$${pricing.medianSoldPrice.toFixed(2)}`, color: "" },
               { label: "Your cost", val: `– $${enteredCost.toFixed(2)}`, color: "text-red-400/70" },
               { label: "eBay fees (~13%)", val: `– $${pricing.estimatedFees.toFixed(2)}`, color: "text-red-400/70" },
               { label: "Shipping (est.)", val: `– $${pricing.estimatedShipping.toFixed(2)}`, color: "text-red-400/70" },
