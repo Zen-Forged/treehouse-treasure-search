@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const result = await getApifySoldComps(normalized);
-    cacheSet<Record<string, unknown>>(rawQuery, result as Record<string, unknown>);
+    cacheSet(rawQuery, result as unknown as Record<string, unknown>);
     return NextResponse.json({
       source: "live",
       normalizedQuery: normalized,
