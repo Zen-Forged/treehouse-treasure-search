@@ -102,12 +102,6 @@ export default function EnhancePage() {
           </div>
         ) : (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
-              className="flex items-center justify-between px-1">
-              <span style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "2.5px" }}>As found</span>
-              <span style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2.5px" }}>Brought to light</span>
-            </motion.div>
-
             <motion.div ref={containerRef}
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
               className="relative w-full rounded-2xl overflow-hidden select-none"
@@ -140,11 +134,6 @@ export default function EnhancePage() {
                 Brought to light
               </div>
             </motion.div>
-
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}
-              style={{ fontSize: 12, color: "rgba(106,85,40,0.5)", lineHeight: 1.6, letterSpacing: "0.1px", textAlign: "center", padding: "0 8px" }}>
-              Cameras don't always capture what you see.<br />This brings it closer.
-            </motion.p>
 
             <div className="flex-1" />
 
