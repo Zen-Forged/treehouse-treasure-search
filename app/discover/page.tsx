@@ -79,7 +79,7 @@ export default function DiscoverPage() {
 
   const handleShare = () => router.push("/intent");
 
-  const handleWhatIsItWorth = () => router.push("/worth");
+  const handleWhatIsItWorth = () => router.push("/decide");
 
   const title       = session?.identification?.title       ?? "Something interesting";
   const description = session?.identification?.description ?? "";
