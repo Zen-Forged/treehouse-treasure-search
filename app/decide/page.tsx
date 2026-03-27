@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, RefreshCw, ChevronDown, ChevronUp, Camera } from "lucide-react";
 import Image from "next/image";
 import { useScanSession } from "@/hooks/useScanSession";
 import { useSavedItems } from "@/hooks/useSavedItems";
@@ -28,17 +28,8 @@ interface SoldSummary {
 
 interface Step {
   id: string;
-  icon: string;
   title: string;
-  desc: string;
   state: "pending" | "active" | "done";
-}
-
-function getVelocityLabel(velocity: string, days: number): string {
-  if (!velocity && !days) return "~2 wks";
-  if (velocity === "fast" || days <= 7) return "~1 wk";
-  if (velocity === "slow" || days >= 21) return "Slow";
-  return "~2 wks";
 }
 
 function getROI(profit: number, cost: number): string {
@@ -49,31 +40,31 @@ function getROI(profit: number, cost: number): string {
 function getVerdict(recommendation: string, profit: number) {
   if (recommendation === "strong-buy") {
     return {
-      chipClass: "bg-forest-900/40 border-forest-600/40 text-forest-300",
-      chipLabel: "🌿 Strong Buy",
-      headline: "This one's worth the story",
-      line: "Good margin, moves fast, low risk. The hunt paid off on this one.",
-      scoutTake: `Grab it. The margin is solid and this category moves reliably. After fees you're looking at roughly $${profit} profit. Check condition carefully before the register.`,
-      buyLabel: "I'm buying this",
+      chipClass: "bg-forest-900/40 border-forest-700/40 text-forest-300",
+      chipLabel: "A strong find",
+      headline: "A strong find",
+      line: "Strong margin. Sells reliably. This one stands out.",
+      scoutTake: `Strong margin and steady demand. After fees, the return is clear. Condition looks solid — worth picking up.`,
+      buyLabel: "Pick it up",
     };
   }
   if (recommendation === "maybe") {
     return {
-      chipClass: "bg-amber-900/20 border-amber-700/30 text-amber-400",
-      chipLabel: "🍂 Worth a Closer Look",
-      headline: "Could be a find — dig deeper",
-      line: "The margin is there but it's tight. Condition and timing will make or break this one.",
-      scoutTake: `The prices are real but there's not a lot of cushion. You're looking at maybe $${profit} profit if it sells cleanly. Only pull the trigger if it's in solid shape.`,
-      buyLabel: "I'll take the chance",
+      chipClass: "bg-amber-900/20 border-amber-800/30 text-amber-500",
+      chipLabel: "Worth considering",
+      headline: "Worth considering",
+      line: "Reasonable margin. Condition and timing will determine the outcome.",
+      scoutTake: `Decent margin but not a lot of room. If condition is clean and the price holds, this works. Proceed with care.`,
+      buyLabel: "Pick it up",
     };
   }
   return {
     chipClass: "bg-red-950/30 border-red-900/40 text-red-400",
-    chipLabel: "🪵 Leave It Behind",
-    headline: "Not your treasure today",
-    line: "The numbers don't leave enough room. There's a better find waiting on this floor.",
-    scoutTake: "Pass on this one. After fees you'd clear very little. Your time and shelf space are worth more. Keep hunting.",
-    buyLabel: "Save it anyway",
+    chipLabel: "Slim margin",
+    headline: "Slim margin",
+    line: "After fees, there isn't much room. A better find may be nearby.",
+    scoutTake: "The numbers are too tight. After fees you'd clear very little — and that assumes a clean sale. Move on.",
+    buyLabel: "Pick it up anyway",
   };
 }
 
@@ -95,10 +86,10 @@ export default function DecidePage() {
   const priceInputRef = useRef<HTMLInputElement>(null);
 
   const [steps, setSteps] = useState<Step[]>([
-    { id: "identify", icon: "👁", title: "Identified your find", desc: "We looked at the photo so you didn't have to type a thing.", state: "pending" },
-    { id: "search", icon: "🗺", title: "Searching what treasure hunters paid", desc: "Real sold prices — not what sellers are asking, but what buyers actually paid.", state: "pending" },
-    { id: "calculate", icon: "💰", title: "Running the numbers", desc: "Fees, your cost — tallying up what actually lands in your pocket.", state: "pending" },
-    { id: "recommend", icon: "🎯", title: "Is this your score?", desc: "We'll tell you straight — buy it, pass on it, or dig deeper.", state: "pending" },
+    { id: "identify", title: "Identifying the item", state: "pending" },
+    { id: "search",   title: "Reviewing recent sales", state: "pending" },
+    { id: "calculate",title: "Calculating value", state: "pending" },
+    { id: "recommend",title: "Preparing your result", state: "pending" },
   ]);
 
   const updateStep = useCallback((index: number, state: "pending" | "active" | "done") => {
@@ -109,7 +100,6 @@ export default function DecidePage() {
     if (!sessionData) router.replace("/scan");
   }, [sessionData, router]);
 
-  // Auto-focus price input on mount
   useEffect(() => {
     if (appState === "price-entry") {
       setTimeout(() => priceInputRef.current?.focus(), 300);
@@ -129,7 +119,6 @@ export default function DecidePage() {
     updateStep(0, "active");
 
     let query = "thrift store item";
-
     try {
       const res = await fetch("/api/suggest", {
         method: "POST",
@@ -178,12 +167,10 @@ export default function DecidePage() {
     updateStep(1, "done");
     updateStep(2, "active");
     setFetchState("calculating");
-
     await new Promise(r => setTimeout(r, 1200));
     updateStep(2, "done");
     updateStep(3, "active");
     setFetchState("recommending");
-
     await new Promise(r => setTimeout(r, 900));
     updateStep(3, "done");
     setFetchState("done");
@@ -213,68 +200,65 @@ export default function DecidePage() {
 
   if (!sessionData) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-bark-600 text-sm">Loading...</div>
+      <div className="flex items-center justify-center min-h-screen bg-[#050f05]">
+        <div className="text-bark-700 text-sm">Loading...</div>
       </div>
     );
   }
 
   // Shared nav
   const NavBar = () => (
-    <header className="sticky top-0 z-50 flex items-center justify-between px-4 py-3 bg-forest-950/90 backdrop-blur-sm border-b border-forest-800/40">
+    <header className="sticky top-0 z-50 flex items-center justify-between px-4 py-3 border-b border-forest-900/60"
+      style={{ background: "rgba(5,15,5,0.92)", backdropFilter: "blur(20px)" }}>
       <button
         onClick={() => router.back()}
-        className="w-9 h-9 flex items-center justify-center rounded-full bg-forest-900/50 border border-forest-800/40 text-bark-400"
+        className="w-9 h-9 flex items-center justify-center rounded-full border border-forest-900/50 text-bark-500"
+        style={{ background: "rgba(13,31,13,0.5)" }}
       >
-        <ArrowLeft size={18} />
+        <ArrowLeft size={16} />
       </button>
       <div className="flex items-center gap-2">
-        <Image src="/logo.png" alt="Treehouse Search" width={22} height={22} className="drop-shadow-[0_0_4px_rgba(200,180,126,0.4)]" />
-        <div className="flex flex-col">
-          <span className="font-display text-sm font-bold text-bark-100 leading-none">Treehouse Search</span>
-          <span className="text-[8px] text-bark-600 uppercase tracking-widest leading-none mt-0.5">Embrace the search</span>
-        </div>
+        <Image src="/logo.png" alt="Treehouse Search" width={20} height={20}
+          style={{ filter: "drop-shadow(0 0 4px rgba(200,180,126,0.35))", opacity: 0.9 }} />
+        <span style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 600, color: "#f5f0e8", letterSpacing: "0.3px" }}>
+          Treehouse Search
+        </span>
       </div>
       <div className="w-9" />
     </header>
   );
 
-  // ── PRICE ENTRY SCREEN ──
+  // ── PRICE ENTRY ──
   if (appState === "price-entry") {
     return (
-      <div className="flex flex-col min-h-screen bg-forest-950">
+      <div className="flex flex-col min-h-screen bg-[#050f05]">
         <NavBar />
-
         <main className="flex-1 flex flex-col">
-
-          {/* Item photo */}
           <div className="relative w-full" style={{ height: 260 }}>
-            <img
-              src={sessionData.imageDataUrl}
-              alt="Item"
+            <img src={sessionData.imageDataUrl} alt="Item"
               className="w-full h-full object-cover"
-              style={{ filter: "brightness(0.85) saturate(0.8)" }}
-            />
-            <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, #050f05 100%)" }} />
+              style={{ filter: "brightness(0.8) saturate(0.75) sepia(0.08)" }} />
+            <div className="absolute inset-0" style={{
+              background: "linear-gradient(to bottom, transparent 40%, #050f05 100%)"
+            }} />
           </div>
 
-          {/* Price entry card */}
-          <div className="flex-1 flex flex-col px-5 pt-6 pb-8 gap-6">
-
-            <div className="space-y-1">
-              <h2 className="font-display text-2xl font-bold text-bark-50">What's the price tag?</h2>
-              <p className="text-bark-500 text-sm leading-relaxed">
-                Enter what they're asking. We'll tell you if the margin makes sense.
+          <div className="flex-1 flex flex-col px-6 pt-6 pb-8 gap-6">
+            <div className="space-y-2">
+              <h2 style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 700, color: "#f5f0e8", lineHeight: 1.2 }}>
+                What are they asking?
+              </h2>
+              <p style={{ fontSize: 13, color: "#6a5528", lineHeight: 1.6, fontWeight: 300 }}>
+                Enter the price you see. We'll help you understand the value.
               </p>
             </div>
 
-            {/* Big price input */}
             <div
-              className="flex items-center gap-3 px-5 py-5 rounded-2xl"
-              style={{ background: "rgba(17,37,17,0.7)", border: "1px solid rgba(109,188,109,0.2)" }}
+              className="flex items-center gap-3 px-5 py-5 rounded-2xl cursor-text"
+              style={{ background: "rgba(17,37,17,0.7)", border: "1px solid rgba(109,188,109,0.18)" }}
               onClick={() => priceInputRef.current?.focus()}
             >
-              <span className="font-display text-4xl font-light text-bark-500">$</span>
+              <span style={{ fontFamily: "Georgia, serif", fontSize: 36, fontWeight: 300, color: "#7a6535" }}>$</span>
               <input
                 ref={priceInputRef}
                 type="number"
@@ -283,24 +267,27 @@ export default function DecidePage() {
                 step="0.01"
                 value={costStr}
                 onChange={e => setCostStr(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && costStr && handleStartAnalysis()}
+                onKeyDown={e => e.key === "Enter" && handleStartAnalysis()}
                 placeholder="0.00"
-                className="flex-1 bg-transparent text-5xl font-mono font-bold text-bark-50 focus:outline-none placeholder:text-bark-800"
+                className="flex-1 bg-transparent text-5xl font-mono font-bold text-[#f5f0e8] focus:outline-none placeholder:text-[#2e2410]"
               />
             </div>
 
-            {/* Quick price chips */}
             <div className="flex gap-2 flex-wrap">
               {["1", "2", "5", "10", "20", "25"].map(val => (
                 <button
                   key={val}
                   onClick={() => setCostStr(val)}
-                  className={clsx(
-                    "px-4 py-2 rounded-xl text-sm font-semibold transition-all active:scale-95",
-                    costStr === val
-                      ? "bg-forest-700 text-bark-50 border border-forest-500"
-                      : "bg-forest-900/50 text-bark-400 border border-forest-800/40"
-                  )}
+                  className="transition-all active:scale-95"
+                  style={{
+                    padding: "8px 16px",
+                    borderRadius: 10,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    background: costStr === val ? "rgba(44,106,44,0.6)" : "rgba(13,31,13,0.5)",
+                    color: costStr === val ? "#d4c9b0" : "#6a5528",
+                    border: costStr === val ? "1px solid rgba(109,188,109,0.25)" : "1px solid rgba(109,188,109,0.08)",
+                  }}
                 >
                   ${val}
                 </button>
@@ -309,133 +296,170 @@ export default function DecidePage() {
 
             <div className="flex-1" />
 
-            {/* CTA */}
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               <button
                 onClick={handleStartAnalysis}
                 disabled={!costStr || parseFloat(costStr) <= 0}
-                className="w-full py-4 rounded-2xl text-bark-50 text-base font-bold flex items-center justify-center gap-2 active:scale-[0.97] transition-all disabled:opacity-30"
+                className="w-full flex items-center justify-center gap-2.5 font-semibold transition-all active:scale-[0.97] disabled:opacity-30"
                 style={{
-                  background: "linear-gradient(135deg, #2d7d2d, #3d9c3d)",
-                  boxShadow: "0 2px 24px rgba(45,125,45,0.28)"
+                  padding: "17px 22px",
+                  borderRadius: 16,
+                  fontSize: 15,
+                  color: "#f5f0e8",
+                  letterSpacing: "0.2px",
+                  background: "linear-gradient(175deg, rgba(44,106,44,0.97) 0%, rgba(38,92,38,0.99) 50%, rgba(32,80,32,1) 100%)",
+                  border: "1px solid rgba(109,188,109,0.18)",
+                  boxShadow: "0 4px 24px rgba(5,15,5,0.55), 0 0 40px rgba(45,125,45,0.12)",
                 }}
               >
-                🔎 Find Comps
+                <Camera size={16} strokeWidth={1.5} />
+                Look it up
               </button>
               <button
                 onClick={handleStartAnalysis}
-                className="w-full py-3 text-bark-600 text-sm font-medium"
+                className="w-full py-3 text-center transition-all"
+                style={{ fontSize: 12, color: "rgba(106,85,40,0.5)", letterSpacing: "0.3px" }}
               >
-                Skip — search without a price
+                Continue without a price
               </button>
             </div>
-
           </div>
         </main>
       </div>
     );
   }
 
-  // ── ANALYZING SCREEN ──
+  // ── ANALYZING ──
   if (appState === "analyzing") {
     return (
-      <div className="flex flex-col min-h-screen bg-forest-950">
+      <div className="flex flex-col min-h-screen bg-[#050f05]">
         <NavBar />
+        <main className="flex-1 flex flex-col px-5 py-8 pb-32 gap-6">
 
-        <main className="flex-1 flex flex-col px-5 py-6 pb-32 gap-5">
-          <div className="text-center pt-2">
-            <div className="text-xs text-forest-400 uppercase tracking-widest mb-2">🔎 The Hunt Is On</div>
-            <h1 className="font-display text-xl text-bark-50 font-bold leading-snug">Checking if this is your treasure</h1>
-            <p className="text-bark-500 text-xs mt-2 leading-relaxed">
-              Give us a moment — we're searching the market so you don't have to guess at the register.
+          <div className="text-center pt-2 space-y-2">
+            <div style={{ fontSize: 9, color: "#7a6535", textTransform: "uppercase", letterSpacing: "3px" }}>
+              Taking a closer look
+            </div>
+            <h1 style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: "#f5f0e8", lineHeight: 1.25 }}>
+              Understanding what you found
+            </h1>
+            <p style={{ fontSize: 12, color: "#6a5528", lineHeight: 1.6, maxWidth: 260, margin: "0 auto" }}>
+              We're identifying the item and checking recent sales.
             </p>
           </div>
 
-          {/* Item + cost summary */}
-          <div className="flex gap-3 items-center px-4 py-3 rounded-2xl bg-forest-900/40 border border-forest-800/40">
-            <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-forest-900 border border-forest-800">
-              <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover" />
+          {/* Item summary */}
+          <div className="flex gap-3 items-center px-4 py-3 rounded-2xl"
+            style={{ background: "rgba(13,31,13,0.5)", border: "1px solid rgba(109,188,109,0.1)" }}>
+            <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0"
+              style={{ border: "1px solid rgba(109,188,109,0.12)" }}>
+              <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover"
+                style={{ filter: "brightness(0.85) saturate(0.8)" }} />
             </div>
             <div className="flex-1">
-              <div className="text-[10px] text-bark-600 uppercase tracking-widest mb-0.5">You're holding it for</div>
-              <div className="text-2xl font-mono font-bold text-bark-50">
-                {costStr ? `$${parseFloat(costStr).toFixed(2)}` : "No price entered"}
+              <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 3 }}>
+                Price noted
+              </div>
+              <div style={{ fontSize: 22, fontFamily: "monospace", fontWeight: 700, color: "#f5f0e8" }}>
+                {costStr ? `$${parseFloat(costStr).toFixed(2)}` : "Not entered"}
               </div>
               <div className="flex items-center gap-1.5 mt-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-forest-400 animate-pulse" />
-                <span className="text-[11px] text-forest-400">
-                  {fetchState === "analyzing" && "Identifying your find…"}
-                  {fetchState === "searching" && "Searching real sold listings…"}
-                  {fetchState === "calculating" && "Running the numbers…"}
-                  {fetchState === "recommending" && "Almost ready…"}
+                <div className="w-1.5 h-1.5 rounded-full bg-forest-500 animate-pulse" />
+                <span style={{ fontSize: 11, color: "#6dbc6d" }}>
+                  {fetchState === "analyzing" && "Identifying the item…"}
+                  {fetchState === "searching" && "Checking recent sales…"}
+                  {fetchState === "calculating" && "Calculating value…"}
+                  {fetchState === "recommending" && "Preparing your result…"}
                 </span>
               </div>
             </div>
           </div>
 
           {/* Steps */}
-          <div className="flex flex-col gap-2.5">
-            {steps.map((step) => (
+          <div className="flex flex-col gap-2">
+            {steps.map((step, i) => (
               <div key={step.id} className={clsx(
-                "flex items-start gap-3 px-4 py-3.5 rounded-2xl border transition-all duration-500",
-                step.state === "done" && "bg-forest-900/30 border-forest-800/40 opacity-100",
-                step.state === "active" && "bg-forest-900/50 border-forest-600/40 opacity-100",
-                step.state === "pending" && "bg-forest-950/30 border-forest-900/30 opacity-35"
-              )}>
+                "flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-500",
+                step.state === "done"    && "border-forest-900/30 opacity-100",
+                step.state === "active"  && "border-forest-700/30 opacity-100",
+                step.state === "pending" && "border-transparent opacity-25"
+              )}
+              style={{
+                background: step.state === "active" ? "rgba(13,31,13,0.55)" :
+                            step.state === "done"   ? "rgba(9,21,9,0.4)" : "transparent"
+              }}>
                 <div className={clsx(
-                  "w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0 border",
-                  step.state === "done" && "bg-forest-800/50 border-forest-700/40",
-                  step.state === "active" && "bg-forest-700/50 border-forest-600/50",
-                  step.state === "pending" && "bg-forest-950/50 border-forest-900/30"
-                )}>{step.icon}</div>
-                <div className="flex-1 min-w-0">
-                  <div className={clsx("text-sm font-semibold mb-0.5", step.state === "pending" ? "text-bark-600" : "text-bark-100")}>{step.title}</div>
-                  <div className={clsx("text-xs leading-relaxed", step.state === "active" ? "text-bark-300" : "text-bark-600")}>{step.desc}</div>
+                  "w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-xs border",
+                  step.state === "done"    && "border-forest-700/50 bg-forest-900/50",
+                  step.state === "active"  && "border-forest-600/50 bg-forest-800/50",
+                  step.state === "pending" && "border-forest-900/30 bg-transparent"
+                )}>
+                  {step.state === "done"   && <span style={{ color: "#6dbc6d", fontSize: 10 }}>✓</span>}
+                  {step.state === "active" && <RefreshCw size={10} className="text-forest-400 animate-spin" />}
                 </div>
-                <div className="flex-shrink-0 mt-1">
-                  {step.state === "done" && <span className="text-forest-400 text-sm">✓</span>}
-                  {step.state === "active" && <RefreshCw size={14} className="text-forest-400 animate-spin" />}
-                  {step.state === "pending" && <span className="text-bark-700">·</span>}
-                </div>
+                <span style={{
+                  fontSize: 13, fontWeight: 400, letterSpacing: "0.1px",
+                  color: step.state === "pending" ? "#3d3018" :
+                         step.state === "active"  ? "#d4c9b0" : "#7a6535"
+                }}>
+                  {step.title}
+                </span>
               </div>
             ))}
           </div>
         </main>
 
-        <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-5 py-4 bg-forest-950/97 backdrop-blur-sm border-t border-forest-900/60 safe-bottom">
-          <div className="h-0.5 bg-forest-900 rounded-full overflow-hidden mb-2.5">
-            <div className="h-full bg-forest-500 rounded-full transition-all duration-700" style={{
-              width: fetchState === "analyzing" ? "20%" : fetchState === "searching" ? "50%" : fetchState === "calculating" ? "80%" : fetchState === "recommending" ? "93%" : "100%"
-            }} />
+        {/* Progress */}
+        <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-5 py-4 safe-bottom"
+          style={{ background: "rgba(5,15,5,0.97)", backdropFilter: "blur(20px)", borderTop: "1px solid rgba(200,180,126,0.06)" }}>
+          <div className="h-px bg-forest-950 rounded-full overflow-hidden mb-2.5">
+            <div className="h-full rounded-full transition-all duration-700"
+              style={{
+                background: "rgba(109,188,109,0.5)",
+                width: fetchState === "analyzing" ? "20%" : fetchState === "searching" ? "50%" :
+                       fetchState === "calculating" ? "80%" : fetchState === "recommending" ? "93%" : "100%"
+              }} />
           </div>
-          <div className="text-center text-[11px] text-bark-600">
-            {fetchState === "searching" ? "Searching real sold listings — takes about 30 seconds" : "Your verdict is almost ready 🌲"}
+          <div style={{ textAlign: "center", fontSize: 11, color: "rgba(106,85,40,0.5)", letterSpacing: "0.3px" }}>
+            {fetchState === "searching" ? "Checking real sales data — a moment more" : "Almost ready"}
           </div>
         </div>
       </div>
     );
   }
 
-  // ── RESULTS SCREEN ──
+  // ── RESULTS ──
   return (
-    <div className="flex flex-col min-h-screen bg-forest-950">
+    <div className="flex flex-col min-h-screen bg-[#050f05]">
       <NavBar />
 
       <main className="flex-1 overflow-y-auto pb-36">
 
         {/* Hero */}
         <div className="relative w-full" style={{ height: 240 }}>
-          <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover" style={{ filter: "brightness(0.9) saturate(0.85)" }} />
-          <div className="absolute bottom-0 left-0 right-0 h-24" style={{ background: "linear-gradient(to bottom, transparent, #050f05)" }} />
+          <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover"
+            style={{ filter: "brightness(0.85) saturate(0.75) sepia(0.06)" }} />
+          {/* vignette */}
+          <div className="absolute inset-0" style={{
+            background: "radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(5,15,5,0.45) 100%)"
+          }} />
+          <div className="absolute bottom-0 left-0 right-0 h-28"
+            style={{ background: "linear-gradient(to bottom, transparent, #050f05)" }} />
           <div className="absolute bottom-0 left-0 right-0 px-4 pb-3 flex items-end justify-between">
             <div>
-              <div className="text-[9px] text-bark-600 uppercase tracking-widest mb-0.5">You paid</div>
-              <div className="text-2xl font-mono font-bold text-bark-50">
+              <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 2 }}>
+                Your cost
+              </div>
+              <div style={{ fontSize: 22, fontFamily: "monospace", fontWeight: 700, color: "#f5f0e8" }}>
                 {costStr ? `$${parseFloat(costStr).toFixed(2)}` : "—"}
               </div>
             </div>
-            <div className="px-3 py-1.5 rounded-full backdrop-blur-sm" style={{ background: "rgba(45,125,45,0.25)", border: "1px solid rgba(109,188,109,0.3)" }}>
-              <span className="text-[10px] text-forest-300 font-medium">High confidence</span>
+            {/* confidence tag — softer, less button-like */}
+            <div style={{
+              padding: "4px 10px", borderRadius: 20, opacity: 0.75,
+              background: "rgba(45,125,45,0.2)", border: "1px solid rgba(109,188,109,0.2)"
+            }}>
+              <span style={{ fontSize: 10, color: "#9fd49f", letterSpacing: "0.3px" }}>High confidence</span>
             </div>
           </div>
         </div>
@@ -444,60 +468,70 @@ export default function DecidePage() {
 
           {/* Primary value */}
           <div className="rounded-2xl p-5 relative overflow-hidden"
-            style={{ background: "linear-gradient(160deg, rgba(17,37,17,0.9), rgba(9,21,9,0.95))", border: "1px solid rgba(109,188,109,0.14)" }}>
-            <div className="absolute top-0 left-[15%] right-[15%] h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(200,180,126,0.3), transparent)" }} />
+            style={{ background: "linear-gradient(160deg, rgba(17,37,17,0.9), rgba(9,21,9,0.95))", border: "1px solid rgba(109,188,109,0.12)" }}>
+            <div className="absolute top-0 left-[15%] right-[15%] h-px"
+              style={{ background: "linear-gradient(90deg, transparent, rgba(200,180,126,0.25), transparent)" }} />
 
-            <div className="text-[9px] text-bark-600 uppercase tracking-widest mb-1">Estimated Resell Price</div>
+            {/* Resell price — dominant */}
+            <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "2px", marginBottom: 4, fontWeight: 400 }}>
+              Resell price
+            </div>
             <div className="flex items-start gap-1 mb-1" style={{ fontFamily: "Georgia, serif" }}>
-              <span className="text-bark-400 text-2xl font-semibold mt-1">$</span>
-              <span className="text-bark-50 font-bold leading-none" style={{ fontSize: 64, letterSpacing: -2 }}>
+              <span style={{ fontSize: 24, fontWeight: 500, color: "#a8904e", paddingTop: 6 }}>$</span>
+              <span style={{ fontSize: 62, fontWeight: 700, color: "#f5f0e8", lineHeight: 1, letterSpacing: -2 }}>
                 {pricing.medianSoldPrice.toFixed(2)}
               </span>
             </div>
 
-            <div className="flex items-center gap-3 pt-3 mt-1 border-t border-forest-900/60">
-              <span className={clsx(
-                "text-2xl font-bold font-mono",
-                pricing.estimatedProfitHigh > 15 ? "text-forest-400" :
-                pricing.estimatedProfitHigh > 5 ? "text-amber-400" : "text-bark-500"
-              )}>
+            {/* Profit — secondary */}
+            <div className="flex items-center gap-3 pt-3 mt-1 border-t border-forest-950/80">
+              <span style={{
+                fontSize: 24, fontWeight: 700, fontFamily: "monospace",
+                color: pricing.estimatedProfitHigh > 15 ? "#6dbc6d" :
+                       pricing.estimatedProfitHigh > 5  ? "#d4920a" : "#6a5528"
+              }}>
                 {pricing.estimatedProfitHigh >= 0 ? "+" : ""}${pricing.estimatedProfitHigh.toFixed(2)}
               </span>
-              <div className="flex flex-col">
-                <span className="text-[9px] text-bark-600 uppercase tracking-widest">Estimated Profit</span>
-                {enteredCost > 0 && <span className="text-[11px] text-forest-400 font-semibold">{roiLabel} ROI</span>}
+              <div className="flex flex-col gap-0.5">
+                <span style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "1.5px" }}>Profit</span>
+                {/* ROI — tertiary, smaller */}
+                {enteredCost > 0 && (
+                  <span style={{ fontSize: 10, color: "#7a6535", fontWeight: 400 }}>{roiLabel} return</span>
+                )}
               </div>
             </div>
 
-            <div className="flex items-center gap-3 pt-3 mt-3 border-t border-forest-900/40">
-              <span className={clsx("text-xs font-semibold px-3 py-1.5 rounded-full border flex-shrink-0", verdict.chipClass)}>
+            {/* Verdict chip */}
+            <div className="flex items-center gap-3 pt-3 mt-3 border-t border-forest-950/60">
+              <span className={clsx("text-xs font-medium px-3 py-1.5 rounded-full border flex-shrink-0", verdict.chipClass)}
+                style={{ fontSize: 11, letterSpacing: "0.2px" }}>
                 {verdict.chipLabel}
               </span>
-              <span className="text-xs text-bark-500 leading-snug">{verdict.line}</span>
+              <span style={{ fontSize: 12, color: "#6a5528", lineHeight: 1.45 }}>{verdict.line}</span>
             </div>
           </div>
 
           {/* Scout's take */}
-          <div className="rounded-2xl p-4" style={{ background: "rgba(13,31,13,0.55)", border: "1px solid rgba(200,180,126,0.1)" }}>
+          <div className="rounded-2xl p-4"
+            style={{ background: "rgba(13,31,13,0.5)", border: "1px solid rgba(200,180,126,0.08)" }}>
             <div className="flex items-center gap-2 mb-3">
-              <Image src="/logo.png" alt="" width={16} height={16} className="opacity-70" />
-              <span className="text-[9px] text-bark-400 uppercase tracking-widest font-semibold">The Scout's Take</span>
+              <Image src="/logo.png" alt="" width={14} height={14} style={{ opacity: 0.55 }} />
+              <span style={{ fontSize: 9, color: "#7a6535", textTransform: "uppercase", letterSpacing: "2.5px", fontWeight: 500 }}>
+                Assessment
+              </span>
             </div>
-            <p className="text-bark-300 leading-relaxed italic" style={{ fontFamily: "Georgia, serif", fontSize: 15 }}>
+            <p style={{ fontFamily: "Georgia, serif", fontSize: 15, color: "#a8904e", lineHeight: 1.7, fontStyle: "italic" }}>
               "{soldSummary?.quickTake || verdict.scoutTake}"
             </p>
           </div>
 
           {/* Math */}
-          <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(109,188,109,0.1)" }}>
+          <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(109,188,109,0.08)" }}>
             <button onClick={() => setShowMath(v => !v)}
               className="w-full flex items-center justify-between px-4 py-3.5"
-              style={{ background: "rgba(13,31,13,0.55)" }}>
-              <div className="flex items-center gap-2">
-                <span className="text-sm">💵</span>
-                <span className="text-sm font-semibold text-bark-200">The Math</span>
-              </div>
-              {showMath ? <ChevronUp size={14} className="text-bark-600" /> : <ChevronDown size={14} className="text-bark-600" />}
+              style={{ background: "rgba(13,31,13,0.5)" }}>
+              <span style={{ fontSize: 12, fontWeight: 500, color: "#d4c9b0", letterSpacing: "0.2px" }}>The numbers</span>
+              {showMath ? <ChevronUp size={13} className="text-bark-700" /> : <ChevronDown size={13} className="text-bark-700" />}
             </button>
             {showMath && (
               <div>
@@ -507,15 +541,18 @@ export default function DecidePage() {
                   { label: "eBay fees (~13%)", val: `– $${pricing.estimatedFees.toFixed(2)}`, sub: true },
                 ].map(row => (
                   <div key={row.label} className="flex justify-between px-4 py-2.5"
-                    style={{ borderTop: "1px solid rgba(109,188,109,0.07)", background: "rgba(9,21,9,0.5)" }}>
-                    <span className="text-xs text-bark-600">{row.label}</span>
-                    <span className={clsx("text-xs font-mono font-semibold", row.sub ? "text-red-400/70" : "text-bark-200")}>{row.val}</span>
+                    style={{ borderTop: "1px solid rgba(109,188,109,0.06)", background: "rgba(9,21,9,0.5)" }}>
+                    <span style={{ fontSize: 12, color: "#6a5528" }}>{row.label}</span>
+                    <span style={{ fontSize: 12, fontFamily: "monospace", fontWeight: 600, color: row.sub ? "rgba(180,60,50,0.6)" : "#d4c9b0" }}>
+                      {row.val}
+                    </span>
                   </div>
                 ))}
                 <div className="flex justify-between px-4 py-3"
-                  style={{ borderTop: "1px solid rgba(109,188,109,0.15)", background: "rgba(45,125,45,0.1)" }}>
-                  <span className="text-sm font-semibold text-bark-100">In your pocket</span>
-                  <span className={clsx("text-sm font-mono font-bold", pricing.estimatedProfitHigh >= 0 ? "text-forest-400" : "text-red-400")}>
+                  style={{ borderTop: "1px solid rgba(109,188,109,0.1)", background: "rgba(45,125,45,0.08)" }}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: "#f5f0e8" }}>In your pocket</span>
+                  <span style={{ fontSize: 13, fontFamily: "monospace", fontWeight: 700,
+                    color: pricing.estimatedProfitHigh >= 0 ? "#6dbc6d" : "#c0392b" }}>
                     {pricing.estimatedProfitHigh >= 0 ? "+" : ""}${pricing.estimatedProfitHigh.toFixed(2)}
                   </span>
                 </div>
@@ -527,43 +564,46 @@ export default function DecidePage() {
           <div>
             <button onClick={() => setShowComps(v => !v)}
               className="w-full flex items-center justify-between px-4 py-3 rounded-xl mb-2"
-              style={{ background: "rgba(13,31,13,0.4)", border: "1px solid rgba(109,188,109,0.09)" }}>
+              style={{ background: "rgba(13,31,13,0.4)", border: "1px solid rgba(109,188,109,0.07)" }}>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-bark-200">What sold recently</span>
-                <span className="text-[10px] text-forest-400 font-semibold px-2 py-0.5 rounded-full"
-                  style={{ background: "rgba(45,125,45,0.16)" }}>{comps.length} sales</span>
+                <span style={{ fontSize: 12, fontWeight: 500, color: "#d4c9b0" }}>Recent sales</span>
+                <span style={{ fontSize: 10, color: "#6dbc6d", background: "rgba(45,125,45,0.14)", padding: "2px 8px", borderRadius: 8 }}>
+                  {comps.length}
+                </span>
               </div>
-              {showComps ? <ChevronUp size={14} className="text-bark-600" /> : <ChevronDown size={14} className="text-bark-600" />}
+              {showComps ? <ChevronUp size={13} className="text-bark-700" /> : <ChevronDown size={13} className="text-bark-700" />}
             </button>
             {showComps && (
               <div className="flex flex-col gap-1.5">
                 {comps.map((comp, i) => (
                   <a key={i} href={comp.url ?? "#"} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-3 px-3 py-2.5 rounded-xl active:scale-[0.98] transition-all"
-                    style={{ background: "rgba(13,31,13,0.45)", border: "1px solid rgba(109,188,109,0.09)" }}>
-                    {comp.imageUrl ? (
-                      <img src={comp.imageUrl} alt="" className="w-11 h-11 rounded-lg object-cover flex-shrink-0"
-                        style={{ border: "1px solid rgba(109,188,109,0.1)" }} />
-                    ) : (
-                      <div className="w-11 h-11 rounded-lg flex-shrink-0"
-                        style={{ background: "rgba(17,37,17,0.6)", border: "1px solid rgba(109,188,109,0.1)" }} />
-                    )}
+                    style={{ background: "rgba(13,31,13,0.4)", border: "1px solid rgba(109,188,109,0.07)" }}>
+                    {comp.imageUrl
+                      ? <img src={comp.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                          style={{ border: "1px solid rgba(109,188,109,0.08)", filter: "brightness(0.9) saturate(0.8)" }} />
+                      : <div className="w-10 h-10 rounded-lg flex-shrink-0"
+                          style={{ background: "rgba(17,37,17,0.6)", border: "1px solid rgba(109,188,109,0.08)" }} />
+                    }
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs text-bark-300 truncate mb-1 font-medium">{comp.title}</div>
+                      <div style={{ fontSize: 12, color: "#d4c9b0", fontWeight: 400 }} className="truncate mb-1">{comp.title}</div>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] text-bark-600 px-1.5 py-0.5 rounded"
-                          style={{ background: "rgba(45,125,45,0.1)" }}>{comp.condition}</span>
-                        <span className="text-[10px] text-bark-700">{comp.daysAgo}d ago</span>
+                        <span style={{ fontSize: 10, color: "#6a5528", background: "rgba(45,125,45,0.08)", padding: "1px 6px", borderRadius: 4 }}>
+                          {comp.condition}
+                        </span>
+                        <span style={{ fontSize: 10, color: "#3d3018" }}>{comp.daysAgo}d ago</span>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                      <span className="text-sm font-bold font-mono text-bark-100">${comp.price.toFixed(2)}</span>
-                      <span className="text-[10px] text-bark-700">↗</span>
+                      <span style={{ fontSize: 13, fontFamily: "monospace", fontWeight: 600, color: "#f5f0e8" }}>
+                        ${comp.price.toFixed(2)}
+                      </span>
+                      <span style={{ fontSize: 10, color: "#3d3018" }}>↗</span>
                     </div>
                   </a>
                 ))}
-                <p className="text-center text-[10px] py-1" style={{ color: "rgba(61,48,24,0.8)" }}>
-                  {usingMock ? "Mock data · Real comps coming soon" : "Real eBay sold listings · Tap to view"}
+                <p style={{ textAlign: "center", fontSize: 10, color: "#2e2410", padding: "6px 0" }}>
+                  {usingMock ? "Estimated data" : "Real eBay sold listings"}
                 </p>
               </div>
             )}
@@ -574,19 +614,24 @@ export default function DecidePage() {
 
       {/* Bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-4 py-3 safe-bottom"
-        style={{ background: "rgba(5,15,5,0.97)", backdropFilter: "blur(24px)", borderTop: "1px solid rgba(200,180,126,0.08)" }}>
+        style={{ background: "rgba(5,15,5,0.97)", backdropFilter: "blur(24px)", borderTop: "1px solid rgba(200,180,126,0.06)" }}>
         <div className="absolute top-0 left-[20%] right-[20%] h-px"
-          style={{ background: "linear-gradient(90deg, transparent, rgba(200,180,126,0.18), transparent)" }} />
+          style={{ background: "linear-gradient(90deg, transparent, rgba(200,180,126,0.14), transparent)" }} />
         <div className="flex flex-col gap-2">
           <button onClick={() => handleDecision("purchased")} disabled={deciding}
-            className="w-full py-4 rounded-2xl text-bark-50 text-base font-bold flex items-center justify-center gap-2 active:scale-[0.97] transition-all disabled:opacity-40"
-            style={{ background: "linear-gradient(135deg, #2d7d2d, #3d9c3d)", boxShadow: "0 2px 24px rgba(45,125,45,0.28)" }}>
-            🛍 {verdict.buyLabel}
+            className="w-full flex items-center justify-center gap-2 font-semibold transition-all active:scale-[0.97] disabled:opacity-40"
+            style={{
+              padding: "16px 22px", borderRadius: 16, fontSize: 15, color: "#f5f0e8",
+              background: "linear-gradient(175deg, rgba(44,106,44,0.97) 0%, rgba(32,80,32,1) 100%)",
+              border: "1px solid rgba(109,188,109,0.18)",
+              boxShadow: "0 4px 24px rgba(5,15,5,0.55), 0 0 40px rgba(45,125,45,0.1)",
+            }}>
+            Pick it up
           </button>
           <button onClick={() => handleDecision("passed")} disabled={deciding}
-            className="w-full py-3.5 rounded-xl text-bark-500 text-sm font-medium flex items-center justify-center gap-2 active:scale-[0.97] transition-all disabled:opacity-40"
-            style={{ border: "1px solid rgba(109,188,109,0.14)" }}>
-            Leave it on the shelf
+            className="w-full flex items-center justify-center gap-2 transition-all active:scale-[0.97] disabled:opacity-40"
+            style={{ padding: "13px", borderRadius: 12, fontSize: 13, color: "rgba(106,85,40,0.5)", border: "1px solid rgba(109,188,109,0.08)" }}>
+            Leave it
           </button>
         </div>
       </div>
