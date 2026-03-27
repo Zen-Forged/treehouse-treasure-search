@@ -35,16 +35,15 @@ function applyEnhancement(src: string): Promise<string> {
 export default function EnhancePage() {
   const router = useRouter();
   const { draft, setDraft } = useFindDraft();
-  const [enhanced, setEnhanced]   = useState<string | null>(null);
+  const [enhanced, setEnhanced]     = useState<string | null>(null);
   const [processing, setProcessing] = useState(true);
-  const [sliderX, setSliderX]     = useState(50);
-  const containerRef               = useRef<HTMLDivElement>(null);
-  const dragging                   = useRef(false);
+  const [sliderX, setSliderX]       = useState(50);
+  const containerRef                = useRef<HTMLDivElement>(null);
+  const dragging                    = useRef(false);
 
   useEffect(() => {
     if (!draft.imageOriginal) { router.replace("/"); return; }
 
-    // Run enhancement + identification in parallel
     Promise.all([
       applyEnhancement(draft.imageOriginal),
       Promise.resolve(
@@ -81,10 +80,16 @@ export default function EnhancePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#050f05]">
-      <header className="flex items-center px-4 py-3 flex-shrink-0 sticky top-0 z-10"
-        style={{ borderBottom: "1px solid rgba(200,180,126,0.06)", background: "rgba(5,15,5,0.92)", backdropFilter: "blur(20px)" }}>
-        <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-full"
-          style={{ background: "rgba(13,31,13,0.5)", border: "1px solid rgba(109,188,109,0.1)" }}>
+
+      <header
+        className="flex items-center px-4 py-3 flex-shrink-0 sticky top-0 z-10"
+        style={{ borderBottom: "1px solid rgba(200,180,126,0.06)", background: "rgba(5,15,5,0.92)", backdropFilter: "blur(20px)" }}
+      >
+        <button
+          onClick={() => router.back()}
+          className="w-9 h-9 flex items-center justify-center rounded-full"
+          style={{ background: "rgba(13,31,13,0.5)", border: "1px solid rgba(109,188,109,0.1)" }}
+        >
           <ArrowLeft size={15} style={{ color: "#7a6535" }} />
         </button>
         <span style={{ fontFamily: "Georgia, serif", fontSize: 15, color: "#d4c9b0", marginLeft: 14 }}>
@@ -92,62 +97,128 @@ export default function EnhancePage() {
         </span>
       </header>
 
-      <main className="flex-1 flex flex-col px-5 py-5 gap-4">
+      <main className="flex-1 flex flex-col px-5 py-5 gap-5">
+
         {processing ? (
           <div className="flex-1 flex items-center justify-center">
-            <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.5, repeat: Infinity }}
-              style={{ fontSize: 13, color: "#7a6535", letterSpacing: "0.3px" }}>
+            <motion.div
+              animate={{ opacity: [0.4, 1, 0.4] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+              style={{ fontSize: 13, color: "#7a6535", letterSpacing: "0.3px" }}
+            >
               One moment...
             </motion.div>
           </div>
         ) : (
           <>
-            <motion.div ref={containerRef}
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+            {/* Comparison slider — no external labels */}
+            <motion.div
+              ref={containerRef}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
               className="relative w-full rounded-2xl overflow-hidden select-none"
-              style={{ height: 360, border: "1px solid rgba(109,188,109,0.1)", cursor: "ew-resize", touchAction: "none" }}
-              onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
-              onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-              <img src={enhanced!} alt="Brought to light"
-                className="absolute inset-0 w-full h-full object-cover" draggable={false} />
-              <div className="absolute inset-0 overflow-hidden" style={{ width: `${sliderX}%` }}>
-                <img src={draft.imageOriginal} alt="As found"
+              style={{
+                height: 420,
+                border: "1px solid rgba(109,188,109,0.1)",
+                cursor: "ew-resize",
+                touchAction: "none",
+              }}
+              onMouseDown={onMouseDown}
+              onMouseMove={onMouseMove}
+              onMouseUp={onMouseUp}
+              onMouseLeave={onMouseUp}
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+            >
+              {/* AFTER — enhanced base layer */}
+              <img
+                src={enhanced!}
+                alt="Enhanced"
+                className="absolute inset-0 w-full h-full object-cover"
+                draggable={false}
+              />
+
+              {/* BEFORE — original clipped left */}
+              <div
+                className="absolute inset-0 overflow-hidden"
+                style={{ width: `${sliderX}%` }}
+              >
+                <img
+                  src={draft.imageOriginal}
+                  alt="Original"
                   className="absolute inset-0 h-full object-cover"
-                  style={{ width: `${100 / (sliderX / 100)}%`, maxWidth: "none", filter: "brightness(0.82) saturate(0.72)" }}
-                  draggable={false} />
+                  style={{
+                    width: `${100 / (sliderX / 100)}%`,
+                    maxWidth: "none",
+                    filter: "brightness(0.82) saturate(0.72)"
+                  }}
+                  draggable={false}
+                />
               </div>
-              <div className="absolute top-0 bottom-0 w-px"
-                style={{ left: `${sliderX}%`, background: "rgba(255,255,255,0.65)", boxShadow: "0 0 8px rgba(0,0,0,0.4)", pointerEvents: "none" }} />
-              <div className="absolute top-1/2 flex items-center justify-center"
-                style={{ left: `${sliderX}%`, transform: "translate(-50%,-50%)", width: 36, height: 36, borderRadius: "50%", background: "rgba(5,15,5,0.85)", border: "1.5px solid rgba(200,180,126,0.5)", boxShadow: "0 2px 12px rgba(0,0,0,0.5)", pointerEvents: "none", backdropFilter: "blur(8px)" }}>
+
+              {/* Divider line */}
+              <div
+                className="absolute top-0 bottom-0 w-px"
+                style={{
+                  left: `${sliderX}%`,
+                  background: "rgba(255,255,255,0.65)",
+                  boxShadow: "0 0 8px rgba(0,0,0,0.4)",
+                  pointerEvents: "none",
+                }}
+              />
+
+              {/* Drag handle */}
+              <div
+                className="absolute top-1/2 flex items-center justify-center"
+                style={{
+                  left: `${sliderX}%`,
+                  transform: "translate(-50%, -50%)",
+                  width: 36, height: 36,
+                  borderRadius: "50%",
+                  background: "rgba(5,15,5,0.85)",
+                  border: "1.5px solid rgba(200,180,126,0.5)",
+                  boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
+                  pointerEvents: "none",
+                  backdropFilter: "blur(8px)",
+                }}
+              >
                 <svg width="18" height="12" viewBox="0 0 18 12" fill="none">
                   <path d="M5 6H1M1 6L4 3M1 6L4 9" stroke="#c8b47e" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
                   <path d="M13 6H17M17 6L14 3M17 6L14 9" stroke="#c8b47e" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
-              <div className="absolute top-3 left-3 px-2 py-1 rounded-md"
-                style={{ background: "rgba(5,15,5,0.58)", backdropFilter: "blur(8px)", fontSize: 10, color: "rgba(212,201,176,0.65)", letterSpacing: "0.4px" }}>
-                As found
-              </div>
-              <div className="absolute top-3 right-3 px-2 py-1 rounded-md"
-                style={{ background: "rgba(5,15,5,0.58)", backdropFilter: "blur(8px)", fontSize: 10, color: "#a8904e", letterSpacing: "0.4px" }}>
-                Brought to light
-              </div>
             </motion.div>
 
             <div className="flex-1" />
 
-            <motion.div className="flex flex-col gap-2"
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-              <motion.button onClick={handleContinue}
+            {/* Actions */}
+            <motion.div
+              className="flex flex-col gap-2"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <motion.button
+                onClick={handleContinue}
                 className="w-full flex items-center justify-center font-semibold text-[#f5f0e8] relative overflow-hidden"
-                style={{ padding: "17px 22px", borderRadius: 16, fontSize: 15, background: "linear-gradient(175deg, rgba(46,110,46,0.96) 0%, rgba(33,82,33,1) 100%)", border: "1px solid rgba(109,188,109,0.16)", boxShadow: "0 4px 24px rgba(5,15,5,0.55), 0 0 40px rgba(45,125,45,0.1)" }}
-                whileTap={{ scale: 0.97 }}>
+                style={{
+                  padding: "17px 22px", borderRadius: 16, fontSize: 15,
+                  background: "linear-gradient(175deg, rgba(46,110,46,0.96) 0%, rgba(33,82,33,1) 100%)",
+                  border: "1px solid rgba(109,188,109,0.16)",
+                  boxShadow: "0 4px 24px rgba(5,15,5,0.55), 0 0 40px rgba(45,125,45,0.1)",
+                }}
+                whileTap={{ scale: 0.97 }}
+              >
                 <span style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)" }} />
                 Continue
               </motion.button>
-              <button onClick={handleSkip}
-                style={{ padding: "10px", fontSize: 12, color: "rgba(106,85,40,0.35)", background: "none", border: "none", cursor: "pointer", letterSpacing: "0.3px" }}>
+
+              <button
+                onClick={handleSkip}
+                style={{ padding: "10px", fontSize: 12, color: "rgba(106,85,40,0.35)", background: "none", border: "none", cursor: "pointer", letterSpacing: "0.3px" }}
+              >
                 Skip for now
               </button>
             </motion.div>
