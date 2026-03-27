@@ -19,10 +19,11 @@ export function FindDraftProvider({ children }: { children: ReactNode }) {
 
   const clearDraft = () => setDraftState({});
 
-  return FindDraftContext.Provider({
-    value: { draft, setDraft, clearDraft },
-    children,
-  });
+  return (
+    <FindDraftContext.Provider value={{ draft, setDraft, clearDraft }}>
+      {children}
+    </FindDraftContext.Provider>
+  );
 }
 
 export function useFindDraft() {
