@@ -1,7 +1,7 @@
+// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { ScanProvider } from "@/hooks/useScanSession";
-import { FindDraftProvider } from "@/hooks/useFindDraft";
+import { FindSessionProvider } from "@/hooks/useSession";
 
 export const metadata: Metadata = {
   title: "Treehouse Search",
@@ -29,13 +29,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="bg-forest-950 text-bark-100 font-body antialiased min-h-screen">
-        <ScanProvider>
-          <FindDraftProvider>
-            <div className="max-w-md mx-auto min-h-screen flex flex-col">
-              {children}
-            </div>
-          </FindDraftProvider>
-        </ScanProvider>
+        <FindSessionProvider>
+          <div className="max-w-md mx-auto min-h-screen flex flex-col">
+            {children}
+          </div>
+        </FindSessionProvider>
       </body>
     </html>
   );
