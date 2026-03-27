@@ -18,7 +18,7 @@ export default function HomePage() {
     reader.onload = (e) => {
       const imageDataUrl = e.target?.result as string;
       setSessionData({ imageDataUrl, enteredCost: 0 });
-      router.push("/decide");
+      router.push("/capture");
     };
     reader.readAsDataURL(file);
   };
@@ -127,7 +127,7 @@ export default function HomePage() {
         >
           {/* Primary CTA — material surface feel */}
           <motion.button
-            onClick={() => cameraInputRef.current?.click()}
+            onClick={() => router.push("/capture")}
             className="w-full flex items-center justify-center gap-3 font-semibold text-[#f5f0e8] relative overflow-hidden"
             style={{
               padding: "18px 22px",
@@ -156,11 +156,11 @@ export default function HomePage() {
           <div className="flex gap-2 mt-0.5">
             {[
               { label: "Choose a photo", action: () => galleryInputRef.current?.click() },
-              { label: "Your finds",     action: () => router.push("/saved") },
+              { label: "Your finds",     action: () => router.push("/finds") },
             ].map(({ label, action }) => (
               <motion.button
                 key={label}
-                onClick={action}
+                onClick={() => router.push("/finds")}
                 className="flex-1 flex items-center justify-center"
                 style={{
                   padding: "12px 8px",
