@@ -5,20 +5,22 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useScanSession } from "@/hooks/useScanSession";
+import { useFindDraft } from "@/hooks/useFindDraft";
 
 export default function HomePage() {
   const router = useRouter();
   const { setSessionData } = useScanSession();
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const { setDraft } = useFindDraft();
 
   const handleFile = (file: File) => {
     if (!file.type.startsWith("image/")) return;
     const reader = new FileReader();
     reader.onload = (e) => {
       const imageDataUrl = e.target?.result as string;
-      setSessionData({ imageDataUrl, enteredCost: 0 });
-      router.push("/capture");
+      setDraft({ imageOriginal: imageDataUrl });
+      router.push("/enhance");
     };
     reader.readAsDataURL(file);
   };
@@ -127,7 +129,7 @@ export default function HomePage() {
         >
           {/* Primary CTA — material surface feel */}
           <motion.button
-            onClick={() => router.push("/capture")}
+            onClick={() => cameraInputRef.current?.click()}
             className="w-full flex items-center justify-center gap-3 font-semibold text-[#f5f0e8] relative overflow-hidden"
             style={{
               padding: "18px 22px",
