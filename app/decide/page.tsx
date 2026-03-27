@@ -10,7 +10,6 @@ import { useScanSession } from "@/hooks/useScanSession";
 import { useSavedItems } from "@/hooks/useSavedItems";
 import { generateMockEvaluation } from "@/lib/mockIntelligence";
 import { calculatePricing } from "@/lib/pricingLogic";
-import { getCachedResult, setCachedResult } from "@/lib/searchCache";
 import { useAnalysisFlow } from "@/hooks/useAnalysisFlow";
 import { AnalysisFeed } from "@/components/AnalysisFeed";
 import { EvaluatedItem, MockComp } from "@/types";
@@ -96,8 +95,6 @@ export default function DecidePage() {
         setSoldSummary(fetchedSummary);
       },
       onComplete: () => setAppState("done"),
-      getCachedResult,
-      setCachedResult,
       generateMockEvaluation,
       setUsingMock,
     });
