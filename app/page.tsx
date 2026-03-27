@@ -22,7 +22,7 @@ export default function HomePage() {
     reader.onload = (e) => {
       const imageDataUrl = e.target?.result as string;
       setDraft({ imageOriginal: imageDataUrl });
-      router.push("/enhance");
+      router.push("/discover");
     };
     reader.readAsDataURL(file);
   };

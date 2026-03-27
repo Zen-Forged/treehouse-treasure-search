@@ -11,6 +11,32 @@ import { useScanSession } from "@/hooks/useScanSession";
 
 const ease = [0.25, 0.1, 0.25, 1] as const;
 
+// Enhancement runs silently in the background
+function applyEnhancement(src: string): Promise<string> {
+  return new Promise(resolve => {
+    const img = new window.Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0);
+      const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const px = d.data;
+      for (let i = 0; i < px.length; i += 4) {
+        px[i]     = Math.min(255, px[i]     * 1.06);
+        px[i + 2] = Math.max(0,   px[i + 2] * 0.92);
+        px[i]     = Math.min(255, (px[i]     - 128) * 1.08 + 128);
+        px[i + 1] = Math.min(255, (px[i + 1] - 128) * 1.08 + 128);
+        px[i + 2] = Math.min(255, (px[i + 2] - 128) * 1.08 + 128);
+      }
+      ctx.putImageData(d, 0, 0);
+      resolve(canvas.toDataURL("image/jpeg", 0.88));
+    };
+    img.src = src;
+  });
+}
+
 export default function DiscoverPage() {
   const router = useRouter();
   const { draft, setDraft } = useFindDraft();
@@ -19,15 +45,21 @@ export default function DiscoverPage() {
   useEffect(() => {
     if (!draft.imageOriginal) { router.replace("/"); return; }
 
-    // Run mock identification if not already done
+    // Identify item if not already done
     if (!draft.titleGuess) {
       const result = mockIdentifyItem(draft.imageOriginal);
       setDraft(result);
     }
+
+    // Enhance silently in background — ready for share flow later
+    if (!draft.imageEnhanced) {
+      applyEnhancement(draft.imageOriginal).then(enhanced => {
+        setDraft({ imageEnhanced: enhanced });
+      });
+    }
   }, []);
 
   const handleWhatIsItWorth = () => {
-    // Bridge into existing pricing flow
     if (draft.imageOriginal) {
       setSessionData({ imageDataUrl: draft.imageOriginal, enteredCost: draft.pricePaid ?? 0 });
     }
@@ -38,16 +70,20 @@ export default function DiscoverPage() {
     router.push("/intent");
   };
 
-  const image = draft.imageEnhanced ?? draft.imageOriginal;
-  const title = draft.titleGuess ?? "Something interesting";
-  const description = draft.description ?? "We're still working out what this is.";
+  const image       = draft.imageOriginal; // show original — enhanced is being processed
+  const title       = draft.titleGuess ?? "Something interesting";
+  const description = draft.description ?? "We're still working this one out.";
 
   return (
     <div className="flex flex-col min-h-screen bg-[#050f05]">
 
       <header
         className="flex items-center px-4 py-3 flex-shrink-0 sticky top-0 z-10"
-        style={{ borderBottom: "1px solid rgba(200,180,126,0.06)", background: "rgba(5,15,5,0.92)", backdropFilter: "blur(20px)" }}
+        style={{
+          borderBottom: "1px solid rgba(200,180,126,0.06)",
+          background: "rgba(5,15,5,0.92)",
+          backdropFilter: "blur(20px)",
+        }}
       >
         <button
           onClick={() => router.back()}
@@ -61,12 +97,12 @@ export default function DiscoverPage() {
         </span>
       </header>
 
-      <main className="flex-1 flex flex-col pb-36 overflow-y-auto">
+      <main className="flex-1 flex flex-col pb-40 overflow-y-auto">
 
-        {/* Image */}
+        {/* Full image */}
         <motion.div
-          className="relative w-full"
-          style={{ height: 300 }}
+          className="relative w-full flex-shrink-0"
+          style={{ height: 340 }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
@@ -79,21 +115,20 @@ export default function DiscoverPage() {
               style={{ filter: "brightness(0.88) saturate(0.82)" }}
             />
           )}
-          {/* fade bottom */}
           <div className="absolute inset-0" style={{
             background: "radial-gradient(ellipse at 50% 50%, transparent 30%, rgba(5,15,5,0.35) 100%)"
           }} />
-          <div className="absolute bottom-0 left-0 right-0 h-24"
+          <div className="absolute bottom-0 left-0 right-0 h-28"
             style={{ background: "linear-gradient(to bottom, transparent, #050f05)" }} />
         </motion.div>
 
-        <div className="px-5 flex flex-col gap-5">
+        <div className="px-5 flex flex-col gap-5 pt-2">
 
           {/* Title + description */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1, ease }}
+            transition={{ duration: 0.5, delay: 0.12, ease }}
           >
             <h1 style={{
               fontFamily: "Georgia, serif",
@@ -123,7 +158,7 @@ export default function DiscoverPage() {
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.22, ease }}
+            transition={{ duration: 0.5, delay: 0.24, ease }}
           >
             <div style={{
               fontSize: 9, color: "#a8904e",
@@ -132,8 +167,8 @@ export default function DiscoverPage() {
             }}>
               What's on your mind?
             </div>
-            <p style={{ fontSize: 13, color: "#6a5528", lineHeight: 1.6, fontWeight: 300 }}>
-              You can look up what it might be worth, or share it with others and see what they think.
+            <p style={{ fontSize: 13, color: "#6a5528", lineHeight: 1.65, fontWeight: 300 }}>
+              You can look into what it might be worth, or share it and see what others think.
             </p>
           </motion.div>
 
@@ -157,7 +192,7 @@ export default function DiscoverPage() {
           style={{ background: "linear-gradient(90deg, transparent, rgba(200,180,126,0.12), transparent)" }} />
 
         <div className="flex flex-col gap-2">
-          {/* Primary: share path */}
+          {/* Primary — share path */}
           <motion.button
             onClick={handleShare}
             className="w-full flex items-center justify-center font-semibold text-[#f5f0e8] relative overflow-hidden"
@@ -177,7 +212,7 @@ export default function DiscoverPage() {
             Share with others
           </motion.button>
 
-          {/* Secondary: pricing path */}
+          {/* Secondary — pricing path */}
           <motion.button
             onClick={handleWhatIsItWorth}
             className="w-full flex items-center justify-center"
