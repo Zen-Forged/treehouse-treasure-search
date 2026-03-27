@@ -2,11 +2,8 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import {
-  AnalysisState,
-  AnalysisMessage,
-  AnalysisStepId,
-} from "@/types/analysis";
+import { AnalysisState, AnalysisMessage, AnalysisStepId } from "@/types/analysis";
+import { normalizeQuery } from "@/utils/normalizeQuery";
 import { MockComp } from "@/types";
 
 let msgCounter = 0;
@@ -32,8 +29,6 @@ interface RunAnalysisOptions {
   costStr: string;
   onCompsReady: (comps: MockComp[], summary: any) => void;
   onComplete: () => void;
-  setCachedResult: (query: string, data: any) => void;
-  getCachedResult: (query: string) => any;
   generateMockEvaluation: (cost: number, imageDataUrl: string) => any;
   setUsingMock: (v: boolean) => void;
 }
@@ -51,18 +46,13 @@ export function useAnalysisFlow() {
     ) => {
       if (aborted.current) return;
       setState((prev) => {
-        // Replace an active message for the same step, or append
         const existing = prev.messages.findIndex(
           (m) => m.stepId === stepId && m.status === "active"
         );
         const msg = makeMessage(stepId, title, detail, status);
         const messages =
           existing >= 0
-            ? [
-                ...prev.messages.slice(0, existing),
-                msg,
-                ...prev.messages.slice(existing + 1),
-              ]
+            ? [...prev.messages.slice(0, existing), msg, ...prev.messages.slice(existing + 1)]
             : [...prev.messages, msg];
         return { ...prev, messages, currentStep: stepId };
       });
@@ -81,22 +71,20 @@ export function useAnalysisFlow() {
       costStr,
       onCompsReady,
       onComplete,
-      setCachedResult,
-      getCachedResult,
       generateMockEvaluation,
       setUsingMock,
     }: RunAnalysisOptions) => {
       aborted.current = false;
       setState(initialState);
 
-      // ── STEP 1: Uploading ──────────────────────────────
+      // ── Step 1: Uploading ──────────────────────────────
       push("uploading", "Looking at your item...", undefined, "active");
       await tick(300);
 
-      // ── STEP 2: Identifying (Claude vision) ───────────
+      // ── Step 2: Identifying via Claude ─────────────────
       push("identifying", "Identifying the item...", undefined, "active");
 
-      let query = "thrift store item";
+      let rawQuery = "thrift store item";
       let confidence: AnalysisState["confidence"] = "low";
       let identifiedItem: string | undefined;
 
@@ -106,14 +94,11 @@ export function useAnalysisFlow() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ imageDataUrl }),
         });
-
         if (res.ok) {
           const data = await res.json();
           if (data.suggestion) {
-            query = data.suggestion;
-            identifiedItem = data.itemData
-              ? buildItemLabel(data.itemData)
-              : query;
+            rawQuery = data.suggestion;
+            identifiedItem = data.itemData ? buildItemLabel(data.itemData) : rawQuery;
             confidence = inferConfidence(data.itemData);
           }
         }
@@ -125,78 +110,72 @@ export function useAnalysisFlow() {
         confidenceLabel(confidence),
         "complete"
       );
-
-      updateState({ identifiedItem, confidence, searchQuery: query });
+      updateState({ identifiedItem, confidence, searchQuery: rawQuery });
       await tick(200);
 
-      // ── STEP 3: Refining ──────────────────────────────
-      push("refining", "Refining the search...", `Searching for: ${query}`, "active");
-      await tick(600);
-      push("refining", "Search terms ready", query, "complete");
+      // ── Step 3: Refining (normalize query) ─────────────
+      const normalizedQuery = normalizeQuery(rawQuery);
+      push("refining", "Refining the search...", `Searching for: ${normalizedQuery}`, "active");
+      await tick(400);
+      push("refining", "Search terms ready", normalizedQuery, "complete");
 
-      // ── STEP 4: Searching comps ───────────────────────
+      // ── Step 4: Fetch comps (cache-aware) ──────────────
       push("searching_comps", "Checking recent sales...", undefined, "active");
 
       let fetchedComps: MockComp[] = [];
       let fetchedSummary: any = null;
+      let dataSource: "cache" | "live" | "mock" = "mock";
 
-      const cached = getCachedResult(query);
-      if (cached) {
-        fetchedComps = cached.comps;
-        fetchedSummary = cached.summary;
+      try {
+        const res = await fetch(
+          `/api/sold-comps?q=${encodeURIComponent(rawQuery)}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data.comps?.length > 0) {
+            fetchedComps = data.comps;
+            fetchedSummary = data.summary ?? null;
+            dataSource = data.source ?? "live"; // "cache" | "live"
+          }
+        }
+      } catch {}
+
+      if (fetchedComps.length === 0) {
+        const mock = generateMockEvaluation(parseFloat(costStr) || 0, imageDataUrl);
+        fetchedComps = mock.mockComps;
+        setUsingMock(true);
+        dataSource = "mock";
         push(
           "searching_comps",
-          `Found ${fetchedComps.length} recent sales`,
-          "Loaded from cache",
+          "Using estimated market data",
+          "Live data unavailable",
           "complete"
         );
       } else {
-        try {
-          const res = await fetch(
-            `/api/sold-comps?q=${encodeURIComponent(query)}`
-          );
-          if (res.ok) {
-            const data = await res.json();
-            if (data.comps?.length > 0) {
-              fetchedComps = data.comps;
-              fetchedSummary = data.summary;
-              setCachedResult(query, data);
-            }
-          }
-        } catch {}
+        const prices = fetchedComps.map((c) => c.price).sort((a, b) => a - b);
+        const low  = prices[0];
+        const high = prices[prices.length - 1];
+        updateState({ compCount: fetchedComps.length, priceRange: { low, high } });
 
-        if (fetchedComps.length > 0) {
-          const prices = fetchedComps.map((c) => c.price).sort((a, b) => a - b);
-          const low = prices[0];
-          const high = prices[prices.length - 1];
-          updateState({ compCount: fetchedComps.length, priceRange: { low, high } });
-          push(
-            "searching_comps",
-            `Found ${fetchedComps.length} recent sales`,
-            `Prices ranging from $${low.toFixed(0)} to $${high.toFixed(0)}`,
-            "complete"
-          );
-        } else {
-          // Fall back to mock
-          const mock = generateMockEvaluation(parseFloat(costStr) || 0, imageDataUrl);
-          fetchedComps = mock.mockComps;
-          setUsingMock(true);
-          push(
-            "searching_comps",
-            "Using estimated market data",
-            "Live data unavailable",
-            "complete"
-          );
-        }
+        // Key UI distinction: cache vs live
+        push(
+          "searching_comps",
+          dataSource === "cache"
+            ? `Using recent market data`
+            : `Found ${fetchedComps.length} recent sales`,
+          dataSource === "cache"
+            ? `${fetchedComps.length} sales · $${low.toFixed(0)}–$${high.toFixed(0)}`
+            : `Prices ranging from $${low.toFixed(0)} to $${high.toFixed(0)}`,
+          "complete"
+        );
       }
 
       await tick(300);
 
-      // ── STEP 5: Analyzing market ──────────────────────
+      // ── Step 5: Analyzing market ───────────────────────
       push("analyzing_market", "Analyzing market value...", undefined, "active");
-      await tick(800);
+      await tick(700);
 
-      // Compute median for the message
       const prices = fetchedComps.map((c) => c.price).sort((a, b) => a - b);
       const median = computeMedian(prices);
       updateState({ medianPrice: median });
@@ -211,13 +190,13 @@ export function useAnalysisFlow() {
       onCompsReady(fetchedComps, fetchedSummary);
       await tick(400);
 
-      // ── STEP 6: Finalizing ────────────────────────────
+      // ── Step 6: Finalizing ─────────────────────────────
       push("finalizing", "Calculating profit...", undefined, "active");
-      await tick(700);
+      await tick(600);
       push("finalizing", "Your result is ready", undefined, "complete");
 
       updateState({ isComplete: true });
-      await tick(350);
+      await tick(300);
       onComplete();
     },
     [push, updateState]
@@ -241,23 +220,18 @@ function tick(ms: number) {
 function computeMedian(sorted: number[]): number {
   if (!sorted.length) return 0;
   const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2
-    ? sorted[mid]
-    : (sorted[mid - 1] + sorted[mid]) / 2;
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
 function buildItemLabel(itemData: any): string {
   const parts: string[] = [];
-  if (itemData.brand) parts.push(itemData.brand);
-  if (itemData.model) parts.push(itemData.model);
-  if (itemData.category && parts.length === 0)
-    parts.push(capitalize(itemData.category));
+  if (itemData.brand)    parts.push(itemData.brand);
+  if (itemData.model)    parts.push(itemData.model);
+  if (itemData.category && parts.length === 0) parts.push(capitalize(itemData.category));
   return parts.join(" ") || "Unknown item";
 }
 
-function inferConfidence(
-  itemData: any
-): AnalysisState["confidence"] {
+function inferConfidence(itemData: any): AnalysisState["confidence"] {
   if (!itemData) return "low";
   const score =
     (itemData.brand ? 2 : 0) +
