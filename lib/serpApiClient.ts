@@ -41,13 +41,14 @@ export async function getSerpApiSoldComps(query: string): Promise<SoldCompsResul
   if (!SERPAPI_KEY) throw new Error("SERPAPI_KEY is not set");
 
   const params = new URLSearchParams({
-    api_key:  SERPAPI_KEY,
-    engine:   "ebay",
-    _nkw:     query,
-    LH_Sold:  "1",       // sold listings only
-    LH_Complete: "1",    // completed listings
-    _sop:     "13",      // sort by date: newest first
-  });
+  api_key:     SERPAPI_KEY,
+  engine:      "ebay",
+  _nkw:        query,
+  _sacat:      "0",
+  LH_Sold:     "1",
+  LH_Complete: "1",
+  _sop:        "13",
+});
 
   const url = `${SERPAPI_BASE}?${params.toString()}`;
   const res  = await fetch(url, { next: { revalidate: 0 } });
