@@ -68,13 +68,14 @@ export async function getSerpApiSoldComps(query: string): Promise<SoldCompsResul
       const price = item.price?.extracted ?? parsePrice(item.price?.raw ?? "");
       if (!price) return null;
       return {
-        title:     item.title ?? "Unknown item",
-        price,
-        condition: normalizeCondition(item.condition ?? ""),
-        daysAgo:   estimateDaysAgo(item.sold_date ?? ""),
-        imageUrl:  item.thumbnail ?? null,
-        url:       item.link ?? null,
-      };
+  title:     item.title ?? "Unknown item",
+  price,
+  condition: normalizeCondition(item.condition ?? ""),
+  daysAgo:   estimateDaysAgo(item.sold_date ?? ""),
+  imageUrl:  item.thumbnail ?? undefined,
+  url:       item.link ?? undefined,
+  platform:  "ebay" as const,
+};
     })
     .filter((c): c is MockComp => c !== null)
     .slice(0, 20);
