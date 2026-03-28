@@ -28,12 +28,12 @@ function mockIdentify(imageDataUrl: string): IdentifyResult {
 }
 
 async function claudeIdentify(imageDataUrl: string): Promise<IdentifyResult> {
-  const client = new Anthropic();
-
   const base64     = imageDataUrl.replace(/^data:image\/\w+;base64,/, "");
   const mediaMatch = imageDataUrl.match(/^data:(image\/\w+);/);
   const mediaType  = (mediaMatch?.[1] ?? "image/jpeg") as
     "image/jpeg" | "image/png" | "image/webp" | "image/gif";
+
+  const client = new Anthropic();
 
   const response = await client.messages.create({
     model:      "claude-opus-4-5",
@@ -42,24 +42,27 @@ async function claudeIdentify(imageDataUrl: string): Promise<IdentifyResult> {
       role: "user",
       content: [
         { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-        { type: "text",  text: `Identify this object. Respond ONLY with valid JSON:
-{
-  "title": "short name 3-5 words",
-  "description": "one or two calm observational sentences",
-  "confidence": "high" | "medium" | "low",
-  "searchQuery": "3-5 keywords for eBay sold listings"
-}
-No markdown. No extra text.` },
+        {
+          type: "text",
+          text: `Identify this object. Respond ONLY with raw valid JSON, no markdown, no backticks, no explanation:\n{"title":"short name 3-5 words","description":"one or two calm observational sentences","confidence":"high or medium or low","searchQuery":"3-5 keywords for eBay sold listings"}`,
+        },
       ],
     }],
   });
 
-  const text = (response.content as Array<{ type: string; text?: string }>)
-    .filter(b => b.type === "text" && b.text)
-    .map(b => b.text as string)
+  const raw = response.content
+    .filter((b): b is { type: "text"; text: string } => b.type === "text")
+    .map(b => b.text)
     .join("");
 
-  const parsed = JSON.parse(text.trim()) as IdentifyResult;
+  const clean = raw
+    .trim()
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
+
+  const parsed = JSON.parse(clean) as IdentifyResult;
   parsed.searchQuery = normalizeQuery(parsed.searchQuery || parsed.title);
   return parsed;
 }
@@ -80,7 +83,6 @@ export async function POST(req: NextRequest) {
 
   } catch (err) {
     console.error("[identify] error:", err);
-    // Never hard-fail — return mock so the user flow continues
     return NextResponse.json(mockIdentify("fallback"));
   }
 }
