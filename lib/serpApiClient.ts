@@ -40,17 +40,10 @@ export interface SoldCompsResult {
 export async function getSerpApiSoldComps(query: string): Promise<SoldCompsResult> {
   if (!SERPAPI_KEY) throw new Error("SERPAPI_KEY is not set");
 
-  const params = new URLSearchParams({
-  api_key: SERPAPI_KEY,
-  engine:  "ebay",
-  _nkw:    query,
-  _sacat:  "0",
-  filters: "Sold,Complete",
-  _sop:    "13",
-});
+  const encodedQuery = encodeURIComponent(query);
+const url = `${SERPAPI_BASE}?api_key=${SERPAPI_KEY}&engine=ebay&_nkw=${encodedQuery}&_sacat=0&filters=Sold%2CComplete&_sop=13`;
 
-  const url = `${SERPAPI_BASE}?${params.toString()}`;
-  const res  = await fetch(url, { next: { revalidate: 0 } });
+const res = await fetch(url, { cache: "no-store" });
 
   if (!res.ok) {
     throw new Error(`SerpAPI returned ${res.status}: ${res.statusText}`);
