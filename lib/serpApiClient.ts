@@ -42,7 +42,7 @@ export async function getSerpApiSoldComps(query: string): Promise<SoldCompsResul
 
   // Build URL as a plain string — no URLSearchParams
   const q = encodeURIComponent(query);
-  const url = `${SERPAPI_BASE}?engine=ebay&_nkw=${q}&_sacat=0&_sop=13&api_key=${key}`;
+  const url = `${SERPAPI_BASE}?engine=ebay&_nkw=${q}&_sacat=0&api_key=${key}`;
 
   console.log("[serpapi] fetching URL (key hidden):", url.replace(key, "***"));
 
