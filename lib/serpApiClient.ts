@@ -3,6 +3,9 @@ import { MockComp } from "@/types";
 
 const SERPAPI_BASE = "https://serpapi.com/search.json";
 
+// Patterns that indicate a multi-item lot — filter these out
+const LOT_PATTERN = /\b(lot|set|pair|collection|bundle|group)\s+(of\s+)?\d+|\d+\s*(x|pc|pcs|piece|pieces)\b|\b\d{1,2}\s*-?\s*(goblets?|glasses?|cups?|plates?|bowls?|figurines?|statues?)\b/i;
+
 interface SerpApiListing {
   title?: string;
   price?: { raw?: string; extracted?: number };
@@ -32,19 +35,13 @@ export interface SoldCompsResult {
 }
 
 export async function getSerpApiSoldComps(query: string): Promise<SoldCompsResult> {
-  // Read key inside function — not at module scope
   const key = process.env.SERPAPI_KEY ?? "";
-
-  console.log("[serpapi] key length:", key.length);
-  console.log("[serpapi] query:", query);
+  console.log("[serpapi] key length:", key.length, "query:", query);
 
   if (!key) throw new Error("SERPAPI_KEY is not set");
 
-  // Build URL as a plain string — no URLSearchParams
-  const q = encodeURIComponent(query);
+  const q   = encodeURIComponent(query);
   const url = `${SERPAPI_BASE}?engine=ebay&_nkw=${q}&_sacat=0&api_key=${key}`;
-
-  console.log("[serpapi] fetching URL (key hidden):", url.replace(key, "***"));
 
   const res = await fetch(url, { cache: "no-store" });
 
@@ -57,13 +54,21 @@ export async function getSerpApiSoldComps(query: string): Promise<SoldCompsResul
   }
 
   const json: SerpApiResponse = await res.json();
-
   if (json.error) throw new Error(`SerpAPI error: ${json.error}`);
 
   const listings = json.organic_results ?? [];
-  console.log("[serpapi] listings count:", listings.length);
+  console.log("[serpapi] raw listings:", listings.length);
 
   const comps: MockComp[] = listings
+    .filter(item => {
+      const title = item.title ?? "";
+      // Filter out multi-item lots
+      if (LOT_PATTERN.test(title)) {
+        console.log("[serpapi] filtered lot:", title);
+        return false;
+      }
+      return true;
+    })
     .map((item): MockComp | null => {
       const price = item.price?.extracted ?? parsePrice(item.price?.raw ?? "");
       if (!price) return null;
@@ -79,6 +84,8 @@ export async function getSerpApiSoldComps(query: string): Promise<SoldCompsResul
     })
     .filter((c): c is MockComp => c !== null)
     .slice(0, 20);
+
+  console.log("[serpapi] comps after filtering:", comps.length);
 
   if (comps.length === 0) return { comps: [], summary: null };
 
