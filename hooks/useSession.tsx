@@ -1,4 +1,5 @@
 // hooks/useSession.tsx
+// Phase 2: added refinedQuery to FindSession
 "use client";
 
 import {
@@ -11,84 +12,60 @@ import {
 import { IntentChip } from "@/types/find";
 import { MockComp } from "@/types";
 
-// ── Types ─────────────────────────────────────────────────
-
 export interface FindIdentification {
-  title: string;
+  title:       string;
   description: string;
-  confidence: "high" | "medium" | "low";
+  confidence:  "high" | "medium" | "low";
   searchQuery: string;
 }
 
 export interface FindPricing {
-  medianSoldPrice: number;
-  estimatedFees: number;
+  medianSoldPrice:     number;
+  estimatedFees:       number;
   estimatedProfitHigh: number;
-  recommendation: "strong-buy" | "maybe" | "pass";
+  recommendation:      "strong-buy" | "maybe" | "pass";
 }
 
 export interface FindSession {
-  id: string;
-  createdAt: string;
-
-  // Image
+  id:            string;
+  createdAt:     string;
   imageOriginal: string;
   imageEnhanced?: string;
-
-  // Identification — shared by both branches
   identification?: FindIdentification;
-
-  // Social branch
-  intentText?: string;
-  intentChips?: IntentChip[];
+  refinedQuery?:   string;          // Phase 2: user-confirmed query from /refine screen
+  intentText?:     string;
+  intentChips?:    IntentChip[];
   captionRefined?: string;
-
-  // Valuation branch
-  pricePaid?: number;
-  comps?: MockComp[];
-  pricing?: FindPricing;
-
-  // Outcome
-  decision?: "purchased" | "passed" | "shared";
+  pricePaid?:      number;
+  comps?:          MockComp[];
+  pricing?:        FindPricing;
+  decision?:       "purchased" | "passed" | "shared";
 }
 
 interface FindSessionContextType {
-  session: FindSession | null;
-  startSession: (imageOriginal: string) => FindSession;
+  session:       FindSession | null;
+  startSession:  (imageOriginal: string) => FindSession;
   updateSession: (patch: Partial<FindSession>) => void;
-  clearSession: () => void;
+  clearSession:  () => void;
 }
-
-// ── Storage helpers ────────────────────────────────────────
 
 const STORAGE_KEY = "tts_active_session";
 
 function saveToStorage(session: FindSession) {
-  try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-  } catch {}
+  try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(session)); } catch {}
 }
-
 function loadFromStorage(): FindSession | null {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as FindSession) : null;
-  } catch {
-    return null;
-  }
+    return raw ? JSON.parse(raw) as FindSession : null;
+  } catch { return null; }
 }
-
 function clearStorage() {
-  try {
-    sessionStorage.removeItem(STORAGE_KEY);
-  } catch {}
+  try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
 }
-
 function generateId(): string {
   return `find_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 }
-
-// ── Context ────────────────────────────────────────────────
 
 const FindSessionContext = createContext<FindSessionContextType | null>(null);
 
@@ -123,9 +100,7 @@ export function FindSessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <FindSessionContext.Provider
-      value={{ session, startSession, updateSession, clearSession }}
-    >
+    <FindSessionContext.Provider value={{ session, startSession, updateSession, clearSession }}>
       {children}
     </FindSessionContext.Provider>
   );

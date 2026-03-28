@@ -1,4 +1,5 @@
 // app/decide/page.tsx
+// Phase 1: uses findSession.identification.searchQuery — no re-identification
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
@@ -66,15 +67,22 @@ export default function DecidePage() {
     ? { imageDataUrl: findSession.imageOriginal, enteredCost: findSession.pricePaid ?? 0 }
     : null;
 
-  const [appState, setAppState]         = useState<AppState>("price-entry");
-  const [costStr, setCostStr]           = useState("5");
-  const [comps, setComps]               = useState<MockComp[]>([]);
-  const [soldSummary, setSoldSummary]   = useState<SoldSummary | null>(null);
-  const [usingMock, setUsingMock]       = useState(false);
-  const [showComps, setShowComps]       = useState(false);
+  // Phase 1: use refined query if available, fall back to identification query
+  const searchQuery = findSession?.refinedQuery
+    ?? findSession?.identification?.searchQuery
+    ?? "thrift store item";
+
+  const identifiedTitle = findSession?.identification?.title;
+
+  const [appState, setAppState]           = useState<AppState>("price-entry");
+  const [costStr, setCostStr]             = useState("5");
+  const [comps, setComps]                 = useState<MockComp[]>([]);
+  const [soldSummary, setSoldSummary]     = useState<SoldSummary | null>(null);
+  const [usingMock, setUsingMock]         = useState(false);
+  const [showComps, setShowComps]         = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
-  const [deciding, setDeciding]         = useState(false);
-  const analysisStarted                 = useRef(false);
+  const [deciding, setDeciding]           = useState(false);
+  const analysisStarted                   = useRef(false);
 
   const { state: analysisState, run: runAnalysis, reset } = useAnalysisFlow();
 
@@ -89,17 +97,19 @@ export default function DecidePage() {
     analysisStarted.current = true;
     setAppState("analyzing");
     runAnalysis({
-      imageDataUrl: sessionData.imageDataUrl,
+      imageDataUrl:    sessionData.imageDataUrl,
       costStr,
+      searchQuery,           // Phase 1: pass in pre-identified query
+      identifiedTitle,       // for display in the feed
       onCompsReady: (fetchedComps, fetchedSummary) => {
         setComps(fetchedComps);
         setSoldSummary(fetchedSummary);
       },
-      onComplete: () => setAppState("done"),
+      onComplete:      () => setAppState("done"),
       generateMockEvaluation,
       setUsingMock,
     });
-  }, [sessionData, costStr, runAnalysis]);
+  }, [sessionData, costStr, searchQuery, identifiedTitle, runAnalysis]);
 
   const enteredCost = parseFloat(costStr) || 0;
   const pricing     = calculatePricing(comps, enteredCost);
@@ -110,7 +120,6 @@ export default function DecidePage() {
   const handleDecision = useCallback(async (decision: "purchased" | "passed") => {
     if (!sessionData || !findSession || deciding) return;
     setDeciding(true);
-
     const patch = {
       ...findSession,
       pricePaid: enteredCost,
@@ -154,12 +163,10 @@ export default function DecidePage() {
   // ── PRICE ENTRY ──────────────────────────────────────
   if (appState === "price-entry") {
     const sliderVal = Math.min(Math.max(parseFloat(costStr) || 0, 0), 100);
-
     return (
       <div className="flex flex-col min-h-screen bg-[#050f05]">
         <NavBar />
         <main className="flex-1 flex flex-col">
-
           <motion.div className="relative w-full" style={{ height: 240 }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
             <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover"
@@ -167,17 +174,14 @@ export default function DecidePage() {
             <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%, transparent 25%, rgba(5,15,5,0.4) 100%)" }} />
             <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 35%, #050f05 100%)" }} />
           </motion.div>
-
           <div className="flex-1 flex flex-col px-6 pt-5 pb-8 gap-5">
-
-            <motion.div className="space-y-1.5"
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1, ease }}>
+            <motion.div className="space-y-1.5" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1, ease }}>
               <h2 style={{ fontFamily: "Georgia, serif", fontSize: 24, fontWeight: 700, color: "#f5f0e8", lineHeight: 1.2 }}>
                 What's the asking price?
               </h2>
               <p style={{ fontSize: 12, color: "#6a5528", lineHeight: 1.5, fontWeight: 300 }}>Set the price you see.</p>
             </motion.div>
-
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.18, ease }}>
               <div className="flex items-center gap-2 px-5 py-4 rounded-2xl"
                 style={{ background: "rgba(13,31,13,0.6)", border: "1px solid rgba(109,188,109,0.14)" }}>
@@ -190,7 +194,6 @@ export default function DecidePage() {
                   style={{ fontSize: 48, lineHeight: 1 }} />
               </div>
             </motion.div>
-
             <motion.div className="px-1" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.24, ease }}>
               <div className="relative flex items-center" style={{ height: 28 }}>
                 <div className="absolute left-0 right-0 h-0.5 rounded-full" style={{ background: "rgba(109,188,109,0.1)" }} />
@@ -208,9 +211,7 @@ export default function DecidePage() {
                 <span>$0</span><span>$100</span>
               </div>
             </motion.div>
-
             <div className="flex-1" />
-
             <motion.div className="space-y-2" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3, ease }}>
               <motion.button onClick={handleStartAnalysis}
                 className="w-full flex items-center justify-center gap-2.5 font-semibold text-[#f5f0e8] relative overflow-hidden"
@@ -236,12 +237,9 @@ export default function DecidePage() {
       <div className="flex flex-col min-h-screen bg-[#050f05]">
         <NavBar />
         <main className="flex-1 flex flex-col px-5 py-6 pb-8 gap-6 overflow-y-auto">
-
-          <motion.div className="flex gap-3 items-center"
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
+          <motion.div className="flex gap-3 items-center" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
             <div className="rounded-xl overflow-hidden flex-shrink-0" style={{ width: 52, height: 52, border: "1px solid rgba(109,188,109,0.1)" }}>
-              <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover"
-                style={{ filter: "brightness(0.8) saturate(0.65)" }} />
+              <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover" style={{ filter: "brightness(0.8) saturate(0.65)" }} />
             </div>
             <div>
               <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 2 }}>Price noted</div>
@@ -250,32 +248,10 @@ export default function DecidePage() {
               </div>
             </div>
           </motion.div>
-
           <div style={{ height: 1, background: "rgba(200,180,126,0.05)" }} />
-
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, delay: 0.15 }}>
             <AnalysisFeed state={analysisState} />
           </motion.div>
-
-          <AnimatePresence>
-            {analysisState.identifiedItem && (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                style={{ padding: "14px 16px", borderRadius: 16, background: "rgba(13,31,13,0.55)", border: "1px solid rgba(200,180,126,0.1)" }}>
-                <div style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2px", marginBottom: 6 }}>Identified as</div>
-                <div style={{ fontFamily: "Georgia, serif", fontSize: 18, fontWeight: 600, color: "#f5f0e8", lineHeight: 1.3 }}>
-                  {analysisState.identifiedItem}
-                </div>
-                {analysisState.confidence && (
-                  <div style={{ fontSize: 11, color: "#7a6535", marginTop: 4 }}>
-                    {analysisState.confidence === "strong" && "Strong match found"}
-                    {analysisState.confidence === "likely" && "Likely match"}
-                    {analysisState.confidence === "low"    && "Low confidence — results may vary"}
-                  </div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           <AnimatePresence>
             {analysisState.priceRange && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -301,20 +277,16 @@ export default function DecidePage() {
   return (
     <div className="flex flex-col min-h-screen bg-[#050f05]">
       <NavBar />
-
       <main className="flex-1 overflow-y-auto pb-36">
-
         <motion.div className="relative px-5 pt-7 pb-6"
           style={{ background: "linear-gradient(160deg, rgba(17,37,17,0.85) 0%, rgba(9,21,9,0.95) 100%)", borderBottom: "1px solid rgba(109,188,109,0.08)" }}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
           <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(200,180,126,0.18), transparent)" }} />
-
           <div className="absolute top-5 right-5">
-            <div style={{ padding: "5px 11px", borderRadius: 20, fontSize: 10, fontWeight: 500, letterSpacing: "0.3px", color: badge.color, background: badge.bg, border: `1px solid ${badge.border}` }}>
+            <div style={{ padding: "5px 11px", borderRadius: 20, fontSize: 10, fontWeight: 500, color: badge.color, background: badge.bg, border: `1px solid ${badge.border}` }}>
               {badge.label}
             </div>
           </div>
-
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
             <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "2px", marginBottom: 4 }}>Estimated profit</div>
             <div className="flex items-start gap-1" style={{ fontFamily: "Georgia, serif" }}>
@@ -324,9 +296,7 @@ export default function DecidePage() {
               </span>
             </div>
           </motion.div>
-
-          <motion.div className="flex items-center gap-5 mt-4 pt-4"
-            style={{ borderTop: "1px solid rgba(109,188,109,0.08)" }}
+          <motion.div className="flex items-center gap-5 mt-4 pt-4" style={{ borderTop: "1px solid rgba(109,188,109,0.08)" }}
             initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
             <div>
               <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 2 }}>Resell price</div>
@@ -347,7 +317,6 @@ export default function DecidePage() {
               </>
             )}
           </motion.div>
-
           <motion.p style={{ fontSize: 12, color: "#6a5528", lineHeight: 1.5, marginTop: 14 }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.3 }}>
             {verdict.line}
@@ -355,12 +324,9 @@ export default function DecidePage() {
         </motion.div>
 
         <div className="px-4 py-4 flex flex-col gap-4">
-
-          <motion.div className="flex gap-3 items-center"
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.22 }}>
+          <motion.div className="flex gap-3 items-center" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.22 }}>
             <div className="rounded-xl overflow-hidden flex-shrink-0" style={{ width: 60, height: 60, border: "1px solid rgba(109,188,109,0.08)" }}>
-              <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover"
-                style={{ filter: "brightness(0.82) saturate(0.72) sepia(0.08)" }} />
+              <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover" style={{ filter: "brightness(0.82) saturate(0.72) sepia(0.08)" }} />
             </div>
             <div style={{ padding: "4px 10px", borderRadius: 20, opacity: 0.65, background: "rgba(45,125,45,0.14)", border: "1px solid rgba(109,188,109,0.14)" }}>
               <span style={{ fontSize: 10, color: "#9fd49f", letterSpacing: "0.3px" }}>High confidence</span>
@@ -372,10 +338,10 @@ export default function DecidePage() {
               <div style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2.5px", marginBottom: 12 }}>Why it stands out</div>
               <div className="flex flex-col gap-2">
                 {([
-                  soldSummary.demandLevel    ? { label: "Demand",           val: soldSummary.demandLevel }                      : null,
-                  soldSummary.avgDaysToSell  ? { label: "Avg days to sell", val: `${soldSummary.avgDaysToSell} days` }           : null,
-                  soldSummary.marketVelocity ? { label: "Market velocity",  val: soldSummary.marketVelocity }                   : null,
-                  soldSummary.confidence     ? { label: "Confidence",       val: soldSummary.confidence }                       : null,
+                  soldSummary.demandLevel    ? { label: "Demand",           val: soldSummary.demandLevel }                    : null,
+                  soldSummary.avgDaysToSell  ? { label: "Avg days to sell", val: `${soldSummary.avgDaysToSell} days` }         : null,
+                  soldSummary.marketVelocity ? { label: "Market velocity",  val: soldSummary.marketVelocity }                 : null,
+                  soldSummary.confidence     ? { label: "Confidence",       val: soldSummary.confidence }                     : null,
                 ].filter(Boolean) as { label: string; val: string }[]).map(row => (
                   <div key={row.label} className="flex items-center justify-between">
                     <span style={{ fontSize: 12, color: "#6a5528" }}>{row.label}</span>
@@ -395,8 +361,7 @@ export default function DecidePage() {
             </motion.div>
           )}
 
-          <motion.div className="rounded-2xl p-4"
-            style={{ background: "rgba(13,31,13,0.45)", border: "1px solid rgba(200,180,126,0.07)" }}
+          <motion.div className="rounded-2xl p-4" style={{ background: "rgba(13,31,13,0.45)", border: "1px solid rgba(200,180,126,0.07)" }}
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.36 }}>
             <div className="flex items-center gap-2 mb-3">
               <Image src="/logo.png" alt="" width={12} height={12} style={{ opacity: 0.45 }} />
@@ -409,8 +374,7 @@ export default function DecidePage() {
 
           <motion.div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(109,188,109,0.07)" }}
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
-            <button onClick={() => setShowBreakdown(v => !v)}
-              className="w-full flex items-center justify-between px-4 py-3.5" style={{ background: "rgba(13,31,13,0.45)" }}>
+            <button onClick={() => setShowBreakdown(v => !v)} className="w-full flex items-center justify-between px-4 py-3.5" style={{ background: "rgba(13,31,13,0.45)" }}>
               <span style={{ fontSize: 12, fontWeight: 500, color: "#d4c9b0" }}>Breakdown</span>
               {showBreakdown ? <ChevronUp size={12} style={{ color: "#3d3018" }} /> : <ChevronDown size={12} style={{ color: "#3d3018" }} />}
             </button>
@@ -422,14 +386,12 @@ export default function DecidePage() {
                     { label: "Your cost",         val: `– $${enteredCost.toFixed(2)}`,           sub: true  },
                     { label: "Fees",              val: `– $${pricing.estimatedFees.toFixed(2)}`, sub: true  },
                   ].map(row => (
-                    <div key={row.label} className="flex justify-between px-4 py-2.5"
-                      style={{ borderTop: "1px solid rgba(109,188,109,0.05)", background: "rgba(9,21,9,0.45)" }}>
+                    <div key={row.label} className="flex justify-between px-4 py-2.5" style={{ borderTop: "1px solid rgba(109,188,109,0.05)", background: "rgba(9,21,9,0.45)" }}>
                       <span style={{ fontSize: 12, color: "#6a5528" }}>{row.label}</span>
                       <span style={{ fontSize: 12, fontFamily: "monospace", fontWeight: 600, color: row.sub ? "rgba(180,60,50,0.55)" : "#d4c9b0" }}>{row.val}</span>
                     </div>
                   ))}
-                  <div className="flex justify-between px-4 py-3"
-                    style={{ borderTop: "1px solid rgba(109,188,109,0.08)", background: "rgba(45,125,45,0.07)" }}>
+                  <div className="flex justify-between px-4 py-3" style={{ borderTop: "1px solid rgba(109,188,109,0.08)", background: "rgba(45,125,45,0.07)" }}>
                     <span style={{ fontSize: 13, fontWeight: 500, color: "#f5f0e8" }}>In your pocket</span>
                     <span style={{ fontSize: 13, fontFamily: "monospace", fontWeight: 700, color: pricing.estimatedProfitHigh >= 0 ? "#6dbc6d" : "#c0392b" }}>
                       {pricing.estimatedProfitHigh >= 0 ? "+" : ""}${pricing.estimatedProfitHigh.toFixed(2)}
@@ -441,8 +403,7 @@ export default function DecidePage() {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.44 }}>
-            <button onClick={() => setShowComps(v => !v)}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-xl mb-2"
+            <button onClick={() => setShowComps(v => !v)} className="w-full flex items-center justify-between px-4 py-3 rounded-xl mb-2"
               style={{ background: "rgba(13,31,13,0.35)", border: "1px solid rgba(109,188,109,0.06)" }}>
               <div className="flex items-center gap-2">
                 <span style={{ fontSize: 12, fontWeight: 500, color: "#d4c9b0" }}>What it's selling for</span>
@@ -452,8 +413,7 @@ export default function DecidePage() {
             </button>
             <AnimatePresence>
               {showComps && (
-                <motion.div className="flex flex-col gap-1.5"
-                  initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.22 }}>
+                <motion.div className="flex flex-col gap-1.5" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.22 }}>
                   {comps.map((comp, i) => (
                     <motion.a key={i} href={comp.url ?? "#"} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
@@ -461,8 +421,7 @@ export default function DecidePage() {
                       initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.28, delay: i * 0.04 }} whileTap={{ scale: 0.98 }}>
                       {comp.imageUrl
-                        ? <img src={comp.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
-                            style={{ filter: "brightness(0.85) saturate(0.72)", border: "1px solid rgba(109,188,109,0.07)" }} />
+                        ? <img src={comp.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" style={{ filter: "brightness(0.85) saturate(0.72)", border: "1px solid rgba(109,188,109,0.07)" }} />
                         : <div className="w-10 h-10 rounded-lg flex-shrink-0" style={{ background: "rgba(17,37,17,0.5)" }} />
                       }
                       <div className="flex-1 min-w-0">
@@ -485,15 +444,13 @@ export default function DecidePage() {
               )}
             </AnimatePresence>
           </motion.div>
-
         </div>
       </main>
 
       <motion.div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-4 py-3 safe-bottom"
         style={{ background: "rgba(5,15,5,0.97)", backdropFilter: "blur(24px)", borderTop: "1px solid rgba(200,180,126,0.05)" }}
         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.5 }}>
-        <div className="absolute top-0 left-[20%] right-[20%] h-px"
-          style={{ background: "linear-gradient(90deg, transparent, rgba(200,180,126,0.12), transparent)" }} />
+        <div className="absolute top-0 left-[20%] right-[20%] h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(200,180,126,0.12), transparent)" }} />
         <div className="flex flex-col gap-2">
           <motion.button onClick={() => handleDecision("purchased")} disabled={deciding}
             className="w-full flex items-center justify-center font-semibold text-[#f5f0e8] relative overflow-hidden disabled:opacity-40"
