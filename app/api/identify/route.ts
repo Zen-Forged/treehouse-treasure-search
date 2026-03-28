@@ -1,4 +1,5 @@
 // app/api/identify/route.ts
+import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { normalizeQuery } from "@/utils/normalizeQuery";
 
@@ -27,7 +28,6 @@ function mockIdentify(imageDataUrl: string): IdentifyResult {
 }
 
 async function claudeIdentify(imageDataUrl: string): Promise<IdentifyResult> {
-  const Anthropic = (await import("@anthropic-ai/sdk") as any).default;
   const client = new Anthropic();
 
   const base64     = imageDataUrl.replace(/^data:image\/\w+;base64,/, "");
