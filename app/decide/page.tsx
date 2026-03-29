@@ -13,19 +13,21 @@ import { generateMockEvaluation } from "@/lib/mockIntelligence";
 import { calculatePricing } from "@/lib/pricingLogic";
 import { useAnalysisFlow } from "@/hooks/useAnalysisFlow";
 import { AnalysisFeed } from "@/components/AnalysisFeed";
-import { MockComp } from "@/types";
+import { Comp } from "@/types";
 
 type AppState = "price-entry" | "analyzing" | "done";
 
 interface SoldSummary {
-  recommendedPrice: number;
-  priceRangeLow: number;
-  priceRangeHigh: number;
-  marketVelocity: string;
-  demandLevel: string;
-  quickTake: string;
-  confidence: string;
-  avgDaysToSell: number;
+  recommendedPrice:  number;
+  priceRangeLow:     number;
+  priceRangeHigh:    number;
+  marketVelocity:    string;
+  demandLevel:       string;
+  quickTake:         string;
+  confidence:        string;
+  avgDaysToSell:     number;
+  competitionCount:  number;
+  competitionLevel:  "low" | "moderate" | "high";
 }
 
 function getROI(profit: number, cost: number): string {
@@ -56,6 +58,12 @@ function getVerdict(recommendation: string) {
   };
 }
 
+function getCompetitionColor(level: string): string {
+  if (level === "high")     return "#c0392b";
+  if (level === "moderate") return "#a8904e";
+  return "#6dbc6d";
+}
+
 const ease = [0.25, 0.1, 0.25, 1] as const;
 
 export default function DecidePage() {
@@ -67,22 +75,24 @@ export default function DecidePage() {
     ? { imageDataUrl: findSession.imageOriginal, enteredCost: findSession.pricePaid ?? 0 }
     : null;
 
-  // Phase 1: use refined query if available, fall back to identification query
   const searchQuery = findSession?.refinedQuery
     ?? findSession?.identification?.searchQuery
     ?? "thrift store item";
 
   const identifiedTitle = findSession?.identification?.title;
+  const attributes      = findSession?.identification?.attributes;
 
-  const [appState, setAppState]           = useState<AppState>("price-entry");
-  const [costStr, setCostStr]             = useState("5");
-  const [comps, setComps]                 = useState<MockComp[]>([]);
-  const [soldSummary, setSoldSummary]     = useState<SoldSummary | null>(null);
-  const [usingMock, setUsingMock]         = useState(false);
-  const [showComps, setShowComps]         = useState(false);
-  const [showBreakdown, setShowBreakdown] = useState(false);
-  const [deciding, setDeciding]           = useState(false);
-  const analysisStarted                   = useRef(false);
+  const [appState, setAppState]         = useState<AppState>("price-entry");
+  const [costStr, setCostStr]           = useState("5");
+  const [soldComps, setSoldComps]       = useState<Comp[]>([]);
+  const [activeComps, setActiveComps]   = useState<Comp[]>([]);
+  const [soldSummary, setSoldSummary]   = useState<SoldSummary | null>(null);
+  const [usingMock, setUsingMock]       = useState(false);
+  const [showSoldComps, setShowSoldComps]     = useState(false);
+  const [showActiveComps, setShowActiveComps] = useState(false);
+  const [showBreakdown, setShowBreakdown]     = useState(false);
+  const [deciding, setDeciding]         = useState(false);
+  const analysisStarted                 = useRef(false);
 
   const { state: analysisState, run: runAnalysis, reset } = useAnalysisFlow();
 
@@ -99,10 +109,11 @@ export default function DecidePage() {
     runAnalysis({
       imageDataUrl:    sessionData.imageDataUrl,
       costStr,
-      searchQuery,           // Phase 1: pass in pre-identified query
-      identifiedTitle,       // for display in the feed
-      onCompsReady: (fetchedComps, fetchedSummary) => {
-        setComps(fetchedComps);
+      searchQuery,
+      identifiedTitle,
+      onCompsReady: (fetchedSold, fetchedActive, fetchedSummary) => {
+        setSoldComps(fetchedSold);
+        setActiveComps(fetchedActive);
         setSoldSummary(fetchedSummary);
       },
       onComplete:      () => setAppState("done"),
@@ -112,10 +123,13 @@ export default function DecidePage() {
   }, [sessionData, costStr, searchQuery, identifiedTitle, runAnalysis]);
 
   const enteredCost = parseFloat(costStr) || 0;
-  const pricing     = calculatePricing(comps, enteredCost);
-  const verdict     = getVerdict(pricing.recommendation);
-  const badge       = getBadge(pricing.recommendation);
-  const roiLabel    = getROI(pricing.estimatedProfitHigh, enteredCost);
+
+  // Pricing always uses sold comps; fall back to active if none
+  const pricingComps = soldComps.length > 0 ? soldComps : activeComps;
+  const pricing      = calculatePricing(pricingComps, enteredCost);
+  const verdict      = getVerdict(pricing.recommendation);
+  const badge        = getBadge(pricing.recommendation);
+  const roiLabel     = getROI(pricing.estimatedProfitHigh, enteredCost);
 
   const handleDecision = useCallback(async (decision: "purchased" | "passed") => {
     if (!sessionData || !findSession || deciding) return;
@@ -262,7 +276,7 @@ export default function DecidePage() {
                   <span style={{ fontSize: 11, color: "#6a5528" }}>to</span>
                   <span style={{ fontFamily: "monospace", fontSize: 22, fontWeight: 700, color: "#f5f0e8" }}>${analysisState.priceRange.high.toFixed(0)}</span>
                 </div>
-                {analysisState.compCount && (
+                {analysisState.compCount != null && (
                   <div style={{ fontSize: 11, color: "#6a5528", marginTop: 4 }}>Based on {analysisState.compCount} recent sales</div>
                 )}
               </motion.div>
@@ -278,6 +292,8 @@ export default function DecidePage() {
     <div className="flex flex-col min-h-screen bg-[#050f05]">
       <NavBar />
       <main className="flex-1 overflow-y-auto pb-36">
+
+        {/* ── Hero profit section ── */}
         <motion.div className="relative px-5 pt-7 pb-6"
           style={{ background: "linear-gradient(160deg, rgba(17,37,17,0.85) 0%, rgba(9,21,9,0.95) 100%)", borderBottom: "1px solid rgba(109,188,109,0.08)" }}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
@@ -324,6 +340,8 @@ export default function DecidePage() {
         </motion.div>
 
         <div className="px-4 py-4 flex flex-col gap-4">
+
+          {/* ── Item thumbnail + confidence ── */}
           <motion.div className="flex gap-3 items-center" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.22 }}>
             <div className="rounded-xl overflow-hidden flex-shrink-0" style={{ width: 60, height: 60, border: "1px solid rgba(109,188,109,0.08)" }}>
               <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover" style={{ filter: "brightness(0.82) saturate(0.72) sepia(0.08)" }} />
@@ -333,25 +351,54 @@ export default function DecidePage() {
             </div>
           </motion.div>
 
-          {soldSummary && (soldSummary.demandLevel || soldSummary.avgDaysToSell) && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.28 }}>
-              <div style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2.5px", marginBottom: 12 }}>Why it stands out</div>
+          {/* ── Item attributes (brand, material, era, origin, category) ── */}
+          {attributes && Object.values(attributes).some(v => v !== null) && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.25 }}>
+              <div style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2.5px", marginBottom: 10 }}>Item details</div>
               <div className="flex flex-col gap-2">
                 {([
-                  soldSummary.demandLevel    ? { label: "Demand",           val: soldSummary.demandLevel }                    : null,
-                  soldSummary.avgDaysToSell  ? { label: "Avg days to sell", val: `${soldSummary.avgDaysToSell} days` }         : null,
-                  soldSummary.marketVelocity ? { label: "Market velocity",  val: soldSummary.marketVelocity }                 : null,
-                  soldSummary.confidence     ? { label: "Confidence",       val: soldSummary.confidence }                     : null,
+                  attributes.brand    ? { label: "Brand",    val: attributes.brand    } : null,
+                  attributes.material ? { label: "Material", val: attributes.material } : null,
+                  attributes.era      ? { label: "Era",      val: attributes.era      } : null,
+                  attributes.origin   ? { label: "Origin",   val: attributes.origin   } : null,
+                  attributes.category ? { label: "Category", val: attributes.category } : null,
                 ].filter(Boolean) as { label: string; val: string }[]).map(row => (
                   <div key={row.label} className="flex items-center justify-between">
                     <span style={{ fontSize: 12, color: "#6a5528" }}>{row.label}</span>
-                    <span style={{ fontSize: 12, color: "#d4c9b0", fontWeight: 500, textTransform: "capitalize" }}>{row.val}</span>
+                    <span style={{ fontSize: 12, color: "#d4c9b0", fontWeight: 500 }}>{row.val}</span>
                   </div>
                 ))}
               </div>
             </motion.div>
           )}
 
+          {/* ── Market intelligence ── */}
+          {soldSummary && (soldSummary.demandLevel || soldSummary.avgDaysToSell) && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.28 }}
+              style={{ paddingTop: 12, borderTop: "1px solid rgba(200,180,126,0.06)" }}>
+              <div style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2.5px", marginBottom: 10 }}>Market intelligence</div>
+              <div className="flex flex-col gap-2">
+                {([
+                  soldSummary.demandLevel   ? { label: "Demand",           val: soldSummary.demandLevel }                             : null,
+                  soldSummary.avgDaysToSell ? { label: "Avg days to sell", val: `${soldSummary.avgDaysToSell} days` }                  : null,
+                  soldSummary.marketVelocity ? { label: "Market velocity",  val: soldSummary.marketVelocity }                         : null,
+                  soldSummary.confidence    ? { label: "Data confidence",   val: soldSummary.confidence }                             : null,
+                  soldSummary.competitionCount != null ? {
+                    label: "Competition",
+                    val: `${soldSummary.competitionLevel} (${soldSummary.competitionCount} active)`,
+                    color: getCompetitionColor(soldSummary.competitionLevel),
+                  } : null,
+                ].filter(Boolean) as { label: string; val: string; color?: string }[]).map(row => (
+                  <div key={row.label} className="flex items-center justify-between">
+                    <span style={{ fontSize: 12, color: "#6a5528" }}>{row.label}</span>
+                    <span style={{ fontSize: 12, color: row.color ?? "#d4c9b0", fontWeight: 500, textTransform: "capitalize" }}>{row.val}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── Quick take ── */}
           {soldSummary?.quickTake && (
             <motion.div style={{ paddingTop: 12, borderTop: "1px solid rgba(200,180,126,0.06)" }}
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.32 }}>
@@ -361,6 +408,7 @@ export default function DecidePage() {
             </motion.div>
           )}
 
+          {/* ── Scout assessment ── */}
           <motion.div className="rounded-2xl p-4" style={{ background: "rgba(13,31,13,0.45)", border: "1px solid rgba(200,180,126,0.07)" }}
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.36 }}>
             <div className="flex items-center gap-2 mb-3">
@@ -372,6 +420,7 @@ export default function DecidePage() {
             </p>
           </motion.div>
 
+          {/* ── Breakdown ── */}
           <motion.div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(109,188,109,0.07)" }}
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
             <button onClick={() => setShowBreakdown(v => !v)} className="w-full flex items-center justify-between px-4 py-3.5" style={{ background: "rgba(13,31,13,0.45)" }}>
@@ -402,51 +451,63 @@ export default function DecidePage() {
             </AnimatePresence>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.44 }}>
-            <button onClick={() => setShowComps(v => !v)} className="w-full flex items-center justify-between px-4 py-3 rounded-xl mb-2"
-              style={{ background: "rgba(13,31,13,0.35)", border: "1px solid rgba(109,188,109,0.06)" }}>
-              <div className="flex items-center gap-2">
-                <span style={{ fontSize: 12, fontWeight: 500, color: "#d4c9b0" }}>What it's selling for</span>
-                <span style={{ fontSize: 10, color: "#6dbc6d", background: "rgba(45,125,45,0.12)", padding: "1px 7px", borderRadius: 8 }}>{comps.length}</span>
-              </div>
-              {showComps ? <ChevronUp size={12} style={{ color: "#3d3018" }} /> : <ChevronDown size={12} style={{ color: "#3d3018" }} />}
-            </button>
-            <AnimatePresence>
-              {showComps && (
-                <motion.div className="flex flex-col gap-1.5" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.22 }}>
-                  {comps.map((comp, i) => (
-                    <motion.a key={i} href={comp.url ?? "#"} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-                      style={{ background: "rgba(13,31,13,0.35)", border: "1px solid rgba(109,188,109,0.06)" }}
-                      initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.28, delay: i * 0.04 }} whileTap={{ scale: 0.98 }}>
-                      {comp.imageUrl
-                        ? <img src={comp.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" style={{ filter: "brightness(0.85) saturate(0.72)", border: "1px solid rgba(109,188,109,0.07)" }} />
-                        : <div className="w-10 h-10 rounded-lg flex-shrink-0" style={{ background: "rgba(17,37,17,0.5)" }} />
-                      }
-                      <div className="flex-1 min-w-0">
-                        <div style={{ fontSize: 12, color: "#d4c9b0" }} className="truncate mb-1">{comp.title}</div>
-                        <div className="flex items-center gap-1.5">
-                          <span style={{ fontSize: 10, color: "#6a5528", background: "rgba(45,125,45,0.07)", padding: "1px 5px", borderRadius: 3 }}>{comp.condition}</span>
-                          <span style={{ fontSize: 10, color: "#2e2410" }}>{comp.daysAgo}d ago</span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                        <span style={{ fontSize: 13, fontFamily: "monospace", fontWeight: 600, color: "#f5f0e8" }}>${comp.price.toFixed(2)}</span>
-                        <span style={{ fontSize: 10, color: "#2e2410" }}>↗</span>
-                      </div>
-                    </motion.a>
-                  ))}
-                  <p style={{ textAlign: "center", fontSize: 10, color: "#2e2410", padding: "5px 0" }}>
-                    {usingMock ? "Estimated data" : "Real eBay sold listings"}
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+          {/* ── Sold comps ── */}
+          {soldComps.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.44 }}>
+              <button onClick={() => setShowSoldComps(v => !v)} className="w-full flex items-center justify-between px-4 py-3 rounded-xl mb-2"
+                style={{ background: "rgba(13,31,13,0.35)", border: "1px solid rgba(109,188,109,0.06)" }}>
+                <div className="flex items-center gap-2">
+                  <span style={{ fontSize: 12, fontWeight: 500, color: "#d4c9b0" }}>Sold listings</span>
+                  <span style={{ fontSize: 10, color: "#6dbc6d", background: "rgba(45,125,45,0.12)", padding: "1px 7px", borderRadius: 8 }}>{soldComps.length}</span>
+                </div>
+                {showSoldComps ? <ChevronUp size={12} style={{ color: "#3d3018" }} /> : <ChevronDown size={12} style={{ color: "#3d3018" }} />}
+              </button>
+              <AnimatePresence>
+                {showSoldComps && (
+                  <motion.div className="flex flex-col gap-1.5" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.22 }}>
+                    {soldComps.map((comp, i) => (
+                      <CompRow key={i} comp={comp} index={i} />
+                    ))}
+                    <p style={{ textAlign: "center", fontSize: 10, color: "#2e2410", padding: "5px 0" }}>
+                      {usingMock ? "Estimated data" : "Real eBay sold listings"}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+
+          {/* ── Active comps (competition) ── */}
+          {activeComps.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.48 }}>
+              <button onClick={() => setShowActiveComps(v => !v)} className="w-full flex items-center justify-between px-4 py-3 rounded-xl mb-2"
+                style={{ background: "rgba(13,31,13,0.35)", border: "1px solid rgba(109,188,109,0.06)" }}>
+                <div className="flex items-center gap-2">
+                  <span style={{ fontSize: 12, fontWeight: 500, color: "#d4c9b0" }}>Active listings</span>
+                  <span style={{ fontSize: 10, color: soldSummary ? getCompetitionColor(soldSummary.competitionLevel) : "#a8904e", background: "rgba(45,125,45,0.08)", padding: "1px 7px", borderRadius: 8 }}>{activeComps.length}</span>
+                  <span style={{ fontSize: 10, color: "#6a5528" }}>competition</span>
+                </div>
+                {showActiveComps ? <ChevronUp size={12} style={{ color: "#3d3018" }} /> : <ChevronDown size={12} style={{ color: "#3d3018" }} />}
+              </button>
+              <AnimatePresence>
+                {showActiveComps && (
+                  <motion.div className="flex flex-col gap-1.5" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.22 }}>
+                    {activeComps.map((comp, i) => (
+                      <CompRow key={i} comp={comp} index={i} />
+                    ))}
+                    <p style={{ textAlign: "center", fontSize: 10, color: "#2e2410", padding: "5px 0" }}>
+                      Active eBay listings — your competition
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+
         </div>
       </main>
 
+      {/* ── Fixed decision bar ── */}
       <motion.div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-4 py-3 safe-bottom"
         style={{ background: "rgba(5,15,5,0.97)", backdropFilter: "blur(24px)", borderTop: "1px solid rgba(200,180,126,0.05)" }}
         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.5 }}>
@@ -468,5 +529,37 @@ export default function DecidePage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+// ── Shared comp row component ─────────────────────────────────────────────────
+
+function CompRow({ comp, index }: { comp: Comp; index: number }) {
+  return (
+    <motion.a href={comp.url ?? "#"} target="_blank" rel="noopener noreferrer"
+      className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+      style={{ background: "rgba(13,31,13,0.35)", border: "1px solid rgba(109,188,109,0.06)" }}
+      initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.28, delay: index * 0.04 }} whileTap={{ scale: 0.98 }}>
+      {comp.imageUrl
+        ? <img src={comp.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" style={{ filter: "brightness(0.85) saturate(0.72)", border: "1px solid rgba(109,188,109,0.07)" }} />
+        : <div className="w-10 h-10 rounded-lg flex-shrink-0" style={{ background: "rgba(17,37,17,0.5)" }} />
+      }
+      <div className="flex-1 min-w-0">
+        <div style={{ fontSize: 12, color: "#d4c9b0" }} className="truncate mb-1">{comp.title}</div>
+        <div className="flex items-center gap-1.5">
+          <span style={{ fontSize: 10, color: "#6a5528", background: "rgba(45,125,45,0.07)", padding: "1px 5px", borderRadius: 3 }}>{comp.condition}</span>
+          {comp.daysAgo > 0 && (
+            <span style={{ fontSize: 10, color: "#2e2410" }}>
+              {comp.listingType === "sold" ? `sold ${comp.daysAgo}d ago` : `listed ${comp.daysAgo}d ago`}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+        <span style={{ fontSize: 13, fontFamily: "monospace", fontWeight: 600, color: "#f5f0e8" }}>${comp.price.toFixed(2)}</span>
+        <span style={{ fontSize: 10, color: "#2e2410" }}>↗</span>
+      </div>
+    </motion.a>
   );
 }
