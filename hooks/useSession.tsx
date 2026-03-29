@@ -10,13 +10,14 @@ import {
   ReactNode,
 } from "react";
 import { IntentChip } from "@/types/find";
-import { MockComp } from "@/types";
+import { Comp, ItemAttributes } from "@/types";
 
 export interface FindIdentification {
   title:       string;
   description: string;
   confidence:  "high" | "medium" | "low";
   searchQuery: string;
+  attributes?: ItemAttributes;   // brand, material, era, origin, category
 }
 
 export interface FindPricing {
@@ -37,7 +38,9 @@ export interface FindSession {
   intentChips?:    IntentChip[];
   captionRefined?: string;
   pricePaid?:      number;
-  comps?:          MockComp[];
+  comps?:          Comp[];          // legacy — kept for backward compat
+  soldComps?:      Comp[];
+  activeComps?:    Comp[];
   pricing?:        FindPricing;
   decision?:       "purchased" | "passed" | "shared";
 }
