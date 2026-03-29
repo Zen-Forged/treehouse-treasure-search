@@ -1,4 +1,4 @@
-import { MockComp } from "@/types";
+import { Comp } from "@/types";
 
 const APIFY_BASE = "https://api.apify.com/v2";
 
@@ -36,17 +36,21 @@ interface ApifySummary {
   "summary.priceRange.high.display"?: string;
 }
 
+// Matches CompsResult shape from serpApiClient so the route can use either
 export interface ApifyResult {
-  comps: MockComp[];
+  soldComps:   Comp[];
+  activeComps: Comp[];   // Apify only returns sold; active is always empty
   summary: {
-    recommendedPrice: number;
-    priceRangeLow: number;
-    priceRangeHigh: number;
-    marketVelocity: string;
-    demandLevel: string;
-    quickTake: string;
-    confidence: string;
-    avgDaysToSell: number;
+    recommendedPrice:  number;
+    priceRangeLow:     number;
+    priceRangeHigh:    number;
+    marketVelocity:    string;
+    demandLevel:       string;
+    quickTake:         string;
+    confidence:        string;
+    avgDaysToSell:     number;
+    competitionCount:  number;
+    competitionLevel:  "low" | "moderate" | "high";
   } | null;
 }
 
@@ -72,7 +76,7 @@ function normalizeCondition(condition?: string): string {
 }
 
 export async function getApifySoldComps(query: string): Promise<ApifyResult> {
-  const token = process.env.APIFY_TOKEN;
+  const token   = process.env.APIFY_TOKEN;
   const actorId = process.env.APIFY_ACTOR_ID;
 
   if (!token || !actorId) {
@@ -83,16 +87,16 @@ export async function getApifySoldComps(query: string): Promise<ApifyResult> {
   const runRes = await fetch(
     `${APIFY_BASE}/acts/${actorId}/runs?token=${token}`,
     {
-      method: "POST",
+      method:  "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         query,
-        maxItems: 10,
-        soldWithinDays: 30,
-        sortBy: "date_desc",
+        maxItems:        10,
+        soldWithinDays:  30,
+        sortBy:          "date_desc",
         includeAnalytics: true,
-        outputFormat: "full",
-        ebaySite: "ebay.com",
+        outputFormat:    "full",
+        ebaySite:        "ebay.com",
       }),
     }
   );
@@ -103,22 +107,20 @@ export async function getApifySoldComps(query: string): Promise<ApifyResult> {
   }
 
   const runData = await runRes.json();
-  const runId = runData?.data?.id;
+  const runId   = runData?.data?.id;
   if (!runId) throw new Error("No run ID returned from Apify");
 
   // Poll for completion (max 90 seconds)
-  let status = "RUNNING";
-  let attempts = 0;
+  let status    = "RUNNING";
+  let attempts  = 0;
   const maxAttempts = 18;
 
   while (status === "RUNNING" || status === "READY") {
     if (attempts >= maxAttempts) throw new Error("Apify run timed out");
-    await new Promise((r) => setTimeout(r, 5000));
+    await new Promise(r => setTimeout(r, 5000));
     attempts++;
 
-    const statusRes = await fetch(
-      `${APIFY_BASE}/actor-runs/${runId}?token=${token}`
-    );
+    const statusRes  = await fetch(`${APIFY_BASE}/actor-runs/${runId}?token=${token}`);
     const statusData = await statusRes.json();
     status = statusData?.data?.status ?? "FAILED";
   }
@@ -139,74 +141,62 @@ export async function getApifySoldComps(query: string): Promise<ApifyResult> {
   const items: (ApifyItem & ApifySummary)[] = await datasetRes.json();
 
   // Separate comp items from summary
-  const compRows = items.filter(
-    (i) => i.type === "item" && i.title && i.soldPrice
-  );
-
+  const compRows  = items.filter(i => i.type === "item" && i.title && i.soldPrice);
   const summaryRow = items.find(
-    (i) =>
-      i.type === "summary" ||
-      i["summary.recommendedPrice.display"] ||
-      i.recommendedPrice
+    i => i.type === "summary" || i["summary.recommendedPrice.display"] || i.recommendedPrice
   );
 
   if (compRows.length === 0) {
     throw new Error("No sold comp items returned");
   }
 
-  const comps: MockComp[] = compRows.slice(0, 10).map((item) => ({
-    title: (item.title ?? "Unknown Item").replace(
-      /Opens in a new window or tab/gi,
-      ""
-    ).trim(),
-    platform: "eBay (Sold)",
-    price: item.soldPrice?.cents
+  const soldComps: Comp[] = compRows.slice(0, 10).map(item => ({
+    title: (item.title ?? "Unknown Item")
+      .replace(/Opens in a new window or tab/gi, "")
+      .trim(),
+    platform:    "ebay",
+    price:       item.soldPrice?.cents
       ? item.soldPrice.cents / 100
       : parsePrice(item.soldPrice?.display),
-    condition: normalizeCondition(item.condition?.condition),
-    daysAgo: daysAgo(item.soldDate),
-    url: item.url,
-    imageUrl: item.thumbnailUrl ?? item.imageUrls?.[0],
+    condition:   normalizeCondition(item.condition?.condition),
+    daysAgo:     daysAgo(item.soldDate),
+    listingType: "sold" as const,
+    soldDate:    item.soldDate,
+    url:         item.url,
+    imageUrl:    item.thumbnailUrl ?? item.imageUrls?.[0],
   }));
 
   // Parse summary
   let summary: ApifyResult["summary"] = null;
 
   if (summaryRow) {
-    const recPrice =
-      parsePrice(summaryRow["summary.recommendedPrice.display"]) ||
-      parsePrice((summaryRow.recommendedPrice as any)?.display);
+    const recPrice = parsePrice(summaryRow["summary.recommendedPrice.display"])
+      || parsePrice((summaryRow.recommendedPrice as any)?.display);
 
-    const priceLow =
-      parsePrice(summaryRow["summary.priceRange.low.display"]) ||
-      parsePrice((summaryRow.priceRange as any)?.low?.display);
+    const priceLow = parsePrice(summaryRow["summary.priceRange.low.display"])
+      || parsePrice((summaryRow.priceRange as any)?.low?.display);
 
-    const priceHigh =
-      parsePrice(summaryRow["summary.priceRange.high.display"]) ||
-      parsePrice((summaryRow.priceRange as any)?.high?.display);
+    const priceHigh = parsePrice(summaryRow["summary.priceRange.high.display"])
+      || parsePrice((summaryRow.priceRange as any)?.high?.display);
+
+    const avgDays = summaryRow["summary.averageDaysToSell"]
+      ?? summaryRow.averageDaysToSell
+      ?? 0;
 
     summary = {
       recommendedPrice: recPrice,
-      priceRangeLow: priceLow,
-      priceRangeHigh: priceHigh,
-      marketVelocity:
-        summaryRow["summary.marketVelocity"] ??
-        summaryRow.marketVelocity ??
-        "unknown",
-      demandLevel:
-        summaryRow["summary.demandLevel"] ??
-        summaryRow.demandLevel ??
-        "unknown",
-      quickTake:
-        summaryRow["summary.quickTake"] ?? summaryRow.quickTake ?? "",
-      confidence:
-        summaryRow["summary.confidence"] ?? summaryRow.confidence ?? "medium",
-      avgDaysToSell:
-        summaryRow["summary.averageDaysToSell"] ??
-        summaryRow.averageDaysToSell ??
-        0,
+      priceRangeLow:    priceLow,
+      priceRangeHigh:   priceHigh,
+      marketVelocity:   summaryRow["summary.marketVelocity"] ?? summaryRow.marketVelocity ?? "unknown",
+      demandLevel:      summaryRow["summary.demandLevel"]    ?? summaryRow.demandLevel    ?? "unknown",
+      quickTake:        summaryRow["summary.quickTake"]      ?? summaryRow.quickTake      ?? "",
+      confidence:       summaryRow["summary.confidence"]     ?? summaryRow.confidence     ?? "medium",
+      avgDaysToSell:    avgDays,
+      // Apify doesn't return active listings so competition is unknown
+      competitionCount: 0,
+      competitionLevel: "low",
     };
   }
 
-  return { comps, summary };
+  return { soldComps, activeComps: [], summary };
 }
