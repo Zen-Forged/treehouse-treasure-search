@@ -1,5 +1,6 @@
 // hooks/useSession.tsx
 // Phase 2: added refinedQuery to FindSession
+// Phase 3: added skipPriceEntry to bypass price-entry screen
 "use client";
 
 import {
@@ -17,7 +18,7 @@ export interface FindIdentification {
   description: string;
   confidence:  "high" | "medium" | "low";
   searchQuery: string;
-  attributes?: ItemAttributes;   // brand, material, era, origin, category
+  attributes?: ItemAttributes;
 }
 
 export interface FindPricing {
@@ -28,17 +29,18 @@ export interface FindPricing {
 }
 
 export interface FindSession {
-  id:            string;
-  createdAt:     string;
-  imageOriginal: string;
-  imageEnhanced?: string;
+  id:              string;
+  createdAt:       string;
+  imageOriginal:   string;
+  imageEnhanced?:  string;
   identification?: FindIdentification;
-  refinedQuery?:   string;          // Phase 2: user-confirmed query from /refine screen
+  refinedQuery?:   string;
+  skipPriceEntry?: boolean;       // Phase 3: skip price-entry, go straight to analyzing
   intentText?:     string;
   intentChips?:    IntentChip[];
   captionRefined?: string;
   pricePaid?:      number;
-  comps?:          Comp[];          // legacy — kept for backward compat
+  comps?:          Comp[];        // legacy
   soldComps?:      Comp[];
   activeComps?:    Comp[];
   pricing?:        FindPricing;

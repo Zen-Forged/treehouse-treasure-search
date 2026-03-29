@@ -1,4 +1,5 @@
 // app/decide/page.tsx
+// Phase 3: removed price-entry screen — analysis starts immediately from discover
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
@@ -14,7 +15,7 @@ import { useAnalysisFlow } from "@/hooks/useAnalysisFlow";
 import { AnalysisFeed } from "@/components/AnalysisFeed";
 import { Comp } from "@/types";
 
-type AppState = "price-entry" | "analyzing" | "done";
+type AppState = "analyzing" | "done";
 
 interface SoldSummary {
   recommendedPrice:  number;
@@ -44,7 +45,15 @@ function getIntelColor(level: string): string {
   return "#9a7a5a";
 }
 
-const ease = [0.25, 0.1, 0.25, 1] as const;
+function formatSoldDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "Recent";
+  const days = Math.round((Date.now() - d.getTime()) / 86_400_000);
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 30)  return `${days}d ago`;
+  return `${Math.round(days / 30)}mo ago`;
+}
 
 export default function DecidePage() {
   const router = useRouter();
@@ -52,14 +61,13 @@ export default function DecidePage() {
   const { saveFind } = useFinds();
 
   const sessionData = findSession
-    ? { imageDataUrl: findSession.imageOriginal, enteredCost: findSession.pricePaid ?? 0 }
+    ? { imageDataUrl: findSession.imageOriginal }
     : null;
 
   const searchQuery     = findSession?.refinedQuery ?? findSession?.identification?.searchQuery ?? "thrift store item";
   const identifiedTitle = findSession?.identification?.title;
 
-  const [appState, setAppState]       = useState<AppState>("price-entry");
-  const [costStr, setCostStr]         = useState("5");
+  const [appState, setAppState]       = useState<AppState>("analyzing");
   const [soldComps, setSoldComps]     = useState<Comp[]>([]);
   const [activeComps, setActiveComps] = useState<Comp[]>([]);
   const [soldSummary, setSoldSummary] = useState<SoldSummary | null>(null);
@@ -69,16 +77,16 @@ export default function DecidePage() {
 
   const { state: analysisState, run: runAnalysis, reset } = useAnalysisFlow();
 
-  useEffect(() => { if (!sessionData) router.replace("/"); }, []);
-  useEffect(() => () => reset(), [reset]);
+  useEffect(() => {
+    if (!sessionData) { router.replace("/"); return; }
 
-  const handleStartAnalysis = useCallback(() => {
-    if (analysisStarted.current || !sessionData) return;
+    // Start analysis immediately on mount — no price entry step
+    if (analysisStarted.current) return;
     analysisStarted.current = true;
-    setAppState("analyzing");
+
     runAnalysis({
       imageDataUrl: sessionData.imageDataUrl,
-      costStr,
+      costStr:      "0",   // no cost entered — pricing calc will show $0 cost
       searchQuery,
       identifiedTitle,
       onCompsReady: (fetchedSold, fetchedActive, fetchedSummary) => {
@@ -90,19 +98,22 @@ export default function DecidePage() {
       generateMockEvaluation,
       setUsingMock,
     });
-  }, [sessionData, costStr, searchQuery, identifiedTitle, runAnalysis]);
+  }, []);
 
-  const enteredCost  = parseFloat(costStr) || 0;
-  const pricingComps = soldComps.length > 0 ? soldComps : activeComps;
-  const pricing      = calculatePricing(pricingComps, enteredCost);
-  const badge        = getBadge(pricing.recommendation);
+  useEffect(() => () => reset(), [reset]);
+
+  // No entered cost — pricing used only for recommendation badge
+  const pricing = calculatePricing(
+    soldComps.length > 0 ? soldComps : activeComps,
+    0
+  );
+  const badge = getBadge(pricing.recommendation);
 
   const handleDecision = useCallback(async (decision: "purchased" | "passed") => {
     if (!sessionData || !findSession || deciding) return;
     setDeciding(true);
     const patch = {
       ...findSession,
-      pricePaid: enteredCost,
       pricing: {
         medianSoldPrice:     pricing.medianSoldPrice,
         estimatedFees:       pricing.estimatedFees,
@@ -112,7 +123,7 @@ export default function DecidePage() {
     };
     saveFind(sessionToFind(patch, decision));
     router.push("/finds");
-  }, [sessionData, findSession, deciding, enteredCost, pricing, saveFind, router]);
+  }, [sessionData, findSession, deciding, pricing, saveFind, router]);
 
   if (!sessionData) {
     return (
@@ -140,77 +151,6 @@ export default function DecidePage() {
     </header>
   );
 
-  // ── PRICE ENTRY ──────────────────────────────────────────────────────────────
-  if (appState === "price-entry") {
-    const sliderVal = Math.min(Math.max(parseFloat(costStr) || 0, 0), 100);
-    return (
-      <div className="flex flex-col min-h-screen bg-[#050f05]">
-        <NavBar />
-        <main className="flex-1 flex flex-col">
-          <motion.div className="relative w-full flex-shrink-0" style={{ height: 320 }}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
-            <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover"
-              style={{ filter: "brightness(0.82) saturate(0.75) sepia(0.08)" }} />
-            <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%, transparent 25%, rgba(5,15,5,0.4) 100%)" }} />
-            <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 35%, #050f05 100%)" }} />
-          </motion.div>
-          <div className="flex-1 flex flex-col px-6 pt-5 pb-8 gap-5">
-            <motion.div className="space-y-1.5" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1, ease }}>
-              <h2 style={{ fontFamily: "Georgia, serif", fontSize: 24, fontWeight: 700, color: "#f5f0e8", lineHeight: 1.2 }}>
-                What's the asking price?
-              </h2>
-              <p style={{ fontSize: 12, color: "#6a5528", lineHeight: 1.5, fontWeight: 300 }}>Set the price you see on the tag.</p>
-            </motion.div>
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.18, ease }}>
-              <div className="flex items-center gap-2 px-5 py-4 rounded-2xl"
-                style={{ background: "rgba(13,31,13,0.6)", border: "1px solid rgba(109,188,109,0.14)" }}>
-                <span style={{ fontFamily: "Georgia, serif", fontSize: 32, fontWeight: 300, color: "#7a6535" }}>$</span>
-                <input type="number" inputMode="decimal" min="0" max="9999" step="1"
-                  value={costStr} onChange={e => setCostStr(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && handleStartAnalysis()}
-                  placeholder="0"
-                  className="flex-1 bg-transparent font-mono font-bold text-[#f5f0e8] focus:outline-none placeholder:text-[#2e2410]"
-                  style={{ fontSize: 48, lineHeight: 1 }} />
-              </div>
-            </motion.div>
-            <motion.div className="px-1" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.24, ease }}>
-              <div className="relative flex items-center" style={{ height: 28 }}>
-                <div className="absolute left-0 right-0 h-0.5 rounded-full" style={{ background: "rgba(109,188,109,0.1)" }} />
-                <div className="absolute left-0 h-0.5 rounded-full" style={{ width: `${sliderVal}%`, background: "linear-gradient(90deg, rgba(168,144,78,0.4), rgba(109,188,109,0.4))" }} />
-                <input type="range" min="0" max="100" step="1" value={sliderVal}
-                  onChange={e => setCostStr(e.target.value)}
-                  className="absolute left-0 right-0 w-full opacity-0 cursor-pointer" style={{ height: 28, margin: 0 }} />
-                <div className="absolute pointer-events-none" style={{
-                  left: `calc(${sliderVal}% - 9px)`, width: 18, height: 18, borderRadius: "50%",
-                  background: "linear-gradient(135deg, rgba(200,180,126,0.9), rgba(168,144,78,0.95))",
-                  boxShadow: "0 2px 8px rgba(5,15,5,0.6), 0 0 0 1px rgba(200,180,126,0.3)",
-                }} />
-              </div>
-              <div className="flex justify-between mt-2" style={{ fontSize: 9, color: "rgba(106,85,40,0.4)", letterSpacing: "0.5px" }}>
-                <span>$0</span><span>$100</span>
-              </div>
-            </motion.div>
-            <div className="flex-1" />
-            <motion.div className="space-y-2" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3, ease }}>
-              <motion.button onClick={handleStartAnalysis}
-                className="w-full flex items-center justify-center gap-2.5 font-semibold text-[#f5f0e8] relative overflow-hidden"
-                style={{ padding: "17px 22px", borderRadius: 16, fontSize: 15, letterSpacing: "0.2px", background: "linear-gradient(175deg, rgba(46,110,46,0.96) 0%, rgba(33,82,33,1) 100%)", border: "1px solid rgba(109,188,109,0.16)", boxShadow: "0 4px 24px rgba(5,15,5,0.55), 0 0 40px rgba(45,125,45,0.1)" }}
-                whileTap={{ scale: 0.97 }} transition={{ duration: 0.15, ease: "easeOut" }}>
-                <span style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)" }} />
-                Look it up
-              </motion.button>
-              <button onClick={handleStartAnalysis}
-                style={{ width: "100%", padding: "10px", fontSize: 12, color: "rgba(106,85,40,0.4)", letterSpacing: "0.3px", background: "none", border: "none", cursor: "pointer" }}>
-                Continue without a price
-              </button>
-            </motion.div>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
   // ── ANALYZING ────────────────────────────────────────────────────────────────
   if (appState === "analyzing") {
     return (
@@ -219,31 +159,45 @@ export default function DecidePage() {
         <main className="flex-1 flex flex-col px-5 py-6 pb-8 gap-6 overflow-y-auto">
           <motion.div className="flex gap-3 items-center" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
             <div className="rounded-xl overflow-hidden flex-shrink-0" style={{ width: 52, height: 52, border: "1px solid rgba(109,188,109,0.1)" }}>
-              <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover" style={{ filter: "brightness(0.8) saturate(0.65)" }} />
+              <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover"
+                style={{ filter: "brightness(0.8) saturate(0.65)" }} />
             </div>
             <div>
-              <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 2 }}>Price noted</div>
-              <div style={{ fontSize: 18, fontFamily: "monospace", fontWeight: 700, color: "#f5f0e8" }}>
-                {costStr ? `$${parseFloat(costStr).toFixed(2)}` : "Not entered"}
+              <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 2 }}>
+                Looking it up
+              </div>
+              <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: "#d4c9b0" }}>
+                {identifiedTitle ?? "Your find"}
               </div>
             </div>
           </motion.div>
+
           <div style={{ height: 1, background: "rgba(200,180,126,0.05)" }} />
+
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, delay: 0.15 }}>
             <AnalysisFeed state={analysisState} />
           </motion.div>
+
           <AnimatePresence>
             {analysisState.priceRange && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 style={{ padding: "14px 16px", borderRadius: 16, background: "rgba(13,31,13,0.45)", border: "1px solid rgba(109,188,109,0.1)" }}>
-                <div style={{ fontSize: 9, color: "#7a6535", textTransform: "uppercase", letterSpacing: "2px", marginBottom: 8 }}>Price range found</div>
+                <div style={{ fontSize: 9, color: "#7a6535", textTransform: "uppercase", letterSpacing: "2px", marginBottom: 8 }}>
+                  Price range found
+                </div>
                 <div className="flex items-baseline gap-3">
-                  <span style={{ fontFamily: "monospace", fontSize: 22, fontWeight: 700, color: "#d4c9b0" }}>${analysisState.priceRange.low.toFixed(0)}</span>
+                  <span style={{ fontFamily: "monospace", fontSize: 22, fontWeight: 700, color: "#d4c9b0" }}>
+                    ${analysisState.priceRange.low.toFixed(0)}
+                  </span>
                   <span style={{ fontSize: 11, color: "#6a5528" }}>to</span>
-                  <span style={{ fontFamily: "monospace", fontSize: 22, fontWeight: 700, color: "#f5f0e8" }}>${analysisState.priceRange.high.toFixed(0)}</span>
+                  <span style={{ fontFamily: "monospace", fontSize: 22, fontWeight: 700, color: "#f5f0e8" }}>
+                    ${analysisState.priceRange.high.toFixed(0)}
+                  </span>
                 </div>
                 {analysisState.compCount != null && (
-                  <div style={{ fontSize: 11, color: "#6a5528", marginTop: 4 }}>Based on {analysisState.compCount} recent sales</div>
+                  <div style={{ fontSize: 11, color: "#6a5528", marginTop: 4 }}>
+                    Based on {analysisState.compCount} recent sales
+                  </div>
                 )}
               </motion.div>
             )}
@@ -260,7 +214,7 @@ export default function DecidePage() {
 
       <main className="flex-1 overflow-y-auto pb-36">
 
-        {/* ── Photo — full bleed 320px matching discover page ── */}
+        {/* ── Photo — full bleed 320px ── */}
         <motion.div className="relative w-full flex-shrink-0" style={{ height: 320 }}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
           <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover"
@@ -280,7 +234,7 @@ export default function DecidePage() {
         <div className="px-5 flex flex-col gap-6 pt-2 pb-4">
 
           {/* ── Resell price hero ── */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1, ease }}>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
             <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "2px", marginBottom: 6 }}>
               Resell price
             </div>
@@ -301,7 +255,7 @@ export default function DecidePage() {
 
           {/* ── Market intelligence — 2×2 card grid ── */}
           {soldSummary && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.18, ease }}>
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.18 }}>
               <div style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2.5px", marginBottom: 12 }}>
                 Market intelligence
               </div>
@@ -340,7 +294,7 @@ export default function DecidePage() {
           {soldComps.length > 0 && (
             <>
               <div style={{ height: 1, background: "rgba(200,180,126,0.06)" }} />
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.26, ease }}>
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.26 }}>
                 <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
                   <div style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2.5px" }}>
                     Sold listings
@@ -371,7 +325,11 @@ export default function DecidePage() {
                           ${comp.price.toFixed(2)}
                         </div>
                         <div style={{ fontSize: 9, color: "#6a5528" }}>
-                          {comp.daysAgo > 0 ? `${comp.daysAgo}d ago` : "Recent"}
+                          {comp.soldDate
+                            ? formatSoldDate(comp.soldDate)
+                            : comp.daysAgo > 0
+                              ? `${comp.daysAgo}d ago`
+                              : "No date"}
                         </div>
                         <div style={{ display: "inline-block", fontSize: 8, background: "rgba(45,125,45,0.08)", color: "#7a6535", padding: "1px 4px", borderRadius: 3, marginTop: 3 }}>
                           {comp.condition}
@@ -391,7 +349,7 @@ export default function DecidePage() {
           {activeComps.length > 0 && (
             <>
               <div style={{ height: 1, background: "rgba(200,180,126,0.06)" }} />
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.34, ease }}>
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.34 }}>
                 <div className="flex items-center gap-2" style={{ marginBottom: 10 }}>
                   <div style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2.5px" }}>
                     Active listings
@@ -400,8 +358,7 @@ export default function DecidePage() {
                     {activeComps.length} competitors
                   </span>
                 </div>
-                <div
-                  style={{ overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch", margin: "0 -20px", padding: "0 20px 4px" }}
+                <div style={{ overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch", margin: "0 -20px", padding: "0 20px 4px" }}
                   className="hide-scrollbar">
                   <div style={{ display: "flex", gap: 10, width: "max-content" }}>
                     {activeComps.map((comp, i) => (
