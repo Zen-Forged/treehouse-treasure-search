@@ -98,10 +98,22 @@ export function sessionToFind(
 }
 
 export function useFinds() {
-  const [finds, setFinds] = useState<SavedFind[]>([]);
+  const [finds, setFinds] = useState<SavedFind[]>(() => load());
 
+  // Reload from localStorage whenever the page becomes visible
+  // Handles Next.js App Router keeping pages mounted across navigation
   useEffect(() => {
-    setFinds(load());
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        setFinds(load());
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    // Also reload on focus in case visibilitychange didn't fire
+    window.addEventListener("focus", () => setFinds(load()));
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   const saveFind = useCallback((find: SavedFind) => {
