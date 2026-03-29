@@ -8,7 +8,7 @@ import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useFindSession } from "@/hooks/useSession";
-import { useFinds, sessionToFind } from "@/hooks/useFinds";
+import { useFinds, SavedFind } from "@/hooks/useFinds";
 import { generateMockEvaluation } from "@/lib/mockIntelligence";
 import { calculatePricing } from "@/lib/pricingLogic";
 import { useAnalysisFlow } from "@/hooks/useAnalysisFlow";
@@ -40,8 +40,8 @@ function getBadge(recommendation: string) {
 
 function getIntelColor(level: string): string {
   const l = level.toLowerCase();
-  if (l === "high" || l === "fast")  return "#6dbc6d";
-  if (l === "moderate")              return "#a8904e";
+  if (l === "high" || l === "fast") return "#6dbc6d";
+  if (l === "moderate")             return "#a8904e";
   return "#9a7a5a";
 }
 
@@ -75,24 +75,32 @@ export default function DecidePage() {
   const [deciding, setDeciding]       = useState(false);
   const analysisStarted               = useRef(false);
 
+  // ── Store latest comp data in refs so handleDecision always has current values
+  // regardless of React closure staleness
+  const soldCompsRef   = useRef<Comp[]>([]);
+  const activeCompsRef = useRef<Comp[]>([]);
+  const summaryRef     = useRef<SoldSummary | null>(null);
+
   const { state: analysisState, run: runAnalysis, reset } = useAnalysisFlow();
 
   useEffect(() => {
     if (!sessionData) { router.replace("/"); return; }
-
-    // Start analysis immediately on mount — no price entry step
     if (analysisStarted.current) return;
     analysisStarted.current = true;
 
     runAnalysis({
       imageDataUrl: sessionData.imageDataUrl,
-      costStr:      "0",   // no cost entered — pricing calc will show $0 cost
+      costStr:      "0",
       searchQuery,
       identifiedTitle,
       onCompsReady: (fetchedSold, fetchedActive, fetchedSummary) => {
+        // Update both state (for rendering) and refs (for handleDecision)
         setSoldComps(fetchedSold);
         setActiveComps(fetchedActive);
         setSoldSummary(fetchedSummary);
+        soldCompsRef.current   = fetchedSold;
+        activeCompsRef.current = fetchedActive;
+        summaryRef.current     = fetchedSummary;
       },
       onComplete:           () => setAppState("done"),
       generateMockEvaluation,
@@ -102,28 +110,59 @@ export default function DecidePage() {
 
   useEffect(() => () => reset(), [reset]);
 
-  // No entered cost — pricing used only for recommendation badge
-  const pricing = calculatePricing(
-    soldComps.length > 0 ? soldComps : activeComps,
-    0
-  );
-  const badge = getBadge(pricing.recommendation);
+  const pricingComps = soldComps.length > 0 ? soldComps : activeComps;
+  const pricing      = calculatePricing(pricingComps, 0);
+  const badge        = getBadge(pricing.recommendation);
 
-  const handleDecision = useCallback(async (decision: "purchased" | "passed") => {
-    if (!sessionData || !findSession || deciding) return;
+  const handleDecision = useCallback((decision: "purchased" | "passed") => {
+    if (deciding) return;
     setDeciding(true);
-    const patch = {
-      ...findSession,
-      pricing: {
-        medianSoldPrice:     pricing.medianSoldPrice,
-        estimatedFees:       pricing.estimatedFees,
-        estimatedProfitHigh: pricing.estimatedProfitHigh,
-        recommendation:      pricing.recommendation,
-      },
+
+    // Read latest comp data from refs — avoids stale closure values
+    const currentSold    = soldCompsRef.current;
+    const currentActive  = activeCompsRef.current;
+    const currentSummary = summaryRef.current;
+    const pricingData    = calculatePricing(
+      currentSold.length > 0 ? currentSold : currentActive,
+      0
+    );
+
+    // Build the find directly — don't depend on findSession being non-null
+    // Pull everything we need from what we have in scope
+    const find: SavedFind = {
+      id:            findSession?.id            ?? `find_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      createdAt:     findSession?.createdAt     ?? new Date().toISOString(),
+      imageOriginal: findSession?.imageOriginal ?? "",
+      imageEnhanced: findSession?.imageEnhanced,
+
+      // Identity
+      title:         findSession?.identification?.title,
+      description:   findSession?.identification?.description,
+
+      // Attributes
+      brand:         findSession?.identification?.attributes?.brand    ?? null,
+      material:      findSession?.identification?.attributes?.material ?? null,
+      era:           findSession?.identification?.attributes?.era      ?? null,
+      origin:        findSession?.identification?.attributes?.origin   ?? null,
+      category:      findSession?.identification?.attributes?.category ?? null,
+
+      // Transaction
+      decision,
+
+      // Market data from refs
+      medianSoldPrice:  pricingData.medianSoldPrice,
+      priceRangeLow:    currentSummary?.priceRangeLow,
+      priceRangeHigh:   currentSummary?.priceRangeHigh,
+      avgDaysToSell:    currentSummary?.avgDaysToSell,
+      competitionCount: currentSummary?.competitionCount,
+      competitionLevel: currentSummary?.competitionLevel,
+      recommendation:   pricingData.recommendation,
     };
-    saveFind(sessionToFind(patch, decision));
+
+    console.log("[decide] saving find:", find.id, find.title, decision);
+    saveFind(find);
     router.push("/finds");
-  }, [sessionData, findSession, deciding, pricing, saveFind, router]);
+  }, [deciding, findSession, saveFind, router]);
 
   if (!sessionData) {
     return (
@@ -157,8 +196,10 @@ export default function DecidePage() {
       <div className="flex flex-col min-h-screen bg-[#050f05]">
         <NavBar />
         <main className="flex-1 flex flex-col px-5 py-6 pb-8 gap-6 overflow-y-auto">
-          <motion.div className="flex gap-3 items-center" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
-            <div className="rounded-xl overflow-hidden flex-shrink-0" style={{ width: 52, height: 52, border: "1px solid rgba(109,188,109,0.1)" }}>
+          <motion.div className="flex gap-3 items-center"
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
+            <div className="rounded-xl overflow-hidden flex-shrink-0"
+              style={{ width: 52, height: 52, border: "1px solid rgba(109,188,109,0.1)" }}>
               <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover"
                 style={{ filter: "brightness(0.8) saturate(0.65)" }} />
             </div>
