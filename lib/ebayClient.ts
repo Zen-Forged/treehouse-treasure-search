@@ -1,20 +1,20 @@
-import { MockComp } from "@/types";
+import { Comp } from "@/types";
 
 const EBAY_API_BASE = "https://api.ebay.com";
 
 // eBay category IDs for common reseller categories
 const CATEGORY_MAP: Record<string, string> = {
-  clothing: "11450",
-  shoes: "63889",
+  clothing:    "11450",
+  shoes:       "63889",
   electronics: "consumer_electronics",
-  handbag: "169291",
-  jewelry: "281",
+  handbag:     "169291",
+  jewelry:     "281",
   collectible: "1",
-  other: "",
+  other:       "",
 };
 
 interface TokenCache {
-  token: string;
+  token:     string;
   expiresAt: number;
 }
 
@@ -25,7 +25,7 @@ async function getAccessToken(): Promise<string> {
     return tokenCache.token;
   }
 
-  const clientId = process.env.EBAY_CLIENT_ID;
+  const clientId     = process.env.EBAY_CLIENT_ID;
   const clientSecret = process.env.EBAY_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
@@ -35,9 +35,9 @@ async function getAccessToken(): Promise<string> {
   const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
 
   const res = await fetch(`${EBAY_API_BASE}/identity/v1/oauth2/token`, {
-    method: "POST",
+    method:  "POST",
     headers: {
-      Authorization: `Basic ${credentials}`,
+      Authorization:  `Basic ${credentials}`,
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: "grant_type=client_credentials&scope=https%3A%2F%2Fapi.ebay.com%2Foauth%2Fapi_scope",
@@ -50,7 +50,7 @@ async function getAccessToken(): Promise<string> {
 
   const data = await res.json();
   tokenCache = {
-    token: data.access_token,
+    token:     data.access_token,
     expiresAt: Date.now() + data.expires_in * 1000,
   };
 
@@ -58,11 +58,11 @@ async function getAccessToken(): Promise<string> {
 }
 
 interface EbayItem {
-  title: string;
-  price?: { value: string };
-  condition?: string;
-  itemWebUrl?: string;
-  image?: { imageUrl: string };
+  title:        string;
+  price?:       { value: string };
+  condition?:   string;
+  itemWebUrl?:  string;
+  image?:       { imageUrl: string };
   itemEndDate?: string;
   lastSoldDate?: string;
 }
@@ -76,52 +76,49 @@ function daysAgo(dateStr?: string): number {
 function normalizeCondition(condition?: string): string {
   if (!condition) return "Good";
   const c = condition.toLowerCase();
-  if (c.includes("new")) return "Like New";
+  if (c.includes("new"))                                     return "Like New";
   if (c.includes("excellent") || c.includes("refurbished")) return "Very Good";
-  if (c.includes("good")) return "Good";
-  if (c.includes("acceptable") || c.includes("fair")) return "Acceptable";
+  if (c.includes("good"))                                    return "Good";
+  if (c.includes("acceptable") || c.includes("fair"))        return "Acceptable";
   return condition;
 }
 
 export async function getEbaySoldComps(
-  query: string,
-  category?: string
-): Promise<MockComp[]> {
+  query:    string,
+  category?: string,
+): Promise<Comp[]> {
   const token = await getAccessToken();
 
   const categoryId = category ? CATEGORY_MAP[category.toLowerCase()] : "";
 
-  // Price floors by category to filter out accessories
   const PRICE_FLOORS: Record<string, number> = {
     electronics: 50,
-    shoes: 10,
-    clothing: 8,
-    handbag: 20,
-    jewelry: 10,
+    shoes:       10,
+    clothing:    8,
+    handbag:     20,
+    jewelry:     10,
     collectible: 8,
-    other: 8,
+    other:       8,
   };
 
   const priceFloor = category ? (PRICE_FLOORS[category.toLowerCase()] ?? 8) : 8;
 
   const params = new URLSearchParams({
-    q: query,
+    q:      query,
     filter: `buyingOptions:{FIXED_PRICE},price:[${priceFloor}..],priceCurrency:USD`,
-    sort: "price",
-    limit: "20",
+    sort:   "price",
+    limit:  "20",
   });
 
-  if (categoryId) {
-    params.append("category_ids", categoryId);
-  }
+  if (categoryId) params.append("category_ids", categoryId);
 
   const res = await fetch(
     `${EBAY_API_BASE}/buy/browse/v1/item_summary/search?${params}`,
     {
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization:            `Bearer ${token}`,
         "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
-        "Content-Type": "application/json",
+        "Content-Type":            "application/json",
       },
     }
   );
@@ -131,30 +128,24 @@ export async function getEbaySoldComps(
     throw new Error(`eBay search failed: ${res.status} ${text}`);
   }
 
-  const data = await res.json();
+  const data  = await res.json();
   const items: EbayItem[] = data.itemSummaries ?? [];
 
   if (items.length === 0) throw new Error("No eBay results found");
 
   const filtered = items
-    .filter((item) => {
-      const price = parseFloat(item.price?.value ?? "0");
-      return price >= 8;
-    })
-    .sort((a, b) => {
-      const priceA = parseFloat(a.price?.value ?? "0");
-      const priceB = parseFloat(b.price?.value ?? "0");
-      return priceA - priceB;
-    })
+    .filter(item => parseFloat(item.price?.value ?? "0") >= 8)
+    .sort((a, b) => parseFloat(a.price?.value ?? "0") - parseFloat(b.price?.value ?? "0"))
     .slice(0, 5)
-    .map((item) => ({
-      title: item.title ?? "Unknown Item",
-      platform: "eBay",
-      price: parseFloat(item.price!.value),
-      condition: normalizeCondition(item.condition),
-      daysAgo: daysAgo(item.itemEndDate ?? item.lastSoldDate),
-      url: item.itemWebUrl,
-      imageUrl: item.image?.imageUrl,
+    .map((item): Comp => ({
+      title:       item.title ?? "Unknown Item",
+      platform:    "ebay",
+      price:       parseFloat(item.price!.value),
+      condition:   normalizeCondition(item.condition),
+      daysAgo:     daysAgo(item.itemEndDate ?? item.lastSoldDate),
+      listingType: "active",   // Browse API returns active listings
+      url:         item.itemWebUrl,
+      imageUrl:    item.image?.imageUrl,
     }));
 
   if (filtered.length === 0) throw new Error("No qualifying results found");
