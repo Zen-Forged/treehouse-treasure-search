@@ -58,6 +58,8 @@ function Row({
 
 export function PricingBreakdown({ item }: PricingBreakdownProps) {
   const profitPositive = item.estimatedProfitHigh > 0;
+  const compLow        = item.mockCompLow  ?? 0;
+  const compHigh       = item.mockCompHigh ?? 0;
 
   return (
     <div className="rounded-2xl bg-forest-900/40 border border-forest-800/40 p-4 space-y-2.5">
@@ -67,16 +69,16 @@ export function PricingBreakdown({ item }: PricingBreakdownProps) {
 
       <Row
         label="Comp Range"
-        value={`${formatCurrency(item.mockCompLow)} – ${formatCurrency(item.mockCompHigh)}`}
+        value={`${formatCurrency(compLow)} – ${formatCurrency(compHigh)}`}
       />
       <Row
         label="Suggested List Price"
         value={formatCurrency(item.suggestedListPrice)}
         accent
       />
-      <Row label="Your Cost" value={`– ${formatCurrency(item.enteredCost)}`} />
-      <Row label="Marketplace Fees (~13%)" value={`– ${formatCurrency(item.estimatedFees)}`} />
-      <Row label="Shipping (est.)" value={`– ${formatCurrency(item.estimatedShipping)}`} />
+      <Row label="Your Cost"                value={`– ${formatCurrency(item.enteredCost)}`} />
+      <Row label="Marketplace Fees (~13%)"  value={`– ${formatCurrency(item.estimatedFees)}`} />
+      <Row label="Shipping (est.)"          value={`– ${formatCurrency(item.estimatedShipping)}`} />
 
       <div className="border-t border-forest-800/60 pt-2.5">
         <Row
