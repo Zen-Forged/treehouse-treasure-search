@@ -1,10 +1,9 @@
 // app/decide/page.tsx
-// Phase 1: uses findSession.identification.searchQuery — no re-identification
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useFindSession } from "@/hooks/useSession";
@@ -30,38 +29,19 @@ interface SoldSummary {
   competitionLevel:  "low" | "moderate" | "high";
 }
 
-function getROI(profit: number, cost: number): string {
-  if (!cost) return "—";
-  return Math.round((profit / cost) * 100) + "%";
-}
-
 function getBadge(recommendation: string) {
   if (recommendation === "strong-buy")
     return { label: "Strong find",         color: "#c8b47e", border: "rgba(200,180,126,0.35)", bg: "rgba(200,180,126,0.08)" };
   if (recommendation === "maybe")
     return { label: "Worth a closer look", color: "#a0a0a8", border: "rgba(160,160,168,0.35)", bg: "rgba(160,160,168,0.08)" };
-  return       { label: "Marginal",        color: "#9a7a5a", border: "rgba(154,122,90,0.35)",  bg: "rgba(154,122,90,0.08)" };
+  return       { label: "Marginal",        color: "#9a7a5a", border: "rgba(154,122,90,0.35)",  bg: "rgba(154,122,90,0.08)"  };
 }
 
-function getVerdict(recommendation: string) {
-  if (recommendation === "strong-buy") return {
-    line:      "Strong margin. Sells reliably. This one stands out.",
-    scoutTake: "Strong margin and steady demand. After fees, the return is clear. Condition looks solid.",
-  };
-  if (recommendation === "maybe") return {
-    line:      "Reasonable margin. Condition and timing will determine the outcome.",
-    scoutTake: "Decent margin but not a lot of room. If condition is clean and the price holds, this works.",
-  };
-  return {
-    line:      "After fees, there isn't much room. A better find may be nearby.",
-    scoutTake: "The numbers are too tight. After fees you'd clear very little. Move on.",
-  };
-}
-
-function getCompetitionColor(level: string): string {
-  if (level === "high")     return "#c0392b";
-  if (level === "moderate") return "#a8904e";
-  return "#6dbc6d";
+function getIntelColor(level: string): string {
+  const l = level.toLowerCase();
+  if (l === "high" || l === "fast")  return "#6dbc6d";
+  if (l === "moderate")              return "#a8904e";
+  return "#9a7a5a";
 }
 
 const ease = [0.25, 0.1, 0.25, 1] as const;
@@ -75,31 +55,21 @@ export default function DecidePage() {
     ? { imageDataUrl: findSession.imageOriginal, enteredCost: findSession.pricePaid ?? 0 }
     : null;
 
-  const searchQuery = findSession?.refinedQuery
-    ?? findSession?.identification?.searchQuery
-    ?? "thrift store item";
-
+  const searchQuery     = findSession?.refinedQuery ?? findSession?.identification?.searchQuery ?? "thrift store item";
   const identifiedTitle = findSession?.identification?.title;
-  const attributes      = findSession?.identification?.attributes;
 
-  const [appState, setAppState]         = useState<AppState>("price-entry");
-  const [costStr, setCostStr]           = useState("5");
-  const [soldComps, setSoldComps]       = useState<Comp[]>([]);
-  const [activeComps, setActiveComps]   = useState<Comp[]>([]);
-  const [soldSummary, setSoldSummary]   = useState<SoldSummary | null>(null);
-  const [usingMock, setUsingMock]       = useState(false);
-  const [showSoldComps, setShowSoldComps]     = useState(false);
-  const [showActiveComps, setShowActiveComps] = useState(false);
-  const [showBreakdown, setShowBreakdown]     = useState(false);
-  const [deciding, setDeciding]         = useState(false);
-  const analysisStarted                 = useRef(false);
+  const [appState, setAppState]       = useState<AppState>("price-entry");
+  const [costStr, setCostStr]         = useState("5");
+  const [soldComps, setSoldComps]     = useState<Comp[]>([]);
+  const [activeComps, setActiveComps] = useState<Comp[]>([]);
+  const [soldSummary, setSoldSummary] = useState<SoldSummary | null>(null);
+  const [usingMock, setUsingMock]     = useState(false);
+  const [deciding, setDeciding]       = useState(false);
+  const analysisStarted               = useRef(false);
 
   const { state: analysisState, run: runAnalysis, reset } = useAnalysisFlow();
 
-  useEffect(() => {
-    if (!sessionData) router.replace("/");
-  }, []);
-
+  useEffect(() => { if (!sessionData) router.replace("/"); }, []);
   useEffect(() => () => reset(), [reset]);
 
   const handleStartAnalysis = useCallback(() => {
@@ -107,7 +77,7 @@ export default function DecidePage() {
     analysisStarted.current = true;
     setAppState("analyzing");
     runAnalysis({
-      imageDataUrl:    sessionData.imageDataUrl,
+      imageDataUrl: sessionData.imageDataUrl,
       costStr,
       searchQuery,
       identifiedTitle,
@@ -116,20 +86,16 @@ export default function DecidePage() {
         setActiveComps(fetchedActive);
         setSoldSummary(fetchedSummary);
       },
-      onComplete:      () => setAppState("done"),
+      onComplete:           () => setAppState("done"),
       generateMockEvaluation,
       setUsingMock,
     });
   }, [sessionData, costStr, searchQuery, identifiedTitle, runAnalysis]);
 
-  const enteredCost = parseFloat(costStr) || 0;
-
-  // Pricing always uses sold comps; fall back to active if none
+  const enteredCost  = parseFloat(costStr) || 0;
   const pricingComps = soldComps.length > 0 ? soldComps : activeComps;
   const pricing      = calculatePricing(pricingComps, enteredCost);
-  const verdict      = getVerdict(pricing.recommendation);
   const badge        = getBadge(pricing.recommendation);
-  const roiLabel     = getROI(pricing.estimatedProfitHigh, enteredCost);
 
   const handleDecision = useCallback(async (decision: "purchased" | "passed") => {
     if (!sessionData || !findSession || deciding) return;
@@ -174,17 +140,17 @@ export default function DecidePage() {
     </header>
   );
 
-  // ── PRICE ENTRY ──────────────────────────────────────
+  // ── PRICE ENTRY ──────────────────────────────────────────────────────────────
   if (appState === "price-entry") {
     const sliderVal = Math.min(Math.max(parseFloat(costStr) || 0, 0), 100);
     return (
       <div className="flex flex-col min-h-screen bg-[#050f05]">
         <NavBar />
         <main className="flex-1 flex flex-col">
-          <motion.div className="relative w-full" style={{ height: 240 }}
+          <motion.div className="relative w-full flex-shrink-0" style={{ height: 320 }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
             <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover"
-              style={{ filter: "brightness(0.78) saturate(0.7) sepia(0.1)" }} />
+              style={{ filter: "brightness(0.82) saturate(0.75) sepia(0.08)" }} />
             <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%, transparent 25%, rgba(5,15,5,0.4) 100%)" }} />
             <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 35%, #050f05 100%)" }} />
           </motion.div>
@@ -194,7 +160,7 @@ export default function DecidePage() {
               <h2 style={{ fontFamily: "Georgia, serif", fontSize: 24, fontWeight: 700, color: "#f5f0e8", lineHeight: 1.2 }}>
                 What's the asking price?
               </h2>
-              <p style={{ fontSize: 12, color: "#6a5528", lineHeight: 1.5, fontWeight: 300 }}>Set the price you see.</p>
+              <p style={{ fontSize: 12, color: "#6a5528", lineHeight: 1.5, fontWeight: 300 }}>Set the price you see on the tag.</p>
             </motion.div>
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.18, ease }}>
               <div className="flex items-center gap-2 px-5 py-4 rounded-2xl"
@@ -245,7 +211,7 @@ export default function DecidePage() {
     );
   }
 
-  // ── ANALYZING ────────────────────────────────────────
+  // ── ANALYZING ────────────────────────────────────────────────────────────────
   if (appState === "analyzing") {
     return (
       <div className="flex flex-col min-h-screen bg-[#050f05]">
@@ -287,231 +253,201 @@ export default function DecidePage() {
     );
   }
 
-  // ── RESULTS ──────────────────────────────────────────
+  // ── RESULTS ──────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col min-h-screen bg-[#050f05]">
       <NavBar />
+
       <main className="flex-1 overflow-y-auto pb-36">
 
-        {/* ── Hero profit section ── */}
-        <motion.div className="relative px-5 pt-7 pb-6"
-          style={{ background: "linear-gradient(160deg, rgba(17,37,17,0.85) 0%, rgba(9,21,9,0.95) 100%)", borderBottom: "1px solid rgba(109,188,109,0.08)" }}
+        {/* ── Photo — full bleed 320px matching discover page ── */}
+        <motion.div className="relative w-full flex-shrink-0" style={{ height: 320 }}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
-          <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(200,180,126,0.18), transparent)" }} />
-          <div className="absolute top-5 right-5">
+          <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover"
+            style={{ filter: "brightness(0.82) saturate(0.75) sepia(0.08)" }} />
+          <div className="absolute inset-0"
+            style={{ background: "radial-gradient(ellipse at 50% 50%, transparent 25%, rgba(5,15,5,0.4) 100%)" }} />
+          <div className="absolute bottom-0 left-0 right-0"
+            style={{ height: 120, background: "linear-gradient(to bottom, transparent, #050f05)" }} />
+          <motion.div className="absolute bottom-4 right-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
             <div style={{ padding: "5px 11px", borderRadius: 20, fontSize: 10, fontWeight: 500, color: badge.color, background: badge.bg, border: `1px solid ${badge.border}` }}>
               {badge.label}
             </div>
-          </div>
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
-            <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "2px", marginBottom: 4 }}>Estimated profit</div>
-            <div className="flex items-start gap-1" style={{ fontFamily: "Georgia, serif" }}>
-              <span style={{ fontSize: 22, fontWeight: 500, color: "#a8904e", paddingTop: 8, lineHeight: 1 }}>+$</span>
-              <span style={{ fontSize: 72, fontWeight: 700, lineHeight: 1, letterSpacing: -3, color: pricing.estimatedProfitHigh > 15 ? "#f5f0e8" : pricing.estimatedProfitHigh > 5 ? "#d4c9b0" : "#7a6535" }}>
-                {Math.max(0, pricing.estimatedProfitHigh).toFixed(2)}
-              </span>
-            </div>
           </motion.div>
-          <motion.div className="flex items-center gap-5 mt-4 pt-4" style={{ borderTop: "1px solid rgba(109,188,109,0.08)" }}
-            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
-            <div>
-              <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 2 }}>Resell price</div>
-              <div style={{ fontSize: 20, fontFamily: "monospace", fontWeight: 600, color: "#d4c9b0" }}>${pricing.medianSoldPrice.toFixed(0)}</div>
-            </div>
-            <div style={{ width: 1, height: 28, background: "rgba(109,188,109,0.1)" }} />
-            <div>
-              <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 2 }}>Your cost</div>
-              <div style={{ fontSize: 20, fontFamily: "monospace", fontWeight: 600, color: "#6a5528" }}>${enteredCost.toFixed(0)}</div>
-            </div>
-            {enteredCost > 0 && (
-              <>
-                <div style={{ width: 1, height: 28, background: "rgba(109,188,109,0.1)" }} />
-                <div>
-                  <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 2 }}>Return</div>
-                  <div style={{ fontSize: 20, fontFamily: "monospace", fontWeight: 600, color: "#7a6535" }}>{roiLabel}</div>
-                </div>
-              </>
-            )}
-          </motion.div>
-          <motion.p style={{ fontSize: 12, color: "#6a5528", lineHeight: 1.5, marginTop: 14 }}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.3 }}>
-            {verdict.line}
-          </motion.p>
         </motion.div>
 
-        <div className="px-4 py-4 flex flex-col gap-4">
+        <div className="px-5 flex flex-col gap-6 pt-2 pb-4">
 
-          {/* ── Item thumbnail + confidence ── */}
-          <motion.div className="flex gap-3 items-center" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.22 }}>
-            <div className="rounded-xl overflow-hidden flex-shrink-0" style={{ width: 60, height: 60, border: "1px solid rgba(109,188,109,0.08)" }}>
-              <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover" style={{ filter: "brightness(0.82) saturate(0.72) sepia(0.08)" }} />
+          {/* ── Resell price hero ── */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1, ease }}>
+            <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "2px", marginBottom: 6 }}>
+              Resell price
             </div>
-            <div style={{ padding: "4px 10px", borderRadius: 20, opacity: 0.65, background: "rgba(45,125,45,0.14)", border: "1px solid rgba(109,188,109,0.14)" }}>
-              <span style={{ fontSize: 10, color: "#9fd49f", letterSpacing: "0.3px" }}>High confidence</span>
+            <div className="flex items-start gap-1" style={{ fontFamily: "Georgia, serif" }}>
+              <span style={{ fontSize: 22, fontWeight: 500, color: "#a8904e", paddingTop: 8, lineHeight: 1 }}>$</span>
+              <span style={{ fontSize: 64, fontWeight: 700, lineHeight: 1, letterSpacing: -2, color: "#f5f0e8" }}>
+                {pricing.medianSoldPrice > 0 ? Math.round(pricing.medianSoldPrice) : "—"}
+              </span>
             </div>
+            {soldSummary && soldSummary.priceRangeLow > 0 && (
+              <div style={{ fontFamily: "monospace", fontSize: 11, color: "#6a5528", marginTop: 6 }}>
+                ${Math.round(soldSummary.priceRangeLow)} — ${Math.round(soldSummary.priceRangeHigh)} range
+              </div>
+            )}
           </motion.div>
 
-          {/* ── Item attributes (brand, material, era, origin, category) ── */}
-          {attributes && Object.values(attributes).some(v => v !== null) && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.25 }}>
-              <div style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2.5px", marginBottom: 10 }}>Item details</div>
-              <div className="flex flex-col gap-2">
-                {([
-                  attributes.brand    ? { label: "Brand",    val: attributes.brand    } : null,
-                  attributes.material ? { label: "Material", val: attributes.material } : null,
-                  attributes.era      ? { label: "Era",      val: attributes.era      } : null,
-                  attributes.origin   ? { label: "Origin",   val: attributes.origin   } : null,
-                  attributes.category ? { label: "Category", val: attributes.category } : null,
-                ].filter(Boolean) as { label: string; val: string }[]).map(row => (
-                  <div key={row.label} className="flex items-center justify-between">
-                    <span style={{ fontSize: 12, color: "#6a5528" }}>{row.label}</span>
-                    <span style={{ fontSize: 12, color: "#d4c9b0", fontWeight: 500 }}>{row.val}</span>
-                  </div>
-                ))}
+          <div style={{ height: 1, background: "rgba(200,180,126,0.06)" }} />
+
+          {/* ── Market intelligence — 2×2 card grid ── */}
+          {soldSummary && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.18, ease }}>
+              <div style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2.5px", marginBottom: 12 }}>
+                Market intelligence
               </div>
-            </motion.div>
-          )}
-
-          {/* ── Market intelligence ── */}
-          {soldSummary && (soldSummary.demandLevel || soldSummary.avgDaysToSell) && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.28 }}
-              style={{ paddingTop: 12, borderTop: "1px solid rgba(200,180,126,0.06)" }}>
-              <div style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2.5px", marginBottom: 10 }}>Market intelligence</div>
-              <div className="flex flex-col gap-2">
-                {([
-                  soldSummary.demandLevel   ? { label: "Demand",           val: soldSummary.demandLevel }                             : null,
-                  soldSummary.avgDaysToSell ? { label: "Avg days to sell", val: `${soldSummary.avgDaysToSell} days` }                  : null,
-                  soldSummary.marketVelocity ? { label: "Market velocity",  val: soldSummary.marketVelocity }                         : null,
-                  soldSummary.confidence    ? { label: "Data confidence",   val: soldSummary.confidence }                             : null,
-                  soldSummary.competitionCount != null ? {
-                    label: "Competition",
-                    val: `${soldSummary.competitionLevel} (${soldSummary.competitionCount} active)`,
-                    color: getCompetitionColor(soldSummary.competitionLevel),
-                  } : null,
-                ].filter(Boolean) as { label: string; val: string; color?: string }[]).map(row => (
-                  <div key={row.label} className="flex items-center justify-between">
-                    <span style={{ fontSize: 12, color: "#6a5528" }}>{row.label}</span>
-                    <span style={{ fontSize: 12, color: row.color ?? "#d4c9b0", fontWeight: 500, textTransform: "capitalize" }}>{row.val}</span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {/* ── Quick take ── */}
-          {soldSummary?.quickTake && (
-            <motion.div style={{ paddingTop: 12, borderTop: "1px solid rgba(200,180,126,0.06)" }}
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.32 }}>
-              <p style={{ fontFamily: "Georgia, serif", fontSize: 15, color: "#a8904e", lineHeight: 1.65, fontStyle: "italic" }}>
-                "{soldSummary.quickTake}"
-              </p>
-            </motion.div>
-          )}
-
-          {/* ── Scout assessment ── */}
-          <motion.div className="rounded-2xl p-4" style={{ background: "rgba(13,31,13,0.45)", border: "1px solid rgba(200,180,126,0.07)" }}
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.36 }}>
-            <div className="flex items-center gap-2 mb-3">
-              <Image src="/logo.png" alt="" width={12} height={12} style={{ opacity: 0.45 }} />
-              <span style={{ fontSize: 9, color: "#7a6535", textTransform: "uppercase", letterSpacing: "2.5px" }}>Assessment</span>
-            </div>
-            <p style={{ fontFamily: "Georgia, serif", fontSize: 14, color: "#a8904e", lineHeight: 1.7, fontStyle: "italic" }}>
-              "{verdict.scoutTake}"
-            </p>
-          </motion.div>
-
-          {/* ── Breakdown ── */}
-          <motion.div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(109,188,109,0.07)" }}
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
-            <button onClick={() => setShowBreakdown(v => !v)} className="w-full flex items-center justify-between px-4 py-3.5" style={{ background: "rgba(13,31,13,0.45)" }}>
-              <span style={{ fontSize: 12, fontWeight: 500, color: "#d4c9b0" }}>Breakdown</span>
-              {showBreakdown ? <ChevronUp size={12} style={{ color: "#3d3018" }} /> : <ChevronDown size={12} style={{ color: "#3d3018" }} />}
-            </button>
-            <AnimatePresence>
-              {showBreakdown && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.22 }}>
-                  {[
-                    { label: "Median sold price", val: `$${pricing.medianSoldPrice.toFixed(2)}`, sub: false },
-                    { label: "Your cost",         val: `– $${enteredCost.toFixed(2)}`,           sub: true  },
-                    { label: "Fees",              val: `– $${pricing.estimatedFees.toFixed(2)}`, sub: true  },
-                  ].map(row => (
-                    <div key={row.label} className="flex justify-between px-4 py-2.5" style={{ borderTop: "1px solid rgba(109,188,109,0.05)", background: "rgba(9,21,9,0.45)" }}>
-                      <span style={{ fontSize: 12, color: "#6a5528" }}>{row.label}</span>
-                      <span style={{ fontSize: 12, fontFamily: "monospace", fontWeight: 600, color: row.sub ? "rgba(180,60,50,0.55)" : "#d4c9b0" }}>{row.val}</span>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {[
+                  { key: "Demand",      val: soldSummary.demandLevel,     sub: `${soldComps.length} sold comps` },
+                  { key: "Velocity",    val: soldSummary.marketVelocity,  sub: soldSummary.avgDaysToSell > 0 ? `~${soldSummary.avgDaysToSell} days to sell` : "" },
+                  { key: "Confidence",  val: soldSummary.confidence,      sub: `${soldComps.length} data points` },
+                  { key: "Competition", val: soldSummary.competitionLevel, sub: `${soldSummary.competitionCount} active listings` },
+                ].map(card => (
+                  <div key={card.key}
+                    style={{ background: "rgba(13,31,13,0.5)", border: "1px solid rgba(109,188,109,0.08)", borderRadius: 14, padding: "12px 14px" }}>
+                    <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 5 }}>
+                      {card.key}
                     </div>
-                  ))}
-                  <div className="flex justify-between px-4 py-3" style={{ borderTop: "1px solid rgba(109,188,109,0.08)", background: "rgba(45,125,45,0.07)" }}>
-                    <span style={{ fontSize: 13, fontWeight: 500, color: "#f5f0e8" }}>In your pocket</span>
-                    <span style={{ fontSize: 13, fontFamily: "monospace", fontWeight: 700, color: pricing.estimatedProfitHigh >= 0 ? "#6dbc6d" : "#c0392b" }}>
-                      {pricing.estimatedProfitHigh >= 0 ? "+" : ""}${pricing.estimatedProfitHigh.toFixed(2)}
-                    </span>
+                    <div style={{ fontSize: 15, fontWeight: 500, color: getIntelColor(card.val), textTransform: "capitalize" }}>
+                      {card.val}
+                    </div>
+                    {card.sub && (
+                      <div style={{ fontSize: 10, color: "#6a5528", marginTop: 2 }}>{card.sub}</div>
+                    )}
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-
-          {/* ── Sold comps ── */}
-          {soldComps.length > 0 && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.44 }}>
-              <button onClick={() => setShowSoldComps(v => !v)} className="w-full flex items-center justify-between px-4 py-3 rounded-xl mb-2"
-                style={{ background: "rgba(13,31,13,0.35)", border: "1px solid rgba(109,188,109,0.06)" }}>
-                <div className="flex items-center gap-2">
-                  <span style={{ fontSize: 12, fontWeight: 500, color: "#d4c9b0" }}>Sold listings</span>
-                  <span style={{ fontSize: 10, color: "#6dbc6d", background: "rgba(45,125,45,0.12)", padding: "1px 7px", borderRadius: 8 }}>{soldComps.length}</span>
+                ))}
+              </div>
+              {soldSummary.quickTake && (
+                <div style={{ marginTop: 12, padding: "14px 16px", borderRadius: 14, background: "rgba(13,31,13,0.35)", border: "1px solid rgba(200,180,126,0.06)" }}>
+                  <p style={{ fontFamily: "Georgia, serif", fontSize: 13, color: "#a8904e", lineHeight: 1.7, fontStyle: "italic" }}>
+                    "{soldSummary.quickTake}"
+                  </p>
                 </div>
-                {showSoldComps ? <ChevronUp size={12} style={{ color: "#3d3018" }} /> : <ChevronDown size={12} style={{ color: "#3d3018" }} />}
-              </button>
-              <AnimatePresence>
-                {showSoldComps && (
-                  <motion.div className="flex flex-col gap-1.5" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.22 }}>
-                    {soldComps.map((comp, i) => (
-                      <CompRow key={i} comp={comp} index={i} />
-                    ))}
-                    <p style={{ textAlign: "center", fontSize: 10, color: "#2e2410", padding: "5px 0" }}>
-                      {usingMock ? "Estimated data" : "Real eBay sold listings"}
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              )}
             </motion.div>
           )}
 
-          {/* ── Active comps (competition) ── */}
-          {activeComps.length > 0 && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.48 }}>
-              <button onClick={() => setShowActiveComps(v => !v)} className="w-full flex items-center justify-between px-4 py-3 rounded-xl mb-2"
-                style={{ background: "rgba(13,31,13,0.35)", border: "1px solid rgba(109,188,109,0.06)" }}>
-                <div className="flex items-center gap-2">
-                  <span style={{ fontSize: 12, fontWeight: 500, color: "#d4c9b0" }}>Active listings</span>
-                  <span style={{ fontSize: 10, color: soldSummary ? getCompetitionColor(soldSummary.competitionLevel) : "#a8904e", background: "rgba(45,125,45,0.08)", padding: "1px 7px", borderRadius: 8 }}>{activeComps.length}</span>
-                  <span style={{ fontSize: 10, color: "#6a5528" }}>competition</span>
+          {/* ── Sold comps — 3-per-row grid ── */}
+          {soldComps.length > 0 && (
+            <>
+              <div style={{ height: 1, background: "rgba(200,180,126,0.06)" }} />
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.26, ease }}>
+                <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2.5px" }}>
+                    Sold listings
+                  </div>
+                  <span style={{ fontSize: 10, color: "#6dbc6d", background: "rgba(45,125,45,0.12)", padding: "1px 8px", borderRadius: 8 }}>
+                    {soldComps.length}
+                  </span>
                 </div>
-                {showActiveComps ? <ChevronUp size={12} style={{ color: "#3d3018" }} /> : <ChevronDown size={12} style={{ color: "#3d3018" }} />}
-              </button>
-              <AnimatePresence>
-                {showActiveComps && (
-                  <motion.div className="flex flex-col gap-1.5" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.22 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                  {soldComps.slice(0, 9).map((comp, i) => (
+                    <motion.a key={i} href={comp.url ?? "#"} target="_blank" rel="noopener noreferrer"
+                      style={{ borderRadius: 12, overflow: "hidden", background: "rgba(13,31,13,0.5)", border: "1px solid rgba(109,188,109,0.07)", display: "block", textDecoration: "none" }}
+                      initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.25, delay: 0.28 + i * 0.03 }}
+                      whileTap={{ scale: 0.97 }}>
+                      {comp.imageUrl ? (
+                        <img src={comp.imageUrl} alt={comp.title}
+                          style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block", filter: "brightness(0.82) saturate(0.7)" }} />
+                      ) : (
+                        <div style={{ width: "100%", aspectRatio: "1", background: "rgba(17,37,17,0.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(200,180,126,0.12)" strokeWidth="1">
+                            <rect x="2" y="2" width="20" height="20" rx="3"/><circle cx="12" cy="12" r="4"/>
+                          </svg>
+                        </div>
+                      )}
+                      <div style={{ padding: "7px 8px 9px" }}>
+                        <div style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 700, color: "#f5f0e8", marginBottom: 2 }}>
+                          ${comp.price.toFixed(2)}
+                        </div>
+                        <div style={{ fontSize: 9, color: "#6a5528" }}>
+                          {comp.daysAgo > 0 ? `${comp.daysAgo}d ago` : "Recent"}
+                        </div>
+                        <div style={{ display: "inline-block", fontSize: 8, background: "rgba(45,125,45,0.08)", color: "#7a6535", padding: "1px 4px", borderRadius: 3, marginTop: 3 }}>
+                          {comp.condition}
+                        </div>
+                      </div>
+                    </motion.a>
+                  ))}
+                </div>
+                <p style={{ textAlign: "center", fontSize: 10, color: "#2e2410", paddingTop: 8 }}>
+                  {usingMock ? "Estimated data" : "Real eBay sold listings"}
+                </p>
+              </motion.div>
+            </>
+          )}
+
+          {/* ── Active comps — horizontal scroll ── */}
+          {activeComps.length > 0 && (
+            <>
+              <div style={{ height: 1, background: "rgba(200,180,126,0.06)" }} />
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.34, ease }}>
+                <div className="flex items-center gap-2" style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2.5px" }}>
+                    Active listings
+                  </div>
+                  <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 8, background: "rgba(168,144,78,0.1)", color: "#a8904e", border: "1px solid rgba(168,144,78,0.2)" }}>
+                    {activeComps.length} competitors
+                  </span>
+                </div>
+                <div
+                  style={{ overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch", margin: "0 -20px", padding: "0 20px 4px" }}
+                  className="hide-scrollbar">
+                  <div style={{ display: "flex", gap: 10, width: "max-content" }}>
                     {activeComps.map((comp, i) => (
-                      <CompRow key={i} comp={comp} index={i} />
+                      <motion.a key={i} href={comp.url ?? "#"} target="_blank" rel="noopener noreferrer"
+                        style={{ width: 130, flexShrink: 0, borderRadius: 12, overflow: "hidden", background: "rgba(13,31,13,0.5)", border: "1px solid rgba(109,188,109,0.07)", display: "block", textDecoration: "none" }}
+                        initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.25, delay: 0.36 + i * 0.04 }}
+                        whileTap={{ scale: 0.97 }}>
+                        {comp.imageUrl ? (
+                          <img src={comp.imageUrl} alt={comp.title}
+                            style={{ width: "100%", height: 100, objectFit: "cover", display: "block", filter: "brightness(0.78) saturate(0.65)" }} />
+                        ) : (
+                          <div style={{ width: "100%", height: 100, background: "rgba(17,37,17,0.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(200,180,126,0.12)" strokeWidth="1">
+                              <rect x="2" y="2" width="20" height="20" rx="3"/><circle cx="12" cy="12" r="4"/>
+                            </svg>
+                          </div>
+                        )}
+                        <div style={{ padding: "8px 9px 10px" }}>
+                          <div style={{ fontSize: 10, color: "#d4c9b0", lineHeight: 1.4, marginBottom: 4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
+                            {comp.title}
+                          </div>
+                          <div style={{ fontFamily: "monospace", fontSize: 12, fontWeight: 700, color: "#f5f0e8" }}>
+                            ${comp.price.toFixed(2)}
+                          </div>
+                          <div style={{ display: "inline-block", fontSize: 8, background: "rgba(168,144,78,0.1)", color: "#a8904e", padding: "1px 5px", borderRadius: 3, marginTop: 3 }}>
+                            Active
+                          </div>
+                        </div>
+                      </motion.a>
                     ))}
-                    <p style={{ textAlign: "center", fontSize: 10, color: "#2e2410", padding: "5px 0" }}>
-                      Active eBay listings — your competition
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
+                  </div>
+                </div>
+              </motion.div>
+            </>
           )}
 
         </div>
       </main>
 
       {/* ── Fixed decision bar ── */}
-      <motion.div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-4 py-3 safe-bottom"
-        style={{ background: "rgba(5,15,5,0.97)", backdropFilter: "blur(24px)", borderTop: "1px solid rgba(200,180,126,0.05)" }}
+      <motion.div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-4 py-3"
+        style={{ background: "rgba(5,15,5,0.97)", backdropFilter: "blur(24px)", borderTop: "1px solid rgba(200,180,126,0.05)", paddingBottom: "max(16px, env(safe-area-inset-bottom, 16px))" }}
         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.5 }}>
-        <div className="absolute top-0 left-[20%] right-[20%] h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(200,180,126,0.12), transparent)" }} />
+        <div className="absolute top-0 left-[20%] right-[20%] h-px"
+          style={{ background: "linear-gradient(90deg, transparent, rgba(200,180,126,0.12), transparent)" }} />
         <div className="flex flex-col gap-2">
           <motion.button onClick={() => handleDecision("purchased")} disabled={deciding}
             className="w-full flex items-center justify-center font-semibold text-[#f5f0e8] relative overflow-hidden disabled:opacity-40"
@@ -528,38 +464,8 @@ export default function DecidePage() {
           </motion.button>
         </div>
       </motion.div>
+
+      <style>{`.hide-scrollbar::-webkit-scrollbar{display:none}.hide-scrollbar{scrollbar-width:none}`}</style>
     </div>
-  );
-}
-
-// ── Shared comp row component ─────────────────────────────────────────────────
-
-function CompRow({ comp, index }: { comp: Comp; index: number }) {
-  return (
-    <motion.a href={comp.url ?? "#"} target="_blank" rel="noopener noreferrer"
-      className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-      style={{ background: "rgba(13,31,13,0.35)", border: "1px solid rgba(109,188,109,0.06)" }}
-      initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.28, delay: index * 0.04 }} whileTap={{ scale: 0.98 }}>
-      {comp.imageUrl
-        ? <img src={comp.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" style={{ filter: "brightness(0.85) saturate(0.72)", border: "1px solid rgba(109,188,109,0.07)" }} />
-        : <div className="w-10 h-10 rounded-lg flex-shrink-0" style={{ background: "rgba(17,37,17,0.5)" }} />
-      }
-      <div className="flex-1 min-w-0">
-        <div style={{ fontSize: 12, color: "#d4c9b0" }} className="truncate mb-1">{comp.title}</div>
-        <div className="flex items-center gap-1.5">
-          <span style={{ fontSize: 10, color: "#6a5528", background: "rgba(45,125,45,0.07)", padding: "1px 5px", borderRadius: 3 }}>{comp.condition}</span>
-          {comp.daysAgo > 0 && (
-            <span style={{ fontSize: 10, color: "#2e2410" }}>
-              {comp.listingType === "sold" ? `sold ${comp.daysAgo}d ago` : `listed ${comp.daysAgo}d ago`}
-            </span>
-          )}
-        </div>
-      </div>
-      <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-        <span style={{ fontSize: 13, fontFamily: "monospace", fontWeight: 600, color: "#f5f0e8" }}>${comp.price.toFixed(2)}</span>
-        <span style={{ fontSize: 10, color: "#2e2410" }}>↗</span>
-      </div>
-    </motion.a>
   );
 }
