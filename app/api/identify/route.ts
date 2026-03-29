@@ -2,15 +2,17 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { normalizeQuery } from "@/utils/normalizeQuery";
+import { ItemAttributes } from "@/types";
 
-interface IdentifyResult {
-  title: string;
+export interface IdentifyResult {
+  title:       string;
   description: string;
-  confidence: "high" | "medium" | "low";
+  confidence:  "high" | "medium" | "low";
   searchQuery: string;
+  attributes:  ItemAttributes;
 }
 
-const MOCK_ITEMS: IdentifyResult[] = [
+const MOCK_ITEMS: Omit<IdentifyResult, "attributes">[] = [
   { title: "Brass Owl Bookend",         description: "A decorative brass piece — possibly a bookend or paperweight. The patina suggests age.",           confidence: "medium", searchQuery: "brass owl bookend" },
   { title: "Mid-Century Ceramic Vase",  description: "A ceramic vessel with matte glaze. The form suggests mid-century American or Scandinavian origin.", confidence: "medium", searchQuery: "mid century ceramic vase" },
   { title: "Cast Iron Bank",            description: "A painted cast iron figurine, likely a still bank. Popular in the early 20th century.",             confidence: "high",   searchQuery: "cast iron bank figurine" },
@@ -21,10 +23,22 @@ const MOCK_ITEMS: IdentifyResult[] = [
   { title: "Porcelain Figurine",        description: "A small porcelain piece with hand-applied details.",                                                confidence: "high",   searchQuery: "porcelain figurine vintage single" },
 ];
 
+const NULL_ATTRIBUTES: ItemAttributes = {
+  brand:    null,
+  material: null,
+  era:      null,
+  origin:   null,
+  category: null,
+};
+
 function mockIdentify(imageDataUrl: string): IdentifyResult {
   const seed = imageDataUrl.length % MOCK_ITEMS.length;
   const item = MOCK_ITEMS[seed];
-  return { ...item, searchQuery: normalizeQuery(item.searchQuery) };
+  return {
+    ...item,
+    searchQuery: normalizeQuery(item.searchQuery),
+    attributes:  NULL_ATTRIBUTES,
+  };
 }
 
 async function claudeIdentify(imageDataUrl: string): Promise<IdentifyResult> {
@@ -37,14 +51,14 @@ async function claudeIdentify(imageDataUrl: string): Promise<IdentifyResult> {
 
   const response = await client.messages.create({
     model:      "claude-opus-4-5",
-    max_tokens: 400,
+    max_tokens: 600,
     messages: [{
       role: "user",
       content: [
         { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
         {
           type: "text",
-          text: `Identify this object. Respond ONLY with raw valid JSON, no markdown, no backticks, no explanation.
+          text: `Identify this object for a reseller evaluating it at a thrift store. Respond ONLY with raw valid JSON, no markdown, no backticks, no explanation.
 
 Rules for searchQuery:
 - Be as specific as possible — include brand, model number, material, type, and form
@@ -53,7 +67,26 @@ Rules for searchQuery:
 - Never use generic terms like "item" or "object"
 - Good examples: "carnival glass iridescent goblet single", "canon eos r50 camera", "benjamin franklin brass bookend bank"
 
-{"title":"descriptive name 3-6 words","description":"one or two calm observational sentences about material era and style","confidence":"high or medium or low","searchQuery":"specific ebay search query following the rules above"}`,
+Rules for attributes:
+- brand: manufacturer or maker name if visible or identifiable (e.g. "Wedgwood", "Pyrex", "Levi's"). null if unknown.
+- material: primary material(s) (e.g. "Cast iron", "Sterling silver", "Ceramic", "Cotton denim"). null if unclear.
+- era: estimated decade or period (e.g. "1950s–1960s", "Victorian", "1980s", "Pre-1900"). null if cannot determine.
+- origin: country of manufacture if identifiable from markings or style (e.g. "Japan", "USA", "England", "West Germany"). null if unknown.
+- category: resale category (e.g. "Kitchenware", "Figurines", "Jewelry", "Clothing", "Electronics", "Books", "Toys", "Art"). null if unclear.
+
+{
+  "title": "descriptive name 3-6 words",
+  "description": "one or two calm observational sentences about material, era, and style",
+  "confidence": "high or medium or low",
+  "searchQuery": "specific ebay search query following the rules above",
+  "attributes": {
+    "brand":    "string or null",
+    "material": "string or null",
+    "era":      "string or null",
+    "origin":   "string or null",
+    "category": "string or null"
+  }
+}`,
         },
       ],
     }],
@@ -73,6 +106,16 @@ Rules for searchQuery:
 
   const parsed = JSON.parse(clean) as IdentifyResult;
   parsed.searchQuery = normalizeQuery(parsed.searchQuery || parsed.title);
+
+  // Ensure attributes always exists with correct shape
+  parsed.attributes = {
+    brand:    parsed.attributes?.brand    ?? null,
+    material: parsed.attributes?.material ?? null,
+    era:      parsed.attributes?.era      ?? null,
+    origin:   parsed.attributes?.origin   ?? null,
+    category: parsed.attributes?.category ?? null,
+  };
+
   return parsed;
 }
 
@@ -88,7 +131,12 @@ export async function POST(req: NextRequest) {
     console.log(`[identify] source=${hasKey ? "claude" : "mock"}`);
 
     const result = hasKey ? await claudeIdentify(imageDataUrl) : mockIdentify(imageDataUrl);
-    console.log(`[identify] title="${result.title}" query="${result.searchQuery}" confidence=${result.confidence}`);
+
+    console.log(
+      `[identify] title="${result.title}" query="${result.searchQuery}" confidence=${result.confidence}`,
+      `brand=${result.attributes.brand} material=${result.attributes.material} era=${result.attributes.era} origin=${result.attributes.origin}`,
+    );
+
     return NextResponse.json(result);
 
   } catch (err) {

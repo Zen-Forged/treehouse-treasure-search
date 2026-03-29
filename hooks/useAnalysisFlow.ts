@@ -4,7 +4,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import { AnalysisState, AnalysisMessage, AnalysisStepId } from "@/types/analysis";
-import { MockComp } from "@/types";
+import { Comp } from "@/types";
 
 let msgCounter = 0;
 const uid = () => `msg_${++msgCounter}`;
@@ -25,14 +25,14 @@ const initialState: AnalysisState = {
 };
 
 interface RunAnalysisOptions {
-  imageDataUrl:    string;
-  costStr:         string;
-  searchQuery:     string;          // Phase 1: passed in from session, no re-identification
-  identifiedTitle?: string;         // for display in the feed
-  onCompsReady:    (comps: MockComp[], summary: any) => void;
-  onComplete:      () => void;
+  imageDataUrl:     string;
+  costStr:          string;
+  searchQuery:      string;
+  identifiedTitle?: string;
+  onCompsReady:     (soldComps: Comp[], activeComps: Comp[], summary: any) => void;
+  onComplete:       () => void;
   generateMockEvaluation: (cost: number, imageDataUrl: string) => any;
-  setUsingMock:    (v: boolean) => void;
+  setUsingMock:     (v: boolean) => void;
 }
 
 export function useAnalysisFlow() {
@@ -77,14 +77,14 @@ export function useAnalysisFlow() {
     setState(initialState);
 
     // ── Step 1: Show what we already identified ──────────
-    // Phase 1: no API call needed — identification already happened at /discover
     push("uploading", "Item already identified", identifiedTitle ?? searchQuery, "complete");
     await tick(300);
 
     // ── Step 2: Search comps ─────────────────────────────
     push("searching_comps", "Checking recent sales...", undefined, "active");
 
-    let fetchedComps: MockComp[] = [];
+    let soldComps:   Comp[] = [];
+    let activeComps: Comp[] = [];
     let fetchedSummary: any = null;
     let dataSource: "cache" | "live" | "mock" = "mock";
 
@@ -92,31 +92,42 @@ export function useAnalysisFlow() {
       const res = await fetch(`/api/sold-comps?q=${encodeURIComponent(searchQuery)}`);
       if (res.ok) {
         const data = await res.json();
-        if (data.comps?.length > 0) {
-          fetchedComps   = data.comps;
-          fetchedSummary = data.summary ?? null;
-          dataSource     = data.source ?? "live";
+        if ((data.soldComps?.length ?? 0) > 0 || (data.activeComps?.length ?? 0) > 0) {
+          soldComps      = data.soldComps   ?? [];
+          activeComps    = data.activeComps ?? [];
+          fetchedSummary = data.summary     ?? null;
+          dataSource     = data.source      ?? "live";
         }
       }
     } catch {}
 
-    if (fetchedComps.length === 0) {
+    const hasSoldData = soldComps.length > 0;
+
+    if (!hasSoldData && activeComps.length === 0) {
+      // Full fallback to mock
       const mock = generateMockEvaluation(parseFloat(costStr) || 0, imageDataUrl);
-      fetchedComps = mock.mockComps;
+      soldComps = (mock.mockComps ?? []).map((c: any) => ({ ...c, listingType: "sold" as const }));
       setUsingMock(true);
       dataSource = "mock";
       push("searching_comps", "Using estimated market data", "Live data unavailable", "complete");
     } else {
-      const prices = fetchedComps.map((c: MockComp) => c.price).sort((a: number, b: number) => a - b);
+      const pricingComps = hasSoldData ? soldComps : activeComps;
+      const prices = pricingComps.map(c => c.price).sort((a, b) => a - b);
       const low    = prices[0];
       const high   = prices[prices.length - 1];
-      updateState({ compCount: fetchedComps.length, priceRange: { low, high } });
+
+      updateState({ compCount: soldComps.length, priceRange: { low, high } });
+
+      const soldLabel  = hasSoldData ? `${soldComps.length} sold` : "no sold data";
+      const activeLabel = `${activeComps.length} active`;
+      const sourceNote  = dataSource === "cache" ? "cached" : "live";
+
       push(
         "searching_comps",
-        dataSource === "cache" ? "Using recent market data" : `Found ${fetchedComps.length} recent sales`,
-        dataSource === "cache"
-          ? `${fetchedComps.length} sales · $${low.toFixed(0)}–$${high.toFixed(0)}`
-          : `Prices ranging from $${low.toFixed(0)} to $${high.toFixed(0)}`,
+        hasSoldData
+          ? `Found ${soldComps.length} recent sales`
+          : `No sold listings — ${activeComps.length} active listings found`,
+        `${soldLabel} · ${activeLabel} · $${low.toFixed(0)}–$${high.toFixed(0)} (${sourceNote})`,
         "complete"
       );
     }
@@ -127,18 +138,29 @@ export function useAnalysisFlow() {
     push("analyzing_market", "Calculating value...", undefined, "active");
     await tick(800);
 
-    const prices  = fetchedComps.map((c: MockComp) => c.price).sort((a: number, b: number) => a - b);
-    const median  = computeMedian(prices);
+    const pricingComps = soldComps.length > 0 ? soldComps : activeComps;
+    const prices       = pricingComps.map(c => c.price).sort((a, b) => a - b);
+    const median       = computeMedian(prices);
     updateState({ medianPrice: median });
+
+    const compLevel = fetchedSummary?.competitionLevel;
+    const compCount = fetchedSummary?.competitionCount ?? activeComps.length;
+    const competitionNote = compLevel === "high"
+      ? `High competition — ${compCount} active listings`
+      : compLevel === "moderate"
+        ? `Moderate competition — ${compCount} active listings`
+        : compCount > 0
+          ? `Low competition — ${compCount} active listings`
+          : undefined;
 
     push(
       "analyzing_market",
       `Most items are selling around $${median.toFixed(0)}`,
-      fetchedSummary?.quickTake ?? undefined,
+      competitionNote ?? fetchedSummary?.quickTake ?? undefined,
       "complete"
     );
 
-    onCompsReady(fetchedComps, fetchedSummary);
+    onCompsReady(soldComps, activeComps, fetchedSummary);
     await tick(400);
 
     // ── Step 4: Finalizing ───────────────────────────────

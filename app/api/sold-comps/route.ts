@@ -1,3 +1,4 @@
+// app/api/sold-comps/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { cacheGet, cacheSet } from "@/lib/cache";
 import { normalizeQuery } from "@/utils/normalizeQuery";
@@ -43,11 +44,15 @@ export async function GET(req: NextRequest) {
 
   try {
     const result = await fetchComps(normalized);
+
     cacheSet(rawQuery, result as unknown as Record<string, unknown>);
+
     return NextResponse.json({
-      source: "live",
+      source:          "live",
       normalizedQuery: normalized,
-      ...result,
+      soldComps:       result.soldComps,
+      activeComps:     result.activeComps,
+      summary:         result.summary,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
