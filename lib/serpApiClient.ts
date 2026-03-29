@@ -8,12 +8,13 @@ const LOT_PATTERN =
   /\b(lot|set|pair|collection|bundle|group)\s+(of\s+)?\d+|\d+\s*(x|pc|pcs|piece|pieces)\b|\b\d{1,2}\s*-?\s*(goblets?|glasses?|cups?|plates?|bowls?|figurines?|statues?)\b/i;
 
 interface SerpApiListing {
-  title?:     string;
-  price?:     { raw?: string; extracted?: number };
-  condition?: string;
-  thumbnail?: string;
-  link?:      string;
-  sold_date?: string;
+  title?:      string;
+  price?:      { raw?: string; extracted?: number };
+  condition?:  string;
+  thumbnail?:  string;
+  link?:       string;
+  sold_date?:  string;   // present when show_only=Sold
+  unsold_date?: string;  // present for completed-but-unsold
 }
 
 interface SerpApiResponse {
@@ -71,16 +72,25 @@ export async function getSerpApiSoldComps(query: string): Promise<CompsResult> {
 // ─── Fetch helpers ────────────────────────────────────────────────────────────
 
 async function fetchEbayListings(
-  query:   string,
-  key:     string,
-  mode:    "sold" | "active",
+  query: string,
+  key:   string,
+  mode:  "sold" | "active",
 ): Promise<{ listings: SerpApiListing[]; totalResults: number }> {
-  const q = encodeURIComponent(query);
+  const params = new URLSearchParams({
+    engine:  "ebay",
+    _nkw:    query,
+    _sacat:  "0",
+    api_key: key,
+  });
 
-  // LH_Sold=1&LH_Complete=1 filters eBay to completed/sold listings only
-  const soldParams = mode === "sold" ? "&LH_Sold=1&LH_Complete=1" : "";
-  const url = `${SERPAPI_BASE}?engine=ebay&_nkw=${q}&_sacat=0${soldParams}&api_key=${key}`;
+  // show_only is the correct SerpAPI parameter — NOT LH_Sold/LH_Complete
+  // "Sold" filters to sold listings and returns sold_date on each result
+  // "Complete" includes sold + unsold ended listings
+  if (mode === "sold") {
+    params.set("show_only", "Sold");
+  }
 
+  const url = `${SERPAPI_BASE}?${params.toString()}`;
   const res = await fetch(url, { cache: "no-store" });
 
   if (!res.ok) {
@@ -108,6 +118,10 @@ function parseListings(listings: SerpApiListing[], listingType: "sold" | "active
         console.log(`[serpapi] filtered lot (${listingType}):`, title);
         return false;
       }
+      // For sold mode: drop unsold completed listings (have unsold_date but no sold_date)
+      if (listingType === "sold" && !item.sold_date && item.unsold_date) {
+        return false;
+      }
       return true;
     })
     .map((item): Comp | null => {
@@ -133,7 +147,6 @@ function parseListings(listings: SerpApiListing[], listingType: "sold" | "active
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 function buildSummary(soldComps: Comp[], activeComps: Comp[]): CompsResult["summary"] {
-  // Use sold comps for pricing; fall back to active if no sold data
   const pricingComps = soldComps.length > 0 ? soldComps : activeComps;
   const prices       = pricingComps.map(c => c.price).sort((a, b) => a - b);
 
@@ -143,7 +156,7 @@ function buildSummary(soldComps: Comp[], activeComps: Comp[]): CompsResult["summ
   const trimmed     = prices.filter(p => p >= median * 0.3 && p <= median * 2.5).sort((a, b) => a - b);
   const recommended = computeMedian(trimmed);
 
-  // Avg days to sell — only meaningful from sold comps with real sold_date
+  // avgDaysToSell — only from comps that have a real sold_date
   const soldWithDates = soldComps.filter(c => c.soldDate);
   const avgDaysToSell = soldWithDates.length > 0
     ? Math.round(soldWithDates.reduce((s, c) => s + c.daysAgo, 0) / soldWithDates.length)
@@ -151,7 +164,6 @@ function buildSummary(soldComps: Comp[], activeComps: Comp[]): CompsResult["summ
       ? Math.round(soldComps.reduce((s, c) => s + c.daysAgo, 0) / soldComps.length)
       : 0;
 
-  // Competition from active listings
   const competitionCount = activeComps.length;
   const competitionLevel: "low" | "moderate" | "high" =
     competitionCount >= 20 ? "high" :
@@ -169,11 +181,11 @@ function buildSummary(soldComps: Comp[], activeComps: Comp[]): CompsResult["summ
     soldComps.length >= 8 ? "High" :
     soldComps.length >= 4 ? "Moderate" : "Low";
 
-  const spread      = prices[prices.length - 1] - prices[0];
-  const demandLine  = demand === "High" ? "Strong demand" : demand === "Moderate" ? "Moderate demand" : "Limited demand";
-  const velLine     = velocity === "fast" ? "moves quickly" : velocity === "moderate" ? "sells at a steady pace" : "can take time to sell";
-  const priceNote   = spread > median * 0.5 ? " — condition significantly affects price" : "";
-  const compNote    = competitionLevel === "high" ? " High competition on eBay." : competitionLevel === "moderate" ? " Moderate competition." : "";
+  const spread     = prices[prices.length - 1] - prices[0];
+  const demandLine = demand === "High" ? "Strong demand" : demand === "Moderate" ? "Moderate demand" : "Limited demand";
+  const velLine    = velocity === "fast" ? "moves quickly" : velocity === "moderate" ? "sells at a steady pace" : "can take time to sell";
+  const priceNote  = spread > median * 0.5 ? " — condition significantly affects price" : "";
+  const compNote   = competitionLevel === "high" ? " High competition on eBay." : competitionLevel === "moderate" ? " Moderate competition." : "";
 
   return {
     recommendedPrice:  recommended,
@@ -198,9 +210,9 @@ function parsePrice(raw: string): number {
 
 function normalizeCondition(raw: string): string {
   const l = raw.toLowerCase();
-  if (l.includes("new"))                        return "New";
-  if (l.includes("mint"))                       return "Like New";
-  if (l.includes("good"))                       return "Good";
+  if (l.includes("new"))                              return "New";
+  if (l.includes("mint"))                             return "Like New";
+  if (l.includes("good"))                             return "Good";
   if (l.includes("fair") || l.includes("acceptable")) return "Fair";
   return "Used";
 }
