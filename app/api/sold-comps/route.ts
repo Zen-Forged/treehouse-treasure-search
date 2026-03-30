@@ -7,17 +7,18 @@ import { getApifySoldComps } from "@/lib/apifyClient";
 
 const COMP_SOURCE = process.env.COMP_SOURCE ?? "serpapi";
 
-async function fetchComps(query: string) {
+async function fetchComps(query: string, primaryColor?: string) {
   if (COMP_SOURCE === "apify") {
     console.log("[sold-comps] using Apify");
     return getApifySoldComps(query);
   }
   console.log("[sold-comps] using SerpAPI");
-  return getSerpApiSoldComps(query);
+  return getSerpApiSoldComps(query, primaryColor);
 }
 
 export async function GET(req: NextRequest) {
-  const rawQuery = req.nextUrl.searchParams.get("q");
+  const rawQuery    = req.nextUrl.searchParams.get("q");
+  const primaryColor = req.nextUrl.searchParams.get("color") ?? undefined;
 
   if (!rawQuery?.trim()) {
     return NextResponse.json({ error: "Missing query parameter ?q=" }, { status: 400 });
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
   console.log(`[sold-comps] cache miss — fetching live "${normalized}" via ${COMP_SOURCE}`);
 
   try {
-    const result = await fetchComps(normalized);
+    const result = await fetchComps(normalized, primaryColor);
 
     cacheSet(rawQuery, result as unknown as Record<string, unknown>);
 

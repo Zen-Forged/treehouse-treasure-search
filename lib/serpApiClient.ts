@@ -42,7 +42,7 @@ export interface CompsResult {
 
 // ─── Public entry point ───────────────────────────────────────────────────────
 
-export async function getSerpApiSoldComps(query: string): Promise<CompsResult> {
+export async function getSerpApiSoldComps(query: string, primaryColor?: string): Promise<CompsResult> {
   const key = process.env.SERPAPI_KEY ?? "";
   if (!key) throw new Error("SERPAPI_KEY is not set");
 
@@ -53,7 +53,7 @@ export async function getSerpApiSoldComps(query: string): Promise<CompsResult> {
     fetchEbayListings(query, key, "active"),
   ]);
 
-  const soldComps   = parseListings(soldResult.listings, "sold");
+  const soldComps   = parseListings(soldResult.listings, "sold", primaryColor);
   const activeComps = parseListings(activeResult.listings, "active");
 
   console.log(`[serpapi] sold: ${soldComps.length}  active: ${activeComps.length}`);
@@ -110,7 +110,7 @@ async function fetchEbayListings(
 
 // ─── Parsing ──────────────────────────────────────────────────────────────────
 
-function parseListings(listings: SerpApiListing[], listingType: "sold" | "active"): Comp[] {
+function parseListings(listings: SerpApiListing[], listingType: "sold" | "active", primaryColor?: string): Comp[] {
   const parsed = listings
     .filter(item => {
       const title = item.title ?? "";
@@ -143,7 +143,7 @@ function parseListings(listings: SerpApiListing[], listingType: "sold" | "active
     .filter((c): c is Comp => c !== null);
 
   if (listingType === "sold") {
-    return scoreSoldComps(parsed);
+    return scoreSoldComps(parsed, primaryColor);
   }
 
   return parsed.slice(0, 20);
@@ -151,37 +151,45 @@ function parseListings(listings: SerpApiListing[], listingType: "sold" | "active
 
 // ─── Scoring ──────────────────────────────────────────────────────────────────
 
-function scoreSoldComps(comps: Comp[]): Comp[] {
+function scoreSoldComps(comps: Comp[], primaryColor?: string): Comp[] {
   if (comps.length === 0) return [];
 
-  const RECENCY_CUTOFF  = 90;  // days
-  const MIN_COMPS       = 15;
+  const RECENCY_CUTOFF = 90; // days
+  const MIN_COMPS      = 15;
 
-  // Apply 90-day filter — but only if it leaves us with enough comps
+  // Apply 90-day filter — but only if it leaves enough comps
   const recent = comps.filter(c => c.daysAgo <= RECENCY_CUTOFF || c.daysAgo === 0);
   const pool   = recent.length >= MIN_COMPS ? recent : comps;
 
   // Compute median price from pool for match_score
   const prices  = pool.map(c => c.price).sort((a, b) => a - b);
   const median  = computeMedian(prices);
-
-  // Score each comp
   const MAX_DAYS = Math.max(...pool.map(c => c.daysAgo), 1);
 
-  const scored = pool.map(comp => {
-    // match_score: how close the price is to median (1.0 = exact match, 0 = very far)
-    const priceDiff   = Math.abs(comp.price - median);
-    const matchScore  = median > 0 ? Math.max(0, 1 - priceDiff / median) : 0.5;
+  // Normalize color for title matching (e.g. "white", "black", "silver")
+  const colorToken = primaryColor?.toLowerCase().trim() ?? null;
 
-    // recency_score: 1.0 = sold today, 0 = oldest in pool
+  const scored = pool.map(comp => {
+    // match_score: price proximity to median (1.0 = exact, 0 = far outlier)
+    const priceDiff  = Math.abs(comp.price - median);
+    const matchScore = median > 0 ? Math.max(0, 1 - priceDiff / median) : 0.5;
+
+    // recency_score: 1.0 = today, 0 = oldest in pool
     const recencyScore = comp.daysAgo === 0 ? 1 : Math.max(0, 1 - comp.daysAgo / MAX_DAYS);
 
-    const finalScore = (matchScore * 0.6) + (recencyScore * 0.4);
+    // color_score: 1.0 if comp title contains the item's primary color, else 0
+    const colorScore = colorToken && comp.title.toLowerCase().includes(colorToken) ? 1.0 : 0.0;
+
+    // Weighted formula — color is a tiebreaker on top of price+recency
+    // When color is available: (match × 0.5) + (recency × 0.3) + (color × 0.2)
+    // When color is absent:    (match × 0.6) + (recency × 0.4)  — original weights
+    const finalScore = colorToken
+      ? (matchScore * 0.5) + (recencyScore * 0.3) + (colorScore * 0.2)
+      : (matchScore * 0.6) + (recencyScore * 0.4);
 
     return { comp, finalScore };
   });
 
-  // Sort by final_score descending, return top 20
   return scored
     .sort((a, b) => b.finalScore - a.finalScore)
     .map(s => s.comp)

@@ -66,6 +66,7 @@ export default function DecidePage() {
 
   const searchQuery     = findSession?.refinedQuery ?? findSession?.identification?.searchQuery ?? "thrift store item";
   const identifiedTitle = findSession?.identification?.title;
+  const primaryColor    = findSession?.identification?.attributes?.primaryColor ?? undefined;
 
   const [appState, setAppState]       = useState<AppState>("analyzing");
   const [soldComps, setSoldComps]     = useState<Comp[]>([]);
@@ -96,6 +97,7 @@ export default function DecidePage() {
       costStr:      "0",
       searchQuery,
       identifiedTitle,
+      primaryColor,
       onCompsReady: (fetchedSold, fetchedActive, fetchedSummary) => {
         // Update both state (for rendering) and refs (for handleDecision)
         setSoldComps(fetchedSold);
@@ -279,6 +281,11 @@ export default function DecidePage() {
 
           {/* ── Resell price hero ── */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
+            {identifiedTitle && (
+              <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 600, color: "#d4c9b0", marginBottom: 10, lineHeight: 1.3 }}>
+                {identifiedTitle}
+              </div>
+            )}
             <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "2px", marginBottom: 6 }}>
               Resell price
             </div>
@@ -335,7 +342,16 @@ export default function DecidePage() {
           )}
 
           {/* ── Sold comps — 3-per-row grid ── */}
-          {soldComps.length > 0 && (
+          {soldComps.length > 0 && (() => {
+            // Pin lowest + highest price comps to the front, tag them
+            const byPrice      = [...soldComps].sort((a, b) => a.price - b.price);
+            const lowestComp   = byPrice[0];
+            const highestComp  = byPrice[byPrice.length - 1];
+            const rest         = soldComps.filter(c => c !== lowestComp && c !== highestComp);
+            const orderedComps = [lowestComp, highestComp, ...rest];
+            const displayComps = showAllSoldComps ? orderedComps : orderedComps.slice(0, SOLD_COMPS_INITIAL);
+
+            return (
             <>
               <div style={{ height: 1, background: "rgba(200,180,126,0.06)" }} />
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.26 }}>
@@ -348,12 +364,30 @@ export default function DecidePage() {
                   </span>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                  {(showAllSoldComps ? soldComps : soldComps.slice(0, SOLD_COMPS_INITIAL)).map((comp, i) => (
+                  {displayComps.map((comp, i) => {
+                    const isLowest  = comp === lowestComp;
+                    const isHighest = comp === highestComp;
+                    return (
                     <motion.a key={comp.url ?? i} href={comp.url ?? "#"} target="_blank" rel="noopener noreferrer"
-                      style={{ borderRadius: 12, overflow: "hidden", background: "rgba(13,31,13,0.5)", border: "1px solid rgba(109,188,109,0.07)", display: "block", textDecoration: "none" }}
+                      style={{ borderRadius: 12, overflow: "hidden", background: "rgba(13,31,13,0.5)", border: `1px solid ${isLowest ? "rgba(109,188,109,0.18)" : isHighest ? "rgba(200,180,126,0.18)" : "rgba(109,188,109,0.07)"}`, display: "block", textDecoration: "none", position: "relative" }}
                       initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: 0.25, delay: i < SOLD_COMPS_INITIAL ? 0.28 + i * 0.03 : 0 }}
                       whileTap={{ scale: 0.97 }}>
+                      {/* Low / High tag */}
+                      {(isLowest || isHighest) && (
+                        <div style={{
+                          position: "absolute", top: 5, left: 5, zIndex: 2,
+                          fontSize: 7, fontWeight: 700, letterSpacing: "0.8px",
+                          textTransform: "uppercase",
+                          padding: "2px 5px", borderRadius: 4,
+                          color:      isLowest ? "#6dbc6d" : "#a8904e",
+                          background: isLowest ? "rgba(13,31,13,0.85)" : "rgba(13,31,13,0.85)",
+                          border:     `1px solid ${isLowest ? "rgba(109,188,109,0.3)" : "rgba(200,180,126,0.3)"}`,
+                          backdropFilter: "blur(4px)",
+                        }}>
+                          {isLowest ? "Low" : "High"}
+                        </div>
+                      )}
                       {comp.imageUrl ? (
                         <img src={comp.imageUrl} alt={comp.title}
                           style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block", filter: "brightness(0.82) saturate(0.7)" }} />
@@ -377,7 +411,8 @@ export default function DecidePage() {
                         </div>
                       </div>
                     </motion.a>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Show more / less */}
@@ -396,7 +431,8 @@ export default function DecidePage() {
                 </p>
               </motion.div>
             </>
-          )}
+            );
+          })()}
 
           {/* ── Active comps — horizontal scroll ── */}
           {activeComps.length > 0 && (
