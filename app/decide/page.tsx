@@ -1,5 +1,6 @@
 // app/decide/page.tsx
 // Phase 3: removed price-entry screen — analysis starts immediately from discover
+// Phase 4: DecisionDial added above market intel
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
@@ -14,6 +15,7 @@ import { calculatePricing } from "@/lib/pricingLogic";
 import { useAnalysisFlow } from "@/hooks/useAnalysisFlow";
 import { AnalysisFeed } from "@/components/AnalysisFeed";
 import { Comp } from "@/types";
+import { DecisionDial } from "@/components/DecisionDial";
 
 type AppState = "analyzing" | "done";
 
@@ -304,11 +306,23 @@ export default function DecidePage() {
 
           <div style={{ height: 1, background: "rgba(200,180,126,0.06)" }} />
 
+          {/* ── Decision Dial ── */}
+          {soldSummary && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, delay: 0.15 }}>
+              <DecisionDial
+                demandLevel={soldSummary.demandLevel}
+                marketVelocity={soldSummary.marketVelocity}
+                confidence={soldSummary.confidence}
+                competitionLevel={soldSummary.competitionLevel}
+              />
+            </motion.div>
+          )}
+
           {/* ── Market intelligence — 2×2 card grid ── */}
           {soldSummary && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.18 }}>
-              <div style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2.5px", marginBottom: 12 }}>
-                Market intelligence
+              <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "2.5px", marginBottom: 12 }}>
+                Signals
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                 {[
@@ -318,15 +332,15 @@ export default function DecidePage() {
                   { key: "Competition", val: soldSummary.competitionLevel, sub: `${soldSummary.competitionCount} active listings` },
                 ].map(card => (
                   <div key={card.key}
-                    style={{ background: "rgba(13,31,13,0.5)", border: "1px solid rgba(109,188,109,0.08)", borderRadius: 14, padding: "12px 14px" }}>
-                    <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 5 }}>
+                    style={{ background: "rgba(13,31,13,0.35)", border: "1px solid rgba(109,188,109,0.06)", borderRadius: 12, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 8, color: "#4a3a1e", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 4 }}>
                       {card.key}
                     </div>
-                    <div style={{ fontSize: 15, fontWeight: 500, color: getIntelColor(card.val), textTransform: "capitalize" }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: getIntelColor(card.val), textTransform: "capitalize" }}>
                       {card.val}
                     </div>
                     {card.sub && (
-                      <div style={{ fontSize: 10, color: "#6a5528", marginTop: 2 }}>{card.sub}</div>
+                      <div style={{ fontSize: 9, color: "#4a3a1e", marginTop: 2 }}>{card.sub}</div>
                     )}
                   </div>
                 ))}
