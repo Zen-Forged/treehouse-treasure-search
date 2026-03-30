@@ -43,9 +43,38 @@ function formatSoldDate(dateStr: string): string {
   return `${Math.round(days / 30)}mo ago`;
 }
 
+// ── Treehouse photo filter (same as share/enhance flow) ─────────────────────
+function applyTreehouseFilter(src: string): Promise<string> {
+  return new Promise(resolve => {
+    const img = new window.Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0);
+      const d  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const px = d.data;
+      for (let i = 0; i < px.length; i += 4) {
+        // Boost reds slightly, pull down blues (warm earthy tone)
+        px[i]     = Math.min(255, px[i]     * 1.06);
+        px[i + 2] = Math.max(0,   px[i + 2] * 0.92);
+        // Contrast boost
+        px[i]     = Math.min(255, (px[i]     - 128) * 1.08 + 128);
+        px[i + 1] = Math.min(255, (px[i + 1] - 128) * 1.08 + 128);
+        px[i + 2] = Math.min(255, (px[i + 2] - 128) * 1.08 + 128);
+      }
+      ctx.putImageData(d, 0, 0);
+      resolve(canvas.toDataURL("image/jpeg", 0.88));
+    };
+    img.onerror = () => resolve(src); // fall back to original on error
+    img.src = src;
+  });
+}
+
 export default function DecidePage() {
   const router = useRouter();
-  const { session: findSession } = useFindSession();
+  const { session: findSession, updateSession } = useFindSession();
   const { saveFind } = useFinds();
 
   const sessionData = findSession
@@ -65,8 +94,9 @@ export default function DecidePage() {
   const [showAllSoldComps, setShowAllSoldComps] = useState(false);
 
   const SOLD_COMPS_INITIAL = 12;
-  const analysisStarted = useRef(false);
-  const compsRef        = useRef<HTMLDivElement>(null);
+  const analysisStarted  = useRef(false);
+  const compsRef         = useRef<HTMLDivElement>(null);
+  const enhancedImageRef = useRef<string | undefined>(findSession?.imageEnhanced);
 
   // ── Store latest comp data in refs so handleDecision always has current values
   // regardless of React closure staleness
@@ -80,6 +110,14 @@ export default function DecidePage() {
     if (!sessionData) { router.replace("/"); return; }
     if (analysisStarted.current) return;
     analysisStarted.current = true;
+
+    // Run photo filter concurrently with comp fetch — store in ref + session
+    if (!findSession?.imageEnhanced) {
+      applyTreehouseFilter(sessionData.imageDataUrl).then(enhanced => {
+        enhancedImageRef.current = enhanced;
+        updateSession({ imageEnhanced: enhanced });
+      });
+    }
 
     runAnalysis({
       imageDataUrl: sessionData.imageDataUrl,
@@ -120,13 +158,13 @@ export default function DecidePage() {
       0
     );
 
-    // Build the find directly — don't depend on findSession being non-null
-    // Pull everything we need from what we have in scope
+    // Build the find — use sessionData.imageDataUrl as reliable fallback for imageOriginal
+    // Use enhancedImageRef for imageEnhanced (may have finished during analysis)
     const find: SavedFind = {
       id:            findSession?.id            ?? `find_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       createdAt:     findSession?.createdAt     ?? new Date().toISOString(),
-      imageOriginal: findSession?.imageOriginal ?? "",
-      imageEnhanced: findSession?.imageEnhanced,
+      imageOriginal: findSession?.imageOriginal ?? sessionData?.imageDataUrl ?? "",
+      imageEnhanced: enhancedImageRef.current   ?? findSession?.imageEnhanced,
 
       // Identity
       title:         findSession?.identification?.title,
@@ -300,11 +338,11 @@ export default function DecidePage() {
                     const isHighest = comp === highestComp;
                     return (
                     <motion.a key={comp.url ?? i} href={comp.url ?? "#"} target="_blank" rel="noopener noreferrer"
-                      style={{ borderRadius: 12, overflow: "hidden", background: "rgba(13,31,13,0.5)", border: `1px solid ${isLowest ? "rgba(109,188,109,0.18)" : isHighest ? "rgba(200,180,126,0.18)" : "rgba(109,188,109,0.07)"}`, display: "block", textDecoration: "none", position: "relative" }}
+                      style={{ borderRadius: 12, overflow: "hidden", background: "rgba(13,31,13,0.5)", border: `1px solid ${isLowest ? "rgba(109,188,109,0.18)" : isHighest ? "rgba(200,180,126,0.18)" : "rgba(109,188,109,0.07)"}`, display: "block", textDecoration: "none", position: "relative", isolation: "isolate" }}
                       initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: 0.25, delay: i < SOLD_COMPS_INITIAL ? 0.28 + i * 0.03 : 0 }}
                       whileTap={{ scale: 0.97 }}>
-                      {/* Low / High tag */}
+                      {/* Low / High tag — no backdropFilter to avoid escaping stacking context */}
                       {(isLowest || isHighest) && (
                         <div style={{
                           position: "absolute", top: 5, left: 5, zIndex: 2,
@@ -312,9 +350,8 @@ export default function DecidePage() {
                           textTransform: "uppercase",
                           padding: "2px 5px", borderRadius: 4,
                           color:      isLowest ? "#6dbc6d" : "#a8904e",
-                          background: isLowest ? "rgba(13,31,13,0.85)" : "rgba(13,31,13,0.85)",
+                          background: isLowest ? "rgba(8,20,8,0.92)" : "rgba(8,20,8,0.92)",
                           border:     `1px solid ${isLowest ? "rgba(109,188,109,0.3)" : "rgba(200,180,126,0.3)"}`,
-                          backdropFilter: "blur(4px)",
                         }}>
                           {isLowest ? "Low" : "High"}
                         </div>
