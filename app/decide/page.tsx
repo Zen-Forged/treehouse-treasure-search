@@ -150,7 +150,7 @@ export default function DecidePage() {
   const pricingComps = soldComps.length > 0 ? soldComps : activeComps;
   const pricing      = calculatePricing(pricingComps, 0);
 
-  const handleDecision = useCallback((decision: "purchased" | "passed") => {
+  const handleDecision = useCallback(async (decision: "purchased" | "passed") => {
     if (deciding) return;
     setDeciding(true);
 
@@ -195,10 +195,10 @@ export default function DecidePage() {
       recommendation:   pricingData.recommendation,
     };
 
-    console.log("[decide] saving find:", find.id, find.title, decision);
-    saveFind(find);
+    // saveFind compresses images before writing — await it before navigating
+    await saveFind(find);
     router.push("/finds");
-  }, [deciding, findSession, saveFind, router]);
+  }, [deciding, findSession, saveFind, router, sessionData]);
 
   if (!sessionData) {
     return (
@@ -267,9 +267,30 @@ export default function DecidePage() {
             </motion.div>
           )}
 
-          {/* ── Opportunity Meter — verdict first ── */}
+          {/* ── Resell value — anchor before the decision block ── */}
+          {pricing.medianSoldPrice > 0 && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}
+              style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 2, fontFamily: "Georgia, serif" }}>
+                <span style={{ fontSize: 16, fontWeight: 500, color: "#a8904e", paddingTop: 5, lineHeight: 1 }}>$</span>
+                <span style={{ fontSize: 48, fontWeight: 700, lineHeight: 1, letterSpacing: -1.5, color: "#f5f0e8" }}>
+                  {Math.round(pricing.medianSoldPrice)}
+                </span>
+              </div>
+              <div>
+                <div style={{ fontSize: 8, color: "#4a3a1e", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 2 }}>Resells around</div>
+                {soldSummary && soldSummary.priceRangeLow > 0 && (
+                  <div style={{ fontFamily: "monospace", fontSize: 11, color: "#6a5528" }}>
+                    ${Math.round(soldSummary.priceRangeLow)}–${Math.round(soldSummary.priceRangeHigh)}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── Decision block ── */}
           {soldSummary && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.12 }}>
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.16 }}>
               <OpportunityMeter
                 input={{
                   demandLevel:      soldSummary.demandLevel,
@@ -287,31 +308,6 @@ export default function DecidePage() {
               />
             </motion.div>
           )}
-
-          {/* ── Resell price ── */}
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.2 }}
-            style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-            <div>
-              <div style={{ fontSize: 8, color: "#4a3a1e", textTransform: "uppercase", letterSpacing: "2px", marginBottom: 4 }}>
-                Resell price
-              </div>
-              <div className="flex items-start gap-0.5" style={{ fontFamily: "Georgia, serif" }}>
-                <span style={{ fontSize: 18, fontWeight: 500, color: "#a8904e", paddingTop: 6, lineHeight: 1 }}>$</span>
-                <span style={{ fontSize: 52, fontWeight: 700, lineHeight: 1, letterSpacing: -1.5, color: "#f5f0e8" }}>
-                  {pricing.medianSoldPrice > 0 ? Math.round(pricing.medianSoldPrice) : "—"}
-                </span>
-              </div>
-            </div>
-            {soldSummary && soldSummary.priceRangeLow > 0 && (
-              <div style={{ paddingBottom: 4 }}>
-                <div style={{ fontSize: 8, color: "#4a3a1e", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 4 }}>Range</div>
-                <div style={{ fontFamily: "monospace", fontSize: 12, color: "#6a5528", lineHeight: 1.4 }}>
-                  <div>${Math.round(soldSummary.priceRangeLow)}</div>
-                  <div>${Math.round(soldSummary.priceRangeHigh)}</div>
-                </div>
-              </div>
-            )}
-          </motion.div>
 
 
 
