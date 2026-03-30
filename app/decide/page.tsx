@@ -15,7 +15,7 @@ import { calculatePricing } from "@/lib/pricingLogic";
 import { useAnalysisFlow } from "@/hooks/useAnalysisFlow";
 import { AnalysisFeed } from "@/components/AnalysisFeed";
 import { Comp } from "@/types";
-import { DecisionDial } from "@/components/DecisionDial";
+import { OpportunityMeter } from "@/components/OpportunityMeter";
 
 type AppState = "analyzing" | "done";
 
@@ -30,21 +30,6 @@ interface SoldSummary {
   avgDaysToSell:     number;
   competitionCount:  number;
   competitionLevel:  "low" | "moderate" | "high";
-}
-
-function getBadge(recommendation: string) {
-  if (recommendation === "strong-buy")
-    return { label: "Strong find",         color: "#c8b47e", border: "rgba(200,180,126,0.35)", bg: "rgba(200,180,126,0.08)" };
-  if (recommendation === "maybe")
-    return { label: "Worth a closer look", color: "#a0a0a8", border: "rgba(160,160,168,0.35)", bg: "rgba(160,160,168,0.08)" };
-  return       { label: "Marginal",        color: "#9a7a5a", border: "rgba(154,122,90,0.35)",  bg: "rgba(154,122,90,0.08)"  };
-}
-
-function getIntelColor(level: string): string {
-  const l = level.toLowerCase();
-  if (l === "high" || l === "fast") return "#6dbc6d";
-  if (l === "moderate")             return "#a8904e";
-  return "#9a7a5a";
 }
 
 function formatSoldDate(dateStr: string): string {
@@ -119,7 +104,6 @@ export default function DecidePage() {
 
   const pricingComps = soldComps.length > 0 ? soldComps : activeComps;
   const pricing      = calculatePricing(pricingComps, 0);
-  const badge        = getBadge(pricing.recommendation);
 
   const handleDecision = useCallback((decision: "purchased" | "passed") => {
     if (deciding) return;
@@ -271,12 +255,6 @@ export default function DecidePage() {
             style={{ background: "radial-gradient(ellipse at 50% 50%, transparent 25%, rgba(5,15,5,0.4) 100%)" }} />
           <div className="absolute bottom-0 left-0 right-0"
             style={{ height: 120, background: "linear-gradient(to bottom, transparent, #050f05)" }} />
-          <motion.div className="absolute bottom-4 right-4"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-            <div style={{ padding: "5px 11px", borderRadius: 20, fontSize: 10, fontWeight: 500, color: badge.color, background: badge.bg, border: `1px solid ${badge.border}` }}>
-              {badge.label}
-            </div>
-          </motion.div>
         </motion.div>
 
         <div className="px-5 flex flex-col gap-6 pt-2 pb-4">
@@ -306,20 +284,26 @@ export default function DecidePage() {
 
           <div style={{ height: 1, background: "rgba(200,180,126,0.06)" }} />
 
-          {/* ── Decision Dial ── */}
+          {/* ── Opportunity Meter ── */}
           {soldSummary && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, delay: 0.15 }}>
-              <DecisionDial
-                demandLevel={soldSummary.demandLevel}
-                marketVelocity={soldSummary.marketVelocity}
-                confidence={soldSummary.confidence}
-                competitionLevel={soldSummary.competitionLevel}
-              />
+              <OpportunityMeter input={{
+                demandLevel:      soldSummary.demandLevel,
+                marketVelocity:   soldSummary.marketVelocity,
+                confidence:       soldSummary.confidence,
+                competitionLevel: soldSummary.competitionLevel,
+                competitionCount: soldSummary.competitionCount,
+                avgDaysToSell:    soldSummary.avgDaysToSell,
+                priceRangeLow:    soldSummary.priceRangeLow,
+                priceRangeHigh:   soldSummary.priceRangeHigh,
+                medianSoldPrice:  pricing.medianSoldPrice,
+                compCount:        soldComps.length,
+              }} />
             </motion.div>
           )}
 
-          {/* ── Market intelligence — 2×2 card grid ── */}
-          {soldSummary && (
+          {/* signals grid removed — absorbed into OpportunityMeter signal bars */}
+          {false && soldSummary && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.18 }}>
               <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "2.5px", marginBottom: 12 }}>
                 Signals
