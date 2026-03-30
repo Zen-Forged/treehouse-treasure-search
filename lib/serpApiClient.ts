@@ -111,7 +111,7 @@ async function fetchEbayListings(
 // ─── Parsing ──────────────────────────────────────────────────────────────────
 
 function parseListings(listings: SerpApiListing[], listingType: "sold" | "active"): Comp[] {
-  return listings
+  const parsed = listings
     .filter(item => {
       const title = item.title ?? "";
       if (LOT_PATTERN.test(title)) {
@@ -140,7 +140,51 @@ function parseListings(listings: SerpApiListing[], listingType: "sold" | "active
         platform:    "ebay",
       };
     })
-    .filter((c): c is Comp => c !== null)
+    .filter((c): c is Comp => c !== null);
+
+  if (listingType === "sold") {
+    return scoreSoldComps(parsed);
+  }
+
+  return parsed.slice(0, 20);
+}
+
+// ─── Scoring ──────────────────────────────────────────────────────────────────
+
+function scoreSoldComps(comps: Comp[]): Comp[] {
+  if (comps.length === 0) return [];
+
+  const RECENCY_CUTOFF  = 90;  // days
+  const MIN_COMPS       = 15;
+
+  // Apply 90-day filter — but only if it leaves us with enough comps
+  const recent = comps.filter(c => c.daysAgo <= RECENCY_CUTOFF || c.daysAgo === 0);
+  const pool   = recent.length >= MIN_COMPS ? recent : comps;
+
+  // Compute median price from pool for match_score
+  const prices  = pool.map(c => c.price).sort((a, b) => a - b);
+  const median  = computeMedian(prices);
+
+  // Score each comp
+  const MAX_DAYS = Math.max(...pool.map(c => c.daysAgo), 1);
+
+  const scored = pool.map(comp => {
+    // match_score: how close the price is to median (1.0 = exact match, 0 = very far)
+    const priceDiff   = Math.abs(comp.price - median);
+    const matchScore  = median > 0 ? Math.max(0, 1 - priceDiff / median) : 0.5;
+
+    // recency_score: 1.0 = sold today, 0 = oldest in pool
+    const recencyScore = comp.daysAgo === 0 ? 1 : Math.max(0, 1 - comp.daysAgo / MAX_DAYS);
+
+    const finalScore = (matchScore * 0.6) + (recencyScore * 0.4);
+
+    return { comp, finalScore };
+  });
+
+  // Sort by final_score descending, return top 20
+  return scored
+    .sort((a, b) => b.finalScore - a.finalScore)
+    .map(s => s.comp)
     .slice(0, 20);
 }
 
