@@ -302,42 +302,7 @@ export default function DecidePage() {
             </motion.div>
           )}
 
-          {/* signals grid removed — absorbed into OpportunityMeter signal bars */}
-          {false && soldSummary && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.18 }}>
-              <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "2.5px", marginBottom: 12 }}>
-                Signals
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                {[
-                  { key: "Demand",      val: soldSummary.demandLevel,     sub: `${soldComps.length} sold comps` },
-                  { key: "Velocity",    val: soldSummary.marketVelocity,  sub: soldSummary.avgDaysToSell > 0 ? `~${soldSummary.avgDaysToSell} days to sell` : "" },
-                  { key: "Confidence",  val: soldSummary.confidence,      sub: `${soldComps.length} data points` },
-                  { key: "Competition", val: soldSummary.competitionLevel, sub: `${soldSummary.competitionCount} active listings` },
-                ].map(card => (
-                  <div key={card.key}
-                    style={{ background: "rgba(13,31,13,0.35)", border: "1px solid rgba(109,188,109,0.06)", borderRadius: 12, padding: "10px 12px" }}>
-                    <div style={{ fontSize: 8, color: "#4a3a1e", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 4 }}>
-                      {card.key}
-                    </div>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: getIntelColor(card.val), textTransform: "capitalize" }}>
-                      {card.val}
-                    </div>
-                    {card.sub && (
-                      <div style={{ fontSize: 9, color: "#4a3a1e", marginTop: 2 }}>{card.sub}</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-              {soldSummary.quickTake && (
-                <div style={{ marginTop: 12, padding: "14px 16px", borderRadius: 14, background: "rgba(13,31,13,0.35)", border: "1px solid rgba(200,180,126,0.06)" }}>
-                  <p style={{ fontFamily: "Georgia, serif", fontSize: 13, color: "#a8904e", lineHeight: 1.7, fontStyle: "italic" }}>
-                    "{soldSummary.quickTake}"
-                  </p>
-                </div>
-              )}
-            </motion.div>
-          )}
+
 
           {/* ── Sold comps — 3-per-row grid ── */}
           {soldComps.length > 0 && (() => {
