@@ -109,13 +109,24 @@ export default function DiscoverPage() {
   const attributes  = session?.identification?.attributes;
   const image       = session?.imageOriginal;
 
+  // Build attribute rows — show visual fields when available, fall back to core fields
   const attrRows = [
-    { label: "Brand",    val: attributes?.brand    ?? null },
-    { label: "Material", val: attributes?.material ?? null },
-    { label: "Era",      val: attributes?.era      ?? null },
-    { label: "Origin",   val: attributes?.origin   ?? null },
-  ];
-  const hasAttributes = attrRows.some(r => r.val !== null);
+    attributes?.objectType  ? { label: "Type",      val: attributes.objectType }                         : null,
+    attributes?.material    ? { label: "Material",  val: attributes.material }                           : null,
+    attributes?.primaryColor ? { label: "Color",    val: attributes.secondaryColor
+                                   ? `${attributes.primaryColor} / ${attributes.secondaryColor}`
+                                   : attributes.primaryColor }                                           : null,
+    attributes?.condition   ? { label: "Condition", val: attributes.condition }                          : null,
+    attributes?.setType && attributes.setType !== "unknown"
+                            ? { label: "Listed as", val: attributes.setType }                            : null,
+    attributes?.era         ? { label: "Era",       val: attributes.era }                                : null,
+    attributes?.origin      ? { label: "Origin",    val: attributes.origin }                             : null,
+    attributes?.brand       ? { label: "Brand",     val: attributes.brand }                              : null,
+  ].filter(Boolean) as { label: string; val: string }[];
+
+  const hasAttributes = attrRows.length > 0;
+
+  const distinctiveFeatures = attributes?.distinctiveFeatures ?? [];
 
   return (
     <div className="flex flex-col min-h-screen bg-[#050f05]">
@@ -198,7 +209,7 @@ export default function DiscoverPage() {
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.18 }} />
 
               {/* ── Item attributes ── */}
-              {(hasAttributes || !attributes) && (
+              {hasAttributes && (
                 <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.22, ease }}>
                   <div style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2.5px", marginBottom: 12 }}>
@@ -207,15 +218,20 @@ export default function DiscoverPage() {
                   <div className="flex flex-col">
                     {attrRows.map((row, i) => (
                       <div key={row.label} className="flex items-center justify-between py-2"
-                        style={{ borderBottom: i < attrRows.length - 1 ? "1px solid rgba(109,188,109,0.05)" : "none" }}>
-                        <span style={{ fontSize: 12, color: "#6a5528" }}>{row.label}</span>
-                        {row.val ? (
-                          <span style={{ fontSize: 12, color: "#d4c9b0", fontWeight: 500 }}>{row.val}</span>
-                        ) : (
-                          <span style={{ fontSize: 12, color: "rgba(106,85,40,0.35)", fontStyle: "italic", fontWeight: 300 }}>Unknown</span>
-                        )}
+                        style={{ borderBottom: i < attrRows.length - 1 || distinctiveFeatures.length > 0 ? "1px solid rgba(109,188,109,0.05)" : "none" }}>
+                        <span style={{ fontSize: 12, color: "#6a5528", textTransform: "capitalize" }}>{row.label}</span>
+                        <span style={{ fontSize: 12, color: "#d4c9b0", fontWeight: 500, textTransform: "capitalize" }}>{row.val}</span>
                       </div>
                     ))}
+                    {/* Distinctive features */}
+                    {distinctiveFeatures.length > 0 && (
+                      <div className="flex items-start justify-between py-2">
+                        <span style={{ fontSize: 12, color: "#6a5528", flexShrink: 0, marginRight: 12 }}>Features</span>
+                        <span style={{ fontSize: 12, color: "#d4c9b0", fontWeight: 500, textAlign: "right", textTransform: "capitalize" }}>
+                          {distinctiveFeatures.join(", ")}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               )}
