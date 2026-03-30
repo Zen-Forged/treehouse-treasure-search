@@ -64,7 +64,8 @@ export default function DecidePage() {
   const [showAllSoldComps, setShowAllSoldComps] = useState(false);
 
   const SOLD_COMPS_INITIAL = 12;
-  const analysisStarted               = useRef(false);
+  const analysisStarted = useRef(false);
+  const compsRef        = useRef<HTMLDivElement>(null);
 
   // ── Store latest comp data in refs so handleDecision always has current values
   // regardless of React closure staleness
@@ -257,50 +258,62 @@ export default function DecidePage() {
             style={{ height: 120, background: "linear-gradient(to bottom, transparent, #050f05)" }} />
         </motion.div>
 
-        <div className="px-5 flex flex-col gap-6 pt-2 pb-4">
+        <div className="px-5 flex flex-col gap-5 pt-3 pb-4">
 
-          {/* ── Resell price hero ── */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}>
-            {identifiedTitle && (
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 600, color: "#d4c9b0", marginBottom: 10, lineHeight: 1.3 }}>
+          {/* ── Item title ── */}
+          {identifiedTitle && (
+            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.08 }}>
+              <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: "#d4c9b0", lineHeight: 1.25 }}>
                 {identifiedTitle}
               </div>
-            )}
-            <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "2px", marginBottom: 6 }}>
-              Resell price
-            </div>
-            <div className="flex items-start gap-1" style={{ fontFamily: "Georgia, serif" }}>
-              <span style={{ fontSize: 22, fontWeight: 500, color: "#a8904e", paddingTop: 8, lineHeight: 1 }}>$</span>
-              <span style={{ fontSize: 64, fontWeight: 700, lineHeight: 1, letterSpacing: -2, color: "#f5f0e8" }}>
-                {pricing.medianSoldPrice > 0 ? Math.round(pricing.medianSoldPrice) : "—"}
-              </span>
+            </motion.div>
+          )}
+
+          {/* ── Opportunity Meter — verdict first ── */}
+          {soldSummary && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.12 }}>
+              <OpportunityMeter
+                input={{
+                  demandLevel:      soldSummary.demandLevel,
+                  marketVelocity:   soldSummary.marketVelocity,
+                  confidence:       soldSummary.confidence,
+                  competitionLevel: soldSummary.competitionLevel,
+                  competitionCount: soldSummary.competitionCount,
+                  avgDaysToSell:    soldSummary.avgDaysToSell,
+                  priceRangeLow:    soldSummary.priceRangeLow,
+                  priceRangeHigh:   soldSummary.priceRangeHigh,
+                  medianSoldPrice:  pricing.medianSoldPrice,
+                  compCount:        soldComps.length,
+                }}
+                onScrollToComps={() => compsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              />
+            </motion.div>
+          )}
+
+          {/* ── Resell price ── */}
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.2 }}
+            style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 8, color: "#4a3a1e", textTransform: "uppercase", letterSpacing: "2px", marginBottom: 4 }}>
+                Resell price
+              </div>
+              <div className="flex items-start gap-0.5" style={{ fontFamily: "Georgia, serif" }}>
+                <span style={{ fontSize: 18, fontWeight: 500, color: "#a8904e", paddingTop: 6, lineHeight: 1 }}>$</span>
+                <span style={{ fontSize: 52, fontWeight: 700, lineHeight: 1, letterSpacing: -1.5, color: "#f5f0e8" }}>
+                  {pricing.medianSoldPrice > 0 ? Math.round(pricing.medianSoldPrice) : "—"}
+                </span>
+              </div>
             </div>
             {soldSummary && soldSummary.priceRangeLow > 0 && (
-              <div style={{ fontFamily: "monospace", fontSize: 11, color: "#6a5528", marginTop: 6 }}>
-                ${Math.round(soldSummary.priceRangeLow)} — ${Math.round(soldSummary.priceRangeHigh)} range
+              <div style={{ paddingBottom: 4 }}>
+                <div style={{ fontSize: 8, color: "#4a3a1e", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 4 }}>Range</div>
+                <div style={{ fontFamily: "monospace", fontSize: 12, color: "#6a5528", lineHeight: 1.4 }}>
+                  <div>${Math.round(soldSummary.priceRangeLow)}</div>
+                  <div>${Math.round(soldSummary.priceRangeHigh)}</div>
+                </div>
               </div>
             )}
           </motion.div>
-
-          <div style={{ height: 1, background: "rgba(200,180,126,0.06)" }} />
-
-          {/* ── Opportunity Meter ── */}
-          {soldSummary && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, delay: 0.15 }}>
-              <OpportunityMeter input={{
-                demandLevel:      soldSummary.demandLevel,
-                marketVelocity:   soldSummary.marketVelocity,
-                confidence:       soldSummary.confidence,
-                competitionLevel: soldSummary.competitionLevel,
-                competitionCount: soldSummary.competitionCount,
-                avgDaysToSell:    soldSummary.avgDaysToSell,
-                priceRangeLow:    soldSummary.priceRangeLow,
-                priceRangeHigh:   soldSummary.priceRangeHigh,
-                medianSoldPrice:  pricing.medianSoldPrice,
-                compCount:        soldComps.length,
-              }} />
-            </motion.div>
-          )}
 
 
 
@@ -316,7 +329,7 @@ export default function DecidePage() {
 
             return (
             <>
-              <div style={{ height: 1, background: "rgba(200,180,126,0.06)" }} />
+              <div ref={compsRef} style={{ height: 1, background: "rgba(200,180,126,0.06)" }} />
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.26 }}>
                 <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
                   <div style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2.5px" }}>
@@ -449,24 +462,50 @@ export default function DecidePage() {
       </main>
 
       {/* ── Fixed decision bar ── */}
-      <motion.div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-4 py-3"
-        style={{ background: "rgba(5,15,5,0.97)", backdropFilter: "blur(24px)", borderTop: "1px solid rgba(200,180,126,0.05)", paddingBottom: "max(16px, env(safe-area-inset-bottom, 16px))" }}
-        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.5 }}>
-        <div className="absolute top-0 left-[20%] right-[20%] h-px"
-          style={{ background: "linear-gradient(90deg, transparent, rgba(200,180,126,0.12), transparent)" }} />
-        <div className="flex flex-col gap-2">
+      <motion.div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-4"
+        style={{
+          background: "rgba(5,13,5,0.98)",
+          backdropFilter: "blur(28px)",
+          borderTop: "1px solid rgba(200,180,126,0.07)",
+          paddingTop: 12,
+          paddingBottom: "max(18px, env(safe-area-inset-bottom, 18px))",
+        }}
+        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.45 }}>
+        <div className="absolute top-0 left-[15%] right-[15%] h-px"
+          style={{ background: "linear-gradient(90deg, transparent, rgba(200,180,126,0.15), transparent)" }} />
+        <div className="flex gap-3">
+          {/* Leave it — now a visible outlined button, not ghost text */}
+          <motion.button onClick={() => handleDecision("passed")} disabled={deciding}
+            className="flex items-center justify-center disabled:opacity-40"
+            style={{
+              flex: "0 0 auto",
+              padding: "15px 18px",
+              borderRadius: 14,
+              fontSize: 13,
+              fontWeight: 500,
+              color: "rgba(160,130,90,0.7)",
+              border: "1px solid rgba(200,180,126,0.1)",
+              background: "rgba(13,31,13,0.3)",
+              letterSpacing: "0.2px",
+            }}
+            whileTap={{ scale: 0.97 }} transition={{ duration: 0.15, ease: "easeOut" }}>
+            Leave it
+          </motion.button>
+          {/* Pick it up — primary */}
           <motion.button onClick={() => handleDecision("purchased")} disabled={deciding}
-            className="w-full flex items-center justify-center font-semibold text-[#f5f0e8] relative overflow-hidden disabled:opacity-40"
-            style={{ padding: "16px 22px", borderRadius: 16, fontSize: 15, letterSpacing: "0.2px", background: "linear-gradient(175deg, rgba(46,110,46,0.96) 0%, rgba(33,82,33,1) 100%)", border: "1px solid rgba(109,188,109,0.15)", boxShadow: "0 4px 24px rgba(5,15,5,0.55), 0 0 40px rgba(45,125,45,0.1)" }}
+            className="flex-1 flex items-center justify-center font-semibold text-[#f5f0e8] relative overflow-hidden disabled:opacity-40"
+            style={{
+              padding: "15px 22px",
+              borderRadius: 14,
+              fontSize: 15,
+              letterSpacing: "0.2px",
+              background: "linear-gradient(175deg, rgba(46,110,46,0.96) 0%, rgba(33,82,33,1) 100%)",
+              border: "1px solid rgba(109,188,109,0.15)",
+              boxShadow: "0 4px 20px rgba(5,15,5,0.5), 0 0 32px rgba(45,125,45,0.08)",
+            }}
             whileTap={{ scale: 0.97 }} transition={{ duration: 0.15, ease: "easeOut" }}>
             <span style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)" }} />
             Pick it up
-          </motion.button>
-          <motion.button onClick={() => handleDecision("passed")} disabled={deciding}
-            className="w-full flex items-center justify-center disabled:opacity-40"
-            style={{ padding: "13px", borderRadius: 12, fontSize: 12, color: "rgba(106,85,40,0.35)", border: "none", background: "none", letterSpacing: "0.3px" }}
-            whileTap={{ scale: 0.97 }} transition={{ duration: 0.15, ease: "easeOut" }}>
-            Leave it
           </motion.button>
         </div>
       </motion.div>
