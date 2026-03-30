@@ -1,5 +1,4 @@
 // hooks/useAnalysisFlow.ts
-// Phase 1: removed /api/suggest call — uses findSession.identification directly
 "use client";
 
 import { useState, useCallback, useRef } from "react";
@@ -29,7 +28,7 @@ interface RunAnalysisOptions {
   costStr:          string;
   searchQuery:      string;
   identifiedTitle?: string;
-  primaryColor?:    string;   // passed to comp scoring for color match boost
+  primaryColor?:    string;
   onCompsReady:     (soldComps: Comp[], activeComps: Comp[], summary: any) => void;
   onComplete:       () => void;
   generateMockEvaluation: (cost: number, imageDataUrl: string) => any;
@@ -78,16 +77,21 @@ export function useAnalysisFlow() {
     aborted.current = false;
     setState(initialState);
 
-    // ── Step 1: Show what we already identified ──────────
-    push("uploading", "Item already identified", identifiedTitle ?? searchQuery, "complete");
-    await tick(300);
+    // Step 1 — identity confirmed
+    push(
+      "uploading",
+      identifiedTitle ? `Identified as ${identifiedTitle}` : "Item identified",
+      undefined,
+      "complete"
+    );
+    await tick(350);
 
-    // ── Step 2: Search comps ─────────────────────────────
-    push("searching_comps", "Checking recent sales...", undefined, "active");
+    // Step 2 — fetch comp data
+    push("searching_comps", "Searching recent sales…", undefined, "active");
 
-    let soldComps:   Comp[] = [];
-    let activeComps: Comp[] = [];
-    let fetchedSummary: any = null;
+    let soldComps:    Comp[] = [];
+    let activeComps:  Comp[] = [];
+    let fetchedSummary: any  = null;
     let dataSource: "cache" | "live" | "mock" = "mock";
 
     try {
@@ -107,12 +111,11 @@ export function useAnalysisFlow() {
     const hasSoldData = soldComps.length > 0;
 
     if (!hasSoldData && activeComps.length === 0) {
-      // Full fallback to mock
       const mock = generateMockEvaluation(parseFloat(costStr) || 0, imageDataUrl);
       soldComps = (mock.mockComps ?? []).map((c: any) => ({ ...c, listingType: "sold" as const }));
       setUsingMock(true);
       dataSource = "mock";
-      push("searching_comps", "Using estimated market data", "Live data unavailable", "complete");
+      push("searching_comps", "Using estimated market data", undefined, "complete");
     } else {
       const pricingComps = hasSoldData ? soldComps : activeComps;
       const prices = pricingComps.map(c => c.price).sort((a, b) => a - b);
@@ -121,24 +124,22 @@ export function useAnalysisFlow() {
 
       updateState({ compCount: soldComps.length, priceRange: { low, high } });
 
-      const soldLabel  = hasSoldData ? `${soldComps.length} sold` : "no sold data";
-      const activeLabel = `${activeComps.length} active`;
-      const sourceNote  = dataSource === "cache" ? "cached" : "live";
-
       push(
         "searching_comps",
         hasSoldData
           ? `Found ${soldComps.length} recent sales`
-          : `No sold listings — ${activeComps.length} active listings found`,
-        `${soldLabel} · ${activeLabel} · $${low.toFixed(0)}–$${high.toFixed(0)} (${sourceNote})`,
+          : `Checking active listings`,
+        hasSoldData
+          ? `Price range $${low.toFixed(0)} — $${high.toFixed(0)}`
+          : `${activeComps.length} active listings found`,
         "complete"
       );
     }
 
     await tick(300);
 
-    // ── Step 3: Calculate value ──────────────────────────
-    push("analyzing_market", "Calculating value...", undefined, "active");
+    // Step 3 — market analysis
+    push("analyzing_market", "Estimating resell value…", undefined, "active");
     await tick(800);
 
     const pricingComps = soldComps.length > 0 ? soldComps : activeComps;
@@ -148,26 +149,23 @@ export function useAnalysisFlow() {
 
     const compLevel = fetchedSummary?.competitionLevel;
     const compCount = fetchedSummary?.competitionCount ?? activeComps.length;
-    const competitionNote = compLevel === "high"
-      ? `High competition — ${compCount} active listings`
-      : compLevel === "moderate"
-        ? `Moderate competition — ${compCount} active listings`
-        : compCount > 0
-          ? `Low competition — ${compCount} active listings`
-          : undefined;
+    const competitionNote =
+      compLevel === "high"     ? `${compCount} active listings — competitive market` :
+      compLevel === "moderate" ? `${compCount} active listings — moderate competition` :
+      compCount > 0            ? `${compCount} competing listings` : undefined;
 
     push(
       "analyzing_market",
-      `Most items are selling around $${median.toFixed(0)}`,
-      competitionNote ?? fetchedSummary?.quickTake ?? undefined,
+      `Similar items sell around $${median.toFixed(0)}`,
+      competitionNote,
       "complete"
     );
 
     onCompsReady(soldComps, activeComps, fetchedSummary);
     await tick(400);
 
-    // ── Step 4: Finalizing ───────────────────────────────
-    push("finalizing", "Calculating profit...", undefined, "active");
+    // Step 4 — finalizing
+    push("finalizing", "Running the numbers…", undefined, "active");
     await tick(600);
     push("finalizing", "Your result is ready", undefined, "complete");
 
