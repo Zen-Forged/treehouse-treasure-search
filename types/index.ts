@@ -13,6 +13,7 @@ export interface ItemAttributes {
 
   // Visual classification — from refined identification prompt
   objectType?:          string | null;   // "bookend", "table lamp", "drink caddy"
+  model?:               string | null;   // "eos r50", "air jordan 1", "stand mixer"
   shape?:               string | null;   // "tall cylindrical", "low round", "rectangular tray"
   primaryColor?:        string | null;   // normalized: "brass", "white", "amber"
   secondaryColor?:      string | null;

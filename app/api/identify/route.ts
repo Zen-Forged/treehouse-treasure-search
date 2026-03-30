@@ -82,42 +82,65 @@ async function claudeIdentify(imageDataUrl: string): Promise<IdentifyResult> {
 
   const response = await client.messages.create({
     model:      "claude-opus-4-5",
-    max_tokens: 800,
+    max_tokens: 900,
     messages: [{
       role: "user",
       content: [
         { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
         {
           type: "text",
-          text: `You are a product identification and classification engine for a resale pricing application.
-Analyze this image and extract ONLY visually observable attributes useful for matching against marketplace listings (eBay sold comps).
-DO NOT guess. DO NOT infer beyond what is visually supported. If uncertain, use null and lower confidence.
-Respond ONLY with raw valid JSON — no markdown, no backticks, no explanation.
+          text: `You are a resale product identification engine. Your job is to identify items for eBay comp matching.
+
+STEP 1 — IDENTITY CHECK:
+First, determine if this is a specific named product (brand + model identifiable from the image itself — e.g. Canon EOS R50, Nike Air Jordan 1, KitchenAid Stand Mixer, Pyrex Cinderella Bowl).
+
+- If YES (branded/named product you can identify with high confidence):
+  Set "is_named_product": true
+  Fill brand, model, and object_type with precision
+  The user-facing title should be: "[Brand] [Model] [Color] [Object Type]" e.g. "Canon EOS R50 White Mirrorless Camera"
+  The search_query should be the exact product name: "canon eos r50 white"
+
+- If NO (unbranded, generic, vintage, or ambiguous):
+  Set "is_named_product": false
+  Use visual classification to describe it accurately
+  Build title from strongest visual signals: "[material] [object_type] [color]" e.g. "Brass Owl Bookend" or "Tall Ceramic Vase White"
+  Build search_query from visual attributes: "[shape] [material] [object_type] [color]"
+
+STEP 2 — VISUAL ATTRIBUTES (always fill these regardless of Step 1):
+Extract all visually observable attributes. Only include what you can actually see.
+All string values must be lowercase. Confidence 0.0–1.0.
+
+Respond ONLY with raw valid JSON — no markdown, no backticks, no explanation:
 
 {
+  "is_named_product": false,
+  "brand": {
+    "value": "brand name if identifiable (canon, nike, pyrex, wedgwood) — null if not visible or uncertain",
+    "confidence": 0.0
+  },
+  "model": {
+    "value": "specific model name/number if identifiable (eos r50, air jordan 1, stand mixer) — null if unknown",
+    "confidence": 0.0
+  },
   "object_type": {
-    "value": "most specific common resale term (e.g. vase, table lamp, drink caddy, bookend). avoid vague terms like decor",
+    "value": "specific resale term (camera, bookend, vase, sneaker, mixing bowl) — never use 'item' or 'object'",
     "confidence": 0.0
   },
   "category": {
-    "value": "marketplace category (e.g. home decor, kitchenware, lighting, clothing, electronics)",
+    "value": "marketplace category (electronics, home decor, kitchenware, clothing, collectibles, toys, jewelry)",
     "confidence": 0.0
   },
   "shape": {
-    "value": "normalized form factor (e.g. tall cylindrical, low round, rectangular tray, abstract sculptural)",
+    "value": "form factor (tall cylindrical, low round, rectangular, compact rectangular body, abstract sculptural)",
     "confidence": 0.0
   },
   "color": {
-    "primary": "simple normalized color (white, brown, gold, amber, black, etc.)",
-    "secondary": "second color or empty string if none",
+    "primary": "dominant color (white, black, brass, amber, red) — empty string if indeterminate",
+    "secondary": "second color or empty string",
     "confidence": 0.0
   },
   "material": {
-    "value": "only if visually supported (ceramic, glass, wood, brass, cast iron, silver plate, etc.) — null if uncertain",
-    "confidence": 0.0
-  },
-  "pattern": {
-    "value": "one of: solid, speckled, etched, painted, gradient, floral, geometric, plain — null if unclear",
+    "value": "primary material if visible (ceramic, glass, brass, plastic, leather, denim) — null if unclear",
     "confidence": 0.0
   },
   "condition": {
@@ -129,28 +152,19 @@ Respond ONLY with raw valid JSON — no markdown, no backticks, no explanation.
     "confidence": 0.0
   },
   "size_estimate": {
-    "value": "estimate only if visual reference exists (e.g. small under 6 inches, medium 6-12 inches) — unknown if no reference",
-    "confidence": 0.0,
-    "notes": "reference used for estimate or empty string"
+    "value": "only if visual reference exists: small (under 6in), medium (6-12in), large (over 12in) — otherwise unknown",
+    "confidence": 0.0
   },
-  "distinctive_features": ["array of notable details e.g. handles on both sides, gold rim, woven texture, painted scene, embossed logo"],
+  "distinctive_features": ["notable details visible in image e.g. flip-out screen, gold trim, woven texture, painted scene"],
   "era": {
-    "value": "estimated decade or period only if visually supported (e.g. 1950s-1960s, victorian, art deco, 1980s) — null if cannot determine",
+    "value": "decade or period only if visually certain (1950s-1960s, victorian, art deco) — null if uncertain",
     "confidence": 0.0
   },
-  "origin": {
-    "value": "country of manufacture only if identifiable from markings or unmistakable style (e.g. japan, usa, england, west germany) — null if unknown",
-    "confidence": 0.0
-  },
-  "brand": {
-    "value": "manufacturer name only if visible marking exists (e.g. wedgwood, pyrex, levis) — null if not visible",
-    "confidence": 0.0
-  },
-  "search_query": "short optimized eBay search query. format: [shape] [material] [object_type] [color]. example: tall ceramic vase white. all lowercase. no filler words.",
-  "notes": "any important observation not captured above or empty string"
-}
-
-Rules: all string values lowercase. confidence 0.0-1.0. do not hallucinate brand, era, or origin.`,
+  "title": "user-facing product name following the rules in Step 1 — specific and accurate, 3-7 words, title case",
+  "description": "one calm sentence describing what this is, its key visual characteristics, and condition",
+  "search_query": "optimized eBay search query following Step 1 rules — all lowercase, no filler words",
+  "overall_confidence": 0.0
+}`,
         },
       ],
     }],
@@ -168,55 +182,52 @@ Rules: all string values lowercase. confidence 0.0-1.0. do not hallucinate brand
     .replace(/```\s*$/i, "")
     .trim();
 
-  const v = JSON.parse(clean) as VisualClassification;
+  const v = JSON.parse(clean) as VisualClassification & {
+    is_named_product: boolean;
+    model?:           VisualField;
+    title:            string;
+    description:      string;
+    overall_confidence: number;
+  };
 
-  // Only include fields above confidence threshold
   const THRESHOLD = 0.55;
   const pick = (field: VisualField | undefined): string | null =>
     field && field.confidence >= THRESHOLD && field.value ? field.value : null;
 
+  const brand     = pick(v.brand);
+  const model     = pick(v.model);
   const objectType = pick(v.object_type);
-  const material   = pick(v.material);
-  const shape      = pick(v.shape);
-  const color      = v.color?.confidence >= THRESHOLD ? v.color.primary || null : null;
-  const category   = pick(v.category);
+  const material  = pick(v.material);
+  const shape     = pick(v.shape);
+  const color     = v.color?.confidence >= THRESHOLD ? v.color.primary || null : null;
+  const category  = pick(v.category);
 
-  // Build title from strongest signals
-  const titleParts = [shape, material, objectType].filter(Boolean);
-  const title = titleParts.length >= 2
-    ? titleParts.join(" ")
-    : objectType ?? v.search_query ?? "unknown item";
+  // Title: use Claude's generated title directly — it follows our Step 1 rules
+  const title = v.title || [
+    brand, model, color, objectType
+  ].filter(Boolean).join(" ") || objectType || "unknown item";
 
-  // Build description
-  const descParts: string[] = [];
-  if (material) descParts.push(material);
-  if (color)    descParts.push(color);
-  if (pick(v.pattern)) descParts.push(pick(v.pattern)!);
-  if (v.distinctive_features?.length) descParts.push(v.distinctive_features.slice(0, 2).join(", "));
-  const description = descParts.length
-    ? `A ${descParts.join(", ")} ${objectType ?? "item"}.`
-    : v.notes || `A ${objectType ?? "item"}.`;
+  const description = v.description || `A ${[material, color, objectType].filter(Boolean).join(" ") || "item"}.`;
 
-  // Overall confidence
-  const avgConf = [
-    v.object_type?.confidence ?? 0,
-    v.material?.confidence    ?? 0,
-    v.category?.confidence    ?? 0,
-  ].reduce((a, b) => a + b, 0) / 3;
+  const overallConf = v.overall_confidence ?? (
+    [v.object_type?.confidence ?? 0, v.material?.confidence ?? 0, v.category?.confidence ?? 0]
+      .reduce((a, b) => a + b, 0) / 3
+  );
 
   const confidence: "high" | "medium" | "low" =
-    avgConf >= 0.8  ? "high" :
-    avgConf >= 0.55 ? "medium" : "low";
+    overallConf >= 0.8  ? "high" :
+    overallConf >= 0.55 ? "medium" : "low";
 
   const searchQuery = normalizeQuery(v.search_query || title);
 
   const attributes: ItemAttributes = {
-    brand:               pick(v.brand),
+    brand,
     material,
     era:                 pick(v.era),
-    origin:              pick(v.origin),
+    origin:              null,   // not in prompt — avoids hallucination
     category,
     objectType,
+    model,
     shape,
     primaryColor:        color,
     secondaryColor:      v.color?.confidence >= THRESHOLD && v.color.secondary ? v.color.secondary : null,
@@ -225,10 +236,10 @@ Rules: all string values lowercase. confidence 0.0-1.0. do not hallucinate brand
     setType:             pick(v.set_type),
     sizeEstimate:        pick(v.size_estimate),
     distinctiveFeatures: v.distinctive_features?.length ? v.distinctive_features : undefined,
-    visualConfidence:    Math.round(avgConf * 100) / 100,
+    visualConfidence:    Math.round(overallConf * 100) / 100,
   };
 
-  console.log(`[identify] obj="${objectType}" material="${material}" shape="${shape}" color="${color}" conf=${confidence} (${avgConf.toFixed(2)}) query="${searchQuery}"`);
+  console.log(`[identify] named=${v.is_named_product} brand="${brand}" model="${model}" title="${title}" conf=${confidence} query="${searchQuery}"`);
 
   return { title, description, confidence, searchQuery, attributes };
 }

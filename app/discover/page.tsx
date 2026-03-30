@@ -109,19 +109,24 @@ export default function DiscoverPage() {
   const attributes  = session?.identification?.attributes;
   const image       = session?.imageOriginal;
 
-  // Build attribute rows — show visual fields when available, fall back to core fields
+  // Build attribute rows — named products show brand/model first, unbranded show visual attributes
+  const brandWithModel = attributes?.brand
+    ? attributes?.model
+      ? `${attributes.brand} ${attributes.model}`
+      : attributes.brand
+    : null;
+
   const attrRows = [
-    attributes?.objectType  ? { label: "Type",      val: attributes.objectType }                         : null,
-    attributes?.material    ? { label: "Material",  val: attributes.material }                           : null,
-    attributes?.primaryColor ? { label: "Color",    val: attributes.secondaryColor
-                                   ? `${attributes.primaryColor} / ${attributes.secondaryColor}`
-                                   : attributes.primaryColor }                                           : null,
-    attributes?.condition   ? { label: "Condition", val: attributes.condition }                          : null,
+    brandWithModel                        ? { label: "Brand",     val: brandWithModel }                  : null,
+    attributes?.objectType                ? { label: "Type",      val: attributes.objectType }           : null,
+    attributes?.material                  ? { label: "Material",  val: attributes.material }             : null,
+    attributes?.primaryColor              ? { label: "Color",     val: attributes.secondaryColor
+                                                ? `${attributes.primaryColor} / ${attributes.secondaryColor}`
+                                                : attributes.primaryColor }                              : null,
+    attributes?.condition                 ? { label: "Condition", val: attributes.condition }            : null,
     attributes?.setType && attributes.setType !== "unknown"
-                            ? { label: "Listed as", val: attributes.setType }                            : null,
-    attributes?.era         ? { label: "Era",       val: attributes.era }                                : null,
-    attributes?.origin      ? { label: "Origin",    val: attributes.origin }                             : null,
-    attributes?.brand       ? { label: "Brand",     val: attributes.brand }                              : null,
+                                          ? { label: "Listed as", val: attributes.setType }             : null,
+    attributes?.era                       ? { label: "Era",       val: attributes.era }                  : null,
   ].filter(Boolean) as { label: string; val: string }[];
 
   const hasAttributes = attrRows.length > 0;
