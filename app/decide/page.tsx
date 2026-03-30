@@ -73,6 +73,9 @@ export default function DecidePage() {
   const [soldSummary, setSoldSummary] = useState<SoldSummary | null>(null);
   const [usingMock, setUsingMock]     = useState(false);
   const [deciding, setDeciding]       = useState(false);
+  const [showAllSoldComps, setShowAllSoldComps] = useState(false);
+
+  const SOLD_COMPS_INITIAL = 12;
   const analysisStarted               = useRef(false);
 
   // ── Store latest comp data in refs so handleDecision always has current values
@@ -345,11 +348,11 @@ export default function DecidePage() {
                   </span>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                  {soldComps.slice(0, 9).map((comp, i) => (
-                    <motion.a key={i} href={comp.url ?? "#"} target="_blank" rel="noopener noreferrer"
+                  {(showAllSoldComps ? soldComps : soldComps.slice(0, SOLD_COMPS_INITIAL)).map((comp, i) => (
+                    <motion.a key={comp.url ?? i} href={comp.url ?? "#"} target="_blank" rel="noopener noreferrer"
                       style={{ borderRadius: 12, overflow: "hidden", background: "rgba(13,31,13,0.5)", border: "1px solid rgba(109,188,109,0.07)", display: "block", textDecoration: "none" }}
                       initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.25, delay: 0.28 + i * 0.03 }}
+                      transition={{ duration: 0.25, delay: i < SOLD_COMPS_INITIAL ? 0.28 + i * 0.03 : 0 }}
                       whileTap={{ scale: 0.97 }}>
                       {comp.imageUrl ? (
                         <img src={comp.imageUrl} alt={comp.title}
@@ -372,14 +375,23 @@ export default function DecidePage() {
                               ? `${comp.daysAgo}d ago`
                               : "No date"}
                         </div>
-                        <div style={{ display: "inline-block", fontSize: 8, background: "rgba(45,125,45,0.08)", color: "#7a6535", padding: "1px 4px", borderRadius: 3, marginTop: 3 }}>
-                          {comp.condition}
-                        </div>
                       </div>
                     </motion.a>
                   ))}
                 </div>
-                <p style={{ textAlign: "center", fontSize: 10, color: "#2e2410", paddingTop: 8 }}>
+
+                {/* Show more / less */}
+                {soldComps.length > SOLD_COMPS_INITIAL && (
+                  <button
+                    onClick={() => setShowAllSoldComps(v => !v)}
+                    style={{ width: "100%", marginTop: 10, padding: "9px", background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "#6a5528", letterSpacing: "0.3px" }}>
+                    {showAllSoldComps
+                      ? `Show fewer`
+                      : `Show ${soldComps.length - SOLD_COMPS_INITIAL} more`}
+                  </button>
+                )}
+
+                <p style={{ textAlign: "center", fontSize: 10, color: "#2e2410", paddingTop: 4 }}>
                   {usingMock ? "Estimated data" : "Real eBay sold listings"}
                 </p>
               </motion.div>
@@ -424,9 +436,6 @@ export default function DecidePage() {
                           </div>
                           <div style={{ fontFamily: "monospace", fontSize: 12, fontWeight: 700, color: "#f5f0e8" }}>
                             ${comp.price.toFixed(2)}
-                          </div>
-                          <div style={{ display: "inline-block", fontSize: 8, background: "rgba(168,144,78,0.1)", color: "#a8904e", padding: "1px 5px", borderRadius: 3, marginTop: 3 }}>
-                            Active
                           </div>
                         </div>
                       </motion.a>
