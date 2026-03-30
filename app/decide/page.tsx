@@ -16,6 +16,7 @@ import { useAnalysisFlow } from "@/hooks/useAnalysisFlow";
 import { AnalysisFeed } from "@/components/AnalysisFeed";
 import { Comp } from "@/types";
 import { OpportunityMeter } from "@/components/OpportunityMeter";
+import { AnalysisSheet } from "@/components/AnalysisSheet";
 
 type AppState = "analyzing" | "done";
 
@@ -182,61 +183,15 @@ export default function DecidePage() {
     </header>
   );
 
-  // ── ANALYZING ────────────────────────────────────────────────────────────────
+  // ── ANALYZING — bottom sheet overlay ─────────────────────────────────────────
   if (appState === "analyzing") {
     return (
-      <div className="flex flex-col min-h-screen bg-[#050f05]">
-        <NavBar />
-        <main className="flex-1 flex flex-col px-5 py-6 pb-8 gap-6 overflow-y-auto">
-          <motion.div className="flex gap-3 items-center"
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
-            <div className="rounded-xl overflow-hidden flex-shrink-0"
-              style={{ width: 52, height: 52, border: "1px solid rgba(109,188,109,0.1)" }}>
-              <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover"
-                style={{ filter: "brightness(0.8) saturate(0.65)" }} />
-            </div>
-            <div>
-              <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 2 }}>
-                Looking it up
-              </div>
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: "#d4c9b0" }}>
-                {identifiedTitle ?? "Your find"}
-              </div>
-            </div>
-          </motion.div>
-
-          <div style={{ height: 1, background: "rgba(200,180,126,0.05)" }} />
-
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, delay: 0.15 }}>
-            <AnalysisFeed state={analysisState} />
-          </motion.div>
-
-          <AnimatePresence>
-            {analysisState.priceRange && (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                style={{ padding: "14px 16px", borderRadius: 16, background: "rgba(13,31,13,0.45)", border: "1px solid rgba(109,188,109,0.1)" }}>
-                <div style={{ fontSize: 9, color: "#7a6535", textTransform: "uppercase", letterSpacing: "2px", marginBottom: 8 }}>
-                  Price range found
-                </div>
-                <div className="flex items-baseline gap-3">
-                  <span style={{ fontFamily: "monospace", fontSize: 22, fontWeight: 700, color: "#d4c9b0" }}>
-                    ${analysisState.priceRange.low.toFixed(0)}
-                  </span>
-                  <span style={{ fontSize: 11, color: "#6a5528" }}>to</span>
-                  <span style={{ fontFamily: "monospace", fontSize: 22, fontWeight: 700, color: "#f5f0e8" }}>
-                    ${analysisState.priceRange.high.toFixed(0)}
-                  </span>
-                </div>
-                {analysisState.compCount != null && (
-                  <div style={{ fontSize: 11, color: "#6a5528", marginTop: 4 }}>
-                    Based on {analysisState.compCount} recent sales
-                  </div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </main>
-      </div>
+      <AnalysisSheet
+        state={analysisState}
+        imageDataUrl={sessionData.imageDataUrl}
+        itemTitle={identifiedTitle}
+        isComplete={analysisState.isComplete}
+      />
     );
   }
 
