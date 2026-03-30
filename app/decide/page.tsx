@@ -4,9 +4,10 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
+import { Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useFindSession } from "@/hooks/useSession";
 import { useFinds, SavedFind } from "@/hooks/useFinds";
@@ -72,8 +73,11 @@ function applyTreehouseFilter(src: string): Promise<string> {
   });
 }
 
-export default function DecidePage() {
-  const router = useRouter();
+function DecidePageInner() {
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const isReview     = searchParams.get("review") === "1";
+
   const { session: findSession, updateSession } = useFindSession();
   const { saveFind } = useFinds();
 
@@ -85,10 +89,32 @@ export default function DecidePage() {
   const identifiedTitle = findSession?.identification?.title;
   const primaryColor    = findSession?.identification?.attributes?.primaryColor ?? undefined;
 
-  const [appState, setAppState]       = useState<AppState>("analyzing");
+  // In review mode, start directly in done state using the saved find data
+  const [appState, setAppState] = useState<AppState>(
+    isReview ? "done" : "analyzing"
+  );
   const [soldComps, setSoldComps]     = useState<Comp[]>([]);
   const [activeComps, setActiveComps] = useState<Comp[]>([]);
-  const [soldSummary, setSoldSummary] = useState<SoldSummary | null>(null);
+
+  // In review mode, reconstruct soldSummary from the saved find data
+  const reviewSummary: SoldSummary | null = isReview && findSession?.savedFindData
+    ? {
+        recommendedPrice:  findSession.savedFindData.medianSoldPrice ?? 0,
+        priceRangeLow:     findSession.savedFindData.priceRangeLow   ?? 0,
+        priceRangeHigh:    findSession.savedFindData.priceRangeHigh  ?? 0,
+        marketVelocity:    findSession.savedFindData.avgDaysToSell != null
+                             ? (findSession.savedFindData.avgDaysToSell <= 7 ? "fast" : findSession.savedFindData.avgDaysToSell <= 21 ? "moderate" : "slow")
+                             : "moderate",
+        demandLevel:       "Moderate",
+        quickTake:         "",
+        confidence:        "Moderate",
+        avgDaysToSell:     findSession.savedFindData.avgDaysToSell    ?? 0,
+        competitionCount:  findSession.savedFindData.competitionCount ?? 0,
+        competitionLevel:  findSession.savedFindData.competitionLevel ?? "moderate",
+      }
+    : null;
+
+  const [soldSummary, setSoldSummary] = useState<SoldSummary | null>(reviewSummary);
   const [usingMock, setUsingMock]     = useState(false);
   const [deciding, setDeciding]       = useState(false);
   const [showAllSoldComps, setShowAllSoldComps] = useState(false);
@@ -112,6 +138,8 @@ export default function DecidePage() {
 
   useEffect(() => {
     if (!sessionData) { router.replace("/"); return; }
+    // In review mode, skip all analysis — data is already in the session
+    if (isReview) return;
     if (analysisStarted.current) return;
     analysisStarted.current = true;
 
@@ -195,8 +223,11 @@ export default function DecidePage() {
       recommendation:   pricingData.recommendation,
     };
 
-    // saveFind compresses images before writing — await it before navigating
+    // saveFind compresses images before writing — await it before navigating.
+    // The extra 150ms gives mobile Safari's JS engine time to fully flush the
+    // localStorage write before the page transition tears down the context.
     await saveFind(find);
+    await new Promise(r => setTimeout(r, 150));
     router.push("/finds");
   }, [deciding, findSession, saveFind, router, sessionData]);
 
@@ -505,5 +536,17 @@ export default function DecidePage() {
 
       <style>{`.hide-scrollbar::-webkit-scrollbar{display:none}.hide-scrollbar{scrollbar-width:none}`}</style>
     </div>
+  );
+}
+
+export default function DecidePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-[#050f05]">
+        <div style={{ color: "#3d3018", fontSize: 13 }}>Loading...</div>
+      </div>
+    }>
+      <DecidePageInner />
+    </Suspense>
   );
 }
