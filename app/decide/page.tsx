@@ -92,6 +92,10 @@ export default function DecidePage() {
   const [usingMock, setUsingMock]     = useState(false);
   const [deciding, setDeciding]       = useState(false);
   const [showAllSoldComps, setShowAllSoldComps] = useState(false);
+  // Tracks the displayed photo — starts as original, updates to filtered version when ready
+  const [displayImage, setDisplayImage] = useState<string>(
+    findSession?.imageEnhanced ?? findSession?.imageOriginal ?? ""
+  );
 
   const SOLD_COMPS_INITIAL = 12;
   const analysisStarted  = useRef(false);
@@ -111,11 +115,12 @@ export default function DecidePage() {
     if (analysisStarted.current) return;
     analysisStarted.current = true;
 
-    // Run photo filter concurrently with comp fetch — store in ref + session
+    // Run photo filter concurrently with comp fetch — store in ref, session, and display state
     if (!findSession?.imageEnhanced) {
       applyTreehouseFilter(sessionData.imageDataUrl).then(enhanced => {
         enhancedImageRef.current = enhanced;
         updateSession({ imageEnhanced: enhanced });
+        setDisplayImage(enhanced); // swap the hero photo once filter is ready
       });
     }
 
@@ -243,7 +248,7 @@ export default function DecidePage() {
         {/* ── Photo — full bleed 320px ── */}
         <motion.div className="relative w-full flex-shrink-0" style={{ height: 320 }}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
-          <img src={sessionData.imageDataUrl} alt="Item" className="w-full h-full object-cover"
+          <img src={displayImage} alt="Item" className="w-full h-full object-cover"
             style={{ filter: "brightness(0.82) saturate(0.75) sepia(0.08)" }} />
           <div className="absolute inset-0"
             style={{ background: "radial-gradient(ellipse at 50% 50%, transparent 25%, rgba(5,15,5,0.4) 100%)" }} />
