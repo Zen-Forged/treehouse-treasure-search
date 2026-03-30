@@ -4,11 +4,24 @@ export type Decision = "purchased" | "passed" | "pending";
 // ─── Item Attributes (extracted by Claude Vision) ────────────────────────────
 
 export interface ItemAttributes {
-  brand:    string | null;   // e.g. "Wedgwood", "Pyrex", null if unknown
-  material: string | null;   // e.g. "Cast iron", "Sterling silver", "Ceramic"
-  era:      string | null;   // e.g. "1950s–1960s", "Victorian", "Pre-1900"
-  origin:   string | null;   // e.g. "Japan", "USA", "England"
-  category: string | null;   // e.g. "Kitchenware", "Figurines", "Jewelry"
+  // Core identity — displayed in UI + saved to finds
+  brand:    string | null;
+  material: string | null;
+  era:      string | null;
+  origin:   string | null;
+  category: string | null;
+
+  // Visual classification — from refined identification prompt
+  objectType?:          string | null;   // "bookend", "table lamp", "drink caddy"
+  shape?:               string | null;   // "tall cylindrical", "low round", "rectangular tray"
+  primaryColor?:        string | null;   // normalized: "brass", "white", "amber"
+  secondaryColor?:      string | null;
+  pattern?:             string | null;   // "solid", "speckled", "etched", "painted"
+  condition?:           string | null;   // "new" | "like new" | "good" | "worn" | "damaged"
+  setType?:             string | null;   // "single" | "pair" | "set" | "unknown"
+  sizeEstimate?:        string | null;   // "small (under 6 inches)", "unknown"
+  distinctiveFeatures?: string[];        // ["handles on both sides", "gold rim"]
+  visualConfidence?:    number;          // overall 0.0–1.0
 }
 
 // ─── Comp (replaces MockComp) ─────────────────────────────────────────────────
