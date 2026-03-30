@@ -45,6 +45,15 @@ export interface FindSession {
   activeComps?:    Comp[];
   pricing?:        FindPricing;
   decision?:       "purchased" | "passed" | "shared";
+  // Populated when reviewing a saved find — lets decide page skip re-analysis
+  savedFindData?: {
+    medianSoldPrice?:  number;
+    priceRangeLow?:    number;
+    priceRangeHigh?:   number;
+    avgDaysToSell?:    number;
+    competitionCount?: number;
+    competitionLevel?: "low" | "moderate" | "high";
+  };
 }
 
 interface FindSessionContextType {

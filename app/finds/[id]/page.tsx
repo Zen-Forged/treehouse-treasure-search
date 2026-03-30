@@ -22,21 +22,40 @@ export default function FindDetailPage() {
     else setFind(found);
   }, [params.id]);
 
-  const handleAnalyze = () => {
+  const handleReview = () => {
     if (!find) return;
+    // Restore the session from the saved find so /decide renders
+    // directly into results state — no re-analysis, no API calls.
     const session = startSession(find.imageOriginal);
     updateSession({
       ...session,
-      imageEnhanced: find.imageEnhanced,
+      imageEnhanced:  find.imageEnhanced,
       identification: find.title ? {
         title:       find.title,
         description: find.description ?? "",
-        confidence:  "medium" as const,
+        confidence:  "high" as const,
         searchQuery: find.title.toLowerCase(),
+        attributes:  {
+          brand:    find.brand    ?? undefined,
+          material: find.material ?? undefined,
+          era:      find.era      ?? undefined,
+          origin:   find.origin   ?? undefined,
+          category: find.category ?? undefined,
+        },
       } : undefined,
-      pricePaid: find.pricePaid,
+      pricePaid:    find.pricePaid,
+      // Embed the saved market data so decide page can skip fetching
+      skipPriceEntry: true,
+      savedFindData: {
+        medianSoldPrice:  find.medianSoldPrice,
+        priceRangeLow:    find.priceRangeLow,
+        priceRangeHigh:   find.priceRangeHigh,
+        avgDaysToSell:    find.avgDaysToSell,
+        competitionCount: find.competitionCount,
+        competitionLevel: find.competitionLevel,
+      },
     });
-    router.push("/worth");
+    router.push("/decide?review=1");
   };
 
   const handleDelete = () => {
@@ -98,12 +117,12 @@ export default function FindDetailPage() {
 
       <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-4 py-4"
         style={{ background: "rgba(5,15,5,0.97)", backdropFilter: "blur(20px)", borderTop: "1px solid rgba(200,180,126,0.05)", paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}>
-        <motion.button onClick={handleAnalyze}
+        <motion.button onClick={handleReview}
           className="w-full flex items-center justify-center font-semibold text-[#f5f0e8] relative overflow-hidden"
           style={{ padding: "16px", borderRadius: 16, fontSize: 15, background: "linear-gradient(175deg, rgba(46,110,46,0.96) 0%, rgba(33,82,33,1) 100%)", border: "1px solid rgba(109,188,109,0.16)", boxShadow: "0 4px 24px rgba(5,15,5,0.55)" }}
           whileTap={{ scale: 0.97 }}>
           <span style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)" }} />
-          What's it worth
+          View results
         </motion.button>
       </div>
     </div>
