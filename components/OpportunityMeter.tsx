@@ -1,93 +1,161 @@
 // components/OpportunityMeter.tsx
-// Decision-support layer — refactored from "verdict first" to "value first".
+// Transparent Decision Engine — Phase 2 refactor.
 //
-// PRESENTATION ONLY — all 4 underlying signals (profit, speed, confidence, effort)
-// are preserved and still power every label on this screen. Nothing in
-// opportunityScore.ts was changed.
+// WHAT CHANGED (presentation layer only):
+//   - Abstract pills ("Sells Quickly") → literal numbers ("Avg 8 days to sell")
+//   - Abstract market label ("Crowded Market") → literal counts ("42 active · 14 sold")
+//   - Single "Buy Under $X" → three-tier buy range (Strong / Acceptable / Risky)
+//   - New profit scenario table (3 example buy prices → estimated net)
+//   - Confidence badge anchored to real comp count
 //
-// New information hierarchy:
-//   1. Estimated Value   (medianSoldPrice + range)
-//   2. Sellability       (derived: Demand + Velocity → speed signal)
-//   3. Market Pressure   (derived: Competition → effort signal)
-//   4. Confidence badge  (trust indicator, not main verdict)
-//   5. Buy Under         (hero decision output — replaces Strong Buy / Maybe / Pass)
-//   6. Why this score?   (expandable breakdown — unchanged)
+// WHAT DID NOT CHANGE:
+//   - opportunityScore.ts — scoring engine is untouched
+//   - ScoringInput type — no new required fields
+//   - All 4 signals: Profit, Speed, Confidence, Effort
+//   - Data flow in decide/page.tsx — OpportunityMeter props are identical
+//
+// MODE: "resell" assumed. Fees modeled as flat 13% eBay rate.
+// Future: accept pricePaid prop → live margin recalc.
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { computeOpportunityScore, type ScoringInput } from "@/lib/opportunityScore";
 
-// ─── Derived presentation labels ─────────────────────────────────────────────
-// Pure functions of existing signal values — no scoring logic changed.
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-function sellabilityLabel(speed: number): { label: string; level: "high" | "mid" | "low" } {
-  if (speed >= 65) return { label: "Sells Quickly",    level: "high" };
-  if (speed >= 38) return { label: "Moves Steadily",   level: "mid"  };
-  return              { label: "Slow Mover",            level: "low"  };
+const EBAY_FEE_RATE = 0.13; // 13% combined eBay + payment fees
+
+// ─── Derived literal metrics ──────────────────────────────────────────────────
+// Pure functions. No scoring logic changed. All inputs already present in ScoringInput.
+
+/** Convert avgDaysToSell to a human display string. */
+function formatDaysToSell(days: number, velocityFallback: string): string {
+  if (days > 0) {
+    if (days === 1) return "~1 day to sell";
+    if (days < 7)  return `~${days} days to sell`;
+    if (days < 30) return `~${days} days to sell`;
+    return `${Math.round(days / 7)}+ weeks to sell`;
+  }
+  // Fall back to velocity string if no numeric data
+  const map: Record<string, string> = {
+    fast:     "Typically sells fast",
+    moderate: "Moderate sell time",
+    slow:     "Can be slow to sell",
+  };
+  return map[velocityFallback.toLowerCase()] ?? "Sell time unknown";
 }
 
-function marketPressureLabel(effort: number): { label: string; level: "low" | "mid" | "high" } {
-  if (effort <= 30) return { label: "Low Competition",  level: "low"  };
-  if (effort <= 62) return { label: "Some Competition", level: "mid"  };
-  return               { label: "Crowded Market",       level: "high" };
+/** Three-tier buy range derived from median + score + fees. Presentation only. */
+interface BuyRange {
+  strong:     number;   // "Strong Buy" max price
+  acceptable: number;   // "Acceptable" max price
+  risky:      number;   // "Risky" boundary (above = not recommended)
+  explanation: string;
 }
 
-function confidenceCopy(confidence: number, compCount: number): string {
-  const n = compCount > 0 ? ` · ${compCount} sale${compCount !== 1 ? "s" : ""}` : "";
-  if (confidence >= 65) return `Strong data${n}`;
-  if (confidence >= 38) return `Moderate data${n}`;
-  return `Thin data — review comps`;
-}
-
-// "Buy Under" threshold — the main decision output.
-// Derived from score + medianSoldPrice, no new inputs required.
-function buyUnderThreshold(
-  score:           number,
+function computeBuyRange(
   medianSoldPrice: number,
   priceRangeLow:   number,
-): { copy: string; price: number | null } {
-  if (medianSoldPrice <= 0) return { copy: "Not enough data", price: null };
+  score:           number,
+): BuyRange | null {
+  if (medianSoldPrice <= 0) return null;
 
-  if (score >= 75) {
-    // Strong signal: buy under the low end of the range
-    const threshold = priceRangeLow > 0
-      ? Math.round(priceRangeLow * 0.95)
-      : Math.round(medianSoldPrice * 0.55);
-    return { copy: `Worth it under`, price: threshold };
-  }
-  if (score >= 55) {
-    const threshold = Math.round(medianSoldPrice * 0.62);
-    return { copy: `Good buy under`, price: threshold };
-  }
-  if (score >= 38) {
-    const threshold = Math.round(medianSoldPrice * 0.45);
-    return { copy: `Maybe at`, price: threshold };
-  }
-  return { copy: "Hard to make this work", price: null };
+  const fees = medianSoldPrice * EBAY_FEE_RATE;
+  const net  = medianSoldPrice - fees;
+
+  // Strong buy: target at least 50% margin on net proceeds
+  // → net / (1 + 0.5) = net * 0.667
+  const strong = Math.round(net * 0.65);
+
+  // Acceptable: target at least 20% margin
+  // → net / (1 + 0.2) = net * 0.833
+  const acceptable = Math.round(net * 0.82);
+
+  // Risky: break-even minus a small buffer (10%)
+  const risky = Math.round(net * 0.92);
+
+  // Confidence modifier — when score is low, tighten thresholds
+  const modifier = score >= 70 ? 1.0 : score >= 50 ? 0.92 : 0.80;
+
+  return {
+    strong:      Math.round(strong     * modifier),
+    acceptable:  Math.round(acceptable * modifier),
+    risky:       Math.round(risky      * modifier),
+    explanation: `Based on ~$${Math.round(medianSoldPrice)} resale value after ~${Math.round(EBAY_FEE_RATE * 100)}% fees`,
+  };
+}
+
+/** Three profit scenarios at spread-derived buy prices. */
+interface ProfitScenario {
+  buyPrice:   number;
+  net:        number;   // after fees, positive = profit
+  label:      string;   // "Low", "Mid", "High"
+}
+
+function computeProfitScenarios(
+  medianSoldPrice: number,
+  priceRangeLow:   number,
+  priceRangeHigh:  number,
+): ProfitScenario[] {
+  if (medianSoldPrice <= 0) return [];
+
+  const fees = medianSoldPrice * EBAY_FEE_RATE;
+  const net  = medianSoldPrice - fees;
+
+  // Three realistic buy prices: low-end, 35% of median, 55% of median
+  const lo  = priceRangeLow > 0 ? Math.round(priceRangeLow * 0.7) : Math.round(medianSoldPrice * 0.25);
+  const mid = Math.round(medianSoldPrice * 0.38);
+  const hi  = Math.round(medianSoldPrice * 0.55);
+
+  return [
+    { buyPrice: lo,  net: Math.round(net - lo),  label: "Low buy"  },
+    { buyPrice: mid, net: Math.round(net - mid), label: "Mid buy"  },
+    { buyPrice: hi,  net: Math.round(net - hi),  label: "High buy" },
+  ];
 }
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
-const LEVEL_COLOR = {
-  high: { text: "#6dbc6d", bg: "rgba(109,188,109,0.1)", border: "rgba(109,188,109,0.2)" },
-  mid:  { text: "#c8b47e", bg: "rgba(200,180,126,0.1)", border: "rgba(200,180,126,0.2)" },
-  low:  { text: "#a07868", bg: "rgba(160,120,104,0.1)", border: "rgba(160,120,104,0.2)" },
+const C = {
+  green:  { text: "#6dbc6d", bg: "rgba(109,188,109,0.08)", border: "rgba(109,188,109,0.18)" },
+  gold:   { text: "#c8b47e", bg: "rgba(200,180,126,0.08)", border: "rgba(200,180,126,0.18)" },
+  rust:   { text: "#a07868", bg: "rgba(160,120,104,0.08)", border: "rgba(160,120,104,0.18)" },
+  dim:    "#5a4828",
+  muted:  "#4a3a1e",
+  faint:  "rgba(200,180,126,0.06)",
 } as const;
 
-// Pressure level color is inverted — low competition is good
-const PRESSURE_COLOR = {
-  low:  LEVEL_COLOR.high,
-  mid:  LEVEL_COLOR.mid,
-  high: LEVEL_COLOR.low,
-} as const;
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
-// ─── Signal bar (unchanged from before) ──────────────────────────────────────
+function Row({ label, value, sub, color }: {
+  label: string; value: string; sub?: string; color?: string;
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+      <span style={{ fontSize: 11, color: C.dim, flexShrink: 0 }}>{label}</span>
+      <div style={{ textAlign: "right" }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: color ?? "#d4c9b0" }}>{value}</span>
+        {sub && <div style={{ fontSize: 10, color: C.muted, marginTop: 1 }}>{sub}</div>}
+      </div>
+    </div>
+  );
+}
 
-function SignalBar({
-  label, value, valueLabel, inverted = false, delay = 0,
-}: {
-  label: string; value: number; valueLabel: string;
-  inverted?: boolean; delay?: number;
+function Divider() {
+  return <div style={{ height: 1, background: C.faint, margin: "2px 0" }} />;
+}
+
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <div style={{ fontSize: 8, color: C.muted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: 10 }}>
+      {children}
+    </div>
+  );
+}
+
+// Signal bar — unchanged visually, used in expandable breakdown
+function SignalBar({ label, value, valueLabel, inverted = false, delay = 0 }: {
+  label: string; value: number; valueLabel: string; inverted?: boolean; delay?: number;
 }) {
   const [animVal, setAnimVal] = useState(0);
   useEffect(() => {
@@ -105,7 +173,7 @@ function SignalBar({
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <div style={{ width: 72, flexShrink: 0, fontSize: 10, color: "#5a4828", textTransform: "uppercase", letterSpacing: "0.8px" }}>
+      <div style={{ width: 72, flexShrink: 0, fontSize: 10, color: C.dim, textTransform: "uppercase", letterSpacing: "0.8px" }}>
         {label}
       </div>
       <div style={{ flex: 1, height: 2, borderRadius: 1, background: "rgba(255,255,255,0.04)", overflow: "hidden" }}>
@@ -122,36 +190,6 @@ function SignalBar({
   );
 }
 
-// ─── Pill badge ───────────────────────────────────────────────────────────────
-
-function Pill({ label, colors, delay = 0 }: {
-  label:  string;
-  colors: { text: string; bg: string; border: string };
-  delay?: number;
-}) {
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), delay);
-    return () => clearTimeout(t);
-  }, [delay]);
-
-  return (
-    <div style={{
-      display: "inline-flex", alignItems: "center",
-      padding: "5px 11px", borderRadius: 20,
-      fontSize: 12, fontWeight: 500, letterSpacing: "0.1px",
-      color:      colors.text,
-      background: colors.bg,
-      border:     `1px solid ${colors.border}`,
-      opacity:    visible ? 1 : 0,
-      transform:  visible ? "translateY(0)" : "translateY(4px)",
-      transition: "opacity 0.3s ease, transform 0.3s ease",
-    }}>
-      {label}
-    </div>
-  );
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function OpportunityMeter({
@@ -163,110 +201,192 @@ export function OpportunityMeter({
 }) {
   const [showDetail, setShowDetail] = useState(false);
 
+  // Scoring engine — completely unchanged
   const result = computeOpportunityScore(input);
   const { score, signals, detail } = result;
 
-  // Derived presentation labels — all from existing signal values
-  const sellability = sellabilityLabel(signals.speed);
-  const pressure    = marketPressureLabel(signals.effort);
-  const confCopy    = confidenceCopy(signals.confidence, input.compCount);
-  const buyUnder    = buyUnderThreshold(score, input.medianSoldPrice, input.priceRangeLow);
+  // ── Derived literal metrics (presentation only) ───────────────────────────
+  const daysLabel    = formatDaysToSell(input.avgDaysToSell, input.marketVelocity);
+  const buyRange     = computeBuyRange(input.medianSoldPrice, input.priceRangeLow, score);
+  const scenarios    = computeProfitScenarios(input.medianSoldPrice, input.priceRangeLow, input.priceRangeHigh);
+  const soldCount    = input.compCount;
+  const activeCount  = input.competitionCount;
 
-  // Buy Under color mirrors the overall score health
-  const buyUnderColor =
-    score >= 75 ? "#6dbc6d" :
-    score >= 55 ? "#c8b47e" :
-    score >= 38 ? "#a8904e" : "#9a7a5a";
+  // Confidence text anchored to real numbers
+  const confText =
+    soldCount >= 10 ? `High confidence · ${soldCount} sold` :
+    soldCount >= 5  ? `Moderate confidence · ${soldCount} sold` :
+    soldCount > 0   ? `Low confidence · ${soldCount} sold` :
+    "Not enough data";
 
   return (
     <div style={{
       borderRadius: 18,
-      background: "rgba(11,26,11,0.55)",
+      background: "rgba(10,24,10,0.6)",
       border: "1px solid rgba(200,180,126,0.1)",
       overflow: "hidden",
     }}>
 
-      {/* ── Block 1: Sellability + Market Pressure pills ── */}
-      <div style={{
-        padding: "16px 18px 14px",
-        display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
-        borderBottom: "1px solid rgba(200,180,126,0.06)",
-      }}>
-        <Pill label={sellability.label}  colors={LEVEL_COLOR[sellability.level]}    delay={0}   />
-        <Pill label={pressure.label}     colors={PRESSURE_COLOR[pressure.level]}    delay={80}  />
+      {/* ── Block 1: Sell Speed + Market Activity ── */}
+      <div style={{ padding: "16px 18px 14px", borderBottom: `1px solid ${C.faint}` }}>
+        <SectionLabel>Market snapshot</SectionLabel>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+          {/* Sell speed — literal number, not an abstract label */}
+          <Row
+            label="Avg sell time"
+            value={daysLabel}
+            sub={input.avgDaysToSell > 0 ? `From ${soldCount} recent sales` : "Estimated from velocity"}
+            color={signals.speed >= 65 ? C.green.text : signals.speed >= 38 ? C.gold.text : C.rust.text}
+          />
+
+          <Divider />
+
+          {/* Market activity — real counts */}
+          <Row
+            label="Active listings"
+            value={activeCount > 0 ? `${activeCount}` : "—"}
+            sub="Currently competing on eBay"
+            color={signals.effort <= 30 ? C.green.text : signals.effort <= 60 ? C.gold.text : C.rust.text}
+          />
+          <Row
+            label="Recently sold"
+            value={soldCount > 0 ? `${soldCount}` : "—"}
+            sub="Used for this estimate"
+            color="#9a8878"
+          />
+        </div>
       </div>
 
-      {/* ── Block 2: Confidence badge + comp count ── */}
+      {/* ── Block 2: Confidence ── */}
       <div style={{
         padding: "10px 18px",
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        borderBottom: "1px solid rgba(200,180,126,0.04)",
+        borderBottom: `1px solid ${C.faint}`,
       }}>
-        <span style={{ fontSize: 11, color: "#6a5528", letterSpacing: "0.2px" }}>
-          {confCopy}
+        <span style={{ fontSize: 11, color: C.dim }}>
+          {confText}
         </span>
-        {onScrollToComps && input.compCount > 0 && (
-          <button
-            onClick={onScrollToComps}
-            style={{
-              background: "none", border: "none", cursor: "pointer",
-              fontSize: 11, color: "#4a3a1e",
-              padding: 0, display: "flex", alignItems: "center", gap: 3,
-            }}>
-            See comps
-            <span style={{ fontSize: 10, opacity: 0.5 }}>↓</span>
+        {onScrollToComps && soldCount > 0 && (
+          <button onClick={onScrollToComps} style={{
+            background: "none", border: "none", cursor: "pointer",
+            fontSize: 11, color: C.muted, padding: 0,
+            display: "flex", alignItems: "center", gap: 3,
+          }}>
+            See comps <span style={{ fontSize: 10, opacity: 0.5 }}>↓</span>
           </button>
         )}
       </div>
 
-      {/* ── Block 3: Buy Under — hero decision output ── */}
-      <div style={{
-        padding: "18px 18px 16px",
-        borderBottom: "1px solid rgba(200,180,126,0.06)",
-      }}>
-        <div style={{ fontSize: 8, color: "#4a3a1e", textTransform: "uppercase", letterSpacing: "2px", marginBottom: 8 }}>
-          Decision
-        </div>
-        {buyUnder.price != null ? (
-          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-            <span style={{ fontSize: 14, color: "#7a6535", fontWeight: 400, letterSpacing: "0.1px" }}>
-              {buyUnder.copy}
-            </span>
-            <span style={{
-              fontFamily: "Georgia, serif",
-              fontSize: 32, fontWeight: 700, lineHeight: 1,
-              color: buyUnderColor,
-              letterSpacing: -0.5,
+      {/* ── Block 3: Buy Range — three tiers, not a single number ── */}
+      {buyRange && (
+        <div style={{ padding: "16px 18px 14px", borderBottom: `1px solid ${C.faint}` }}>
+          <SectionLabel>Resale buy range</SectionLabel>
+
+          {/* Visual tier bar */}
+          <div style={{ display: "flex", borderRadius: 6, overflow: "hidden", height: 28, marginBottom: 12 }}>
+            <div style={{
+              flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+              background: "rgba(109,188,109,0.15)", borderRight: "1px solid rgba(109,188,109,0.2)",
             }}>
-              ${buyUnder.price}
-            </span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: C.green.text }}>
+                Under ${buyRange.strong}
+              </span>
+            </div>
+            <div style={{
+              flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+              background: "rgba(200,180,126,0.1)", borderRight: "1px solid rgba(200,180,126,0.15)",
+            }}>
+              <span style={{ fontSize: 11, fontWeight: 500, color: C.gold.text }}>
+                ${buyRange.strong}–${buyRange.acceptable}
+              </span>
+            </div>
+            <div style={{
+              flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+              background: "rgba(160,120,104,0.08)",
+            }}>
+              <span style={{ fontSize: 11, fontWeight: 400, color: C.rust.text }}>
+                ${buyRange.acceptable}+
+              </span>
+            </div>
           </div>
-        ) : (
-          <div style={{ fontSize: 15, color: "#7a6535", fontStyle: "italic" }}>
-            {buyUnder.copy}
+
+          {/* Tier labels */}
+          <div style={{ display: "flex", justifyContent: "space-around", marginBottom: 8 }}>
+            {[
+              { label: "Strong",     color: C.green.text },
+              { label: "Acceptable", color: C.gold.text  },
+              { label: "Risky",      color: C.rust.text  },
+            ].map(t => (
+              <span key={t.label} style={{ fontSize: 9, color: t.color, textTransform: "uppercase", letterSpacing: "1px" }}>
+                {t.label}
+              </span>
+            ))}
           </div>
-        )}
-      </div>
 
-      {/* ── Block 4: Signal bars (unchanged data, relabelled) ── */}
-      <div style={{ padding: "14px 18px 12px", display: "flex", flexDirection: "column", gap: 11 }}>
-        {/* Demand + Velocity power "Sellability" — shown as Profit + Speed */}
-        <SignalBar label="Profit"    value={signals.profit}     valueLabel={detail.profitLabel}     delay={0}   />
-        <SignalBar label="Speed"     value={signals.speed}      valueLabel={detail.speedLabel}      delay={50}  />
-        <SignalBar label="Data"      value={signals.confidence} valueLabel={detail.confidenceLabel} delay={100} />
-        <SignalBar label="Market"    value={signals.effort}     valueLabel={detail.effortLabel}     inverted delay={150} />
-      </div>
+          <div style={{ fontSize: 10, color: C.muted, textAlign: "center" }}>
+            {buyRange.explanation}
+          </div>
+        </div>
+      )}
 
-      {/* ── Footer: Why this score ── */}
-      <div style={{
-        borderTop: "1px solid rgba(200,180,126,0.05)",
-        padding: "10px 18px",
-      }}>
+      {/* ── Block 4: Profit scenarios ── */}
+      {scenarios.length > 0 && (
+        <div style={{ padding: "16px 18px 14px", borderBottom: `1px solid ${C.faint}` }}>
+          <SectionLabel>Profit estimate · Resale mode</SectionLabel>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {scenarios.map((s, i) => {
+              const isPositive = s.net > 0;
+              const netColor   = isPositive ? C.green.text : C.rust.text;
+              const netStr     = isPositive ? `+$${s.net}` : `-$${Math.abs(s.net)}`;
+              return (
+                <div key={i} style={{
+                  display: "flex", alignItems: "center",
+                  padding: "8px 12px", borderRadius: 10,
+                  background: "rgba(5,14,5,0.4)",
+                  border: "1px solid rgba(200,180,126,0.05)",
+                }}>
+                  {/* Buy price */}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "1px", marginBottom: 2 }}>
+                      {s.label}
+                    </div>
+                    <div style={{ fontFamily: "monospace", fontSize: 15, fontWeight: 700, color: "#d4c9b0" }}>
+                      ${s.buyPrice}
+                    </div>
+                  </div>
+
+                  {/* Arrow */}
+                  <div style={{ color: "rgba(200,180,126,0.2)", fontSize: 14, padding: "0 10px" }}>→</div>
+
+                  {/* Net profit */}
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "1px", marginBottom: 2 }}>
+                      Est. net
+                    </div>
+                    <div style={{ fontFamily: "monospace", fontSize: 15, fontWeight: 700, color: netColor }}>
+                      {netStr}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ fontSize: 10, color: C.muted, marginTop: 10, textAlign: "center" }}>
+            After ~{Math.round(EBAY_FEE_RATE * 100)}% eBay fees · Resale mode
+          </div>
+        </div>
+      )}
+
+      {/* ── Footer: How this was scored (expandable) ── */}
+      <div style={{ padding: "10px 18px" }}>
         <button
           onClick={() => setShowDetail(v => !v)}
           style={{
             background: "none", border: "none", cursor: "pointer",
-            fontSize: 10, color: "#4a3a1e",
+            fontSize: 10, color: C.muted,
             letterSpacing: "0.6px", textTransform: "uppercase",
             padding: 0, display: "flex", alignItems: "center", gap: 5,
           }}>
@@ -275,23 +395,19 @@ export function OpportunityMeter({
         </button>
       </div>
 
-      {/* ── Expandable breakdown (unchanged) ── */}
+      {/* ── Expandable signal breakdown — all 4 metrics, unchanged ── */}
       {showDetail && (
-        <div style={{
-          margin: "0 14px 14px",
-          padding: "11px 13px",
-          borderRadius: 10,
-          background: "rgba(5,12,5,0.5)",
-          border: "1px solid rgba(200,180,126,0.04)",
-          fontSize: 11, color: "#6a5528", lineHeight: 1.85,
-        }}>
-          <div style={{ color: "#7a6535", fontWeight: 500, marginBottom: 3 }}>Signal breakdown</div>
-          <div>Profit ({Math.round(signals.profit)}) — {detail.profitLabel.toLowerCase()} earning potential</div>
-          <div>Speed ({Math.round(signals.speed)}) — {detail.speedLabel.toLowerCase()} market velocity</div>
-          <div>Data ({Math.round(signals.confidence)}) — {detail.confidenceLabel.toLowerCase()} confidence in results</div>
-          <div>Market ({Math.round(signals.effort)}) — {detail.effortLabel.toLowerCase()} competition drag</div>
-          <div style={{ marginTop: 7, paddingTop: 7, borderTop: "1px solid rgba(200,180,126,0.04)", color: "#3a2e16", fontSize: 10 }}>
-            Overall score: {score}/100 · Weights: Profit 35% · Speed 25% · Data 25% · Market −15%
+        <div style={{ margin: "0 14px 14px", padding: "12px 14px", borderRadius: 12, background: "rgba(5,12,5,0.5)", border: "1px solid rgba(200,180,126,0.04)" }}>
+          <div style={{ fontSize: 11, color: "#7a6535", fontWeight: 500, marginBottom: 10 }}>Signal breakdown</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <SignalBar label="Profit"    value={signals.profit}     valueLabel={detail.profitLabel}     delay={0}   />
+            <SignalBar label="Speed"     value={signals.speed}      valueLabel={detail.speedLabel}      delay={50}  />
+            <SignalBar label="Data"      value={signals.confidence} valueLabel={detail.confidenceLabel} delay={100} />
+            <SignalBar label="Market"    value={signals.effort}     valueLabel={detail.effortLabel}     inverted delay={150} />
+          </div>
+          <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(200,180,126,0.04)", fontSize: 10, color: "rgba(74,58,30,0.7)", lineHeight: 1.6 }}>
+            <div>Score: {score}/100 · Profit 35% · Speed 25% · Data 25% · Market −15%</div>
+            <div style={{ marginTop: 4 }}>Sell time from {soldCount > 0 ? `${soldCount} sold listings` : "velocity estimate"} · {activeCount} active listings tracked</div>
           </div>
         </div>
       )}
