@@ -29,6 +29,7 @@ interface RunAnalysisOptions {
   costStr:          string;
   searchQuery:      string;
   identifiedTitle?: string;
+  primaryColor?:    string;   // passed to comp scoring for color match boost
   onCompsReady:     (soldComps: Comp[], activeComps: Comp[], summary: any) => void;
   onComplete:       () => void;
   generateMockEvaluation: (cost: number, imageDataUrl: string) => any;
@@ -68,6 +69,7 @@ export function useAnalysisFlow() {
     costStr,
     searchQuery,
     identifiedTitle,
+    primaryColor,
     onCompsReady,
     onComplete,
     generateMockEvaluation,
@@ -89,7 +91,8 @@ export function useAnalysisFlow() {
     let dataSource: "cache" | "live" | "mock" = "mock";
 
     try {
-      const res = await fetch(`/api/sold-comps?q=${encodeURIComponent(searchQuery)}`);
+      const colorParam = primaryColor ? `&color=${encodeURIComponent(primaryColor)}` : "";
+      const res = await fetch(`/api/sold-comps?q=${encodeURIComponent(searchQuery)}${colorParam}`);
       if (res.ok) {
         const data = await res.json();
         if ((data.soldComps?.length ?? 0) > 0 || (data.activeComps?.length ?? 0) > 0) {
