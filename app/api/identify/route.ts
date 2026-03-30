@@ -12,6 +12,37 @@ export interface IdentifyResult {
   attributes:  ItemAttributes;
 }
 
+// ─── Visual classification output from Claude ───────────────────────────────
+
+interface VisualField {
+  value:      string | null;
+  confidence: number;
+}
+
+interface VisualColor {
+  primary:    string;
+  secondary:  string;
+  confidence: number;
+}
+
+interface VisualClassification {
+  object_type:          VisualField;
+  category:             VisualField;
+  shape:                VisualField;
+  color:                VisualColor;
+  material:             VisualField;
+  pattern:              VisualField;
+  condition:            VisualField;
+  set_type:             VisualField;
+  size_estimate:        VisualField & { notes?: string };
+  distinctive_features: string[];
+  era?:                 VisualField;
+  origin?:              VisualField;
+  brand?:               VisualField;
+  search_query:         string;
+  notes:                string;
+}
+
 const MOCK_ITEMS: Omit<IdentifyResult, "attributes">[] = [
   { title: "Brass Owl Bookend",         description: "A decorative brass piece — possibly a bookend or paperweight. The patina suggests age.",           confidence: "medium", searchQuery: "brass owl bookend" },
   { title: "Mid-Century Ceramic Vase",  description: "A ceramic vessel with matte glaze. The form suggests mid-century American or Scandinavian origin.", confidence: "medium", searchQuery: "mid century ceramic vase" },
@@ -51,42 +82,75 @@ async function claudeIdentify(imageDataUrl: string): Promise<IdentifyResult> {
 
   const response = await client.messages.create({
     model:      "claude-opus-4-5",
-    max_tokens: 600,
+    max_tokens: 800,
     messages: [{
       role: "user",
       content: [
         { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
         {
           type: "text",
-          text: `Identify this object for a reseller evaluating it at a thrift store. Respond ONLY with raw valid JSON, no markdown, no backticks, no explanation.
-
-Rules for searchQuery:
-- Be as specific as possible — include brand, model number, material, type, and form
-- If this is clearly a single item (one goblet, one figurine, one bookend), include the word "single"
-- If it has a specific brand or model (e.g. Canon EOS R50), include the full brand and model
-- Never use generic terms like "item" or "object"
-- Good examples: "carnival glass iridescent goblet single", "canon eos r50 camera", "benjamin franklin brass bookend bank"
-
-Rules for attributes:
-- brand: manufacturer or maker name if visible or identifiable (e.g. "Wedgwood", "Pyrex", "Levi's"). null if unknown.
-- material: primary material(s) (e.g. "Cast iron", "Sterling silver", "Ceramic", "Cotton denim"). null if unclear.
-- era: estimated decade or period (e.g. "1950s–1960s", "Victorian", "1980s", "Pre-1900"). null if cannot determine.
-- origin: country of manufacture if identifiable from markings or style (e.g. "Japan", "USA", "England", "West Germany"). null if unknown.
-- category: resale category (e.g. "Kitchenware", "Figurines", "Jewelry", "Clothing", "Electronics", "Books", "Toys", "Art"). null if unclear.
+          text: `You are a product identification and classification engine for a resale pricing application.
+Analyze this image and extract ONLY visually observable attributes useful for matching against marketplace listings (eBay sold comps).
+DO NOT guess. DO NOT infer beyond what is visually supported. If uncertain, use null and lower confidence.
+Respond ONLY with raw valid JSON — no markdown, no backticks, no explanation.
 
 {
-  "title": "descriptive name 3-6 words",
-  "description": "one or two calm observational sentences about material, era, and style",
-  "confidence": "high or medium or low",
-  "searchQuery": "specific ebay search query following the rules above",
-  "attributes": {
-    "brand":    "string or null",
-    "material": "string or null",
-    "era":      "string or null",
-    "origin":   "string or null",
-    "category": "string or null"
-  }
-}`,
+  "object_type": {
+    "value": "most specific common resale term (e.g. vase, table lamp, drink caddy, bookend). avoid vague terms like decor",
+    "confidence": 0.0
+  },
+  "category": {
+    "value": "marketplace category (e.g. home decor, kitchenware, lighting, clothing, electronics)",
+    "confidence": 0.0
+  },
+  "shape": {
+    "value": "normalized form factor (e.g. tall cylindrical, low round, rectangular tray, abstract sculptural)",
+    "confidence": 0.0
+  },
+  "color": {
+    "primary": "simple normalized color (white, brown, gold, amber, black, etc.)",
+    "secondary": "second color or empty string if none",
+    "confidence": 0.0
+  },
+  "material": {
+    "value": "only if visually supported (ceramic, glass, wood, brass, cast iron, silver plate, etc.) — null if uncertain",
+    "confidence": 0.0
+  },
+  "pattern": {
+    "value": "one of: solid, speckled, etched, painted, gradient, floral, geometric, plain — null if unclear",
+    "confidence": 0.0
+  },
+  "condition": {
+    "value": "one of: new, like new, good, worn, damaged — based only on visible surface",
+    "confidence": 0.0
+  },
+  "set_type": {
+    "value": "one of: single, pair, set, unknown",
+    "confidence": 0.0
+  },
+  "size_estimate": {
+    "value": "estimate only if visual reference exists (e.g. small under 6 inches, medium 6-12 inches) — unknown if no reference",
+    "confidence": 0.0,
+    "notes": "reference used for estimate or empty string"
+  },
+  "distinctive_features": ["array of notable details e.g. handles on both sides, gold rim, woven texture, painted scene, embossed logo"],
+  "era": {
+    "value": "estimated decade or period only if visually supported (e.g. 1950s-1960s, victorian, art deco, 1980s) — null if cannot determine",
+    "confidence": 0.0
+  },
+  "origin": {
+    "value": "country of manufacture only if identifiable from markings or unmistakable style (e.g. japan, usa, england, west germany) — null if unknown",
+    "confidence": 0.0
+  },
+  "brand": {
+    "value": "manufacturer name only if visible marking exists (e.g. wedgwood, pyrex, levis) — null if not visible",
+    "confidence": 0.0
+  },
+  "search_query": "short optimized eBay search query. format: [shape] [material] [object_type] [color]. example: tall ceramic vase white. all lowercase. no filler words.",
+  "notes": "any important observation not captured above or empty string"
+}
+
+Rules: all string values lowercase. confidence 0.0-1.0. do not hallucinate brand, era, or origin.`,
         },
       ],
     }],
@@ -104,19 +168,69 @@ Rules for attributes:
     .replace(/```\s*$/i, "")
     .trim();
 
-  const parsed = JSON.parse(clean) as IdentifyResult;
-  parsed.searchQuery = normalizeQuery(parsed.searchQuery || parsed.title);
+  const v = JSON.parse(clean) as VisualClassification;
 
-  // Ensure attributes always exists with correct shape
-  parsed.attributes = {
-    brand:    parsed.attributes?.brand    ?? null,
-    material: parsed.attributes?.material ?? null,
-    era:      parsed.attributes?.era      ?? null,
-    origin:   parsed.attributes?.origin   ?? null,
-    category: parsed.attributes?.category ?? null,
+  // Only include fields above confidence threshold
+  const THRESHOLD = 0.55;
+  const pick = (field: VisualField | undefined): string | null =>
+    field && field.confidence >= THRESHOLD && field.value ? field.value : null;
+
+  const objectType = pick(v.object_type);
+  const material   = pick(v.material);
+  const shape      = pick(v.shape);
+  const color      = v.color?.confidence >= THRESHOLD ? v.color.primary || null : null;
+  const category   = pick(v.category);
+
+  // Build title from strongest signals
+  const titleParts = [shape, material, objectType].filter(Boolean);
+  const title = titleParts.length >= 2
+    ? titleParts.join(" ")
+    : objectType ?? v.search_query ?? "unknown item";
+
+  // Build description
+  const descParts: string[] = [];
+  if (material) descParts.push(material);
+  if (color)    descParts.push(color);
+  if (pick(v.pattern)) descParts.push(pick(v.pattern)!);
+  if (v.distinctive_features?.length) descParts.push(v.distinctive_features.slice(0, 2).join(", "));
+  const description = descParts.length
+    ? `A ${descParts.join(", ")} ${objectType ?? "item"}.`
+    : v.notes || `A ${objectType ?? "item"}.`;
+
+  // Overall confidence
+  const avgConf = [
+    v.object_type?.confidence ?? 0,
+    v.material?.confidence    ?? 0,
+    v.category?.confidence    ?? 0,
+  ].reduce((a, b) => a + b, 0) / 3;
+
+  const confidence: "high" | "medium" | "low" =
+    avgConf >= 0.8  ? "high" :
+    avgConf >= 0.55 ? "medium" : "low";
+
+  const searchQuery = normalizeQuery(v.search_query || title);
+
+  const attributes: ItemAttributes = {
+    brand:               pick(v.brand),
+    material,
+    era:                 pick(v.era),
+    origin:              pick(v.origin),
+    category,
+    objectType,
+    shape,
+    primaryColor:        color,
+    secondaryColor:      v.color?.confidence >= THRESHOLD && v.color.secondary ? v.color.secondary : null,
+    pattern:             pick(v.pattern),
+    condition:           pick(v.condition),
+    setType:             pick(v.set_type),
+    sizeEstimate:        pick(v.size_estimate),
+    distinctiveFeatures: v.distinctive_features?.length ? v.distinctive_features : undefined,
+    visualConfidence:    Math.round(avgConf * 100) / 100,
   };
 
-  return parsed;
+  console.log(`[identify] obj="${objectType}" material="${material}" shape="${shape}" color="${color}" conf=${confidence} (${avgConf.toFixed(2)}) query="${searchQuery}"`);
+
+  return { title, description, confidence, searchQuery, attributes };
 }
 
 export async function POST(req: NextRequest) {
