@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { useFindSession } from "@/hooks/useSession";
-import { IntentChip } from "@/types/find";
+import { IntentChip, StoryStatus } from "@/types/find";
 
 const CHIPS: { id: IntentChip; label: string }[] = [
   { id: "curious",  label: "Curious about it"   },
@@ -23,6 +23,9 @@ export default function IntentPage() {
 
   const [text, setText]         = useState(session?.intentText ?? "");
   const [selected, setSelected] = useState<IntentChip[]>(session?.intentChips ?? []);
+  const [status, setStatus]     = useState<StoryStatus>(session?.storyStatus ?? "Available");
+
+  const STATUS_OPTIONS: StoryStatus[] = ["Available", "Found & Shared", "Moved On"];
 
   useEffect(() => {
     if (!session?.imageOriginal) router.replace("/");
@@ -32,7 +35,7 @@ export default function IntentPage() {
     setSelected(prev => prev.includes(chip) ? prev.filter(c => c !== chip) : [...prev, chip]);
 
   const handleContinue = () => {
-    updateSession({ intentText: text, intentChips: selected });
+    updateSession({ intentText: text, intentChips: selected, storyStatus: status, story: undefined, captionRefined: undefined });
     router.push("/enhance-text");
   };
 
@@ -73,6 +76,19 @@ export default function IntentPage() {
               </motion.button>
             );
           })}
+        </motion.div>
+
+        {/* ── Status selector ── */}
+        <motion.div className="flex flex-col gap-2" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.19, ease }}>
+          <div style={{ fontSize: 9, color: "#7a6535", textTransform: "uppercase", letterSpacing: "2.5px" }}>Status</div>
+          <div className="flex gap-2">
+            {STATUS_OPTIONS.map(opt => (
+              <button key={opt} onClick={() => setStatus(opt)}
+                style={{ flex: 1, padding: "8px 4px", borderRadius: 12, fontSize: 11, fontWeight: status === opt ? 500 : 400, letterSpacing: "0.1px", textAlign: "center", background: status === opt ? "rgba(168,144,78,0.12)" : "rgba(13,31,13,0.5)", color: status === opt ? "#c8b47e" : "rgba(212,201,176,0.38)", border: status === opt ? "1px solid rgba(200,180,126,0.3)" : "1px solid rgba(109,188,109,0.08)", transition: "all 0.2s", cursor: "pointer", fontFamily: "inherit" }}>
+                {opt}
+              </button>
+            ))}
+          </div>
         </motion.div>
 
         <motion.div className="flex flex-col gap-2" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.22, ease }}>

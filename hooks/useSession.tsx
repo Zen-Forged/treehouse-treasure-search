@@ -45,6 +45,8 @@ export interface FindSession {
   activeComps?:    Comp[];
   pricing?:        FindPricing;
   decision?:       "purchased" | "passed" | "shared";
+  storyStatus?:    "Available" | "Found & Shared" | "Moved On";
+  story?:          import("@/types/find").StoryOutput;
   // Populated when reviewing a saved find — lets decide page skip re-analysis
   savedFindData?: {
     medianSoldPrice?:  number;

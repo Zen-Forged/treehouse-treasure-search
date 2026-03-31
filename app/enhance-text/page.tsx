@@ -1,148 +1,255 @@
 // app/enhance-text/page.tsx
+// Story generation screen — replaces the old caption-refinement screen.
+// Generates a Kentucky Treehouse–style post from item + user note.
+// Uses staged loading language ("Bringing it into the Treehouse…") not a spinner.
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useFindSession } from "@/hooks/useSession";
+import { StoryOutput } from "@/types/find";
 
 const ease = [0.25, 0.1, 0.25, 1] as const;
 
-function mockRefineCaption(text: string, chips: string[]): string {
-  if (!text.trim()) {
-    return "Found this today — not quite sure what it is yet, but something about it stood out. Anyone know more?";
-  }
-  let refined = text
-    .replace(/\bI think\b/gi, "").replace(/\bmaybe\b/gi, "")
-    .replace(/\bprobably\b/gi, "").replace(/\bkind of\b/gi, "")
-    .replace(/\bsort of\b/gi, "").replace(/\bI guess\b/gi, "")
-    .replace(/\s{2,}/g, " ").trim();
-  refined = refined.charAt(0).toUpperCase() + refined.slice(1);
-  if (chips.includes("selling") || chips.includes("offers")) refined += " Open to offers if anyone's interested.";
-  else if (chips.includes("curious")) refined += " Would love to know more about this one.";
-  else if (chips.includes("sharing")) refined += " Felt worth sharing.";
-  return refined;
+// Staged loading phrases — appear sequentially, one at a time
+const LOADING_STAGES = [
+  "Bringing it into the Treehouse…",
+  "Identifying the piece…",
+  "Setting the scene…",
+  "Writing the story…",
+];
+
+function useLoadingStage(active: boolean) {
+  const [stage, setStage] = useState(0);
+
+  useEffect(() => {
+    if (!active) { setStage(0); return; }
+    const interval = setInterval(() => {
+      setStage(s => Math.min(s + 1, LOADING_STAGES.length - 1));
+    }, 900);
+    return () => clearInterval(interval);
+  }, [active]);
+
+  return LOADING_STAGES[stage];
 }
 
 export default function EnhanceTextPage() {
   const router = useRouter();
   const { session, updateSession } = useFindSession();
 
-  const [refined, setRefined]           = useState<string | null>(session?.captionRefined ?? null);
-  const [processing, setProcessing]     = useState(!session?.captionRefined);
-  const [showOriginal, setShowOriginal] = useState(false);
-  const [sliderX, setSliderX]           = useState(50);
+  const [generating, setGenerating] = useState(!session?.story);
+  const [story, setStory]           = useState<StoryOutput | null>(session?.story ?? null);
+
+  const loadingPhrase = useLoadingStage(generating);
 
   useEffect(() => {
     if (!session?.imageOriginal) { router.replace("/"); return; }
-    if (session.captionRefined) { setProcessing(false); return; }
+    // Already have a story — skip generation
+    if (session.story) { setGenerating(false); return; }
 
-    const t = setTimeout(() => {
-      const result = mockRefineCaption(session.intentText ?? "", session.intentChips ?? []);
-      setRefined(result);
-      updateSession({ captionRefined: result });
-      setProcessing(false);
-    }, 1200);
-    return () => clearTimeout(t);
+    const run = async () => {
+      try {
+        const res = await fetch("/api/story", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({
+            itemName:  session.identification?.title  ?? "an interesting find",
+            material:  session.identification?.attributes?.material ?? null,
+            condition: session.identification?.attributes?.condition ?? null,
+            status:    session.storyStatus ?? "Available",
+            userNote:  session.intentText ?? "",
+          }),
+        });
+
+        const result: StoryOutput = await res.json();
+        setStory(result);
+        updateSession({ story: result, captionRefined: result.caption });
+      } catch (err) {
+        console.error("[enhance-text] story generation failed:", err);
+        // Graceful fallback so user isn't stuck
+        const fallback: StoryOutput = {
+          postType:    "Found in the Wild",
+          caption:     session.intentText?.trim() || "Found this today. Something about it stood out.",
+          altCaption:  "Still here.",
+          scene:       "forest floor",
+          imagePrompt: `Photorealistic cinematic still of a ${session.identification?.title?.toLowerCase() ?? "found object"} resting on a forest floor. Natural light, earthy tones, no people.`,
+        };
+        setStory(fallback);
+        updateSession({ story: fallback, captionRefined: fallback.caption });
+      } finally {
+        setGenerating(false);
+      }
+    };
+
+    run();
   }, []);
 
   const handleContinue = () => {
-    if (refined) updateSession({ captionRefined: refined });
+    if (!story) return;
     router.push("/share");
   };
+
+  const image = session?.imageEnhanced ?? session?.imageOriginal;
 
   return (
     <div className="flex flex-col min-h-screen bg-[#050f05]">
 
+      {/* ── Header ── */}
       <header className="flex items-center px-4 py-3 flex-shrink-0 sticky top-0 z-10"
         style={{ borderBottom: "1px solid rgba(200,180,126,0.06)", background: "rgba(5,15,5,0.92)", backdropFilter: "blur(20px)" }}>
         <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-full"
           style={{ background: "rgba(13,31,13,0.5)", border: "1px solid rgba(109,188,109,0.1)" }}>
           <ArrowLeft size={15} style={{ color: "#7a6535" }} />
         </button>
-        <span style={{ fontFamily: "Georgia, serif", fontSize: 15, color: "#d4c9b0", marginLeft: 14 }}>Brought to light</span>
+        <span style={{ fontFamily: "Georgia, serif", fontSize: 15, color: "#d4c9b0", marginLeft: 14 }}>
+          {generating ? "Building the story" : "The story"}
+        </span>
       </header>
 
       <main className="flex-1 flex flex-col px-5 py-5 gap-5 pb-36 overflow-y-auto">
 
-        <motion.p initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease }}
-          style={{ fontSize: 13, color: "#6a5528", lineHeight: 1.65, fontWeight: 300 }}>
-          We've refined the photo and your words — closer to how it feels.
-        </motion.p>
-
-        {/* Image comparison slider */}
-        <motion.div className="relative w-full rounded-2xl overflow-hidden select-none flex-shrink-0"
-          style={{ height: 260, border: "1px solid rgba(109,188,109,0.1)", cursor: "ew-resize", touchAction: "none" }}
-          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.08, ease }}
-          onMouseMove={e => { if (e.buttons !== 1) return; const r = e.currentTarget.getBoundingClientRect(); setSliderX(Math.min(98, Math.max(2, ((e.clientX - r.left) / r.width) * 100))); }}
-          onTouchMove={e => { const r = e.currentTarget.getBoundingClientRect(); setSliderX(Math.min(98, Math.max(2, ((e.touches[0].clientX - r.left) / r.width) * 100))); }}>
-          <img src={session?.imageEnhanced ?? session?.imageOriginal} alt="Enhanced" className="absolute inset-0 w-full h-full object-cover" draggable={false} />
-          <div className="absolute inset-0 overflow-hidden" style={{ width: `${sliderX}%` }}>
-            <img src={session?.imageOriginal} alt="Original" className="absolute inset-0 h-full object-cover"
-              style={{ width: `${100 / (sliderX / 100)}%`, maxWidth: "none", filter: "brightness(0.82) saturate(0.72)" }} draggable={false} />
-          </div>
-          <div className="absolute top-0 bottom-0 w-px" style={{ left: `${sliderX}%`, background: "rgba(255,255,255,0.65)", pointerEvents: "none" }} />
-          <div className="absolute top-1/2 flex items-center justify-center"
-            style={{ left: `${sliderX}%`, transform: "translate(-50%,-50%)", width: 32, height: 32, borderRadius: "50%", background: "rgba(5,15,5,0.85)", border: "1.5px solid rgba(200,180,126,0.5)", pointerEvents: "none" }}>
-            <svg width="16" height="10" viewBox="0 0 18 12" fill="none">
-              <path d="M5 6H1M1 6L4 3M1 6L4 9" stroke="#c8b47e" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M13 6H17M17 6L14 3M17 6L14 9" stroke="#c8b47e" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
+        {/* ── Item photo ── */}
+        <motion.div className="w-full rounded-2xl overflow-hidden flex-shrink-0"
+          style={{ height: 200, border: "1px solid rgba(109,188,109,0.08)" }}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+          {image && (
+            <img src={image} alt="Your find" className="w-full h-full object-cover"
+              style={{ filter: "brightness(0.82) saturate(0.75) sepia(0.06)" }} />
+          )}
         </motion.div>
 
-        {/* Caption */}
-        <motion.div className="flex flex-col gap-3" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.18, ease }}>
-          <div style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2.5px" }}>Your caption</div>
+        {/* ── Staged loading overlay ── */}
+        <AnimatePresence mode="wait">
+          {generating ? (
+            <motion.div key="loading"
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.4, ease }}
+              className="flex flex-col gap-4 py-4">
 
-          {processing ? (
-            <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.4, repeat: Infinity }}
-              className="px-4 py-4 rounded-2xl" style={{ background: "rgba(13,31,13,0.45)", border: "1px solid rgba(109,188,109,0.08)", minHeight: 80 }}>
-              <span style={{ fontSize: 13, color: "#6a5528" }}>Refining your words...</span>
-            </motion.div>
-          ) : (
-            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease }}
-              className="px-4 py-4 rounded-2xl" style={{ background: "rgba(13,31,13,0.5)", border: "1px solid rgba(200,180,126,0.08)" }}>
-              <p style={{ fontFamily: "Georgia, serif", fontSize: 15, color: "#d4c9b0", lineHeight: 1.7, fontStyle: "italic" }}>
-                "{refined}"
+              {/* Animated phrase */}
+              <AnimatePresence mode="wait">
+                <motion.div key={loadingPhrase}
+                  initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.35, ease }}
+                  style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 600, color: "#d4c9b0", lineHeight: 1.3 }}>
+                  {loadingPhrase}
+                </motion.div>
+              </AnimatePresence>
+
+              {/* Stage progress dots */}
+              <div className="flex gap-2" style={{ paddingTop: 4 }}>
+                {LOADING_STAGES.map((s, i) => {
+                  const active = s === loadingPhrase;
+                  const done   = LOADING_STAGES.indexOf(loadingPhrase) > i;
+                  return (
+                    <motion.div key={s}
+                      animate={{ opacity: done ? 0.3 : active ? 1 : 0.15, scale: active ? 1.15 : 1 }}
+                      transition={{ duration: 0.3 }}
+                      style={{ width: active ? 20 : 6, height: 6, borderRadius: 3,
+                        background: active ? "#a8904e" : "#3d3018", transition: "width 0.3s ease" }} />
+                  );
+                })}
+              </div>
+
+              <p style={{ fontSize: 13, color: "#4a3a1e", fontWeight: 300 }}>
+                This takes just a moment.
               </p>
             </motion.div>
-          )}
 
-          {session?.intentText && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
-              <button onClick={() => setShowOriginal(v => !v)} className="flex items-center gap-1.5"
-                style={{ fontSize: 11, color: "rgba(106,85,40,0.45)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                {showOriginal ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-                {showOriginal ? "Hide original" : "See your original words"}
-              </button>
-              <AnimatePresence>
-                {showOriginal && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.22 }} className="mt-2 px-4 py-3 rounded-xl overflow-hidden"
-                    style={{ background: "rgba(9,21,9,0.4)", border: "1px solid rgba(109,188,109,0.07)" }}>
-                    <p style={{ fontSize: 13, color: "#6a5528", lineHeight: 1.65, fontStyle: "italic" }}>"{session.intentText}"</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+          ) : story ? (
+            <motion.div key="story"
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease }}
+              className="flex flex-col gap-5">
+
+              {/* Post type badge */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{
+                  padding: "4px 12px", borderRadius: 20, display: "inline-block",
+                  fontSize: 10, fontWeight: 600, letterSpacing: "0.8px", textTransform: "uppercase",
+                  color: "#a8904e", background: "rgba(168,144,78,0.1)", border: "1px solid rgba(200,180,126,0.2)",
+                }}>
+                  {story.postType}
+                </div>
+                <div style={{ fontSize: 10, color: "#3d3018" }}>
+                  {story.scene}
+                </div>
+              </div>
+
+              {/* Primary caption */}
+              <div className="flex flex-col gap-2">
+                <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "2.5px" }}>
+                  Caption
+                </div>
+                <textarea
+                  value={story.caption}
+                  onChange={e => setStory(prev => prev ? { ...prev, caption: e.target.value } : prev)}
+                  rows={4}
+                  className="w-full resize-none focus:outline-none"
+                  style={{
+                    fontFamily: "Georgia, serif", fontSize: 15, color: "#d4c9b0",
+                    lineHeight: 1.7, background: "rgba(13,31,13,0.5)",
+                    border: "1px solid rgba(200,180,126,0.1)", borderRadius: 14,
+                    padding: "14px 16px",
+                  }}
+                />
+              </div>
+
+              {/* Alt caption */}
+              <div className="flex flex-col gap-2">
+                <div style={{ fontSize: 9, color: "#6a5528", textTransform: "uppercase", letterSpacing: "2.5px" }}>
+                  Alternate caption
+                </div>
+                <textarea
+                  value={story.altCaption}
+                  onChange={e => setStory(prev => prev ? { ...prev, altCaption: e.target.value } : prev)}
+                  rows={2}
+                  className="w-full resize-none focus:outline-none"
+                  style={{
+                    fontFamily: "Georgia, serif", fontSize: 14, color: "#a8906a",
+                    lineHeight: 1.65, background: "rgba(13,31,13,0.4)",
+                    border: "1px solid rgba(200,180,126,0.07)", borderRadius: 12,
+                    padding: "12px 14px", fontStyle: "italic",
+                  }}
+                />
+              </div>
+
+              {/* Image prompt */}
+              <div className="flex flex-col gap-2">
+                <div style={{ fontSize: 9, color: "#3d3018", textTransform: "uppercase", letterSpacing: "2.5px" }}>
+                  Image prompt
+                </div>
+                <div style={{
+                  padding: "12px 14px", borderRadius: 12, fontSize: 12,
+                  color: "#4a3a1e", lineHeight: 1.65,
+                  background: "rgba(5,12,5,0.5)", border: "1px solid rgba(200,180,126,0.05)",
+                }}>
+                  {story.imagePrompt}
+                </div>
+              </div>
+
             </motion.div>
-          )}
-        </motion.div>
+          ) : null}
+        </AnimatePresence>
 
       </main>
 
+      {/* ── CTA ── */}
       <motion.div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto px-5 py-4"
         style={{ background: "rgba(5,15,5,0.97)", backdropFilter: "blur(24px)", borderTop: "1px solid rgba(200,180,126,0.06)", paddingBottom: "max(20px, env(safe-area-inset-bottom, 20px))" }}
-        initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.35 }}>
+        initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.3 }}>
         <div className="absolute top-0 left-[20%] right-[20%] h-px"
           style={{ background: "linear-gradient(90deg, transparent, rgba(200,180,126,0.12), transparent)" }} />
-        <motion.button onClick={handleContinue} disabled={processing}
+        <motion.button
+          onClick={handleContinue}
+          disabled={generating || !story}
           className="w-full flex items-center justify-center font-semibold text-[#f5f0e8] relative overflow-hidden disabled:opacity-40"
           style={{ padding: "17px 22px", borderRadius: 16, fontSize: 15, background: "linear-gradient(175deg, rgba(46,110,46,0.96) 0%, rgba(33,82,33,1) 100%)", border: "1px solid rgba(109,188,109,0.16)", boxShadow: "0 4px 24px rgba(5,15,5,0.55), 0 0 40px rgba(45,125,45,0.1)" }}
           whileTap={{ scale: 0.97 }}>
           <span style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)" }} />
-          Ready to share
+          {generating ? "Writing…" : "Ready to share"}
         </motion.button>
       </motion.div>
     </div>
