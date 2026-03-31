@@ -282,7 +282,7 @@ function DecidePageInner() {
     <div className="flex flex-col min-h-screen bg-[#050f05]">
       <NavBar />
 
-      <main className="flex-1 overflow-y-auto pb-36">
+      <main className="flex-1 overflow-y-auto pb-28">
 
         {/* ── Photo — full bleed 320px ── */}
         <motion.div className="relative w-full flex-shrink-0" style={{ height: 320 }}
@@ -389,20 +389,33 @@ function DecidePageInner() {
                     </div>
                   </div>
 
-                  {/* Slider track */}
-                  <div style={{ position: "relative", height: 36, display: "flex", alignItems: "center" }}>
+                  {/* Slider track — touch-action none on container prevents page scroll while sliding */}
+                  <div style={{ position: "relative", height: 44, display: "flex", alignItems: "center", touchAction: "none" }}>
                     {/* Track background */}
                     <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.06)" }} />
                     {/* Filled portion */}
                     <div style={{
                       position: "absolute", left: 0, height: 4, borderRadius: 2,
                       width: `${pct * 100}%`,
-                      background: `linear-gradient(90deg, rgba(109,188,109,0.7), ${profitColor}88)`,
-                      transition: "width 0.05s ease, background 0.3s ease",
+                      background: `linear-gradient(90deg, rgba(109,188,109,0.55), ${profitColor})`,
+                      transition: "background 0.25s ease",
                     }} />
-                    {/* Native range input — invisible but functional */}
+                    {/* Custom thumb — positioned visually, pointer-events none so input captures touch */}
+                    <div style={{
+                      position: "absolute",
+                      left: `calc(${pct * 100}% - 13px)`,
+                      width: 26, height: 26, borderRadius: "50%",
+                      background: "#0a1a0a",
+                      border: `2.5px solid ${profitColor}`,
+                      boxShadow: `0 0 0 4px ${profitColor}22, 0 2px 8px rgba(0,0,0,0.5)`,
+                      transition: "border-color 0.25s ease, box-shadow 0.25s ease",
+                      pointerEvents: "none",
+                      zIndex: 1,
+                    }} />
+                    {/* Native range input — transparent overlay, 44px thumb gives full mobile hit area */}
                     <input
                       type="range"
+                      className="tts-slider"
                       min={sliderMin}
                       max={sliderMax}
                       step={1}
@@ -410,21 +423,9 @@ function DecidePageInner() {
                       onChange={e => setAskingPrice(Number(e.target.value))}
                       style={{
                         position: "absolute", left: 0, right: 0, width: "100%",
-                        opacity: 0, height: 36, cursor: "pointer", margin: 0, padding: 0,
-                        WebkitAppearance: "none",
+                        height: "100%", margin: 0, padding: 0, zIndex: 2,
                       }}
                     />
-                    {/* Custom thumb */}
-                    <div style={{
-                      position: "absolute",
-                      left: `calc(${pct * 100}% - 11px)`,
-                      width: 22, height: 22, borderRadius: "50%",
-                      background: "rgba(10,24,10,1)",
-                      border: `2px solid ${profitColor}`,
-                      boxShadow: `0 0 10px ${profitColor}55`,
-                      transition: "left 0.05s ease, border-color 0.3s ease, box-shadow 0.3s ease",
-                      pointerEvents: "none",
-                    }} />
                   </div>
 
                   {/* Slider min/max labels */}
@@ -471,114 +472,81 @@ function DecidePageInner() {
             );
           })()}
 
-          {/* ── Market details (sell time + competition) — compact row ── */}
-          {soldSummary && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.16 }}>
-              <OpportunityMeter
-                input={{
-                  demandLevel:      soldSummary.demandLevel,
-                  marketVelocity:   soldSummary.marketVelocity,
-                  confidence:       soldSummary.confidence,
-                  competitionLevel: soldSummary.competitionLevel,
-                  competitionCount: soldSummary.competitionCount,
-                  avgDaysToSell:    soldSummary.avgDaysToSell,
-                  priceRangeLow:    soldSummary.priceRangeLow,
-                  priceRangeHigh:   soldSummary.priceRangeHigh,
-                  medianSoldPrice:  pricing.medianSoldPrice,
-                  compCount:        soldComps.length,
-                }}
-                onScrollToComps={() => compsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-              />
-            </motion.div>
-          )}
 
 
 
-          {/* ── Sold comps — 3-per-row grid ── */}
+          {/* ── Sold comps — horizontal scroll ── */}
           {soldComps.length > 0 && (() => {
-            // Pin lowest + highest price comps to the front, tag them
-            const byPrice      = [...soldComps].sort((a, b) => a.price - b.price);
-            const lowestComp   = byPrice[0];
-            const highestComp  = byPrice[byPrice.length - 1];
-            const rest         = soldComps.filter(c => c !== lowestComp && c !== highestComp);
-            const orderedComps = [lowestComp, highestComp, ...rest];
-            const displayComps = showAllSoldComps ? orderedComps : orderedComps.slice(0, SOLD_COMPS_INITIAL);
+            const byPrice     = [...soldComps].sort((a, b) => a.price - b.price);
+            const lowestComp  = byPrice[0];
+            const highestComp = byPrice[byPrice.length - 1];
+            const rest        = soldComps.filter(c => c !== lowestComp && c !== highestComp);
+            const ordered     = [lowestComp, highestComp, ...rest];
 
             return (
             <>
               <div ref={compsRef} style={{ height: 1, background: "rgba(200,180,126,0.06)" }} />
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.26 }}>
-                <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.22 }}>
+                <div className="flex items-center gap-2" style={{ marginBottom: 10 }}>
                   <div style={{ fontSize: 9, color: "#a8904e", textTransform: "uppercase", letterSpacing: "2.5px" }}>
                     Sold listings
                   </div>
-                  <span style={{ fontSize: 10, color: "#6dbc6d", background: "rgba(45,125,45,0.12)", padding: "1px 8px", borderRadius: 8 }}>
+                  <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 8, background: "rgba(109,188,109,0.1)", color: "#6dbc6d", border: "1px solid rgba(109,188,109,0.2)" }}>
                     {soldComps.length}
                   </span>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                  {displayComps.map((comp, i) => {
-                    const isLowest  = comp === lowestComp;
-                    const isHighest = comp === highestComp;
-                    return (
-                    <motion.a key={comp.url ?? i} href={comp.url ?? "#"} target="_blank" rel="noopener noreferrer"
-                      style={{ borderRadius: 12, overflow: "hidden", background: "rgba(13,31,13,0.5)", border: `1px solid ${isLowest ? "rgba(109,188,109,0.18)" : isHighest ? "rgba(200,180,126,0.18)" : "rgba(109,188,109,0.07)"}`, display: "block", textDecoration: "none", position: "relative", isolation: "isolate" }}
-                      initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.25, delay: i < SOLD_COMPS_INITIAL ? 0.28 + i * 0.03 : 0 }}
-                      whileTap={{ scale: 0.97 }}>
-                      {/* Low / High tag — no backdropFilter to avoid escaping stacking context */}
-                      {(isLowest || isHighest) && (
-                        <div style={{
-                          position: "absolute", top: 5, left: 5, zIndex: 2,
-                          fontSize: 7, fontWeight: 700, letterSpacing: "0.8px",
-                          textTransform: "uppercase",
-                          padding: "2px 5px", borderRadius: 4,
-                          color:      isLowest ? "#6dbc6d" : "#a8904e",
-                          background: isLowest ? "rgba(8,20,8,0.92)" : "rgba(8,20,8,0.92)",
-                          border:     `1px solid ${isLowest ? "rgba(109,188,109,0.3)" : "rgba(200,180,126,0.3)"}`,
-                        }}>
-                          {isLowest ? "Low" : "High"}
+                <div style={{ overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch", margin: "0 -20px", padding: "0 20px 4px" }}
+                  className="hide-scrollbar">
+                  <div style={{ display: "flex", gap: 10, width: "max-content" }}>
+                    {ordered.map((comp, i) => {
+                      const isLowest  = comp === lowestComp;
+                      const isHighest = comp === highestComp;
+                      return (
+                      <motion.a key={comp.url ?? i} href={comp.url ?? "#"} target="_blank" rel="noopener noreferrer"
+                        style={{ width: 120, flexShrink: 0, borderRadius: 12, overflow: "hidden",
+                          background: "rgba(13,31,13,0.5)",
+                          border: `1px solid ${isLowest ? "rgba(109,188,109,0.22)" : isHighest ? "rgba(200,180,126,0.22)" : "rgba(109,188,109,0.07)"}`,
+                          display: "block", textDecoration: "none", position: "relative", isolation: "isolate" }}
+                        initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.25, delay: 0.24 + i * 0.03 }}
+                        whileTap={{ scale: 0.97 }}>
+                        {/* Low / High tag */}
+                        {(isLowest || isHighest) && (
+                          <div style={{
+                            position: "absolute", top: 5, left: 5, zIndex: 2,
+                            fontSize: 7, fontWeight: 700, letterSpacing: "0.8px",
+                            textTransform: "uppercase", padding: "2px 5px", borderRadius: 4,
+                            color:      isLowest ? "#6dbc6d" : "#a8904e",
+                            background: "rgba(8,20,8,0.92)",
+                            border:     `1px solid ${isLowest ? "rgba(109,188,109,0.3)" : "rgba(200,180,126,0.3)"}`,
+                          }}>
+                            {isLowest ? "Low" : "High"}
+                          </div>
+                        )}
+                        {comp.imageUrl ? (
+                          <img src={comp.imageUrl} alt={comp.title}
+                            style={{ width: "100%", height: 100, objectFit: "cover", display: "block", filter: "brightness(0.82) saturate(0.7)" }} />
+                        ) : (
+                          <div style={{ width: "100%", height: 100, background: "rgba(17,37,17,0.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(200,180,126,0.12)" strokeWidth="1">
+                              <rect x="2" y="2" width="20" height="20" rx="3"/><circle cx="12" cy="12" r="4"/>
+                            </svg>
+                          </div>
+                        )}
+                        <div style={{ padding: "7px 9px 9px" }}>
+                          <div style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 700, color: "#f5f0e8", marginBottom: 2 }}>
+                            ${comp.price.toFixed(0)}
+                          </div>
+                          <div style={{ fontSize: 9, color: "#6a5528" }}>
+                            {comp.soldDate ? formatSoldDate(comp.soldDate) : comp.daysAgo > 0 ? `${comp.daysAgo}d ago` : "Recent"}
+                          </div>
                         </div>
-                      )}
-                      {comp.imageUrl ? (
-                        <img src={comp.imageUrl} alt={comp.title}
-                          style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block", filter: "brightness(0.82) saturate(0.7)" }} />
-                      ) : (
-                        <div style={{ width: "100%", aspectRatio: "1", background: "rgba(17,37,17,0.7)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(200,180,126,0.12)" strokeWidth="1">
-                            <rect x="2" y="2" width="20" height="20" rx="3"/><circle cx="12" cy="12" r="4"/>
-                          </svg>
-                        </div>
-                      )}
-                      <div style={{ padding: "7px 8px 9px" }}>
-                        <div style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 700, color: "#f5f0e8", marginBottom: 2 }}>
-                          ${comp.price.toFixed(2)}
-                        </div>
-                        <div style={{ fontSize: 9, color: "#6a5528" }}>
-                          {comp.soldDate
-                            ? formatSoldDate(comp.soldDate)
-                            : comp.daysAgo > 0
-                              ? `${comp.daysAgo}d ago`
-                              : "No date"}
-                        </div>
-                      </div>
-                    </motion.a>
-                    );
-                  })}
+                      </motion.a>
+                      );
+                    })}
+                  </div>
                 </div>
-
-                {/* Show more / less */}
-                {soldComps.length > SOLD_COMPS_INITIAL && (
-                  <button
-                    onClick={() => setShowAllSoldComps(v => !v)}
-                    style={{ width: "100%", marginTop: 10, padding: "9px", background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "#6a5528", letterSpacing: "0.3px" }}>
-                    {showAllSoldComps
-                      ? `Show fewer`
-                      : `Show ${soldComps.length - SOLD_COMPS_INITIAL} more`}
-                  </button>
-                )}
-
-                <p style={{ textAlign: "center", fontSize: 10, color: "#2e2410", paddingTop: 4 }}>
+                <p style={{ fontSize: 10, color: "#2e2410", paddingTop: 6 }}>
                   {usingMock ? "Estimated data" : "Real eBay sold listings"}
                 </p>
               </motion.div>
@@ -643,55 +611,47 @@ function DecidePageInner() {
           background: "rgba(5,13,5,0.98)",
           backdropFilter: "blur(28px)",
           borderTop: "1px solid rgba(200,180,126,0.07)",
-          paddingTop: 12,
-          paddingBottom: "max(18px, env(safe-area-inset-bottom, 18px))",
+          paddingTop: 10,
+          paddingBottom: "max(14px, env(safe-area-inset-bottom, 14px))",
         }}
         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.45 }}>
         <div className="absolute top-0 left-[15%] right-[15%] h-px"
           style={{ background: "linear-gradient(90deg, transparent, rgba(200,180,126,0.15), transparent)" }} />
-        <div className="flex gap-3">
-          {/* Leave it — now a visible outlined button, not ghost text */}
-          <motion.button onClick={() => handleDecision("passed")} disabled={deciding}
-            className="flex items-center justify-center disabled:opacity-40"
-            style={{
-              flex: "0 0 auto",
-              padding: "15px 18px",
-              borderRadius: 14,
-              fontSize: 13,
-              fontWeight: 500,
-              color: "rgba(160,130,90,0.7)",
-              border: "1px solid rgba(200,180,126,0.1)",
-              background: "rgba(13,31,13,0.3)",
-              letterSpacing: "0.2px",
-            }}
-            whileTap={{ scale: 0.97 }} transition={{ duration: 0.15, ease: "easeOut" }}>
-            Leave it
-          </motion.button>
-          {/* Pick it up — primary */}
-          <motion.button onClick={() => handleDecision("purchased")} disabled={deciding}
-            className="flex-1 flex items-center justify-center font-semibold text-[#f5f0e8] relative overflow-hidden disabled:opacity-40"
-            style={{
-              padding: "15px 22px",
-              borderRadius: 14,
-              fontSize: 15,
-              letterSpacing: "0.2px",
-              background: "linear-gradient(175deg, rgba(46,110,46,0.96) 0%, rgba(33,82,33,1) 100%)",
-              border: "1px solid rgba(109,188,109,0.15)",
-              boxShadow: "0 4px 20px rgba(5,15,5,0.5), 0 0 32px rgba(45,125,45,0.08)",
-            }}
-            whileTap={{ scale: 0.97 }} transition={{ duration: 0.15, ease: "easeOut" }}>
-            <span style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)" }} />
-            Pick it up
-          </motion.button>
-        </div>
+        {/* Pick — full width primary */}
+        <motion.button onClick={() => handleDecision("purchased")} disabled={deciding}
+          className="w-full flex items-center justify-center font-semibold text-[#f5f0e8] relative overflow-hidden disabled:opacity-40"
+          style={{
+            padding: "15px 22px",
+            borderRadius: 14,
+            fontSize: 16,
+            letterSpacing: "0.3px",
+            background: "linear-gradient(175deg, rgba(46,110,46,0.96) 0%, rgba(33,82,33,1) 100%)",
+            border: "1px solid rgba(109,188,109,0.15)",
+            boxShadow: "0 4px 20px rgba(5,15,5,0.5), 0 0 32px rgba(45,125,45,0.08)",
+          }}
+          whileTap={{ scale: 0.97 }} transition={{ duration: 0.15, ease: "easeOut" }}>
+          <span style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)" }} />
+          Pick
+        </motion.button>
+        {/* Leave it — plain text, sits below */}
+        <button onClick={() => handleDecision("passed")} disabled={deciding}
+          style={{
+            width: "100%", marginTop: 6, padding: "6px",
+            background: "none", border: "none", cursor: "pointer",
+            fontSize: 13, color: "rgba(160,130,90,0.45)", letterSpacing: "0.2px",
+          }}>
+          Leave it
+        </button>
       </motion.div>
 
       <style>{`
         .hide-scrollbar::-webkit-scrollbar{display:none}
         .hide-scrollbar{scrollbar-width:none}
-        input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:0;height:0}
-        input[type=range]::-moz-range-thumb{width:0;height:0;border:none}
-        input[type=range]{-webkit-appearance:none;appearance:none;background:transparent}
+        .tts-slider{-webkit-appearance:none;appearance:none;background:transparent;outline:none}
+        .tts-slider::-webkit-slider-thumb{-webkit-appearance:none;width:44px;height:44px;border-radius:50%;background:transparent;cursor:pointer}
+        .tts-slider::-moz-range-thumb{width:44px;height:44px;border-radius:50%;background:transparent;border:none;cursor:pointer}
+        .tts-slider::-webkit-slider-runnable-track{background:transparent}
+        .tts-slider::-moz-range-track{background:transparent}
       `}</style>
     </div>
   );
