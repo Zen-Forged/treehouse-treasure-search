@@ -262,10 +262,13 @@ export default function DiscoverPage() {
             <span style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)" }} />
             {launching ? "Looking it up..." : "What's it worth?"}
           </motion.button>
-          <button onClick={handleShare}
-            style={{ width: "100%", padding: "10px", fontSize: 12, color: "rgba(106,85,40,0.4)", letterSpacing: "0.3px", background: "none", border: "none", cursor: "pointer" }}>
-            Share the story
-          </button>
+          <motion.button onClick={handleShare}
+            disabled={identifying}
+            className="w-full flex items-center justify-center disabled:opacity-40"
+            style={{ padding: "14px 22px", borderRadius: 14, fontSize: 14, fontWeight: 500, letterSpacing: "0.2px", color: "rgba(200,180,126,0.7)", background: "rgba(13,31,13,0.4)", border: "1px solid rgba(200,180,126,0.12)", cursor: "pointer" }}
+            whileTap={{ scale: 0.97 }} transition={{ duration: 0.15, ease: "easeOut" }}>
+            Tell the story
+          </motion.button>
         </div>
       </motion.div>
     </div>
