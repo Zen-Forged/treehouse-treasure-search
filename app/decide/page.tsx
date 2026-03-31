@@ -297,10 +297,11 @@ function DecidePageInner() {
 
         <div className="px-5 flex flex-col gap-5 pt-3 pb-4">
 
-          {/* ── Item title ── */}
+          {/* ── Item title — overlaps image fade, negative margin pulls it up ── */}
           {identifiedTitle && (
-            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.08 }}>
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 17, fontWeight: 600, color: "#d4c9b0", lineHeight: 1.25 }}>
+            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.08 }}
+              style={{ marginTop: -52 }}>
+              <div style={{ fontFamily: "Georgia, serif", fontSize: 24, fontWeight: 700, color: "#f5f0e8", lineHeight: 1.2, textShadow: "0 1px 12px rgba(5,15,5,0.7)" }}>
                 {identifiedTitle}
               </div>
             </motion.div>
@@ -378,65 +379,12 @@ function DecidePageInner() {
                   </div>
                 </div>
 
-                {/* Row 2: Asking Price slider */}
-                <div style={{ padding: "16px 20px 18px" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-                    <div style={{ fontSize: 8, color: "#4a3a1e", textTransform: "uppercase", letterSpacing: "2px" }}>
-                      Asking price
-                    </div>
-                    <div style={{ fontFamily: "monospace", fontSize: 22, fontWeight: 700, color: "#f5f0e8", letterSpacing: -0.5 }}>
-                      ${askingPrice}
-                    </div>
-                  </div>
-
-                  {/* Slider track — touch-action none on container prevents page scroll while sliding */}
-                  <div style={{ position: "relative", height: 44, display: "flex", alignItems: "center", touchAction: "none" }}>
-                    {/* Track background */}
-                    <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.06)" }} />
-                    {/* Filled portion */}
-                    <div style={{
-                      position: "absolute", left: 0, height: 4, borderRadius: 2,
-                      width: `${pct * 100}%`,
-                      background: `linear-gradient(90deg, rgba(109,188,109,0.55), ${profitColor})`,
-                      transition: "background 0.25s ease",
-                    }} />
-                    {/* Custom thumb — positioned visually, pointer-events none so input captures touch */}
-                    <div style={{
-                      position: "absolute",
-                      left: `calc(${pct * 100}% - 13px)`,
-                      width: 26, height: 26, borderRadius: "50%",
-                      background: "#0a1a0a",
-                      border: `2.5px solid ${profitColor}`,
-                      boxShadow: `0 0 0 4px ${profitColor}22, 0 2px 8px rgba(0,0,0,0.5)`,
-                      transition: "border-color 0.25s ease, box-shadow 0.25s ease",
-                      pointerEvents: "none",
-                      zIndex: 1,
-                    }} />
-                    {/* Native range input — transparent overlay, 44px thumb gives full mobile hit area */}
-                    <input
-                      type="range"
-                      className="tts-slider"
-                      min={sliderMin}
-                      max={sliderMax}
-                      step={1}
-                      value={askingPrice}
-                      onChange={e => setAskingPrice(Number(e.target.value))}
-                      style={{
-                        position: "absolute", left: 0, right: 0, width: "100%",
-                        height: "100%", margin: 0, padding: 0, zIndex: 2,
-                      }}
-                    />
-                  </div>
-
-                  {/* Slider min/max labels */}
-                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-                    <span style={{ fontSize: 9, color: "#3a2e18" }}>${sliderMin}</span>
-                    <span style={{ fontSize: 9, color: "#3a2e18" }}>Cap ${sliderMax}</span>
-                  </div>
-
-                  {/* Profit result */}
+                {/* Row 2: Profit result — shown first so hand doesn't cover it */}
+                <div style={{
+                  padding: "14px 20px 16px",
+                  borderBottom: "1px solid rgba(200,180,126,0.06)",
+                }}>
                   <div style={{
-                    marginTop: 14,
                     padding: "12px 16px",
                     borderRadius: 12,
                     background: profitBg,
@@ -449,7 +397,7 @@ function DecidePageInner() {
                         Est. profit
                       </div>
                       <div style={{ fontFamily: "monospace", fontSize: 26, fontWeight: 700, color: profitColor, letterSpacing: -0.5, lineHeight: 1, transition: "color 0.3s ease" }}>
-                        {profit > 0 ? `+${Math.round(profit)}` : profit < 0 ? `-${Math.abs(Math.round(profit))}` : "$0"}
+                        {profit > 0 ? "+$" + Math.round(profit) : profit < 0 ? "-$" + Math.abs(Math.round(profit)) : "$0"}
                       </div>
                       <div style={{ fontSize: 10, color: "rgba(200,180,126,0.3)", marginTop: 3 }}>
                         after ~13% fees
@@ -466,6 +414,58 @@ function DecidePageInner() {
                         {profitLabel}
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                {/* Row 3: Asking Price slider — below profit so thumb doesn't obscure results */}
+                <div style={{ padding: "14px 20px 18px" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                    <div style={{ fontSize: 8, color: "#4a3a1e", textTransform: "uppercase", letterSpacing: "2px" }}>
+                      Asking price
+                    </div>
+                    <div style={{ fontFamily: "monospace", fontSize: 22, fontWeight: 700, color: "#f5f0e8", letterSpacing: -0.5 }}>
+                      ${askingPrice}
+                    </div>
+                  </div>
+
+                  {/* Slider track — touch-action none on container prevents page scroll while sliding */}
+                  <div style={{ position: "relative", height: 44, display: "flex", alignItems: "center", touchAction: "none" }}>
+                    <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.06)" }} />
+                    <div style={{
+                      position: "absolute", left: 0, height: 4, borderRadius: 2,
+                      width: `${pct * 100}%`,
+                      background: `linear-gradient(90deg, rgba(109,188,109,0.55), ${profitColor})`,
+                      transition: "background 0.25s ease",
+                    }} />
+                    <div style={{
+                      position: "absolute",
+                      left: `calc(${pct * 100}% - 13px)`,
+                      width: 26, height: 26, borderRadius: "50%",
+                      background: "#0a1a0a",
+                      border: `2.5px solid ${profitColor}`,
+                      boxShadow: `0 0 0 4px ${profitColor}22, 0 2px 8px rgba(0,0,0,0.5)`,
+                      transition: "border-color 0.25s ease, box-shadow 0.25s ease",
+                      pointerEvents: "none",
+                      zIndex: 1,
+                    }} />
+                    <input
+                      type="range"
+                      className="tts-slider"
+                      min={sliderMin}
+                      max={sliderMax}
+                      step={1}
+                      value={askingPrice}
+                      onChange={e => setAskingPrice(Number(e.target.value))}
+                      style={{
+                        position: "absolute", left: 0, right: 0, width: "100%",
+                        height: "100%", margin: 0, padding: 0, zIndex: 2,
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                    <span style={{ fontSize: 9, color: "#3a2e18" }}>${sliderMin}</span>
+                    <span style={{ fontSize: 9, color: "#3a2e18" }}>Cap ${sliderMax}</span>
                   </div>
                 </div>
               </motion.div>
