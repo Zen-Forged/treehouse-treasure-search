@@ -118,6 +118,7 @@ function DecidePageInner() {
   const [usingMock, setUsingMock]     = useState(false);
   const [deciding, setDeciding]       = useState(false);
   const [showAllSoldComps, setShowAllSoldComps] = useState(false);
+  const [askingPrice, setAskingPrice]           = useState<number>(0);
   // Tracks the displayed photo — starts as original, updates to filtered version when ready
   const [displayImage, setDisplayImage] = useState<string>(
     findSession?.imageEnhanced ?? findSession?.imageOriginal ?? ""
@@ -177,6 +178,13 @@ function DecidePageInner() {
 
   const pricingComps = soldComps.length > 0 ? soldComps : activeComps;
   const pricing      = calculatePricing(pricingComps, 0);
+
+  // Set default asking price to 40% of median once data arrives
+  useEffect(() => {
+    if (pricing.medianSoldPrice > 0 && askingPrice === 0) {
+      setAskingPrice(Math.round(pricing.medianSoldPrice * 0.40));
+    }
+  }, [pricing.medianSoldPrice]);
 
   const handleDecision = useCallback(async (decision: "purchased" | "passed") => {
     if (deciding) return;
@@ -292,34 +300,178 @@ function DecidePageInner() {
           {/* ── Item title ── */}
           {identifiedTitle && (
             <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.08 }}>
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: "#d4c9b0", lineHeight: 1.25 }}>
+              <div style={{ fontFamily: "Georgia, serif", fontSize: 17, fontWeight: 600, color: "#d4c9b0", lineHeight: 1.25 }}>
                 {identifiedTitle}
               </div>
             </motion.div>
           )}
 
-          {/* ── Resell value — anchor before the decision block ── */}
-          {pricing.medianSoldPrice > 0 && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}
-              style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 2, fontFamily: "Georgia, serif" }}>
-                <span style={{ fontSize: 16, fontWeight: 500, color: "#a8904e", paddingTop: 5, lineHeight: 1 }}>$</span>
-                <span style={{ fontSize: 48, fontWeight: 700, lineHeight: 1, letterSpacing: -1.5, color: "#f5f0e8" }}>
-                  {Math.round(pricing.medianSoldPrice)}
-                </span>
-              </div>
-              <div>
-                <div style={{ fontSize: 8, color: "#4a3a1e", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 2 }}>Resells around</div>
-                {soldSummary && soldSummary.priceRangeLow > 0 && (
-                  <div style={{ fontFamily: "monospace", fontSize: 11, color: "#6a5528" }}>
-                    ${Math.round(soldSummary.priceRangeLow)}–${Math.round(soldSummary.priceRangeHigh)}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
+          {/* ── Resell value + Asking Price slider ── */}
+          {pricing.medianSoldPrice > 0 && (() => {
+            const median      = pricing.medianSoldPrice;
+            const sliderMax   = Math.round(median * 1.1);
+            const sliderMin   = 1;
+            const fees        = median * 0.13;
+            const netProceeds = median - fees;
+            const profit      = askingPrice > 0 ? netProceeds - askingPrice : 0;
+            const roi         = askingPrice > 0 ? (profit / askingPrice) * 100 : 0;
+            const pct         = Math.max(0, Math.min(1, (askingPrice - sliderMin) / (sliderMax - sliderMin)));
 
-          {/* ── Decision block ── */}
+            // Color logic
+            const profitColor =
+              profit <= 0  ? "#c05a4a" :
+              roi < 10     ? "#c07a2a" :
+              roi < 40     ? "#c8b47e" : "#6dbc6d";
+            const profitBg =
+              profit <= 0  ? "rgba(192,90,74,0.1)" :
+              roi < 10     ? "rgba(192,122,42,0.1)" :
+              roi < 40     ? "rgba(200,180,126,0.1)" : "rgba(109,188,109,0.1)";
+            const profitBorder =
+              profit <= 0  ? "rgba(192,90,74,0.25)" :
+              roi < 10     ? "rgba(192,122,42,0.25)" :
+              roi < 40     ? "rgba(200,180,126,0.25)" : "rgba(109,188,109,0.25)";
+
+            const profitLabel =
+              profit <= 0  ? "No profit" :
+              roi < 10     ? "Thin margin" :
+              roi < 40     ? "Decent flip" : "Strong flip";
+
+            return (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.1 }}
+                style={{
+                  borderRadius: 18,
+                  background: "rgba(10,24,10,0.65)",
+                  border: "1px solid rgba(200,180,126,0.1)",
+                  overflow: "hidden",
+                }}>
+
+                {/* Row 1: Resell value */}
+                <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid rgba(200,180,126,0.06)" }}>
+                  <div style={{ fontSize: 8, color: "#4a3a1e", textTransform: "uppercase", letterSpacing: "2px", marginBottom: 6 }}>
+                    Avg resell value
+                  </div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 2, fontFamily: "Georgia, serif" }}>
+                      <span style={{ fontSize: 15, fontWeight: 500, color: "#a8904e", paddingTop: 5, lineHeight: 1 }}>$</span>
+                      <span style={{ fontSize: 52, fontWeight: 700, lineHeight: 1, letterSpacing: -2, color: "#f5f0e8" }}>
+                        {Math.round(median)}
+                      </span>
+                    </div>
+                    {soldSummary && soldSummary.priceRangeLow > 0 && (
+                      <div style={{ paddingBottom: 2 }}>
+                        <div style={{ fontSize: 9, color: "#3a2e18", marginBottom: 1 }}>Range</div>
+                        <div style={{ fontFamily: "monospace", fontSize: 11, color: "#6a5528" }}>
+                          ${Math.round(soldSummary.priceRangeLow)}–${Math.round(soldSummary.priceRangeHigh)}
+                        </div>
+                      </div>
+                    )}
+                    {soldSummary && soldSummary.avgDaysToSell > 0 && (
+                      <div style={{ marginLeft: "auto", textAlign: "right", paddingBottom: 2 }}>
+                        <div style={{ fontSize: 9, color: "#3a2e18", marginBottom: 1 }}>Avg sell time</div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "#a8904e" }}>
+                          {soldSummary.avgDaysToSell <= 7
+                            ? `~${soldSummary.avgDaysToSell}d`
+                            : `~${Math.round(soldSummary.avgDaysToSell / 7)}wk`}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Row 2: Asking Price slider */}
+                <div style={{ padding: "16px 20px 18px" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                    <div style={{ fontSize: 8, color: "#4a3a1e", textTransform: "uppercase", letterSpacing: "2px" }}>
+                      Asking price
+                    </div>
+                    <div style={{ fontFamily: "monospace", fontSize: 22, fontWeight: 700, color: "#f5f0e8", letterSpacing: -0.5 }}>
+                      ${askingPrice}
+                    </div>
+                  </div>
+
+                  {/* Slider track */}
+                  <div style={{ position: "relative", height: 36, display: "flex", alignItems: "center" }}>
+                    {/* Track background */}
+                    <div style={{ position: "absolute", left: 0, right: 0, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.06)" }} />
+                    {/* Filled portion */}
+                    <div style={{
+                      position: "absolute", left: 0, height: 4, borderRadius: 2,
+                      width: `${pct * 100}%`,
+                      background: `linear-gradient(90deg, rgba(109,188,109,0.7), ${profitColor}88)`,
+                      transition: "width 0.05s ease, background 0.3s ease",
+                    }} />
+                    {/* Native range input — invisible but functional */}
+                    <input
+                      type="range"
+                      min={sliderMin}
+                      max={sliderMax}
+                      step={1}
+                      value={askingPrice}
+                      onChange={e => setAskingPrice(Number(e.target.value))}
+                      style={{
+                        position: "absolute", left: 0, right: 0, width: "100%",
+                        opacity: 0, height: 36, cursor: "pointer", margin: 0, padding: 0,
+                        WebkitAppearance: "none",
+                      }}
+                    />
+                    {/* Custom thumb */}
+                    <div style={{
+                      position: "absolute",
+                      left: `calc(${pct * 100}% - 11px)`,
+                      width: 22, height: 22, borderRadius: "50%",
+                      background: "rgba(10,24,10,1)",
+                      border: `2px solid ${profitColor}`,
+                      boxShadow: `0 0 10px ${profitColor}55`,
+                      transition: "left 0.05s ease, border-color 0.3s ease, box-shadow 0.3s ease",
+                      pointerEvents: "none",
+                    }} />
+                  </div>
+
+                  {/* Slider min/max labels */}
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                    <span style={{ fontSize: 9, color: "#3a2e18" }}>${sliderMin}</span>
+                    <span style={{ fontSize: 9, color: "#3a2e18" }}>Cap ${sliderMax}</span>
+                  </div>
+
+                  {/* Profit result */}
+                  <div style={{
+                    marginTop: 14,
+                    padding: "12px 16px",
+                    borderRadius: 12,
+                    background: profitBg,
+                    border: `1px solid ${profitBorder}`,
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    transition: "background 0.3s ease, border-color 0.3s ease",
+                  }}>
+                    <div>
+                      <div style={{ fontSize: 8, color: "rgba(200,180,126,0.4)", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 4 }}>
+                        Est. profit
+                      </div>
+                      <div style={{ fontFamily: "monospace", fontSize: 26, fontWeight: 700, color: profitColor, letterSpacing: -0.5, lineHeight: 1, transition: "color 0.3s ease" }}>
+                        {profit > 0 ? `+${Math.round(profit)}` : profit < 0 ? `-${Math.abs(Math.round(profit))}` : "$0"}
+                      </div>
+                      <div style={{ fontSize: 10, color: "rgba(200,180,126,0.3)", marginTop: 3 }}>
+                        after ~13% fees
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 8, color: "rgba(200,180,126,0.4)", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 4 }}>
+                        ROI
+                      </div>
+                      <div style={{ fontFamily: "monospace", fontSize: 26, fontWeight: 700, color: profitColor, letterSpacing: -0.5, lineHeight: 1, transition: "color 0.3s ease" }}>
+                        {askingPrice > 0 ? `${Math.round(roi)}%` : "—"}
+                      </div>
+                      <div style={{ fontSize: 10, color: profitColor, marginTop: 3, fontWeight: 500, opacity: 0.8, transition: "color 0.3s ease" }}>
+                        {profitLabel}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })()}
+
+          {/* ── Market details (sell time + competition) — compact row ── */}
           {soldSummary && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.16 }}>
               <OpportunityMeter
@@ -534,7 +686,13 @@ function DecidePageInner() {
         </div>
       </motion.div>
 
-      <style>{`.hide-scrollbar::-webkit-scrollbar{display:none}.hide-scrollbar{scrollbar-width:none}`}</style>
+      <style>{`
+        .hide-scrollbar::-webkit-scrollbar{display:none}
+        .hide-scrollbar{scrollbar-width:none}
+        input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:0;height:0}
+        input[type=range]::-moz-range-thumb{width:0;height:0;border:none}
+        input[type=range]{-webkit-appearance:none;appearance:none;background:transparent}
+      `}</style>
     </div>
   );
 }
