@@ -2,8 +2,10 @@
 //
 // Change 1 — color + objectType embedded in query string (filters at eBay level)
 // Change 2 — hard-filter wrong-color listings post-fetch
+//            NOTE: material-colors (brass, copper, bronze etc.) are excluded from
+//            the conflict filter — sellers describe shade color, not body material.
 // Change 3 — hard-filter body/kit mismatches for camera-category items
-// Change 4 — color scoring weight raised to 35%, comp cap lowered to 15
+// Change 4 — color scoring weight raised to 35%, cap lowered to 15
 
 import { Comp } from "@/types";
 
@@ -13,14 +15,22 @@ const SERPAPI_BASE = "https://serpapi.com/search.json";
 const LOT_PATTERN =
   /\b(lot|set|pair|collection|bundle|group)\s+(of\s+)?\d+|\d+\s*(x|pc|pcs|piece|pieces)\b|\b\d{1,2}\s*-?\s*(goblets?|glasses?|cups?|plates?|bowls?|figurines?|statues?)\b/i;
 
-// ── Change 2: known color vocabulary for conflict detection ───────────────────
-// If a listing title contains one of these AND it doesn't contain our target
-// color, we drop it. Only applies when primaryColor is known and specific.
+// ── Change 2: true colors only — materials excluded ──────────────────────────
+// Brass, copper, bronze, gold, silver are MATERIALS, not colors.
+// A "Vintage White Glass Gooseneck Lamp" is a valid comp for a brass lamp —
+// the seller is describing the shade, not the body. Filtering on material-colors
+// wipes out the bulk of valid comps for vintage lighting and metalwork.
 const KNOWN_COLORS = [
-  "black", "white", "silver", "gold", "red", "blue", "green", "pink",
-  "purple", "orange", "yellow", "tan", "brown", "gray", "grey", "copper",
-  "bronze", "rose gold", "space gray", "midnight", "starlight",
+  "black", "white", "red", "blue", "green", "pink",
+  "purple", "orange", "yellow", "tan", "brown", "gray", "grey",
+  "rose gold", "space gray", "midnight", "starlight",
 ];
+
+// Material-colors: never apply the conflict filter when the target color is one of these.
+const MATERIAL_COLORS = new Set([
+  "brass", "copper", "bronze", "silver", "gold", "pewter",
+  "sterling", "chrome", "iron", "steel", "amber",
+]);
 
 // ── Change 3: lens-bundle keywords that indicate a kit, not body-only ────────
 const LENS_BUNDLE_KEYWORDS = [
@@ -28,8 +38,6 @@ const LENS_BUNDLE_KEYWORDS = [
   "18-55mm", "15-45mm", "16-50mm", "18-135mm",
   "zoom lens", "with zoom", "and lens", "lens bundle",
   "twin lens", "double lens", "lens included",
-  // Note: "kit" deliberately excluded — too broad, matches model names
-  // and accessories that have nothing to do with lens kits
 ];
 
 // ── Change 3: object types that activate the body/kit filter ─────────────────
@@ -70,7 +78,9 @@ export interface CompsResult {
   } | null;
 }
 
-// ─── Change 1: build a refined query embedding color + object-type signals ────
+// ─── Change 1: build a refined query embedding color signal ──────────────────
+// Only appends true colors (not material-colors) to avoid redundancy.
+// "brass gooseneck lamp brass" is noise; the material is already in the query.
 
 interface QueryExtras {
   primaryColor?: string | null;
@@ -80,15 +90,15 @@ interface QueryExtras {
 
 function buildRefinedQuery(baseQuery: string, extras: QueryExtras): string {
   const parts: string[] = [baseQuery];
-
   const color = extras.primaryColor?.toLowerCase().trim();
 
-  // Append color only — keeps the query broad enough to return results.
-  // Appending object-type modifiers like "body only" makes the query too
-  // narrow for eBay's engine and causes zero-result pages. Color is the
-  // most impactful and safe addition; body/kit disambiguation is handled
-  // post-fetch by the title filters (Change 3).
-  if (color && color !== "unknown" && !baseQuery.toLowerCase().includes(color)) {
+  // Only append if it's a true color (not a material) and not already in query
+  if (
+    color &&
+    color !== "unknown" &&
+    !MATERIAL_COLORS.has(color) &&
+    !baseQuery.toLowerCase().includes(color)
+  ) {
     parts.push(color);
   }
 
@@ -99,22 +109,22 @@ function buildRefinedQuery(baseQuery: string, extras: QueryExtras): string {
   return refined;
 }
 
-// ─── Change 2: detect color conflicts in a listing title ─────────────────────
-// Returns true if the title contains a different color and NOT our target color.
-// Ambiguous titles (no color mentioned) return false — we keep them.
+// ─── Change 2: detect color conflicts ────────────────────────────────────────
+// Returns true only when target is a true color (not a material-color) AND
+// the listing title mentions a different specific color.
 
 function hasColorConflict(title: string, targetColor: string): boolean {
+  // Never filter on material-colors — they describe the body, not the shade
+  if (MATERIAL_COLORS.has(targetColor.toLowerCase().trim())) return false;
+
   const lower  = title.toLowerCase();
   const target = targetColor.toLowerCase().trim();
 
-  // If the title contains our target color → definitely keep it
   if (lower.includes(target)) return false;
 
-  // If no known color appears in the title → ambiguous, keep it
   const containsAnyColor = KNOWN_COLORS.some(c => lower.includes(c));
   if (!containsAnyColor) return false;
 
-  // Title mentions a different color → conflict → drop it
   return true;
 }
 
@@ -139,7 +149,6 @@ export async function getSerpApiSoldComps(
   const key = process.env.SERPAPI_KEY ?? "";
   if (!key) throw new Error("SERPAPI_KEY is not set");
 
-  // Change 1: embed color + object-type signals into the eBay query
   const refinedQuery = buildRefinedQuery(query, { primaryColor, objectType, setType });
 
   console.log(`[serpapi] fetching sold + active for query: "${refinedQuery}"`);
@@ -210,37 +219,35 @@ function parseListings(
   objectType?:   string,
 ): Comp[] {
   const colorToken = primaryColor?.toLowerCase().trim() ?? null;
-  // Only apply color filter when the color is specific (not generic/unknown)
+
+  // Skip color filter entirely for material-colors or vague values
   const applyColorFilter = !!(
     colorToken &&
     colorToken !== "unknown" &&
     colorToken !== "multi" &&
     colorToken !== "various" &&
-    colorToken.length > 2
+    colorToken.length > 2 &&
+    !MATERIAL_COLORS.has(colorToken)
   );
 
   const parsed = listings
     .filter(item => {
       const title = item.title ?? "";
 
-      // Lot filter (unchanged)
       if (LOT_PATTERN.test(title)) {
         console.log(`[serpapi] filtered lot (${listingType}):`, title);
         return false;
       }
 
-      // Unsold-completed filter (unchanged)
       if (listingType === "sold" && !item.sold_date && item.unsold_date) {
         return false;
       }
 
-      // Change 2: hard-drop wrong-color listings
       if (applyColorFilter && hasColorConflict(title, colorToken!)) {
         console.log(`[serpapi] filtered color mismatch (${listingType}): "${title}" (want: ${colorToken})`);
         return false;
       }
 
-      // Change 3: hard-drop lens-bundle listings for camera items
       if (hasLensBundleConflict(title, objectType)) {
         console.log(`[serpapi] filtered lens bundle (${listingType}): "${title}"`);
         return false;
@@ -267,20 +274,20 @@ function parseListings(
     .filter((c): c is Comp => c !== null);
 
   if (listingType === "sold") {
-    return scoreSoldComps(parsed, colorToken);
+    return scoreSoldComps(parsed, colorToken, applyColorFilter);
   }
 
-  // Change 4: active listings cap lowered from 20 → 15
   return parsed.slice(0, 15);
 }
 
-// ─── Scoring — Change 4: color weight 20% → 35%, cap 20 → 15 ────────────────
+// ─── Scoring — Change 4 ───────────────────────────────────────────────────────
+// Color scoring only applied when color filter is active (i.e. not a material-color)
 
-function scoreSoldComps(comps: Comp[], colorToken: string | null): Comp[] {
+function scoreSoldComps(comps: Comp[], colorToken: string | null, applyColorFilter: boolean): Comp[] {
   if (comps.length === 0) return [];
 
   const RECENCY_CUTOFF = 90;
-  const MIN_COMPS      = 10; // lowered from 15 since we're capping at 15 anyway
+  const MIN_COMPS      = 10;
 
   const recent = comps.filter(c => c.daysAgo <= RECENCY_CUTOFF || c.daysAgo === 0);
   const pool   = recent.length >= MIN_COMPS ? recent : comps;
@@ -293,19 +300,15 @@ function scoreSoldComps(comps: Comp[], colorToken: string | null): Comp[] {
     const priceDiff    = Math.abs(comp.price - median);
     const matchScore   = median > 0 ? Math.max(0, 1 - priceDiff / median) : 0.5;
     const recencyScore = comp.daysAgo === 0 ? 1 : Math.max(0, 1 - comp.daysAgo / MAX_DAYS);
-    const colorScore   = colorToken && comp.title.toLowerCase().includes(colorToken) ? 1.0 : 0.0;
+    const colorScore   = (applyColorFilter && colorToken && comp.title.toLowerCase().includes(colorToken)) ? 1.0 : 0.0;
 
-    // Change 4: color weight raised from 20% → 35% when color is available
-    // Corresponding reduction: match 50%→45%, recency 30%→20%
-    // Without color: match 60%, recency 40% (unchanged)
-    const finalScore = colorToken
+    const finalScore = applyColorFilter
       ? (matchScore * 0.45) + (recencyScore * 0.20) + (colorScore * 0.35)
       : (matchScore * 0.60) + (recencyScore * 0.40);
 
     return { comp, finalScore };
   });
 
-  // Change 4: cap lowered from 20 → 15
   return scored
     .sort((a, b) => b.finalScore - a.finalScore)
     .map(s => s.comp)
