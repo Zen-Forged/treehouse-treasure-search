@@ -79,12 +79,24 @@ async function claudeIdentify(imageDataUrl: string): Promise<IdentifyResult> {
   const mediaType  = (mediaMatch?.[1] ?? "image/jpeg") as
     "image/jpeg" | "image/png" | "image/webp" | "image/gif";
 
+  // ── DEBUG: image sanity check ──────────────────────────────────────────────
+  const base64Length = base64.length;
+  const estimatedKB  = Math.round((base64Length * 3) / 4 / 1024);
+  console.log(`[identify:debug] mediaType="${mediaType}" base64Length=${base64Length} estimatedSizeKB=${estimatedKB}`);
+  if (base64Length < 1000) {
+    console.warn(`[identify:debug] WARNING: base64 suspiciously short (${base64Length} chars) — image may be malformed or empty`);
+  }
+  if (!mediaMatch) {
+    console.warn(`[identify:debug] WARNING: could not parse media type from data URL — falling back to image/jpeg`);
+  }
+  // ── END DEBUG ──────────────────────────────────────────────────────────────
+
   const client = new Anthropic();
 
   const response = await client.messages.create({
     model:       "claude-opus-4-5",
     max_tokens:  900,
-    temperature: 0,   // deterministic output — identification should be consistent, not creative
+    temperature: 0,
     messages: [{
       role: "user",
       content: [
@@ -92,6 +104,8 @@ async function claudeIdentify(imageDataUrl: string): Promise<IdentifyResult> {
         {
           type: "text",
           text: `You are a resale product identification engine. Your job is to identify items for eBay comp matching.
+
+IMPORTANT: You must ALWAYS return valid JSON even if the image is unclear, blurry, or shows a non-resalable item (person, pet, scenery, etc.). Never refuse or add explanation text. If you genuinely cannot identify anything useful, set overall_confidence to 0.1 and use your best guess for object_type.
 
 STEP 1 — IDENTITY CHECK:
 First, determine if this is a specific named product (brand + model identifiable from the image itself — e.g. Canon EOS R50, Nike Air Jordan 1, KitchenAid Stand Mixer, Pyrex Cinderella Bowl).
@@ -177,6 +191,10 @@ Respond ONLY with raw valid JSON — no markdown, no backticks, no explanation:
     .map(b => (b as { type: "text"; text: string }).text)
     .join("");
 
+  // ── DEBUG: log raw Claude response ────────────────────────────────────────
+  console.log(`[identify:debug] raw Claude response (first 500 chars): ${raw.slice(0, 500)}`);
+  // ── END DEBUG ─────────────────────────────────────────────────────────────
+
   const clean = raw
     .trim()
     .replace(/^```json\s*/i, "")
@@ -192,6 +210,11 @@ Respond ONLY with raw valid JSON — no markdown, no backticks, no explanation:
     overall_confidence: number;
   };
 
+  // ── DEBUG: log parsed field confidences ───────────────────────────────────
+  console.log(`[identify:debug] parsed fields: object_type="${v.object_type?.value}"(${v.object_type?.confidence}) material="${v.material?.value}"(${v.material?.confidence}) category="${v.category?.value}"(${v.category?.confidence}) overall=${v.overall_confidence}`);
+  console.log(`[identify:debug] claude title="${v.title}" search_query="${v.search_query}"`);
+  // ── END DEBUG ─────────────────────────────────────────────────────────────
+
   const THRESHOLD = 0.55;
   const pick = (field: VisualField | undefined): string | null =>
     field && field.confidence >= THRESHOLD && field.value ? field.value : null;
@@ -204,7 +227,6 @@ Respond ONLY with raw valid JSON — no markdown, no backticks, no explanation:
   const color     = v.color?.confidence >= THRESHOLD ? v.color.primary || null : null;
   const category  = pick(v.category);
 
-  // Title: use Claude's generated title directly — it follows our Step 1 rules
   const title = v.title || [
     brand, model, color, objectType
   ].filter(Boolean).join(" ") || objectType || "unknown item";
@@ -224,7 +246,7 @@ Respond ONLY with raw valid JSON — no markdown, no backticks, no explanation:
     brand,
     material,
     era:                 pick(v.era),
-    origin:              null,   // not in prompt — avoids hallucination
+    origin:              null,
     category,
     objectType,
     model,
@@ -239,8 +261,6 @@ Respond ONLY with raw valid JSON — no markdown, no backticks, no explanation:
     visualConfidence:    Math.round(overallConf * 100) / 100,
   };
 
-  // Build search query deterministically from structured attributes.
-  // Falls back to Claude's suggested query only if queryBuilder produces nothing useful.
   const builtQuery   = buildSearchQuery(attributes, v.is_named_product);
   const claudeQuery  = normalizeQuery(v.search_query || "");
   const searchQuery  = builtQuery || claudeQuery || normalizeQuery(title);
