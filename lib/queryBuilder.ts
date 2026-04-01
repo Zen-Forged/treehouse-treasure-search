@@ -152,9 +152,10 @@ export function extractStyleDescriptor(
 
   // Check individual features for single-word descriptors
   // Process features in order — Claude puts most salient first
+  const keywordArray = Array.from(STYLE_DESCRIPTOR_KEYWORDS);
   for (const feature of distinctiveFeatures) {
     const lower = feature.toLowerCase();
-    for (const keyword of STYLE_DESCRIPTOR_KEYWORDS) {
+    for (const keyword of keywordArray) {
       // Match as a whole word within the feature string
       const pattern = new RegExp(`\\b${keyword}\\b`);
       if (pattern.test(lower)) {
