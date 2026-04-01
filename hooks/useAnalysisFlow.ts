@@ -32,6 +32,8 @@ interface RunAnalysisOptions {
   searchQuery?:     string;
   identifiedTitle?: string;
   primaryColor?:    string;
+  objectType?:      string;
+  setType?:         string;
   onIdentified?:    (result: import("@/app/api/identify/route").IdentifyResult) => void;
   onCompsReady:     (soldComps: Comp[], activeComps: Comp[], summary: any) => void;
   onComplete:       () => void;
@@ -101,6 +103,8 @@ export function useAnalysisFlow() {
     searchQuery:      preSearchQuery,
     identifiedTitle:  preTitle,
     primaryColor:     preColor,
+    objectType:       preObjectType,
+    setType:          preSetType,
     onIdentified,
     onCompsReady,
     onComplete,
@@ -110,9 +114,11 @@ export function useAnalysisFlow() {
     aborted.current = false;
     setState(initialState);
 
-    let resolvedTitle:  string = preTitle  ?? "";
-    let resolvedQuery:  string = preSearchQuery ?? "";
-    let resolvedColor:  string | undefined = preColor;
+    let resolvedTitle:      string = preTitle        ?? "";
+    let resolvedQuery:      string = preSearchQuery   ?? "";
+    let resolvedColor:      string | undefined = preColor;
+    let resolvedObjectType: string | undefined = preObjectType;
+    let resolvedSetType:    string | undefined = preSetType;
 
     // ── STEP 0 — Identify (only when not pre-identified) ─────────────────────
     if (!preTitle || !preSearchQuery) {
@@ -130,9 +136,11 @@ export function useAnalysisFlow() {
 
         if (res.ok) {
           const result = await res.json() as import("@/app/api/identify/route").IdentifyResult;
-          resolvedTitle = result.title;
-          resolvedQuery = result.searchQuery;
-          resolvedColor = result.attributes?.primaryColor ?? undefined;
+          resolvedTitle      = result.title;
+          resolvedQuery      = result.searchQuery;
+          resolvedColor      = result.attributes?.primaryColor ?? undefined;
+          resolvedObjectType = result.attributes?.objectType   ?? undefined;
+          resolvedSetType    = result.attributes?.setType      ?? undefined;
 
           // Surface the title immediately in the AnalysisSheet header
           updateState({ identifiedTitle: result.title });
@@ -174,8 +182,11 @@ export function useAnalysisFlow() {
     let fetchedSummary: any  = null;
 
     try {
-      const colorParam = resolvedColor ? `&color=${encodeURIComponent(resolvedColor)}` : "";
-      const res = await fetch(`/api/sold-comps?q=${encodeURIComponent(resolvedQuery)}${colorParam}`);
+      const params = new URLSearchParams({ q: resolvedQuery });
+      if (resolvedColor)      params.set("color",      resolvedColor);
+      if (resolvedObjectType) params.set("objectType", resolvedObjectType);
+      if (resolvedSetType)    params.set("setType",    resolvedSetType);
+      const res = await fetch(`/api/sold-comps?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         if ((data.soldComps?.length ?? 0) > 0 || (data.activeComps?.length ?? 0) > 0) {

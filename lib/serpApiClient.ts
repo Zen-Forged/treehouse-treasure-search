@@ -1,20 +1,47 @@
 // lib/serpApiClient.ts
+//
+// Change 1 — color + objectType embedded in query string (filters at eBay level)
+// Change 2 — hard-filter wrong-color listings post-fetch
+// Change 3 — hard-filter body/kit mismatches for camera-category items
+// Change 4 — color scoring weight raised to 35%, comp cap lowered to 15
+
 import { Comp } from "@/types";
 
 const SERPAPI_BASE = "https://serpapi.com/search.json";
 
-// Patterns that indicate a multi-item lot — filter these out
+// ── Lot pattern — multi-item bundles ─────────────────────────────────────────
 const LOT_PATTERN =
   /\b(lot|set|pair|collection|bundle|group)\s+(of\s+)?\d+|\d+\s*(x|pc|pcs|piece|pieces)\b|\b\d{1,2}\s*-?\s*(goblets?|glasses?|cups?|plates?|bowls?|figurines?|statues?)\b/i;
 
+// ── Change 2: known color vocabulary for conflict detection ───────────────────
+// If a listing title contains one of these AND it doesn't contain our target
+// color, we drop it. Only applies when primaryColor is known and specific.
+const KNOWN_COLORS = [
+  "black", "white", "silver", "gold", "red", "blue", "green", "pink",
+  "purple", "orange", "yellow", "tan", "brown", "gray", "grey", "copper",
+  "bronze", "rose gold", "space gray", "midnight", "starlight",
+];
+
+// ── Change 3: lens-bundle keywords that indicate a kit, not body-only ────────
+const LENS_BUNDLE_KEYWORDS = [
+  "with lens", "w/lens", "w/ lens", "+ lens", "kit", "18-55", "15-45",
+  "16-50", "18-135", "zoom lens", "with zoom", "and lens", "lens bundle",
+  "twin lens", "double lens", "lens included",
+];
+
+// ── Change 3: object types that activate the body/kit filter ─────────────────
+const CAMERA_OBJECT_TYPES = [
+  "camera", "mirrorless", "dslr", "slr", "digital camera",
+];
+
 interface SerpApiListing {
-  title?:      string;
-  price?:      { raw?: string; extracted?: number };
-  condition?:  string;
-  thumbnail?:  string;
-  link?:       string;
-  sold_date?:  string;   // present when show_only=Sold
-  unsold_date?: string;  // present for completed-but-unsold
+  title?:       string;
+  price?:       { raw?: string; extracted?: number };
+  condition?:   string;
+  thumbnail?:   string;
+  link?:        string;
+  sold_date?:   string;
+  unsold_date?: string;
 }
 
 interface SerpApiResponse {
@@ -40,21 +67,94 @@ export interface CompsResult {
   } | null;
 }
 
+// ─── Change 1: build a refined query embedding color + object-type signals ────
+
+interface QueryExtras {
+  primaryColor?: string | null;
+  objectType?:   string | null;
+  setType?:      string | null;
+}
+
+function buildRefinedQuery(baseQuery: string, extras: QueryExtras): string {
+  const parts: string[] = [baseQuery];
+
+  const color      = extras.primaryColor?.toLowerCase().trim();
+  const objectType = extras.objectType?.toLowerCase().trim();
+  const setType    = extras.setType?.toLowerCase().trim();
+
+  // Append color if known and not already in the base query
+  if (color && color !== "unknown" && !baseQuery.toLowerCase().includes(color)) {
+    parts.push(color);
+  }
+
+  // For camera-type items marked as single/body-only, append "body only"
+  // This directly targets the body vs kit disambiguation at the eBay level
+  const isCamera = objectType && CAMERA_OBJECT_TYPES.some(t => objectType.includes(t));
+  if (isCamera && (setType === "single" || !setType || setType === "unknown")) {
+    if (!baseQuery.toLowerCase().includes("body")) {
+      parts.push("body only");
+    }
+  }
+
+  const refined = parts.join(" ");
+  if (refined !== baseQuery) {
+    console.log(`[serpapi] refined query: "${baseQuery}" → "${refined}"`);
+  }
+  return refined;
+}
+
+// ─── Change 2: detect color conflicts in a listing title ─────────────────────
+// Returns true if the title contains a different color and NOT our target color.
+// Ambiguous titles (no color mentioned) return false — we keep them.
+
+function hasColorConflict(title: string, targetColor: string): boolean {
+  const lower  = title.toLowerCase();
+  const target = targetColor.toLowerCase().trim();
+
+  // If the title contains our target color → definitely keep it
+  if (lower.includes(target)) return false;
+
+  // If no known color appears in the title → ambiguous, keep it
+  const containsAnyColor = KNOWN_COLORS.some(c => lower.includes(c));
+  if (!containsAnyColor) return false;
+
+  // Title mentions a different color → conflict → drop it
+  return true;
+}
+
+// ─── Change 3: detect lens-bundle listings for camera items ──────────────────
+
+function hasLensBundleConflict(title: string, objectType: string | null | undefined): boolean {
+  if (!objectType) return false;
+  const isCamera = CAMERA_OBJECT_TYPES.some(t => objectType.toLowerCase().includes(t));
+  if (!isCamera) return false;
+  const lower = title.toLowerCase();
+  return LENS_BUNDLE_KEYWORDS.some(kw => lower.includes(kw));
+}
+
 // ─── Public entry point ───────────────────────────────────────────────────────
 
-export async function getSerpApiSoldComps(query: string, primaryColor?: string): Promise<CompsResult> {
+export async function getSerpApiSoldComps(
+  query:       string,
+  primaryColor?: string,
+  objectType?:   string,
+  setType?:      string,
+): Promise<CompsResult> {
   const key = process.env.SERPAPI_KEY ?? "";
   if (!key) throw new Error("SERPAPI_KEY is not set");
 
-  console.log("[serpapi] fetching sold + active for query:", query);
+  // Change 1: embed color + object-type signals into the eBay query
+  const refinedQuery = buildRefinedQuery(query, { primaryColor, objectType, setType });
+
+  console.log(`[serpapi] fetching sold + active for query: "${refinedQuery}"`);
 
   const [soldResult, activeResult] = await Promise.all([
-    fetchEbayListings(query, key, "sold"),
-    fetchEbayListings(query, key, "active"),
+    fetchEbayListings(refinedQuery, key, "sold"),
+    fetchEbayListings(refinedQuery, key, "active"),
   ]);
 
-  const soldComps   = parseListings(soldResult.listings, "sold", primaryColor);
-  const activeComps = parseListings(activeResult.listings, "active");
+  const soldComps   = parseListings(soldResult.listings, "sold",   primaryColor, objectType);
+  const activeComps = parseListings(activeResult.listings, "active", primaryColor, objectType);
 
   console.log(`[serpapi] sold: ${soldComps.length}  active: ${activeComps.length}`);
 
@@ -69,7 +169,7 @@ export async function getSerpApiSoldComps(query: string, primaryColor?: string):
   };
 }
 
-// ─── Fetch helpers ────────────────────────────────────────────────────────────
+// ─── Fetch ────────────────────────────────────────────────────────────────────
 
 async function fetchEbayListings(
   query: string,
@@ -83,15 +183,12 @@ async function fetchEbayListings(
     api_key: key,
   });
 
-  // show_only is the correct SerpAPI parameter — NOT LH_Sold/LH_Complete
-  // "Sold" filters to sold listings and returns sold_date on each result
-  // "Complete" includes sold + unsold ended listings
   if (mode === "sold") {
     params.set("show_only", "Sold");
   }
 
   const url = `${SERPAPI_BASE}?${params.toString()}`;
-  const res = await fetch(url, { cache: "no-store" });
+  const res  = await fetch(url, { cache: "no-store" });
 
   if (!res.ok) {
     const body = await res.text();
@@ -108,20 +205,51 @@ async function fetchEbayListings(
   };
 }
 
-// ─── Parsing ──────────────────────────────────────────────────────────────────
+// ─── Parsing — applies Change 2 (color) and Change 3 (lens/kit) filters ──────
 
-function parseListings(listings: SerpApiListing[], listingType: "sold" | "active", primaryColor?: string): Comp[] {
+function parseListings(
+  listings:    SerpApiListing[],
+  listingType: "sold" | "active",
+  primaryColor?: string,
+  objectType?:   string,
+): Comp[] {
+  const colorToken = primaryColor?.toLowerCase().trim() ?? null;
+  // Only apply color filter when the color is specific (not generic/unknown)
+  const applyColorFilter = !!(
+    colorToken &&
+    colorToken !== "unknown" &&
+    colorToken !== "multi" &&
+    colorToken !== "various" &&
+    colorToken.length > 2
+  );
+
   const parsed = listings
     .filter(item => {
       const title = item.title ?? "";
+
+      // Lot filter (unchanged)
       if (LOT_PATTERN.test(title)) {
         console.log(`[serpapi] filtered lot (${listingType}):`, title);
         return false;
       }
-      // For sold mode: drop unsold completed listings (have unsold_date but no sold_date)
+
+      // Unsold-completed filter (unchanged)
       if (listingType === "sold" && !item.sold_date && item.unsold_date) {
         return false;
       }
+
+      // Change 2: hard-drop wrong-color listings
+      if (applyColorFilter && hasColorConflict(title, colorToken!)) {
+        console.log(`[serpapi] filtered color mismatch (${listingType}): "${title}" (want: ${colorToken})`);
+        return false;
+      }
+
+      // Change 3: hard-drop lens-bundle listings for camera items
+      if (hasLensBundleConflict(title, objectType)) {
+        console.log(`[serpapi] filtered lens bundle (${listingType}): "${title}"`);
+        return false;
+      }
+
       return true;
     })
     .map((item): Comp | null => {
@@ -143,57 +271,49 @@ function parseListings(listings: SerpApiListing[], listingType: "sold" | "active
     .filter((c): c is Comp => c !== null);
 
   if (listingType === "sold") {
-    return scoreSoldComps(parsed, primaryColor);
+    return scoreSoldComps(parsed, colorToken);
   }
 
-  return parsed.slice(0, 20);
+  // Change 4: active listings cap lowered from 20 → 15
+  return parsed.slice(0, 15);
 }
 
-// ─── Scoring ──────────────────────────────────────────────────────────────────
+// ─── Scoring — Change 4: color weight 20% → 35%, cap 20 → 15 ────────────────
 
-function scoreSoldComps(comps: Comp[], primaryColor?: string): Comp[] {
+function scoreSoldComps(comps: Comp[], colorToken: string | null): Comp[] {
   if (comps.length === 0) return [];
 
-  const RECENCY_CUTOFF = 90; // days
-  const MIN_COMPS      = 15;
+  const RECENCY_CUTOFF = 90;
+  const MIN_COMPS      = 10; // lowered from 15 since we're capping at 15 anyway
 
-  // Apply 90-day filter — but only if it leaves enough comps
   const recent = comps.filter(c => c.daysAgo <= RECENCY_CUTOFF || c.daysAgo === 0);
   const pool   = recent.length >= MIN_COMPS ? recent : comps;
 
-  // Compute median price from pool for match_score
-  const prices  = pool.map(c => c.price).sort((a, b) => a - b);
-  const median  = computeMedian(prices);
+  const prices   = pool.map(c => c.price).sort((a, b) => a - b);
+  const median   = computeMedian(prices);
   const MAX_DAYS = Math.max(...pool.map(c => c.daysAgo), 1);
 
-  // Normalize color for title matching (e.g. "white", "black", "silver")
-  const colorToken = primaryColor?.toLowerCase().trim() ?? null;
-
   const scored = pool.map(comp => {
-    // match_score: price proximity to median (1.0 = exact, 0 = far outlier)
-    const priceDiff  = Math.abs(comp.price - median);
-    const matchScore = median > 0 ? Math.max(0, 1 - priceDiff / median) : 0.5;
-
-    // recency_score: 1.0 = today, 0 = oldest in pool
+    const priceDiff    = Math.abs(comp.price - median);
+    const matchScore   = median > 0 ? Math.max(0, 1 - priceDiff / median) : 0.5;
     const recencyScore = comp.daysAgo === 0 ? 1 : Math.max(0, 1 - comp.daysAgo / MAX_DAYS);
+    const colorScore   = colorToken && comp.title.toLowerCase().includes(colorToken) ? 1.0 : 0.0;
 
-    // color_score: 1.0 if comp title contains the item's primary color, else 0
-    const colorScore = colorToken && comp.title.toLowerCase().includes(colorToken) ? 1.0 : 0.0;
-
-    // Weighted formula — color is a tiebreaker on top of price+recency
-    // When color is available: (match × 0.5) + (recency × 0.3) + (color × 0.2)
-    // When color is absent:    (match × 0.6) + (recency × 0.4)  — original weights
+    // Change 4: color weight raised from 20% → 35% when color is available
+    // Corresponding reduction: match 50%→45%, recency 30%→20%
+    // Without color: match 60%, recency 40% (unchanged)
     const finalScore = colorToken
-      ? (matchScore * 0.5) + (recencyScore * 0.3) + (colorScore * 0.2)
-      : (matchScore * 0.6) + (recencyScore * 0.4);
+      ? (matchScore * 0.45) + (recencyScore * 0.20) + (colorScore * 0.35)
+      : (matchScore * 0.60) + (recencyScore * 0.40);
 
     return { comp, finalScore };
   });
 
+  // Change 4: cap lowered from 20 → 15
   return scored
     .sort((a, b) => b.finalScore - a.finalScore)
     .map(s => s.comp)
-    .slice(0, 20);
+    .slice(0, 15);
 }
 
 // ─── Summary ──────────────────────────────────────────────────────────────────
@@ -208,7 +328,6 @@ function buildSummary(soldComps: Comp[], activeComps: Comp[]): CompsResult["summ
   const trimmed     = prices.filter(p => p >= median * 0.3 && p <= median * 2.5).sort((a, b) => a - b);
   const recommended = computeMedian(trimmed);
 
-  // avgDaysToSell — only from comps that have a real sold_date
   const soldWithDates = soldComps.filter(c => c.soldDate);
   const avgDaysToSell = soldWithDates.length > 0
     ? Math.round(soldWithDates.reduce((s, c) => s + c.daysAgo, 0) / soldWithDates.length)
@@ -218,16 +337,16 @@ function buildSummary(soldComps: Comp[], activeComps: Comp[]): CompsResult["summ
 
   const competitionCount = activeComps.length;
   const competitionLevel: "low" | "moderate" | "high" =
-    competitionCount >= 20 ? "high" :
-    competitionCount >= 8  ? "moderate" : "low";
+    competitionCount >= 15 ? "high" :
+    competitionCount >= 6  ? "moderate" : "low";
 
   const velocity: "fast" | "moderate" | "slow" =
     avgDaysToSell <= 7  ? "fast" :
     avgDaysToSell <= 21 ? "moderate" : "slow";
 
   const demand: "High" | "Moderate" | "Low" =
-    soldComps.length >= 10 ? "High" :
-    soldComps.length >= 5  ? "Moderate" : "Low";
+    soldComps.length >= 8 ? "High" :
+    soldComps.length >= 4 ? "Moderate" : "Low";
 
   const confidence: "High" | "Moderate" | "Low" =
     soldComps.length >= 8 ? "High" :
@@ -262,9 +381,9 @@ function parsePrice(raw: string): number {
 
 function normalizeCondition(raw: string): string {
   const l = raw.toLowerCase();
-  if (l.includes("new"))                              return "New";
-  if (l.includes("mint"))                             return "Like New";
-  if (l.includes("good"))                             return "Good";
+  if (l.includes("new"))                               return "New";
+  if (l.includes("mint"))                              return "Like New";
+  if (l.includes("good"))                              return "Good";
   if (l.includes("fair") || l.includes("acceptable")) return "Fair";
   return "Used";
 }

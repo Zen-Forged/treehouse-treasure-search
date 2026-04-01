@@ -163,6 +163,8 @@ function DecidePageInner() {
       searchQuery:     searchQuery || undefined,
       identifiedTitle: identifiedTitle || undefined,
       primaryColor,
+      objectType:      findSession?.identification?.attributes?.objectType ?? undefined,
+      setType:         findSession?.identification?.attributes?.setType    ?? undefined,
       onIdentified: (result) => {
         // Store identification in session so it persists (e.g. for My Picks save)
         updateSession({
