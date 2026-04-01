@@ -81,8 +81,9 @@ async function claudeIdentify(imageDataUrl: string): Promise<IdentifyResult> {
   const client = new Anthropic();
 
   const response = await client.messages.create({
-    model:      "claude-opus-4-5",
-    max_tokens: 900,
+    model:       "claude-opus-4-5",
+    max_tokens:  900,
+    temperature: 0,   // deterministic output — identification should be consistent, not creative
     messages: [{
       role: "user",
       content: [
