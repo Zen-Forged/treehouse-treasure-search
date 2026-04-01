@@ -24,9 +24,12 @@ const KNOWN_COLORS = [
 
 // ── Change 3: lens-bundle keywords that indicate a kit, not body-only ────────
 const LENS_BUNDLE_KEYWORDS = [
-  "with lens", "w/lens", "w/ lens", "+ lens", "kit", "18-55", "15-45",
-  "16-50", "18-135", "zoom lens", "with zoom", "and lens", "lens bundle",
+  "with lens", "w/lens", "w/ lens", "+ lens",
+  "18-55mm", "15-45mm", "16-50mm", "18-135mm",
+  "zoom lens", "with zoom", "and lens", "lens bundle",
   "twin lens", "double lens", "lens included",
+  // Note: "kit" deliberately excluded — too broad, matches model names
+  // and accessories that have nothing to do with lens kits
 ];
 
 // ── Change 3: object types that activate the body/kit filter ─────────────────
@@ -78,22 +81,15 @@ interface QueryExtras {
 function buildRefinedQuery(baseQuery: string, extras: QueryExtras): string {
   const parts: string[] = [baseQuery];
 
-  const color      = extras.primaryColor?.toLowerCase().trim();
-  const objectType = extras.objectType?.toLowerCase().trim();
-  const setType    = extras.setType?.toLowerCase().trim();
+  const color = extras.primaryColor?.toLowerCase().trim();
 
-  // Append color if known and not already in the base query
+  // Append color only — keeps the query broad enough to return results.
+  // Appending object-type modifiers like "body only" makes the query too
+  // narrow for eBay's engine and causes zero-result pages. Color is the
+  // most impactful and safe addition; body/kit disambiguation is handled
+  // post-fetch by the title filters (Change 3).
   if (color && color !== "unknown" && !baseQuery.toLowerCase().includes(color)) {
     parts.push(color);
-  }
-
-  // For camera-type items marked as single/body-only, append "body only"
-  // This directly targets the body vs kit disambiguation at the eBay level
-  const isCamera = objectType && CAMERA_OBJECT_TYPES.some(t => objectType.includes(t));
-  if (isCamera && (setType === "single" || !setType || setType === "unknown")) {
-    if (!baseQuery.toLowerCase().includes("body")) {
-      parts.push("body only");
-    }
   }
 
   const refined = parts.join(" ");
