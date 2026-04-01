@@ -1,7 +1,7 @@
 // app/finds/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
@@ -112,8 +112,15 @@ function FindCard({ find, index }: { find: SavedFind; index: number }) {
 
 export default function FindsPage() {
   const router     = useRouter();
-  const { finds }  = useFinds();
+  const { finds, reloadFinds }  = useFinds();
   const [filter, setFilter] = useState<Filter>("all");
+
+  // Force a fresh read from localStorage on every mount.
+  // Mobile Safari may navigate here before the visibilitychange event fires,
+  // leaving the in-memory state stale from the previous session.
+  useEffect(() => {
+    reloadFinds?.();
+  }, []);
 
   const purchasedCount = finds.filter(f => f.decision === "purchased").length;
   const passedCount    = finds.filter(f => f.decision === "passed").length;
