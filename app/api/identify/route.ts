@@ -2,7 +2,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { normalizeQuery } from "@/utils/normalizeQuery";
-import { buildSearchQuery, queryPriority } from "@/lib/queryBuilder";
+import { buildSearchQuery, queryPriority, extractStyleDescriptor } from "@/lib/queryBuilder";
 import { ItemAttributes } from "@/types";
 
 export interface IdentifyResult {
@@ -266,8 +266,11 @@ Respond ONLY with raw valid JSON — no markdown, no backticks, no explanation:
   const searchQuery  = builtQuery || claudeQuery || normalizeQuery(title);
   const priority     = queryPriority(attributes, v.is_named_product);
 
+  const styleDescriptor = extractStyleDescriptor(attributes.distinctiveFeatures);
+
   console.log(`[identify] named=${v.is_named_product} brand="${brand}" model="${model}" title="${title}" conf=${confidence}`);
-  console.log(`[identify] query="${searchQuery}" priority=${priority} (claude suggested: "${claudeQuery}")`);
+  console.log(`[identify] query="${searchQuery}" priority=${priority} styleDescriptor="${styleDescriptor ?? "none"}" (claude suggested: "${claudeQuery}")`);
+  console.log(`[identify] features=${JSON.stringify(attributes.distinctiveFeatures ?? [])}`);
 
   return { title, description, confidence, searchQuery, attributes };
 }
