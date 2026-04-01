@@ -207,7 +207,7 @@ export function AnalysisSheet({ state, imageDataUrl, itemTitle, isComplete }: An
             Analyzing
           </div>
           <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 600, color: "#d4c9b0", lineHeight: 1.2 }}>
-            {itemTitle ?? "Your find"}
+            {state.identifiedTitle ?? itemTitle ?? "Identifying your find…"}
           </div>
         </div>
       </motion.div>

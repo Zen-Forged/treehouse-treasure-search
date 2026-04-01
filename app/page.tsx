@@ -14,27 +14,29 @@ export default function HomePage() {
   const cameraInputRef  = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = (file: File) => {
+  const handleFile = (file: File, dest: "/decide" | "/discover" = "/decide") => {
     if (!file.type.startsWith("image/")) return;
     const reader = new FileReader();
     reader.onload = e => {
       const imageOriginal = e.target?.result as string;
       startSession(imageOriginal);
-      router.push("/discover");
+      router.push(dest);
     };
     reader.readAsDataURL(file);
   };
 
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onChangeDirect  = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) handleFile(file);
+    if (file) handleFile(file, "/decide");
+    // Reset so the same file can be re-selected
+    e.target.value = "";
   };
 
   return (
     <div className="relative flex flex-col min-h-screen max-w-[430px] mx-auto overflow-hidden bg-[#050f05]">
 
-      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onChange} />
-      <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={onChange} />
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onChangeDirect} />
+      <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={onChangeDirect} />
 
       {/* Environment */}
       <div className="absolute inset-0 pointer-events-none z-0">

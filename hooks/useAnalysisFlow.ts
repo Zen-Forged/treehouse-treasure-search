@@ -1,4 +1,6 @@
 // hooks/useAnalysisFlow.ts
+// Phase 4: identification now runs inside the flow as step 0.
+// Camera → /decide directly. /discover is only used for the story path.
 "use client";
 
 import { useState, useCallback, useRef } from "react";
@@ -26,13 +28,43 @@ const initialState: AnalysisState = {
 interface RunAnalysisOptions {
   imageDataUrl:     string;
   costStr:          string;
-  searchQuery:      string;
+  // These are now optional — if omitted, identification runs as step 0
+  searchQuery?:     string;
   identifiedTitle?: string;
   primaryColor?:    string;
+  onIdentified?:    (result: import("@/app/api/identify/route").IdentifyResult) => void;
   onCompsReady:     (soldComps: Comp[], activeComps: Comp[], summary: any) => void;
   onComplete:       () => void;
   generateMockEvaluation: (cost: number, imageDataUrl: string) => any;
   setUsingMock:     (v: boolean) => void;
+}
+
+// ── Image compression before sending to identify API ────────────────────────
+// Resize to max 1024px on longest edge at 0.85 JPEG quality.
+// Reduces payload from ~5MB to ~80KB — saves 1-2s of network + model time.
+async function compressForApi(dataUrl: string): Promise<string> {
+  return new Promise(resolve => {
+    try {
+      const img = new window.Image();
+      img.onload = () => {
+        const MAX = 1024;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height, 1));
+        const w = Math.round(img.width  * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(dataUrl); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    } catch {
+      resolve(dataUrl);
+    }
+  });
 }
 
 export function useAnalysisFlow() {
@@ -66,9 +98,10 @@ export function useAnalysisFlow() {
   const run = useCallback(async ({
     imageDataUrl,
     costStr,
-    searchQuery,
-    identifiedTitle,
-    primaryColor,
+    searchQuery:      preSearchQuery,
+    identifiedTitle:  preTitle,
+    primaryColor:     preColor,
+    onIdentified,
     onCompsReady,
     onComplete,
     generateMockEvaluation,
@@ -77,33 +110,78 @@ export function useAnalysisFlow() {
     aborted.current = false;
     setState(initialState);
 
-    // Step 1 — identity confirmed
-    push(
-      "uploading",
-      identifiedTitle ? `Identified as ${identifiedTitle}` : "Item identified",
-      undefined,
-      "complete"
-    );
-    await tick(350);
+    let resolvedTitle:  string = preTitle  ?? "";
+    let resolvedQuery:  string = preSearchQuery ?? "";
+    let resolvedColor:  string | undefined = preColor;
 
-    // Step 2 — fetch comp data
+    // ── STEP 0 — Identify (only when not pre-identified) ─────────────────────
+    if (!preTitle || !preSearchQuery) {
+      push("uploading", "Identifying your find…", undefined, "active");
+
+      try {
+        // Compress before sending — 1024px max, 0.85 JPEG
+        const compressed = await compressForApi(imageDataUrl);
+
+        const res = await fetch("/api/identify", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ imageDataUrl: compressed }),
+        });
+
+        if (res.ok) {
+          const result = await res.json() as import("@/app/api/identify/route").IdentifyResult;
+          resolvedTitle = result.title;
+          resolvedQuery = result.searchQuery;
+          resolvedColor = result.attributes?.primaryColor ?? undefined;
+
+          // Surface the title immediately in the AnalysisSheet header
+          updateState({ identifiedTitle: result.title });
+
+          // Notify decide page so it can store identification in session
+          onIdentified?.(result);
+
+          push(
+            "uploading",
+            `Found: ${result.title}`,
+            result.confidence === "low" ? "Low confidence — results may vary" : undefined,
+            "complete"
+          );
+        } else {
+          throw new Error("identify returned non-ok");
+        }
+      } catch {
+        // Graceful fallback — continue with generic query rather than blocking
+        push("uploading", "Searching for comparable items", undefined, "complete");
+        resolvedQuery = resolvedQuery || "thrift store vintage item";
+      }
+    } else {
+      // Pre-identified (coming from /discover story path or review mode)
+      push(
+        "uploading",
+        resolvedTitle ? `Found: ${resolvedTitle}` : "Item identified",
+        undefined,
+        "complete"
+      );
+    }
+
+    await tick(200);
+
+    // ── STEP 1 — Fetch comps ──────────────────────────────────────────────────
     push("searching_comps", "Searching recent sales…", undefined, "active");
 
     let soldComps:    Comp[] = [];
     let activeComps:  Comp[] = [];
     let fetchedSummary: any  = null;
-    let dataSource: "cache" | "live" | "mock" = "mock";
 
     try {
-      const colorParam = primaryColor ? `&color=${encodeURIComponent(primaryColor)}` : "";
-      const res = await fetch(`/api/sold-comps?q=${encodeURIComponent(searchQuery)}${colorParam}`);
+      const colorParam = resolvedColor ? `&color=${encodeURIComponent(resolvedColor)}` : "";
+      const res = await fetch(`/api/sold-comps?q=${encodeURIComponent(resolvedQuery)}${colorParam}`);
       if (res.ok) {
         const data = await res.json();
         if ((data.soldComps?.length ?? 0) > 0 || (data.activeComps?.length ?? 0) > 0) {
           soldComps      = data.soldComps   ?? [];
           activeComps    = data.activeComps ?? [];
           fetchedSummary = data.summary     ?? null;
-          dataSource     = data.source      ?? "live";
         }
       }
     } catch {}
@@ -114,7 +192,6 @@ export function useAnalysisFlow() {
       const mock = generateMockEvaluation(parseFloat(costStr) || 0, imageDataUrl);
       soldComps = (mock.mockComps ?? []).map((c: any) => ({ ...c, listingType: "sold" as const }));
       setUsingMock(true);
-      dataSource = "mock";
       push("searching_comps", "Using estimated market data", undefined, "complete");
     } else {
       const pricingComps = hasSoldData ? soldComps : activeComps;
@@ -136,11 +213,11 @@ export function useAnalysisFlow() {
       );
     }
 
-    await tick(300);
+    await tick(250);
 
-    // Step 3 — market analysis
+    // ── STEP 2 — Market analysis ──────────────────────────────────────────────
     push("analyzing_market", "Estimating resell value…", undefined, "active");
-    await tick(800);
+    await tick(600);
 
     const pricingComps = soldComps.length > 0 ? soldComps : activeComps;
     const prices       = pricingComps.map(c => c.price).sort((a, b) => a - b);
@@ -162,15 +239,15 @@ export function useAnalysisFlow() {
     );
 
     onCompsReady(soldComps, activeComps, fetchedSummary);
-    await tick(400);
+    await tick(300);
 
-    // Step 4 — finalizing
+    // ── STEP 3 — Finalise ─────────────────────────────────────────────────────
     push("finalizing", "Running the numbers…", undefined, "active");
-    await tick(600);
+    await tick(500);
     push("finalizing", "Your result is ready", undefined, "complete");
 
     updateState({ isComplete: true });
-    await tick(300);
+    await tick(250);
     onComplete();
   }, [push, updateState]);
 
