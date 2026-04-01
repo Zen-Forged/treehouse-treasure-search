@@ -2,6 +2,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { normalizeQuery } from "@/utils/normalizeQuery";
+import { buildSearchQuery, queryPriority } from "@/lib/queryBuilder";
 import { ItemAttributes } from "@/types";
 
 export interface IdentifyResult {
@@ -219,8 +220,6 @@ Respond ONLY with raw valid JSON — no markdown, no backticks, no explanation:
     overallConf >= 0.8  ? "high" :
     overallConf >= 0.55 ? "medium" : "low";
 
-  const searchQuery = normalizeQuery(v.search_query || title);
-
   const attributes: ItemAttributes = {
     brand,
     material,
@@ -240,7 +239,15 @@ Respond ONLY with raw valid JSON — no markdown, no backticks, no explanation:
     visualConfidence:    Math.round(overallConf * 100) / 100,
   };
 
-  console.log(`[identify] named=${v.is_named_product} brand="${brand}" model="${model}" title="${title}" conf=${confidence} query="${searchQuery}"`);
+  // Build search query deterministically from structured attributes.
+  // Falls back to Claude's suggested query only if queryBuilder produces nothing useful.
+  const builtQuery   = buildSearchQuery(attributes, v.is_named_product);
+  const claudeQuery  = normalizeQuery(v.search_query || "");
+  const searchQuery  = builtQuery || claudeQuery || normalizeQuery(title);
+  const priority     = queryPriority(attributes, v.is_named_product);
+
+  console.log(`[identify] named=${v.is_named_product} brand="${brand}" model="${model}" title="${title}" conf=${confidence}`);
+  console.log(`[identify] query="${searchQuery}" priority=${priority} (claude suggested: "${claudeQuery}")`);
 
   return { title, description, confidence, searchQuery, attributes };
 }
