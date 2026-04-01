@@ -43,27 +43,81 @@ interface RunAnalysisOptions {
 
 // ── Image compression before sending to identify API ────────────────────────
 // Resize to max 1024px on longest edge at 0.85 JPEG quality.
-// Reduces payload from ~5MB to ~80KB — saves 1-2s of network + model time.
+// Uses createImageBitmap (supported in Safari 15+) which handles EXIF orientation
+// and avoids the black-canvas bug caused by drawImage on an undecoded Image element.
+// Falls back to the HTMLImageElement path if createImageBitmap is unavailable.
+// On any error, returns the original dataUrl unmodified.
 async function compressForApi(dataUrl: string): Promise<string> {
+  const MAX = 1024;
+
+  // ── Path A: createImageBitmap (Safari 15+, Chrome, Firefox) ─────────────
+  // This approach fully decodes the image (including EXIF rotation) before
+  // drawing, which prevents the black-canvas issue on mobile camera photos.
+  if (typeof createImageBitmap !== "undefined") {
+    try {
+      const res  = await fetch(dataUrl);
+      const blob = await res.blob();
+      const bmp  = await createImageBitmap(blob);
+
+      const scale  = Math.min(1, MAX / Math.max(bmp.width, bmp.height, 1));
+      const w      = Math.round(bmp.width  * scale);
+      const h      = Math.round(bmp.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width  = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { bmp.close(); return dataUrl; }
+      ctx.drawImage(bmp, 0, 0, w, h);
+      bmp.close();
+
+      const compressed = canvas.toDataURL("image/jpeg", 0.85);
+      // Sanity check: a valid JPEG is at minimum a few KB.
+      // If the result is suspiciously small, the canvas was blank — bail out.
+      if (compressed.length < 5000) {
+        console.warn("[compressForApi] compressed result suspiciously small — using original");
+        return dataUrl;
+      }
+      return compressed;
+    } catch (err) {
+      console.warn("[compressForApi] createImageBitmap path failed, trying HTMLImageElement:", err);
+      // fall through to Path B
+    }
+  }
+
+  // ── Path B: HTMLImageElement (older browsers) ────────────────────────────
   return new Promise(resolve => {
     try {
       const img = new window.Image();
       img.onload = () => {
-        const MAX = 1024;
-        const scale = Math.min(1, MAX / Math.max(img.width, img.height, 1));
-        const w = Math.round(img.width  * scale);
-        const h = Math.round(img.height * scale);
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) { resolve(dataUrl); return; }
-        ctx.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/jpeg", 0.85));
+        try {
+          const scale  = Math.min(1, MAX / Math.max(img.width, img.height, 1));
+          const w      = Math.round(img.width  * scale);
+          const h      = Math.round(img.height * scale);
+          const canvas = document.createElement("canvas");
+          canvas.width  = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) { resolve(dataUrl); return; }
+          ctx.drawImage(img, 0, 0, w, h);
+          const compressed = canvas.toDataURL("image/jpeg", 0.85);
+          if (compressed.length < 5000) {
+            console.warn("[compressForApi] HTMLImageElement result suspiciously small — using original");
+            resolve(dataUrl);
+            return;
+          }
+          resolve(compressed);
+        } catch (drawErr) {
+          console.warn("[compressForApi] draw failed:", drawErr);
+          resolve(dataUrl);
+        }
       };
-      img.onerror = () => resolve(dataUrl);
+      img.onerror = (e) => {
+        console.warn("[compressForApi] image load failed:", e);
+        resolve(dataUrl);
+      };
       img.src = dataUrl;
-    } catch {
+    } catch (outerErr) {
+      console.warn("[compressForApi] outer error:", outerErr);
       resolve(dataUrl);
     }
   });
@@ -126,6 +180,7 @@ export function useAnalysisFlow() {
 
       try {
         // Compress before sending — 1024px max, 0.85 JPEG
+        // Uses createImageBitmap to avoid black-canvas on mobile camera photos
         const compressed = await compressForApi(imageDataUrl);
 
         const res = await fetch("/api/identify", {
