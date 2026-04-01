@@ -85,7 +85,9 @@ function DecidePageInner() {
     ? { imageDataUrl: findSession.imageOriginal }
     : null;
 
-  const searchQuery     = findSession?.refinedQuery ?? findSession?.identification?.searchQuery ?? "thrift store item";
+  const searchQuery     = findSession?.refinedQuery ?? findSession?.identification?.searchQuery ?? "";
+  // identifiedTitle reads from session reactively — it may arrive after mount
+  // via onIdentified when taking the direct camera → /decide path
   const identifiedTitle = findSession?.identification?.title;
   const primaryColor    = findSession?.identification?.attributes?.primaryColor ?? undefined;
 
@@ -127,8 +129,17 @@ function DecidePageInner() {
   const soldCompsRef     = useRef<Comp[]>([]);
   const activeCompsRef   = useRef<Comp[]>([]);
   const summaryRef       = useRef<SoldSummary | null>(null);
+  // Keeps identification current for handleDecision regardless of when it arrives
+  const identificationRef = useRef(findSession?.identification);
 
   const { state: analysisState, run: runAnalysis, reset } = useAnalysisFlow();
+
+  // Keep identificationRef in sync whenever session updates (async identify path)
+  useEffect(() => {
+    if (findSession?.identification) {
+      identificationRef.current = findSession.identification;
+    }
+  }, [findSession?.identification]);
 
   useEffect(() => {
     if (!sessionData) { router.replace("/"); return; }
@@ -147,9 +158,23 @@ function DecidePageInner() {
     runAnalysis({
       imageDataUrl: sessionData.imageDataUrl,
       costStr:      "0",
-      searchQuery,
-      identifiedTitle,
+      // Pass pre-identified values if coming from /discover story path.
+      // If nil, useAnalysisFlow runs identification itself as step 0.
+      searchQuery:     searchQuery || undefined,
+      identifiedTitle: identifiedTitle || undefined,
       primaryColor,
+      onIdentified: (result) => {
+        // Store identification in session so it persists (e.g. for My Picks save)
+        updateSession({
+          identification: {
+            title:       result.title,
+            description: result.description,
+            confidence:  result.confidence,
+            searchQuery: result.searchQuery,
+            attributes:  result.attributes,
+          },
+        });
+      },
       onCompsReady: (fetchedSold, fetchedActive, fetchedSummary) => {
         setSoldComps(fetchedSold);
         setActiveComps(fetchedActive);
@@ -193,13 +218,14 @@ function DecidePageInner() {
       createdAt:     findSession?.createdAt     ?? new Date().toISOString(),
       imageOriginal: findSession?.imageOriginal ?? sessionData?.imageDataUrl ?? "",
       imageEnhanced: enhancedImageRef.current   ?? findSession?.imageEnhanced,
-      title:         findSession?.identification?.title,
-      description:   findSession?.identification?.description,
-      brand:         findSession?.identification?.attributes?.brand    ?? null,
-      material:      findSession?.identification?.attributes?.material ?? null,
-      era:           findSession?.identification?.attributes?.era      ?? null,
-      origin:        findSession?.identification?.attributes?.origin   ?? null,
-      category:      findSession?.identification?.attributes?.category ?? null,
+      // Read from ref — may have arrived asynchronously on direct camera path
+      title:         identificationRef.current?.title,
+      description:   identificationRef.current?.description,
+      brand:         identificationRef.current?.attributes?.brand    ?? null,
+      material:      identificationRef.current?.attributes?.material ?? null,
+      era:           identificationRef.current?.attributes?.era      ?? null,
+      origin:        identificationRef.current?.attributes?.origin   ?? null,
+      category:      identificationRef.current?.attributes?.category ?? null,
       decision,
       medianSoldPrice:  pricingData.medianSoldPrice,
       priceRangeLow:    currentSummary?.priceRangeLow,

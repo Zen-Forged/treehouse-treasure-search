@@ -23,6 +23,7 @@ export interface AnalysisState {
   currentStep: AnalysisStepId;
   isComplete: boolean;
   identifiedItem?: string;
+  identifiedTitle?: string;  // populated as soon as identify API resolves
   confidence?: "strong" | "likely" | "low";
   searchQuery?: string;
   compCount?: number;
