@@ -46,14 +46,14 @@ interface VisualClassification {
 }
 
 const MOCK_ITEMS: Omit<IdentifyResult, "attributes">[] = [
-  { title: "Brass Owl Bookend",         description: "A decorative brass piece — possibly a bookend or paperweight. The patina suggests age.",           confidence: "medium", searchQuery: "brass owl bookend" },
-  { title: "Mid-Century Ceramic Vase",  description: "A ceramic vessel with matte glaze. The form suggests mid-century American or Scandinavian origin.", confidence: "medium", searchQuery: "mid century ceramic vase" },
-  { title: "Cast Iron Bank",            description: "A painted cast iron figurine, likely a still bank. Popular in the early 20th century.",             confidence: "high",   searchQuery: "cast iron bank figurine" },
-  { title: "Amber Glass Decanter",      description: "A hand-blown amber glass decanter with a ground stopper.",                                          confidence: "medium", searchQuery: "amber glass decanter single" },
-  { title: "Enamel Trinket Box",        description: "A small enameled box with hand-painted detail. Could be French or English.",                        confidence: "low",    searchQuery: "enamel trinket box" },
-  { title: "Wooden Carved Figure",      description: "A hand-carved wooden figure with folk art characteristics.",                                        confidence: "medium", searchQuery: "carved wooden folk art figurine" },
-  { title: "Silver-Plate Serving Tray", description: "A silver-plated tray with decorative edging.",                                                     confidence: "medium", searchQuery: "silver plate serving tray" },
-  { title: "Porcelain Figurine",        description: "A small porcelain piece with hand-applied details.",                                                confidence: "high",   searchQuery: "porcelain figurine vintage single" },
+  { title: "Brass Owl Bookend",         description: "A decorative brass piece — possibly a bookend or paperweight. The patina suggests age.",           confidence: "medium", searchQuery: "brass owl bookend",           isNamedProduct: false },
+  { title: "Mid-Century Ceramic Vase",  description: "A ceramic vessel with matte glaze. The form suggests mid-century American or Scandinavian origin.", confidence: "medium", searchQuery: "mid century ceramic vase",    isNamedProduct: false },
+  { title: "Cast Iron Bank",            description: "A painted cast iron figurine, likely a still bank. Popular in the early 20th century.",             confidence: "high",   searchQuery: "cast iron bank figurine",    isNamedProduct: false },
+  { title: "Amber Glass Decanter",      description: "A hand-blown amber glass decanter with a ground stopper.",                                          confidence: "medium", searchQuery: "amber glass decanter single", isNamedProduct: false },
+  { title: "Enamel Trinket Box",        description: "A small enameled box with hand-painted detail. Could be French or English.",                        confidence: "low",    searchQuery: "enamel trinket box",         isNamedProduct: false },
+  { title: "Wooden Carved Figure",      description: "A hand-carved wooden figure with folk art characteristics.",                                        confidence: "medium", searchQuery: "carved wooden folk art figurine", isNamedProduct: false },
+  { title: "Silver-Plate Serving Tray", description: "A silver-plated tray with decorative edging.",                                                     confidence: "medium", searchQuery: "silver plate serving tray",  isNamedProduct: false },
+  { title: "Porcelain Figurine",        description: "A small porcelain piece with hand-applied details.",                                                confidence: "high",   searchQuery: "porcelain figurine vintage single", isNamedProduct: false },
 ];
 
 const NULL_ATTRIBUTES: ItemAttributes = {
