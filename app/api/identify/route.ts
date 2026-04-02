@@ -6,11 +6,12 @@ import { buildSearchQuery, queryPriority, extractStyleDescriptor } from "@/lib/q
 import { ItemAttributes } from "@/types";
 
 export interface IdentifyResult {
-  title:       string;
-  description: string;
-  confidence:  "high" | "medium" | "low";
-  searchQuery: string;
-  attributes:  ItemAttributes;
+  title:          string;
+  description:    string;
+  confidence:     "high" | "medium" | "low";
+  searchQuery:    string;
+  attributes:     ItemAttributes;
+  isNamedProduct: boolean;
 }
 
 // ─── Visual classification output from Claude ───────────────────────────────
@@ -68,8 +69,9 @@ function mockIdentify(imageDataUrl: string): IdentifyResult {
   const item = MOCK_ITEMS[seed];
   return {
     ...item,
-    searchQuery: normalizeQuery(item.searchQuery),
-    attributes:  NULL_ATTRIBUTES,
+    searchQuery:    normalizeQuery(item.searchQuery),
+    attributes:     NULL_ATTRIBUTES,
+    isNamedProduct: false,
   };
 }
 
@@ -275,7 +277,7 @@ Respond ONLY with raw valid JSON — no markdown, no backticks, no explanation:
   console.log(`[identify] query="${searchQuery}" priority=${priority} subject="${attributes.subject ?? "none"}" styleDescriptor="${styleDescriptor ?? "none"}" (claude suggested: "${claudeQuery}")`);
   console.log(`[identify] features=${JSON.stringify(attributes.distinctiveFeatures ?? [])}`);
 
-  return { title, description, confidence, searchQuery, attributes };
+  return { title, description, confidence, searchQuery, attributes, isNamedProduct: v.is_named_product };
 }
 
 export async function POST(req: NextRequest) {

@@ -5,7 +5,9 @@
 
 import { useState, useCallback, useRef } from "react";
 import { AnalysisState, AnalysisMessage, AnalysisStepId } from "@/types/analysis";
-import { Comp } from "@/types";
+import { Comp, ItemAttributes } from "@/types";
+import { rankComps } from "@/lib/scoring/scoreComp";
+import { NormalizedMarketplaceItem } from "@/lib/search/retrievalOrchestrator";
 
 let msgCounter = 0;
 const uid = () => `msg_${++msgCounter}`;
@@ -174,6 +176,8 @@ export function useAnalysisFlow() {
     let resolvedObjectType: string | undefined = preObjectType;
     let resolvedSetType:    string | undefined = preSetType;
     let resolvedMaterial:   string | undefined = undefined;
+    let resolvedAttributes: ItemAttributes | null = null;
+    let resolvedIsNamed:    boolean = false;
 
     // ── STEP 0 — Identify (only when not pre-identified) ─────────────────────
     if (!preTitle || !preSearchQuery) {
@@ -198,6 +202,8 @@ export function useAnalysisFlow() {
           resolvedObjectType = result.attributes?.objectType   ?? undefined;
           resolvedSetType    = result.attributes?.setType      ?? undefined;
           resolvedMaterial   = result.attributes?.material     ?? undefined;
+          resolvedAttributes = result.attributes ?? null;
+          resolvedIsNamed    = result.isNamedProduct ?? false;
 
           // Surface the title immediately in the AnalysisSheet header
           updateState({ identifiedTitle: result.title });
@@ -263,10 +269,57 @@ export function useAnalysisFlow() {
       setUsingMock(true);
       push("searching_comps", "Using estimated market data", undefined, "complete");
     } else {
-      const pricingComps = hasSoldData ? soldComps : activeComps;
+      // ── Step 1 scoring: filter comps through rankComps before pricing ────
+      // Converts Comp[] → NormalizedMarketplaceItem[] (same shape, different type)
+      // then scores each one and keeps only usable comps (score ≥ 45).
+      // Lot penalty (-60), material mismatch (-25), repro (-40) kill bad comps
+      // before they contaminate the median price.
+      if (resolvedAttributes) {
+        const toNormalized = (c: Comp): NormalizedMarketplaceItem => ({
+          id:          c.url ?? `${c.title}:${c.price}`,
+          title:       c.title,
+          imageUrl:    c.imageUrl,
+          price:       c.price,
+          totalPrice:  c.price,
+          soldDate:    c.soldDate ?? null,
+          condition:   c.condition ?? null,
+          listingType: c.listingType,
+          queryOrigin: "primary-waterfall",
+          url:         c.url,
+          daysAgo:     c.daysAgo,
+        });
+
+        const fromNormalized = (n: NormalizedMarketplaceItem, original: Comp): Comp => ({
+          ...original,
+          title:    n.title,
+          price:    n.price ?? original.price,
+          imageUrl: n.imageUrl,
+          url:      n.url,
+        });
+
+        if (soldComps.length > 0) {
+          const normalized  = soldComps.map(toNormalized);
+          const { usable, excluded } = rankComps(normalized, resolvedAttributes, resolvedIsNamed);
+          const usableIds  = new Set(usable.map(s => s.item.id));
+          // Reorder to match scorer ranking, preserving original Comp shape
+          const orderedMap = new Map(soldComps.map(c => [c.url ?? `${c.title}:${c.price}`, c]));
+          soldComps = usable.map(s => orderedMap.get(s.item.id) ?? fromNormalized(s.item, soldComps[0]));
+          console.log(`[scoring] sold: ${normalized.length} raw → ${soldComps.length} usable, ${excluded.length} excluded`);
+        }
+
+        if (activeComps.length > 0) {
+          const normalized = activeComps.map(toNormalized);
+          const { usable } = rankComps(normalized, resolvedAttributes, resolvedIsNamed);
+          const keepIds    = new Set(usable.map(s => s.item.id));
+          activeComps = activeComps.filter(c => keepIds.has(c.url ?? `${c.title}:${c.price}`));
+          console.log(`[scoring] active: ${normalized.length} raw → ${activeComps.length} usable`);
+        }
+      }
+
+      const pricingComps = (soldComps.length > 0 ? soldComps : activeComps);
       const prices = pricingComps.map(c => c.price).sort((a, b) => a - b);
-      const low    = prices[0];
-      const high   = prices[prices.length - 1];
+      const low    = prices[0]  ?? 0;
+      const high   = prices[prices.length - 1] ?? 0;
 
       updateState({ compCount: soldComps.length, priceRange: { low, high } });
 
@@ -276,7 +329,7 @@ export function useAnalysisFlow() {
           ? `Found ${soldComps.length} recent sales`
           : `Checking active listings`,
         hasSoldData
-          ? `Price range $${low.toFixed(0)} — $${high.toFixed(0)}`
+          ? `Price range ${low.toFixed(0)} — ${high.toFixed(0)}`
           : `${activeComps.length} active listings found`,
         "complete"
       );
