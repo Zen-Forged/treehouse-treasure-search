@@ -145,6 +145,9 @@ function DecidePageInner() {
   const [soldSummary, setSoldSummary] = useState<SoldSummary | null>(reviewSummary);
   const [usingMock, setUsingMock]     = useState(false);
   const [deciding, setDeciding]       = useState(false);
+  const [reporting, setReporting]     = useState(false);
+  const [reportSent, setReportSent]   = useState(false);
+  const [reportSheet, setReportSheet] = useState(false);
   const [askingPrice, setAskingPrice] = useState<number>(0);
   const [compTab, setCompTab]         = useState<CompTab>("sold");
 
@@ -263,6 +266,32 @@ function DecidePageInner() {
     await new Promise(r => setTimeout(r, 150));
     router.push("/finds");
   }, [deciding, findSession, saveFind, router, sessionData]);
+
+  const handleReport = useCallback(async (issue: string) => {
+    if (reporting) return;
+    setReporting(true);
+    try {
+      await fetch("/api/report-comps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemTitle:           identificationRef.current?.title ?? "Unknown",
+          searchQuery:         findSession?.identification?.searchQuery ?? "",
+          objectType:          identificationRef.current?.attributes?.objectType,
+          material:            identificationRef.current?.attributes?.material,
+          primaryColor:        identificationRef.current?.attributes?.primaryColor,
+          distinctiveFeatures: identificationRef.current?.attributes?.distinctiveFeatures,
+          soldCompsCount:      soldCompsRef.current.length,
+          activeCompsCount:    activeCompsRef.current.length,
+          issue,
+        }),
+      });
+    } finally {
+      setReporting(false);
+      setReportSent(true);
+      setReportSheet(false);
+    }
+  }, [reporting, findSession]);
 
   if (!sessionData) {
     return (
@@ -746,6 +775,67 @@ function DecidePageInner() {
               {compTab === "active" && activeComps.length === 0 && (
                 <div style={{ fontSize: 12, color: "#3a2e18", textAlign: "center", padding: "20px 0" }}>No active listings found</div>
               )}
+            </motion.div>
+          )}
+
+          {/* ── Report bad comps ─────────────────────────────────────────── */}
+          {!isReview && (
+            <div style={{ textAlign: "center", paddingTop: 4, paddingBottom: 8 }}>
+              {reportSent ? (
+                <span style={{ fontSize: 11, color: "#6a5528" }}>Thanks — logged for review ✓</span>
+              ) : (
+                <button
+                  onClick={() => setReportSheet(true)}
+                  style={{ fontSize: 11, color: "rgba(106,85,40,0.4)", background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}
+                >
+                  Comps look off?
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ── Report sheet — slides up ──────────────────────────────────── */}
+          {reportSheet && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+              style={{
+                position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100,
+                maxWidth: 448, margin: "0 auto",
+                background: "rgba(8,20,8,0.98)", backdropFilter: "blur(28px)",
+                borderTop: "1px solid rgba(200,180,126,0.12)",
+                borderRadius: "18px 18px 0 0",
+                padding: "20px 20px",
+                paddingBottom: "max(24px, env(safe-area-inset-bottom, 24px))",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <span style={{ fontSize: 13, color: "#d4c9b0", fontFamily: "Georgia, serif", fontWeight: 600 }}>What was off?</span>
+                <button onClick={() => setReportSheet(false)} style={{ background: "none", border: "none", color: "#4a3a1e", fontSize: 20, cursor: "pointer", lineHeight: 1, padding: "0 4px" }}>×</button>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {([
+                  "No comps returned",
+                  "Wrong items",
+                  "Price range way off",
+                  "Lot filter too aggressive",
+                  "Color filter too aggressive",
+                ] as const).map(issue => (
+                  <button
+                    key={issue}
+                    onClick={() => handleReport(issue)}
+                    disabled={reporting}
+                    style={{
+                      width: "100%", padding: "12px 14px", borderRadius: 10,
+                      background: "rgba(13,31,13,0.7)",
+                      border: "1px solid rgba(109,188,109,0.12)",
+                      color: "#c8b47e", fontSize: 13, textAlign: "left",
+                      cursor: "pointer", letterSpacing: "0.1px",
+                    }}
+                  >
+                    {issue}
+                  </button>
+                ))}
+              </div>
             </motion.div>
           )}
 
