@@ -173,6 +173,7 @@ export function useAnalysisFlow() {
     let resolvedColor:      string | undefined = preColor;
     let resolvedObjectType: string | undefined = preObjectType;
     let resolvedSetType:    string | undefined = preSetType;
+    let resolvedMaterial:   string | undefined = undefined;
 
     // ── STEP 0 — Identify (only when not pre-identified) ─────────────────────
     if (!preTitle || !preSearchQuery) {
@@ -196,6 +197,7 @@ export function useAnalysisFlow() {
           resolvedColor      = result.attributes?.primaryColor ?? undefined;
           resolvedObjectType = result.attributes?.objectType   ?? undefined;
           resolvedSetType    = result.attributes?.setType      ?? undefined;
+          resolvedMaterial   = result.attributes?.material     ?? undefined;
 
           // Surface the title immediately in the AnalysisSheet header
           updateState({ identifiedTitle: result.title });
@@ -241,6 +243,7 @@ export function useAnalysisFlow() {
       if (resolvedColor)      params.set("color",      resolvedColor);
       if (resolvedObjectType) params.set("objectType", resolvedObjectType);
       if (resolvedSetType)    params.set("setType",    resolvedSetType);
+      if (resolvedMaterial)   params.set("material",   resolvedMaterial);
       const res = await fetch(`/api/sold-comps?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();

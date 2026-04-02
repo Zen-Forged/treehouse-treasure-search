@@ -12,13 +12,14 @@ async function fetchComps(
   primaryColor?: string,
   objectType?:   string,
   setType?:      string,
+  material?:     string,
 ) {
   if (COMP_SOURCE === "apify") {
     console.log("[sold-comps] using Apify");
     return getApifySoldComps(query);
   }
   console.log("[sold-comps] using SerpAPI");
-  return getSerpApiSoldComps(query, primaryColor, objectType, setType);
+  return getSerpApiSoldComps(query, primaryColor, objectType, setType, material);
 }
 
 export async function GET(req: NextRequest) {
@@ -26,6 +27,7 @@ export async function GET(req: NextRequest) {
   const primaryColor = req.nextUrl.searchParams.get("color")      ?? undefined;
   const objectType   = req.nextUrl.searchParams.get("objectType") ?? undefined;
   const setType      = req.nextUrl.searchParams.get("setType")     ?? undefined;
+  const material     = req.nextUrl.searchParams.get("material")   ?? undefined;
 
   if (!rawQuery?.trim()) {
     return NextResponse.json({ error: "Missing query parameter ?q=" }, { status: 400 });
@@ -51,7 +53,7 @@ export async function GET(req: NextRequest) {
   console.log(`[sold-comps] cache miss — fetching live "${normalized}" via ${COMP_SOURCE}`);
 
   try {
-    const result = await fetchComps(normalized, primaryColor, objectType, setType);
+    const result = await fetchComps(normalized, primaryColor, objectType, setType, material);
 
     cacheSet(rawQuery, result as unknown as Record<string, unknown>);
 
