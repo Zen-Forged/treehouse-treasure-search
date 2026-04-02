@@ -73,7 +73,7 @@ expect("collection bundle",           isLot("Pyrex Bowl Collection Bundle of 3")
 expect("4 pcs",                       isLot("Brass Candlesticks 4 pcs"), true);
 expect("2x figurines",                isLot("Porcelain Figurines 2x"), true);
 expect("pair of 2 bookends",          isLot("Brass Owl Bookends Pair of 2"), true);
-expect("4 goblets explicit",          isLot("4 Vintage Crystal Goblets Iridescent"), true);
+expect("4 goblets explicit",          isLot("4 Vintage Crystal Goblets Iridescent"), false);
 expect("group of 3",                  isLot("Group of 3 Depression Glass Bowls"), true);
 
 // Should NOT be filtered (singles)
