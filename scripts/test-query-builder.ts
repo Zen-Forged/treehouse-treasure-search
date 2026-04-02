@@ -26,7 +26,7 @@ function expect(desc: string, actual: string, expected: string) {
   }
 }
 
-function expectDescriptor(desc: string, features: string[], expected: string | null) {
+function expectDescriptor(desc: string, features: string[] | undefined, expected: string | null) {
   const actual = extractStyleDescriptor(features);
   if (actual === expected) {
     console.log(`  ✅ ${desc}`);
