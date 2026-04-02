@@ -32,6 +32,49 @@ const MATERIAL_COLORS = new Set([
   "sterling", "chrome", "iron", "steel", "amber",
 ]);
 
+// ── Material conflict filter ──────────────────────────────────────────────────
+// When we know the item's material (e.g. "brass"), drop listings that clearly
+// mention a DIFFERENT material AND don't mention our target material.
+// This catches "Tin Benjamin Franklin Bank" when we want brass.
+//
+// Only applies to materials that are both common on eBay AND meaningfully
+// different — we don't want to over-filter ambiguous listings.
+// Approach: if the title contains a conflicting material word AND does NOT
+// contain the target material word, drop it.
+//
+// We are deliberately conservative — only hard-conflict pairs are listed.
+// E.g. "tin" and "brass" are clearly different; "metal" is too vague to filter.
+const KNOWN_MATERIALS = [
+  "brass", "bronze", "copper", "cast iron", "wrought iron",
+  "tin", "zinc", "pewter", "sterling", "silver plate",
+  "ceramic", "porcelain", "stoneware", "terracotta", "earthenware",
+  "glass", "crystal",
+  "wood", "wooden", "mahogany", "walnut", "oak",
+  "plastic", "resin", "bakelite",
+  "leather", "fabric", "cloth",
+];
+
+function hasMaterialConflict(title: string, targetMaterial: string): boolean {
+  const lower  = title.toLowerCase();
+  const target = targetMaterial.toLowerCase().trim();
+
+  // If title contains our target material → keep it
+  if (lower.includes(target)) return false;
+
+  // Special case: "cast iron" and "wrought iron" both contain "iron" — handle together
+  const targetIsIron = target === "cast iron" || target === "wrought iron" || target === "iron";
+  if (targetIsIron && (lower.includes("cast iron") || lower.includes("wrought iron") || lower.includes(" iron"))) return false;
+
+  // If no known conflicting material appears in the title → ambiguous, keep it
+  const hasConflict = KNOWN_MATERIALS.some(mat => {
+    if (mat === target) return false;           // skip our own material
+    if (targetIsIron && mat.includes("iron")) return false; // don't conflict iron vs iron
+    return lower.includes(mat);
+  });
+
+  return hasConflict;
+}
+
 // ── Change 3: lens-bundle keywords that indicate a kit, not body-only ────────
 const LENS_BUNDLE_KEYWORDS = [
   "with lens", "w/lens", "w/ lens", "+ lens",
@@ -145,6 +188,7 @@ export async function getSerpApiSoldComps(
   primaryColor?: string,
   objectType?:   string,
   setType?:      string,
+  material?:     string,
 ): Promise<CompsResult> {
   const key = process.env.SERPAPI_KEY ?? "";
   if (!key) throw new Error("SERPAPI_KEY is not set");
@@ -158,8 +202,8 @@ export async function getSerpApiSoldComps(
     fetchEbayListings(refinedQuery, key, "active"),
   ]);
 
-  const soldComps   = parseListings(soldResult.listings, "sold",   primaryColor, objectType);
-  const activeComps = parseListings(activeResult.listings, "active", primaryColor, objectType);
+  const soldComps   = parseListings(soldResult.listings, "sold",   primaryColor, objectType, material);
+  const activeComps = parseListings(activeResult.listings, "active", primaryColor, objectType, material);
 
   console.log(`[serpapi] sold: ${soldComps.length}  active: ${activeComps.length}`);
 
@@ -217,6 +261,7 @@ function parseListings(
   listingType: "sold" | "active",
   primaryColor?: string,
   objectType?:   string,
+  material?:     string,
 ): Comp[] {
   const colorToken = primaryColor?.toLowerCase().trim() ?? null;
 
@@ -251,6 +296,16 @@ function parseListings(
       if (hasLensBundleConflict(title, objectType)) {
         console.log(`[serpapi] filtered lens bundle (${listingType}): "${title}"`);
         return false;
+      }
+
+      // Material conflict filter — only active when material is a hard physical material
+      // (not vague terms like "metal" or "vintage")
+      const materialToken = material?.toLowerCase().trim();
+      if (materialToken && KNOWN_MATERIALS.includes(materialToken)) {
+        if (hasMaterialConflict(title, materialToken)) {
+          console.log(`[serpapi] filtered material mismatch (${listingType}): "${title}" (want: ${materialToken})`);
+          return false;
+        }
       }
 
       return true;
