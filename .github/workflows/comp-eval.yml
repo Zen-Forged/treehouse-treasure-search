@@ -1,0 +1,157 @@
+name: Comp Pipeline Eval
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/queryBuilder.ts'
+      - 'lib/serpApiClient.ts'
+      - 'utils/normalizeQuery.ts'
+      - 'app/api/identify/route.ts'
+      - 'app/api/sold-comps/route.ts'
+      - 'scripts/test-filters.ts'
+      - 'scripts/test-query-builder.ts'
+      - 'scripts/test-comps.ts'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'lib/queryBuilder.ts'
+      - 'lib/serpApiClient.ts'
+      - 'utils/normalizeQuery.ts'
+      - 'app/api/identify/route.ts'
+      - 'app/api/sold-comps/route.ts'
+  workflow_dispatch:
+
+jobs:
+  # ── Job 1: Filter unit tests — free, ~5s ────────────────────────────────────
+  filter-unit-tests:
+    name: Filter unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run filter unit tests
+        run: npx tsx scripts/test-filters.ts
+
+  # ── Job 2: Query builder unit tests — free, ~5s ─────────────────────────────
+  query-builder-tests:
+    name: Query builder tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run query builder tests
+        run: npx tsx scripts/test-query-builder.ts
+
+  # ── Job 3: TypeScript typecheck — catches Set iteration / type errors ────────
+  # This is what would have caught the downlevelIteration error before deploy.
+  typecheck:
+    name: TypeScript typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+  # ── Job 4: Live comp eval — only on push to main, uses SerpAPI credits ───────
+  # Fires real queries against your dev server and grades PASS/WARN/FAIL.
+  # Blocked from running on PRs to avoid burning SerpAPI credits unnecessarily.
+  # All 3 fast jobs must pass before this runs.
+  live-comp-eval:
+    name: Live comp eval
+    runs-on: ubuntu-latest
+    needs: [filter-unit-tests, query-builder-tests, typecheck]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install wait-on
+        run: npm install -g wait-on
+
+      - name: Start dev server
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+          COMP_SOURCE: serpapi
+        run: |
+          npm run dev &
+          wait-on http://localhost:3000/api/debug --timeout 30000
+
+      - name: Run live comp eval
+        env:
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+        run: npx tsx scripts/test-comps.ts --url http://localhost:3000
+
+      - name: Upload eval report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: comp-eval-${{ github.sha }}
+          path: scripts/test-results-*.json
+          retention-days: 30
+
+      - name: Post summary to job
+        if: always()
+        run: |
+          REPORT=$(ls scripts/test-results-*.json 2>/dev/null | tail -1)
+          if [ -f "$REPORT" ]; then
+            PASS=$(python3  -c "import json; d=json.load(open('$REPORT')); print(d['meta']['pass'])")
+            WARN=$(python3  -c "import json; d=json.load(open('$REPORT')); print(d['meta']['warn'])")
+            FAIL=$(python3  -c "import json; d=json.load(open('$REPORT')); print(d['meta']['fail'])")
+            ERROR=$(python3 -c "import json; d=json.load(open('$REPORT')); print(d['meta']['error'])")
+
+            echo "## Comp Eval Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Grade | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| ✅ PASS  | $PASS  |" >> $GITHUB_STEP_SUMMARY
+            echo "| ⚠️ WARN  | $WARN  |" >> $GITHUB_STEP_SUMMARY
+            echo "| ❌ FAIL  | $FAIL  |" >> $GITHUB_STEP_SUMMARY
+            echo "| 💥 ERROR | $ERROR |" >> $GITHUB_STEP_SUMMARY
+
+            # Fail the build if too many hard failures — adjust thresholds as suite grows
+            if [ "$FAIL" -gt "3" ] || [ "$ERROR" -gt "2" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "> ❌ **Threshold exceeded** — $FAIL failures, $ERROR errors. Review the artifact." >> $GITHUB_STEP_SUMMARY
+              echo "::error::Comp eval failed: $FAIL failures, $ERROR errors"
+              exit 1
+            fi
+
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "> ✅ Within acceptable thresholds (≤3 fail, ≤2 error)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "::warning::No test results file found — eval may not have run"
+          fi
