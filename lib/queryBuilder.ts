@@ -3,19 +3,17 @@
 // Deterministic search query construction from ItemAttributes.
 //
 // Priority hierarchy:
-//   1. Named product  → brand + model + color
-//   2. Brand + type   → brand + objectType (+ styleDescriptor)
-//   3. Brand + category fallback
-//   4. Material + styleDescriptor + type → e.g. "brass lily lamp", "carnival glass owl bookend"
-//   5. Material + era + type
-//   6. Material + type (+ non-material color)
-//   7. Era + type (no material)
+//   1. Named product    → brand + model + color
+//   2. Subject + type   → "benjamin franklin bust", "lincoln bookend"
+//      The depicted person/character is the highest-specificity signal for
+//      portrait collectibles, busts, coins, figurines, and historical items.
+//   3. Brand + type     → brand + objectType (+ styleDescriptor)
+//   4. Brand + category fallback
+//   5. Material + styleDescriptor + type → "brass lily lamp"
+//   6. Era + styleDescriptor + type
+//   7. styleDescriptor + type
 //   8. Type + color/material fallback
 //   9. Category only
-//
-// styleDescriptor is extracted from distinctiveFeatures — it's the one token
-// that makes a generic item specific on eBay (lily, owl, cinderella, gooseneck,
-// globe, tulip). Without it "brass lamp" returns thousands; "brass lily lamp" returns 20.
 
 import { ItemAttributes } from "@/types";
 import { normalizeQuery } from "@/utils/normalizeQuery";
@@ -51,9 +49,6 @@ const QUERY_WORTHY_MATERIALS = new Set([
 ]);
 
 // ── Style descriptors — shape/form keywords that define the item on eBay ──────
-// These are pulled from distinctiveFeatures when present.
-// They dramatically narrow a generic query: "brass lamp" → "brass lily lamp"
-// Only single-word or tight two-word tokens that eBay sellers actually use.
 const STYLE_DESCRIPTOR_KEYWORDS = new Set([
   // Figural / sculptural forms
   "lily", "lotus", "tulip", "rose", "daisy", "poppy", "sunflower",
@@ -98,11 +93,6 @@ function isMultiDecadeEra(era: string): boolean {
   return /\d{4}s.{1,3}\d{4}s/i.test(era);
 }
 
-function isSpecificColor(color: string | null | undefined): boolean {
-  if (!color) return false;
-  return SPECIFIC_COLORS.has(color.toLowerCase().trim());
-}
-
 function isNonMaterialColor(color: string | null | undefined): boolean {
   if (!color) return false;
   const lower = color.toLowerCase().trim();
@@ -129,13 +119,6 @@ function clean(...parts: (string | null | undefined)[]): string {
 }
 
 // ── Style descriptor extraction ───────────────────────────────────────────────
-// Scans distinctiveFeatures for the single most valuable shape/form keyword.
-// Returns the best match or null if nothing useful found.
-//
-// Priority: multi-word phrases first (more specific), then single keywords.
-// When multiple single keywords match, prefer the one that appears earliest
-// in the features list (Claude returns most salient features first).
-
 export function extractStyleDescriptor(
   distinctiveFeatures: string[] | undefined,
 ): string | null {
@@ -143,24 +126,16 @@ export function extractStyleDescriptor(
 
   const featuresText = distinctiveFeatures.join(" ").toLowerCase();
 
-  // Check multi-word phrases first — more specific
   for (const phrase of STYLE_DESCRIPTOR_PHRASES) {
-    if (featuresText.includes(phrase)) {
-      return phrase;
-    }
+    if (featuresText.includes(phrase)) return phrase;
   }
 
-  // Check individual features for single-word descriptors
-  // Process features in order — Claude puts most salient first
   const keywordArray = Array.from(STYLE_DESCRIPTOR_KEYWORDS);
   for (const feature of distinctiveFeatures) {
     const lower = feature.toLowerCase();
     for (const keyword of keywordArray) {
-      // Match as a whole word within the feature string
       const pattern = new RegExp(`\\b${keyword}\\b`);
-      if (pattern.test(lower)) {
-        return keyword;
-      }
+      if (pattern.test(lower)) return keyword;
     }
   }
 
@@ -182,12 +157,14 @@ export function buildSearchQuery(
     era,
     category,
     distinctiveFeatures,
+    subject,
   } = attributes;
 
-  const color          = isNonMaterialColor(primaryColor) ? primaryColor : null;
-  const goodEra        = isQueryWorthyEra(era) ? era : null;
-  const goodMat        = isQueryWorthyMaterial(material) ? material : null;
+  const color           = isNonMaterialColor(primaryColor) ? primaryColor : null;
+  const goodEra         = isQueryWorthyEra(era) ? era : null;
+  const goodMat         = isQueryWorthyMaterial(material) ? material : null;
   const styleDescriptor = extractStyleDescriptor(distinctiveFeatures);
+  const goodSubject     = subject?.toLowerCase().trim() || null;
 
   let query = "";
 
@@ -196,40 +173,48 @@ export function buildSearchQuery(
     query = clean(brand, model, color);
   }
 
-  // ── Priority 2: Brand + type (+ style if present) ─────────────────────────
+  // ── Priority 2: Subject + type ────────────────────────────────────────────
+  // The depicted person/character is the most specific signal for portrait
+  // collectibles. "benjamin franklin bust" returns exact matches.
+  // "brass figural bust" returns everything.
+  // Include material when present — "benjamin franklin brass bookend" is better
+  // than "benjamin franklin bookend" but both are miles better than no subject.
+  if (!query && goodSubject && objectType) {
+    query = clean(goodSubject, goodMat, objectType);
+  }
+
+  // ── Priority 3: Brand + type (+ style if present) ─────────────────────────
   if (!query && brand && objectType) {
     query = clean(brand, styleDescriptor, objectType, color);
   }
 
-  // ── Priority 3: Brand + category fallback ─────────────────────────────────
+  // ── Priority 4: Brand + category fallback ─────────────────────────────────
   if (!query && brand && category) {
     query = clean(brand, category);
   }
 
-  // ── Priority 4: Material + styleDescriptor + type ─────────────────────────
-  // The most valuable path for vintage/thrift items without a brand.
+  // ── Priority 5: Material + styleDescriptor + type ─────────────────────────
   // "brass lily lamp" >> "brass gooseneck lamp" >> "brass desk lamp"
-  // styleDescriptor is slotted between material and objectType.
   if (!query && goodMat && objectType) {
     query = clean(goodMat, styleDescriptor, objectType, color);
   }
 
-  // ── Priority 5: Era + styleDescriptor + type (no material) ────────────────
+  // ── Priority 6: Era + styleDescriptor + type ──────────────────────────────
   if (!query && goodEra && objectType) {
     query = clean(goodEra, styleDescriptor, objectType);
   }
 
-  // ── Priority 6: styleDescriptor + type (no material, no era) ──────────────
+  // ── Priority 7: styleDescriptor + type ────────────────────────────────────
   if (!query && styleDescriptor && objectType) {
     query = clean(styleDescriptor, objectType, color);
   }
 
-  // ── Priority 7: Object type + color/material ──────────────────────────────
+  // ── Priority 8: Object type + color/material ──────────────────────────────
   if (!query && objectType) {
     query = clean(objectType, color ?? (goodMat ?? null));
   }
 
-  // ── Priority 8: Category only ─────────────────────────────────────────────
+  // ── Priority 9: Category only ─────────────────────────────────────────────
   if (!query && category) {
     query = clean(category);
   }
@@ -243,20 +228,22 @@ export function queryPriority(
   attributes:     ItemAttributes,
   isNamedProduct: boolean,
 ): string {
-  const { brand, model, objectType, material, era, category, distinctiveFeatures } = attributes;
-  const goodEra        = isQueryWorthyEra(era) ? era : null;
-  const goodMat        = isQueryWorthyMaterial(material) ? material : null;
+  const { brand, model, objectType, material, era, category, distinctiveFeatures, subject } = attributes;
+  const goodEra         = isQueryWorthyEra(era) ? era : null;
+  const goodMat         = isQueryWorthyMaterial(material) ? material : null;
   const styleDescriptor = extractStyleDescriptor(distinctiveFeatures);
+  const goodSubject     = subject?.toLowerCase().trim() || null;
 
-  if (isNamedProduct && brand && model)   return "P1:named-product";
-  if (brand && objectType)                return "P2:brand+type";
-  if (brand && category)                  return "P3:brand+category";
-  if (goodMat && objectType && styleDescriptor) return "P4:material+style+type";
-  if (goodMat && objectType)              return "P4:material+type";
-  if (goodEra && objectType)              return "P5:era+type";
-  if (styleDescriptor && objectType)      return "P6:style+type";
-  if (objectType)                         return "P7:type+color";
-  if (category)                           return "P8:category";
+  if (isNamedProduct && brand && model)         return "P1:named-product";
+  if (goodSubject && objectType)                return "P2:subject+type";
+  if (brand && objectType)                      return "P3:brand+type";
+  if (brand && category)                        return "P4:brand+category";
+  if (goodMat && objectType && styleDescriptor) return "P5:material+style+type";
+  if (goodMat && objectType)                    return "P5:material+type";
+  if (goodEra && objectType)                    return "P6:era+type";
+  if (styleDescriptor && objectType)            return "P7:style+type";
+  if (objectType)                               return "P8:type+color";
+  if (category)                                 return "P9:category";
   return "P9:fallback";
 }
 
