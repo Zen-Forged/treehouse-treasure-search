@@ -22,6 +22,7 @@ export interface ItemAttributes {
   setType?:             string | null;   // "single" | "pair" | "set" | "unknown"
   sizeEstimate?:        string | null;   // "small (under 6 inches)", "unknown"
   distinctiveFeatures?: string[];        // ["handles on both sides", "gold rim"]
+  subject?:             string | null;   // depicted person/character: "benjamin franklin", "lincoln", "elvis"
   visualConfidence?:    number;          // overall 0.0–1.0
 }
 

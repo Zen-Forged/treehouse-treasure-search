@@ -172,6 +172,7 @@ Respond ONLY with raw valid JSON — no markdown, no backticks, no explanation:
     "confidence": 0.0
   },
   "distinctive_features": ["notable details visible in image e.g. flip-out screen, gold trim, woven texture, painted scene"],
+  "subject": "the depicted person, character, or subject if this is a portrait/figural item — e.g. 'benjamin franklin', 'abraham lincoln', 'elvis presley', 'betty boop', 'mickey mouse' — null if not a portrait/character item",
   "era": {
     "value": "decade or period only if visually certain (1950s-1960s, victorian, art deco) — null if uncertain",
     "confidence": 0.0
@@ -205,6 +206,7 @@ Respond ONLY with raw valid JSON — no markdown, no backticks, no explanation:
   const v = JSON.parse(clean) as VisualClassification & {
     is_named_product: boolean;
     model?:           VisualField;
+    subject?:         string | null;
     title:            string;
     description:      string;
     overall_confidence: number;
@@ -258,6 +260,7 @@ Respond ONLY with raw valid JSON — no markdown, no backticks, no explanation:
     setType:             pick(v.set_type),
     sizeEstimate:        pick(v.size_estimate),
     distinctiveFeatures: v.distinctive_features?.length ? v.distinctive_features : undefined,
+    subject:             v.subject?.trim() || null,
     visualConfidence:    Math.round(overallConf * 100) / 100,
   };
 
@@ -269,7 +272,7 @@ Respond ONLY with raw valid JSON — no markdown, no backticks, no explanation:
   const styleDescriptor = extractStyleDescriptor(attributes.distinctiveFeatures);
 
   console.log(`[identify] named=${v.is_named_product} brand="${brand}" model="${model}" title="${title}" conf=${confidence}`);
-  console.log(`[identify] query="${searchQuery}" priority=${priority} styleDescriptor="${styleDescriptor ?? "none"}" (claude suggested: "${claudeQuery}")`);
+  console.log(`[identify] query="${searchQuery}" priority=${priority} subject="${attributes.subject ?? "none"}" styleDescriptor="${styleDescriptor ?? "none"}" (claude suggested: "${claudeQuery}")`);
   console.log(`[identify] features=${JSON.stringify(attributes.distinctiveFeatures ?? [])}`);
 
   return { title, description, confidence, searchQuery, attributes };
