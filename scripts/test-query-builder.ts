@@ -125,9 +125,9 @@ expect(
   "ceramic vase blue"
 );
 expect(
-  "P4: amber treated as material-color — NOT appended",
+  "P4: amber appended as true color (not in MATERIAL_COLORS set)",
   buildSearchQuery({ ...base(), material: "glass", objectType: "decanter", primaryColor: "amber" }, false),
-  "glass decanter"
+  "glass decanter amber"
 );
 
 // ── Era handling ──────────────────────────────────────────────────────────────
