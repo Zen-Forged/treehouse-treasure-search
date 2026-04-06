@@ -1,6 +1,4 @@
 // types/treehouse.ts
-// Shared types for the Treehouse ecosystem layer:
-// vendors, malls, posts, and lightweight local profile storage.
 
 export type PostStatus = "available" | "sold" | "pending";
 
@@ -16,16 +14,17 @@ export interface Mall {
 }
 
 export interface Vendor {
-  id:           string;
-  created_at:   string;
-  updated_at:   string;
-  user_id:      string | null;
-  mall_id:      string;
-  display_name: string;
-  booth_number: string | null;
-  bio:          string | null;
-  avatar_url:   string | null;
-  slug:         string;
+  id:            string;
+  created_at:    string;
+  updated_at:    string;
+  user_id:       string | null;
+  mall_id:       string;
+  display_name:  string;
+  booth_number:  string | null;
+  bio:           string | null;
+  avatar_url:    string | null;
+  slug:          string;
+  facebook_url:  string | null;
   // Joined
   mall?: Mall;
 }
@@ -48,16 +47,15 @@ export interface Post {
   mall?:   Mall;
 }
 
-// ── Lightweight vendor profile stored in localStorage ─────────────────────────
-// Lets vendors post without auth. Persists name/booth/mall across sessions.
 export interface LocalVendorProfile {
-  display_name: string;
-  booth_number: string;
-  mall_id:      string;
-  mall_name:    string;
-  mall_city:    string;
-  vendor_id?:   string; // set after first Supabase vendor row is created
-  slug?:        string;
+  display_name:  string;
+  booth_number:  string;
+  mall_id:       string;
+  mall_name:     string;
+  mall_city:     string;
+  vendor_id?:    string;
+  slug?:         string;
+  facebook_url?: string;
 }
 
 export const LOCAL_VENDOR_KEY = "th_vendor_profile";
