@@ -10,7 +10,6 @@ import type { Post, Vendor, Mall, LocalVendorProfile } from "@/types/treehouse";
 // POSTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Fetch the discovery feed — all available posts, newest first */
 export async function getFeedPosts(limit = 40): Promise<Post[]> {
   const { data, error } = await supabase
     .from("posts")
@@ -22,14 +21,10 @@ export async function getFeedPosts(limit = 40): Promise<Post[]> {
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (error) {
-    console.error("[posts] getFeedPosts:", error.message);
-    return [];
-  }
+  if (error) { console.error("[posts] getFeedPosts:", error.message); return []; }
   return (data ?? []) as Post[];
 }
 
-/** Fetch a single post by id with full vendor + mall detail */
 export async function getPost(id: string): Promise<Post | null> {
   const { data, error } = await supabase
     .from("posts")
@@ -41,33 +36,22 @@ export async function getPost(id: string): Promise<Post | null> {
     .eq("id", id)
     .single();
 
-  if (error) {
-    console.error("[posts] getPost:", error.message);
-    return null;
-  }
+  if (error) { console.error("[posts] getPost:", error.message); return null; }
   return data as Post;
 }
 
-/** Fetch all posts from a specific mall */
 export async function getMallPosts(mallId: string, limit = 60): Promise<Post[]> {
   const { data, error } = await supabase
     .from("posts")
-    .select(`
-      *,
-      vendor:vendors ( id, display_name, booth_number, slug )
-    `)
+    .select(`*, vendor:vendors ( id, display_name, booth_number, slug )`)
     .eq("mall_id", mallId)
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (error) {
-    console.error("[posts] getMallPosts:", error.message);
-    return [];
-  }
+  if (error) { console.error("[posts] getMallPosts:", error.message); return []; }
   return (data ?? []) as Post[];
 }
 
-/** Fetch all posts from a specific vendor */
 export async function getVendorPosts(vendorId: string, limit = 40): Promise<Post[]> {
   const { data, error } = await supabase
     .from("posts")
@@ -76,10 +60,7 @@ export async function getVendorPosts(vendorId: string, limit = 40): Promise<Post
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (error) {
-    console.error("[posts] getVendorPosts:", error.message);
-    return [];
-  }
+  if (error) { console.error("[posts] getVendorPosts:", error.message); return []; }
   return (data ?? []) as Post[];
 }
 
@@ -94,7 +75,6 @@ export interface CreatePostInput {
   location_label?: string;
 }
 
-/** Insert a new post row */
 export async function createPost(input: CreatePostInput): Promise<Post | null> {
   const { data, error } = await supabase
     .from("posts")
@@ -102,10 +82,7 @@ export async function createPost(input: CreatePostInput): Promise<Post | null> {
     .select()
     .single();
 
-  if (error) {
-    console.error("[posts] createPost:", error.message);
-    return null;
-  }
+  if (error) { console.error("[posts] createPost:", error.message, error.details, error.hint); return null; }
   return data as Post;
 }
 
@@ -113,7 +90,6 @@ export async function createPost(input: CreatePostInput): Promise<Post | null> {
 // VENDORS
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Fetch vendor by slug (for profile page) */
 export async function getVendorBySlug(slug: string): Promise<Vendor | null> {
   const { data, error } = await supabase
     .from("vendors")
@@ -121,7 +97,7 @@ export async function getVendorBySlug(slug: string): Promise<Vendor | null> {
     .eq("slug", slug)
     .single();
 
-  if (error) return null;
+  if (error) { console.error("[posts] getVendorBySlug:", error.message); return null; }
   return data as Vendor;
 }
 
@@ -132,7 +108,6 @@ export interface CreateVendorInput {
   slug:          string;
 }
 
-/** Create a vendor row — called on first post from an unregistered vendor */
 export async function createVendor(input: CreateVendorInput): Promise<Vendor | null> {
   const { data, error } = await supabase
     .from("vendors")
@@ -140,14 +115,10 @@ export async function createVendor(input: CreateVendorInput): Promise<Vendor | n
     .select()
     .single();
 
-  if (error) {
-    console.error("[posts] createVendor:", error.message);
-    return null;
-  }
+  if (error) { console.error("[posts] createVendor:", error.message, error.details, error.hint); return null; }
   return data as Vendor;
 }
 
-/** Derive a URL-safe slug from a vendor display name */
 export function slugify(name: string): string {
   return name
     .toLowerCase()
@@ -162,21 +133,16 @@ export function slugify(name: string): string {
 // MALLS
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Fetch all malls for the post-flow mall selector */
 export async function getAllMalls(): Promise<Mall[]> {
   const { data, error } = await supabase
     .from("malls")
     .select("*")
     .order("name", { ascending: true });
 
-  if (error) {
-    console.error("[posts] getAllMalls:", error.message);
-    return [];
-  }
+  if (error) { console.error("[posts] getAllMalls:", error.message); return []; }
   return (data ?? []) as Mall[];
 }
 
-/** Fetch a single mall by slug */
 export async function getMallBySlug(slug: string): Promise<Mall | null> {
   const { data, error } = await supabase
     .from("malls")
@@ -184,7 +150,7 @@ export async function getMallBySlug(slug: string): Promise<Mall | null> {
     .eq("slug", slug)
     .single();
 
-  if (error) return null;
+  if (error) { console.error("[posts] getMallBySlug:", error.message); return null; }
   return data as Mall;
 }
 
@@ -194,7 +160,8 @@ export async function getMallBySlug(slug: string): Promise<Mall | null> {
 
 /**
  * Upload a base64 image data URL to Supabase Storage.
- * Bucket: "post-images" — must exist with public access in Supabase dashboard.
+ * Bucket: "post-images" — must exist with public access.
+ * Requires storage RLS policy allowing anon INSERT on post-images bucket.
  * Returns the public URL or null on failure.
  */
 export async function uploadPostImage(
@@ -210,24 +177,21 @@ export async function uploadPostImage(
 
     const binary = atob(base64);
     const bytes  = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
 
-    const { error } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from("post-images")
       .upload(filename, bytes, { contentType: mimeType, upsert: false });
 
-    if (error) {
-      console.error("[posts] uploadPostImage:", error.message);
+    if (uploadError) {
+      console.error("[posts] uploadPostImage error:", uploadError.message, uploadError);
       return null;
     }
 
-    const { data } = supabase.storage
-      .from("post-images")
-      .getPublicUrl(filename);
-
+    const { data } = supabase.storage.from("post-images").getPublicUrl(filename);
+    console.log("[posts] uploadPostImage success:", data?.publicUrl);
     return data?.publicUrl ?? null;
+
   } catch (err) {
     console.error("[posts] uploadPostImage exception:", err);
     return null;
