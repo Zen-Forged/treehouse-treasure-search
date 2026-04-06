@@ -27,23 +27,56 @@ const C = {
   header:      "rgba(240,237,230,0.96)",
 };
 
+// Aggressively compress for mobile — target under 800KB base64
+function compressForUpload(dataUrl: string, maxWidth = 1200, quality = 0.78): Promise<string> {
+  return new Promise(resolve => {
+    const img = new window.Image();
+    img.onload = () => {
+      const scale  = Math.min(1, maxWidth / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width  = Math.round(img.width  * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const result = canvas.toDataURL("image/jpeg", quality);
+      // If still over 1MB base64 (~750KB file), compress harder
+      if (result.length > 1_000_000) {
+        const canvas2 = document.createElement("canvas");
+        const scale2  = 0.75;
+        canvas2.width  = Math.round(canvas.width  * scale2);
+        canvas2.height = Math.round(canvas.height * scale2);
+        canvas2.getContext("2d")!.drawImage(canvas, 0, 0, canvas2.width, canvas2.height);
+        resolve(canvas2.toDataURL("image/jpeg", 0.72));
+      } else {
+        resolve(result);
+      }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 async function generateTitleAndCaption(imageDataUrl: string): Promise<{ title: string; caption: string }> {
   try {
-    const res  = await fetch("/api/post-caption", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body:   JSON.stringify({ imageDataUrl }),
+    // Send a smaller thumbnail for the AI call to avoid body size limits
+    const thumb = await compressForUpload(imageDataUrl, 800, 0.7);
+    const res = await fetch("/api/post-caption", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ imageDataUrl: thumb }),
     });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     return { title: data.title ?? "", caption: data.caption ?? "" };
-  } catch {
+  } catch (err) {
+    console.error("[preview] generateTitleAndCaption failed:", err);
     return { title: "", caption: "" };
   }
 }
 
 function ItemImage({ src }: { src: string }) {
   return (
-    <div style={{ position: "relative", width: "100%", borderRadius: 14, overflow: "hidden", aspectRatio: "4/3" }}>
-      <img src={src} alt="Your find" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+    <div style={{ width: "100%", borderRadius: 14, overflow: "hidden", background: C.surface }}>
+      <img src={src} alt="Your find" style={{ width: "100%", height: "auto", display: "block", objectFit: "contain", maxHeight: "50vh" }} />
     </div>
   );
 }
@@ -53,15 +86,15 @@ type Stage = "loading" | "edit" | "publishing" | "done" | "error";
 export default function PostPreviewPage() {
   const router = useRouter();
 
-  const [image,        setImage]        = useState<string | null>(null);
-  const [profile,      setProfile]      = useState<LocalVendorProfile | null>(null);
-  const [stage,        setStage]        = useState<Stage>("loading");
-  const [postId,       setPostId]       = useState<string | null>(null);
-  const [errorDetail,  setErrorDetail]  = useState<string>("");
+  const [image,       setImage]       = useState<string | null>(null);
+  const [profile,     setProfile]     = useState<LocalVendorProfile | null>(null);
+  const [stage,       setStage]       = useState<Stage>("loading");
+  const [postId,      setPostId]      = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string>("");
 
-  const [title,   setTitle]   = useState("");
-  const [caption, setCaption] = useState("");
-  const [price,   setPrice]   = useState("");
+  const [title,     setTitle]     = useState("");
+  const [caption,   setCaption]   = useState("");
+  const [price,     setPrice]     = useState("");
   const [editTitle, setEditTitle] = useState(false);
   const [editCap,   setEditCap]   = useState(false);
 
@@ -69,11 +102,17 @@ export default function PostPreviewPage() {
 
   useEffect(() => {
     const draft = postStore.get();
-    const raw   = localStorage.getItem(LOCAL_VENDOR_KEY);
+    let raw: string | null = null;
+    try { raw = localStorage.getItem(LOCAL_VENDOR_KEY); } catch {}
+
     if (!draft || !raw) { router.replace("/post"); return; }
-    const prof = JSON.parse(raw) as LocalVendorProfile;
+
+    let prof: LocalVendorProfile;
+    try { prof = JSON.parse(raw); } catch { router.replace("/post"); return; }
+
     setImage(draft.imageDataUrl);
     setProfile(prof);
+
     if (!started.current) {
       started.current = true;
       generateTitleAndCaption(draft.imageDataUrl).then(({ title: t, caption: c }) => {
@@ -88,31 +127,60 @@ export default function PostPreviewPage() {
     if (!image || !profile || !title.trim()) return;
     setStage("publishing");
     setErrorDetail("");
+
     try {
-      let vendorId = profile.vendor_id;
+      // ── Step 1: Ensure vendor row exists ──────────────────────────────
+      let vendorId  = profile.vendor_id ?? null;
+      let vendorSlug = profile.slug ?? null;
 
       if (!vendorId) {
-        const slug   = slugify(profile.display_name) + "-" + Date.now().toString(36);
+        const baseSlug = slugify(profile.display_name);
+        const slug     = baseSlug + "-" + Date.now().toString(36);
+        console.log("[publish] creating vendor:", { mall_id: profile.mall_id, display_name: profile.display_name, slug });
+
         const vendor = await createVendor({
           mall_id:      profile.mall_id,
           display_name: profile.display_name,
           booth_number: profile.booth_number || undefined,
           slug,
         });
+
         if (!vendor) {
-          setErrorDetail("Could not create vendor record. Check Supabase RLS on the vendors table.");
-          throw new Error("Vendor creation failed");
+          setErrorDetail("Vendor creation failed — check Supabase vendors table RLS and that mall_id is valid.");
+          throw new Error("vendor null");
         }
-        vendorId = vendor.id;
+
+        vendorId   = vendor.id;
+        vendorSlug = vendor.slug;
+
+        // Persist back to localStorage
         const updated: LocalVendorProfile = { ...profile, vendor_id: vendor.id, slug: vendor.slug };
         try { localStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(updated)); } catch {}
         setProfile(updated);
       }
 
-      const imageUrl = await uploadPostImage(image, vendorId);
-      // imageUrl can be null — post still goes through without an image
+      // ── Step 2: Compress image aggressively before upload ─────────────
+      let uploadImage = image;
+      try { uploadImage = await compressForUpload(image, 1200, 0.78); } catch {}
 
+      // ── Step 3: Upload image (non-fatal if it fails) ──────────────────
+      let imageUrl: string | null = null;
+      try {
+        imageUrl = await uploadPostImage(uploadImage, vendorId);
+        if (!imageUrl) console.warn("[publish] image upload returned null — posting without image");
+      } catch (uploadErr) {
+        console.warn("[publish] image upload threw:", uploadErr);
+      }
+
+      // ── Step 4: Create post ───────────────────────────────────────────
       const priceNum = price.trim() ? parseFloat(price.replace(/[^0-9.]/g, "")) : null;
+
+      console.log("[publish] creating post:", {
+        vendor_id: vendorId,
+        mall_id:   profile.mall_id,
+        title:     title.trim(),
+        image_url: imageUrl,
+      });
 
       const post = await createPost({
         vendor_id:      vendorId,
@@ -125,8 +193,8 @@ export default function PostPreviewPage() {
       });
 
       if (!post) {
-        setErrorDetail("Post insert returned null. Check Supabase RLS on the posts table.");
-        throw new Error("Post creation failed");
+        setErrorDetail("Post insert returned null — check Supabase posts table RLS (needs anon INSERT policy or RLS disabled).");
+        throw new Error("post null");
       }
 
       postStore.clear();
@@ -134,7 +202,7 @@ export default function PostPreviewPage() {
       setStage("done");
 
     } catch (err) {
-      console.error("[post/preview] publish error:", err);
+      console.error("[publish] error:", err);
       setStage("error");
     }
   }
@@ -147,7 +215,6 @@ export default function PostPreviewPage() {
     background: C.input, border: `1px solid ${C.inputBorder}`,
     color: C.textPrimary, fontSize: 14, outline: "none",
   };
-
   const labelStyle: React.CSSProperties = {
     fontSize: 9, color: C.textMuted, textTransform: "uppercase",
     letterSpacing: "1.8px", display: "block", marginBottom: 6,
@@ -159,7 +226,7 @@ export default function PostPreviewPage() {
       <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20 }}>
         {image && (
           <div style={{ width: "78%", borderRadius: 14, overflow: "hidden", opacity: 0.55 }}>
-            <img src={image} alt="" style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover" }} />
+            <img src={image} alt="" style={{ width: "100%", height: "auto", maxHeight: "40vh", objectFit: "contain" }} />
           </div>
         )}
         <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.8, repeat: Infinity }}
@@ -204,12 +271,12 @@ export default function PostPreviewPage() {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: "0 24px" }}>
         <div style={{ fontFamily: "Georgia, serif", fontSize: 18, color: C.textPrimary, textAlign: "center" }}>Something went wrong.</div>
-        <div style={{ fontSize: 13, color: C.textMuted, textAlign: "center", lineHeight: 1.6 }}>The post couldn't be saved. Check your connection and try again.</div>
-        {errorDetail ? (
-          <div style={{ fontSize: 11, color: C.textFaint, textAlign: "center", lineHeight: 1.5, fontFamily: "monospace", background: C.surface, padding: "10px 14px", borderRadius: 8, border: `1px solid ${C.border}` }}>
+        <div style={{ fontSize: 13, color: C.textMuted, textAlign: "center", lineHeight: 1.6 }}>The post couldn't be saved.</div>
+        {errorDetail && (
+          <div style={{ fontSize: 11, color: C.textFaint, textAlign: "left", lineHeight: 1.6, fontFamily: "monospace", background: C.surface, padding: "10px 14px", borderRadius: 8, border: `1px solid ${C.border}`, width: "100%" }}>
             {errorDetail}
           </div>
-        ) : null}
+        )}
         <button onClick={() => setStage("edit")} style={{ padding: "12px 24px", borderRadius: 12, fontSize: 13, fontWeight: 600, color: "#fff", background: C.green, border: "none", cursor: "pointer" }}>
           Try again
         </button>
@@ -217,11 +284,10 @@ export default function PostPreviewPage() {
     );
   }
 
-  // ── Edit (main) ───────────────────────────────────────────────────────────
+  // ── Edit ─────────────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
 
-      {/* Nav */}
       <header style={{ display: "flex", alignItems: "center", gap: 12, padding: "max(14px, env(safe-area-inset-top, 14px)) 15px 12px", background: C.header, backdropFilter: "blur(20px)", borderBottom: `1px solid ${C.border}`, position: "sticky", top: 0, zIndex: 40 }}>
         <button onClick={() => router.back()} style={{ width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer" }}>
           <ArrowLeft size={14} style={{ color: C.textMid }} />
@@ -234,7 +300,6 @@ export default function PostPreviewPage() {
         </div>
       </header>
 
-      {/* Content */}
       <main style={{ flex: 1, padding: "14px 15px", paddingBottom: "max(110px, env(safe-area-inset-bottom, 110px))", display: "flex", flexDirection: "column", gap: 14, overflowY: "auto" }}>
 
         {image && <ItemImage src={image} />}
@@ -324,7 +389,7 @@ export default function PostPreviewPage() {
         )}
       </main>
 
-      {/* Fixed publish bar */}
+      {/* Publish bar */}
       <motion.div
         initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, delay: 0.1 }}
