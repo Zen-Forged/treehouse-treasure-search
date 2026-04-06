@@ -10,38 +10,46 @@ export async function GET() {
   const sb = createClient(url, anon);
 
   // Test 1: read malls
-  const { data: malls, error: mallsErr } = await sb.from("malls").select("id,name").limit(1);
+  const { data: malls, error: mallsErr } = await sb
+    .from("malls")
+    .select("id,name")
+    .limit(1);
 
-  // Test 2: check posts RLS with a dummy insert
-  const { data: postTest, error: postErr } = await sb.from("posts").insert([{
-    vendor_id:  "00000000-0000-0000-0000-000000000000",
-    mall_id:    "00000000-0000-0000-0000-000000000000",
-    title:      "__rls_test__",
-    status:     "available",
-  }]).select().single();
+  // Test 2: dummy insert to check posts RLS
+  const { data: postTest, error: postErr } = await sb
+    .from("posts")
+    .insert([{
+      vendor_id: "00000000-0000-0000-0000-000000000000",
+      mall_id:   "00000000-0000-0000-0000-000000000000",
+      title:     "__rls_test__",
+      status:    "available",
+    }])
+    .select("id")
+    .single();
 
-  // Clean up test row if it was created
-  if (postTest?.id) {
-    await sb.from("posts").delete().eq("id", postTest.id);
+  // Clean up if row was created
+  const testId = (postTest as { id?: string } | null)?.id;
+  if (testId) {
+    await sb.from("posts").delete().eq("id", testId);
   }
 
   return NextResponse.json({
     env: {
-      hasUrl:  !!url,
-      hasAnon: !!anon,
-      anonPrefix: anon.slice(0, 20),
+      hasUrl:     !!url,
+      hasAnon:    !!anon,
+      anonPrefix: anon.slice(0, 30),
     },
     malls: {
       ok:    !mallsErr,
       data:  malls,
       error: mallsErr?.message ?? null,
-      code:  mallsErr?.code ?? null,
+      code:  mallsErr?.code   ?? null,
     },
     postInsert: {
       ok:      !postErr,
       error:   postErr?.message ?? null,
-      code:    postErr?.code ?? null,
-      hint:    postErr?.hint ?? null,
+      code:    postErr?.code    ?? null,
+      hint:    postErr?.hint    ?? null,
       details: postErr?.details ?? null,
     },
   });

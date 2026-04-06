@@ -4,11 +4,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 
-// Increase body size limit for large mobile images
-export const config = {
-  api: { bodyParser: { sizeLimit: "10mb" } },
-};
-
 const MOCK_RESPONSES = [
   { title: "Mid-century ceramic vase", caption: "A quietly beautiful piece that carries its age with dignity. The kind of find that earns a permanent spot on the shelf." },
   { title: "Brass candlestick holder", caption: "There's something understated about this one. Well-made, clearly cared for, and still very much at home in the world." },
