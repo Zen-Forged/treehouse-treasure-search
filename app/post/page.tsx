@@ -4,7 +4,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
+import { Camera, ArrowLeft, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import { getAllMalls } from "@/lib/posts";
 import { postStore } from "@/lib/postStore";
 import type { Mall } from "@/types/treehouse";
@@ -52,13 +52,11 @@ export default function PostCapturePage() {
   const [mallsLoading, setMallsLoading] = useState(true);
   const [showSetup,    setShowSetup]    = useState(false);
   const [showMallPick, setShowMallPick] = useState(false);
-
   const [displayName,  setDisplayName]  = useState("");
   const [boothNumber,  setBoothNumber]  = useState("");
   const [selectedMall, setSelectedMall] = useState<Mall | null>(null);
   const [capturing,    setCapturing]    = useState(false);
 
-  // Load profile from localStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem(LOCAL_VENDOR_KEY);
@@ -76,54 +74,50 @@ export default function PostCapturePage() {
     getAllMalls().then(data => { setMalls(data); setMallsLoading(false); });
   }, []);
 
-  // Once malls load, validate the saved mall_id against live malls.
-  // If the saved mall_id doesn't exist (e.g. mall was deleted/replaced),
-  // clear the stale profile so the vendor is forced to re-select.
+  // Validate saved mall_id against live malls.
+  // If stale, clear mall_id AND vendor_id so a fresh vendor row is created.
   useEffect(() => {
-    if (malls.length === 0 || mallsLoading) return;
-
-    if (profile) {
-      const match = malls.find(m => m.id === profile.mall_id);
-      if (match) {
-        setSelectedMall(match);
-      } else {
-        // Stale mall_id — preserve name/booth but clear mall + vendor_id
-        // so they re-select the correct mall and get a fresh vendor row
-        console.warn("[post] saved mall_id not found in current malls — clearing stale profile");
-        const cleaned: LocalVendorProfile = {
-          display_name: profile.display_name,
-          booth_number: profile.booth_number,
-          mall_id:      "",
-          mall_name:    "",
-          mall_city:    "",
-        };
-        try { localStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(cleaned)); } catch {}
-        setProfile(cleaned);
-        setShowSetup(true); // open setup so they can re-select mall
-      }
+    if (malls.length === 0 || mallsLoading || !profile) return;
+    const match = malls.find(m => m.id === profile.mall_id);
+    if (match) {
+      setSelectedMall(match);
+    } else if (profile.mall_id) {
+      console.warn("[post] stale mall_id — resetting profile");
+      const cleaned: LocalVendorProfile = {
+        display_name: profile.display_name,
+        booth_number: profile.booth_number,
+        mall_id:      "",
+        mall_name:    "",
+        mall_city:    "",
+        // vendor_id intentionally omitted — force fresh vendor creation
+      };
+      try { localStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(cleaned)); } catch {}
+      setProfile(cleaned);
+      setShowSetup(true);
     }
   }, [malls, mallsLoading]);
 
-  const formComplete    = displayName.trim().length >= 2 && selectedMall !== null;
-  const hasValidProfile = formComplete ||
-    (profile !== null &&
-     profile.mall_id.length > 0 &&
-     profile.display_name.trim().length >= 2 &&
-     // Extra guard: mall_id must exist in the loaded malls list
-     malls.some(m => m.id === profile.mall_id));
-
-  const canCapture = hasValidProfile && !capturing;
+  function handleReset() {
+    try { localStorage.removeItem(LOCAL_VENDOR_KEY); } catch {}
+    setProfile(null);
+    setDisplayName("");
+    setBoothNumber("");
+    setSelectedMall(null);
+    setShowSetup(true);
+  }
 
   function saveProfile() {
     if (!selectedMall) return;
+    // Only carry over vendor_id if the mall hasn't changed
+    const sameMall = profile?.mall_id === selectedMall.id;
     const p: LocalVendorProfile = {
       display_name: displayName.trim(),
       booth_number: boothNumber.trim(),
       mall_id:      selectedMall.id,
       mall_name:    selectedMall.name,
       mall_city:    selectedMall.city,
-      vendor_id:    profile?.vendor_id,
-      slug:         profile?.slug,
+      vendor_id:    sameMall ? profile?.vendor_id : undefined,
+      slug:         sameMall ? profile?.slug       : undefined,
     };
     try { localStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(p)); } catch {}
     setProfile(p);
@@ -149,6 +143,15 @@ export default function PostCapturePage() {
     e.target.value = "";
   };
 
+  const formComplete    = displayName.trim().length >= 2 && selectedMall !== null;
+  const hasValidProfile = formComplete || (
+    profile !== null &&
+    profile.mall_id.length > 0 &&
+    profile.display_name.trim().length >= 2 &&
+    malls.some(m => m.id === profile.mall_id)
+  );
+  const canCapture = hasValidProfile && !capturing;
+
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "10px 12px", borderRadius: 9,
     background: C.input, border: `1px solid ${C.inputBorder}`,
@@ -161,21 +164,28 @@ export default function PostCapturePage() {
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
-
       <input ref={cameraRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={onFileChange} />
-      <input ref={galleryRef} type="file" accept="image/*"                        className="hidden" onChange={onFileChange} />
+      <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
 
       <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column" }}>
 
         {/* Nav */}
-        <header style={{ display: "flex", alignItems: "center", gap: 12, padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 14px", borderBottom: `1px solid ${C.border}`, background: C.bg }}>
-          <button onClick={() => router.back()} style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer" }}>
-            <ArrowLeft size={15} style={{ color: C.textMid }} />
-          </button>
-          <div>
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: C.textPrimary, lineHeight: 1 }}>Post a find</div>
-            <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginTop: 2 }}>Share with your community</div>
+        <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 14px", borderBottom: `1px solid ${C.border}`, background: C.bg }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button onClick={() => router.back()} style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer" }}>
+              <ArrowLeft size={15} style={{ color: C.textMid }} />
+            </button>
+            <div>
+              <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: C.textPrimary, lineHeight: 1 }}>Post a find</div>
+              <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginTop: 2 }}>Share with your community</div>
+            </div>
           </div>
+          {profile && (
+            <button onClick={handleReset} style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 10px", borderRadius: 8, background: "none", border: `1px solid ${C.border}`, cursor: "pointer", fontSize: 10, color: C.textFaint }}>
+              <RotateCcw size={10} />
+              Reset
+            </button>
+          )}
         </header>
 
         <div style={{ flex: 1, padding: "16px 15px", paddingBottom: "max(32px, env(safe-area-inset-bottom, 32px))", display: "flex", flexDirection: "column", gap: 14 }}>
@@ -183,51 +193,36 @@ export default function PostCapturePage() {
           {/* Vendor profile card */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
             style={{ borderRadius: 14, background: C.surface, border: `1px solid ${C.border}`, overflow: "hidden" }}>
-            <button
-              onClick={() => setShowSetup(s => !s)}
-              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", borderBottom: showSetup ? `1px solid ${C.border}` : "none" }}
-            >
+            <button onClick={() => setShowSetup(s => !s)}
+              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", borderBottom: showSetup ? `1px solid ${C.border}` : "none" }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 3 }}>
                 <div style={{ fontSize: 8, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px" }}>Your vendor profile</div>
-                {profile && profile.mall_id && selectedMall
+                {profile && selectedMall
                   ? <div style={{ fontFamily: "Georgia, serif", fontSize: 14, color: C.textPrimary, fontWeight: 600 }}>
                       {[profile.display_name, profile.booth_number ? `Booth ${profile.booth_number}` : null, selectedMall.name].filter(Boolean).join(" · ")}
                     </div>
                   : <div style={{ fontSize: 12, color: C.textMuted }}>
-                      {profile?.display_name ? "Select your mall to continue" : "Set up your profile to post"}
+                      {profile?.display_name && !selectedMall ? "Select your mall to continue" : "Set up your profile to post"}
                     </div>
                 }
               </div>
-              {showSetup
-                ? <ChevronUp   size={14} style={{ color: C.textMuted, flexShrink: 0 }} />
-                : <ChevronDown size={14} style={{ color: C.textMuted, flexShrink: 0 }} />
-              }
+              {showSetup ? <ChevronUp size={14} style={{ color: C.textMuted, flexShrink: 0 }} /> : <ChevronDown size={14} style={{ color: C.textMuted, flexShrink: 0 }} />}
             </button>
 
             <AnimatePresence>
               {showSetup && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }}
-                  style={{ overflow: "hidden" }}
-                >
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} style={{ overflow: "hidden" }}>
                   <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: 12 }}>
-
                     <div>
                       <label style={labelStyle}>Vendor name</label>
                       <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)}
-                        placeholder="e.g. Magnolia & Co."
-                        style={{ ...inputStyle, fontFamily: "Georgia, serif" }} />
+                        placeholder="e.g. Magnolia & Co." style={{ ...inputStyle, fontFamily: "Georgia, serif" }} />
                     </div>
-
                     <div>
-                      <label style={labelStyle}>
-                        Booth number <span style={{ color: C.textFaint, textTransform: "none", letterSpacing: 0 }}>(optional)</span>
-                      </label>
-                      <input type="text" value={boothNumber} onChange={e => setBoothNumber(e.target.value)}
-                        placeholder="e.g. 42B" style={inputStyle} />
+                      <label style={labelStyle}>Booth number <span style={{ color: C.textFaint, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
+                      <input type="text" value={boothNumber} onChange={e => setBoothNumber(e.target.value)} placeholder="e.g. 42B" style={inputStyle} />
                     </div>
-
                     <div>
                       <label style={labelStyle}>Your mall</label>
                       {mallsLoading ? (
@@ -236,27 +231,19 @@ export default function PostCapturePage() {
                         <div style={{ padding: "10px 12px", fontSize: 12, color: C.textMid, lineHeight: 1.5 }}>No malls listed yet.</div>
                       ) : (
                         <>
-                          <button
-                            onClick={() => setShowMallPick(s => !s)}
-                            style={{ ...inputStyle, display: "flex", alignItems: "center", justifyContent: "space-between", border: `1px solid ${selectedMall ? C.greenBorder : C.inputBorder}`, background: C.input, cursor: "pointer", fontFamily: selectedMall ? "Georgia, serif" : "inherit", color: selectedMall ? C.textPrimary : C.textMuted }}
-                          >
+                          <button onClick={() => setShowMallPick(s => !s)}
+                            style={{ ...inputStyle, display: "flex", alignItems: "center", justifyContent: "space-between", border: `1px solid ${selectedMall ? C.greenBorder : C.inputBorder}`, cursor: "pointer", color: selectedMall ? C.textPrimary : C.textMuted, fontFamily: selectedMall ? "Georgia, serif" : "inherit" }}>
                             <span>{selectedMall ? `${selectedMall.name} · ${selectedMall.city}` : "Select your mall"}</span>
                             <ChevronDown size={13} style={{ color: C.textMuted, flexShrink: 0 }} />
                           </button>
-
                           <AnimatePresence>
                             {showMallPick && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }}
-                                style={{ overflow: "hidden", marginTop: 4 }}
-                              >
+                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} style={{ overflow: "hidden", marginTop: 4 }}>
                                 <div style={{ borderRadius: 9, border: `1px solid ${C.border}`, overflow: "hidden", background: "#fff", maxHeight: 200, overflowY: "auto" }}>
                                   {malls.map(mall => (
-                                    <button key={mall.id}
-                                      onClick={() => { setSelectedMall(mall); setShowMallPick(false); }}
-                                      style={{ width: "100%", padding: "11px 14px", background: selectedMall?.id === mall.id ? C.greenLight : "none", border: "none", borderBottom: `1px solid ${C.border}`, cursor: "pointer", textAlign: "left" }}
-                                    >
+                                    <button key={mall.id} onClick={() => { setSelectedMall(mall); setShowMallPick(false); }}
+                                      style={{ width: "100%", padding: "11px 14px", background: selectedMall?.id === mall.id ? C.greenLight : "none", border: "none", borderBottom: `1px solid ${C.border}`, cursor: "pointer", textAlign: "left" }}>
                                       <div style={{ fontFamily: "Georgia, serif", fontSize: 13, color: C.textPrimary, lineHeight: 1.2 }}>{mall.name}</div>
                                       <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>{mall.city}, {mall.state}</div>
                                     </button>
@@ -268,12 +255,9 @@ export default function PostCapturePage() {
                         </>
                       )}
                     </div>
-
-                    <button
-                      onClick={saveProfile} disabled={!formComplete}
-                      style={{ width: "100%", padding: "12px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: formComplete ? "pointer" : "default", color: formComplete ? "#fff" : C.textFaint, background: formComplete ? C.green : C.surfaceDeep, border: "none", transition: "all 0.2s" }}
-                    >
-                      {profile?.mall_id ? "Update profile" : "Save profile"}
+                    <button onClick={saveProfile} disabled={!formComplete}
+                      style={{ width: "100%", padding: "12px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: formComplete ? "pointer" : "default", color: formComplete ? "#fff" : C.textFaint, background: formComplete ? C.green : C.surfaceDeep, border: "none", transition: "all 0.2s" }}>
+                      Save profile
                     </button>
                   </div>
                 </motion.div>
@@ -285,13 +269,9 @@ export default function PostCapturePage() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.1 }}
             style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", paddingLeft: 2 }}>Photograph your find</div>
-
-            <motion.button
-              onClick={() => canCapture && cameraRef.current?.click()}
-              disabled={!canCapture}
+            <motion.button onClick={() => canCapture && cameraRef.current?.click()} disabled={!canCapture}
               style={{ width: "100%", padding: "48px 22px", borderRadius: 16, cursor: canCapture ? "pointer" : "default", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, background: canCapture ? C.surface : C.surfaceDeep, border: `1px dashed ${canCapture ? "rgba(30,77,43,0.3)" : C.border}`, transition: "all 0.2s" }}
-              whileTap={canCapture ? { scale: 0.98 } : {}}
-            >
+              whileTap={canCapture ? { scale: 0.98 } : {}}>
               <div style={{ width: 52, height: 52, borderRadius: "50%", background: canCapture ? C.greenLight : C.surfaceDeep, border: `1px solid ${canCapture ? C.greenBorder : C.border}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Camera size={22} style={{ color: canCapture ? C.green : C.textFaint }} />
               </div>
@@ -304,12 +284,8 @@ export default function PostCapturePage() {
                 </div>
               )}
             </motion.button>
-
-            <button
-              onClick={() => canCapture && galleryRef.current?.click()}
-              disabled={!canCapture}
-              style={{ width: "100%", padding: "12px", borderRadius: 10, fontSize: 13, border: "none", color: canCapture ? C.green : C.textFaint, background: "transparent", cursor: canCapture ? "pointer" : "default", textDecoration: canCapture ? "underline" : "none", textDecorationColor: "rgba(30,77,43,0.3)" }}
-            >
+            <button onClick={() => canCapture && galleryRef.current?.click()} disabled={!canCapture}
+              style={{ width: "100%", padding: "12px", borderRadius: 10, fontSize: 13, border: "none", color: canCapture ? C.green : C.textFaint, background: "transparent", cursor: canCapture ? "pointer" : "default", textDecoration: canCapture ? "underline" : "none", textDecorationColor: "rgba(30,77,43,0.3)" }}>
               Choose from library
             </button>
           </motion.div>
@@ -325,7 +301,6 @@ export default function PostCapturePage() {
               </div>
             ))}
           </motion.div>
-
         </div>
       </div>
     </div>
