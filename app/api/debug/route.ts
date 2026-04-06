@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
+  const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL  ?? "";
+  const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+
   return NextResponse.json({
-    hasApifyToken:    !!process.env.APIFY_TOKEN,
-    hasApifyActorId:  !!process.env.APIFY_ACTOR_ID,
-    actorId:          process.env.APIFY_ACTOR_ID ?? "not set",
+    // Supabase
+    hasSupabaseUrl:   !!supabaseUrl,
+    hasSupabaseAnon:  !!supabaseAnon,
+    supabaseUrlHost:  supabaseUrl ? new URL(supabaseUrl).hostname : "not set",
+    supabaseAnonLen:  supabaseAnon.length,
+    // AI / comps
     hasAnthropicKey:  !!process.env.ANTHROPIC_API_KEY,
-    hasEbayId:        !!process.env.EBAY_CLIENT_ID,
     hasSerpApiKey:    !!process.env.SERPAPI_KEY,
     compSource:       process.env.COMP_SOURCE ?? "not set",
+    hasApifyToken:    !!process.env.APIFY_TOKEN,
   });
 }
