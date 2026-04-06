@@ -4,7 +4,7 @@ import "./globals.css";
 import { FindSessionProvider } from "@/hooks/useSession";
 
 export const metadata: Metadata = {
-  title: "Treehouse Search",
+  title: "Treehouse",
   description: "Embrace the search. Treasure the find.",
   appleWebApp: {
     capable: true,
