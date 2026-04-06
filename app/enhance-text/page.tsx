@@ -2,6 +2,7 @@
 // Story generation screen — replaces the old caption-refinement screen.
 // Generates a Kentucky Treehouse–style post from item + user note.
 // Uses staged loading language ("Bringing it into the Treehouse…") not a spinner.
+// Routes to /post/preview for the social post preview step.
 "use client";
 
 import { useEffect, useState } from "react";
@@ -86,9 +87,11 @@ export default function EnhanceTextPage() {
     run();
   }, []);
 
+  // Persist any caption edits to session before moving forward
   const handleContinue = () => {
     if (!story) return;
-    router.push("/share");
+    updateSession({ story, captionRefined: story.caption });
+    router.push("/post/preview");
   };
 
   const image = session?.imageEnhanced ?? session?.imageOriginal;
@@ -249,7 +252,7 @@ export default function EnhanceTextPage() {
           style={{ padding: "17px 22px", borderRadius: 16, fontSize: 15, background: "linear-gradient(175deg, rgba(46,110,46,0.96) 0%, rgba(33,82,33,1) 100%)", border: "1px solid rgba(109,188,109,0.16)", boxShadow: "0 4px 24px rgba(5,15,5,0.55), 0 0 40px rgba(45,125,45,0.1)" }}
           whileTap={{ scale: 0.97 }}>
           <span style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)" }} />
-          {generating ? "Writing…" : "Ready to share"}
+          {generating ? "Writing…" : "Preview post"}
         </motion.button>
       </motion.div>
     </div>
