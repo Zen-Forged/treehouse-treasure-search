@@ -8,8 +8,8 @@ export const metadata: Metadata = {
   description: "Embrace the search. Treasure the find.",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Treehouse Search",
+    statusBarStyle: "default",
+    title: "Treehouse",
   },
 };
 
@@ -18,7 +18,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#050f05",
+  themeColor: "#f0ede6",
 };
 
 export default function RootLayout({
@@ -27,12 +27,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className="bg-forest-950 text-bark-100 font-body antialiased min-h-screen">
+    <html lang="en">
+      <body style={{ margin: 0, padding: 0, minHeight: "100vh", background: "#f0ede6" }}>
         <FindSessionProvider>
-          <div className="max-w-md mx-auto min-h-screen flex flex-col">
-            {children}
-          </div>
+          {children}
         </FindSessionProvider>
       </body>
     </html>

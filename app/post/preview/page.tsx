@@ -11,7 +11,6 @@ import { createPost, createVendor, uploadPostImage, slugify } from "@/lib/posts"
 import { postStore } from "@/lib/postStore";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 
-// ── Palette ───────────────────────────────────────────────────────────────────
 const C = {
   bg:          "#f0ede6",
   surface:     "#e8e4db",
@@ -28,15 +27,17 @@ const C = {
   header:      "rgba(240,237,230,0.96)",
 };
 
-async function generateCaption(imageDataUrl: string): Promise<string> {
+async function generateTitleAndCaption(imageDataUrl: string): Promise<{ title: string; caption: string }> {
   try {
     const res  = await fetch("/api/post-caption", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body:   JSON.stringify({ imageDataUrl }),
     });
     const data = await res.json();
-    return data.caption ?? "";
-  } catch { return ""; }
+    return { title: data.title ?? "", caption: data.caption ?? "" };
+  } catch {
+    return { title: "", caption: "" };
+  }
 }
 
 function ItemImage({ src }: { src: string }) {
@@ -52,17 +53,19 @@ type Stage = "loading" | "edit" | "publishing" | "done" | "error";
 export default function PostPreviewPage() {
   const router = useRouter();
 
-  const [image,   setImage]   = useState<string | null>(null);
-  const [profile, setProfile] = useState<LocalVendorProfile | null>(null);
-  const [stage,   setStage]   = useState<Stage>("loading");
-  const [postId,  setPostId]  = useState<string | null>(null);
+  const [image,        setImage]        = useState<string | null>(null);
+  const [profile,      setProfile]      = useState<LocalVendorProfile | null>(null);
+  const [stage,        setStage]        = useState<Stage>("loading");
+  const [postId,       setPostId]       = useState<string | null>(null);
+  const [errorDetail,  setErrorDetail]  = useState<string>("");
 
   const [title,   setTitle]   = useState("");
   const [caption, setCaption] = useState("");
   const [price,   setPrice]   = useState("");
-  const [editCap, setEditCap] = useState(false);
+  const [editTitle, setEditTitle] = useState(false);
+  const [editCap,   setEditCap]   = useState(false);
 
-  const captionStarted = useRef(false);
+  const started = useRef(false);
 
   useEffect(() => {
     const draft = postStore.get();
@@ -71,28 +74,46 @@ export default function PostPreviewPage() {
     const prof = JSON.parse(raw) as LocalVendorProfile;
     setImage(draft.imageDataUrl);
     setProfile(prof);
-    if (!captionStarted.current) {
-      captionStarted.current = true;
-      generateCaption(draft.imageDataUrl).then(cap => { setCaption(cap); setStage("edit"); });
+    if (!started.current) {
+      started.current = true;
+      generateTitleAndCaption(draft.imageDataUrl).then(({ title: t, caption: c }) => {
+        setTitle(t);
+        setCaption(c);
+        setStage("edit");
+      });
     }
   }, []);
 
   async function handlePublish() {
     if (!image || !profile || !title.trim()) return;
     setStage("publishing");
+    setErrorDetail("");
     try {
       let vendorId = profile.vendor_id;
+
       if (!vendorId) {
         const slug   = slugify(profile.display_name) + "-" + Date.now().toString(36);
-        const vendor = await createVendor({ mall_id: profile.mall_id, display_name: profile.display_name, booth_number: profile.booth_number || undefined, slug });
-        if (!vendor) throw new Error("Vendor creation failed");
+        const vendor = await createVendor({
+          mall_id:      profile.mall_id,
+          display_name: profile.display_name,
+          booth_number: profile.booth_number || undefined,
+          slug,
+        });
+        if (!vendor) {
+          setErrorDetail("Could not create vendor record. Check Supabase RLS on the vendors table.");
+          throw new Error("Vendor creation failed");
+        }
         vendorId = vendor.id;
         const updated: LocalVendorProfile = { ...profile, vendor_id: vendor.id, slug: vendor.slug };
         try { localStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(updated)); } catch {}
         setProfile(updated);
       }
+
       const imageUrl = await uploadPostImage(image, vendorId);
+      // imageUrl can be null — post still goes through without an image
+
       const priceNum = price.trim() ? parseFloat(price.replace(/[^0-9.]/g, "")) : null;
+
       const post = await createPost({
         vendor_id:      vendorId,
         mall_id:        profile.mall_id,
@@ -102,10 +123,16 @@ export default function PostPreviewPage() {
         price_asking:   priceNum && !isNaN(priceNum) ? priceNum : null,
         location_label: profile.booth_number ? `Booth ${profile.booth_number}` : undefined,
       });
-      if (!post) throw new Error("Post creation failed");
+
+      if (!post) {
+        setErrorDetail("Post insert returned null. Check Supabase RLS on the posts table.");
+        throw new Error("Post creation failed");
+      }
+
       postStore.clear();
       setPostId(post.id);
       setStage("done");
+
     } catch (err) {
       console.error("[post/preview] publish error:", err);
       setStage("error");
@@ -135,12 +162,9 @@ export default function PostPreviewPage() {
             <img src={image} alt="" style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover" }} />
           </div>
         )}
-        <motion.div
-          animate={{ opacity: [0.4, 1, 0.4] }}
-          transition={{ duration: 1.8, repeat: Infinity }}
-          style={{ fontSize: 13, color: C.textMuted, fontFamily: "Georgia, serif", fontStyle: "italic" }}
-        >
-          Crafting a caption…
+        <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.8, repeat: Infinity }}
+          style={{ fontSize: 13, color: C.textMuted, fontFamily: "Georgia, serif", fontStyle: "italic" }}>
+          Identifying your find…
         </motion.div>
       </div>
     );
@@ -150,11 +174,8 @@ export default function PostPreviewPage() {
   if (stage === "done") {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 22, padding: "0 24px" }}>
-        <motion.div
-          initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 260, damping: 20 }}
-          style={{ width: 62, height: 62, borderRadius: "50%", background: "rgba(30,77,43,0.1)", border: `1px solid ${C.greenBorder}`, display: "flex", alignItems: "center", justifyContent: "center" }}
-        >
+        <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 260, damping: 20 }}
+          style={{ width: 62, height: 62, borderRadius: "50%", background: "rgba(30,77,43,0.1)", border: `1px solid ${C.greenBorder}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Check size={28} style={{ color: C.green }} />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} style={{ textAlign: "center" }}>
@@ -184,6 +205,11 @@ export default function PostPreviewPage() {
       <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: "0 24px" }}>
         <div style={{ fontFamily: "Georgia, serif", fontSize: 18, color: C.textPrimary, textAlign: "center" }}>Something went wrong.</div>
         <div style={{ fontSize: 13, color: C.textMuted, textAlign: "center", lineHeight: 1.6 }}>The post couldn't be saved. Check your connection and try again.</div>
+        {errorDetail ? (
+          <div style={{ fontSize: 11, color: C.textFaint, textAlign: "center", lineHeight: 1.5, fontFamily: "monospace", background: C.surface, padding: "10px 14px", borderRadius: 8, border: `1px solid ${C.border}` }}>
+            {errorDetail}
+          </div>
+        ) : null}
         <button onClick={() => setStage("edit")} style={{ padding: "12px 24px", borderRadius: 12, fontSize: 13, fontWeight: 600, color: "#fff", background: C.green, border: "none", cursor: "pointer" }}>
           Try again
         </button>
@@ -215,8 +241,34 @@ export default function PostPreviewPage() {
 
         {/* Title */}
         <div>
-          <label style={labelStyle}>Title</label>
-          <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Mid-century ceramic vase" style={inputStyle} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <label style={{ ...labelStyle, marginBottom: 0 }}>Title</label>
+            <button onClick={() => setEditTitle(e => !e)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: "2px 4px" }}>
+              <Pencil size={10} style={{ color: C.textMuted }} />
+              <span style={{ fontSize: 9, color: C.textMuted }}>{editTitle ? "Done" : "Edit"}</span>
+            </button>
+          </div>
+          <AnimatePresence mode="wait">
+            {editTitle ? (
+              <motion.div key="title-edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <input type="text" value={title} onChange={e => setTitle(e.target.value)}
+                  placeholder="e.g. Mid-century ceramic vase"
+                  style={{ ...inputStyle, border: `1px solid ${C.greenBorder}`, fontFamily: "Georgia, serif" }}
+                  autoFocus
+                />
+              </motion.div>
+            ) : (
+              <motion.div key="title-display" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={() => setEditTitle(true)}
+                style={{ padding: "10px 13px", borderRadius: 9, background: C.surface, border: `1px solid ${C.border}`, cursor: "text" }}
+              >
+                {title
+                  ? <p style={{ fontSize: 15, color: C.textPrimary, lineHeight: 1.3, margin: 0, fontFamily: "Georgia, serif", fontWeight: 600 }}>{title}</p>
+                  : <p style={{ fontSize: 13, color: C.textFaint, margin: 0, fontStyle: "italic" }}>Tap to add a title…</p>
+                }
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Caption */}
@@ -230,13 +282,13 @@ export default function PostPreviewPage() {
           </div>
           <AnimatePresence mode="wait">
             {editCap ? (
-              <motion.div key="edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <motion.div key="cap-edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <textarea rows={4} value={caption} onChange={e => setCaption(e.target.value)}
                   style={{ ...inputStyle, fontFamily: "Georgia, serif", lineHeight: 1.65, resize: "none", border: `1px solid ${C.greenBorder}` } as React.CSSProperties}
                 />
               </motion.div>
             ) : (
-              <motion.div key="display" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              <motion.div key="cap-display" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 onClick={() => setEditCap(true)}
                 style={{ padding: "12px 13px", borderRadius: 9, background: C.surface, border: `1px solid ${C.border}`, cursor: "text" }}
               >
