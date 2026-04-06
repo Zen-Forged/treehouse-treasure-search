@@ -14,8 +14,8 @@
   }
 
   body {
-    background-color: #061406;
-    color: #c4b07d;
+    background-color: #f0ede6;
+    color: #1a1a18;
   }
 
   /* Remove number input spinners */
@@ -75,13 +75,21 @@
   }
 }
 
-/* Grain texture overlay for depth */
-.grain::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 9999;
-  opacity: 0.35;
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { scrollbar-width: none; }
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(220,216,208,0.7) 25%,
+    rgba(200,196,188,0.9) 50%,
+    rgba(220,216,208,0.7) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.6s infinite linear;
 }

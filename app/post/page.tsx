@@ -14,6 +14,23 @@ import { postStore } from "@/lib/postStore";
 import type { Mall } from "@/types/treehouse";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 
+// ── Palette ───────────────────────────────────────────────────────────────────
+const C = {
+  bg:          "#f0ede6",
+  surface:     "#e8e4db",
+  surfaceDeep: "#dedad0",
+  border:      "rgba(26,26,24,0.1)",
+  textPrimary: "#1a1a18",
+  textMid:     "#4a4a42",
+  textMuted:   "#8a8478",
+  textFaint:   "#b0aa9e",
+  green:       "#1e4d2b",
+  greenLight:  "rgba(30,77,43,0.07)",
+  greenBorder: "rgba(30,77,43,0.18)",
+  input:       "rgba(255,255,255,0.7)",
+  inputBorder: "rgba(26,26,24,0.14)",
+};
+
 function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.84): Promise<string> {
   return new Promise(resolve => {
     const img = new window.Image();
@@ -46,7 +63,6 @@ export default function PostCapturePage() {
   const [selectedMall, setSelectedMall] = useState<Mall | null>(null);
   const [capturing,    setCapturing]    = useState(false);
 
-  // Load saved profile from localStorage on mount
   useEffect(() => {
     try {
       const raw = localStorage.getItem(LOCAL_VENDOR_KEY);
@@ -55,22 +71,15 @@ export default function PostCapturePage() {
         setProfile(saved);
         setDisplayName(saved.display_name);
         setBoothNumber(saved.booth_number ?? "");
-        // Don't open setup — they already have a profile
       } else {
-        // First time — open setup automatically
         setShowSetup(true);
       }
     } catch {
       setShowSetup(true);
     }
-
-    getAllMalls().then(data => {
-      setMalls(data);
-      setMallsLoading(false);
-    });
+    getAllMalls().then(data => { setMalls(data); setMallsLoading(false); });
   }, []);
 
-  // Once malls load, restore the vendor's saved mall selection
   useEffect(() => {
     if (!selectedMall && profile && malls.length > 0) {
       const match = malls.find(m => m.id === profile.mall_id);
@@ -78,18 +87,10 @@ export default function PostCapturePage() {
     }
   }, [malls, profile]);
 
-  // ── Profile completeness ────────────────────────────────────────────────────
-  // For the form: needs name + mall selected
   const formComplete = displayName.trim().length >= 2 && selectedMall !== null;
-
-  // For capture: either a saved profile exists (already has mall_id stored),
-  // OR they've just filled the form and selected a mall in this session.
-  // A saved profile with a mall_id is sufficient — we don't need the mall
-  // object loaded to proceed; uploadPostImage only needs the mall_id string.
   const hasValidProfile =
     (profile !== null && profile.mall_id.length > 0 && profile.display_name.trim().length >= 2) ||
     formComplete;
-
   const canCapture = hasValidProfile && !capturing;
 
   function saveProfile() {
@@ -127,57 +128,63 @@ export default function PostCapturePage() {
     e.target.value = "";
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "10px 12px", borderRadius: 9,
+    background: C.input, border: `1px solid ${C.inputBorder}`,
+    color: C.textPrimary, fontSize: 14, outline: "none", boxSizing: "border-box",
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 9, color: C.textMuted, textTransform: "uppercase",
+    letterSpacing: "1.8px", display: "block", marginBottom: 6,
+  };
+
   return (
-    <div style={{ minHeight: "100vh", background: "#050f05", maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
 
       <input ref={cameraRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={onFileChange} />
       <input ref={galleryRef} type="file" accept="image/*"                        className="hidden" onChange={onFileChange} />
 
-      {/* Ambient */}
-      <div style={{ position: "fixed", inset: 0, maxWidth: 430, margin: "0 auto", pointerEvents: "none", zIndex: 0 }}>
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 50% 0%, rgba(200,180,126,0.04) 0%, transparent 60%)" }} />
-      </div>
-
       <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column" }}>
 
         {/* Nav */}
-        <header style={{ display: "flex", alignItems: "center", gap: 12, padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 14px" }}>
+        <header style={{ display: "flex", alignItems: "center", gap: 12, padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 14px", borderBottom: `1px solid ${C.border}`, background: C.bg }}>
           <button
             onClick={() => router.back()}
-            style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(13,31,13,0.6)", border: "1px solid rgba(109,188,109,0.1)", cursor: "pointer" }}
+            style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer" }}
           >
-            <ArrowLeft size={15} style={{ color: "#7a6535" }} />
+            <ArrowLeft size={15} style={{ color: C.textMid }} />
           </button>
           <div>
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: "#f5f0e8", lineHeight: 1 }}>Post a find</div>
-            <div style={{ fontSize: 9, color: "#3a2e18", textTransform: "uppercase", letterSpacing: "2px", marginTop: 2 }}>Share with your community</div>
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: C.textPrimary, lineHeight: 1 }}>Post a find</div>
+            <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginTop: 2 }}>Share with your community</div>
           </div>
         </header>
 
-        <div style={{ flex: 1, padding: "0 15px", paddingBottom: "max(32px, env(safe-area-inset-bottom, 32px))", display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ flex: 1, padding: "16px 15px", paddingBottom: "max(32px, env(safe-area-inset-bottom, 32px))", display: "flex", flexDirection: "column", gap: 14 }}>
 
           {/* ── Vendor identity card ─────────────────────────────────────── */}
           <motion.div
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
-            style={{ borderRadius: 14, background: "rgba(13,31,13,0.55)", border: "1px solid rgba(109,188,109,0.1)", overflow: "hidden" }}
+            style={{ borderRadius: 14, background: C.surface, border: `1px solid ${C.border}`, overflow: "hidden" }}
           >
             <button
               onClick={() => setShowSetup(s => !s)}
-              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", borderBottom: showSetup ? "1px solid rgba(109,188,109,0.07)" : "none" }}
+              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", borderBottom: showSetup ? `1px solid ${C.border}` : "none" }}
             >
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 3 }}>
-                <div style={{ fontSize: 8, color: "#2a2010", textTransform: "uppercase", letterSpacing: "2px" }}>Your vendor profile</div>
+                <div style={{ fontSize: 8, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px" }}>Your vendor profile</div>
                 {profile
-                  ? <div style={{ fontFamily: "Georgia, serif", fontSize: 14, color: "#d4c9b0", fontWeight: 600 }}>
+                  ? <div style={{ fontFamily: "Georgia, serif", fontSize: 14, color: C.textPrimary, fontWeight: 600 }}>
                       {[profile.display_name, profile.booth_number ? `Booth ${profile.booth_number}` : null, profile.mall_name].filter(Boolean).join(" · ")}
                     </div>
-                  : <div style={{ fontSize: 12, color: "#4a3a1e" }}>Set up your profile to post</div>
+                  : <div style={{ fontSize: 12, color: C.textMuted }}>Set up your profile to post</div>
                 }
               </div>
               {showSetup
-                ? <ChevronUp   size={14} style={{ color: "#3a2e18", flexShrink: 0 }} />
-                : <ChevronDown size={14} style={{ color: "#3a2e18", flexShrink: 0 }} />
+                ? <ChevronUp   size={14} style={{ color: C.textMuted, flexShrink: 0 }} />
+                : <ChevronDown size={14} style={{ color: C.textMuted, flexShrink: 0 }} />
               }
             </button>
 
@@ -190,55 +197,32 @@ export default function PostCapturePage() {
                 >
                   <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: 12 }}>
 
-                    {/* Display name */}
                     <div>
-                      <label style={{ fontSize: 9, color: "#2a2010", textTransform: "uppercase", letterSpacing: "1.8px", display: "block", marginBottom: 6 }}>Vendor name</label>
-                      <input
-                        type="text" value={displayName} onChange={e => setDisplayName(e.target.value)}
-                        placeholder="e.g. Magnolia & Co."
-                        style={{ width: "100%", padding: "10px 12px", borderRadius: 9, background: "rgba(5,13,5,0.8)", border: "1px solid rgba(109,188,109,0.12)", color: "#f5f0e8", fontSize: 14, outline: "none", fontFamily: "Georgia, serif", boxSizing: "border-box" }}
-                      />
+                      <label style={labelStyle}>Vendor name</label>
+                      <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="e.g. Magnolia & Co." style={{ ...inputStyle, fontFamily: "Georgia, serif" }} />
                     </div>
 
-                    {/* Booth number */}
                     <div>
-                      <label style={{ fontSize: 9, color: "#2a2010", textTransform: "uppercase", letterSpacing: "1.8px", display: "block", marginBottom: 6 }}>
-                        Booth number <span style={{ color: "#1e1808", textTransform: "none", letterSpacing: 0 }}>(optional)</span>
+                      <label style={labelStyle}>
+                        Booth number <span style={{ color: C.textFaint, textTransform: "none", letterSpacing: 0 }}>(optional)</span>
                       </label>
-                      <input
-                        type="text" value={boothNumber} onChange={e => setBoothNumber(e.target.value)}
-                        placeholder="e.g. 42B"
-                        style={{ width: "100%", padding: "10px 12px", borderRadius: 9, background: "rgba(5,13,5,0.8)", border: "1px solid rgba(109,188,109,0.12)", color: "#f5f0e8", fontSize: 14, outline: "none", boxSizing: "border-box" }}
-                      />
+                      <input type="text" value={boothNumber} onChange={e => setBoothNumber(e.target.value)} placeholder="e.g. 42B" style={inputStyle} />
                     </div>
 
-                    {/* Mall selector */}
                     <div>
-                      <label style={{ fontSize: 9, color: "#2a2010", textTransform: "uppercase", letterSpacing: "1.8px", display: "block", marginBottom: 6 }}>Your mall</label>
-
+                      <label style={labelStyle}>Your mall</label>
                       {mallsLoading ? (
-                        <div style={{ padding: "10px 12px", fontSize: 12, color: "#2a2010" }}>Loading malls…</div>
+                        <div style={{ padding: "10px 12px", fontSize: 12, color: C.textMuted }}>Loading malls…</div>
                       ) : malls.length === 0 ? (
-                        <div style={{ padding: "10px 12px", fontSize: 12, color: "#3a2e18", lineHeight: 1.5 }}>
-                          No malls listed yet. Contact your mall manager to get added.
-                        </div>
+                        <div style={{ padding: "10px 12px", fontSize: 12, color: C.textMid, lineHeight: 1.5 }}>No malls listed yet. Contact your mall manager to get added.</div>
                       ) : (
                         <>
                           <button
                             onClick={() => setShowMallPick(s => !s)}
-                            style={{
-                              width: "100%", padding: "10px 12px", borderRadius: 9, boxSizing: "border-box",
-                              background: "rgba(5,13,5,0.8)",
-                              border: `1px solid ${selectedMall ? "rgba(200,180,126,0.2)" : "rgba(109,188,109,0.12)"}`,
-                              color: selectedMall ? "#d4c9b0" : "#3a2e18",
-                              fontSize: 14, textAlign: "left",
-                              display: "flex", alignItems: "center", justifyContent: "space-between",
-                              cursor: "pointer",
-                              fontFamily: selectedMall ? "Georgia, serif" : "inherit",
-                            }}
+                            style={{ ...inputStyle, display: "flex", alignItems: "center", justifyContent: "space-between", border: `1px solid ${selectedMall ? C.greenBorder : C.inputBorder}`, background: C.input, cursor: "pointer", fontFamily: selectedMall ? "Georgia, serif" : "inherit", color: selectedMall ? C.textPrimary : C.textMuted }}
                           >
                             <span>{selectedMall ? `${selectedMall.name} · ${selectedMall.city}` : "Select your mall"}</span>
-                            <ChevronDown size={13} style={{ color: "#3a2e18", flexShrink: 0 }} />
+                            <ChevronDown size={13} style={{ color: C.textMuted, flexShrink: 0 }} />
                           </button>
 
                           <AnimatePresence>
@@ -248,15 +232,15 @@ export default function PostCapturePage() {
                                 exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }}
                                 style={{ overflow: "hidden", marginTop: 4 }}
                               >
-                                <div style={{ borderRadius: 9, border: "1px solid rgba(109,188,109,0.12)", overflow: "hidden", background: "rgba(8,20,8,0.97)", maxHeight: 200, overflowY: "auto" }}>
+                                <div style={{ borderRadius: 9, border: `1px solid ${C.border}`, overflow: "hidden", background: "#fff", maxHeight: 200, overflowY: "auto" }}>
                                   {malls.map(mall => (
                                     <button
                                       key={mall.id}
                                       onClick={() => { setSelectedMall(mall); setShowMallPick(false); }}
-                                      style={{ width: "100%", padding: "11px 14px", background: selectedMall?.id === mall.id ? "rgba(200,180,126,0.08)" : "none", border: "none", borderBottom: "1px solid rgba(109,188,109,0.06)", cursor: "pointer", textAlign: "left" }}
+                                      style={{ width: "100%", padding: "11px 14px", background: selectedMall?.id === mall.id ? C.greenLight : "none", border: "none", borderBottom: `1px solid ${C.border}`, cursor: "pointer", textAlign: "left" }}
                                     >
-                                      <div style={{ fontFamily: "Georgia, serif", fontSize: 13, color: "#d4c9b0", lineHeight: 1.2 }}>{mall.name}</div>
-                                      <div style={{ fontSize: 10, color: "#3a2e18", marginTop: 2 }}>{mall.city}, {mall.state}</div>
+                                      <div style={{ fontFamily: "Georgia, serif", fontSize: 13, color: C.textPrimary, lineHeight: 1.2 }}>{mall.name}</div>
+                                      <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>{mall.city}, {mall.state}</div>
                                     </button>
                                   ))}
                                 </div>
@@ -267,18 +251,10 @@ export default function PostCapturePage() {
                       )}
                     </div>
 
-                    {/* Save button */}
                     <button
                       onClick={saveProfile}
                       disabled={!formComplete}
-                      style={{
-                        width: "100%", padding: "12px", borderRadius: 10, fontSize: 13, fontWeight: 600,
-                        letterSpacing: "0.2px", cursor: formComplete ? "pointer" : "default",
-                        color: formComplete ? "#f5f0e8" : "#1e1808",
-                        background: formComplete ? "linear-gradient(175deg, rgba(46,110,46,0.96), rgba(33,82,33,1))" : "rgba(13,31,13,0.4)",
-                        border: "1px solid rgba(109,188,109,0.14)",
-                        transition: "all 0.2s",
-                      }}
+                      style={{ width: "100%", padding: "12px", borderRadius: 10, fontSize: 13, fontWeight: 600, letterSpacing: "0.2px", cursor: formComplete ? "pointer" : "default", color: formComplete ? "#fff" : C.textFaint, background: formComplete ? C.green : C.surfaceDeep, border: "none", transition: "all 0.2s" }}
                     >
                       {profile ? "Update profile" : "Save profile"}
                     </button>
@@ -294,51 +270,33 @@ export default function PostCapturePage() {
             transition={{ duration: 0.35, delay: 0.1 }}
             style={{ display: "flex", flexDirection: "column", gap: 10 }}
           >
-            <div style={{ fontSize: 9, color: "#2a2010", textTransform: "uppercase", letterSpacing: "2px", paddingLeft: 2 }}>
+            <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", paddingLeft: 2 }}>
               Photograph your find
             </div>
 
-            {/* Primary camera tap zone */}
             <motion.button
               onClick={() => canCapture && cameraRef.current?.click()}
               disabled={!canCapture}
-              style={{
-                width: "100%", padding: "48px 22px", borderRadius: 16,
-                cursor: canCapture ? "pointer" : "default",
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12,
-                background: canCapture ? "rgba(13,31,13,0.6)" : "rgba(8,18,8,0.3)",
-                border: `1px dashed ${canCapture ? "rgba(109,188,109,0.22)" : "rgba(109,188,109,0.07)"}`,
-                transition: "all 0.2s",
-              }}
+              style={{ width: "100%", padding: "48px 22px", borderRadius: 16, cursor: canCapture ? "pointer" : "default", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, background: canCapture ? C.surface : C.surfaceDeep, border: `1px dashed ${canCapture ? "rgba(30,77,43,0.3)" : C.border}`, transition: "all 0.2s" }}
               whileTap={canCapture ? { scale: 0.98 } : {}}
             >
-              <div style={{
-                width: 52, height: 52, borderRadius: "50%",
-                background: canCapture ? "rgba(46,110,46,0.18)" : "rgba(13,31,13,0.35)",
-                border: `1px solid ${canCapture ? "rgba(109,188,109,0.22)" : "rgba(109,188,109,0.06)"}`,
-                display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s",
-              }}>
-                <Camera size={22} style={{ color: canCapture ? "#6dbc6d" : "#1e1808" }} />
+              <div style={{ width: 52, height: 52, borderRadius: "50%", background: canCapture ? C.greenLight : C.surfaceDeep, border: `1px solid ${canCapture ? C.greenBorder : C.border}`, display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.2s" }}>
+                <Camera size={22} style={{ color: canCapture ? C.green : C.textFaint }} />
               </div>
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, lineHeight: 1.2, color: canCapture ? "#d4c9b0" : "#1e1808", transition: "color 0.2s" }}>
+              <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, lineHeight: 1.2, color: canCapture ? C.textPrimary : C.textFaint, transition: "color 0.2s" }}>
                 {capturing ? "Opening camera…" : "Take a photo"}
               </div>
               {!hasValidProfile && (
-                <div style={{ fontSize: 11, color: "#2a2010", textAlign: "center", maxWidth: 210, lineHeight: 1.5 }}>
+                <div style={{ fontSize: 11, color: C.textMuted, textAlign: "center", maxWidth: 210, lineHeight: 1.5 }}>
                   Complete your vendor profile above to continue
                 </div>
               )}
             </motion.button>
 
-            {/* Gallery fallback */}
             <button
               onClick={() => canCapture && galleryRef.current?.click()}
               disabled={!canCapture}
-              style={{
-                width: "100%", padding: "12px", borderRadius: 10, fontSize: 13, border: "none",
-                color: canCapture ? "rgba(168,144,78,0.5)" : "rgba(106,85,40,0.18)",
-                background: "transparent", cursor: canCapture ? "pointer" : "default", transition: "color 0.2s",
-              }}
+              style={{ width: "100%", padding: "12px", borderRadius: 10, fontSize: 13, border: "none", color: canCapture ? C.green : C.textFaint, background: "transparent", cursor: canCapture ? "pointer" : "default", transition: "color 0.2s", textDecoration: canCapture ? "underline" : "none", textDecorationColor: "rgba(30,77,43,0.3)" }}
             >
               Choose from library
             </button>
@@ -348,17 +306,17 @@ export default function PostCapturePage() {
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.25 }}
-            style={{ borderRadius: 12, background: "rgba(8,20,8,0.4)", border: "1px solid rgba(200,180,126,0.05)", padding: "12px 14px" }}
+            style={{ borderRadius: 12, background: C.surface, border: `1px solid ${C.border}`, padding: "12px 14px" }}
           >
-            <div style={{ fontSize: 8, color: "#1e1808", textTransform: "uppercase", letterSpacing: "2px", marginBottom: 8 }}>Posting tips</div>
+            <div style={{ fontSize: 8, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: 8 }}>Posting tips</div>
             {[
               "Good light goes a long way — natural is best",
               "Get close enough to show the character of the piece",
               "One item per photo reads better than a crowded shelf",
             ].map((tip, i) => (
               <div key={i} style={{ display: "flex", gap: 8, marginBottom: i < 2 ? 6 : 0 }}>
-                <span style={{ fontSize: 9, color: "#2a2010", marginTop: 1, flexShrink: 0 }}>·</span>
-                <span style={{ fontSize: 11, color: "#2a2010", lineHeight: 1.55 }}>{tip}</span>
+                <span style={{ fontSize: 9, color: C.textFaint, marginTop: 1, flexShrink: 0 }}>·</span>
+                <span style={{ fontSize: 11, color: C.textMid, lineHeight: 1.55 }}>{tip}</span>
               </div>
             ))}
           </motion.div>
