@@ -6,60 +6,67 @@
 
 ## HOW TO START A NEW SESSION
 
-Paste this at the top of every new conversation:
+1. Start a new chat at claude.ai
+2. Run in Terminal: `cat /Users/davidbutler/Projects/treehouse-treasure-search/CLAUDE.md`
+3. Paste this into the new chat:
 
 ```
-PROJECT: Treehouse — Zen-Forged/treehouse-treasure-search
+PROJECT: Treehouse — Zen-Forged/treehouse-treasure-search — treehouse-treasure-search.vercel.app
+STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Vercel
+Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md and CONTEXT.md before doing anything.
-Current issue: [paste the CURRENT ISSUE section below]
+
+CURRENT ISSUE:
+[paste the CURRENT ISSUE section below]
 ```
 
-Then paste the **CURRENT ISSUE** section verbatim. That gives Claude everything needed without re-explaining the whole project.
+## HOW TO END A SESSION
+
+Tell Claude: "update CLAUDE.md with current status" then run:
+```bash
+cd /Users/davidbutler/Projects/treehouse-treasure-search
+git add CLAUDE.md && git commit -m "docs: update current issue" && git push
+```
 
 ---
 
 ## CURRENT ISSUE
-> Update this section every time you finish a session or hit a blocker.
+> Last updated: 2026-04-06
 
-**Status:** iPhone publish flow fails — "vendor creation failed" error on device, works fine on desktop Chrome.
+**Status:** iPhone publish flow fails with "vendor creation failed" error. Desktop Chrome works perfectly.
 
-**What we know:**
-- Desktop Chrome: full publish flow works (status 201, confirmed via live browser debug)
-- Supabase RLS: disabled on posts, vendors, malls — confirmed not the issue
-- localStorage on desktop has correct data: `{ display_name, booth_number, mall_id: "19a8ff7e-...", vendor_id: "65a879f1-...", slug }`
-- Direct Supabase insert via debug API: vendor insert ✅, post insert ✅
-- Browser fetch intercept on desktop: post inserts with 201 ✅
-- iPhone-specific: unknown — likely Safari localStorage, HEIC image format, or body size issue
+**Confirmed working:**
+- Supabase RLS disabled on posts, vendors, malls ✅
+- Desktop Chrome full publish: 201 success, confirmed via live browser fetch intercept ✅
+- Direct Supabase insert from debug API: vendor ✅ post ✅
+- localStorage on desktop has correct data: `mall_id: "19a8ff7e-cb45-491f-9451-878e2dde5bf4"`, `vendor_id: "65a879f1-c43c-481b-974f-379792a36db8"`
 
-**Hypotheses not yet tested on iPhone:**
-1. Safari private browsing mode blocks localStorage → profile is null → vendor creation attempted with empty mall_id
-2. iPhone camera outputs HEIC format → FileReader fails → imageDataUrl is malformed → postStore.set() gets bad data → preview page bounces back to /post
-3. The image compression on iPhone is producing a payload too large for the API route
+**Not yet confirmed on iPhone:**
+- Does the vendor profile card show name/booth/mall on `/post`? If blank → localStorage problem
+- If profile shows → does AI generate title/caption on preview? If not → image format problem (HEIC)
+- If title/caption shows → publish fails → Supabase network issue specific to iPhone Safari
 
-**What to try next:**
-- Have user open `/post` on iPhone and confirm vendor profile card shows name/mall (not blank)
-- If blank → localStorage is the issue (private browsing or Safari ITP)
-- If populated → take photo, on preview page check if title/caption generated (confirms image was read correctly)
-- If title/caption missing → image format issue
-- If title/caption present but publish fails → Supabase insert issue specific to iPhone network
+**Most likely cause:** Safari on iPhone is either in private browsing mode (blocks localStorage) or Safari ITP is clearing localStorage between sessions. This would make the profile appear blank, vendor_id would be null, createVendor would be called with an empty mall_id, and the insert would fail with a foreign key error.
 
-**Files relevant to this issue:**
-- `app/post/page.tsx` — capture + profile validation
-- `app/post/preview/page.tsx` — title/caption generation + publish flow
-- `lib/posts.ts` — createVendor, createPost, uploadPostImage
-- `app/api/debug/route.ts` — live diagnostics endpoint
+**Next debugging step:**
+1. Ask user: open `/post` on iPhone — does the vendor profile card show "ZenForged Finds · Booth 369 · America's Antique Mall"?
+2. If YES → take photo, on preview page does title/caption auto-populate?
+3. If YES → tap publish and read the exact error detail shown on screen
+4. The error screen now shows `errorDetail` text — that message tells you exactly which step failed
+
+**Key files for this issue:**
+- `app/post/page.tsx` — profile load + mall_id validation
+- `app/post/preview/page.tsx` — publish flow, shows errorDetail on screen
+- `lib/posts.ts` — createVendor, createPost
+- `app/api/debug/route.ts` — run `curl https://treehouse-treasure-search.vercel.app/api/debug`
 
 ---
 
 ## PROJECT OVERVIEW
 
-**What it is:** Local discovery ecosystem for vintage/antique/thrift finds.
-- Buyers browse feed → Vendors post finds → Mall operators get foot traffic
-- Reseller intel tool (/scan → /decide) exists as a secondary feature
-
 **Two independent layers:**
-1. **Ecosystem** (front door): feed, vendor profiles, mall pages, post flow → Supabase
-2. **Reseller intel**: scan → identify → comps → decide → localStorage only
+1. **Ecosystem** (front door, light cream theme): feed, vendor profiles, mall pages, post flow → Supabase
+2. **Reseller intel** (dark forest theme, untouched): scan → identify → comps → decide → localStorage only
 
 ---
 
@@ -74,7 +81,7 @@ Anthropic SDK (claude-opus-4-5) · Supabase (Postgres + Storage) · SerpAPI · V
 ## ENV VARS
 ```
 NEXT_PUBLIC_SUPABASE_URL         https://zogxkarpwlaqmamfzceb.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY    eyJhbGci... (JWT, set in Vercel + .env.local)
+NEXT_PUBLIC_SUPABASE_ANON_KEY    eyJhbGci... (full JWT — in .env.local and Vercel)
 ANTHROPIC_API_KEY                Claude Vision + caption generation
 SERPAPI_KEY                      eBay sold comps
 ```
@@ -82,49 +89,49 @@ SERPAPI_KEY                      eBay sold comps
 ---
 
 ## SUPABASE
-- **Tables:** malls, vendors, posts (RLS disabled on all three)
-- **Storage bucket:** post-images (public)
+- **Tables:** malls, vendors, posts — RLS DISABLED on all three
+- **Storage bucket:** post-images — PUBLIC
 - **Only mall:** America's Antique Mall, id: `19a8ff7e-cb45-491f-9451-878e2dde5bf4`
 - **Known vendor:** ZenForged Finds, booth 369, id: `65a879f1-c43c-481b-974f-379792a36db8`
-- **Schema note:** vendors table has `facebook_url text` column (added manually)
+- **Extra column:** vendors table has `facebook_url text` (added via SQL)
 
 ---
 
 ## ROUTE MAP
 
-### Ecosystem routes (cream/light theme)
+### Ecosystem (light cream theme)
 ```
 /                   Discovery feed — front door
-/find/[id]          Find detail — full image, vendor info, vendor actions (mark sold/delete)
+/find/[id]          Find detail — full image, vendor info, mark sold/delete (own posts)
 /mall/[slug]        Mall profile
 /vendor/[slug]      Vendor profile — Facebook link, available/sold grid
-/post               Vendor capture — camera/gallery, profile setup
-/post/preview       Edit title/caption/price → publish to Supabase
+/post               Vendor capture — camera/gallery, profile setup, Reset button
+/post/preview       Edit title/caption/price → publish
 ```
 
-### Reseller intel routes (dark forest theme — untouched)
+### Reseller intel (dark theme — do not touch)
 ```
 /scan → /discover → /refine → /decide → /intent → /enhance-text → /share
 /finds, /finds/[id]
 ```
 
-### API routes
+### API
 ```
-POST /api/post-caption    Claude → { title, caption } from image (mock fallback included)
+POST /api/post-caption    Claude → { title, caption } from image (mock fallback)
 POST /api/identify        Claude Vision → { title, description, confidence, searchQuery }
-GET  /api/sold-comps      SerpAPI eBay comps, 48h in-memory cache
-GET  /api/debug           Live Supabase connectivity + insert test
+GET  /api/sold-comps      SerpAPI eBay comps, 48h cache
+GET  /api/debug           Supabase connectivity + real vendor/post insert test
 ```
 
 ---
 
 ## KEY FILES
 ```
-lib/supabase.ts           Supabase client (placeholder fallback for build time)
-lib/posts.ts              All data functions: getFeedPosts, getPost, createPost,
-                          createVendor, uploadPostImage, updatePostStatus, deletePost,
+lib/supabase.ts           Client with placeholder fallback for build time
+lib/posts.ts              getFeedPosts, getPost, createPost, createVendor,
+                          uploadPostImage, updatePostStatus, deletePost,
                           getAllMalls, getMallBySlug, getVendorBySlug, slugify
-lib/postStore.ts          In-memory image store for post flow (avoids sessionStorage)
+lib/postStore.ts          In-memory image store for /post → /post/preview flow
 types/treehouse.ts        Post, Vendor, Mall, LocalVendorProfile, PostStatus
 app/layout.tsx            No max-width wrapper — each page owns its own width
 ```
@@ -133,89 +140,67 @@ app/layout.tsx            No max-width wrapper — each page owns its own width
 
 ## DESIGN SYSTEM
 
-### Ecosystem pages (light theme)
+### Ecosystem pages (light)
 ```
-bg:           #f0ede6  warm cream
-surface:      #e8e4db
-border:       rgba(26,26,24,0.1)
-textPrimary:  #1a1a18
-textMid:      #4a4a42
-textMuted:    #8a8478
-textFaint:    #b0aa9e
-green:        #1e4d2b  (CTAs, active states)
+bg: #f0ede6  surface: #e8e4db  border: rgba(26,26,24,0.1)
+text: #1a1a18 / #4a4a42 / #8a8478 / #b0aa9e
+green (CTAs): #1e4d2b
 ```
 
-### Reseller pages (dark theme — do not change)
+### Reseller pages (dark — do not change)
 ```
-bg:    #050f05
-text:  #f5f0e8
-gold:  #c8b47e
-green: #6dbc6d
+bg: #050f05  text: #f5f0e8  gold: #c8b47e  green: #6dbc6d
 ```
 
-### Shared rules
+### Shared
 ```
-Font:        Georgia serif (headings), monospace (prices), system (body)
-Max-width:   430px per page
-Safe area:   env(safe-area-inset-bottom) on all fixed bars
-Animations:  opacity 0→1, y 8-16→0, ease [0.25,0.1,0.25,1], whileTap scale 0.97
+Font: Georgia serif (headings), monospace (prices), system (body)
+Max-width: 430px per page
+Safe area: env(safe-area-inset-bottom) on all fixed bars
+Animations: opacity 0→1, y 8-16→0, ease [0.25,0.1,0.25,1]
 ```
 
 ---
 
-## KNOWN ARCHITECTURAL RULES
-- `export const dynamic = "force-dynamic"` on all pages that import from lib/supabase.ts
-- Supabase client uses placeholder URL/key at build time to avoid prerender crash
-- zsh: always use `git add -A` not individual paths (brackets cause glob expansion)
-- `export const config = {}` is deprecated in Next.js 14 App Router — never use it
-- Image upload: `uploadPostImage` is non-fatal — post goes through even if image fails
-- vendor_id only carried over in LocalVendorProfile if mall hasn't changed
+## RULES & GOTCHAS
+- All ecosystem pages need `export const dynamic = "force-dynamic"` (import supabase at module scope)
+- Never use `export const config = {}` — deprecated in Next.js 14 App Router
+- Always use `git add -A` — never individual paths (zsh glob-expands `[slug]`)
+- `uploadPostImage` is non-fatal — post goes through even without image
+- vendor_id only carried over in LocalVendorProfile if mall_id unchanged
+- Supabase client uses placeholder URL at build time to avoid prerender crash
 
 ---
 
 ## WORKING ✅
-- Discovery feed loads from Supabase, skeleton loading, filters
-- Find detail: full-image display (contain, no crop), vendor/mall card, directions
-- Vendor actions on own posts: mark sold/available, delete with confirmation
-- Facebook share button (sharer.php popup)
-- Vendor profile page: Facebook link, light theme, available/sold grid
-- Mall profile page: grid, directions, available/sold split
-- Vendor post flow (desktop): capture → AI title+caption → preview → publish → live
+- Discovery feed, skeleton loading, filters (All/Available/Just In)
+- Find detail: full image (contain, no crop), vendor/mall card, directions CTA
+- Vendor actions on own posts: mark sold/available toggle, delete with confirmation
+- Facebook share button (sharer.php popup) + share sheet button
+- Vendor profile: Facebook link, light theme, available/sold grid
+- Mall profile: grid, directions, available/sold split
+- Vendor post flow on desktop: capture → AI title+caption → preview → publish → live
 - Image upload to Supabase Storage
-- All reseller intel routes (untouched from original build)
+- All reseller intel routes (untouched)
 
 ## KNOWN GAPS ⚠️
-- iPhone publish flow broken (see CURRENT ISSUE above)
-- /enhance-text caption refinement is mock (not real Claude call)
-- No Supabase RLS (auth not implemented yet — planned future sprint)
+- **iPhone publish broken** — see CURRENT ISSUE
+- /enhance-text is mock (not real Claude)
+- No Supabase RLS / auth yet
 - No pull-to-refresh on feed
-- No mark-as-sold from vendor profile page (only from find detail)
-- Facebook share is sharer.php popup, not native iOS share sheet
-- No PWA/offline support
+- Facebook share is sharer.php popup, not native iOS sheet
+- No PWA support
 
 ---
 
-## DEBUGGING PATTERNS
+## DEBUGGING
 ```bash
-# Check live env vars and Supabase connectivity
+# Live Supabase test (vendor + post insert with real IDs)
 curl -s https://treehouse-treasure-search.vercel.app/api/debug | python3 -m json.tool
 
-# Vercel logs
-npx vercel logs --prod | grep -i "error"
-
-# Build test before pushing
+# Build check before pushing
 npm run build 2>&1 | tail -30
 
-# Git — always use -A to avoid zsh glob issues with [slug] paths
+# Always use -A for git add
 git add -A && git commit -m "..." && git push
 ```
-
----
-
-## SESSION WORKFLOW (recommended)
-1. Start session by pasting the CURRENT ISSUE section
-2. Fix the issue
-3. Before ending session, update CURRENT ISSUE with new status
-4. Commit CLAUDE.md with the update: `git add CLAUDE.md && git commit -m "docs: update current issue"`
-
-This keeps the next session from wasting turns re-diagnosing.
