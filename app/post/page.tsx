@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Camera, ArrowLeft, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import { getAllMalls } from "@/lib/posts";
 import { postStore } from "@/lib/postStore";
+import { safeStorage } from "@/lib/safeStorage";
 import type { Mall } from "@/types/treehouse";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 
@@ -58,17 +59,18 @@ export default function PostCapturePage() {
   const [capturing,    setCapturing]    = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(LOCAL_VENDOR_KEY);
-      if (raw) {
+    // Use safeStorage — handles Safari private mode / ITP
+    const raw = safeStorage.getItem(LOCAL_VENDOR_KEY);
+    if (raw) {
+      try {
         const saved = JSON.parse(raw) as LocalVendorProfile;
         setProfile(saved);
         setDisplayName(saved.display_name);
         setBoothNumber(saved.booth_number ?? "");
-      } else {
+      } catch {
         setShowSetup(true);
       }
-    } catch {
+    } else {
       setShowSetup(true);
     }
     getAllMalls().then(data => { setMalls(data); setMallsLoading(false); });
@@ -91,14 +93,14 @@ export default function PostCapturePage() {
         mall_city:    "",
         // vendor_id intentionally omitted — force fresh vendor creation
       };
-      try { localStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(cleaned)); } catch {}
+      safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(cleaned));
       setProfile(cleaned);
       setShowSetup(true);
     }
   }, [malls, mallsLoading]);
 
   function handleReset() {
-    try { localStorage.removeItem(LOCAL_VENDOR_KEY); } catch {}
+    safeStorage.removeItem(LOCAL_VENDOR_KEY);
     setProfile(null);
     setDisplayName("");
     setBoothNumber("");
@@ -119,7 +121,7 @@ export default function PostCapturePage() {
       vendor_id:    sameMall ? profile?.vendor_id : undefined,
       slug:         sameMall ? profile?.slug       : undefined,
     };
-    try { localStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(p)); } catch {}
+    safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(p));
     setProfile(p);
     setShowSetup(false);
   }
