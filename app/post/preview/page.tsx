@@ -6,7 +6,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Check, Pencil } from "lucide-react";
+import { ArrowLeft, Check, Pencil, Camera } from "lucide-react";
 import { createPost, createVendor, uploadPostImage, slugify } from "@/lib/posts";
 import { postStore } from "@/lib/postStore";
 import { safeStorage } from "@/lib/safeStorage";
@@ -28,7 +28,7 @@ const C = {
   header:      "rgba(240,237,230,0.96)",
 };
 
-// Kentucky Treehouse Facebook page — "View your post" opens this externally
+// Kentucky Treehouse Facebook page — honest link, not a post-specific link
 const FACEBOOK_PAGE_URL = "https://www.facebook.com/KentuckyTreehouse";
 
 function compressForUpload(dataUrl: string, maxWidth = 1200, quality = 0.78): Promise<string> {
@@ -249,29 +249,47 @@ export default function PostPreviewPage() {
           style={{ width: 62, height: 62, borderRadius: "50%", background: "rgba(30,77,43,0.1)", border: `1px solid ${C.greenBorder}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Check size={28} style={{ color: C.green }} />
         </motion.div>
+
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} style={{ textAlign: "center" }}>
           <div style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, marginBottom: 8 }}>Find posted.</div>
           <div style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6 }}>It's live in the Treehouse feed.</div>
         </motion.div>
+
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
-          {/* Opens Kentucky Treehouse Facebook page externally */}
+          {/* Primary: back to feed */}
+          <button
+            onClick={() => router.push("/")}
+            style={{ width: "100%", padding: "14px", borderRadius: 13, fontSize: 14, fontWeight: 600, color: "#fff", background: C.green, border: "none", cursor: "pointer" }}
+          >
+            Back to feed
+          </button>
+
+          {/* Secondary: visit Facebook page */}
           <a
             href={FACEBOOK_PAGE_URL}
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              display: "block", width: "100%", padding: "14px",
-              borderRadius: 13, fontSize: 14, fontWeight: 600,
-              color: "#fff", background: C.green, border: "none",
+              display: "block", width: "100%", padding: "13px",
+              borderRadius: 13, fontSize: 13, fontWeight: 500,
+              color: C.textMid, background: C.surface,
+              border: `1px solid ${C.border}`,
               textAlign: "center", textDecoration: "none", boxSizing: "border-box",
             }}
           >
-            View on Facebook
+            Visit us on Facebook
           </a>
-          <button onClick={() => router.push("/")} style={{ width: "100%", padding: "13px", borderRadius: 13, fontSize: 13, color: C.textMid, background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer" }}>
-            Back to feed
-          </button>
-          <button onClick={() => router.push("/post")} style={{ width: "100%", padding: "12px", borderRadius: 13, fontSize: 12, color: C.textFaint, background: "transparent", border: "none", cursor: "pointer" }}>
+
+          {/* Tertiary: post another */}
+          <button
+            onClick={() => router.push("/post")}
+            style={{
+              width: "100%", padding: "12px", borderRadius: 13, fontSize: 12,
+              color: C.textFaint, background: "transparent", border: "none", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            }}
+          >
+            <Camera size={13} style={{ color: C.textFaint }} />
             Post another find
           </button>
         </motion.div>
