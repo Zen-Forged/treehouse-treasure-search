@@ -33,32 +33,22 @@ git add CLAUDE.md && git commit -m "docs: update current issue" && git push
 ## CURRENT ISSUE
 > Last updated: 2026-04-06
 
-**Status:** iPhone publish flow fails with "vendor creation failed" error. Desktop Chrome works perfectly.
+**Status:** ✅ iPhone publish flow is working. No known active bugs.
 
-**Confirmed working:**
-- Supabase RLS disabled on posts, vendors, malls ✅
-- Desktop Chrome full publish: 201 success, confirmed via live browser fetch intercept ✅
-- Direct Supabase insert from debug API: vendor ✅ post ✅
-- localStorage on desktop has correct data: `mall_id: "19a8ff7e-cb45-491f-9451-878e2dde5bf4"`, `vendor_id: "65a879f1-c43c-481b-974f-379792a36db8"`
+**What was fixed (this session):**
+1. `lib/safeStorage.ts` — new utility that wraps localStorage with sessionStorage + in-memory fallbacks. Handles Safari private mode and ITP clearing.
+2. `app/post/page.tsx` + `app/post/preview/page.tsx` — swapped all `localStorage.*` calls to `safeStorage.*`.
+3. `lib/posts.ts` — `createVendor` and `createPost` now return `{ data, error }` instead of bare value. `createVendor` handles Supabase error code `23505` (duplicate key on `vendors_mall_booth_unique`) by falling back to a SELECT of the existing row — this was the actual root cause on iPhone.
 
-**Not yet confirmed on iPhone:**
-- Does the vendor profile card show name/booth/mall on `/post`? If blank → localStorage problem
-- If profile shows → does AI generate title/caption on preview? If not → image format problem (HEIC)
-- If title/caption shows → publish fails → Supabase network issue specific to iPhone Safari
+**Root cause (resolved):**
+Safari on iPhone clears localStorage between sessions (ITP). This caused `vendor_id` to be lost, triggering a fresh `createVendor` call. The vendor row already existed in Supabase (booth 369), so the insert hit the `(mall_id, booth_number)` unique constraint and failed with code `23505`. The fix: on `23505`, look up and return the existing vendor instead of failing.
 
-**Most likely cause:** Safari on iPhone is either in private browsing mode (blocks localStorage) or Safari ITP is clearing localStorage between sessions. This would make the profile appear blank, vendor_id would be null, createVendor would be called with an empty mall_id, and the insert would fail with a foreign key error.
-
-**Next debugging step:**
-1. Ask user: open `/post` on iPhone — does the vendor profile card show "ZenForged Finds · Booth 369 · America's Antique Mall"?
-2. If YES → take photo, on preview page does title/caption auto-populate?
-3. If YES → tap publish and read the exact error detail shown on screen
-4. The error screen now shows `errorDetail` text — that message tells you exactly which step failed
-
-**Key files for this issue:**
-- `app/post/page.tsx` — profile load + mall_id validation
-- `app/post/preview/page.tsx` — publish flow, shows errorDetail on screen
-- `lib/posts.ts` — createVendor, createPost
-- `app/api/debug/route.ts` — run `curl https://treehouse-treasure-search.vercel.app/api/debug`
+**Next session starting point:**
+No active issues. Good candidates for next work:
+- Pull-to-refresh on feed
+- PWA support
+- Supabase RLS / auth
+- `/enhance-text` real Claude integration
 
 ---
 
@@ -94,6 +84,7 @@ SERPAPI_KEY                      eBay sold comps
 - **Only mall:** America's Antique Mall, id: `19a8ff7e-cb45-491f-9451-878e2dde5bf4`
 - **Known vendor:** ZenForged Finds, booth 369, id: `65a879f1-c43c-481b-974f-379792a36db8`
 - **Extra column:** vendors table has `facebook_url text` (added via SQL)
+- **Unique constraint:** `vendors_mall_booth_unique` on `(mall_id, booth_number)`
 
 ---
 
@@ -131,7 +122,9 @@ lib/supabase.ts           Client with placeholder fallback for build time
 lib/posts.ts              getFeedPosts, getPost, createPost, createVendor,
                           uploadPostImage, updatePostStatus, deletePost,
                           getAllMalls, getMallBySlug, getVendorBySlug, slugify
+                          createVendor + createPost return { data, error }
 lib/postStore.ts          In-memory image store for /post → /post/preview flow
+lib/safeStorage.ts        localStorage wrapper with sessionStorage + memory fallback
 types/treehouse.ts        Post, Vendor, Mall, LocalVendorProfile, PostStatus
 app/layout.tsx            No max-width wrapper — each page owns its own width
 ```
@@ -169,6 +162,8 @@ Animations: opacity 0→1, y 8-16→0, ease [0.25,0.1,0.25,1]
 - `uploadPostImage` is non-fatal — post goes through even without image
 - vendor_id only carried over in LocalVendorProfile if mall_id unchanged
 - Supabase client uses placeholder URL at build time to avoid prerender crash
+- `createVendor` handles 23505 duplicate key by fetching existing row — do not revert this
+- Always use `safeStorage` (not raw `localStorage`) in ecosystem client components
 
 ---
 
@@ -179,12 +174,12 @@ Animations: opacity 0→1, y 8-16→0, ease [0.25,0.1,0.25,1]
 - Facebook share button (sharer.php popup) + share sheet button
 - Vendor profile: Facebook link, light theme, available/sold grid
 - Mall profile: grid, directions, available/sold split
-- Vendor post flow on desktop: capture → AI title+caption → preview → publish → live
+- Vendor post flow on desktop AND iPhone: capture → AI title+caption → preview → publish → live
 - Image upload to Supabase Storage
+- safeStorage fallback for Safari private/ITP
 - All reseller intel routes (untouched)
 
 ## KNOWN GAPS ⚠️
-- **iPhone publish broken** — see CURRENT ISSUE
 - /enhance-text is mock (not real Claude)
 - No Supabase RLS / auth yet
 - No pull-to-refresh on feed
