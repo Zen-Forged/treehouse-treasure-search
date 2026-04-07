@@ -116,20 +116,44 @@ export interface CreateVendorInput {
   slug:          string;
 }
 
+/**
+ * Creates a vendor row, or recovers the existing one if the
+ * (mall_id, booth_number) unique constraint fires (code 23505).
+ * This handles the case where iPhone lost its vendor_id from storage
+ * but the row already exists in Supabase.
+ */
 export async function createVendor(input: CreateVendorInput): Promise<{ data: Vendor | null; error: string | null }> {
   const { data, error } = await supabase
     .from("vendors")
     .insert([input])
     .select()
     .single();
-  if (error) {
-    console.error("[posts] createVendor:", error.message, error.details, error.hint, error.code);
-    return {
-      data: null,
-      error: `code=${error.code} | ${error.message}${error.details ? " | " + error.details : ""}${error.hint ? " | hint: " + error.hint : ""}`,
-    };
+
+  if (!error) {
+    return { data: data as Vendor, error: null };
   }
-  return { data: data as Vendor, error: null };
+
+  // code 23505 = duplicate key — vendor already exists (iPhone lost its vendor_id from storage)
+  // Look up the existing row by mall_id + booth_number
+  if (error.code === "23505" && input.booth_number) {
+    console.warn("[posts] createVendor: duplicate, looking up existing vendor");
+    const { data: existing, error: fetchErr } = await supabase
+      .from("vendors")
+      .select("*")
+      .eq("mall_id", input.mall_id)
+      .eq("booth_number", input.booth_number)
+      .single();
+
+    if (existing) return { data: existing as Vendor, error: null };
+    return { data: null, error: `Duplicate vendor but lookup failed: ${fetchErr?.message ?? "unknown"}` };
+  }
+
+  // Some other error
+  console.error("[posts] createVendor:", error.message, error.details, error.hint, error.code);
+  return {
+    data: null,
+    error: `code=${error.code} | ${error.message}${error.details ? " | " + error.details : ""}${error.hint ? " | hint: " + error.hint : ""}`,
+  };
 }
 
 export function slugify(name: string): string {
