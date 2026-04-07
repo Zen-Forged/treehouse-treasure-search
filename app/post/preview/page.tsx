@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, Pencil } from "lucide-react";
 import { createPost, createVendor, uploadPostImage, slugify } from "@/lib/posts";
 import { postStore } from "@/lib/postStore";
+import { safeStorage } from "@/lib/safeStorage";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 
 const C = {
@@ -102,8 +103,8 @@ export default function PostPreviewPage() {
 
   useEffect(() => {
     const draft = postStore.get();
-    let raw: string | null = null;
-    try { raw = localStorage.getItem(LOCAL_VENDOR_KEY); } catch {}
+    // Use safeStorage — handles Safari private mode / ITP
+    const raw = safeStorage.getItem(LOCAL_VENDOR_KEY);
 
     if (!draft || !raw) { router.replace("/post"); return; }
 
@@ -129,6 +130,16 @@ export default function PostPreviewPage() {
     setErrorDetail("");
 
     try {
+      // ── Validate profile before touching Supabase ─────────────────────
+      if (!profile.display_name?.trim()) {
+        setErrorDetail("Profile error: display_name is empty. Go back and re-save your vendor profile.");
+        throw new Error("missing display_name");
+      }
+      if (!profile.mall_id?.trim()) {
+        setErrorDetail("Profile error: mall_id is empty. Go back and re-select your mall — Safari may have cleared your saved profile.");
+        throw new Error("missing mall_id");
+      }
+
       // ── Step 1: Ensure vendor row exists ──────────────────────────────
       let vendorId  = profile.vendor_id ?? null;
       let vendorSlug = profile.slug ?? null;
@@ -146,16 +157,23 @@ export default function PostPreviewPage() {
         });
 
         if (!vendor) {
-          setErrorDetail("Vendor creation failed — check Supabase vendors table RLS and that mall_id is valid.");
+          setErrorDetail(
+            `Vendor creation failed.\n` +
+            `mall_id: "${profile.mall_id}"\n` +
+            `display_name: "${profile.display_name}"\n\n` +
+            `Likely cause: mall_id is not a valid UUID in the malls table, ` +
+            `or Supabase RLS is blocking the INSERT. ` +
+            `Go back and re-select your mall.`
+          );
           throw new Error("vendor null");
         }
 
         vendorId   = vendor.id;
         vendorSlug = vendor.slug;
 
-        // Persist back to localStorage
+        // Persist back to safeStorage
         const updated: LocalVendorProfile = { ...profile, vendor_id: vendor.id, slug: vendor.slug };
-        try { localStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(updated)); } catch {}
+        safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(updated));
         setProfile(updated);
       }
 
@@ -193,7 +211,12 @@ export default function PostPreviewPage() {
       });
 
       if (!post) {
-        setErrorDetail("Post insert returned null — check Supabase posts table RLS (needs anon INSERT policy or RLS disabled).");
+        setErrorDetail(
+          `Post insert returned null.\n` +
+          `vendor_id: "${vendorId}"\n` +
+          `mall_id: "${profile.mall_id}"\n\n` +
+          `Check Supabase posts table — RLS may be blocking anon INSERT.`
+        );
         throw new Error("post null");
       }
 
@@ -273,13 +296,18 @@ export default function PostPreviewPage() {
         <div style={{ fontFamily: "Georgia, serif", fontSize: 18, color: C.textPrimary, textAlign: "center" }}>Something went wrong.</div>
         <div style={{ fontSize: 13, color: C.textMuted, textAlign: "center", lineHeight: 1.6 }}>The post couldn't be saved.</div>
         {errorDetail && (
-          <div style={{ fontSize: 11, color: C.textFaint, textAlign: "left", lineHeight: 1.6, fontFamily: "monospace", background: C.surface, padding: "10px 14px", borderRadius: 8, border: `1px solid ${C.border}`, width: "100%" }}>
+          <div style={{ fontSize: 11, color: C.textFaint, textAlign: "left", lineHeight: 1.7, fontFamily: "monospace", background: C.surface, padding: "10px 14px", borderRadius: 8, border: `1px solid ${C.border}`, width: "100%", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
             {errorDetail}
           </div>
         )}
-        <button onClick={() => setStage("edit")} style={{ padding: "12px 24px", borderRadius: 12, fontSize: 13, fontWeight: 600, color: "#fff", background: C.green, border: "none", cursor: "pointer" }}>
-          Try again
-        </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
+          <button onClick={() => setStage("edit")} style={{ padding: "12px 24px", borderRadius: 12, fontSize: 13, fontWeight: 600, color: "#fff", background: C.green, border: "none", cursor: "pointer", width: "100%" }}>
+            Try again
+          </button>
+          <button onClick={() => router.push("/post")} style={{ padding: "11px 24px", borderRadius: 12, fontSize: 12, color: C.textMuted, background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer", width: "100%" }}>
+            Go back and re-select mall
+          </button>
+        </div>
       </div>
     );
   }
