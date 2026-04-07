@@ -66,14 +66,17 @@ export interface CreatePostInput {
   location_label?: string;
 }
 
-export async function createPost(input: CreatePostInput): Promise<Post | null> {
+export async function createPost(input: CreatePostInput): Promise<{ data: Post | null; error: string | null }> {
   const { data, error } = await supabase
     .from("posts")
     .insert([{ ...input, status: "available" }])
     .select()
     .single();
-  if (error) { console.error("[posts] createPost:", error.message, error.details, error.hint); return null; }
-  return data as Post;
+  if (error) {
+    console.error("[posts] createPost:", error.message, error.details, error.hint);
+    return { data: null, error: `${error.message}${error.details ? " | " + error.details : ""}${error.hint ? " | hint: " + error.hint : ""}` };
+  }
+  return { data: data as Post, error: null };
 }
 
 export async function updatePostStatus(id: string, status: "available" | "sold"): Promise<boolean> {
@@ -113,14 +116,20 @@ export interface CreateVendorInput {
   slug:          string;
 }
 
-export async function createVendor(input: CreateVendorInput): Promise<Vendor | null> {
+export async function createVendor(input: CreateVendorInput): Promise<{ data: Vendor | null; error: string | null }> {
   const { data, error } = await supabase
     .from("vendors")
     .insert([input])
     .select()
     .single();
-  if (error) { console.error("[posts] createVendor:", error.message, error.details, error.hint); return null; }
-  return data as Vendor;
+  if (error) {
+    console.error("[posts] createVendor:", error.message, error.details, error.hint, error.code);
+    return {
+      data: null,
+      error: `code=${error.code} | ${error.message}${error.details ? " | " + error.details : ""}${error.hint ? " | hint: " + error.hint : ""}`,
+    };
+  }
+  return { data: data as Vendor, error: null };
 }
 
 export function slugify(name: string): string {

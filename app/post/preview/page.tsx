@@ -28,7 +28,6 @@ const C = {
   header:      "rgba(240,237,230,0.96)",
 };
 
-// Aggressively compress for mobile — target under 800KB base64
 function compressForUpload(dataUrl: string, maxWidth = 1200, quality = 0.78): Promise<string> {
   return new Promise(resolve => {
     const img = new window.Image();
@@ -39,7 +38,6 @@ function compressForUpload(dataUrl: string, maxWidth = 1200, quality = 0.78): Pr
       canvas.height = Math.round(img.height * scale);
       canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
       const result = canvas.toDataURL("image/jpeg", quality);
-      // If still over 1MB base64 (~750KB file), compress harder
       if (result.length > 1_000_000) {
         const canvas2 = document.createElement("canvas");
         const scale2  = 0.75;
@@ -58,7 +56,6 @@ function compressForUpload(dataUrl: string, maxWidth = 1200, quality = 0.78): Pr
 
 async function generateTitleAndCaption(imageDataUrl: string): Promise<{ title: string; caption: string }> {
   try {
-    // Send a smaller thumbnail for the AI call to avoid body size limits
     const thumb = await compressForUpload(imageDataUrl, 800, 0.7);
     const res = await fetch("/api/post-caption", {
       method:  "POST",
@@ -103,7 +100,6 @@ export default function PostPreviewPage() {
 
   useEffect(() => {
     const draft = postStore.get();
-    // Use safeStorage — handles Safari private mode / ITP
     const raw = safeStorage.getItem(LOCAL_VENDOR_KEY);
 
     if (!draft || !raw) { router.replace("/post"); return; }
@@ -130,26 +126,25 @@ export default function PostPreviewPage() {
     setErrorDetail("");
 
     try {
-      // ── Validate profile before touching Supabase ─────────────────────
+      // ── Validate profile ──────────────────────────────────────────────
       if (!profile.display_name?.trim()) {
         setErrorDetail("Profile error: display_name is empty. Go back and re-save your vendor profile.");
         throw new Error("missing display_name");
       }
       if (!profile.mall_id?.trim()) {
-        setErrorDetail("Profile error: mall_id is empty. Go back and re-select your mall — Safari may have cleared your saved profile.");
+        setErrorDetail("Profile error: mall_id is empty. Safari may have cleared your saved profile. Go back and re-select your mall.");
         throw new Error("missing mall_id");
       }
 
       // ── Step 1: Ensure vendor row exists ──────────────────────────────
-      let vendorId  = profile.vendor_id ?? null;
+      let vendorId   = profile.vendor_id ?? null;
       let vendorSlug = profile.slug ?? null;
 
       if (!vendorId) {
         const baseSlug = slugify(profile.display_name);
         const slug     = baseSlug + "-" + Date.now().toString(36);
-        console.log("[publish] creating vendor:", { mall_id: profile.mall_id, display_name: profile.display_name, slug });
 
-        const vendor = await createVendor({
+        const { data: vendor, error: vendorErr } = await createVendor({
           mall_id:      profile.mall_id,
           display_name: profile.display_name,
           booth_number: profile.booth_number || undefined,
@@ -160,10 +155,8 @@ export default function PostPreviewPage() {
           setErrorDetail(
             `Vendor creation failed.\n` +
             `mall_id: "${profile.mall_id}"\n` +
-            `display_name: "${profile.display_name}"\n\n` +
-            `Likely cause: mall_id is not a valid UUID in the malls table, ` +
-            `or Supabase RLS is blocking the INSERT. ` +
-            `Go back and re-select your mall.`
+            `display_name: "${profile.display_name}"\n` +
+            `Supabase error: ${vendorErr ?? "null (no response)"}`
           );
           throw new Error("vendor null");
         }
@@ -171,17 +164,16 @@ export default function PostPreviewPage() {
         vendorId   = vendor.id;
         vendorSlug = vendor.slug;
 
-        // Persist back to safeStorage
         const updated: LocalVendorProfile = { ...profile, vendor_id: vendor.id, slug: vendor.slug };
         safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(updated));
         setProfile(updated);
       }
 
-      // ── Step 2: Compress image aggressively before upload ─────────────
+      // ── Step 2: Compress image ────────────────────────────────────────
       let uploadImage = image;
       try { uploadImage = await compressForUpload(image, 1200, 0.78); } catch {}
 
-      // ── Step 3: Upload image (non-fatal if it fails) ──────────────────
+      // ── Step 3: Upload image (non-fatal) ──────────────────────────────
       let imageUrl: string | null = null;
       try {
         imageUrl = await uploadPostImage(uploadImage, vendorId);
@@ -193,14 +185,7 @@ export default function PostPreviewPage() {
       // ── Step 4: Create post ───────────────────────────────────────────
       const priceNum = price.trim() ? parseFloat(price.replace(/[^0-9.]/g, "")) : null;
 
-      console.log("[publish] creating post:", {
-        vendor_id: vendorId,
-        mall_id:   profile.mall_id,
-        title:     title.trim(),
-        image_url: imageUrl,
-      });
-
-      const post = await createPost({
+      const { data: post, error: postErr } = await createPost({
         vendor_id:      vendorId,
         mall_id:        profile.mall_id,
         title:          title.trim(),
@@ -212,10 +197,10 @@ export default function PostPreviewPage() {
 
       if (!post) {
         setErrorDetail(
-          `Post insert returned null.\n` +
+          `Post insert failed.\n` +
           `vendor_id: "${vendorId}"\n` +
-          `mall_id: "${profile.mall_id}"\n\n` +
-          `Check Supabase posts table — RLS may be blocking anon INSERT.`
+          `mall_id: "${profile.mall_id}"\n` +
+          `Supabase error: ${postErr ?? "null (no response)"}`
         );
         throw new Error("post null");
       }
