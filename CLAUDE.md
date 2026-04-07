@@ -33,28 +33,32 @@ git add CLAUDE.md && git commit -m "docs: update current issue" && git push
 ## CURRENT ISSUE
 > Last updated: 2026-04-07
 
-**Status:** ✅ Product detail page UX refinement complete. No known active bugs.
+**Status:** ✅ Story-driven feed sprint complete. No known active bugs.
 
 **What was done (this session):**
 
-1. `app/page.tsx` — Home screen sprint:
-   - Mall dropdown added to header (between logo row and filter pills). Uses `getAllMalls()`. Defaults to "All malls"; filtering applied client-side.
-   - Masonry grid replaces single-column layout. Two columns, right column offset 22px for stagger. Natural aspect ratio tiles (clamped 90–260px).
-   - Clean image tiles — all text removed from thumbnails. Price badge + sold badge only.
-   - Masonry skeleton loader matches new layout.
+1. `app/page.tsx` — Feed gallery refinement:
+   - **Price badges removed** from all grid tiles. Items feel like discoveries, not listings.
+   - **Filter bar removed** entirely (no "All finds / Available / Just in" pills). Feed is unified.
+   - `filter` and `FilterKey` state + `FilterBar` component deleted.
+   - `EmptyFeed` simplified — no longer needs a `filter` prop.
+   - **Grid gap increased** from 8px → 14px (column gap and row gap). Skeleton matches.
+   - **Right column stagger** increased from 22px → 26px.
+   - **Border radius** on tiles bumped from 12px → 14px for a softer gallery feel.
+   - **Box shadow** lightened slightly.
+   - Sold items (`"Found a home"` badge + grayscale) remain fully intact.
 
-2. `app/find/[id]/page.tsx` — Multiple detail page refinements across several passes:
-   - **Layout order:** image → title → metadata → caption → Mark the Spot → divider → location → divider → vendor/booth → delete (owner) → "Keep exploring →"
-   - **Image:** rounded corners (16px), subtle shadow, share icon overlay bottom-right (dark circle, backdrop blur)
-   - **Metadata row:** single soft line — "Found for $35 · 29m ago" — monospace, `textFaint`, non-competing
-   - **Caption:** italic Georgia, lineHeight 1.82; description below in lighter muted tone
-   - **Mark the Spot button:** sits directly below caption, slightly larger (13px, padding 8px 18px). Wired to sold toggle for owners; decorative disabled pill for visitors.
-   - **Location section:** mall name is plain text (no link). Street address is the tappable map link (green, faint underline). City/state line removed (redundant with full address). Fallback to city/state link if no full address.
-   - **Vendor row:** Vendor name (left, Georgia bold) + Booth number (right, monospace). Clean two-column, no third pill.
-   - **"Directions" button removed** — replaced by address-as-link pattern.
-   - **Large green CTA removed** — no fixed bottom bar.
-   - **"Keep exploring →"** — soft italic Georgia link at bottom, routes to `/`.
-   - **Facebook share removed** from nav; universal Share2 icon lives on image overlay only.
+2. `app/post/preview/page.tsx` — Confirmation screen:
+   - **"View your post" replaced** with `"View on Facebook"` — opens `https://www.facebook.com/KentuckyTreehouse` externally (`target="_blank"`).
+   - `postId` state removed (no longer needed).
+   - Facebook URL declared as `FACEBOOK_PAGE_URL` constant at top of file for easy updating.
+   - Post flow, publish logic, and all error handling unchanged.
+
+3. `app/api/post-caption/route.ts` — AI caption prompt tightened:
+   - Captions now target **1–2 sentences max** (was 2–3).
+   - Prompt explicitly bans: starting with "This" or the item name, filler phrases ("a wonderful find"), and condition assessments.
+   - `max_tokens` reduced from 300 → 200 (enforces brevity, saves cost).
+   - Mock fallbacks updated to match new shorter style.
 
 **Next session starting point:**
 No active issues. Good candidates for next work:
@@ -63,6 +67,7 @@ No active issues. Good candidates for next work:
 - PWA support
 - Supabase RLS / auth
 - `/enhance-text` real Claude integration
+- Confirm Facebook page URL is correct (currently `https://www.facebook.com/KentuckyTreehouse`)
 
 ---
 
@@ -106,12 +111,12 @@ SERPAPI_KEY                      eBay sold comps
 
 ### Ecosystem (light cream theme)
 ```
-/                   Discovery feed — masonry grid, mall dropdown filter
+/                   Discovery feed — masonry grid, mall dropdown filter, no status filters
 /find/[id]          Find detail — journal layout, image, caption, location, vendor/booth
 /mall/[slug]        Mall profile
 /vendor/[slug]      Vendor profile — Facebook link, available/sold grid
 /post               Vendor capture — camera/gallery, profile setup, Reset button
-/post/preview       Edit title/caption/price → publish
+/post/preview       Edit title/caption/price → publish → "View on Facebook" CTA
 ```
 
 ### Reseller intel (dark theme — do not touch)
@@ -183,9 +188,9 @@ Animations: opacity 0→1, y 8-16→0, ease [0.25,0.1,0.25,1]
 ---
 
 ## WORKING ✅
-- Discovery feed with masonry grid (2-column staggered, natural aspect ratios)
+- Discovery feed — gallery masonry, no price badges, no filter pills, unified feed
 - Mall dropdown in feed header — filters feed client-side by mall_id
-- Clean image tiles — no text on thumbnails, price badge + sold badge only
+- Clean image tiles — sold items grayed + "Found a home" badge; no price on any tile
 - Skeleton loading matches masonry layout
 - Find detail: journal layout — image, title, metadata, caption, Mark the Spot, location, vendor/booth
 - Address-as-map-link in location section (Apple Maps deep link)
@@ -195,7 +200,7 @@ Animations: opacity 0→1, y 8-16→0, ease [0.25,0.1,0.25,1]
 - Vendor actions on own posts: mark sold toggle, delete with confirmation
 - Vendor profile: Facebook link, light theme, available/sold grid
 - Mall profile: grid, directions, available/sold split
-- Vendor post flow on desktop AND iPhone: capture → AI title+caption → preview → publish → live
+- Vendor post flow on desktop AND iPhone: capture → AI title+caption → preview → publish → "View on Facebook"
 - Image upload to Supabase Storage
 - safeStorage fallback for Safari private/ITP
 - All reseller intel routes (untouched)
@@ -206,6 +211,7 @@ Animations: opacity 0→1, y 8-16→0, ease [0.25,0.1,0.25,1]
 - No Supabase RLS / auth yet
 - No pull-to-refresh on feed
 - No PWA support
+- Facebook page URL (`FACEBOOK_PAGE_URL` in preview/page.tsx) should be verified — currently set to `https://www.facebook.com/KentuckyTreehouse`
 
 ---
 

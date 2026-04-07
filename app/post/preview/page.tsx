@@ -28,6 +28,9 @@ const C = {
   header:      "rgba(240,237,230,0.96)",
 };
 
+// Kentucky Treehouse Facebook page — "View your post" opens this externally
+const FACEBOOK_PAGE_URL = "https://www.facebook.com/KentuckyTreehouse";
+
 function compressForUpload(dataUrl: string, maxWidth = 1200, quality = 0.78): Promise<string> {
   return new Promise(resolve => {
     const img = new window.Image();
@@ -87,7 +90,6 @@ export default function PostPreviewPage() {
   const [image,       setImage]       = useState<string | null>(null);
   const [profile,     setProfile]     = useState<LocalVendorProfile | null>(null);
   const [stage,       setStage]       = useState<Stage>("loading");
-  const [postId,      setPostId]      = useState<string | null>(null);
   const [errorDetail, setErrorDetail] = useState<string>("");
 
   const [title,     setTitle]     = useState("");
@@ -126,7 +128,6 @@ export default function PostPreviewPage() {
     setErrorDetail("");
 
     try {
-      // ── Validate profile ──────────────────────────────────────────────
       if (!profile.display_name?.trim()) {
         setErrorDetail("Profile error: display_name is empty. Go back and re-save your vendor profile.");
         throw new Error("missing display_name");
@@ -136,7 +137,6 @@ export default function PostPreviewPage() {
         throw new Error("missing mall_id");
       }
 
-      // ── Step 1: Ensure vendor row exists ──────────────────────────────
       let vendorId   = profile.vendor_id ?? null;
       let vendorSlug = profile.slug ?? null;
 
@@ -169,11 +169,9 @@ export default function PostPreviewPage() {
         setProfile(updated);
       }
 
-      // ── Step 2: Compress image ────────────────────────────────────────
       let uploadImage = image;
       try { uploadImage = await compressForUpload(image, 1200, 0.78); } catch {}
 
-      // ── Step 3: Upload image (non-fatal) ──────────────────────────────
       let imageUrl: string | null = null;
       try {
         imageUrl = await uploadPostImage(uploadImage, vendorId);
@@ -182,7 +180,6 @@ export default function PostPreviewPage() {
         console.warn("[publish] image upload threw:", uploadErr);
       }
 
-      // ── Step 4: Create post ───────────────────────────────────────────
       const priceNum = price.trim() ? parseFloat(price.replace(/[^0-9.]/g, "")) : null;
 
       const { data: post, error: postErr } = await createPost({
@@ -206,7 +203,6 @@ export default function PostPreviewPage() {
       }
 
       postStore.clear();
-      setPostId(post.id);
       setStage("done");
 
     } catch (err) {
@@ -258,11 +254,20 @@ export default function PostPreviewPage() {
           <div style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6 }}>It's live in the Treehouse feed.</div>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
-          {postId && (
-            <button onClick={() => router.push(`/find/${postId}`)} style={{ width: "100%", padding: "14px", borderRadius: 13, fontSize: 14, fontWeight: 600, color: "#fff", cursor: "pointer", background: C.green, border: "none" }}>
-              View your post
-            </button>
-          )}
+          {/* Opens Kentucky Treehouse Facebook page externally */}
+          <a
+            href={FACEBOOK_PAGE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "block", width: "100%", padding: "14px",
+              borderRadius: 13, fontSize: 14, fontWeight: 600,
+              color: "#fff", background: C.green, border: "none",
+              textAlign: "center", textDecoration: "none", boxSizing: "border-box",
+            }}
+          >
+            View on Facebook
+          </a>
           <button onClick={() => router.push("/")} style={{ width: "100%", padding: "13px", borderRadius: 13, fontSize: 13, color: C.textMid, background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer" }}>
             Back to feed
           </button>
