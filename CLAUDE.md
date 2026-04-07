@@ -31,17 +31,18 @@ git add CLAUDE.md && git commit -m "docs: update current issue" && git push
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-06
+> Last updated: 2026-04-07
 
-**Status:** ✅ iPhone publish flow is working. No known active bugs.
+**Status:** ✅ Home screen redesign complete. No known active bugs.
 
-**What was fixed (this session):**
-1. `lib/safeStorage.ts` — new utility that wraps localStorage with sessionStorage + in-memory fallbacks. Handles Safari private mode and ITP clearing.
-2. `app/post/page.tsx` + `app/post/preview/page.tsx` — swapped all `localStorage.*` calls to `safeStorage.*`.
-3. `lib/posts.ts` — `createVendor` and `createPost` now return `{ data, error }` instead of bare value. `createVendor` handles Supabase error code `23505` (duplicate key on `vendors_mall_booth_unique`) by falling back to a SELECT of the existing row — this was the actual root cause on iPhone.
-
-**Root cause (resolved):**
-Safari on iPhone clears localStorage between sessions (ITP). This caused `vendor_id` to be lost, triggering a fresh `createVendor` call. The vendor row already existed in Supabase (booth 369), so the insert hit the `(mall_id, booth_number)` unique constraint and failed with code `23505`. The fix: on `23505`, look up and return the existing vendor instead of failing.
+**What was done (this session):**
+1. `app/page.tsx` — full home screen sprint:
+   - **Mall dropdown** added to header (between logo row and filter pills). Uses `getAllMalls()` from `lib/posts.ts`. Defaults to "All malls"; filtering is applied client-side on the fetched posts array. Uses native `<select>` with `ChevronDown` icon overlay, styled to match existing cream/surface palette.
+   - **Masonry grid** replaces the single-column card layout. Two columns, right column offset 22px for stagger. `MasonryTile` renders images at natural aspect ratio (clamped 90–260px) so tiles vary organically.
+   - **Clean image tiles** — all text removed from photo thumbnails. No title, no caption, no vendor/mall attribution on the tile. Only price badge (top-right) and "Found a home" badge (sold, top-left) remain.
+   - **No-image fallback** — posts without photos show a small title-only block so nothing breaks.
+   - **Masonry skeleton** replaces old skeleton cards — matches the two-column staggered layout with varied heights.
+   - All existing design tokens, button styles, header, and filter pills are unchanged.
 
 **Next session starting point:**
 No active issues. Good candidates for next work:
@@ -49,6 +50,7 @@ No active issues. Good candidates for next work:
 - PWA support
 - Supabase RLS / auth
 - `/enhance-text` real Claude integration
+- Tap-to-zoom or full detail on masonry tile (title/vendor shown on `/find/[id]` detail page)
 
 ---
 
@@ -168,7 +170,10 @@ Animations: opacity 0→1, y 8-16→0, ease [0.25,0.1,0.25,1]
 ---
 
 ## WORKING ✅
-- Discovery feed, skeleton loading, filters (All/Available/Just In)
+- Discovery feed with masonry grid (2-column staggered, natural aspect ratios)
+- Mall dropdown in feed header — filters feed client-side by mall_id
+- Clean image tiles — no text on thumbnails, price badge + sold badge only
+- Skeleton loading matches masonry layout
 - Find detail: full image (contain, no crop), vendor/mall card, directions CTA
 - Vendor actions on own posts: mark sold/available toggle, delete with confirmation
 - Facebook share button (sharer.php popup) + share sheet button
