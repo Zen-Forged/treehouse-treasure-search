@@ -1,7 +1,6 @@
 // app/page.tsx
 // Treehouse — Discovery Feed
-// The front door. Buyers browse what's new at local peddler and antique malls
-// before they make the trip. Vendors gain visibility. Malls get foot traffic.
+// Gallery-style, story-driven. No marketplace signals.
 
 "use client";
 
@@ -34,9 +33,8 @@ const C = {
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
-function EmptyFeed({ filter }: { filter: string }) {
-  const router     = useRouter();
-  const isFiltered = filter !== "all";
+function EmptyFeed() {
+  const router = useRouter();
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
@@ -47,19 +45,17 @@ function EmptyFeed({ filter }: { filter: string }) {
         <Compass size={20} style={{ color: C.textMuted }} />
       </div>
       <div style={{ fontFamily: "Georgia, serif", fontSize: 19, fontWeight: 600, color: C.textPrimary, marginBottom: 10, lineHeight: 1.3 }}>
-        {isFiltered ? "Nothing here yet." : "The shelves are quiet."}
+        The shelves are quiet.
       </div>
       <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.65, maxWidth: 230, margin: "0 auto 26px" }}>
-        {isFiltered ? "Try a different filter or check back soon." : "Be the first vendor to share a find in your area."}
+        Be the first vendor to share a find in your area.
       </p>
-      {!isFiltered && (
-        <button
-          onClick={() => router.push("/post")}
-          style={{ padding: "11px 22px", borderRadius: 12, fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer", letterSpacing: "0.2px", background: C.green, border: "none" }}
-        >
-          Post a find
-        </button>
-      )}
+      <button
+        onClick={() => router.push("/post")}
+        style={{ padding: "11px 22px", borderRadius: 12, fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer", letterSpacing: "0.2px", background: C.green, border: "none" }}
+      >
+        Post a find
+      </button>
     </motion.div>
   );
 }
@@ -69,20 +65,19 @@ function EmptyFeed({ filter }: { filter: string }) {
 const SKELETON_HEIGHTS = [130, 160, 170, 105, 115, 145, 155, 118];
 
 function SkeletonMasonry() {
-  // Split into two columns, staggered
   const col1 = SKELETON_HEIGHTS.filter((_, i) => i % 2 === 0);
   const col2 = SKELETON_HEIGHTS.filter((_, i) => i % 2 === 1);
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, alignItems: "start" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, alignItems: "start" }}>
       {[col1, col2].map((col, ci) => (
-        <div key={ci} style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: ci === 1 ? 22 : 0 }}>
+        <div key={ci} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: ci === 1 ? 26 : 0 }}>
           {col.map((h, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               transition={{ duration: 0.3, delay: (ci * col.length + i) * 0.05 }}
-              style={{ borderRadius: 12, overflow: "hidden", background: C.surface, border: `1px solid ${C.border}` }}
+              style={{ borderRadius: 14, overflow: "hidden", background: C.surface, border: `1px solid ${C.border}` }}
             >
               <div className="skeleton-shimmer" style={{ height: h }} />
             </motion.div>
@@ -93,7 +88,7 @@ function SkeletonMasonry() {
   );
 }
 
-// ─── Masonry tile (image only) ────────────────────────────────────────────────
+// ─── Masonry tile (image only, no price) ─────────────────────────────────────
 
 function MasonryTile({ post, index }: { post: Post; index: number }) {
   const [imgErr,    setImgErr]    = useState(false);
@@ -103,7 +98,6 @@ function MasonryTile({ post, index }: { post: Post; index: number }) {
   const hasImg = !!post.image_url && !imgErr;
   const isSold = post.status === "sold";
 
-  // Natural-height fallback pool so tiles without images still look varied
   const fallbackHeights = [120, 145, 110, 160, 130, 105, 150, 125];
   const fallbackH = fallbackHeights[index % fallbackHeights.length];
 
@@ -111,7 +105,6 @@ function MasonryTile({ post, index }: { post: Post; index: number }) {
     const img = e.currentTarget;
     const containerWidth = img.parentElement?.offsetWidth ?? 160;
     const ratio = img.naturalHeight / img.naturalWidth;
-    // Clamp between 90 and 260 so nothing gets absurdly tall
     const computed = Math.min(260, Math.max(90, Math.round(containerWidth * ratio)));
     setImgHeight(computed);
   }
@@ -124,11 +117,11 @@ function MasonryTile({ post, index }: { post: Post; index: number }) {
     >
       <Link href={`/find/${post.id}`} style={{ display: "block", textDecoration: "none" }}>
         <div style={{
-          borderRadius: 12,
+          borderRadius: 14,
           overflow: "hidden",
           background: C.surface,
           border: `1px solid ${C.border}`,
-          boxShadow: "0 1px 4px rgba(26,26,24,0.07)",
+          boxShadow: "0 1px 6px rgba(26,26,24,0.06)",
           position: "relative",
           opacity: isSold ? 0.62 : 1,
           transition: "opacity 0.2s",
@@ -146,42 +139,27 @@ function MasonryTile({ post, index }: { post: Post; index: number }) {
                   height: "100%",
                   objectFit: "cover",
                   display: "block",
-                  filter: isSold ? "grayscale(0.5) brightness(0.9)" : "brightness(0.97) saturate(0.93)",
+                  filter: isSold ? "grayscale(0.55) brightness(0.88)" : "brightness(0.97) saturate(0.93)",
                 }}
               />
 
-              {/* Price badge — top right */}
-              {post.price_asking != null && !isSold && (
-                <div style={{
-                  position: "absolute", top: 7, right: 7,
-                  fontFamily: "monospace", fontSize: 11, fontWeight: 700,
-                  padding: "2px 7px", borderRadius: 5,
-                  background: "rgba(240,237,230,0.94)",
-                  color: C.textPrimary,
-                  border: `1px solid ${C.border}`,
-                  backdropFilter: "blur(6px)",
-                }}>
-                  ${post.price_asking % 1 === 0 ? post.price_asking.toFixed(0) : post.price_asking.toFixed(2)}
-                </div>
-              )}
-
-              {/* Sold badge — top left */}
+              {/* Sold badge only — no price */}
               {isSold && (
                 <div style={{
-                  position: "absolute", top: 7, left: 7,
+                  position: "absolute", top: 8, left: 8,
                   fontSize: 7, fontWeight: 700, textTransform: "uppercase",
-                  letterSpacing: "1.5px", padding: "2px 6px", borderRadius: 4,
+                  letterSpacing: "1.5px", padding: "3px 7px", borderRadius: 4,
                   background: "rgba(240,237,230,0.92)",
                   color: C.textMuted,
                   border: `1px solid ${C.border}`,
+                  backdropFilter: "blur(6px)",
                 }}>
                   Found a home
                 </div>
               )}
             </div>
           ) : (
-            // No-image fallback: show title in a small content block
-            <div style={{ padding: "14px 12px", minHeight: fallbackH, display: "flex", alignItems: "center" }}>
+            <div style={{ padding: "16px 14px", minHeight: fallbackH, display: "flex", alignItems: "center" }}>
               <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.3 }}>
                 {post.title}
               </div>
@@ -200,15 +178,13 @@ function MasonryGrid({ posts }: { posts: Post[] }) {
   const col2 = posts.filter((_, i) => i % 2 === 1);
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, alignItems: "start" }}>
-      {/* Left column — starts flush */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, alignItems: "start" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {col1.map((post, i) => (
           <MasonryTile key={post.id} post={post} index={i * 2} />
         ))}
       </div>
-      {/* Right column — offset down for stagger */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 22 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 26 }}>
         {col2.map((post, i) => (
           <MasonryTile key={post.id} post={post} index={i * 2 + 1} />
         ))}
@@ -229,7 +205,7 @@ function MallDropdown({
   onChange: (id: string | null) => void;
 }) {
   return (
-    <div style={{ position: "relative", marginBottom: 9 }}>
+    <div style={{ position: "relative", marginBottom: 10 }}>
       <div style={{
         position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)",
         display: "flex", alignItems: "center", gap: 5,
@@ -276,55 +252,21 @@ function MallDropdown({
   );
 }
 
-// ─── Filter bar ───────────────────────────────────────────────────────────────
-
-type FilterKey = "all" | "available" | "recent";
-
-const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: "all",       label: "All finds" },
-  { key: "available", label: "Available" },
-  { key: "recent",    label: "Just in"   },
-];
-
-function FilterBar({ active, onChange }: { active: FilterKey; onChange: (k: FilterKey) => void }) {
-  return (
-    <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 1 }} className="hide-scrollbar">
-      {FILTERS.map(f => {
-        const on = active === f.key;
-        return (
-          <button key={f.key} onClick={() => onChange(f.key)} style={{
-            flexShrink: 0, padding: "6px 14px", borderRadius: 20, fontSize: 11,
-            fontWeight: on ? 600 : 400, letterSpacing: "0.15px", cursor: "pointer", transition: "all 0.18s ease",
-            color:      on ? "#fff" : C.textMid,
-            background: on ? C.green : C.surface,
-            border:     on ? "none" : `1px solid ${C.border}`,
-          }}>
-            {f.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DiscoveryFeedPage() {
   const router = useRouter();
 
-  const [posts,    setPosts]    = useState<Post[]>([]);
-  const [malls,    setMalls]    = useState<Mall[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState(false);
-  const [filter,   setFilter]   = useState<FilterKey>("all");
-  const [mallId,   setMallId]   = useState<string | null>(null);
+  const [posts,   setPosts]   = useState<Post[]>([]);
+  const [malls,   setMalls]   = useState<Mall[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(false);
+  const [mallId,  setMallId]  = useState<string | null>(null);
 
-  // Load malls once
   useEffect(() => {
     getAllMalls().then(setMalls);
   }, []);
 
-  // Load posts whenever mall filter changes
   useEffect(() => {
     let live = true;
     setLoading(true);
@@ -337,8 +279,6 @@ export default function DiscoveryFeedPage() {
 
   const filtered = posts.filter(p => {
     if (mallId && p.mall_id !== mallId) return false;
-    if (filter === "available") return p.status === "available";
-    if (filter === "recent")   return (Date.now() - new Date(p.created_at).getTime()) < 7 * 86_400_000;
     return true;
   });
 
@@ -373,15 +313,10 @@ export default function DiscoveryFeedPage() {
 
           {/* Mall selector */}
           <MallDropdown malls={malls} selectedId={mallId} onChange={setMallId} />
-
-          {/* Status filter pills */}
-          <div style={{ paddingBottom: 10 }}>
-            <FilterBar active={filter} onChange={setFilter} />
-          </div>
         </header>
 
         {/* ── Feed ── */}
-        <main style={{ padding: "12px 13px", paddingBottom: "max(80px, env(safe-area-inset-bottom, 80px))" }}>
+        <main style={{ padding: "16px 14px", paddingBottom: "max(80px, env(safe-area-inset-bottom, 80px))" }}>
           {loading ? (
             <SkeletonMasonry />
           ) : error ? (
@@ -389,7 +324,7 @@ export default function DiscoveryFeedPage() {
               Couldn't load finds. Check your connection and try again.
             </div>
           ) : filtered.length === 0 ? (
-            <EmptyFeed filter={filter} />
+            <EmptyFeed />
           ) : (
             <AnimatePresence>
               <MasonryGrid posts={filtered} />

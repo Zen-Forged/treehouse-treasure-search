@@ -1,15 +1,16 @@
 // app/api/post-caption/route.ts
 // Generates a Treehouse title AND caption for a vendor find post.
+// Captions are short, slightly poetic, never transactional.
 
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 
 const MOCK_RESPONSES = [
-  { title: "Mid-century ceramic vase", caption: "A quietly beautiful piece that carries its age with dignity. The kind of find that earns a permanent spot on the shelf." },
-  { title: "Brass candlestick holder", caption: "There's something understated about this one. Well-made, clearly cared for, and still very much at home in the world." },
-  { title: "Vintage glass figurine", caption: "The sort of thing you don't see twice. Simple in form, considered in craft — and honest about what it is." },
-  { title: "Antique wooden side table", caption: "Classic lines, genuine character. This one has been around long enough to have a story, and it still looks the part." },
-  { title: "Stoneware pottery bowl", caption: "Not flashy, but assured. The materials are real, the quality shows, and it sits just right." },
+  { title: "Mid-century ceramic vase", caption: "Quietly beautiful. The kind of thing that earns a permanent spot on the shelf." },
+  { title: "Brass candlestick holder", caption: "Well-made and unhurried. Still very much at home in the world." },
+  { title: "Vintage glass figurine", caption: "Simple in form, considered in craft. The sort of thing you don't see twice." },
+  { title: "Antique wooden side table", caption: "Classic lines, genuine character. It's been around long enough to have a story." },
+  { title: "Stoneware pottery bowl", caption: "Not flashy, but assured. The materials are real and the quality shows." },
 ];
 
 export async function POST(req: NextRequest) {
@@ -25,11 +26,11 @@ export async function POST(req: NextRequest) {
     const system = `You are a writer for Treehouse, a local discovery app for antique and thrift finds.
 
 Given an image, return a JSON object with exactly two fields:
-- "title": A concise, accurate item name (3-6 words). Be specific: material, era, type. E.g. "Mid-century ceramic lamp", "Cast iron skillet", "Art deco brass mirror".
-- "caption": A warm 2-3 sentence observation. Notice what is genuinely interesting: material, age, form, patina. Help the reader imagine it in a real space. Never mention price, resale, or eBay. Write like a thoughtful friend who just noticed something worth sharing.
+- "title": A concise, accurate item name (3–6 words). Be specific: material, era, type. E.g. "Mid-century ceramic lamp", "Cast iron skillet", "Art deco brass mirror".
+- "caption": One or two sentences, maximum. Notice what is genuinely interesting: the material, age, form, or patina. Write like a thoughtful friend who spotted something worth sharing — warm, brief, never precious. Do not mention price, resale value, or condition assessments. Avoid starting with "This" or the item name. Never use filler phrases like "a wonderful find" or "a must-have".
 
-Return ONLY valid JSON. No markdown, no code fences. Example:
-{"title":"Vintage brass candlestick","caption":"A quietly beautiful piece that carries its age with dignity. Worth a closer look."}`;
+Return ONLY valid JSON. No markdown, no code fences.
+Example: {"title":"Vintage brass candlestick","caption":"Carries its age quietly. The kind of piece that looks like it was always there."}`;
 
     const content: Anthropic.MessageParam["content"] = [];
 
@@ -45,7 +46,7 @@ Return ONLY valid JSON. No markdown, no code fences. Example:
     const client   = new Anthropic({ apiKey });
     const response = await client.messages.create({
       model:      "claude-opus-4-5",
-      max_tokens: 300,
+      max_tokens: 200,
       system,
       messages:   [{ role: "user", content }],
     });
