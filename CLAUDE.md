@@ -37,22 +37,36 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 
 **What was done (this session):**
 
-### Detail page — button + layout polish (`app/find/[id]/page.tsx`)
-- **"Bookmark Booth"** — visitor button renamed from "Mark the Spot", now full-width, green surface (same treatment as "Mark available"), with Bookmark icon from lucide-react. Unmistakably tappable.
-- **Owner button** also upgraded to full-width + Bookmark icon. Label stays "Mark the Spot" / "Mark available".
-- **Vendor row condensed** — vendor name + booth number pill now inline on the same row (flex, right-aligned). Cleaner hierarchy. Facebook link drops below as a subrow.
-- **Orphaned hairline fixed** — hairline before "View the shelf" is now conditional: only renders after `ShelfSection` resolves with `hasItems: true`. `ShelfSection` accepts an `onReady(hasItems: boolean)` callback; parent holds `shelfHasItems` state.
-- **`greenBorder` tightened** — updated to `rgba(30,77,43,0.22)` (was 0.18) for better contrast on the new full-width button.
+### Bookmark Booth — local-only toggle with hero badge (`app/find/[id]/page.tsx`)
+- **No DB write** — Bookmark Booth is purely client-side. Clicking it never calls Supabase or changes `post.status`.
+- **State** — `isBookmarked` boolean in component state. Persisted to `safeStorage` under key `treehouse_bookmark_${postId}`. Restored from storage on mount. Toggled by `handleBookmark()` which calls `safeStorage.setItem` / `safeStorage.removeItem`.
+- **Button (visitor)** — toggles between:
+  - Unset: ghost green surface (`greenLight` bg, `greenBorder` border), `Bookmark` icon, label "Bookmark Booth"
+  - Set: solid dark green (`greenSolid = rgba(30,77,43,0.92)`) bg, `BookmarkCheck` icon, label "Booth Bookmarked", white text
+  - CSS `transition` on background/color/border for smooth swap
+- **Hero image badge** — `AnimatePresence` + `motion.div` pill overlaid bottom-left of image:
+  - Only shown for visitors (`!isMyPost`) when `isBookmarked === true`
+  - Style: solid dark green pill, `BookmarkCheck` icon + "Bookmarked" white text
+  - Animates in (scale 0.88→1, opacity 0→1, y 4→0) and out on toggle
+  - `pointerEvents: "none"` so it doesn't block image interaction
+  - Shares bottom row with share button (share is bottom-right, badge is bottom-left)
+- **Owner view** — Bookmark Booth logic is completely hidden from owners (`isMyPost`). Their button stays "Mark the Spot" / "Mark available" (Supabase write, unchanged).
+- Added `greenSolid: "rgba(30,77,43,0.92)"` to palette constant `C`.
+- Added `useCallback` import; `handleShelfReady` wrapped in `useCallback` to avoid unnecessary `ShelfSection` re-renders.
 
-### Navigation / scroll restoration (previous session)
-- "Keep exploring →" section removed from detail page
-- Feed saves `window.scrollY` to `sessionStorage` (`SCROLL_KEY = "treehouse_feed_scroll"`) and restores on mount via `requestAnimationFrame`
+### Previous session — button + layout polish
+- "Bookmark Booth" renamed from "Mark the Spot" for visitors, full-width green surface
+- Vendor name + booth pill inline on same row in "Find this here" card
+- Orphaned hairline above shelf fixed (conditional on `shelfHasItems`)
+
+### Previous session — navigation
+- "Keep exploring →" removed from detail page
+- Feed scroll position saved/restored via sessionStorage
 
 **Next session starting point:**
 No active issues. Good candidates for next work:
-- Wire up "Bookmark Booth" for visitors (save to local list, future saved/shelf feature)
-- Directions affordance: small "→ Directions" label under mall address in "Find this here" card
-- Delete button discoverability improvement (owner-only section label or separator above it)
+- Directions affordance: "→ Directions" label under mall address in "Find this here" card
+- Delete button discoverability (owner-section label or separator above it)
 - Pull-to-refresh on feed
 - PWA support
 - Supabase RLS / auth
@@ -103,8 +117,8 @@ SERPAPI_KEY                      eBay sold comps
 ```
 /                   Discovery feed — tree masonry, mall dropdown, no filters, no prices
 /find/[id]          Find detail — full-bleed image, floating back btn, availability status,
-                    "View the shelf" scroll, "Find this here" card, Bookmark Booth inside card,
-                    booth pill inline with vendor name, delete at bottom
+                    "View the shelf" scroll, "Find this here" card, Bookmark Booth (visitors)
+                    / Mark the Spot (owners) inside card, booth pill inline, delete at bottom
 /mall/[slug]        Mall profile
 /vendor/[slug]      Vendor profile — Facebook link, available/sold grid
 /post               Vendor capture — camera/gallery, profile setup, Reset button
@@ -137,6 +151,7 @@ lib/posts.ts              getFeedPosts, getPost, getVendorPosts, createPost, cre
                           createVendor + createPost return { data, error }
 lib/postStore.ts          In-memory image store for /post → /post/preview flow
 lib/safeStorage.ts        localStorage wrapper with sessionStorage + memory fallback
+                          API: getItem, setItem, removeItem
 types/treehouse.ts        Post, Vendor, Mall, LocalVendorProfile, PostStatus
 app/layout.tsx            No max-width wrapper — each page owns its own width
 ```
@@ -150,6 +165,7 @@ app/layout.tsx            No max-width wrapper — each page owns its own width
 bg: #f0ede6  surface: #e8e4db  surfaceDeep: #dedad0  border: rgba(26,26,24,0.1)
 text: #1a1a18 / #4a4a42 / #8a8478 / #b0aa9e
 green (CTAs): #1e4d2b   greenLight: rgba(30,77,43,0.09)   greenBorder: rgba(30,77,43,0.22)
+greenSolid: rgba(30,77,43,0.92)  ← used for filled/active state (Bookmark Booth confirmed)
 header blur: rgba(240,237,230,0.94)
 ```
 
@@ -177,7 +193,11 @@ Scroll position saved to sessionStorage ("treehouse_feed_scroll"), restored on m
 
 ### Detail page layout order
 ```
-1. Full-bleed image (floating back btn top-left, share btn bottom-right)
+1. Full-bleed image
+   - Floating back btn (top-left)
+   - "Found a home" badge (top-left, offset from back btn) — only when sold
+   - "Bookmarked" pill badge (bottom-left, dark green, BookmarkCheck icon) — visitors only, when bookmarked
+   - Share btn (bottom-right)
 2. Title (Georgia 26px bold)
 3. Availability (pulsing dot + "Available" green, or "Found a home" muted)
 4. Caption (italic Georgia) + description
@@ -187,7 +207,8 @@ Scroll position saved to sessionStorage ("treehouse_feed_scroll"), restored on m
      [divider]
      Vendor name + booth pill (inline, same row, right-aligned)
      Facebook link (below vendor name, if present)
-     Bookmark Booth button (visitors) / Mark the Spot toggle (owners) — full-width, green surface
+     Visitors: Bookmark Booth toggle (ghost green → solid green, local only, no DB)
+     Owners: Mark the Spot / Mark available toggle (Supabase write)
 7. Delete post (ghost, owner only, very bottom)
 ```
 
@@ -204,6 +225,7 @@ Scroll position saved to sessionStorage ("treehouse_feed_scroll"), restored on m
 - `createVendor` handles 23505 duplicate key by fetching existing row — do not revert this
 - Always use `safeStorage` (not raw `localStorage`) in ecosystem client components
 - `ShelfSection` accepts `onReady(hasItems: boolean)` callback — parent uses this to conditionally render the hairline separator. Do not remove this prop.
+- Bookmark state uses `safeStorage` with key `treehouse_bookmark_${postId}`. Value "1" = bookmarked, absent = not bookmarked. Never touches Supabase.
 - Tree offset: wrap only the first tile in a plain `div` with the `ref` — do NOT put the ref on `MasonryTile` itself (it renders a `motion.div` and would need forwardRef)
 - `FACEBOOK_PAGE_URL` constant lives at the top of `app/post/preview/page.tsx` — update it there when the real page URL is confirmed
 - Feed scroll restoration uses raw `sessionStorage` directly (not safeStorage) — scroll position is ephemeral tab state, not user data
@@ -218,8 +240,9 @@ Scroll position saved to sessionStorage ("treehouse_feed_scroll"), restored on m
 - Find detail: full-bleed image, floating back btn, availability pulse, "View the shelf", "Find this here" card
 - Vendor name + booth number inline on same row in "Find this here" card
 - Hairline above shelf only shown when shelf has items (no orphaned separator)
-- "Bookmark Booth" — full-width green surface button for visitors (Bookmark icon)
-- Owner: "Mark the Spot" / "Mark available" toggle — full-width, same green surface treatment
+- Bookmark Booth — local-only toggle, no DB write, persisted to safeStorage
+- Bookmarked hero badge — animated pill (bottom-left of image), only for visitors when bookmarked
+- Owner: Mark the Spot / Mark available toggle (Supabase write, full-width, Bookmark icon)
 - "View the shelf" — horizontal scroll, full-bleed, hides if empty, hairline conditional
 - Share icon on image overlay — native share sheet or clipboard copy
 - Vendor actions: mark sold toggle, delete with confirmation
@@ -232,7 +255,7 @@ Scroll position saved to sessionStorage ("treehouse_feed_scroll"), restored on m
 - All reseller intel routes (untouched, dark theme)
 
 ## KNOWN GAPS ⚠️
-- "Bookmark Booth" for visitors is unwired (future saved/shelf feature)
+- Bookmarked items have no consolidated "saved" list yet (future feature)
 - Directions affordance missing from "Find this here" mall address (visual cue only, link works)
 - Delete button discoverability — very faint at page bottom, no owner-section separator
 - `/enhance-text` is mock (not real Claude)
