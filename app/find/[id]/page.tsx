@@ -31,9 +31,6 @@ const C = {
   red:         "#8b2020",
   redBg:       "rgba(139,32,32,0.07)",
   redBorder:   "rgba(139,32,32,0.18)",
-  amber:       "#7a4f1a",
-  amberBg:     "rgba(122,79,26,0.07)",
-  amberBorder: "rgba(122,79,26,0.2)",
 };
 
 function bookmarkKey(postId: string) {
@@ -149,7 +146,6 @@ function ShelfSection({ vendorId, currentPostId, onReady }: {
         style={{
           display: "flex", gap: 10,
           overflowX: "auto", overflowY: "hidden",
-          // paddingLeft matches the label indent (20px) with a small leading spacer built in
           paddingLeft: 20, paddingRight: 20, paddingBottom: 4,
           scrollSnapType: "x mandatory",
           WebkitOverflowScrolling: "touch",
@@ -158,8 +154,6 @@ function ShelfSection({ vendorId, currentPostId, onReady }: {
         }}
         className="hide-scrollbar"
       >
-        {/* Leading spacer so first card aligns with label */}
-        <div style={{ flexShrink: 0, width: 0 }} />
         {items.map(item => (
           <div key={item.id} style={{ scrollSnapAlign: "start", flexShrink: 0 }}>
             <ShelfCard post={item} />
@@ -168,49 +162,6 @@ function ShelfSection({ vendorId, currentPostId, onReady }: {
         <div style={{ flexShrink: 0, width: 8 }} />
       </div>
     </motion.div>
-  );
-}
-
-// ─── Persistent back tab ──────────────────────────────────────────────────────
-
-function BackTab({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      aria-label="Go back"
-      style={{
-        position: "fixed",
-        left: 0,
-        top: "50%",
-        transform: "translateY(-50%)",
-        zIndex: 50,
-        // Pill shape
-        width: 28,
-        height: 72,
-        borderRadius: "0 12px 12px 0",
-        // Styling
-        background: "rgba(240,237,230,0.88)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-        border: `1px solid ${C.border}`,
-        borderLeft: "none",
-        boxShadow: "2px 0 12px rgba(26,26,24,0.10)",
-        cursor: "pointer",
-        // Layout
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 0,
-        // Subtle press feel
-        transition: "background 0.15s, transform 0.1s",
-      }}
-      onMouseDown={e => (e.currentTarget.style.transform = "translateY(-50%) scaleX(0.93)")}
-      onMouseUp={e => (e.currentTarget.style.transform = "translateY(-50%)")}
-      onTouchStart={e => (e.currentTarget.style.transform = "translateY(-50%) scaleX(0.93)")}
-      onTouchEnd={e => (e.currentTarget.style.transform = "translateY(-50%)")}
-    >
-      <ArrowLeft size={13} style={{ color: C.textMid }} />
-    </button>
   );
 }
 
@@ -242,7 +193,6 @@ export default function FindDetailPage() {
         const raw = localStorage.getItem(LOCAL_VENDOR_KEY);
         if (raw && data) {
           const profile = JSON.parse(raw) as LocalVendorProfile;
-          // Match on vendor_id if available; fall back to matching post's vendor_id
           const profileVendorId = profile.vendor_id;
           const postVendorId = data.vendor_id ?? data.vendor?.id;
           if (profileVendorId && postVendorId && profileVendorId === postVendorId) {
@@ -327,9 +277,6 @@ export default function FindDetailPage() {
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
 
-      {/* ── Persistent back tab (fixed left side) ── */}
-      <BackTab onClick={() => router.back()} />
-
       {/* ── 1. Hero image ── */}
       <div style={{ position: "relative", width: "100%" }}>
         {post.image_url ? (
@@ -349,7 +296,7 @@ export default function FindDetailPage() {
         {/* Unavailable badge — top-left */}
         {isSold && (
           <div style={{
-            position: "absolute", top: "max(18px, env(safe-area-inset-top, 18px))", left: 16,
+            position: "absolute", top: "max(14px, env(safe-area-inset-top, 14px))", left: 14,
             fontSize: 8, fontWeight: 700, textTransform: "uppercase",
             letterSpacing: "1.5px", padding: "3px 9px", borderRadius: 5,
             background: "rgba(240,237,230,0.92)", color: C.textMuted,
@@ -360,28 +307,48 @@ export default function FindDetailPage() {
           </div>
         )}
 
-        {/* Bottom-right overlay buttons — follow + share (visitors) */}
-        {!isMyPost && (
-          <div style={{
-            position: "absolute", bottom: 12, right: 14,
-            display: "flex", alignItems: "center", gap: 8,
-          }}>
-            <button
-              onClick={handleFollow}
-              style={{
-                width: 34, height: 34, borderRadius: "50%",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                background: isFollowing ? C.greenSolid : "rgba(0,0,0,0.32)",
-                backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-                border: "none", cursor: "pointer",
-                transition: "background 0.18s",
-              }}
-            >
-              {isFollowing
-                ? <BookmarkCheck size={14} style={{ color: "rgba(255,255,255,0.95)" }} />
-                : <Bookmark size={14} style={{ color: "rgba(255,255,255,0.9)" }} />
-              }
-            </button>
+        {/* ── Bottom overlay row: back (left) + action buttons (right) ── */}
+        <div style={{
+          position: "absolute", bottom: 12, left: 12, right: 14,
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          {/* Back button — bottom-left */}
+          <button
+            onClick={() => router.back()}
+            aria-label="Go back"
+            style={{
+              width: 34, height: 34, borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "rgba(240,237,230,0.82)",
+              backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
+              border: `1px solid ${C.border}`,
+              boxShadow: "0 1px 6px rgba(26,26,24,0.10)",
+              cursor: "pointer",
+            }}
+          >
+            <ArrowLeft size={15} style={{ color: C.textMid }} />
+          </button>
+
+          {/* Right side — visitor: follow + share | owner: share only */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {!isMyPost && (
+              <button
+                onClick={handleFollow}
+                style={{
+                  width: 34, height: 34, borderRadius: "50%",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: isFollowing ? C.greenSolid : "rgba(0,0,0,0.32)",
+                  backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+                  border: "none", cursor: "pointer",
+                  transition: "background 0.18s",
+                }}
+              >
+                {isFollowing
+                  ? <BookmarkCheck size={14} style={{ color: "rgba(255,255,255,0.95)" }} />
+                  : <Bookmark size={14} style={{ color: "rgba(255,255,255,0.9)" }} />
+                }
+              </button>
+            )}
             <button
               onClick={handleShare}
               style={{
@@ -395,24 +362,7 @@ export default function FindDetailPage() {
               <Share2 size={13} style={{ color: copied ? "#a8d5b5" : "rgba(255,255,255,0.9)" }} />
             </button>
           </div>
-        )}
-
-        {/* Owner view: share only */}
-        {isMyPost && (
-          <button
-            onClick={handleShare}
-            style={{
-              position: "absolute", bottom: 12, right: 14,
-              width: 34, height: 34, borderRadius: "50%",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: "rgba(0,0,0,0.32)",
-              backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-              border: "none", cursor: "pointer",
-            }}
-          >
-            <Share2 size={13} style={{ color: copied ? "#a8d5b5" : "rgba(255,255,255,0.9)" }} />
-          </button>
-        )}
+        </div>
       </div>
 
       {/* ── 2. Title + availability ── */}
@@ -548,7 +498,7 @@ export default function FindDetailPage() {
               <div style={{ height: 1, background: C.border, margin: "0 14px" }} />
             )}
 
-            {/* Vendor row — name + booth pill inline */}
+            {/* Vendor row */}
             {post.vendor && (
               <div style={{ padding: "10px 14px 0", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
                 <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500, paddingTop: 2, flexShrink: 0, width: 48 }}>
@@ -588,7 +538,7 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* ── Visitor: Follow the Find | Owner: Mark the Spot ── */}
+            {/* Visitor: Follow the Find | Owner: Mark the Spot */}
             {post.vendor && (
               <div style={{ padding: "12px 14px 14px" }}>
                 {isMyPost ? (
@@ -665,7 +615,6 @@ export default function FindDetailPage() {
             gap: 0,
           }}
         >
-          {/* Separator */}
           <div style={{ height: 1, background: C.border, marginBottom: 16 }} />
 
           {/* Mark as sold toggle */}
