@@ -42,7 +42,7 @@ function VendorPostCard({ post, index }: { post: Post; index: number }) {
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", filter: isSold ? "grayscale(0.4) brightness(0.88)" : "brightness(0.97)" }} />
               <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "45%", background: "linear-gradient(to bottom, transparent, rgba(26,26,24,0.55))" }} />
               {isSold && (
-                <div style={{ position: "absolute", top: 7, left: 7, fontSize: 7, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px", padding: "2px 6px", borderRadius: 4, background: "rgba(240,237,230,0.92)", color: C.textMuted, border: `1px solid ${C.border}` }}>Sold</div>
+                <div style={{ position: "absolute", top: 7, left: 7, fontSize: 7, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.2px", padding: "2px 6px", borderRadius: 4, background: "rgba(240,237,230,0.92)", color: C.textMuted, border: `1px solid ${C.border}` }}>Unavailable</div>
               )}
               {post.price_asking != null && !isSold && (
                 <div style={{ position: "absolute", top: 7, right: 7, fontFamily: "monospace", fontSize: 11, fontWeight: 700, padding: "2px 7px", borderRadius: 5, background: "rgba(240,237,230,0.92)", color: C.textPrimary, border: `1px solid ${C.border}` }}>
@@ -98,7 +98,6 @@ export default function VendorPage() {
       const p = await getVendorPosts(v.id);
       setPosts(p);
       setLoading(false);
-      // Check if this is the logged-in vendor
       try {
         const raw = localStorage.getItem(LOCAL_VENDOR_KEY);
         if (raw) {
@@ -163,7 +162,6 @@ export default function VendorPage() {
                     </div>
                   </Link>
                 )}
-                {/* Facebook link */}
                 {vendor.facebook_url && (
                   <a href={vendor.facebook_url} target="_blank" rel="noopener noreferrer"
                     style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: "#1877f2", textDecoration: "none", fontWeight: 500 }}>
@@ -202,7 +200,7 @@ export default function VendorPage() {
               )}
               {sold.length > 0 && (
                 <>
-                  <div style={{ fontSize: 8, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2px", marginBottom: 10 }}>Found a home · {sold.length}</div>
+                  <div style={{ fontSize: 8, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2px", marginBottom: 10 }}>Unavailable · {sold.length}</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                     {sold.map((post, i) => <VendorPostCard key={post.id} post={post} index={i} />)}
                   </div>

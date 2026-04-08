@@ -155,7 +155,7 @@ function MasonryTile({ post, index }: { post: Post; index: number }) {
                   border: `1px solid ${C.border}`,
                   backdropFilter: "blur(6px)",
                 }}>
-                  Found a home
+                  Unavailable
                 </div>
               )}
             </div>
@@ -285,17 +285,13 @@ export default function DiscoveryFeedPage() {
   const [mallId,  setMallId]  = useState<string | null>(null);
 
   // ── Scroll restoration ──────────────────────────────────────────────────────
-  // Save scroll position whenever the user scrolls, restore it on mount.
-  // Uses sessionStorage so it only persists within the tab session.
 
   useEffect(() => {
-    // Restore scroll position from previous visit to this page
     try {
       const saved = sessionStorage.getItem(SCROLL_KEY);
       if (saved) {
         const y = parseInt(saved, 10);
         if (!isNaN(y) && y > 0) {
-          // Defer to after paint so the DOM has content to scroll into
           requestAnimationFrame(() => {
             window.scrollTo({ top: y, behavior: "instant" });
           });
@@ -303,7 +299,6 @@ export default function DiscoveryFeedPage() {
       }
     } catch {}
 
-    // Save scroll on every scroll event
     function onScroll() {
       try {
         sessionStorage.setItem(SCROLL_KEY, String(Math.round(window.scrollY)));
