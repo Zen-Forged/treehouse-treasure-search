@@ -37,44 +37,22 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 
 **What was done (this session):**
 
-### Navigation / scroll restoration
-- "Keep exploring →" section removed entirely from `/find/[id]/page.tsx`
-- Feed (`app/page.tsx`) now saves `window.scrollY` to `sessionStorage` on every scroll event (`SCROLL_KEY = "treehouse_feed_scroll"`)
-- On mount, feed restores saved scroll position via `requestAnimationFrame` → `window.scrollTo({ behavior: "instant" })`
-- Back button on detail page already used `router.back()` — no change needed there
-- No new UI, no breadcrumbs, no navigation components added
+### Detail page — button + layout polish (`app/find/[id]/page.tsx`)
+- **"Bookmark Booth"** — visitor button renamed from "Mark the Spot", now full-width, green surface (same treatment as "Mark available"), with Bookmark icon from lucide-react. Unmistakably tappable.
+- **Owner button** also upgraded to full-width + Bookmark icon. Label stays "Mark the Spot" / "Mark available".
+- **Vendor row condensed** — vendor name + booth number pill now inline on the same row (flex, right-aligned). Cleaner hierarchy. Facebook link drops below as a subrow.
+- **Orphaned hairline fixed** — hairline before "View the shelf" is now conditional: only renders after `ShelfSection` resolves with `hasItems: true`. `ShelfSection` accepts an `onReady(hasItems: boolean)` callback; parent holds `shelfHasItems` state.
+- **`greenBorder` tightened** — updated to `rgba(30,77,43,0.22)` (was 0.18) for better contrast on the new full-width button.
 
-**What was done (previous session):**
-
-### Feed (`app/page.tsx`)
-- Price badges removed from all tiles — items feel like discoveries, not listings
-- Filter bar removed entirely (no "All finds / Available / Just in" pills) — unified feed
-- Grid gap: `8px → 14px`. Tile border radius: `12 → 14px`
-- **Tree offset masonry** — right column offset is now dynamic: `50% of first tile's rendered height` via `ResizeObserver` on the first tile ref. Stays live on screen rotation, font scale changes, image load. Skeleton uses `Math.round(SKELETON_HEIGHTS[0] * 0.5)` = 65px to avoid layout jump on load.
-
-### Detail page (`app/find/[id]/page.tsx`)
-- **Sticky nav header removed** — replaced with floating back button (top-left, over image, frosted cream bg + blur)
-- **Full-bleed hero image** — no rounded container, no shadow, bleeds to page edges
-- **Availability status** — price + timestamp replaced with pulsing green dot + "Available" / "Found a home"
-- **"View the shelf"** (was "More on the shelf") — renamed, layout unchanged
-- **"Find this here" card** — location + vendor condensed into a single surface card, below the shelf section
-- **Booth number on its own line** — pill style (monospace, `surfaceDeep` bg, rounded-20), right-aligned
-- **Mark the Spot moved inside the card** — at the bottom, spatially tied to location/vendor context
-- **Delete button** — ghost style (no background, no border, tiny trash icon + 11px faint text), very bottom
-- **"Keep exploring →" removed** — back button handles return navigation; scroll position restored on feed
-
-### Post confirmation (`app/post/preview/page.tsx`)
-- "Back to feed" is primary green CTA (top)
-- "Visit us on Facebook" is secondary surface button (middle)
-- "Post another find" is ghost with Camera icon (bottom)
-
-### AI caption (`app/api/post-caption/route.ts`)
-- Captions: 1–2 sentences max (was 2–3)
-- `max_tokens`: 300 → 200
+### Navigation / scroll restoration (previous session)
+- "Keep exploring →" section removed from detail page
+- Feed saves `window.scrollY` to `sessionStorage` (`SCROLL_KEY = "treehouse_feed_scroll"`) and restores on mount via `requestAnimationFrame`
 
 **Next session starting point:**
 No active issues. Good candidates for next work:
-- Wire up "Mark the Spot" for visitors (save to local list, future shelf/saved feature)
+- Wire up "Bookmark Booth" for visitors (save to local list, future saved/shelf feature)
+- Directions affordance: small "→ Directions" label under mall address in "Find this here" card
+- Delete button discoverability improvement (owner-only section label or separator above it)
 - Pull-to-refresh on feed
 - PWA support
 - Supabase RLS / auth
@@ -125,8 +103,8 @@ SERPAPI_KEY                      eBay sold comps
 ```
 /                   Discovery feed — tree masonry, mall dropdown, no filters, no prices
 /find/[id]          Find detail — full-bleed image, floating back btn, availability status,
-                    "View the shelf" scroll, "Find this here" card, Mark the Spot inside card,
-                    booth pill, delete at bottom
+                    "View the shelf" scroll, "Find this here" card, Bookmark Booth inside card,
+                    booth pill inline with vendor name, delete at bottom
 /mall/[slug]        Mall profile
 /vendor/[slug]      Vendor profile — Facebook link, available/sold grid
 /post               Vendor capture — camera/gallery, profile setup, Reset button
@@ -171,7 +149,7 @@ app/layout.tsx            No max-width wrapper — each page owns its own width
 ```
 bg: #f0ede6  surface: #e8e4db  surfaceDeep: #dedad0  border: rgba(26,26,24,0.1)
 text: #1a1a18 / #4a4a42 / #8a8478 / #b0aa9e
-green (CTAs): #1e4d2b   greenLight: rgba(30,77,43,0.09)   greenBorder: rgba(30,77,43,0.18)
+green (CTAs): #1e4d2b   greenLight: rgba(30,77,43,0.09)   greenBorder: rgba(30,77,43,0.22)
 header blur: rgba(240,237,230,0.94)
 ```
 
@@ -203,13 +181,13 @@ Scroll position saved to sessionStorage ("treehouse_feed_scroll"), restored on m
 2. Title (Georgia 26px bold)
 3. Availability (pulsing dot + "Available" green, or "Found a home" muted)
 4. Caption (italic Georgia) + description
-5. [hairline] + "View the shelf" horizontal scroll (full-bleed)
+5. [hairline — only if shelf has items] + "View the shelf" horizontal scroll (full-bleed)
 6. "Find this here" label + card:
      Mall name + address link
      [divider]
-     Vendor name (fontWeight 400, textMid)
-     Booth pill (monospace, surfaceDeep bg, border-radius 20)
-     Mark the Spot button
+     Vendor name + booth pill (inline, same row, right-aligned)
+     Facebook link (below vendor name, if present)
+     Bookmark Booth button (visitors) / Mark the Spot toggle (owners) — full-width, green surface
 7. Delete post (ghost, owner only, very bottom)
 ```
 
@@ -225,7 +203,7 @@ Scroll position saved to sessionStorage ("treehouse_feed_scroll"), restored on m
 - Supabase client uses placeholder URL at build time to avoid prerender crash
 - `createVendor` handles 23505 duplicate key by fetching existing row — do not revert this
 - Always use `safeStorage` (not raw `localStorage`) in ecosystem client components
-- `ShelfSection` uses `getVendorPosts` directly — that's a Supabase fetch, not localStorage, so safeStorage is not needed there
+- `ShelfSection` accepts `onReady(hasItems: boolean)` callback — parent uses this to conditionally render the hairline separator. Do not remove this prop.
 - Tree offset: wrap only the first tile in a plain `div` with the `ref` — do NOT put the ref on `MasonryTile` itself (it renders a `motion.div` and would need forwardRef)
 - `FACEBOOK_PAGE_URL` constant lives at the top of `app/post/preview/page.tsx` — update it there when the real page URL is confirmed
 - Feed scroll restoration uses raw `sessionStorage` directly (not safeStorage) — scroll position is ephemeral tab state, not user data
@@ -237,9 +215,12 @@ Scroll position saved to sessionStorage ("treehouse_feed_scroll"), restored on m
 - Feed scroll position saved/restored via sessionStorage on back navigation
 - Skeleton loading matches live grid proportions (65px right-column offset)
 - Sold items in feed: 0.62 opacity + grayscale + "Found a home" badge
-- Find detail: full-bleed image, floating back btn, availability pulse, "View the shelf", "Find this here" card, booth pill, Mark the Spot inside card, delete at bottom (no "Keep exploring")
-- "View the shelf" — horizontal scroll, full-bleed, vendor's other items (lazy loaded), hides if empty
-- Mark the Spot — wired for owners (toggle sold/available), decorative for visitors
+- Find detail: full-bleed image, floating back btn, availability pulse, "View the shelf", "Find this here" card
+- Vendor name + booth number inline on same row in "Find this here" card
+- Hairline above shelf only shown when shelf has items (no orphaned separator)
+- "Bookmark Booth" — full-width green surface button for visitors (Bookmark icon)
+- Owner: "Mark the Spot" / "Mark available" toggle — full-width, same green surface treatment
+- "View the shelf" — horizontal scroll, full-bleed, hides if empty, hairline conditional
 - Share icon on image overlay — native share sheet or clipboard copy
 - Vendor actions: mark sold toggle, delete with confirmation
 - Vendor profile: Facebook link, light theme, available/sold grid
@@ -251,7 +232,9 @@ Scroll position saved to sessionStorage ("treehouse_feed_scroll"), restored on m
 - All reseller intel routes (untouched, dark theme)
 
 ## KNOWN GAPS ⚠️
-- "Mark the Spot" for visitors is unwired (future saved/shelf feature)
+- "Bookmark Booth" for visitors is unwired (future saved/shelf feature)
+- Directions affordance missing from "Find this here" mall address (visual cue only, link works)
+- Delete button discoverability — very faint at page bottom, no owner-section separator
 - `/enhance-text` is mock (not real Claude)
 - No Supabase RLS / auth yet
 - No pull-to-refresh on feed

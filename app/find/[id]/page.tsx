@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Share2, Trash2, Facebook } from "lucide-react";
+import { ArrowLeft, Share2, Trash2, Facebook, Bookmark } from "lucide-react";
 import { getPost, getVendorPosts, updatePostStatus, deletePost } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import type { Post } from "@/types/treehouse";
@@ -24,7 +24,7 @@ const C = {
   textFaint:   "#b0aa9e",
   green:       "#1e4d2b",
   greenLight:  "rgba(30,77,43,0.09)",
-  greenBorder: "rgba(30,77,43,0.18)",
+  greenBorder: "rgba(30,77,43,0.22)",
   header:      "rgba(240,237,230,0.96)",
   red:         "#8b2020",
   redBg:       "rgba(139,32,32,0.07)",
@@ -98,16 +98,22 @@ function ShelfCard({ post }: { post: Post }) {
 
 // ─── Shelf section ────────────────────────────────────────────────────────────
 
-function ShelfSection({ vendorId, currentPostId }: { vendorId: string; currentPostId: string }) {
+function ShelfSection({ vendorId, currentPostId, onReady }: {
+  vendorId: string;
+  currentPostId: string;
+  onReady: (hasItems: boolean) => void;
+}) {
   const [items, setItems] = useState<Post[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     getVendorPosts(vendorId, 12).then(posts => {
-      setItems(posts.filter(p => p.id !== currentPostId));
+      const filtered = posts.filter(p => p.id !== currentPostId);
+      setItems(filtered);
       setReady(true);
+      onReady(filtered.length > 0);
     });
-  }, [vendorId, currentPostId]);
+  }, [vendorId, currentPostId, onReady]);
 
   if (!ready || items.length === 0) return null;
 
@@ -159,12 +165,13 @@ export default function FindDetailPage() {
   const { id }  = useParams<{ id: string }>();
   const router  = useRouter();
 
-  const [post,       setPost]       = useState<Post | null>(null);
-  const [loading,    setLoading]    = useState(true);
-  const [copied,     setCopied]     = useState(false);
-  const [isMyPost,   setIsMyPost]   = useState(false);
-  const [actionBusy, setActionBusy] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
+  const [post,        setPost]        = useState<Post | null>(null);
+  const [loading,     setLoading]     = useState(true);
+  const [copied,      setCopied]      = useState(false);
+  const [isMyPost,    setIsMyPost]    = useState(false);
+  const [actionBusy,  setActionBusy]  = useState(false);
+  const [showDelete,  setShowDelete]  = useState(false);
+  const [shelfHasItems, setShelfHasItems] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -233,11 +240,12 @@ export default function FindDetailPage() {
   }
 
   const isSold = post.status === "sold";
+  const hasVendor = !!post.vendor;
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
 
-      {/* ── 1. Hero image — full bleed, floating back + share ── */}
+      {/* ── 1. Hero image ── */}
       <div style={{ position: "relative", width: "100%" }}>
         {post.image_url ? (
           <img
@@ -253,7 +261,6 @@ export default function FindDetailPage() {
           <div style={{ height: 120, background: C.surface }} />
         )}
 
-        {/* Sold badge — top-left (only when no back button overlap) */}
         {isSold && (
           <div style={{
             position: "absolute", top: "max(18px, env(safe-area-inset-top, 18px))", left: 60,
@@ -338,7 +345,7 @@ export default function FindDetailPage() {
           </span>
         </motion.div>
 
-        {/* ── Caption + description ── */}
+        {/* Caption + description */}
         {(post.caption || post.description) && (
           <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32, delay: 0.1 }} style={{ marginBottom: 32 }}>
             {post.caption && (
@@ -361,19 +368,25 @@ export default function FindDetailPage() {
 
       </div>
 
-      {/* ── "View the shelf" — full bleed ── */}
-      {post.vendor && (
+      {/* ── "View the shelf" — hairline only shown if shelf has items ── */}
+      {hasVendor && (
         <>
-          <div style={{ height: 1, background: C.border, margin: "0 0 24px" }} />
-          <ShelfSection vendorId={post.vendor.id} currentPostId={post.id} />
+          {/* Hairline is rendered but only visible once we know shelf has items */}
+          {shelfHasItems && (
+            <div style={{ height: 1, background: C.border, margin: "0 0 24px" }} />
+          )}
+          <ShelfSection
+            vendorId={post.vendor!.id}
+            currentPostId={post.id}
+            onReady={setShelfHasItems}
+          />
         </>
       )}
 
-      {/* ── "Find this here" — location + vendor card ── */}
+      {/* ── "Find this here" ── */}
       {(post.mall || post.vendor) && (
         <div style={{ padding: "0 20px", marginBottom: 28 }}>
 
-          {/* Section label */}
           <div style={{
             fontSize: 9, color: C.textFaint,
             textTransform: "uppercase", letterSpacing: "2.2px", fontWeight: 500,
@@ -405,7 +418,7 @@ export default function FindDetailPage() {
                   {post.mall.address ? (
                     mapsUrl ? (
                       <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
-                        style={{ fontSize: 11, color: C.green, textDecoration: "none", borderBottom: `1px solid ${C.greenBorder}` }}>
+                        style={{ fontSize: 11, color: C.green, textDecoration: "none", borderBottom: `1px solid rgba(30,77,43,0.18)` }}>
                         {post.mall.address}
                       </a>
                     ) : (
@@ -413,7 +426,7 @@ export default function FindDetailPage() {
                     )
                   ) : mapsUrl ? (
                     <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
-                      style={{ fontSize: 11, color: C.green, textDecoration: "none", borderBottom: `1px solid ${C.greenBorder}` }}>
+                      style={{ fontSize: 11, color: C.green, textDecoration: "none", borderBottom: `1px solid rgba(30,77,43,0.18)` }}>
                       {post.mall.city}{post.mall.state ? `, ${post.mall.state}` : ""}
                     </a>
                   ) : (
@@ -430,19 +443,39 @@ export default function FindDetailPage() {
               <div style={{ height: 1, background: C.border, margin: "0 14px" }} />
             )}
 
-            {/* Vendor row */}
+            {/* Vendor row — name + booth pill inline */}
             {post.vendor && (
               <div style={{ padding: "10px 14px 0", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
                 <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500, paddingTop: 2, flexShrink: 0, width: 48 }}>
                   Vendor
                 </div>
                 <div style={{ flex: 1, textAlign: "right" }}>
-                  <div style={{ fontSize: 13, fontWeight: 400, color: C.textMid, lineHeight: 1.3 }}>
-                    {post.vendor.display_name}
+                  {/* Name + booth pill on the same line */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 7 }}>
+                    <div style={{ fontSize: 13, fontWeight: 400, color: C.textMid, lineHeight: 1.3 }}>
+                      {post.vendor.display_name}
+                    </div>
+                    {post.vendor.booth_number && (
+                      <div style={{
+                        display: "inline-block",
+                        padding: "3px 8px",
+                        borderRadius: 20,
+                        background: C.surfaceDeep,
+                        border: `1px solid ${C.border}`,
+                        fontFamily: "monospace",
+                        fontSize: 11,
+                        fontWeight: 500,
+                        color: C.textMid,
+                        letterSpacing: "0.3px",
+                        flexShrink: 0,
+                      }}>
+                        {post.vendor.booth_number}
+                      </div>
+                    )}
                   </div>
                   {post.vendor.facebook_url && (
                     <a href={post.vendor.facebook_url} target="_blank" rel="noopener noreferrer"
-                      style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 3, fontSize: 10, color: "#1877f2", textDecoration: "none", opacity: 0.8 }}>
+                      style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 4, fontSize: 10, color: "#1877f2", textDecoration: "none", opacity: 0.8 }}>
                       <Facebook size={9} />
                       Facebook
                     </a>
@@ -451,27 +484,7 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Booth number pill */}
-            {post.vendor?.booth_number && (
-              <div style={{ padding: "8px 14px 0", display: "flex", justifyContent: "flex-end" }}>
-                <div style={{
-                  display: "inline-block",
-                  padding: "4px 10px",
-                  borderRadius: 20,
-                  background: C.surfaceDeep,
-                  border: `1px solid ${C.border}`,
-                  fontFamily: "monospace",
-                  fontSize: 13,
-                  fontWeight: 500,
-                  color: C.textMid,
-                  letterSpacing: "0.3px",
-                }}>
-                  Booth {post.vendor.booth_number}
-                </div>
-              </div>
-            )}
-
-            {/* Mark the Spot — inside card, bottom */}
+            {/* ── Bookmark Booth / owner toggle ── */}
             {post.vendor && (
               <div style={{ padding: "12px 14px 14px" }}>
                 {isMyPost ? (
@@ -479,33 +492,48 @@ export default function FindDetailPage() {
                     onClick={handleToggleSold}
                     disabled={actionBusy}
                     style={{
-                      padding: "8px 16px", borderRadius: 20,
-                      fontSize: 12, fontWeight: 500,
-                      color: isSold ? C.green : C.textMuted,
-                      background: isSold ? C.greenLight : "rgba(26,26,24,0.05)",
+                      width: "100%",
+                      padding: "10px 16px",
+                      borderRadius: 10,
+                      fontSize: 13,
+                      fontWeight: 500,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 7,
+                      color: isSold ? C.green : C.textMid,
+                      background: isSold ? C.greenLight : C.surfaceDeep,
                       border: `1px solid ${isSold ? C.greenBorder : C.border}`,
                       cursor: "pointer",
                       opacity: actionBusy ? 0.5 : 1,
                       letterSpacing: "0.1px",
                     }}
                   >
+                    <Bookmark size={14} style={{ color: isSold ? C.green : C.textMid }} />
                     {isSold ? "Mark available" : "Mark the Spot"}
                   </button>
                 ) : (
                   <button
-                    disabled
+                    onClick={() => {/* future: save booth to local list */}}
                     style={{
-                      padding: "8px 16px", borderRadius: 20,
-                      fontSize: 12, fontWeight: 500,
-                      color: C.textFaint,
-                      background: "rgba(26,26,24,0.04)",
-                      border: `1px solid ${C.border}`,
-                      cursor: "default",
+                      width: "100%",
+                      padding: "10px 16px",
+                      borderRadius: 10,
+                      fontSize: 13,
+                      fontWeight: 500,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 7,
+                      color: C.green,
+                      background: C.greenLight,
+                      border: `1px solid ${C.greenBorder}`,
+                      cursor: "pointer",
                       letterSpacing: "0.1px",
-                      opacity: 0.6,
                     }}
                   >
-                    Mark the Spot
+                    <Bookmark size={14} style={{ color: C.green }} />
+                    Bookmark Booth
                   </button>
                 )}
               </div>
