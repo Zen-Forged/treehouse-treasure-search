@@ -1,6 +1,5 @@
 // app/page.tsx
 // Treehouse — Discovery Feed
-// Gallery-style, story-driven. No marketplace signals.
 
 "use client";
 
@@ -9,11 +8,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Plus, Compass, ChevronDown } from "lucide-react";
+import { MapPin, Plus, Compass, ChevronDown, BookmarkCheck } from "lucide-react";
 import { getFeedPosts, getAllMalls } from "@/lib/posts";
+import { safeStorage } from "@/lib/safeStorage";
 import type { Post, Mall } from "@/types/treehouse";
 
-// ── Palette ───────────────────────────────────────────────────────────────────
 const C = {
   bg:           "#f0ede6",
   surface:      "#e8e4db",
@@ -26,12 +25,29 @@ const C = {
   textFaint:    "#b0aa9e",
   green:        "#1e4d2b",
   greenLight:   "rgba(30,77,43,0.08)",
+  greenSolid:   "rgba(30,77,43,0.88)",
   greenBorder:  "rgba(30,77,43,0.18)",
   sold:         "#8a8478",
   header:       "rgba(240,237,230,0.94)",
 };
 
-const SCROLL_KEY = "treehouse_feed_scroll";
+const SCROLL_KEY    = "treehouse_feed_scroll";
+const BOOKMARK_PREFIX = "treehouse_bookmark_";
+
+// Load all followed post IDs from safeStorage in one pass
+function loadFollowedIds(): Set<string> {
+  const followed = new Set<string>();
+  try {
+    // safeStorage falls back gracefully — try localStorage keys
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(BOOKMARK_PREFIX) && localStorage.getItem(key) === "1") {
+        followed.add(key.slice(BOOKMARK_PREFIX.length));
+      }
+    }
+  } catch {}
+  return followed;
+}
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
@@ -65,7 +81,7 @@ function EmptyFeed() {
 // ─── Masonry skeleton ─────────────────────────────────────────────────────────
 
 const SKELETON_HEIGHTS = [130, 160, 170, 105, 115, 145, 155, 118];
-const SKELETON_OFFSET  = Math.round(SKELETON_HEIGHTS[0] * 0.5); // 65px
+const SKELETON_OFFSET  = Math.round(SKELETON_HEIGHTS[0] * 0.5);
 
 function SkeletonMasonry() {
   const col1 = SKELETON_HEIGHTS.filter((_, i) => i % 2 === 0);
@@ -93,7 +109,7 @@ function SkeletonMasonry() {
 
 // ─── Masonry tile ─────────────────────────────────────────────────────────────
 
-function MasonryTile({ post, index }: { post: Post; index: number }) {
+function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; isFollowed: boolean }) {
   const [imgErr,    setImgErr]    = useState(false);
   const [imgHeight, setImgHeight] = useState<number | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -145,6 +161,8 @@ function MasonryTile({ post, index }: { post: Post; index: number }) {
                   filter: isSold ? "grayscale(0.55) brightness(0.88)" : "brightness(0.97) saturate(0.93)",
                 }}
               />
+
+              {/* Unavailable badge */}
               {isSold && (
                 <div style={{
                   position: "absolute", top: 8, left: 8,
@@ -158,12 +176,37 @@ function MasonryTile({ post, index }: { post: Post; index: number }) {
                   Unavailable
                 </div>
               )}
+
+              {/* Followed indicator — bottom-right corner of image */}
+              {isFollowed && (
+                <div style={{
+                  position: "absolute", bottom: 7, right: 7,
+                  width: 22, height: 22, borderRadius: "50%",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: C.greenSolid,
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.18)",
+                }}>
+                  <BookmarkCheck size={11} style={{ color: "rgba(255,255,255,0.95)" }} />
+                </div>
+              )}
             </div>
           ) : (
-            <div style={{ padding: "16px 14px", minHeight: fallbackH, display: "flex", alignItems: "center" }}>
+            <div style={{ padding: "16px 14px", minHeight: fallbackH, display: "flex", alignItems: "center", position: "relative" }}>
               <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.3 }}>
                 {post.title}
               </div>
+              {/* Followed indicator on text-only tiles */}
+              {isFollowed && (
+                <div style={{
+                  position: "absolute", bottom: 7, right: 7,
+                  width: 22, height: 22, borderRadius: "50%",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: C.greenSolid,
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.18)",
+                }}>
+                  <BookmarkCheck size={11} style={{ color: "rgba(255,255,255,0.95)" }} />
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -172,9 +215,9 @@ function MasonryTile({ post, index }: { post: Post; index: number }) {
   );
 }
 
-// ─── Two-column masonry — tree offset ────────────────────────────────────────
+// ─── Two-column masonry ────────────────────────────────────────────────────────
 
-function MasonryGrid({ posts }: { posts: Post[] }) {
+function MasonryGrid({ posts, followedIds }: { posts: Post[]; followedIds: Set<string> }) {
   const col1 = posts.filter((_, i) => i % 2 === 0);
   const col2 = posts.filter((_, i) => i % 2 === 1);
 
@@ -184,13 +227,8 @@ function MasonryGrid({ posts }: { posts: Post[] }) {
   useEffect(() => {
     const el = firstTileRef.current;
     if (!el) return;
-
-    function measure() {
-      setOffset(Math.round(el!.offsetHeight * 0.5));
-    }
-
+    function measure() { setOffset(Math.round(el!.offsetHeight * 0.5)); }
     measure();
-
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
@@ -201,13 +239,13 @@ function MasonryGrid({ posts }: { posts: Post[] }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {col1.map((post, i) => (
           <div key={post.id} ref={i === 0 ? firstTileRef : undefined}>
-            <MasonryTile post={post} index={i * 2} />
+            <MasonryTile post={post} index={i * 2} isFollowed={followedIds.has(post.id)} />
           </div>
         ))}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: offset }}>
         {col2.map((post, i) => (
-          <MasonryTile key={post.id} post={post} index={i * 2 + 1} />
+          <MasonryTile key={post.id} post={post} index={i * 2 + 1} isFollowed={followedIds.has(post.id)} />
         ))}
       </div>
     </div>
@@ -216,11 +254,7 @@ function MasonryGrid({ posts }: { posts: Post[] }) {
 
 // ─── Mall dropdown ────────────────────────────────────────────────────────────
 
-function MallDropdown({
-  malls,
-  selectedId,
-  onChange,
-}: {
+function MallDropdown({ malls, selectedId, onChange }: {
   malls: Mall[];
   selectedId: string | null;
   onChange: (id: string | null) => void;
@@ -242,8 +276,7 @@ function MallDropdown({
         onChange={e => onChange(e.target.value || null)}
         style={{
           width: "100%",
-          appearance: "none",
-          WebkitAppearance: "none",
+          appearance: "none", WebkitAppearance: "none",
           background: C.surface,
           border: `1px solid ${C.border}`,
           borderRadius: 10,
@@ -262,13 +295,7 @@ function MallDropdown({
           </option>
         ))}
       </select>
-      <ChevronDown
-        size={13}
-        style={{
-          position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
-          color: C.textMuted, pointerEvents: "none",
-        }}
-      />
+      <ChevronDown size={13} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: C.textMuted, pointerEvents: "none" }} />
     </div>
   );
 }
@@ -278,35 +305,35 @@ function MallDropdown({
 export default function DiscoveryFeedPage() {
   const router = useRouter();
 
-  const [posts,   setPosts]   = useState<Post[]>([]);
-  const [malls,   setMalls]   = useState<Mall[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(false);
-  const [mallId,  setMallId]  = useState<string | null>(null);
+  const [posts,       setPosts]       = useState<Post[]>([]);
+  const [malls,       setMalls]       = useState<Mall[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState(false);
+  const [mallId,      setMallId]      = useState<string | null>(null);
+  const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
 
   // ── Scroll restoration ──────────────────────────────────────────────────────
-
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(SCROLL_KEY);
       if (saved) {
         const y = parseInt(saved, 10);
         if (!isNaN(y) && y > 0) {
-          requestAnimationFrame(() => {
-            window.scrollTo({ top: y, behavior: "instant" });
-          });
+          requestAnimationFrame(() => { window.scrollTo({ top: y, behavior: "instant" }); });
         }
       }
     } catch {}
 
     function onScroll() {
-      try {
-        sessionStorage.setItem(SCROLL_KEY, String(Math.round(window.scrollY)));
-      } catch {}
+      try { sessionStorage.setItem(SCROLL_KEY, String(Math.round(window.scrollY))); } catch {}
     }
-
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // ── Load followed IDs from storage ─────────────────────────────────────────
+  useEffect(() => {
+    setFollowedIds(loadFollowedIds());
   }, []);
 
   useEffect(() => {
@@ -323,10 +350,7 @@ export default function DiscoveryFeedPage() {
     return () => { live = false; };
   }, []);
 
-  const filtered = posts.filter(p => {
-    if (mallId && p.mall_id !== mallId) return false;
-    return true;
-  });
+  const filtered = posts.filter(p => !mallId || p.mall_id === mallId);
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", position: "relative" }}>
@@ -356,8 +380,6 @@ export default function DiscoveryFeedPage() {
               Post a find
             </button>
           </div>
-
-          {/* Mall selector */}
           <MallDropdown malls={malls} selectedId={mallId} onChange={setMallId} />
         </header>
 
@@ -373,7 +395,7 @@ export default function DiscoveryFeedPage() {
             <EmptyFeed />
           ) : (
             <AnimatePresence>
-              <MasonryGrid posts={filtered} />
+              <MasonryGrid posts={filtered} followedIds={followedIds} />
             </AnimatePresence>
           )}
         </main>
