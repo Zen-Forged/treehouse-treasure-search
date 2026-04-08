@@ -1,15 +1,14 @@
 // app/flagged/page.tsx
 // Flagged finds — all items the user has bookmarked locally.
+// Grouped by booth number with section headers.
 
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flag } from "lucide-react";
+import { Flag, Eye } from "lucide-react";
 import { getPostsByIds } from "@/lib/posts";
-import { safeStorage } from "@/lib/safeStorage";
 import BottomNav from "@/components/BottomNav";
 import type { Post } from "@/types/treehouse";
 
@@ -42,6 +41,36 @@ function loadFlaggedIds(): string[] {
     }
   } catch {}
   return ids;
+}
+
+// Group posts by booth — returns ordered array of [boothLabel, posts[]]
+function groupByBooth(posts: Post[]): Array<{ label: string; vendorName: string; posts: Post[] }> {
+  const map = new Map<string, { label: string; vendorName: string; posts: Post[] }>();
+
+  for (const post of posts) {
+    const booth = post.vendor?.booth_number ?? null;
+    const vendorName = post.vendor?.display_name ?? "Unknown Vendor";
+    // Key by vendor id so two vendors with same booth# don't merge
+    const key = post.vendor?.id ?? "__no_vendor__";
+
+    if (!map.has(key)) {
+      map.set(key, {
+        label: booth ?? "No booth listed",
+        vendorName,
+        posts: [],
+      });
+    }
+    map.get(key)!.posts.push(post);
+  }
+
+  // Sort groups: booths with numbers first (alphabetical), then "No booth listed"
+  return Array.from(map.values()).sort((a, b) => {
+    const aNum = a.label === "No booth listed";
+    const bNum = b.label === "No booth listed";
+    if (aNum && !bNum) return 1;
+    if (!aNum && bNum) return -1;
+    return a.label.localeCompare(b.label, undefined, { numeric: true });
+  });
 }
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
@@ -152,7 +181,6 @@ function FlaggedRow({ post, index }: { post: Post; index: number }) {
               fontSize: 14, fontWeight: 600,
               color: C.textPrimary,
               lineHeight: 1.3,
-              marginBottom: 5,
               overflow: "hidden",
               textOverflow: "ellipsis",
               display: "-webkit-box",
@@ -161,41 +189,85 @@ function FlaggedRow({ post, index }: { post: Post; index: number }) {
             }}>
               {post.title}
             </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              {post.vendor?.booth_number && (
-                <div style={{
-                  display: "inline-flex", alignItems: "center",
-                  padding: "2px 8px",
-                  borderRadius: 20,
-                  background: C.bg,
-                  border: `1px solid ${C.border}`,
-                  fontFamily: "monospace",
-                  fontSize: 10, fontWeight: 500,
-                  color: C.textMid,
-                  letterSpacing: "0.3px",
-                  flexShrink: 0,
-                }}>
-                  {post.vendor.booth_number}
-                </div>
-              )}
-              {isSold && (
-                <span style={{
-                  fontSize: 9, fontWeight: 700,
-                  textTransform: "uppercase", letterSpacing: "1.3px",
-                  color: C.textMuted,
-                }}>
-                  Unavailable
-                </span>
-              )}
-            </div>
+            {isSold && (
+              <div style={{
+                marginTop: 5,
+                fontSize: 9, fontWeight: 700,
+                textTransform: "uppercase", letterSpacing: "1.3px",
+                color: C.textMuted,
+              }}>
+                Unavailable
+              </div>
+            )}
           </div>
 
-          {/* Chevron */}
-          <div style={{ color: C.textFaint, fontSize: 18, flexShrink: 0, paddingRight: 2 }}>›</div>
+          {/* Eye icon */}
+          <div style={{ flexShrink: 0, paddingRight: 2, display: "flex", alignItems: "center" }}>
+            <Eye size={15} style={{ color: C.textFaint }} />
+          </div>
         </div>
       </Link>
     </motion.div>
+  );
+}
+
+// ─── Booth section ────────────────────────────────────────────────────────────
+
+function BoothSection({
+  label,
+  vendorName,
+  posts,
+  startIndex,
+}: {
+  label: string;
+  vendorName: string;
+  posts: Post[];
+  startIndex: number;
+}) {
+  return (
+    <div style={{ marginBottom: 28 }}>
+      {/* Section header */}
+      <div style={{
+        display: "flex",
+        alignItems: "baseline",
+        gap: 8,
+        marginBottom: 10,
+        paddingLeft: 2,
+      }}>
+        <div style={{
+          fontFamily: "monospace",
+          fontSize: 11,
+          fontWeight: 600,
+          color: C.green,
+          letterSpacing: "0.5px",
+          background: "rgba(30,77,43,0.08)",
+          border: "1px solid rgba(30,77,43,0.16)",
+          borderRadius: 6,
+          padding: "2px 8px",
+          flexShrink: 0,
+        }}>
+          {label}
+        </div>
+        <div style={{
+          fontSize: 12,
+          color: C.textMuted,
+          fontFamily: "Georgia, serif",
+          fontStyle: "italic",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}>
+          {vendorName}
+        </div>
+      </div>
+
+      {/* Rows */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {posts.map((post, i) => (
+          <FlaggedRow key={post.id} post={post} index={startIndex + i} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -216,6 +288,11 @@ export default function FlaggedPage() {
       setLoading(false);
     });
   }, []);
+
+  const groups = groupByBooth(posts);
+
+  // Running index so stagger animation doesn't reset per group
+  let rowIndex = 0;
 
   return (
     <div style={{
@@ -259,7 +336,7 @@ export default function FlaggedPage() {
             </div>
             {!loading && posts.length > 0 && (
               <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>
-                {posts.length} {posts.length === 1 ? "find" : "finds"}
+                {posts.length} {posts.length === 1 ? "find" : "finds"} · {groups.length} {groups.length === 1 ? "booth" : "booths"}
               </div>
             )}
           </div>
@@ -268,7 +345,7 @@ export default function FlaggedPage() {
 
       {/* ── List ── */}
       <main style={{
-        padding: "14px 14px",
+        padding: "16px 14px",
         paddingBottom: "max(100px, calc(env(safe-area-inset-bottom, 0px) + 90px))",
       }}>
         {loading ? (
@@ -281,11 +358,19 @@ export default function FlaggedPage() {
           <EmptyFlagged />
         ) : (
           <AnimatePresence>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {posts.map((post, i) => (
-                <FlaggedRow key={post.id} post={post} index={i} />
-              ))}
-            </div>
+            {groups.map(group => {
+              const start = rowIndex;
+              rowIndex += group.posts.length;
+              return (
+                <BoothSection
+                  key={group.label + group.vendorName}
+                  label={group.label}
+                  vendorName={group.vendorName}
+                  posts={group.posts}
+                  startIndex={start}
+                />
+              );
+            })}
           </AnimatePresence>
         )}
       </main>
