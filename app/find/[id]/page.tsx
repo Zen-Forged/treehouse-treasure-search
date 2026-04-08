@@ -4,7 +4,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,6 +22,7 @@ const C = {
   textMuted:   "#8a8478",
   textFaint:   "#b0aa9e",
   green:       "#1e4d2b",
+  greenLight:  "rgba(30,77,43,0.1)",
   greenBorder: "rgba(30,77,43,0.18)",
   header:      "rgba(240,237,230,0.96)",
   red:         "#8b2020",
@@ -29,23 +30,7 @@ const C = {
   redBorder:   "rgba(139,32,32,0.18)",
 };
 
-function timeAgo(dateStr: string): string {
-  const ms   = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(ms / 60_000);
-  const hrs  = Math.floor(ms / 3_600_000);
-  const days = Math.floor(ms / 86_400_000);
-  if (mins < 60) return `${mins}m ago`;
-  if (hrs  < 24) return `${hrs}h ago`;
-  if (days <  7) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function formatPrice(price: number): string {
-  return `$${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
-}
-
 // ─── Shelf card ───────────────────────────────────────────────────────────────
-// Each card is ~42vw wide so ~2.3 are visible at once, hinting at scroll.
 
 function ShelfCard({ post }: { post: Post }) {
   const [imgErr, setImgErr] = useState(false);
@@ -91,7 +76,6 @@ function ShelfCard({ post }: { post: Post }) {
             )}
           </div>
         ) : (
-          // No image — text fallback tile
           <div style={{ aspectRatio: "3/4", padding: "12px 10px", display: "flex", alignItems: "flex-end", background: C.surface }}>
             <div style={{ fontFamily: "Georgia, serif", fontSize: 11, fontWeight: 600, color: C.textMid, lineHeight: 1.3 }}>
               {post.title}
@@ -99,7 +83,6 @@ function ShelfCard({ post }: { post: Post }) {
           </div>
         )}
       </div>
-      {/* Title below card — very subtle */}
       <div style={{
         marginTop: 6, paddingLeft: 2,
         fontSize: 10, color: C.textMuted, lineHeight: 1.4,
@@ -125,14 +108,13 @@ function ShelfSection({ vendorId, currentPostId }: { vendorId: string; currentPo
     });
   }, [vendorId, currentPostId]);
 
-  // Don't render anything until loaded, and hide if no other items
   if (!ready || items.length === 0) return null;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: 0.22 }}
+      transition={{ duration: 0.35, delay: 0.18 }}
       style={{ marginBottom: 32 }}
     >
       {/* Section header */}
@@ -145,14 +127,14 @@ function ShelfSection({ vendorId, currentPostId }: { vendorId: string; currentPo
           fontSize: 9, color: C.textFaint,
           textTransform: "uppercase", letterSpacing: "2.2px", fontWeight: 500,
         }}>
-          More on the shelf
+          View the shelf
         </div>
         <div style={{ fontSize: 10, color: C.textFaint, fontStyle: "italic", fontFamily: "Georgia, serif" }}>
           {items.length} {items.length === 1 ? "item" : "items"}
         </div>
       </div>
 
-      {/* Horizontal scroll strip — full bleed, no visible scrollbar */}
+      {/* Horizontal scroll strip */}
       <div
         style={{
           display: "flex",
@@ -161,11 +143,9 @@ function ShelfSection({ vendorId, currentPostId }: { vendorId: string; currentPo
           overflowY: "hidden",
           paddingLeft: 20,
           paddingRight: 20,
-          // Trailing peek padding so last card doesn't snap to edge
           paddingBottom: 4,
           scrollSnapType: "x mandatory",
           WebkitOverflowScrolling: "touch",
-          // Hide scrollbar cross-browser
           msOverflowStyle: "none",
           scrollbarWidth: "none",
         }}
@@ -176,8 +156,6 @@ function ShelfSection({ vendorId, currentPostId }: { vendorId: string; currentPo
             <ShelfCard post={item} />
           </div>
         ))}
-
-        {/* Trailing spacer so last card shows partial peek on right */}
         <div style={{ flexShrink: 0, width: 8 }} />
       </div>
     </motion.div>
@@ -246,13 +224,6 @@ export default function FindDetailPage() {
     ? `https://maps.apple.com/?q=${encodeURIComponent(`${post.mall.name} ${post.mall.city} ${post.mall.state}`)}`
     : null;
 
-  function metaLine(p: Post): string {
-    const parts: string[] = [];
-    if (p.price_asking != null) parts.push(`Found for ${formatPrice(p.price_asking)}`);
-    parts.push(timeAgo(p.created_at));
-    return parts.join(" · ");
-  }
-
   if (loading) {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -275,94 +246,116 @@ export default function FindDetailPage() {
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
 
-      {/* ── Sticky nav ── */}
-      <div style={{
-        position: "sticky", top: 0, zIndex: 50,
-        display: "flex", alignItems: "center",
-        padding: "max(14px, env(safe-area-inset-top, 14px)) 15px 10px",
-        background: C.header,
-        backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
-        borderBottom: `1px solid ${C.border}`,
-      }}>
+      {/* ── 1. Hero image — full bleed, floating back + share ── */}
+      <div style={{ position: "relative", width: "100%" }}>
+        {post.image_url ? (
+          <img
+            src={post.image_url}
+            alt={post.title}
+            style={{
+              width: "100%", height: "auto", display: "block",
+              objectFit: "contain",
+              filter: isSold ? "grayscale(0.35) brightness(0.88)" : "none",
+            }}
+          />
+        ) : (
+          // No image — spacer so back button has somewhere to float
+          <div style={{ height: 120, background: C.surface }} />
+        )}
+
+        {/* Sold badge */}
+        {isSold && (
+          <div style={{
+            position: "absolute", top: "max(18px, env(safe-area-inset-top, 18px))", left: 14,
+            fontSize: 8, fontWeight: 700, textTransform: "uppercase",
+            letterSpacing: "1.5px", padding: "3px 9px", borderRadius: 5,
+            background: "rgba(240,237,230,0.92)", color: C.textMuted,
+            border: `1px solid ${C.border}`,
+            backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+          }}>
+            Found a home
+          </div>
+        )}
+
+        {/* Floating back button — top-left */}
         <button
           onClick={() => router.back()}
-          style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer" }}
+          style={{
+            position: "absolute",
+            top: "max(14px, env(safe-area-inset-top, 14px))",
+            left: 14,
+            width: 36, height: 36, borderRadius: "50%",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "rgba(240,237,230,0.82)",
+            backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
+            border: `1px solid ${C.border}`,
+            boxShadow: "0 1px 6px rgba(26,26,24,0.12)",
+            cursor: "pointer",
+          }}
         >
           <ArrowLeft size={15} style={{ color: C.textMid }} />
         </button>
+
+        {/* Share button — bottom-right of image */}
+        <button
+          onClick={handleShare}
+          style={{
+            position: "absolute", bottom: 12, right: 14,
+            width: 34, height: 34, borderRadius: "50%",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "rgba(0,0,0,0.32)",
+            backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+            border: "none", cursor: "pointer",
+          }}
+        >
+          <Share2 size={13} style={{ color: copied ? "#a8d5b5" : "rgba(255,255,255,0.9)" }} />
+        </button>
       </div>
 
-      {/* ── Image ── */}
-      {post.image_url && (
-        <div style={{ padding: "16px 16px 0" }}>
-          <div style={{ borderRadius: 16, overflow: "hidden", boxShadow: "0 2px 18px rgba(26,26,24,0.11)", background: C.surface, position: "relative" }}>
-            <img
-              src={post.image_url}
-              alt={post.title}
-              style={{
-                width: "100%", height: "auto", display: "block",
-                objectFit: "contain", maxHeight: "65vh",
-                filter: isSold ? "grayscale(0.35) brightness(0.88)" : "none",
-              }}
-            />
-            {isSold && (
-              <div style={{
-                position: "absolute", top: 12, left: 12,
-                fontSize: 8, fontWeight: 700, textTransform: "uppercase",
-                letterSpacing: "1.5px", padding: "3px 9px", borderRadius: 5,
-                background: "rgba(240,237,230,0.92)", color: C.textMuted,
-                border: `1px solid ${C.border}`,
-              }}>
-                Found a home
-              </div>
-            )}
-            <button
-              onClick={handleShare}
-              style={{
-                position: "absolute", bottom: 12, right: 12,
-                width: 34, height: 34, borderRadius: "50%",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                background: "rgba(0,0,0,0.36)",
-                backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-                border: "none", cursor: "pointer",
-              }}
-            >
-              <Share2 size={13} style={{ color: copied ? "#a8d5b5" : "rgba(255,255,255,0.9)" }} />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* ── 2. Title + availability status ── */}
+      <div style={{ padding: "20px 20px 0" }}>
 
-      {/* ── Content ── */}
-      <div style={{ flex: 1, padding: "24px 20px 0" }}>
-
-        {/* 1 — Title */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32 }}>
           <h1 style={{
             fontFamily: "Georgia, serif",
             fontSize: 26, fontWeight: 700,
             color: C.textPrimary,
             lineHeight: 1.22, letterSpacing: "-0.4px",
-            margin: "0 0 8px",
+            margin: "0 0 6px",
           }}>
             {post.title}
           </h1>
         </motion.div>
 
-        {/* 2 — Metadata */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.06 }}>
-          <p style={{
-            fontSize: 12, color: C.textFaint,
-            fontFamily: "monospace", letterSpacing: "0.1px",
-            margin: "0 0 22px",
+        {/* Availability — replaces price + timestamp */}
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.06 }}
+          style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 28 }}
+        >
+          {/* Pulsing dot */}
+          {!isSold && (
+            <motion.div
+              animate={{ opacity: [1, 0.35, 1] }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+              style={{
+                width: 6, height: 6, borderRadius: "50%",
+                background: C.green, flexShrink: 0,
+              }}
+            />
+          )}
+          <span style={{
+            fontSize: 12, fontWeight: 500,
+            color: isSold ? C.textMuted : C.green,
+            letterSpacing: "0.1px",
           }}>
-            {metaLine(post)}
-          </p>
+            {isSold ? "Found a home" : "Available"}
+          </span>
         </motion.div>
 
-        {/* 3 — Caption + description */}
+        {/* ── 3. Caption + description ── */}
         {(post.caption || post.description) && (
-          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32, delay: 0.1 }} style={{ marginBottom: 16 }}>
+          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32, delay: 0.1 }} style={{ marginBottom: 20 }}>
             {post.caption && (
               <p style={{
                 fontSize: 15, color: C.textMid,
@@ -374,19 +367,16 @@ export default function FindDetailPage() {
               </p>
             )}
             {post.description && (
-              <p style={{
-                fontSize: 13, color: C.textMuted,
-                lineHeight: 1.78, margin: 0,
-              }}>
+              <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.78, margin: 0 }}>
                 {post.description}
               </p>
             )}
           </motion.div>
         )}
 
-        {/* 4 — Mark the Spot */}
+        {/* ── 4. Mark the Spot ── */}
         {post.vendor && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.13 }} style={{ marginBottom: 28 }}>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.13 }} style={{ marginBottom: 32 }}>
             {isMyPost ? (
               <button
                 onClick={handleToggleSold}
@@ -395,7 +385,7 @@ export default function FindDetailPage() {
                   padding: "8px 18px", borderRadius: 20,
                   fontSize: 13, fontWeight: 500,
                   color: isSold ? C.green : C.textMuted,
-                  background: isSold ? "rgba(30,77,43,0.07)" : C.surface,
+                  background: isSold ? C.greenLight : C.surface,
                   border: `1px solid ${isSold ? C.greenBorder : C.border}`,
                   cursor: "pointer",
                   opacity: actionBusy ? 0.5 : 1,
@@ -424,127 +414,103 @@ export default function FindDetailPage() {
           </motion.div>
         )}
 
-        {/* ── Hairline divider ── */}
-        <div style={{ height: 1, background: C.border, marginBottom: 24 }} />
+      </div>{/* end padded content */}
 
-        {/* 5 — Location */}
-        {post.mall && (
-          <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.16 }} style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2px", fontWeight: 500, marginBottom: 6 }}>
-              Location
-            </div>
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 600, color: C.textPrimary, marginBottom: 4 }}>
-              {post.mall.name}
-            </div>
-            {post.mall.address ? (
-              mapsUrl ? (
-                <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: 12, color: C.green, textDecoration: "none", borderBottom: `1px solid ${C.greenBorder}`, lineHeight: 1.5, fontWeight: 400 }}>
-                  {post.mall.address}
-                </a>
-              ) : (
-                <div style={{ fontSize: 12, color: C.textMuted }}>{post.mall.address}</div>
-              )
-            ) : (
-              mapsUrl ? (
-                <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: 12, color: C.green, textDecoration: "none", borderBottom: `1px solid ${C.greenBorder}` }}>
-                  {post.mall.city}{post.mall.state ? `, ${post.mall.state}` : ""}
-                </a>
-              ) : (
-                <div style={{ fontSize: 12, color: C.textMuted }}>
-                  {post.mall.city}{post.mall.state ? `, ${post.mall.state}` : ""}
-                </div>
-              )
-            )}
-          </motion.div>
-        )}
-
-        {/* ── Hairline divider ── */}
-        {post.vendor && <div style={{ height: 1, background: C.border, marginBottom: 22 }} />}
-
-        {/* 6 — Vendor · Booth row */}
-        {post.vendor && (
-          <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.19 }} style={{ marginBottom: 28 }}>
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2px", fontWeight: 500, marginBottom: 3 }}>Vendor</div>
-                <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 600, color: C.textPrimary, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {post.vendor.display_name}
-                </div>
-                {post.vendor.facebook_url && (
-                  <a href={post.vendor.facebook_url} target="_blank" rel="noopener noreferrer"
-                    style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 5, fontSize: 11, color: "#1877f2", textDecoration: "none" }}>
-                    <Facebook size={11} />
-                    Facebook
-                  </a>
-                )}
-              </div>
-              {post.vendor.booth_number && (
-                <div style={{ flexShrink: 0, textAlign: "right" }}>
-                  <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2px", fontWeight: 500, marginBottom: 3 }}>Booth</div>
-                  <div style={{ fontFamily: "monospace", fontSize: 14, fontWeight: 500, color: C.textMid }}>
-                    {post.vendor.booth_number}
-                  </div>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-
-        {/* ── Owner-only: delete ── */}
-        {isMyPost && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.22 }} style={{ marginBottom: 28 }}>
-            {!showDelete ? (
-              <button
-                onClick={() => setShowDelete(true)}
-                style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 10, background: C.redBg, border: `1px solid ${C.redBorder}`, cursor: "pointer" }}
-              >
-                <Trash2 size={13} style={{ color: C.red }} />
-                <span style={{ fontSize: 12, fontWeight: 500, color: C.red }}>Delete post</span>
-              </button>
-            ) : (
-              <AnimatePresence>
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-                  style={{ padding: "14px", borderRadius: 12, background: C.redBg, border: `1px solid ${C.redBorder}` }}
-                >
-                  <div style={{ fontSize: 13, fontWeight: 600, color: C.red, marginBottom: 4 }}>Delete this post?</div>
-                  <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 12, lineHeight: 1.6 }}>
-                    This can't be undone. The image and listing will be permanently removed.
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={handleDelete} disabled={actionBusy}
-                      style={{ flex: 1, padding: "10px", borderRadius: 9, fontSize: 13, fontWeight: 600, color: "#fff", background: C.red, border: "none", cursor: "pointer", opacity: actionBusy ? 0.6 : 1 }}>
-                      {actionBusy ? "Deleting…" : "Yes, delete"}
-                    </button>
-                    <button onClick={() => setShowDelete(false)}
-                      style={{ flex: 1, padding: "10px", borderRadius: 9, fontSize: 13, color: C.textMid, background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer" }}>
-                      Cancel
-                    </button>
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-            )}
-          </motion.div>
-        )}
-
-      </div>
-
-      {/* ── "More on the shelf" — outside padded content, full bleed ── */}
+      {/* ── 5. "View the shelf" — full bleed, above location ── */}
       {post.vendor && (
         <>
-          <div style={{ height: 1, background: C.border, margin: "0 0 28px" }} />
+          <div style={{ height: 1, background: C.border, margin: "0 0 24px" }} />
           <ShelfSection vendorId={post.vendor.id} currentPostId={post.id} />
         </>
       )}
 
+      {/* ── 6. Location + Vendor — condensed, below shelf ── */}
+      <div style={{ padding: "0 20px" }}>
+        <motion.div
+          initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.16 }}
+          style={{
+            padding: "16px",
+            background: C.surface,
+            borderRadius: 12,
+            border: `1px solid ${C.border}`,
+            marginBottom: 24,
+            display: "flex", flexDirection: "column", gap: 12,
+          }}
+        >
+          {/* Location row */}
+          {post.mall && (
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+              <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500, paddingTop: 2, flexShrink: 0, width: 52 }}>
+                Mall
+              </div>
+              <div style={{ flex: 1, textAlign: "right" }}>
+                <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.3, marginBottom: 2 }}>
+                  {post.mall.name}
+                </div>
+                {post.mall.address ? (
+                  mapsUrl ? (
+                    <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: 11, color: C.green, textDecoration: "none", borderBottom: `1px solid ${C.greenBorder}` }}>
+                      {post.mall.address}
+                    </a>
+                  ) : (
+                    <div style={{ fontSize: 11, color: C.textMuted }}>{post.mall.address}</div>
+                  )
+                ) : (
+                  mapsUrl ? (
+                    <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: 11, color: C.green, textDecoration: "none", borderBottom: `1px solid ${C.greenBorder}` }}>
+                      {post.mall.city}{post.mall.state ? `, ${post.mall.state}` : ""}
+                    </a>
+                  ) : (
+                    <div style={{ fontSize: 11, color: C.textMuted }}>
+                      {post.mall.city}{post.mall.state ? `, ${post.mall.state}` : ""}
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Divider between location + vendor */}
+          {post.mall && post.vendor && (
+            <div style={{ height: 1, background: C.border }} />
+          )}
+
+          {/* Vendor row */}
+          {post.vendor && (
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+              <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500, paddingTop: 2, flexShrink: 0, width: 52 }}>
+                Vendor
+              </div>
+              <div style={{ flex: 1, textAlign: "right" }}>
+                <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.3 }}>
+                  {post.vendor.display_name}
+                  {post.vendor.booth_number && (
+                    <span style={{ fontFamily: "monospace", fontSize: 11, fontWeight: 400, color: C.textMuted, marginLeft: 6 }}>
+                      · {post.vendor.booth_number}
+                    </span>
+                  )}
+                </div>
+                {post.vendor.facebook_url && (
+                  <a href={post.vendor.facebook_url} target="_blank" rel="noopener noreferrer"
+                    style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 4, fontSize: 11, color: "#1877f2", textDecoration: "none" }}>
+                    <Facebook size={10} />
+                    Facebook
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      </div>
+
       {/* ── "Keep exploring →" ── */}
       <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, delay: 0.3 }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, delay: 0.28 }}
         style={{
           paddingTop: 12,
-          paddingBottom: "max(52px, env(safe-area-inset-bottom, 52px))",
           display: "flex", alignItems: "center", justifyContent: "center",
           position: "relative",
           margin: "0 20px",
@@ -567,6 +533,60 @@ export default function FindDetailPage() {
           <span style={{ fontSize: 14, lineHeight: 1 }}>→</span>
         </button>
       </motion.div>
+
+      {/* ── 7. Delete — bottom of page, reduced prominence ── */}
+      {isMyPost && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.3 }}
+          style={{
+            padding: "0 20px",
+            paddingBottom: "max(36px, env(safe-area-inset-bottom, 36px))",
+            marginTop: 24,
+          }}
+        >
+          {!showDelete ? (
+            <button
+              onClick={() => setShowDelete(true)}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                background: "none", border: "none", cursor: "pointer",
+                padding: "6px 0",
+              }}
+            >
+              <Trash2 size={11} style={{ color: C.textFaint }} />
+              <span style={{ fontSize: 11, color: C.textFaint }}>Delete post</span>
+            </button>
+          ) : (
+            <AnimatePresence>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
+                style={{ padding: "14px", borderRadius: 12, background: C.redBg, border: `1px solid ${C.redBorder}` }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.red, marginBottom: 4 }}>Delete this post?</div>
+                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 12, lineHeight: 1.6 }}>
+                  This can't be undone. The image and listing will be permanently removed.
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={handleDelete} disabled={actionBusy}
+                    style={{ flex: 1, padding: "10px", borderRadius: 9, fontSize: 13, fontWeight: 600, color: "#fff", background: C.red, border: "none", cursor: "pointer", opacity: actionBusy ? 0.6 : 1 }}>
+                    {actionBusy ? "Deleting…" : "Yes, delete"}
+                  </button>
+                  <button onClick={() => setShowDelete(false)}
+                    style={{ flex: 1, padding: "10px", borderRadius: 9, fontSize: 13, color: C.textMid, background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer" }}>
+                    Cancel
+                  </button>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          )}
+        </motion.div>
+      )}
+
+      {/* Safe area bottom pad when not owner */}
+      {!isMyPost && (
+        <div style={{ paddingBottom: "max(36px, env(safe-area-inset-bottom, 36px))" }} />
+      )}
 
     </div>
   );
