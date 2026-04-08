@@ -289,7 +289,7 @@ export default function FindDetailPage() {
           <div style={{ height: 120, background: C.surface }} />
         )}
 
-        {/* Unavailable badge — top-left offset from back button */}
+        {/* Unavailable badge — top-left, offset from back button */}
         {isSold && (
           <div style={{
             position: "absolute", top: "max(18px, env(safe-area-inset-top, 18px))", left: 60,
@@ -303,45 +303,7 @@ export default function FindDetailPage() {
           </div>
         )}
 
-        {/* Bookmarked badge — bottom-left, visitors only */}
-        <AnimatePresence>
-          {isBookmarked && !isMyPost && (
-            <motion.div
-              key="bookmark-badge"
-              initial={{ opacity: 0, scale: 0.88, y: 4 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.88, y: 4 }}
-              transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-              style={{
-                position: "absolute",
-                bottom: 12,
-                left: 14,
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-                padding: "4px 10px 4px 7px",
-                borderRadius: 20,
-                background: C.greenSolid,
-                backdropFilter: "blur(8px)",
-                WebkitBackdropFilter: "blur(8px)",
-                pointerEvents: "none",
-              }}
-            >
-              <BookmarkCheck size={11} style={{ color: "rgba(255,255,255,0.95)", flexShrink: 0 }} />
-              <span style={{
-                fontSize: 10,
-                fontWeight: 600,
-                color: "rgba(255,255,255,0.95)",
-                letterSpacing: "0.3px",
-                fontFamily: "system-ui, sans-serif",
-              }}>
-                Bookmarked
-              </span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Floating back button */}
+        {/* Floating back button — top-left */}
         <button
           onClick={() => router.back()}
           style={{
@@ -360,20 +322,62 @@ export default function FindDetailPage() {
           <ArrowLeft size={15} style={{ color: C.textMid }} />
         </button>
 
-        {/* Share button */}
-        <button
-          onClick={handleShare}
-          style={{
+        {/* Bottom-right overlay buttons — bookmark + share, side by side */}
+        {!isMyPost && (
+          <div style={{
             position: "absolute", bottom: 12, right: 14,
-            width: 34, height: 34, borderRadius: "50%",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: "rgba(0,0,0,0.32)",
-            backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-            border: "none", cursor: "pointer",
-          }}
-        >
-          <Share2 size={13} style={{ color: copied ? "#a8d5b5" : "rgba(255,255,255,0.9)" }} />
-        </button>
+            display: "flex", alignItems: "center", gap: 8,
+          }}>
+            {/* Bookmark icon button */}
+            <button
+              onClick={handleBookmark}
+              style={{
+                width: 34, height: 34, borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: isBookmarked ? C.greenSolid : "rgba(0,0,0,0.32)",
+                backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+                border: "none", cursor: "pointer",
+                transition: "background 0.18s",
+              }}
+            >
+              {isBookmarked
+                ? <BookmarkCheck size={14} style={{ color: "rgba(255,255,255,0.95)" }} />
+                : <Bookmark size={14} style={{ color: "rgba(255,255,255,0.9)" }} />
+              }
+            </button>
+
+            {/* Share icon button */}
+            <button
+              onClick={handleShare}
+              style={{
+                width: 34, height: 34, borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: "rgba(0,0,0,0.32)",
+                backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+                border: "none", cursor: "pointer",
+              }}
+            >
+              <Share2 size={13} style={{ color: copied ? "#a8d5b5" : "rgba(255,255,255,0.9)" }} />
+            </button>
+          </div>
+        )}
+
+        {/* Owner view: share only, no bookmark */}
+        {isMyPost && (
+          <button
+            onClick={handleShare}
+            style={{
+              position: "absolute", bottom: 12, right: 14,
+              width: 34, height: 34, borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "rgba(0,0,0,0.32)",
+              backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+              border: "none", cursor: "pointer",
+            }}
+          >
+            <Share2 size={13} style={{ color: copied ? "#a8d5b5" : "rgba(255,255,255,0.9)" }} />
+          </button>
+        )}
       </div>
 
       {/* ── 2. Title + availability ── */}
