@@ -178,12 +178,12 @@ export default function FindDetailPage() {
   const [actionBusy,    setActionBusy]    = useState(false);
   const [showDelete,    setShowDelete]    = useState(false);
   const [shelfHasItems, setShelfHasItems] = useState(false);
-  const [isBookmarked,  setIsBookmarked]  = useState(false);
+  const [isFollowing,   setIsFollowing]   = useState(false);
 
   useEffect(() => {
     if (!id) return;
     try {
-      setIsBookmarked(safeStorage.getItem(bookmarkKey(id)) === "1");
+      setIsFollowing(safeStorage.getItem(bookmarkKey(id)) === "1");
     } catch {}
 
     getPost(id).then(data => {
@@ -199,10 +199,10 @@ export default function FindDetailPage() {
     });
   }, [id]);
 
-  function handleBookmark() {
+  function handleFollow() {
     if (!id) return;
-    const next = !isBookmarked;
-    setIsBookmarked(next);
+    const next = !isFollowing;
+    setIsFollowing(next);
     try {
       if (next) {
         safeStorage.setItem(bookmarkKey(id), "1");
@@ -322,31 +322,28 @@ export default function FindDetailPage() {
           <ArrowLeft size={15} style={{ color: C.textMid }} />
         </button>
 
-        {/* Bottom-right overlay buttons — bookmark + share, side by side */}
+        {/* Bottom-right overlay buttons — follow + share (visitors) */}
         {!isMyPost && (
           <div style={{
             position: "absolute", bottom: 12, right: 14,
             display: "flex", alignItems: "center", gap: 8,
           }}>
-            {/* Bookmark icon button */}
             <button
-              onClick={handleBookmark}
+              onClick={handleFollow}
               style={{
                 width: 34, height: 34, borderRadius: "50%",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                background: isBookmarked ? C.greenSolid : "rgba(0,0,0,0.32)",
+                background: isFollowing ? C.greenSolid : "rgba(0,0,0,0.32)",
                 backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
                 border: "none", cursor: "pointer",
                 transition: "background 0.18s",
               }}
             >
-              {isBookmarked
+              {isFollowing
                 ? <BookmarkCheck size={14} style={{ color: "rgba(255,255,255,0.95)" }} />
                 : <Bookmark size={14} style={{ color: "rgba(255,255,255,0.9)" }} />
               }
             </button>
-
-            {/* Share icon button */}
             <button
               onClick={handleShare}
               style={{
@@ -362,7 +359,7 @@ export default function FindDetailPage() {
           </div>
         )}
 
-        {/* Owner view: share only, no bookmark */}
+        {/* Owner view: share only */}
         {isMyPost && (
           <button
             onClick={handleShare}
@@ -553,7 +550,7 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* ── Visitor: Bookmark Booth toggle | Owner: Mark the Spot toggle ── */}
+            {/* ── Visitor: Follow the Find | Owner: Mark the Spot ── */}
             {post.vendor && (
               <div style={{ padding: "12px 14px 14px" }}>
                 {isMyPost ? (
@@ -583,7 +580,7 @@ export default function FindDetailPage() {
                   </button>
                 ) : (
                   <button
-                    onClick={handleBookmark}
+                    onClick={handleFollow}
                     style={{
                       width: "100%",
                       padding: "10px 16px",
@@ -594,19 +591,19 @@ export default function FindDetailPage() {
                       alignItems: "center",
                       justifyContent: "center",
                       gap: 7,
-                      color: isBookmarked ? "rgba(255,255,255,0.97)" : C.green,
-                      background: isBookmarked ? C.greenSolid : C.greenLight,
-                      border: `1px solid ${isBookmarked ? "transparent" : C.greenBorder}`,
+                      color: isFollowing ? "rgba(255,255,255,0.97)" : C.green,
+                      background: isFollowing ? C.greenSolid : C.greenLight,
+                      border: `1px solid ${isFollowing ? "transparent" : C.greenBorder}`,
                       cursor: "pointer",
                       letterSpacing: "0.1px",
                       transition: "background 0.18s, color 0.18s, border-color 0.18s",
                     }}
                   >
-                    {isBookmarked
+                    {isFollowing
                       ? <BookmarkCheck size={14} style={{ color: "rgba(255,255,255,0.97)" }} />
                       : <Bookmark size={14} style={{ color: C.green }} />
                     }
-                    {isBookmarked ? "Booth Bookmarked" : "Bookmark Booth"}
+                    {isFollowing ? "Following" : "Follow the Find"}
                   </button>
                 )}
               </div>
