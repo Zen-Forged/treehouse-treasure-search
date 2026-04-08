@@ -8,7 +8,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Share2, Trash2, Facebook, Bookmark, BookmarkCheck, Tag } from "lucide-react";
+import { ArrowLeft, Share2, Trash2, Facebook, Flag, Tag } from "lucide-react";
 import { getPost, getVendorPosts, updatePostStatus, deletePost } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
@@ -33,7 +33,7 @@ const C = {
   redBorder:   "rgba(139,32,32,0.18)",
 };
 
-function bookmarkKey(postId: string) {
+function flagKey(postId: string) {
   return `treehouse_bookmark_${postId}`;
 }
 
@@ -178,12 +178,13 @@ export default function FindDetailPage() {
   const [actionBusy,    setActionBusy]    = useState(false);
   const [showDelete,    setShowDelete]    = useState(false);
   const [shelfHasItems, setShelfHasItems] = useState(false);
-  const [isFollowing,   setIsFollowing]   = useState(false);
+  const [isFlagged,     setIsFlagged]     = useState(false);
 
   useEffect(() => {
     if (!id) return;
+    // Load flag state for everyone (owners + visitors)
     try {
-      setIsFollowing(safeStorage.getItem(bookmarkKey(id)) === "1");
+      setIsFlagged(safeStorage.getItem(flagKey(id)) === "1");
     } catch {}
 
     getPost(id).then(data => {
@@ -203,15 +204,16 @@ export default function FindDetailPage() {
     });
   }, [id]);
 
-  function handleFollow() {
+  // Flag Booth — local only, works for everyone including owners
+  function handleFlag() {
     if (!id) return;
-    const next = !isFollowing;
-    setIsFollowing(next);
+    const next = !isFlagged;
+    setIsFlagged(next);
     try {
       if (next) {
-        safeStorage.setItem(bookmarkKey(id), "1");
+        safeStorage.setItem(flagKey(id), "1");
       } else {
-        safeStorage.removeItem(bookmarkKey(id));
+        safeStorage.removeItem(flagKey(id));
       }
     } catch {}
   }
@@ -227,6 +229,7 @@ export default function FindDetailPage() {
     }
   }
 
+  // Mark as sold — owner only, writes to Supabase
   async function handleToggleSold() {
     if (!post || actionBusy) return;
     const next = post.status === "sold" ? "available" : "sold";
@@ -307,7 +310,7 @@ export default function FindDetailPage() {
           </div>
         )}
 
-        {/* ── Bottom overlay row: back (left) + action buttons (right) ── */}
+        {/* ── Bottom overlay row: back (left) + flag + share (right) ── */}
         <div style={{
           position: "absolute", bottom: 12, left: 12, right: 14,
           display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -329,26 +332,32 @@ export default function FindDetailPage() {
             <ArrowLeft size={15} style={{ color: C.textMid }} />
           </button>
 
-          {/* Right side — visitor: follow + share | owner: share only */}
+          {/* Right side — flag + share (everyone sees both) */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {!isMyPost && (
-              <button
-                onClick={handleFollow}
+            {/* Flag Booth — local bookmark, visible to everyone */}
+            <button
+              onClick={handleFlag}
+              aria-label={isFlagged ? "Unflag booth" : "Flag booth"}
+              style={{
+                width: 34, height: 34, borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: isFlagged ? C.greenSolid : "rgba(0,0,0,0.32)",
+                backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+                border: "none", cursor: "pointer",
+                transition: "background 0.18s",
+              }}
+            >
+              <Flag
+                size={14}
                 style={{
-                  width: 34, height: 34, borderRadius: "50%",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  background: isFollowing ? C.greenSolid : "rgba(0,0,0,0.32)",
-                  backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-                  border: "none", cursor: "pointer",
-                  transition: "background 0.18s",
+                  color: "rgba(255,255,255,0.95)",
+                  fill: isFlagged ? "rgba(255,255,255,0.95)" : "none",
+                  transition: "fill 0.18s",
                 }}
-              >
-                {isFollowing
-                  ? <BookmarkCheck size={14} style={{ color: "rgba(255,255,255,0.95)" }} />
-                  : <Bookmark size={14} style={{ color: "rgba(255,255,255,0.9)" }} />
-                }
-              </button>
-            )}
+              />
+            </button>
+
+            {/* Share */}
             <button
               onClick={handleShare}
               style={{
@@ -538,62 +547,39 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Visitor: Follow the Find | Owner: Mark the Spot */}
+            {/* Flag Booth button — everyone, local only */}
             {post.vendor && (
               <div style={{ padding: "12px 14px 14px" }}>
-                {isMyPost ? (
-                  <button
-                    onClick={handleToggleSold}
-                    disabled={actionBusy}
+                <button
+                  onClick={handleFlag}
+                  style={{
+                    width: "100%",
+                    padding: "10px 16px",
+                    borderRadius: 10,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 7,
+                    color: isFlagged ? "rgba(255,255,255,0.97)" : C.green,
+                    background: isFlagged ? C.greenSolid : C.greenLight,
+                    border: `1px solid ${isFlagged ? "transparent" : C.greenBorder}`,
+                    cursor: "pointer",
+                    letterSpacing: "0.1px",
+                    transition: "background 0.18s, color 0.18s, border-color 0.18s",
+                  }}
+                >
+                  <Flag
+                    size={14}
                     style={{
-                      width: "100%",
-                      padding: "10px 16px",
-                      borderRadius: 10,
-                      fontSize: 13,
-                      fontWeight: 500,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 7,
-                      color: isSold ? C.green : C.textMid,
-                      background: isSold ? C.greenLight : C.surfaceDeep,
-                      border: `1px solid ${isSold ? C.greenBorder : C.border}`,
-                      cursor: "pointer",
-                      opacity: actionBusy ? 0.5 : 1,
-                      letterSpacing: "0.1px",
+                      color: isFlagged ? "rgba(255,255,255,0.97)" : C.green,
+                      fill: isFlagged ? "rgba(255,255,255,0.97)" : "none",
+                      transition: "fill 0.18s",
                     }}
-                  >
-                    <Bookmark size={14} style={{ color: isSold ? C.green : C.textMid }} />
-                    {isSold ? "Mark available" : "Mark the Spot"}
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleFollow}
-                    style={{
-                      width: "100%",
-                      padding: "10px 16px",
-                      borderRadius: 10,
-                      fontSize: 13,
-                      fontWeight: 500,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 7,
-                      color: isFollowing ? "rgba(255,255,255,0.97)" : C.green,
-                      background: isFollowing ? C.greenSolid : C.greenLight,
-                      border: `1px solid ${isFollowing ? "transparent" : C.greenBorder}`,
-                      cursor: "pointer",
-                      letterSpacing: "0.1px",
-                      transition: "background 0.18s, color 0.18s, border-color 0.18s",
-                    }}
-                  >
-                    {isFollowing
-                      ? <BookmarkCheck size={14} style={{ color: "rgba(255,255,255,0.97)" }} />
-                      : <Bookmark size={14} style={{ color: C.green }} />
-                    }
-                    {isFollowing ? "Following" : "Follow the Find"}
-                  </button>
-                )}
+                  />
+                  {isFlagged ? "Booth Flagged" : "Flag Booth"}
+                </button>
               </div>
             )}
 
@@ -617,7 +603,7 @@ export default function FindDetailPage() {
         >
           <div style={{ height: 1, background: C.border, marginBottom: 16 }} />
 
-          {/* Mark as sold toggle */}
+          {/* Mark as sold toggle — owner only, Supabase write */}
           <button
             onClick={handleToggleSold}
             disabled={actionBusy}
