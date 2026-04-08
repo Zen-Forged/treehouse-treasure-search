@@ -78,7 +78,7 @@ function ShelfCard({ post }: { post: Post }) {
                 border: `1px solid ${C.border}`,
                 backdropFilter: "blur(4px)",
               }}>
-                Found a home
+                Unavailable
               </div>
             )}
           </div>
@@ -182,7 +182,6 @@ export default function FindDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    // Restore bookmark state from storage
     try {
       setIsBookmarked(safeStorage.getItem(bookmarkKey(id)) === "1");
     } catch {}
@@ -290,7 +289,7 @@ export default function FindDetailPage() {
           <div style={{ height: 120, background: C.surface }} />
         )}
 
-        {/* Sold badge — top-left offset from back button */}
+        {/* Unavailable badge — top-left offset from back button */}
         {isSold && (
           <div style={{
             position: "absolute", top: "max(18px, env(safe-area-inset-top, 18px))", left: 60,
@@ -300,11 +299,11 @@ export default function FindDetailPage() {
             border: `1px solid ${C.border}`,
             backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
           }}>
-            Found a home
+            Unavailable
           </div>
         )}
 
-        {/* Bookmarked badge — bottom-left, only for visitors who bookmarked */}
+        {/* Bookmarked badge — bottom-left, visitors only */}
         <AnimatePresence>
           {isBookmarked && !isMyPost && (
             <motion.div
@@ -409,7 +408,7 @@ export default function FindDetailPage() {
             color: isSold ? C.textMuted : C.green,
             letterSpacing: "0.1px",
           }}>
-            {isSold ? "Found a home" : "Available"}
+            {isSold ? "Unavailable" : "Available"}
           </span>
         </motion.div>
 
@@ -554,7 +553,6 @@ export default function FindDetailPage() {
             {post.vendor && (
               <div style={{ padding: "12px 14px 14px" }}>
                 {isMyPost ? (
-                  /* Owner — mark sold/available, unchanged */
                   <button
                     onClick={handleToggleSold}
                     disabled={actionBusy}
@@ -580,7 +578,6 @@ export default function FindDetailPage() {
                     {isSold ? "Mark available" : "Mark the Spot"}
                   </button>
                 ) : (
-                  /* Visitor — local bookmark toggle only, no DB write */
                   <button
                     onClick={handleBookmark}
                     style={{
