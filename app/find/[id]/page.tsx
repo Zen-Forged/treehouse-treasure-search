@@ -4,13 +4,14 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Share2, Trash2, Facebook, Bookmark } from "lucide-react";
+import { ArrowLeft, Share2, Trash2, Facebook, Bookmark, BookmarkCheck } from "lucide-react";
 import { getPost, getVendorPosts, updatePostStatus, deletePost } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
+import { safeStorage } from "@/lib/safeStorage";
 import type { Post } from "@/types/treehouse";
 
 const C = {
@@ -24,12 +25,17 @@ const C = {
   textFaint:   "#b0aa9e",
   green:       "#1e4d2b",
   greenLight:  "rgba(30,77,43,0.09)",
+  greenSolid:  "rgba(30,77,43,0.92)",
   greenBorder: "rgba(30,77,43,0.22)",
   header:      "rgba(240,237,230,0.96)",
   red:         "#8b2020",
   redBg:       "rgba(139,32,32,0.07)",
   redBorder:   "rgba(139,32,32,0.18)",
 };
+
+function bookmarkKey(postId: string) {
+  return `treehouse_bookmark_${postId}`;
+}
 
 // ─── Shelf card ───────────────────────────────────────────────────────────────
 
@@ -165,16 +171,22 @@ export default function FindDetailPage() {
   const { id }  = useParams<{ id: string }>();
   const router  = useRouter();
 
-  const [post,        setPost]        = useState<Post | null>(null);
-  const [loading,     setLoading]     = useState(true);
-  const [copied,      setCopied]      = useState(false);
-  const [isMyPost,    setIsMyPost]    = useState(false);
-  const [actionBusy,  setActionBusy]  = useState(false);
-  const [showDelete,  setShowDelete]  = useState(false);
+  const [post,          setPost]          = useState<Post | null>(null);
+  const [loading,       setLoading]       = useState(true);
+  const [copied,        setCopied]        = useState(false);
+  const [isMyPost,      setIsMyPost]      = useState(false);
+  const [actionBusy,    setActionBusy]    = useState(false);
+  const [showDelete,    setShowDelete]    = useState(false);
   const [shelfHasItems, setShelfHasItems] = useState(false);
+  const [isBookmarked,  setIsBookmarked]  = useState(false);
 
   useEffect(() => {
     if (!id) return;
+    // Restore bookmark state from storage
+    try {
+      setIsBookmarked(safeStorage.getItem(bookmarkKey(id)) === "1");
+    } catch {}
+
     getPost(id).then(data => {
       setPost(data);
       setLoading(false);
@@ -187,6 +199,19 @@ export default function FindDetailPage() {
       } catch {}
     });
   }, [id]);
+
+  function handleBookmark() {
+    if (!id) return;
+    const next = !isBookmarked;
+    setIsBookmarked(next);
+    try {
+      if (next) {
+        safeStorage.setItem(bookmarkKey(id), "1");
+      } else {
+        safeStorage.removeItem(bookmarkKey(id));
+      }
+    } catch {}
+  }
 
   async function handleShare() {
     const url = window.location.href;
@@ -215,6 +240,10 @@ export default function FindDetailPage() {
     if (ok) router.replace("/");
     else setActionBusy(false);
   }
+
+  const handleShelfReady = useCallback((hasItems: boolean) => {
+    setShelfHasItems(hasItems);
+  }, []);
 
   const mapsUrl = post?.mall?.address
     ? `https://maps.apple.com/?q=${encodeURIComponent(post.mall.address)}`
@@ -261,6 +290,7 @@ export default function FindDetailPage() {
           <div style={{ height: 120, background: C.surface }} />
         )}
 
+        {/* Sold badge — top-left offset from back button */}
         {isSold && (
           <div style={{
             position: "absolute", top: "max(18px, env(safe-area-inset-top, 18px))", left: 60,
@@ -273,6 +303,44 @@ export default function FindDetailPage() {
             Found a home
           </div>
         )}
+
+        {/* Bookmarked badge — bottom-left, only for visitors who bookmarked */}
+        <AnimatePresence>
+          {isBookmarked && !isMyPost && (
+            <motion.div
+              key="bookmark-badge"
+              initial={{ opacity: 0, scale: 0.88, y: 4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.88, y: 4 }}
+              transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+              style={{
+                position: "absolute",
+                bottom: 12,
+                left: 14,
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "4px 10px 4px 7px",
+                borderRadius: 20,
+                background: C.greenSolid,
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                pointerEvents: "none",
+              }}
+            >
+              <BookmarkCheck size={11} style={{ color: "rgba(255,255,255,0.95)", flexShrink: 0 }} />
+              <span style={{
+                fontSize: 10,
+                fontWeight: 600,
+                color: "rgba(255,255,255,0.95)",
+                letterSpacing: "0.3px",
+                fontFamily: "system-ui, sans-serif",
+              }}>
+                Bookmarked
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Floating back button */}
         <button
@@ -368,17 +436,16 @@ export default function FindDetailPage() {
 
       </div>
 
-      {/* ── "View the shelf" — hairline only shown if shelf has items ── */}
+      {/* ── "View the shelf" ── */}
       {hasVendor && (
         <>
-          {/* Hairline is rendered but only visible once we know shelf has items */}
           {shelfHasItems && (
             <div style={{ height: 1, background: C.border, margin: "0 0 24px" }} />
           )}
           <ShelfSection
             vendorId={post.vendor!.id}
             currentPostId={post.id}
-            onReady={setShelfHasItems}
+            onReady={handleShelfReady}
           />
         </>
       )}
@@ -450,7 +517,6 @@ export default function FindDetailPage() {
                   Vendor
                 </div>
                 <div style={{ flex: 1, textAlign: "right" }}>
-                  {/* Name + booth pill on the same line */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 7 }}>
                     <div style={{ fontSize: 13, fontWeight: 400, color: C.textMid, lineHeight: 1.3 }}>
                       {post.vendor.display_name}
@@ -484,10 +550,11 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* ── Bookmark Booth / owner toggle ── */}
+            {/* ── Visitor: Bookmark Booth toggle | Owner: Mark the Spot toggle ── */}
             {post.vendor && (
               <div style={{ padding: "12px 14px 14px" }}>
                 {isMyPost ? (
+                  /* Owner — mark sold/available, unchanged */
                   <button
                     onClick={handleToggleSold}
                     disabled={actionBusy}
@@ -513,8 +580,9 @@ export default function FindDetailPage() {
                     {isSold ? "Mark available" : "Mark the Spot"}
                   </button>
                 ) : (
+                  /* Visitor — local bookmark toggle only, no DB write */
                   <button
-                    onClick={() => {/* future: save booth to local list */}}
+                    onClick={handleBookmark}
                     style={{
                       width: "100%",
                       padding: "10px 16px",
@@ -525,15 +593,19 @@ export default function FindDetailPage() {
                       alignItems: "center",
                       justifyContent: "center",
                       gap: 7,
-                      color: C.green,
-                      background: C.greenLight,
-                      border: `1px solid ${C.greenBorder}`,
+                      color: isBookmarked ? "rgba(255,255,255,0.97)" : C.green,
+                      background: isBookmarked ? C.greenSolid : C.greenLight,
+                      border: `1px solid ${isBookmarked ? "transparent" : C.greenBorder}`,
                       cursor: "pointer",
                       letterSpacing: "0.1px",
+                      transition: "background 0.18s, color 0.18s, border-color 0.18s",
                     }}
                   >
-                    <Bookmark size={14} style={{ color: C.green }} />
-                    Bookmark Booth
+                    {isBookmarked
+                      ? <BookmarkCheck size={14} style={{ color: "rgba(255,255,255,0.97)" }} />
+                      : <Bookmark size={14} style={{ color: C.green }} />
+                    }
+                    {isBookmarked ? "Booth Bookmarked" : "Bookmark Booth"}
                   </button>
                 )}
               </div>
