@@ -33,34 +33,51 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ## CURRENT ISSUE
 > Last updated: 2026-04-08
 
-**Status:** ✅ Clean. No known active bugs.
+**Status:** ⚠️ Admin page deployed, Vercel webhook investigation needed.
 
 **What was done (this session):**
 
-### Detail page improvements (`app/find/[id]/page.tsx`)
+### Back button — Option D (`app/find/[id]/page.tsx`)
+- Removed `<BackTab>` fixed left pill entirely
+- Back button restored to image overlay bottom-left: 34px frosted circle (`rgba(240,237,230,0.82)`), same row as Follow + Share
+- Single bottom row across image: back left, follow + share right (`justifyContent: space-between`)
+- "Unavailable" badge moved to `left: 14` (no longer needs to clear overlay btn)
 
-**Persistent back navigation:**
-- Removed floating back button from hero image overlay
-- Added `<BackTab>` component: fixed left-edge pill (28×72px, rounded right corners), centered vertically, frosted glass bg, arrow icon — always visible while scrolling
-- "Unavailable" badge moved from `left: 60` → `left: 16` now that the overlay back btn is gone
+### Admin page (`app/admin/page.tsx` + `app/api/admin/posts/route.ts`)
+- `/admin` — local vendor profile inspector + all posts list with bulk delete
+- Local profile card: shows `display_name`, `booth_number`, `mall_id`, `vendor_id` (flags ⚠ if missing)
+- "Clear local profile" button to reset localStorage and re-trigger vendor setup flow
+- Posts list: tap to select, thumbnail + vendor name + `vendor_id` prefix shown per post
+- "Delete N selected" — deletes chosen posts + their Supabase Storage images
+- "Nuke all" (two-tap confirm) — wipes all posts + all images in bucket
+- API: `GET /api/admin/posts` returns all posts; `DELETE` accepts `{ ids }` or `{ deleteAll: true }`
 
-**Mark as sold at bottom (owner):**
-- Added owner actions section below "Find this here" card with hairline separator above it
-- `Tag` icon + "Mark as sold" / "Mark as available" ghost button — same ghost style as Delete post
-- Both sold toggle + delete are now grouped together with separator, improving discoverability
-- Sold toggle also remains in "Find this here" vendor card as "Mark the Spot" (unchanged)
+### Vercel deployment issue (UNRESOLVED)
+- Commits `3619379` and earlier deploy fine via GitHub webhook
+- Commit `bf34e2f` (admin page) pushed to GitHub successfully but Vercel never triggered a build
+- Root cause: Vercel project lives under `david-6613s-projects`, NOT `zen-forged` — the `/zen-forged/` dashboard URL returns 404
+- The GitHub→Vercel webhook silently dropped the push — no failed build, just no build at all
+- **Fix for next session:** Run `npx vercel --prod` from project root to force-deploy, OR go to Vercel dashboard → project → most recent deployment → `···` menu → Redeploy
+- After manual deploy succeeds, check Vercel → Settings → Git for webhook health
 
-**Delete post fix:**
-- Improved owner detection: checks `data.vendor_id ?? data.vendor?.id` against profile (was only checking `data.vendor_id`, causing missing delete on some posts)
-- Delete and mark-sold always shown when `isMyPost` is true, regardless of vendor card presence
+### Delete button root cause (diagnosed, partially fixed)
+- Owner detection now checks `data.vendor_id ?? data.vendor?.id` (was only `data.vendor_id`)
+- Real fix requires visiting `/admin` to check if `vendor_id` is present in local profile
+- If missing: "Clear local profile" → post something new → `vendor_id` gets stored → delete works on all future posts
+- Old posts created before `vendor_id` was reliably stored will still not show delete unless owner match can be made
 
 **Previous sessions:**
 - "Follow the Find" rename, feed followed indicators, "Unavailable" status labels
 - Orphaned shelf hairline fixed, vendor name + booth inline, scroll restoration
 
 **Next session starting point:**
-No active issues. Good candidates for next work:
-- Directions affordance: "→ Directions" label under mall address in "Find this here" card
+1. Run `npx vercel --prod` or use Vercel dashboard Redeploy to get admin page live
+2. Visit `/admin` on live site to inspect local profile and nuke test posts
+3. After clean slate: re-post to establish fresh `vendor_id` in local profile
+4. Verify delete button appears on new posts
+
+Good candidates after that:
+- Directions affordance under mall address in "Find this here" card
 - Pull-to-refresh on feed
 - PWA support
 - Supabase RLS / auth
@@ -111,8 +128,8 @@ SERPAPI_KEY                      eBay sold comps
 ```
 /                   Discovery feed — tree masonry, mall dropdown, no filters, no prices
                     Followed items show green BookmarkCheck circle on tile image
-/find/[id]          Find detail — full-bleed image, persistent left BackTab, availability status,
-                    follow + share buttons on image (visitors), share only (owners),
+/find/[id]          Find detail — full-bleed image, back btn bottom-left of image,
+                    follow + share bottom-right of image (visitors), share only (owners),
                     "View the shelf" scroll, "Find this here" card,
                     "Follow the Find" button (visitors) / "Mark the Spot" toggle (owners),
                     booth pill inline, owner section at bottom (mark sold + delete)
@@ -121,6 +138,7 @@ SERPAPI_KEY                      eBay sold comps
 /post               Vendor capture — camera/gallery, profile setup, Reset button
 /post/preview       Edit title/caption/price → publish → "Back to feed" primary,
                     "Visit us on Facebook" secondary, "Post another find" camera ghost
+/admin              Admin: local profile inspector + bulk post/image delete
 ```
 
 ### Reseller intel (dark theme — do not touch)
@@ -131,10 +149,12 @@ SERPAPI_KEY                      eBay sold comps
 
 ### API
 ```
-POST /api/post-caption    Claude → { title, caption } 1-2 sentences, poetic, no filler (mock fallback)
-POST /api/identify        Claude Vision → { title, description, confidence, searchQuery }
-GET  /api/sold-comps      SerpAPI eBay comps, 48h cache
-GET  /api/debug           Supabase connectivity + real vendor/post insert test
+POST /api/post-caption      Claude → { title, caption } 1-2 sentences, poetic, no filler
+POST /api/identify          Claude Vision → { title, description, confidence, searchQuery }
+GET  /api/sold-comps        SerpAPI eBay comps, 48h cache
+GET  /api/debug             Supabase connectivity + real vendor/post insert test
+GET  /api/admin/posts       All posts with vendor info (admin)
+DELETE /api/admin/posts     Bulk delete posts + storage images ({ ids } or { deleteAll })
 ```
 
 ---
@@ -151,6 +171,8 @@ lib/safeStorage.ts        localStorage wrapper with sessionStorage + memory fall
                           API: getItem, setItem, removeItem
 types/treehouse.ts        Post, Vendor, Mall, LocalVendorProfile, PostStatus
 app/layout.tsx            No max-width wrapper — each page owns its own width
+app/admin/page.tsx        Admin UI — profile inspector + bulk delete
+app/api/admin/posts/route.ts  Admin API — GET all posts, DELETE by id or all
 ```
 
 ---
@@ -162,7 +184,7 @@ app/layout.tsx            No max-width wrapper — each page owns its own width
 bg: #f0ede6  surface: #e8e4db  surfaceDeep: #dedad0  border: rgba(26,26,24,0.1)
 text: #1a1a18 / #4a4a42 / #8a8478 / #b0aa9e
 green (CTAs): #1e4d2b   greenLight: rgba(30,77,43,0.09)   greenBorder: rgba(30,77,43,0.22)
-greenSolid: rgba(30,77,43,0.92)  ← filled/active state (Follow the Find confirmed, feed indicator)
+greenSolid: rgba(30,77,43,0.92)  ← filled/active state
 header blur: rgba(240,237,230,0.94)
 ```
 
@@ -192,14 +214,15 @@ Followed IDs loaded once on mount via loadFollowedIds() — scans localStorage f
 
 ### Detail page layout order
 ```
-1. Full-bleed image (no floating back button — replaced by persistent BackTab)
-   - "Unavailable" badge (top-left: 16px) — only when status=sold
-   - Follow icon btn + Share icon btn (bottom-right row) — visitors only
-   - Share icon btn only (bottom-right) — owners only
+1. Full-bleed image
+   - "Unavailable" badge top-left (left: 14px) — only when status=sold
+   - Back btn bottom-left (34px frosted circle, rgba(240,237,230,0.82))
+   - Follow + Share bottom-right row (visitors) / Share only (owners)
+   - All three in one justifyContent:space-between row across image bottom
 2. Title (Georgia 26px bold)
 3. Availability (pulsing dot + "Available" green, or "Unavailable" muted)
 4. Caption (italic Georgia) + description
-5. [hairline — only if shelf has items] + "View the shelf" horizontal scroll (full-bleed)
+5. [hairline — only if shelf has items] + "View the shelf" horizontal scroll
 6. "Find this here" label + card:
      Mall name + address link
      [divider]
@@ -207,10 +230,9 @@ Followed IDs loaded once on mount via loadFollowedIds() — scans localStorage f
      Facebook link (below vendor name, if present)
      Visitors: "Follow the Find" / "Following" toggle (local only, no DB)
      Owners: "Mark the Spot" / "Mark available" toggle (Supabase write)
-7. [hairline separator] Owner actions section (owner only):
+7. [hairline separator] Owner actions (owner only):
      "Mark as sold" / "Mark as available" ghost button (Tag icon)
      "Delete post" ghost button (Trash2 icon) → confirmation panel
-BackTab: fixed left-edge pill, always visible, routes to router.back()
 ```
 
 ---
@@ -219,20 +241,22 @@ BackTab: fixed left-edge pill, always visible, routes to router.back()
 - All ecosystem pages need `export const dynamic = "force-dynamic"` (import supabase at module scope)
 - Never use `export const config = {}` — deprecated in Next.js 14 App Router
 - Always use `git add -A` — never individual paths (zsh glob-expands `[slug]`)
-- `str_replace` tool fails on bracket-path files (`app/find/[id]/page.tsx`, `app/vendor/[slug]/page.tsx`) — **always use `filesystem:write_file` for full rewrites on these files**
+- `filesystem:write_file` is the ONLY reliable way to write files to disk — bash heredoc writes only to the sandbox container, NOT the real filesystem
+- `str_replace` tool fails on bracket-path files (`app/find/[id]/page.tsx`, `app/vendor/[slug]/page.tsx`) — always use `filesystem:write_file` for full rewrites
+- New directories must be created with `mkdir -p` in Terminal first — `filesystem:write_file` cannot create missing parent directories
 - `uploadPostImage` is non-fatal — post goes through even without image
 - vendor_id only carried over in LocalVendorProfile if mall_id unchanged
 - Supabase client uses placeholder URL at build time to avoid prerender crash
 - `createVendor` handles 23505 duplicate key by fetching existing row — do not revert this
 - Always use `safeStorage` (not raw `localStorage`) in ecosystem client components, EXCEPT:
-  - Feed's `loadFollowedIds()` reads raw `localStorage` directly (needs key iteration, safeStorage doesn't expose that)
+  - Feed's `loadFollowedIds()` reads raw `localStorage` directly (needs key iteration)
   - Feed scroll restoration uses raw `sessionStorage` (ephemeral tab state)
-- `ShelfSection` accepts `onReady(hasItems: boolean)` callback — parent uses this to conditionally render the hairline separator. Do not remove this prop.
-- Follow state uses `safeStorage` with key `treehouse_bookmark_${postId}`. Value "1" = following, absent = not following. Never touches Supabase.
-- Tree offset: wrap only the first tile in a plain `div` with the `ref` — do NOT put the ref on `MasonryTile` itself (it renders a `motion.div` and would need forwardRef)
-- `FACEBOOK_PAGE_URL` constant lives at the top of `app/post/preview/page.tsx` — update it there when the real page URL is confirmed
-- Owner detection: checks `data.vendor_id ?? data.vendor?.id` against `profile.vendor_id` — do not simplify to just `data.vendor_id`
-- `BackTab` is `position: fixed` — it overlays all page content. Keep page content left-padding in mind if needed
+- `ShelfSection` accepts `onReady(hasItems: boolean)` callback — parent uses this to conditionally render the hairline separator
+- Follow state uses `safeStorage` with key `treehouse_bookmark_${postId}`. Value "1" = following
+- Owner detection checks `data.vendor_id ?? data.vendor?.id` against `profile.vendor_id` — do not simplify
+- Vercel project is under `david-6613s-projects` scope, NOT `zen-forged` — use correct dashboard URL
+- Vercel GitHub webhook has been unreliable — if push doesn't deploy, use `npx vercel --prod`
+- `FACEBOOK_PAGE_URL` constant lives at top of `app/post/preview/page.tsx`
 
 ---
 
@@ -242,33 +266,32 @@ BackTab: fixed left-edge pill, always visible, routes to router.back()
 - Skeleton loading matches live grid proportions (65px right-column offset)
 - Sold items in feed: 0.62 opacity + grayscale + "Unavailable" badge
 - Followed items in feed: green BookmarkCheck circle at bottom-right of tile image
-- Find detail: full-bleed image, persistent BackTab (fixed left pill), availability pulse
+- Find detail: full-bleed image, back btn bottom-left of image, availability pulse
 - "View the shelf" — horizontal scroll, full-bleed, hides if empty, hairline conditional
 - Vendor name + booth number inline on same row in "Find this here" card
-- Hairline above shelf only shown when shelf has items (no orphaned separator)
-- "Follow the Find" / "Following" — local-only toggle, persisted to safeStorage, no DB write
-- Follow + share icon buttons on hero image (bottom-right) — visitors only
-- Share icon on image overlay — native share sheet or clipboard copy
-- Owner: "Mark the Spot" / "Mark available" toggle in vendor card (Supabase write, full-width)
-- Owner bottom section: hairline separator + "Mark as sold" ghost btn + "Delete post" ghost btn
+- "Follow the Find" / "Following" — local-only toggle, persisted to safeStorage
+- Follow + share icons on image bottom-right (visitors) / share only (owners)
+- Owner: "Mark the Spot" / "Mark available" toggle in vendor card (Supabase write)
+- Owner bottom section: hairline + "Mark as sold" ghost btn + "Delete post" ghost btn
 - Delete confirmation panel: red styled, two-button confirm/cancel
-- Vendor actions: mark sold toggle, delete with confirmation
-- Vendor profile: Facebook link, light theme, available/Unavailable grid + section labels
+- Vendor profile: Facebook link, light theme, available/Unavailable grid
 - Mall profile: grid, directions, available/sold split
-- Post flow: capture → AI title + caption (1-2 sentences, poetic) → preview → publish
-- Post confirmation: "Back to feed" primary, "Visit us on Facebook" secondary, "Post another find" + camera icon
+- Post flow: capture → AI title + caption → preview → publish
 - Image upload to Supabase Storage
 - safeStorage fallback for Safari private/ITP
+- Admin page: local profile inspector, bulk delete, nuke all (PENDING DEPLOY)
 - All reseller intel routes (untouched, dark theme)
 
 ## KNOWN GAPS ⚠️
-- Followed items have no consolidated "saved" list yet (future feature)
-- Directions affordance missing from "Find this here" mall address (link works, no visual cue)
+- Admin page not yet live — Vercel webhook dropped the push (fix: `npx vercel --prod`)
+- Delete button still missing on posts created before `vendor_id` was stored in local profile
+- Followed items have no consolidated "saved" list yet
+- Directions affordance missing from "Find this here" mall address
 - `/enhance-text` is mock (not real Claude)
 - No Supabase RLS / auth yet
 - No pull-to-refresh on feed
 - No PWA support
-- `FACEBOOK_PAGE_URL` in `app/post/preview/page.tsx` needs verification — currently `https://www.facebook.com/KentuckyTreehouse`
+- `FACEBOOK_PAGE_URL` needs verification — currently `https://www.facebook.com/KentuckyTreehouse`
 
 ---
 
@@ -277,9 +300,15 @@ BackTab: fixed left-edge pill, always visible, routes to router.back()
 # Live Supabase test
 curl -s https://treehouse-treasure-search.vercel.app/api/debug | python3 -m json.tool
 
+# Force deploy when webhook fails
+npx vercel --prod
+
 # Build check before pushing
 npm run build 2>&1 | tail -30
 
-# Always stage everything
+# Always stage everything (filesystem MCP writes to real disk, bash heredoc does NOT)
 git add -A && git commit -m "..." && git push
+
+# Create new directories before filesystem:write_file can use them
+mkdir -p app/some/new/path
 ```

@@ -8,7 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Plus, Compass, ChevronDown, BookmarkCheck } from "lucide-react";
+import { MapPin, Plus, Compass, ChevronDown, Flag } from "lucide-react";
 import { getFeedPosts, getAllMalls } from "@/lib/posts";
 import { safeStorage } from "@/lib/safeStorage";
 import type { Post, Mall } from "@/types/treehouse";
@@ -31,14 +31,13 @@ const C = {
   header:       "rgba(240,237,230,0.94)",
 };
 
-const SCROLL_KEY    = "treehouse_feed_scroll";
+const SCROLL_KEY      = "treehouse_feed_scroll";
 const BOOKMARK_PREFIX = "treehouse_bookmark_";
 
-// Load all followed post IDs from safeStorage in one pass
+// Load all flagged post IDs from localStorage in one pass
 function loadFollowedIds(): Set<string> {
   const followed = new Set<string>();
   try {
-    // safeStorage falls back gracefully — try localStorage keys
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key?.startsWith(BOOKMARK_PREFIX) && localStorage.getItem(key) === "1") {
@@ -177,7 +176,7 @@ function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; i
                 </div>
               )}
 
-              {/* Followed indicator — bottom-right corner of image */}
+              {/* Flagged indicator — bottom-right corner of image */}
               {isFollowed && (
                 <div style={{
                   position: "absolute", bottom: 7, right: 7,
@@ -186,7 +185,7 @@ function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; i
                   background: C.greenSolid,
                   boxShadow: "0 1px 4px rgba(0,0,0,0.18)",
                 }}>
-                  <BookmarkCheck size={11} style={{ color: "rgba(255,255,255,0.95)" }} />
+                  <Flag size={11} style={{ color: "rgba(255,255,255,0.95)", fill: "rgba(255,255,255,0.95)" }} />
                 </div>
               )}
             </div>
@@ -195,7 +194,7 @@ function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; i
               <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.3 }}>
                 {post.title}
               </div>
-              {/* Followed indicator on text-only tiles */}
+              {/* Flagged indicator on text-only tiles */}
               {isFollowed && (
                 <div style={{
                   position: "absolute", bottom: 7, right: 7,
@@ -204,7 +203,7 @@ function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; i
                   background: C.greenSolid,
                   boxShadow: "0 1px 4px rgba(0,0,0,0.18)",
                 }}>
-                  <BookmarkCheck size={11} style={{ color: "rgba(255,255,255,0.95)" }} />
+                  <Flag size={11} style={{ color: "rgba(255,255,255,0.95)", fill: "rgba(255,255,255,0.95)" }} />
                 </div>
               )}
             </div>
@@ -331,7 +330,7 @@ export default function DiscoveryFeedPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // ── Load followed IDs from storage ─────────────────────────────────────────
+  // ── Load flagged IDs from storage ───────────────────────────────────────────
   useEffect(() => {
     setFollowedIds(loadFollowedIds());
   }, []);
