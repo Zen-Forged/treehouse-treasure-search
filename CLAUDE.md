@@ -33,32 +33,18 @@ git add CLAUDE.md && git commit -m "docs: update current issue" && git push
 ## CURRENT ISSUE
 > Last updated: 2026-04-07
 
-**Status:** ✅ Story-driven feed sprint complete. No known active bugs.
+**Status:** ✅ "More on the shelf" feature complete. No known active bugs.
 
 **What was done (this session):**
 
-1. `app/page.tsx` — Feed gallery refinement:
-   - **Price badges removed** from all grid tiles. Items feel like discoveries, not listings.
-   - **Filter bar removed** entirely (no "All finds / Available / Just in" pills). Feed is unified.
-   - `filter` and `FilterKey` state + `FilterBar` component deleted.
-   - `EmptyFeed` simplified — no longer needs a `filter` prop.
-   - **Grid gap increased** from 8px → 14px (column gap and row gap). Skeleton matches.
-   - **Right column stagger** increased from 22px → 26px.
-   - **Border radius** on tiles bumped from 12px → 14px for a softer gallery feel.
-   - **Box shadow** lightened slightly.
-   - Sold items (`"Found a home"` badge + grayscale) remain fully intact.
-
-2. `app/post/preview/page.tsx` — Confirmation screen:
-   - **"View your post" replaced** with `"View on Facebook"` — opens `https://www.facebook.com/KentuckyTreehouse` externally (`target="_blank"`).
-   - `postId` state removed (no longer needed).
-   - Facebook URL declared as `FACEBOOK_PAGE_URL` constant at top of file for easy updating.
-   - Post flow, publish logic, and all error handling unchanged.
-
-3. `app/api/post-caption/route.ts` — AI caption prompt tightened:
-   - Captions now target **1–2 sentences max** (was 2–3).
-   - Prompt explicitly bans: starting with "This" or the item name, filler phrases ("a wonderful find"), and condition assessments.
-   - `max_tokens` reduced from 300 → 200 (enforces brevity, saves cost).
-   - Mock fallbacks updated to match new shorter style.
+1. `app/find/[id]/page.tsx` — "More on the shelf" horizontal scroll section:
+   - Added `ShelfCard` component — 42vw wide (max 170px), 3:4 aspect ratio image, `loading="lazy"`, sold treatment (grayscale + "Found a home" badge), text fallback tile for no-image posts, faint title label below card.
+   - Added `ShelfSection` component — fetches via `getVendorPosts(vendorId, 12)`, excludes current post client-side, hides entirely if 0 results (no empty state rendered).
+   - Section placed: below the vendor/booth row divider, above "Keep exploring →". Rendered outside the padded `<div>` wrapper so the scroll strip is full-bleed to page edges.
+   - Header row: "MORE ON THE SHELF" label (left, uppercase tracking) + item count (right, italic Georgia).
+   - Horizontal scroll: `scrollSnapType: x mandatory`, `WebkitOverflowScrolling: touch`, scrollbar hidden via `hide-scrollbar` class + inline `scrollbarWidth: none`. Trailing spacer div creates peek effect on right edge.
+   - No price shown on shelf cards. Sold items still appear with grayscale treatment.
+   - Uses existing `getVendorPosts` from `lib/posts.ts` — no new queries added.
 
 **Next session starting point:**
 No active issues. Good candidates for next work:
@@ -67,7 +53,7 @@ No active issues. Good candidates for next work:
 - PWA support
 - Supabase RLS / auth
 - `/enhance-text` real Claude integration
-- Confirm Facebook page URL is correct (currently `https://www.facebook.com/KentuckyTreehouse`)
+- Confirm Facebook page URL (`https://www.facebook.com/KentuckyTreehouse`) is correct
 
 ---
 
@@ -112,11 +98,11 @@ SERPAPI_KEY                      eBay sold comps
 ### Ecosystem (light cream theme)
 ```
 /                   Discovery feed — masonry grid, mall dropdown filter, no status filters
-/find/[id]          Find detail — journal layout, image, caption, location, vendor/booth
+/find/[id]          Find detail — journal layout, image, caption, location, vendor/booth, "More on the shelf"
 /mall/[slug]        Mall profile
 /vendor/[slug]      Vendor profile — Facebook link, available/sold grid
 /post               Vendor capture — camera/gallery, profile setup, Reset button
-/post/preview       Edit title/caption/price → publish → "View on Facebook" CTA
+/post/preview       Edit title/caption/price → publish → "Back to feed" primary, "Visit us on Facebook" secondary
 ```
 
 ### Reseller intel (dark theme — do not touch)
@@ -138,7 +124,7 @@ GET  /api/debug           Supabase connectivity + real vendor/post insert test
 ## KEY FILES
 ```
 lib/supabase.ts           Client with placeholder fallback for build time
-lib/posts.ts              getFeedPosts, getPost, createPost, createVendor,
+lib/posts.ts              getFeedPosts, getPost, getVendorPosts, createPost, createVendor,
                           uploadPostImage, updatePostStatus, deletePost,
                           getAllMalls, getMallBySlug, getVendorBySlug, slugify
                           createVendor + createPost return { data, error }
@@ -184,6 +170,7 @@ Animations: opacity 0→1, y 8-16→0, ease [0.25,0.1,0.25,1]
 - Supabase client uses placeholder URL at build time to avoid prerender crash
 - `createVendor` handles 23505 duplicate key by fetching existing row — do not revert this
 - Always use `safeStorage` (not raw `localStorage`) in ecosystem client components
+- ShelfSection uses raw `getVendorPosts` (no safeStorage needed — it's a Supabase fetch, not localStorage)
 
 ---
 
@@ -193,6 +180,7 @@ Animations: opacity 0→1, y 8-16→0, ease [0.25,0.1,0.25,1]
 - Clean image tiles — sold items grayed + "Found a home" badge; no price on any tile
 - Skeleton loading matches masonry layout
 - Find detail: journal layout — image, title, metadata, caption, Mark the Spot, location, vendor/booth
+- "More on the shelf" — horizontal scroll, full-bleed, vendor's other items, hides if empty
 - Address-as-map-link in location section (Apple Maps deep link)
 - Mark the Spot pill below caption — wired for owners, decorative for visitors
 - Share icon overlaid on image (bottom-right, dark circle)
@@ -200,7 +188,8 @@ Animations: opacity 0→1, y 8-16→0, ease [0.25,0.1,0.25,1]
 - Vendor actions on own posts: mark sold toggle, delete with confirmation
 - Vendor profile: Facebook link, light theme, available/sold grid
 - Mall profile: grid, directions, available/sold split
-- Vendor post flow on desktop AND iPhone: capture → AI title+caption → preview → publish → "View on Facebook"
+- Vendor post flow on desktop AND iPhone: capture → AI title+caption → preview → publish → confirmation
+- Post confirmation: "Back to feed" (primary green), "Visit us on Facebook" (secondary), "Post another find" (camera icon, ghost)
 - Image upload to Supabase Storage
 - safeStorage fallback for Safari private/ITP
 - All reseller intel routes (untouched)
@@ -211,7 +200,7 @@ Animations: opacity 0→1, y 8-16→0, ease [0.25,0.1,0.25,1]
 - No Supabase RLS / auth yet
 - No pull-to-refresh on feed
 - No PWA support
-- Facebook page URL (`FACEBOOK_PAGE_URL` in preview/page.tsx) should be verified — currently set to `https://www.facebook.com/KentuckyTreehouse`
+- Facebook page URL (`FACEBOOK_PAGE_URL` in preview/page.tsx) should be verified — currently `https://www.facebook.com/KentuckyTreehouse`
 
 ---
 
