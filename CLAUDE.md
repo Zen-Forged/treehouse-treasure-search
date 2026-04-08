@@ -33,56 +33,82 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ## CURRENT ISSUE
 > Last updated: 2026-04-08
 
-**Status:** ⚠️ Admin page deployed, Vercel webhook investigation needed.
+**Status:** ✅ Bottom nav + flagged screen + booth tag price all implemented. MCP timed out on final write — verify `app/find/[id]/page.tsx` has `BoothTag` component and updated hero section.
 
 **What was done (this session):**
 
-### Back button — Option D (`app/find/[id]/page.tsx`)
-- Removed `<BackTab>` fixed left pill entirely
-- Back button restored to image overlay bottom-left: 34px frosted circle (`rgba(240,237,230,0.82)`), same row as Follow + Share
-- Single bottom row across image: back left, follow + share right (`justifyContent: space-between`)
-- "Unavailable" badge moved to `left: 14` (no longer needs to clear overlay btn)
+### Bottom navigation bar (`components/BottomNav.tsx`)
+- Fixed bottom bar with two tabs: Home and Flagged
+- Active state: soft green pill behind icon, bold label
+- Optional count badge on Flagged tab (green dot, capped at 9+)
+- Safe area inset handled via `env(safe-area-inset-bottom)`
+- Centered/capped at 430px to match page max-width
+- `active` prop accepts `"home" | "flagged" | null` — null = sub-page (no tab highlighted)
 
-### Admin page (`app/admin/page.tsx` + `app/api/admin/posts/route.ts`)
-- `/admin` — local vendor profile inspector + all posts list with bulk delete
-- Local profile card: shows `display_name`, `booth_number`, `mall_id`, `vendor_id` (flags ⚠ if missing)
-- "Clear local profile" button to reset localStorage and re-trigger vendor setup flow
-- Posts list: tap to select, thumbnail + vendor name + `vendor_id` prefix shown per post
-- "Delete N selected" — deletes chosen posts + their Supabase Storage images
-- "Nuke all" (two-tap confirm) — wipes all posts + all images in bucket
-- API: `GET /api/admin/posts` returns all posts; `DELETE` accepts `{ ids }` or `{ deleteAll: true }`
+### Flagged screen (`app/flagged/page.tsx`)
+- Reads all `treehouse_bookmark_*` keys from localStorage in one pass
+- Fetches matching posts via `getPostsByIds()` — single Supabase `.in("id", ids)` query
+- Row layout: 62×62 thumbnail · title (2-line clamp, Georgia) · booth number pill · "Unavailable" badge if sold
+- Skeleton loading (3 rows) while fetching
+- Empty state: Flag icon + "No flagged finds yet" + supporting copy
+- Header shows find count when items are present
+- Tapping a row routes to `/find/[id]`
+- `BottomNav active="flagged"` with live count from loaded posts
 
-### Vercel deployment issue (UNRESOLVED)
-- Commits `3619379` and earlier deploy fine via GitHub webhook
-- Commit `bf34e2f` (admin page) pushed to GitHub successfully but Vercel never triggered a build
-- Root cause: Vercel project lives under `david-6613s-projects`, NOT `zen-forged` — the `/zen-forged/` dashboard URL returns 404
-- The GitHub→Vercel webhook silently dropped the push — no failed build, just no build at all
-- **Fix for next session:** Run `npx vercel --prod` from project root to force-deploy, OR go to Vercel dashboard → project → most recent deployment → `···` menu → Redeploy
-- After manual deploy succeeds, check Vercel → Settings → Git for webhook health
+### `lib/posts.ts` — `getPostsByIds(ids: string[])`
+- New batch fetch: `.select(* + vendor + mall).in("id", ids).order("created_at")`
+- Returns `Post[]`, empty array on error or empty input
+- Used exclusively by the Flagged screen
 
-### Delete button root cause (diagnosed, partially fixed)
-- Owner detection now checks `data.vendor_id ?? data.vendor?.id` (was only `data.vendor_id`)
-- Real fix requires visiting `/admin` to check if `vendor_id` is present in local profile
-- If missing: "Clear local profile" → post something new → `vendor_id` gets stored → delete works on all future posts
-- Old posts created before `vendor_id` was reliably stored will still not show delete unless owner match can be made
+### Navigation redesign
+- Removed back button from all pages — Home tab in bottom nav serves as feed navigation
+- Back button (`ArrowLeft`) removed from `app/find/[id]/page.tsx` entirely
+- `app/page.tsx`: `BottomNav active="home"` added, bottom padding updated to `max(100px, calc(env(safe-area-inset-bottom) + 90px))`
+- `app/find/[id]/page.tsx`: `BottomNav active={null}` added, same bottom padding formula
+
+### Price — booth tag design (`app/find/[id]/page.tsx`)
+- Replaced flat green price line with `<BoothTag>` component
+- Tag hangs from bottom-left of hero photo via a 1.5px string + hole-punch detail
+- Tag body: `#faf7f0` background, `#c8c2b4` border, `border-radius: 6px 6px 6px 2px`
+- Label: "In-Booth" (8px, uppercase, muted) above price (20px, bold, `#1a1a18`)
+- Hero `<div>` gets `marginBottom: hasPrice ? 36 : 0` to make room for the hanging tag
+- Only renders when `post.price_asking != null`
+- New C tokens: `tag`, `tagBorder`, `tagString`
+
+### Flag + share icon repositioning (`app/find/[id]/page.tsx`)
+- Moved from top-right of photo to **bottom-right** (`bottom: 12, right: 14`)
+- Same frosted pill buttons (`rgba(0,0,0,0.32)` backdrop), same 8px gap
+- Flag active state: `greenSolid` background + filled icon
+
+**⚠️ MCP timeout note:**
+The final `filesystem:write_file` for `app/find/[id]/page.tsx` timed out. Verify the file on disk contains:
+- `BoothTag` component (above `ShelfCard`)
+- `tag`, `tagBorder`, `tagString` in the `C` token object
+- Hero `<div>` with `marginBottom: hasPrice ? 36 : 0`
+- `{hasPrice && <BoothTag price={post.price_asking!} />}` inside the hero div
+- Flag/share at `bottom: 12, right: 14` (not top)
+- No old flat price `motion.div` in the content section
+
+If the file is stale, apply the diffs from the previous Claude response or re-request the full file write.
 
 **Previous sessions:**
-- "Follow the Find" rename, feed followed indicators, "Unavailable" status labels
-- Orphaned shelf hairline fixed, vendor name + booth inline, scroll restoration
+- Admin page + bulk delete (pending Vercel deploy)
+- Back button removal, flagging system, "Follow the Find" → "Flag Booth" rename
+- Feed masonry, scroll restoration, sold state, vendor profile
 
 **Next session starting point:**
-1. Run `npx vercel --prod` or use Vercel dashboard Redeploy to get admin page live
-2. Visit `/admin` on live site to inspect local profile and nuke test posts
-3. After clean slate: re-post to establish fresh `vendor_id` in local profile
-4. Verify delete button appears on new posts
+1. Verify `app/find/[id]/page.tsx` has the BoothTag component (MCP timed out)
+2. Run `npx vercel --prod` if needed to deploy
+3. QA: flag items on feed → badge shows on Flagged tab → Flagged screen lists them → tap routes to detail
+4. QA: price shows as booth tag on detail page, absent when `price_asking` is null
+5. Add price field to `/post` and `/post/preview` so vendors can actually set it
 
 Good candidates after that:
+- Price field in post creation flow (`/post` + `/post/preview`)
 - Directions affordance under mall address in "Find this here" card
 - Pull-to-refresh on feed
 - PWA support
 - Supabase RLS / auth
-- `/enhance-text` real Claude integration
-- Verify Facebook page URL — currently `https://www.facebook.com/KentuckyTreehouse`
 
 ---
 
@@ -126,18 +152,16 @@ SERPAPI_KEY                      eBay sold comps
 
 ### Ecosystem (light cream theme)
 ```
-/                   Discovery feed — tree masonry, mall dropdown, no filters, no prices
-                    Followed items show green BookmarkCheck circle on tile image
-/find/[id]          Find detail — full-bleed image, back btn bottom-left of image,
-                    follow + share bottom-right of image (visitors), share only (owners),
+/                   Discovery feed — masonry, mall dropdown, flagged indicators on tiles
+/find/[id]          Find detail — full-bleed image, booth tag price (bottom-left of photo),
+                    flag + share icons bottom-right of photo, BottomNav (no active tab),
                     "View the shelf" scroll, "Find this here" card,
-                    "Follow the Find" button (visitors) / "Mark the Spot" toggle (owners),
-                    booth pill inline, owner section at bottom (mark sold + delete)
+                    "Flag Booth" button (visitors + owners), owner actions (mark sold + delete)
+/flagged            Flagged finds — list of bookmarked posts (image + title + booth#)
 /mall/[slug]        Mall profile
-/vendor/[slug]      Vendor profile — Facebook link, available/sold grid, "Unavailable" label
-/post               Vendor capture — camera/gallery, profile setup, Reset button
-/post/preview       Edit title/caption/price → publish → "Back to feed" primary,
-                    "Visit us on Facebook" secondary, "Post another find" camera ghost
+/vendor/[slug]      Vendor profile — Facebook link, available/sold grid
+/post               Vendor capture — camera/gallery, profile setup
+/post/preview       Edit title/caption/price → publish
 /admin              Admin: local profile inspector + bulk post/image delete
 ```
 
@@ -162,15 +186,18 @@ DELETE /api/admin/posts     Bulk delete posts + storage images ({ ids } or { del
 ## KEY FILES
 ```
 lib/supabase.ts           Client with placeholder fallback for build time
-lib/posts.ts              getFeedPosts, getPost, getVendorPosts, createPost, createVendor,
-                          uploadPostImage, updatePostStatus, deletePost,
+lib/posts.ts              getFeedPosts, getPost, getPostsByIds, getVendorPosts,
+                          createPost, createVendor, uploadPostImage,
+                          updatePostStatus, deletePost,
                           getAllMalls, getMallBySlug, getVendorBySlug, slugify
-                          createVendor + createPost return { data, error }
 lib/postStore.ts          In-memory image store for /post → /post/preview flow
 lib/safeStorage.ts        localStorage wrapper with sessionStorage + memory fallback
-                          API: getItem, setItem, removeItem
 types/treehouse.ts        Post, Vendor, Mall, LocalVendorProfile, PostStatus
+components/BottomNav.tsx  Fixed bottom nav — Home + Flagged tabs, active state, badge
 app/layout.tsx            No max-width wrapper — each page owns its own width
+app/page.tsx              Discovery feed — BottomNav active="home"
+app/flagged/page.tsx      Flagged screen — BottomNav active="flagged"
+app/find/[id]/page.tsx    Find detail — BoothTag, flag/share bottom-right, BottomNav null
 app/admin/page.tsx        Admin UI — profile inspector + bulk delete
 app/api/admin/posts/route.ts  Admin API — GET all posts, DELETE by id or all
 ```
@@ -186,6 +213,7 @@ text: #1a1a18 / #4a4a42 / #8a8478 / #b0aa9e
 green (CTAs): #1e4d2b   greenLight: rgba(30,77,43,0.09)   greenBorder: rgba(30,77,43,0.22)
 greenSolid: rgba(30,77,43,0.92)  ← filled/active state
 header blur: rgba(240,237,230,0.94)
+tag: #faf7f0   tagBorder: #c8c2b4   tagString: #b0aa9e   ← booth tag tokens
 ```
 
 ### Reseller pages (dark — do not change)
@@ -198,6 +226,7 @@ bg: #050f05  text: #f5f0e8  gold: #c8b47e  green: #6dbc6d
 Font: Georgia serif (headings/captions/italic labels), monospace (booth/prices), system (body)
 Max-width: 430px per page
 Safe area: env(safe-area-inset-bottom) on all fixed bars
+Bottom padding formula: max(100px, calc(env(safe-area-inset-bottom, 0px) + 90px))
 Animations: opacity 0→1, y 8-16→0, ease [0.25,0.1,0.25,1]
 ```
 
@@ -206,19 +235,40 @@ Animations: opacity 0→1, y 8-16→0, ease [0.25,0.1,0.25,1]
 2-column masonry. Gap: 14px. Tile border-radius: 14px.
 Right column offset: 50% of first tile's rendered height (ResizeObserver, live).
 Skeleton uses SKELETON_OFFSET = Math.round(SKELETON_HEIGHTS[0] * 0.5) = 65px.
-No price badges. Sold items: 0.62 opacity + grayscale + "Unavailable" badge.
-Followed items: 22px solid green circle (BookmarkCheck icon) at bottom-right of tile image.
+No price badges on tiles. Sold items: 0.62 opacity + grayscale + "Unavailable" badge.
+Flagged items: 22px solid green circle (Flag icon, filled) at bottom-right of tile image.
 Scroll position saved to sessionStorage ("treehouse_feed_scroll"), restored on mount.
-Followed IDs loaded once on mount via loadFollowedIds() — scans localStorage for treehouse_bookmark_* keys.
+Flagged IDs loaded once on mount via loadFollowedIds() — scans localStorage for treehouse_bookmark_* keys.
+```
+
+### Bottom navigation
+```
+Component: components/BottomNav.tsx
+Props: active ("home" | "flagged" | null), flaggedCount (number, optional)
+Tabs: Home (/) · Flagged (/flagged)
+Active state: green pill (rgba(30,77,43,0.10)) behind icon + bold label
+Badge: green dot on Flagged tab, shown only when flaggedCount > 0, capped at 9+
+Pages that show it: /, /flagged, /find/[id]
+Active tab: "home" on feed · "flagged" on flagged screen · null on detail (sub-page)
+```
+
+### Flagging system
+```
+Storage key: treehouse_bookmark_{postId} = "1"
+Storage layer: safeStorage (localStorage → sessionStorage → memory)
+Raw localStorage iteration used in: feed loadFollowedIds(), flagged loadFlaggedIds()
+BottomNav badge on feed: followedIds.size (loaded on mount)
+BottomNav badge on flagged screen: posts.length (after Supabase fetch)
+Unflagging: safeStorage.removeItem(key) — removes from all layers
 ```
 
 ### Detail page layout order
 ```
-1. Full-bleed image
+1. Full-bleed image (overflow: visible on wrapper when hasPrice)
    - "Unavailable" badge top-left (left: 14px) — only when status=sold
-   - Back btn bottom-left (34px frosted circle, rgba(240,237,230,0.82))
-   - Follow + Share bottom-right row (visitors) / Share only (owners)
-   - All three in one justifyContent:space-between row across image bottom
+   - Flag + Share buttons bottom-right (bottom: 12, right: 14) — frosted pills
+   - BoothTag bottom-left — hangs on string from photo edge (only when price_asking != null)
+   - Hero wrapper: marginBottom: hasPrice ? 36 : 0
 2. Title (Georgia 26px bold)
 3. Availability (pulsing dot + "Available" green, or "Unavailable" muted)
 4. Caption (italic Georgia) + description
@@ -228,11 +278,24 @@ Followed IDs loaded once on mount via loadFollowedIds() — scans localStorage f
      [divider]
      Vendor name + booth pill (inline, same row, right-aligned)
      Facebook link (below vendor name, if present)
-     Visitors: "Follow the Find" / "Following" toggle (local only, no DB)
-     Owners: "Mark the Spot" / "Mark available" toggle (Supabase write)
+     "Flag Booth" / "Booth Flagged" toggle (everyone, local only)
 7. [hairline separator] Owner actions (owner only):
      "Mark as sold" / "Mark as available" ghost button (Tag icon)
      "Delete post" ghost button (Trash2 icon) → confirmation panel
+8. BottomNav (active={null})
+```
+
+### BoothTag component
+```
+Location: top of app/find/[id]/page.tsx (above ShelfCard)
+Props: price (number)
+Structure:
+  - 1.5px × 20px vertical string (tagString color), marginLeft: 17px
+  - Tag body: tagBorder border, borderRadius "6px 6px 6px 2px"
+  - Hole punch: 8px circle, absolute top: -1.5px left: 13px, bg color fills
+  - "In-Booth" label: 8px uppercase, 1.8px letter-spacing, textMuted
+  - Price: 20px bold, textPrimary, price.toLocaleString()
+Placement: position absolute, bottom: -28, left: 20 inside hero div
 ```
 
 ---
@@ -243,55 +306,59 @@ Followed IDs loaded once on mount via loadFollowedIds() — scans localStorage f
 - Always use `git add -A` — never individual paths (zsh glob-expands `[slug]`)
 - `filesystem:write_file` is the ONLY reliable way to write files to disk — bash heredoc writes only to the sandbox container, NOT the real filesystem
 - `str_replace` tool fails on bracket-path files (`app/find/[id]/page.tsx`, `app/vendor/[slug]/page.tsx`) — always use `filesystem:write_file` for full rewrites
-- New directories must be created with `mkdir -p` in Terminal first — `filesystem:write_file` cannot create missing parent directories
+- New directories must be created with `filesystem:create_directory` before `filesystem:write_file` — it cannot create missing parents
 - `uploadPostImage` is non-fatal — post goes through even without image
 - vendor_id only carried over in LocalVendorProfile if mall_id unchanged
 - Supabase client uses placeholder URL at build time to avoid prerender crash
 - `createVendor` handles 23505 duplicate key by fetching existing row — do not revert this
 - Always use `safeStorage` (not raw `localStorage`) in ecosystem client components, EXCEPT:
   - Feed's `loadFollowedIds()` reads raw `localStorage` directly (needs key iteration)
+  - Flagged screen's `loadFlaggedIds()` reads raw `localStorage` directly (same reason)
   - Feed scroll restoration uses raw `sessionStorage` (ephemeral tab state)
 - `ShelfSection` accepts `onReady(hasItems: boolean)` callback — parent uses this to conditionally render the hairline separator
-- Follow state uses `safeStorage` with key `treehouse_bookmark_${postId}`. Value "1" = following
+- Flagging uses `safeStorage` with key `treehouse_bookmark_${postId}`. Value "1" = flagged
 - Owner detection checks `data.vendor_id ?? data.vendor?.id` against `profile.vendor_id` — do not simplify
 - Vercel project is under `david-6613s-projects` scope, NOT `zen-forged` — use correct dashboard URL
 - Vercel GitHub webhook has been unreliable — if push doesn't deploy, use `npx vercel --prod`
-- `FACEBOOK_PAGE_URL` constant lives at top of `app/post/preview/page.tsx`
+- Always provide a git commit/push bash command after every code change
+- MCP filesystem tool can time out on large files — if it does, provide manual diffs clearly
 
 ---
 
 ## WORKING ✅
-- Discovery feed — tree masonry (50% dynamic offset), no prices, no filter pills, mall dropdown
+- Discovery feed — masonry (50% dynamic offset), mall dropdown, no prices on tiles
 - Feed scroll position saved/restored via sessionStorage on back navigation
-- Skeleton loading matches live grid proportions (65px right-column offset)
+- Skeleton loading matches live grid proportions
 - Sold items in feed: 0.62 opacity + grayscale + "Unavailable" badge
-- Followed items in feed: green BookmarkCheck circle at bottom-right of tile image
-- Find detail: full-bleed image, back btn bottom-left of image, availability pulse
-- "View the shelf" — horizontal scroll, full-bleed, hides if empty, hairline conditional
-- Vendor name + booth number inline on same row in "Find this here" card
-- "Follow the Find" / "Following" — local-only toggle, persisted to safeStorage
-- Follow + share icons on image bottom-right (visitors) / share only (owners)
-- Owner: "Mark the Spot" / "Mark available" toggle in vendor card (Supabase write)
-- Owner bottom section: hairline + "Mark as sold" ghost btn + "Delete post" ghost btn
-- Delete confirmation panel: red styled, two-button confirm/cancel
+- Flagged items in feed: green Flag circle at bottom-right of tile image
+- Fixed bottom nav — Home + Flagged tabs, active state, count badge
+- Flagged screen — list view (image + title + booth#), skeleton, empty state, live count
+- `getPostsByIds` batch query in lib/posts.ts
+- Find detail: full-bleed image, booth tag price hanging from photo, flag/share bottom-right
+- BoothTag: string + hole punch + "In-Booth" label + formatted price
+- "View the shelf" — horizontal scroll, hides if empty, hairline conditional
+- Vendor name + booth number inline in "Find this here" card
+- "Flag Booth" / "Booth Flagged" — local-only toggle, persisted to safeStorage
+- Owner: "Mark as sold" / "Mark as available" toggle (Supabase write)
+- Owner bottom section: "Mark as sold" ghost btn + "Delete post" ghost btn + confirmation
 - Vendor profile: Facebook link, light theme, available/Unavailable grid
 - Mall profile: grid, directions, available/sold split
 - Post flow: capture → AI title + caption → preview → publish
 - Image upload to Supabase Storage
 - safeStorage fallback for Safari private/ITP
-- Admin page: local profile inspector, bulk delete, nuke all (PENDING DEPLOY)
+- Admin page: local profile inspector, bulk delete, nuke all
 - All reseller intel routes (untouched, dark theme)
 
 ## KNOWN GAPS ⚠️
-- Admin page not yet live — Vercel webhook dropped the push (fix: `npx vercel --prod`)
-- Delete button still missing on posts created before `vendor_id` was stored in local profile
-- Followed items have no consolidated "saved" list yet
+- `app/find/[id]/page.tsx` BoothTag write may have failed (MCP timeout) — verify on disk
+- Price field missing from post creation flow (`/post` + `/post/preview`)
+- Flagged items have no unflag affordance from the Flagged screen (must go to detail page)
 - Directions affordance missing from "Find this here" mall address
 - `/enhance-text` is mock (not real Claude)
 - No Supabase RLS / auth yet
 - No pull-to-refresh on feed
 - No PWA support
-- `FACEBOOK_PAGE_URL` needs verification — currently `https://www.facebook.com/KentuckyTreehouse`
+- Delete button missing on posts created before `vendor_id` was stored in local profile
 
 ---
 
@@ -306,9 +373,9 @@ npx vercel --prod
 # Build check before pushing
 npm run build 2>&1 | tail -30
 
-# Always stage everything (filesystem MCP writes to real disk, bash heredoc does NOT)
+# Always stage everything
 git add -A && git commit -m "..." && git push
 
-# Create new directories before filesystem:write_file can use them
-mkdir -p app/some/new/path
+# Create new directories before filesystem:write_file
+filesystem:create_directory path/to/new/dir
 ```
