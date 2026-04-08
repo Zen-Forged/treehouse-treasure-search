@@ -16,13 +16,14 @@ import type { Post } from "@/types/treehouse";
 const C = {
   bg:          "#f0ede6",
   surface:     "#e8e4db",
+  surfaceDeep: "#dedad0",
   border:      "rgba(26,26,24,0.1)",
   textPrimary: "#1a1a18",
   textMid:     "#4a4a42",
   textMuted:   "#8a8478",
   textFaint:   "#b0aa9e",
   green:       "#1e4d2b",
-  greenLight:  "rgba(30,77,43,0.1)",
+  greenLight:  "rgba(30,77,43,0.09)",
   greenBorder: "rgba(30,77,43,0.18)",
   header:      "rgba(240,237,230,0.96)",
   red:         "#8b2020",
@@ -117,33 +118,23 @@ function ShelfSection({ vendorId, currentPostId }: { vendorId: string; currentPo
       transition={{ duration: 0.35, delay: 0.18 }}
       style={{ marginBottom: 32 }}
     >
-      {/* Section header */}
       <div style={{
         paddingLeft: 20, paddingRight: 20,
         marginBottom: 12,
         display: "flex", alignItems: "baseline", justifyContent: "space-between",
       }}>
-        <div style={{
-          fontSize: 9, color: C.textFaint,
-          textTransform: "uppercase", letterSpacing: "2.2px", fontWeight: 500,
-        }}>
+        <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2.2px", fontWeight: 500 }}>
           View the shelf
         </div>
         <div style={{ fontSize: 10, color: C.textFaint, fontStyle: "italic", fontFamily: "Georgia, serif" }}>
           {items.length} {items.length === 1 ? "item" : "items"}
         </div>
       </div>
-
-      {/* Horizontal scroll strip */}
       <div
         style={{
-          display: "flex",
-          gap: 10,
-          overflowX: "auto",
-          overflowY: "hidden",
-          paddingLeft: 20,
-          paddingRight: 20,
-          paddingBottom: 4,
+          display: "flex", gap: 10,
+          overflowX: "auto", overflowY: "hidden",
+          paddingLeft: 20, paddingRight: 20, paddingBottom: 4,
           scrollSnapType: "x mandatory",
           WebkitOverflowScrolling: "touch",
           msOverflowStyle: "none",
@@ -259,14 +250,13 @@ export default function FindDetailPage() {
             }}
           />
         ) : (
-          // No image — spacer so back button has somewhere to float
           <div style={{ height: 120, background: C.surface }} />
         )}
 
-        {/* Sold badge */}
+        {/* Sold badge — top-left (only when no back button overlap) */}
         {isSold && (
           <div style={{
-            position: "absolute", top: "max(18px, env(safe-area-inset-top, 18px))", left: 14,
+            position: "absolute", top: "max(18px, env(safe-area-inset-top, 18px))", left: 60,
             fontSize: 8, fontWeight: 700, textTransform: "uppercase",
             letterSpacing: "1.5px", padding: "3px 9px", borderRadius: 5,
             background: "rgba(240,237,230,0.92)", color: C.textMuted,
@@ -277,7 +267,7 @@ export default function FindDetailPage() {
           </div>
         )}
 
-        {/* Floating back button — top-left */}
+        {/* Floating back button */}
         <button
           onClick={() => router.back()}
           style={{
@@ -296,7 +286,7 @@ export default function FindDetailPage() {
           <ArrowLeft size={15} style={{ color: C.textMid }} />
         </button>
 
-        {/* Share button — bottom-right of image */}
+        {/* Share button */}
         <button
           onClick={handleShare}
           style={{
@@ -312,7 +302,7 @@ export default function FindDetailPage() {
         </button>
       </div>
 
-      {/* ── 2. Title + availability status ── */}
+      {/* ── 2. Title + availability ── */}
       <div style={{ padding: "20px 20px 0" }}>
 
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32 }}>
@@ -327,21 +317,16 @@ export default function FindDetailPage() {
           </h1>
         </motion.div>
 
-        {/* Availability — replaces price + timestamp */}
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           transition={{ duration: 0.3, delay: 0.06 }}
           style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 28 }}
         >
-          {/* Pulsing dot */}
           {!isSold && (
             <motion.div
               animate={{ opacity: [1, 0.35, 1] }}
               transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-              style={{
-                width: 6, height: 6, borderRadius: "50%",
-                background: C.green, flexShrink: 0,
-              }}
+              style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, flexShrink: 0 }}
             />
           )}
           <span style={{
@@ -353,9 +338,9 @@ export default function FindDetailPage() {
           </span>
         </motion.div>
 
-        {/* ── 3. Caption + description ── */}
+        {/* ── Caption + description ── */}
         {(post.caption || post.description) && (
-          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32, delay: 0.1 }} style={{ marginBottom: 20 }}>
+          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32, delay: 0.1 }} style={{ marginBottom: 32 }}>
             {post.caption && (
               <p style={{
                 fontSize: 15, color: C.textMid,
@@ -374,49 +359,9 @@ export default function FindDetailPage() {
           </motion.div>
         )}
 
-        {/* ── 4. Mark the Spot ── */}
-        {post.vendor && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.13 }} style={{ marginBottom: 32 }}>
-            {isMyPost ? (
-              <button
-                onClick={handleToggleSold}
-                disabled={actionBusy}
-                style={{
-                  padding: "8px 18px", borderRadius: 20,
-                  fontSize: 13, fontWeight: 500,
-                  color: isSold ? C.green : C.textMuted,
-                  background: isSold ? C.greenLight : C.surface,
-                  border: `1px solid ${isSold ? C.greenBorder : C.border}`,
-                  cursor: "pointer",
-                  opacity: actionBusy ? 0.5 : 1,
-                  letterSpacing: "0.1px",
-                }}
-              >
-                {isSold ? "Mark available" : "Mark the Spot"}
-              </button>
-            ) : (
-              <button
-                disabled
-                style={{
-                  padding: "8px 18px", borderRadius: 20,
-                  fontSize: 13, fontWeight: 500,
-                  color: C.textFaint,
-                  background: C.surface,
-                  border: `1px solid ${C.border}`,
-                  cursor: "default",
-                  letterSpacing: "0.1px",
-                  opacity: 0.7,
-                }}
-              >
-                Mark the Spot
-              </button>
-            )}
-          </motion.div>
-        )}
+      </div>
 
-      </div>{/* end padded content */}
-
-      {/* ── 5. "View the shelf" — full bleed, above location ── */}
+      {/* ── "View the shelf" — full bleed ── */}
       {post.vendor && (
         <>
           <div style={{ height: 1, background: C.border, margin: "0 0 24px" }} />
@@ -424,41 +369,49 @@ export default function FindDetailPage() {
         </>
       )}
 
-      {/* ── 6. Location + Vendor — condensed, below shelf ── */}
-      <div style={{ padding: "0 20px" }}>
-        <motion.div
-          initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.16 }}
-          style={{
-            padding: "16px",
-            background: C.surface,
-            borderRadius: 12,
-            border: `1px solid ${C.border}`,
-            marginBottom: 24,
-            display: "flex", flexDirection: "column", gap: 12,
-          }}
-        >
-          {/* Location row */}
-          {post.mall && (
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-              <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500, paddingTop: 2, flexShrink: 0, width: 52 }}>
-                Mall
-              </div>
-              <div style={{ flex: 1, textAlign: "right" }}>
-                <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.3, marginBottom: 2 }}>
-                  {post.mall.name}
+      {/* ── 6+8. "Find this here" — location + vendor card ── */}
+      {(post.mall || post.vendor) && (
+        <div style={{ padding: "0 20px", marginBottom: 28 }}>
+
+          {/* Section label */}
+          <div style={{
+            fontSize: 9, color: C.textFaint,
+            textTransform: "uppercase", letterSpacing: "2.2px", fontWeight: 500,
+            marginBottom: 8,
+          }}>
+            Find this here
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.16 }}
+            style={{
+              background: C.surface,
+              borderRadius: 12,
+              border: `1px solid ${C.border}`,
+              overflow: "hidden",
+            }}
+          >
+            {/* Mall row */}
+            {post.mall && (
+              <div style={{ padding: "12px 14px 10px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500, paddingTop: 2, flexShrink: 0, width: 48 }}>
+                  Mall
                 </div>
-                {post.mall.address ? (
-                  mapsUrl ? (
-                    <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
-                      style={{ fontSize: 11, color: C.green, textDecoration: "none", borderBottom: `1px solid ${C.greenBorder}` }}>
-                      {post.mall.address}
-                    </a>
-                  ) : (
-                    <div style={{ fontSize: 11, color: C.textMuted }}>{post.mall.address}</div>
-                  )
-                ) : (
-                  mapsUrl ? (
+                <div style={{ flex: 1, textAlign: "right" }}>
+                  <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.3, marginBottom: 2 }}>
+                    {post.mall.name}
+                  </div>
+                  {post.mall.address ? (
+                    mapsUrl ? (
+                      <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
+                        style={{ fontSize: 11, color: C.green, textDecoration: "none", borderBottom: `1px solid ${C.greenBorder}` }}>
+                        {post.mall.address}
+                      </a>
+                    ) : (
+                      <div style={{ fontSize: 11, color: C.textMuted }}>{post.mall.address}</div>
+                    )
+                  ) : mapsUrl ? (
                     <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
                       style={{ fontSize: 11, color: C.green, textDecoration: "none", borderBottom: `1px solid ${C.greenBorder}` }}>
                       {post.mall.city}{post.mall.state ? `, ${post.mall.state}` : ""}
@@ -467,44 +420,100 @@ export default function FindDetailPage() {
                     <div style={{ fontSize: 11, color: C.textMuted }}>
                       {post.mall.city}{post.mall.state ? `, ${post.mall.state}` : ""}
                     </div>
-                  )
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Divider between location + vendor */}
-          {post.mall && post.vendor && (
-            <div style={{ height: 1, background: C.border }} />
-          )}
-
-          {/* Vendor row */}
-          {post.vendor && (
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-              <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500, paddingTop: 2, flexShrink: 0, width: 52 }}>
-                Vendor
-              </div>
-              <div style={{ flex: 1, textAlign: "right" }}>
-                <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.3 }}>
-                  {post.vendor.display_name}
-                  {post.vendor.booth_number && (
-                    <span style={{ fontFamily: "monospace", fontSize: 11, fontWeight: 400, color: C.textMuted, marginLeft: 6 }}>
-                      · {post.vendor.booth_number}
-                    </span>
                   )}
                 </div>
-                {post.vendor.facebook_url && (
-                  <a href={post.vendor.facebook_url} target="_blank" rel="noopener noreferrer"
-                    style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 4, fontSize: 11, color: "#1877f2", textDecoration: "none" }}>
-                    <Facebook size={10} />
-                    Facebook
-                  </a>
+              </div>
+            )}
+
+            {/* Divider */}
+            {post.mall && post.vendor && (
+              <div style={{ height: 1, background: C.border, margin: "0 14px" }} />
+            )}
+
+            {/* Vendor row — reduced weight */}
+            {post.vendor && (
+              <div style={{ padding: "10px 14px 0", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500, paddingTop: 2, flexShrink: 0, width: 48 }}>
+                  Vendor
+                </div>
+                <div style={{ flex: 1, textAlign: "right" }}>
+                  <div style={{ fontSize: 13, fontWeight: 400, color: C.textMid, lineHeight: 1.3 }}>
+                    {post.vendor.display_name}
+                  </div>
+                  {post.vendor.facebook_url && (
+                    <a href={post.vendor.facebook_url} target="_blank" rel="noopener noreferrer"
+                      style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 3, fontSize: 10, color: "#1877f2", textDecoration: "none", opacity: 0.8 }}>
+                      <Facebook size={9} />
+                      Facebook
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── 9. Booth number — own line, pill, prominent ── */}
+            {post.vendor?.booth_number && (
+              <div style={{ padding: "8px 14px 0", display: "flex", justifyContent: "flex-end" }}>
+                <div style={{
+                  display: "inline-block",
+                  padding: "4px 10px",
+                  borderRadius: 20,
+                  background: C.surfaceDeep,
+                  border: `1px solid ${C.border}`,
+                  fontFamily: "monospace",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: C.textMid,
+                  letterSpacing: "0.3px",
+                }}>
+                  Booth {post.vendor.booth_number}
+                </div>
+              </div>
+            )}
+
+            {/* ── Mark the Spot — inside card, bottom ── */}
+            {post.vendor && (
+              <div style={{ padding: "12px 14px 14px" }}>
+                {isMyPost ? (
+                  <button
+                    onClick={handleToggleSold}
+                    disabled={actionBusy}
+                    style={{
+                      padding: "8px 16px", borderRadius: 20,
+                      fontSize: 12, fontWeight: 500,
+                      color: isSold ? C.green : C.textMuted,
+                      background: isSold ? C.greenLight : "rgba(26,26,24,0.05)",
+                      border: `1px solid ${isSold ? C.greenBorder : C.border}`,
+                      cursor: "pointer",
+                      opacity: actionBusy ? 0.5 : 1,
+                      letterSpacing: "0.1px",
+                    }}
+                  >
+                    {isSold ? "Mark available" : "Mark the Spot"}
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    style={{
+                      padding: "8px 16px", borderRadius: 20,
+                      fontSize: 12, fontWeight: 500,
+                      color: C.textFaint,
+                      background: "rgba(26,26,24,0.04)",
+                      border: `1px solid ${C.border}`,
+                      cursor: "default",
+                      letterSpacing: "0.1px",
+                      opacity: 0.6,
+                    }}
+                  >
+                    Mark the Spot
+                  </button>
                 )}
               </div>
-            </div>
-          )}
-        </motion.div>
-      </div>
+            )}
+
+          </motion.div>
+        </div>
+      )}
 
       {/* ── "Keep exploring →" ── */}
       <motion.div
@@ -534,7 +543,7 @@ export default function FindDetailPage() {
         </button>
       </motion.div>
 
-      {/* ── 7. Delete — bottom of page, reduced prominence ── */}
+      {/* ── 7. Delete — bottom, ghost style ── */}
       {isMyPost && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -583,7 +592,6 @@ export default function FindDetailPage() {
         </motion.div>
       )}
 
-      {/* Safe area bottom pad when not owner */}
       {!isMyPost && (
         <div style={{ paddingBottom: "max(36px, env(safe-area-inset-bottom, 36px))" }} />
       )}
