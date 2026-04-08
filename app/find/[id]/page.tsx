@@ -308,10 +308,10 @@ export default function FindDetailPage() {
           </div>
         )}
 
-        {/* ── Action row: flag + share — top-right ── */}
+        {/* ── Flag + share — bottom-right corner of photo ── */}
         <div style={{
           position: "absolute",
-          top: "max(12px, env(safe-area-inset-top, 12px))",
+          bottom: 12,
           right: 14,
           display: "flex",
           alignItems: "center",
@@ -356,7 +356,7 @@ export default function FindDetailPage() {
         </div>
       </div>
 
-      {/* ── 2. Title + availability ── */}
+      {/* ── 2. Title + price + availability ── */}
       <div style={{ padding: "20px 20px 0" }}>
 
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32 }}>
@@ -365,11 +365,31 @@ export default function FindDetailPage() {
             fontSize: 26, fontWeight: 700,
             color: C.textPrimary,
             lineHeight: 1.22, letterSpacing: "-0.4px",
-            margin: "0 0 6px",
+            margin: "0 0 8px",
           }}>
             {post.title}
           </h1>
         </motion.div>
+
+        {/* Price — Option B: green, own line, between title and availability */}
+        {post.price_asking != null && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, delay: 0.04 }}
+            style={{
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+              fontSize: 22,
+              fontWeight: 700,
+              color: C.green,
+              letterSpacing: "-0.5px",
+              lineHeight: 1,
+              marginBottom: 10,
+            }}
+          >
+            ${post.price_asking.toLocaleString()}
+          </motion.div>
+        )}
 
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
