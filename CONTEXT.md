@@ -1,5 +1,5 @@
 # Treehouse — Master Context Document
-> Last updated: 2026-04-06 | Repo: Zen-Forged/treehouse-treasure-search | Live: treehouse-treasure-search.vercel.app
+> Last updated: 2026-04-07 | Repo: Zen-Forged/treehouse-treasure-search | Live: treehouse-treasure-search.vercel.app
 
 ---
 
@@ -13,6 +13,15 @@ Treehouse is a **local discovery ecosystem for vintage, antique, and thrift find
 - **Resellers** (future premium) get comp and profit analysis via the `/scan → /decide` flow.
 
 The front door is the **Discovery Feed** (`/`). The reseller intel tool (`/scan`) is a secondary feature, not the entry point. No auth required — vendor identity is persisted to localStorage.
+
+### Design philosophy
+
+The ecosystem layer is intentionally **not a marketplace**. It is a calm, story-driven discovery experience:
+- No prices in the feed grid — items feel like finds, not listings
+- No filter pills or status toggles — unified feed only
+- Sold items remain visible ("Found a home") for social proof and storytelling
+- Copy is warm and observational, never transactional
+- Layout breathing room over density
 
 ### Two independent layers
 
@@ -65,7 +74,7 @@ APIFY_TOKEN                    Required if COMP_SOURCE=apify
 
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL       Supabase project URL (public)
-NEXT_PUBLIC_SUPABASE_ANON_KEY  Publishable/anon key from Supabase dashboard (public)
+NEXT_PUBLIC_SUPABASE_ANON_KEY  Full JWT anon key from Supabase dashboard (NOT publishable key format)
 ```
 
 ---
@@ -95,8 +104,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY  Publishable/anon key from Supabase dashboard (pub
 | bio | text | nullable |
 | avatar_url | text | nullable |
 | slug | text | URL-safe, unique |
+| facebook_url | text | nullable — added via SQL |
 | created_at | timestamptz | |
 | updated_at | timestamptz | |
+
+**Unique constraint:** `vendors_mall_booth_unique` on `(mall_id, booth_number)`
 
 ### `posts`
 | Column | Type | Notes |
@@ -108,7 +120,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY  Publishable/anon key from Supabase dashboard (pub
 | description | text | nullable |
 | caption | text | AI-generated in Treehouse tone |
 | image_url | text | nullable — public Supabase Storage URL |
-| price_asking | numeric | nullable |
+| price_asking | numeric | nullable — stored but NOT shown in feed or detail page |
 | status | text | `available` \| `sold` \| `pending` |
 | location_label | text | nullable — e.g. "Booth 14" |
 | created_at | timestamptz | |
@@ -118,42 +130,45 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY  Publishable/anon key from Supabase dashboard (pub
 - `Post` includes `vendor?: Vendor` and `mall?: Mall`
 - `Vendor` includes `mall?: Mall`
 
+**Only mall in production:** America's Antique Mall, id: `19a8ff7e-cb45-491f-9451-878e2dde5bf4`
+**Known vendor:** ZenForged Finds, booth 369, id: `65a879f1-c43c-481b-974f-379792a36db8`
+
 ---
 
 ## 5. Complete Route Map
 
-### Ecosystem routes (new layer)
+### Ecosystem routes
 
 | Route | Purpose |
 |---|---|
-| `/` | Discovery feed — front door. Buyers browse all posted finds. Filter bar: All / Available / Just In. Vendor + mall names are tappable links. |
-| `/find/[id]` | Find detail — hero image, caption, vendor info, mall address, directions CTA (Google Maps deep link). |
-| `/mall/[slug]` | Mall profile — all finds from that location, available/sold split, directions CTA. |
-| `/vendor/[slug]` | Vendor profile — their finds, booth info, link to their mall. |
-| `/post` | Vendor capture — camera/gallery pick, profile setup (display name, booth, mall). Profile persists to localStorage. |
-| `/post/preview` | Edit title / caption / price → AI caption generation → publish to Supabase → live in feed. |
-| `/finds` | Buyer's saved finds (localStorage — reseller tool side). |
+| `/` | Discovery feed — tree masonry grid, mall dropdown filter, no status filters, no prices |
+| `/find/[id]` | Find detail — full-bleed image, floating nav, availability status, shelf scroll, location card |
+| `/mall/[slug]` | Mall profile — all finds from that location, available/sold split, directions CTA |
+| `/vendor/[slug]` | Vendor profile — their finds, booth info, Facebook link |
+| `/post` | Vendor capture — camera/gallery pick, profile setup (display name, booth, mall) |
+| `/post/preview` | Edit title/caption/price → AI caption → publish → confirmation screen |
 
 ### Reseller intel routes (existing layer — untouched)
 
 | Route | Purpose |
 |---|---|
-| `/scan` | Camera capture entry point for reseller flow. |
-| `/discover` | Claude Vision identification (POST `/api/identify` fires on mount). |
-| `/refine` | Low-confidence correction — user edits item name. |
-| `/decide` | Comp data + profit analysis + verdict. |
-| `/intent` | Caption + intent chips (sharing flow). |
-| `/enhance-text` | Before/after caption slider (mock refinement). |
-| `/share` | Copy/download/Facebook stub + save to My Finds. |
+| `/scan` | Camera capture entry point for reseller flow |
+| `/discover` | Claude Vision identification (POST `/api/identify` fires on mount) |
+| `/refine` | Low-confidence correction — user edits item name |
+| `/decide` | Comp data + profit analysis + verdict |
+| `/intent` | Caption + intent chips (sharing flow) |
+| `/enhance-text` | Before/after caption slider (mock refinement) |
+| `/share` | Copy/download/Facebook stub + save to My Finds |
+| `/finds` | Buyer's saved finds (localStorage — reseller tool side) |
 
 ### API routes
 
 | Route | Purpose |
 |---|---|
-| `POST /api/identify` | Claude Vision identification for reseller flow. |
-| `GET /api/sold-comps` | SerpAPI or Apify comp fetch with 48h in-memory cache. |
-| `POST /api/post-caption` | Treehouse-tone caption for vendor post flow. Claude or mock fallback. |
-| `GET /api/debug` | Returns env var status — `curl [url]/api/debug` for prod debugging. |
+| `POST /api/identify` | Claude Vision identification for reseller flow |
+| `GET /api/sold-comps` | SerpAPI or Apify comp fetch with 48h in-memory cache |
+| `POST /api/post-caption` | Treehouse-tone title + caption for vendor post flow. Claude or mock fallback. |
+| `GET /api/debug` | Returns env var status + live Supabase insert test |
 
 ---
 
@@ -162,273 +177,226 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY  Publishable/anon key from Supabase dashboard (pub
 ### Types
 
 **`types/treehouse.ts`**
-Shared types for the ecosystem layer.
 - `PostStatus` — `"available" | "sold" | "pending"`
 - `Mall` — id, name, city, state, slug, address
-- `Vendor` — id, mall_id, display_name, booth_number, bio, avatar_url, slug; optional joined `mall`
+- `Vendor` — id, mall_id, display_name, booth_number, bio, avatar_url, slug, facebook_url; optional joined `mall`
 - `Post` — id, vendor_id, mall_id, title, description, caption, image_url, price_asking, status, location_label; optional joined `vendor` and `mall`
-- `LocalVendorProfile` — lightweight localStorage profile (display_name, booth_number, mall_id, mall_name, mall_city, vendor_id?, slug?)
-- `LOCAL_VENDOR_KEY = "th_vendor_profile"` — localStorage key for vendor profile
-- `POST_IMAGE_KEY = "th_post_image"` — localStorage key (legacy; postStore now preferred)
+- `LocalVendorProfile` — localStorage profile (display_name, booth_number, mall_id, mall_name, mall_city, vendor_id?, slug?)
+- `LOCAL_VENDOR_KEY = "th_vendor_profile"` — localStorage key
 
 ### Lib
 
 **`lib/supabase.ts`**
-Supabase browser client. Reads `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Single export: `supabase`.
+Supabase browser client. Uses placeholder URL at build time to avoid prerender crash. Single export: `supabase`.
 
 **`lib/posts.ts`**
-Data access layer — all functions return typed results and never throw (return `null` / `[]` on error for graceful UI degradation).
+Data access layer — all functions return typed results and never throw.
 
 | Export | Description |
 |---|---|
 | `getFeedPosts(limit?)` | All posts newest-first, with joined vendor + mall. Used by `/`. |
 | `getPost(id)` | Single post with full vendor + mall detail. Used by `/find/[id]`. |
 | `getMallPosts(mallId, limit?)` | All posts from a mall. Used by `/mall/[slug]`. |
-| `getVendorPosts(vendorId, limit?)` | All posts from a vendor. Used by `/vendor/[slug]`. |
-| `createPost(input)` | Insert a new post row with `status: "available"`. |
+| `getVendorPosts(vendorId, limit?)` | All posts from a vendor. Used by `/vendor/[slug]` and shelf section on `/find/[id]`. |
+| `createPost(input)` | Insert post row with `status: "available"`. Returns `{ data, error }`. |
+| `updatePostStatus(id, status)` | Toggle available/sold. Returns boolean. |
+| `deletePost(id)` | Hard delete. Returns boolean. |
 | `getVendorBySlug(slug)` | Fetch vendor + joined mall for profile page. |
-| `createVendor(input)` | Insert vendor row — called on first post from an unregistered vendor. |
-| `slugify(name)` | URL-safe slug from display name. Strips non-alphanumeric, max 50 chars. |
-| `getAllMalls()` | All malls alphabetically — used by post-flow mall selector. |
+| `createVendor(input)` | Insert vendor row. Handles 23505 duplicate key by fetching existing row (Safari localStorage loss recovery). Returns `{ data, error }`. |
+| `slugify(name)` | URL-safe slug. Strips non-alphanumeric, max 50 chars. |
+| `getAllMalls()` | All malls alphabetically — used by post-flow mall selector and feed dropdown. |
 | `getMallBySlug(slug)` | Single mall for profile page. |
-| `uploadPostImage(base64DataUrl, vendorId)` | Uploads base64 image to `post-images` Supabase Storage bucket. Returns public URL or null. Filename pattern: `{vendorId}/{timestamp}.{ext}`. |
+| `uploadPostImage(base64DataUrl, vendorId)` | Uploads to `post-images` bucket. Returns public URL or null. Non-fatal — post proceeds without image. |
 
 **`lib/postStore.ts`**
-In-memory store for the vendor post flow (`/post` → `/post/preview`). Avoids sessionStorage size limits and Safari quirks. Cleared after publish.
-- `postStore.set(imageDataUrl)` — store draft
-- `postStore.get()` — retrieve draft
-- `postStore.clear()` — clear after publish
+In-memory store for `/post → /post/preview` image handoff. Avoids sessionStorage size limits and Safari quirks. Cleared after publish.
 
-**`lib/serpApiClient.ts`**
-SerpAPI eBay engine integration. Filters lot listings via regex. Builds comp summary: `recommendedPrice`, `priceRangeLow`, `priceRangeHigh`, `marketVelocity`, `demandLevel`, `quickTake`, `confidence`, `avgDaysToSell`.
-
-**`lib/cache.ts`**
-In-memory Map cache with 48h TTL for comp data. Keys are normalized query strings. `cacheGet`, `cacheSet`, `cacheDelete`, `cacheSize`, `cachePurgeExpired`.
-
-**`lib/pricingLogic.ts`**
-`calculatePricing(comps, enteredCost)` — trims outliers, calculates fees/profit/recommendation.
-
-**`lib/mockIntelligence.ts`**
-`generateMockEvaluation(cost, imageDataUrl)` — seeded mock comp data for dev/no-API fallback. Also exports `formatCurrency`, `getRecommendationLabel`, `getRecommendationCopy`.
-
-### Hooks (reseller layer)
-
-**`hooks/useSession.tsx`**
-`FindSessionContext` + `FindSessionProvider` + `useFindSession()`. Single source of truth for the active reseller scan. Persists to sessionStorage. `clearSession()` removes it.
-
-**`hooks/useFinds.ts`**
-`useFinds()` — loads/saves/deletes saved finds from localStorage (`tts_finds_v2`). `sessionToFind(session, decision)` converts active session to `SavedFind`.
-
-**`hooks/useAnalysisFlow.ts`**
-State machine for the animated analysis feed on `/decide`. Steps: `uploading → searching_comps → analyzing_market → finalizing`. Calls `GET /api/sold-comps`. Falls back to mock if no comps returned.
-
-### Components
-
-**`components/AnalysisFeed.tsx`** — Animated analysis step timeline on `/decide`.
-**`components/RecommendationMeter.tsx`** — Visual strong-buy/maybe/pass meter.
-**`components/PricingBreakdown.tsx`** — Collapsible fee breakdown.
-**`components/CompCard.tsx`** — Individual sold comp listing card.
-**`components/SavedItemCard.tsx`** — Card for `/finds` grid.
-**`components/AppHeader.tsx`** — Shared sticky header with logo.
-**`components/PriceInput.tsx`** — Number input + range slider combo.
-**`components/Buttons.tsx`** — Shared button primitives.
+**`lib/safeStorage.ts`**
+localStorage wrapper with sessionStorage + memory fallback. Use this instead of raw `localStorage` in all ecosystem client components.
 
 ---
 
 ## 7. Vendor Post Flow
 
-The post flow creates both a vendor row and a post row in Supabase with no auth.
-
-### Step-by-step
-
-1. **`/post`** — vendor captures photo (camera or gallery). Profile form: display name, booth number, mall selector (pulls from `getAllMalls()`). Profile written to localStorage (`th_vendor_profile`). Image written to `postStore`.
-
-2. **`/post/preview`** — vendor edits title, caption, price. On load:
-   - Reads profile from localStorage; reads image from `postStore`.
-   - If no `vendor_id` in profile: calls `createVendor()` → writes `vendor_id` + `slug` back to localStorage.
-   - Caption generation: `POST /api/post-caption` with image + title.
-
-3. **Publish** — `uploadPostImage()` → `createPost()` → clears `postStore` → navigates to `/`.
+1. **`/post`** — capture photo → fill profile (name, booth, mall) → stored to localStorage + postStore
+2. **`/post/preview`** — edit title/caption/price → AI caption via `POST /api/post-caption` → review
+3. **Publish** — `uploadPostImage()` → `createPost()` → clears postStore → confirmation screen
+4. **Confirmation** — "Back to feed" (primary), "Visit us on Facebook" (secondary, external link), "Post another find" (camera icon, ghost)
 
 ### API: `POST /api/post-caption`
 
-Model: `claude-opus-4-5`, max_tokens: 160. Accepts `{ imageDataUrl, title, description }`. Returns `{ caption }`. Mock fallback (5 rotating captions) if no `ANTHROPIC_API_KEY`.
+Model: `claude-opus-4-5`, max_tokens: 200. Accepts `{ imageDataUrl }`. Returns `{ title, caption }`. Mock fallback if no `ANTHROPIC_API_KEY`.
 
 **Caption tone rules:**
-- 2–3 sentences. Warm and observational — never salesy or hype.
-- Notice what is genuinely interesting: material, age, form, character, patina.
-- Help the reader imagine the object in a real space.
-- Never mention price, resale value, eBay, or flipping.
-- Write like a thoughtful friend who just noticed something worth sharing.
+- 1–2 sentences maximum
+- Warm and observational — never salesy or hype
+- Notice: material, age, form, character, patina
+- Do NOT start with "This" or the item name
+- Do NOT use filler phrases ("a wonderful find", "a must-have")
+- Do NOT mention price, resale value, condition assessments, eBay, or flipping
+- Write like a thoughtful friend who just noticed something worth sharing
 
 ---
 
 ## 8. Discovery Feed (`/`)
 
-- Fetches up to 80 posts via `getFeedPosts()` on mount.
-- Skeleton loading (3 cards, shimmer animation) while fetching.
-- Filter bar: **All finds** / **Available** / **Just in** (< 7 days).
-- Each `PostCard` links to `/find/[id]`.
-- Sold items render at 72% opacity with "Found a home" badge and desaturated image.
-- `VendorMallTag` — vendor name links to `/vendor/[slug]`, mall name links to `/mall/[slug]`. Wrapped in `onClick preventDefault` so tapping the tag doesn't also navigate to find detail.
-- Price badge (monospace gold) overlaid on image, top-right. Hidden when sold.
-- Empty state CTA routes to `/post`.
-- "Post a find" button in header routes to `/post`.
+- Fetches up to 80 posts via `getFeedPosts()` on mount
+- Mall dropdown filter in header — filters client-side by mall_id; "All malls" default
+- No status filter pills — all finds shown in a single unified feed
+- **Tree masonry grid** — 2 columns, 14px gap, 14px border-radius tiles
+  - Right column drops by exactly 50% of the first left tile's rendered height
+  - Offset is live via `ResizeObserver` on the first tile ref — recalculates on image load, orientation change, resize
+  - Skeleton uses 65px offset (Math.round(130 × 0.5)) to prevent layout jump
+- **No price badges** on tiles — items feel like discoveries
+- Sold items: 0.62 opacity + grayscale filter + "Found a home" badge (top-left)
+- Tiles link to `/find/[id]`; no text overlay on images
+- Empty state CTA routes to `/post`
 
 ---
 
-## 9. Design System
+## 9. Find Detail Page (`/find/[id]`)
 
-### Colors
+### Layout order (top to bottom)
+1. **Full-bleed hero image** — `width: 100%`, no container, no rounded corners, no shadow
+   - Floating back button: top-left, `position: absolute`, frosted cream circle (blur + `rgba(240,237,230,0.82)`)
+   - Share button: bottom-right of image, dark circle overlay
+   - "Found a home" badge on image if sold (offset left to avoid back button)
+2. **Title** — Georgia 26px bold, `-0.4px` letter-spacing
+3. **Availability status** — pulsing green dot + "Available" (green) or "Found a home" (muted). No price. No timestamp.
+4. **Caption** — italic Georgia 15px, lineHeight 1.82
+5. **Description** — 13px muted (if present)
+6. **Hairline divider**
+7. **"View the shelf"** — horizontal scroll strip, full-bleed, vendor's other items
+   - Section label (uppercase, faint) + item count (italic Georgia, right)
+   - Cards: 42vw wide (max 170px), 3:4 aspect ratio, lazy loaded
+   - Sold cards: grayscale + "Found a home" badge
+   - Hides entirely if vendor has no other items
+8. **"Find this here"** section label (uppercase, faint)
+9. **Location + vendor card** (single surface card, `background: surface, borderRadius: 12`)
+   - Mall name + address link (tighter padding, right-aligned)
+   - [inset divider]
+   - Vendor name (fontWeight 400, textMid — reduced weight)
+   - **Booth pill** — own line, right-aligned, `background: surfaceDeep`, `borderRadius: 20`, monospace 13px
+   - **Mark the Spot button** — inside card at bottom. Owner: toggles sold/available. Visitor: decorative disabled.
+10. **"Keep exploring →"** — soft italic Georgia link, routes to `/`
+11. **Delete post** — owner only, very bottom, ghost style (no bg, no border, tiny trash icon + 11px faint text). Expands to full confirmation on tap.
 
-| Token | Value |
-|---|---|
-| Background | `#050f05` |
-| Surface | `rgba(13,31,13,0.5–0.6)` |
-| Border green | `rgba(109,188,109,0.08–0.16)` |
-| Text primary | `#f5f0e8` warm white |
-| Text mid | `#d4c9b0` warm gray |
-| Text dim | `#7a6535`, `#6a5528` bark tones |
-| Text muted | `rgba(46,36,16,0.55)` |
-| Accent gold | `#c8b47e`, `#a8904e` antique gold |
-| Accent green | `#6dbc6d` success / strong-buy |
-| CTA button | `linear-gradient(175deg, rgba(46,110,46,0.96), rgba(33,82,33,1))` |
+---
+
+## 10. Design System
+
+### Ecosystem palette
+```
+bg:           #f0ede6
+surface:      #e8e4db
+surfaceDeep:  #dedad0
+border:       rgba(26,26,24,0.1)
+textPrimary:  #1a1a18
+textMid:      #4a4a42
+textMuted:    #8a8478
+textFaint:    #b0aa9e
+green:        #1e4d2b
+greenLight:   rgba(30,77,43,0.09)
+greenBorder:  rgba(30,77,43,0.18)
+header:       rgba(240,237,230,0.94–0.96)
+red:          #8b2020
+redBg:        rgba(139,32,32,0.07)
+redBorder:    rgba(139,32,32,0.18)
+```
+
+### Reseller palette (dark — do not change)
+```
+bg: #050f05  text: #f5f0e8  gold: #c8b47e  green: #6dbc6d
+```
 
 ### Typography
-
 | Use | Font |
 |---|---|
-| Headings, titles, quotes, logo | Georgia, serif |
-| All prices and numbers | monospace |
-| Body | Tailwind system default |
+| Headings, titles, captions, italic labels | Georgia, serif |
+| Prices, booth numbers, monospace data | monospace |
+| Body, UI labels | system default |
 
 ### Animations (framer-motion)
-
 ```js
-// Standard entry
 initial={{ opacity: 0, y: 8–16 }}
 animate={{ opacity: 1, y: 0 }}
 transition={{ ease: [0.25, 0.1, 0.25, 1] }}
-
-// Tap feedback
-whileTap={{ scale: 0.97 }}
 ```
 
-### Mobile Layout Rules
-
-- Max width: `430px` (feed), `max-w-md` (layout wrapper)
+### Mobile layout rules
+- Max width: 430px per page
 - Safe area: `env(safe-area-inset-bottom)` on all fixed bottom bars
-- Sticky header: `backdrop-filter: blur(20px)`, `bg rgba(5,15,5,0.92)`, `border rgba(200,180,126,0.06)`
-- Page pattern: `flex flex-col min-h-screen bg-[#050f05]`
-- Fixed CTAs: `position fixed`, `bottom-0`, `left-0`, `right-0`, `max-w-md mx-auto`
+- Sticky/floating headers: `backdropFilter: blur(20px)`, `WebkitBackdropFilter: blur(20px)`
+- No `position: fixed` headers on detail page — use floating buttons over image instead
 
 ---
 
-## 10. Reseller Layer — Data Model
+## 11. Reseller Layer — Data Model
 
 ### FindSession (sessionStorage key: `tts_active_session`)
-
 ```
-id: string                     "find_{timestamp}_{random}"
-createdAt: string
-imageOriginal: string          base64 data URL
-imageEnhanced?: string
-identification?: {
-  title, description, confidence: "high"|"medium"|"low", searchQuery
-}
-refinedQuery?: string          user-confirmed from /refine
-intentText?: string
-intentChips?: string[]         "curious"|"selling"|"sharing"|"offers"
-captionRefined?: string
-pricePaid?: number
-comps?: MockComp[]
-pricing?: {
-  medianSoldPrice, estimatedFees, estimatedProfitHigh,
-  recommendation: "strong-buy"|"maybe"|"pass"
-}
-decision?: "purchased"|"passed"|"shared"
+id, createdAt, imageOriginal, imageEnhanced?, identification?, refinedQuery?,
+intentText?, intentChips?, captionRefined?, pricePaid?, comps?, pricing?, decision?
 ```
 
 ### SavedFind (localStorage key: `tts_finds_v2`)
-
 Subset of FindSession fields plus decision + pricing summary.
-
-### MockComp
-
-```
-title, platform, price, condition, daysAgo, url?, imageUrl?
-```
 
 ---
 
-## 11. Reseller Layer — Comp Data Pipeline
+## 12. Reseller Layer — Comp Data Pipeline
 
-1. `/discover` fires `POST /api/identify` on mount → stores `session.identification.searchQuery`
-2. (optional) `/refine` lets user confirm/edit → stores `session.refinedQuery`
-3. `/decide` price entry → user hits "Look it up" → `useAnalysisFlow.run({ searchQuery: refinedQuery ?? identification.searchQuery })`
-4. `useAnalysisFlow` → `GET /api/sold-comps?q={searchQuery}`
-5. sold-comps route: `normalizeQuery` → cache check (48h) → SerpAPI/Apify fetch → cache set → return
-6. If `comps.length === 0` → fall back to `generateMockEvaluation()`
+1. `/discover` fires `POST /api/identify` → stores `session.identification.searchQuery`
+2. (optional) `/refine` → stores `session.refinedQuery`
+3. `/decide` → `GET /api/sold-comps?q={searchQuery}`
+4. `normalizeQuery` → cache check (48h) → SerpAPI fetch → cache set → return
+5. If `comps.length === 0` → fall back to `generateMockEvaluation()`
 
 **SerpAPI lot filter regex:**
 ```
-/(lot|set|pair|collection|bundle|group)s+(ofs+)?d+|d+s*(x|pc|pcs|piece|pieces)|d{1,2}s*-?s*(goblets?|glasses?|...)/i
+/(lot|set|pair|collection|bundle|group)s+(ofs+)?d+|d+s*(x|pc|pcs|piece|pieces)|.../i
 ```
 
 ---
 
-## 12. Reseller Layer — Pricing Logic
+## 13. Reseller Layer — Pricing Logic
 
 ```
-medianSoldPrice  = trimmed median (remove prices < 0.3x or > 2.5x raw median)
-estimatedFees    = medianSoldPrice × 0.13   (eBay ~13%)
-estimatedShipping = 0                        (buyer pays)
+medianSoldPrice  = trimmed median (remove < 0.3x or > 2.5x raw median)
+estimatedFees    = medianSoldPrice × 0.13
 estimatedProfitHigh = medianSoldPrice - cost - fees
-estimatedProfitLow  = compLow - cost - fees
 
-Recommendation:
-  strong-buy  profitHigh >= $20 AND (profit/cost) >= 1.5
-  maybe       profitHigh >= $8  AND (profit/cost) >= 0.6
-  pass        everything else
+strong-buy  profitHigh >= $20 AND (profit/cost) >= 1.5
+maybe       profitHigh >= $8  AND (profit/cost) >= 0.6
+pass        everything else
 ```
 
 ---
 
-## 13. Reseller Layer — Identification API
+## 14. Reseller Layer — Identification API
 
-`POST /api/identify` — model `claude-opus-4-5`, max_tokens: 400. Returns raw JSON (no markdown): `{ title, description, confidence, searchQuery }`.
+`POST /api/identify` — model `claude-opus-4-5`, max_tokens: 400. Returns `{ title, description, confidence, searchQuery }`.
 
 Mock fallback: 8 deterministic items seeded by `imageDataUrl.length % 8`.
 
-**searchQuery prompt rules:**
-- Be specific: brand, model, material, type, form
-- Include "single" if clearly one item
-- Include full brand+model if present (e.g. `"canon eos r50 camera"`)
-- Never use generic terms like "item" or "object"
-- Examples: `"carnival glass iridescent goblet single"`, `"benjamin franklin brass bookend bank"`, `"mid century ceramic vase single"`
-
-Query runs through `normalizeQuery()` (strips filler, max 8 words) before comp lookup.
-
 ---
 
-## 14. User Flows
+## 15. User Flows
 
 ### Flow A — Vendor Posts a Find
-
-1. `/post` — capture photo → fill profile (name, booth, mall) → stored to localStorage + postStore
-2. `/post/preview` — edit title/caption/price → AI caption generated → review → publish
-3. Publish: image → Supabase Storage → post row → clears postStore → redirects to `/`
-4. Find is live in the discovery feed immediately
+1. `/post` — capture photo → fill profile → stored to localStorage + postStore
+2. `/post/preview` — edit title/caption/price → AI caption → review → publish
+3. Publish: image → Supabase Storage → post row → clears postStore → confirmation screen
+4. Confirmation: "Back to feed" / "Visit us on Facebook" / "Post another find"
+5. Find is live in discovery feed immediately
 
 ### Flow B — Buyer Browses
-
-1. `/` — scroll feed, filter (All / Available / Just In)
-2. Tap a card → `/find/[id]` — hero image, full caption, vendor info, mall, directions CTA
-3. Tap vendor name → `/vendor/[slug]`
-4. Tap mall name → `/mall/[slug]`
+1. `/` — scroll feed (tree masonry, no prices, no filters)
+2. Tap a tile → `/find/[id]` — full-bleed image, title, availability, caption, shelf scroll, location card
+3. Tap address → Apple Maps deep link
+4. Scroll shelf → tap item → navigate to that find's detail page
 
 ### Flow C — Reseller Intel
-
 1. `/scan` → camera capture
 2. `/discover` — AI identification fires on mount
 3. [low confidence] `/refine` — user edits item name
@@ -436,94 +404,90 @@ Query runs through `normalizeQuery()` (strips filler, max 8 words) before comp l
 5. Save as purchased or passed → `/finds`
 
 ### Flow D — Social Sharing (reseller)
-
-1. `/discover` → tap "Share the story" → `/intent`
+1. `/discover` → "Share the story" → `/intent`
 2. `/intent` → select chips + optional text
-3. `/enhance-text` → before/after image slider + mock-refined caption
+3. `/enhance-text` → before/after caption slider (mock)
 4. `/share` → copy/download/Facebook stub → save to My Finds
 
 ---
 
-## 15. Current Development State (2026-04-06)
+## 16. Current Development State (2026-04-07)
 
 ### Working — Ecosystem layer
-- Discovery feed loads from Supabase with skeleton loading + filter bar
-- Feed cards link to `/find/[id]`, `/vendor/[slug]`, `/mall/[slug]`
-- Find detail page — hero image, caption, vendor info, directions CTA
-- Mall profile page — grid, available/sold split, directions
-- Vendor profile page — their finds, booth info, mall link
-- Vendor post flow — capture → preview → AI caption → publish → live in feed
-- Vendor profile persists to localStorage (no auth required)
-- Image upload to Supabase Storage (bucket: `post-images`)
-- `POST /api/post-caption` — Claude or mock fallback
+- Discovery feed: tree masonry (50% dynamic right-column offset), no prices, no filter pills, mall dropdown
+- Skeleton loading matches live grid proportions
+- Find detail: full-bleed image, floating nav, availability pulse, "View the shelf", "Find this here" card, booth pill, Mark the Spot inside card, delete at bottom
+- "View the shelf" — lazy-loaded horizontal scroll, vendor's other posts, hides if empty
+- Mark the Spot — owner toggle (sold/available), visitor decorative
+- Post flow — capture → AI caption (1-2 sentences) → preview → publish → confirmation
+- Post confirmation — "Back to feed" primary, "Visit us on Facebook" (external), "Post another find" + camera icon
+- Vendor profile: Facebook link, available/sold grid
+- Mall profile: grid, directions, available/sold split
+- Image upload to Supabase Storage
+- safeStorage fallback for Safari private/ITP
 
 ### Working — Reseller layer
 - Full Claude Vision identification with mock fallback
-- Real eBay comp data via SerpAPI
-- In-memory comp caching (48h TTL)
-- Lot filtering from SerpAPI results
-- Confidence gate: `/refine` for low-confidence IDs
-- Full sharing flow: intent → enhance-text → share
+- Real eBay comp data via SerpAPI with 48h cache
+- Lot filtering, confidence gate, full sharing flow
 - Finds persistence (`tts_finds_v2`)
 - All mobile animations and layout
 
 ### Known Gaps / Next Sprint Options
-- **Poll-to-refresh** on discovery feed
-- **Mark as sold** button on `/find/[id]` for vendors (matches their localStorage profile)
-- **Native share sheet** on find detail + copyable vendor profile URL
-- **Supabase RLS** — row-level security so vendors can only edit their own posts
+- "Mark the Spot" for visitors — unwired (future saved/shelf feature)
+- Pull-to-refresh on discovery feed
 - `/enhance-text` caption refinement is mock — not real Claude call yet
-- Facebook share on `/share` is a UI stub
-- No PWA/offline support
-- `lib/ebayClient.ts`, `lib/searchCache.ts` — legacy files, not in active flow
-- `/app/enhance/`, `/app/flow-test/` — likely unused/experimental
+- Supabase RLS — row-level security so vendors can only edit their own posts
+- No PWA / offline support
+- `FACEBOOK_PAGE_URL` constant in `app/post/preview/page.tsx` needs verification
 
 ---
 
-## 16. Roadmap
+## 17. Roadmap
 
 | Item | Status |
 |---|---|
 | Discovery feed + vendor post flow | ✅ Done |
 | Real eBay comps (SerpAPI) | ✅ Done |
 | Mall + vendor profile pages | ✅ Done |
+| Tree masonry feed | ✅ Done |
+| Story-driven detail page (availability, shelf, location card) | ✅ Done |
+| Mark the Spot for vendors | ✅ Done |
+| Mark the Spot for visitors (saved shelf) | Planned |
 | Pull-to-refresh on feed | Planned |
-| Mark as sold (vendor action) | Planned |
-| Native share sheet | Planned |
+| Native share sheet on find detail | Planned |
 | Supabase RLS | Planned |
 | Real `/enhance-text` caption (Claude) | Planned |
-| Poshmark / Mercari comps | Planned |
-| Reverse image search | Planned |
-| Label / brand detection via ML | Planned |
+| PWA / offline mode | Planned |
+| Facebook auto-post via Graph API | Future |
 | Vendor auth (Supabase Auth) | Future |
+| Poshmark / Mercari comps | Future |
+| Reverse image search | Future |
 | Kanban sourcing board | Future |
-| Listing generator | Future |
 | Analytics dashboard | Future |
-| PWA / offline mode | Future |
 
 ---
 
-## 17. How to Use This Document
+## 18. How to Use This Document
 
-Paste as the opening message to give an AI full codebase context. It covers:
+Paste as the opening message to give Claude full codebase context. It covers:
 - Both product layers (ecosystem + reseller intel)
 - Complete Supabase schema
 - Every route and its purpose
 - All API endpoints and their logic
 - Data access functions in `lib/posts.ts`
 - The vendor post flow end-to-end
-- Comp data pipeline
-- Pricing formulas and recommendation thresholds
+- Discovery feed grid system
+- Find detail page layout order (authoritative)
 - Design tokens, typography, animation conventions
 - Mobile layout rules
 - All four user flows
 - Current state and known gaps
 
-For file-level questions, paste the raw source alongside this document.
-For new feature work, reference section 15 (gaps) and section 16 (roadmap).
-
-**Production debugging patterns:**
+**Production debugging:**
 ```bash
 curl https://treehouse-treasure-search.vercel.app/api/debug
 npx vercel logs --prod | grep -i "[error-keyword]"
+npm run build 2>&1 | tail -30
+git add -A && git commit -m "..." && git push
 ```
