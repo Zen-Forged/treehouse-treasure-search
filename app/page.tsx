@@ -31,6 +31,8 @@ const C = {
   header:       "rgba(240,237,230,0.94)",
 };
 
+const SCROLL_KEY = "treehouse_feed_scroll";
+
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
 function EmptyFeed() {
@@ -61,8 +63,6 @@ function EmptyFeed() {
 }
 
 // ─── Masonry skeleton ─────────────────────────────────────────────────────────
-// Skeleton uses a fixed representative offset (half of a typical first tile)
-// so the layout doesn't jump when real content loads.
 
 const SKELETON_HEIGHTS = [130, 160, 170, 105, 115, 145, 155, 118];
 const SKELETON_OFFSET  = Math.round(SKELETON_HEIGHTS[0] * 0.5); // 65px
@@ -91,7 +91,7 @@ function SkeletonMasonry() {
   );
 }
 
-// ─── Masonry tile (image only, no price) ─────────────────────────────────────
+// ─── Masonry tile ─────────────────────────────────────────────────────────────
 
 function MasonryTile({ post, index }: { post: Post; index: number }) {
   const [imgErr,    setImgErr]    = useState(false);
@@ -173,15 +173,13 @@ function MasonryTile({ post, index }: { post: Post; index: number }) {
 }
 
 // ─── Two-column masonry — tree offset ────────────────────────────────────────
-// The right column ("branch") drops by exactly 50% of the first left tile's
-// rendered height. A ResizeObserver keeps this live on any layout change.
 
 function MasonryGrid({ posts }: { posts: Post[] }) {
   const col1 = posts.filter((_, i) => i % 2 === 0);
   const col2 = posts.filter((_, i) => i % 2 === 1);
 
   const firstTileRef  = useRef<HTMLDivElement>(null);
-  const [offset, setOffset] = useState(SKELETON_OFFSET); // start with skeleton value to avoid flash
+  const [offset, setOffset] = useState(SKELETON_OFFSET);
 
   useEffect(() => {
     const el = firstTileRef.current;
@@ -196,11 +194,10 @@ function MasonryGrid({ posts }: { posts: Post[] }) {
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [posts]); // re-run when posts change (e.g. after filter)
+  }, [posts]);
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, alignItems: "start" }}>
-      {/* Left column — trunk, always starts flush */}
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {col1.map((post, i) => (
           <div key={post.id} ref={i === 0 ? firstTileRef : undefined}>
@@ -208,7 +205,6 @@ function MasonryGrid({ posts }: { posts: Post[] }) {
           </div>
         ))}
       </div>
-      {/* Right column — branch, drops by 50% of first tile height */}
       <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: offset }}>
         {col2.map((post, i) => (
           <MasonryTile key={post.id} post={post} index={i * 2 + 1} />
@@ -287,6 +283,36 @@ export default function DiscoveryFeedPage() {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(false);
   const [mallId,  setMallId]  = useState<string | null>(null);
+
+  // ── Scroll restoration ──────────────────────────────────────────────────────
+  // Save scroll position whenever the user scrolls, restore it on mount.
+  // Uses sessionStorage so it only persists within the tab session.
+
+  useEffect(() => {
+    // Restore scroll position from previous visit to this page
+    try {
+      const saved = sessionStorage.getItem(SCROLL_KEY);
+      if (saved) {
+        const y = parseInt(saved, 10);
+        if (!isNaN(y) && y > 0) {
+          // Defer to after paint so the DOM has content to scroll into
+          requestAnimationFrame(() => {
+            window.scrollTo({ top: y, behavior: "instant" });
+          });
+        }
+      }
+    } catch {}
+
+    // Save scroll on every scroll event
+    function onScroll() {
+      try {
+        sessionStorage.setItem(SCROLL_KEY, String(Math.round(window.scrollY)));
+      } catch {}
+    }
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     getAllMalls().then(setMalls);

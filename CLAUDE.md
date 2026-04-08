@@ -33,9 +33,18 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ## CURRENT ISSUE
 > Last updated: 2026-04-07
 
-**Status:** ✅ Full UI sprint complete. No known active bugs.
+**Status:** ✅ Clean. No known active bugs.
 
 **What was done (this session):**
+
+### Navigation / scroll restoration
+- "Keep exploring →" section removed entirely from `/find/[id]/page.tsx`
+- Feed (`app/page.tsx`) now saves `window.scrollY` to `sessionStorage` on every scroll event (`SCROLL_KEY = "treehouse_feed_scroll"`)
+- On mount, feed restores saved scroll position via `requestAnimationFrame` → `window.scrollTo({ behavior: "instant" })`
+- Back button on detail page already used `router.back()` — no change needed there
+- No new UI, no breadcrumbs, no navigation components added
+
+**What was done (previous session):**
 
 ### Feed (`app/page.tsx`)
 - Price badges removed from all tiles — items feel like discoveries, not listings
@@ -48,23 +57,19 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 - **Full-bleed hero image** — no rounded container, no shadow, bleeds to page edges
 - **Availability status** — price + timestamp replaced with pulsing green dot + "Available" / "Found a home"
 - **"View the shelf"** (was "More on the shelf") — renamed, layout unchanged
-- **"Find this here" card** — location + vendor condensed into a single surface card, below the shelf section:
-  - Section label "Find this here" above the card
-  - Mall row: name + address link (tighter padding)
-  - Vendor row: reduced weight (fontWeight 400, textMid color)
-  - **Booth number on its own line** — pill style (monospace, `surfaceDeep` bg, rounded-20), right-aligned, between vendor name and Mark the Spot button
-  - **Mark the Spot moved inside the card** — at the bottom, spatially tied to location/vendor context
-- **Delete button** — moved to very bottom of page, ghost style (no background, no border, tiny trash icon + 11px faint text)
-- "Keep exploring →" sits above delete
+- **"Find this here" card** — location + vendor condensed into a single surface card, below the shelf section
+- **Booth number on its own line** — pill style (monospace, `surfaceDeep` bg, rounded-20), right-aligned
+- **Mark the Spot moved inside the card** — at the bottom, spatially tied to location/vendor context
+- **Delete button** — ghost style (no background, no border, tiny trash icon + 11px faint text), very bottom
+- **"Keep exploring →" removed** — back button handles return navigation; scroll position restored on feed
 
 ### Post confirmation (`app/post/preview/page.tsx`)
 - "Back to feed" is primary green CTA (top)
-- "Visit us on Facebook" is secondary surface button (middle) — links to `FACEBOOK_PAGE_URL` constant, `target="_blank"`, honest label (not "View your post")
+- "Visit us on Facebook" is secondary surface button (middle)
 - "Post another find" is ghost with Camera icon (bottom)
 
 ### AI caption (`app/api/post-caption/route.ts`)
 - Captions: 1–2 sentences max (was 2–3)
-- Prompt bans: leading with "This" or item name, filler phrases, condition assessments
 - `max_tokens`: 300 → 200
 
 **Next session starting point:**
@@ -189,6 +194,7 @@ Animations: opacity 0→1, y 8-16→0, ease [0.25,0.1,0.25,1]
 Right column offset: 50% of first tile's rendered height (ResizeObserver, live).
 Skeleton uses SKELETON_OFFSET = Math.round(SKELETON_HEIGHTS[0] * 0.5) = 65px.
 No price badges. Sold items: 0.62 opacity + grayscale + "Found a home" badge.
+Scroll position saved to sessionStorage ("treehouse_feed_scroll"), restored on mount.
 ```
 
 ### Detail page layout order
@@ -204,8 +210,7 @@ No price badges. Sold items: 0.62 opacity + grayscale + "Found a home" badge.
      Vendor name (fontWeight 400, textMid)
      Booth pill (monospace, surfaceDeep bg, border-radius 20)
      Mark the Spot button
-7. "Keep exploring →"
-8. Delete post (ghost, owner only, very bottom)
+7. Delete post (ghost, owner only, very bottom)
 ```
 
 ---
@@ -223,18 +228,19 @@ No price badges. Sold items: 0.62 opacity + grayscale + "Found a home" badge.
 - `ShelfSection` uses `getVendorPosts` directly — that's a Supabase fetch, not localStorage, so safeStorage is not needed there
 - Tree offset: wrap only the first tile in a plain `div` with the `ref` — do NOT put the ref on `MasonryTile` itself (it renders a `motion.div` and would need forwardRef)
 - `FACEBOOK_PAGE_URL` constant lives at the top of `app/post/preview/page.tsx` — update it there when the real page URL is confirmed
+- Feed scroll restoration uses raw `sessionStorage` directly (not safeStorage) — scroll position is ephemeral tab state, not user data
 
 ---
 
 ## WORKING ✅
 - Discovery feed — tree masonry (50% dynamic offset), no prices, no filter pills, mall dropdown
+- Feed scroll position saved/restored via sessionStorage on back navigation
 - Skeleton loading matches live grid proportions (65px right-column offset)
 - Sold items in feed: 0.62 opacity + grayscale + "Found a home" badge
-- Find detail: full-bleed image, floating back btn, availability pulse, "View the shelf", "Find this here" card, booth pill, Mark the Spot inside card, delete at bottom
+- Find detail: full-bleed image, floating back btn, availability pulse, "View the shelf", "Find this here" card, booth pill, Mark the Spot inside card, delete at bottom (no "Keep exploring")
 - "View the shelf" — horizontal scroll, full-bleed, vendor's other items (lazy loaded), hides if empty
 - Mark the Spot — wired for owners (toggle sold/available), decorative for visitors
 - Share icon on image overlay — native share sheet or clipboard copy
-- "Keep exploring →" soft bottom nav
 - Vendor actions: mark sold toggle, delete with confirmation
 - Vendor profile: Facebook link, light theme, available/sold grid
 - Mall profile: grid, directions, available/sold split

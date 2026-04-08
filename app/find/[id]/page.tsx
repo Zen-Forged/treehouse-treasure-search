@@ -369,7 +369,7 @@ export default function FindDetailPage() {
         </>
       )}
 
-      {/* ── 6+8. "Find this here" — location + vendor card ── */}
+      {/* ── "Find this here" — location + vendor card ── */}
       {(post.mall || post.vendor) && (
         <div style={{ padding: "0 20px", marginBottom: 28 }}>
 
@@ -430,7 +430,7 @@ export default function FindDetailPage() {
               <div style={{ height: 1, background: C.border, margin: "0 14px" }} />
             )}
 
-            {/* Vendor row — reduced weight */}
+            {/* Vendor row */}
             {post.vendor && (
               <div style={{ padding: "10px 14px 0", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
                 <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500, paddingTop: 2, flexShrink: 0, width: 48 }}>
@@ -451,7 +451,7 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* ── 9. Booth number — own line, pill, prominent ── */}
+            {/* Booth number pill */}
             {post.vendor?.booth_number && (
               <div style={{ padding: "8px 14px 0", display: "flex", justifyContent: "flex-end" }}>
                 <div style={{
@@ -471,7 +471,7 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* ── Mark the Spot — inside card, bottom ── */}
+            {/* Mark the Spot — inside card, bottom */}
             {post.vendor && (
               <div style={{ padding: "12px 14px 14px" }}>
                 {isMyPost ? (
@@ -515,35 +515,7 @@ export default function FindDetailPage() {
         </div>
       )}
 
-      {/* ── "Keep exploring →" ── */}
-      <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, delay: 0.28 }}
-        style={{
-          paddingTop: 12,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          position: "relative",
-          margin: "0 20px",
-        }}
-      >
-        <div style={{ height: 1, background: C.border, position: "absolute", left: 0, right: 0, top: 12 }} />
-        <button
-          onClick={() => router.push("/")}
-          style={{
-            background: "none", border: "none", cursor: "pointer",
-            fontSize: 13, color: C.textMuted,
-            fontFamily: "Georgia, serif", fontStyle: "italic",
-            letterSpacing: "0.2px",
-            padding: "20px 0",
-            display: "flex", alignItems: "center", gap: 6,
-            position: "relative",
-          }}
-        >
-          Keep exploring
-          <span style={{ fontSize: 14, lineHeight: 1 }}>→</span>
-        </button>
-      </motion.div>
-
-      {/* ── 7. Delete — bottom, ghost style ── */}
+      {/* ── Delete — bottom, ghost style ── */}
       {isMyPost && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -551,7 +523,7 @@ export default function FindDetailPage() {
           style={{
             padding: "0 20px",
             paddingBottom: "max(36px, env(safe-area-inset-bottom, 36px))",
-            marginTop: 24,
+            marginTop: 8,
           }}
         >
           {!showDelete ? (
