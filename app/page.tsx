@@ -61,8 +61,11 @@ function EmptyFeed() {
 }
 
 // ─── Masonry skeleton ─────────────────────────────────────────────────────────
+// Skeleton uses a fixed representative offset (half of a typical first tile)
+// so the layout doesn't jump when real content loads.
 
 const SKELETON_HEIGHTS = [130, 160, 170, 105, 115, 145, 155, 118];
+const SKELETON_OFFSET  = Math.round(SKELETON_HEIGHTS[0] * 0.5); // 65px
 
 function SkeletonMasonry() {
   const col1 = SKELETON_HEIGHTS.filter((_, i) => i % 2 === 0);
@@ -71,7 +74,7 @@ function SkeletonMasonry() {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, alignItems: "start" }}>
       {[col1, col2].map((col, ci) => (
-        <div key={ci} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: ci === 1 ? 26 : 0 }}>
+        <div key={ci} style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: ci === 1 ? SKELETON_OFFSET : 0 }}>
           {col.map((h, i) => (
             <motion.div
               key={i}
@@ -142,8 +145,6 @@ function MasonryTile({ post, index }: { post: Post; index: number }) {
                   filter: isSold ? "grayscale(0.55) brightness(0.88)" : "brightness(0.97) saturate(0.93)",
                 }}
               />
-
-              {/* Sold badge only — no price */}
               {isSold && (
                 <div style={{
                   position: "absolute", top: 8, left: 8,
@@ -171,20 +172,44 @@ function MasonryTile({ post, index }: { post: Post; index: number }) {
   );
 }
 
-// ─── Two-column staggered masonry ─────────────────────────────────────────────
+// ─── Two-column masonry — tree offset ────────────────────────────────────────
+// The right column ("branch") drops by exactly 50% of the first left tile's
+// rendered height. A ResizeObserver keeps this live on any layout change.
 
 function MasonryGrid({ posts }: { posts: Post[] }) {
   const col1 = posts.filter((_, i) => i % 2 === 0);
   const col2 = posts.filter((_, i) => i % 2 === 1);
 
+  const firstTileRef  = useRef<HTMLDivElement>(null);
+  const [offset, setOffset] = useState(SKELETON_OFFSET); // start with skeleton value to avoid flash
+
+  useEffect(() => {
+    const el = firstTileRef.current;
+    if (!el) return;
+
+    function measure() {
+      setOffset(Math.round(el!.offsetHeight * 0.5));
+    }
+
+    measure();
+
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [posts]); // re-run when posts change (e.g. after filter)
+
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, alignItems: "start" }}>
+      {/* Left column — trunk, always starts flush */}
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {col1.map((post, i) => (
-          <MasonryTile key={post.id} post={post} index={i * 2} />
+          <div key={post.id} ref={i === 0 ? firstTileRef : undefined}>
+            <MasonryTile post={post} index={i * 2} />
+          </div>
         ))}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 26 }}>
+      {/* Right column — branch, drops by 50% of first tile height */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: offset }}>
         {col2.map((post, i) => (
           <MasonryTile key={post.id} post={post} index={i * 2 + 1} />
         ))}
