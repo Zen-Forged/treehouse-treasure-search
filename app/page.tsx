@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Plus, Compass, ChevronDown, Flag } from "lucide-react";
 import { getFeedPosts, getAllMalls } from "@/lib/posts";
 import { safeStorage } from "@/lib/safeStorage";
+import BottomNav from "@/components/BottomNav";
 import type { Post, Mall } from "@/types/treehouse";
 
 const C = {
@@ -350,6 +351,7 @@ export default function DiscoveryFeedPage() {
   }, []);
 
   const filtered = posts.filter(p => !mallId || p.mall_id === mallId);
+  const flaggedCount = followedIds.size;
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", position: "relative" }}>
@@ -383,7 +385,7 @@ export default function DiscoveryFeedPage() {
         </header>
 
         {/* ── Feed ── */}
-        <main style={{ padding: "16px 14px", paddingBottom: "max(80px, env(safe-area-inset-bottom, 80px))" }}>
+        <main style={{ padding: "16px 14px", paddingBottom: "max(100px, calc(env(safe-area-inset-bottom, 0px) + 90px))" }}>
           {loading ? (
             <SkeletonMasonry />
           ) : error ? (
@@ -400,6 +402,8 @@ export default function DiscoveryFeedPage() {
         </main>
 
       </div>
+
+      <BottomNav active="home" flaggedCount={flaggedCount} />
     </div>
   );
 }

@@ -33,6 +33,25 @@ export async function getPost(id: string): Promise<Post | null> {
   return data as Post;
 }
 
+/**
+ * Fetch multiple posts by ID in a single Supabase query.
+ * Used by the Flagged screen to hydrate saved post IDs efficiently.
+ */
+export async function getPostsByIds(ids: string[]): Promise<Post[]> {
+  if (ids.length === 0) return [];
+  const { data, error } = await supabase
+    .from("posts")
+    .select(`
+      *,
+      vendor:vendors ( id, display_name, booth_number, slug, avatar_url, facebook_url ),
+      mall:malls     ( id, name, city, state, slug )
+    `)
+    .in("id", ids)
+    .order("created_at", { ascending: false });
+  if (error) { console.error("[posts] getPostsByIds:", error.message); return []; }
+  return (data ?? []) as Post[];
+}
+
 export async function getMallPosts(mallId: string, limit = 60): Promise<Post[]> {
   const { data, error } = await supabase
     .from("posts")
