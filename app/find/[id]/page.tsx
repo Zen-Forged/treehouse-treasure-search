@@ -8,7 +8,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Share2, Trash2, Facebook, Bookmark, BookmarkCheck } from "lucide-react";
+import { ArrowLeft, Share2, Trash2, Facebook, Bookmark, BookmarkCheck, Tag } from "lucide-react";
 import { getPost, getVendorPosts, updatePostStatus, deletePost } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
@@ -31,6 +31,9 @@ const C = {
   red:         "#8b2020",
   redBg:       "rgba(139,32,32,0.07)",
   redBorder:   "rgba(139,32,32,0.18)",
+  amber:       "#7a4f1a",
+  amberBg:     "rgba(122,79,26,0.07)",
+  amberBorder: "rgba(122,79,26,0.2)",
 };
 
 function bookmarkKey(postId: string) {
@@ -146,6 +149,7 @@ function ShelfSection({ vendorId, currentPostId, onReady }: {
         style={{
           display: "flex", gap: 10,
           overflowX: "auto", overflowY: "hidden",
+          // paddingLeft matches the label indent (20px) with a small leading spacer built in
           paddingLeft: 20, paddingRight: 20, paddingBottom: 4,
           scrollSnapType: "x mandatory",
           WebkitOverflowScrolling: "touch",
@@ -154,6 +158,8 @@ function ShelfSection({ vendorId, currentPostId, onReady }: {
         }}
         className="hide-scrollbar"
       >
+        {/* Leading spacer so first card aligns with label */}
+        <div style={{ flexShrink: 0, width: 0 }} />
         {items.map(item => (
           <div key={item.id} style={{ scrollSnapAlign: "start", flexShrink: 0 }}>
             <ShelfCard post={item} />
@@ -162,6 +168,49 @@ function ShelfSection({ vendorId, currentPostId, onReady }: {
         <div style={{ flexShrink: 0, width: 8 }} />
       </div>
     </motion.div>
+  );
+}
+
+// ─── Persistent back tab ──────────────────────────────────────────────────────
+
+function BackTab({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label="Go back"
+      style={{
+        position: "fixed",
+        left: 0,
+        top: "50%",
+        transform: "translateY(-50%)",
+        zIndex: 50,
+        // Pill shape
+        width: 28,
+        height: 72,
+        borderRadius: "0 12px 12px 0",
+        // Styling
+        background: "rgba(240,237,230,0.88)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        border: `1px solid ${C.border}`,
+        borderLeft: "none",
+        boxShadow: "2px 0 12px rgba(26,26,24,0.10)",
+        cursor: "pointer",
+        // Layout
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 0,
+        // Subtle press feel
+        transition: "background 0.15s, transform 0.1s",
+      }}
+      onMouseDown={e => (e.currentTarget.style.transform = "translateY(-50%) scaleX(0.93)")}
+      onMouseUp={e => (e.currentTarget.style.transform = "translateY(-50%)")}
+      onTouchStart={e => (e.currentTarget.style.transform = "translateY(-50%) scaleX(0.93)")}
+      onTouchEnd={e => (e.currentTarget.style.transform = "translateY(-50%)")}
+    >
+      <ArrowLeft size={13} style={{ color: C.textMid }} />
+    </button>
   );
 }
 
@@ -193,7 +242,12 @@ export default function FindDetailPage() {
         const raw = localStorage.getItem(LOCAL_VENDOR_KEY);
         if (raw && data) {
           const profile = JSON.parse(raw) as LocalVendorProfile;
-          setIsMyPost(!!profile.vendor_id && profile.vendor_id === data.vendor_id);
+          // Match on vendor_id if available; fall back to matching post's vendor_id
+          const profileVendorId = profile.vendor_id;
+          const postVendorId = data.vendor_id ?? data.vendor?.id;
+          if (profileVendorId && postVendorId && profileVendorId === postVendorId) {
+            setIsMyPost(true);
+          }
         }
       } catch {}
     });
@@ -273,6 +327,9 @@ export default function FindDetailPage() {
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
 
+      {/* ── Persistent back tab (fixed left side) ── */}
+      <BackTab onClick={() => router.back()} />
+
       {/* ── 1. Hero image ── */}
       <div style={{ position: "relative", width: "100%" }}>
         {post.image_url ? (
@@ -289,10 +346,10 @@ export default function FindDetailPage() {
           <div style={{ height: 120, background: C.surface }} />
         )}
 
-        {/* Unavailable badge — top-left, offset from back button */}
+        {/* Unavailable badge — top-left */}
         {isSold && (
           <div style={{
-            position: "absolute", top: "max(18px, env(safe-area-inset-top, 18px))", left: 60,
+            position: "absolute", top: "max(18px, env(safe-area-inset-top, 18px))", left: 16,
             fontSize: 8, fontWeight: 700, textTransform: "uppercase",
             letterSpacing: "1.5px", padding: "3px 9px", borderRadius: 5,
             background: "rgba(240,237,230,0.92)", color: C.textMuted,
@@ -302,25 +359,6 @@ export default function FindDetailPage() {
             Unavailable
           </div>
         )}
-
-        {/* Floating back button — top-left */}
-        <button
-          onClick={() => router.back()}
-          style={{
-            position: "absolute",
-            top: "max(14px, env(safe-area-inset-top, 14px))",
-            left: 14,
-            width: 36, height: 36, borderRadius: "50%",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: "rgba(240,237,230,0.82)",
-            backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
-            border: `1px solid ${C.border}`,
-            boxShadow: "0 1px 6px rgba(26,26,24,0.12)",
-            cursor: "pointer",
-          }}
-        >
-          <ArrowLeft size={15} style={{ color: C.textMid }} />
-        </button>
 
         {/* Bottom-right overlay buttons — follow + share (visitors) */}
         {!isMyPost && (
@@ -613,7 +651,7 @@ export default function FindDetailPage() {
         </div>
       )}
 
-      {/* ── Delete — bottom, ghost style ── */}
+      {/* ── Owner actions: Mark as sold + Delete ── */}
       {isMyPost && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -621,9 +659,37 @@ export default function FindDetailPage() {
           style={{
             padding: "0 20px",
             paddingBottom: "max(36px, env(safe-area-inset-bottom, 36px))",
-            marginTop: 8,
+            marginTop: 4,
+            display: "flex",
+            flexDirection: "column",
+            gap: 0,
           }}
         >
+          {/* Separator */}
+          <div style={{ height: 1, background: C.border, marginBottom: 16 }} />
+
+          {/* Mark as sold toggle */}
+          <button
+            onClick={handleToggleSold}
+            disabled={actionBusy}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: "none", border: "none", cursor: "pointer",
+              padding: "6px 0", marginBottom: 10,
+              opacity: actionBusy ? 0.5 : 1,
+            }}
+          >
+            <Tag size={11} style={{ color: isSold ? C.green : C.textFaint }} />
+            <span style={{
+              fontSize: 11,
+              color: isSold ? C.green : C.textFaint,
+              fontWeight: isSold ? 500 : 400,
+            }}>
+              {isSold ? "Mark as available" : "Mark as sold"}
+            </span>
+          </button>
+
+          {/* Delete post */}
           {!showDelete ? (
             <button
               onClick={() => setShowDelete(true)}
