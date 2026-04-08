@@ -63,12 +63,12 @@ function groupByBooth(posts: Post[]): Array<{ label: string; vendorName: string;
     map.get(key)!.posts.push(post);
   }
 
-  // Sort groups: booths with numbers first (alphabetical), then "No booth listed"
+  // Sort groups: booths with numbers first (numeric), then "No booth listed"
   return Array.from(map.values()).sort((a, b) => {
-    const aNum = a.label === "No booth listed";
-    const bNum = b.label === "No booth listed";
-    if (aNum && !bNum) return 1;
-    if (!aNum && bNum) return -1;
+    const aFallback = a.label === "No booth listed";
+    const bFallback = b.label === "No booth listed";
+    if (aFallback && !bFallback) return 1;
+    if (!aFallback && bFallback) return -1;
     return a.label.localeCompare(b.label, undefined, { numeric: true });
   });
 }
@@ -224,6 +224,9 @@ function BoothSection({
   posts: Post[];
   startIndex: number;
 }) {
+  // Prefix "Booth " unless it's the fallback label
+  const displayLabel = label === "No booth listed" ? label : `Booth ${label}`;
+
   return (
     <div style={{ marginBottom: 28 }}>
       {/* Section header */}
@@ -246,7 +249,7 @@ function BoothSection({
           padding: "2px 8px",
           flexShrink: 0,
         }}>
-          {label}
+          {displayLabel}
         </div>
         <div style={{
           fontSize: 12,
