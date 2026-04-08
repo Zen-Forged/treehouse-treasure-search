@@ -4,11 +4,12 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Share2, Trash2, Facebook } from "lucide-react";
-import { getPost, updatePostStatus, deletePost } from "@/lib/posts";
+import { getPost, getVendorPosts, updatePostStatus, deletePost } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import type { Post } from "@/types/treehouse";
 
@@ -42,6 +43,148 @@ function timeAgo(dateStr: string): string {
 function formatPrice(price: number): string {
   return `$${price % 1 === 0 ? price.toFixed(0) : price.toFixed(2)}`;
 }
+
+// ─── Shelf card ───────────────────────────────────────────────────────────────
+// Each card is ~42vw wide so ~2.3 are visible at once, hinting at scroll.
+
+function ShelfCard({ post }: { post: Post }) {
+  const [imgErr, setImgErr] = useState(false);
+  const isSold = post.status === "sold";
+  const hasImg = !!post.image_url && !imgErr;
+
+  return (
+    <Link href={`/find/${post.id}`} style={{ display: "block", textDecoration: "none", flexShrink: 0, width: "42vw", maxWidth: 170 }}>
+      <div style={{
+        borderRadius: 13,
+        overflow: "hidden",
+        background: C.surface,
+        border: `1px solid ${C.border}`,
+        boxShadow: "0 1px 5px rgba(26,26,24,0.06)",
+        position: "relative",
+        opacity: isSold ? 0.62 : 1,
+        transition: "opacity 0.2s",
+      }}>
+        {hasImg ? (
+          <div style={{ position: "relative", width: "100%", aspectRatio: "3/4", overflow: "hidden" }}>
+            <img
+              src={post.image_url!}
+              alt={post.title}
+              loading="lazy"
+              onError={() => setImgErr(true)}
+              style={{
+                width: "100%", height: "100%",
+                objectFit: "cover", display: "block",
+                filter: isSold ? "grayscale(0.5) brightness(0.88)" : "brightness(0.97) saturate(0.93)",
+              }}
+            />
+            {isSold && (
+              <div style={{
+                position: "absolute", top: 6, left: 6,
+                fontSize: 6, fontWeight: 700, textTransform: "uppercase",
+                letterSpacing: "1.3px", padding: "2px 6px", borderRadius: 4,
+                background: "rgba(240,237,230,0.92)", color: C.textMuted,
+                border: `1px solid ${C.border}`,
+                backdropFilter: "blur(4px)",
+              }}>
+                Found a home
+              </div>
+            )}
+          </div>
+        ) : (
+          // No image — text fallback tile
+          <div style={{ aspectRatio: "3/4", padding: "12px 10px", display: "flex", alignItems: "flex-end", background: C.surface }}>
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 11, fontWeight: 600, color: C.textMid, lineHeight: 1.3 }}>
+              {post.title}
+            </div>
+          </div>
+        )}
+      </div>
+      {/* Title below card — very subtle */}
+      <div style={{
+        marginTop: 6, paddingLeft: 2,
+        fontSize: 10, color: C.textMuted, lineHeight: 1.4,
+        overflow: "hidden", textOverflow: "ellipsis",
+        display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
+      }}>
+        {post.title}
+      </div>
+    </Link>
+  );
+}
+
+// ─── Shelf section ────────────────────────────────────────────────────────────
+
+function ShelfSection({ vendorId, currentPostId }: { vendorId: string; currentPostId: string }) {
+  const [items, setItems] = useState<Post[]>([]);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    getVendorPosts(vendorId, 12).then(posts => {
+      setItems(posts.filter(p => p.id !== currentPostId));
+      setReady(true);
+    });
+  }, [vendorId, currentPostId]);
+
+  // Don't render anything until loaded, and hide if no other items
+  if (!ready || items.length === 0) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: 0.22 }}
+      style={{ marginBottom: 32 }}
+    >
+      {/* Section header */}
+      <div style={{
+        paddingLeft: 20, paddingRight: 20,
+        marginBottom: 12,
+        display: "flex", alignItems: "baseline", justifyContent: "space-between",
+      }}>
+        <div style={{
+          fontSize: 9, color: C.textFaint,
+          textTransform: "uppercase", letterSpacing: "2.2px", fontWeight: 500,
+        }}>
+          More on the shelf
+        </div>
+        <div style={{ fontSize: 10, color: C.textFaint, fontStyle: "italic", fontFamily: "Georgia, serif" }}>
+          {items.length} {items.length === 1 ? "item" : "items"}
+        </div>
+      </div>
+
+      {/* Horizontal scroll strip — full bleed, no visible scrollbar */}
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          overflowX: "auto",
+          overflowY: "hidden",
+          paddingLeft: 20,
+          paddingRight: 20,
+          // Trailing peek padding so last card doesn't snap to edge
+          paddingBottom: 4,
+          scrollSnapType: "x mandatory",
+          WebkitOverflowScrolling: "touch",
+          // Hide scrollbar cross-browser
+          msOverflowStyle: "none",
+          scrollbarWidth: "none",
+        }}
+        className="hide-scrollbar"
+      >
+        {items.map(item => (
+          <div key={item.id} style={{ scrollSnapAlign: "start", flexShrink: 0 }}>
+            <ShelfCard post={item} />
+          </div>
+        ))}
+
+        {/* Trailing spacer so last card shows partial peek on right */}
+        <div style={{ flexShrink: 0, width: 8 }} />
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function FindDetailPage() {
   const { id }  = useParams<{ id: string }>();
@@ -206,7 +349,7 @@ export default function FindDetailPage() {
           </h1>
         </motion.div>
 
-        {/* 2 — Metadata: "Found for $35 · 29m ago" */}
+        {/* 2 — Metadata */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.06 }}>
           <p style={{
             fontSize: 12, color: C.textFaint,
@@ -241,7 +384,7 @@ export default function FindDetailPage() {
           </motion.div>
         )}
 
-        {/* 4 — Mark the Spot — below caption, slightly larger, always visible */}
+        {/* 4 — Mark the Spot */}
         {post.vendor && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.13 }} style={{ marginBottom: 28 }}>
             {isMyPost ? (
@@ -284,45 +427,28 @@ export default function FindDetailPage() {
         {/* ── Hairline divider ── */}
         <div style={{ height: 1, background: C.border, marginBottom: 24 }} />
 
-        {/* 5 — Location: mall name plain, address is the map link */}
+        {/* 5 — Location */}
         {post.mall && (
           <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.16 }} style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2px", fontWeight: 500, marginBottom: 6 }}>
               Location
             </div>
-            {/* Mall name — plain text, no link */}
             <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 600, color: C.textPrimary, marginBottom: 4 }}>
               {post.mall.name}
             </div>
-            {/* Address — tappable map link if available, else city/state fallback */}
             {post.mall.address ? (
               mapsUrl ? (
-                <a
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    fontSize: 12, color: C.green,
-                    textDecoration: "none",
-                    borderBottom: `1px solid ${C.greenBorder}`,
-                    lineHeight: 1.5,
-                    fontWeight: 400,
-                  }}
-                >
+                <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize: 12, color: C.green, textDecoration: "none", borderBottom: `1px solid ${C.greenBorder}`, lineHeight: 1.5, fontWeight: 400 }}>
                   {post.mall.address}
                 </a>
               ) : (
                 <div style={{ fontSize: 12, color: C.textMuted }}>{post.mall.address}</div>
               )
             ) : (
-              // No full address — fall back to city/state with map link
               mapsUrl ? (
-                <a
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ fontSize: 12, color: C.green, textDecoration: "none", borderBottom: `1px solid ${C.greenBorder}` }}
-                >
+                <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize: 12, color: C.green, textDecoration: "none", borderBottom: `1px solid ${C.greenBorder}` }}>
                   {post.mall.city}{post.mall.state ? `, ${post.mall.state}` : ""}
                 </a>
               ) : (
@@ -341,8 +467,6 @@ export default function FindDetailPage() {
         {post.vendor && (
           <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.19 }} style={{ marginBottom: 28 }}>
             <div style={{ display: "flex", alignItems: "center" }}>
-
-              {/* Vendor name — left */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2px", fontWeight: 500, marginBottom: 3 }}>Vendor</div>
                 <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 600, color: C.textPrimary, lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -356,8 +480,6 @@ export default function FindDetailPage() {
                   </a>
                 )}
               </div>
-
-              {/* Booth — right */}
               {post.vendor.booth_number && (
                 <div style={{ flexShrink: 0, textAlign: "right" }}>
                   <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2px", fontWeight: 500, marginBottom: 3 }}>Booth</div>
@@ -366,7 +488,6 @@ export default function FindDetailPage() {
                   </div>
                 </div>
               )}
-
             </div>
           </motion.div>
         )}
@@ -408,35 +529,45 @@ export default function FindDetailPage() {
           </motion.div>
         )}
 
-        {/* ── Soft bottom: "Keep exploring →" ── */}
-        <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, delay: 0.28 }}
+      </div>
+
+      {/* ── "More on the shelf" — outside padded content, full bleed ── */}
+      {post.vendor && (
+        <>
+          <div style={{ height: 1, background: C.border, margin: "0 0 28px" }} />
+          <ShelfSection vendorId={post.vendor.id} currentPostId={post.id} />
+        </>
+      )}
+
+      {/* ── "Keep exploring →" ── */}
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, delay: 0.3 }}
+        style={{
+          paddingTop: 12,
+          paddingBottom: "max(52px, env(safe-area-inset-bottom, 52px))",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          position: "relative",
+          margin: "0 20px",
+        }}
+      >
+        <div style={{ height: 1, background: C.border, position: "absolute", left: 0, right: 0, top: 12 }} />
+        <button
+          onClick={() => router.push("/")}
           style={{
-            paddingTop: 12,
-            paddingBottom: "max(52px, env(safe-area-inset-bottom, 52px))",
-            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "none", border: "none", cursor: "pointer",
+            fontSize: 13, color: C.textMuted,
+            fontFamily: "Georgia, serif", fontStyle: "italic",
+            letterSpacing: "0.2px",
+            padding: "20px 0",
+            display: "flex", alignItems: "center", gap: 6,
             position: "relative",
           }}
         >
-          <div style={{ height: 1, background: C.border, position: "absolute", left: 0, right: 0, top: 12 }} />
-          <button
-            onClick={() => router.push("/")}
-            style={{
-              background: "none", border: "none", cursor: "pointer",
-              fontSize: 13, color: C.textMuted,
-              fontFamily: "Georgia, serif", fontStyle: "italic",
-              letterSpacing: "0.2px",
-              padding: "20px 0",
-              display: "flex", alignItems: "center", gap: 6,
-              position: "relative",
-            }}
-          >
-            Keep exploring
-            <span style={{ fontSize: 14, lineHeight: 1 }}>→</span>
-          </button>
-        </motion.div>
+          Keep exploring
+          <span style={{ fontSize: 14, lineHeight: 1 }}>→</span>
+        </button>
+      </motion.div>
 
-      </div>
     </div>
   );
 }
