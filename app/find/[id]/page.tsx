@@ -8,10 +8,11 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Share2, Trash2, Facebook, Flag, Tag } from "lucide-react";
+import { Share2, Trash2, Facebook, Flag, Tag } from "lucide-react";
 import { getPost, getVendorPosts, updatePostStatus, deletePost } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
+import BottomNav from "@/components/BottomNav";
 import type { Post } from "@/types/treehouse";
 
 const C = {
@@ -182,7 +183,6 @@ export default function FindDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    // Load flag state for everyone (owners + visitors)
     try {
       setIsFlagged(safeStorage.getItem(flagKey(id)) === "1");
     } catch {}
@@ -204,7 +204,6 @@ export default function FindDetailPage() {
     });
   }, [id]);
 
-  // Flag Booth — local only, works for everyone including owners
   function handleFlag() {
     if (!id) return;
     const next = !isFlagged;
@@ -229,7 +228,6 @@ export default function FindDetailPage() {
     }
   }
 
-  // Mark as sold — owner only, writes to Supabase
   async function handleToggleSold() {
     if (!post || actionBusy) return;
     const next = post.status === "sold" ? "available" : "sold";
@@ -310,67 +308,51 @@ export default function FindDetailPage() {
           </div>
         )}
 
-        {/* ── Bottom overlay row: back (left) + flag + share (right) ── */}
+        {/* ── Action row: flag + share — top-right ── */}
         <div style={{
-          position: "absolute", bottom: 12, left: 12, right: 14,
-          display: "flex", alignItems: "center", justifyContent: "space-between",
+          position: "absolute",
+          top: "max(12px, env(safe-area-inset-top, 12px))",
+          right: 14,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
         }}>
-          {/* Back button — bottom-left */}
+          {/* Flag */}
           <button
-            onClick={() => router.back()}
-            aria-label="Go back"
+            onClick={handleFlag}
+            aria-label={isFlagged ? "Unflag booth" : "Flag booth"}
             style={{
               width: 34, height: 34, borderRadius: "50%",
               display: "flex", alignItems: "center", justifyContent: "center",
-              background: "rgba(240,237,230,0.82)",
-              backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)",
-              border: `1px solid ${C.border}`,
-              boxShadow: "0 1px 6px rgba(26,26,24,0.10)",
-              cursor: "pointer",
+              background: isFlagged ? C.greenSolid : "rgba(0,0,0,0.32)",
+              backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+              border: "none", cursor: "pointer",
+              transition: "background 0.18s",
             }}
           >
-            <ArrowLeft size={15} style={{ color: C.textMid }} />
+            <Flag
+              size={14}
+              style={{
+                color: "rgba(255,255,255,0.95)",
+                fill: isFlagged ? "rgba(255,255,255,0.95)" : "none",
+                transition: "fill 0.18s",
+              }}
+            />
           </button>
 
-          {/* Right side — flag + share (everyone sees both) */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {/* Flag Booth — local bookmark, visible to everyone */}
-            <button
-              onClick={handleFlag}
-              aria-label={isFlagged ? "Unflag booth" : "Flag booth"}
-              style={{
-                width: 34, height: 34, borderRadius: "50%",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                background: isFlagged ? C.greenSolid : "rgba(0,0,0,0.32)",
-                backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-                border: "none", cursor: "pointer",
-                transition: "background 0.18s",
-              }}
-            >
-              <Flag
-                size={14}
-                style={{
-                  color: "rgba(255,255,255,0.95)",
-                  fill: isFlagged ? "rgba(255,255,255,0.95)" : "none",
-                  transition: "fill 0.18s",
-                }}
-              />
-            </button>
-
-            {/* Share */}
-            <button
-              onClick={handleShare}
-              style={{
-                width: 34, height: 34, borderRadius: "50%",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                background: "rgba(0,0,0,0.32)",
-                backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-                border: "none", cursor: "pointer",
-              }}
-            >
-              <Share2 size={13} style={{ color: copied ? "#a8d5b5" : "rgba(255,255,255,0.9)" }} />
-            </button>
-          </div>
+          {/* Share */}
+          <button
+            onClick={handleShare}
+            style={{
+              width: 34, height: 34, borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "rgba(0,0,0,0.32)",
+              backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+              border: "none", cursor: "pointer",
+            }}
+          >
+            <Share2 size={13} style={{ color: copied ? "#a8d5b5" : "rgba(255,255,255,0.9)" }} />
+          </button>
         </div>
       </div>
 
@@ -594,7 +576,6 @@ export default function FindDetailPage() {
           transition={{ duration: 0.3, delay: 0.3 }}
           style={{
             padding: "0 20px",
-            paddingBottom: "max(36px, env(safe-area-inset-bottom, 36px))",
             marginTop: 4,
             display: "flex",
             flexDirection: "column",
@@ -603,7 +584,6 @@ export default function FindDetailPage() {
         >
           <div style={{ height: 1, background: C.border, marginBottom: 16 }} />
 
-          {/* Mark as sold toggle — owner only, Supabase write */}
           <button
             onClick={handleToggleSold}
             disabled={actionBusy}
@@ -624,7 +604,6 @@ export default function FindDetailPage() {
             </span>
           </button>
 
-          {/* Delete post */}
           {!showDelete ? (
             <button
               onClick={() => setShowDelete(true)}
@@ -663,10 +642,10 @@ export default function FindDetailPage() {
         </motion.div>
       )}
 
-      {!isMyPost && (
-        <div style={{ paddingBottom: "max(36px, env(safe-area-inset-bottom, 36px))" }} />
-      )}
+      {/* Bottom padding to clear the fixed nav */}
+      <div style={{ paddingBottom: "max(100px, calc(env(safe-area-inset-bottom, 0px) + 90px))" }} />
 
+      <BottomNav active={null} />
     </div>
   );
 }
