@@ -32,10 +32,82 @@ const C = {
   red:         "#8b2020",
   redBg:       "rgba(139,32,32,0.07)",
   redBorder:   "rgba(139,32,32,0.18)",
+  tag:         "#faf7f0",
+  tagBorder:   "#c8c2b4",
+  tagString:   "#b0aa9e",
 };
 
 function flagKey(postId: string) {
   return `treehouse_bookmark_${postId}`;
+}
+
+// ─── Booth tag ────────────────────────────────────────────────────────────────
+
+function BoothTag({ price }: { price: number }) {
+  return (
+    <div style={{
+      position: "absolute",
+      bottom: -28,
+      left: 20,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "flex-start",
+    }}>
+      {/* String */}
+      <div style={{
+        width: 1.5,
+        height: 20,
+        background: C.tagString,
+        marginLeft: 16,
+        borderRadius: 1,
+      }} />
+
+      {/* Tag body */}
+      <div style={{
+        background: C.tag,
+        border: `1.5px solid ${C.tagBorder}`,
+        borderRadius: "6px 6px 6px 2px",
+        padding: "7px 14px 8px 12px",
+        position: "relative",
+      }}>
+        {/* Punch hole */}
+        <div style={{
+          position: "absolute",
+          top: -1.5,
+          left: 12,
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          background: C.bg,
+          border: `1.5px solid ${C.tagBorder}`,
+        }} />
+
+        <div style={{
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          fontSize: 8,
+          fontWeight: 600,
+          textTransform: "uppercase" as const,
+          letterSpacing: "1.8px",
+          color: C.textMuted,
+          lineHeight: 1,
+          marginBottom: 3,
+          paddingTop: 6,
+        }}>
+          In-Booth
+        </div>
+        <div style={{
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          fontSize: 20,
+          fontWeight: 700,
+          color: C.textPrimary,
+          letterSpacing: "-0.5px",
+          lineHeight: 1.1,
+        }}>
+          ${price.toLocaleString()}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ─── Shelf card ───────────────────────────────────────────────────────────────
@@ -274,12 +346,18 @@ export default function FindDetailPage() {
 
   const isSold = post.status === "sold";
   const hasVendor = !!post.vendor;
+  const hasPrice = post.price_asking != null;
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
 
       {/* ── 1. Hero image ── */}
-      <div style={{ position: "relative", width: "100%" }}>
+      <div style={{
+        position: "relative",
+        width: "100%",
+        // Extra bottom space to accommodate the hanging tag when price exists
+        marginBottom: hasPrice ? 36 : 0,
+      }}>
         {post.image_url ? (
           <img
             src={post.image_url}
@@ -308,7 +386,7 @@ export default function FindDetailPage() {
           </div>
         )}
 
-        {/* ── Flag + share — bottom-right corner of photo ── */}
+        {/* Flag + share — bottom-right corner of photo */}
         <div style={{
           position: "absolute",
           bottom: 12,
@@ -317,7 +395,6 @@ export default function FindDetailPage() {
           alignItems: "center",
           gap: 8,
         }}>
-          {/* Flag */}
           <button
             onClick={handleFlag}
             aria-label={isFlagged ? "Unflag booth" : "Flag booth"}
@@ -340,7 +417,6 @@ export default function FindDetailPage() {
             />
           </button>
 
-          {/* Share */}
           <button
             onClick={handleShare}
             style={{
@@ -354,9 +430,20 @@ export default function FindDetailPage() {
             <Share2 size={13} style={{ color: copied ? "#a8d5b5" : "rgba(255,255,255,0.9)" }} />
           </button>
         </div>
+
+        {/* Hanging booth tag — bottom-left, overlaps photo/content boundary */}
+        {hasPrice && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.12 }}
+          >
+            <BoothTag price={post.price_asking!} />
+          </motion.div>
+        )}
       </div>
 
-      {/* ── 2. Title + price + availability ── */}
+      {/* ── 2. Title + availability ── */}
       <div style={{ padding: "20px 20px 0" }}>
 
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32 }}>
@@ -370,26 +457,6 @@ export default function FindDetailPage() {
             {post.title}
           </h1>
         </motion.div>
-
-        {/* Price — Option B: green, own line, between title and availability */}
-        {post.price_asking != null && (
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28, delay: 0.04 }}
-            style={{
-              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-              fontSize: 22,
-              fontWeight: 700,
-              color: C.green,
-              letterSpacing: "-0.5px",
-              lineHeight: 1,
-              marginBottom: 10,
-            }}
-          >
-            ${post.price_asking.toLocaleString()}
-          </motion.div>
-        )}
 
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -549,7 +616,7 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Flag Booth button — everyone, local only */}
+            {/* Flag Booth button */}
             {post.vendor && (
               <div style={{ padding: "12px 14px 14px" }}>
                 <button
@@ -589,18 +656,12 @@ export default function FindDetailPage() {
         </div>
       )}
 
-      {/* ── Owner actions: Mark as sold + Delete ── */}
+      {/* ── Owner actions ── */}
       {isMyPost && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           transition={{ duration: 0.3, delay: 0.3 }}
-          style={{
-            padding: "0 20px",
-            marginTop: 4,
-            display: "flex",
-            flexDirection: "column",
-            gap: 0,
-          }}
+          style={{ padding: "0 20px", marginTop: 4, display: "flex", flexDirection: "column", gap: 0 }}
         >
           <div style={{ height: 1, background: C.border, marginBottom: 16 }} />
 
@@ -615,11 +676,7 @@ export default function FindDetailPage() {
             }}
           >
             <Tag size={11} style={{ color: isSold ? C.green : C.textFaint }} />
-            <span style={{
-              fontSize: 11,
-              color: isSold ? C.green : C.textFaint,
-              fontWeight: isSold ? 500 : 400,
-            }}>
+            <span style={{ fontSize: 11, color: isSold ? C.green : C.textFaint, fontWeight: isSold ? 500 : 400 }}>
               {isSold ? "Mark as available" : "Mark as sold"}
             </span>
           </button>
@@ -662,7 +719,6 @@ export default function FindDetailPage() {
         </motion.div>
       )}
 
-      {/* Bottom padding to clear the fixed nav */}
       <div style={{ paddingBottom: "max(100px, calc(env(safe-area-inset-bottom, 0px) + 90px))" }} />
 
       <BottomNav active={null} />
