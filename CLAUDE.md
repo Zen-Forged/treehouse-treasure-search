@@ -33,82 +33,58 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ## CURRENT ISSUE
 > Last updated: 2026-04-08
 
-**Status:** ✅ Bottom nav + flagged screen + booth tag price all implemented. MCP timed out on final write — verify `app/find/[id]/page.tsx` has `BoothTag` component and updated hero section.
+**Status:** ✅ My Shelf page + 3-tab BottomNav built. Flagged page grouped by booth with Eye icon.
 
 **What was done (this session):**
 
-### Bottom navigation bar (`components/BottomNav.tsx`)
-- Fixed bottom bar with two tabs: Home and Flagged
-- Active state: soft green pill behind icon, bold label
-- Optional count badge on Flagged tab (green dot, capped at 9+)
-- Safe area inset handled via `env(safe-area-inset-bottom)`
-- Centered/capped at 430px to match page max-width
-- `active` prop accepts `"home" | "flagged" | null` — null = sub-page (no tab highlighted)
+### Flagged page redesign (`app/flagged/page.tsx`)
+- Posts now grouped by booth via `groupByBooth()` — keyed by vendor ID, sorted numerically
+- Each group gets a section header: green monospace pill "Booth 300" + italic vendor name
+- Booth pill removed from individual rows (redundant now header carries it)
+- `›` chevron replaced with `Eye` icon (lucide-react, 15px, textFaint)
+- Header subtitle: "4 finds · 2 booths"
+- "No booth listed" fallback for vendors without a booth number
 
-### Flagged screen (`app/flagged/page.tsx`)
-- Reads all `treehouse_bookmark_*` keys from localStorage in one pass
-- Fetches matching posts via `getPostsByIds()` — single Supabase `.in("id", ids)` query
-- Row layout: 62×62 thumbnail · title (2-line clamp, Georgia) · booth number pill · "Unavailable" badge if sold
-- Skeleton loading (3 rows) while fetching
-- Empty state: Flag icon + "No flagged finds yet" + supporting copy
-- Header shows find count when items are present
-- Tapping a row routes to `/find/[id]`
-- `BottomNav active="flagged"` with live count from loaded posts
+### My Shelf page (`app/my-shelf/page.tsx`)
+- New route at `/my-shelf` — vendor's personal 3×3 grid, max 9 items
+- Reads `LocalVendorProfile` from localStorage — no vendor_id = NoProfile state
+- Available posts first, sold second, sliced to 9
+- **Header identity block:**
+  - "My Shelf" label (uppercase, faint, above)
+  - Mall name (small, muted, below label)
+  - Vendor name: Georgia 20px bold, left-justified, dominant
+  - Booth number: monospace 18px bold, green, boxed (greenLight bg + greenBorder border + 8px radius), right-justified, "Booth" label below box in faint uppercase
+  - All on one inline row — vendor name left, booth box right
+- **3×3 square tile grid** — 1:1 aspect ratio, 6px gap, 10px border radius
+  - Image tiles: objectFit cover, sold tiles get grayscale + "Sold" frosted overlay badge
+  - No-image tiles: show title text bottom-left
+  - Empty slots (when < 9 posts): dashed border placeholder tiles
+- Item count line: "N available · N sold" italic Georgia left, "N / 9" faint uppercase right
+- Shelf label: hairline rule with mall name centered between dashes
+- "Share my shelf" CTA: full-width green button, disabled + 0.72 opacity, "Coming soon" label below
+- Skeleton: 9-tile shimmer grid while loading
+- Empty/no-profile states with "Post a find" CTA linking to /post
 
-### `lib/posts.ts` — `getPostsByIds(ids: string[])`
-- New batch fetch: `.select(* + vendor + mall).in("id", ids).order("created_at")`
-- Returns `Post[]`, empty array on error or empty input
-- Used exclusively by the Flagged screen
-
-### Navigation redesign
-- Removed back button from all pages — Home tab in bottom nav serves as feed navigation
-- Back button (`ArrowLeft`) removed from `app/find/[id]/page.tsx` entirely
-- `app/page.tsx`: `BottomNav active="home"` added, bottom padding updated to `max(100px, calc(env(safe-area-inset-bottom) + 90px))`
-- `app/find/[id]/page.tsx`: `BottomNav active={null}` added, same bottom padding formula
-
-### Price — booth tag design (`app/find/[id]/page.tsx`)
-- Replaced flat green price line with `<BoothTag>` component
-- Tag hangs from bottom-left of hero photo via a 1.5px string + hole-punch detail
-- Tag body: `#faf7f0` background, `#c8c2b4` border, `border-radius: 6px 6px 6px 2px`
-- Label: "In-Booth" (8px, uppercase, muted) above price (20px, bold, `#1a1a18`)
-- Hero `<div>` gets `marginBottom: hasPrice ? 36 : 0` to make room for the hanging tag
-- Only renders when `post.price_asking != null`
-- New C tokens: `tag`, `tagBorder`, `tagString`
-
-### Flag + share icon repositioning (`app/find/[id]/page.tsx`)
-- Moved from top-right of photo to **bottom-right** (`bottom: 12, right: 14`)
-- Same frosted pill buttons (`rgba(0,0,0,0.32)` backdrop), same 8px gap
-- Flag active state: `greenSolid` background + filled icon
-
-**⚠️ MCP timeout note:**
-The final `filesystem:write_file` for `app/find/[id]/page.tsx` timed out. Verify the file on disk contains:
-- `BoothTag` component (above `ShelfCard`)
-- `tag`, `tagBorder`, `tagString` in the `C` token object
-- Hero `<div>` with `marginBottom: hasPrice ? 36 : 0`
-- `{hasPrice && <BoothTag price={post.price_asking!} />}` inside the hero div
-- Flag/share at `bottom: 12, right: 14` (not top)
-- No old flat price `motion.div` in the content section
-
-If the file is stale, apply the diffs from the previous Claude response or re-request the full file write.
+### BottomNav — 3rd tab (`components/BottomNav.tsx`)
+- Added "My Shelf" tab with `Store` icon from lucide-react
+- Tab type expanded: `"home" | "flagged" | "my-shelf" | null`
+- `/my-shelf` passes `active="my-shelf"` to BottomNav
 
 **Previous sessions:**
-- Admin page + bulk delete (pending Vercel deploy)
-- Back button removal, flagging system, "Follow the Find" → "Flag Booth" rename
+- BoothTag price hanging from photo on detail page
+- Bottom nav + flagged screen initial build
 - Feed masonry, scroll restoration, sold state, vendor profile
 
 **Next session starting point:**
-1. Verify `app/find/[id]/page.tsx` has the BoothTag component (MCP timed out)
-2. Run `npx vercel --prod` if needed to deploy
-3. QA: flag items on feed → badge shows on Flagged tab → Flagged screen lists them → tap routes to detail
-4. QA: price shows as booth tag on detail page, absent when `price_asking` is null
-5. Add price field to `/post` and `/post/preview` so vendors can actually set it
-
-Good candidates after that:
-- Price field in post creation flow (`/post` + `/post/preview`)
-- Directions affordance under mall address in "Find this here" card
-- Pull-to-refresh on feed
-- PWA support
-- Supabase RLS / auth
+1. Deploy: `git push` or `npx vercel --prod`
+2. QA My Shelf: visit `/my-shelf` — confirm identity header, 3×3 grid, empty tile placeholders
+3. QA Flagged: confirm booth grouping headers show "Booth 300 · Vendor Name"
+4. Good candidates after:
+   - Price field in post creation flow (`/post` + `/post/preview`)
+   - "Share my shelf" wiring (screenshot/native share)
+   - Directions affordance in "Find this here" card
+   - Pull-to-refresh on feed
+   - PWA support
 
 ---
 
@@ -157,7 +133,8 @@ SERPAPI_KEY                      eBay sold comps
                     flag + share icons bottom-right of photo, BottomNav (no active tab),
                     "View the shelf" scroll, "Find this here" card,
                     "Flag Booth" button (visitors + owners), owner actions (mark sold + delete)
-/flagged            Flagged finds — list of bookmarked posts (image + title + booth#)
+/flagged            Flagged finds — grouped by booth, section headers, Eye icon row affordance
+/my-shelf           Vendor's 3×3 shelf — identity header, 9-slot grid, "Share my shelf" CTA
 /mall/[slug]        Mall profile
 /vendor/[slug]      Vendor profile — Facebook link, available/sold grid
 /post               Vendor capture — camera/gallery, profile setup
@@ -193,10 +170,11 @@ lib/posts.ts              getFeedPosts, getPost, getPostsByIds, getVendorPosts,
 lib/postStore.ts          In-memory image store for /post → /post/preview flow
 lib/safeStorage.ts        localStorage wrapper with sessionStorage + memory fallback
 types/treehouse.ts        Post, Vendor, Mall, LocalVendorProfile, PostStatus
-components/BottomNav.tsx  Fixed bottom nav — Home + Flagged tabs, active state, badge
+components/BottomNav.tsx  Fixed bottom nav — Home + Flagged + My Shelf tabs, active state, badge
 app/layout.tsx            No max-width wrapper — each page owns its own width
 app/page.tsx              Discovery feed — BottomNav active="home"
-app/flagged/page.tsx      Flagged screen — BottomNav active="flagged"
+app/flagged/page.tsx      Flagged screen — grouped by booth, BottomNav active="flagged"
+app/my-shelf/page.tsx     My Shelf — vendor 3×3 grid, identity header, BottomNav active="my-shelf"
 app/find/[id]/page.tsx    Find detail — BoothTag, flag/share bottom-right, BottomNav null
 app/admin/page.tsx        Admin UI — profile inspector + bulk delete
 app/api/admin/posts/route.ts  Admin API — GET all posts, DELETE by id or all
@@ -244,12 +222,13 @@ Flagged IDs loaded once on mount via loadFollowedIds() — scans localStorage fo
 ### Bottom navigation
 ```
 Component: components/BottomNav.tsx
-Props: active ("home" | "flagged" | null), flaggedCount (number, optional)
-Tabs: Home (/) · Flagged (/flagged)
+Props: active ("home" | "flagged" | "my-shelf" | null), flaggedCount (number, optional)
+Tabs: Home (/) · Flagged (/flagged) · My Shelf (/my-shelf)
+Icons: Home, Flag, Store (lucide-react)
 Active state: green pill (rgba(30,77,43,0.10)) behind icon + bold label
 Badge: green dot on Flagged tab, shown only when flaggedCount > 0, capped at 9+
-Pages that show it: /, /flagged, /find/[id]
-Active tab: "home" on feed · "flagged" on flagged screen · null on detail (sub-page)
+Pages that show it: /, /flagged, /my-shelf, /find/[id]
+Active tab: "home" · "flagged" · "my-shelf" · null (sub-pages)
 ```
 
 ### Flagging system
@@ -260,6 +239,27 @@ Raw localStorage iteration used in: feed loadFollowedIds(), flagged loadFlaggedI
 BottomNav badge on feed: followedIds.size (loaded on mount)
 BottomNav badge on flagged screen: posts.length (after Supabase fetch)
 Unflagging: safeStorage.removeItem(key) — removes from all layers
+```
+
+### My Shelf page layout
+```
+Header (sticky, blurred):
+  - "My Shelf" label: 9px uppercase, faint, above identity row
+  - Identity row: vendor name (Georgia 20px bold, left) | booth box (monospace 18px bold, green, right)
+  - Booth box: greenLight bg, greenBorder border, 8px radius, padding 5px 12px
+  - "Booth" label: 8px uppercase faint, below booth box
+  - Mall name: 10px muted, above vendor name
+
+Content:
+  - Count line: "N available · N sold" italic Georgia left | "N / 9" faint right
+  - 3×3 grid: repeat(3, 1fr), 6px gap, 1:1 aspect ratio tiles, 10px border radius
+  - Sold tiles: grayscale + frosted "Sold" badge overlay
+  - Empty slots: dashed border placeholder (no content)
+  - Shelf label: hairline rules + mall name centered between them
+
+Footer:
+  - "Share my shelf" button: full-width green, disabled, 0.72 opacity
+  - "Coming soon" label beneath
 ```
 
 ### Detail page layout order
@@ -322,6 +322,7 @@ Placement: position absolute, bottom: -28, left: 20 inside hero div
 - Vercel GitHub webhook has been unreliable — if push doesn't deploy, use `npx vercel --prod`
 - Always provide a git commit/push bash command after every code change
 - MCP filesystem tool can time out on large files — if it does, provide manual diffs clearly
+- My Shelf reads raw `localStorage` directly for LocalVendorProfile (same pattern as feed)
 
 ---
 
@@ -331,8 +332,9 @@ Placement: position absolute, bottom: -28, left: 20 inside hero div
 - Skeleton loading matches live grid proportions
 - Sold items in feed: 0.62 opacity + grayscale + "Unavailable" badge
 - Flagged items in feed: green Flag circle at bottom-right of tile image
-- Fixed bottom nav — Home + Flagged tabs, active state, count badge
-- Flagged screen — list view (image + title + booth#), skeleton, empty state, live count
+- Fixed bottom nav — Home + Flagged + My Shelf tabs, active state, count badge
+- Flagged screen — grouped by booth (Booth N header + vendor name), Eye icon, skeleton, empty state
+- My Shelf — 3×3 grid, identity header (vendor name + booth box), empty tile placeholders, "Share my shelf" stub
 - `getPostsByIds` batch query in lib/posts.ts
 - Find detail: full-bleed image, booth tag price hanging from photo, flag/share bottom-right
 - BoothTag: string + hole punch + "In-Booth" label + formatted price
@@ -350,7 +352,7 @@ Placement: position absolute, bottom: -28, left: 20 inside hero div
 - All reseller intel routes (untouched, dark theme)
 
 ## KNOWN GAPS ⚠️
-- `app/find/[id]/page.tsx` BoothTag write may have failed (MCP timeout) — verify on disk
+- "Share my shelf" is unwired (disabled button, "Coming soon")
 - Price field missing from post creation flow (`/post` + `/post/preview`)
 - Flagged items have no unflag affordance from the Flagged screen (must go to detail page)
 - Directions affordance missing from "Find this here" mall address
