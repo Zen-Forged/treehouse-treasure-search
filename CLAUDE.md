@@ -33,58 +33,55 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ## CURRENT ISSUE
 > Last updated: 2026-04-08
 
-**Status:** ✅ My Shelf page + 3-tab BottomNav built. Flagged page grouped by booth with Eye icon.
+**Status:** ✅ Day 1–2 design audit changes implemented. Typography scale corrected across all three tab pages.
 
 **What was done (this session):**
 
-### Flagged page redesign (`app/flagged/page.tsx`)
-- Posts now grouped by booth via `groupByBooth()` — keyed by vendor ID, sorted numerically
-- Each group gets a section header: green monospace pill "Booth 300" + italic vendor name
-- Booth pill removed from individual rows (redundant now header carries it)
-- `›` chevron replaced with `Eye` icon (lucide-react, 15px, textFaint)
-- Header subtitle: "4 finds · 2 booths"
-- "No booth listed" fallback for vendors without a booth number
+### Design audit — 9 findings identified
+A full UX/hierarchy/consistency audit was conducted across Home, Flagged, My Shelf, and Find Detail pages. Findings were categorised as: Typography, Hierarchy, UX/Clarity, and Consistency.
 
-### My Shelf page (`app/my-shelf/page.tsx`)
-- New route at `/my-shelf` — vendor's personal 3×3 grid, max 9 items
-- Reads `LocalVendorProfile` from localStorage — no vendor_id = NoProfile state
-- Available posts first, sold second, sliced to 9
-- **Header identity block:**
-  - "My Shelf" label (uppercase, faint, above)
-  - Mall name (small, muted, below label)
-  - Vendor name: Georgia 20px bold, left-justified, dominant
-  - Booth number: monospace 18px bold, green, boxed (greenLight bg + greenBorder border + 8px radius), right-justified, "Booth" label below box in faint uppercase
-  - All on one inline row — vendor name left, booth box right
-- **3×3 square tile grid** — 1:1 aspect ratio, 6px gap, 10px border radius
-  - Image tiles: objectFit cover, sold tiles get grayscale + "Sold" frosted overlay badge
-  - No-image tiles: show title text bottom-left
-  - Empty slots (when < 9 posts): dashed border placeholder tiles
-- Item count line: "N available · N sold" italic Georgia left, "N / 9" faint uppercase right
-- Shelf label: hairline rule with mall name centered between dashes
-- "Share my shelf" CTA: full-width green button, disabled + 0.72 opacity, "Coming soon" label below
-- Skeleton: 9-tile shimmer grid while loading
-- Empty/no-profile states with "Post a find" CTA linking to /post
+### Day 1–2 changes implemented
 
-### BottomNav — 3rd tab (`components/BottomNav.tsx`)
-- Added "My Shelf" tab with `Store` icon from lucide-react
-- Tab type expanded: `"home" | "flagged" | "my-shelf" | null`
-- `/my-shelf` passes `active="my-shelf"` to BottomNav
+**Home (`app/page.tsx`)**
+- "Treehouse" wordmark: `13px → 15px` Georgia 700
+- Logo: `20px → 22px`
+- "Local finds" subtext: `6px → 9px` uppercase muted
+- "Post a find" button: padding restored to `7px 13px`, font `12px`
+
+**Flagged (`app/flagged/page.tsx`)**
+- Green icon circle removed entirely — BottomNav tab provides the icon association
+- "Flagged" title: `13px → 16px` Georgia 700 — now the sole header anchor
+- Count subtext: `6px → 10px`
+- "Unavailable" badge in rows: `9px → 10px`
+
+**My Shelf (`app/my-shelf/page.tsx`)**
+- "My Shelf" page label: `6px → 10px`
+- Mall name: `7px → 10px`
+- Vendor name: `13px → 17px` Georgia 700 — now clearly dominates the booth box
+- "Booth" label: `6px → 10px`
+- Booth number box: `12px → 11px` mono (smaller than vendor name — correct hierarchy)
+- Count lines: `6px → 10px`
+- Shelf rule: `6px → 10px`
+- "Coming soon": `6px → 10px`
+- "Add Find" empty tile label: `9px → 10px`
+- Sold overlay in grid now says "Unavailable" (was "Sold") — consistency fix
 
 **Previous sessions:**
+- My Shelf concept C alternating layout (2/3 + 1/3, thirds, 1/3 + 2/3)
+- Flagged page grouped by booth with "Booth N" headers + Eye icon
+- 3-tab BottomNav (Home · Flagged · My Shelf)
 - BoothTag price hanging from photo on detail page
-- Bottom nav + flagged screen initial build
-- Feed masonry, scroll restoration, sold state, vendor profile
+- Admin page + bulk delete
 
 **Next session starting point:**
 1. Deploy: `git push` or `npx vercel --prod`
-2. QA My Shelf: visit `/my-shelf` — confirm identity header, 3×3 grid, empty tile placeholders
-3. QA Flagged: confirm booth grouping headers show "Booth 300 · Vendor Name"
-4. Good candidates after:
-   - Price field in post creation flow (`/post` + `/post/preview`)
-   - "Share my shelf" wiring (screenshot/native share)
-   - Directions affordance in "Find this here" card
-   - Pull-to-refresh on feed
-   - PWA support
+2. QA all three headers on device — confirm no text below 10px
+3. Day 3–4 audit items (good candidates for next sprint):
+   - Rename "Flag/Flagged" → "Save/Saved" throughout (tab, button, state, storage key)
+   - Wire "Share my shelf" to native share / URL copy (vendor profile URL)
+   - Hide mall dropdown when only 1 mall exists
+   - Unify sold label to "Unavailable" everywhere (My Shelf grid overlay still says "Sold" — FIXED this session)
+   - Add inline unsave on Flagged rows
 
 ---
 
@@ -133,8 +130,10 @@ SERPAPI_KEY                      eBay sold comps
                     flag + share icons bottom-right of photo, BottomNav (no active tab),
                     "View the shelf" scroll, "Find this here" card,
                     "Flag Booth" button (visitors + owners), owner actions (mark sold + delete)
-/flagged            Flagged finds — grouped by booth, section headers, Eye icon row affordance
-/my-shelf           Vendor's 3×3 shelf — identity header, 9-slot grid, "Share my shelf" CTA
+/flagged            Flagged finds — grouped by booth ("Booth N" header + italic vendor name),
+                    Eye icon row affordance, no icon circle in header
+/my-shelf           Vendor's alternating-row shelf — identity header (vendor name 17px dominant,
+                    booth box 11px mono), 7-slot grid, "Share my shelf" CTA
 /mall/[slug]        Mall profile
 /vendor/[slug]      Vendor profile — Facebook link, available/sold grid
 /post               Vendor capture — camera/gallery, profile setup
@@ -162,21 +161,21 @@ DELETE /api/admin/posts     Bulk delete posts + storage images ({ ids } or { del
 
 ## KEY FILES
 ```
-lib/supabase.ts           Client with placeholder fallback for build time
-lib/posts.ts              getFeedPosts, getPost, getPostsByIds, getVendorPosts,
-                          createPost, createVendor, uploadPostImage,
-                          updatePostStatus, deletePost,
-                          getAllMalls, getMallBySlug, getVendorBySlug, slugify
-lib/postStore.ts          In-memory image store for /post → /post/preview flow
-lib/safeStorage.ts        localStorage wrapper with sessionStorage + memory fallback
-types/treehouse.ts        Post, Vendor, Mall, LocalVendorProfile, PostStatus
-components/BottomNav.tsx  Fixed bottom nav — Home + Flagged + My Shelf tabs, active state, badge
-app/layout.tsx            No max-width wrapper — each page owns its own width
-app/page.tsx              Discovery feed — BottomNav active="home"
-app/flagged/page.tsx      Flagged screen — grouped by booth, BottomNav active="flagged"
-app/my-shelf/page.tsx     My Shelf — vendor 3×3 grid, identity header, BottomNav active="my-shelf"
-app/find/[id]/page.tsx    Find detail — BoothTag, flag/share bottom-right, BottomNav null
-app/admin/page.tsx        Admin UI — profile inspector + bulk delete
+lib/supabase.ts               Client with placeholder fallback for build time
+lib/posts.ts                  getFeedPosts, getPost, getPostsByIds, getVendorPosts,
+                              createPost, createVendor, uploadPostImage,
+                              updatePostStatus, deletePost,
+                              getAllMalls, getMallBySlug, getVendorBySlug, slugify
+lib/postStore.ts              In-memory image store for /post → /post/preview flow
+lib/safeStorage.ts            localStorage wrapper with sessionStorage + memory fallback
+types/treehouse.ts            Post, Vendor, Mall, LocalVendorProfile, PostStatus
+components/BottomNav.tsx      Fixed bottom nav — Home + Flagged + My Shelf tabs, active state, badge
+app/layout.tsx                No max-width wrapper — each page owns its own width
+app/page.tsx                  Discovery feed — BottomNav active="home"
+app/flagged/page.tsx          Flagged screen — grouped by booth, no icon circle, BottomNav active="flagged"
+app/my-shelf/page.tsx         My Shelf — alternating grid, identity header, BottomNav active="my-shelf"
+app/find/[id]/page.tsx        Find detail — BoothTag, flag/share bottom-right, BottomNav null
+app/admin/page.tsx            Admin UI — profile inspector + bulk delete
 app/api/admin/posts/route.ts  Admin API — GET all posts, DELETE by id or all
 ```
 
@@ -192,11 +191,24 @@ green (CTAs): #1e4d2b   greenLight: rgba(30,77,43,0.09)   greenBorder: rgba(30,7
 greenSolid: rgba(30,77,43,0.92)  ← filled/active state
 header blur: rgba(240,237,230,0.94)
 tag: #faf7f0   tagBorder: #c8c2b4   tagString: #b0aa9e   ← booth tag tokens
+emptyTile: #d8d4cc  ← Add Find tile background
 ```
 
 ### Reseller pages (dark — do not change)
 ```
 bg: #050f05  text: #f5f0e8  gold: #c8b47e  green: #6dbc6d
+```
+
+### Typography scale (enforced minimums)
+```
+MINIMUM font size anywhere in the app: 10px
+Page labels ("My Shelf", "Local finds"): 9–10px uppercase muted
+Count/subtext lines: 10px
+Section headers / page titles: 16–17px Georgia 700
+App wordmark (Home): 15px Georgia 700
+Vendor name (My Shelf): 17px Georgia 700 — identity hero
+Body / tile titles: 13–14px
+Captions: 15px italic Georgia
 ```
 
 ### Shared
@@ -227,8 +239,7 @@ Tabs: Home (/) · Flagged (/flagged) · My Shelf (/my-shelf)
 Icons: Home, Flag, Store (lucide-react)
 Active state: green pill (rgba(30,77,43,0.10)) behind icon + bold label
 Badge: green dot on Flagged tab, shown only when flaggedCount > 0, capped at 9+
-Pages that show it: /, /flagged, /my-shelf, /find/[id]
-Active tab: "home" · "flagged" · "my-shelf" · null (sub-pages)
+Active tab: "home" · "flagged" · "my-shelf" · null (sub-pages e.g. /find/[id])
 ```
 
 ### Flagging system
@@ -241,25 +252,35 @@ BottomNav badge on flagged screen: posts.length (after Supabase fetch)
 Unflagging: safeStorage.removeItem(key) — removes from all layers
 ```
 
-### My Shelf page layout
+### My Shelf header hierarchy
 ```
-Header (sticky, blurred):
-  - "My Shelf" label: 9px uppercase, faint, above identity row
-  - Identity row: vendor name (Georgia 20px bold, left) | booth box (monospace 18px bold, green, right)
-  - Booth box: greenLight bg, greenBorder border, 8px radius, padding 5px 12px
-  - "Booth" label: 8px uppercase faint, below booth box
-  - Mall name: 10px muted, above vendor name
+Row label:    "My Shelf" — 10px uppercase faint (page context)
+Mall name:    10px muted (location context)
+Vendor name:  17px Georgia 700 textPrimary — DOMINANT identity element
+Booth label:  "Booth" — 10px uppercase faint
+Booth box:    11px monospace green, greenLight bg, greenBorder border, 6px radius
+              Padding: 3px 9px — compact, does not compete with vendor name
+Count line:   10px italic Georgia muted (available · sold) | 10px faint uppercase (N / 7)
+```
 
-Content:
-  - Count line: "N available · N sold" italic Georgia left | "N / 9" faint right
-  - 3×3 grid: repeat(3, 1fr), 6px gap, 1:1 aspect ratio tiles, 10px border radius
-  - Sold tiles: grayscale + frosted "Sold" badge overlay
-  - Empty slots: dashed border placeholder (no content)
-  - Shelf label: hairline rules + mall name centered between them
+### My Shelf grid layout
+```
+Alternating rows — 7 real slots + 2 implicit (grid only holds 7):
+  Row 1: [0] flex:2  |  [1] flex:1
+  Row 2: [2] flex:1  |  [3] flex:1  |  [4] flex:1
+  Row 3: [5] flex:1  |  [6] flex:2
+Gap: 4px. Border-radius: 9px per tile.
+Empty slots: #d8d4cc bg, ImagePlus icon (20px, 28% opacity), "Add Find" 10px uppercase → /post
+Sold tiles: "Unavailable" frosted overlay badge (NOT "Sold")
+Page uses height:100dvh + overflow:hidden — everything fits one screen, no scroll.
+```
 
-Footer:
-  - "Share my shelf" button: full-width green, disabled, 0.72 opacity
-  - "Coming soon" label beneath
+### Flagged page header
+```
+No icon circle — title is the sole anchor (icon context comes from BottomNav tab)
+"Flagged": 16px Georgia 700
+Count: 10px muted — "N finds · N booths"
+Booth section headers: "Booth N" green monospace pill (11px) + italic vendor name (12px Georgia)
 ```
 
 ### Detail page layout order
@@ -322,7 +343,8 @@ Placement: position absolute, bottom: -28, left: 20 inside hero div
 - Vercel GitHub webhook has been unreliable — if push doesn't deploy, use `npx vercel --prod`
 - Always provide a git commit/push bash command after every code change
 - MCP filesystem tool can time out on large files — if it does, provide manual diffs clearly
-- My Shelf reads raw `localStorage` directly for LocalVendorProfile (same pattern as feed)
+- MINIMUM font size: 10px everywhere. Never ship 6px, 7px, 8px text as readable UI labels.
+- Sold state label is "Unavailable" everywhere — never "Sold" in the ecosystem layer
 
 ---
 
@@ -333,8 +355,9 @@ Placement: position absolute, bottom: -28, left: 20 inside hero div
 - Sold items in feed: 0.62 opacity + grayscale + "Unavailable" badge
 - Flagged items in feed: green Flag circle at bottom-right of tile image
 - Fixed bottom nav — Home + Flagged + My Shelf tabs, active state, count badge
-- Flagged screen — grouped by booth (Booth N header + vendor name), Eye icon, skeleton, empty state
-- My Shelf — 3×3 grid, identity header (vendor name + booth box), empty tile placeholders, "Share my shelf" stub
+- Flagged screen — grouped by booth ("Booth N" header), Eye icon, no icon circle in header
+- My Shelf — alternating 3-row grid, identity header (17px vendor name dominates 11px booth box),
+  empty Add Find tiles → /post, "Unavailable" sold overlay, single-screen layout
 - `getPostsByIds` batch query in lib/posts.ts
 - Find detail: full-bleed image, booth tag price hanging from photo, flag/share bottom-right
 - BoothTag: string + hole punch + "In-Booth" label + formatted price
@@ -349,18 +372,46 @@ Placement: position absolute, bottom: -28, left: 20 inside hero div
 - Image upload to Supabase Storage
 - safeStorage fallback for Safari private/ITP
 - Admin page: local profile inspector, bulk delete, nuke all
+- Typography scale corrected: 10px minimum, correct title hierarchy across all tabs
 - All reseller intel routes (untouched, dark theme)
 
 ## KNOWN GAPS ⚠️
-- "Share my shelf" is unwired (disabled button, "Coming soon")
+- "Flag/Flagged" terminology should become "Save/Saved" (audit finding — Day 3)
+- "Share my shelf" is unwired (disabled button, "Coming soon") — Day 3 target
+- Mall dropdown visible even with only 1 mall — Day 3 target
+- Inline unsave from Flagged screen not yet implemented — Day 5 target
 - Price field missing from post creation flow (`/post` + `/post/preview`)
-- Flagged items have no unflag affordance from the Flagged screen (must go to detail page)
 - Directions affordance missing from "Find this here" mall address
 - `/enhance-text` is mock (not real Claude)
 - No Supabase RLS / auth yet
 - No pull-to-refresh on feed
 - No PWA support
 - Delete button missing on posts created before `vendor_id` was stored in local profile
+
+---
+
+## DESIGN AUDIT FINDINGS (for reference)
+Completed audit 2026-04-08. 9 findings across 4 categories.
+
+### Typography (Day 1–2 — DONE ✅)
+- 6px text was unreadable — restored all labels to 10px+
+- Inconsistent title scale — fixed: Home 15px, Flagged 16px, My Shelf vendor 17px
+
+### Hierarchy (Day 1–2 — DONE ✅)
+- Home header lacked a primary focus — wordmark now dominates at 15px
+- My Shelf booth box outweighed vendor name — vendor name now 17px, booth box 11px
+- Flagged icon circle competed with title — removed, title is now sole anchor
+
+### UX / Clarity (Day 3–4 — PENDING)
+- "Flag Booth" terminology confusing → rename to Save/Saved
+- No way to unsave from Flagged screen → add inline toggle
+- "Share my shelf" is a dead end → wire to native share
+- Mall dropdown shows with only 1 mall → hide conditionally
+
+### Consistency (Day 5 — PENDING)
+- Three different header structures → align vertical rhythm
+- Sold label varies "Unavailable" vs "Sold" → FIXED this session (all "Unavailable")
+- Bottom padding formula not unified → document two patterns
 
 ---
 
