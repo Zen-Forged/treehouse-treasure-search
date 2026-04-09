@@ -103,7 +103,7 @@ function FlaggedRow({ post, index }: { post: Post; index: number }) {
               {post.title}
             </div>
             {isSold && (
-              <div style={{ marginTop: 5, fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.3px", color: C.textMuted }}>
+              <div style={{ marginTop: 5, fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1.1px", color: C.textMuted }}>
                 Unavailable
               </div>
             )}
@@ -156,27 +156,19 @@ export default function FlaggedPage() {
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", position: "relative" }}>
 
-      {/* ── Header ── */}
+      {/* ── Header — no icon circle, title is the anchor ── */}
       <header style={{ position: "sticky", top: 0, zIndex: 50, background: C.header, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: "max(14px, env(safe-area-inset-top, 14px))", paddingBottom: 11 }}>
-
-          {/* Icon circle */}
-          <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.greenLight, border: "1px solid rgba(30,77,43,0.14)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <Flag size={12} style={{ color: C.green, fill: C.green }} />
+        <div style={{ paddingTop: "max(14px, env(safe-area-inset-top, 14px))", paddingBottom: 12 }}>
+          {/* Title: 16px Georgia — clear page anchor, no competing icon */}
+          <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 700, color: C.textPrimary, lineHeight: 1.1 }}>
+            Flagged
           </div>
-
-          {/* Title + count */}
-          <div>
-            {/* ↓ Mockup-matched: Georgia 13px 700, count 6px */}
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: C.textPrimary, lineHeight: 1.1 }}>
-              Flagged
+          {/* Count: 10px — readable subordinate context */}
+          {!loading && posts.length > 0 && (
+            <div style={{ fontSize: 10, color: C.textMuted, marginTop: 3, letterSpacing: "0.1px" }}>
+              {posts.length} {posts.length === 1 ? "find" : "finds"} · {groups.length} {groups.length === 1 ? "booth" : "booths"}
             </div>
-            {!loading && posts.length > 0 && (
-              <div style={{ fontSize: 6, color: C.textMuted, marginTop: 2, textTransform: "uppercase", letterSpacing: "1.4px" }}>
-                {posts.length} {posts.length === 1 ? "find" : "finds"} · {groups.length} {groups.length === 1 ? "booth" : "booths"}
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </header>
 

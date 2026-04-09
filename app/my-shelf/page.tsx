@@ -61,7 +61,7 @@ function ShelfTile({ post, index }: { post: Post; index: number }) {
           {isSold && (
             <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(240,237,230,0.15)" }}>
               <div style={{ fontSize: 8, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.4px", color: "rgba(240,237,230,0.9)", background: "rgba(26,26,24,0.48)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", padding: "3px 9px", borderRadius: 4 }}>
-                Sold
+                Unavailable
               </div>
             </div>
           )}
@@ -82,7 +82,7 @@ function AddFindTile({ index }: { index: number }) {
       <button onClick={() => router.push("/post")}
         style={{ width: "100%", height: "100%", borderRadius: 9, background: C.emptyTile, border: "none", cursor: "pointer", padding: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, WebkitTapHighlightColor: "transparent" }}>
         <ImagePlus size={20} strokeWidth={1.5} style={{ color: "rgba(26,26,24,0.28)" }} />
-        <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(26,26,24,0.35)", textTransform: "uppercase", letterSpacing: "1.2px", lineHeight: 1 }}>
+        <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(26,26,24,0.35)", textTransform: "uppercase", letterSpacing: "1px", lineHeight: 1 }}>
           Add Find
         </span>
       </button>
@@ -177,46 +177,50 @@ export default function MyShelfPage() {
 
       {/* ── Header ── */}
       <header style={{ flexShrink: 0, background: C.header, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px" }}>
-        <div style={{ paddingTop: "max(14px, env(safe-area-inset-top, 14px))", paddingBottom: 10 }}>
+        <div style={{ paddingTop: "max(14px, env(safe-area-inset-top, 14px))", paddingBottom: 11 }}>
 
-          {/* ↓ Mockup-matched page label */}
-          <div style={{ fontSize: 6, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2.2px", marginBottom: 4 }}>
+          {/* Page label: 10px — readable, clearly subordinate */}
+          <div style={{ fontSize: 10, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2px", marginBottom: 5 }}>
             My Shelf
           </div>
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-            {/* Left — mall (7px) + vendor name (13px 700) */}
+
+            {/* Left — mall name (10px) + vendor name (17px, dominant) */}
             <div style={{ flex: 1, minWidth: 0 }}>
               {profile?.mall_name && (
-                <div style={{ fontSize: 7, color: C.textMuted, marginBottom: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {profile.mall_name}
                 </div>
               )}
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: C.textPrimary, lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {/* Vendor name: 17px Georgia bold — the identity hero */}
+              <div style={{ fontFamily: "Georgia, serif", fontSize: 17, fontWeight: 700, color: C.textPrimary, lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {profile?.display_name ?? "Your Booth"}
               </div>
             </div>
 
-            {/* Right — "Booth" label (6px) above number box (12px mono) */}
+            {/* Right — "Booth" label (10px) above, number box (11px mono, compact) */}
             {profile?.booth_number && (
               <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
-                <div style={{ fontSize: 6, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.8px" }}>
+                {/* Booth label: 10px — readable, properly subordinate to vendor name */}
+                <div style={{ fontSize: 10, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.6px" }}>
                   Booth
                 </div>
-                <div style={{ fontFamily: "monospace", fontSize: 12, fontWeight: 700, color: C.green, lineHeight: 1, padding: "3px 9px 4px", border: `1.5px solid ${C.greenBorder}`, borderRadius: 6, background: C.greenLight, letterSpacing: "0.5px" }}>
+                {/* Number box: 11px mono — present but not competing with vendor name */}
+                <div style={{ fontFamily: "monospace", fontSize: 11, fontWeight: 700, color: C.green, lineHeight: 1, padding: "3px 9px 4px", border: `1.5px solid ${C.greenBorder}`, borderRadius: 6, background: C.greenLight, letterSpacing: "0.5px" }}>
                   {profile.booth_number}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Count line — 6px, matches mockup subtext scale */}
+          {/* Count line: 10px — readable context */}
           {!loading && hasProfile && posts.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
-              <div style={{ fontSize: 6, color: C.textMuted, fontStyle: "italic", fontFamily: "Georgia, serif" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 7 }}>
+              <div style={{ fontSize: 10, color: C.textMuted, fontStyle: "italic", fontFamily: "Georgia, serif" }}>
                 {availableCount} available · {posts.length - availableCount} sold
               </div>
-              <div style={{ fontSize: 6, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.6px" }}>
+              <div style={{ fontSize: 10, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.4px" }}>
                 {posts.length} / 7
               </div>
             </div>
@@ -238,9 +242,10 @@ export default function MyShelfPage() {
       ) : (
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, paddingTop: GAP }}>
           <ShelfGrid slots={slots} />
+          {/* Shelf rule: 10px — readable brand watermark */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: `6px ${GAP + 2}px 4px`, flexShrink: 0 }}>
             <div style={{ flex: 1, height: 1, background: C.border }} />
-            <div style={{ fontSize: 6, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2.2px", flexShrink: 0 }}>
+            <div style={{ fontSize: 10, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2px", flexShrink: 0 }}>
               {profile?.mall_name ?? "The Shelf"}
             </div>
             <div style={{ flex: 1, height: 1, background: C.border }} />
@@ -256,7 +261,8 @@ export default function MyShelfPage() {
             Share my shelf
           </span>
         </button>
-        <div style={{ textAlign: "center", marginTop: 5, fontSize: 6, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.6px" }}>
+        {/* Coming soon: 10px — accessible label */}
+        <div style={{ textAlign: "center", marginTop: 5, fontSize: 10, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.4px" }}>
           Coming soon
         </div>
       </div>

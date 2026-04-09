@@ -256,19 +256,21 @@ export default function DiscoveryFeedPage() {
         {/* ── Header ── */}
         <header style={{ position: "sticky", top: 0, zIndex: 50, background: C.header, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: `1px solid ${C.border}`, padding: "0 15px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "max(14px, env(safe-area-inset-top, 14px))", paddingBottom: 10 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Image src="/logo.png" alt="Treehouse" width={20} height={20} />
-              <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                {/* ↓ Mockup-matched: Georgia 13px 700, subtext 6px */}
-                <span style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: C.textPrimary, letterSpacing: "0.1px", lineHeight: 1 }}>Treehouse</span>
-                <span style={{ fontSize: 6, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2.2px", lineHeight: 1 }}>Local finds</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+              {/* Logo: 22px — slightly larger to match 15px wordmark */}
+              <Image src="/logo.png" alt="Treehouse" width={22} height={22} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {/* Wordmark: 15px Georgia — clear brand anchor */}
+                <span style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: C.textPrimary, letterSpacing: "0.1px", lineHeight: 1 }}>Treehouse</span>
+                {/* Subtext: 9px — readable, properly subordinate */}
+                <span style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", lineHeight: 1 }}>Local finds</span>
               </div>
             </div>
             <button
               onClick={() => router.push("/post")}
-              style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 20, fontSize: 11, fontWeight: 600, letterSpacing: "0.15px", color: "#fff", cursor: "pointer", background: C.green, border: "none", boxShadow: "0 1px 6px rgba(30,77,43,0.2)" }}
+              style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 13px", borderRadius: 20, fontSize: 12, fontWeight: 600, letterSpacing: "0.15px", color: "#fff", cursor: "pointer", background: C.green, border: "none", boxShadow: "0 1px 6px rgba(30,77,43,0.2)" }}
             >
-              <Plus size={11} strokeWidth={2.5} />
+              <Plus size={12} strokeWidth={2.5} />
               Post a find
             </button>
           </div>
