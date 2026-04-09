@@ -8,7 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Plus, Compass, ChevronDown, Flag } from "lucide-react";
+import { MapPin, Plus, Compass, ChevronDown } from "lucide-react";
 import { getFeedPosts, getAllMalls } from "@/lib/posts";
 import { safeStorage } from "@/lib/safeStorage";
 import BottomNav from "@/components/BottomNav";
@@ -19,6 +19,7 @@ const C = {
   bg:           "#f0ede6",
   surface:      "#e8e4db",
   surfaceHover: "#e2ddd4",
+  surfaceDeep:  "#dedad0",
   border:       "rgba(26,26,24,0.1)",
   borderLight:  "rgba(26,26,24,0.06)",
   textPrimary:  "#1a1a18",
@@ -49,7 +50,7 @@ function loadFollowedIds(): Set<string> {
   return followed;
 }
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
+// ─── Empty state ───────────────────────────────────────────────────────────────
 
 function EmptyFeed() {
   const router = useRouter();
@@ -78,7 +79,7 @@ function EmptyFeed() {
   );
 }
 
-// ─── Masonry skeleton ─────────────────────────────────────────────────────────
+// ─── Masonry skeleton ──────────────────────────────────────────────────────────
 
 const SKELETON_HEIGHTS = [130, 160, 170, 105, 115, 145, 155, 118];
 const SKELETON_OFFSET  = Math.round(SKELETON_HEIGHTS[0] * 0.5);
@@ -94,6 +95,11 @@ function SkeletonMasonry() {
             <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: (ci * col.length + i) * 0.05 }}
               style={{ borderRadius: 14, overflow: "hidden", background: C.surface, border: `1px solid ${C.border}` }}>
               <div className="skeleton-shimmer" style={{ height: h }} />
+              {/* Text band skeleton */}
+              <div style={{ padding: "10px 10px 12px" }}>
+                <div className="skeleton-shimmer" style={{ height: 10, borderRadius: 4, marginBottom: 6, width: "80%" }} />
+                <div className="skeleton-shimmer" style={{ height: 9, borderRadius: 4, width: "45%" }} />
+              </div>
             </motion.div>
           ))}
         </div>
@@ -102,7 +108,7 @@ function SkeletonMasonry() {
   );
 }
 
-// ─── Masonry tile ─────────────────────────────────────────────────────────────
+// ─── Masonry tile ──────────────────────────────────────────────────────────────
 
 function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; isFollowed: boolean }) {
   const [imgErr, setImgErr] = useState(false);
@@ -112,6 +118,10 @@ function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; i
   const isSold = post.status === "sold";
   const fallbackHeights = [120, 145, 110, 160, 130, 105, 150, 125];
   const fallbackH = fallbackHeights[index % fallbackHeights.length];
+
+  const boothLabel = post.vendor?.booth_number
+    ? `Booth ${post.vendor.booth_number}`
+    : post.vendor?.display_name ?? null;
 
   function handleLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const img = e.currentTarget;
@@ -125,7 +135,17 @@ function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; i
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.32, delay: Math.min(index * 0.04, 0.3), ease: [0.25, 0.1, 0.25, 1] }}>
       <Link href={`/find/${post.id}`} style={{ display: "block", textDecoration: "none" }}>
-        <div style={{ borderRadius: 14, overflow: "hidden", background: C.surface, border: `1px solid ${C.border}`, boxShadow: "0 1px 6px rgba(26,26,24,0.06)", position: "relative", opacity: isSold ? 0.62 : 1, transition: "opacity 0.2s" }}>
+        <div style={{
+          borderRadius: 14,
+          overflow: "hidden",
+          background: C.surface,
+          border: `1px solid ${C.border}`,
+          boxShadow: "0 1px 6px rgba(26,26,24,0.06)",
+          position: "relative",
+          opacity: isSold ? 0.62 : 1,
+          transition: "opacity 0.2s",
+        }}>
+          {/* Image area */}
           {hasImg ? (
             <div style={{ position: "relative", width: "100%", height: imgHeight ?? fallbackH }}>
               <img ref={imgRef} src={post.image_url!} alt={post.title} onLoad={handleLoad} onError={() => setImgErr(true)}
@@ -136,21 +156,47 @@ function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; i
                 </div>
               )}
               {isFollowed && (
-                <div style={{ position: "absolute", bottom: 7, right: 7, width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.greenSolid, boxShadow: "0 1px 4px rgba(0,0,0,0.18)" }}>
-                  <Flag size={11} style={{ color: "rgba(255,255,255,0.95)", fill: "rgba(255,255,255,0.95)" }} />
+                <div style={{ position: "absolute", bottom: 7, right: 7, width: 20, height: 20, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.greenSolid, boxShadow: "0 1px 4px rgba(0,0,0,0.18)" }}>
+                  <svg width="10" height="12" viewBox="0 0 10 12" fill="none">
+                    <path d="M1 1h8v10L5 8.5 1 11V1Z" fill="rgba(255,255,255,0.95)" />
+                  </svg>
                 </div>
               )}
             </div>
           ) : (
-            <div style={{ padding: "16px 14px", minHeight: fallbackH, display: "flex", alignItems: "center", position: "relative" }}>
+            <div style={{ padding: "14px 12px 10px", minHeight: fallbackH, display: "flex", alignItems: "flex-start" }}>
               <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.3 }}>{post.title}</div>
-              {isFollowed && (
-                <div style={{ position: "absolute", bottom: 7, right: 7, width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.greenSolid, boxShadow: "0 1px 4px rgba(0,0,0,0.18)" }}>
-                  <Flag size={11} style={{ color: "rgba(255,255,255,0.95)", fill: "rgba(255,255,255,0.95)" }} />
-                </div>
-              )}
             </div>
           )}
+
+          {/* Text band — always shown below image */}
+          <div style={{ padding: "9px 10px 11px", borderTop: hasImg ? `1px solid ${C.borderLight}` : "none" }}>
+            <div style={{
+              fontFamily: "Georgia, serif",
+              fontSize: 12,
+              fontWeight: 600,
+              color: C.textPrimary,
+              lineHeight: 1.3,
+              marginBottom: boothLabel ? 4 : 0,
+              overflow: "hidden",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical" as const,
+            }}>
+              {post.title}
+            </div>
+            {boothLabel && (
+              <div style={{
+                fontSize: 10,
+                color: C.textFaint,
+                fontFamily: "monospace",
+                letterSpacing: "0.3px",
+                lineHeight: 1,
+              }}>
+                {boothLabel}
+              </div>
+            )}
+          </div>
         </div>
       </Link>
     </motion.div>
@@ -196,7 +242,6 @@ function MasonryGrid({ posts, followedIds }: { posts: Post[]; followedIds: Set<s
 // ─── Mall dropdown (hidden when only 1 mall) ──────────────────────────────────
 
 function MallDropdown({ malls, selectedId, onChange }: { malls: Mall[]; selectedId: string | null; onChange: (id: string | null) => void }) {
-  // Day 3 audit fix: hide dropdown when only 1 mall exists (no choice to make)
   if (malls.length <= 1) return null;
 
   return (
@@ -226,7 +271,6 @@ export default function DiscoveryFeedPage() {
   const [mallId,      setMallId]      = useState<string | null>(null);
   const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
 
-  // Ref to the feed section so CTA can scroll to it
   const feedRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -253,26 +297,16 @@ export default function DiscoveryFeedPage() {
     return () => { live = false; };
   }, []);
 
-  const filtered    = posts.filter(p => !mallId || p.mall_id === mallId);
+  const filtered     = posts.filter(p => !mallId || p.mall_id === mallId);
   const flaggedCount = followedIds.size;
-
-  // The selected mall object (null = "All malls")
   const selectedMall = malls.find(m => m.id === mallId) ?? null;
 
-  // Hero CTA: if a specific mall is selected → filter feed to that mall;
-  // if "All malls" → scroll to feed section
   function handleHeroExplore() {
-    if (selectedMall) {
-      // Already filtered — just scroll down to feed
-    }
     feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  // When hero card is clicked while on "All malls", pick the first mall
   function handleGenericExplore() {
-    if (malls.length === 1) {
-      setMallId(malls[0].id);
-    }
+    if (malls.length === 1) setMallId(malls[0].id);
     feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -298,7 +332,6 @@ export default function DiscoveryFeedPage() {
               Post a find
             </button>
           </div>
-          {/* Only show dropdown when multiple malls exist */}
           <MallDropdown malls={malls} selectedId={mallId} onChange={setMallId} />
         </header>
 
@@ -322,11 +355,12 @@ export default function DiscoveryFeedPage() {
 
           {/* ── Feed section anchor ── */}
           <div ref={feedRef} style={{ scrollMarginTop: 80 }}>
-            {/* Section label above grid */}
+
+            {/* Section label */}
             {!loading && filtered.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                 <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "1.8px", color: C.textFaint, fontWeight: 500 }}>
-                  {selectedMall ? `${selectedMall.name}` : "All finds"}
+                  {selectedMall ? selectedMall.name : "What did you find today?"}
                 </span>
                 <span style={{ fontSize: 10, color: C.textFaint, fontFamily: "Georgia, serif", fontStyle: "italic" }}>
                   {filtered.length} {filtered.length === 1 ? "find" : "finds"}
@@ -345,6 +379,11 @@ export default function DiscoveryFeedPage() {
       </div>
 
       <BottomNav active="home" flaggedCount={flaggedCount} />
+
+      <style>{`
+        @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+        .skeleton-shimmer { background: linear-gradient(90deg, rgba(220,216,208,0.7) 25%, rgba(200,196,188,0.9) 50%, rgba(220,216,208,0.7) 75%); background-size: 800px 100%; animation: shimmer 1.6s infinite linear; }
+      `}</style>
     </div>
   );
 }

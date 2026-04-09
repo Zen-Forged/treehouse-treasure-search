@@ -1,10 +1,10 @@
 // components/BottomNav.tsx
-// Fixed bottom navigation bar — Home, Flagged, My Shelf.
+// Fixed bottom navigation bar — Home, Visit List, My Shelf.
 
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Home, Flag, Store } from "lucide-react";
+import { Home, Bookmark, Store } from "lucide-react";
 
 type Tab = "home" | "flagged" | "my-shelf" | null;
 
@@ -34,9 +34,9 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     },
     {
       key: "flagged",
-      label: "Flagged",
+      label: "Visit List",
       href: "/flagged",
-      icon: <Flag size={20} strokeWidth={1.8} />,
+      icon: <Bookmark size={20} strokeWidth={1.8} />,
     },
     {
       key: "my-shelf",

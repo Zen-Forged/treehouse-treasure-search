@@ -1,8 +1,6 @@
 // app/my-shelf/page.tsx
-// "My Shelf" — vendor's curated shelf view. Max 7 items in alternating layout.
-// Row 1: 2/3 wide + 1/3 narrow
-// Row 2: three equal thirds
-// Row 3: 1/3 narrow + 2/3 wide
+// My Shelf — vendor's curated shelf view.
+// 3×3 uniform grid (9 slots). Empty slots are greyed with an Add Find affordance.
 
 "use client";
 
@@ -29,13 +27,17 @@ const C = {
   green:       "#1e4d2b",
   greenLight:  "rgba(30,77,43,0.08)",
   greenBorder: "rgba(30,77,43,0.20)",
+  greenSolid:  "rgba(30,77,43,0.92)",
   header:      "rgba(240,237,230,0.95)",
   emptyTile:   "#d8d4cc",
 };
 
-const GAP = 4;
+const GAP       = 5;
+const GRID_COLS = 3;
+const GRID_ROWS = 3;
+const TOTAL     = GRID_COLS * GRID_ROWS; // 9
 
-// ─── Image tile ───────────────────────────────────────────────────────────────
+// ─── Image tile ────────────────────────────────────────────────────────────────
 
 function ShelfTile({ post, index }: { post: Post; index: number }) {
   const [imgErr, setImgErr] = useState(false);
@@ -43,24 +45,35 @@ function ShelfTile({ post, index }: { post: Post; index: number }) {
   const isSold = post.status === "sold";
 
   return (
-    <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.28, delay: Math.min(index * 0.04, 0.28), ease: [0.25, 0.1, 0.25, 1] }}
-      style={{ width: "100%", height: "100%", borderRadius: 9, overflow: "hidden", position: "relative" }}>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: [0.25, 0.1, 0.25, 1] }}
+      style={{ width: "100%", height: "100%", borderRadius: 9, overflow: "hidden", position: "relative" }}
+    >
       <Link href={`/find/${post.id}`} style={{ display: "block", width: "100%", height: "100%", textDecoration: "none" }}>
         <div style={{ width: "100%", height: "100%", position: "relative" }}>
           {hasImg ? (
-            <img src={post.image_url!} alt={post.title} onError={() => setImgErr(true)}
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: isSold ? "grayscale(0.55) brightness(0.82)" : "brightness(0.97) saturate(0.94)" }} />
+            <img
+              src={post.image_url!}
+              alt={post.title}
+              onError={() => setImgErr(true)}
+              style={{
+                width: "100%", height: "100%",
+                objectFit: "cover", display: "block",
+                filter: isSold ? "grayscale(0.55) brightness(0.82)" : "brightness(0.97) saturate(0.94)",
+              }}
+            />
           ) : (
-            <div style={{ width: "100%", height: "100%", background: C.surface, display: "flex", alignItems: "flex-end", padding: "8px 10px" }}>
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 11, fontWeight: 600, color: C.textMuted, lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" as const }}>
+            <div style={{ width: "100%", height: "100%", background: C.surface, display: "flex", alignItems: "flex-end", padding: "6px 8px" }}>
+              <div style={{ fontFamily: "Georgia, serif", fontSize: 10, fontWeight: 600, color: C.textMuted, lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" as const }}>
                 {post.title}
               </div>
             </div>
           )}
           {isSold && (
             <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(240,237,230,0.15)" }}>
-              <div style={{ fontSize: 8, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.4px", color: "rgba(240,237,230,0.9)", background: "rgba(26,26,24,0.48)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", padding: "3px 9px", borderRadius: 4 }}>
+              <div style={{ fontSize: 7, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.4px", color: "rgba(240,237,230,0.9)", background: "rgba(26,26,24,0.48)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", padding: "3px 8px", borderRadius: 4 }}>
                 Unavailable
               </div>
             </div>
@@ -71,61 +84,95 @@ function ShelfTile({ post, index }: { post: Post; index: number }) {
   );
 }
 
-// ─── Add Find tile ────────────────────────────────────────────────────────────
+// ─── Empty / Add Find tile ─────────────────────────────────────────────────────
 
 function AddFindTile({ index }: { index: number }) {
   const router = useRouter();
   return (
-    <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.28, delay: Math.min(index * 0.04, 0.28), ease: [0.25, 0.1, 0.25, 1] }}
-      style={{ width: "100%", height: "100%" }}>
-      <button onClick={() => router.push("/post")}
-        style={{ width: "100%", height: "100%", borderRadius: 9, background: C.emptyTile, border: "none", cursor: "pointer", padding: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, WebkitTapHighlightColor: "transparent" }}>
-        <ImagePlus size={20} strokeWidth={1.5} style={{ color: "rgba(26,26,24,0.28)" }} />
-        <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(26,26,24,0.35)", textTransform: "uppercase", letterSpacing: "1px", lineHeight: 1 }}>
-          Add Find
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: [0.25, 0.1, 0.25, 1] }}
+      style={{ width: "100%", height: "100%" }}
+    >
+      <button
+        onClick={() => router.push("/post")}
+        style={{
+          width: "100%", height: "100%",
+          borderRadius: 9,
+          background: C.emptyTile,
+          border: "none", cursor: "pointer", padding: 0,
+          display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center", gap: 5,
+          WebkitTapHighlightColor: "transparent",
+        }}
+      >
+        <ImagePlus size={18} strokeWidth={1.5} style={{ color: "rgba(26,26,24,0.25)" }} />
+        <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(26,26,24,0.30)", textTransform: "uppercase", letterSpacing: "1px", lineHeight: 1 }}>
+          Add
         </span>
       </button>
     </motion.div>
   );
 }
 
-function Slot({ slot, index }: { slot: Post | null; index: number }) {
-  if (slot) return <ShelfTile post={slot} index={index} />;
-  return <AddFindTile index={index} />;
-}
+// ─── 3×3 uniform grid ─────────────────────────────────────────────────────────
 
-// ─── Alternating grid ─────────────────────────────────────────────────────────
-
-function ShelfGrid({ slots }: { slots: (Post | null)[] }) {
-  const s = [...slots, ...Array(Math.max(0, 7 - slots.length)).fill(null)].slice(0, 7);
-  const rowStyle: React.CSSProperties = { display: "flex", gap: GAP, flex: 1, minHeight: 0 };
+function ShelfGrid({ posts }: { posts: Post[] }) {
+  const slots: (Post | null)[] = [
+    ...posts.slice(0, TOTAL),
+    ...Array(Math.max(0, TOTAL - posts.length)).fill(null),
+  ];
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: GAP, padding: `0 ${GAP}px`, minHeight: 0 }}>
-      <div style={rowStyle}>
-        <div style={{ flex: 2, minWidth: 0, minHeight: 0 }}><Slot slot={s[0]} index={0} /></div>
-        <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}><Slot slot={s[1]} index={1} /></div>
-      </div>
-      <div style={rowStyle}>
-        <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}><Slot slot={s[2]} index={2} /></div>
-        <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}><Slot slot={s[3]} index={3} /></div>
-        <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}><Slot slot={s[4]} index={4} /></div>
-      </div>
-      <div style={rowStyle}>
-        <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}><Slot slot={s[5]} index={5} /></div>
-        <div style={{ flex: 2, minWidth: 0, minHeight: 0 }}><Slot slot={s[6]} index={6} /></div>
-      </div>
+    <div style={{
+      flex: 1,
+      display: "grid",
+      gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`,
+      gridTemplateRows: `repeat(${GRID_ROWS}, 1fr)`,
+      gap: GAP,
+      padding: `${GAP}px`,
+      minHeight: 0,
+    }}>
+      {slots.map((post, i) =>
+        post ? (
+          <ShelfTile key={post.id} post={post} index={i} />
+        ) : (
+          <AddFindTile key={`empty-${i}`} index={i} />
+        )
+      )}
     </div>
   );
 }
 
-// ─── No profile state ─────────────────────────────────────────────────────────
+// ─── Skeleton grid ─────────────────────────────────────────────────────────────
+
+function SkeletonGrid() {
+  return (
+    <div style={{
+      flex: 1,
+      display: "grid",
+      gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`,
+      gridTemplateRows: `repeat(${GRID_ROWS}, 1fr)`,
+      gap: GAP,
+      padding: `${GAP}px`,
+      minHeight: 0,
+    }}>
+      {Array(TOTAL).fill(null).map((_, i) => (
+        <div key={i} className="skeleton-shimmer" style={{ borderRadius: 9, width: "100%", height: "100%" }} />
+      ))}
+    </div>
+  );
+}
+
+// ─── No profile state ──────────────────────────────────────────────────────────
 
 function NoProfile() {
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 32px", textAlign: "center" }}>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 32px", textAlign: "center" }}
+    >
       <div style={{ width: 54, height: 54, borderRadius: "50%", background: C.surface, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
         <Store size={22} style={{ color: C.textMuted }} />
       </div>
@@ -156,10 +203,11 @@ export default function MyShelfPage() {
       const p = JSON.parse(raw) as LocalVendorProfile;
       setProfile(p);
       if (p.vendor_id) {
-        getVendorPosts(p.vendor_id, 7).then(data => {
+        getVendorPosts(p.vendor_id, TOTAL).then(data => {
+          // Available first, then sold — fill up to 9
           const available = data.filter(x => x.status === "available");
           const sold      = data.filter(x => x.status === "sold");
-          setPosts([...available, ...sold].slice(0, 7));
+          setPosts([...available, ...sold].slice(0, TOTAL));
           setLoading(false);
         });
       } else {
@@ -168,9 +216,8 @@ export default function MyShelfPage() {
     } catch { setLoading(false); }
   }, []);
 
-  const slots: (Post | null)[] = [...posts, ...Array(Math.max(0, 7 - posts.length)).fill(null)];
   const availableCount = posts.filter(p => p.status === "available").length;
-  const hasProfile = !!profile;
+  const hasProfile     = !!profile;
 
   return (
     <div style={{ height: "100dvh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -179,34 +226,30 @@ export default function MyShelfPage() {
       <header style={{ flexShrink: 0, background: C.header, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px" }}>
         <div style={{ paddingTop: "max(14px, env(safe-area-inset-top, 14px))", paddingBottom: 11 }}>
 
-          {/* Page label: 10px — readable, clearly subordinate */}
+          {/* Page label */}
           <div style={{ fontSize: 10, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2px", marginBottom: 5 }}>
             My Shelf
           </div>
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-
-            {/* Left — mall name (10px) + vendor name (17px, dominant) */}
+            {/* Left — vendor name dominant */}
             <div style={{ flex: 1, minWidth: 0 }}>
               {profile?.mall_name && (
                 <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {profile.mall_name}
                 </div>
               )}
-              {/* Vendor name: 17px Georgia bold — the identity hero */}
               <div style={{ fontFamily: "Georgia, serif", fontSize: 17, fontWeight: 700, color: C.textPrimary, lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {profile?.display_name ?? "Your Booth"}
               </div>
             </div>
 
-            {/* Right — "Booth" label (10px) above, number box (11px mono, compact) */}
+            {/* Right — Booth pill */}
             {profile?.booth_number && (
               <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
-                {/* Booth label: 10px — readable, properly subordinate to vendor name */}
                 <div style={{ fontSize: 10, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.6px" }}>
                   Booth
                 </div>
-                {/* Number box: 11px mono — present but not competing with vendor name */}
                 <div style={{ fontFamily: "monospace", fontSize: 11, fontWeight: 700, color: C.green, lineHeight: 1, padding: "3px 9px 4px", border: `1.5px solid ${C.greenBorder}`, borderRadius: 6, background: C.greenLight, letterSpacing: "0.5px" }}>
                   {profile.booth_number}
                 </div>
@@ -214,14 +257,14 @@ export default function MyShelfPage() {
             )}
           </div>
 
-          {/* Count line: 10px — readable context */}
+          {/* Count line */}
           {!loading && hasProfile && posts.length > 0 && (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 7 }}>
               <div style={{ fontSize: 10, color: C.textMuted, fontStyle: "italic", fontFamily: "Georgia, serif" }}>
                 {availableCount} available · {posts.length - availableCount} sold
               </div>
               <div style={{ fontSize: 10, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.4px" }}>
-                {posts.length} / 7
+                {posts.length} / {TOTAL}
               </div>
             </div>
           )}
@@ -230,41 +273,50 @@ export default function MyShelfPage() {
 
       {/* ── Grid area ── */}
       {loading ? (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: GAP, padding: `${GAP}px ${GAP}px`, minHeight: 0 }}>
-          {[[2, 1], [1, 1, 1], [1, 2]].map((row, ri) => (
-            <div key={ri} style={{ display: "flex", gap: GAP, flex: 1 }}>
-              {row.map((fr, ci) => <div key={ci} className="skeleton-shimmer" style={{ flex: fr, borderRadius: 9, minWidth: 0 }} />)}
-            </div>
-          ))}
-        </div>
+        <SkeletonGrid />
       ) : !hasProfile ? (
         <NoProfile />
       ) : (
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, paddingTop: GAP }}>
-          <ShelfGrid slots={slots} />
-          {/* Shelf rule: 10px — readable brand watermark */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: `6px ${GAP + 2}px 4px`, flexShrink: 0 }}>
-            <div style={{ flex: 1, height: 1, background: C.border }} />
-            <div style={{ fontSize: 10, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2px", flexShrink: 0 }}>
-              {profile?.mall_name ?? "The Shelf"}
-            </div>
-            <div style={{ flex: 1, height: 1, background: C.border }} />
+        <ShelfGrid posts={posts} />
+      )}
+
+      {/* ── Shelf watermark ── */}
+      {hasProfile && !loading && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: `4px ${GAP + 4}px 4px`, flexShrink: 0 }}>
+          <div style={{ flex: 1, height: 1, background: C.border }} />
+          <div style={{ fontSize: 10, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2px", flexShrink: 0 }}>
+            {profile?.mall_name ?? "The Shelf"}
           </div>
+          <div style={{ flex: 1, height: 1, background: C.border }} />
         </div>
       )}
 
-      {/* ── Share my shelf ── */}
-      <div style={{ flexShrink: 0, padding: "8px 14px", paddingBottom: "max(calc(env(safe-area-inset-bottom, 0px) + 74px), 82px)", background: C.header, borderTop: `1px solid ${C.border}` }}>
-        <button disabled style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 9, padding: "13px 20px", borderRadius: 13, background: C.green, border: "none", cursor: "not-allowed", opacity: 0.72 }}>
+      {/* ── Share my shelf CTA ── */}
+      <div style={{
+        flexShrink: 0,
+        padding: "8px 14px",
+        paddingBottom: "max(calc(env(safe-area-inset-bottom, 0px) + 74px), 82px)",
+        background: C.header,
+        borderTop: `1px solid ${C.border}`,
+      }}>
+        <button
+          disabled
+          style={{
+            width: "100%",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
+            padding: "13px 20px",
+            borderRadius: 13,
+            background: C.greenSolid,
+            border: "none",
+            cursor: "not-allowed",
+            opacity: 0.72,
+          }}
+        >
           <Share2 size={14} style={{ color: "rgba(255,255,255,0.85)" }} />
           <span style={{ fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.92)", letterSpacing: "0.1px" }}>
             Share my shelf
           </span>
         </button>
-        {/* Coming soon: 10px — accessible label */}
-        <div style={{ textAlign: "center", marginTop: 5, fontSize: 10, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.4px" }}>
-          Coming soon
-        </div>
       </div>
 
       <BottomNav active="my-shelf" />
