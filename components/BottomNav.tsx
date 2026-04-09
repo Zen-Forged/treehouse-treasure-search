@@ -1,10 +1,11 @@
 // components/BottomNav.tsx
-// Fixed bottom navigation — Home, Visit List, My Shelf.
+// Fixed bottom navigation — Home, Your Finds, My Shelf.
 
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Home, Bookmark, Store } from "lucide-react";
+import { Home, Store } from "lucide-react";
+import PiLeafIcon from "@/components/PiLeafIcon";
 
 type Tab = "home" | "flagged" | "my-shelf" | null;
 
@@ -26,12 +27,12 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
   const router = useRouter();
 
   const tabs: { key: Tab; label: string; icon: React.ReactNode; href: string }[] = [
-    { key: "home",      label: "Home",       href: "/",        icon: <Home     size={21} strokeWidth={1.7} /> },
-    { key: "flagged",   label: "Visit List", href: "/flagged", icon: <Bookmark size={21} strokeWidth={1.7} /> },
-    { key: "my-shelf",  label: "My Shelf",   href: "/my-shelf",icon: <Store    size={21} strokeWidth={1.7} /> },
+    { key: "home",     label: "Home",       href: "/",        icon: <Home size={21} strokeWidth={1.7} /> },
+    { key: "flagged",  label: "Your Finds", href: "/flagged", icon: <PiLeafIcon size={21} strokeWidth={1.7} /> },
+    { key: "my-shelf", label: "My Shelf",   href: "/my-shelf",icon: <Store size={21} strokeWidth={1.7} /> },
   ];
 
-  // Badge label — single digit: raw number. 10+: "9+". Cap at 99 for safety.
+  // Badge label — single digit raw, 10+: "9+", cap at 99
   const badgeLabel = (n: number) =>
     n > 99 ? "99+" : n > 9 ? "9+" : String(n);
 
@@ -43,7 +44,6 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
       backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
       borderTop: `1px solid ${C.border}`,
       display: "flex", alignItems: "stretch",
-      // Increased bottom padding: 10px extra over safe area, pushes icons higher on iPhone
       paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)",
     }}>
       {tabs.map((tab) => {
@@ -77,10 +77,8 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 9, fontWeight: 700, color: "#fff",
                   border: "1.5px solid rgba(245,242,235,0.97)",
-                  lineHeight: 1,
-                  letterSpacing: "-0.3px",
-                  boxSizing: "border-box",
-                  whiteSpace: "nowrap",
+                  lineHeight: 1, letterSpacing: "-0.3px",
+                  boxSizing: "border-box", whiteSpace: "nowrap",
                 }}>
                   {badgeLabel(flaggedCount)}
                 </div>

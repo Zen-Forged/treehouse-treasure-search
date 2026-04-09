@@ -8,7 +8,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, Trash2, Facebook, Bookmark, Tag } from "lucide-react";
+import { Share2, Trash2, Facebook, Tag } from "lucide-react";
+import PiLeafIcon from "@/components/PiLeafIcon";
 import { getPost, getVendorPosts, updatePostStatus, deletePost } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
@@ -35,7 +36,6 @@ const C = {
   redBorder:   "rgba(139,32,32,0.18)",
   tag:         "#faf8f2",
   tagBorder:   "#ccc6b4",
-  tagString:   "#b4ae9e",
 };
 
 function flagKey(postId: string) {
@@ -43,42 +43,19 @@ function flagKey(postId: string) {
 }
 
 // ─── Booth location box ────────────────────────────────────────────────────────
-// Clean rectangular box — no tag shape, no price.
-// Shows "Found In-Booth" label + booth number.
-// Positioned at bottom-left of the hero image, overlapping slightly.
 
 function BoothBox({ boothNumber }: { boothNumber: string }) {
   return (
     <div style={{
-      position: "absolute",
-      bottom: -22,
-      left: 20,
-      background: C.tag,
-      border: `1.5px solid ${C.tagBorder}`,
-      borderRadius: 8,
-      padding: "6px 14px 7px",
+      position: "absolute", bottom: -22, left: 20,
+      background: C.tag, border: `1.5px solid ${C.tagBorder}`,
+      borderRadius: 8, padding: "6px 14px 7px",
       boxShadow: "0 2px 8px rgba(26,24,16,0.10), 0 1px 3px rgba(26,24,16,0.06)",
     }}>
-      <div style={{
-        fontFamily: "system-ui, sans-serif",
-        fontSize: 8,
-        fontWeight: 600,
-        textTransform: "uppercase" as const,
-        letterSpacing: "1.8px",
-        color: C.textMuted,
-        lineHeight: 1,
-        marginBottom: 4,
-      }}>
+      <div style={{ fontFamily: "system-ui, sans-serif", fontSize: 8, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "1.8px", color: C.textMuted, lineHeight: 1, marginBottom: 4 }}>
         Found In-Booth
       </div>
-      <div style={{
-        fontFamily: "monospace",
-        fontSize: 16,
-        fontWeight: 700,
-        color: C.textPrimary,
-        letterSpacing: "0.2px",
-        lineHeight: 1,
-      }}>
+      <div style={{ fontFamily: "monospace", fontSize: 16, fontWeight: 700, color: C.textPrimary, letterSpacing: "0.2px", lineHeight: 1 }}>
         {boothNumber}
       </div>
     </div>
@@ -249,10 +226,9 @@ export default function FindDetailPage() {
     );
   }
 
-  const isSold    = post.status === "sold";
-  const hasVendor = !!post.vendor;
-  const hasPrice  = post.price_asking != null;
-  // Show booth box when the item has a booth number — independent of price
+  const isSold      = post.status === "sold";
+  const hasVendor   = !!post.vendor;
+  const hasPrice    = post.price_asking != null;
   const boothNumber = post.vendor?.booth_number ?? null;
   const hasBoothBox = !!boothNumber;
 
@@ -260,7 +236,6 @@ export default function FindDetailPage() {
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
 
       {/* ── 1. Hero image ── */}
-      {/* marginBottom creates room for the BoothBox that overlaps downward */}
       <div style={{ position: "relative", width: "100%", marginBottom: hasBoothBox ? 34 : 0 }}>
         {post.image_url ? (
           <img src={post.image_url} alt={post.title}
@@ -275,11 +250,11 @@ export default function FindDetailPage() {
           </div>
         )}
 
-        {/* Bookmark + Share buttons */}
+        {/* Save + Share buttons */}
         <div style={{ position: "absolute", bottom: 12, right: 14, display: "flex", alignItems: "center", gap: 8 }}>
-          <button onClick={handleSave} aria-label={isSaved ? "Remove from visit list" : "Add to visit list"}
+          <button onClick={handleSave} aria-label={isSaved ? "Remove from Your Finds" : "Save to Your Finds"}
             style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: isSaved ? C.greenSolid : "rgba(0,0,0,0.30)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", cursor: "pointer", transition: "background 0.18s" }}>
-            <Bookmark size={15} style={{ color: "rgba(255,255,255,0.95)", fill: isSaved ? "rgba(255,255,255,0.95)" : "none", transition: "fill 0.18s" }} />
+            <PiLeafIcon size={16} strokeWidth={isSaved ? 2.2 : 1.8} style={{ color: "rgba(255,255,255,0.95)" }} />
           </button>
           <button onClick={handleShare}
             style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.30)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", cursor: "pointer" }}>
@@ -287,7 +262,7 @@ export default function FindDetailPage() {
           </button>
         </div>
 
-        {/* Found In-Booth box — replaces price tag */}
+        {/* Found In-Booth box */}
         {hasBoothBox && (
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.12 }}>
             <BoothBox boothNumber={boothNumber!} />
@@ -295,7 +270,7 @@ export default function FindDetailPage() {
         )}
       </div>
 
-      {/* ── 2. Title + price + availability ── */}
+      {/* ── 2. Title + availability ── */}
       <div style={{ padding: "22px 20px 0" }}>
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32 }}>
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 700, color: C.textPrimary, lineHeight: 1.22, letterSpacing: "-0.5px", margin: "0 0 10px" }}>
@@ -394,12 +369,13 @@ export default function FindDetailPage() {
               </div>
             )}
 
+            {/* Save to Your Finds button */}
             {post.vendor && (
               <div style={{ padding: "13px 16px 15px" }}>
                 <button onClick={handleSave}
-                  style={{ width: "100%", padding: "11px 16px", borderRadius: 11, fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, color: isSaved ? "rgba(255,255,255,0.97)" : C.green, background: isSaved ? C.greenSolid : C.greenLight, border: `1px solid ${isSaved ? "transparent" : C.greenBorder}`, cursor: "pointer", fontFamily: "Georgia, serif", letterSpacing: "0px", transition: "background 0.18s, color 0.18s, border-color 0.18s" }}>
-                  <Bookmark size={14} style={{ color: isSaved ? "rgba(255,255,255,0.97)" : C.green, fill: isSaved ? "rgba(255,255,255,0.97)" : "none", transition: "fill 0.18s" }} />
-                  {isSaved ? "Saved to Visit List" : "Save to Visit List"}
+                  style={{ width: "100%", padding: "11px 16px", borderRadius: 11, fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: isSaved ? "rgba(255,255,255,0.97)" : C.green, background: isSaved ? C.greenSolid : C.greenLight, border: `1px solid ${isSaved ? "transparent" : C.greenBorder}`, cursor: "pointer", fontFamily: "Georgia, serif", transition: "background 0.18s, color 0.18s, border-color 0.18s" }}>
+                  <PiLeafIcon size={14} strokeWidth={isSaved ? 2.2 : 1.8} style={{ color: isSaved ? "rgba(255,255,255,0.97)" : C.green }} />
+                  {isSaved ? "Saved to Your Finds" : "Save to Your Finds"}
                 </button>
               </div>
             )}
