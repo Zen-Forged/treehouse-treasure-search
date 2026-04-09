@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Share2, Store, ImagePlus } from "lucide-react";
+import { Share2, Store, ImagePlus, Plus } from "lucide-react";
 import { getVendorPosts } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Post } from "@/types/treehouse";
 import BottomNav from "@/components/BottomNav";
@@ -29,7 +29,7 @@ const C = {
   greenBorder: "rgba(30,77,43,0.20)",
   greenSolid:  "rgba(30,77,43,0.90)",
   header:      "rgba(245,242,235,0.96)",
-  emptyTile:   "#dedad2",           // slightly warmer empty tile
+  emptyTile:   "#dedad2",
 };
 
 const GAP       = 6;
@@ -171,6 +171,7 @@ function NoProfile() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MyShelfPage() {
+  const router  = useRouter();
   const [profile, setProfile] = useState<LocalVendorProfile | null>(null);
   const [posts,   setPosts]   = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -204,19 +205,35 @@ export default function MyShelfPage() {
       <header style={{ flexShrink: 0, background: C.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${C.border}`, padding: "0 18px" }}>
         <div style={{ paddingTop: "max(16px, env(safe-area-inset-top, 16px))", paddingBottom: 13 }}>
 
-          {/* Page label */}
-          <div style={{ fontSize: 10, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2.2px", marginBottom: 6, fontWeight: 500 }}>
-            My Shelf
+          {/* Page label row — label left, Post a Find button right */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <div style={{ fontSize: 10, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2.2px", fontWeight: 500 }}>
+              My Shelf
+            </div>
+            {/* Post a find button — enabled for testing, will be gated later */}
+            <button
+              onClick={() => router.push("/post")}
+              style={{
+                display: "flex", alignItems: "center", gap: 5,
+                padding: "6px 12px",
+                borderRadius: 20,
+                fontSize: 11, fontWeight: 600,
+                color: "#fff",
+                cursor: "pointer",
+                background: C.green,
+                border: "none",
+                letterSpacing: "0.1px",
+                boxShadow: "0 1px 6px rgba(30,77,43,0.28)",
+              }}
+            >
+              <Plus size={11} strokeWidth={2.5} />
+              Post a find
+            </button>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             {/* Vendor identity */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              {profile?.mall_name && (
-                <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "0.1px" }}>
-                  {profile.mall_name}
-                </div>
-              )}
               <div style={{ fontFamily: "Georgia, serif", fontSize: 19, fontWeight: 700, color: C.textPrimary, lineHeight: 1.1, letterSpacing: "-0.3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {profile?.display_name ?? "Your Booth"}
               </div>
@@ -252,15 +269,9 @@ export default function MyShelfPage() {
       {/* ── Grid ── */}
       {loading ? <SkeletonGrid /> : !hasProfile ? <NoProfile /> : <ShelfGrid posts={posts} />}
 
-      {/* ── Watermark rule ── */}
+      {/* ── Hairline divider only — no mall text watermark ── */}
       {hasProfile && !loading && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: `5px ${GAP + 6}px 5px`, flexShrink: 0 }}>
-          <div style={{ flex: 1, height: 1, background: C.border }} />
-          <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2.2px", flexShrink: 0, fontWeight: 500 }}>
-            {profile?.mall_name ?? "The Shelf"}
-          </div>
-          <div style={{ flex: 1, height: 1, background: C.border }} />
-        </div>
+        <div style={{ height: 1, background: C.border, margin: `5px ${GAP + 6}px`, flexShrink: 0 }} />
       )}
 
       {/* ── Share my shelf ── */}

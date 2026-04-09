@@ -44,6 +44,8 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
       {tabs.map((tab) => {
         const isActive  = active === tab.key;
         const showBadge = tab.key === "flagged" && flaggedCount > 0;
+        // Badge label — cap at 99 for layout safety; shows "9+" for 10–99, raw for 1–9
+        const badgeLabel = flaggedCount > 99 ? "99+" : flaggedCount > 9 ? "9+" : String(flaggedCount);
 
         return (
           <button key={tab.key} onClick={() => router.push(tab.href)}
@@ -64,14 +66,21 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
               {tab.icon}
               {showBadge && (
                 <div style={{
-                  position: "absolute", top: -2, right: -2,
-                  width: 14, height: 14, borderRadius: "50%",
+                  position: "absolute", top: -4, right: -4,
+                  // Auto width with min-width so it grows for "9+" without clipping
+                  minWidth: 16, height: 16,
+                  paddingLeft: 4, paddingRight: 4,
+                  borderRadius: 8,
                   background: C.green,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 8, fontWeight: 700, color: "#fff",
-                  border: "1.5px solid rgba(245,242,235,0.97)", lineHeight: 1,
+                  fontSize: 9, fontWeight: 700, color: "#fff",
+                  border: "1.5px solid rgba(245,242,235,0.97)",
+                  lineHeight: 1,
+                  letterSpacing: "-0.3px",
+                  boxSizing: "border-box",
+                  whiteSpace: "nowrap",
                 }}>
-                  {flaggedCount > 9 ? "9+" : flaggedCount}
+                  {badgeLabel}
                 </div>
               )}
             </div>

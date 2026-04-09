@@ -42,20 +42,44 @@ function flagKey(postId: string) {
   return `treehouse_bookmark_${postId}`;
 }
 
-// ─── Booth tag ─────────────────────────────────────────────────────────────────
+// ─── Booth location box ────────────────────────────────────────────────────────
+// Clean rectangular box — no tag shape, no price.
+// Shows "Found In-Booth" label + booth number.
+// Positioned at bottom-left of the hero image, overlapping slightly.
 
-function BoothTag({ price }: { price: number }) {
+function BoothBox({ boothNumber }: { boothNumber: string }) {
   return (
-    <div style={{ position: "absolute", bottom: -28, left: 20, display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-      <div style={{ width: 1.5, height: 20, background: C.tagString, marginLeft: 16, borderRadius: 1 }} />
-      <div style={{ background: C.tag, border: `1.5px solid ${C.tagBorder}`, borderRadius: "6px 6px 6px 2px", padding: "7px 14px 8px 12px", position: "relative" }}>
-        <div style={{ position: "absolute", top: -1.5, left: 12, width: 8, height: 8, borderRadius: "50%", background: C.bg, border: `1.5px solid ${C.tagBorder}` }} />
-        <div style={{ fontFamily: "system-ui, sans-serif", fontSize: 8, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "1.8px", color: C.textMuted, lineHeight: 1, marginBottom: 3, paddingTop: 6 }}>
-          In-Booth
-        </div>
-        <div style={{ fontFamily: "monospace", fontSize: 20, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px", lineHeight: 1.1 }}>
-          ${price.toLocaleString()}
-        </div>
+    <div style={{
+      position: "absolute",
+      bottom: -22,
+      left: 20,
+      background: C.tag,
+      border: `1.5px solid ${C.tagBorder}`,
+      borderRadius: 8,
+      padding: "6px 14px 7px",
+      boxShadow: "0 2px 8px rgba(26,24,16,0.10), 0 1px 3px rgba(26,24,16,0.06)",
+    }}>
+      <div style={{
+        fontFamily: "system-ui, sans-serif",
+        fontSize: 8,
+        fontWeight: 600,
+        textTransform: "uppercase" as const,
+        letterSpacing: "1.8px",
+        color: C.textMuted,
+        lineHeight: 1,
+        marginBottom: 4,
+      }}>
+        Found In-Booth
+      </div>
+      <div style={{
+        fontFamily: "monospace",
+        fontSize: 16,
+        fontWeight: 700,
+        color: C.textPrimary,
+        letterSpacing: "0.2px",
+        lineHeight: 1,
+      }}>
+        {boothNumber}
       </div>
     </div>
   );
@@ -228,12 +252,16 @@ export default function FindDetailPage() {
   const isSold    = post.status === "sold";
   const hasVendor = !!post.vendor;
   const hasPrice  = post.price_asking != null;
+  // Show booth box when the item has a booth number — independent of price
+  const boothNumber = post.vendor?.booth_number ?? null;
+  const hasBoothBox = !!boothNumber;
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
 
       {/* ── 1. Hero image ── */}
-      <div style={{ position: "relative", width: "100%", marginBottom: hasPrice ? 36 : 0 }}>
+      {/* marginBottom creates room for the BoothBox that overlaps downward */}
+      <div style={{ position: "relative", width: "100%", marginBottom: hasBoothBox ? 34 : 0 }}>
         {post.image_url ? (
           <img src={post.image_url} alt={post.title}
             style={{ width: "100%", height: "auto", display: "block", objectFit: "contain", filter: isSold ? "grayscale(0.35) brightness(0.88)" : "none" }} />
@@ -247,6 +275,7 @@ export default function FindDetailPage() {
           </div>
         )}
 
+        {/* Bookmark + Share buttons */}
         <div style={{ position: "absolute", bottom: 12, right: 14, display: "flex", alignItems: "center", gap: 8 }}>
           <button onClick={handleSave} aria-label={isSaved ? "Remove from visit list" : "Add to visit list"}
             style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: isSaved ? C.greenSolid : "rgba(0,0,0,0.30)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", cursor: "pointer", transition: "background 0.18s" }}>
@@ -258,9 +287,10 @@ export default function FindDetailPage() {
           </button>
         </div>
 
-        {hasPrice && (
+        {/* Found In-Booth box — replaces price tag */}
+        {hasBoothBox && (
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.12 }}>
-            <BoothTag price={post.price_asking!} />
+            <BoothBox boothNumber={boothNumber!} />
           </motion.div>
         )}
       </div>

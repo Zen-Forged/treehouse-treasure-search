@@ -8,24 +8,23 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Plus, Compass, ChevronDown } from "lucide-react";
+import { MapPin, Compass, ChevronDown } from "lucide-react";
 import { getFeedPosts, getAllMalls } from "@/lib/posts";
 import BottomNav from "@/components/BottomNav";
 import { MallHeroCard, GenericMallHero } from "@/components/MallHeroCard";
 import type { Post, Mall } from "@/types/treehouse";
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
-// Warmer, richer parchment palette — closer to the mockup's premium feel.
 const C = {
-  bg:           "#f5f2eb",          // warmer parchment (was #f0ede6)
-  surface:      "#edeae1",          // card surface — warmer, higher contrast vs bg
-  surfaceDeep:  "#e4e0d6",          // pressed / deep surface
+  bg:           "#f5f2eb",
+  surface:      "#edeae1",
+  surfaceDeep:  "#e4e0d6",
   border:       "rgba(26,24,16,0.09)",
   borderLight:  "rgba(26,24,16,0.05)",
-  textPrimary:  "#1c1a14",          // warmer near-black
-  textMid:      "#4a4840",          // warm mid
-  textMuted:    "#8a8476",          // warm muted
-  textFaint:    "#b4ae9e",          // warm faint
+  textPrimary:  "#1c1a14",
+  textMid:      "#4a4840",
+  textMuted:    "#8a8476",
+  textFaint:    "#b4ae9e",
   green:        "#1e4d2b",
   greenLight:   "rgba(30,77,43,0.08)",
   greenSolid:   "rgba(30,77,43,0.90)",
@@ -262,7 +261,6 @@ function MallDropdown({ malls, selectedId, onChange }: { malls: Mall[]; selected
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DiscoveryFeedPage() {
-  const router = useRouter();
   const [posts,       setPosts]       = useState<Post[]>([]);
   const [malls,       setMalls]       = useState<Mall[]>([]);
   const [loading,     setLoading]     = useState(true);
@@ -270,6 +268,13 @@ export default function DiscoveryFeedPage() {
   const [mallId,      setMallId]      = useState<string | null>(null);
   const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
   const feedRef = useRef<HTMLDivElement>(null);
+
+  // Reload bookmark counts when tab regains focus — keeps badge in sync across pages
+  useEffect(() => {
+    function onFocus() { setFollowedIds(loadFollowedIds()); }
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, []);
 
   useEffect(() => {
     try {
@@ -312,19 +317,14 @@ export default function DiscoveryFeedPage() {
 
       {/* ── Header ── */}
       <header style={{ position: "sticky", top: 0, zIndex: 50, background: C.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "max(16px, env(safe-area-inset-top, 16px))", paddingBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", paddingTop: "max(16px, env(safe-area-inset-top, 16px))", paddingBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <span style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.2px", lineHeight: 1 }}>Treehouse</span>
-              <span style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2.2px", lineHeight: 1 }}>Local finds</span>
-            </div>
+            {/* Wordmark — single line, same font/size as before, no subtext */}
+            <span style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.2px", lineHeight: 1 }}>
+              Treehouse Finds
+            </span>
           </div>
-          <button onClick={() => router.push("/post")}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 15px", borderRadius: 22, fontSize: 12, fontWeight: 600, letterSpacing: "0.1px", color: "#fff", cursor: "pointer", background: C.green, border: "none", boxShadow: "0 2px 8px rgba(30,77,43,0.25)" }}>
-            <Plus size={12} strokeWidth={2.5} />
-            Post a find
-          </button>
         </div>
         <MallDropdown malls={malls} selectedId={mallId} onChange={setMallId} />
       </header>
@@ -350,7 +350,7 @@ export default function DiscoveryFeedPage() {
         {/* Feed anchor */}
         <div ref={feedRef} style={{ scrollMarginTop: 80 }}>
 
-          {/* Section label — italic Georgia question, like the mockup */}
+          {/* Section label */}
           {!loading && filtered.length > 0 && (
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 16 }}>
               <span style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 15, color: C.textMid, fontWeight: 400, letterSpacing: "-0.1px" }}>

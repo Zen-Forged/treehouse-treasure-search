@@ -30,6 +30,9 @@ const C = {
   greenSolid:  "rgba(30,77,43,0.90)",
   greenBorder: "rgba(30,77,43,0.20)",
   header:      "rgba(245,242,235,0.96)",
+  // Banner gradient — echoes the MallHeroCard feel, warm forest palette
+  bannerFrom:  "#1e3d24",
+  bannerTo:    "#2d5435",
 };
 
 function loadFlaggedIds(): string[] {
@@ -95,14 +98,14 @@ function VisitRow({ post, index }: { post: Post; index: number }) {
           display: "flex", alignItems: "center", gap: 14,
           padding: "13px 14px",
           background: C.surface,
-          borderRadius: 16,
+          borderRadius: 14,
           border: `1px solid ${C.border}`,
           boxShadow: "0 2px 10px rgba(26,24,16,0.06), 0 1px 3px rgba(26,24,16,0.04)",
           opacity: isSold ? 0.65 : 1,
           transition: "opacity 0.2s",
         }}>
           {/* Thumbnail */}
-          <div style={{ width: 64, height: 64, borderRadius: 11, overflow: "hidden", flexShrink: 0, background: C.surfaceDeep, border: `1px solid ${C.borderLight}` }}>
+          <div style={{ width: 64, height: 64, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: C.surfaceDeep, border: `1px solid ${C.borderLight}` }}>
             {hasImg ? (
               <img src={post.image_url!} alt={post.title} onError={() => setImgErr(true)}
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
@@ -148,31 +151,100 @@ function VisitRow({ post, index }: { post: Post; index: number }) {
   );
 }
 
-// ─── Booth section ─────────────────────────────────────────────────────────────
+// ─── Vendor banner — slim, professional, echoes MallHeroCard aesthetic ─────────
+//
+// Full-width gradient banner. Left: vendor name (dominant). Right: booth number.
+// No image — clean type-only layout.
 
-function BoothSection({ label, vendorName, posts, startIndex }: { label: string; vendorName: string; posts: Post[]; startIndex: number }) {
-  const displayLabel = label === "No booth listed" ? label : `Booth ${label}`;
+function VendorBanner({ label, vendorName }: { label: string; vendorName: string }) {
+  const displayBooth = label === "No booth listed" ? null : label;
+
   return (
-    <div style={{ marginBottom: 32 }}>
-      {/* Section header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, paddingLeft: 2 }}>
+    <div style={{
+      width: "100%",
+      borderRadius: 14,
+      overflow: "hidden",
+      marginBottom: 10,
+      position: "relative",
+      // Warm dark forest gradient — same palette family as MallHeroCard
+      background: `linear-gradient(105deg, ${C.bannerFrom} 0%, ${C.bannerTo} 100%)`,
+      boxShadow: "0 2px 14px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.10)",
+    }}>
+      {/* Subtle noise texture overlay */}
+      <div style={{
+        position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.04,
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")`,
+        backgroundRepeat: "repeat", backgroundSize: "200px 200px",
+      }} />
+
+      {/* Content row */}
+      <div style={{
+        position: "relative", zIndex: 1,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "13px 16px",
+        gap: 12,
+      }}>
+        {/* Vendor name — left, dominant */}
         <div style={{
-          fontFamily: "monospace", fontSize: 11, fontWeight: 700, color: C.green,
-          letterSpacing: "0.5px", background: C.greenLight,
-          border: `1px solid ${C.greenBorder}`, borderRadius: 7,
-          padding: "3px 9px", flexShrink: 0,
-        }}>
-          {displayLabel}
-        </div>
-        <div style={{
-          fontFamily: "Georgia, serif", fontStyle: "italic",
-          fontSize: 13, color: C.textMuted,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          fontFamily: "Georgia, serif",
+          fontSize: 15,
+          fontWeight: 700,
+          color: "rgba(255,255,255,0.96)",
+          letterSpacing: "-0.2px",
+          lineHeight: 1.2,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          flex: 1,
+          minWidth: 0,
         }}>
           {vendorName}
         </div>
+
+        {/* Booth number — right, contained pill */}
+        {displayBooth && (
+          <div style={{
+            flexShrink: 0,
+            display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2,
+          }}>
+            <div style={{
+              fontSize: 8,
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "1.8px",
+              color: "rgba(255,255,255,0.50)",
+              lineHeight: 1,
+            }}>
+              Booth
+            </div>
+            <div style={{
+              fontFamily: "monospace",
+              fontSize: 13,
+              fontWeight: 700,
+              color: "rgba(255,255,255,0.95)",
+              letterSpacing: "0.4px",
+              lineHeight: 1,
+              background: "rgba(255,255,255,0.12)",
+              border: "1px solid rgba(255,255,255,0.18)",
+              borderRadius: 7,
+              padding: "4px 10px 5px",
+            }}>
+              {displayBooth}
+            </div>
+          </div>
+        )}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+    </div>
+  );
+}
+
+// ─── Booth section ─────────────────────────────────────────────────────────────
+
+function BoothSection({ label, vendorName, posts, startIndex }: { label: string; vendorName: string; posts: Post[]; startIndex: number }) {
+  return (
+    <div style={{ marginBottom: 28 }}>
+      <VendorBanner label={label} vendorName={vendorName} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {posts.map((post, i) => <VisitRow key={post.id} post={post} index={startIndex + i} />)}
       </div>
     </div>
@@ -191,6 +263,17 @@ export default function FlaggedPage() {
     getPostsByIds(ids).then(data => { setPosts(data); setLoading(false); });
   }, []);
 
+  // Re-sync when user returns to this tab (e.g. after bookmarking on detail page)
+  useEffect(() => {
+    function onFocus() {
+      const ids = loadFlaggedIds();
+      if (ids.length === 0) { setPosts([]); return; }
+      getPostsByIds(ids).then(setPosts);
+    }
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, []);
+
   const groups = groupByBooth(posts);
   let rowIndex = 0;
 
@@ -206,11 +289,9 @@ export default function FlaggedPage() {
         padding: "0 18px",
       }}>
         <div style={{ paddingTop: "max(18px, env(safe-area-inset-top, 18px))", paddingBottom: 14 }}>
-          {/* Page title — larger, Georgia, editorial weight */}
           <div style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, lineHeight: 1.15, letterSpacing: "-0.3px" }}>
             Your Visit List
           </div>
-          {/* Subtitle — italic Georgia, human and warm */}
           <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: C.textMuted, marginTop: 4, lineHeight: 1.4 }}>
             {!loading && posts.length > 0
               ? `${posts.length} ${posts.length === 1 ? "find" : "finds"} waiting for you`
