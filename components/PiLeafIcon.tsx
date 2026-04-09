@@ -1,9 +1,9 @@
 // components/PiLeafIcon.tsx
-// Inline SVG recreation of the PiLeaf (Phosphor Icons) leaf/sprout glyph.
-// Used as the "Your Finds" tab icon throughout the ecosystem layer.
-// strokeWidth and size are configurable to match lucide-react's API shape.
+// Thin wrapper around react-icons/pi PiLeaf.
+// Matches the lucide-react API shape (size, strokeWidth, style, className)
+// so all existing usages continue to work without changes.
 
-import React from "react";
+import { PiLeaf } from "react-icons/pi";
 
 interface PiLeafIconProps {
   size?: number;
@@ -14,31 +14,21 @@ interface PiLeafIconProps {
 
 export default function PiLeafIcon({
   size = 21,
-  strokeWidth = 1.7,
+  // react-icons uses a numeric strokeWidth via CSS var --react-icons-stroke-width
+  // but PiLeaf is a filled/path icon so strokeWidth is not exposed the same way.
+  // We pass it as stroke on the svg element via style override.
+  strokeWidth,
   style,
   className,
 }: PiLeafIconProps) {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
-      viewBox="0 0 256 256"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={strokeWidth * (256 / 21)} // scale stroke to viewBox
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={style}
+    <PiLeaf
+      size={size}
+      style={{
+        ...(strokeWidth ? { strokeWidth } : {}),
+        ...style,
+      }}
       className={className}
-    >
-      {/*
-        Phosphor "Leaf" regular path:
-        A leaf shape curving from bottom-left stem up and around,
-        plus a centre vein line. Matches the pi PiLeaf icon.
-      */}
-      <path d="M208,40c0,0-152,24-168,144c0,0,40-64,128-72" />
-      <line x1="40" y1="216" x2="208" y2="40" />
-    </svg>
+    />
   );
 }
