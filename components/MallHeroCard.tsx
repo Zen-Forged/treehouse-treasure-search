@@ -1,0 +1,289 @@
+// components/MallHeroCard.tsx
+// Mall Identity Hero Card — full-width, place-based, no custom image required
+// Renders instantly for any mall with just name + city + state
+
+"use client";
+
+import { motion } from "framer-motion";
+import { MapPin, ArrowRight } from "lucide-react";
+import type { Mall } from "@/types/treehouse";
+
+// ─── Palette (ecosystem tokens) ───────────────────────────────────────────────
+
+const C = {
+  green:       "#1e4d2b",
+  greenSolid:  "rgba(30,77,43,0.92)",
+  greenLight:  "rgba(30,77,43,0.13)",
+  greenBorder: "rgba(30,77,43,0.26)",
+  textPrimary: "#1a1a18",
+  textMuted:   "#8a8478",
+  textFaint:   "#b0aa9e",
+  border:      "rgba(26,26,24,0.10)",
+  surface:     "#e8e4db",
+  bg:          "#f0ede6",
+};
+
+// ─── Background style variants ────────────────────────────────────────────────
+// Each "style" is a pure CSS gradient — no image upload required.
+// Extend with more as malls join. Deterministic by mall name length → always same style.
+
+type HeroStyle = "default" | "golden" | "forest" | "terracotta" | "slate";
+
+const HERO_GRADIENTS: Record<HeroStyle, string> = {
+  default:    "linear-gradient(135deg, #3d2b1a 0%, #5c3d20 35%, #2a3d1e 100%)",
+  golden:     "linear-gradient(140deg, #2e1f0a 0%, #6b4a1a 40%, #3d2a08 100%)",
+  forest:     "linear-gradient(135deg, #0d1f0e 0%, #1e4d2b 45%, #0a2a10 100%)",
+  terracotta: "linear-gradient(135deg, #2d1208 0%, #6b2c12 40%, #3d1e0e 100%)",
+  slate:      "linear-gradient(140deg, #0e1520 0%, #243344 40%, #0a1018 100%)",
+};
+
+const HERO_STYLES: HeroStyle[] = ["default", "golden", "forest", "terracotta", "slate"];
+
+function pickStyle(mallName: string): HeroStyle {
+  // Deterministic — same mall always gets same style
+  let hash = 0;
+  for (let i = 0; i < mallName.length; i++) hash = (hash * 31 + mallName.charCodeAt(i)) | 0;
+  return HERO_STYLES[Math.abs(hash) % HERO_STYLES.length];
+}
+
+// Subtle noise texture overlay as SVG data URI
+const NOISE_OVERLAY =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E\")";
+
+// ─── Generic hero (All malls selected) ────────────────────────────────────────
+
+interface GenericHeroProps {
+  onExplore: () => void;
+}
+
+export function GenericMallHero({ onExplore }: GenericHeroProps) {
+  return (
+    <MallHeroCardInner
+      gradient={HERO_GRADIENTS.default}
+      eyebrow="Welcome to"
+      title="Local Finds"
+      subtitle="Curated across nearby antique & vintage locations"
+      ctaLabel="Explore all finds"
+      onExplore={onExplore}
+    />
+  );
+}
+
+// ─── Mall-specific hero ────────────────────────────────────────────────────────
+
+export interface MallHeroProps {
+  mall: Mall & {
+    hero_title?:    string | null;
+    hero_subtitle?: string | null;
+    hero_style?:    string | null;
+    hero_image_url?: string | null;
+  };
+  onExplore: () => void;
+}
+
+export function MallHeroCard({ mall, onExplore }: MallHeroProps) {
+  const style     = (mall.hero_style as HeroStyle) ?? pickStyle(mall.name);
+  const gradient  = HERO_GRADIENTS[style] ?? HERO_GRADIENTS.default;
+  const title     = mall.hero_title  ?? mall.name;
+  const subtitle  = mall.hero_subtitle ?? `Curated finds in ${mall.city}${mall.state ? `, ${mall.state}` : ""}`;
+
+  return (
+    <MallHeroCardInner
+      gradient={gradient}
+      bgImage={mall.hero_image_url ?? undefined}
+      eyebrow="Welcome to"
+      title={title}
+      subtitle={subtitle}
+      ctaLabel="Explore this mall →"
+      onExplore={onExplore}
+      locationLine={mall.city && mall.state ? `${mall.city}, ${mall.state}` : mall.city ?? undefined}
+    />
+  );
+}
+
+// ─── Shared inner renderer ─────────────────────────────────────────────────────
+
+interface InnerProps {
+  gradient:     string;
+  bgImage?:     string;
+  eyebrow:      string;
+  title:        string;
+  subtitle:     string;
+  ctaLabel:     string;
+  locationLine?: string;
+  onExplore:    () => void;
+}
+
+function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLabel, locationLine, onExplore }: InnerProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+      style={{
+        borderRadius: 18,
+        overflow: "hidden",
+        position: "relative",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.22), 0 1px 4px rgba(0,0,0,0.12)",
+        cursor: "pointer",
+        userSelect: "none",
+      }}
+      onClick={onExplore}
+      whileTap={{ scale: 0.985 }}
+      transition={{ duration: 0.12 } as any}
+    >
+      {/* ── Background layer ── */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: gradient,
+          zIndex: 0,
+        }}
+      />
+
+      {/* Optional photo background */}
+      {bgImage && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `url(${bgImage})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            opacity: 0.35,
+            zIndex: 1,
+          }}
+        />
+      )}
+
+      {/* Noise texture overlay */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          backgroundImage: NOISE_OVERLAY,
+          backgroundRepeat: "repeat",
+          backgroundSize: "200px 200px",
+          zIndex: 2,
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* Vignette: darker at edges for depth */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "radial-gradient(ellipse at 60% 40%, transparent 30%, rgba(0,0,0,0.38) 100%)",
+          zIndex: 3,
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* ── Content ── */}
+      <div style={{ position: "relative", zIndex: 4, padding: "22px 20px 20px" }}>
+
+        {/* Eyebrow */}
+        <div style={{
+          fontSize: 10,
+          fontWeight: 500,
+          letterSpacing: "2.4px",
+          textTransform: "uppercase",
+          color: "rgba(255,255,255,0.52)",
+          marginBottom: 6,
+          fontFamily: "system-ui, sans-serif",
+        }}>
+          {eyebrow}
+        </div>
+
+        {/* Main title */}
+        <div style={{
+          fontFamily: "Georgia, serif",
+          fontSize: 26,
+          fontWeight: 700,
+          color: "rgba(255,255,255,0.96)",
+          letterSpacing: "-0.5px",
+          lineHeight: 1.15,
+          marginBottom: locationLine ? 6 : 10,
+          textShadow: "0 1px 8px rgba(0,0,0,0.35)",
+        }}>
+          {title}
+        </div>
+
+        {/* City, State pill */}
+        {locationLine && (
+          <div style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            background: "rgba(255,255,255,0.10)",
+            border: "1px solid rgba(255,255,255,0.14)",
+            borderRadius: 20,
+            padding: "3px 9px 3px 7px",
+            marginBottom: 10,
+          }}>
+            <MapPin size={9} style={{ color: "rgba(255,255,255,0.55)", flexShrink: 0 }} />
+            <span style={{
+              fontSize: 10,
+              color: "rgba(255,255,255,0.62)",
+              letterSpacing: "0.8px",
+              fontFamily: "system-ui, sans-serif",
+            }}>
+              {locationLine}
+            </span>
+          </div>
+        )}
+
+        {/* Subtitle */}
+        <div style={{
+          fontSize: 12,
+          color: "rgba(255,255,255,0.58)",
+          lineHeight: 1.55,
+          marginBottom: 18,
+          maxWidth: 260,
+          fontFamily: "Georgia, serif",
+          fontStyle: "italic",
+        }}>
+          {subtitle}
+        </div>
+
+        {/* CTA button */}
+        <button
+          onClick={e => { e.stopPropagation(); onExplore(); }}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "9px 16px",
+            borderRadius: 22,
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: "0.2px",
+            fontFamily: "system-ui, sans-serif",
+            color: "rgba(255,255,255,0.96)",
+            background: C.greenSolid,
+            border: "1px solid rgba(255,255,255,0.08)",
+            cursor: "pointer",
+            boxShadow: "0 2px 12px rgba(30,77,43,0.45), 0 1px 3px rgba(0,0,0,0.2)",
+            transition: "transform 0.12s ease, box-shadow 0.12s ease",
+          }}
+        >
+          {ctaLabel}
+          <ArrowRight size={12} strokeWidth={2.5} />
+        </button>
+      </div>
+
+      {/* Subtle bottom shine line */}
+      <div style={{
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 1,
+        background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)",
+        zIndex: 5,
+      }} />
+    </motion.div>
+  );
+}

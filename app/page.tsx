@@ -12,6 +12,7 @@ import { MapPin, Plus, Compass, ChevronDown, Flag } from "lucide-react";
 import { getFeedPosts, getAllMalls } from "@/lib/posts";
 import { safeStorage } from "@/lib/safeStorage";
 import BottomNav from "@/components/BottomNav";
+import { MallHeroCard, GenericMallHero } from "@/components/MallHeroCard";
 import type { Post, Mall } from "@/types/treehouse";
 
 const C = {
@@ -192,9 +193,12 @@ function MasonryGrid({ posts, followedIds }: { posts: Post[]; followedIds: Set<s
   );
 }
 
-// ─── Mall dropdown ────────────────────────────────────────────────────────────
+// ─── Mall dropdown (hidden when only 1 mall) ──────────────────────────────────
 
 function MallDropdown({ malls, selectedId, onChange }: { malls: Mall[]; selectedId: string | null; onChange: (id: string | null) => void }) {
+  // Day 3 audit fix: hide dropdown when only 1 mall exists (no choice to make)
+  if (malls.length <= 1) return null;
+
   return (
     <div style={{ position: "relative", marginBottom: 10 }}>
       <div style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", gap: 5, pointerEvents: "none", zIndex: 1 }}>
@@ -222,6 +226,9 @@ export default function DiscoveryFeedPage() {
   const [mallId,      setMallId]      = useState<string | null>(null);
   const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
 
+  // Ref to the feed section so CTA can scroll to it
+  const feedRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(SCROLL_KEY);
@@ -246,8 +253,28 @@ export default function DiscoveryFeedPage() {
     return () => { live = false; };
   }, []);
 
-  const filtered = posts.filter(p => !mallId || p.mall_id === mallId);
+  const filtered    = posts.filter(p => !mallId || p.mall_id === mallId);
   const flaggedCount = followedIds.size;
+
+  // The selected mall object (null = "All malls")
+  const selectedMall = malls.find(m => m.id === mallId) ?? null;
+
+  // Hero CTA: if a specific mall is selected → filter feed to that mall;
+  // if "All malls" → scroll to feed section
+  function handleHeroExplore() {
+    if (selectedMall) {
+      // Already filtered — just scroll down to feed
+    }
+    feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // When hero card is clicked while on "All malls", pick the first mall
+  function handleGenericExplore() {
+    if (malls.length === 1) {
+      setMallId(malls[0].id);
+    }
+    feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", position: "relative" }}>
@@ -257,12 +284,9 @@ export default function DiscoveryFeedPage() {
         <header style={{ position: "sticky", top: 0, zIndex: 50, background: C.header, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: `1px solid ${C.border}`, padding: "0 15px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "max(14px, env(safe-area-inset-top, 14px))", paddingBottom: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-              {/* Logo: 22px — slightly larger to match 15px wordmark */}
               <Image src="/logo.png" alt="Treehouse" width={22} height={22} />
               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {/* Wordmark: 15px Georgia — clear brand anchor */}
                 <span style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: C.textPrimary, letterSpacing: "0.1px", lineHeight: 1 }}>Treehouse</span>
-                {/* Subtext: 9px — readable, properly subordinate */}
                 <span style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", lineHeight: 1 }}>Local finds</span>
               </div>
             </div>
@@ -274,16 +298,49 @@ export default function DiscoveryFeedPage() {
               Post a find
             </button>
           </div>
+          {/* Only show dropdown when multiple malls exist */}
           <MallDropdown malls={malls} selectedId={mallId} onChange={setMallId} />
         </header>
 
-        {/* ── Feed ── */}
-        <main style={{ padding: "16px 14px", paddingBottom: "max(100px, calc(env(safe-area-inset-bottom, 0px) + 90px))" }}>
-          {loading ? <SkeletonMasonry /> : error ? (
-            <div style={{ textAlign: "center", paddingTop: 60, color: C.textMuted, fontSize: 13 }}>Couldn't load finds. Check your connection and try again.</div>
-          ) : filtered.length === 0 ? <EmptyFeed /> : (
-            <AnimatePresence><MasonryGrid posts={filtered} followedIds={followedIds} /></AnimatePresence>
-          )}
+        {/* ── Main content ── */}
+        <main style={{ padding: "14px 14px 0", paddingBottom: "max(100px, calc(env(safe-area-inset-bottom, 0px) + 90px))" }}>
+
+          {/* ── Mall Hero Card ── */}
+          <div style={{ marginBottom: 18 }}>
+            <AnimatePresence mode="wait">
+              {selectedMall ? (
+                <motion.div key={selectedMall.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.25 }}>
+                  <MallHeroCard mall={selectedMall} onExplore={handleHeroExplore} />
+                </motion.div>
+              ) : (
+                <motion.div key="generic" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.25 }}>
+                  <GenericMallHero onExplore={handleGenericExplore} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* ── Feed section anchor ── */}
+          <div ref={feedRef} style={{ scrollMarginTop: 80 }}>
+            {/* Section label above grid */}
+            {!loading && filtered.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "1.8px", color: C.textFaint, fontWeight: 500 }}>
+                  {selectedMall ? `${selectedMall.name}` : "All finds"}
+                </span>
+                <span style={{ fontSize: 10, color: C.textFaint, fontFamily: "Georgia, serif", fontStyle: "italic" }}>
+                  {filtered.length} {filtered.length === 1 ? "find" : "finds"}
+                </span>
+              </div>
+            )}
+
+            {/* ── Masonry grid ── */}
+            {loading ? <SkeletonMasonry /> : error ? (
+              <div style={{ textAlign: "center", paddingTop: 60, color: C.textMuted, fontSize: 13 }}>Couldn't load finds. Check your connection and try again.</div>
+            ) : filtered.length === 0 ? <EmptyFeed /> : (
+              <AnimatePresence><MasonryGrid posts={filtered} followedIds={followedIds} /></AnimatePresence>
+            )}
+          </div>
         </main>
       </div>
 
