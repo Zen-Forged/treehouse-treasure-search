@@ -24,8 +24,6 @@ const C = {
 };
 
 // ─── Background style variants ────────────────────────────────────────────────
-// Each "style" is a pure CSS gradient — no image upload required.
-// Extend with more as malls join. Deterministic by mall name length → always same style.
 
 type HeroStyle = "default" | "golden" | "forest" | "terracotta" | "slate";
 
@@ -40,7 +38,6 @@ const HERO_GRADIENTS: Record<HeroStyle, string> = {
 const HERO_STYLES: HeroStyle[] = ["default", "golden", "forest", "terracotta", "slate"];
 
 function pickStyle(mallName: string): HeroStyle {
-  // Deterministic — same mall always gets same style
   let hash = 0;
   for (let i = 0; i < mallName.length; i++) hash = (hash * 31 + mallName.charCodeAt(i)) | 0;
   return HERO_STYLES[Math.abs(hash) % HERO_STYLES.length];
@@ -73,19 +70,19 @@ export function GenericMallHero({ onExplore }: GenericHeroProps) {
 
 export interface MallHeroProps {
   mall: Mall & {
-    hero_title?:    string | null;
-    hero_subtitle?: string | null;
-    hero_style?:    string | null;
+    hero_title?:     string | null;
+    hero_subtitle?:  string | null;
+    hero_style?:     string | null;
     hero_image_url?: string | null;
   };
   onExplore: () => void;
 }
 
 export function MallHeroCard({ mall, onExplore }: MallHeroProps) {
-  const style     = (mall.hero_style as HeroStyle) ?? pickStyle(mall.name);
-  const gradient  = HERO_GRADIENTS[style] ?? HERO_GRADIENTS.default;
-  const title     = mall.hero_title  ?? mall.name;
-  const subtitle  = mall.hero_subtitle ?? `Curated finds in ${mall.city}${mall.state ? `, ${mall.state}` : ""}`;
+  const style    = (mall.hero_style as HeroStyle) ?? pickStyle(mall.name);
+  const gradient = HERO_GRADIENTS[style] ?? HERO_GRADIENTS.default;
+  const title    = mall.hero_title   ?? mall.name;
+  const subtitle = mall.hero_subtitle ?? `Curated finds in ${mall.city}${mall.state ? `, ${mall.state}` : ""}`;
 
   return (
     <MallHeroCardInner
@@ -104,14 +101,14 @@ export function MallHeroCard({ mall, onExplore }: MallHeroProps) {
 // ─── Shared inner renderer ─────────────────────────────────────────────────────
 
 interface InnerProps {
-  gradient:     string;
-  bgImage?:     string;
-  eyebrow:      string;
-  title:        string;
-  subtitle:     string;
-  ctaLabel:     string;
+  gradient:      string;
+  bgImage?:      string;
+  eyebrow:       string;
+  title:         string;
+  subtitle:      string;
+  ctaLabel:      string;
   locationLine?: string;
-  onExplore:    () => void;
+  onExplore:     () => void;
 }
 
 function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLabel, locationLine, onExplore }: InnerProps) {
@@ -119,6 +116,7 @@ function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLab
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
+      whileTap={{ scale: 0.985 }}
       transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
       style={{
         borderRadius: 18,
@@ -129,8 +127,6 @@ function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLab
         userSelect: "none",
       }}
       onClick={onExplore}
-      whileTap={{ scale: 0.985 }}
-      transition={{ duration: 0.12 } as any}
     >
       {/* ── Background layer ── */}
       <div
@@ -170,7 +166,7 @@ function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLab
         }}
       />
 
-      {/* Vignette: darker at edges for depth */}
+      {/* Vignette */}
       <div
         style={{
           position: "absolute",
@@ -266,7 +262,6 @@ function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLab
             border: "1px solid rgba(255,255,255,0.08)",
             cursor: "pointer",
             boxShadow: "0 2px 12px rgba(30,77,43,0.45), 0 1px 3px rgba(0,0,0,0.2)",
-            transition: "transform 0.12s ease, box-shadow 0.12s ease",
           }}
         >
           {ctaLabel}
@@ -274,7 +269,7 @@ function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLab
         </button>
       </div>
 
-      {/* Subtle bottom shine line */}
+      {/* Bottom shine line */}
       <div style={{
         position: "absolute",
         bottom: 0,
