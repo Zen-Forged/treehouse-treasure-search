@@ -1,13 +1,14 @@
 // app/flagged/page.tsx
-// Visit List — all items the user has bookmarked locally.
-// Grouped by booth. URL stays /flagged; label is "Your Visit List" throughout.
+// Your Finds — all items the user has saved locally.
+// Grouped by booth. URL stays /flagged; label is "Your Finds" throughout.
 
 "use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bookmark, Share2, ChevronRight } from "lucide-react";
+import { Share2, ChevronRight } from "lucide-react";
+import PiLeafIcon from "@/components/PiLeafIcon";
 import { getPostsByIds } from "@/lib/posts";
 import BottomNav from "@/components/BottomNav";
 import type { Post } from "@/types/treehouse";
@@ -35,7 +36,6 @@ const C = {
 };
 
 // ─── Bookmark helpers ──────────────────────────────────────────────────────────
-// Always reads raw localStorage — single source of truth shared with home page.
 
 function loadFlaggedIds(): string[] {
   const ids: string[] = [];
@@ -79,15 +79,15 @@ function groupByBooth(posts: Post[]): Array<{ label: string; vendorName: string;
 
 // ─── Empty state ───────────────────────────────────────────────────────────────
 
-function EmptyVisitList() {
+function EmptyFinds() {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
       style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 32px 0", textAlign: "center" }}>
       <div style={{ width: 52, height: 52, borderRadius: "50%", background: C.surface, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 22 }}>
-        <Bookmark size={20} style={{ color: C.textMuted }} />
+        <PiLeafIcon size={22} strokeWidth={1.6} style={{ color: C.textMuted }} />
       </div>
       <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: C.textPrimary, marginBottom: 10, lineHeight: 1.3 }}>
-        Your visit list is empty
+        No finds saved yet
       </div>
       <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: C.textMuted, lineHeight: 1.75, maxWidth: 230, margin: 0 }}>
         Save finds you want to see in person and they'll appear here, grouped by booth.
@@ -96,9 +96,9 @@ function EmptyVisitList() {
   );
 }
 
-// ─── Visit List item row ───────────────────────────────────────────────────────
+// ─── Find row ─────────────────────────────────────────────────────────────────
 
-function VisitRow({ post, index }: { post: Post; index: number }) {
+function FindRow({ post, index }: { post: Post; index: number }) {
   const [imgErr, setImgErr] = useState(false);
   const hasImg = !!post.image_url && !imgErr;
   const isSold = post.status === "sold";
@@ -125,7 +125,7 @@ function VisitRow({ post, index }: { post: Post; index: number }) {
                   filter: isSold ? "grayscale(0.5) brightness(0.88)" : "brightness(0.99) saturate(0.95)" }} />
             ) : (
               <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Bookmark size={16} style={{ color: C.textFaint }} />
+                <PiLeafIcon size={18} strokeWidth={1.6} style={{ color: C.textFaint }} />
               </div>
             )}
           </div>
@@ -215,7 +215,7 @@ function BoothSection({ label, vendorName, posts, startIndex }: { label: string;
     <div style={{ marginBottom: 28 }}>
       <VendorBanner label={label} vendorName={vendorName} />
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {posts.map((post, i) => <VisitRow key={post.id} post={post} index={startIndex + i} />)}
+        {posts.map((post, i) => <FindRow key={post.id} post={post} index={startIndex + i} />)}
       </div>
     </div>
   );
@@ -223,10 +223,9 @@ function BoothSection({ label, vendorName, posts, startIndex }: { label: string;
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function FlaggedPage() {
+export default function YourFindsPage() {
   const [posts,         setPosts]         = useState<Post[]>([]);
   const [loading,       setLoading]       = useState(true);
-  // Badge count: raw localStorage keys — same source of truth as home page
   const [bookmarkCount, setBookmarkCount] = useState(0);
 
   function syncBookmarkCount() {
@@ -240,7 +239,6 @@ export default function FlaggedPage() {
     getPostsByIds(ids).then(data => { setPosts(data); setLoading(false); });
   }, []);
 
-  // Re-sync when user returns to this tab
   useEffect(() => {
     function onFocus() {
       syncBookmarkCount();
@@ -268,7 +266,7 @@ export default function FlaggedPage() {
       }}>
         <div style={{ paddingTop: "max(18px, env(safe-area-inset-top, 18px))", paddingBottom: 14 }}>
           <div style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, lineHeight: 1.15, letterSpacing: "-0.3px" }}>
-            Your Visit List
+            Your Finds
           </div>
           <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: C.textMuted, marginTop: 4, lineHeight: 1.4 }}>
             {!loading && posts.length > 0
@@ -288,7 +286,7 @@ export default function FlaggedPage() {
               <div key={i} className="skeleton-shimmer" style={{ height: h, borderRadius: 16 }} />
             ))}
           </div>
-        ) : posts.length === 0 ? <EmptyVisitList /> : (
+        ) : posts.length === 0 ? <EmptyFinds /> : (
           <AnimatePresence>
             {groups.map(group => {
               const start = rowIndex;
@@ -303,7 +301,7 @@ export default function FlaggedPage() {
         )}
       </main>
 
-      {/* ── Share your finds CTA — fixed above BottomNav ── */}
+      {/* ── Share your finds CTA ── */}
       <div style={{
         position: "fixed",
         bottom: 0, left: "50%", transform: "translateX(-50%)",
@@ -317,8 +315,7 @@ export default function FlaggedPage() {
         <button disabled style={{
           width: "100%",
           display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
-          padding: "15px 20px",
-          borderRadius: 14,
+          padding: "15px 20px", borderRadius: 14,
           background: C.greenSolid,
           border: "none", cursor: "not-allowed", opacity: 0.70,
           boxShadow: "0 2px 12px rgba(30,77,43,0.20)",
@@ -330,7 +327,6 @@ export default function FlaggedPage() {
         </button>
       </div>
 
-      {/* Badge uses raw localStorage count — consistent with home page badge */}
       <BottomNav active="flagged" flaggedCount={bookmarkCount} />
 
       <style>{`
