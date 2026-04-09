@@ -35,6 +35,9 @@ const C = {
 const SCROLL_KEY      = "treehouse_feed_scroll";
 const BOOKMARK_PREFIX = "treehouse_bookmark_";
 
+// ─── Bookmark helpers ──────────────────────────────────────────────────────────
+// Always reads raw localStorage so all pages agree on the same source of truth.
+
 function loadFollowedIds(): Set<string> {
   const followed = new Set<string>();
   try {
@@ -46,6 +49,17 @@ function loadFollowedIds(): Set<string> {
     }
   } catch {}
   return followed;
+}
+
+function loadBookmarkCount(): number {
+  let count = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(BOOKMARK_PREFIX) && localStorage.getItem(key) === "1") count++;
+    }
+  } catch {}
+  return count;
 }
 
 // ─── Empty state ───────────────────────────────────────────────────────────────
@@ -133,16 +147,11 @@ function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; i
       transition={{ duration: 0.32, delay: Math.min(index * 0.04, 0.3), ease: [0.25, 0.1, 0.25, 1] }}>
       <Link href={`/find/${post.id}`} style={{ display: "block", textDecoration: "none" }}>
         <div style={{
-          borderRadius: 16,
-          overflow: "hidden",
-          background: C.surface,
+          borderRadius: 16, overflow: "hidden", background: C.surface,
           border: `1px solid ${C.border}`,
           boxShadow: "0 2px 10px rgba(26,24,16,0.07), 0 1px 3px rgba(26,24,16,0.04)",
-          position: "relative",
-          opacity: isSold ? 0.60 : 1,
-          transition: "opacity 0.2s",
+          position: "relative", opacity: isSold ? 0.60 : 1, transition: "opacity 0.2s",
         }}>
-          {/* Image */}
           {hasImg ? (
             <div style={{ position: "relative", width: "100%", height: imgHeight ?? fallbackH }}>
               <img ref={imgRef} src={post.image_url!} alt={post.title}
@@ -171,27 +180,15 @@ function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; i
           {/* Text band */}
           <div style={{ padding: "10px 11px 13px", borderTop: hasImg ? `1px solid ${C.borderLight}` : "none" }}>
             <div style={{
-              fontFamily: "Georgia, serif",
-              fontSize: 12,
-              fontWeight: 600,
-              color: C.textPrimary,
-              lineHeight: 1.35,
-              marginBottom: boothLabel ? 5 : 0,
-              overflow: "hidden",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical" as const,
+              fontFamily: "Georgia, serif", fontSize: 12, fontWeight: 600, color: C.textPrimary,
+              lineHeight: 1.35, marginBottom: boothLabel ? 5 : 0,
+              overflow: "hidden", display: "-webkit-box",
+              WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
             }}>
               {post.title}
             </div>
             {boothLabel && (
-              <div style={{
-                fontSize: 10,
-                color: C.textFaint,
-                fontFamily: "monospace",
-                letterSpacing: "0.4px",
-                lineHeight: 1,
-              }}>
+              <div style={{ fontSize: 10, color: C.textFaint, fontFamily: "monospace", letterSpacing: "0.4px", lineHeight: 1 }}>
                 {boothLabel}
               </div>
             )}
@@ -267,15 +264,27 @@ export default function DiscoveryFeedPage() {
   const [error,       setError]       = useState(false);
   const [mallId,      setMallId]      = useState<string | null>(null);
   const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
+  const [bookmarkCount, setBookmarkCount] = useState(0);
+  // Guard: only fetch posts once — don't re-fetch when navigating back
+  const hasFetched = useRef(false);
   const feedRef = useRef<HTMLDivElement>(null);
 
-  // Reload bookmark counts when tab regains focus — keeps badge in sync across pages
+  // ── Bookmark badge: always from raw localStorage, updated on focus ──
+  // This is the single source of truth for the badge count across all tabs.
+  function syncBookmarks() {
+    const ids = loadFollowedIds();
+    setFollowedIds(ids);
+    setBookmarkCount(ids.size);
+  }
+
   useEffect(() => {
-    function onFocus() { setFollowedIds(loadFollowedIds()); }
+    syncBookmarks();
+    function onFocus() { syncBookmarks(); }
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
+  // ── Scroll position restore ──
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(SCROLL_KEY);
@@ -289,9 +298,13 @@ export default function DiscoveryFeedPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => { setFollowedIds(loadFollowedIds()); }, []);
+  // ── Malls (cheap, always fresh) ──
   useEffect(() => { getAllMalls().then(setMalls); }, []);
+
+  // ── Posts: only fetch once per app session, don't re-fetch on back-navigate ──
   useEffect(() => {
+    if (hasFetched.current) return;
+    hasFetched.current = true;
     let live = true;
     setLoading(true); setError(false);
     getFeedPosts(80)
@@ -301,7 +314,6 @@ export default function DiscoveryFeedPage() {
   }, []);
 
   const filtered     = posts.filter(p => !mallId || p.mall_id === mallId);
-  const flaggedCount = followedIds.size;
   const selectedMall = malls.find(m => m.id === mallId) ?? null;
 
   function handleHeroExplore() {
@@ -320,7 +332,6 @@ export default function DiscoveryFeedPage() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", paddingTop: "max(16px, env(safe-area-inset-top, 16px))", paddingBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
-            {/* Wordmark — single line, same font/size as before, no subtext */}
             <span style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.2px", lineHeight: 1 }}>
               Treehouse Finds
             </span>
@@ -350,11 +361,11 @@ export default function DiscoveryFeedPage() {
         {/* Feed anchor */}
         <div ref={feedRef} style={{ scrollMarginTop: 80 }}>
 
-          {/* Section label */}
+          {/* Section label — updated copy */}
           {!loading && filtered.length > 0 && (
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 16 }}>
               <span style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 15, color: C.textMid, fontWeight: 400, letterSpacing: "-0.1px" }}>
-                {selectedMall ? `Finds from ${selectedMall.name}` : "What did you find today?"}
+                {selectedMall ? `Finds from ${selectedMall.name}` : "What will you find today?"}
               </span>
               <span style={{ fontSize: 11, color: C.textFaint, fontFamily: "Georgia, serif", fontStyle: "italic", flexShrink: 0, marginLeft: 8 }}>
                 {filtered.length}
@@ -372,7 +383,8 @@ export default function DiscoveryFeedPage() {
         </div>
       </main>
 
-      <BottomNav active="home" flaggedCount={flaggedCount} />
+      {/* Badge uses raw localStorage count — same source of truth as Visit List */}
+      <BottomNav active="home" flaggedCount={bookmarkCount} />
 
       <style>{`
         @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
