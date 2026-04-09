@@ -33,69 +33,96 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ## CURRENT ISSUE
 > Last updated: 2026-04-09
 
-**Status:** ✅ Mall Identity Layer (Sprint 1) shipped and deployed. Build fix applied (duplicate `transition` prop on motion.div).
+**Status:** ✅ Branded experience sprint complete. Three-page UI overhaul + premium refinement pass shipped and deployed.
 
 **What was done (this session):**
 
-### Mall Identity Layer — Sprint 1
+### Branded Experience Sprint — 3-page overhaul
 
-**New file: `components/MallHeroCard.tsx`**
-- `MallHeroCard` — mall-specific hero. Uses `mall.name`, `mall.city`, `mall.state` to render with zero custom config.
-- `GenericMallHero` — shown when "All malls" is selected.
-- 5 gradient styles: `default | golden | forest | terracotta | slate` — deterministic by mall name hash (same mall always same style).
-- Optional `hero_image_url` — photo renders at 35% opacity behind gradient if set. Not required for MVP.
-- Noise texture SVG overlay + radial vignette for depth.
-- City/State frosted pill, italic Georgia subtitle, green CTA with ArrowRight icon.
-- `whileTap={{ scale: 0.985 }}` with single merged `transition` prop (no duplicate — build-breaking bug fixed).
-- `AnimatePresence mode="wait"` in page — hero cross-fades on mall switch.
+**Design decisions locked:**
+- No prices in feed tiles (discovery-first, gallery model preserved)
+- "Flagged" → "Visit List" (label only; URL stays `/flagged`)
+- Price shown on detail page when `price_asking != null`
+- My Shelf reverted to 3×3 uniform 9-tile grid
+- Booth attribution (`Booth 300`) added to feed tiles — no price
+- `Flag` icon → `Bookmark` icon throughout
 
-**Build fix applied:**
-- Error: `JSX elements cannot have multiple attributes with the same name` — `transition` prop appeared twice on `motion.div` (once for enter animation, once for whileTap).
-- Fix: merged into single `transition={{ duration: 0.4, ease: [...] }}` alongside `whileTap`. Framer Motion reuses the same transition for both.
+**BottomNav (`components/BottomNav.tsx`):**
+- `Flag` → `Bookmark` icon
+- "Flagged" → "Visit List" label
+- Warmer parchment token: `rgba(245,242,235,0.97)` bg
+- Icon size 20→21px, padding increased, blur 20→24px
 
-**Updated: `app/page.tsx`**
-- Hero placed between sticky header and masonry grid, 18px margin-bottom.
-- Section label row above grid: mall name left + find count italic right — 10px faint.
-- `feedRef` — hero CTA smooth-scrolls to feed section.
-- Mall dropdown hidden when `malls.length <= 1` (Day 3 audit fix, pulled forward).
+**Discovery Feed (`app/page.tsx`):**
+- Feed tile text band added below image: Georgia 12px title + monospace booth attribution
+- Section label changed to italic Georgia 15px question copy ("What did you find today?")
+- Tile border-radius 14→16px, shadow upgraded to layered depth
+- Skeleton updated to include text band shimmer
+- Warmer palette tokens throughout
 
-**Updated: `types/treehouse.ts`**
-- `Mall` extended with optional hero fields: `hero_title?`, `hero_subtitle?`, `hero_style?`, `hero_image_url?`.
-- All optional — no DB migration required. Hero defaults from `name`/`city`/`state`.
+**Visit List (`app/flagged/page.tsx`):**
+- Full rename: "Your Visit List" header (Georgia 22px 700), italic subtitle
+- "N finds waiting for you" — italic Georgia, warm and human
+- Item rows: Georgia title, price shown when available, `ChevronRight` affordance (replaces Eye)
+- Booth section header: green pill + italic Georgia vendor name, more breathing room
+- "Share your Shelf" CTA fixed above BottomNav — disabled, green, unwired
+- Card border-radius 14→16px, layered shadow
 
-**Demo flow (live pitch):**
-1. `INSERT INTO malls (name, city, state, slug) VALUES ('XYZ Antique Mall', 'Louisville', 'KY', 'xyz-antique-mall')`
-2. Mall appears in dropdown immediately on next mount
-3. Selecting it renders a fully styled hero — no config needed
+**My Shelf (`app/my-shelf/page.tsx`):**
+- 3×3 uniform grid (9 slots) — replaces alternating 7-slot layout
+- Empty slots: `#dedad2` greyed tiles, `ImagePlus` icon + "Add" label → `/post`
+- Vendor name 17→19px Georgia, booth pill refined
+- Count line italic Georgia
+- Watermark rule between grid and CTA
+- "Share my shelf" CTA — same green style as Visit List
+
+**Detail page (`app/find/[id]/page.tsx`):**
+- Price surfaced inline: `$325 · ● Available` below title
+- `Flag` → `Bookmark` icon on photo buttons
+- "Flag Booth" → "Save to Visit List" / "Saved to Visit List"
+- "Find this here" card: 14px Georgia 700 mall name, 14px border-radius, layered shadow
+- "Save to Visit List" button uses Georgia serif
+- All warmer palette tokens
+
+**Refinement pass (premium styling):**
+- Background `#f0ede6` → `#f5f2eb` across all pages (warmer parchment)
+- Surface `#e8e4db` → `#edeae1` (higher contrast vs bg, cards lift off page)
+- All text tokens shifted warm: `#1c1a14` primary, `#8a8476` muted, `#b4ae9e` faint
+- Georgia serif applied to: empty states, subtitles, metadata lines, CTA buttons, shelf card titles, loading states
+- Backdrop blur 20→24px on all headers and nav
+- Layered box-shadow system on all cards and CTAs
+- Spacing increased: header padding, card gaps, section margins
 
 **Previous sessions:**
-- Design audit 9 findings — Day 1–2 typography/hierarchy fixes all done
-- My Shelf concept C alternating layout
+- Mall Identity Layer (Sprint 1) — MallHeroCard shipped
+- Design audit 9 findings — Day 1–2 typography/hierarchy fixes
+- My Shelf concept C alternating layout (now reverted to 3×3)
 - Flagged page grouped by booth with "Booth N" headers
-- 3-tab BottomNav (Home · Flagged · My Shelf)
+- 3-tab BottomNav (Home · Visit List · My Shelf)
 - BoothTag price hanging from photo on detail page
 - Admin page + bulk delete
+- safeStorage iPhone Safari bug fix
 
 **Next session starting point:**
-1. QA on device: hero card at top of feed, cross-fade on mall switch, CTA scrolls to grid
-2. Optional Supabase columns (hero works without them):
+1. QA on device: warmer palette, tile text bands, 3×3 shelf, Visit List rename
+2. Remaining Day 3 audit items:
+   - Wire "Share your Shelf" to native share / URL copy (both Visit List + My Shelf CTAs)
+   - Add inline unsave from Visit List rows (swipe or tap affordance)
+3. Price field missing from post creation flow (`/post` + `/post/preview`)
+4. Optional Supabase hero columns (hero works without them):
    ```sql
    ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_title text;
    ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_subtitle text;
    ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_style text;
    ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_image_url text;
    ```
-3. Remaining Day 3–4 audit items:
-   - Rename "Flag/Flagged" → "Save/Saved" throughout
-   - Wire "Share my shelf" to native share / URL copy
-   - Add inline unsave on Flagged rows
 
 ---
 
 ## PROJECT OVERVIEW
 
 **Two independent layers:**
-1. **Ecosystem** (front door, light cream theme): feed, vendor profiles, mall pages, post flow → Supabase
+1. **Ecosystem** (front door, warm parchment theme): feed, vendor profiles, mall pages, post flow → Supabase
 2. **Reseller intel** (dark forest theme, untouched): scan → identify → comps → decide → localStorage only
 
 ---
@@ -130,18 +157,18 @@ SERPAPI_KEY                      eBay sold comps
 
 ## ROUTE MAP
 
-### Ecosystem (light cream theme)
+### Ecosystem (warm parchment theme)
 ```
 /                   Discovery feed — masonry, Mall Hero Card at top, mall dropdown (hidden if ≤1 mall),
-                    flagged indicators on tiles
+                    tile text bands (Georgia title + booth attribution), bookmarked indicators on tiles
 /find/[id]          Find detail — full-bleed image, booth tag price (bottom-left of photo),
-                    flag + share icons bottom-right of photo, BottomNav (no active tab),
-                    "View the shelf" scroll, "Find this here" card,
-                    "Flag Booth" button (visitors + owners), owner actions (mark sold + delete)
-/flagged            Flagged finds — grouped by booth ("Booth N" header + italic vendor name),
-                    Eye icon row affordance, no icon circle in header
-/my-shelf           Vendor's alternating-row shelf — identity header (vendor name 17px dominant,
-                    booth box 11px mono), 7-slot grid, "Share my shelf" CTA
+                    bookmark + share buttons bottom-right of photo, BottomNav (no active tab),
+                    price inline below title, "View the shelf" scroll, "Find this here" card,
+                    "Save to Visit List" button, owner actions (mark sold + delete)
+/flagged            Visit List — grouped by booth ("Booth N" header + italic vendor name),
+                    ChevronRight affordance, "Share your Shelf" CTA at bottom
+/my-shelf           My Shelf — 3×3 uniform 9-tile grid, identity header (vendor name 19px dominant,
+                    booth box 12px mono), watermark rule, "Share my shelf" CTA
 /mall/[slug]        Mall profile
 /vendor/[slug]      Vendor profile — Facebook link, available/sold grid
 /post               Vendor capture — camera/gallery, profile setup
@@ -177,13 +204,14 @@ lib/posts.ts                  getFeedPosts, getPost, getPostsByIds, getVendorPos
 lib/postStore.ts              In-memory image store for /post → /post/preview flow
 lib/safeStorage.ts            localStorage wrapper with sessionStorage + memory fallback
 types/treehouse.ts            Post, Vendor, Mall (+ hero fields), LocalVendorProfile, PostStatus
-components/BottomNav.tsx      Fixed bottom nav — Home + Flagged + My Shelf tabs, active state, badge
+components/BottomNav.tsx      Fixed bottom nav — Home + Visit List + My Shelf tabs, active state, badge
+                              Icons: Home, Bookmark, Store (lucide-react)
 components/MallHeroCard.tsx   Mall Identity Hero — MallHeroCard + GenericMallHero exports
 app/layout.tsx                No max-width wrapper — each page owns its own width
-app/page.tsx                  Discovery feed — MallHeroCard at top, BottomNav active="home"
-app/flagged/page.tsx          Flagged screen — grouped by booth, no icon circle, BottomNav active="flagged"
-app/my-shelf/page.tsx         My Shelf — alternating grid, identity header, BottomNav active="my-shelf"
-app/find/[id]/page.tsx        Find detail — BoothTag, flag/share bottom-right, BottomNav null
+app/page.tsx                  Discovery feed — MallHeroCard, tile text bands, BottomNav active="home"
+app/flagged/page.tsx          Visit List — grouped by booth, ChevronRight rows, Share CTA
+app/my-shelf/page.tsx         My Shelf — 3×3 grid, identity header, Share CTA
+app/find/[id]/page.tsx        Find detail — BoothTag, bookmark/share, price inline, Save to Visit List
 app/admin/page.tsx            Admin UI — profile inspector + bulk delete
 app/api/admin/posts/route.ts  Admin API — GET all posts, DELETE by id or all
 ```
@@ -192,15 +220,25 @@ app/api/admin/posts/route.ts  Admin API — GET all posts, DELETE by id or all
 
 ## DESIGN SYSTEM
 
-### Ecosystem pages (light cream)
+### Ecosystem pages (warm parchment)
 ```
-bg: #f0ede6  surface: #e8e4db  surfaceDeep: #dedad0  border: rgba(26,26,24,0.1)
-text: #1a1a18 / #4a4a42 / #8a8478 / #b0aa9e
-green (CTAs): #1e4d2b   greenLight: rgba(30,77,43,0.09)   greenBorder: rgba(30,77,43,0.22)
-greenSolid: rgba(30,77,43,0.92)  ← filled/active state
-header blur: rgba(240,237,230,0.94)
-tag: #faf7f0   tagBorder: #c8c2b4   tagString: #b0aa9e   ← booth tag tokens
-emptyTile: #d8d4cc  ← Add Find tile background
+bg:           #f5f2eb          ← warmer parchment (updated from #f0ede6)
+surface:      #edeae1          ← card surface, higher contrast vs bg (updated from #e8e4db)
+surfaceDeep:  #e4e0d6
+border:       rgba(26,24,16,0.09)
+textPrimary:  #1c1a14          ← warm near-black
+textMid:      #4a4840
+textMuted:    #8a8476
+textFaint:    #b4ae9e
+green (CTAs): #1e4d2b
+greenLight:   rgba(30,77,43,0.08)
+greenBorder:  rgba(30,77,43,0.20)
+greenSolid:   rgba(30,77,43,0.90)   ← filled/active state
+header blur:  rgba(245,242,235,0.96), backdropFilter blur(24px)
+emptyTile:    #dedad2               ← warmed up from #d8d4cc
+tag:          #faf8f2
+tagBorder:    #ccc6b4
+tagString:    #b4ae9e
 ```
 
 ### Reseller pages (dark — do not change)
@@ -212,21 +250,50 @@ bg: #050f05  text: #f5f0e8  gold: #c8b47e  green: #6dbc6d
 ```
 MINIMUM font size anywhere in the app: 10px
 Page labels ("My Shelf", "Local finds"): 9–10px uppercase muted
-Count/subtext lines: 10px
-Section headers / page titles: 16–17px Georgia 700
-App wordmark (Home): 15px Georgia 700
-Vendor name (My Shelf): 17px Georgia 700 — identity hero
-Body / tile titles: 13–14px
-Captions: 15px italic Georgia
+Count/subtext lines: 10–11px italic Georgia
+Section headers / page titles: 16–22px Georgia 700
+  - Feed section label: italic Georgia 15px (question copy, not uppercase label)
+  - Visit List header: Georgia 22px 700
+  - My Shelf vendor name: Georgia 19px 700 — identity hero
+  - App wordmark (Home): 16px Georgia 700
+Body / tile titles: Georgia 12–14px
+Captions: 15px italic Georgia, lineHeight 1.85
+Empty state headers: Georgia 20px 700
+Empty state body: italic Georgia 14px
+```
+
+### Georgia serif usage — ecosystem pages
+```
+Georgia is the brand font. Use it for:
+- All page headers and section titles
+- Item titles in feed tiles, rows, shelf cards
+- Italic subtitles, count lines, metadata
+- Caption / description copy
+- CTA buttons (Save to Visit List, Share your Shelf, Share my shelf)
+- Empty state copy (both header and body)
+- Loading states ("Loading…")
+- Error / not-found states
+System UI is reserved for: BottomNav labels, dropdown options, monospace data
+```
+
+### Shadow system
+```
+Cards (feed tiles, Visit List rows, Find this here card):
+  box-shadow: "0 2px 10px rgba(26,24,16,0.07), 0 1px 3px rgba(26,24,16,0.04)"
+CTA buttons:
+  box-shadow: "0 2px 12px rgba(30,77,43,0.20–0.25)"
+Hero card:
+  box-shadow: "0 4px 24px rgba(0,0,0,0.22), 0 1px 4px rgba(0,0,0,0.12)"
 ```
 
 ### Shared
 ```
-Font: Georgia serif (headings/captions/italic labels), monospace (booth/prices), system (body)
+Font: Georgia serif (all content), monospace (booth/prices), system UI (nav labels only)
 Max-width: 430px per page
 Safe area: env(safe-area-inset-bottom) on all fixed bars
-Bottom padding formula: max(100px, calc(env(safe-area-inset-bottom, 0px) + 90px))
+Bottom padding formula: max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))
 Animations: opacity 0→1, y 8-16→0, ease [0.25,0.1,0.25,1]
+Border radius: 16px cards, 14px inner cards, 10–11px shelf tiles, 24px pill buttons
 ```
 
 ### Mall Hero Card
@@ -249,85 +316,82 @@ KNOWN BUG PATTERN: framer-motion motion.div cannot have two `transition` props �
 
 ### Feed grid
 ```
-2-column masonry. Gap: 14px. Tile border-radius: 14px.
+2-column masonry. Gap: 12px. Tile border-radius: 16px.
 Right column offset: 50% of first tile's rendered height (ResizeObserver, live).
 Skeleton uses SKELETON_OFFSET = Math.round(SKELETON_HEIGHTS[0] * 0.5) = 65px.
-No price badges on tiles. Sold items: 0.62 opacity + grayscale + "Unavailable" badge.
-Flagged items: 22px solid green circle (Flag icon, filled) at bottom-right of tile image.
+Skeleton includes text band shimmer below image area.
+No price badges on tiles. Sold items: 0.60 opacity + grayscale + "Unavailable" badge.
+Bookmarked items: 20px solid green circle (Bookmark SVG, filled) at bottom-right of tile image.
+Tile text band (always shown below image):
+  - Title: Georgia 12px 600, 2-line clamp
+  - Booth attribution: monospace 10px textFaint (e.g. "Booth 300")
+  - Padding: 10px 11px 13px
 Scroll position saved to sessionStorage ("treehouse_feed_scroll"), restored on mount.
-Flagged IDs loaded once on mount via loadFollowedIds() — scans localStorage for treehouse_bookmark_* keys.
-Section label above grid: mall name (left) + "N finds" italic (right) — 10px faint.
+Bookmarked IDs loaded once on mount via loadFollowedIds() — scans localStorage for treehouse_bookmark_* keys.
+Section label above grid: italic Georgia 15px question copy (left) + count italic Georgia (right).
 ```
 
 ### Bottom navigation
 ```
 Component: components/BottomNav.tsx
 Props: active ("home" | "flagged" | "my-shelf" | null), flaggedCount (number, optional)
-Tabs: Home (/) · Flagged (/flagged) · My Shelf (/my-shelf)
-Icons: Home, Flag, Store (lucide-react)
-Active state: green pill (rgba(30,77,43,0.10)) behind icon + bold label
-Badge: green dot on Flagged tab, shown only when flaggedCount > 0, capped at 9+
-Active tab: "home" · "flagged" · "my-shelf" · null (sub-pages e.g. /find/[id])
+Tabs: Home (/) · Visit List (/flagged) · My Shelf (/my-shelf)
+Icons: Home, Bookmark, Store (lucide-react) — size 21, strokeWidth 1.7
+Active state: green pill (rgba(30,77,43,0.10)) behind icon + bold label (600)
+Badge: green dot on Visit List tab, shown only when flaggedCount > 0, capped at 9+
+Active tab key: "home" · "flagged" · "my-shelf" · null (sub-pages e.g. /find/[id])
 ```
 
-### Flagging system
+### Bookmarking / Visit List system
 ```
 Storage key: treehouse_bookmark_{postId} = "1"
 Storage layer: safeStorage (localStorage → sessionStorage → memory)
-Raw localStorage iteration used in: feed loadFollowedIds(), flagged loadFlaggedIds()
+Raw localStorage iteration used in: feed loadFollowedIds(), Visit List loadFlaggedIds()
 BottomNav badge on feed: followedIds.size (loaded on mount)
-BottomNav badge on flagged screen: posts.length (after Supabase fetch)
-Unflagging: safeStorage.removeItem(key) — removes from all layers
-```
-
-### My Shelf header hierarchy
-```
-Row label:    "My Shelf" — 10px uppercase faint (page context)
-Mall name:    10px muted (location context)
-Vendor name:  17px Georgia 700 textPrimary — DOMINANT identity element
-Booth label:  "Booth" — 10px uppercase faint
-Booth box:    11px monospace green, greenLight bg, greenBorder border, 6px radius
-              Padding: 3px 9px — compact, does not compete with vendor name
-Count line:   10px italic Georgia muted (available · sold) | 10px faint uppercase (N / 7)
+BottomNav badge on Visit List: posts.length (after Supabase fetch)
+Unbookmarking: safeStorage.removeItem(key) — removes from all layers
+Icon: Bookmark (lucide-react) — filled when saved, outline when not
+Terminology: "Save to Visit List" / "Saved to Visit List" (not "Flag" anywhere in ecosystem)
 ```
 
 ### My Shelf grid layout
 ```
-Alternating rows — 7 real slots + 2 implicit (grid only holds 7):
-  Row 1: [0] flex:2  |  [1] flex:1
-  Row 2: [2] flex:1  |  [3] flex:1  |  [4] flex:1
-  Row 3: [5] flex:1  |  [6] flex:2
-Gap: 4px. Border-radius: 9px per tile.
-Empty slots: #d8d4cc bg, ImagePlus icon (20px, 28% opacity), "Add Find" 10px uppercase → /post
-Sold tiles: "Unavailable" frosted overlay badge (NOT "Sold")
+Uniform 3×3 grid — 9 slots total:
+  gridTemplateColumns: repeat(3, 1fr)
+  gridTemplateRows: repeat(3, 1fr)
+  Gap: 6px. Border-radius: 10px per tile.
+Empty slots: #dedad2 bg, ImagePlus icon (18px, 22% opacity), "Add" 9px uppercase → /post
+Sold tiles: "Unavailable" frosted overlay badge
 Page uses height:100dvh + overflow:hidden — everything fits one screen, no scroll.
+Watermark rule: hairline + mall name + hairline between grid and Share CTA.
 ```
 
-### Flagged page header
+### Visit List page layout
 ```
-No icon circle — title is the sole anchor (icon context comes from BottomNav tab)
-"Flagged": 16px Georgia 700
-Count: 10px muted — "N finds · N booths"
-Booth section headers: "Booth N" green monospace pill (11px) + italic vendor name (12px Georgia)
+Header: Georgia 22px 700 "Your Visit List" + italic Georgia 13px subtitle
+Booth section headers: green pill (monospace 11px 700) + italic Georgia 13px vendor name
+Item rows: 64×64 thumbnail, Georgia 14px 600 title, monospace price, ChevronRight
+  - Padding: 13px 14px, borderRadius 16, layered shadow
+"Share your Shelf" CTA: fixed above BottomNav, green, disabled (unwired), Georgia 15px 600
 ```
 
 ### Detail page layout order
 ```
 1. Full-bleed image (overflow: visible on wrapper when hasPrice)
-   - "Unavailable" badge top-left (left: 14px) — only when status=sold
-   - Flag + Share buttons bottom-right (bottom: 12, right: 14) — frosted pills
+   - "Unavailable" badge top-left — only when status=sold
+   - Bookmark + Share buttons bottom-right (36px circles, blur backdrop)
    - BoothTag bottom-left — hangs on string from photo edge (only when price_asking != null)
    - Hero wrapper: marginBottom: hasPrice ? 36 : 0
-2. Title (Georgia 26px bold)
-3. Availability (pulsing dot + "Available" green, or "Unavailable" muted)
-4. Caption (italic Georgia) + description
+2. Title (Georgia 26px 700, letterSpacing -0.5px)
+3. Price + availability inline: "$325 · ● Available" (monospace price, green dot + label)
+4. Caption (italic Georgia 15px, lineHeight 1.85) + description (13px)
 5. [hairline — only if shelf has items] + "View the shelf" horizontal scroll
-6. "Find this here" label + card:
-     Mall name + address link
+6. "Find this here" label + card (borderRadius 14, layered shadow):
+     Mall name (Georgia 14px 700) + address link
      [divider]
-     Vendor name + booth pill (inline, same row, right-aligned)
+     Vendor name (Georgia 13px 600) + booth pill (monospace, inline)
      Facebook link (below vendor name, if present)
-     "Flag Booth" / "Booth Flagged" toggle (everyone, local only)
+     "Save to Visit List" / "Saved to Visit List" Georgia button (everyone)
 7. [hairline separator] Owner actions (owner only):
      "Mark as sold" / "Mark as available" ghost button (Tag icon)
      "Delete post" ghost button (Trash2 icon) → confirmation panel
@@ -341,9 +405,9 @@ Props: price (number)
 Structure:
   - 1.5px × 20px vertical string (tagString color), marginLeft: 17px
   - Tag body: tagBorder border, borderRadius "6px 6px 6px 2px"
-  - Hole punch: 8px circle, absolute top: -1.5px left: 13px, bg color fills
+  - Hole punch: 8px circle, absolute top: -1.5px left: 13px
   - "In-Booth" label: 8px uppercase, 1.8px letter-spacing, textMuted
-  - Price: 20px bold, textPrimary, price.toLocaleString()
+  - Price: 20px bold monospace, textPrimary
 Placement: position absolute, bottom: -28, left: 20 inside hero div
 ```
 
@@ -353,50 +417,51 @@ Placement: position absolute, bottom: -28, left: 20 inside hero div
 - All ecosystem pages need `export const dynamic = "force-dynamic"` (import supabase at module scope)
 - Never use `export const config = {}` — deprecated in Next.js 14 App Router
 - Always use `git add -A` — never individual paths (zsh glob-expands `[slug]`)
-- `filesystem:write_file` is the ONLY reliable way to write files to disk — bash heredoc writes only to the sandbox container, NOT the real filesystem
-- `str_replace` tool fails on bracket-path files (`app/find/[id]/page.tsx`, `app/vendor/[slug]/page.tsx`) — always use `filesystem:write_file` for full rewrites
-- New directories must be created with `filesystem:create_directory` before `filesystem:write_file` — it cannot create missing parents
+- `filesystem:write_file` is the ONLY reliable way to write files to disk
+- `str_replace` tool fails on bracket-path files (`app/find/[id]/page.tsx`) — always use `filesystem:write_file` for full rewrites
+- New directories must be created with `filesystem:create_directory` before `filesystem:write_file`
 - `uploadPostImage` is non-fatal — post goes through even without image
 - vendor_id only carried over in LocalVendorProfile if mall_id unchanged
 - Supabase client uses placeholder URL at build time to avoid prerender crash
 - `createVendor` handles 23505 duplicate key by fetching existing row — do not revert this
 - Always use `safeStorage` (not raw `localStorage`) in ecosystem client components, EXCEPT:
   - Feed's `loadFollowedIds()` reads raw `localStorage` directly (needs key iteration)
-  - Flagged screen's `loadFlaggedIds()` reads raw `localStorage` directly (same reason)
+  - Visit List's `loadFlaggedIds()` reads raw `localStorage` directly (same reason)
   - Feed scroll restoration uses raw `sessionStorage` (ephemeral tab state)
 - `ShelfSection` accepts `onReady(hasItems: boolean)` callback — parent uses this to conditionally render the hairline separator
-- Flagging uses `safeStorage` with key `treehouse_bookmark_${postId}`. Value "1" = flagged
+- Bookmarking uses `safeStorage` with key `treehouse_bookmark_${postId}`. Value "1" = saved
 - Owner detection checks `data.vendor_id ?? data.vendor?.id` against `profile.vendor_id` — do not simplify
-- Vercel project is under `david-6613s-projects` scope, NOT `zen-forged` — use correct dashboard URL
+- Vercel project is under `david-6613s-projects` scope, NOT `zen-forged`
 - Vercel GitHub webhook has been unreliable — if push doesn't deploy, use `npx vercel --prod`
 - Always provide a git commit/push bash command after every code change
-- MCP filesystem tool can time out on large files — if it does, provide manual diffs clearly
-- MINIMUM font size: 10px everywhere. Never ship 6px, 7px, 8px text as readable UI labels.
+- MINIMUM font size: 10px everywhere. Never ship 9px or smaller as readable UI labels.
 - Sold state label is "Unavailable" everywhere — never "Sold" in the ecosystem layer
 - **framer-motion**: `motion.div` cannot have two `transition` props — TypeScript error at build time. Always merge `whileTap` transition into the single `transition` prop.
+- **Terminology**: "Save/Saved" not "Flag/Flagged" in all ecosystem-facing copy. Storage key stays `treehouse_bookmark_*` — do not rename keys (would break existing saves).
 
 ---
 
 ## WORKING ✅
 - Discovery feed — masonry (50% dynamic offset), mall dropdown (hidden ≤1 mall), no prices on tiles
-- **Mall Hero Card** — full-width hero at top of feed. MallHeroCard (mall-specific) + GenericMallHero (all-malls).
-  5 gradient styles, deterministic per mall, optional photo overlay, noise texture + vignette.
-  AnimatePresence cross-fade on mall switch. CTA scrolls to feed.
-- Feed section label: mall name (left) + find count (right) — 10px, above masonry grid
+- **Feed tile text bands** — Georgia title + monospace booth attribution below every image
+- **Mall Hero Card** — full-width hero at top of feed, 5 gradient styles, AnimatePresence cross-fade
+- Feed section label: italic Georgia question copy ("What did you find today?")
 - Feed scroll position saved/restored via sessionStorage on back navigation
-- Skeleton loading matches live grid proportions
-- Sold items in feed: 0.62 opacity + grayscale + "Unavailable" badge
-- Flagged items in feed: green Flag circle at bottom-right of tile image
-- Fixed bottom nav — Home + Flagged + My Shelf tabs, active state, count badge
-- Flagged screen — grouped by booth ("Booth N" header), Eye icon, no icon circle in header
-- My Shelf — alternating 3-row grid, identity header (17px vendor name dominates 11px booth box),
-  empty Add Find tiles → /post, "Unavailable" sold overlay, single-screen layout
+- Skeleton loading matches live grid including text band
+- Sold items in feed: 0.60 opacity + grayscale + "Unavailable" badge
+- Bookmarked items in feed: green Bookmark circle at bottom-right of tile image
+- Fixed bottom nav — Home + Visit List + My Shelf tabs, Bookmark icon, active state, count badge
+- **Visit List** (`/flagged`) — "Your Visit List" header (Georgia 22px), italic subtitle, grouped by booth,
+  ChevronRight rows, price shown, "Share your Shelf" CTA fixed above BottomNav
+- **My Shelf** — 3×3 uniform 9-tile grid, identity header (19px vendor name, 12px mono booth),
+  empty Add Find tiles → /post, "Unavailable" sold overlay, watermark rule, "Share my shelf" CTA
 - `getPostsByIds` batch query in lib/posts.ts
-- Find detail: full-bleed image, booth tag price hanging from photo, flag/share bottom-right
+- Find detail: full-bleed image, booth tag price hanging from photo, bookmark/share bottom-right
+- **Price surfaced on detail page**: `$325 · ● Available` inline below title
+- **"Save to Visit List"** / "Saved to Visit List" — Georgia button in "Find this here" card
 - BoothTag: string + hole punch + "In-Booth" label + formatted price
 - "View the shelf" — horizontal scroll, hides if empty, hairline conditional
-- Vendor name + booth number inline in "Find this here" card
-- "Flag Booth" / "Booth Flagged" — local-only toggle, persisted to safeStorage
+- Vendor name + booth number inline in "Find this here" card (Georgia 14px 700 mall name)
 - Owner: "Mark as sold" / "Mark as available" toggle (Supabase write)
 - Owner bottom section: "Mark as sold" ghost btn + "Delete post" ghost btn + confirmation
 - Vendor profile: Facebook link, light theme, available/Unavailable grid
@@ -405,15 +470,15 @@ Placement: position absolute, bottom: -28, left: 20 inside hero div
 - Image upload to Supabase Storage
 - safeStorage fallback for Safari private/ITP
 - Admin page: local profile inspector, bulk delete, nuke all
-- Typography scale corrected: 10px minimum, correct title hierarchy across all tabs
+- **Premium design system**: warmer `#f5f2eb` parchment bg, Georgia throughout, layered shadows,
+  blur(24px) headers, 16px border-radius cards, consistent warm token set
 - All reseller intel routes (untouched, dark theme)
 
 ## KNOWN GAPS ⚠️
-- "Flag/Flagged" terminology should become "Save/Saved" (audit finding — Day 3)
-- "Share my shelf" is unwired (disabled button, "Coming soon") — Day 3 target
-- Inline unsave from Flagged screen not yet implemented — Day 5 target
+- "Share your Shelf" / "Share my shelf" CTAs are unwired (disabled buttons) — next sprint
+- Inline unsave from Visit List rows not yet implemented
 - Price field missing from post creation flow (`/post` + `/post/preview`)
-- Directions affordance missing from "Find this here" mall address
+- Directions affordance missing from "Find this here" mall address (tap address → Maps works; dedicated button not added)
 - `/enhance-text` is mock (not real Claude)
 - No Supabase RLS / auth yet
 - No pull-to-refresh on feed
@@ -428,23 +493,24 @@ Completed audit 2026-04-08. 9 findings across 4 categories.
 
 ### Typography (Day 1–2 — DONE ✅)
 - 6px text was unreadable — restored all labels to 10px+
-- Inconsistent title scale — fixed: Home 15px, Flagged 16px, My Shelf vendor 17px
+- Inconsistent title scale — fixed across all pages
 
 ### Hierarchy (Day 1–2 — DONE ✅)
-- Home header lacked a primary focus — wordmark now dominates at 15px
-- My Shelf booth box outweighed vendor name — vendor name now 17px, booth box 11px
-- Flagged icon circle competed with title — removed, title is now sole anchor
+- Home header wordmark now dominates at 16px Georgia
+- My Shelf vendor name 19px dominates 12px booth box
+- Visit List (Flagged) icon circle removed, title is sole anchor
 
-### UX / Clarity (Day 3–4 — PENDING)
-- "Flag Booth" terminology confusing → rename to Save/Saved
-- No way to unsave from Flagged screen → add inline toggle
-- "Share my shelf" is a dead end → wire to native share
-- Mall dropdown shows with only 1 mall → FIXED (hidden when ≤1 mall)
+### UX / Clarity (Day 3–4 — PARTIAL)
+- "Flag" → "Save/Visit List" terminology — DONE ✅
+- Mall dropdown hidden when ≤1 mall — DONE ✅
+- "Share my shelf" / "Share your Shelf" — unwired CTA placed ✅, wiring PENDING
+- Inline unsave from Visit List — PENDING
 
-### Consistency (Day 5 — PENDING)
-- Three different header structures → align vertical rhythm
-- Sold label varies "Unavailable" vs "Sold" → FIXED (all "Unavailable")
-- Bottom padding formula not unified → document two patterns
+### Consistency (Day 5 — PARTIAL)
+- Sold label unified to "Unavailable" everywhere — DONE ✅
+- Georgia serif applied consistently across ecosystem — DONE ✅
+- Warmer palette unified across all pages — DONE ✅
+- Bottom padding formula documented — DONE ✅
 
 ---
 
