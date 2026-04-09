@@ -33,49 +33,48 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ## CURRENT ISSUE
 > Last updated: 2026-04-09
 
-**Status:** ✅ Day 2 UI/UX sprint complete. Naming, icons, badge sync, hero copy, nav padding, and "Your Finds" rename all shipped and deployed.
+**Status:** ✅ Day 3 UI/UX sprint complete. Found badge centered, leaf unsave with confirm, My Shelf VendorBanner + Available/Found sections, header font size unified, Share CTA removed from Your Finds.
 
 **What was done (this session):**
 
-### Sprint A — Home page
-- Wordmark: "Treehouse Local Finds" → **"Treehouse Finds"** (single line, same Georgia 16px 700, no subtext)
-- Removed "Post a find" button from home header
-- Badge: `minWidth: 16` + auto-width — "9+" fits cleanly, capped at "9+" display
-- Badge source fixed: now reads raw `localStorage` key count — same source of truth across all tabs
-- Feed no-reload on back-navigate: `hasFetched = useRef(false)` guard — posts only fetched once per session
-- Section label: "What did you find today?" → **"What will you find today?"**
-- Added `window.addEventListener("focus")` to reload bookmark counts when returning from other pages
+### Sprint — "Found" terminology + badge repositioning
+- "Unavailable" renamed to **"Found"** everywhere in the ecosystem UI
+  - Home feed tile badge: moved from top-left → **centered on image**
+  - My Shelf grid tiles: centered "Found" badge on found items
+  - Find detail hero: centered "Found" badge (larger pill, 9px text)
+  - Find detail shelf cards: centered "Found" badge
+  - Find detail status line: "Unavailable" → "Found"
+  - Your Finds rows: "Unavailable" → "Found" label on sold items
+- "Sold" label preserved in admin/owner controls only (Mark as sold / Mark as available)
 
-### Sprint B — Visit List → "Your Finds"
-- Renamed everywhere: BottomNav tab, page header, empty state, CTA, aria-labels
-- URL stays `/flagged` — storage keys unchanged
-- Booth section header redesigned as slim **VendorBanner** — full-width dark forest gradient, vendor name left, booth pill right. No image. Matches MallHeroCard aesthetic.
-- CTA: "Share your Shelf" → **"Share your finds"**
-- Badge and row count now both use raw `localStorage` count (consistent with home)
-- `window.addEventListener("focus")` re-fetches on tab return
+### Sprint — Your Finds page
+- **Removed** Share your finds CTA button and fixed footer bar entirely
+- **Added** inline unsave: filled green leaf circle button on each row
+  - First tap: animates to "Remove?" pill (red tint, autoFocus)
+  - Second tap: removes post optimistically from state + decrements badge
+  - Unsave button sits outside the `<Link>` wrapper — does not navigate
+- Header redesigned: logo + **22px Georgia** "Your Finds" wordmark row above italic subtitle
 
-### Sprint C — My Shelf
-- Removed mall text watermark from hairline divider (now clean hairline only)
-- Added "Post a find" button to header (top-right, green pill, enabled for testing)
-- Header redesigned to match home page pattern: logo + "My Shelf" wordmark left, button right
-- Vendor name becomes italic Georgia 13px subtitle; booth is inline green pill
+### Sprint — My Shelf page
+- Fixed `100dvh` layout → scrollable flex column — **shows all posts, no 9 cap**
+- Header: logo + **22px Georgia** "My Shelf" wordmark + "Post a find" pill
+- **VendorBanner** (dark forest gradient, vendor name + Booth pill) added to header — replaces italic name/booth pill subtext
+- Grid split into two labeled sections:
+  - **Available** — linked tiles, Add tile appended after last available
+  - **Found** — inert tiles (no link), centered "Found" badge, grayscale + 0.62 opacity
+- Section separators: uppercase faint label + hairline extending right
+- Count line updated to "X available · Y found"
+- Trailing hairline divider and "Share my shelf" CTA **removed**
 
-### Sprint D — Bottom nav iOS padding
-- `paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)"` — adds 10px above safe area, icons lift off home indicator
+### Sprint — Home feed
+- Header wordmark bumped from 16px → **22px Georgia** to match other pages
+- Logo already present — consistent across all 3 tab pages now
 
-### Sprint E — MallHeroCard / GenericMallHero
-- Eyebrow: "Welcome to" → **"Treehouse Finds"**
-- Title: **"What will you find today?"**
-- Subtitle: **"Found across Kentucky's antique malls. A closer look at what's worth the trip."**
-
-### Sprint F — PiLeaf icon (`react-icons`)
-- Installed `react-icons` package
-- Created `components/PiLeafIcon.tsx` — thin wrapper around `import { PiLeaf } from "react-icons/pi"`
-- Replaced `Bookmark` icon with `PiLeafIcon` in: BottomNav, flagged page (empty state + thumbnail fallback), find detail page (photo button + "Save to Your Finds" button)
-- Feed tile saved indicator: replaced inline SVG bookmark path with `<PiLeafIcon size={12} />` in the green pill
-- "Save to Visit List" / "Saved to Visit List" → **"Save to Your Finds"** / **"Saved to Your Finds"**
+### Sprint — Price field in /post/preview
+- Price field UI was already wired in `handlePublish` — confirmed present in existing code, no change needed
 
 **Previous sessions:**
+- Day 2 UI/UX sprint — PiLeaf icons, badge sync, hero copy, "Your Finds" rename, iOS nav padding, VendorBanner, My Shelf header, all deployed
 - Branded Experience Sprint — 3-page overhaul (warmer parchment, Georgia, layered shadows)
 - Mall Identity Layer (Sprint 1) — MallHeroCard shipped
 - Design audit 9 findings — Day 1–2 typography/hierarchy fixes
@@ -87,10 +86,10 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 - safeStorage iPhone Safari bug fix
 
 **Next session starting point:**
-1. QA on device — PiLeaf icon across all surfaces, badge sync, hero copy, "Your Finds" rename
-2. Wire "Share your finds" / "Share my shelf" CTAs (native share sheet or URL copy)
-3. Inline unsave from Your Finds rows (swipe or tap affordance)
-4. Price field missing from post creation flow (`/post` + `/post/preview`)
+1. QA on device — Found badge centering, leaf unsave flow, My Shelf sections, header size parity
+2. Wire "Share my shelf" CTA (native share sheet or URL copy) — deferred from this sprint
+3. My Shelf Found tiles — make tappable/linkable (deferred to later sprint)
+4. Inline unsave from Your Finds — verify badge count decrements correctly on device
 5. Optional Supabase hero columns (hero works without them):
    ```sql
    ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_title text;
@@ -143,16 +142,18 @@ SERPAPI_KEY                      eBay sold comps
 ### Ecosystem (warm parchment theme)
 ```
 /                   Discovery feed — masonry, Mall Hero Card at top, mall dropdown (hidden if ≤1 mall),
-                    tile text bands (Georgia title + booth attribution), PiLeaf saved indicators on tiles
-/find/[id]          Find detail — full-bleed image, BoothBox bottom-left (booth number, no price),
+                    tile text bands (Georgia title + booth attribution), PiLeaf saved indicators on tiles,
+                    "Found" badge centered on sold tile images
+/find/[id]          Find detail — full-bleed image, centered "Found" badge on hero (sold),
+                    BoothBox bottom-left (booth number, no price),
                     PiLeaf save + share buttons bottom-right of photo, BottomNav (no active tab),
-                    price inline below title, "View the shelf" scroll, "Find this here" card,
-                    "Save to Your Finds" button, owner actions (mark sold + delete)
-/flagged            Your Finds — grouped by booth (VendorBanner: gradient, vendor name + booth pill),
-                    ChevronRight affordance, "Share your finds" CTA at bottom
-/my-shelf           My Shelf — 3×3 uniform 9-tile grid, logo + "My Shelf" wordmark header,
-                    "Post a find" button top-right, vendor italic subtitle + booth pill,
-                    hairline divider, "Share my shelf" CTA
+                    price inline below title, "View the shelf" horizontal scroll,
+                    "Find this here" card, "Save to Your Finds" button, owner actions (mark sold + delete)
+/flagged            Your Finds — logo + 22px Georgia header, grouped by booth (VendorBanner),
+                    leaf unsave button (confirm state), "Found" label on sold rows, no Share CTA
+/my-shelf           My Shelf — logo + 22px Georgia header, VendorBanner (gradient) in header,
+                    scrollable (all posts shown), Available grid + Found grid (separated, labeled),
+                    Add tile after last available, Found tiles inert (no link), no trailing hairline/Share CTA
 /mall/[slug]        Mall profile
 /vendor/[slug]      Vendor profile — Facebook link, available/sold grid
 /post               Vendor capture — camera/gallery, profile setup
@@ -195,12 +196,14 @@ components/PiLeafIcon.tsx     Thin wrapper: import { PiLeaf } from "react-icons/
 components/MallHeroCard.tsx   Mall Identity Hero — MallHeroCard + GenericMallHero exports
                               GenericMallHero: eyebrow "Treehouse Finds", Kentucky copy
 app/layout.tsx                No max-width wrapper — each page owns its own width
-app/page.tsx                  Discovery feed — MallHeroCard, tile text bands, PiLeaf saved dot,
-                              hasFetched guard (no re-fetch on back-nav), focus bookmark sync
-app/flagged/page.tsx          Your Finds — VendorBanner grouped by booth, PiLeaf icon,
-                              "Share your finds" CTA, raw localStorage badge count
-app/my-shelf/page.tsx         My Shelf — 3×3 grid, home-style header, "Post a find" btn, hairline
-app/find/[id]/page.tsx        Find detail — BoothBox, PiLeaf save button, "Save to Your Finds"
+app/page.tsx                  Discovery feed — MallHeroCard, tile text bands, centered "Found" badge
+                              on sold tile images, PiLeaf saved dot, hasFetched guard, focus bookmark sync
+app/flagged/page.tsx          Your Finds — logo+22px header, VendorBanner sections, PiLeaf unsave button
+                              (confirm state), "Found" label on sold rows, no Share CTA
+app/my-shelf/page.tsx         My Shelf — logo+22px header, VendorBanner in header, scrollable,
+                              Available grid + Found grid (labeled, separated), Add tile, no Share CTA
+app/find/[id]/page.tsx        Find detail — centered "Found" badge on hero + shelf cards,
+                              "Found" status text, BoothBox, PiLeaf save button
 app/admin/page.tsx            Admin UI — profile inspector + bulk delete
 app/api/admin/posts/route.ts  Admin API — GET all posts, DELETE by id or all
 ```
@@ -227,6 +230,8 @@ header blur:  rgba(245,242,235,0.96), backdropFilter blur(24px)
 emptyTile:    #dedad2
 tag:          #faf8f2
 tagBorder:    #ccc6b4
+bannerFrom:   #1e3d24
+bannerTo:     #2d5435
 ```
 
 ### Reseller pages (dark — do not change)
@@ -239,11 +244,11 @@ bg: #050f05  text: #f5f0e8  gold: #c8b47e  green: #6dbc6d
 MINIMUM font size anywhere in the app: 10px
 Page labels: 9–10px uppercase muted
 Count/subtext lines: 10–11px italic Georgia
-Section headers / page titles: 16–22px Georgia 700
-  - Feed section label: italic Georgia 15px
-  - Your Finds header: Georgia 22px 700
-  - My Shelf wordmark: 16px Georgia 700 (matches home)
-  - My Shelf vendor subtitle: italic Georgia 13px
+Section headers / page titles: 22px Georgia 700 — ALL three tab pages (home, flagged, my-shelf)
+  - Home wordmark:       "Treehouse Finds" — 22px Georgia 700
+  - Your Finds header:   "Your Finds"      — 22px Georgia 700
+  - My Shelf wordmark:   "My Shelf"        — 22px Georgia 700
+  - My Shelf vendor subtitle: italic Georgia 15px (inside VendorBanner)
 Body / tile titles: Georgia 12–14px
 Captions: 15px italic Georgia, lineHeight 1.85
 Empty state headers: Georgia 20px 700
@@ -267,12 +272,12 @@ System UI is reserved for: BottomNav labels, dropdown options, monospace data
 ```
 lucide-react: Home, Store, Share2, Trash2, Facebook, Tag, MapPin, Compass, ChevronDown,
               ChevronRight, Plus, ImagePlus, Share2
-react-icons/pi: PiLeaf — used as the "Your Finds" / save icon throughout ecosystem
+react-icons/pi: PiLeaf — used as the "Your Finds" / save / unsave icon throughout ecosystem
   - BottomNav "Your Finds" tab
-  - Feed tile saved indicator (green pill, bottom-right of image)
+  - Feed tile saved indicator (green circle, bottom-right of image)
   - Find detail: photo save button (circle, dark/green bg)
   - Find detail: "Save to Your Finds" / "Saved to Your Finds" button in card
-  - Your Finds page: empty state icon, thumbnail fallback icon
+  - Your Finds page: empty state icon, thumbnail fallback icon, inline unsave button (filled green circle)
 ```
 
 ### Shadow system
@@ -287,7 +292,7 @@ VendorBanner: "0 2px 14px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.10)"
 ```
 Max-width: 430px per page
 Safe area: env(safe-area-inset-bottom) on all fixed bars
-Bottom nav padding: calc(env(safe-area-inset-bottom, 0px) + 10px) — 10px extra above safe area
+Bottom nav padding: calc(env(safe-area-inset-bottom, 0px) + 10px) — 10px extra above iPhone home bar
 Bottom padding formula: max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))
 Animations: opacity 0→1, y 8-16→0, ease [0.25,0.1,0.25,1]
 Border radius: 16px cards, 14px inner cards, 10–11px shelf tiles, 24px pill buttons
@@ -313,7 +318,10 @@ KNOWN BUG PATTERN: framer-motion motion.div cannot have two `transition` props �
 2-column masonry. Gap: 12px. Tile border-radius: 16px.
 Right column offset: 50% of first tile's rendered height (ResizeObserver, live).
 Skeleton uses SKELETON_OFFSET = Math.round(SKELETON_HEIGHTS[0] * 0.5) = 65px.
-No price badges on tiles. Sold items: 0.60 opacity + grayscale + "Unavailable" badge.
+No price badges on tiles. Sold items: 0.60 opacity + grayscale.
+"Found" badge: centered on image — position absolute, top 50% left 50%, translate(-50%,-50%),
+  dark frosted pill (rgba(28,26,20,0.54) bg, rgba(245,242,235,0.93) text, blur(6px)).
+  7px text, 700 weight, uppercase, 1.5px letter-spacing. Same treatment on home, My Shelf, find detail.
 Saved items: 22px green circle, PiLeafIcon size=12 white, bottom-right of tile image.
 Tile text band: Georgia 12px 600 title (2-line clamp) + monospace 10px booth attribution.
 Section label: italic Georgia 15px "What will you find today?" + count right.
@@ -340,46 +348,75 @@ Raw localStorage iteration used in: feed loadFollowedIds(), Your Finds loadFlagg
 Badge count source: raw localStorage key iteration — same function on all pages
 Terminology: "Save to Your Finds" / "Saved to Your Finds"
 Icon: PiLeafIcon everywhere (not Bookmark)
+Unsave: inline on Your Finds rows — filled green leaf circle → "Remove?" confirm pill → optimistic removal
 ```
 
 ### Your Finds page layout
 ```
-Header: Georgia 22px 700 "Your Finds" + italic Georgia 13px subtitle
+Header: logo + 22px Georgia 700 "Your Finds" | italic Georgia 13px subtitle below
 VendorBanner: full-width gradient (bannerFrom #1e3d24 → bannerTo #2d5435), borderRadius 14,
   noise texture overlay (opacity 0.04), vendor name Georgia 15px 700 left,
   booth label+pill right (rgba white 0.12 bg, monospace 13px 700)
-Item rows: 64×64 thumbnail (PiLeaf fallback), Georgia 14px 600 title, monospace price, ChevronRight
+Item rows: 64×64 thumbnail (PiLeaf fallback), Georgia 14px 600 title, monospace price or "Found" label,
+  ChevronRight (inside Link), UnsaveButton (outside Link, green leaf circle → "Remove?" confirm)
   borderRadius 14, layered shadow
-"Share your finds" CTA: fixed above BottomNav, green, disabled (unwired), Georgia 15px 600
+No Share CTA — footer bar removed entirely
 ```
 
-### My Shelf header (updated)
+### My Shelf page layout (updated)
 ```
-Matches home page pattern:
-  Top row: logo (24px) + "My Shelf" Georgia 16px 700 left | "Post a find" green pill right
-  Subtitle row: vendor name italic Georgia 13px left | "Booth N" green pill right
-  Count row (if posts): "X available · Y sold" italic Georgia 11px | "N / 9" uppercase faint
+Header:
+  Top row: logo (24px) + "My Shelf" Georgia 22px 700 left | "Post a find" green pill right
+  VendorBanner row: dark gradient banner (same as Your Finds), vendor name + Booth pill
+  Count row: "X available · Y found" italic Georgia 11px faint
+Layout: scrollable flex column (not fixed 100dvh) — all posts shown, no cap
+Available section:
+  SectionLabel: "Available" — uppercase 9px faint + hairline extending right
+  3-col grid, 1:1 aspect tiles, linked to find detail
+  Add tile (+) appended after last available tile
+Found section:
+  SectionLabel: "Found" — same style
+  3-col grid, 1:1 aspect tiles, INERT (no link — future sprint)
+  Tiles: grayscale(0.55) + brightness(0.82) + opacity 0.62 + centered "Found" badge
+No trailing hairline divider. No Share my shelf CTA.
 ```
 
 ### Detail page layout order
 ```
 1. Full-bleed image
-   - "Unavailable" badge top-left — only when status=sold
+   - Centered "Found" badge when sold — dark frosted pill, centered absolutely on image
+     (9px text, 5px top/bottom 12px left/right padding, blur(8px), larger than tile badges)
    - PiLeaf save + Share2 buttons bottom-right (36px circles, blur backdrop)
      PiLeaf: strokeWidth 1.8 unsaved / 2.2 saved, greenSolid bg when saved
    - BoothBox bottom-left — clean rectangle, "Found In-Booth" 8px label + booth number 16px mono
      marginBottom on wrapper: hasBoothBox ? 34 : 0
 2. Title (Georgia 26px 700)
-3. Price + availability: "$325 · ● Available" (monospace price, green pulsing dot)
+3. Price + availability: "$325 · ● Available" or "Found" (no dot when sold)
 4. Caption (italic Georgia 15px, lineHeight 1.85) + description (13px)
 5. [hairline if shelf has items] + "View the shelf" horizontal scroll
+   - ShelfCard sold badge: centered "Found" pill (6px text, same dark frosted treatment)
 6. "Find this here" label + card:
      Mall name (Georgia 14px 700) + address link
      Vendor name + booth pill
      Facebook link (if present)
      "Save to Your Finds" / "Saved to Your Finds" Georgia button with PiLeafIcon
 7. Owner actions: "Mark as sold/available" + "Delete post" → confirmation
+   - Owner toggle label: "Mark as sold" / "Mark as available" (unchanged — admin language)
 8. BottomNav (active={null})
+```
+
+### "Found" terminology rules
+```
+UI-facing (buyers see): "Found" — used for sold/unavailable status everywhere
+  - Badge on tiles: "Found" (centered)
+  - Status line below title on detail page: "Found"
+  - Your Finds row label: "Found"
+  - My Shelf section header: "Found"
+  - My Shelf tile badge: "Found"
+Admin/owner-facing: "Sold" — preserved in owner controls only
+  - Owner action toggle: "Mark as sold" / "Mark as available"
+  - Supabase status column value: still "sold" (unchanged in DB)
+Never use "Unavailable" — fully retired
 ```
 
 ---
@@ -399,7 +436,9 @@ Matches home page pattern:
   - Feed's `loadFollowedIds()` reads raw `localStorage` directly (needs key iteration)
   - Your Finds' `loadFlaggedIds()` reads raw `localStorage` directly (same reason)
   - Feed scroll restoration uses raw `sessionStorage` (ephemeral tab state)
-- Badge count must always use raw localStorage key iteration — NOT `posts.length` (Supabase count diverges if a post is deleted)
+- Badge count must always use raw localStorage key iteration — NOT `posts.length`
+- Unsave in Your Finds: optimistic removal — filter from state + decrement count, no re-fetch needed
+- UnsaveButton in Your Finds: must be OUTSIDE the `<Link>` wrapper — otherwise tap navigates
 - `ShelfSection` accepts `onReady(hasItems: boolean)` callback — parent uses this to conditionally render the hairline separator
 - Bookmarking uses `safeStorage` with key `treehouse_bookmark_${postId}`. Value "1" = saved. DO NOT rename keys.
 - Owner detection checks `data.vendor_id ?? data.vendor?.id` against `profile.vendor_id` — do not simplify
@@ -407,37 +446,36 @@ Matches home page pattern:
 - Vercel GitHub webhook has been unreliable — if push doesn't deploy, use `npx vercel --prod`
 - Always provide a git commit/push bash command after every code change
 - MINIMUM font size: 10px everywhere. Never ship 9px or smaller as readable UI labels.
-- Sold state label is "Unavailable" everywhere — never "Sold" in the ecosystem layer
+- Found badge on images: always centered (top 50%, left 50%, translate -50% -50%), never top-left
 - **framer-motion**: `motion.div` cannot have two `transition` props — TypeScript error at build time. Always merge `whileTap` transition into the single `transition` prop.
-- **react-icons**: `PiLeaf` from `react-icons/pi` — use via `components/PiLeafIcon.tsx` wrapper everywhere. Do not import directly in pages (keeps swap easy).
+- **react-icons**: `PiLeaf` from `react-icons/pi` — use via `components/PiLeafIcon.tsx` wrapper everywhere.
 
 ---
 
 ## WORKING ✅
-- Discovery feed — masonry, no prices, PiLeaf saved indicator, mall dropdown, no re-fetch on back-nav
+- Discovery feed — masonry, no prices, centered "Found" badge on sold tiles, PiLeaf saved indicator, mall dropdown, no re-fetch on back-nav
 - **Feed section label**: italic Georgia "What will you find today?"
 - **MallHeroCard / GenericMallHero**: Kentucky copy, "Treehouse Finds" eyebrow, updated title
 - Feed scroll position saved/restored via sessionStorage
 - Bookmark badge: raw localStorage count, synced on focus across all pages
-- **Your Finds** (`/flagged`) — "Your Finds" header, VendorBanner sections, PiLeaf icon,
-  "Share your finds" CTA, badge from raw localStorage
-- **My Shelf** — 3×3 grid, home-style header (logo + wordmark + "Post a find" btn), hairline, Share CTA
+- **Your Finds** (`/flagged`) — logo+22px header, VendorBanner sections, leaf unsave (confirm state),
+  "Found" label on sold rows, no Share CTA
+- **My Shelf** — logo+22px header, VendorBanner in header, scrollable (all posts), Available + Found sections, Add tile, no trailing hairline/Share CTA
 - **BottomNav**: Home · Your Finds · My Shelf, PiLeafIcon tab, iOS bottom padding fixed
-- Find detail: BoothBox (clean rect, "Found In-Booth" + booth number), PiLeaf save button,
-  "Save to Your Finds" / "Saved to Your Finds"
+- Find detail: centered "Found" badge on hero + shelf cards, "Found" status text, BoothBox,
+  PiLeaf save button, "Save to Your Finds" / "Saved to Your Finds"
 - Price surfaced inline below title on detail page
 - "View the shelf" — horizontal scroll, hides if empty
 - Owner: mark sold/available toggle, delete with confirmation
-- Post flow: capture → AI title + caption → preview → publish
+- Post flow: capture → AI title + caption → preview (with price field) → publish
 - Image upload to Supabase Storage
 - safeStorage fallback for Safari private/ITP
 - Admin page: local profile inspector, bulk delete
 - All reseller intel routes (untouched, dark theme)
 
 ## KNOWN GAPS ⚠️
-- "Share your finds" / "Share my shelf" CTAs are unwired (disabled buttons) — next sprint
-- Inline unsave from Your Finds rows not yet implemented
-- Price field missing from post creation flow (`/post` + `/post/preview`)
+- "Share my shelf" CTA unwired (button removed from UI — will be re-added when wired)
+- My Shelf Found tiles are inert — no tap action (deferred to later sprint)
 - `/enhance-text` is mock (not real Claude)
 - No Supabase RLS / auth yet
 - No pull-to-refresh on feed
