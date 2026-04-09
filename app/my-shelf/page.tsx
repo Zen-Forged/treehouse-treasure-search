@@ -1,5 +1,7 @@
 // app/my-shelf/page.tsx
-// My Shelf — vendor's curated shelf. 3x3 uniform grid (9 slots).
+// My Shelf — vendor's full shelf, scrollable.
+// Available posts first (3-col grid), Found posts below (3-col grid, labeled separately).
+// VendorBanner in header. No 9-cap — shows all posts.
 
 "use client";
 
@@ -10,7 +12,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Share2, Store, ImagePlus, Plus } from "lucide-react";
+import { Store, ImagePlus, Plus } from "lucide-react";
 import { getVendorPosts } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Post } from "@/types/treehouse";
 import BottomNav from "@/components/BottomNav";
@@ -31,51 +33,97 @@ const C = {
   greenSolid:  "rgba(30,77,43,0.90)",
   header:      "rgba(245,242,235,0.96)",
   emptyTile:   "#dedad2",
+  bannerFrom:  "#1e3d24",
+  bannerTo:    "#2d5435",
 };
 
 const GAP       = 6;
 const GRID_COLS = 3;
-const GRID_ROWS = 3;
-const TOTAL     = GRID_COLS * GRID_ROWS;
 
-// ─── Image tile ────────────────────────────────────────────────────────────────
+// ─── Section label ─────────────────────────────────────────────────────────────
 
-function ShelfTile({ post, index }: { post: Post; index: number }) {
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 10,
+      fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1.8px",
+      color: C.textFaint, margin: `${GAP * 2}px ${GAP}px ${GAP}px`,
+    }}>
+      {children}
+      <div style={{ flex: 1, height: 1, background: C.border }} />
+    </div>
+  );
+}
+
+// ─── Available tile ────────────────────────────────────────────────────────────
+
+function AvailableTile({ post, index }: { post: Post; index: number }) {
   const [imgErr, setImgErr] = useState(false);
   const hasImg = !!post.image_url && !imgErr;
-  const isSold = post.status === "sold";
 
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: [0.25, 0.1, 0.25, 1] }}
-      style={{ width: "100%", height: "100%", borderRadius: 10, overflow: "hidden", position: "relative" }}
+      style={{ width: "100%", aspectRatio: "1", borderRadius: 10, overflow: "hidden", position: "relative" }}
     >
       <Link href={`/find/${post.id}`} style={{ display: "block", width: "100%", height: "100%", textDecoration: "none" }}>
-        <div style={{ width: "100%", height: "100%", position: "relative" }}>
-          {hasImg ? (
-            <img src={post.image_url!} alt={post.title} onError={() => setImgErr(true)}
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
-                filter: isSold ? "grayscale(0.55) brightness(0.82)" : "brightness(0.99) saturate(0.96)" }} />
-          ) : (
-            <div style={{ width: "100%", height: "100%", background: C.surface, display: "flex", alignItems: "flex-end", padding: "7px 9px" }}>
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 10, fontWeight: 600, color: C.textMuted, lineHeight: 1.3,
-                overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" as const }}>
-                {post.title}
-              </div>
+        {hasImg ? (
+          <img src={post.image_url!} alt={post.title} onError={() => setImgErr(true)}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
+              filter: "brightness(0.99) saturate(0.96)" }} />
+        ) : (
+          <div style={{ width: "100%", height: "100%", background: C.surface, display: "flex", alignItems: "flex-end", padding: "7px 9px" }}>
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 10, fontWeight: 600, color: C.textMuted, lineHeight: 1.3,
+              overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" as const }}>
+              {post.title}
             </div>
-          )}
-          {isSold && (
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(245,242,235,0.12)" }}>
-              <div style={{ fontSize: 7, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.4px",
-                color: "rgba(245,242,235,0.92)", background: "rgba(28,26,20,0.50)",
-                backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", padding: "3px 8px", borderRadius: 4 }}>
-                Unavailable
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </Link>
+    </motion.div>
+  );
+}
+
+// ─── Found tile — no link, centered badge ──────────────────────────────────────
+
+function FoundTile({ post, index }: { post: Post; index: number }) {
+  const [imgErr, setImgErr] = useState(false);
+  const hasImg = !!post.image_url && !imgErr;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: [0.25, 0.1, 0.25, 1] }}
+      style={{ width: "100%", aspectRatio: "1", borderRadius: 10, overflow: "hidden", position: "relative", opacity: 0.62 }}
+    >
+      {/* No link — found items are inert in this sprint */}
+      {hasImg ? (
+        <img src={post.image_url!} alt={post.title} onError={() => setImgErr(true)}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
+            filter: "grayscale(0.55) brightness(0.82)" }} />
+      ) : (
+        <div style={{ width: "100%", height: "100%", background: C.surface, display: "flex", alignItems: "flex-end", padding: "7px 9px" }}>
+          <div style={{ fontFamily: "Georgia, serif", fontSize: 10, fontWeight: 600, color: C.textMuted, lineHeight: 1.3 }}>
+            {post.title}
+          </div>
+        </div>
+      )}
+      {/* "Found" badge — centered on image */}
+      <div style={{
+        position: "absolute",
+        top: "50%", left: "50%",
+        transform: "translate(-50%, -50%)",
+        fontSize: 7, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px",
+        padding: "3px 8px", borderRadius: 5,
+        background: "rgba(28,26,20,0.54)",
+        color: "rgba(245,242,235,0.93)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
+        whiteSpace: "nowrap",
+      }}>
+        Found
+      </div>
     </motion.div>
   );
 }
@@ -88,7 +136,7 @@ function AddFindTile({ index }: { index: number }) {
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: [0.25, 0.1, 0.25, 1] }}
-      style={{ width: "100%", height: "100%" }}
+      style={{ width: "100%", aspectRatio: "1" }}
     >
       <button onClick={() => router.push("/post")}
         style={{ width: "100%", height: "100%", borderRadius: 10, background: C.emptyTile, border: "none", cursor: "pointer", padding: 0,
@@ -103,26 +151,17 @@ function AddFindTile({ index }: { index: number }) {
   );
 }
 
-// ─── 3x3 Grid ─────────────────────────────────────────────────────────────────
+// ─── 3-col grid wrapper ────────────────────────────────────────────────────────
 
-function ShelfGrid({ posts }: { posts: Post[] }) {
-  const slots: (Post | null)[] = [
-    ...posts.slice(0, TOTAL),
-    ...Array(Math.max(0, TOTAL - posts.length)).fill(null),
-  ];
+function ThreeColGrid({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      flex: 1,
       display: "grid",
       gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`,
-      gridTemplateRows: `repeat(${GRID_ROWS}, 1fr)`,
-      gap: GAP, padding: `${GAP}px`, minHeight: 0,
+      gap: GAP,
+      padding: `0 ${GAP}px`,
     }}>
-      {slots.map((post, i) =>
-        post
-          ? <ShelfTile key={post.id}        post={post} index={i} />
-          : <AddFindTile key={`empty-${i}`} index={i} />
-      )}
+      {children}
     </div>
   );
 }
@@ -131,16 +170,16 @@ function ShelfGrid({ posts }: { posts: Post[] }) {
 
 function SkeletonGrid() {
   return (
-    <div style={{
-      flex: 1,
-      display: "grid",
-      gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`,
-      gridTemplateRows: `repeat(${GRID_ROWS}, 1fr)`,
-      gap: GAP, padding: `${GAP}px`, minHeight: 0,
-    }}>
-      {Array(TOTAL).fill(null).map((_, i) => (
-        <div key={i} className="skeleton-shimmer" style={{ borderRadius: 10, width: "100%", height: "100%" }} />
-      ))}
+    <div style={{ padding: GAP }}>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`,
+        gap: GAP,
+      }}>
+        {Array(9).fill(null).map((_, i) => (
+          <div key={i} className="skeleton-shimmer" style={{ borderRadius: 10, width: "100%", aspectRatio: "1" }} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -150,7 +189,7 @@ function SkeletonGrid() {
 function NoProfile() {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-      style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 32px", textAlign: "center" }}>
+      style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 32px 0", textAlign: "center" }}>
       <div style={{ width: 54, height: 54, borderRadius: "50%", background: C.surface, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 22 }}>
         <Store size={22} style={{ color: C.textMuted }} />
       </div>
@@ -182,10 +221,9 @@ export default function MyShelfPage() {
       const p = JSON.parse(raw) as LocalVendorProfile;
       setProfile(p);
       if (p.vendor_id) {
-        getVendorPosts(p.vendor_id, TOTAL).then(data => {
-          const available = data.filter(x => x.status === "available");
-          const sold      = data.filter(x => x.status === "sold");
-          setPosts([...available, ...sold].slice(0, TOTAL));
+        // Fetch all posts — no cap
+        getVendorPosts(p.vendor_id, 200).then(data => {
+          setPosts(data);
           setLoading(false);
         });
       } else {
@@ -194,28 +232,32 @@ export default function MyShelfPage() {
     } catch { setLoading(false); }
   }, []);
 
-  const availableCount = posts.filter(p => p.status === "available").length;
+  const available      = posts.filter(p => p.status === "available");
+  const found          = posts.filter(p => p.status === "sold");
+  const availableCount = available.length;
+  const foundCount     = found.length;
   const hasProfile     = !!profile;
 
   return (
-    <div style={{ height: "100dvh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{ minHeight: "100dvh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
 
-      {/* ── Header ─────────────────────────────────────────────────────────────
-          Matches the home page header pattern: logo + Georgia wordmark left,
-          action button right. Subtext line carries the vendor/booth identity.
-      ────────────────────────────────────────────────────────────────────────── */}
-      <header style={{ flexShrink: 0, background: C.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px" }}>
+      {/* ── Header ── */}
+      <header style={{
+        flexShrink: 0,
+        background: C.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
+        borderBottom: `1px solid ${C.border}`, padding: "0 16px",
+      }}>
         <div style={{ paddingTop: "max(16px, env(safe-area-inset-top, 16px))", paddingBottom: 12 }}>
 
-          {/* Top row: logo + wordmark left / Post a find button right */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          {/* Top row: logo + wordmark left / Post a find right */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
-              <span style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.2px", lineHeight: 1 }}>
+              {/* 22px Georgia — unified with home and Your Finds */}
+              <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.3px", lineHeight: 1 }}>
                 My Shelf
               </span>
             </div>
-            {/* Post a find — enabled for testing, will be gated later */}
             <button
               onClick={() => router.push("/post")}
               style={{
@@ -232,63 +274,106 @@ export default function MyShelfPage() {
             </button>
           </div>
 
-          {/* Vendor identity subtext — booth number right-aligned, like a subtitle */}
+          {/* VendorBanner — dark gradient, vendor name + booth pill */}
           {hasProfile && (
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginTop: 6 }}>
-              {/* Vendor name — italic Georgia, warm subtext style */}
-              <span style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: C.textMuted, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
-                {profile?.display_name ?? "Your Booth"}
-              </span>
-              {/* Booth pill — right aligned */}
-              {profile?.booth_number && (
+            <div style={{
+              borderRadius: 12, overflow: "hidden", position: "relative",
+              background: `linear-gradient(105deg, ${C.bannerFrom} 0%, ${C.bannerTo} 100%)`,
+              boxShadow: "0 2px 12px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.10)",
+            }}>
+              {/* Noise texture */}
+              <div style={{
+                position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.04,
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")`,
+                backgroundRepeat: "repeat", backgroundSize: "200px 200px",
+              }} />
+              <div style={{
+                position: "relative", zIndex: 1,
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "11px 14px", gap: 12,
+              }}>
                 <div style={{
-                  flexShrink: 0, marginLeft: 12,
-                  fontFamily: "monospace", fontSize: 11, fontWeight: 700, color: C.green,
-                  padding: "3px 9px 4px", border: `1.5px solid ${C.greenBorder}`,
-                  borderRadius: 7, background: C.greenLight, letterSpacing: "0.4px",
+                  fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700,
+                  color: "rgba(255,255,255,0.96)", letterSpacing: "-0.2px", lineHeight: 1.2,
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0,
                 }}>
-                  Booth {profile.booth_number}
+                  {profile.display_name}
                 </div>
-              )}
+                {profile.booth_number && (
+                  <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
+                    <div style={{ fontSize: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1.8px", color: "rgba(255,255,255,0.50)", lineHeight: 1 }}>
+                      Booth
+                    </div>
+                    <div style={{
+                      fontFamily: "monospace", fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.95)",
+                      letterSpacing: "0.4px", lineHeight: 1,
+                      background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)",
+                      borderRadius: 7, padding: "4px 10px 5px",
+                    }}>
+                      {profile.booth_number}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
           {/* Count line */}
           {!loading && hasProfile && posts.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 5 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 7 }}>
               <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: C.textFaint }}>
-                {availableCount} available · {posts.length - availableCount} sold
-              </div>
-              <div style={{ fontSize: 10, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.4px", fontWeight: 500 }}>
-                {posts.length} / {TOTAL}
+                {availableCount} available · {foundCount} found
               </div>
             </div>
           )}
         </div>
       </header>
 
-      {/* ── Grid ── */}
-      {loading ? <SkeletonGrid /> : !hasProfile ? <NoProfile /> : <ShelfGrid posts={posts} />}
+      {/* ── Content — scrollable ── */}
+      <div style={{ flex: 1, overflowY: "auto", paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }}>
+        {loading ? (
+          <SkeletonGrid />
+        ) : !hasProfile ? (
+          <NoProfile />
+        ) : (
+          <>
+            {/* Available section */}
+            {available.length > 0 && (
+              <>
+                <SectionLabel>Available</SectionLabel>
+                <ThreeColGrid>
+                  {available.map((post, i) => (
+                    <AvailableTile key={post.id} post={post} index={i} />
+                  ))}
+                  {/* Add tile after last available */}
+                  <AddFindTile index={available.length} />
+                </ThreeColGrid>
+              </>
+            )}
 
-      {/* ── Hairline divider ── */}
-      {hasProfile && !loading && (
-        <div style={{ height: 1, background: C.border, margin: `5px ${GAP + 6}px`, flexShrink: 0 }} />
-      )}
+            {/* If no posts at all, just show add tile */}
+            {posts.length === 0 && (
+              <>
+                <SectionLabel>Available</SectionLabel>
+                <ThreeColGrid>
+                  <AddFindTile index={0} />
+                </ThreeColGrid>
+              </>
+            )}
 
-      {/* ── Share my shelf ── */}
-      <div style={{ flexShrink: 0, padding: "10px 16px", paddingBottom: "max(calc(env(safe-area-inset-bottom, 0px) + 76px), 86px)", background: C.header, borderTop: `1px solid ${C.border}` }}>
-        <button disabled style={{
-          width: "100%",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
-          padding: "14px 20px", borderRadius: 14,
-          background: C.greenSolid, border: "none", cursor: "not-allowed", opacity: 0.70,
-          boxShadow: "0 2px 12px rgba(30,77,43,0.18)",
-        }}>
-          <Share2 size={15} style={{ color: "rgba(255,255,255,0.85)" }} />
-          <span style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 600, color: "rgba(255,255,255,0.94)", letterSpacing: "-0.1px" }}>
-            Share my shelf
-          </span>
-        </button>
+            {/* Found section */}
+            {found.length > 0 && (
+              <>
+                <SectionLabel>Found</SectionLabel>
+                <ThreeColGrid>
+                  {found.map((post, i) => (
+                    <FoundTile key={post.id} post={post} index={i} />
+                  ))}
+                </ThreeColGrid>
+              </>
+            )}
+          </>
+        )}
       </div>
 
       <BottomNav active="my-shelf" />

@@ -158,12 +158,26 @@ function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; i
                 onLoad={handleLoad} onError={() => setImgErr(true)}
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
                   filter: isSold ? "grayscale(0.55) brightness(0.88)" : "brightness(0.99) saturate(0.96)" }} />
+
+              {/* Found badge — centered on image */}
               {isSold && (
-                <div style={{ position: "absolute", top: 8, left: 8, fontSize: 7, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px", padding: "3px 7px", borderRadius: 5, background: "rgba(245,242,235,0.92)", color: C.textMuted, border: `1px solid ${C.border}`, backdropFilter: "blur(6px)" }}>
-                  Unavailable
+                <div style={{
+                  position: "absolute",
+                  top: "50%", left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  fontSize: 7, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px",
+                  padding: "3px 8px", borderRadius: 5,
+                  background: "rgba(28,26,20,0.54)",
+                  color: "rgba(245,242,235,0.93)",
+                  backdropFilter: "blur(6px)",
+                  WebkitBackdropFilter: "blur(6px)",
+                  whiteSpace: "nowrap",
+                }}>
+                  Found
                 </div>
               )}
-              {/* Saved indicator — PiLeaf icon in green pill, bottom-right of tile image */}
+
+              {/* Saved indicator — PiLeaf icon in green circle, bottom-right */}
               {isFollowed && (
                 <div style={{
                   position: "absolute", bottom: 7, right: 7,
@@ -331,7 +345,8 @@ export default function DiscoveryFeedPage() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", paddingTop: "max(16px, env(safe-area-inset-top, 16px))", paddingBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
-            <span style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.2px", lineHeight: 1 }}>
+            {/* 22px Georgia — unified with Your Finds and My Shelf headers */}
+            <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.3px", lineHeight: 1 }}>
               Treehouse Finds
             </span>
           </div>

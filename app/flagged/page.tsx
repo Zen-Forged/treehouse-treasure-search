@@ -5,9 +5,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import PiLeafIcon from "@/components/PiLeafIcon";
 import { getPostsByIds } from "@/lib/posts";
 import BottomNav from "@/components/BottomNav";
@@ -33,6 +34,9 @@ const C = {
   header:      "rgba(245,242,235,0.96)",
   bannerFrom:  "#1e3d24",
   bannerTo:    "#2d5435",
+  red:         "#8b2020",
+  redBg:       "rgba(139,32,32,0.07)",
+  redBorder:   "rgba(139,32,32,0.18)",
 };
 
 // ─── Bookmark helpers ──────────────────────────────────────────────────────────
@@ -59,6 +63,10 @@ function loadBookmarkCount(): number {
     }
   } catch {}
   return count;
+}
+
+function removeBookmark(postId: string) {
+  try { localStorage.removeItem(`${BOOKMARK_PREFIX}${postId}`); } catch {}
 }
 
 function groupByBooth(posts: Post[]): Array<{ label: string; vendorName: string; posts: Post[] }> {
@@ -96,9 +104,71 @@ function EmptyFinds() {
   );
 }
 
+// ─── Unsave button — filled leaf icon with quick confirm ───────────────────────
+
+function UnsaveButton({ postId, onUnsave }: { postId: string; onUnsave: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+
+  function handlePress() {
+    if (!confirming) { setConfirming(true); return; }
+    // Confirmed — remove and notify parent
+    removeBookmark(postId);
+    onUnsave();
+  }
+
+  function handleBlur() {
+    // Cancel confirm if user taps away
+    setTimeout(() => setConfirming(false), 200);
+  }
+
+  return (
+    <AnimatePresence mode="wait">
+      {confirming ? (
+        <motion.button
+          key="confirm"
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.85 }}
+          transition={{ duration: 0.15 }}
+          onClick={handlePress}
+          onBlur={handleBlur}
+          autoFocus
+          style={{
+            flexShrink: 0, display: "flex", alignItems: "center", gap: 5,
+            padding: "5px 10px", borderRadius: 20,
+            background: C.redBg, border: `1px solid ${C.redBorder}`,
+            color: C.red, fontSize: 10, fontWeight: 600, cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Remove?
+        </motion.button>
+      ) : (
+        <motion.button
+          key="leaf"
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.85 }}
+          transition={{ duration: 0.15 }}
+          onClick={handlePress}
+          aria-label="Unsave find"
+          style={{
+            flexShrink: 0, width: 30, height: 30, borderRadius: "50%",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: C.greenSolid, border: "none", cursor: "pointer",
+            boxShadow: "0 1px 5px rgba(0,0,0,0.18)",
+          }}
+        >
+          <PiLeafIcon size={14} strokeWidth={2.0} style={{ color: "rgba(255,255,255,0.95)" }} />
+        </motion.button>
+      )}
+    </AnimatePresence>
+  );
+}
+
 // ─── Find row ─────────────────────────────────────────────────────────────────
 
-function FindRow({ post, index }: { post: Post; index: number }) {
+function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsave: (id: string) => void }) {
   const [imgErr, setImgErr] = useState(false);
   const hasImg = !!post.image_url && !imgErr;
   const isSold = post.status === "sold";
@@ -106,18 +176,18 @@ function FindRow({ post, index }: { post: Post; index: number }) {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, delay: Math.min(index * 0.05, 0.25) }}>
-      <Link href={`/find/${post.id}`} style={{ display: "block", textDecoration: "none" }}>
-        <div style={{
-          display: "flex", alignItems: "center", gap: 14,
-          padding: "13px 14px",
-          background: C.surface,
-          borderRadius: 14,
-          border: `1px solid ${C.border}`,
-          boxShadow: "0 2px 10px rgba(26,24,16,0.06), 0 1px 3px rgba(26,24,16,0.04)",
-          opacity: isSold ? 0.65 : 1,
-          transition: "opacity 0.2s",
-        }}>
-          {/* Thumbnail */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 14,
+        padding: "13px 14px",
+        background: C.surface,
+        borderRadius: 14,
+        border: `1px solid ${C.border}`,
+        boxShadow: "0 2px 10px rgba(26,24,16,0.06), 0 1px 3px rgba(26,24,16,0.04)",
+        opacity: isSold ? 0.65 : 1,
+        transition: "opacity 0.2s",
+      }}>
+        {/* Thumbnail — links to detail; unsave button does not navigate */}
+        <Link href={`/find/${post.id}`} style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 0, textDecoration: "none" }}>
           <div style={{ width: 64, height: 64, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: C.surfaceDeep, border: `1px solid ${C.borderLight}` }}>
             {hasImg ? (
               <img src={post.image_url!} alt={post.title} onError={() => setImgErr(true)}
@@ -147,15 +217,17 @@ function FindRow({ post, index }: { post: Post; index: number }) {
             )}
             {isSold && (
               <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1.2px", color: C.textMuted }}>
-                Unavailable
+                Found
               </div>
             )}
           </div>
 
-          {/* Chevron */}
           <ChevronRight size={16} style={{ color: C.textFaint, flexShrink: 0 }} />
-        </div>
-      </Link>
+        </Link>
+
+        {/* Unsave button — outside the Link so it doesn't navigate */}
+        <UnsaveButton postId={post.id} onUnsave={() => onUnsave(post.id)} />
+      </div>
     </motion.div>
   );
 }
@@ -210,12 +282,16 @@ function VendorBanner({ label, vendorName }: { label: string; vendorName: string
 
 // ─── Booth section ─────────────────────────────────────────────────────────────
 
-function BoothSection({ label, vendorName, posts, startIndex }: { label: string; vendorName: string; posts: Post[]; startIndex: number }) {
+function BoothSection({ label, vendorName, posts, startIndex, onUnsave }: {
+  label: string; vendorName: string; posts: Post[]; startIndex: number; onUnsave: (id: string) => void;
+}) {
   return (
     <div style={{ marginBottom: 28 }}>
       <VendorBanner label={label} vendorName={vendorName} />
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {posts.map((post, i) => <FindRow key={post.id} post={post} index={startIndex + i} />)}
+        {posts.map((post, i) => (
+          <FindRow key={post.id} post={post} index={startIndex + i} onUnsave={onUnsave} />
+        ))}
       </div>
     </div>
   );
@@ -250,6 +326,12 @@ export default function YourFindsPage() {
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
+  // Optimistically remove a post from the list after unsave confirmation
+  function handleUnsave(postId: string) {
+    setPosts(prev => prev.filter(p => p.id !== postId));
+    setBookmarkCount(prev => Math.max(0, prev - 1));
+  }
+
   const groups = groupByBooth(posts);
   let rowIndex = 0;
 
@@ -265,10 +347,14 @@ export default function YourFindsPage() {
         padding: "0 18px",
       }}>
         <div style={{ paddingTop: "max(18px, env(safe-area-inset-top, 18px))", paddingBottom: 14 }}>
-          <div style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, lineHeight: 1.15, letterSpacing: "-0.3px" }}>
-            Your Finds
+          {/* Logo + wordmark row — 22px Georgia, matches home and My Shelf */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+            <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
+            <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.3px", lineHeight: 1 }}>
+              Your Finds
+            </span>
           </div>
-          <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: C.textMuted, marginTop: 4, lineHeight: 1.4 }}>
+          <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: C.textMuted, lineHeight: 1.4 }}>
             {!loading && posts.length > 0
               ? `${posts.length} ${posts.length === 1 ? "find" : "finds"} waiting for you`
               : !loading && posts.length === 0
@@ -279,7 +365,7 @@ export default function YourFindsPage() {
       </header>
 
       {/* ── List ── */}
-      <main style={{ padding: "20px 16px 0", paddingBottom: "max(150px, calc(env(safe-area-inset-bottom, 0px) + 140px))" }}>
+      <main style={{ padding: "20px 16px 0", paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }}>
         {loading ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {[78, 64, 72].map((h, i) => (
@@ -294,38 +380,13 @@ export default function YourFindsPage() {
               return (
                 <BoothSection key={group.label + group.vendorName}
                   label={group.label} vendorName={group.vendorName}
-                  posts={group.posts} startIndex={start} />
+                  posts={group.posts} startIndex={start}
+                  onUnsave={handleUnsave} />
               );
             })}
           </AnimatePresence>
         )}
       </main>
-
-      {/* ── Share your finds CTA ── */}
-      <div style={{
-        position: "fixed",
-        bottom: 0, left: "50%", transform: "translateX(-50%)",
-        width: "100%", maxWidth: 430, zIndex: 90,
-        background: C.header,
-        backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
-        borderTop: `1px solid ${C.border}`,
-        padding: "12px 18px",
-        paddingBottom: "max(calc(env(safe-area-inset-bottom, 0px) + 74px), 82px)",
-      }}>
-        <button disabled style={{
-          width: "100%",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 9,
-          padding: "15px 20px", borderRadius: 14,
-          background: C.greenSolid,
-          border: "none", cursor: "not-allowed", opacity: 0.70,
-          boxShadow: "0 2px 12px rgba(30,77,43,0.20)",
-        }}>
-          <Share2 size={15} style={{ color: "rgba(255,255,255,0.85)" }} />
-          <span style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 600, color: "rgba(255,255,255,0.94)", letterSpacing: "-0.1px" }}>
-            Share your finds
-          </span>
-        </button>
-      </div>
 
       <BottomNav active="flagged" flaggedCount={bookmarkCount} />
 
