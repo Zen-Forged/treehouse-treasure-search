@@ -8,8 +8,9 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Share2, Store } from "lucide-react";
+import { Share2, Store, ImagePlus } from "lucide-react";
 import { getVendorPosts } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Post } from "@/types/treehouse";
 import BottomNav from "@/components/BottomNav";
@@ -28,6 +29,7 @@ const C = {
   greenLight:  "rgba(30,77,43,0.08)",
   greenBorder: "rgba(30,77,43,0.20)",
   header:      "rgba(240,237,230,0.95)",
+  emptyTile:   "#d8d4cc",  // light grey for empty slots
 };
 
 // ─── Tile ─────────────────────────────────────────────────────────────────────
@@ -73,7 +75,7 @@ function ShelfTile({ post, index }: { post: Post; index: number }) {
               }}
             />
           ) : (
-            // No-image placeholder — title text only
+            // No-image fallback — show title
             <div style={{
               width: "100%",
               height: "100%",
@@ -130,16 +132,62 @@ function ShelfTile({ post, index }: { post: Post; index: number }) {
   );
 }
 
-// ─── Empty tile (placeholder in grid) ─────────────────────────────────────────
+// ─── Empty tile — tappable, routes to /post ───────────────────────────────────
 
-function EmptyTile() {
+function EmptyTile({ index }: { index: number }) {
+  const router = useRouter();
+
   return (
-    <div style={{
-      aspectRatio: "1 / 1",
-      borderRadius: 10,
-      background: "transparent",
-      border: `1.5px dashed ${C.border}`,
-    }} />
+    <motion.div
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{
+        duration: 0.3,
+        delay: Math.min(index * 0.045, 0.35),
+        ease: [0.25, 0.1, 0.25, 1],
+      }}
+    >
+      <button
+        onClick={() => router.push("/post")}
+        style={{
+          display: "block",
+          width: "100%",
+          aspectRatio: "1 / 1",
+          borderRadius: 10,
+          background: C.emptyTile,
+          border: "none",
+          cursor: "pointer",
+          padding: 0,
+          WebkitTapHighlightColor: "transparent",
+        }}
+      >
+        <div style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+        }}>
+          <ImagePlus
+            size={20}
+            style={{ color: "rgba(26,26,24,0.28)" }}
+            strokeWidth={1.5}
+          />
+          <span style={{
+            fontSize: 9,
+            fontWeight: 600,
+            color: "rgba(26,26,24,0.35)",
+            textTransform: "uppercase",
+            letterSpacing: "1.2px",
+            lineHeight: 1,
+          }}>
+            Add Find
+          </span>
+        </div>
+      </button>
+    </motion.div>
   );
 }
 
@@ -203,9 +251,9 @@ function NoProfile() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MyShelfPage() {
-  const [profile,  setProfile]  = useState<LocalVendorProfile | null>(null);
-  const [posts,    setPosts]    = useState<Post[]>([]);
-  const [loading,  setLoading]  = useState(true);
+  const [profile, setProfile] = useState<LocalVendorProfile | null>(null);
+  const [posts,   setPosts]   = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     try {
@@ -230,7 +278,7 @@ export default function MyShelfPage() {
     }
   }, []);
 
-  // Build a 9-slot grid — fill empties with null
+  // Build a 9-slot grid — real posts first, then nulls for empties
   const slots: (Post | null)[] = [
     ...posts,
     ...Array(Math.max(0, 9 - posts.length)).fill(null),
@@ -300,15 +348,23 @@ export default function MyShelfPage() {
               </div>
             </div>
 
-            {/* Right — booth number box */}
+            {/* Right — "Booth" label above, number box below */}
             {profile?.booth_number && (
               <div style={{
                 flexShrink: 0,
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "flex-end",
-                gap: 2,
+                gap: 3,
               }}>
+                <div style={{
+                  fontSize: 8,
+                  color: C.textFaint,
+                  textTransform: "uppercase",
+                  letterSpacing: "1.8px",
+                }}>
+                  Booth
+                </div>
                 <div style={{
                   fontFamily: "monospace",
                   fontSize: 18,
@@ -322,14 +378,6 @@ export default function MyShelfPage() {
                   letterSpacing: "0.5px",
                 }}>
                   {profile.booth_number}
-                </div>
-                <div style={{
-                  fontSize: 8,
-                  color: C.textFaint,
-                  textTransform: "uppercase",
-                  letterSpacing: "1.8px",
-                }}>
-                  Booth
                 </div>
               </div>
             )}
@@ -356,30 +404,29 @@ export default function MyShelfPage() {
           <NoProfile />
 
         ) : posts.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{ textAlign: "center", paddingTop: 60 }}
-          >
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 17, color: C.textPrimary, marginBottom: 10 }}>
-              Your shelf is empty.
-            </div>
-            <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.7, marginBottom: 28 }}>
-              Post your first find to start filling it in.
-            </p>
-            <Link href="/post" style={{
-              display: "inline-block",
-              padding: "11px 24px",
-              borderRadius: 10,
-              background: C.green,
-              color: "rgba(255,255,255,0.95)",
-              fontSize: 13,
-              fontWeight: 600,
-              textDecoration: "none",
+          // All-empty shelf still shows the tappable grid
+          <>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              marginBottom: 12,
             }}>
-              Post a find
-            </Link>
-          </motion.div>
+              <div style={{
+                fontSize: 9,
+                color: C.textFaint,
+                textTransform: "uppercase",
+                letterSpacing: "1.8px",
+              }}>
+                0 / 9
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+              {Array(9).fill(null).map((_, i) => (
+                <EmptyTile key={`empty-${i}`} index={i} />
+              ))}
+            </div>
+          </>
 
         ) : (
           <>
@@ -417,7 +464,7 @@ export default function MyShelfPage() {
               {slots.map((post, i) =>
                 post
                   ? <ShelfTile key={post.id} post={post} index={i} />
-                  : <EmptyTile key={`empty-${i}`} />
+                  : <EmptyTile key={`empty-${i}`} index={i} />
               )}
             </div>
 
@@ -497,7 +544,7 @@ export default function MyShelfPage() {
       )}
 
       <div style={{ paddingBottom: "max(100px, calc(env(safe-area-inset-bottom, 0px) + 90px))" }} />
-      <BottomNav active={null} />
+      <BottomNav active="my-shelf" />
 
       <style>{`
         @keyframes shimmer {
