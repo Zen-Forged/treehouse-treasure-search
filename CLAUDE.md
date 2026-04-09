@@ -31,56 +31,60 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-08
+> Last updated: 2026-04-09
 
-**Status:** ✅ Day 1–2 design audit changes implemented. Typography scale corrected across all three tab pages.
+**Status:** ✅ Mall Identity Layer (Sprint 1) implemented. MallHeroCard + GenericMallHero shipped. Mall dropdown hidden when ≤1 mall. types/treehouse.ts extended with hero fields.
 
 **What was done (this session):**
 
-### Design audit — 9 findings identified
-A full UX/hierarchy/consistency audit was conducted across Home, Flagged, My Shelf, and Find Detail pages. Findings were categorised as: Typography, Hierarchy, UX/Clarity, and Consistency.
+### Mall Identity Layer — Sprint 1
 
-### Day 1–2 changes implemented
+**New file: `components/MallHeroCard.tsx`**
+- `MallHeroCard` — mall-specific hero. Uses `mall.name`, `mall.city`, `mall.state` to render with zero custom config.
+- `GenericMallHero` — shown when "All malls" is selected (or only 1 mall exists and none selected).
+- 5 background gradient styles: `default | golden | forest | terracotta | slate` — assigned deterministically by mall name hash (same mall = always same style). No randomness.
+- Optional `hero_image_url` — if set on mall row, photo renders at 35% opacity behind gradient. Fully optional for MVP.
+- Noise texture SVG overlay + radial vignette for visual depth.
+- City/State frosted pill, italic Georgia subtitle, green CTA button with ArrowRight icon.
+- `AnimatePresence` mode="wait" — hero cross-fades when mall selection changes.
 
-**Home (`app/page.tsx`)**
-- "Treehouse" wordmark: `13px → 15px` Georgia 700
-- Logo: `20px → 22px`
-- "Local finds" subtext: `6px → 9px` uppercase muted
-- "Post a find" button: padding restored to `7px 13px`, font `12px`
+**Updated: `app/page.tsx`**
+- Removed "Found today" hero (was not present; hero slot was empty — added Mall Hero Card in its place).
+- Hero placed between sticky header and masonry grid, with 18px margin-bottom.
+- Section label row above grid: mall name (left) + find count italic (right) — 10px faint.
+- `feedRef` scroll target — hero CTA smooth-scrolls to feed section.
+- Mall dropdown now hidden when `malls.length <= 1` (Day 3 audit fix, pulled forward).
 
-**Flagged (`app/flagged/page.tsx`)**
-- Green icon circle removed entirely — BottomNav tab provides the icon association
-- "Flagged" title: `13px → 16px` Georgia 700 — now the sole header anchor
-- Count subtext: `6px → 10px`
-- "Unavailable" badge in rows: `9px → 10px`
+**Updated: `types/treehouse.ts`**
+- `Mall` interface extended with optional hero fields: `hero_title`, `hero_subtitle`, `hero_style`, `hero_image_url`.
+- All optional — no DB migration required now. Hero defaults gracefully from `name`/`city`/`state`.
 
-**My Shelf (`app/my-shelf/page.tsx`)**
-- "My Shelf" page label: `6px → 10px`
-- Mall name: `7px → 10px`
-- Vendor name: `13px → 17px` Georgia 700 — now clearly dominates the booth box
-- "Booth" label: `6px → 10px`
-- Booth number box: `12px → 11px` mono (smaller than vendor name — correct hierarchy)
-- Count lines: `6px → 10px`
-- Shelf rule: `6px → 10px`
-- "Coming soon": `6px → 10px`
-- "Add Find" empty tile label: `9px → 10px`
-- Sold overlay in grid now says "Unavailable" (was "Sold") — consistency fix
+**Demo flow (live pitch):**
+1. Add mall in Supabase: `INSERT INTO malls (name, city, state, slug) VALUES ('XYZ Antique Mall', 'Louisville', 'KY', 'xyz-antique-mall')`
+2. Mall appears in dropdown immediately (getAllMalls is called on mount)
+3. Selecting it renders a fully styled hero card — no config needed
 
 **Previous sessions:**
-- My Shelf concept C alternating layout (2/3 + 1/3, thirds, 1/3 + 2/3)
-- Flagged page grouped by booth with "Booth N" headers + Eye icon
+- Design audit 9 findings — Day 1–2 typography/hierarchy fixes all done
+- My Shelf concept C alternating layout
+- Flagged page grouped by booth with "Booth N" headers
 - 3-tab BottomNav (Home · Flagged · My Shelf)
 - BoothTag price hanging from photo on detail page
 - Admin page + bulk delete
 
 **Next session starting point:**
-1. Deploy: `git push` or `npx vercel --prod`
-2. QA all three headers on device — confirm no text below 10px
-3. Day 3–4 audit items (good candidates for next sprint):
-   - Rename "Flag/Flagged" → "Save/Saved" throughout (tab, button, state, storage key)
-   - Wire "Share my shelf" to native share / URL copy (vendor profile URL)
-   - Hide mall dropdown when only 1 mall exists
-   - Unify sold label to "Unavailable" everywhere (My Shelf grid overlay still says "Sold" — FIXED this session)
+1. Deploy: `git add -A && git commit -m "feat: Mall Identity Layer — MallHeroCard" && git push` or `npx vercel --prod`
+2. QA on device: hero card at top of feed, cross-fade when switching malls in dropdown, CTA scrolls to grid
+3. Optional Supabase columns (no rush — hero defaults without them):
+   ```sql
+   ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_title text;
+   ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_subtitle text;
+   ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_style text;
+   ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_image_url text;
+   ```
+4. Remaining Day 3–4 audit items:
+   - Rename "Flag/Flagged" → "Save/Saved" throughout
+   - Wire "Share my shelf" to native share / URL copy
    - Add inline unsave on Flagged rows
 
 ---
@@ -125,7 +129,8 @@ SERPAPI_KEY                      eBay sold comps
 
 ### Ecosystem (light cream theme)
 ```
-/                   Discovery feed — masonry, mall dropdown, flagged indicators on tiles
+/                   Discovery feed — masonry, Mall Hero Card at top, mall dropdown (hidden if ≤1 mall),
+                    flagged indicators on tiles
 /find/[id]          Find detail — full-bleed image, booth tag price (bottom-left of photo),
                     flag + share icons bottom-right of photo, BottomNav (no active tab),
                     "View the shelf" scroll, "Find this here" card,
@@ -168,10 +173,11 @@ lib/posts.ts                  getFeedPosts, getPost, getPostsByIds, getVendorPos
                               getAllMalls, getMallBySlug, getVendorBySlug, slugify
 lib/postStore.ts              In-memory image store for /post → /post/preview flow
 lib/safeStorage.ts            localStorage wrapper with sessionStorage + memory fallback
-types/treehouse.ts            Post, Vendor, Mall, LocalVendorProfile, PostStatus
+types/treehouse.ts            Post, Vendor, Mall (+ hero fields), LocalVendorProfile, PostStatus
 components/BottomNav.tsx      Fixed bottom nav — Home + Flagged + My Shelf tabs, active state, badge
+components/MallHeroCard.tsx   Mall Identity Hero — MallHeroCard + GenericMallHero exports
 app/layout.tsx                No max-width wrapper — each page owns its own width
-app/page.tsx                  Discovery feed — BottomNav active="home"
+app/page.tsx                  Discovery feed — MallHeroCard at top, BottomNav active="home"
 app/flagged/page.tsx          Flagged screen — grouped by booth, no icon circle, BottomNav active="flagged"
 app/my-shelf/page.tsx         My Shelf — alternating grid, identity header, BottomNav active="my-shelf"
 app/find/[id]/page.tsx        Find detail — BoothTag, flag/share bottom-right, BottomNav null
@@ -220,6 +226,22 @@ Bottom padding formula: max(100px, calc(env(safe-area-inset-bottom, 0px) + 90px)
 Animations: opacity 0→1, y 8-16→0, ease [0.25,0.1,0.25,1]
 ```
 
+### Mall Hero Card
+```
+Component: components/MallHeroCard.tsx
+Exports: MallHeroCard (mall-specific) + GenericMallHero (all-malls fallback)
+Gradient styles: default | golden | forest | terracotta | slate (5 total)
+Style assignment: deterministic hash of mall.name → always same style per mall
+Layers (bottom to top):
+  1. CSS gradient (always present)
+  2. Photo (optional hero_image_url — 35% opacity)
+  3. SVG noise texture (SVG data URI, repeat, 200×200)
+  4. Radial vignette (edges darken for depth)
+  5. Content (eyebrow 10px / title 26px Georgia / location pill / subtitle / CTA button)
+CTA: green solid pill, ArrowRight icon, scrolls feedRef into view
+AnimatePresence mode="wait" — hero cross-fades on mall change
+```
+
 ### Feed grid
 ```
 2-column masonry. Gap: 14px. Tile border-radius: 14px.
@@ -229,6 +251,7 @@ No price badges on tiles. Sold items: 0.62 opacity + grayscale + "Unavailable" b
 Flagged items: 22px solid green circle (Flag icon, filled) at bottom-right of tile image.
 Scroll position saved to sessionStorage ("treehouse_feed_scroll"), restored on mount.
 Flagged IDs loaded once on mount via loadFollowedIds() — scans localStorage for treehouse_bookmark_* keys.
+Section label above grid: mall name (left) + "N finds" italic (right) — 10px faint.
 ```
 
 ### Bottom navigation
@@ -349,7 +372,11 @@ Placement: position absolute, bottom: -28, left: 20 inside hero div
 ---
 
 ## WORKING ✅
-- Discovery feed — masonry (50% dynamic offset), mall dropdown, no prices on tiles
+- Discovery feed — masonry (50% dynamic offset), mall dropdown (hidden ≤1 mall), no prices on tiles
+- **Mall Hero Card** — full-width hero at top of feed. MallHeroCard (mall-specific) + GenericMallHero (all-malls).
+  5 gradient styles, deterministic per mall, optional photo overlay, noise texture + vignette.
+  AnimatePresence cross-fade on mall switch. CTA scrolls to feed.
+- Feed section label: mall name (left) + find count (right) — 10px, above masonry grid
 - Feed scroll position saved/restored via sessionStorage on back navigation
 - Skeleton loading matches live grid proportions
 - Sold items in feed: 0.62 opacity + grayscale + "Unavailable" badge
@@ -378,7 +405,6 @@ Placement: position absolute, bottom: -28, left: 20 inside hero div
 ## KNOWN GAPS ⚠️
 - "Flag/Flagged" terminology should become "Save/Saved" (audit finding — Day 3)
 - "Share my shelf" is unwired (disabled button, "Coming soon") — Day 3 target
-- Mall dropdown visible even with only 1 mall — Day 3 target
 - Inline unsave from Flagged screen not yet implemented — Day 5 target
 - Price field missing from post creation flow (`/post` + `/post/preview`)
 - Directions affordance missing from "Find this here" mall address
@@ -387,6 +413,7 @@ Placement: position absolute, bottom: -28, left: 20 inside hero div
 - No pull-to-refresh on feed
 - No PWA support
 - Delete button missing on posts created before `vendor_id` was stored in local profile
+- Optional hero columns not yet added to malls table in Supabase (hero works without them — defaults from name/city/state)
 
 ---
 
@@ -406,11 +433,11 @@ Completed audit 2026-04-08. 9 findings across 4 categories.
 - "Flag Booth" terminology confusing → rename to Save/Saved
 - No way to unsave from Flagged screen → add inline toggle
 - "Share my shelf" is a dead end → wire to native share
-- Mall dropdown shows with only 1 mall → hide conditionally
+- Mall dropdown shows with only 1 mall → FIXED this session (hidden when ≤1 mall)
 
 ### Consistency (Day 5 — PENDING)
 - Three different header structures → align vertical rhythm
-- Sold label varies "Unavailable" vs "Sold" → FIXED this session (all "Unavailable")
+- Sold label varies "Unavailable" vs "Sold" → FIXED (all "Unavailable")
 - Bottom padding formula not unified → document two patterns
 
 ---
@@ -431,4 +458,11 @@ git add -A && git commit -m "..." && git push
 
 # Create new directories before filesystem:write_file
 filesystem:create_directory path/to/new/dir
+
+# Add hero columns to malls table (optional — hero works without them)
+# Run in Supabase SQL editor:
+# ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_title text;
+# ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_subtitle text;
+# ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_style text;
+# ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_image_url text;
 ```
