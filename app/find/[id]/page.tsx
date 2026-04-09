@@ -76,9 +76,21 @@ function ShelfCard({ post }: { post: Post }) {
           <div style={{ position: "relative", width: "100%", aspectRatio: "3/4", overflow: "hidden" }}>
             <img src={post.image_url!} alt={post.title} loading="lazy" onError={() => setImgErr(true)}
               style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: isSold ? "grayscale(0.5) brightness(0.88)" : "brightness(0.99) saturate(0.96)" }} />
+            {/* Found badge — centered on shelf card image */}
             {isSold && (
-              <div style={{ position: "absolute", top: 6, left: 6, fontSize: 6, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.3px", padding: "2px 6px", borderRadius: 4, background: "rgba(245,242,235,0.92)", color: C.textMuted, border: `1px solid ${C.border}`, backdropFilter: "blur(4px)" }}>
-                Unavailable
+              <div style={{
+                position: "absolute",
+                top: "50%", left: "50%",
+                transform: "translate(-50%, -50%)",
+                fontSize: 6, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.3px",
+                padding: "2px 7px", borderRadius: 4,
+                background: "rgba(28,26,20,0.54)",
+                color: "rgba(245,242,235,0.93)",
+                backdropFilter: "blur(4px)",
+                WebkitBackdropFilter: "blur(4px)",
+                whiteSpace: "nowrap",
+              }}>
+                Found
               </div>
             )}
           </div>
@@ -244,9 +256,21 @@ export default function FindDetailPage() {
           <div style={{ height: 120, background: C.surface }} />
         )}
 
+        {/* Found badge — centered on hero image */}
         {isSold && (
-          <div style={{ position: "absolute", top: "max(14px, env(safe-area-inset-top, 14px))", left: 14, fontSize: 8, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px", padding: "4px 10px", borderRadius: 5, background: "rgba(245,242,235,0.93)", color: C.textMuted, border: `1px solid ${C.border}`, backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}>
-            Unavailable
+          <div style={{
+            position: "absolute",
+            top: "50%", left: "50%",
+            transform: "translate(-50%, -50%)",
+            fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.6px",
+            padding: "5px 12px", borderRadius: 6,
+            background: "rgba(28,26,20,0.54)",
+            color: "rgba(245,242,235,0.95)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            whiteSpace: "nowrap",
+          }}>
+            Found
           </div>
         )}
 
@@ -291,7 +315,7 @@ export default function FindDetailPage() {
               style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, flexShrink: 0 }} />
           )}
           <span style={{ fontSize: 12, fontWeight: 500, color: isSold ? C.textMuted : C.green, letterSpacing: "0.1px" }}>
-            {isSold ? "Unavailable" : "Available"}
+            {isSold ? "Found" : "Available"}
           </span>
         </motion.div>
 
