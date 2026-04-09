@@ -30,10 +30,12 @@ const C = {
   greenSolid:  "rgba(30,77,43,0.90)",
   greenBorder: "rgba(30,77,43,0.20)",
   header:      "rgba(245,242,235,0.96)",
-  // Banner gradient — echoes the MallHeroCard feel, warm forest palette
   bannerFrom:  "#1e3d24",
   bannerTo:    "#2d5435",
 };
+
+// ─── Bookmark helpers ──────────────────────────────────────────────────────────
+// Always reads raw localStorage — single source of truth shared with home page.
 
 function loadFlaggedIds(): string[] {
   const ids: string[] = [];
@@ -46,6 +48,17 @@ function loadFlaggedIds(): string[] {
     }
   } catch {}
   return ids;
+}
+
+function loadBookmarkCount(): number {
+  let count = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(BOOKMARK_PREFIX) && localStorage.getItem(key) === "1") count++;
+    }
+  } catch {}
+  return count;
 }
 
 function groupByBooth(posts: Post[]): Array<{ label: string; vendorName: string; posts: Post[] }> {
@@ -120,12 +133,8 @@ function VisitRow({ post, index }: { post: Post; index: number }) {
           {/* Content */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
-              fontFamily: "Georgia, serif",
-              fontSize: 14,
-              fontWeight: 600,
-              color: C.textPrimary,
-              lineHeight: 1.35,
-              overflow: "hidden", textOverflow: "ellipsis",
+              fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600, color: C.textPrimary,
+              lineHeight: 1.35, overflow: "hidden", textOverflow: "ellipsis",
               display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
               marginBottom: 4,
             }}>
@@ -151,83 +160,44 @@ function VisitRow({ post, index }: { post: Post; index: number }) {
   );
 }
 
-// ─── Vendor banner — slim, professional, echoes MallHeroCard aesthetic ─────────
-//
-// Full-width gradient banner. Left: vendor name (dominant). Right: booth number.
-// No image — clean type-only layout.
+// ─── Vendor banner ─────────────────────────────────────────────────────────────
 
 function VendorBanner({ label, vendorName }: { label: string; vendorName: string }) {
   const displayBooth = label === "No booth listed" ? null : label;
 
   return (
     <div style={{
-      width: "100%",
-      borderRadius: 14,
-      overflow: "hidden",
-      marginBottom: 10,
-      position: "relative",
-      // Warm dark forest gradient — same palette family as MallHeroCard
+      width: "100%", borderRadius: 14, overflow: "hidden", marginBottom: 10, position: "relative",
       background: `linear-gradient(105deg, ${C.bannerFrom} 0%, ${C.bannerTo} 100%)`,
       boxShadow: "0 2px 14px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.10)",
     }}>
-      {/* Subtle noise texture overlay */}
       <div style={{
         position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.04,
         backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")`,
         backgroundRepeat: "repeat", backgroundSize: "200px 200px",
       }} />
-
-      {/* Content row */}
       <div style={{
         position: "relative", zIndex: 1,
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "13px 16px",
-        gap: 12,
+        padding: "13px 16px", gap: 12,
       }}>
-        {/* Vendor name — left, dominant */}
         <div style={{
-          fontFamily: "Georgia, serif",
-          fontSize: 15,
-          fontWeight: 700,
-          color: "rgba(255,255,255,0.96)",
-          letterSpacing: "-0.2px",
-          lineHeight: 1.2,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          flex: 1,
-          minWidth: 0,
+          fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700,
+          color: "rgba(255,255,255,0.96)", letterSpacing: "-0.2px", lineHeight: 1.2,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0,
         }}>
           {vendorName}
         </div>
-
-        {/* Booth number — right, contained pill */}
         {displayBooth && (
-          <div style={{
-            flexShrink: 0,
-            display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2,
-          }}>
-            <div style={{
-              fontSize: 8,
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "1.8px",
-              color: "rgba(255,255,255,0.50)",
-              lineHeight: 1,
-            }}>
+          <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
+            <div style={{ fontSize: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1.8px", color: "rgba(255,255,255,0.50)", lineHeight: 1 }}>
               Booth
             </div>
             <div style={{
-              fontFamily: "monospace",
-              fontSize: 13,
-              fontWeight: 700,
-              color: "rgba(255,255,255,0.95)",
-              letterSpacing: "0.4px",
-              lineHeight: 1,
-              background: "rgba(255,255,255,0.12)",
-              border: "1px solid rgba(255,255,255,0.18)",
-              borderRadius: 7,
-              padding: "4px 10px 5px",
+              fontFamily: "monospace", fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.95)",
+              letterSpacing: "0.4px", lineHeight: 1,
+              background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)",
+              borderRadius: 7, padding: "4px 10px 5px",
             }}>
               {displayBooth}
             </div>
@@ -254,18 +224,26 @@ function BoothSection({ label, vendorName, posts, startIndex }: { label: string;
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function FlaggedPage() {
-  const [posts,   setPosts]   = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [posts,         setPosts]         = useState<Post[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  // Badge count: raw localStorage keys — same source of truth as home page
+  const [bookmarkCount, setBookmarkCount] = useState(0);
+
+  function syncBookmarkCount() {
+    setBookmarkCount(loadBookmarkCount());
+  }
 
   useEffect(() => {
+    syncBookmarkCount();
     const ids = loadFlaggedIds();
     if (ids.length === 0) { setLoading(false); return; }
     getPostsByIds(ids).then(data => { setPosts(data); setLoading(false); });
   }, []);
 
-  // Re-sync when user returns to this tab (e.g. after bookmarking on detail page)
+  // Re-sync when user returns to this tab
   useEffect(() => {
     function onFocus() {
+      syncBookmarkCount();
       const ids = loadFlaggedIds();
       if (ids.length === 0) { setPosts([]); return; }
       getPostsByIds(ids).then(setPosts);
@@ -325,7 +303,7 @@ export default function FlaggedPage() {
         )}
       </main>
 
-      {/* ── Share your Shelf CTA — fixed above BottomNav ── */}
+      {/* ── Share your finds CTA — fixed above BottomNav ── */}
       <div style={{
         position: "fixed",
         bottom: 0, left: "50%", transform: "translateX(-50%)",
@@ -347,12 +325,13 @@ export default function FlaggedPage() {
         }}>
           <Share2 size={15} style={{ color: "rgba(255,255,255,0.85)" }} />
           <span style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 600, color: "rgba(255,255,255,0.94)", letterSpacing: "-0.1px" }}>
-            Share your Shelf
+            Share your finds
           </span>
         </button>
       </div>
 
-      <BottomNav active="flagged" flaggedCount={posts.length} />
+      {/* Badge uses raw localStorage count — consistent with home page badge */}
+      <BottomNav active="flagged" flaggedCount={bookmarkCount} />
 
       <style>{`
         @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }

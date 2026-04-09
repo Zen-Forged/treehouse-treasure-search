@@ -31,6 +31,10 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     { key: "my-shelf",  label: "My Shelf",   href: "/my-shelf",icon: <Store    size={21} strokeWidth={1.7} /> },
   ];
 
+  // Badge label — single digit: raw number. 10+: "9+". Cap at 99 for safety.
+  const badgeLabel = (n: number) =>
+    n > 99 ? "99+" : n > 9 ? "9+" : String(n);
+
   return (
     <nav style={{
       position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
@@ -39,19 +43,18 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
       backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
       borderTop: `1px solid ${C.border}`,
       display: "flex", alignItems: "stretch",
-      paddingBottom: "env(safe-area-inset-bottom, 0px)",
+      // Increased bottom padding: 10px extra over safe area, pushes icons higher on iPhone
+      paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)",
     }}>
       {tabs.map((tab) => {
         const isActive  = active === tab.key;
         const showBadge = tab.key === "flagged" && flaggedCount > 0;
-        // Badge label — cap at 99 for layout safety; shows "9+" for 10–99, raw for 1–9
-        const badgeLabel = flaggedCount > 99 ? "99+" : flaggedCount > 9 ? "9+" : String(flaggedCount);
 
         return (
           <button key={tab.key} onClick={() => router.push(tab.href)}
             style={{
               flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              gap: 4, padding: "11px 0 9px",
+              gap: 4, padding: "12px 0 10px",
               background: "none", border: "none", cursor: "pointer",
               color: isActive ? C.green : C.textMuted,
               position: "relative", transition: "color 0.15s",
@@ -59,7 +62,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
             }}>
             <div style={{
               position: "relative", display: "flex", alignItems: "center", justifyContent: "center",
-              width: 42, height: 27, borderRadius: 14,
+              width: 44, height: 28, borderRadius: 14,
               background: isActive ? C.greenLight : "transparent",
               transition: "background 0.18s",
             }}>
@@ -67,7 +70,6 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
               {showBadge && (
                 <div style={{
                   position: "absolute", top: -4, right: -4,
-                  // Auto width with min-width so it grows for "9+" without clipping
                   minWidth: 16, height: 16,
                   paddingLeft: 4, paddingRight: 4,
                   borderRadius: 8,
@@ -80,7 +82,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
                   boxSizing: "border-box",
                   whiteSpace: "nowrap",
                 }}>
-                  {badgeLabel}
+                  {badgeLabel(flaggedCount)}
                 </div>
               )}
             </div>

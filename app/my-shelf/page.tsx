@@ -1,11 +1,12 @@
 // app/my-shelf/page.tsx
-// My Shelf — vendor's curated shelf. 3×3 uniform grid (9 slots).
+// My Shelf — vendor's curated shelf. 3x3 uniform grid (9 slots).
 
 "use client";
 
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -102,7 +103,7 @@ function AddFindTile({ index }: { index: number }) {
   );
 }
 
-// ─── 3×3 Grid ─────────────────────────────────────────────────────────────────
+// ─── 3x3 Grid ─────────────────────────────────────────────────────────────────
 
 function ShelfGrid({ posts }: { posts: Post[] }) {
   const slots: (Post | null)[] = [
@@ -115,9 +116,7 @@ function ShelfGrid({ posts }: { posts: Post[] }) {
       display: "grid",
       gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`,
       gridTemplateRows: `repeat(${GRID_ROWS}, 1fr)`,
-      gap: GAP,
-      padding: `${GAP}px`,
-      minHeight: 0,
+      gap: GAP, padding: `${GAP}px`, minHeight: 0,
     }}>
       {slots.map((post, i) =>
         post
@@ -201,27 +200,29 @@ export default function MyShelfPage() {
   return (
     <div style={{ height: "100dvh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-      {/* ── Header ── */}
-      <header style={{ flexShrink: 0, background: C.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${C.border}`, padding: "0 18px" }}>
-        <div style={{ paddingTop: "max(16px, env(safe-area-inset-top, 16px))", paddingBottom: 13 }}>
+      {/* ── Header ─────────────────────────────────────────────────────────────
+          Matches the home page header pattern: logo + Georgia wordmark left,
+          action button right. Subtext line carries the vendor/booth identity.
+      ────────────────────────────────────────────────────────────────────────── */}
+      <header style={{ flexShrink: 0, background: C.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px" }}>
+        <div style={{ paddingTop: "max(16px, env(safe-area-inset-top, 16px))", paddingBottom: 12 }}>
 
-          {/* Page label row — label left, Post a Find button right */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-            <div style={{ fontSize: 10, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2.2px", fontWeight: 500 }}>
-              My Shelf
+          {/* Top row: logo + wordmark left / Post a find button right */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
+              <span style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.2px", lineHeight: 1 }}>
+                My Shelf
+              </span>
             </div>
-            {/* Post a find button — enabled for testing, will be gated later */}
+            {/* Post a find — enabled for testing, will be gated later */}
             <button
               onClick={() => router.push("/post")}
               style={{
                 display: "flex", alignItems: "center", gap: 5,
-                padding: "6px 12px",
-                borderRadius: 20,
-                fontSize: 11, fontWeight: 600,
-                color: "#fff",
-                cursor: "pointer",
-                background: C.green,
-                border: "none",
+                padding: "7px 13px", borderRadius: 20,
+                fontSize: 11, fontWeight: 600, color: "#fff",
+                cursor: "pointer", background: C.green, border: "none",
                 letterSpacing: "0.1px",
                 boxShadow: "0 1px 6px rgba(30,77,43,0.28)",
               }}
@@ -231,31 +232,31 @@ export default function MyShelfPage() {
             </button>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            {/* Vendor identity */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 19, fontWeight: 700, color: C.textPrimary, lineHeight: 1.1, letterSpacing: "-0.3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {/* Vendor identity subtext — booth number right-aligned, like a subtitle */}
+          {hasProfile && (
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginTop: 6 }}>
+              {/* Vendor name — italic Georgia, warm subtext style */}
+              <span style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: C.textMuted, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
                 {profile?.display_name ?? "Your Booth"}
-              </div>
+              </span>
+              {/* Booth pill — right aligned */}
+              {profile?.booth_number && (
+                <div style={{
+                  flexShrink: 0, marginLeft: 12,
+                  fontFamily: "monospace", fontSize: 11, fontWeight: 700, color: C.green,
+                  padding: "3px 9px 4px", border: `1.5px solid ${C.greenBorder}`,
+                  borderRadius: 7, background: C.greenLight, letterSpacing: "0.4px",
+                }}>
+                  Booth {profile.booth_number}
+                </div>
+              )}
             </div>
-
-            {/* Booth pill */}
-            {profile?.booth_number && (
-              <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3 }}>
-                <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500 }}>
-                  Booth
-                </div>
-                <div style={{ fontFamily: "monospace", fontSize: 12, fontWeight: 700, color: C.green, lineHeight: 1, padding: "4px 10px 5px", border: `1.5px solid ${C.greenBorder}`, borderRadius: 7, background: C.greenLight, letterSpacing: "0.4px" }}>
-                  {profile.booth_number}
-                </div>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Count line */}
           {!loading && hasProfile && posts.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
-              <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: C.textMuted }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 5 }}>
+              <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: C.textFaint }}>
                 {availableCount} available · {posts.length - availableCount} sold
               </div>
               <div style={{ fontSize: 10, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.4px", fontWeight: 500 }}>
@@ -269,7 +270,7 @@ export default function MyShelfPage() {
       {/* ── Grid ── */}
       {loading ? <SkeletonGrid /> : !hasProfile ? <NoProfile /> : <ShelfGrid posts={posts} />}
 
-      {/* ── Hairline divider only — no mall text watermark ── */}
+      {/* ── Hairline divider ── */}
       {hasProfile && !loading && (
         <div style={{ height: 1, background: C.border, margin: `5px ${GAP + 6}px`, flexShrink: 0 }} />
       )}

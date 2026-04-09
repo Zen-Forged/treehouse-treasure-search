@@ -47,7 +47,7 @@ function pickStyle(mallName: string): HeroStyle {
 const NOISE_OVERLAY =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E\")";
 
-// ─── Generic hero (All malls selected) ────────────────────────────────────────
+// ─── Generic hero (All malls / no mall selected) ───────────────────────────────
 
 interface GenericHeroProps {
   onExplore: () => void;
@@ -57,9 +57,9 @@ export function GenericMallHero({ onExplore }: GenericHeroProps) {
   return (
     <MallHeroCardInner
       gradient={HERO_GRADIENTS.default}
-      eyebrow="Welcome to"
-      title="Local Finds"
-      subtitle="Curated across nearby antique & vintage locations"
+      eyebrow="Treehouse Finds"
+      title="What will you find today?"
+      subtitle={"Found across Kentucky's antique malls. A closer look at what's worth the trip."}
       ctaLabel="Explore all finds"
       onExplore={onExplore}
     />
@@ -129,65 +129,42 @@ function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLab
       onClick={onExplore}
     >
       {/* ── Background layer ── */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: gradient,
-          zIndex: 0,
-        }}
-      />
+      <div style={{ position: "absolute", inset: 0, background: gradient, zIndex: 0 }} />
 
       {/* Optional photo background */}
       {bgImage && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: `url(${bgImage})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            opacity: 0.35,
-            zIndex: 1,
-          }}
-        />
+        <div style={{
+          position: "absolute", inset: 0,
+          backgroundImage: `url(${bgImage})`,
+          backgroundSize: "cover", backgroundPosition: "center",
+          opacity: 0.35, zIndex: 1,
+        }} />
       )}
 
       {/* Noise texture overlay */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          backgroundImage: NOISE_OVERLAY,
-          backgroundRepeat: "repeat",
-          backgroundSize: "200px 200px",
-          zIndex: 2,
-          pointerEvents: "none",
-        }}
-      />
+      <div style={{
+        position: "absolute", inset: 0,
+        backgroundImage: NOISE_OVERLAY,
+        backgroundRepeat: "repeat", backgroundSize: "200px 200px",
+        zIndex: 2, pointerEvents: "none",
+      }} />
 
       {/* Vignette */}
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "radial-gradient(ellipse at 60% 40%, transparent 30%, rgba(0,0,0,0.38) 100%)",
-          zIndex: 3,
-          pointerEvents: "none",
-        }}
-      />
+      <div style={{
+        position: "absolute", inset: 0,
+        background: "radial-gradient(ellipse at 60% 40%, transparent 30%, rgba(0,0,0,0.38) 100%)",
+        zIndex: 3, pointerEvents: "none",
+      }} />
 
       {/* ── Content ── */}
       <div style={{ position: "relative", zIndex: 4, padding: "22px 20px 20px" }}>
 
         {/* Eyebrow */}
         <div style={{
-          fontSize: 10,
-          fontWeight: 500,
-          letterSpacing: "2.4px",
+          fontSize: 10, fontWeight: 500, letterSpacing: "2.4px",
           textTransform: "uppercase",
           color: "rgba(255,255,255,0.52)",
-          marginBottom: 6,
+          marginBottom: 8,
           fontFamily: "system-ui, sans-serif",
         }}>
           {eyebrow}
@@ -196,12 +173,12 @@ function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLab
         {/* Main title */}
         <div style={{
           fontFamily: "Georgia, serif",
-          fontSize: 26,
+          fontSize: 24,
           fontWeight: 700,
           color: "rgba(255,255,255,0.96)",
-          letterSpacing: "-0.5px",
-          lineHeight: 1.15,
-          marginBottom: locationLine ? 6 : 10,
+          letterSpacing: "-0.4px",
+          lineHeight: 1.2,
+          marginBottom: locationLine ? 6 : 12,
           textShadow: "0 1px 8px rgba(0,0,0,0.35)",
         }}>
           {title}
@@ -210,22 +187,12 @@ function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLab
         {/* City, State pill */}
         {locationLine && (
           <div style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 4,
-            background: "rgba(255,255,255,0.10)",
-            border: "1px solid rgba(255,255,255,0.14)",
-            borderRadius: 20,
-            padding: "3px 9px 3px 7px",
-            marginBottom: 10,
+            display: "inline-flex", alignItems: "center", gap: 4,
+            background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.14)",
+            borderRadius: 20, padding: "3px 9px 3px 7px", marginBottom: 10,
           }}>
             <MapPin size={9} style={{ color: "rgba(255,255,255,0.55)", flexShrink: 0 }} />
-            <span style={{
-              fontSize: 10,
-              color: "rgba(255,255,255,0.62)",
-              letterSpacing: "0.8px",
-              fontFamily: "system-ui, sans-serif",
-            }}>
+            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.62)", letterSpacing: "0.8px", fontFamily: "system-ui, sans-serif" }}>
               {locationLine}
             </span>
           </div>
@@ -234,10 +201,10 @@ function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLab
         {/* Subtitle */}
         <div style={{
           fontSize: 12,
-          color: "rgba(255,255,255,0.58)",
-          lineHeight: 1.55,
+          color: "rgba(255,255,255,0.60)",
+          lineHeight: 1.6,
           marginBottom: 18,
-          maxWidth: 260,
+          maxWidth: 270,
           fontFamily: "Georgia, serif",
           fontStyle: "italic",
         }}>
@@ -248,14 +215,9 @@ function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLab
         <button
           onClick={e => { e.stopPropagation(); onExplore(); }}
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "9px 16px",
-            borderRadius: 22,
-            fontSize: 12,
-            fontWeight: 600,
-            letterSpacing: "0.2px",
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "9px 16px", borderRadius: 22,
+            fontSize: 12, fontWeight: 600, letterSpacing: "0.2px",
             fontFamily: "system-ui, sans-serif",
             color: "rgba(255,255,255,0.96)",
             background: C.greenSolid,
@@ -271,11 +233,7 @@ function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLab
 
       {/* Bottom shine line */}
       <div style={{
-        position: "absolute",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 1,
+        position: "absolute", bottom: 0, left: 0, right: 0, height: 1,
         background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)",
         zIndex: 5,
       }} />
