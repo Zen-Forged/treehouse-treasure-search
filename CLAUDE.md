@@ -33,7 +33,7 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ## CURRENT ISSUE
 > Last updated: 2026-04-09
 
-**Status:** ✅ Mall Identity Layer (Sprint 1) implemented. MallHeroCard + GenericMallHero shipped. Mall dropdown hidden when ≤1 mall. types/treehouse.ts extended with hero fields.
+**Status:** ✅ Mall Identity Layer (Sprint 1) shipped and deployed. Build fix applied (duplicate `transition` prop on motion.div).
 
 **What was done (this session):**
 
@@ -41,28 +41,32 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 
 **New file: `components/MallHeroCard.tsx`**
 - `MallHeroCard` — mall-specific hero. Uses `mall.name`, `mall.city`, `mall.state` to render with zero custom config.
-- `GenericMallHero` — shown when "All malls" is selected (or only 1 mall exists and none selected).
-- 5 background gradient styles: `default | golden | forest | terracotta | slate` — assigned deterministically by mall name hash (same mall = always same style). No randomness.
-- Optional `hero_image_url` — if set on mall row, photo renders at 35% opacity behind gradient. Fully optional for MVP.
-- Noise texture SVG overlay + radial vignette for visual depth.
-- City/State frosted pill, italic Georgia subtitle, green CTA button with ArrowRight icon.
-- `AnimatePresence` mode="wait" — hero cross-fades when mall selection changes.
+- `GenericMallHero` — shown when "All malls" is selected.
+- 5 gradient styles: `default | golden | forest | terracotta | slate` — deterministic by mall name hash (same mall always same style).
+- Optional `hero_image_url` — photo renders at 35% opacity behind gradient if set. Not required for MVP.
+- Noise texture SVG overlay + radial vignette for depth.
+- City/State frosted pill, italic Georgia subtitle, green CTA with ArrowRight icon.
+- `whileTap={{ scale: 0.985 }}` with single merged `transition` prop (no duplicate — build-breaking bug fixed).
+- `AnimatePresence mode="wait"` in page — hero cross-fades on mall switch.
+
+**Build fix applied:**
+- Error: `JSX elements cannot have multiple attributes with the same name` — `transition` prop appeared twice on `motion.div` (once for enter animation, once for whileTap).
+- Fix: merged into single `transition={{ duration: 0.4, ease: [...] }}` alongside `whileTap`. Framer Motion reuses the same transition for both.
 
 **Updated: `app/page.tsx`**
-- Removed "Found today" hero (was not present; hero slot was empty — added Mall Hero Card in its place).
-- Hero placed between sticky header and masonry grid, with 18px margin-bottom.
-- Section label row above grid: mall name (left) + find count italic (right) — 10px faint.
-- `feedRef` scroll target — hero CTA smooth-scrolls to feed section.
-- Mall dropdown now hidden when `malls.length <= 1` (Day 3 audit fix, pulled forward).
+- Hero placed between sticky header and masonry grid, 18px margin-bottom.
+- Section label row above grid: mall name left + find count italic right — 10px faint.
+- `feedRef` — hero CTA smooth-scrolls to feed section.
+- Mall dropdown hidden when `malls.length <= 1` (Day 3 audit fix, pulled forward).
 
 **Updated: `types/treehouse.ts`**
-- `Mall` interface extended with optional hero fields: `hero_title`, `hero_subtitle`, `hero_style`, `hero_image_url`.
-- All optional — no DB migration required now. Hero defaults gracefully from `name`/`city`/`state`.
+- `Mall` extended with optional hero fields: `hero_title?`, `hero_subtitle?`, `hero_style?`, `hero_image_url?`.
+- All optional — no DB migration required. Hero defaults from `name`/`city`/`state`.
 
 **Demo flow (live pitch):**
-1. Add mall in Supabase: `INSERT INTO malls (name, city, state, slug) VALUES ('XYZ Antique Mall', 'Louisville', 'KY', 'xyz-antique-mall')`
-2. Mall appears in dropdown immediately (getAllMalls is called on mount)
-3. Selecting it renders a fully styled hero card — no config needed
+1. `INSERT INTO malls (name, city, state, slug) VALUES ('XYZ Antique Mall', 'Louisville', 'KY', 'xyz-antique-mall')`
+2. Mall appears in dropdown immediately on next mount
+3. Selecting it renders a fully styled hero — no config needed
 
 **Previous sessions:**
 - Design audit 9 findings — Day 1–2 typography/hierarchy fixes all done
@@ -73,16 +77,15 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 - Admin page + bulk delete
 
 **Next session starting point:**
-1. Deploy: `git add -A && git commit -m "feat: Mall Identity Layer — MallHeroCard" && git push` or `npx vercel --prod`
-2. QA on device: hero card at top of feed, cross-fade when switching malls in dropdown, CTA scrolls to grid
-3. Optional Supabase columns (no rush — hero defaults without them):
+1. QA on device: hero card at top of feed, cross-fade on mall switch, CTA scrolls to grid
+2. Optional Supabase columns (hero works without them):
    ```sql
    ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_title text;
    ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_subtitle text;
    ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_style text;
    ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_image_url text;
    ```
-4. Remaining Day 3–4 audit items:
+3. Remaining Day 3–4 audit items:
    - Rename "Flag/Flagged" → "Save/Saved" throughout
    - Wire "Share my shelf" to native share / URL copy
    - Add inline unsave on Flagged rows
@@ -235,11 +238,13 @@ Style assignment: deterministic hash of mall.name → always same style per mall
 Layers (bottom to top):
   1. CSS gradient (always present)
   2. Photo (optional hero_image_url — 35% opacity)
-  3. SVG noise texture (SVG data URI, repeat, 200×200)
+  3. SVG noise texture (data URI, repeat, 200×200)
   4. Radial vignette (edges darken for depth)
-  5. Content (eyebrow 10px / title 26px Georgia / location pill / subtitle / CTA button)
-CTA: green solid pill, ArrowRight icon, scrolls feedRef into view
-AnimatePresence mode="wait" — hero cross-fades on mall change
+  5. Content: eyebrow 10px / title 26px Georgia / location pill / subtitle italic / CTA button
+CTA: greenSolid pill, ArrowRight icon, scrolls feedRef into view on tap
+whileTap: scale 0.985 — single transition prop (duration 0.4) — DO NOT split into two transition props
+AnimatePresence mode="wait" in page — hero cross-fades on mall change
+KNOWN BUG PATTERN: framer-motion motion.div cannot have two `transition` props — merge always
 ```
 
 ### Feed grid
@@ -368,6 +373,7 @@ Placement: position absolute, bottom: -28, left: 20 inside hero div
 - MCP filesystem tool can time out on large files — if it does, provide manual diffs clearly
 - MINIMUM font size: 10px everywhere. Never ship 6px, 7px, 8px text as readable UI labels.
 - Sold state label is "Unavailable" everywhere — never "Sold" in the ecosystem layer
+- **framer-motion**: `motion.div` cannot have two `transition` props — TypeScript error at build time. Always merge `whileTap` transition into the single `transition` prop.
 
 ---
 
@@ -413,7 +419,7 @@ Placement: position absolute, bottom: -28, left: 20 inside hero div
 - No pull-to-refresh on feed
 - No PWA support
 - Delete button missing on posts created before `vendor_id` was stored in local profile
-- Optional hero columns not yet added to malls table in Supabase (hero works without them — defaults from name/city/state)
+- Optional hero columns not yet added to malls table in Supabase (hero works without them)
 
 ---
 
@@ -433,7 +439,7 @@ Completed audit 2026-04-08. 9 findings across 4 categories.
 - "Flag Booth" terminology confusing → rename to Save/Saved
 - No way to unsave from Flagged screen → add inline toggle
 - "Share my shelf" is a dead end → wire to native share
-- Mall dropdown shows with only 1 mall → FIXED this session (hidden when ≤1 mall)
+- Mall dropdown shows with only 1 mall → FIXED (hidden when ≤1 mall)
 
 ### Consistency (Day 5 — PENDING)
 - Three different header structures → align vertical rhythm
