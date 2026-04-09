@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Compass, ChevronDown } from "lucide-react";
+import PiLeafIcon from "@/components/PiLeafIcon";
 import { getFeedPosts, getAllMalls } from "@/lib/posts";
 import BottomNav from "@/components/BottomNav";
 import { MallHeroCard, GenericMallHero } from "@/components/MallHeroCard";
@@ -36,7 +37,6 @@ const SCROLL_KEY      = "treehouse_feed_scroll";
 const BOOKMARK_PREFIX = "treehouse_bookmark_";
 
 // ─── Bookmark helpers ──────────────────────────────────────────────────────────
-// Always reads raw localStorage so all pages agree on the same source of truth.
 
 function loadFollowedIds(): Set<string> {
   const followed = new Set<string>();
@@ -163,11 +163,16 @@ function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; i
                   Unavailable
                 </div>
               )}
+              {/* Saved indicator — PiLeaf icon in green pill, bottom-right of tile image */}
               {isFollowed && (
-                <div style={{ position: "absolute", bottom: 7, right: 7, width: 20, height: 20, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.greenSolid, boxShadow: "0 1px 5px rgba(0,0,0,0.2)" }}>
-                  <svg width="10" height="12" viewBox="0 0 10 12" fill="none">
-                    <path d="M1 1h8v10L5 8.5 1 11V1Z" fill="rgba(255,255,255,0.96)" />
-                  </svg>
+                <div style={{
+                  position: "absolute", bottom: 7, right: 7,
+                  width: 22, height: 22, borderRadius: "50%",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: C.greenSolid,
+                  boxShadow: "0 1px 5px rgba(0,0,0,0.22)",
+                }}>
+                  <PiLeafIcon size={12} style={{ color: "rgba(255,255,255,0.96)" }} />
                 </div>
               )}
             </div>
@@ -258,19 +263,16 @@ function MallDropdown({ malls, selectedId, onChange }: { malls: Mall[]; selected
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DiscoveryFeedPage() {
-  const [posts,       setPosts]       = useState<Post[]>([]);
-  const [malls,       setMalls]       = useState<Mall[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState(false);
-  const [mallId,      setMallId]      = useState<string | null>(null);
-  const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
+  const [posts,         setPosts]         = useState<Post[]>([]);
+  const [malls,         setMalls]         = useState<Mall[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [error,         setError]         = useState(false);
+  const [mallId,        setMallId]        = useState<string | null>(null);
+  const [followedIds,   setFollowedIds]   = useState<Set<string>>(new Set());
   const [bookmarkCount, setBookmarkCount] = useState(0);
-  // Guard: only fetch posts once — don't re-fetch when navigating back
   const hasFetched = useRef(false);
-  const feedRef = useRef<HTMLDivElement>(null);
+  const feedRef    = useRef<HTMLDivElement>(null);
 
-  // ── Bookmark badge: always from raw localStorage, updated on focus ──
-  // This is the single source of truth for the badge count across all tabs.
   function syncBookmarks() {
     const ids = loadFollowedIds();
     setFollowedIds(ids);
@@ -284,7 +286,6 @@ export default function DiscoveryFeedPage() {
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
-  // ── Scroll position restore ──
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(SCROLL_KEY);
@@ -298,10 +299,8 @@ export default function DiscoveryFeedPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // ── Malls (cheap, always fresh) ──
   useEffect(() => { getAllMalls().then(setMalls); }, []);
 
-  // ── Posts: only fetch once per app session, don't re-fetch on back-navigate ──
   useEffect(() => {
     if (hasFetched.current) return;
     hasFetched.current = true;
@@ -343,7 +342,6 @@ export default function DiscoveryFeedPage() {
       {/* ── Main ── */}
       <main style={{ padding: "16px 14px 0", paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }}>
 
-        {/* Hero */}
         <div style={{ marginBottom: 20 }}>
           <AnimatePresence mode="wait">
             {selectedMall ? (
@@ -358,10 +356,7 @@ export default function DiscoveryFeedPage() {
           </AnimatePresence>
         </div>
 
-        {/* Feed anchor */}
         <div ref={feedRef} style={{ scrollMarginTop: 80 }}>
-
-          {/* Section label — updated copy */}
           {!loading && filtered.length > 0 && (
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 16 }}>
               <span style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 15, color: C.textMid, fontWeight: 400, letterSpacing: "-0.1px" }}>
@@ -383,7 +378,6 @@ export default function DiscoveryFeedPage() {
         </div>
       </main>
 
-      {/* Badge uses raw localStorage count — same source of truth as Visit List */}
       <BottomNav active="home" flaggedCount={bookmarkCount} />
 
       <style>{`
