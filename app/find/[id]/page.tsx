@@ -8,7 +8,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, Trash2, Facebook, Flag, Tag } from "lucide-react";
+import { Share2, Trash2, Facebook, Bookmark, Tag } from "lucide-react";
 import { getPost, getVendorPosts, updatePostStatus, deletePost } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
@@ -41,68 +41,21 @@ function flagKey(postId: string) {
   return `treehouse_bookmark_${postId}`;
 }
 
-// ─── Booth tag ────────────────────────────────────────────────────────────────
+// ─── Booth tag ─────────────────────────────────────────────────────────────────
 
 function BoothTag({ price }: { price: number }) {
   return (
-    <div style={{
-      position: "absolute",
-      bottom: -28,
-      left: 20,
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "flex-start",
-    }}>
+    <div style={{ position: "absolute", bottom: -28, left: 20, display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
       {/* String */}
-      <div style={{
-        width: 1.5,
-        height: 20,
-        background: C.tagString,
-        marginLeft: 16,
-        borderRadius: 1,
-      }} />
-
+      <div style={{ width: 1.5, height: 20, background: C.tagString, marginLeft: 16, borderRadius: 1 }} />
       {/* Tag body */}
-      <div style={{
-        background: C.tag,
-        border: `1.5px solid ${C.tagBorder}`,
-        borderRadius: "6px 6px 6px 2px",
-        padding: "7px 14px 8px 12px",
-        position: "relative",
-      }}>
+      <div style={{ background: C.tag, border: `1.5px solid ${C.tagBorder}`, borderRadius: "6px 6px 6px 2px", padding: "7px 14px 8px 12px", position: "relative" }}>
         {/* Punch hole */}
-        <div style={{
-          position: "absolute",
-          top: -1.5,
-          left: 12,
-          width: 8,
-          height: 8,
-          borderRadius: "50%",
-          background: C.bg,
-          border: `1.5px solid ${C.tagBorder}`,
-        }} />
-
-        <div style={{
-          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-          fontSize: 8,
-          fontWeight: 600,
-          textTransform: "uppercase" as const,
-          letterSpacing: "1.8px",
-          color: C.textMuted,
-          lineHeight: 1,
-          marginBottom: 3,
-          paddingTop: 6,
-        }}>
+        <div style={{ position: "absolute", top: -1.5, left: 12, width: 8, height: 8, borderRadius: "50%", background: C.bg, border: `1.5px solid ${C.tagBorder}` }} />
+        <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", fontSize: 8, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "1.8px", color: C.textMuted, lineHeight: 1, marginBottom: 3, paddingTop: 6 }}>
           In-Booth
         </div>
-        <div style={{
-          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-          fontSize: 20,
-          fontWeight: 700,
-          color: C.textPrimary,
-          letterSpacing: "-0.5px",
-          lineHeight: 1.1,
-        }}>
+        <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", fontSize: 20, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.5px", lineHeight: 1.1 }}>
           ${price.toLocaleString()}
         </div>
       </div>
@@ -110,7 +63,7 @@ function BoothTag({ price }: { price: number }) {
   );
 }
 
-// ─── Shelf card ───────────────────────────────────────────────────────────────
+// ─── Shelf card ────────────────────────────────────────────────────────────────
 
 function ShelfCard({ post }: { post: Post }) {
   const [imgErr, setImgErr] = useState(false);
@@ -119,69 +72,33 @@ function ShelfCard({ post }: { post: Post }) {
 
   return (
     <Link href={`/find/${post.id}`} style={{ display: "block", textDecoration: "none", flexShrink: 0, width: "42vw", maxWidth: 170 }}>
-      <div style={{
-        borderRadius: 13,
-        overflow: "hidden",
-        background: C.surface,
-        border: `1px solid ${C.border}`,
-        boxShadow: "0 1px 5px rgba(26,26,24,0.06)",
-        position: "relative",
-        opacity: isSold ? 0.62 : 1,
-        transition: "opacity 0.2s",
-      }}>
+      <div style={{ borderRadius: 13, overflow: "hidden", background: C.surface, border: `1px solid ${C.border}`, boxShadow: "0 1px 5px rgba(26,26,24,0.06)", position: "relative", opacity: isSold ? 0.62 : 1, transition: "opacity 0.2s" }}>
         {hasImg ? (
           <div style={{ position: "relative", width: "100%", aspectRatio: "3/4", overflow: "hidden" }}>
-            <img
-              src={post.image_url!}
-              alt={post.title}
-              loading="lazy"
-              onError={() => setImgErr(true)}
-              style={{
-                width: "100%", height: "100%",
-                objectFit: "cover", display: "block",
-                filter: isSold ? "grayscale(0.5) brightness(0.88)" : "brightness(0.97) saturate(0.93)",
-              }}
-            />
+            <img src={post.image_url!} alt={post.title} loading="lazy" onError={() => setImgErr(true)}
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: isSold ? "grayscale(0.5) brightness(0.88)" : "brightness(0.97) saturate(0.93)" }} />
             {isSold && (
-              <div style={{
-                position: "absolute", top: 6, left: 6,
-                fontSize: 6, fontWeight: 700, textTransform: "uppercase",
-                letterSpacing: "1.3px", padding: "2px 6px", borderRadius: 4,
-                background: "rgba(240,237,230,0.92)", color: C.textMuted,
-                border: `1px solid ${C.border}`,
-                backdropFilter: "blur(4px)",
-              }}>
+              <div style={{ position: "absolute", top: 6, left: 6, fontSize: 6, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.3px", padding: "2px 6px", borderRadius: 4, background: "rgba(240,237,230,0.92)", color: C.textMuted, border: `1px solid ${C.border}`, backdropFilter: "blur(4px)" }}>
                 Unavailable
               </div>
             )}
           </div>
         ) : (
           <div style={{ aspectRatio: "3/4", padding: "12px 10px", display: "flex", alignItems: "flex-end", background: C.surface }}>
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 11, fontWeight: 600, color: C.textMid, lineHeight: 1.3 }}>
-              {post.title}
-            </div>
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 11, fontWeight: 600, color: C.textMid, lineHeight: 1.3 }}>{post.title}</div>
           </div>
         )}
       </div>
-      <div style={{
-        marginTop: 6, paddingLeft: 2,
-        fontSize: 10, color: C.textMuted, lineHeight: 1.4,
-        overflow: "hidden", textOverflow: "ellipsis",
-        display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
-      }}>
+      <div style={{ marginTop: 6, paddingLeft: 2, fontSize: 10, color: C.textMuted, lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
         {post.title}
       </div>
     </Link>
   );
 }
 
-// ─── Shelf section ────────────────────────────────────────────────────────────
+// ─── Shelf section ─────────────────────────────────────────────────────────────
 
-function ShelfSection({ vendorId, currentPostId, onReady }: {
-  vendorId: string;
-  currentPostId: string;
-  onReady: (hasItems: boolean) => void;
-}) {
+function ShelfSection({ vendorId, currentPostId, onReady }: { vendorId: string; currentPostId: string; onReady: (hasItems: boolean) => void }) {
   const [items, setItems] = useState<Post[]>([]);
   const [ready, setReady] = useState(false);
 
@@ -197,36 +114,12 @@ function ShelfSection({ vendorId, currentPostId, onReady }: {
   if (!ready || items.length === 0) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: 0.18 }}
-      style={{ marginBottom: 32 }}
-    >
-      <div style={{
-        paddingLeft: 20, paddingRight: 20,
-        marginBottom: 12,
-        display: "flex", alignItems: "baseline", justifyContent: "space-between",
-      }}>
-        <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2.2px", fontWeight: 500 }}>
-          View the shelf
-        </div>
-        <div style={{ fontSize: 10, color: C.textFaint, fontStyle: "italic", fontFamily: "Georgia, serif" }}>
-          {items.length} {items.length === 1 ? "item" : "items"}
-        </div>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.18 }} style={{ marginBottom: 32 }}>
+      <div style={{ paddingLeft: 20, paddingRight: 20, marginBottom: 12, display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+        <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2.2px", fontWeight: 500 }}>View the shelf</div>
+        <div style={{ fontSize: 10, color: C.textFaint, fontStyle: "italic", fontFamily: "Georgia, serif" }}>{items.length} {items.length === 1 ? "item" : "items"}</div>
       </div>
-      <div
-        style={{
-          display: "flex", gap: 10,
-          overflowX: "auto", overflowY: "hidden",
-          paddingLeft: 20, paddingRight: 20, paddingBottom: 4,
-          scrollSnapType: "x mandatory",
-          WebkitOverflowScrolling: "touch",
-          msOverflowStyle: "none",
-          scrollbarWidth: "none",
-        }}
-        className="hide-scrollbar"
-      >
+      <div style={{ display: "flex", gap: 10, overflowX: "auto", overflowY: "hidden", paddingLeft: 20, paddingRight: 20, paddingBottom: 4, scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", msOverflowStyle: "none", scrollbarWidth: "none" }} className="hide-scrollbar">
         {items.map(item => (
           <div key={item.id} style={{ scrollSnapAlign: "start", flexShrink: 0 }}>
             <ShelfCard post={item} />
@@ -251,13 +144,11 @@ export default function FindDetailPage() {
   const [actionBusy,    setActionBusy]    = useState(false);
   const [showDelete,    setShowDelete]    = useState(false);
   const [shelfHasItems, setShelfHasItems] = useState(false);
-  const [isFlagged,     setIsFlagged]     = useState(false);
+  const [isSaved,       setIsSaved]       = useState(false);
 
   useEffect(() => {
     if (!id) return;
-    try {
-      setIsFlagged(safeStorage.getItem(flagKey(id)) === "1");
-    } catch {}
+    try { setIsSaved(safeStorage.getItem(flagKey(id)) === "1"); } catch {}
 
     getPost(id).then(data => {
       setPost(data);
@@ -267,25 +158,20 @@ export default function FindDetailPage() {
         if (raw && data) {
           const profile = JSON.parse(raw) as LocalVendorProfile;
           const profileVendorId = profile.vendor_id;
-          const postVendorId = data.vendor_id ?? data.vendor?.id;
-          if (profileVendorId && postVendorId && profileVendorId === postVendorId) {
-            setIsMyPost(true);
-          }
+          const postVendorId    = data.vendor_id ?? data.vendor?.id;
+          if (profileVendorId && postVendorId && profileVendorId === postVendorId) setIsMyPost(true);
         }
       } catch {}
     });
   }, [id]);
 
-  function handleFlag() {
+  function handleSave() {
     if (!id) return;
-    const next = !isFlagged;
-    setIsFlagged(next);
+    const next = !isSaved;
+    setIsSaved(next);
     try {
-      if (next) {
-        safeStorage.setItem(flagKey(id), "1");
-      } else {
-        safeStorage.removeItem(flagKey(id));
-      }
+      if (next) safeStorage.setItem(flagKey(id), "1");
+      else      safeStorage.removeItem(flagKey(id));
     } catch {}
   }
 
@@ -314,12 +200,10 @@ export default function FindDetailPage() {
     setActionBusy(true);
     const ok = await deletePost(post.id);
     if (ok) router.replace("/");
-    else setActionBusy(false);
+    else    setActionBusy(false);
   }
 
-  const handleShelfReady = useCallback((hasItems: boolean) => {
-    setShelfHasItems(hasItems);
-  }, []);
+  const handleShelfReady = useCallback((hasItems: boolean) => { setShelfHasItems(hasItems); }, []);
 
   const mapsUrl = post?.mall?.address
     ? `https://maps.apple.com/?q=${encodeURIComponent(post.mall.address)}`
@@ -344,137 +228,74 @@ export default function FindDetailPage() {
     );
   }
 
-  const isSold = post.status === "sold";
+  const isSold  = post.status === "sold";
   const hasVendor = !!post.vendor;
-  const hasPrice = post.price_asking != null;
+  const hasPrice  = post.price_asking != null;
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
 
       {/* ── 1. Hero image ── */}
-      <div style={{
-        position: "relative",
-        width: "100%",
-        // Extra bottom space to accommodate the hanging tag when price exists
-        marginBottom: hasPrice ? 36 : 0,
-      }}>
+      <div style={{ position: "relative", width: "100%", marginBottom: hasPrice ? 36 : 0 }}>
         {post.image_url ? (
-          <img
-            src={post.image_url}
-            alt={post.title}
-            style={{
-              width: "100%", height: "auto", display: "block",
-              objectFit: "contain",
-              filter: isSold ? "grayscale(0.35) brightness(0.88)" : "none",
-            }}
-          />
+          <img src={post.image_url} alt={post.title}
+            style={{ width: "100%", height: "auto", display: "block", objectFit: "contain", filter: isSold ? "grayscale(0.35) brightness(0.88)" : "none" }} />
         ) : (
           <div style={{ height: 120, background: C.surface }} />
         )}
 
         {/* Unavailable badge — top-left */}
         {isSold && (
-          <div style={{
-            position: "absolute", top: "max(14px, env(safe-area-inset-top, 14px))", left: 14,
-            fontSize: 8, fontWeight: 700, textTransform: "uppercase",
-            letterSpacing: "1.5px", padding: "3px 9px", borderRadius: 5,
-            background: "rgba(240,237,230,0.92)", color: C.textMuted,
-            border: `1px solid ${C.border}`,
-            backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
-          }}>
+          <div style={{ position: "absolute", top: "max(14px, env(safe-area-inset-top, 14px))", left: 14, fontSize: 8, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px", padding: "3px 9px", borderRadius: 5, background: "rgba(240,237,230,0.92)", color: C.textMuted, border: `1px solid ${C.border}`, backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)" }}>
             Unavailable
           </div>
         )}
 
-        {/* Flag + share — bottom-right corner of photo */}
-        <div style={{
-          position: "absolute",
-          bottom: 12,
-          right: 14,
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-        }}>
-          <button
-            onClick={handleFlag}
-            aria-label={isFlagged ? "Unflag booth" : "Flag booth"}
-            style={{
-              width: 34, height: 34, borderRadius: "50%",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: isFlagged ? C.greenSolid : "rgba(0,0,0,0.32)",
-              backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-              border: "none", cursor: "pointer",
-              transition: "background 0.18s",
-            }}
-          >
-            <Flag
-              size={14}
-              style={{
-                color: "rgba(255,255,255,0.95)",
-                fill: isFlagged ? "rgba(255,255,255,0.95)" : "none",
-                transition: "fill 0.18s",
-              }}
-            />
+        {/* Save + Share — bottom-right */}
+        <div style={{ position: "absolute", bottom: 12, right: 14, display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={handleSave} aria-label={isSaved ? "Remove from visit list" : "Add to visit list"}
+            style={{ width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: isSaved ? C.greenSolid : "rgba(0,0,0,0.32)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", border: "none", cursor: "pointer", transition: "background 0.18s" }}>
+            <Bookmark size={14} style={{ color: "rgba(255,255,255,0.95)", fill: isSaved ? "rgba(255,255,255,0.95)" : "none", transition: "fill 0.18s" }} />
           </button>
-
-          <button
-            onClick={handleShare}
-            style={{
-              width: 34, height: 34, borderRadius: "50%",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: "rgba(0,0,0,0.32)",
-              backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-              border: "none", cursor: "pointer",
-            }}
-          >
+          <button onClick={handleShare}
+            style={{ width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.32)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", border: "none", cursor: "pointer" }}>
             <Share2 size={13} style={{ color: copied ? "#a8d5b5" : "rgba(255,255,255,0.9)" }} />
           </button>
         </div>
 
-        {/* Hanging booth tag — bottom-left, overlaps photo/content boundary */}
+        {/* Hanging booth tag */}
         {hasPrice && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.12 }}
-          >
+          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.12 }}>
             <BoothTag price={post.price_asking!} />
           </motion.div>
         )}
       </div>
 
-      {/* ── 2. Title + availability ── */}
+      {/* ── 2. Title + price + availability ── */}
       <div style={{ padding: "20px 20px 0" }}>
 
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32 }}>
-          <h1 style={{
-            fontFamily: "Georgia, serif",
-            fontSize: 26, fontWeight: 700,
-            color: C.textPrimary,
-            lineHeight: 1.22, letterSpacing: "-0.4px",
-            margin: "0 0 8px",
-          }}>
+          <h1 style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 700, color: C.textPrimary, lineHeight: 1.22, letterSpacing: "-0.4px", margin: "0 0 8px" }}>
             {post.title}
           </h1>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, delay: 0.06 }}
-          style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 28 }}
-        >
-          {!isSold && (
-            <motion.div
-              animate={{ opacity: [1, 0.35, 1] }}
-              transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-              style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, flexShrink: 0 }}
-            />
+        {/* Price + availability inline */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.06 }}
+          style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 28 }}>
+          {hasPrice && !isSold && (
+            <span style={{ fontFamily: "monospace", fontSize: 16, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.3px" }}>
+              ${post.price_asking!.toLocaleString()}
+            </span>
           )}
-          <span style={{
-            fontSize: 12, fontWeight: 500,
-            color: isSold ? C.textMuted : C.green,
-            letterSpacing: "0.1px",
-          }}>
+          {hasPrice && !isSold && (
+            <span style={{ fontSize: 12, color: C.textFaint }}>·</span>
+          )}
+          {!isSold && (
+            <motion.div animate={{ opacity: [1, 0.35, 1] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+              style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, flexShrink: 0 }} />
+          )}
+          <span style={{ fontSize: 12, fontWeight: 500, color: isSold ? C.textMuted : C.green, letterSpacing: "0.1px" }}>
             {isSold ? "Unavailable" : "Available"}
           </span>
         </motion.div>
@@ -483,12 +304,7 @@ export default function FindDetailPage() {
         {(post.caption || post.description) && (
           <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32, delay: 0.1 }} style={{ marginBottom: 32 }}>
             {post.caption && (
-              <p style={{
-                fontSize: 15, color: C.textMid,
-                lineHeight: 1.82,
-                fontStyle: "italic", fontFamily: "Georgia, serif",
-                margin: "0 0 10px",
-              }}>
+              <p style={{ fontSize: 15, color: C.textMid, lineHeight: 1.82, fontStyle: "italic", fontFamily: "Georgia, serif", margin: "0 0 10px" }}>
                 {post.caption}
               </p>
             )}
@@ -499,115 +315,66 @@ export default function FindDetailPage() {
             )}
           </motion.div>
         )}
-
       </div>
 
-      {/* ── "View the shelf" ── */}
+      {/* ── View the shelf ── */}
       {hasVendor && (
         <>
-          {shelfHasItems && (
-            <div style={{ height: 1, background: C.border, margin: "0 0 24px" }} />
-          )}
-          <ShelfSection
-            vendorId={post.vendor!.id}
-            currentPostId={post.id}
-            onReady={handleShelfReady}
-          />
+          {shelfHasItems && <div style={{ height: 1, background: C.border, margin: "0 0 24px" }} />}
+          <ShelfSection vendorId={post.vendor!.id} currentPostId={post.id} onReady={handleShelfReady} />
         </>
       )}
 
-      {/* ── "Find this here" ── */}
+      {/* ── Find this here ── */}
       {(post.mall || post.vendor) && (
         <div style={{ padding: "0 20px", marginBottom: 28 }}>
-
-          <div style={{
-            fontSize: 9, color: C.textFaint,
-            textTransform: "uppercase", letterSpacing: "2.2px", fontWeight: 500,
-            marginBottom: 8,
-          }}>
+          <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "2.2px", fontWeight: 500, marginBottom: 8 }}>
             Find this here
           </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.16 }}
-            style={{
-              background: C.surface,
-              borderRadius: 12,
-              border: `1px solid ${C.border}`,
-              overflow: "hidden",
-            }}
-          >
+          <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.16 }}
+            style={{ background: C.surface, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+
             {/* Mall row */}
             {post.mall && (
               <div style={{ padding: "12px 14px 10px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-                <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500, paddingTop: 2, flexShrink: 0, width: 48 }}>
-                  Mall
-                </div>
+                <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500, paddingTop: 2, flexShrink: 0, width: 48 }}>Mall</div>
                 <div style={{ flex: 1, textAlign: "right" }}>
-                  <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.3, marginBottom: 2 }}>
-                    {post.mall.name}
-                  </div>
+                  <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.3, marginBottom: 2 }}>{post.mall.name}</div>
                   {post.mall.address ? (
                     mapsUrl ? (
-                      <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
-                        style={{ fontSize: 11, color: C.green, textDecoration: "none", borderBottom: `1px solid rgba(30,77,43,0.18)` }}>
-                        {post.mall.address}
-                      </a>
+                      <a href={mapsUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: C.green, textDecoration: "none", borderBottom: `1px solid rgba(30,77,43,0.18)` }}>{post.mall.address}</a>
                     ) : (
                       <div style={{ fontSize: 11, color: C.textMuted }}>{post.mall.address}</div>
                     )
                   ) : mapsUrl ? (
-                    <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
-                      style={{ fontSize: 11, color: C.green, textDecoration: "none", borderBottom: `1px solid rgba(30,77,43,0.18)` }}>
+                    <a href={mapsUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: C.green, textDecoration: "none", borderBottom: `1px solid rgba(30,77,43,0.18)` }}>
                       {post.mall.city}{post.mall.state ? `, ${post.mall.state}` : ""}
                     </a>
                   ) : (
-                    <div style={{ fontSize: 11, color: C.textMuted }}>
-                      {post.mall.city}{post.mall.state ? `, ${post.mall.state}` : ""}
-                    </div>
+                    <div style={{ fontSize: 11, color: C.textMuted }}>{post.mall.city}{post.mall.state ? `, ${post.mall.state}` : ""}</div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* Divider */}
-            {post.mall && post.vendor && (
-              <div style={{ height: 1, background: C.border, margin: "0 14px" }} />
-            )}
+            {post.mall && post.vendor && <div style={{ height: 1, background: C.border, margin: "0 14px" }} />}
 
             {/* Vendor row */}
             {post.vendor && (
               <div style={{ padding: "10px 14px 0", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-                <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500, paddingTop: 2, flexShrink: 0, width: 48 }}>
-                  Vendor
-                </div>
+                <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500, paddingTop: 2, flexShrink: 0, width: 48 }}>Vendor</div>
                 <div style={{ flex: 1, textAlign: "right" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 7 }}>
-                    <div style={{ fontSize: 13, fontWeight: 400, color: C.textMid, lineHeight: 1.3 }}>
-                      {post.vendor.display_name}
-                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 400, color: C.textMid, lineHeight: 1.3 }}>{post.vendor.display_name}</div>
                     {post.vendor.booth_number && (
-                      <div style={{
-                        display: "inline-block",
-                        padding: "3px 8px",
-                        borderRadius: 20,
-                        background: C.surfaceDeep,
-                        border: `1px solid ${C.border}`,
-                        fontFamily: "monospace",
-                        fontSize: 11,
-                        fontWeight: 500,
-                        color: C.textMid,
-                        letterSpacing: "0.3px",
-                        flexShrink: 0,
-                      }}>
+                      <div style={{ display: "inline-block", padding: "3px 8px", borderRadius: 20, background: C.surfaceDeep, border: `1px solid ${C.border}`, fontFamily: "monospace", fontSize: 11, fontWeight: 500, color: C.textMid, letterSpacing: "0.3px", flexShrink: 0 }}>
                         {post.vendor.booth_number}
                       </div>
                     )}
                   </div>
                   {post.vendor.facebook_url && (
-                    <a href={post.vendor.facebook_url} target="_blank" rel="noopener noreferrer"
-                      style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 4, fontSize: 10, color: "#1877f2", textDecoration: "none", opacity: 0.8 }}>
+                    <a href={post.vendor.facebook_url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 4, fontSize: 10, color: "#1877f2", textDecoration: "none", opacity: 0.8 }}>
                       <Facebook size={9} />
                       Facebook
                     </a>
@@ -616,65 +383,28 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Flag Booth button */}
+            {/* Save to Visit List button */}
             {post.vendor && (
               <div style={{ padding: "12px 14px 14px" }}>
-                <button
-                  onClick={handleFlag}
-                  style={{
-                    width: "100%",
-                    padding: "10px 16px",
-                    borderRadius: 10,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 7,
-                    color: isFlagged ? "rgba(255,255,255,0.97)" : C.green,
-                    background: isFlagged ? C.greenSolid : C.greenLight,
-                    border: `1px solid ${isFlagged ? "transparent" : C.greenBorder}`,
-                    cursor: "pointer",
-                    letterSpacing: "0.1px",
-                    transition: "background 0.18s, color 0.18s, border-color 0.18s",
-                  }}
-                >
-                  <Flag
-                    size={14}
-                    style={{
-                      color: isFlagged ? "rgba(255,255,255,0.97)" : C.green,
-                      fill: isFlagged ? "rgba(255,255,255,0.97)" : "none",
-                      transition: "fill 0.18s",
-                    }}
-                  />
-                  {isFlagged ? "Booth Flagged" : "Flag Booth"}
+                <button onClick={handleSave}
+                  style={{ width: "100%", padding: "10px 16px", borderRadius: 10, fontSize: 13, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, color: isSaved ? "rgba(255,255,255,0.97)" : C.green, background: isSaved ? C.greenSolid : C.greenLight, border: `1px solid ${isSaved ? "transparent" : C.greenBorder}`, cursor: "pointer", letterSpacing: "0.1px", transition: "background 0.18s, color 0.18s, border-color 0.18s" }}>
+                  <Bookmark size={14} style={{ color: isSaved ? "rgba(255,255,255,0.97)" : C.green, fill: isSaved ? "rgba(255,255,255,0.97)" : "none", transition: "fill 0.18s" }} />
+                  {isSaved ? "Saved to Visit List" : "Save to Visit List"}
                 </button>
               </div>
             )}
-
           </motion.div>
         </div>
       )}
 
       {/* ── Owner actions ── */}
       {isMyPost && (
-        <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, delay: 0.3 }}
-          style={{ padding: "0 20px", marginTop: 4, display: "flex", flexDirection: "column", gap: 0 }}
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.3 }}
+          style={{ padding: "0 20px", marginTop: 4, display: "flex", flexDirection: "column", gap: 0 }}>
           <div style={{ height: 1, background: C.border, marginBottom: 16 }} />
 
-          <button
-            onClick={handleToggleSold}
-            disabled={actionBusy}
-            style={{
-              display: "flex", alignItems: "center", gap: 6,
-              background: "none", border: "none", cursor: "pointer",
-              padding: "6px 0", marginBottom: 10,
-              opacity: actionBusy ? 0.5 : 1,
-            }}
-          >
+          <button onClick={handleToggleSold} disabled={actionBusy}
+            style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: "6px 0", marginBottom: 10, opacity: actionBusy ? 0.5 : 1 }}>
             <Tag size={11} style={{ color: isSold ? C.green : C.textFaint }} />
             <span style={{ fontSize: 11, color: isSold ? C.green : C.textFaint, fontWeight: isSold ? 500 : 400 }}>
               {isSold ? "Mark as available" : "Mark as sold"}
@@ -682,23 +412,15 @@ export default function FindDetailPage() {
           </button>
 
           {!showDelete ? (
-            <button
-              onClick={() => setShowDelete(true)}
-              style={{
-                display: "flex", alignItems: "center", gap: 6,
-                background: "none", border: "none", cursor: "pointer",
-                padding: "6px 0",
-              }}
-            >
+            <button onClick={() => setShowDelete(true)}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: "6px 0" }}>
               <Trash2 size={11} style={{ color: C.textFaint }} />
               <span style={{ fontSize: 11, color: C.textFaint }}>Delete post</span>
             </button>
           ) : (
             <AnimatePresence>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-                style={{ padding: "14px", borderRadius: 12, background: C.redBg, border: `1px solid ${C.redBorder}` }}
-              >
+              <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
+                style={{ padding: "14px", borderRadius: 12, background: C.redBg, border: `1px solid ${C.redBorder}` }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: C.red, marginBottom: 4 }}>Delete this post?</div>
                 <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 12, lineHeight: 1.6 }}>
                   This can't be undone. The image and listing will be permanently removed.
@@ -720,7 +442,6 @@ export default function FindDetailPage() {
       )}
 
       <div style={{ paddingBottom: "max(100px, calc(env(safe-area-inset-bottom, 0px) + 90px))" }} />
-
       <BottomNav active={null} />
     </div>
   );
