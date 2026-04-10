@@ -1,6 +1,8 @@
 // app/flagged/page.tsx
 // Your Finds — all items the user has saved locally.
-// Grouped by booth. URL stays /flagged; label is "Your Finds" throughout.
+// Grouped by vendor/booth, sorted by booth number for easy in-store navigation.
+// Within each group: available items first, Found (sold) items last.
+// Groups where ALL items are Found sort to the bottom — nothing left to pick up.
 
 "use client";
 
@@ -69,8 +71,14 @@ function removeBookmark(postId: string) {
   try { localStorage.removeItem(`${BOOKMARK_PREFIX}${postId}`); } catch {}
 }
 
-function groupByBooth(posts: Post[]): Array<{ label: string; vendorName: string; posts: Post[] }> {
+// ─── Grouping + sorting ────────────────────────────────────────────────────────
+// Groups by vendor, sorts groups by booth number (numeric).
+// Groups where ALL items are Found (sold) go last — buyer has nothing to pick up.
+// Within each group: available items first, Found items last.
+
+function groupByBooth(posts: Post[]): Array<{ label: string; vendorName: string; posts: Post[]; allFound: boolean }> {
   const map = new Map<string, { label: string; vendorName: string; posts: Post[] }>();
+
   for (const post of posts) {
     const booth      = post.vendor?.booth_number ?? null;
     const vendorName = post.vendor?.display_name ?? "Unknown Vendor";
@@ -78,11 +86,33 @@ function groupByBooth(posts: Post[]): Array<{ label: string; vendorName: string;
     if (!map.has(key)) map.set(key, { label: booth ?? "No booth listed", vendorName, posts: [] });
     map.get(key)!.posts.push(post);
   }
-  return Array.from(map.values()).sort((a, b) => {
-    const aF = a.label === "No booth listed", bF = b.label === "No booth listed";
-    if (aF && !bF) return 1; if (!aF && bF) return -1;
-    return a.label.localeCompare(b.label, undefined, { numeric: true });
-  });
+
+  return Array.from(map.values())
+    .map(group => {
+      // Within each group: available first, sold last
+      const sorted = [
+        ...group.posts.filter(p => p.status !== "sold"),
+        ...group.posts.filter(p => p.status === "sold"),
+      ];
+      const allFound = sorted.every(p => p.status === "sold");
+      return { ...group, posts: sorted, allFound };
+    })
+    .sort((a, b) => {
+      // Groups with anything still available sort before all-found groups
+      if (!a.allFound && b.allFound) return -1;
+      if (a.allFound && !b.allFound) return 1;
+
+      // Within same tier: "No booth listed" goes last
+      const aNoLabel = a.label === "No booth listed";
+      const bNoLabel = b.label === "No booth listed";
+      if (aNoLabel && !bNoLabel) return 1;
+      if (!aNoLabel && bNoLabel) return -1;
+
+      // Otherwise sort by booth number numerically, then vendor name alpha
+      const boothCmp = a.label.localeCompare(b.label, undefined, { numeric: true });
+      if (boothCmp !== 0) return boothCmp;
+      return a.vendorName.localeCompare(b.vendorName);
+    });
 }
 
 // ─── Empty state ───────────────────────────────────────────────────────────────
@@ -111,13 +141,11 @@ function UnsaveButton({ postId, onUnsave }: { postId: string; onUnsave: () => vo
 
   function handlePress() {
     if (!confirming) { setConfirming(true); return; }
-    // Confirmed — remove and notify parent
     removeBookmark(postId);
     onUnsave();
   }
 
   function handleBlur() {
-    // Cancel confirm if user taps away
     setTimeout(() => setConfirming(false), 200);
   }
 
@@ -186,7 +214,7 @@ function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsav
         opacity: isSold ? 0.65 : 1,
         transition: "opacity 0.2s",
       }}>
-        {/* Thumbnail — links to detail; unsave button does not navigate */}
+        {/* Thumbnail + content — links to detail */}
         <Link href={`/find/${post.id}`} style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 0, textDecoration: "none" }}>
           <div style={{ width: 64, height: 64, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: C.surfaceDeep, border: `1px solid ${C.borderLight}` }}>
             {hasImg ? (
@@ -200,7 +228,6 @@ function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsav
             )}
           </div>
 
-          {/* Content */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
               fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600, color: C.textPrimary,
@@ -225,7 +252,7 @@ function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsav
           <ChevronRight size={16} style={{ color: C.textFaint, flexShrink: 0 }} />
         </Link>
 
-        {/* Unsave button — outside the Link so it doesn't navigate */}
+        {/* Unsave button — outside Link so it doesn't navigate */}
         <UnsaveButton postId={post.id} onUnsave={() => onUnsave(post.id)} />
       </div>
     </motion.div>
@@ -234,14 +261,18 @@ function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsav
 
 // ─── Vendor banner ─────────────────────────────────────────────────────────────
 
-function VendorBanner({ label, vendorName }: { label: string; vendorName: string }) {
+function VendorBanner({ label, vendorName, allFound }: { label: string; vendorName: string; allFound: boolean }) {
   const displayBooth = label === "No booth listed" ? null : label;
 
   return (
     <div style={{
       width: "100%", borderRadius: 14, overflow: "hidden", marginBottom: 10, position: "relative",
-      background: `linear-gradient(105deg, ${C.bannerFrom} 0%, ${C.bannerTo} 100%)`,
+      background: allFound
+        ? "linear-gradient(105deg, #3a3830 0%, #4a4840 100%)"
+        : `linear-gradient(105deg, ${C.bannerFrom} 0%, ${C.bannerTo} 100%)`,
       boxShadow: "0 2px 14px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.10)",
+      opacity: allFound ? 0.72 : 1,
+      transition: "opacity 0.2s",
     }}>
       <div style={{
         position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.04,
@@ -253,12 +284,19 @@ function VendorBanner({ label, vendorName }: { label: string; vendorName: string
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "13px 16px", gap: 12,
       }}>
-        <div style={{
-          fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700,
-          color: "rgba(255,255,255,0.96)", letterSpacing: "-0.2px", lineHeight: 1.2,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0,
-        }}>
-          {vendorName}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700,
+            color: "rgba(255,255,255,0.96)", letterSpacing: "-0.2px", lineHeight: 1.2,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>
+            {vendorName}
+          </div>
+          {allFound && (
+            <div style={{ fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1.6px", color: "rgba(255,255,255,0.45)", marginTop: 3, lineHeight: 1 }}>
+              All found
+            </div>
+          )}
         </div>
         {displayBooth && (
           <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
@@ -282,12 +320,12 @@ function VendorBanner({ label, vendorName }: { label: string; vendorName: string
 
 // ─── Booth section ─────────────────────────────────────────────────────────────
 
-function BoothSection({ label, vendorName, posts, startIndex, onUnsave }: {
-  label: string; vendorName: string; posts: Post[]; startIndex: number; onUnsave: (id: string) => void;
+function BoothSection({ label, vendorName, posts, allFound, startIndex, onUnsave }: {
+  label: string; vendorName: string; posts: Post[]; allFound: boolean; startIndex: number; onUnsave: (id: string) => void;
 }) {
   return (
     <div style={{ marginBottom: 28 }}>
-      <VendorBanner label={label} vendorName={vendorName} />
+      <VendorBanner label={label} vendorName={vendorName} allFound={allFound} />
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {posts.map((post, i) => (
           <FindRow key={post.id} post={post} index={startIndex + i} onUnsave={onUnsave} />
@@ -326,14 +364,14 @@ export default function YourFindsPage() {
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
-  // Optimistically remove a post from the list after unsave confirmation
   function handleUnsave(postId: string) {
     setPosts(prev => prev.filter(p => p.id !== postId));
     setBookmarkCount(prev => Math.max(0, prev - 1));
   }
 
-  const groups = groupByBooth(posts);
-  let rowIndex = 0;
+  const groups   = groupByBooth(posts);
+  const available = posts.filter(p => p.status !== "sold").length;
+  let rowIndex   = 0;
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", position: "relative" }}>
@@ -347,7 +385,6 @@ export default function YourFindsPage() {
         padding: "0 18px",
       }}>
         <div style={{ paddingTop: "max(18px, env(safe-area-inset-top, 18px))", paddingBottom: 14 }}>
-          {/* Logo + wordmark row — 22px Georgia, matches home and My Shelf */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
             <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
             <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.3px", lineHeight: 1 }}>
@@ -356,7 +393,9 @@ export default function YourFindsPage() {
           </div>
           <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: C.textMuted, lineHeight: 1.4 }}>
             {!loading && posts.length > 0
-              ? `${posts.length} ${posts.length === 1 ? "find" : "finds"} waiting for you`
+              ? available > 0
+                ? `${available} ${available === 1 ? "find" : "finds"} still available · ${groups.length} ${groups.length === 1 ? "booth" : "booths"}`
+                : `${posts.length} ${posts.length === 1 ? "find" : "finds"} · all found`
               : !loading && posts.length === 0
               ? "Nothing saved yet"
               : ""}
@@ -378,10 +417,15 @@ export default function YourFindsPage() {
               const start = rowIndex;
               rowIndex += group.posts.length;
               return (
-                <BoothSection key={group.label + group.vendorName}
-                  label={group.label} vendorName={group.vendorName}
-                  posts={group.posts} startIndex={start}
-                  onUnsave={handleUnsave} />
+                <BoothSection
+                  key={group.label + group.vendorName}
+                  label={group.label}
+                  vendorName={group.vendorName}
+                  posts={group.posts}
+                  allFound={group.allFound}
+                  startIndex={start}
+                  onUnsave={handleUnsave}
+                />
               );
             })}
           </AnimatePresence>
