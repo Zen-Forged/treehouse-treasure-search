@@ -8,6 +8,7 @@ import { Camera, ArrowLeft, ChevronDown, ChevronUp, RotateCcw } from "lucide-rea
 import { getAllMalls } from "@/lib/posts";
 import { postStore } from "@/lib/postStore";
 import { safeStorage } from "@/lib/safeStorage";
+import { ensureAnonSession } from "@/lib/auth";
 import type { Mall } from "@/types/treehouse";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 
@@ -57,8 +58,27 @@ export default function PostCapturePage() {
   const [boothNumber,  setBoothNumber]  = useState("");
   const [selectedMall, setSelectedMall] = useState<Mall | null>(null);
   const [capturing,    setCapturing]    = useState(false);
+  const [userId,       setUserId]       = useState<string | null>(null);
 
   useEffect(() => {
+    // Establish anon session on mount — runs silently in background
+    ensureAnonSession().then(uid => {
+      setUserId(uid);
+      // If we have a profile but it's missing user_id, backfill it
+      if (uid) {
+        try {
+          const raw = safeStorage.getItem(LOCAL_VENDOR_KEY);
+          if (raw) {
+            const saved = JSON.parse(raw) as LocalVendorProfile;
+            if (!saved.user_id) {
+              const updated = { ...saved, user_id: uid };
+              safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(updated));
+            }
+          }
+        } catch {}
+      }
+    });
+
     const raw = safeStorage.getItem(LOCAL_VENDOR_KEY);
     if (raw) {
       try {
@@ -76,7 +96,6 @@ export default function PostCapturePage() {
   }, []);
 
   // Validate saved mall_id against live malls.
-  // If stale, clear mall_id AND vendor_id so a fresh vendor row is created.
   useEffect(() => {
     if (malls.length === 0 || mallsLoading || !profile) return;
     const match = malls.find(m => m.id === profile.mall_id);
@@ -90,7 +109,6 @@ export default function PostCapturePage() {
         mall_id:      "",
         mall_name:    "",
         mall_city:    "",
-        // vendor_id intentionally omitted — force fresh vendor creation
       };
       safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(cleaned));
       setProfile(cleaned);
@@ -113,9 +131,6 @@ export default function PostCapturePage() {
     const newName  = displayName.trim();
     const newBooth = boothNumber.trim();
 
-    // Carry vendor_id/slug forward ONLY if mall, name, AND booth are all unchanged.
-    // Any change to identity fields means the Supabase vendor row needs to be
-    // re-created (or a new one found via the duplicate-key recovery path).
     const sameMall  = profile?.mall_id      === selectedMall.id;
     const sameName  = profile?.display_name === newName;
     const sameBooth = (profile?.booth_number ?? "") === newBooth;
@@ -129,6 +144,8 @@ export default function PostCapturePage() {
       mall_city:    selectedMall.city,
       vendor_id:    identityUnchanged ? profile?.vendor_id : undefined,
       slug:         identityUnchanged ? profile?.slug       : undefined,
+      // Always carry user_id — it's session-based, not identity-based
+      user_id:      profile?.user_id ?? userId ?? undefined,
     };
 
     safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(p));
