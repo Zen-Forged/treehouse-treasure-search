@@ -10,7 +10,6 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight } from "lucide-react";
 import PiLeafIcon from "@/components/PiLeafIcon";
 import { getPostsByIds } from "@/lib/posts";
 import BottomNav from "@/components/BottomNav";
@@ -36,9 +35,6 @@ const C = {
   header:      "rgba(245,242,235,0.96)",
   bannerFrom:  "#1e3d24",
   bannerTo:    "#2d5435",
-  red:         "#8b2020",
-  redBg:       "rgba(139,32,32,0.07)",
-  redBorder:   "rgba(139,32,32,0.18)",
 };
 
 // ─── Bookmark helpers ──────────────────────────────────────────────────────────
@@ -72,9 +68,6 @@ function removeBookmark(postId: string) {
 }
 
 // ─── Grouping + sorting ────────────────────────────────────────────────────────
-// Groups by vendor, sorts groups by booth number (numeric).
-// Groups where ALL items are Found (sold) go last — buyer has nothing to pick up.
-// Within each group: available items first, Found items last.
 
 function groupByBooth(posts: Post[]): Array<{ label: string; vendorName: string; posts: Post[]; allFound: boolean }> {
   const map = new Map<string, { label: string; vendorName: string; posts: Post[] }>();
@@ -89,7 +82,6 @@ function groupByBooth(posts: Post[]): Array<{ label: string; vendorName: string;
 
   return Array.from(map.values())
     .map(group => {
-      // Within each group: available first, sold last
       const sorted = [
         ...group.posts.filter(p => p.status !== "sold"),
         ...group.posts.filter(p => p.status === "sold"),
@@ -98,17 +90,12 @@ function groupByBooth(posts: Post[]): Array<{ label: string; vendorName: string;
       return { ...group, posts: sorted, allFound };
     })
     .sort((a, b) => {
-      // Groups with anything still available sort before all-found groups
       if (!a.allFound && b.allFound) return -1;
       if (a.allFound && !b.allFound) return 1;
-
-      // Within same tier: "No booth listed" goes last
       const aNoLabel = a.label === "No booth listed";
       const bNoLabel = b.label === "No booth listed";
       if (aNoLabel && !bNoLabel) return 1;
       if (!aNoLabel && bNoLabel) return -1;
-
-      // Otherwise sort by booth number numerically, then vendor name alpha
       const boothCmp = a.label.localeCompare(b.label, undefined, { numeric: true });
       if (boothCmp !== 0) return boothCmp;
       return a.vendorName.localeCompare(b.vendorName);
@@ -134,88 +121,39 @@ function EmptyFinds() {
   );
 }
 
-// ─── Unsave button — filled leaf icon with quick confirm ───────────────────────
-
-function UnsaveButton({ postId, onUnsave }: { postId: string; onUnsave: () => void }) {
-  const [confirming, setConfirming] = useState(false);
-
-  function handlePress() {
-    if (!confirming) { setConfirming(true); return; }
-    removeBookmark(postId);
-    onUnsave();
-  }
-
-  function handleBlur() {
-    setTimeout(() => setConfirming(false), 200);
-  }
-
-  return (
-    <AnimatePresence mode="wait">
-      {confirming ? (
-        <motion.button
-          key="confirm"
-          initial={{ opacity: 0, scale: 0.85 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.85 }}
-          transition={{ duration: 0.15 }}
-          onClick={handlePress}
-          onBlur={handleBlur}
-          autoFocus
-          style={{
-            flexShrink: 0, display: "flex", alignItems: "center", gap: 5,
-            padding: "5px 10px", borderRadius: 20,
-            background: C.redBg, border: `1px solid ${C.redBorder}`,
-            color: C.red, fontSize: 10, fontWeight: 600, cursor: "pointer",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Remove?
-        </motion.button>
-      ) : (
-        <motion.button
-          key="leaf"
-          initial={{ opacity: 0, scale: 0.85 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.85 }}
-          transition={{ duration: 0.15 }}
-          onClick={handlePress}
-          aria-label="Unsave find"
-          style={{
-            flexShrink: 0, width: 30, height: 30, borderRadius: "50%",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: C.greenSolid, border: "none", cursor: "pointer",
-            boxShadow: "0 1px 5px rgba(0,0,0,0.18)",
-          }}
-        >
-          <PiLeafIcon size={14} strokeWidth={2.0} style={{ color: "rgba(255,255,255,0.95)" }} />
-        </motion.button>
-      )}
-    </AnimatePresence>
-  );
-}
-
 // ─── Find row ─────────────────────────────────────────────────────────────────
+// Full row links to detail. Leaf button instantly unsaves — no confirmation.
 
 function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsave: (id: string) => void }) {
   const [imgErr, setImgErr] = useState(false);
   const hasImg = !!post.image_url && !imgErr;
   const isSold = post.status === "sold";
 
+  function handleUnsave(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    removeBookmark(post.id);
+    onUnsave(post.id);
+  }
+
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.28, delay: Math.min(index * 0.05, 0.25) }}>
-      <div style={{
-        display: "flex", alignItems: "center", gap: 14,
-        padding: "13px 14px",
-        background: C.surface,
-        borderRadius: 14,
-        border: `1px solid ${C.border}`,
-        boxShadow: "0 2px 10px rgba(26,24,16,0.06), 0 1px 3px rgba(26,24,16,0.04)",
-        opacity: isSold ? 0.65 : 1,
-        transition: "opacity 0.2s",
-      }}>
-        {/* Thumbnail + content — links to detail */}
-        <Link href={`/find/${post.id}`} style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 0, textDecoration: "none" }}>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -4, transition: { duration: 0.18 } }}
+      transition={{ duration: 0.28, delay: Math.min(index * 0.05, 0.25) }}
+    >
+      <Link href={`/find/${post.id}`} style={{ textDecoration: "none", display: "block" }}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 14,
+          padding: "13px 14px",
+          background: C.surface,
+          borderRadius: 14,
+          border: `1px solid ${C.border}`,
+          boxShadow: "0 2px 10px rgba(26,24,16,0.06), 0 1px 3px rgba(26,24,16,0.04)",
+          opacity: isSold ? 0.65 : 1,
+          transition: "opacity 0.2s",
+        }}>
+          {/* Thumbnail */}
           <div style={{ width: 64, height: 64, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: C.surfaceDeep, border: `1px solid ${C.borderLight}` }}>
             {hasImg ? (
               <img src={post.image_url!} alt={post.title} onError={() => setImgErr(true)}
@@ -228,6 +166,7 @@ function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsav
             )}
           </div>
 
+          {/* Title + status */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
               fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600, color: C.textPrimary,
@@ -249,12 +188,22 @@ function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsav
             )}
           </div>
 
-          <ChevronRight size={16} style={{ color: C.textFaint, flexShrink: 0 }} />
-        </Link>
-
-        {/* Unsave button — outside Link so it doesn't navigate */}
-        <UnsaveButton postId={post.id} onUnsave={() => onUnsave(post.id)} />
-      </div>
+          {/* Unsave — instant, no confirmation */}
+          <button
+            onClick={handleUnsave}
+            aria-label="Remove from Your Finds"
+            style={{
+              flexShrink: 0, width: 30, height: 30, borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: C.greenSolid, border: "none", cursor: "pointer",
+              boxShadow: "0 1px 5px rgba(0,0,0,0.18)",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <PiLeafIcon size={14} strokeWidth={2.0} style={{ color: "rgba(255,255,255,0.95)" }} />
+          </button>
+        </div>
+      </Link>
     </motion.div>
   );
 }
@@ -369,9 +318,9 @@ export default function YourFindsPage() {
     setBookmarkCount(prev => Math.max(0, prev - 1));
   }
 
-  const groups   = groupByBooth(posts);
+  const groups    = groupByBooth(posts);
   const available = posts.filter(p => p.status !== "sold").length;
-  let rowIndex   = 0;
+  let rowIndex    = 0;
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", position: "relative" }}>
@@ -412,7 +361,7 @@ export default function YourFindsPage() {
             ))}
           </div>
         ) : posts.length === 0 ? <EmptyFinds /> : (
-          <AnimatePresence>
+          <AnimatePresence initial={false}>
             {groups.map(group => {
               const start = rowIndex;
               rowIndex += group.posts.length;
