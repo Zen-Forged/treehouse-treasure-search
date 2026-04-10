@@ -14,6 +14,7 @@ import { getPost, getVendorPosts, updatePostStatus, deletePost } from "@/lib/pos
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
 import { getMode } from "@/lib/mode";
+import { getCachedUserId } from "@/lib/auth";
 import BottomNav from "@/components/BottomNav";
 import type { Post } from "@/types/treehouse";
 
@@ -139,6 +140,33 @@ function ShelfSection({ vendorId, currentPostId, onReady }: { vendorId: string; 
   );
 }
 
+// ─── Owner detection ──────────────────────────────────────────────────────────
+// Priority:
+// 1. Session user_id matches post.vendor.user_id (strongest — session-based)
+// 2. localStorage vendor_id matches post.vendor_id (fallback — for older posts)
+
+function detectOwnership(post: Post): boolean {
+  try {
+    // Method 1: session-based (new approach)
+    const sessionUid = getCachedUserId();
+    if (sessionUid && post.vendor?.user_id && sessionUid === post.vendor.user_id) {
+      return true;
+    }
+
+    // Method 2: localStorage vendor_id comparison (backwards compat)
+    const raw = localStorage.getItem(LOCAL_VENDOR_KEY);
+    if (raw) {
+      const profile = JSON.parse(raw) as LocalVendorProfile;
+      const profileVendorId = profile.vendor_id;
+      const postVendorId    = post.vendor_id ?? post.vendor?.id;
+      if (profileVendorId && postVendorId && profileVendorId === postVendorId) {
+        return true;
+      }
+    }
+  } catch {}
+  return false;
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function FindDetailPage() {
@@ -156,23 +184,13 @@ export default function FindDetailPage() {
   const [isSaved,       setIsSaved]       = useState(false);
 
   useEffect(() => {
-    // Read mode once on mount — owner controls only show in Curator mode
     setIsCurator(getMode() === "curator");
-
     if (!id) return;
     try { setIsSaved(safeStorage.getItem(flagKey(id)) === "1"); } catch {}
     getPost(id).then(data => {
       setPost(data);
       setLoading(false);
-      try {
-        const raw = localStorage.getItem(LOCAL_VENDOR_KEY);
-        if (raw && data) {
-          const profile = JSON.parse(raw) as LocalVendorProfile;
-          const profileVendorId = profile.vendor_id;
-          const postVendorId    = data.vendor_id ?? data.vendor?.id;
-          if (profileVendorId && postVendorId && profileVendorId === postVendorId) setIsMyPost(true);
-        }
-      } catch {}
+      if (data) setIsMyPost(detectOwnership(data));
     });
   }, [id]);
 
@@ -216,9 +234,7 @@ export default function FindDetailPage() {
 
   const handleShelfReady = useCallback((hasItems: boolean) => { setShelfHasItems(hasItems); }, []);
 
-  // Owner controls are only shown when:
-  // 1. The post belongs to this device's vendor (isMyPost), AND
-  // 2. The app is in Curator mode — Explorer (buyer) mode never sees admin actions
+  // Owner controls: must be this device's vendor (isMyPost) AND in Curator mode
   const showOwnerControls = isMyPost && isCurator;
 
   const mapsUrl = post?.mall?.address
@@ -262,7 +278,6 @@ export default function FindDetailPage() {
           <div style={{ height: 120, background: C.surface }} />
         )}
 
-        {/* Found badge */}
         {isSold && (
           <div style={{
             position: "absolute", top: "50%", left: "50%",
@@ -277,7 +292,6 @@ export default function FindDetailPage() {
           </div>
         )}
 
-        {/* Save + Share buttons */}
         <div style={{ position: "absolute", bottom: 12, right: 14, display: "flex", alignItems: "center", gap: 8 }}>
           <button onClick={handleSave} aria-label={isSaved ? "Remove from Your Finds" : "Save to Your Finds"}
             style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: isSaved ? C.greenSolid : "rgba(0,0,0,0.30)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", cursor: "pointer", transition: "background 0.18s" }}>
@@ -289,7 +303,6 @@ export default function FindDetailPage() {
           </button>
         </div>
 
-        {/* Found In-Booth box */}
         {hasBoothBox && (
           <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.12 }}>
             <BoothBox boothNumber={boothNumber!} />
@@ -396,7 +409,7 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Save to Your Finds — shown in Explorer mode; hidden in Curator (vendor manages via My Shelf) */}
+            {/* Save to Your Finds — Explorer mode only */}
             {post.vendor && !isCurator && (
               <div style={{ padding: "13px 16px 15px" }}>
                 <button onClick={handleSave}
@@ -410,7 +423,7 @@ export default function FindDetailPage() {
         </div>
       )}
 
-      {/* ── Owner actions — Curator mode only ── */}
+      {/* ── Owner actions — Curator mode + ownership only ── */}
       {showOwnerControls && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.3 }}
           style={{ padding: "0 20px", marginTop: 4, display: "flex", flexDirection: "column" }}>

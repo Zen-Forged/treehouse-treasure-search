@@ -3,6 +3,7 @@
 // Available posts first (3-col grid), Found posts below (3-col grid, labeled separately).
 // VendorBanner in header with vendor picker when multiple vendors exist at the mall.
 // Found tiles link to find detail — vendor can view sold items and re-mark as available.
+// Share my shelf — native share sheet via Web Share API, fallback to clipboard copy.
 
 "use client";
 
@@ -13,7 +14,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Store, ImagePlus, Plus, ChevronDown } from "lucide-react";
+import { Store, ImagePlus, Plus, ChevronDown, Share2, Check } from "lucide-react";
 import { getVendorPosts, getVendorsByMall } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Post, type Vendor } from "@/types/treehouse";
 import BottomNav from "@/components/BottomNav";
@@ -40,6 +41,7 @@ const C = {
 
 const GAP       = 6;
 const GRID_COLS = 3;
+const BASE_URL  = "https://treehouse-treasure-search.vercel.app";
 
 // ─── Section label ─────────────────────────────────────────────────────────────
 
@@ -201,7 +203,6 @@ function NoProfile() {
 }
 
 // ─── Vendor picker ─────────────────────────────────────────────────────────────
-// Shown only when the mall has more than one vendor.
 
 function VendorPicker({ vendors, activeId, onChange }: {
   vendors: Vendor[];
@@ -282,6 +283,7 @@ export default function MyShelfPage() {
   const [loading,      setLoading]      = useState(true);
   const [vendors,      setVendors]      = useState<Vendor[]>([]);
   const [activeVendor, setActiveVendor] = useState<Vendor | null>(null);
+  const [copied,       setCopied]       = useState(false);
 
   useEffect(() => {
     try {
@@ -313,6 +315,34 @@ export default function MyShelfPage() {
     });
   }, [activeVendor?.id]);
 
+  // Share my shelf — native share sheet with clipboard fallback
+  async function handleShare() {
+    const slug = activeVendor?.slug ?? profile?.slug;
+    if (!slug) return;
+    const url  = `${BASE_URL}/vendor/${slug}`;
+    const name = activeVendor?.display_name ?? profile?.display_name ?? "my shelf";
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${name} on Treehouse`,
+          text:  `Check out finds from ${name} at America's Antique Mall.`,
+          url,
+        });
+        return;
+      } catch {
+        // User cancelled or share failed — fall through to clipboard
+      }
+    }
+
+    // Clipboard fallback
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2200);
+    } catch {}
+  }
+
   const available      = posts.filter(p => p.status === "available");
   const found          = posts.filter(p => p.status === "sold");
   const availableCount = available.length;
@@ -320,6 +350,7 @@ export default function MyShelfPage() {
   const hasProfile     = !!profile;
   const displayName    = activeVendor?.display_name ?? profile?.display_name ?? "";
   const boothNumber    = activeVendor?.booth_number  ?? profile?.booth_number  ?? null;
+  const hasSlug        = !!(activeVendor?.slug ?? profile?.slug);
 
   return (
     <div style={{ minHeight: "100dvh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
@@ -407,12 +438,59 @@ export default function MyShelfPage() {
             </div>
           )}
 
-          {/* Count line */}
-          {!loading && hasProfile && posts.length > 0 && (
-            <div style={{ marginTop: 7 }}>
+          {/* Count + share row */}
+          {!loading && hasProfile && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 7 }}>
               <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: C.textFaint }}>
-                {availableCount} available · {foundCount} found
+                {posts.length > 0
+                  ? `${availableCount} available · ${foundCount} found`
+                  : "No finds posted yet"}
               </div>
+
+              {/* Share my shelf — only shown when vendor has a slug */}
+              {hasSlug && (
+                <AnimatePresence mode="wait">
+                  {copied ? (
+                    <motion.div
+                      key="copied"
+                      initial={{ opacity: 0, scale: 0.88 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.88 }}
+                      transition={{ duration: 0.14 }}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 4,
+                        padding: "4px 10px", borderRadius: 14,
+                        background: C.greenLight, border: `1px solid ${C.greenBorder}`,
+                      }}
+                    >
+                      <Check size={10} style={{ color: C.green }} />
+                      <span style={{ fontSize: 10, fontWeight: 600, color: C.green, letterSpacing: "0.2px" }}>
+                        Copied!
+                      </span>
+                    </motion.div>
+                  ) : (
+                    <motion.button
+                      key="share"
+                      initial={{ opacity: 0, scale: 0.88 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.88 }}
+                      transition={{ duration: 0.14 }}
+                      onClick={handleShare}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 5,
+                        padding: "4px 10px", borderRadius: 14,
+                        background: "none", border: `1px solid ${C.border}`,
+                        cursor: "pointer", WebkitTapHighlightColor: "transparent",
+                      }}
+                    >
+                      <Share2 size={10} style={{ color: C.textMuted }} />
+                      <span style={{ fontSize: 10, fontWeight: 500, color: C.textMuted, letterSpacing: "0.2px" }}>
+                        Share shelf
+                      </span>
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              )}
             </div>
           )}
         </div>

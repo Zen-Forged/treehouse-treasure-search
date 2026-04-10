@@ -13,12 +13,10 @@ export interface Mall {
   address:    string | null;
 
   // ── Mall Identity Layer (all optional — hero defaults gracefully without these) ──
-  // Add these columns to the malls table in Supabase when ready.
-  // Until then they simply come back as undefined and the hero renders from name/city/state.
-  hero_title?:     string | null;   // Override display name. Default: mall.name
-  hero_subtitle?:  string | null;   // Override tagline. Default: "Curated finds in {city}, {state}"
-  hero_style?:     string | null;   // "default" | "golden" | "forest" | "terracotta" | "slate"
-  hero_image_url?: string | null;   // Optional bg photo (Supabase Storage URL). Not required for MVP.
+  hero_title?:     string | null;
+  hero_subtitle?:  string | null;
+  hero_style?:     string | null;
+  hero_image_url?: string | null;
 }
 
 export interface Vendor {
@@ -64,6 +62,7 @@ export interface LocalVendorProfile {
   vendor_id?:    string;
   slug?:         string;
   facebook_url?: string;
+  user_id?:      string;  // Supabase anonymous auth UID — stable per device
 }
 
 export const LOCAL_VENDOR_KEY = "th_vendor_profile";
