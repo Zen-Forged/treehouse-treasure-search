@@ -1,5 +1,6 @@
 // app/page.tsx
 // Treehouse — Discovery Feed
+// Only available posts are shown — sold items are filtered at the query level.
 
 "use client";
 
@@ -126,7 +127,6 @@ function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; i
   const [imgHeight, setImgHeight] = useState<number | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const hasImg = !!post.image_url && !imgErr;
-  const isSold = post.status === "sold";
   const fallbackHeights = [120, 145, 110, 160, 130, 105, 150, 125];
   const fallbackH = fallbackHeights[index % fallbackHeights.length];
 
@@ -150,32 +150,14 @@ function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; i
           borderRadius: 16, overflow: "hidden", background: C.surface,
           border: `1px solid ${C.border}`,
           boxShadow: "0 2px 10px rgba(26,24,16,0.07), 0 1px 3px rgba(26,24,16,0.04)",
-          position: "relative", opacity: isSold ? 0.60 : 1, transition: "opacity 0.2s",
+          position: "relative",
         }}>
           {hasImg ? (
             <div style={{ position: "relative", width: "100%", height: imgHeight ?? fallbackH }}>
               <img ref={imgRef} src={post.image_url!} alt={post.title}
                 onLoad={handleLoad} onError={() => setImgErr(true)}
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
-                  filter: isSold ? "grayscale(0.55) brightness(0.88)" : "brightness(0.99) saturate(0.96)" }} />
-
-              {/* Found badge — centered on image */}
-              {isSold && (
-                <div style={{
-                  position: "absolute",
-                  top: "50%", left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  fontSize: 7, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px",
-                  padding: "3px 8px", borderRadius: 5,
-                  background: "rgba(28,26,20,0.54)",
-                  color: "rgba(245,242,235,0.93)",
-                  backdropFilter: "blur(6px)",
-                  WebkitBackdropFilter: "blur(6px)",
-                  whiteSpace: "nowrap",
-                }}>
-                  Found
-                </div>
-              )}
+                  filter: "brightness(0.99) saturate(0.96)" }} />
 
               {/* Saved indicator — PiLeaf icon in green circle, bottom-right */}
               {isFollowed && (
@@ -345,7 +327,6 @@ export default function DiscoveryFeedPage() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", paddingTop: "max(16px, env(safe-area-inset-top, 16px))", paddingBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
-            {/* 22px Georgia — unified with Your Finds and My Shelf headers */}
             <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.3px", lineHeight: 1 }}>
               Treehouse Finds
             </span>
