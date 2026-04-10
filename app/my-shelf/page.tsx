@@ -111,7 +111,6 @@ function FoundTile({ post, index }: { post: Post; index: number }) {
           </div>
         )}
       </Link>
-      {/* "Found" badge — centered, pointer-events none so tap hits the Link */}
       <div style={{
         position: "absolute", top: "50%", left: "50%",
         transform: "translate(-50%, -50%)", pointerEvents: "none",
@@ -201,9 +200,8 @@ function NoProfile() {
   );
 }
 
-// ─── Vendor picker ────────────────────────────────────────────────────────────
-// Shown only when the mall has more than one vendor. Compact dropdown inside
-// the VendorBanner row — tapping switches whose shelf is displayed.
+// ─── Vendor picker ─────────────────────────────────────────────────────────────
+// Shown only when the mall has more than one vendor.
 
 function VendorPicker({ vendors, activeId, onChange }: {
   vendors: Vendor[];
@@ -251,7 +249,8 @@ function VendorPicker({ vendors, activeId, onChange }: {
                 key={v.id}
                 onClick={() => { onChange(v); setOpen(false); }}
                 style={{
-                  width: "100%", padding: "11px 14px", background: v.id === activeId ? C.greenLight : "none",
+                  width: "100%", padding: "11px 14px",
+                  background: v.id === activeId ? C.greenLight : "none",
                   border: "none", borderBottom: i < vendors.length - 1 ? `1px solid ${C.border}` : "none",
                   cursor: "pointer", textAlign: "left", WebkitTapHighlightColor: "transparent",
                 }}
@@ -278,13 +277,12 @@ function VendorPicker({ vendors, activeId, onChange }: {
 export default function MyShelfPage() {
   const router = useRouter();
 
-  const [profile,       setProfile]       = useState<LocalVendorProfile | null>(null);
-  const [posts,         setPosts]         = useState<Post[]>([]);
-  const [loading,       setLoading]       = useState(true);
-  const [vendors,       setVendors]       = useState<Vendor[]>([]);
-  const [activeVendor,  setActiveVendor]  = useState<Vendor | null>(null);
+  const [profile,      setProfile]      = useState<LocalVendorProfile | null>(null);
+  const [posts,        setPosts]        = useState<Post[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [vendors,      setVendors]      = useState<Vendor[]>([]);
+  const [activeVendor, setActiveVendor] = useState<Vendor | null>(null);
 
-  // Load profile from localStorage on mount
   useEffect(() => {
     try {
       const raw = localStorage.getItem(LOCAL_VENDOR_KEY);
@@ -294,18 +292,15 @@ export default function MyShelfPage() {
     } catch { setLoading(false); }
   }, []);
 
-  // Once we have a profile with a mall_id, fetch all vendors at that mall
   useEffect(() => {
     if (!profile?.mall_id) return;
     getVendorsByMall(profile.mall_id).then(vs => {
       setVendors(vs);
-      // Default to the profile's own vendor if available, else first in list
       const own = vs.find(v => v.id === profile.vendor_id) ?? vs[0] ?? null;
       setActiveVendor(own);
     });
   }, [profile?.mall_id, profile?.vendor_id]);
 
-  // Fetch posts whenever activeVendor changes
   useEffect(() => {
     if (!activeVendor) {
       if (profile && !profile.vendor_id) setLoading(false);
@@ -323,10 +318,8 @@ export default function MyShelfPage() {
   const availableCount = available.length;
   const foundCount     = found.length;
   const hasProfile     = !!profile;
-
-  // The display name + booth we show in the banner
-  const displayName   = activeVendor?.display_name ?? profile?.display_name ?? "";
-  const boothNumber   = activeVendor?.booth_number  ?? profile?.booth_number  ?? null;
+  const displayName    = activeVendor?.display_name ?? profile?.display_name ?? "";
+  const boothNumber    = activeVendor?.booth_number  ?? profile?.booth_number  ?? null;
 
   return (
     <div style={{ minHeight: "100dvh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
@@ -362,15 +355,13 @@ export default function MyShelfPage() {
             </button>
           </div>
 
-          {/* VendorBanner — dark gradient, vendor name + booth + optional picker */}
+          {/* VendorBanner */}
           {hasProfile && (
             <div style={{
               borderRadius: 12, overflow: "visible", position: "relative",
               background: `linear-gradient(105deg, ${C.bannerFrom} 0%, ${C.bannerTo} 100%)`,
               boxShadow: "0 2px 12px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.10)",
-              borderRadius: 12,
             }}>
-              {/* Noise texture */}
               <div style={{
                 position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.04, borderRadius: 12,
                 backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")`,
@@ -389,7 +380,6 @@ export default function MyShelfPage() {
                   }}>
                     {displayName}
                   </div>
-                  {/* Vendor picker — only shows when mall has multiple vendors */}
                   {vendors.length > 1 && activeVendor && (
                     <VendorPicker
                       vendors={vendors}
@@ -436,20 +426,16 @@ export default function MyShelfPage() {
           <NoProfile />
         ) : (
           <>
-            {/* Available section */}
             {available.length > 0 && (
               <>
                 <SectionLabel>Available</SectionLabel>
                 <ThreeColGrid>
-                  {available.map((post, i) => (
-                    <AvailableTile key={post.id} post={post} index={i} />
-                  ))}
+                  {available.map((post, i) => <AvailableTile key={post.id} post={post} index={i} />)}
                   <AddFindTile index={available.length} />
                 </ThreeColGrid>
               </>
             )}
 
-            {/* If no posts at all, just show add tile */}
             {posts.length === 0 && (
               <>
                 <SectionLabel>Available</SectionLabel>
@@ -459,14 +445,11 @@ export default function MyShelfPage() {
               </>
             )}
 
-            {/* Found section */}
             {found.length > 0 && (
               <>
                 <SectionLabel>Found</SectionLabel>
                 <ThreeColGrid>
-                  {found.map((post, i) => (
-                    <FoundTile key={post.id} post={post} index={i} />
-                  ))}
+                  {found.map((post, i) => <FoundTile key={post.id} post={post} index={i} />)}
                 </ThreeColGrid>
               </>
             )}
@@ -477,7 +460,7 @@ export default function MyShelfPage() {
       <BottomNav active="my-shelf" />
 
       <style>{`
-        @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+        @keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
         .skeleton-shimmer { background: linear-gradient(90deg, rgba(225,220,210,0.7) 25%, rgba(208,202,190,0.9) 50%, rgba(225,220,210,0.7) 75%); background-size: 800px 100%; animation: shimmer 1.6s infinite linear; }
       `}</style>
     </div>
