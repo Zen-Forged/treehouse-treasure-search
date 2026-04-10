@@ -10,6 +10,7 @@ import { ArrowLeft, Check, Pencil, Camera } from "lucide-react";
 import { createPost, createVendor, uploadPostImage, slugify } from "@/lib/posts";
 import { postStore } from "@/lib/postStore";
 import { safeStorage } from "@/lib/safeStorage";
+import { ensureAnonSession } from "@/lib/auth";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 
 const C = {
@@ -28,7 +29,6 @@ const C = {
   header:      "rgba(240,237,230,0.96)",
 };
 
-// Kentucky Treehouse Facebook page — honest link, not a post-specific link
 const FACEBOOK_PAGE_URL = "https://www.facebook.com/KentuckyTreehouse";
 
 function compressForUpload(dataUrl: string, maxWidth = 1200, quality = 0.78): Promise<string> {
@@ -137,6 +137,18 @@ export default function PostPreviewPage() {
         throw new Error("missing mall_id");
       }
 
+      // Ensure we have a session user_id — get from profile or establish fresh session
+      let userId = profile.user_id ?? null;
+      if (!userId) {
+        userId = await ensureAnonSession();
+        if (userId) {
+          // Backfill into stored profile
+          const updated = { ...profile, user_id: userId };
+          safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(updated));
+          setProfile(updated);
+        }
+      }
+
       let vendorId   = profile.vendor_id ?? null;
       let vendorSlug = profile.slug ?? null;
 
@@ -149,6 +161,7 @@ export default function PostPreviewPage() {
           display_name: profile.display_name,
           booth_number: profile.booth_number || undefined,
           slug,
+          user_id:      userId ?? undefined,   // ← links session to vendor row
         });
 
         if (!vendor) {
@@ -164,7 +177,12 @@ export default function PostPreviewPage() {
         vendorId   = vendor.id;
         vendorSlug = vendor.slug;
 
-        const updated: LocalVendorProfile = { ...profile, vendor_id: vendor.id, slug: vendor.slug };
+        const updated: LocalVendorProfile = {
+          ...profile,
+          vendor_id: vendor.id,
+          slug:      vendor.slug,
+          user_id:   userId ?? undefined,
+        };
         safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(updated));
         setProfile(updated);
       }
@@ -256,7 +274,6 @@ export default function PostPreviewPage() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
-          {/* Primary: back to feed */}
           <button
             onClick={() => router.push("/")}
             style={{ width: "100%", padding: "14px", borderRadius: 13, fontSize: 14, fontWeight: 600, color: "#fff", background: C.green, border: "none", cursor: "pointer" }}
@@ -264,7 +281,6 @@ export default function PostPreviewPage() {
             Back to feed
           </button>
 
-          {/* Secondary: visit Facebook page */}
           <a
             href={FACEBOOK_PAGE_URL}
             target="_blank"
@@ -280,7 +296,6 @@ export default function PostPreviewPage() {
             Visit us on Facebook
           </a>
 
-          {/* Tertiary: post another */}
           <button
             onClick={() => router.push("/post")}
             style={{
