@@ -13,6 +13,7 @@ import PiLeafIcon from "@/components/PiLeafIcon";
 import { getPost, getVendorPosts, updatePostStatus, deletePost } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
+import { getMode } from "@/lib/mode";
 import BottomNav from "@/components/BottomNav";
 import type { Post } from "@/types/treehouse";
 
@@ -76,18 +77,14 @@ function ShelfCard({ post }: { post: Post }) {
           <div style={{ position: "relative", width: "100%", aspectRatio: "3/4", overflow: "hidden" }}>
             <img src={post.image_url!} alt={post.title} loading="lazy" onError={() => setImgErr(true)}
               style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: isSold ? "grayscale(0.5) brightness(0.88)" : "brightness(0.99) saturate(0.96)" }} />
-            {/* Found badge — centered on shelf card image */}
             {isSold && (
               <div style={{
-                position: "absolute",
-                top: "50%", left: "50%",
+                position: "absolute", top: "50%", left: "50%",
                 transform: "translate(-50%, -50%)",
                 fontSize: 6, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.3px",
                 padding: "2px 7px", borderRadius: 4,
-                background: "rgba(28,26,20,0.54)",
-                color: "rgba(245,242,235,0.93)",
-                backdropFilter: "blur(4px)",
-                WebkitBackdropFilter: "blur(4px)",
+                background: "rgba(28,26,20,0.54)", color: "rgba(245,242,235,0.93)",
+                backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
                 whiteSpace: "nowrap",
               }}>
                 Found
@@ -152,12 +149,16 @@ export default function FindDetailPage() {
   const [loading,       setLoading]       = useState(true);
   const [copied,        setCopied]        = useState(false);
   const [isMyPost,      setIsMyPost]      = useState(false);
+  const [isCurator,     setIsCurator]     = useState(false);
   const [actionBusy,    setActionBusy]    = useState(false);
   const [showDelete,    setShowDelete]    = useState(false);
   const [shelfHasItems, setShelfHasItems] = useState(false);
   const [isSaved,       setIsSaved]       = useState(false);
 
   useEffect(() => {
+    // Read mode once on mount — owner controls only show in Curator mode
+    setIsCurator(getMode() === "curator");
+
     if (!id) return;
     try { setIsSaved(safeStorage.getItem(flagKey(id)) === "1"); } catch {}
     getPost(id).then(data => {
@@ -215,6 +216,11 @@ export default function FindDetailPage() {
 
   const handleShelfReady = useCallback((hasItems: boolean) => { setShelfHasItems(hasItems); }, []);
 
+  // Owner controls are only shown when:
+  // 1. The post belongs to this device's vendor (isMyPost), AND
+  // 2. The app is in Curator mode — Explorer (buyer) mode never sees admin actions
+  const showOwnerControls = isMyPost && isCurator;
+
   const mapsUrl = post?.mall?.address
     ? `https://maps.apple.com/?q=${encodeURIComponent(post.mall.address)}`
     : post?.mall
@@ -256,18 +262,15 @@ export default function FindDetailPage() {
           <div style={{ height: 120, background: C.surface }} />
         )}
 
-        {/* Found badge — centered on hero image */}
+        {/* Found badge */}
         {isSold && (
           <div style={{
-            position: "absolute",
-            top: "50%", left: "50%",
+            position: "absolute", top: "50%", left: "50%",
             transform: "translate(-50%, -50%)",
             fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.6px",
             padding: "5px 12px", borderRadius: 6,
-            background: "rgba(28,26,20,0.54)",
-            color: "rgba(245,242,235,0.95)",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
+            background: "rgba(28,26,20,0.54)", color: "rgba(245,242,235,0.95)",
+            backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
             whiteSpace: "nowrap",
           }}>
             Found
@@ -393,8 +396,8 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Save to Your Finds button */}
-            {post.vendor && (
+            {/* Save to Your Finds — shown in Explorer mode; hidden in Curator (vendor manages via My Shelf) */}
+            {post.vendor && !isCurator && (
               <div style={{ padding: "13px 16px 15px" }}>
                 <button onClick={handleSave}
                   style={{ width: "100%", padding: "11px 16px", borderRadius: 11, fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: isSaved ? "rgba(255,255,255,0.97)" : C.green, background: isSaved ? C.greenSolid : C.greenLight, border: `1px solid ${isSaved ? "transparent" : C.greenBorder}`, cursor: "pointer", fontFamily: "Georgia, serif", transition: "background 0.18s, color 0.18s, border-color 0.18s" }}>
@@ -407,8 +410,8 @@ export default function FindDetailPage() {
         </div>
       )}
 
-      {/* ── Owner actions ── */}
-      {isMyPost && (
+      {/* ── Owner actions — Curator mode only ── */}
+      {showOwnerControls && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.3 }}
           style={{ padding: "0 20px", marginTop: 4, display: "flex", flexDirection: "column" }}>
           <div style={{ height: 1, background: C.border, marginBottom: 16 }} />
