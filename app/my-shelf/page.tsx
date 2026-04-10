@@ -2,6 +2,7 @@
 // My Shelf — vendor's full shelf, scrollable.
 // Available posts first (3-col grid), Found posts below (3-col grid, labeled separately).
 // VendorBanner in header. No 9-cap — shows all posts.
+// Found tiles link to find detail — vendor can view their sold items and re-mark as available.
 
 "use client";
 
@@ -85,7 +86,7 @@ function AvailableTile({ post, index }: { post: Post; index: number }) {
   );
 }
 
-// ─── Found tile — no link, centered badge ──────────────────────────────────────
+// ─── Found tile — linked to detail, grayscale + centered badge ────────────────
 
 function FoundTile({ post, index }: { post: Post; index: number }) {
   const [imgErr, setImgErr] = useState(false);
@@ -97,23 +98,25 @@ function FoundTile({ post, index }: { post: Post; index: number }) {
       transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: [0.25, 0.1, 0.25, 1] }}
       style={{ width: "100%", aspectRatio: "1", borderRadius: 10, overflow: "hidden", position: "relative", opacity: 0.62 }}
     >
-      {/* No link — found items are inert in this sprint */}
-      {hasImg ? (
-        <img src={post.image_url!} alt={post.title} onError={() => setImgErr(true)}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
-            filter: "grayscale(0.55) brightness(0.82)" }} />
-      ) : (
-        <div style={{ width: "100%", height: "100%", background: C.surface, display: "flex", alignItems: "flex-end", padding: "7px 9px" }}>
-          <div style={{ fontFamily: "Georgia, serif", fontSize: 10, fontWeight: 600, color: C.textMuted, lineHeight: 1.3 }}>
-            {post.title}
+      <Link href={`/find/${post.id}`} style={{ display: "block", width: "100%", height: "100%", textDecoration: "none" }}>
+        {hasImg ? (
+          <img src={post.image_url!} alt={post.title} onError={() => setImgErr(true)}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
+              filter: "grayscale(0.55) brightness(0.82)" }} />
+        ) : (
+          <div style={{ width: "100%", height: "100%", background: C.surface, display: "flex", alignItems: "flex-end", padding: "7px 9px" }}>
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 10, fontWeight: 600, color: C.textMuted, lineHeight: 1.3 }}>
+              {post.title}
+            </div>
           </div>
-        </div>
-      )}
-      {/* "Found" badge — centered on image */}
+        )}
+      </Link>
+      {/* "Found" badge — centered on image, sits above the link */}
       <div style={{
         position: "absolute",
         top: "50%", left: "50%",
         transform: "translate(-50%, -50%)",
+        pointerEvents: "none",
         fontSize: 7, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px",
         padding: "3px 8px", borderRadius: 5,
         background: "rgba(28,26,20,0.54)",

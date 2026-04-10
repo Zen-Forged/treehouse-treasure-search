@@ -13,6 +13,7 @@ export async function getFeedPosts(limit = 40): Promise<Post[]> {
       vendor:vendors ( id, display_name, booth_number, slug, avatar_url, facebook_url ),
       mall:malls     ( id, name, city, state, slug )
     `)
+    .eq("status", "available")
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) { console.error("[posts] getFeedPosts:", error.message); return []; }
@@ -57,6 +58,7 @@ export async function getMallPosts(mallId: string, limit = 60): Promise<Post[]> 
     .from("posts")
     .select(`*, vendor:vendors ( id, display_name, booth_number, slug )`)
     .eq("mall_id", mallId)
+    .eq("status", "available")
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) { console.error("[posts] getMallPosts:", error.message); return []; }
@@ -133,6 +135,7 @@ export interface CreateVendorInput {
   display_name:  string;
   booth_number?: string;
   slug:          string;
+  user_id?:      string;
 }
 
 /**
@@ -140,6 +143,7 @@ export interface CreateVendorInput {
  * (mall_id, booth_number) unique constraint fires (code 23505).
  * This handles the case where iPhone lost its vendor_id from storage
  * but the row already exists in Supabase.
+ * Accepts optional user_id for anonymous auth session linking.
  */
 export async function createVendor(input: CreateVendorInput): Promise<{ data: Vendor | null; error: string | null }> {
   const { data, error } = await supabase
@@ -153,7 +157,7 @@ export async function createVendor(input: CreateVendorInput): Promise<{ data: Ve
   }
 
   // code 23505 = duplicate key — vendor already exists (iPhone lost its vendor_id from storage)
-  // Look up the existing row by mall_id + booth_number
+  // Look up the existing row by mall_id + booth_number and update user_id if provided
   if (error.code === "23505" && input.booth_number) {
     console.warn("[posts] createVendor: duplicate, looking up existing vendor");
     const { data: existing, error: fetchErr } = await supabase
@@ -163,7 +167,16 @@ export async function createVendor(input: CreateVendorInput): Promise<{ data: Ve
       .eq("booth_number", input.booth_number)
       .single();
 
-    if (existing) return { data: existing as Vendor, error: null };
+    if (existing) {
+      // If we have a user_id and the existing row doesn't, update it now
+      if (input.user_id && !existing.user_id) {
+        await supabase
+          .from("vendors")
+          .update({ user_id: input.user_id })
+          .eq("id", existing.id);
+      }
+      return { data: existing as Vendor, error: null };
+    }
     return { data: null, error: `Duplicate vendor but lookup failed: ${fetchErr?.message ?? "unknown"}` };
   }
 
