@@ -1,9 +1,9 @@
 // app/flagged/page.tsx
 // Your Finds — all items the user has saved locally.
-// Grouped by vendor/booth, sorted by booth number for easy in-store navigation.
+// Explorer mode only (Curator sees My Shelf instead).
+// Grouped by vendor/booth, sorted by booth number for in-store navigation.
 // Within each group: available items first, Found (sold) items last.
-// Groups where ALL items are Found sort to the bottom — nothing left to pick up.
-// No status filtering — all saved finds are shown regardless of availability.
+// Stale bookmark IDs (posts deleted from Supabase) are auto-cleaned from localStorage.
 
 "use client";
 
@@ -66,30 +66,35 @@ function removeBookmark(postId: string) {
   try { localStorage.removeItem(`${BOOKMARK_PREFIX}${postId}`); } catch {}
 }
 
+// Remove bookmark keys for IDs that Supabase no longer has rows for.
+// Keeps localStorage in sync so the count badge stays accurate.
+function pruneStaleBookmarks(savedIds: string[], returnedIds: string[]) {
+  const returnedSet = new Set(returnedIds);
+  for (const id of savedIds) {
+    if (!returnedSet.has(id)) {
+      console.log(`[flagged] pruning stale bookmark: ${id}`);
+      removeBookmark(id);
+    }
+  }
+}
+
 // ─── Grouping + sorting ────────────────────────────────────────────────────────
-// Groups by vendor. Falls back to post.id as group key if vendor is missing
-// so no post is ever silently dropped due to a missing join.
-// Groups sorted: booths with available items first (numeric), all-found last.
-// Within each group: available first, sold last.
+// Groups by vendor. Falls back to unique key per post if vendor join is missing
+// so no post is ever silently dropped.
 
 function groupByBooth(posts: Post[]): Array<{ label: string; vendorName: string; posts: Post[]; allFound: boolean }> {
   const map = new Map<string, { label: string; vendorName: string; posts: Post[] }>();
 
   for (const post of posts) {
-    const booth      = post.vendor?.booth_number ?? null;
+    const booth      = post.vendor?.booth_number ?? post.location_label ?? null;
     const vendorName = post.vendor?.display_name ?? "Unknown Vendor";
-    // Use vendor.id if available; fall back to a unique key per post so orphaned
-    // posts are never collapsed/dropped.
-    const key = post.vendor?.id ?? `__no_vendor__${post.id}`;
-    if (!map.has(key)) {
-      map.set(key, { label: booth ?? "No booth listed", vendorName, posts: [] });
-    }
+    const key        = post.vendor?.id ?? `__orphan__${post.id}`;
+    if (!map.has(key)) map.set(key, { label: booth ?? "No booth listed", vendorName, posts: [] });
     map.get(key)!.posts.push(post);
   }
 
   return Array.from(map.values())
     .map(group => {
-      // Available first, sold last within each group
       const sorted = [
         ...group.posts.filter(p => p.status !== "sold"),
         ...group.posts.filter(p => p.status === "sold"),
@@ -98,18 +103,14 @@ function groupByBooth(posts: Post[]): Array<{ label: string; vendorName: string;
       return { ...group, posts: sorted, allFound };
     })
     .sort((a, b) => {
-      // Groups with anything still available first
       if (!a.allFound && b.allFound) return -1;
       if (a.allFound && !b.allFound) return 1;
-      // "No booth listed" always last within tier
-      const aNoLabel = a.label === "No booth listed";
-      const bNoLabel = b.label === "No booth listed";
-      if (aNoLabel && !bNoLabel) return 1;
-      if (!aNoLabel && bNoLabel) return -1;
-      // Numeric booth sort, then vendor name alpha
-      const boothCmp = a.label.localeCompare(b.label, undefined, { numeric: true });
-      if (boothCmp !== 0) return boothCmp;
-      return a.vendorName.localeCompare(b.vendorName);
+      const aNo = a.label === "No booth listed";
+      const bNo = b.label === "No booth listed";
+      if (aNo && !bNo) return 1;
+      if (!aNo && bNo) return -1;
+      const cmp = a.label.localeCompare(b.label, undefined, { numeric: true });
+      return cmp !== 0 ? cmp : a.vendorName.localeCompare(b.vendorName);
     });
 }
 
@@ -126,7 +127,7 @@ function EmptyFinds() {
         No finds saved yet
       </div>
       <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: C.textMuted, lineHeight: 1.75, maxWidth: 230, margin: 0 }}>
-        Save finds you want to see in person and they'll appear here, grouped by booth.
+        Tap the leaf on any find to save it here, grouped by booth for your trip.
       </p>
     </motion.div>
   );
@@ -156,14 +157,11 @@ function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsav
         <div style={{
           display: "flex", alignItems: "center", gap: 14,
           padding: "13px 14px",
-          background: C.surface,
-          borderRadius: 14,
+          background: C.surface, borderRadius: 14,
           border: `1px solid ${C.border}`,
           boxShadow: "0 2px 10px rgba(26,24,16,0.06), 0 1px 3px rgba(26,24,16,0.04)",
-          opacity: isSold ? 0.65 : 1,
-          transition: "opacity 0.2s",
+          opacity: isSold ? 0.65 : 1, transition: "opacity 0.2s",
         }}>
-          {/* Thumbnail */}
           <div style={{ width: 64, height: 64, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: C.surfaceDeep, border: `1px solid ${C.borderLight}` }}>
             {hasImg ? (
               <img src={post.image_url!} alt={post.title} onError={() => setImgErr(true)}
@@ -176,7 +174,6 @@ function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsav
             )}
           </div>
 
-          {/* Title + status */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
               fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600, color: C.textPrimary,
@@ -198,18 +195,14 @@ function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsav
             )}
           </div>
 
-          {/* Unsave — instant */}
-          <button
-            onClick={handleUnsave}
-            aria-label="Remove from Your Finds"
+          <button onClick={handleUnsave} aria-label="Remove from Your Finds"
             style={{
               flexShrink: 0, width: 30, height: 30, borderRadius: "50%",
               display: "flex", alignItems: "center", justifyContent: "center",
               background: C.greenSolid, border: "none", cursor: "pointer",
               boxShadow: "0 1px 5px rgba(0,0,0,0.18)",
               WebkitTapHighlightColor: "transparent",
-            }}
-          >
+            }}>
             <PiLeafIcon size={14} strokeWidth={2.0} style={{ color: "rgba(255,255,255,0.95)" }} />
           </button>
         </div>
@@ -222,33 +215,19 @@ function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsav
 
 function VendorBanner({ label, vendorName, allFound }: { label: string; vendorName: string; allFound: boolean }) {
   const displayBooth = label === "No booth listed" ? null : label;
-
   return (
     <div style={{
       width: "100%", borderRadius: 14, overflow: "hidden", marginBottom: 10, position: "relative",
-      background: allFound
-        ? "linear-gradient(105deg, #3a3830 0%, #4a4840 100%)"
-        : `linear-gradient(105deg, ${C.bannerFrom} 0%, ${C.bannerTo} 100%)`,
+      background: allFound ? "linear-gradient(105deg, #3a3830 0%, #4a4840 100%)" : `linear-gradient(105deg, ${C.bannerFrom} 0%, ${C.bannerTo} 100%)`,
       boxShadow: "0 2px 14px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.10)",
-      opacity: allFound ? 0.72 : 1,
-      transition: "opacity 0.2s",
+      opacity: allFound ? 0.72 : 1, transition: "opacity 0.2s",
     }}>
-      <div style={{
-        position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.04,
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.04,
         backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")`,
-        backgroundRepeat: "repeat", backgroundSize: "200px 200px",
-      }} />
-      <div style={{
-        position: "relative", zIndex: 1,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "13px 16px", gap: 12,
-      }}>
+        backgroundRepeat: "repeat", backgroundSize: "200px 200px" }} />
+      <div style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 16px", gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700,
-            color: "rgba(255,255,255,0.96)", letterSpacing: "-0.2px", lineHeight: 1.2,
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          }}>
+          <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.96)", letterSpacing: "-0.2px", lineHeight: 1.2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {vendorName}
           </div>
           {allFound && (
@@ -259,15 +238,8 @@ function VendorBanner({ label, vendorName, allFound }: { label: string; vendorNa
         </div>
         {displayBooth && (
           <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
-            <div style={{ fontSize: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1.8px", color: "rgba(255,255,255,0.50)", lineHeight: 1 }}>
-              Booth
-            </div>
-            <div style={{
-              fontFamily: "monospace", fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.95)",
-              letterSpacing: "0.4px", lineHeight: 1,
-              background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)",
-              borderRadius: 7, padding: "4px 10px 5px",
-            }}>
+            <div style={{ fontSize: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1.8px", color: "rgba(255,255,255,0.50)", lineHeight: 1 }}>Booth</div>
+            <div style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.95)", letterSpacing: "0.4px", lineHeight: 1, background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 7, padding: "4px 10px 5px" }}>
               {displayBooth}
             </div>
           </div>
@@ -301,29 +273,43 @@ export default function YourFindsPage() {
   const [loading,       setLoading]       = useState(true);
   const [bookmarkCount, setBookmarkCount] = useState(0);
 
-  function syncBookmarkCount() {
+  function syncCount() {
     setBookmarkCount(loadBookmarkCount());
   }
 
   async function loadPosts() {
     const ids = loadFlaggedIds();
-    if (ids.length === 0) { setPosts([]); setLoading(false); return; }
+    console.log(`[flagged] localStorage bookmark IDs: ${ids.length}`, ids);
+
+    if (ids.length === 0) {
+      setPosts([]);
+      setLoading(false);
+      return;
+    }
+
     const data = await getPostsByIds(ids);
-    // If Supabase returned fewer rows than IDs, some posts may have been deleted.
-    // Still show what we got — do not filter further.
-    console.log(`[flagged] ${ids.length} saved IDs → ${data.length} posts returned from Supabase`);
+    console.log(`[flagged] Supabase returned: ${data.length} posts`);
+
+    // Prune stale bookmarks whose posts no longer exist in Supabase
+    if (data.length < ids.length) {
+      const returnedIds = data.map(p => p.id);
+      pruneStaleBookmarks(ids, returnedIds);
+      // Re-sync count after pruning
+      setBookmarkCount(loadBookmarkCount());
+    }
+
     setPosts(data);
     setLoading(false);
   }
 
   useEffect(() => {
-    syncBookmarkCount();
+    syncCount();
     loadPosts();
   }, []);
 
   useEffect(() => {
     function onFocus() {
-      syncBookmarkCount();
+      syncCount();
       loadPosts();
     }
     window.addEventListener("focus", onFocus);
@@ -339,16 +325,22 @@ export default function YourFindsPage() {
   const available = posts.filter(p => p.status !== "sold").length;
   let rowIndex    = 0;
 
+  const subtitle = () => {
+    if (loading) return "";
+    if (posts.length === 0 && bookmarkCount === 0) return "Nothing saved yet";
+    if (posts.length === 0 && bookmarkCount > 0) return "Syncing your finds…";
+    if (available > 0) return `${available} ${available === 1 ? "find" : "finds"} still available · ${groups.length} ${groups.length === 1 ? "booth" : "booths"}`;
+    return `${posts.length} ${posts.length === 1 ? "find" : "finds"} · all found`;
+  };
+
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", position: "relative" }}>
 
       {/* ── Header ── */}
       <header style={{
         position: "sticky", top: 0, zIndex: 50,
-        background: C.header,
-        backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
-        borderBottom: `1px solid ${C.border}`,
-        padding: "0 18px",
+        background: C.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
+        borderBottom: `1px solid ${C.border}`, padding: "0 18px",
       }}>
         <div style={{ paddingTop: "max(18px, env(safe-area-inset-top, 18px))", paddingBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
@@ -358,13 +350,7 @@ export default function YourFindsPage() {
             </span>
           </div>
           <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: C.textMuted, lineHeight: 1.4 }}>
-            {!loading && posts.length > 0
-              ? available > 0
-                ? `${available} ${available === 1 ? "find" : "finds"} still available · ${groups.length} ${groups.length === 1 ? "booth" : "booths"}`
-                : `${posts.length} ${posts.length === 1 ? "find" : "finds"} · all found`
-              : !loading && posts.length === 0
-              ? "Nothing saved yet"
-              : ""}
+            {subtitle()}
           </div>
         </div>
       </header>
@@ -385,12 +371,9 @@ export default function YourFindsPage() {
               return (
                 <BoothSection
                   key={group.label + group.vendorName}
-                  label={group.label}
-                  vendorName={group.vendorName}
-                  posts={group.posts}
-                  allFound={group.allFound}
-                  startIndex={start}
-                  onUnsave={handleUnsave}
+                  label={group.label} vendorName={group.vendorName}
+                  posts={group.posts} allFound={group.allFound}
+                  startIndex={start} onUnsave={handleUnsave}
                 />
               );
             })}
@@ -401,7 +384,7 @@ export default function YourFindsPage() {
       <BottomNav active="flagged" flaggedCount={bookmarkCount} />
 
       <style>{`
-        @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+        @keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
         .skeleton-shimmer { background: linear-gradient(90deg, rgba(225,220,210,0.7) 25%, rgba(208,202,190,0.9) 50%, rgba(225,220,210,0.7) 75%); background-size: 800px 100%; animation: shimmer 1.6s infinite linear; }
       `}</style>
     </div>

@@ -1,11 +1,15 @@
 // components/BottomNav.tsx
-// Fixed bottom navigation — Home, Your Finds, My Shelf.
+// Fixed bottom navigation.
+// Explorer mode: Home + Your Finds
+// Curator mode:  Home + My Shelf
 
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Home, Store } from "lucide-react";
 import PiLeafIcon from "@/components/PiLeafIcon";
+import { getMode, type AppMode } from "@/lib/mode";
 
 type Tab = "home" | "flagged" | "my-shelf" | null;
 
@@ -25,16 +29,36 @@ const C = {
 
 export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNavProps) {
   const router = useRouter();
+  const [mode, setMode] = useState<AppMode>("explorer");
 
-  const tabs: { key: Tab; label: string; icon: React.ReactNode; href: string }[] = [
-    { key: "home",     label: "Home",       href: "/",        icon: <Home size={21} strokeWidth={1.7} /> },
-    { key: "flagged",  label: "Your Finds", href: "/flagged", icon: <PiLeafIcon size={21} strokeWidth={1.7} /> },
-    { key: "my-shelf", label: "My Shelf",   href: "/my-shelf",icon: <Store size={21} strokeWidth={1.7} /> },
-  ];
+  useEffect(() => {
+    setMode(getMode());
+    // Re-sync if mode changes in another tab or from header toggle
+    function onStorage(e: StorageEvent) {
+      if (e.key === "treehouse_mode") setMode((e.newValue as AppMode) ?? "explorer");
+    }
+    window.addEventListener("storage", onStorage);
+    // Also re-read on focus (same-tab mode switch navigates, but just in case)
+    function onFocus() { setMode(getMode()); }
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
 
-  // Badge label — single digit raw, 10+: "9+", cap at 99
   const badgeLabel = (n: number) =>
     n > 99 ? "99+" : n > 9 ? "9+" : String(n);
+
+  type TabDef = { key: Tab; label: string; icon: React.ReactNode; href: string; badge?: boolean };
+
+  const homTab: TabDef    = { key: "home",     label: "Home",       href: "/",         icon: <Home size={21} strokeWidth={1.7} /> };
+  const explorerTab: TabDef = { key: "flagged", label: "Your Finds", href: "/flagged",  icon: <PiLeafIcon size={21} strokeWidth={1.7} />, badge: true };
+  const curatorTab: TabDef  = { key: "my-shelf",label: "My Shelf",  href: "/my-shelf", icon: <Store size={21} strokeWidth={1.7} /> };
+
+  const tabs: TabDef[] = mode === "curator"
+    ? [homTab, curatorTab]
+    : [homTab, explorerTab];
 
   return (
     <nav style={{
@@ -48,7 +72,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     }}>
       {tabs.map((tab) => {
         const isActive  = active === tab.key;
-        const showBadge = tab.key === "flagged" && flaggedCount > 0;
+        const showBadge = tab.badge && flaggedCount > 0;
 
         return (
           <button key={tab.key} onClick={() => router.push(tab.href)}

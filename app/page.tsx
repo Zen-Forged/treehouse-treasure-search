@@ -1,6 +1,7 @@
 // app/page.tsx
 // Treehouse — Discovery Feed
 // Only available posts are shown — sold items are filtered at the query level.
+// Mode toggle in header switches between Explorer (buyer) and Curator (vendor).
 
 "use client";
 
@@ -13,8 +14,10 @@ import { MapPin, Compass, ChevronDown } from "lucide-react";
 import PiLeafIcon from "@/components/PiLeafIcon";
 import { getFeedPosts, getAllMalls } from "@/lib/posts";
 import BottomNav from "@/components/BottomNav";
+import ModeToggle from "@/components/ModeToggle";
 import { MallHeroCard, GenericMallHero } from "@/components/MallHeroCard";
 import type { Post, Mall } from "@/types/treehouse";
+import type { AppMode } from "@/lib/mode";
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -158,15 +161,12 @@ function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; i
                 onLoad={handleLoad} onError={() => setImgErr(true)}
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
                   filter: "brightness(0.99) saturate(0.96)" }} />
-
-              {/* Saved indicator — PiLeaf icon in green circle, bottom-right */}
               {isFollowed && (
                 <div style={{
                   position: "absolute", bottom: 7, right: 7,
                   width: 22, height: 22, borderRadius: "50%",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  background: C.greenSolid,
-                  boxShadow: "0 1px 5px rgba(0,0,0,0.22)",
+                  background: C.greenSolid, boxShadow: "0 1px 5px rgba(0,0,0,0.22)",
                 }}>
                   <PiLeafIcon size={12} style={{ color: "rgba(255,255,255,0.96)" }} />
                 </div>
@@ -177,8 +177,6 @@ function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; i
               <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.35 }}>{post.title}</div>
             </div>
           )}
-
-          {/* Text band */}
           <div style={{ padding: "10px 11px 13px", borderTop: hasImg ? `1px solid ${C.borderLight}` : "none" }}>
             <div style={{
               fontFamily: "Georgia, serif", fontSize: 12, fontWeight: 600, color: C.textPrimary,
@@ -259,6 +257,7 @@ function MallDropdown({ malls, selectedId, onChange }: { malls: Mall[]; selected
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DiscoveryFeedPage() {
+  const router = useRouter();
   const [posts,         setPosts]         = useState<Post[]>([]);
   const [malls,         setMalls]         = useState<Mall[]>([]);
   const [loading,       setLoading]       = useState(true);
@@ -319,25 +318,31 @@ export default function DiscoveryFeedPage() {
     feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  function handleModeChange(mode: AppMode) {
+    // Navigate to the right second tab for the new mode
+    if (mode === "curator") router.push("/my-shelf");
+    else router.push("/flagged");
+  }
+
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", position: "relative" }}>
 
       {/* ── Header ── */}
       <header style={{ position: "sticky", top: 0, zIndex: 50, background: C.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-start", paddingTop: "max(16px, env(safe-area-inset-top, 16px))", paddingBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "max(16px, env(safe-area-inset-top, 16px))", paddingBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
             <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.3px", lineHeight: 1 }}>
               Treehouse Finds
             </span>
           </div>
+          <ModeToggle onChange={handleModeChange} />
         </div>
         <MallDropdown malls={malls} selectedId={mallId} onChange={setMallId} />
       </header>
 
       {/* ── Main ── */}
       <main style={{ padding: "16px 14px 0", paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }}>
-
         <div style={{ marginBottom: 20 }}>
           <AnimatePresence mode="wait">
             {selectedMall ? (
@@ -378,7 +383,7 @@ export default function DiscoveryFeedPage() {
 
       <style>{`
         @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
-        .skeleton-shimmer { background: linear-gradient(90deg, rgba(225,220,210,0.7) 25%, rgba(208,202,190,0.9) 50%, rgba(225,220,210,0.7) 75%); background-size: 800px 100%; animation: shimmer 1.6s infinite linear; }
+        .skeleton-shimmer { background: linear-gradient(90deg, rgba(225,220,210,0.7) 25%, rgba(208,202,210,0.9) 50%, rgba(225,220,210,0.7) 75%); background-size: 800px 100%; animation: shimmer 1.6s infinite linear; }
       `}</style>
     </div>
   );
