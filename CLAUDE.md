@@ -22,7 +22,7 @@ CURRENT ISSUE:
 
 ## HOW TO END A SESSION
 
-Tell Claude: "update CLAUDE.md with current status" then run:
+Tell Claude: "close out the session" then run:
 ```bash
 cd /Users/davidbutler/Projects/treehouse-treasure-search
 git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && git push
@@ -31,66 +31,52 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-09
+> Last updated: 2026-04-10
 
-**Status:** ✅ Day 3 UI/UX sprint complete. Found badge centered, leaf unsave with confirm, My Shelf VendorBanner + Available/Found sections, header font size unified, Share CTA removed from Your Finds.
+**Status:** ✅ Demo-ready sprint complete. Feed filter, mode system, Your Finds fixes, My Shelf vendor picker, owner controls gated to Curator mode.
 
 **What was done (this session):**
 
-### Sprint — "Found" terminology + badge repositioning
-- "Unavailable" renamed to **"Found"** everywhere in the ecosystem UI
-  - Home feed tile badge: moved from top-left → **centered on image**
-  - My Shelf grid tiles: centered "Found" badge on found items
-  - Find detail hero: centered "Found" badge (larger pill, 9px text)
-  - Find detail shelf cards: centered "Found" badge
-  - Find detail status line: "Unavailable" → "Found"
-  - Your Finds rows: "Unavailable" → "Found" label on sold items
-- "Sold" label preserved in admin/owner controls only (Mark as sold / Mark as available)
+### Sprint — demo-ready
+- **Feed filter**: `getFeedPosts` + `getMallPosts` now filter `.eq("status", "available")` — sold posts never appear in the discovery feed. Removed all sold-state display logic from `MasonryTile` (grayscale, "Found" badge, opacity).
+- **My Shelf Found tiles**: now tappable — `FoundTile` wraps content in `<Link href=/find/${post.id}>`. Badge gets `pointerEvents: "none"` so it doesn't block the tap. Vendor can see sold items and re-mark as available.
+- **Vendor profile save fix**: `saveProfile()` in `/post` now clears `vendor_id`/`slug` when `display_name` OR `booth_number` changes (not just when mall changes). Previously, editing name/booth kept the old vendor row — new posts published under stale identity.
+- **`lib/posts.ts`**: Added `user_id?: string` to `CreateVendorInput`. Duplicate recovery path now updates `user_id` on existing row if null. Added `getVendorsByMall(mallId)` for My Shelf vendor picker.
 
-### Sprint — Your Finds page
-- **Removed** Share your finds CTA button and fixed footer bar entirely
-- **Added** inline unsave: filled green leaf circle button on each row
-  - First tap: animates to "Remove?" pill (red tint, autoFocus)
-  - Second tap: removes post optimistically from state + decrements badge
-  - Unsave button sits outside the `<Link>` wrapper — does not navigate
-- Header redesigned: logo + **22px Georgia** "Your Finds" wordmark row above italic subtitle
+### Sprint — Your Finds overhaul
+- **Instant unsave**: removed `UnsaveButton` confirm state entirely. Single tap removes immediately. `e.preventDefault()` + `e.stopPropagation()` on the button prevents navigation.
+- **Removed `ChevronRight`** from each row — redundant since the whole row is a link.
+- **Sorting**: `groupByBooth` now sorts groups by: available-first, then numeric booth order, then vendor name alpha. Within each group: available items first, sold last. All-found groups go to bottom.
+- **All-found banner state**: desaturated grey gradient, 0.72 opacity, "All found" sublabel.
+- **Subtitle**: shows `"X finds still available · N booths"` or `"X finds · all found"`.
+- **Stale bookmark pruning**: `pruneStaleBookmarks()` runs after `getPostsByIds` — auto-removes localStorage keys whose post IDs no longer exist in Supabase. Fixes "7 count, 0 items" bug caused by bookmarks pointing to deleted posts.
+- **Grouping key fix**: orphaned posts (missing vendor join) now get unique key `__orphan__${post.id}` instead of all collapsing into `__no_vendor__`. No post silently dropped.
+- **`location_label` fallback**: `groupByBooth` checks `post.location_label` when `vendor?.booth_number` is null.
 
-### Sprint — My Shelf page
-- Fixed `100dvh` layout → scrollable flex column — **shows all posts, no 9 cap**
-- Header: logo + **22px Georgia** "My Shelf" wordmark + "Post a find" pill
-- **VendorBanner** (dark forest gradient, vendor name + Booth pill) added to header — replaces italic name/booth pill subtext
-- Grid split into two labeled sections:
-  - **Available** — linked tiles, Add tile appended after last available
-  - **Found** — inert tiles (no link), centered "Found" badge, grayscale + 0.62 opacity
-- Section separators: uppercase faint label + hairline extending right
-- Count line updated to "X available · Y found"
-- Trailing hairline divider and "Share my shelf" CTA **removed**
-
-### Sprint — Home feed
-- Header wordmark bumped from 16px → **22px Georgia** to match other pages
-- Logo already present — consistent across all 3 tab pages now
-
-### Sprint — Price field in /post/preview
-- Price field UI was already wired in `handlePublish` — confirmed present in existing code, no change needed
+### Sprint — Explorer / Curator mode system
+- **`lib/mode.ts`**: `getMode()`, `setMode()`, `toggleMode()` — persisted in localStorage as `treehouse_mode = "explorer" | "curator"`.
+- **`components/ModeToggle.tsx`**: Animated pill toggle — "Explorer" / "Curator". Used in feed header.
+- **`components/BottomNav.tsx`**: Reads mode on mount + focus + storage event. Explorer shows Home + Your Finds. Curator shows Home + My Shelf. Re-syncs on tab switch.
+- **`app/page.tsx`**: ModeToggle in header. `handleModeChange` navigates to correct second tab on switch.
+- **`app/find/[id]/page.tsx`**: Owner controls (mark sold, delete) now gated to `isMyPost && isCurator`. Explorer mode sees zero owner controls even on their own posts. "Save to Your Finds" button hidden in Curator mode — that's a buyer action.
+- **`app/my-shelf/page.tsx`**: Vendor picker in VendorBanner — fetches all vendors at the stored `mall_id` via `getVendorsByMall`, shows compact dropdown when mall has >1 vendor. Defaults to own vendor. Switching reloads posts for selected vendor.
 
 **Previous sessions:**
-- Day 2 UI/UX sprint — PiLeaf icons, badge sync, hero copy, "Your Finds" rename, iOS nav padding, VendorBanner, My Shelf header, all deployed
+- Day 3 UI/UX sprint — Found badge centering, leaf unsave, My Shelf sections, header font unification
+- Day 2 UI/UX sprint — PiLeaf icons, badge sync, hero copy, "Your Finds" rename, iOS nav padding
 - Branded Experience Sprint — 3-page overhaul (warmer parchment, Georgia, layered shadows)
-- Mall Identity Layer (Sprint 1) — MallHeroCard shipped
-- Design audit 9 findings — Day 1–2 typography/hierarchy fixes
-- My Shelf concept C alternating layout (reverted to 3×3)
-- Flagged page grouped by booth with "Booth N" headers
-- 3-tab BottomNav
-- BoothTag price → BoothBox (clean rectangle, "Found In-Booth" + booth number, no price/string)
-- Admin page + bulk delete
+- Mall Identity Layer — MallHeroCard shipped
 - safeStorage iPhone Safari bug fix
+- Admin page + bulk delete
 
 **Next session starting point:**
-1. QA on device — Found badge centering, leaf unsave flow, My Shelf sections, header size parity
-2. Wire "Share my shelf" CTA (native share sheet or URL copy) — deferred from this sprint
-3. My Shelf Found tiles — make tappable/linkable (deferred to later sprint)
-4. Inline unsave from Your Finds — verify badge count decrements correctly on device
-5. Optional Supabase hero columns (hero works without them):
+1. QA on device — verify stale bookmark pruning works (open Your Finds, check console for `[flagged]` logs)
+2. Verify mode toggle works on device — Explorer hides My Shelf tab, Curator hides Your Finds tab
+3. Verify owner controls invisible in Explorer mode on find detail
+4. Wire "Share my shelf" — native Web Share API, URL = `/vendor/${profile.slug}`, ghost button in My Shelf header. Falls back to clipboard copy + "Copied!" flash.
+5. Auth sprint (Task 2 from demo-ready plan) — Supabase anonymous sessions, link `user_id` to vendor row, replace localStorage vendor_id comparison with session check
+6. Pull-to-refresh on feed (deferred)
+7. Optional Supabase hero columns (hero works without them):
    ```sql
    ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_title text;
    ALTER TABLE malls ADD COLUMN IF NOT EXISTS hero_subtitle text;
@@ -132,7 +118,7 @@ SERPAPI_KEY                      eBay sold comps
 - **Storage bucket:** post-images — PUBLIC
 - **Only mall:** America's Antique Mall, id: `19a8ff7e-cb45-491f-9451-878e2dde5bf4`
 - **Known vendor:** ZenForged Finds, booth 369, id: `65a879f1-c43c-481b-974f-379792a36db8`
-- **Extra column:** vendors table has `facebook_url text` (added via SQL)
+- **Extra columns:** vendors table has `facebook_url text`, `user_id uuid` (nullable — future auth)
 - **Unique constraint:** `vendors_mall_booth_unique` on `(mall_id, booth_number)`
 
 ---
@@ -143,20 +129,29 @@ SERPAPI_KEY                      eBay sold comps
 ```
 /                   Discovery feed — masonry, Mall Hero Card at top, mall dropdown (hidden if ≤1 mall),
                     tile text bands (Georgia title + booth attribution), PiLeaf saved indicators on tiles,
-                    "Found" badge centered on sold tile images
+                    ModeToggle (Explorer/Curator) in header top-right.
+                    ONLY available posts shown — sold filtered at query level.
 /find/[id]          Find detail — full-bleed image, centered "Found" badge on hero (sold),
                     BoothBox bottom-left (booth number, no price),
                     PiLeaf save + share buttons bottom-right of photo, BottomNav (no active tab),
                     price inline below title, "View the shelf" horizontal scroll,
-                    "Find this here" card, "Save to Your Finds" button, owner actions (mark sold + delete)
-/flagged            Your Finds — logo + 22px Georgia header, grouped by booth (VendorBanner),
-                    leaf unsave button (confirm state), "Found" label on sold rows, no Share CTA
-/my-shelf           My Shelf — logo + 22px Georgia header, VendorBanner (gradient) in header,
-                    scrollable (all posts shown), Available grid + Found grid (separated, labeled),
-                    Add tile after last available, Found tiles inert (no link), no trailing hairline/Share CTA
+                    "Find this here" card.
+                    "Save to Your Finds" button — Explorer mode only (hidden in Curator).
+                    Owner controls (mark sold, delete) — Curator mode only AND isMyPost.
+/flagged            Your Finds (Explorer mode) — logo + 22px Georgia header, subtitle shows
+                    available count + booth count, grouped by vendor/booth (VendorBanner),
+                    sorted by: available groups first, numeric booth order, vendor alpha.
+                    Within group: available items first, sold last.
+                    All-found groups: grey banner, "All found" sublabel, sorted to bottom.
+                    Leaf unsave button (instant, no confirm). Stale bookmarks auto-pruned.
+/my-shelf           My Shelf (Curator mode) — logo + 22px Georgia header, VendorBanner in header
+                    with vendor picker dropdown (when >1 vendor at mall), scrollable (all posts shown),
+                    Available grid + Found grid (labeled, separated, Found tiles linked),
+                    Add tile after last available, no trailing hairline/Share CTA.
 /mall/[slug]        Mall profile
 /vendor/[slug]      Vendor profile — Facebook link, available/sold grid
-/post               Vendor capture — camera/gallery, profile setup
+/post               Vendor capture — camera/gallery, profile setup. Clears vendor_id when
+                    display_name or booth_number changes (forces new vendor row on publish).
 /post/preview       Edit title/caption/price → publish
 /admin              Admin: local profile inspector + bulk post/image delete
 ```
@@ -182,28 +177,33 @@ DELETE /api/admin/posts     Bulk delete posts + storage images ({ ids } or { del
 ## KEY FILES
 ```
 lib/supabase.ts               Client with placeholder fallback for build time
-lib/posts.ts                  getFeedPosts, getPost, getPostsByIds, getVendorPosts,
-                              createPost, createVendor, uploadPostImage,
-                              updatePostStatus, deletePost,
+lib/mode.ts                   Explorer/Curator mode — getMode(), setMode(), toggleMode()
+                              localStorage key: treehouse_mode = "explorer" | "curator"
+lib/posts.ts                  getFeedPosts (available only), getPost, getPostsByIds (no status filter),
+                              getVendorPosts, getMallPosts (available only),
+                              getVendorsByMall (for My Shelf picker),
+                              createPost, createVendor (+ user_id param + duplicate recovery),
+                              uploadPostImage, updatePostStatus, deletePost,
                               getAllMalls, getMallBySlug, getVendorBySlug, slugify
 lib/postStore.ts              In-memory image store for /post → /post/preview flow
 lib/safeStorage.ts            localStorage wrapper with sessionStorage + memory fallback
 types/treehouse.ts            Post, Vendor, Mall (+ hero fields), LocalVendorProfile, PostStatus
-components/BottomNav.tsx      Fixed bottom nav — Home · Your Finds · My Shelf tabs, active state, badge
-                              Icons: Home (lucide), PiLeafIcon, Store (lucide)
+components/BottomNav.tsx      Mode-aware nav — Explorer: Home + Your Finds; Curator: Home + My Shelf
+                              Reads mode on mount + focus + storage event. Badge on Your Finds tab.
+components/ModeToggle.tsx     Animated pill toggle in feed header — "Explorer" / "Curator"
+                              onChange prop navigates to correct second tab on switch
 components/PiLeafIcon.tsx     Thin wrapper: import { PiLeaf } from "react-icons/pi"
-                              Props: size, strokeWidth, style, className — matches lucide API
 components/MallHeroCard.tsx   Mall Identity Hero — MallHeroCard + GenericMallHero exports
-                              GenericMallHero: eyebrow "Treehouse Finds", Kentucky copy
 app/layout.tsx                No max-width wrapper — each page owns its own width
-app/page.tsx                  Discovery feed — MallHeroCard, tile text bands, centered "Found" badge
-                              on sold tile images, PiLeaf saved dot, hasFetched guard, focus bookmark sync
-app/flagged/page.tsx          Your Finds — logo+22px header, VendorBanner sections, PiLeaf unsave button
-                              (confirm state), "Found" label on sold rows, no Share CTA
-app/my-shelf/page.tsx         My Shelf — logo+22px header, VendorBanner in header, scrollable,
-                              Available grid + Found grid (labeled, separated), Add tile, no Share CTA
-app/find/[id]/page.tsx        Find detail — centered "Found" badge on hero + shelf cards,
-                              "Found" status text, BoothBox, PiLeaf save button
+app/page.tsx                  Discovery feed — available-only posts, ModeToggle in header,
+                              MallHeroCard, tile text bands, PiLeaf saved dot, hasFetched guard
+app/flagged/page.tsx          Your Finds — instant unsave, stale bookmark pruning, sorted groups,
+                              all-found banner state, location_label fallback, orphan key fix
+app/my-shelf/page.tsx         My Shelf — vendor picker (getVendorsByMall), Available + Found grids,
+                              Found tiles linked to detail, Add tile
+app/find/[id]/page.tsx        Find detail — owner controls gated to `isMyPost && isCurator`,
+                              "Save to Your Finds" hidden in Curator mode
+app/post/page.tsx             Capture + profile — clears vendor_id on name/booth change
 app/admin/page.tsx            Admin UI — profile inspector + bulk delete
 app/api/admin/posts/route.ts  Admin API — GET all posts, DELETE by id or all
 ```
@@ -248,7 +248,6 @@ Section headers / page titles: 22px Georgia 700 — ALL three tab pages (home, f
   - Home wordmark:       "Treehouse Finds" — 22px Georgia 700
   - Your Finds header:   "Your Finds"      — 22px Georgia 700
   - My Shelf wordmark:   "My Shelf"        — 22px Georgia 700
-  - My Shelf vendor subtitle: italic Georgia 15px (inside VendorBanner)
 Body / tile titles: Georgia 12–14px
 Captions: 15px italic Georgia, lineHeight 1.85
 Empty state headers: Georgia 20px 700
@@ -276,7 +275,7 @@ react-icons/pi: PiLeaf — used as the "Your Finds" / save / unsave icon through
   - BottomNav "Your Finds" tab
   - Feed tile saved indicator (green circle, bottom-right of image)
   - Find detail: photo save button (circle, dark/green bg)
-  - Find detail: "Save to Your Finds" / "Saved to Your Finds" button in card
+  - Find detail: "Save to Your Finds" / "Saved to Your Finds" button in card (Explorer only)
   - Your Finds page: empty state icon, thumbnail fallback icon, inline unsave button (filled green circle)
 ```
 
@@ -318,10 +317,7 @@ KNOWN BUG PATTERN: framer-motion motion.div cannot have two `transition` props �
 2-column masonry. Gap: 12px. Tile border-radius: 16px.
 Right column offset: 50% of first tile's rendered height (ResizeObserver, live).
 Skeleton uses SKELETON_OFFSET = Math.round(SKELETON_HEIGHTS[0] * 0.5) = 65px.
-No price badges on tiles. Sold items: 0.60 opacity + grayscale.
-"Found" badge: centered on image — position absolute, top 50% left 50%, translate(-50%,-50%),
-  dark frosted pill (rgba(28,26,20,0.54) bg, rgba(245,242,235,0.93) text, blur(6px)).
-  7px text, 700 weight, uppercase, 1.5px letter-spacing. Same treatment on home, My Shelf, find detail.
+No price badges on tiles. No sold items in feed (filtered at query level).
 Saved items: 22px green circle, PiLeafIcon size=12 white, bottom-right of tile image.
 Tile text band: Georgia 12px 600 title (2-line clamp) + monospace 10px booth attribution.
 Section label: italic Georgia 15px "What will you find today?" + count right.
@@ -329,15 +325,38 @@ hasFetched guard: posts only fetched once per React mount — no re-fetch on bac
 Bookmark sync: loadFollowedIds() on mount + window "focus" event.
 ```
 
+### Explorer / Curator mode system
+```
+Storage key: treehouse_mode = "explorer" | "curator"  (localStorage)
+Default: "explorer"
+lib/mode.ts: getMode(), setMode(), toggleMode()
+components/ModeToggle.tsx: animated pill in feed header, onChange navigates to correct tab
+
+Explorer mode (buyer):
+  - BottomNav: Home · Your Finds
+  - /find/[id]: "Save to Your Finds" button visible, owner controls hidden
+  - /flagged: accessible
+  - /my-shelf: accessible but BottomNav doesn't show it
+
+Curator mode (vendor):
+  - BottomNav: Home · My Shelf
+  - /find/[id]: owner controls visible (isMyPost && isCurator), "Save to Your Finds" hidden
+  - /my-shelf: accessible with vendor picker
+  - /flagged: accessible but BottomNav doesn't show it
+```
+
 ### Bottom navigation
 ```
 Component: components/BottomNav.tsx
 Props: active ("home" | "flagged" | "my-shelf" | null), flaggedCount (number, optional)
-Tabs: Home (/) · Your Finds (/flagged) · My Shelf (/my-shelf)
+Mode-aware tabs:
+  Explorer: Home (/) · Your Finds (/flagged)
+  Curator:  Home (/) · My Shelf (/my-shelf)
 Icons: Home (lucide) · PiLeafIcon · Store (lucide) — size 21
 Active state: green pill behind icon + bold label (600)
-Badge: green rounded pill on Your Finds tab, minWidth 16, auto-width for "9+", cap 99+
+Badge: green rounded pill on Your Finds tab only (Explorer mode), minWidth 16, cap 99+
 Bottom padding: calc(env(safe-area-inset-bottom, 0px) + 10px) — icons lifted off iPhone home bar
+Re-syncs mode on: mount, window focus, storage event
 ```
 
 ### Save / "Your Finds" system
@@ -348,71 +367,64 @@ Raw localStorage iteration used in: feed loadFollowedIds(), Your Finds loadFlagg
 Badge count source: raw localStorage key iteration — same function on all pages
 Terminology: "Save to Your Finds" / "Saved to Your Finds"
 Icon: PiLeafIcon everywhere (not Bookmark)
-Unsave: inline on Your Finds rows — filled green leaf circle → "Remove?" confirm pill → optimistic removal
+Unsave: instant on Your Finds rows — single tap removes, optimistic state update
+Stale pruning: after getPostsByIds, any saved ID not returned by Supabase is auto-removed
 ```
 
 ### Your Finds page layout
 ```
 Header: logo + 22px Georgia 700 "Your Finds" | italic Georgia 13px subtitle below
-VendorBanner: full-width gradient (bannerFrom #1e3d24 → bannerTo #2d5435), borderRadius 14,
-  noise texture overlay (opacity 0.04), vendor name Georgia 15px 700 left,
-  booth label+pill right (rgba white 0.12 bg, monospace 13px 700)
-Item rows: 64×64 thumbnail (PiLeaf fallback), Georgia 14px 600 title, monospace price or "Found" label,
-  ChevronRight (inside Link), UnsaveButton (outside Link, green leaf circle → "Remove?" confirm)
-  borderRadius 14, layered shadow
-No Share CTA — footer bar removed entirely
+  Subtitle: "X finds still available · N booths" or "X finds · all found" or "Nothing saved yet"
+  Loading/mismatch state: "Syncing your finds…"
+Group layout: VendorBanner per vendor → rows of FindRow items
+VendorBanner: dark gradient (bannerFrom → bannerTo), vendor name Georgia 15px 700,
+  booth pill right (monospace 13px). All-found: grey gradient, opacity 0.72, "All found" sublabel.
+Sort order (groups): available groups first (numeric booth), all-found groups last.
+Sort order (within group): available items first, sold last.
+Item rows: 64×64 thumbnail (PiLeaf fallback), Georgia 14px 600 title, price or "Found" label,
+  green leaf circle unsave button (instant, no confirm, e.stopPropagation())
+No ChevronRight. No Share CTA.
 ```
 
-### My Shelf page layout (updated)
+### My Shelf page layout
 ```
 Header:
-  Top row: logo (24px) + "My Shelf" Georgia 22px 700 left | "Post a find" green pill right
-  VendorBanner row: dark gradient banner (same as Your Finds), vendor name + Booth pill
+  Top row: logo + "My Shelf" Georgia 22px 700 left | "Post a find" green pill right
+  VendorBanner: dark gradient, vendor name + booth pill.
+    VendorPicker dropdown inside banner — only shows when mall has >1 vendor.
+    Picker: frosted white pill button, ChevronDown, dropdown list with Georgia vendor names.
+    Switching vendor: reloads posts for selected vendor.id.
   Count row: "X available · Y found" italic Georgia 11px faint
-Layout: scrollable flex column (not fixed 100dvh) — all posts shown, no cap
-Available section:
-  SectionLabel: "Available" — uppercase 9px faint + hairline extending right
-  3-col grid, 1:1 aspect tiles, linked to find detail
-  Add tile (+) appended after last available tile
-Found section:
-  SectionLabel: "Found" — same style
-  3-col grid, 1:1 aspect tiles, INERT (no link — future sprint)
-  Tiles: grayscale(0.55) + brightness(0.82) + opacity 0.62 + centered "Found" badge
-No trailing hairline divider. No Share my shelf CTA.
+Layout: scrollable flex column — all posts shown, no cap
+Available section: 3-col grid, linked tiles, Add tile after last available
+Found section: 3-col grid, linked tiles (to detail page), grayscale + opacity 0.62 + "Found" badge
+No trailing hairline. No Share CTA (deferred).
 ```
 
 ### Detail page layout order
 ```
 1. Full-bleed image
-   - Centered "Found" badge when sold — dark frosted pill, centered absolutely on image
-     (9px text, 5px top/bottom 12px left/right padding, blur(8px), larger than tile badges)
+   - Centered "Found" badge when sold
    - PiLeaf save + Share2 buttons bottom-right (36px circles, blur backdrop)
-     PiLeaf: strokeWidth 1.8 unsaved / 2.2 saved, greenSolid bg when saved
-   - BoothBox bottom-left — clean rectangle, "Found In-Booth" 8px label + booth number 16px mono
-     marginBottom on wrapper: hasBoothBox ? 34 : 0
+   - BoothBox bottom-left — "Found In-Booth" + booth number
 2. Title (Georgia 26px 700)
-3. Price + availability: "$325 · ● Available" or "Found" (no dot when sold)
-4. Caption (italic Georgia 15px, lineHeight 1.85) + description (13px)
+3. Price + availability dot or "Found" text
+4. Caption + description
 5. [hairline if shelf has items] + "View the shelf" horizontal scroll
-   - ShelfCard sold badge: centered "Found" pill (6px text, same dark frosted treatment)
-6. "Find this here" label + card:
-     Mall name (Georgia 14px 700) + address link
+6. "Find this here" card:
+     Mall name + address link
      Vendor name + booth pill
      Facebook link (if present)
-     "Save to Your Finds" / "Saved to Your Finds" Georgia button with PiLeafIcon
-7. Owner actions: "Mark as sold/available" + "Delete post" → confirmation
-   - Owner toggle label: "Mark as sold" / "Mark as available" (unchanged — admin language)
+     "Save to Your Finds" button — EXPLORER MODE ONLY
+7. Owner actions — CURATOR MODE + isMyPost ONLY:
+     "Mark as sold" / "Mark as available" toggle
+     "Delete post" → confirmation
 8. BottomNav (active={null})
 ```
 
 ### "Found" terminology rules
 ```
 UI-facing (buyers see): "Found" — used for sold/unavailable status everywhere
-  - Badge on tiles: "Found" (centered)
-  - Status line below title on detail page: "Found"
-  - Your Finds row label: "Found"
-  - My Shelf section header: "Found"
-  - My Shelf tile badge: "Found"
 Admin/owner-facing: "Sold" — preserved in owner controls only
   - Owner action toggle: "Mark as sold" / "Mark as available"
   - Supabase status column value: still "sold" (unchanged in DB)
@@ -429,59 +441,57 @@ Never use "Unavailable" — fully retired
 - `str_replace` tool fails on bracket-path files (`app/find/[id]/page.tsx`) — always use `filesystem:write_file` for full rewrites
 - New directories must be created with `filesystem:create_directory` before `filesystem:write_file`
 - `uploadPostImage` is non-fatal — post goes through even without image
-- vendor_id only carried over in LocalVendorProfile if mall_id unchanged
+- vendor_id cleared from LocalVendorProfile when display_name OR booth_number changes — forces new vendor row on next publish
+- vendor_id only carried over unchanged when mall + name + booth are ALL identical to saved profile
 - Supabase client uses placeholder URL at build time to avoid prerender crash
 - `createVendor` handles 23505 duplicate key by fetching existing row — do not revert this
+- `createVendor` accepts optional `user_id` — updates existing row's user_id if currently null
+- `getPostsByIds` has NO status filter — saved finds shown regardless of sold/available
+- `getFeedPosts` and `getMallPosts` filter `.eq("status","available")` — sold never reaches feed
 - Always use `safeStorage` (not raw `localStorage`) in ecosystem client components, EXCEPT:
   - Feed's `loadFollowedIds()` reads raw `localStorage` directly (needs key iteration)
   - Your Finds' `loadFlaggedIds()` reads raw `localStorage` directly (same reason)
   - Feed scroll restoration uses raw `sessionStorage` (ephemeral tab state)
 - Badge count must always use raw localStorage key iteration — NOT `posts.length`
 - Unsave in Your Finds: optimistic removal — filter from state + decrement count, no re-fetch needed
-- UnsaveButton in Your Finds: must be OUTSIDE the `<Link>` wrapper — otherwise tap navigates
-- `ShelfSection` accepts `onReady(hasItems: boolean)` callback — parent uses this to conditionally render the hairline separator
-- Bookmarking uses `safeStorage` with key `treehouse_bookmark_${postId}`. Value "1" = saved. DO NOT rename keys.
-- Owner detection checks `data.vendor_id ?? data.vendor?.id` against `profile.vendor_id` — do not simplify
+- `groupByBooth` orphan key: posts with no vendor join get unique key `__orphan__${post.id}` — never `__no_vendor__` (would collapse multiple orphans)
+- Owner controls in find detail: `showOwnerControls = isMyPost && isCurator` — both conditions required
+- Mode toggle in feed header: `onChange` navigates to the correct second tab for the new mode
+- BottomNav re-reads mode on mount + focus + storage event — always in sync
 - Vercel project is under `david-6613s-projects` scope, NOT `zen-forged`
 - Vercel GitHub webhook has been unreliable — if push doesn't deploy, use `npx vercel --prod`
 - Always provide a git commit/push bash command after every code change
 - MINIMUM font size: 10px everywhere. Never ship 9px or smaller as readable UI labels.
-- Found badge on images: always centered (top 50%, left 50%, translate -50% -50%), never top-left
-- **framer-motion**: `motion.div` cannot have two `transition` props — TypeScript error at build time. Always merge `whileTap` transition into the single `transition` prop.
+- **framer-motion**: `motion.div` cannot have two `transition` props — TypeScript error at build time. Merge always.
+- **Duplicate borderRadius on same style object** = TypeScript build error — happened in my-shelf VendorBanner div
 - **react-icons**: `PiLeaf` from `react-icons/pi` — use via `components/PiLeafIcon.tsx` wrapper everywhere.
 
 ---
 
 ## WORKING ✅
-- Discovery feed — masonry, no prices, centered "Found" badge on sold tiles, PiLeaf saved indicator, mall dropdown, no re-fetch on back-nav
-- **Feed section label**: italic Georgia "What will you find today?"
-- **MallHeroCard / GenericMallHero**: Kentucky copy, "Treehouse Finds" eyebrow, updated title
-- Feed scroll position saved/restored via sessionStorage
+- Discovery feed — masonry, available-only posts, no prices, PiLeaf saved indicator, mall dropdown, ModeToggle
+- MallHeroCard / GenericMallHero — Kentucky copy, deterministic gradient, AnimatePresence
+- Feed scroll position saved/restored via sessionStorage, hasFetched guard
 - Bookmark badge: raw localStorage count, synced on focus across all pages
-- **Your Finds** (`/flagged`) — logo+22px header, VendorBanner sections, leaf unsave (confirm state),
-  "Found" label on sold rows, no Share CTA
-- **My Shelf** — logo+22px header, VendorBanner in header, scrollable (all posts), Available + Found sections, Add tile, no trailing hairline/Share CTA
-- **BottomNav**: Home · Your Finds · My Shelf, PiLeafIcon tab, iOS bottom padding fixed
-- Find detail: centered "Found" badge on hero + shelf cards, "Found" status text, BoothBox,
-  PiLeaf save button, "Save to Your Finds" / "Saved to Your Finds"
-- Price surfaced inline below title on detail page
-- "View the shelf" — horizontal scroll, hides if empty
-- Owner: mark sold/available toggle, delete with confirmation
-- Post flow: capture → AI title + caption → preview (with price field) → publish
-- Image upload to Supabase Storage
+- **Your Finds** — instant unsave, stale pruning, sorted groups, all-found banner state
+- **My Shelf** — vendor picker, scrollable, Available + Found grids, Found tiles linked
+- **BottomNav** — mode-aware (Explorer vs Curator), iOS padding, badge
+- **ModeToggle** — animated pill, feed header, navigates on switch
+- **Find detail** — owner controls Curator-only, Save button Explorer-only
+- **Post flow** — vendor_id cleared on identity change, AI caption, price field, publish
 - safeStorage fallback for Safari private/ITP
-- Admin page: local profile inspector, bulk delete
+- Admin page: profile inspector, bulk delete
 - All reseller intel routes (untouched, dark theme)
 
 ## KNOWN GAPS ⚠️
-- "Share my shelf" CTA unwired (button removed from UI — will be re-added when wired)
-- My Shelf Found tiles are inert — no tap action (deferred to later sprint)
-- `/enhance-text` is mock (not real Claude)
-- No Supabase RLS / auth yet
+- "Share my shelf" CTA unwired (deferred — next sprint)
+- Auth sprint deferred — Supabase anonymous sessions not yet linked to vendor rows
 - No pull-to-refresh on feed
 - No PWA support
-- Delete button missing on posts created before `vendor_id` was stored in local profile
-- Optional hero columns not yet added to malls table in Supabase (hero works without them)
+- `/enhance-text` is mock (not real Claude)
+- No Supabase RLS
+- Delete button missing on posts created before vendor_id was stored in local profile
+- Optional hero columns not yet added to malls table in Supabase
 
 ---
 
@@ -499,8 +509,9 @@ npm run build 2>&1 | tail -30
 # Always stage everything
 git add -A && git commit -m "..." && git push
 
-# Create new directories before filesystem:write_file
-filesystem:create_directory path/to/new/dir
+# Your Finds diagnostic — check console on device for:
+# [flagged] localStorage bookmark IDs: N  →  [flagged] Supabase returned: M posts
+# If N > M, stale bookmarks will be auto-pruned
 
 # Add hero columns to malls table (optional — hero works without them)
 # Run in Supabase SQL editor:
