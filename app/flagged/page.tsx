@@ -3,6 +3,7 @@
 // Grouped by vendor/booth, sorted by booth number for easy in-store navigation.
 // Within each group: available items first, Found (sold) items last.
 // Groups where ALL items are Found sort to the bottom — nothing left to pick up.
+// No status filtering — all saved finds are shown regardless of availability.
 
 "use client";
 
@@ -17,7 +18,7 @@ import type { Post } from "@/types/treehouse";
 
 const BOOKMARK_PREFIX = "treehouse_bookmark_";
 
-// ─── Design tokens — warmer parchment palette ──────────────────────────────────
+// ─── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
   bg:          "#f5f2eb",
   surface:     "#edeae1",
@@ -29,9 +30,7 @@ const C = {
   textMuted:   "#8a8476",
   textFaint:   "#b4ae9e",
   green:       "#1e4d2b",
-  greenLight:  "rgba(30,77,43,0.08)",
   greenSolid:  "rgba(30,77,43,0.90)",
-  greenBorder: "rgba(30,77,43,0.20)",
   header:      "rgba(245,242,235,0.96)",
   bannerFrom:  "#1e3d24",
   bannerTo:    "#2d5435",
@@ -68,6 +67,10 @@ function removeBookmark(postId: string) {
 }
 
 // ─── Grouping + sorting ────────────────────────────────────────────────────────
+// Groups by vendor. Falls back to post.id as group key if vendor is missing
+// so no post is ever silently dropped due to a missing join.
+// Groups sorted: booths with available items first (numeric), all-found last.
+// Within each group: available first, sold last.
 
 function groupByBooth(posts: Post[]): Array<{ label: string; vendorName: string; posts: Post[]; allFound: boolean }> {
   const map = new Map<string, { label: string; vendorName: string; posts: Post[] }>();
@@ -75,13 +78,18 @@ function groupByBooth(posts: Post[]): Array<{ label: string; vendorName: string;
   for (const post of posts) {
     const booth      = post.vendor?.booth_number ?? null;
     const vendorName = post.vendor?.display_name ?? "Unknown Vendor";
-    const key        = post.vendor?.id ?? "__no_vendor__";
-    if (!map.has(key)) map.set(key, { label: booth ?? "No booth listed", vendorName, posts: [] });
+    // Use vendor.id if available; fall back to a unique key per post so orphaned
+    // posts are never collapsed/dropped.
+    const key = post.vendor?.id ?? `__no_vendor__${post.id}`;
+    if (!map.has(key)) {
+      map.set(key, { label: booth ?? "No booth listed", vendorName, posts: [] });
+    }
     map.get(key)!.posts.push(post);
   }
 
   return Array.from(map.values())
     .map(group => {
+      // Available first, sold last within each group
       const sorted = [
         ...group.posts.filter(p => p.status !== "sold"),
         ...group.posts.filter(p => p.status === "sold"),
@@ -90,12 +98,15 @@ function groupByBooth(posts: Post[]): Array<{ label: string; vendorName: string;
       return { ...group, posts: sorted, allFound };
     })
     .sort((a, b) => {
+      // Groups with anything still available first
       if (!a.allFound && b.allFound) return -1;
       if (a.allFound && !b.allFound) return 1;
+      // "No booth listed" always last within tier
       const aNoLabel = a.label === "No booth listed";
       const bNoLabel = b.label === "No booth listed";
       if (aNoLabel && !bNoLabel) return 1;
       if (!aNoLabel && bNoLabel) return -1;
+      // Numeric booth sort, then vendor name alpha
       const boothCmp = a.label.localeCompare(b.label, undefined, { numeric: true });
       if (boothCmp !== 0) return boothCmp;
       return a.vendorName.localeCompare(b.vendorName);
@@ -122,7 +133,6 @@ function EmptyFinds() {
 }
 
 // ─── Find row ─────────────────────────────────────────────────────────────────
-// Full row links to detail. Leaf button instantly unsaves — no confirmation.
 
 function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsave: (id: string) => void }) {
   const [imgErr, setImgErr] = useState(false);
@@ -188,7 +198,7 @@ function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsav
             )}
           </div>
 
-          {/* Unsave — instant, no confirmation */}
+          {/* Unsave — instant */}
           <button
             onClick={handleUnsave}
             aria-label="Remove from Your Finds"
@@ -295,19 +305,26 @@ export default function YourFindsPage() {
     setBookmarkCount(loadBookmarkCount());
   }
 
+  async function loadPosts() {
+    const ids = loadFlaggedIds();
+    if (ids.length === 0) { setPosts([]); setLoading(false); return; }
+    const data = await getPostsByIds(ids);
+    // If Supabase returned fewer rows than IDs, some posts may have been deleted.
+    // Still show what we got — do not filter further.
+    console.log(`[flagged] ${ids.length} saved IDs → ${data.length} posts returned from Supabase`);
+    setPosts(data);
+    setLoading(false);
+  }
+
   useEffect(() => {
     syncBookmarkCount();
-    const ids = loadFlaggedIds();
-    if (ids.length === 0) { setLoading(false); return; }
-    getPostsByIds(ids).then(data => { setPosts(data); setLoading(false); });
+    loadPosts();
   }, []);
 
   useEffect(() => {
     function onFocus() {
       syncBookmarkCount();
-      const ids = loadFlaggedIds();
-      if (ids.length === 0) { setPosts([]); return; }
-      getPostsByIds(ids).then(setPosts);
+      loadPosts();
     }
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);

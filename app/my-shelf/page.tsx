@@ -1,8 +1,8 @@
 // app/my-shelf/page.tsx
 // My Shelf — vendor's full shelf, scrollable.
 // Available posts first (3-col grid), Found posts below (3-col grid, labeled separately).
-// VendorBanner in header. No 9-cap — shows all posts.
-// Found tiles link to find detail — vendor can view their sold items and re-mark as available.
+// VendorBanner in header with vendor picker when multiple vendors exist at the mall.
+// Found tiles link to find detail — vendor can view sold items and re-mark as available.
 
 "use client";
 
@@ -12,13 +12,13 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Store, ImagePlus, Plus } from "lucide-react";
-import { getVendorPosts } from "@/lib/posts";
-import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Post } from "@/types/treehouse";
+import { motion, AnimatePresence } from "framer-motion";
+import { Store, ImagePlus, Plus, ChevronDown } from "lucide-react";
+import { getVendorPosts, getVendorsByMall } from "@/lib/posts";
+import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Post, type Vendor } from "@/types/treehouse";
 import BottomNav from "@/components/BottomNav";
 
-// ─── Design tokens — warmer parchment palette ──────────────────────────────────
+// ─── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
   bg:          "#f5f2eb",
   surface:     "#edeae1",
@@ -111,18 +111,14 @@ function FoundTile({ post, index }: { post: Post; index: number }) {
           </div>
         )}
       </Link>
-      {/* "Found" badge — centered on image, sits above the link */}
+      {/* "Found" badge — centered, pointer-events none so tap hits the Link */}
       <div style={{
-        position: "absolute",
-        top: "50%", left: "50%",
-        transform: "translate(-50%, -50%)",
-        pointerEvents: "none",
+        position: "absolute", top: "50%", left: "50%",
+        transform: "translate(-50%, -50%)", pointerEvents: "none",
         fontSize: 7, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px",
         padding: "3px 8px", borderRadius: 5,
-        background: "rgba(28,26,20,0.54)",
-        color: "rgba(245,242,235,0.93)",
-        backdropFilter: "blur(6px)",
-        WebkitBackdropFilter: "blur(6px)",
+        background: "rgba(28,26,20,0.54)", color: "rgba(245,242,235,0.93)",
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
         whiteSpace: "nowrap",
       }}>
         Found
@@ -174,11 +170,7 @@ function ThreeColGrid({ children }: { children: React.ReactNode }) {
 function SkeletonGrid() {
   return (
     <div style={{ padding: GAP }}>
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`,
-        gap: GAP,
-      }}>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`, gap: GAP }}>
         {Array(9).fill(null).map((_, i) => (
           <div key={i} className="skeleton-shimmer" style={{ borderRadius: 10, width: "100%", aspectRatio: "1" }} />
         ))}
@@ -209,37 +201,132 @@ function NoProfile() {
   );
 }
 
+// ─── Vendor picker ────────────────────────────────────────────────────────────
+// Shown only when the mall has more than one vendor. Compact dropdown inside
+// the VendorBanner row — tapping switches whose shelf is displayed.
+
+function VendorPicker({ vendors, activeId, onChange }: {
+  vendors: Vendor[];
+  activeId: string;
+  onChange: (v: Vendor) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const active = vendors.find(v => v.id === activeId) ?? vendors[0];
+
+  if (vendors.length <= 1) return null;
+
+  return (
+    <div style={{ position: "relative", marginTop: 8 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: "flex", alignItems: "center", gap: 6,
+          padding: "6px 10px 6px 12px", borderRadius: 20,
+          background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.18)",
+          cursor: "pointer", WebkitTapHighlightColor: "transparent",
+        }}
+      >
+        <span style={{ fontFamily: "Georgia, serif", fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.92)", whiteSpace: "nowrap", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis" }}>
+          {active.display_name}{active.booth_number ? ` · ${active.booth_number}` : ""}
+        </span>
+        <ChevronDown size={11} style={{ color: "rgba(255,255,255,0.55)", flexShrink: 0, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.18s" }} />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.97 }}
+            transition={{ duration: 0.16 }}
+            style={{
+              position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 20,
+              background: "#fff", borderRadius: 12, overflow: "hidden",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.18), 0 1px 5px rgba(0,0,0,0.10)",
+              border: `1px solid ${C.border}`, minWidth: 200, maxWidth: 280,
+            }}
+          >
+            {vendors.map((v, i) => (
+              <button
+                key={v.id}
+                onClick={() => { onChange(v); setOpen(false); }}
+                style={{
+                  width: "100%", padding: "11px 14px", background: v.id === activeId ? C.greenLight : "none",
+                  border: "none", borderBottom: i < vendors.length - 1 ? `1px solid ${C.border}` : "none",
+                  cursor: "pointer", textAlign: "left", WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.2 }}>
+                  {v.display_name}
+                </div>
+                {v.booth_number && (
+                  <div style={{ fontSize: 10, color: C.textMuted, fontFamily: "monospace", marginTop: 2 }}>
+                    Booth {v.booth_number}
+                  </div>
+                )}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MyShelfPage() {
-  const router  = useRouter();
-  const [profile, setProfile] = useState<LocalVendorProfile | null>(null);
-  const [posts,   setPosts]   = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
+  const [profile,       setProfile]       = useState<LocalVendorProfile | null>(null);
+  const [posts,         setPosts]         = useState<Post[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [vendors,       setVendors]       = useState<Vendor[]>([]);
+  const [activeVendor,  setActiveVendor]  = useState<Vendor | null>(null);
+
+  // Load profile from localStorage on mount
   useEffect(() => {
     try {
       const raw = localStorage.getItem(LOCAL_VENDOR_KEY);
       if (!raw) { setLoading(false); return; }
       const p = JSON.parse(raw) as LocalVendorProfile;
       setProfile(p);
-      if (p.vendor_id) {
-        // Fetch all posts — no cap
-        getVendorPosts(p.vendor_id, 200).then(data => {
-          setPosts(data);
-          setLoading(false);
-        });
-      } else {
-        setLoading(false);
-      }
     } catch { setLoading(false); }
   }, []);
+
+  // Once we have a profile with a mall_id, fetch all vendors at that mall
+  useEffect(() => {
+    if (!profile?.mall_id) return;
+    getVendorsByMall(profile.mall_id).then(vs => {
+      setVendors(vs);
+      // Default to the profile's own vendor if available, else first in list
+      const own = vs.find(v => v.id === profile.vendor_id) ?? vs[0] ?? null;
+      setActiveVendor(own);
+    });
+  }, [profile?.mall_id, profile?.vendor_id]);
+
+  // Fetch posts whenever activeVendor changes
+  useEffect(() => {
+    if (!activeVendor) {
+      if (profile && !profile.vendor_id) setLoading(false);
+      return;
+    }
+    setLoading(true);
+    getVendorPosts(activeVendor.id, 200).then(data => {
+      setPosts(data);
+      setLoading(false);
+    });
+  }, [activeVendor?.id]);
 
   const available      = posts.filter(p => p.status === "available");
   const found          = posts.filter(p => p.status === "sold");
   const availableCount = available.length;
   const foundCount     = found.length;
   const hasProfile     = !!profile;
+
+  // The display name + booth we show in the banner
+  const displayName   = activeVendor?.display_name ?? profile?.display_name ?? "";
+  const boothNumber   = activeVendor?.booth_number  ?? profile?.booth_number  ?? null;
 
   return (
     <div style={{ minHeight: "100dvh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
@@ -256,7 +343,6 @@ export default function MyShelfPage() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
-              {/* 22px Georgia — unified with home and Your Finds */}
               <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.3px", lineHeight: 1 }}>
                 My Shelf
               </span>
@@ -268,8 +354,7 @@ export default function MyShelfPage() {
                 padding: "7px 13px", borderRadius: 20,
                 fontSize: 11, fontWeight: 600, color: "#fff",
                 cursor: "pointer", background: C.green, border: "none",
-                letterSpacing: "0.1px",
-                boxShadow: "0 1px 6px rgba(30,77,43,0.28)",
+                letterSpacing: "0.1px", boxShadow: "0 1px 6px rgba(30,77,43,0.28)",
               }}
             >
               <Plus size={11} strokeWidth={2.5} />
@@ -277,16 +362,17 @@ export default function MyShelfPage() {
             </button>
           </div>
 
-          {/* VendorBanner — dark gradient, vendor name + booth pill */}
+          {/* VendorBanner — dark gradient, vendor name + booth + optional picker */}
           {hasProfile && (
             <div style={{
-              borderRadius: 12, overflow: "hidden", position: "relative",
+              borderRadius: 12, overflow: "visible", position: "relative",
               background: `linear-gradient(105deg, ${C.bannerFrom} 0%, ${C.bannerTo} 100%)`,
               boxShadow: "0 2px 12px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.10)",
+              borderRadius: 12,
             }}>
               {/* Noise texture */}
               <div style={{
-                position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.04,
+                position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.04, borderRadius: 12,
                 backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")`,
                 backgroundRepeat: "repeat", backgroundSize: "200px 200px",
               }} />
@@ -295,14 +381,24 @@ export default function MyShelfPage() {
                 display: "flex", alignItems: "center", justifyContent: "space-between",
                 padding: "11px 14px", gap: 12,
               }}>
-                <div style={{
-                  fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700,
-                  color: "rgba(255,255,255,0.96)", letterSpacing: "-0.2px", lineHeight: 1.2,
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0,
-                }}>
-                  {profile.display_name}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700,
+                    color: "rgba(255,255,255,0.96)", letterSpacing: "-0.2px", lineHeight: 1.2,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>
+                    {displayName}
+                  </div>
+                  {/* Vendor picker — only shows when mall has multiple vendors */}
+                  {vendors.length > 1 && activeVendor && (
+                    <VendorPicker
+                      vendors={vendors}
+                      activeId={activeVendor.id}
+                      onChange={v => { setActiveVendor(v); setPosts([]); setLoading(true); }}
+                    />
+                  )}
                 </div>
-                {profile.booth_number && (
+                {boothNumber && (
                   <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
                     <div style={{ fontSize: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1.8px", color: "rgba(255,255,255,0.50)", lineHeight: 1 }}>
                       Booth
@@ -313,7 +409,7 @@ export default function MyShelfPage() {
                       background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.18)",
                       borderRadius: 7, padding: "4px 10px 5px",
                     }}>
-                      {profile.booth_number}
+                      {boothNumber}
                     </div>
                   </div>
                 )}
@@ -323,7 +419,7 @@ export default function MyShelfPage() {
 
           {/* Count line */}
           {!loading && hasProfile && posts.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 7 }}>
+            <div style={{ marginTop: 7 }}>
               <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: C.textFaint }}>
                 {availableCount} available · {foundCount} found
               </div>
@@ -348,7 +444,6 @@ export default function MyShelfPage() {
                   {available.map((post, i) => (
                     <AvailableTile key={post.id} post={post} index={i} />
                   ))}
-                  {/* Add tile after last available */}
                   <AddFindTile index={available.length} />
                 </ThreeColGrid>
               </>

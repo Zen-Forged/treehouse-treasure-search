@@ -37,6 +37,7 @@ export async function getPost(id: string): Promise<Post | null> {
 /**
  * Fetch multiple posts by ID in a single Supabase query.
  * Used by the Flagged screen to hydrate saved post IDs efficiently.
+ * No status filter — saved finds are shown regardless of availability.
  */
 export async function getPostsByIds(ids: string[]): Promise<Post[]> {
   if (ids.length === 0) return [];
@@ -128,6 +129,20 @@ export async function getVendorBySlug(slug: string): Promise<Vendor | null> {
     .single();
   if (error) { console.error("[posts] getVendorBySlug:", error.message); return null; }
   return data as Vendor;
+}
+
+/**
+ * Fetch all vendors at a given mall, sorted by booth number.
+ * Used by My Shelf vendor picker.
+ */
+export async function getVendorsByMall(mallId: string): Promise<Vendor[]> {
+  const { data, error } = await supabase
+    .from("vendors")
+    .select("id, display_name, booth_number, slug, avatar_url, facebook_url")
+    .eq("mall_id", mallId)
+    .order("booth_number", { ascending: true, nullsFirst: false });
+  if (error) { console.error("[posts] getVendorsByMall:", error.message); return []; }
+  return (data ?? []) as Vendor[];
 }
 
 export interface CreateVendorInput {
