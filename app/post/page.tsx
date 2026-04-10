@@ -59,7 +59,6 @@ export default function PostCapturePage() {
   const [capturing,    setCapturing]    = useState(false);
 
   useEffect(() => {
-    // Use safeStorage — handles Safari private mode / ITP
     const raw = safeStorage.getItem(LOCAL_VENDOR_KEY);
     if (raw) {
       try {
@@ -110,17 +109,28 @@ export default function PostCapturePage() {
 
   function saveProfile() {
     if (!selectedMall) return;
-    // Only carry over vendor_id if the mall hasn't changed
-    const sameMall = profile?.mall_id === selectedMall.id;
+
+    const newName  = displayName.trim();
+    const newBooth = boothNumber.trim();
+
+    // Carry vendor_id/slug forward ONLY if mall, name, AND booth are all unchanged.
+    // Any change to identity fields means the Supabase vendor row needs to be
+    // re-created (or a new one found via the duplicate-key recovery path).
+    const sameMall  = profile?.mall_id      === selectedMall.id;
+    const sameName  = profile?.display_name === newName;
+    const sameBooth = (profile?.booth_number ?? "") === newBooth;
+    const identityUnchanged = sameMall && sameName && sameBooth;
+
     const p: LocalVendorProfile = {
-      display_name: displayName.trim(),
-      booth_number: boothNumber.trim(),
+      display_name: newName,
+      booth_number: newBooth,
       mall_id:      selectedMall.id,
       mall_name:    selectedMall.name,
       mall_city:    selectedMall.city,
-      vendor_id:    sameMall ? profile?.vendor_id : undefined,
-      slug:         sameMall ? profile?.slug       : undefined,
+      vendor_id:    identityUnchanged ? profile?.vendor_id : undefined,
+      slug:         identityUnchanged ? profile?.slug       : undefined,
     };
+
     safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(p));
     setProfile(p);
     setShowSetup(false);
