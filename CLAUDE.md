@@ -31,44 +31,52 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-10
+> Last updated: 2026-04-11
 
-**Status:** ✅ Full session complete. MASTER_PROMPT.md created, Share my shelf wired, anonymous auth sprint done end-to-end.
+**Status:** ✅ UI/UX refinement sprint — My Shelf page redesigned to match cinematic mockup.
 
 **What was done (this session):**
 
-### MASTER_PROMPT.md
-- Created `/MASTER_PROMPT.md` — session standup format, working conventions, sprint brief format, sub-agent dispatch, architecture quick reference, platform gotchas, session close protocol.
+### My Shelf — Full Redesign (app/my-shelf/page.tsx)
+Complete rewrite to match the cinematic vendor profile mockup provided.
 
-### Share My Shelf
-- `app/my-shelf/page.tsx` — "Share shelf" ghost button in the count row (right side).
-- Triggers `navigator.share()` with vendor URL `/vendor/${slug}`, vendor name, and mall name.
-- Clipboard fallback: copies URL and shows animated "Copied!" pill for 2.2s.
-- Button hidden if vendor has no slug (older profiles without slug stored).
-- Uses `AnimatePresence` to transition between share button and copied state.
-- Added `BASE_URL` constant, `Share2` + `Check` icons imported.
+**Hero card:**
+- Now contained with `10px` side margin + `border-radius: 16px` — matches home page aesthetic, does not bleed to edges
+- App bar above card: logo + "Treehouse Finds" in green (`#1e4d2b`) on parchment bg, share pill right-aligned
+- "A curated shelf from" eyebrow + large Georgia vendor name + booth pill + mall/city with pin icon
+- Deterministic pastel bg from vendor name when no hero image set (scaffolded for future image upload)
+- Removed "X of X on shelf" circular badge entirely
 
-### Anonymous Auth Sprint (complete end-to-end)
-- **`lib/auth.ts`** — new file. `ensureAnonSession()`: calls `supabase.auth.signInAnonymously()` if no session exists, caches uid in `localStorage("treehouse_auth_uid")`. `getCachedUserId()`: synchronous read from cache. `isSessionOwner()`: async session check (unused in current flow but available).
-- **`types/treehouse.ts`** — `LocalVendorProfile` now has `user_id?: string` field.
-- **`app/post/page.tsx`** — calls `ensureAnonSession()` on mount, stores `user_id` in profile. `saveProfile()` always carries `user_id` forward (not tied to identity — session-based).
-- **`app/post/preview/page.tsx`** — `handlePublish` gets/establishes `user_id` before `createVendor`, passes `user_id` to `createVendor()` so it gets written to `vendors.user_id` in Supabase.
-- **`app/find/[id]/page.tsx`** — replaced raw localStorage comparison with `detectOwnership()` function. Priority: (1) session uid matches `post.vendor.user_id`, (2) localStorage `vendor_id` matches `post.vendor_id` (backwards compat for older posts). Cleaner, harder to spoof.
+**Tab switcher:**
+- Replaced section labels with segmented pill control (Available / Found with counts)
+- Tapping "Found" switches tab in-place without navigation
 
-**Auth flow summary (full chain):**
-```
-/post mounts → ensureAnonSession() → uid cached in localStorage
-↓
-saveProfile() → uid stored in LocalVendorProfile
-↓
-/post/preview handlePublish → createVendor({ user_id: uid }) → vendors.user_id = uid in Supabase
-↓
-/find/[id] loads → detectOwnership() checks session uid vs post.vendor.user_id → isMyPost = true
-↓
-showOwnerControls = isMyPost && isCurator (mode gate still applies)
-```
+**Grid tiles:**
+- Title + `price_asking` overlaid in bottom gradient band on each tile
+- Add tile always last in Available grid
+- Ghost "Left for you to find" tiles removed entirely
+
+**Booth finder card:**
+- Now an `<a>` tag: tapping opens Maps (`maps.apple.com/?q=MallName,+City`)
+  - iOS: opens Apple Maps natively
+  - Android: redirects to Google Maps
+  - Desktop: Apple Maps web
+- ChevronRight signals tappability
+
+**Explore more shelves CTA:**
+- Dark green banner, "Enter the Treehouse" button routes to `/`
+
+**Vendor picker:**
+- Moved to very bottom of scroll area, below Explore banner
+- "Booth selection" label, full-width button, dropdown opens upward
+- Only visible when `vendors.length > 1` (demo utility, will move to separate page later)
+
+**Cleanup:**
+- Removed `Plus`, `GhostTile`, `GHOST_COUNT`, `useRef`, `post.price` (→ `price_asking`)
+- "Post a find" button removed (Add tile handles it)
 
 **Previous sessions:**
+- Anonymous Auth Sprint — full chain /post → Supabase → owner detection
 - Demo-ready sprint — feed filter, mode system, Your Finds fixes, My Shelf vendor picker, owner controls gated to Curator mode
 - Day 3 UI/UX sprint — Found badge centering, leaf unsave, My Shelf sections, header font unification
 - Day 2 UI/UX sprint — PiLeaf icons, badge sync, hero copy, "Your Finds" rename, iOS nav padding
@@ -78,13 +86,13 @@ showOwnerControls = isMyPost && isCurator (mode gate still applies)
 - Admin page + bulk delete
 
 **Next session starting point:**
-1. QA on device — open `/post`, complete a post flow, check Supabase `vendors.user_id` is populated
-2. Check `detectOwnership` works: in Curator mode, owner controls should appear on your own posts
-3. Check Share shelf works on device (native share sheet should trigger)
-4. Verify stale bookmark pruning on Your Finds — console log should show ID counts
-5. Pull-to-refresh on feed (deferred — next sprint candidate)
-6. Supabase RLS policies — now that `user_id` is on vendor rows, RLS is feasible (future sprint)
-7. Optional Supabase hero columns (hero works without them)
+1. QA My Shelf on device — hero card, tab switcher, Maps link on booth card
+2. Wire image upload for hero banner (booth image) — UI mockup approved, needs Supabase Storage upload
+3. Wire image upload for location card thumbnail (mall image) — same flow
+4. Continue UI/UX refinement to other pages: Home feed, Your Finds, Find detail (`/find/[id]`)
+5. Auth QA — verify vendors.user_id populates and owner detection works in Curator mode
+6. Pull-to-refresh on feed (deferred)
+7. Supabase RLS (now feasible with user_id on vendor rows)
 
 ---
 
@@ -140,8 +148,9 @@ SERPAPI_KEY                      eBay sold comps
                     Owner controls (mark sold, delete) — Curator mode + session ownership only.
 /flagged            Your Finds (Explorer) — grouped by booth, sorted by availability then booth number,
                     instant unsave, stale bookmark pruning, all-found banner state.
-/my-shelf           My Shelf (Curator) — vendor picker for multi-vendor malls, Available + Found grids,
-                    Found tiles linked, Add tile, "Share shelf" button in count row.
+/my-shelf           My Shelf (Curator) — cinematic hero card (contained), Available/Found tab switcher,
+                    price-labelled tiles, Add tile, booth finder card (→ Maps), Explore CTA,
+                    vendor picker at bottom (demo utility).
 /mall/[slug]        Mall profile
 /vendor/[slug]      Vendor profile — Facebook link, available/sold grid
 /post               Vendor capture — camera/gallery, profile setup.
@@ -193,7 +202,8 @@ components/MallHeroCard.tsx   MallHeroCard + GenericMallHero exports
 app/layout.tsx                No max-width wrapper
 app/page.tsx                  Discovery feed — available-only, ModeToggle in header
 app/flagged/page.tsx          Your Finds — instant unsave, stale pruning, sorted groups
-app/my-shelf/page.tsx         My Shelf — vendor picker, Share shelf button, Available+Found grids
+app/my-shelf/page.tsx         My Shelf — cinematic hero (contained), tab switcher, Maps link,
+                              vendor picker at bottom, Explore CTA
 app/find/[id]/page.tsx        Find detail — detectOwnership() (session uid + vendor_id fallback)
 app/post/page.tsx             Capture — ensureAnonSession() on mount, user_id in profile
 app/post/preview/page.tsx     Preview + publish — user_id → createVendor() → vendors.user_id
@@ -243,6 +253,24 @@ Georgia for: all headers, titles, captions, italic labels, CTA buttons, empty st
 System UI for: BottomNav labels, dropdown options, monospace data
 ```
 
+### My Shelf — hero card
+```
+Contained: margin 10px sides, border-radius 16px — NOT full-bleed
+App bar above card: logo + "Treehouse Finds" (green) left, Share pill right
+Hero bg: deterministic pastel from vendor name (vendorHueBg) when no image
+Text: "A curated shelf from" eyebrow + large Georgia name + Booth pill + mall/city + pin icon
+No circular "X of X" badge
+```
+
+### My Shelf — booth finder card
+```
+Tapping opens Maps: href="https://maps.apple.com/?q=MallName,+City"
+  → iOS: Apple Maps native
+  → Android: Google Maps
+  → Desktop: Apple Maps web
+ChevronRight indicates tappable
+```
+
 ### Explorer / Curator mode system
 ```
 treehouse_mode = "explorer" | "curator"  (localStorage, default: "explorer")
@@ -288,10 +316,10 @@ Unsave: instant on Your Finds rows (e.stopPropagation())
 
 ### My Shelf — Share shelf
 ```
-Button: ghost pill in count row (right side) — Share2 icon + "Share shelf" label
+Button: ghost pill top-right of app bar — Share2 icon + "Share" label
 URL: https://treehouse-treasure-search.vercel.app/vendor/${activeVendor.slug ?? profile.slug}
 Payload: navigator.share({ title: "${name} on Treehouse", text: "...", url })
-Fallback: clipboard copy → animated "Copied!" pill (2.2s)
+Fallback: clipboard copy → animated "Copied!" pill (2.2s) in green
 Hidden: if no slug available (older profile without slug)
 ```
 
@@ -325,6 +353,7 @@ Explorer mode: NEVER shows owner controls regardless of isMyPost
 - framer-motion: never two `transition` props on same motion.div
 - Duplicate keys in style objects = TypeScript build error
 - MINIMUM font size: 10px
+- Post type uses `price_asking` (not `price`) — `number | null`
 
 ---
 
@@ -333,18 +362,21 @@ Explorer mode: NEVER shows owner controls regardless of isMyPost
 - MallHeroCard / GenericMallHero — deterministic gradient, AnimatePresence
 - Feed scroll save/restore, hasFetched guard
 - Your Finds — instant unsave, stale pruning, sorted groups, all-found banner
-- My Shelf — vendor picker, Available+Found grids, Found tiles linked, Share shelf
+- My Shelf — cinematic contained hero, Available/Found tabs, price tiles, Add tile,
+             booth finder card → Maps, Explore CTA, vendor picker at bottom
 - BottomNav — mode-aware (Explorer/Curator), iOS padding, badge
 - ModeToggle — animated pill, navigates on switch
 - Find detail — detectOwnership() (session + legacy fallback), Curator-only owner controls
 - Post flow — ensureAnonSession() on mount, user_id → vendors.user_id in Supabase
-- Share shelf — native share sheet + clipboard fallback
+- Share shelf — native share sheet + clipboard fallback (green pill in app bar)
 - Anonymous auth — full chain from /post → Supabase → owner detection
 - safeStorage Safari fallback
 - Admin page, bulk delete
 - All reseller intel routes (untouched)
 
 ## KNOWN GAPS ⚠️
+- Hero image upload not yet wired (UI mockup approved — needs Supabase Storage upload)
+- Location card image upload not yet wired (same)
 - Auth QA needed on device — verify vendors.user_id populates and owner detection works
 - No Supabase RLS (user_id is now on vendor rows — RLS is now feasible)
 - No pull-to-refresh on feed
@@ -352,6 +384,7 @@ Explorer mode: NEVER shows owner controls regardless of isMyPost
 - `/enhance-text` is mock
 - Delete button missing on posts created before vendor_id was stored in local profile
 - Optional hero columns not yet added to malls table
+- UI/UX refinement still needed on: Home feed, Your Finds, Find detail pages
 
 ---
 
