@@ -27,47 +27,26 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ## CURRENT ISSUE
 > Last updated: 2026-04-11
 
-**Status:** ✅ Auth sprint — magic link login, auth-gated pages, admin gate wired.
+**Status:** ✅ Dev auth panel + vendor sign-in entry point shipped.
 
 **What was done (this session):**
 
-### Hero image upload bug fix
-- Added `heroKey` counter to `VendorHero` — bumped on every upload to force `<img>` remount
-- Fixes re-upload not showing new image (CDN cache + React stale src issue)
+### Dev Auth Panel (`components/DevAuthPanel.tsx`)
+- Floating pill in bottom-right — **localhost only**, never visible on Vercel
+- Shows current auth tier: `GUEST` (slate) / `VENDOR` (green) / `ADMIN` (red)
+- Expand to see: current user email, uid, send magic link buttons (admin + vendor), instant sign-out
+- Wired into `app/layout.tsx` so it's available on every page
+- Vendor test email configurable via `NEXT_PUBLIC_DEV_VENDOR_EMAIL` in .env.local (defaults to `vendor@test.com`)
 
-### My Shelf — 5 changes
-1. Hero gradient changed to left-to-right (dark → transparent) — sits above image, below text (zIndex 1 / 2)
-2. Price removed from shelf tiles (title only in gradient band)
-3. "Add a booth" option added to vendor picker dropdown — routes to `/post`
-4. Vendor picker now always shown when vendors exist (not just >1)
-5. Auth-gated — redirects to `/login` if no session
-
-### Post a find — 2 changes
-1. Auth-gated — redirects to `/login` if no session
-2. Profile card locked (read-only) after first setup — vendor cannot change name/booth/mall
-
-### Find detail — owner controls restored
-- Mark sold + delete moved inside "Find this here" card (below Save button)
-- Gated correctly: Curator mode + isMyPost only
-
-### Auth sprint — full magic link flow
-- `lib/auth.ts` — replaced anon auth with `sendMagicLink`, `getSession`, `signOut`, `isAdmin(user)`, `onAuthChange`, persistent sessions
-- `app/login/page.tsx` — new page, three screens: enter email → check email → confirming, Suspense wrapper for useSearchParams
-- `components/BottomNav.tsx` — auth-driven tabs (unauth: Home+YourFinds, authed: Home+MyShelf)
-- `components/ModeToggle.tsx` — hidden when unauth, only shown to logged-in users
-- `app/admin/page.tsx` — auth gate + isAdmin() check, access-denied screen for non-admins
-- `NEXT_PUBLIC_ADMIN_EMAIL=david@zenforged.com` added to .env.local and Vercel
-
-### Supabase schema
-- `vendors.hero_image_url text` column added
-- Test vendors cleaned up (only ZenForged Finds remains)
-
-### lib/posts.ts additions
-- `uploadVendorHeroImage(base64, vendorId)` — uploads to post-images bucket at vendor-hero/{id}.jpg, upsert:true
-- `updateVendorHeroImage(vendorId, url)` — writes URL to vendors.hero_image_url
-- `getVendorsByMall` now selects hero_image_url
+### Feed header — "Vendor? Sign in" link
+- Added to `app/page.tsx` header — auth-aware, only shown to unauthed users
+- Italic Georgia green pill, routes to `/login`
+- Disappears automatically once logged in (replaced by ModeToggle)
+- `isAuthed` state resolved async via `getSession()` — no flash
 
 **Previous sessions:**
+- Auth sprint — magic link login, auth-gated pages, admin gate wired
+- Hero image upload bug fix (heroKey counter)
 - My Shelf redesign — cinematic hero card, tab switcher, Maps link, booth finder
 - Anonymous Auth Sprint — full chain /post → Supabase → owner detection
 - Demo-ready sprint — feed filter, mode system, Your Finds fixes, My Shelf vendor picker
@@ -75,13 +54,13 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 - Branded Experience Sprint, Mall Identity Layer, safeStorage iPhone Safari bug fix
 
 **Next session starting point:**
-1. QA auth flow on device — magic link email, session persistence, My Shelf gate
-2. QA hero image re-upload — verify heroKey fix works on device
-3. Wire vendor.user_id on first publish — post/preview page needs to pass auth user_id to createVendor()
-4. Auth QA — verify owner detection still works (session uid → vendor.user_id)
-5. Consider adding `/login` entry point to feed header (e.g. "Vendor? Sign in" link for unauth users)
-6. Hero image upload for location card (mall image) — same flow, deferred
-7. Supabase RLS — now feasible with proper auth in place
+1. Run build check: `npm run build 2>&1 | tail -30`
+2. QA dev auth panel on localhost — verify GUEST/VENDOR/ADMIN states, magic link send, sign-out
+3. QA "Vendor? Sign in" on feed — verify shows for unauth, hides for authed
+4. **Wire vendor.user_id on first publish** — post/preview page needs to pass auth user_id to createVendor() (highest priority functional gap)
+5. QA auth flow on device — magic link email, session persistence, My Shelf gate
+6. QA hero image re-upload — verify heroKey fix works on device
+7. Consider Supabase RLS — now feasible with real auth in place
 8. UI/UX refinement: Home feed, Your Finds, Find detail pages
 
 ---
@@ -108,6 +87,7 @@ react-icons (PiLeaf from react-icons/pi)
 NEXT_PUBLIC_SUPABASE_URL         https://zogxkarpwlaqmamfzceb.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY    eyJhbGci... (full JWT — in .env.local and Vercel)
 NEXT_PUBLIC_ADMIN_EMAIL          david@zenforged.com
+NEXT_PUBLIC_DEV_VENDOR_EMAIL     vendor@test.com (optional — dev panel vendor test email)
 ANTHROPIC_API_KEY                Claude Vision + caption generation
 SERPAPI_KEY                      eBay sold comps
 ```
@@ -125,7 +105,7 @@ SERPAPI_KEY                      eBay sold comps
 
 ---
 
-## AUTH SYSTEM (new this session)
+## AUTH SYSTEM
 
 ### Three tiers
 | Tier | How | Can do |
@@ -137,6 +117,7 @@ SERPAPI_KEY                      eBay sold comps
 ### Key files
 - `lib/auth.ts` — `sendMagicLink`, `getSession`, `getUser`, `signOut`, `isAdmin(user)`, `onAuthChange`, `getCachedUserId`
 - `app/login/page.tsx` — enter email → check email → confirming (polls for session after ?confirmed=1)
+- `components/DevAuthPanel.tsx` — localhost-only floating panel for auth tier switching
 - `ensureAnonSession()` kept as no-op stub for backwards compat
 
 ### Session persistence
@@ -154,7 +135,7 @@ SERPAPI_KEY                      eBay sold comps
 
 ### Ecosystem (warm parchment theme)
 ```
-/                   Discovery feed — ModeToggle hidden for unauth
+/                   Discovery feed — ModeToggle hidden for unauth, "Vendor? Sign in" for unauth
 /login              Magic link login — enter email → check email → confirming
 /find/[id]          Find detail — owner controls (mark sold + delete) inside "Find this here" card
 /flagged            Your Finds (Explorer) — no auth required
@@ -186,11 +167,12 @@ lib/postStore.ts          In-memory image store for /post → /post/preview
 types/treehouse.ts        Post, Vendor (+ hero_image_url), Mall, LocalVendorProfile
 components/BottomNav.tsx  Auth-driven: unauth→Home+YourFinds, authed→Home+MyShelf
 components/ModeToggle.tsx Hidden when unauth, shown to logged-in users only
+components/DevAuthPanel.tsx  Localhost-only floating auth tier switcher
 components/PiLeafIcon.tsx PiLeaf from react-icons/pi wrapper
 components/MallHeroCard.tsx MallHeroCard + GenericMallHero exports
 app/login/page.tsx        Magic link login, Suspense wrapper for useSearchParams
-app/layout.tsx            No max-width wrapper
-app/page.tsx              Discovery feed — ModeToggle only for authed users
+app/layout.tsx            No max-width wrapper, DevAuthPanel mounted here
+app/page.tsx              Discovery feed — ModeToggle + "Vendor? Sign in" (auth-aware)
 app/flagged/page.tsx      Your Finds — no auth required
 app/my-shelf/page.tsx     My Shelf — auth-gated, heroKey for image remount fix, sign-out, admin link
 app/find/[id]/page.tsx    Find detail — owner controls inside location card
@@ -275,12 +257,15 @@ BottomNav: unauth → Home+YourFinds, authed → Home+MyShelf
 - framer-motion: never two `transition` props on same motion.div
 - MINIMUM font size: 10px
 - Post type uses `price_asking` (not `price`) — `number | null`
+- DevAuthPanel only renders on localhost — checked via `window.location.hostname`
 
 ---
 
 ## WORKING ✅
 - Discovery feed — available-only, masonry, ModeToggle (auth-aware), PiLeaf saved indicator
+- Feed header — "Vendor? Sign in" pill for unauth users, hides when logged in
 - Magic link auth — login page, session persistence, isAdmin check
+- Dev auth panel — localhost-only, tier switcher (guest/vendor/admin), magic link send, sign-out
 - BottomNav — auth-driven tabs, iOS padding, badge
 - ModeToggle — hidden for unauth users
 - My Shelf — auth-gated, cinematic hero (L→R gradient), heroKey remount fix, Available/Found tabs, no price on tiles, Add tile, booth finder → Maps, Explore CTA, sign-out
@@ -295,7 +280,6 @@ BottomNav: unauth → Home+YourFinds, authed → Home+MyShelf
 ## KNOWN GAPS ⚠️
 - post/preview page does NOT yet pass auth user_id to createVendor() — next session priority
 - Owner detection may break for newly published posts until user_id wiring is fixed
-- No entry point to /login from feed for unauth users ("Vendor? Sign in" link)
 - Hero image upload for location card (mall image) not yet wired
 - No Supabase RLS (now feasible — auth is real)
 - No pull-to-refresh on feed
@@ -322,4 +306,8 @@ git add -A && git commit -m "..." && git push
 # Check Supabase Auth dashboard for new user row
 # Check localStorage for treehouse_auth_uid
 # Check vendors table for user_id populated after first publish
+
+# Dev auth panel — localhost only
+# Bottom-right pill shows current tier
+# Expand → send magic link → check email → click → session persists
 ```
