@@ -65,11 +65,12 @@ export default function PostCapturePage() {
   const [selectedMall, setSelectedMall] = useState<Mall | null>(null);
   const [capturing,    setCapturing]    = useState(false);
 
-  // ── Auth gate ──
+  // ── Auth gate (soft — redirects only if NEXT_PUBLIC_REQUIRE_POST_AUTH=true) ──
+  // For now, auth is optional on /post so admin can post from any device.
+  // user_id is attached if a session exists; posts without it still work.
   useEffect(() => {
     getSession().then(s => {
-      if (!s?.user) { router.replace("/login"); return; }
-      setUserId(s.user.id);
+      if (s?.user) setUserId(s.user.id);
       setAuthReady(true);
     });
   }, []);
