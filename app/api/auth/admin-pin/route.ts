@@ -1,9 +1,10 @@
 // app/api/auth/admin-pin/route.ts
-// PIN-based admin login — no magic link required.
+// PIN-based admin login — no magic link email required.
 //
 // POST { pin: string }
 // → verifies PIN against ADMIN_PIN env var (server-only, never sent to client)
-// → uses Supabase service role to generate a magic link token for ADMIN_EMAIL
+// → uses Supabase service role to generate a magic link for ADMIN_EMAIL
+// → extracts the token_hash from the action_link URL
 // → returns { token, email } so the client can call supabase.auth.verifyOtp()
 //
 // Security model:
@@ -38,9 +39,9 @@ export async function POST(req: NextRequest) {
   }
 
   const { pin } = await req.json().catch(() => ({ pin: "" }));
-  const adminPin   = process.env.ADMIN_PIN ?? "";
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  const adminPin    = process.env.ADMIN_PIN ?? "";
+  const adminEmail  = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
+  const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 
   if (!adminPin || !serviceKey) {
@@ -51,24 +52,41 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Incorrect PIN." }, { status: 401 });
   }
 
-  // Use service role to generate a magic link token — no email is sent
+  // Use service role to generate a magic link — no email is sent
   const admin = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
   const { data, error } = await admin.auth.admin.generateLink({
-    type: "magiclink",
+    type:  "magiclink",
     email: adminEmail,
   });
 
-  if (error || !data?.properties) {
-    console.error("[admin-pin] generateLink error:", error?.message);
+  if (error || !data?.properties?.action_link) {
+    console.error("[admin-pin] generateLink error:", error?.message, "data:", JSON.stringify(data?.properties));
     return NextResponse.json({ error: "Failed to generate session token." }, { status: 500 });
   }
 
-  // Return the hashed_token and email — client uses these with verifyOtp
-  return NextResponse.json({
-    token: data.properties.hashed_token,
-    email: adminEmail,
-  });
+  // The action_link is a URL like:
+  //   https://<project>.supabase.co/auth/v1/verify?token=<token_hash>&type=magiclink&...
+  // We need to extract the `token` query param — this is what verifyOtp expects.
+  let token: string | null = null;
+  try {
+    const url = new URL(data.properties.action_link);
+    token = url.searchParams.get("token");
+  } catch (parseErr) {
+    console.error("[admin-pin] failed to parse action_link:", parseErr);
+  }
+
+  if (!token) {
+    // Fallback: use hashed_token directly (older Supabase versions)
+    token = data.properties.hashed_token ?? null;
+  }
+
+  if (!token) {
+    console.error("[admin-pin] no token found in generateLink response:", JSON.stringify(data.properties));
+    return NextResponse.json({ error: "No token in response." }, { status: 500 });
+  }
+
+  return NextResponse.json({ token, email: adminEmail });
 }

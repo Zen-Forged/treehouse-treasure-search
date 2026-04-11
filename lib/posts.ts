@@ -132,13 +132,28 @@ export async function getVendorBySlug(slug: string): Promise<Vendor | null> {
 }
 
 /**
+ * Look up a vendor by the authenticated user's Supabase user_id.
+ * This is the authoritative identity lookup for logged-in users.
+ * Returns null if no vendor row is linked to this user yet (first-time setup).
+ */
+export async function getVendorByUserId(userId: string): Promise<Vendor | null> {
+  const { data, error } = await supabase
+    .from("vendors")
+    .select(`*, mall:malls ( id, name, city, state, slug, address )`)
+    .eq("user_id", userId)
+    .maybeSingle(); // returns null (not error) if no row found
+  if (error) { console.error("[posts] getVendorByUserId:", error.message); return null; }
+  return data as Vendor | null;
+}
+
+/**
  * Fetch all vendors at a given mall, sorted by booth number.
- * Used by My Shelf vendor picker.
+ * Used by admin and internal lookups.
  */
 export async function getVendorsByMall(mallId: string): Promise<Vendor[]> {
   const { data, error } = await supabase
     .from("vendors")
-    .select("id, display_name, booth_number, slug, avatar_url, facebook_url, hero_image_url")
+    .select("id, display_name, booth_number, slug, avatar_url, facebook_url, hero_image_url, user_id, mall_id")
     .eq("mall_id", mallId)
     .order("booth_number", { ascending: true, nullsFirst: false });
   if (error) { console.error("[posts] getVendorsByMall:", error.message); return []; }
@@ -158,7 +173,7 @@ export interface CreateVendorInput {
  * (mall_id, booth_number) unique constraint fires (code 23505).
  * This handles the case where iPhone lost its vendor_id from storage
  * but the row already exists in Supabase.
- * Accepts optional user_id for anonymous auth session linking.
+ * Accepts optional user_id for auth session linking.
  */
 export async function createVendor(input: CreateVendorInput): Promise<{ data: Vendor | null; error: string | null }> {
   const { data, error } = await supabase
@@ -263,7 +278,6 @@ export async function uploadVendorHeroImage(base64DataUrl: string, vendorId: str
   try {
     const [header, base64] = base64DataUrl.split(",");
     const mimeType = header.match(/data:([^;]+);/)?.[1] ?? "image/jpeg";
-    // Always store as JPEG for hero images — consistent and compact
     const filename = `vendor-hero/${vendorId}.jpg`;
 
     const binary = atob(base64);

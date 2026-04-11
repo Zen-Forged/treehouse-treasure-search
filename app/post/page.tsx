@@ -1,19 +1,24 @@
 // app/post/page.tsx
-// Vendor capture — auth-gated. Redirects to /login if no session.
-// Profile locked after first setup — identity cannot be changed by vendor.
-// First publish creates the vendor row and links it to the auth user_id.
+// Vendor capture — auth-optional (soft gate).
+//
+// IDENTITY RESOLUTION (authoritative order):
+//   1. If auth session exists → getVendorByUserId(user.id) → locked identity from Supabase
+//   2. If no Supabase vendor found + localStorage has profile → use as pending identity
+//   3. If neither → show setup form (first-time vendor)
+//
+// This ensures posting always uses the correct vendor account, regardless of
+// which device localStorage was set on.
 
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, ArrowLeft, ChevronDown } from "lucide-react";
-import { getAllMalls } from "@/lib/posts";
-import { postStore } from "@/lib/postStore";
+import { Camera, ArrowLeft, ChevronDown, Check, Loader } from "lucide-react";
+import { getAllMalls, createPost, createVendor, uploadPostImage, getVendorByUserId, slugify } from "@/lib/posts";
 import { safeStorage } from "@/lib/safeStorage";
 import { getSession } from "@/lib/auth";
-import type { Mall } from "@/types/treehouse";
+import type { Mall, Vendor } from "@/types/treehouse";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 
 const C = {
@@ -32,7 +37,7 @@ const C = {
   inputBorder: "rgba(26,26,24,0.14)",
 };
 
-function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promise<string> {
+function compressImage(dataUrl: string, maxWidth = 1200, quality = 0.78): Promise<string> {
   return new Promise(resolve => {
     const img = new window.Image();
     img.onload = () => {
@@ -48,61 +53,115 @@ function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promis
   });
 }
 
+async function generateCaption(imageDataUrl: string): Promise<{ title: string; caption: string }> {
+  try {
+    const res = await fetch("/api/post-caption", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ imageDataUrl }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return { title: data.title ?? "", caption: data.caption ?? "" };
+  } catch (err) {
+    console.error("[post] generateCaption failed:", err);
+    return { title: "", caption: "" };
+  }
+}
+
+type SaveStage = "idle" | "generating" | "uploading" | "done" | "error";
+
 export default function PostCapturePage() {
   const router     = useRouter();
   const cameraRef  = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
-  const [authReady,    setAuthReady]    = useState(false);
-  const [userId,       setUserId]       = useState<string | null>(null);
-  const [profile,      setProfile]      = useState<LocalVendorProfile | null>(null);
+  const [identityReady, setIdentityReady] = useState(false);
+  const [userId,        setUserId]        = useState<string | null>(null);
+
+  // resolvedVendor: the Supabase-confirmed vendor for this auth user (or null)
+  const [resolvedVendor, setResolvedVendor] = useState<Vendor | null>(null);
+
+  // localProfile: used only when no Supabase vendor is found yet (first-time / unauth)
+  const [localProfile, setLocalProfile] = useState<LocalVendorProfile | null>(null);
+
   const [malls,        setMalls]        = useState<Mall[]>([]);
   const [mallsLoading, setMallsLoading] = useState(true);
-  // First-time setup form
+
+  // First-time setup form state
   const [showMallPick, setShowMallPick] = useState(false);
   const [displayName,  setDisplayName]  = useState("");
   const [boothNumber,  setBoothNumber]  = useState("");
   const [selectedMall, setSelectedMall] = useState<Mall | null>(null);
-  const [capturing,    setCapturing]    = useState(false);
 
-  // ── Auth gate (soft — redirects only if NEXT_PUBLIC_REQUIRE_POST_AUTH=true) ──
-  // For now, auth is optional on /post so admin can post from any device.
-  // user_id is attached if a session exists; posts without it still work.
+  // Save flow
+  const [saveStage,  setSaveStage]  = useState<SaveStage>("idle");
+  const [saveError,  setSaveError]  = useState<string | null>(null);
+  const [previewImg, setPreviewImg] = useState<string | null>(null);
+
+  // ── Identity resolution ──
+  // Priority: Supabase (by user_id) → localStorage → setup form
   useEffect(() => {
-    getSession().then(s => {
-      if (s?.user) setUserId(s.user.id);
-      setAuthReady(true);
+    getSession().then(async s => {
+      const uid = s?.user?.id ?? null;
+      setUserId(uid);
+
+      // Always load malls (needed for setup form and display)
+      getAllMalls().then(data => { setMalls(data); setMallsLoading(false); });
+
+      if (uid) {
+        // Auth session exists — look up vendor in Supabase first
+        const vendor = await getVendorByUserId(uid);
+        if (vendor) {
+          // Supabase has a vendor for this user — use it as the locked identity
+          setResolvedVendor(vendor);
+
+          // Sync localStorage cache so it stays consistent
+          const cached: LocalVendorProfile = {
+            display_name: vendor.display_name,
+            booth_number: vendor.booth_number ?? "",
+            mall_id:      vendor.mall_id,
+            mall_name:    (vendor.mall as any)?.name ?? "",
+            mall_city:    (vendor.mall as any)?.city ?? "",
+            vendor_id:    vendor.id,
+            slug:         vendor.slug,
+            user_id:      uid,
+          };
+          safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(cached));
+          setIdentityReady(true);
+          return;
+        }
+        // No Supabase vendor yet — fall through to localStorage
+      }
+
+      // No auth vendor found — try localStorage as pending identity
+      const raw = safeStorage.getItem(LOCAL_VENDOR_KEY);
+      if (raw) {
+        try {
+          const saved = JSON.parse(raw) as LocalVendorProfile;
+          // Backfill user_id if we have a session but it wasn't stored
+          if (uid && !saved.user_id) {
+            const updated = { ...saved, user_id: uid };
+            safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(updated));
+            setLocalProfile(updated);
+          } else {
+            setLocalProfile(saved);
+          }
+        } catch {}
+      }
+
+      setIdentityReady(true);
     });
   }, []);
 
-  // ── Load profile + malls after auth confirmed ──
+  // Validate saved mall_id against live malls (for first-time form pre-fill)
   useEffect(() => {
-    if (!authReady) return;
-    const raw = safeStorage.getItem(LOCAL_VENDOR_KEY);
-    if (raw) {
-      try {
-        const saved = JSON.parse(raw) as LocalVendorProfile;
-        // Backfill user_id if session changed
-        if (userId && !saved.user_id) {
-          const updated = { ...saved, user_id: userId };
-          safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(updated));
-          setProfile(updated);
-        } else {
-          setProfile(saved);
-        }
-      } catch {}
-    }
-    getAllMalls().then(data => { setMalls(data); setMallsLoading(false); });
-  }, [authReady]);
-
-  // Validate saved mall_id against live malls
-  useEffect(() => {
-    if (malls.length === 0 || mallsLoading || !profile) return;
-    const match = malls.find(m => m.id === profile.mall_id);
+    if (malls.length === 0 || mallsLoading || !localProfile) return;
+    const match = malls.find(m => m.id === localProfile.mall_id);
     if (match) setSelectedMall(match);
-  }, [malls, mallsLoading]);
+  }, [malls, mallsLoading, localProfile]);
 
-  function saveProfile() {
+  function saveLocalProfile() {
     if (!selectedMall || displayName.trim().length < 2) return;
     const p: LocalVendorProfile = {
       display_name: displayName.trim(),
@@ -113,21 +172,114 @@ export default function PostCapturePage() {
       user_id:      userId ?? undefined,
     };
     safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(p));
-    setProfile(p);
+    setLocalProfile(p);
   }
 
-  async function handleFile(file: File) {
+  const handleFile = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) return;
-    setCapturing(true);
-    const reader = new FileReader();
-    reader.onload = async e => {
-      const raw        = e.target?.result as string;
-      const compressed = await compressImage(raw);
-      postStore.set(compressed);
-      router.push("/post/preview");
-    };
-    reader.readAsDataURL(file);
-  }
+
+    // Determine which identity to post under
+    // resolvedVendor (Supabase) takes strict priority over localProfile
+    const activeVendorId   = resolvedVendor?.id ?? localProfile?.vendor_id ?? null;
+    const activeMallId     = resolvedVendor?.mall_id ?? localProfile?.mall_id ?? null;
+    const activeBoothNum   = resolvedVendor?.booth_number ?? localProfile?.booth_number ?? null;
+    const activeDispName   = resolvedVendor?.display_name ?? localProfile?.display_name ?? null;
+
+    if (!activeMallId || !activeDispName) {
+      setSaveError("No vendor identity found. Complete your profile first.");
+      setSaveStage("error");
+      return;
+    }
+
+    setSaveStage("generating");
+    setSaveError(null);
+
+    try {
+      // Read + compress
+      const reader  = new FileReader();
+      const rawData = await new Promise<string>((res, rej) => {
+        reader.onload  = e => res(e.target?.result as string);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+      const compressed = await compressImage(rawData);
+      setPreviewImg(compressed);
+
+      // Generate AI title + caption
+      const { title, caption } = await generateCaption(compressed);
+
+      setSaveStage("uploading");
+
+      // Ensure vendor row exists — create if this is first-time (no resolvedVendor, no vendor_id in localProfile)
+      let vendorId = activeVendorId;
+
+      if (!vendorId) {
+        // First-time publish: create the vendor row linked to this user
+        const baseSlug = slugify(activeDispName);
+        const slug     = baseSlug + "-" + Date.now().toString(36);
+        const { data: vendor, error: vendorErr } = await createVendor({
+          mall_id:      activeMallId,
+          display_name: activeDispName,
+          booth_number: activeBoothNum || undefined,
+          slug,
+          user_id:      userId ?? undefined,
+        });
+        if (!vendor) {
+          setSaveError("Couldn't create vendor profile. Try again.");
+          setSaveStage("error");
+          return;
+        }
+        vendorId = vendor.id;
+
+        // Update localStorage cache with new vendor_id
+        const updated: LocalVendorProfile = {
+          ...(localProfile ?? {
+            display_name: activeDispName,
+            booth_number: activeBoothNum ?? "",
+            mall_id:      activeMallId,
+            mall_name:    selectedMall?.name ?? "",
+            mall_city:    selectedMall?.city ?? "",
+          }),
+          vendor_id: vendor.id,
+          slug:      vendor.slug,
+          user_id:   userId ?? undefined,
+        };
+        safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(updated));
+        setLocalProfile(updated);
+      }
+
+      // Upload image
+      let imageUrl: string | null = null;
+      try { imageUrl = await uploadPostImage(compressed, vendorId); } catch {}
+
+      // Create post
+      const { data: post } = await createPost({
+        vendor_id:      vendorId,
+        mall_id:        activeMallId,
+        title:          title.trim() || file.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " "),
+        caption:        caption.trim() || undefined,
+        image_url:      imageUrl ?? undefined,
+        location_label: activeBoothNum ? `Booth ${activeBoothNum}` : undefined,
+      });
+
+      if (!post) {
+        setSaveError("Couldn't save to shelf. Try again.");
+        setSaveStage("error");
+        return;
+      }
+
+      setSaveStage("done");
+      setTimeout(() => {
+        setSaveStage("idle");
+        setPreviewImg(null);
+      }, 2200);
+
+    } catch (err) {
+      console.error("[post] save failed:", err);
+      setSaveError("Something went wrong. Try again.");
+      setSaveStage("error");
+    }
+  }, [resolvedVendor, localProfile, userId, selectedMall]);
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -135,9 +287,23 @@ export default function PostCapturePage() {
     e.target.value = "";
   };
 
-  const hasValidProfile = !!profile && profile.mall_id.length > 0 && profile.display_name.trim().length >= 2;
-  const formComplete    = displayName.trim().length >= 2 && selectedMall !== null;
-  const canCapture      = hasValidProfile && !capturing;
+  // The "active identity" for display — Supabase vendor wins over localStorage
+  const activeIdentity = resolvedVendor
+    ? {
+        display_name: resolvedVendor.display_name,
+        booth_number: resolvedVendor.booth_number ?? "",
+        mall_name:    (resolvedVendor.mall as any)?.name ?? "",
+        mall_city:    (resolvedVendor.mall as any)?.city ?? "",
+        vendor_id:    resolvedVendor.id,
+      }
+    : localProfile;
+
+  const hasValidIdentity = !!(activeIdentity?.mall_id ?? (resolvedVendor?.mall_id || localProfile?.mall_id)) &&
+                           !!(activeIdentity?.display_name?.trim());
+
+  const formComplete = displayName.trim().length >= 2 && selectedMall !== null;
+  const isSaving     = saveStage === "generating" || saveStage === "uploading";
+  const canCapture   = hasValidIdentity && !isSaving;
 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "10px 12px", borderRadius: 9,
@@ -149,12 +315,73 @@ export default function PostCapturePage() {
     letterSpacing: "1.8px", display: "block", marginBottom: 6,
   };
 
-  if (!authReady) return null;
+  if (!identityReady) return null;
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
       <input ref={cameraRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={onFileChange} />
       <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
+
+      {/* ── Toast overlay ── */}
+      <AnimatePresence>
+        {(isSaving || saveStage === "done" || saveStage === "error") && (
+          <motion.div
+            key="toast"
+            initial={{ opacity: 0, y: 18, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0,  scale: 1 }}
+            exit={{ opacity: 0, y: 14, scale: 0.95 }}
+            transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+            style={{
+              position: "fixed",
+              bottom: "max(80px, calc(env(safe-area-inset-bottom, 0px) + 72px))",
+              left: "50%", transform: "translateX(-50%)",
+              zIndex: 100, maxWidth: 320, width: "calc(100% - 40px)",
+              background: saveStage === "error"
+                ? "rgba(139,32,32,0.92)"
+                : saveStage === "done"
+                  ? "rgba(18,34,20,0.92)"
+                  : "rgba(26,24,16,0.88)",
+              backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
+              borderRadius: 16, padding: "14px 18px",
+              display: "flex", alignItems: "center", gap: 12,
+              boxShadow: "0 4px 24px rgba(0,0,0,0.22)",
+            }}
+          >
+            {previewImg && saveStage !== "error" && (
+              <div style={{ width: 40, height: 40, borderRadius: 8, overflow: "hidden", flexShrink: 0, background: "rgba(255,255,255,0.1)" }}>
+                <img src={previewImg} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </div>
+            )}
+            {saveStage === "done" && (
+              <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Check size={14} style={{ color: "#fff" }} />
+              </div>
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: "#fff", lineHeight: 1.3 }}>
+                {saveStage === "generating" ? "Reading your find…" :
+                 saveStage === "uploading"  ? "Saving to shelf…" :
+                 saveStage === "done"       ? "Added to your shelf" :
+                                             saveError ?? "Something went wrong"}
+              </div>
+              {isSaving && (
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.54)", marginTop: 2 }}>
+                  {saveStage === "generating" ? "Writing a caption" : "Uploading image"}
+                </div>
+              )}
+            </div>
+            {isSaving && (
+              <Loader size={14} style={{ color: "rgba(255,255,255,0.7)", animation: "spin 0.9s linear infinite", flexShrink: 0 }} />
+            )}
+            {saveStage === "error" && (
+              <button onClick={() => { setSaveStage("idle"); setSaveError(null); setPreviewImg(null); }}
+                style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", background: "none", border: "none", cursor: "pointer", padding: "4px 0", flexShrink: 0 }}>
+                Dismiss
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column" }}>
 
@@ -164,7 +391,7 @@ export default function PostCapturePage() {
             <ArrowLeft size={15} style={{ color: C.textMid }} />
           </button>
           <div>
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: C.textPrimary, lineHeight: 1 }}>Post a find</div>
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: C.textPrimary, lineHeight: 1 }}>Add to Shelf</div>
             <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginTop: 2 }}>Share with your community</div>
           </div>
         </header>
@@ -175,13 +402,19 @@ export default function PostCapturePage() {
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
             style={{ borderRadius: 14, background: C.surface, border: `1px solid ${C.border}`, overflow: "hidden" }}>
 
-            {hasValidProfile ? (
-              /* Locked — read-only identity */
+            {hasValidIdentity ? (
+              /* Locked identity — shows whichever source won */
               <div style={{ padding: "13px 14px" }}>
                 <div style={{ fontSize: 8, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: 6 }}>Posting as</div>
-                <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: C.textPrimary, marginBottom: 2 }}>{profile.display_name}</div>
+                <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: C.textPrimary, marginBottom: 2 }}>
+                  {resolvedVendor?.display_name ?? localProfile?.display_name}
+                </div>
                 <div style={{ fontSize: 11, color: C.textMuted }}>
-                  {[profile.booth_number ? `Booth ${profile.booth_number}` : null, profile.mall_name, profile.mall_city].filter(Boolean).join(" · ")}
+                  {[
+                    (resolvedVendor?.booth_number ?? localProfile?.booth_number) ? `Booth ${resolvedVendor?.booth_number ?? localProfile?.booth_number}` : null,
+                    (resolvedVendor?.mall as any)?.name ?? localProfile?.mall_name,
+                    (resolvedVendor?.mall as any)?.city ?? localProfile?.mall_city,
+                  ].filter(Boolean).join(" · ")}
                 </div>
               </div>
             ) : (
@@ -228,7 +461,7 @@ export default function PostCapturePage() {
                     </>
                   )}
                 </div>
-                <button onClick={saveProfile} disabled={!formComplete}
+                <button onClick={saveLocalProfile} disabled={!formComplete}
                   style={{ width: "100%", padding: "12px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: formComplete ? "pointer" : "default", color: formComplete ? "#fff" : C.textFaint, background: formComplete ? C.green : C.surfaceDeep, border: "none", transition: "all 0.2s" }}>
                   Save profile
                 </button>
@@ -240,6 +473,7 @@ export default function PostCapturePage() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.1 }}
             style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", paddingLeft: 2 }}>Photograph your find</div>
+
             <motion.button onClick={() => canCapture && cameraRef.current?.click()} disabled={!canCapture}
               style={{ width: "100%", padding: "48px 22px", borderRadius: 16, cursor: canCapture ? "pointer" : "default", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, background: canCapture ? C.surface : C.surfaceDeep, border: `1px dashed ${canCapture ? "rgba(30,77,43,0.3)" : C.border}`, transition: "all 0.2s" }}
               whileTap={canCapture ? { scale: 0.98 } : {}}>
@@ -247,18 +481,26 @@ export default function PostCapturePage() {
                 <Camera size={22} style={{ color: canCapture ? C.green : C.textFaint }} />
               </div>
               <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: canCapture ? C.textPrimary : C.textFaint }}>
-                {capturing ? "Opening camera…" : "Take a photo"}
+                {isSaving ? "Saving…" : "Take a photo"}
               </div>
-              {!hasValidProfile && (
+              {!hasValidIdentity && (
                 <div style={{ fontSize: 11, color: C.textMuted, textAlign: "center", maxWidth: 210, lineHeight: 1.5 }}>
                   Complete your vendor profile above to continue
                 </div>
               )}
             </motion.button>
+
             <button onClick={() => canCapture && galleryRef.current?.click()} disabled={!canCapture}
               style={{ width: "100%", padding: "12px", borderRadius: 10, fontSize: 13, border: "none", color: canCapture ? C.green : C.textFaint, background: "transparent", cursor: canCapture ? "pointer" : "default", textDecoration: canCapture ? "underline" : "none", textDecorationColor: "rgba(30,77,43,0.3)" }}>
               Choose from library
             </button>
+
+            {hasValidIdentity && (
+              <button onClick={() => router.push("/my-shelf")}
+                style={{ width: "100%", padding: "11px", borderRadius: 10, fontSize: 13, border: `1px solid ${C.border}`, color: C.textMid, background: C.surface, cursor: "pointer", fontFamily: "Georgia, serif" }}>
+                View my shelf →
+              </button>
+            )}
           </motion.div>
 
           {/* ── Tips ── */}
@@ -274,7 +516,7 @@ export default function PostCapturePage() {
           </motion.div>
         </div>
       </div>
-      <style>{`.hidden { display: none; }`}</style>
+      <style>{`.hidden { display: none; } @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
     </div>
   );
 }

@@ -1,5 +1,7 @@
 // app/post/preview/page.tsx
-// Vendor post flow — Step 2: Preview + Publish.
+// Vendor post flow — Step 2: Preview + edit before saving to shelf.
+// Optional step — /post now saves directly, but this page remains for cases
+// where the postStore has an image (e.g. navigating from a direct camera capture).
 
 "use client";
 
@@ -137,12 +139,10 @@ export default function PostPreviewPage() {
         throw new Error("missing mall_id");
       }
 
-      // Ensure we have a session user_id — get from profile or establish fresh session
       let userId = profile.user_id ?? null;
       if (!userId) {
         userId = await ensureAnonSession();
         if (userId) {
-          // Backfill into stored profile
           const updated = { ...profile, user_id: userId };
           safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(updated));
           setProfile(updated);
@@ -161,7 +161,7 @@ export default function PostPreviewPage() {
           display_name: profile.display_name,
           booth_number: profile.booth_number || undefined,
           slug,
-          user_id:      userId ?? undefined,   // ← links session to vendor row
+          user_id:      userId ?? undefined,
         });
 
         if (!vendor) {
@@ -269,16 +269,16 @@ export default function PostPreviewPage() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} style={{ textAlign: "center" }}>
-          <div style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, marginBottom: 8 }}>Find posted.</div>
+          <div style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, marginBottom: 8 }}>Saved to shelf.</div>
           <div style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6 }}>It's live in the Treehouse feed.</div>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
           <button
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/my-shelf")}
             style={{ width: "100%", padding: "14px", borderRadius: 13, fontSize: 14, fontWeight: 600, color: "#fff", background: C.green, border: "none", cursor: "pointer" }}
           >
-            Back to feed
+            View my shelf
           </button>
 
           <a
@@ -305,7 +305,7 @@ export default function PostPreviewPage() {
             }}
           >
             <Camera size={13} style={{ color: C.textFaint }} />
-            Post another find
+            Add another find
           </button>
         </motion.div>
       </div>
@@ -328,7 +328,7 @@ export default function PostPreviewPage() {
             Try again
           </button>
           <button onClick={() => router.push("/post")} style={{ padding: "11px 24px", borderRadius: 12, fontSize: 12, color: C.textMuted, background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer", width: "100%" }}>
-            Go back and re-select mall
+            Go back
           </button>
         </div>
       </div>
@@ -440,7 +440,7 @@ export default function PostPreviewPage() {
         )}
       </main>
 
-      {/* Publish bar */}
+      {/* Save bar */}
       <motion.div
         initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, delay: 0.1 }}
@@ -452,8 +452,8 @@ export default function PostPreviewPage() {
           style={{ width: "100%", padding: "15px 22px", borderRadius: 14, fontSize: 15, fontWeight: 600, letterSpacing: "0.2px", cursor: canPublish && !isPublishing ? "pointer" : "default", transition: "all 0.2s", color: canPublish ? "#fff" : C.textFaint, background: canPublish ? C.green : C.surfaceDeep, border: "none", boxShadow: canPublish ? "0 2px 12px rgba(30,77,43,0.25)" : "none" }}
         >
           {isPublishing
-            ? <motion.span animate={{ opacity: [1, 0.5, 1] }} transition={{ duration: 1.2, repeat: Infinity }}>Publishing…</motion.span>
-            : !title.trim() ? "Add a title to publish" : "Publish to Treehouse"
+            ? <motion.span animate={{ opacity: [1, 0.5, 1] }} transition={{ duration: 1.2, repeat: Infinity }}>Saving…</motion.span>
+            : !title.trim() ? "Add a title to save" : "Save to Shelf"
           }
         </button>
       </motion.div>
