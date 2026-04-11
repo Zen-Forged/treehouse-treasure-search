@@ -1,8 +1,7 @@
 // app/my-shelf/page.tsx
-// My Shelf — redesigned to match cinematic vendor profile mockup.
-// Hero card with full-bleed vendor identity, Available/Found tab switcher,
-// price-labelled tiles, ghost "Left for you to find" tiles, booth finder card,
-// and "Explore more shelves" CTA banner.
+// My Shelf — cinematic vendor profile page.
+// Contained hero card, Available/Found tab switcher, price-labelled tiles,
+// booth finder card (opens Maps), explore CTA, vendor picker at bottom.
 
 "use client";
 
@@ -13,7 +12,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, ChevronRight, ChevronDown, Share2, Check, Plus, ImagePlus } from "lucide-react";
+import { MapPin, ChevronRight, ChevronDown, Share2, Check, ImagePlus } from "lucide-react";
 import { PiLeaf } from "react-icons/pi";
 import { getVendorPosts, getVendorsByMall, getAllMalls } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Post, type Vendor, type Mall } from "@/types/treehouse";
@@ -32,7 +31,6 @@ const C = {
   green:       "#1e4d2b",
   greenLight:  "rgba(30,77,43,0.08)",
   greenBorder: "rgba(30,77,43,0.20)",
-  greenSolid:  "rgba(30,77,43,0.90)",
   header:      "rgba(245,242,235,0.96)",
   emptyTile:   "#dedad2",
   bannerFrom:  "#1e3d24",
@@ -43,55 +41,46 @@ const GAP       = 6;
 const GRID_COLS = 3;
 const BASE_URL  = "https://treehouse-treasure-search.vercel.app";
 
+// Build a Maps URL that opens Apple Maps on iOS, Google Maps elsewhere
+function mapsUrl(query: string): string {
+  const q = encodeURIComponent(query);
+  // maps.apple.com works on iOS Safari and opens Apple Maps natively;
+  // on Android/desktop it falls through to Google Maps via the universal URL
+  return `https://maps.apple.com/?q=${q}`;
+}
+
 // Deterministic pastel from vendor name — used as hero bg when no image
 function vendorHueBg(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
   const hues = [142, 168, 195, 220, 25, 340];
-  const hue  = hues[h % hues.length];
-  return `hsl(${hue}, 22%, 78%)`;
+  return `hsl(${hues[h % hues.length]}, 22%, 78%)`;
 }
 
-// ─── Hero card ─────────────────────────────────────────────────────────────────
+// ─── Hero card (contained, not full-bleed) ────────────────────────────────────
 
 function VendorHero({
   displayName, boothNumber, tagline, mallName, mallCity,
-  availableCount, totalCount, heroImageUrl, onShare, hasCopied, hasSlug,
+  heroImageUrl, onShare, hasCopied, hasSlug,
 }: {
-  displayName:    string;
-  boothNumber:    string | null;
-  tagline?:       string | null;
-  mallName?:      string;
-  mallCity?:      string;
-  availableCount: number;
-  totalCount:     number;
-  heroImageUrl?:  string | null;
-  onShare:        () => void;
-  hasCopied:      boolean;
-  hasSlug:        boolean;
+  displayName:   string;
+  boothNumber:   string | null;
+  tagline?:      string | null;
+  mallName?:     string;
+  mallCity?:     string;
+  heroImageUrl?: string | null;
+  onShare:       () => void;
+  hasCopied:     boolean;
+  hasSlug:       boolean;
 }) {
-  const spotsLeft = Math.max(0, 9 - availableCount);
-
   return (
-    <div style={{ position: "relative", width: "100%", minHeight: 220, overflow: "hidden", borderRadius: "0 0 20px 20px" }}>
-      {/* Background */}
-      {heroImageUrl ? (
-        <img src={heroImageUrl} alt=""
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
-      ) : (
-        <div style={{ position: "absolute", inset: 0, background: vendorHueBg(displayName) }} />
-      )}
-
-      {/* Gradient overlays */}
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg, rgba(0,0,0,0.08) 0%, rgba(20,40,25,0.72) 100%)" }} />
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "55%", background: "linear-gradient(to top, rgba(20,38,22,0.88) 0%, transparent 100%)" }} />
-
-      {/* Top bar */}
-      <div style={{ position: "relative", zIndex: 2, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 0" }}>
+    <div style={{ padding: "max(14px, env(safe-area-inset-top, 14px)) 10px 0" }}>
+      {/* App bar above the card */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, paddingLeft: 4, paddingRight: 4 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Image src="/logo.png" alt="Treehouse" width={20} height={20} style={{ opacity: 0.92 }} />
-          <span style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.85)", letterSpacing: "1.8px", textTransform: "uppercase" }}>
-            Treehouse
+          <Image src="/logo.png" alt="Treehouse Finds" width={20} height={20} />
+          <span style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: C.green, letterSpacing: "0.4px" }}>
+            Treehouse Finds
           </span>
         </div>
 
@@ -99,72 +88,60 @@ function VendorHero({
           <AnimatePresence mode="wait">
             {hasCopied ? (
               <motion.div key="copied" initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.88 }} transition={{ duration: 0.14 }}
-                style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 20, background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.30)" }}>
-                <Check size={11} style={{ color: "rgba(255,255,255,0.9)" }} />
-                <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.9)" }}>Copied!</span>
+                style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 11px", borderRadius: 18, background: C.greenLight, border: `1px solid ${C.greenBorder}` }}>
+                <Check size={11} style={{ color: C.green }} />
+                <span style={{ fontSize: 11, fontWeight: 600, color: C.green }}>Copied!</span>
               </motion.div>
             ) : (
               <motion.button key="share" initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.88 }} transition={{ duration: 0.14 }}
                 onClick={onShare}
-                style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 20, background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.22)", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
-                <Share2 size={12} style={{ color: "rgba(255,255,255,0.82)" }} />
-                <span style={{ fontSize: 11, fontWeight: 500, color: "rgba(255,255,255,0.82)" }}>Share</span>
+                style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 11px", borderRadius: 18, background: "none", border: `1px solid ${C.border}`, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
+                <Share2 size={11} style={{ color: C.textMuted }} />
+                <span style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>Share</span>
               </motion.button>
             )}
           </AnimatePresence>
         )}
       </div>
 
-      {/* On-shelf badge when no share button */}
-      {!hasSlug && totalCount > 0 && (
-        <div style={{ position: "absolute", top: "max(16px, env(safe-area-inset-top, 16px))", right: 16, zIndex: 2, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 72, height: 72, background: C.green, borderRadius: "50%", boxShadow: "0 2px 12px rgba(0,0,0,0.22)" }}>
-          <span style={{ fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 700, color: "#fff", lineHeight: 1, textAlign: "center" }}>
-            {availableCount} of {Math.max(availableCount, 9)}
-          </span>
-          <span style={{ fontSize: 7, fontWeight: 600, color: "rgba(255,255,255,0.72)", letterSpacing: "1px", textTransform: "uppercase", marginTop: 2 }}>on shelf</span>
-          {spotsLeft > 0 && <span style={{ fontSize: 7, color: "rgba(255,255,255,0.55)", marginTop: 1 }}>{spotsLeft} left</span>}
-        </div>
-      )}
+      {/* Contained hero card */}
+      <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", minHeight: 200 }}>
+        {heroImageUrl ? (
+          <img src={heroImageUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
+        ) : (
+          <div style={{ position: "absolute", inset: 0, background: vendorHueBg(displayName) }} />
+        )}
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg, rgba(0,0,0,0.06) 0%, rgba(20,40,25,0.70) 100%)" }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "58%", background: "linear-gradient(to top, rgba(20,38,22,0.90) 0%, transparent 100%)" }} />
 
-      {/* Bottom content */}
-      <div style={{ position: "relative", zIndex: 2, padding: "0 16px 20px", marginTop: 80 }}>
-        <p style={{ fontFamily: "Georgia, serif", fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.55)", letterSpacing: "2px", textTransform: "uppercase", margin: "0 0 6px" }}>
-          A curated shelf from
-        </p>
-        <h1 style={{ fontFamily: "Georgia, serif", fontSize: 34, fontWeight: 700, color: "#fff", lineHeight: 1.1, margin: "0 0 6px", textShadow: "0 2px 12px rgba(0,0,0,0.25)" }}>
-          {displayName}
-        </h1>
-        {tagline && (
-          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: "rgba(255,255,255,0.60)", textTransform: "uppercase", letterSpacing: "2px", margin: "0 0 12px" }}>
-            {tagline}
+        <div style={{ position: "relative", zIndex: 2, padding: "100px 16px 18px" }}>
+          <p style={{ fontFamily: "Georgia, serif", fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.52)", letterSpacing: "2px", textTransform: "uppercase", margin: "0 0 5px" }}>
+            A curated shelf from
           </p>
-        )}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          {boothNumber && (
-            <div style={{ padding: "5px 12px", borderRadius: 20, background: C.green, fontFamily: "Georgia, serif", fontSize: 11, fontWeight: 700, color: "#fff", letterSpacing: "1.2px", textTransform: "uppercase" }}>
-              Booth {boothNumber}
-            </div>
+          <h1 style={{ fontFamily: "Georgia, serif", fontSize: 30, fontWeight: 700, color: "#fff", lineHeight: 1.1, margin: "0 0 5px", textShadow: "0 2px 12px rgba(0,0,0,0.22)" }}>
+            {displayName}
+          </h1>
+          {tagline && (
+            <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 10, color: "rgba(255,255,255,0.58)", textTransform: "uppercase", letterSpacing: "1.8px", margin: "0 0 10px" }}>
+              {tagline}
+            </p>
           )}
-          {mallName && (
-            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <MapPin size={10} style={{ color: "rgba(255,255,255,0.55)", flexShrink: 0 }} />
-              <span style={{ fontFamily: "Georgia, serif", fontSize: 11, color: "rgba(255,255,255,0.65)" }}>
-                {mallName}{mallCity ? ` · ${mallCity}` : ""}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* On-shelf badge when share button is in top bar */}
-        {hasSlug && totalCount > 0 && (
-          <div style={{ position: "absolute", top: 0, right: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: 68, height: 68, background: C.green, borderRadius: "50%", boxShadow: "0 2px 12px rgba(0,0,0,0.22)" }}>
-            <span style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: "#fff", lineHeight: 1.1, textAlign: "center" }}>
-              {availableCount} of {Math.max(availableCount, 9)}
-            </span>
-            <span style={{ fontSize: 7, fontWeight: 600, color: "rgba(255,255,255,0.72)", letterSpacing: "1px", textTransform: "uppercase", marginTop: 2 }}>on shelf</span>
-            {spotsLeft > 0 && <span style={{ fontSize: 7, color: "rgba(255,255,255,0.55)", marginTop: 1 }}>{spotsLeft} left</span>}
+          <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+            {boothNumber && (
+              <div style={{ padding: "4px 11px", borderRadius: 18, background: C.green, fontFamily: "Georgia, serif", fontSize: 10, fontWeight: 700, color: "#fff", letterSpacing: "1px", textTransform: "uppercase" }}>
+                Booth {boothNumber}
+              </div>
+            )}
+            {mallName && (
+              <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                <MapPin size={9} style={{ color: "rgba(255,255,255,0.52)", flexShrink: 0 }} />
+                <span style={{ fontFamily: "Georgia, serif", fontSize: 10, color: "rgba(255,255,255,0.62)" }}>
+                  {mallName}{mallCity ? ` · ${mallCity}` : ""}
+                </span>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -179,7 +156,7 @@ function TabSwitcher({ tab, availableCount, foundCount, onChange }: {
   onChange:       (t: "available" | "found") => void;
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", margin: "14px 16px 10px", background: C.surface, borderRadius: 22, padding: 3, gap: 2 }}>
+    <div style={{ display: "flex", alignItems: "center", margin: "12px 10px 8px", background: C.surface, borderRadius: 22, padding: 3, gap: 2 }}>
       {(["available", "found"] as const).map(t => {
         const active = tab === t;
         const count  = t === "available" ? availableCount : foundCount;
@@ -263,23 +240,6 @@ function FoundTile({ post, index }: { post: Post; index: number }) {
   );
 }
 
-// ─── Ghost tile ────────────────────────────────────────────────────────────────
-
-function GhostTile({ index }: { index: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.35), ease: [0.25, 0.1, 0.25, 1] }}
-      style={{ width: "100%", aspectRatio: "1", borderRadius: 10, border: `1.5px dashed ${C.border}`, background: C.surface, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }}
-    >
-      <PiLeaf size={18} style={{ color: "rgba(28,26,20,0.18)" }} />
-      <span style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 10, color: C.textFaint, textAlign: "center", lineHeight: 1.4, padding: "0 8px" }}>
-        Left for you<br />to find
-      </span>
-    </motion.div>
-  );
-}
-
 // ─── Add Find tile ─────────────────────────────────────────────────────────────
 
 function AddFindTile({ index }: { index: number }) {
@@ -309,7 +269,7 @@ function ThreeColGrid({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ─── Booth finder card ─────────────────────────────────────────────────────────
+// ─── Booth finder card — tapping opens Maps ────────────────────────────────────
 
 function BoothFinderCard({ boothNumber, displayName, mallName, mallCity, mallImageUrl }: {
   boothNumber:   string | null;
@@ -318,8 +278,17 @@ function BoothFinderCard({ boothNumber, displayName, mallName, mallCity, mallIma
   mallCity?:     string;
   mallImageUrl?: string | null;
 }) {
+  // Build a search query: "America's Antique Mall Louisville KY" — precise enough
+  // for Maps to land on the right pin without needing a lat/lng.
+  const mapsQuery = [mallName, mallCity].filter(Boolean).join(", ");
+
   return (
-    <div style={{ margin: "24px 10px 0", borderRadius: 16, overflow: "hidden", border: `1px solid ${C.border}`, background: "#fff", display: "flex", alignItems: "stretch" }}>
+    <a
+      href={mapsUrl(mapsQuery)}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ display: "flex", alignItems: "stretch", margin: "20px 10px 0", borderRadius: 16, overflow: "hidden", border: `1px solid ${C.border}`, background: "#fff", textDecoration: "none" }}
+    >
       <div style={{ width: 100, flexShrink: 0, background: C.surfaceDeep, overflow: "hidden" }}>
         {mallImageUrl ? (
           <img src={mallImageUrl} alt={mallName} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
@@ -330,13 +299,13 @@ function BoothFinderCard({ boothNumber, displayName, mallName, mallCity, mallIma
         )}
       </div>
       <div style={{ flex: 1, padding: "14px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5 }}>
           <MapPin size={11} style={{ color: C.textMuted, flexShrink: 0 }} />
-          <span style={{ fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 700, color: C.textPrimary }}>
+          <span style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: C.textPrimary }}>
             Find this booth in person
           </span>
         </div>
-        <p style={{ margin: "0 0 4px", fontFamily: "Georgia, serif", fontSize: 12, color: C.textMid, lineHeight: 1.4 }}>
+        <p style={{ margin: "0 0 3px", fontFamily: "Georgia, serif", fontSize: 12, color: C.textMid, lineHeight: 1.4 }}>
           {displayName}{boothNumber ? ` · Booth ${boothNumber}` : ""}
         </p>
         <p style={{ margin: "0 0 8px", fontFamily: "Georgia, serif", fontSize: 12, color: C.textMuted }}>
@@ -352,7 +321,7 @@ function BoothFinderCard({ boothNumber, displayName, mallName, mallCity, mallIma
       <div style={{ display: "flex", alignItems: "center", paddingRight: 14, flexShrink: 0 }}>
         <ChevronRight size={16} style={{ color: C.textFaint }} />
       </div>
-    </div>
+    </a>
   );
 }
 
@@ -361,7 +330,7 @@ function BoothFinderCard({ boothNumber, displayName, mallName, mallCity, mallIma
 function ExploreBanner() {
   const router = useRouter();
   return (
-    <div style={{ margin: "16px 10px 0", borderRadius: 16, overflow: "hidden", background: `linear-gradient(110deg, ${C.bannerFrom} 0%, ${C.bannerTo} 100%)`, padding: "20px 18px", position: "relative" }}>
+    <div style={{ margin: "14px 10px 0", borderRadius: 16, background: `linear-gradient(110deg, ${C.bannerFrom} 0%, ${C.bannerTo} 100%)`, padding: "20px 18px" }}>
       <p style={{ margin: "0 0 4px", fontFamily: "Georgia, serif", fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.50)", letterSpacing: "2px", textTransform: "uppercase" }}>
         There&apos;s more to discover
       </p>
@@ -376,14 +345,14 @@ function ExploreBanner() {
         Enter the Treehouse
         <ChevronRight size={14} style={{ color: C.bannerFrom }} />
       </button>
-      <p style={{ margin: "12px 0 0", fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.30)", letterSpacing: "2px", textTransform: "uppercase" }}>
+      <p style={{ margin: "12px 0 0", fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.28)", letterSpacing: "2px", textTransform: "uppercase" }}>
         Antiques · Vintage · Stories · All in one place
       </p>
     </div>
   );
 }
 
-// ─── Vendor picker ─────────────────────────────────────────────────────────────
+// ─── Vendor picker (demo utility — bottom of page) ─────────────────────────────
 
 function VendorPicker({ vendors, activeId, onChange }: {
   vendors:  Vendor[];
@@ -395,28 +364,41 @@ function VendorPicker({ vendors, activeId, onChange }: {
   if (vendors.length <= 1) return null;
 
   return (
-    <div style={{ position: "relative" }}>
-      <button onClick={() => setOpen(o => !o)}
-        style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 14, background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
-        <span style={{ fontFamily: "Georgia, serif", fontSize: 12, fontWeight: 600, color: C.textPrimary, whiteSpace: "nowrap", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>
-          {active.display_name}{active.booth_number ? ` · Booth ${active.booth_number}` : ""}
-        </span>
-        <ChevronDown size={11} style={{ color: C.textMuted, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.18s" }} />
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div initial={{ opacity: 0, y: -4, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4, scale: 0.97 }} transition={{ duration: 0.16 }}
-            style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 50, background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.18)", border: `1px solid ${C.border}`, minWidth: 200, maxWidth: 280 }}>
-            {vendors.map((v, i) => (
-              <button key={v.id} onClick={() => { onChange(v); setOpen(false); }}
-                style={{ width: "100%", padding: "11px 14px", background: v.id === activeId ? C.greenLight : "none", border: "none", borderBottom: i < vendors.length - 1 ? `1px solid ${C.border}` : "none", cursor: "pointer", textAlign: "left", WebkitTapHighlightColor: "transparent" }}>
-                <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary }}>{v.display_name}</div>
-                {v.booth_number && <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>Booth {v.booth_number}</div>}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div style={{ margin: "20px 10px 0" }}>
+      <p style={{ fontFamily: "Georgia, serif", fontSize: 9, fontWeight: 600, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.8px", margin: "0 0 8px 2px" }}>
+        Booth selection
+      </p>
+      <div style={{ position: "relative" }}>
+        <button onClick={() => setOpen(o => !o)}
+          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 14px", borderRadius: 12, background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
+          <div style={{ textAlign: "left" }}>
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
+              {active.display_name}
+            </div>
+            {active.booth_number && (
+              <div style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>
+                Booth {active.booth_number}
+              </div>
+            )}
+          </div>
+          <ChevronDown size={13} style={{ color: C.textMuted, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.18s", flexShrink: 0 }} />
+        </button>
+
+        <AnimatePresence>
+          {open && (
+            <motion.div initial={{ opacity: 0, y: -4, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4, scale: 0.97 }} transition={{ duration: 0.16 }}
+              style={{ position: "absolute", bottom: "calc(100% + 6px)", left: 0, right: 0, zIndex: 50, background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.18)", border: `1px solid ${C.border}` }}>
+              {vendors.map((v, i) => (
+                <button key={v.id} onClick={() => { onChange(v); setOpen(false); }}
+                  style={{ width: "100%", padding: "11px 14px", background: v.id === activeId ? C.greenLight : "none", border: "none", borderBottom: i < vendors.length - 1 ? `1px solid ${C.border}` : "none", cursor: "pointer", textAlign: "left", WebkitTapHighlightColor: "transparent" }}>
+                  <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary }}>{v.display_name}</div>
+                  {v.booth_number && <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>Booth {v.booth_number}</div>}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -460,8 +442,6 @@ function NoProfile() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MyShelfPage() {
-  const router = useRouter();
-
   const [profile,      setProfile]      = useState<LocalVendorProfile | null>(null);
   const [posts,        setPosts]        = useState<Post[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -513,46 +493,26 @@ export default function MyShelfPage() {
   const displayName    = activeVendor?.display_name ?? profile?.display_name ?? "";
   const boothNumber    = activeVendor?.booth_number  ?? profile?.booth_number  ?? null;
   const hasSlug        = !!(activeVendor?.slug ?? profile?.slug);
-  const mallName       = mall?.name  ?? "America's Antique Mall";
-  const mallCity       = mall?.city  ?? "Louisville, KY";
+  const mallName       = mall?.name ?? "America's Antique Mall";
+  const mallCity       = mall?.city ?? "Louisville, KY";
   const mallImageUrl   = (mall as any)?.image_url ?? null;
-
-  // Fill remaining grid cells with ghost tiles (max 2), then add tile
-  const GHOST_COUNT = Math.max(0, Math.ceil((available.length + 1) / GRID_COLS) * GRID_COLS - available.length - 1);
 
   return (
     <div style={{ minHeight: "100dvh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
 
-      {/* Hero or minimal header */}
       {hasProfile ? (
         <VendorHero
           displayName={displayName} boothNumber={boothNumber} tagline={null}
           mallName={mallName} mallCity={mallCity}
-          availableCount={availableCount} totalCount={posts.length}
           heroImageUrl={null} onShare={handleShare} hasCopied={copied} hasSlug={hasSlug}
         />
       ) : (
         <header style={{ background: C.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${C.border}`, padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 12px", display: "flex", alignItems: "center", gap: 10 }}>
-          <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
-          <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.3px" }}>My Shelf</span>
+          <Image src="/logo.png" alt="Treehouse Finds" width={24} height={24} />
+          <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.green }}>Treehouse Finds</span>
         </header>
       )}
 
-      {/* Post a find + vendor picker row */}
-      {hasProfile && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px 0", gap: 8 }}>
-          {vendors.length > 1 && activeVendor ? (
-            <VendorPicker vendors={vendors} activeId={activeVendor.id} onChange={v => { setActiveVendor(v); setPosts([]); setLoading(true); }} />
-          ) : <div />}
-          <button onClick={() => router.push("/post")}
-            style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 13px", borderRadius: 20, fontSize: 11, fontWeight: 600, color: "#fff", cursor: "pointer", background: C.green, border: "none", letterSpacing: "0.1px", boxShadow: "0 1px 6px rgba(30,77,43,0.28)", WebkitTapHighlightColor: "transparent", flexShrink: 0 }}>
-            <Plus size={11} strokeWidth={2.5} />
-            Post a find
-          </button>
-        </div>
-      )}
-
-      {/* Scrollable content */}
       <div style={{ flex: 1, overflowY: "auto", paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }}>
         {loading ? (
           <SkeletonGrid />
@@ -565,8 +525,7 @@ export default function MyShelfPage() {
             {tab === "available" && (
               <ThreeColGrid>
                 {available.map((post, i) => <AvailableTile key={post.id} post={post} index={i} />)}
-                {Array(Math.min(GHOST_COUNT, 2)).fill(null).map((_, i) => <GhostTile key={`ghost-${i}`} index={available.length + i} />)}
-                <AddFindTile index={available.length + Math.min(GHOST_COUNT, 2)} />
+                <AddFindTile index={available.length} />
               </ThreeColGrid>
             )}
 
@@ -587,7 +546,17 @@ export default function MyShelfPage() {
 
             <BoothFinderCard boothNumber={boothNumber} displayName={displayName} mallName={mallName} mallCity={mallCity} mallImageUrl={mallImageUrl} />
             <ExploreBanner />
-            <div style={{ height: 8 }} />
+
+            {/* Vendor picker — demo utility, bottom of page */}
+            {vendors.length > 1 && activeVendor && (
+              <VendorPicker
+                vendors={vendors}
+                activeId={activeVendor.id}
+                onChange={v => { setActiveVendor(v); setPosts([]); setLoading(true); }}
+              />
+            )}
+
+            <div style={{ height: 12 }} />
           </>
         )}
       </div>
