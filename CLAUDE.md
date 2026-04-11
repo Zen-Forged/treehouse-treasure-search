@@ -1,9 +1,3 @@
-# Treehouse — Claude Working Instructions
-> Repo: Zen-Forged/treehouse-treasure-search | Live: treehouse-treasure-search.vercel.app
-> Full architecture: CONTEXT.md | Working protocol: MASTER_PROMPT.md
-
----
-
 ## HOW TO START A NEW SESSION
 
 1. Start a new chat at claude.ai
@@ -33,66 +27,62 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ## CURRENT ISSUE
 > Last updated: 2026-04-11
 
-**Status:** ✅ UI/UX refinement sprint — My Shelf page redesigned to match cinematic mockup.
+**Status:** ✅ Auth sprint — magic link login, auth-gated pages, admin gate wired.
 
 **What was done (this session):**
 
-### My Shelf — Full Redesign (app/my-shelf/page.tsx)
-Complete rewrite to match the cinematic vendor profile mockup provided.
+### Hero image upload bug fix
+- Added `heroKey` counter to `VendorHero` — bumped on every upload to force `<img>` remount
+- Fixes re-upload not showing new image (CDN cache + React stale src issue)
 
-**Hero card:**
-- Now contained with `10px` side margin + `border-radius: 16px` — matches home page aesthetic, does not bleed to edges
-- App bar above card: logo + "Treehouse Finds" in green (`#1e4d2b`) on parchment bg, share pill right-aligned
-- "A curated shelf from" eyebrow + large Georgia vendor name + booth pill + mall/city with pin icon
-- Deterministic pastel bg from vendor name when no hero image set (scaffolded for future image upload)
-- Removed "X of X on shelf" circular badge entirely
+### My Shelf — 5 changes
+1. Hero gradient changed to left-to-right (dark → transparent) — sits above image, below text (zIndex 1 / 2)
+2. Price removed from shelf tiles (title only in gradient band)
+3. "Add a booth" option added to vendor picker dropdown — routes to `/post`
+4. Vendor picker now always shown when vendors exist (not just >1)
+5. Auth-gated — redirects to `/login` if no session
 
-**Tab switcher:**
-- Replaced section labels with segmented pill control (Available / Found with counts)
-- Tapping "Found" switches tab in-place without navigation
+### Post a find — 2 changes
+1. Auth-gated — redirects to `/login` if no session
+2. Profile card locked (read-only) after first setup — vendor cannot change name/booth/mall
 
-**Grid tiles:**
-- Title + `price_asking` overlaid in bottom gradient band on each tile
-- Add tile always last in Available grid
-- Ghost "Left for you to find" tiles removed entirely
+### Find detail — owner controls restored
+- Mark sold + delete moved inside "Find this here" card (below Save button)
+- Gated correctly: Curator mode + isMyPost only
 
-**Booth finder card:**
-- Now an `<a>` tag: tapping opens Maps (`maps.apple.com/?q=MallName,+City`)
-  - iOS: opens Apple Maps natively
-  - Android: redirects to Google Maps
-  - Desktop: Apple Maps web
-- ChevronRight signals tappability
+### Auth sprint — full magic link flow
+- `lib/auth.ts` — replaced anon auth with `sendMagicLink`, `getSession`, `signOut`, `isAdmin(user)`, `onAuthChange`, persistent sessions
+- `app/login/page.tsx` — new page, three screens: enter email → check email → confirming, Suspense wrapper for useSearchParams
+- `components/BottomNav.tsx` — auth-driven tabs (unauth: Home+YourFinds, authed: Home+MyShelf)
+- `components/ModeToggle.tsx` — hidden when unauth, only shown to logged-in users
+- `app/admin/page.tsx` — auth gate + isAdmin() check, access-denied screen for non-admins
+- `NEXT_PUBLIC_ADMIN_EMAIL=david@zenforged.com` added to .env.local and Vercel
 
-**Explore more shelves CTA:**
-- Dark green banner, "Enter the Treehouse" button routes to `/`
+### Supabase schema
+- `vendors.hero_image_url text` column added
+- Test vendors cleaned up (only ZenForged Finds remains)
 
-**Vendor picker:**
-- Moved to very bottom of scroll area, below Explore banner
-- "Booth selection" label, full-width button, dropdown opens upward
-- Only visible when `vendors.length > 1` (demo utility, will move to separate page later)
-
-**Cleanup:**
-- Removed `Plus`, `GhostTile`, `GHOST_COUNT`, `useRef`, `post.price` (→ `price_asking`)
-- "Post a find" button removed (Add tile handles it)
+### lib/posts.ts additions
+- `uploadVendorHeroImage(base64, vendorId)` — uploads to post-images bucket at vendor-hero/{id}.jpg, upsert:true
+- `updateVendorHeroImage(vendorId, url)` — writes URL to vendors.hero_image_url
+- `getVendorsByMall` now selects hero_image_url
 
 **Previous sessions:**
+- My Shelf redesign — cinematic hero card, tab switcher, Maps link, booth finder
 - Anonymous Auth Sprint — full chain /post → Supabase → owner detection
-- Demo-ready sprint — feed filter, mode system, Your Finds fixes, My Shelf vendor picker, owner controls gated to Curator mode
-- Day 3 UI/UX sprint — Found badge centering, leaf unsave, My Shelf sections, header font unification
-- Day 2 UI/UX sprint — PiLeaf icons, badge sync, hero copy, "Your Finds" rename, iOS nav padding
-- Branded Experience Sprint — 3-page overhaul (warmer parchment, Georgia, layered shadows)
-- Mall Identity Layer — MallHeroCard shipped
-- safeStorage iPhone Safari bug fix
-- Admin page + bulk delete
+- Demo-ready sprint — feed filter, mode system, Your Finds fixes, My Shelf vendor picker
+- Day 3/2 UI/UX sprints — PiLeaf icons, badge sync, hero copy, iOS nav padding
+- Branded Experience Sprint, Mall Identity Layer, safeStorage iPhone Safari bug fix
 
 **Next session starting point:**
-1. QA My Shelf on device — hero card, tab switcher, Maps link on booth card
-2. Wire image upload for hero banner (booth image) — UI mockup approved, needs Supabase Storage upload
-3. Wire image upload for location card thumbnail (mall image) — same flow
-4. Continue UI/UX refinement to other pages: Home feed, Your Finds, Find detail (`/find/[id]`)
-5. Auth QA — verify vendors.user_id populates and owner detection works in Curator mode
-6. Pull-to-refresh on feed (deferred)
-7. Supabase RLS (now feasible with user_id on vendor rows)
+1. QA auth flow on device — magic link email, session persistence, My Shelf gate
+2. QA hero image re-upload — verify heroKey fix works on device
+3. Wire vendor.user_id on first publish — post/preview page needs to pass auth user_id to createVendor()
+4. Auth QA — verify owner detection still works (session uid → vendor.user_id)
+5. Consider adding `/login` entry point to feed header (e.g. "Vendor? Sign in" link for unauth users)
+6. Hero image upload for location card (mall image) — same flow, deferred
+7. Supabase RLS — now feasible with proper auth in place
+8. UI/UX refinement: Home feed, Your Finds, Find detail pages
 
 ---
 
@@ -117,6 +107,7 @@ react-icons (PiLeaf from react-icons/pi)
 ```
 NEXT_PUBLIC_SUPABASE_URL         https://zogxkarpwlaqmamfzceb.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY    eyJhbGci... (full JWT — in .env.local and Vercel)
+NEXT_PUBLIC_ADMIN_EMAIL          david@zenforged.com
 ANTHROPIC_API_KEY                Claude Vision + caption generation
 SERPAPI_KEY                      eBay sold comps
 ```
@@ -126,11 +117,36 @@ SERPAPI_KEY                      eBay sold comps
 ## SUPABASE
 - **Tables:** malls, vendors, posts — RLS DISABLED on all three
 - **Storage bucket:** post-images — PUBLIC
-- **Auth:** Anonymous sessions enabled — `supabase.auth.signInAnonymously()`
+- **Auth:** Magic link (OTP) via email — `supabase.auth.signInWithOtp()`
 - **Only mall:** America's Antique Mall, id: `19a8ff7e-cb45-491f-9451-878e2dde5bf4`
 - **Known vendor:** ZenForged Finds, booth 369, id: `65a879f1-c43c-481b-974f-379792a36db8`
-- **Extra columns:** vendors table has `facebook_url text`, `user_id uuid` (nullable — linked to anon auth)
+- **Extra columns:** vendors table has `facebook_url text`, `user_id uuid`, `hero_image_url text`
 - **Unique constraint:** `vendors_mall_booth_unique` on `(mall_id, booth_number)`
+
+---
+
+## AUTH SYSTEM (new this session)
+
+### Three tiers
+| Tier | How | Can do |
+|---|---|---|
+| Unauth | No session | Browse feed, find detail, save to Your Finds |
+| Vendor | Magic link email | Post finds (one booth), My Shelf, mark sold, delete own posts |
+| Admin | Magic link, email = NEXT_PUBLIC_ADMIN_EMAIL | Everything + /admin |
+
+### Key files
+- `lib/auth.ts` — `sendMagicLink`, `getSession`, `getUser`, `signOut`, `isAdmin(user)`, `onAuthChange`, `getCachedUserId`
+- `app/login/page.tsx` — enter email → check email → confirming (polls for session after ?confirmed=1)
+- `ensureAnonSession()` kept as no-op stub for backwards compat
+
+### Session persistence
+- Supabase Auth sessions persist across browser restarts (pkce flow default)
+- `treehouse_auth_uid` localStorage key caches user.id for sync owner detection
+
+### Vendor rules
+- One booth per vendor auth account
+- Booth identity locked after first publish — cannot be edited by vendor
+- Admin can manage booth identity via /admin
 
 ---
 
@@ -138,26 +154,16 @@ SERPAPI_KEY                      eBay sold comps
 
 ### Ecosystem (warm parchment theme)
 ```
-/                   Discovery feed — masonry, Mall Hero Card at top, mall dropdown (hidden if ≤1 mall),
-                    tile text bands, PiLeaf saved indicators, ModeToggle (Explorer/Curator) in header.
-                    ONLY available posts shown — sold filtered at query level.
-/find/[id]          Find detail — full-bleed image, centered "Found" badge on hero (sold),
-                    BoothBox bottom-left, PiLeaf save + share buttons bottom-right,
-                    "View the shelf" horizontal scroll, "Find this here" card.
-                    "Save to Your Finds" — Explorer mode only.
-                    Owner controls (mark sold, delete) — Curator mode + session ownership only.
-/flagged            Your Finds (Explorer) — grouped by booth, sorted by availability then booth number,
-                    instant unsave, stale bookmark pruning, all-found banner state.
-/my-shelf           My Shelf (Curator) — cinematic hero card (contained), Available/Found tab switcher,
-                    price-labelled tiles, Add tile, booth finder card (→ Maps), Explore CTA,
-                    vendor picker at bottom (demo utility).
+/                   Discovery feed — ModeToggle hidden for unauth
+/login              Magic link login — enter email → check email → confirming
+/find/[id]          Find detail — owner controls (mark sold + delete) inside "Find this here" card
+/flagged            Your Finds (Explorer) — no auth required
+/my-shelf           My Shelf (Curator) — auth-gated, redirects to /login
 /mall/[slug]        Mall profile
-/vendor/[slug]      Vendor profile — Facebook link, available/sold grid
-/post               Vendor capture — camera/gallery, profile setup.
-                    ensureAnonSession() on mount. Clears vendor_id when name/booth changes.
-/post/preview       Edit title/caption/price → publish.
-                    Passes user_id to createVendor() to link session to vendor row.
-/admin              Admin: local profile inspector + bulk post/image delete
+/vendor/[slug]      Vendor profile
+/post               Vendor capture — auth-gated, redirects to /login, profile locked after setup
+/post/preview       Edit title/caption/price → publish
+/admin              Admin — auth-gated, isAdmin() check, access-denied for non-admins
 ```
 
 ### Reseller intel (dark theme — do not touch)
@@ -166,49 +172,32 @@ SERPAPI_KEY                      eBay sold comps
 /finds, /finds/[id]
 ```
 
-### API
-```
-POST /api/post-caption      Claude → { title, caption }
-POST /api/identify          Claude Vision → { title, description, confidence, searchQuery }
-GET  /api/sold-comps        SerpAPI eBay comps, 48h cache
-GET  /api/debug             Supabase connectivity test
-GET  /api/admin/posts       All posts with vendor info
-DELETE /api/admin/posts     Bulk delete posts + storage images
-```
-
 ---
 
 ## KEY FILES
 ```
-lib/supabase.ts               Client with placeholder fallback for build time
-lib/auth.ts                   Anonymous session management:
-                                ensureAnonSession() → signInAnonymously, caches uid
-                                getCachedUserId() → sync read from localStorage cache
-                              localStorage key: treehouse_auth_uid
-lib/mode.ts                   Explorer/Curator mode — getMode(), setMode(), toggleMode()
-                              localStorage key: treehouse_mode = "explorer" | "curator"
-lib/posts.ts                  getFeedPosts (available only), getPost, getPostsByIds (no filter),
-                              getVendorPosts, getMallPosts (available only),
-                              getVendorsByMall, createPost, createVendor (+ user_id),
-                              uploadPostImage, updatePostStatus, deletePost,
-                              getAllMalls, getMallBySlug, getVendorBySlug, slugify
-lib/postStore.ts              In-memory image store for /post → /post/preview
-lib/safeStorage.ts            localStorage wrapper with sessionStorage + memory fallback
-types/treehouse.ts            Post, Vendor, Mall, LocalVendorProfile (+ user_id field), PostStatus
-components/BottomNav.tsx      Mode-aware: Explorer→Home+YourFinds, Curator→Home+MyShelf
-components/ModeToggle.tsx     Animated pill in feed header — "Explorer" / "Curator"
-components/PiLeafIcon.tsx     PiLeaf from react-icons/pi wrapper
-components/MallHeroCard.tsx   MallHeroCard + GenericMallHero exports
-app/layout.tsx                No max-width wrapper
-app/page.tsx                  Discovery feed — available-only, ModeToggle in header
-app/flagged/page.tsx          Your Finds — instant unsave, stale pruning, sorted groups
-app/my-shelf/page.tsx         My Shelf — cinematic hero (contained), tab switcher, Maps link,
-                              vendor picker at bottom, Explore CTA
-app/find/[id]/page.tsx        Find detail — detectOwnership() (session uid + vendor_id fallback)
-app/post/page.tsx             Capture — ensureAnonSession() on mount, user_id in profile
-app/post/preview/page.tsx     Preview + publish — user_id → createVendor() → vendors.user_id
-app/admin/page.tsx            Admin UI
-app/api/admin/posts/route.ts  Admin API
+lib/auth.ts               Magic link auth — sendMagicLink, getSession, signOut, isAdmin, getCachedUserId
+lib/supabase.ts           Client with placeholder fallback for build time
+lib/posts.ts              Data access layer — getFeedPosts, getPost, getVendorPosts, createPost,
+                          createVendor, uploadPostImage, uploadVendorHeroImage, updateVendorHeroImage, etc.
+lib/mode.ts               Explorer/Curator mode — getMode(), setMode()
+lib/safeStorage.ts        localStorage wrapper with sessionStorage + memory fallback
+lib/postStore.ts          In-memory image store for /post → /post/preview
+types/treehouse.ts        Post, Vendor (+ hero_image_url), Mall, LocalVendorProfile
+components/BottomNav.tsx  Auth-driven: unauth→Home+YourFinds, authed→Home+MyShelf
+components/ModeToggle.tsx Hidden when unauth, shown to logged-in users only
+components/PiLeafIcon.tsx PiLeaf from react-icons/pi wrapper
+components/MallHeroCard.tsx MallHeroCard + GenericMallHero exports
+app/login/page.tsx        Magic link login, Suspense wrapper for useSearchParams
+app/layout.tsx            No max-width wrapper
+app/page.tsx              Discovery feed — ModeToggle only for authed users
+app/flagged/page.tsx      Your Finds — no auth required
+app/my-shelf/page.tsx     My Shelf — auth-gated, heroKey for image remount fix, sign-out, admin link
+app/find/[id]/page.tsx    Find detail — owner controls inside location card
+app/post/page.tsx         Capture — auth-gated, profile locked, no reset
+app/post/preview/page.tsx Preview + publish — needs user_id wired to createVendor (next session)
+app/admin/page.tsx        Admin UI — isAdmin() gate, sign-out, post management
+app/api/admin/posts/route.ts Admin API
 ```
 
 ---
@@ -231,8 +220,6 @@ greenBorder:  rgba(30,77,43,0.20)
 greenSolid:   rgba(30,77,43,0.90)
 header blur:  rgba(245,242,235,0.96), backdropFilter blur(24px)
 emptyTile:    #dedad2
-tag:          #faf8f2
-tagBorder:    #ccc6b4
 bannerFrom:   #1e3d24
 bannerTo:     #2d5435
 ```
@@ -245,90 +232,27 @@ bg: #050f05  text: #f5f0e8  gold: #c8b47e  green: #6dbc6d
 ### Typography scale
 ```
 MINIMUM font size: 10px everywhere
-Section headers / page titles: 22px Georgia 700 — home, flagged, my-shelf
+Section headers / page titles: 22px Georgia 700
 Body / tile titles: Georgia 12–14px
 Captions: 15px italic Georgia, lineHeight 1.85
-Empty state headers: Georgia 20px 700
-Georgia for: all headers, titles, captions, italic labels, CTA buttons, empty states
+Georgia for: all headers, titles, captions, italic labels, CTA buttons
 System UI for: BottomNav labels, dropdown options, monospace data
 ```
 
 ### My Shelf — hero card
 ```
-Contained: margin 10px sides, border-radius 16px — NOT full-bleed
-App bar above card: logo + "Treehouse Finds" (green) left, Share pill right
-Hero bg: deterministic pastel from vendor name (vendorHueBg) when no image
-Text: "A curated shelf from" eyebrow + large Georgia name + Booth pill + mall/city + pin icon
-No circular "X of X" badge
+Contained: margin 10px sides, border-radius 16px
+Gradient: L→R linear-gradient(to right, rgba(18,34,20,0.82) 0%, rgba(18,34,20,0.40) 55%, transparent 100%) zIndex 1
+Text: zIndex 2 (above gradient)
+Edit button: zIndex 10, top-right of hero
+heroKey state: bumped on every upload to force <img> remount (cache bust fix)
+No price on tiles
 ```
 
-### My Shelf — booth finder card
+### Explorer / Curator mode
 ```
-Tapping opens Maps: href="https://maps.apple.com/?q=MallName,+City"
-  → iOS: Apple Maps native
-  → Android: Google Maps
-  → Desktop: Apple Maps web
-ChevronRight indicates tappable
-```
-
-### Explorer / Curator mode system
-```
-treehouse_mode = "explorer" | "curator"  (localStorage, default: "explorer")
-lib/mode.ts: getMode(), setMode(), toggleMode()
-ModeToggle pill in feed header → navigates to correct second tab on switch
-BottomNav re-reads on mount + focus + storage event
-
-Explorer: Home · Your Finds | Save button on find detail | owner controls hidden
-Curator:  Home · My Shelf   | Save button hidden | owner controls if isMyPost
-```
-
-### Auth system
-```
-treehouse_auth_uid  (localStorage cache of Supabase anon session uid)
-lib/auth.ts: ensureAnonSession(), getCachedUserId()
-Supabase Auth: anonymous sign-in on first /post visit
-vendors.user_id: populated on createVendor(), used for ownership detection
-
-Owner detection in find/[id]:
-  detectOwnership(post) checks:
-  1. getCachedUserId() === post.vendor.user_id  (session-based, primary)
-  2. profile.vendor_id === post.vendor_id        (localStorage fallback, legacy)
-```
-
-### Bottom navigation
-```
-Mode-aware tabs (re-syncs on mount + focus + storage event):
-  Explorer: Home (/) · Your Finds (/flagged) — badge on Your Finds
-  Curator:  Home (/) · My Shelf (/my-shelf)  — no badge
-Icons: Home (lucide) · PiLeafIcon · Store (lucide) — size 21
-Active: green pill + bold label. Badge: green pill, cap 99+.
-Bottom padding: calc(env(safe-area-inset-bottom, 0px) + 10px)
-```
-
-### Save / "Your Finds" system
-```
-Storage key: treehouse_bookmark_{postId} = "1"  ← never rename
-Storage layer: safeStorage (localStorage → sessionStorage → memory)
-Raw localStorage iteration for: feed bookmark sync, Your Finds loadFlaggedIds()
-Stale pruning: pruneStaleBookmarks() runs after getPostsByIds — auto-removes dead IDs
-Unsave: instant on Your Finds rows (e.stopPropagation())
-```
-
-### My Shelf — Share shelf
-```
-Button: ghost pill top-right of app bar — Share2 icon + "Share" label
-URL: https://treehouse-treasure-search.vercel.app/vendor/${activeVendor.slug ?? profile.slug}
-Payload: navigator.share({ title: "${name} on Treehouse", text: "...", url })
-Fallback: clipboard copy → animated "Copied!" pill (2.2s) in green
-Hidden: if no slug available (older profile without slug)
-```
-
-### Detail page — owner controls gate
-```
-showOwnerControls = isMyPost && isCurator
-isMyPost = detectOwnership(post) — session uid check + vendor_id fallback
-isCurator = getMode() === "curator" — read on mount
-Explorer mode: NEVER shows owner controls regardless of isMyPost
+Mode toggle only shown to authenticated users
+BottomNav: unauth → Home+YourFinds, authed → Home+MyShelf
 ```
 
 ---
@@ -339,52 +263,44 @@ Explorer mode: NEVER shows owner controls regardless of isMyPost
 - Always use `git add -A` — never individual paths (zsh glob-expands `[slug]`)
 - `filesystem:write_file` is the ONLY reliable way to write files
 - `str_replace` fails on bracket-path files — always full rewrite for `app/find/[id]/page.tsx`
+- `useSearchParams()` requires Suspense wrapper — export default wraps inner component
 - `getPostsByIds` has NO status filter — saved finds shown regardless of status
 - `getFeedPosts` and `getMallPosts` filter `.eq("status","available")`
-- `vendor_id` cleared from LocalVendorProfile when display_name OR booth_number changes
-- `user_id` is ALWAYS carried forward in saveProfile() — session-based, not identity-based
-- `createVendor` handles 23505 duplicate key, updates user_id if row exists and field is null
 - safeStorage in all ecosystem client components EXCEPT raw localStorage for bookmark iteration
 - Badge count = raw localStorage key iteration, NOT posts.length
-- `groupByBooth` orphan key: `__orphan__${post.id}` (never `__no_vendor__`)
-- Supabase anonymous auth must be enabled in project settings for `signInAnonymously()` to work
+- Supabase anonymous auth replaced by magic link — `signInAnonymously()` no longer used
+- `ensureAnonSession()` is now a no-op stub — don't rely on it for new code
 - Vercel project: `david-6613s-projects` scope (NOT zen-forged)
 - Vercel webhook unreliable → `npx vercel --prod` if push doesn't deploy
 - framer-motion: never two `transition` props on same motion.div
-- Duplicate keys in style objects = TypeScript build error
 - MINIMUM font size: 10px
 - Post type uses `price_asking` (not `price`) — `number | null`
 
 ---
 
 ## WORKING ✅
-- Discovery feed — available-only, masonry, ModeToggle, PiLeaf saved indicator
-- MallHeroCard / GenericMallHero — deterministic gradient, AnimatePresence
-- Feed scroll save/restore, hasFetched guard
-- Your Finds — instant unsave, stale pruning, sorted groups, all-found banner
-- My Shelf — cinematic contained hero, Available/Found tabs, price tiles, Add tile,
-             booth finder card → Maps, Explore CTA, vendor picker at bottom
-- BottomNav — mode-aware (Explorer/Curator), iOS padding, badge
-- ModeToggle — animated pill, navigates on switch
-- Find detail — detectOwnership() (session + legacy fallback), Curator-only owner controls
-- Post flow — ensureAnonSession() on mount, user_id → vendors.user_id in Supabase
-- Share shelf — native share sheet + clipboard fallback (green pill in app bar)
-- Anonymous auth — full chain from /post → Supabase → owner detection
+- Discovery feed — available-only, masonry, ModeToggle (auth-aware), PiLeaf saved indicator
+- Magic link auth — login page, session persistence, isAdmin check
+- BottomNav — auth-driven tabs, iOS padding, badge
+- ModeToggle — hidden for unauth users
+- My Shelf — auth-gated, cinematic hero (L→R gradient), heroKey remount fix, Available/Found tabs, no price on tiles, Add tile, booth finder → Maps, Explore CTA, sign-out
+- Find detail — owner controls inside location card (mark sold + delete), Curator-only gate
+- Post flow — auth-gated, profile locked after setup, ensureAnonSession stub
+- Admin — isAdmin() gate, access-denied screen, post management, sign-out
+- Your Finds — no auth required, instant unsave, stale pruning
+- vendors.hero_image_url — column exists, upload/update functions in lib/posts.ts
 - safeStorage Safari fallback
-- Admin page, bulk delete
 - All reseller intel routes (untouched)
 
 ## KNOWN GAPS ⚠️
-- Hero image upload not yet wired (UI mockup approved — needs Supabase Storage upload)
-- Location card image upload not yet wired (same)
-- Auth QA needed on device — verify vendors.user_id populates and owner detection works
-- No Supabase RLS (user_id is now on vendor rows — RLS is now feasible)
+- post/preview page does NOT yet pass auth user_id to createVendor() — next session priority
+- Owner detection may break for newly published posts until user_id wiring is fixed
+- No entry point to /login from feed for unauth users ("Vendor? Sign in" link)
+- Hero image upload for location card (mall image) not yet wired
+- No Supabase RLS (now feasible — auth is real)
 - No pull-to-refresh on feed
 - No PWA support
 - `/enhance-text` is mock
-- Delete button missing on posts created before vendor_id was stored in local profile
-- Optional hero columns not yet added to malls table
-- UI/UX refinement still needed on: Home feed, Your Finds, Find detail pages
 
 ---
 
@@ -402,11 +318,8 @@ npm run build 2>&1 | tail -30
 # Always stage everything
 git add -A && git commit -m "..." && git push
 
-# Auth debug — check in browser console after visiting /post:
-# Should see treehouse_auth_uid in localStorage after mount
-# After publishing: check Supabase vendors table for user_id populated
-
-# Your Finds debug — console on device:
-# [flagged] localStorage bookmark IDs: N
-# [flagged] Supabase returned: M posts
+# Auth debug — after visiting /login and completing magic link:
+# Check Supabase Auth dashboard for new user row
+# Check localStorage for treehouse_auth_uid
+# Check vendors table for user_id populated after first publish
 ```
