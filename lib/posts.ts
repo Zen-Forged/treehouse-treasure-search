@@ -138,7 +138,7 @@ export async function getVendorBySlug(slug: string): Promise<Vendor | null> {
 export async function getVendorsByMall(mallId: string): Promise<Vendor[]> {
   const { data, error } = await supabase
     .from("vendors")
-    .select("id, display_name, booth_number, slug, avatar_url, facebook_url")
+    .select("id, display_name, booth_number, slug, avatar_url, facebook_url, hero_image_url")
     .eq("mall_id", mallId)
     .order("booth_number", { ascending: true, nullsFirst: false });
   if (error) { console.error("[posts] getVendorsByMall:", error.message); return []; }
@@ -252,4 +252,48 @@ export async function uploadPostImage(base64DataUrl: string, vendorId: string): 
     console.error("[posts] uploadPostImage exception:", err);
     return null;
   }
+}
+
+/**
+ * Upload a vendor hero/banner image to Supabase Storage.
+ * Uses upsert: true so re-uploads replace the previous hero image.
+ * Path: vendor-hero/{vendorId}.jpg — one canonical file per vendor.
+ */
+export async function uploadVendorHeroImage(base64DataUrl: string, vendorId: string): Promise<string | null> {
+  try {
+    const [header, base64] = base64DataUrl.split(",");
+    const mimeType = header.match(/data:([^;]+);/)?.[1] ?? "image/jpeg";
+    // Always store as JPEG for hero images — consistent and compact
+    const filename = `vendor-hero/${vendorId}.jpg`;
+
+    const binary = atob(base64);
+    const bytes  = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+    const { error } = await supabase.storage
+      .from("post-images")
+      .upload(filename, bytes, { contentType: mimeType, upsert: true });
+
+    if (error) { console.error("[posts] uploadVendorHeroImage:", error.message); return null; }
+
+    // Bust the CDN cache by appending a timestamp — upsert won't change the URL otherwise
+    const { data } = supabase.storage.from("post-images").getPublicUrl(filename);
+    const publicUrl = data?.publicUrl ?? null;
+    return publicUrl ? `${publicUrl}?t=${Date.now()}` : null;
+  } catch (err) {
+    console.error("[posts] uploadVendorHeroImage exception:", err);
+    return null;
+  }
+}
+
+/**
+ * Persist the hero image URL to the vendors table.
+ */
+export async function updateVendorHeroImage(vendorId: string, heroImageUrl: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("vendors")
+    .update({ hero_image_url: heroImageUrl })
+    .eq("id", vendorId);
+  if (error) { console.error("[posts] updateVendorHeroImage:", error.message); return false; }
+  return true;
 }

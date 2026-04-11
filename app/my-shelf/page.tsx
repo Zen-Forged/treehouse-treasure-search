@@ -2,19 +2,23 @@
 // My Shelf — cinematic vendor profile page.
 // Contained hero card, Available/Found tab switcher, price-labelled tiles,
 // booth finder card (opens Maps), explore CTA, vendor picker at bottom.
+// Hero image: tap pencil icon → pick from library → compress → upload → optimistic update.
 
 "use client";
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, ChevronRight, ChevronDown, Share2, Check, ImagePlus } from "lucide-react";
+import { MapPin, ChevronRight, ChevronDown, Share2, Check, ImagePlus, Pencil, Loader } from "lucide-react";
 import { PiLeaf } from "react-icons/pi";
-import { getVendorPosts, getVendorsByMall, getAllMalls } from "@/lib/posts";
+import {
+  getVendorPosts, getVendorsByMall, getAllMalls,
+  uploadVendorHeroImage, updateVendorHeroImage,
+} from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Post, type Vendor, type Mall } from "@/types/treehouse";
 import BottomNav from "@/components/BottomNav";
 
@@ -44,8 +48,6 @@ const BASE_URL  = "https://treehouse-treasure-search.vercel.app";
 // Build a Maps URL that opens Apple Maps on iOS, Google Maps elsewhere
 function mapsUrl(query: string): string {
   const q = encodeURIComponent(query);
-  // maps.apple.com works on iOS Safari and opens Apple Maps natively;
-  // on Android/desktop it falls through to Google Maps via the universal URL
   return `https://maps.apple.com/?q=${q}`;
 }
 
@@ -57,24 +59,63 @@ function vendorHueBg(name: string): string {
   return `hsl(${hues[h % hues.length]}, 22%, 78%)`;
 }
 
+// Compress image to 1400px max, 0.82 quality — matches post flow
+function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promise<string> {
+  return new Promise(resolve => {
+    const img = new window.Image();
+    img.onload = () => {
+      const scale  = Math.min(1, maxWidth / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width  = Math.round(img.width  * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 // ─── Hero card (contained, not full-bleed) ────────────────────────────────────
 
 function VendorHero({
   displayName, boothNumber, tagline, mallName, mallCity,
   heroImageUrl, onShare, hasCopied, hasSlug,
+  onHeroImageChange, heroUploading,
+  vendorId,
 }: {
-  displayName:   string;
-  boothNumber:   string | null;
-  tagline?:      string | null;
-  mallName?:     string;
-  mallCity?:     string;
-  heroImageUrl?: string | null;
-  onShare:       () => void;
-  hasCopied:     boolean;
-  hasSlug:       boolean;
+  displayName:       string;
+  boothNumber:       string | null;
+  tagline?:          string | null;
+  mallName?:         string;
+  mallCity?:         string;
+  heroImageUrl?:     string | null;
+  onShare:           () => void;
+  hasCopied:         boolean;
+  hasSlug:           boolean;
+  onHeroImageChange: (file: File) => void;
+  heroUploading:     boolean;
+  vendorId:          string | undefined;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) onHeroImageChange(file);
+    e.target.value = "";
+  }
+
   return (
     <div style={{ padding: "max(14px, env(safe-area-inset-top, 14px)) 10px 0" }}>
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
       {/* App bar above the card */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, paddingLeft: 4, paddingRight: 4 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -107,12 +148,38 @@ function VendorHero({
       {/* Contained hero card */}
       <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", minHeight: 200 }}>
         {heroImageUrl ? (
-          <img src={heroImageUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
+          <img
+            src={heroImageUrl}
+            alt=""
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
+          />
         ) : (
           <div style={{ position: "absolute", inset: 0, background: vendorHueBg(displayName) }} />
         )}
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg, rgba(0,0,0,0.06) 0%, rgba(20,40,25,0.70) 100%)" }} />
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "58%", background: "linear-gradient(to top, rgba(20,38,22,0.90) 0%, transparent 100%)" }} />
+
+        {/* Edit / upload button — top right of hero */}
+        {vendorId && (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={heroUploading}
+            style={{
+              position: "absolute", top: 12, right: 12, zIndex: 10,
+              width: 34, height: 34, borderRadius: "50%",
+              background: "rgba(20,18,12,0.52)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+              border: "1px solid rgba(255,255,255,0.18)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              cursor: heroUploading ? "default" : "pointer",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            {heroUploading
+              ? <Loader size={13} style={{ color: "rgba(255,255,255,0.80)", animation: "spin 0.9s linear infinite" }} />
+              : <Pencil size={13} style={{ color: "rgba(255,255,255,0.88)" }} />
+            }
+          </button>
+        )}
 
         <div style={{ position: "relative", zIndex: 2, padding: "100px 16px 18px" }}>
           <p style={{ fontFamily: "Georgia, serif", fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.52)", letterSpacing: "2px", textTransform: "uppercase", margin: "0 0 5px" }}>
@@ -278,8 +345,6 @@ function BoothFinderCard({ boothNumber, displayName, mallName, mallCity, mallIma
   mallCity?:     string;
   mallImageUrl?: string | null;
 }) {
-  // Build a search query: "America's Antique Mall Louisville KY" — precise enough
-  // for Maps to land on the right pin without needing a lat/lng.
   const mapsQuery = [mallName, mallCity].filter(Boolean).join(", ");
 
   return (
@@ -442,14 +507,16 @@ function NoProfile() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MyShelfPage() {
-  const [profile,      setProfile]      = useState<LocalVendorProfile | null>(null);
-  const [posts,        setPosts]        = useState<Post[]>([]);
-  const [loading,      setLoading]      = useState(true);
-  const [vendors,      setVendors]      = useState<Vendor[]>([]);
-  const [activeVendor, setActiveVendor] = useState<Vendor | null>(null);
-  const [mall,         setMall]         = useState<Mall | null>(null);
-  const [copied,       setCopied]       = useState(false);
-  const [tab,          setTab]          = useState<"available" | "found">("available");
+  const [profile,        setProfile]        = useState<LocalVendorProfile | null>(null);
+  const [posts,          setPosts]          = useState<Post[]>([]);
+  const [loading,        setLoading]        = useState(true);
+  const [vendors,        setVendors]        = useState<Vendor[]>([]);
+  const [activeVendor,   setActiveVendor]   = useState<Vendor | null>(null);
+  const [mall,           setMall]           = useState<Mall | null>(null);
+  const [copied,         setCopied]         = useState(false);
+  const [tab,            setTab]            = useState<"available" | "found">("available");
+  const [heroImageUrl,   setHeroImageUrl]   = useState<string | null>(null);
+  const [heroUploading,  setHeroUploading]  = useState(false);
 
   useEffect(() => {
     try {
@@ -463,7 +530,10 @@ export default function MyShelfPage() {
     if (!profile?.mall_id) return;
     getVendorsByMall(profile.mall_id).then(vs => {
       setVendors(vs);
-      setActiveVendor(vs.find(v => v.id === profile.vendor_id) ?? vs[0] ?? null);
+      const match = vs.find(v => v.id === profile.vendor_id) ?? vs[0] ?? null;
+      setActiveVendor(match);
+      // Seed hero image from Supabase row if present
+      if (match?.hero_image_url) setHeroImageUrl(match.hero_image_url);
     });
     getAllMalls().then(malls => setMall(malls.find(m => m.id === profile.mall_id) ?? null));
   }, [profile?.mall_id, profile?.vendor_id]);
@@ -471,8 +541,48 @@ export default function MyShelfPage() {
   useEffect(() => {
     if (!activeVendor) { if (profile && !profile.vendor_id) setLoading(false); return; }
     setLoading(true);
+    // Update hero image when switching vendors
+    setHeroImageUrl(activeVendor.hero_image_url ?? null);
     getVendorPosts(activeVendor.id, 200).then(data => { setPosts(data); setLoading(false); });
   }, [activeVendor?.id]);
+
+  async function handleHeroImageChange(file: File) {
+    if (!activeVendor?.id) return;
+    setHeroUploading(true);
+
+    try {
+      const reader = new FileReader();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        reader.onload = e => resolve(e.target?.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const compressed = await compressImage(dataUrl);
+
+      // Optimistic update — show the image immediately
+      setHeroImageUrl(compressed);
+
+      const uploadedUrl = await uploadVendorHeroImage(compressed, activeVendor.id);
+      if (uploadedUrl) {
+        // Replace optimistic with the stable CDN URL
+        setHeroImageUrl(uploadedUrl);
+        await updateVendorHeroImage(activeVendor.id, uploadedUrl);
+        // Update local vendor state so switching back reflects the new image
+        setActiveVendor(v => v ? { ...v, hero_image_url: uploadedUrl } : v);
+        setVendors(vs => vs.map(v => v.id === activeVendor.id ? { ...v, hero_image_url: uploadedUrl } : v));
+      } else {
+        // Upload failed — revert to previous
+        setHeroImageUrl(activeVendor.hero_image_url ?? null);
+        console.error("[my-shelf] hero image upload failed");
+      }
+    } catch (err) {
+      console.error("[my-shelf] hero image error:", err);
+      setHeroImageUrl(activeVendor.hero_image_url ?? null);
+    } finally {
+      setHeroUploading(false);
+    }
+  }
 
   async function handleShare() {
     const slug = activeVendor?.slug ?? profile?.slug;
@@ -502,9 +612,18 @@ export default function MyShelfPage() {
 
       {hasProfile ? (
         <VendorHero
-          displayName={displayName} boothNumber={boothNumber} tagline={null}
-          mallName={mallName} mallCity={mallCity}
-          heroImageUrl={null} onShare={handleShare} hasCopied={copied} hasSlug={hasSlug}
+          displayName={displayName}
+          boothNumber={boothNumber}
+          tagline={null}
+          mallName={mallName}
+          mallCity={mallCity}
+          heroImageUrl={heroImageUrl}
+          onShare={handleShare}
+          hasCopied={copied}
+          hasSlug={hasSlug}
+          onHeroImageChange={handleHeroImageChange}
+          heroUploading={heroUploading}
+          vendorId={activeVendor?.id ?? profile?.vendor_id}
         />
       ) : (
         <header style={{ background: C.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${C.border}`, padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 12px", display: "flex", alignItems: "center", gap: 10 }}>
@@ -566,6 +685,8 @@ export default function MyShelfPage() {
       <style>{`
         @keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
         .skeleton-shimmer { background: linear-gradient(90deg, rgba(225,220,210,0.7) 25%, rgba(208,202,190,0.9) 50%, rgba(225,220,210,0.7) 75%); background-size: 800px 100%; animation: shimmer 1.6s infinite linear; }
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        .hidden { display: none; }
       `}</style>
     </div>
   );
