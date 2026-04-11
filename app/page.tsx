@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Compass, ChevronDown } from "lucide-react";
 import PiLeafIcon from "@/components/PiLeafIcon";
 import { getFeedPosts, getAllMalls } from "@/lib/posts";
-import { getSession } from "@/lib/auth";
+import { getSession, onAuthChange } from "@/lib/auth";
 import BottomNav from "@/components/BottomNav";
 import ModeToggle from "@/components/ModeToggle";
 import { MallHeroCard, GenericMallHero } from "@/components/MallHeroCard";
@@ -298,9 +298,11 @@ export default function DiscoveryFeedPage() {
 
   useEffect(() => { getAllMalls().then(setMalls); }, []);
 
-  // Check auth state for "Vendor? Sign in" visibility
+  // Check auth state for "Curator Sign in" visibility — reactive via onAuthChange
   useEffect(() => {
     getSession().then(s => setIsAuthed(!!s?.user));
+    const unsub = onAuthChange(user => setIsAuthed(!!user));
+    return unsub;
   }, []);
 
   useEffect(() => {
@@ -352,7 +354,7 @@ export default function DiscoveryFeedPage() {
                   background: C.greenLight, border: `1px solid ${C.greenBorder}`,
                   whiteSpace: "nowrap",
                 }}>
-                Vendor? Sign in
+                Curator Sign in
               </Link>
             )}
             <ModeToggle onChange={handleModeChange} />

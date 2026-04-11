@@ -1,6 +1,11 @@
 // app/login/page.tsx
 // Magic link login — sends OTP email, confirms session, routes to /my-shelf.
 // Handles the redirect back from the email link (?confirmed=1).
+//
+// UX fix: BroadcastChannel lets an already-open tab detect when the magic link
+// is clicked in a new tab (common on mobile email clients) and auto-navigate
+// to /my-shelf without requiring the user to manually switch back.
+//
 // useSearchParams wrapped in Suspense per Next.js 14 App Router requirement.
 
 "use client";
@@ -12,7 +17,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, ArrowLeft, Check, Loader } from "lucide-react";
-import { sendMagicLink, getSession } from "@/lib/auth";
+import { sendMagicLink, getSession, onAuthChange } from "@/lib/auth";
 
 const C = {
   bg:          "#f5f2eb",
@@ -34,6 +39,8 @@ const C = {
 
 type Screen = "enter-email" | "check-email" | "confirming";
 
+const AUTH_CHANNEL = "treehouse_auth";
+
 // ─── Inner component — uses useSearchParams so must be inside Suspense ────────
 
 function LoginInner() {
@@ -47,21 +54,59 @@ function LoginInner() {
 
   useEffect(() => {
     const confirmed = searchParams.get("confirmed");
+
     if (confirmed === "1") {
+      // This tab received the magic link redirect — confirm session and redirect
       setScreen("confirming");
       let attempts = 0;
       const interval = setInterval(async () => {
         attempts++;
         const session = await getSession();
-        if (session?.user || attempts > 10) {
+        if (session?.user) {
           clearInterval(interval);
+          // Broadcast to other open tabs that auth completed
+          try {
+            const bc = new BroadcastChannel(AUTH_CHANNEL);
+            bc.postMessage({ type: "signed_in", userId: session.user.id });
+            bc.close();
+          } catch {}
           router.replace("/my-shelf");
+        } else if (attempts > 20) {
+          clearInterval(interval);
+          setScreen("enter-email");
+          setError("Couldn't confirm sign-in. Please try again.");
         }
       }, 500);
       return () => clearInterval(interval);
     }
+
     // Already logged in — skip to My Shelf
     getSession().then(s => { if (s?.user) router.replace("/my-shelf"); });
+
+    // Listen for auth state changes via Supabase (handles same-tab magic link)
+    const unsub = onAuthChange(user => {
+      if (user) router.replace("/my-shelf");
+    });
+
+    // Listen for auth from another tab via BroadcastChannel
+    // (magic link clicked in email app opens new tab, this tab should react)
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel(AUTH_CHANNEL);
+      bc.onmessage = (e) => {
+        if (e.data?.type === "signed_in") {
+          // Another tab completed auth — reload our session and navigate
+          getSession().then(s => {
+            if (s?.user) router.replace("/my-shelf");
+          });
+        }
+      };
+    } catch {}
+
+    return () => {
+      unsub();
+      try { bc?.close(); } catch {}
+    };
   }, []);
 
   async function handleSend() {
@@ -103,10 +148,10 @@ function LoginInner() {
               </div>
 
               <h1 style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 700, color: C.textPrimary, textAlign: "center", lineHeight: 1.2, margin: "0 0 8px" }}>
-                Welcome back
+                Curator Sign in
               </h1>
               <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: C.textMuted, textAlign: "center", lineHeight: 1.7, margin: "0 0 32px", maxWidth: 260 }}>
-                Enter your email and we&apos;ll send you a sign-in link. No password needed.
+                Enter your email and we&apos;ll send a sign-in link. No password needed.
               </p>
 
               <div style={{ width: "100%", marginBottom: 12 }}>
@@ -172,7 +217,7 @@ function LoginInner() {
 
               <div style={{ padding: "14px 16px", borderRadius: 12, background: C.surface, border: `1px solid ${C.border}`, marginBottom: 28, width: "100%", boxSizing: "border-box" }}>
                 <p style={{ margin: 0, fontSize: 12, color: C.textMid, lineHeight: 1.65 }}>
-                  Tap the link in the email on this device and you&apos;ll be signed in automatically. The link expires in 1 hour.
+                  Tap the link in the email — it will open in a new tab and sign you in automatically. You can then return to this tab or close it.
                 </p>
               </div>
 
