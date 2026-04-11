@@ -18,7 +18,7 @@ import { getCachedUserId } from "@/lib/auth";
 import BottomNav from "@/components/BottomNav";
 import type { Post } from "@/types/treehouse";
 
-// ─── Design tokens — warmer parchment palette ──────────────────────────────────
+// ─── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
   bg:          "#f5f2eb",
   surface:     "#edeae1",
@@ -140,28 +140,18 @@ function ShelfSection({ vendorId, currentPostId, onReady }: { vendorId: string; 
   );
 }
 
-// ─── Owner detection ──────────────────────────────────────────────────────────
-// Priority:
-// 1. Session user_id matches post.vendor.user_id (strongest — session-based)
-// 2. localStorage vendor_id matches post.vendor_id (fallback — for older posts)
+// ─── Owner detection ───────────────────────────────────────────────────────────
 
 function detectOwnership(post: Post): boolean {
   try {
-    // Method 1: session-based (new approach)
     const sessionUid = getCachedUserId();
-    if (sessionUid && post.vendor?.user_id && sessionUid === post.vendor.user_id) {
-      return true;
-    }
-
-    // Method 2: localStorage vendor_id comparison (backwards compat)
+    if (sessionUid && post.vendor?.user_id && sessionUid === post.vendor.user_id) return true;
     const raw = localStorage.getItem(LOCAL_VENDOR_KEY);
     if (raw) {
       const profile = JSON.parse(raw) as LocalVendorProfile;
       const profileVendorId = profile.vendor_id;
       const postVendorId    = post.vendor_id ?? post.vendor?.id;
-      if (profileVendorId && postVendorId && profileVendorId === postVendorId) {
-        return true;
-      }
+      if (profileVendorId && postVendorId && profileVendorId === postVendorId) return true;
     }
   } catch {}
   return false;
@@ -234,7 +224,7 @@ export default function FindDetailPage() {
 
   const handleShelfReady = useCallback((hasItems: boolean) => { setShelfHasItems(hasItems); }, []);
 
-  // Owner controls: must be this device's vendor (isMyPost) AND in Curator mode
+  // Owner controls: must be this device's vendor AND in Curator mode
   const showOwnerControls = isMyPost && isCurator;
 
   const mapsUrl = post?.mall?.address
@@ -262,7 +252,6 @@ export default function FindDetailPage() {
 
   const isSold      = post.status === "sold";
   const hasVendor   = !!post.vendor;
-  const hasPrice    = post.price_asking != null;
   const boothNumber = post.vendor?.booth_number ?? null;
   const hasBoothBox = !!boothNumber;
 
@@ -292,6 +281,7 @@ export default function FindDetailPage() {
           </div>
         )}
 
+        {/* Save + share buttons — bottom right of image */}
         <div style={{ position: "absolute", bottom: 12, right: 14, display: "flex", alignItems: "center", gap: 8 }}>
           <button onClick={handleSave} aria-label={isSaved ? "Remove from Your Finds" : "Save to Your Finds"}
             style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: isSaved ? C.greenSolid : "rgba(0,0,0,0.30)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", cursor: "pointer", transition: "background 0.18s" }}>
@@ -320,18 +310,12 @@ export default function FindDetailPage() {
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.06 }}
           style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 28 }}>
-          {hasPrice && !isSold && (
-            <span style={{ fontFamily: "monospace", fontSize: 16, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.3px" }}>
-              ${post.price_asking!.toLocaleString()}
-            </span>
-          )}
-          {hasPrice && !isSold && <span style={{ fontSize: 13, color: C.textFaint }}>·</span>}
           {!isSold && (
             <motion.div animate={{ opacity: [1, 0.35, 1] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
               style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, flexShrink: 0 }} />
           )}
           <span style={{ fontSize: 12, fontWeight: 500, color: isSold ? C.textMuted : C.green, letterSpacing: "0.1px" }}>
-            {isSold ? "Found" : "Available"}
+            {isSold ? "Found a home" : "Available"}
           </span>
         </motion.div>
 
@@ -419,50 +403,49 @@ export default function FindDetailPage() {
                 </button>
               </div>
             )}
+
+            {/* Owner controls — Curator mode + ownership only */}
+            {showOwnerControls && (
+              <div style={{ padding: "12px 16px 14px", borderTop: `1px solid ${C.border}` }}>
+                <button onClick={handleToggleSold} disabled={actionBusy}
+                  style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: actionBusy ? "default" : "pointer", padding: "4px 0", marginBottom: 10, opacity: actionBusy ? 0.5 : 1, WebkitTapHighlightColor: "transparent" }}>
+                  <Tag size={11} style={{ color: isSold ? C.green : C.textFaint }} />
+                  <span style={{ fontSize: 11, color: isSold ? C.green : C.textMuted, fontWeight: isSold ? 600 : 400 }}>
+                    {isSold ? "Mark as available" : "Mark as sold"}
+                  </span>
+                </button>
+
+                {!showDelete ? (
+                  <button onClick={() => setShowDelete(true)}
+                    style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: "4px 0", WebkitTapHighlightColor: "transparent" }}>
+                    <Trash2 size={11} style={{ color: C.textFaint }} />
+                    <span style={{ fontSize: 11, color: C.textFaint }}>Delete post</span>
+                  </button>
+                ) : (
+                  <AnimatePresence>
+                    <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
+                      style={{ padding: "13px", borderRadius: 11, background: C.redBg, border: `1px solid ${C.redBorder}` }}>
+                      <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: C.red, marginBottom: 4 }}>Delete this post?</div>
+                      <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 13, lineHeight: 1.65 }}>
+                        This can&apos;t be undone. The image and listing will be permanently removed.
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={handleDelete} disabled={actionBusy}
+                          style={{ flex: 1, padding: "10px", borderRadius: 9, fontSize: 13, fontWeight: 600, color: "#fff", background: C.red, border: "none", cursor: "pointer", opacity: actionBusy ? 0.6 : 1 }}>
+                          {actionBusy ? "Deleting…" : "Yes, delete"}
+                        </button>
+                        <button onClick={() => setShowDelete(false)}
+                          style={{ flex: 1, padding: "10px", borderRadius: 9, fontSize: 13, color: C.textMid, background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer" }}>
+                          Cancel
+                        </button>
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
+                )}
+              </div>
+            )}
           </motion.div>
         </div>
-      )}
-
-      {/* ── Owner actions — Curator mode + ownership only ── */}
-      {showOwnerControls && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.3 }}
-          style={{ padding: "0 20px", marginTop: 4, display: "flex", flexDirection: "column" }}>
-          <div style={{ height: 1, background: C.border, marginBottom: 16 }} />
-          <button onClick={handleToggleSold} disabled={actionBusy}
-            style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: "6px 0", marginBottom: 10, opacity: actionBusy ? 0.5 : 1 }}>
-            <Tag size={11} style={{ color: isSold ? C.green : C.textFaint }} />
-            <span style={{ fontSize: 11, color: isSold ? C.green : C.textFaint, fontWeight: isSold ? 500 : 400 }}>
-              {isSold ? "Mark as available" : "Mark as sold"}
-            </span>
-          </button>
-          {!showDelete ? (
-            <button onClick={() => setShowDelete(true)}
-              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: "6px 0" }}>
-              <Trash2 size={11} style={{ color: C.textFaint }} />
-              <span style={{ fontSize: 11, color: C.textFaint }}>Delete post</span>
-            </button>
-          ) : (
-            <AnimatePresence>
-              <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-                style={{ padding: "14px", borderRadius: 12, background: C.redBg, border: `1px solid ${C.redBorder}` }}>
-                <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: C.red, marginBottom: 5 }}>Delete this post?</div>
-                <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 14, lineHeight: 1.65 }}>
-                  This can't be undone. The image and listing will be permanently removed.
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={handleDelete} disabled={actionBusy}
-                    style={{ flex: 1, padding: "10px", borderRadius: 9, fontSize: 13, fontWeight: 600, color: "#fff", background: C.red, border: "none", cursor: "pointer", opacity: actionBusy ? 0.6 : 1 }}>
-                    {actionBusy ? "Deleting…" : "Yes, delete"}
-                  </button>
-                  <button onClick={() => setShowDelete(false)}
-                    style={{ flex: 1, padding: "10px", borderRadius: 9, fontSize: 13, color: C.textMid, background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer" }}>
-                    Cancel
-                  </button>
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          )}
-        </motion.div>
       )}
 
       <div style={{ paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }} />

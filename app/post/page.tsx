@@ -1,10 +1,13 @@
 // app/post/page.tsx
+// Vendor capture — camera/gallery pick, profile display (locked after setup).
+// Profile fields are read-only once set — only Reset clears them.
+
 "use client";
 
 import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, ArrowLeft, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
+import { Camera, ArrowLeft, ChevronDown, RotateCcw } from "lucide-react";
 import { getAllMalls } from "@/lib/posts";
 import { postStore } from "@/lib/postStore";
 import { safeStorage } from "@/lib/safeStorage";
@@ -52,7 +55,7 @@ export default function PostCapturePage() {
   const [profile,      setProfile]      = useState<LocalVendorProfile | null>(null);
   const [malls,        setMalls]        = useState<Mall[]>([]);
   const [mallsLoading, setMallsLoading] = useState(true);
-  const [showSetup,    setShowSetup]    = useState(false);
+  // Setup form state — only used when no profile exists
   const [showMallPick, setShowMallPick] = useState(false);
   const [displayName,  setDisplayName]  = useState("");
   const [boothNumber,  setBoothNumber]  = useState("");
@@ -61,18 +64,15 @@ export default function PostCapturePage() {
   const [userId,       setUserId]       = useState<string | null>(null);
 
   useEffect(() => {
-    // Establish anon session on mount — runs silently in background
     ensureAnonSession().then(uid => {
       setUserId(uid);
-      // If we have a profile but it's missing user_id, backfill it
       if (uid) {
         try {
           const raw = safeStorage.getItem(LOCAL_VENDOR_KEY);
           if (raw) {
             const saved = JSON.parse(raw) as LocalVendorProfile;
             if (!saved.user_id) {
-              const updated = { ...saved, user_id: uid };
-              safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(updated));
+              safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify({ ...saved, user_id: uid }));
             }
           }
         } catch {}
@@ -86,16 +86,12 @@ export default function PostCapturePage() {
         setProfile(saved);
         setDisplayName(saved.display_name);
         setBoothNumber(saved.booth_number ?? "");
-      } catch {
-        setShowSetup(true);
-      }
-    } else {
-      setShowSetup(true);
+      } catch {}
     }
     getAllMalls().then(data => { setMalls(data); setMallsLoading(false); });
   }, []);
 
-  // Validate saved mall_id against live malls.
+  // Validate saved mall_id against live malls
   useEffect(() => {
     if (malls.length === 0 || mallsLoading || !profile) return;
     const match = malls.find(m => m.id === profile.mall_id);
@@ -112,7 +108,6 @@ export default function PostCapturePage() {
       };
       safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(cleaned));
       setProfile(cleaned);
-      setShowSetup(true);
     }
   }, [malls, mallsLoading]);
 
@@ -122,35 +117,21 @@ export default function PostCapturePage() {
     setDisplayName("");
     setBoothNumber("");
     setSelectedMall(null);
-    setShowSetup(true);
   }
 
   function saveProfile() {
-    if (!selectedMall) return;
-
-    const newName  = displayName.trim();
-    const newBooth = boothNumber.trim();
-
-    const sameMall  = profile?.mall_id      === selectedMall.id;
-    const sameName  = profile?.display_name === newName;
-    const sameBooth = (profile?.booth_number ?? "") === newBooth;
-    const identityUnchanged = sameMall && sameName && sameBooth;
-
+    if (!selectedMall || displayName.trim().length < 2) return;
     const p: LocalVendorProfile = {
-      display_name: newName,
-      booth_number: newBooth,
+      display_name: displayName.trim(),
+      booth_number: boothNumber.trim(),
       mall_id:      selectedMall.id,
       mall_name:    selectedMall.name,
       mall_city:    selectedMall.city,
-      vendor_id:    identityUnchanged ? profile?.vendor_id : undefined,
-      slug:         identityUnchanged ? profile?.slug       : undefined,
-      // Always carry user_id — it's session-based, not identity-based
-      user_id:      profile?.user_id ?? userId ?? undefined,
+      // New profile — no vendor_id yet, assigned on first publish
+      user_id:      userId ?? undefined,
     };
-
     safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(p));
     setProfile(p);
-    setShowSetup(false);
   }
 
   async function handleFile(file: File) {
@@ -172,14 +153,11 @@ export default function PostCapturePage() {
     e.target.value = "";
   };
 
-  const formComplete    = displayName.trim().length >= 2 && selectedMall !== null;
-  const hasValidProfile = formComplete || (
-    profile !== null &&
-    profile.mall_id.length > 0 &&
-    profile.display_name.trim().length >= 2 &&
-    malls.some(m => m.id === profile.mall_id)
-  );
-  const canCapture = hasValidProfile && !capturing;
+  // Profile is valid if we have a saved profile with a real mall
+  const hasValidProfile = !!profile && profile.mall_id.length > 0 && profile.display_name.trim().length >= 2;
+  // Setup form is valid enough to save
+  const formComplete = displayName.trim().length >= 2 && selectedMall !== null;
+  const canCapture   = hasValidProfile && !capturing;
 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "10px 12px", borderRadius: 9,
@@ -209,6 +187,7 @@ export default function PostCapturePage() {
               <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginTop: 2 }}>Share with your community</div>
             </div>
           </div>
+          {/* Reset button — always available so vendor can clear their profile if needed */}
           {profile && (
             <button onClick={handleReset} style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 10px", borderRadius: 8, background: "none", border: `1px solid ${C.border}`, cursor: "pointer", fontSize: 10, color: C.textFaint }}>
               <RotateCcw size={10} />
@@ -219,82 +198,79 @@ export default function PostCapturePage() {
 
         <div style={{ flex: 1, padding: "16px 15px", paddingBottom: "max(32px, env(safe-area-inset-bottom, 32px))", display: "flex", flexDirection: "column", gap: 14 }}>
 
-          {/* Vendor profile card */}
+          {/* ── Vendor identity card ── */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
             style={{ borderRadius: 14, background: C.surface, border: `1px solid ${C.border}`, overflow: "hidden" }}>
-            <button onClick={() => setShowSetup(s => !s)}
-              style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "none", border: "none", cursor: "pointer", borderBottom: showSetup ? `1px solid ${C.border}` : "none" }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 3 }}>
-                <div style={{ fontSize: 8, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px" }}>Your vendor profile</div>
-                {profile && selectedMall
-                  ? <div style={{ fontFamily: "Georgia, serif", fontSize: 14, color: C.textPrimary, fontWeight: 600 }}>
-                      {[profile.display_name, profile.booth_number ? `Booth ${profile.booth_number}` : null, selectedMall.name].filter(Boolean).join(" · ")}
-                    </div>
-                  : <div style={{ fontSize: 12, color: C.textMuted }}>
-                      {profile?.display_name && !selectedMall ? "Select your mall to continue" : "Set up your profile to post"}
-                    </div>
-                }
-              </div>
-              {showSetup ? <ChevronUp size={14} style={{ color: C.textMuted, flexShrink: 0 }} /> : <ChevronDown size={14} style={{ color: C.textMuted, flexShrink: 0 }} />}
-            </button>
 
-            <AnimatePresence>
-              {showSetup && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} style={{ overflow: "hidden" }}>
-                  <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: 12 }}>
-                    <div>
-                      <label style={labelStyle}>Vendor name</label>
-                      <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)}
-                        placeholder="e.g. Magnolia & Co." style={{ ...inputStyle, fontFamily: "Georgia, serif" }} />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Booth number <span style={{ color: C.textFaint, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
-                      <input type="text" value={boothNumber} onChange={e => setBoothNumber(e.target.value)} placeholder="e.g. 42B" style={inputStyle} />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Your mall</label>
-                      {mallsLoading ? (
-                        <div style={{ padding: "10px 12px", fontSize: 12, color: C.textMuted }}>Loading malls…</div>
-                      ) : malls.length === 0 ? (
-                        <div style={{ padding: "10px 12px", fontSize: 12, color: C.textMid, lineHeight: 1.5 }}>No malls listed yet.</div>
-                      ) : (
-                        <>
-                          <button onClick={() => setShowMallPick(s => !s)}
-                            style={{ ...inputStyle, display: "flex", alignItems: "center", justifyContent: "space-between", border: `1px solid ${selectedMall ? C.greenBorder : C.inputBorder}`, cursor: "pointer", color: selectedMall ? C.textPrimary : C.textMuted, fontFamily: selectedMall ? "Georgia, serif" : "inherit" }}>
-                            <span>{selectedMall ? `${selectedMall.name} · ${selectedMall.city}` : "Select your mall"}</span>
-                            <ChevronDown size={13} style={{ color: C.textMuted, flexShrink: 0 }} />
-                          </button>
-                          <AnimatePresence>
-                            {showMallPick && (
-                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} style={{ overflow: "hidden", marginTop: 4 }}>
-                                <div style={{ borderRadius: 9, border: `1px solid ${C.border}`, overflow: "hidden", background: "#fff", maxHeight: 200, overflowY: "auto" }}>
-                                  {malls.map(mall => (
-                                    <button key={mall.id} onClick={() => { setSelectedMall(mall); setShowMallPick(false); }}
-                                      style={{ width: "100%", padding: "11px 14px", background: selectedMall?.id === mall.id ? C.greenLight : "none", border: "none", borderBottom: `1px solid ${C.border}`, cursor: "pointer", textAlign: "left" }}>
-                                      <div style={{ fontFamily: "Georgia, serif", fontSize: 13, color: C.textPrimary, lineHeight: 1.2 }}>{mall.name}</div>
-                                      <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>{mall.city}, {mall.state}</div>
-                                    </button>
-                                  ))}
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </>
-                      )}
-                    </div>
-                    <button onClick={saveProfile} disabled={!formComplete}
-                      style={{ width: "100%", padding: "12px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: formComplete ? "pointer" : "default", color: formComplete ? "#fff" : C.textFaint, background: formComplete ? C.green : C.surfaceDeep, border: "none", transition: "all 0.2s" }}>
-                      Save profile
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {hasValidProfile ? (
+              /* ── Locked view — profile is set, show read-only identity ── */
+              <div style={{ padding: "13px 14px" }}>
+                <div style={{ fontSize: 8, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: 6 }}>
+                  Posting as
+                </div>
+                <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: C.textPrimary, marginBottom: 2 }}>
+                  {profile.display_name}
+                </div>
+                <div style={{ fontSize: 11, color: C.textMuted }}>
+                  {[profile.booth_number ? `Booth ${profile.booth_number}` : null, profile.mall_name, profile.mall_city].filter(Boolean).join(" · ")}
+                </div>
+              </div>
+            ) : (
+              /* ── Setup form — first time or after reset ── */
+              <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600, color: C.textPrimary, marginBottom: 2 }}>
+                  Set up your vendor profile
+                </div>
+                <div>
+                  <label style={labelStyle}>Vendor name</label>
+                  <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)}
+                    placeholder="e.g. Magnolia & Co." style={{ ...inputStyle, fontFamily: "Georgia, serif" }} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Booth number <span style={{ color: C.textFaint, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
+                  <input type="text" value={boothNumber} onChange={e => setBoothNumber(e.target.value)} placeholder="e.g. 42B" style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Your mall</label>
+                  {mallsLoading ? (
+                    <div style={{ padding: "10px 12px", fontSize: 12, color: C.textMuted }}>Loading malls…</div>
+                  ) : malls.length === 0 ? (
+                    <div style={{ padding: "10px 12px", fontSize: 12, color: C.textMid, lineHeight: 1.5 }}>No malls listed yet.</div>
+                  ) : (
+                    <>
+                      <button onClick={() => setShowMallPick(s => !s)}
+                        style={{ ...inputStyle, display: "flex", alignItems: "center", justifyContent: "space-between", border: `1px solid ${selectedMall ? C.greenBorder : C.inputBorder}`, cursor: "pointer", color: selectedMall ? C.textPrimary : C.textMuted, fontFamily: selectedMall ? "Georgia, serif" : "inherit" }}>
+                        <span>{selectedMall ? `${selectedMall.name} · ${selectedMall.city}` : "Select your mall"}</span>
+                        <ChevronDown size={13} style={{ color: C.textMuted, flexShrink: 0 }} />
+                      </button>
+                      <AnimatePresence>
+                        {showMallPick && (
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} style={{ overflow: "hidden", marginTop: 4 }}>
+                            <div style={{ borderRadius: 9, border: `1px solid ${C.border}`, overflow: "hidden", background: "#fff", maxHeight: 200, overflowY: "auto" }}>
+                              {malls.map(mall => (
+                                <button key={mall.id} onClick={() => { setSelectedMall(mall); setShowMallPick(false); }}
+                                  style={{ width: "100%", padding: "11px 14px", background: selectedMall?.id === mall.id ? C.greenLight : "none", border: "none", borderBottom: `1px solid ${C.border}`, cursor: "pointer", textAlign: "left" }}>
+                                  <div style={{ fontFamily: "Georgia, serif", fontSize: 13, color: C.textPrimary, lineHeight: 1.2 }}>{mall.name}</div>
+                                  <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>{mall.city}, {mall.state}</div>
+                                </button>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </>
+                  )}
+                </div>
+                <button onClick={saveProfile} disabled={!formComplete}
+                  style={{ width: "100%", padding: "12px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: formComplete ? "pointer" : "default", color: formComplete ? "#fff" : C.textFaint, background: formComplete ? C.green : C.surfaceDeep, border: "none", transition: "all 0.2s" }}>
+                  Save profile
+                </button>
+              </div>
+            )}
           </motion.div>
 
-          {/* Photo capture */}
+          {/* ── Photo capture ── */}
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.1 }}
             style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", paddingLeft: 2 }}>Photograph your find</div>
@@ -309,7 +285,7 @@ export default function PostCapturePage() {
               </div>
               {!hasValidProfile && !mallsLoading && (
                 <div style={{ fontSize: 11, color: C.textMuted, textAlign: "center", maxWidth: 210, lineHeight: 1.5 }}>
-                  {profile?.display_name && !selectedMall ? "Select your mall above to continue" : "Complete your vendor profile above to continue"}
+                  Complete your vendor profile above to continue
                 </div>
               )}
             </motion.button>
@@ -319,7 +295,7 @@ export default function PostCapturePage() {
             </button>
           </motion.div>
 
-          {/* Tips */}
+          {/* ── Tips ── */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.25 }}
             style={{ borderRadius: 12, background: C.surface, border: `1px solid ${C.border}`, padding: "12px 14px" }}>
             <div style={{ fontSize: 8, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: 8 }}>Posting tips</div>
@@ -332,6 +308,8 @@ export default function PostCapturePage() {
           </motion.div>
         </div>
       </div>
+
+      <style>{`.hidden { display: none; }`}</style>
     </div>
   );
 }
