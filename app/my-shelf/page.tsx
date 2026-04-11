@@ -1,7 +1,14 @@
 // app/my-shelf/page.tsx
 // My Shelf — cinematic vendor profile page. Auth-gated.
-// Redirects to /login if no session. One vendor per auth user.
-// Hero image upload, Available/Found tabs, booth finder, explore CTA.
+// Redirects to /login if no session.
+//
+// IDENTITY RESOLUTION (authoritative order):
+//   1. getVendorByUserId(user.id) — Supabase is source of truth for logged-in users
+//   2. localStorage cache — written after Supabase confirms, used as fast-path hint only
+//   3. NoBooth state — shown when auth user has no linked vendor row yet
+//
+// This ensures the correct shelf is always shown regardless of which device
+// the user logs in from.
 
 "use client";
 
@@ -15,7 +22,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, ChevronRight, Share2, Check, ImagePlus, Pencil, Loader, LogOut } from "lucide-react";
 import { PiLeaf } from "react-icons/pi";
 import {
-  getVendorPosts, getVendorsByMall, getAllMalls,
+  getVendorByUserId, getVendorPosts, getAllMalls,
   uploadVendorHeroImage, updateVendorHeroImage,
 } from "@/lib/posts";
 import { getSession, signOut, isAdmin } from "@/lib/auth";
@@ -130,11 +137,9 @@ function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl
           ? <img key={heroKey} src={heroImageUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
           : <div style={{ position: "absolute", inset: 0, background: vendorHueBg(displayName) }} />
         }
-        {/* L→R gradient: dark left, transparent right */}
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(18,34,20,0.82) 0%, rgba(18,34,20,0.40) 55%, transparent 100%)", zIndex: 1 }} />
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "50%", background: "linear-gradient(to top, rgba(18,34,20,0.72) 0%, transparent 100%)", zIndex: 1 }} />
 
-        {/* Edit button */}
         {vendorId && (
           <button onClick={() => fileInputRef.current?.click()} disabled={heroUploading}
             style={{ position: "absolute", top: 12, right: 12, zIndex: 10, width: 34, height: 34, borderRadius: "50%", background: "rgba(20,18,12,0.52)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", cursor: heroUploading ? "default" : "pointer", WebkitTapHighlightColor: "transparent" }}>
@@ -348,18 +353,21 @@ export default function MyShelfPage() {
   const router = useRouter();
   const [user,          setUser]          = useState<User | null>(null);
   const [authReady,     setAuthReady]     = useState(false);
-  const [profile,       setProfile]       = useState<LocalVendorProfile | null>(null);
-  const [posts,         setPosts]         = useState<Post[]>([]);
-  const [loading,       setLoading]       = useState(true);
   const [activeVendor,  setActiveVendor]  = useState<Vendor | null>(null);
+  const [vendorReady,   setVendorReady]   = useState(false); // true once Supabase lookup completes
+  const [posts,         setPosts]         = useState<Post[]>([]);
+  const [postsLoading,  setPostsLoading]  = useState(false);
   const [mall,          setMall]          = useState<Mall | null>(null);
   const [copied,        setCopied]        = useState(false);
   const [tab,           setTab]           = useState<"available" | "found">("available");
   const [heroImageUrl,  setHeroImageUrl]  = useState<string | null>(null);
-  const [heroKey,       setHeroKey]       = useState(0); // force img remount on re-upload
+  const [heroKey,       setHeroKey]       = useState(0);
   const [heroUploading, setHeroUploading] = useState(false);
 
-  // ── Auth gate ──
+  // Prevents the vendor-load effect from overwriting a freshly-uploaded hero image
+  const heroLockedRef = useRef(false);
+
+  // ── Step 1: Auth gate — redirect if no session ──
   useEffect(() => {
     getSession().then(s => {
       if (!s?.user) { router.replace("/login"); return; }
@@ -368,39 +376,63 @@ export default function MyShelfPage() {
     });
   }, []);
 
-  // ── Load profile + vendor from localStorage ──
+  // ── Step 2: Resolve vendor identity from Supabase using user_id (authoritative) ──
+  // This runs once auth is confirmed. The result is the single source of truth.
+  // localStorage is updated as a cache after we have the Supabase result.
   useEffect(() => {
-    if (!authReady) return;
-    try {
-      const raw = localStorage.getItem(LOCAL_VENDOR_KEY);
-      if (raw) setProfile(JSON.parse(raw) as LocalVendorProfile);
-      else setLoading(false);
-    } catch { setLoading(false); }
-  }, [authReady]);
+    if (!authReady || !user) return;
 
-  // ── Load vendor from Supabase using profile.vendor_id ──
-  useEffect(() => {
-    if (!profile?.mall_id) return;
-    // Find the vendor row belonging to this user
-    getVendorsByMall(profile.mall_id).then(vs => {
-      // Prefer the vendor linked to this auth user's uid
-      const mine = vs.find(v => v.id === profile.vendor_id) ?? null;
-      setActiveVendor(mine);
-      if (mine?.hero_image_url) setHeroImageUrl(mine.hero_image_url);
+    getVendorByUserId(user.id).then(vendor => {
+      if (vendor) {
+        // Found in Supabase — this is the real identity
+        setActiveVendor(vendor);
+        if (vendor.hero_image_url && !heroLockedRef.current) {
+          setHeroImageUrl(vendor.hero_image_url);
+        }
+
+        // Write back to localStorage as cache so /post picks it up correctly
+        const cached: LocalVendorProfile = {
+          display_name: vendor.display_name,
+          booth_number: vendor.booth_number ?? "",
+          mall_id:      vendor.mall_id,
+          mall_name:    (vendor.mall as Mall | undefined)?.name ?? "",
+          mall_city:    (vendor.mall as Mall | undefined)?.city ?? "",
+          vendor_id:    vendor.id,
+          slug:         vendor.slug,
+          user_id:      user.id,
+        };
+        try { localStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(cached)); } catch {}
+
+        // Resolve mall display info
+        if (vendor.mall) {
+          setMall(vendor.mall as Mall);
+        } else {
+          getAllMalls().then(malls => {
+            setMall(malls.find(m => m.id === vendor.mall_id) ?? null);
+          });
+        }
+      }
+      // vendor === null means auth user has no linked vendor row yet → show NoBooth
+      setVendorReady(true);
     });
-    getAllMalls().then(malls => setMall(malls.find(m => m.id === profile.mall_id) ?? null));
-  }, [profile?.mall_id, profile?.vendor_id]);
+  }, [authReady, user?.id]);
 
+  // ── Step 3: Load posts once we have an active vendor ──
   useEffect(() => {
-    if (!activeVendor) { if (profile && !profile.vendor_id) setLoading(false); return; }
-    setLoading(true);
-    setHeroImageUrl(activeVendor.hero_image_url ?? null);
-    getVendorPosts(activeVendor.id, 200).then(data => { setPosts(data); setLoading(false); });
+    if (!activeVendor) return;
+    setPostsLoading(true);
+    getVendorPosts(activeVendor.id, 200).then(data => {
+      setPosts(data);
+      setPostsLoading(false);
+    });
   }, [activeVendor?.id]);
 
+  // ── Hero image upload ──
   async function handleHeroImageChange(file: File) {
     if (!activeVendor?.id) return;
     setHeroUploading(true);
+    heroLockedRef.current = true;
+
     try {
       const reader  = new FileReader();
       const dataUrl = await new Promise<string>((res, rej) => {
@@ -408,19 +440,19 @@ export default function MyShelfPage() {
         reader.onerror = rej;
         reader.readAsDataURL(file);
       });
-      const compressed  = await compressImage(dataUrl);
-      // Optimistic: show new image immediately, bump key to force remount
+      const compressed = await compressImage(dataUrl);
+
+      // Optimistic preview
       setHeroImageUrl(compressed);
       setHeroKey(k => k + 1);
 
       const uploadedUrl = await uploadVendorHeroImage(compressed, activeVendor.id);
       if (uploadedUrl) {
-        setHeroImageUrl(uploadedUrl);
-        setHeroKey(k => k + 1); // bump again to load CDN url fresh
         await updateVendorHeroImage(activeVendor.id, uploadedUrl);
+        setHeroImageUrl(uploadedUrl);
+        setHeroKey(k => k + 1);
         setActiveVendor(v => v ? { ...v, hero_image_url: uploadedUrl } : v);
       } else {
-        // Revert on failure
         setHeroImageUrl(activeVendor.hero_image_url ?? null);
         setHeroKey(k => k + 1);
       }
@@ -429,14 +461,15 @@ export default function MyShelfPage() {
       setHeroKey(k => k + 1);
     } finally {
       setHeroUploading(false);
+      setTimeout(() => { heroLockedRef.current = false; }, 3000);
     }
   }
 
   async function handleShare() {
-    const slug = activeVendor?.slug ?? profile?.slug;
+    const slug = activeVendor?.slug;
     if (!slug) return;
-    const url  = `${BASE_URL}/vendor/${slug}`;
-    const name = activeVendor?.display_name ?? profile?.display_name ?? "my shelf";
+    const url  = `${BASE_URL}/shelf/${slug}`;
+    const name = activeVendor.display_name;
     if (navigator.share) { try { await navigator.share({ title: `${name} on Treehouse`, text: `Check out finds from ${name}.`, url }); return; } catch {} }
     try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2200); } catch {}
   }
@@ -446,29 +479,32 @@ export default function MyShelfPage() {
     router.replace("/");
   }
 
-  if (!authReady) return null; // prevent flash before redirect
+  // Don't render anything until auth is confirmed (prevents flash before redirect)
+  if (!authReady) return null;
 
   const available   = posts.filter(p => p.status === "available");
   const found       = posts.filter(p => p.status === "sold");
-  const displayName = activeVendor?.display_name ?? profile?.display_name ?? "";
-  const boothNumber = activeVendor?.booth_number  ?? profile?.booth_number  ?? null;
-  const hasSlug     = !!(activeVendor?.slug ?? profile?.slug);
-  const mallName    = mall?.name ?? "America's Antique Mall";
-  const mallCity    = mall?.city ?? "Louisville, KY";
-  const hasProfile  = !!profile && !!profile.vendor_id;
+  const displayName = activeVendor?.display_name ?? "";
+  const boothNumber = activeVendor?.booth_number  ?? null;
+  const hasSlug     = !!activeVendor?.slug;
+  const mallName    = mall?.name ?? (activeVendor?.mall as Mall | undefined)?.name ?? "America's Antique Mall";
+  const mallCity    = mall?.city ?? (activeVendor?.mall as Mall | undefined)?.city ?? "Louisville, KY";
   const adminUser   = isAdmin(user);
+
+  // Show skeleton while we wait for the Supabase vendor lookup
+  const loading = !vendorReady || postsLoading;
 
   return (
     <div style={{ minHeight: "100dvh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
 
-      {hasProfile ? (
+      {activeVendor ? (
         <VendorHero
           displayName={displayName} boothNumber={boothNumber}
           mallName={mallName} mallCity={mallCity}
           heroImageUrl={heroImageUrl} heroKey={heroKey}
           onShare={handleShare} hasCopied={copied} hasSlug={hasSlug}
           onHeroImageChange={handleHeroImageChange} heroUploading={heroUploading}
-          vendorId={activeVendor?.id ?? profile?.vendor_id}
+          vendorId={activeVendor.id}
           isAdminUser={adminUser} onSignOut={handleSignOut}
         />
       ) : (
@@ -486,7 +522,7 @@ export default function MyShelfPage() {
       <div style={{ flex: 1, overflowY: "auto", paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }}>
         {loading ? (
           <SkeletonGrid />
-        ) : !hasProfile ? (
+        ) : !activeVendor ? (
           <NoBooth onSignOut={handleSignOut} />
         ) : (
           <>
