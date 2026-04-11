@@ -59,7 +59,6 @@ export async function POST(req: NextRequest) {
   const { data, error } = await admin.auth.admin.generateLink({
     type: "magiclink",
     email: adminEmail,
-    options: { shouldCreateUser: true },
   });
 
   if (error || !data?.properties) {
