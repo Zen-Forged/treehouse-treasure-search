@@ -13,7 +13,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, ChevronRight, ChevronDown, Share2, Check, ImagePlus, Pencil, Loader } from "lucide-react";
+import { MapPin, ChevronRight, ChevronDown, Share2, Check, ImagePlus, Pencil, Loader, Plus } from "lucide-react";
 import { PiLeaf } from "react-icons/pi";
 import {
   getVendorPosts, getVendorsByMall, getAllMalls,
@@ -45,13 +45,10 @@ const GAP       = 6;
 const GRID_COLS = 3;
 const BASE_URL  = "https://treehouse-treasure-search.vercel.app";
 
-// Build a Maps URL that opens Apple Maps on iOS, Google Maps elsewhere
 function mapsUrl(query: string): string {
-  const q = encodeURIComponent(query);
-  return `https://maps.apple.com/?q=${q}`;
+  return `https://maps.apple.com/?q=${encodeURIComponent(query)}`;
 }
 
-// Deterministic pastel from vendor name — used as hero bg when no image
 function vendorHueBg(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
@@ -59,7 +56,6 @@ function vendorHueBg(name: string): string {
   return `hsl(${hues[h % hues.length]}, 22%, 78%)`;
 }
 
-// Compress image to 1400px max, 0.82 quality — matches post flow
 function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promise<string> {
   return new Promise(resolve => {
     const img = new window.Image();
@@ -76,13 +72,12 @@ function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promis
   });
 }
 
-// ─── Hero card (contained, not full-bleed) ────────────────────────────────────
+// ─── Hero card ────────────────────────────────────────────────────────────────
 
 function VendorHero({
   displayName, boothNumber, tagline, mallName, mallCity,
   heroImageUrl, onShare, hasCopied, hasSlug,
-  onHeroImageChange, heroUploading,
-  vendorId,
+  onHeroImageChange, heroUploading, vendorId,
 }: {
   displayName:       string;
   boothNumber:       string | null;
@@ -107,16 +102,9 @@ function VendorHero({
 
   return (
     <div style={{ padding: "max(14px, env(safe-area-inset-top, 14px)) 10px 0" }}>
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleFileChange}
-      />
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
-      {/* App bar above the card */}
+      {/* App bar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, paddingLeft: 4, paddingRight: 4 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Image src="/logo.png" alt="Treehouse Finds" width={20} height={20} />
@@ -124,7 +112,6 @@ function VendorHero({
             Treehouse Finds
           </span>
         </div>
-
         {hasSlug && (
           <AnimatePresence mode="wait">
             {hasCopied ? (
@@ -147,19 +134,27 @@ function VendorHero({
 
       {/* Contained hero card */}
       <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", minHeight: 200 }}>
+        {/* Base layer: image or pastel */}
         {heroImageUrl ? (
-          <img
-            src={heroImageUrl}
-            alt=""
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }}
-          />
+          <img src={heroImageUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
         ) : (
           <div style={{ position: "absolute", inset: 0, background: vendorHueBg(displayName) }} />
         )}
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg, rgba(0,0,0,0.06) 0%, rgba(20,40,25,0.70) 100%)" }} />
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "58%", background: "linear-gradient(to top, rgba(20,38,22,0.90) 0%, transparent 100%)" }} />
 
-        {/* Edit / upload button — top right of hero */}
+        {/* Gradient: dark left → transparent right — sits above image, below text */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "linear-gradient(to right, rgba(18,34,20,0.82) 0%, rgba(18,34,20,0.40) 55%, transparent 100%)",
+          zIndex: 1,
+        }} />
+        {/* Bottom fade to anchor text readability */}
+        <div style={{
+          position: "absolute", bottom: 0, left: 0, right: 0, height: "50%",
+          background: "linear-gradient(to top, rgba(18,34,20,0.72) 0%, transparent 100%)",
+          zIndex: 1,
+        }} />
+
+        {/* Edit button — top right, above gradients */}
         {vendorId && (
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -181,6 +176,7 @@ function VendorHero({
           </button>
         )}
 
+        {/* Text content — above all gradients */}
         <div style={{ position: "relative", zIndex: 2, padding: "100px 16px 18px" }}>
           <p style={{ fontFamily: "Georgia, serif", fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.52)", letterSpacing: "2px", textTransform: "uppercase", margin: "0 0 5px" }}>
             A curated shelf from
@@ -217,10 +213,7 @@ function VendorHero({
 // ─── Tab switcher ──────────────────────────────────────────────────────────────
 
 function TabSwitcher({ tab, availableCount, foundCount, onChange }: {
-  tab:            "available" | "found";
-  availableCount: number;
-  foundCount:     number;
-  onChange:       (t: "available" | "found") => void;
+  tab: "available" | "found"; availableCount: number; foundCount: number; onChange: (t: "available" | "found") => void;
 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", margin: "12px 10px 8px", background: C.surface, borderRadius: 22, padding: 3, gap: 2 }}>
@@ -241,12 +234,11 @@ function TabSwitcher({ tab, availableCount, foundCount, onChange }: {
   );
 }
 
-// ─── Available tile ─────────────────────────────────────────────────────────────
+// ─── Available tile — no price shown ──────────────────────────────────────────
 
 function AvailableTile({ post, index }: { post: Post; index: number }) {
   const [imgErr, setImgErr] = useState(false);
   const hasImg = !!post.image_url && !imgErr;
-
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
@@ -260,27 +252,22 @@ function AvailableTile({ post, index }: { post: Post; index: number }) {
         ) : (
           <div style={{ width: "100%", height: "100%", background: C.surface }} />
         )}
+        {/* Title only — no price */}
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(20,18,12,0.72) 0%, transparent 100%)", padding: "18px 8px 8px" }}>
           <div style={{ fontFamily: "Georgia, serif", fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.92)", lineHeight: 1.25, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
             {post.title}
           </div>
-          {post.price_asking != null && (
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.80)", marginTop: 2 }}>
-              ${post.price_asking}
-            </div>
-          )}
         </div>
       </Link>
     </motion.div>
   );
 }
 
-// ─── Found tile ─────────────────────────────────────────────────────────────────
+// ─── Found tile ────────────────────────────────────────────────────────────────
 
 function FoundTile({ post, index }: { post: Post; index: number }) {
   const [imgErr, setImgErr] = useState(false);
   const hasImg = !!post.image_url && !imgErr;
-
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
@@ -336,24 +323,15 @@ function ThreeColGrid({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ─── Booth finder card — tapping opens Maps ────────────────────────────────────
+// ─── Booth finder card ─────────────────────────────────────────────────────────
 
 function BoothFinderCard({ boothNumber, displayName, mallName, mallCity, mallImageUrl }: {
-  boothNumber:   string | null;
-  displayName:   string;
-  mallName:      string;
-  mallCity?:     string;
-  mallImageUrl?: string | null;
+  boothNumber: string | null; displayName: string; mallName: string; mallCity?: string; mallImageUrl?: string | null;
 }) {
   const mapsQuery = [mallName, mallCity].filter(Boolean).join(", ");
-
   return (
-    <a
-      href={mapsUrl(mapsQuery)}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{ display: "flex", alignItems: "stretch", margin: "20px 10px 0", borderRadius: 16, overflow: "hidden", border: `1px solid ${C.border}`, background: "#fff", textDecoration: "none" }}
-    >
+    <a href={mapsUrl(mapsQuery)} target="_blank" rel="noopener noreferrer"
+      style={{ display: "flex", alignItems: "stretch", margin: "20px 10px 0", borderRadius: 16, overflow: "hidden", border: `1px solid ${C.border}`, background: "#fff", textDecoration: "none" }}>
       <div style={{ width: 100, flexShrink: 0, background: C.surfaceDeep, overflow: "hidden" }}>
         {mallImageUrl ? (
           <img src={mallImageUrl} alt={mallName} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
@@ -366,9 +344,7 @@ function BoothFinderCard({ boothNumber, displayName, mallName, mallCity, mallIma
       <div style={{ flex: 1, padding: "14px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5 }}>
           <MapPin size={11} style={{ color: C.textMuted, flexShrink: 0 }} />
-          <span style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: C.textPrimary }}>
-            Find this booth in person
-          </span>
+          <span style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: C.textPrimary }}>Find this booth in person</span>
         </div>
         <p style={{ margin: "0 0 3px", fontFamily: "Georgia, serif", fontSize: 12, color: C.textMid, lineHeight: 1.4 }}>
           {displayName}{boothNumber ? ` · Booth ${boothNumber}` : ""}
@@ -378,9 +354,7 @@ function BoothFinderCard({ boothNumber, displayName, mallName, mallCity, mallIma
         </p>
         <div style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 6, background: C.greenLight, border: `1px solid ${C.greenBorder}`, alignSelf: "flex-start" }}>
           <PiLeaf size={10} style={{ color: C.green }} />
-          <span style={{ fontSize: 9, fontWeight: 600, color: C.green, textTransform: "uppercase", letterSpacing: "1.2px" }}>
-            Real places. Real finds.
-          </span>
+          <span style={{ fontSize: 9, fontWeight: 600, color: C.green, textTransform: "uppercase", letterSpacing: "1.2px" }}>Real places. Real finds.</span>
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", paddingRight: 14, flexShrink: 0 }}>
@@ -417,16 +391,16 @@ function ExploreBanner() {
   );
 }
 
-// ─── Vendor picker (demo utility — bottom of page) ─────────────────────────────
+// ─── Vendor picker + "Add a booth" option ──────────────────────────────────────
 
 function VendorPicker({ vendors, activeId, onChange }: {
-  vendors:  Vendor[];
-  activeId: string;
-  onChange: (v: Vendor) => void;
+  vendors: Vendor[]; activeId: string; onChange: (v: Vendor) => void;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const active = vendors.find(v => v.id === activeId) ?? vendors[0];
-  if (vendors.length <= 1) return null;
+  // Always render — even with 1 vendor, we show the "Add a booth" option
+  if (vendors.length === 0) return null;
 
   return (
     <div style={{ margin: "20px 10px 0" }}>
@@ -438,12 +412,10 @@ function VendorPicker({ vendors, activeId, onChange }: {
           style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 14px", borderRadius: 12, background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
           <div style={{ textAlign: "left" }}>
             <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary }}>
-              {active.display_name}
+              {active?.display_name ?? "Select a booth"}
             </div>
-            {active.booth_number && (
-              <div style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>
-                Booth {active.booth_number}
-              </div>
+            {active?.booth_number && (
+              <div style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>Booth {active.booth_number}</div>
             )}
           </div>
           <ChevronDown size={13} style={{ color: C.textMuted, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.18s", flexShrink: 0 }} />
@@ -455,11 +427,20 @@ function VendorPicker({ vendors, activeId, onChange }: {
               style={{ position: "absolute", bottom: "calc(100% + 6px)", left: 0, right: 0, zIndex: 50, background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.18)", border: `1px solid ${C.border}` }}>
               {vendors.map((v, i) => (
                 <button key={v.id} onClick={() => { onChange(v); setOpen(false); }}
-                  style={{ width: "100%", padding: "11px 14px", background: v.id === activeId ? C.greenLight : "none", border: "none", borderBottom: i < vendors.length - 1 ? `1px solid ${C.border}` : "none", cursor: "pointer", textAlign: "left", WebkitTapHighlightColor: "transparent" }}>
+                  style={{ width: "100%", padding: "11px 14px", background: v.id === activeId ? C.greenLight : "none", border: "none", borderBottom: `1px solid ${C.border}`, cursor: "pointer", textAlign: "left", WebkitTapHighlightColor: "transparent" }}>
                   <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary }}>{v.display_name}</div>
                   {v.booth_number && <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>Booth {v.booth_number}</div>}
                 </button>
               ))}
+              {/* Add a booth — routes to /post setup flow */}
+              <button
+                onClick={() => { setOpen(false); router.push("/post"); }}
+                style={{ width: "100%", padding: "11px 14px", background: "none", border: "none", cursor: "pointer", textAlign: "left", WebkitTapHighlightColor: "transparent", display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 20, height: 20, borderRadius: "50%", background: C.greenLight, border: `1px solid ${C.greenBorder}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Plus size={10} style={{ color: C.green }} />
+                </div>
+                <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 500, color: C.green }}>Add a booth</div>
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -507,16 +488,16 @@ function NoProfile() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MyShelfPage() {
-  const [profile,        setProfile]        = useState<LocalVendorProfile | null>(null);
-  const [posts,          setPosts]          = useState<Post[]>([]);
-  const [loading,        setLoading]        = useState(true);
-  const [vendors,        setVendors]        = useState<Vendor[]>([]);
-  const [activeVendor,   setActiveVendor]   = useState<Vendor | null>(null);
-  const [mall,           setMall]           = useState<Mall | null>(null);
-  const [copied,         setCopied]         = useState(false);
-  const [tab,            setTab]            = useState<"available" | "found">("available");
-  const [heroImageUrl,   setHeroImageUrl]   = useState<string | null>(null);
-  const [heroUploading,  setHeroUploading]  = useState(false);
+  const [profile,       setProfile]       = useState<LocalVendorProfile | null>(null);
+  const [posts,         setPosts]         = useState<Post[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [vendors,       setVendors]       = useState<Vendor[]>([]);
+  const [activeVendor,  setActiveVendor]  = useState<Vendor | null>(null);
+  const [mall,          setMall]          = useState<Mall | null>(null);
+  const [copied,        setCopied]        = useState(false);
+  const [tab,           setTab]           = useState<"available" | "found">("available");
+  const [heroImageUrl,  setHeroImageUrl]  = useState<string | null>(null);
+  const [heroUploading, setHeroUploading] = useState(false);
 
   useEffect(() => {
     try {
@@ -532,7 +513,6 @@ export default function MyShelfPage() {
       setVendors(vs);
       const match = vs.find(v => v.id === profile.vendor_id) ?? vs[0] ?? null;
       setActiveVendor(match);
-      // Seed hero image from Supabase row if present
       if (match?.hero_image_url) setHeroImageUrl(match.hero_image_url);
     });
     getAllMalls().then(malls => setMall(malls.find(m => m.id === profile.mall_id) ?? null));
@@ -541,7 +521,6 @@ export default function MyShelfPage() {
   useEffect(() => {
     if (!activeVendor) { if (profile && !profile.vendor_id) setLoading(false); return; }
     setLoading(true);
-    // Update hero image when switching vendors
     setHeroImageUrl(activeVendor.hero_image_url ?? null);
     getVendorPosts(activeVendor.id, 200).then(data => { setPosts(data); setLoading(false); });
   }, [activeVendor?.id]);
@@ -549,35 +528,25 @@ export default function MyShelfPage() {
   async function handleHeroImageChange(file: File) {
     if (!activeVendor?.id) return;
     setHeroUploading(true);
-
     try {
-      const reader = new FileReader();
+      const reader  = new FileReader();
       const dataUrl = await new Promise<string>((resolve, reject) => {
-        reader.onload = e => resolve(e.target?.result as string);
+        reader.onload  = e => resolve(e.target?.result as string);
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
-
-      const compressed = await compressImage(dataUrl);
-
-      // Optimistic update — show the image immediately
-      setHeroImageUrl(compressed);
-
+      const compressed  = await compressImage(dataUrl);
+      setHeroImageUrl(compressed); // optimistic
       const uploadedUrl = await uploadVendorHeroImage(compressed, activeVendor.id);
       if (uploadedUrl) {
-        // Replace optimistic with the stable CDN URL
         setHeroImageUrl(uploadedUrl);
         await updateVendorHeroImage(activeVendor.id, uploadedUrl);
-        // Update local vendor state so switching back reflects the new image
         setActiveVendor(v => v ? { ...v, hero_image_url: uploadedUrl } : v);
         setVendors(vs => vs.map(v => v.id === activeVendor.id ? { ...v, hero_image_url: uploadedUrl } : v));
       } else {
-        // Upload failed — revert to previous
         setHeroImageUrl(activeVendor.hero_image_url ?? null);
-        console.error("[my-shelf] hero image upload failed");
       }
-    } catch (err) {
-      console.error("[my-shelf] hero image error:", err);
+    } catch {
       setHeroImageUrl(activeVendor.hero_image_url ?? null);
     } finally {
       setHeroUploading(false);
@@ -612,17 +581,10 @@ export default function MyShelfPage() {
 
       {hasProfile ? (
         <VendorHero
-          displayName={displayName}
-          boothNumber={boothNumber}
-          tagline={null}
-          mallName={mallName}
-          mallCity={mallCity}
-          heroImageUrl={heroImageUrl}
-          onShare={handleShare}
-          hasCopied={copied}
-          hasSlug={hasSlug}
-          onHeroImageChange={handleHeroImageChange}
-          heroUploading={heroUploading}
+          displayName={displayName} boothNumber={boothNumber} tagline={null}
+          mallName={mallName} mallCity={mallCity} heroImageUrl={heroImageUrl}
+          onShare={handleShare} hasCopied={copied} hasSlug={hasSlug}
+          onHeroImageChange={handleHeroImageChange} heroUploading={heroUploading}
           vendorId={activeVendor?.id ?? profile?.vendor_id}
         />
       ) : (
@@ -666,8 +628,8 @@ export default function MyShelfPage() {
             <BoothFinderCard boothNumber={boothNumber} displayName={displayName} mallName={mallName} mallCity={mallCity} mallImageUrl={mallImageUrl} />
             <ExploreBanner />
 
-            {/* Vendor picker — demo utility, bottom of page */}
-            {vendors.length > 1 && activeVendor && (
+            {/* Vendor picker — always shown when vendors exist */}
+            {vendors.length > 0 && activeVendor && (
               <VendorPicker
                 vendors={vendors}
                 activeId={activeVendor.id}
