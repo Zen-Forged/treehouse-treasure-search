@@ -27,22 +27,26 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ## CURRENT ISSUE
 > Last updated: 2026-04-11
 
-**Status:** ✅ Dev auth panel + vendor sign-in entry point shipped.
+**Status:** ✅ Admin PIN login shipped. Build fix applied.
 
 **What was done (this session):**
 
-### Dev Auth Panel (`components/DevAuthPanel.tsx`)
-- Floating pill in bottom-right — **localhost only**, never visible on Vercel
-- Shows current auth tier: `GUEST` (slate) / `VENDOR` (green) / `ADMIN` (red)
-- Expand to see: current user email, uid, send magic link buttons (admin + vendor), instant sign-out
-- Wired into `app/layout.tsx` so it's available on every page
-- Vendor test email configurable via `NEXT_PUBLIC_DEV_VENDOR_EMAIL` in .env.local (defaults to `vendor@test.com`)
+### Bug fixes
+- `app/page.tsx` — "Vendor? Sign in" → "Curator Sign in"; added `onAuthChange` subscription so label reactively disappears after sign-in
+- `app/login/page.tsx` — Added `BroadcastChannel("treehouse_auth")` so already-open tab detects magic link click from another tab; updated instruction copy accordingly
+- `app/post/page.tsx` — Removed hard auth redirect on `/post`; auth is now soft (attaches user_id if session exists, but doesn't block unauthenticated use)
+- `lib/postStore.ts` — Added `sessionStorage` persistence so iPhone camera reload doesn't wipe in-memory image draft
 
-### Feed header — "Vendor? Sign in" link
-- Added to `app/page.tsx` header — auth-aware, only shown to unauthed users
-- Italic Georgia green pill, routes to `/login`
-- Disappears automatically once logged in (replaced by ModeToggle)
-- `isAuthed` state resolved async via `getSession()` — no flash
+### Admin PIN login (`app/api/auth/admin-pin/route.ts`)
+- New API route: POST `{ pin }` → verifies against server-only `ADMIN_PIN` env var → uses Supabase service role to generate a magic link token → returns `{ token, email }` → client calls `supabase.auth.verifyOtp()` → instant session, no email required
+- Rate limited: 5 attempts per IP per minute
+- `app/login/page.tsx` — Added "Admin PIN" tab alongside "Email link" tab; PIN input → signs in as admin instantly
+- `.env.local` — Added `ADMIN_PIN` and `SUPABASE_SERVICE_ROLE_KEY` placeholders
+- Build fix: removed invalid `shouldCreateUser` option from `generateLink` call (type error)
+
+### Required setup (not yet done by David)
+- Add real `SUPABASE_SERVICE_ROLE_KEY` to `.env.local` and Vercel env vars (get from Supabase → Settings → API → service_role)
+- Set `ADMIN_PIN` to desired value in both `.env.local` and Vercel
 
 **Previous sessions:**
 - Auth sprint — magic link login, auth-gated pages, admin gate wired
@@ -54,14 +58,12 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 - Branded Experience Sprint, Mall Identity Layer, safeStorage iPhone Safari bug fix
 
 **Next session starting point:**
-1. Run build check: `npm run build 2>&1 | tail -30`
-2. QA dev auth panel on localhost — verify GUEST/VENDOR/ADMIN states, magic link send, sign-out
-3. QA "Vendor? Sign in" on feed — verify shows for unauth, hides for authed
-4. **Wire vendor.user_id on first publish** — post/preview page needs to pass auth user_id to createVendor() (highest priority functional gap)
-5. QA auth flow on device — magic link email, session persistence, My Shelf gate
-6. QA hero image re-upload — verify heroKey fix works on device
-7. Consider Supabase RLS — now feasible with real auth in place
-8. UI/UX refinement: Home feed, Your Finds, Find detail pages
+1. Confirm PIN login works on device — go to `/login`, tap "Admin PIN" tab, enter PIN, verify you land on `/my-shelf` as admin
+2. Confirm image upload displays after posting from phone (sessionStorage fix)
+3. Wire `vendor.user_id` on first publish — `post/preview` page needs to pass auth `user_id` to `createVendor()` (highest priority functional gap)
+4. QA magic link BroadcastChannel UX — does the already-open tab auto-navigate after clicking link in email?
+5. Consider Supabase RLS — now feasible with real auth in place
+6. UI/UX refinement: Home feed, Your Finds, Find detail pages
 
 ---
 
