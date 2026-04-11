@@ -20,17 +20,18 @@ export interface Mall {
 }
 
 export interface Vendor {
-  id:            string;
-  created_at:    string;
-  updated_at:    string;
-  user_id:       string | null;
-  mall_id:       string;
-  display_name:  string;
-  booth_number:  string | null;
-  bio:           string | null;
-  avatar_url:    string | null;
-  slug:          string;
-  facebook_url:  string | null;
+  id:             string;
+  created_at:     string;
+  updated_at:     string;
+  user_id:        string | null;
+  mall_id:        string;
+  display_name:   string;
+  booth_number:   string | null;
+  bio:            string | null;
+  avatar_url:     string | null;
+  slug:           string;
+  facebook_url:   string | null;
+  hero_image_url: string | null;
   // Joined
   mall?: Mall;
 }
