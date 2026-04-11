@@ -2,6 +2,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { FindSessionProvider } from "@/hooks/useSession";
+import DevAuthPanel from "@/components/DevAuthPanel";
 
 export const metadata: Metadata = {
   title: "Treehouse",
@@ -31,6 +32,7 @@ export default function RootLayout({
       <body style={{ margin: 0, padding: 0, minHeight: "100vh", background: "#f0ede6" }}>
         <FindSessionProvider>
           {children}
+          <DevAuthPanel />
         </FindSessionProvider>
       </body>
     </html>

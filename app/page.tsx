@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Compass, ChevronDown } from "lucide-react";
 import PiLeafIcon from "@/components/PiLeafIcon";
 import { getFeedPosts, getAllMalls } from "@/lib/posts";
+import { getSession } from "@/lib/auth";
 import BottomNav from "@/components/BottomNav";
 import ModeToggle from "@/components/ModeToggle";
 import { MallHeroCard, GenericMallHero } from "@/components/MallHeroCard";
@@ -265,6 +266,7 @@ export default function DiscoveryFeedPage() {
   const [mallId,        setMallId]        = useState<string | null>(null);
   const [followedIds,   setFollowedIds]   = useState<Set<string>>(new Set());
   const [bookmarkCount, setBookmarkCount] = useState(0);
+  const [isAuthed,      setIsAuthed]      = useState<boolean | null>(null); // null = loading
   const hasFetched = useRef(false);
   const feedRef    = useRef<HTMLDivElement>(null);
 
@@ -296,6 +298,11 @@ export default function DiscoveryFeedPage() {
 
   useEffect(() => { getAllMalls().then(setMalls); }, []);
 
+  // Check auth state for "Vendor? Sign in" visibility
+  useEffect(() => {
+    getSession().then(s => setIsAuthed(!!s?.user));
+  }, []);
+
   useEffect(() => {
     if (hasFetched.current) return;
     hasFetched.current = true;
@@ -319,7 +326,6 @@ export default function DiscoveryFeedPage() {
   }
 
   function handleModeChange(mode: AppMode) {
-    // Navigate to the right second tab for the new mode
     if (mode === "curator") router.push("/my-shelf");
     else router.push("/flagged");
   }
@@ -336,7 +342,21 @@ export default function DiscoveryFeedPage() {
               Treehouse Finds
             </span>
           </div>
-          <ModeToggle onChange={handleModeChange} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* "Vendor? Sign in" — only shown to unauthed users, fades in once auth state resolves */}
+            {isAuthed === false && (
+              <Link href="/login"
+                style={{
+                  fontSize: 11, color: C.green, fontFamily: "Georgia, serif", fontStyle: "italic",
+                  textDecoration: "none", padding: "5px 10px", borderRadius: 14,
+                  background: C.greenLight, border: `1px solid ${C.greenBorder}`,
+                  whiteSpace: "nowrap",
+                }}>
+                Vendor? Sign in
+              </Link>
+            )}
+            <ModeToggle onChange={handleModeChange} />
+          </div>
         </div>
         <MallDropdown malls={malls} selectedId={mallId} onChange={setMallId} />
       </header>
