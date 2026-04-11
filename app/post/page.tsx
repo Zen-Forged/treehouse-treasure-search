@@ -1,17 +1,18 @@
 // app/post/page.tsx
-// Vendor capture — camera/gallery pick, profile display (locked after setup).
-// Profile fields are read-only once set — only Reset clears them.
+// Vendor capture — auth-gated. Redirects to /login if no session.
+// Profile locked after first setup — identity cannot be changed by vendor.
+// First publish creates the vendor row and links it to the auth user_id.
 
 "use client";
 
 import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, ArrowLeft, ChevronDown, RotateCcw } from "lucide-react";
+import { Camera, ArrowLeft, ChevronDown } from "lucide-react";
 import { getAllMalls } from "@/lib/posts";
 import { postStore } from "@/lib/postStore";
 import { safeStorage } from "@/lib/safeStorage";
-import { ensureAnonSession } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import type { Mall } from "@/types/treehouse";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 
@@ -52,72 +53,53 @@ export default function PostCapturePage() {
   const cameraRef  = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
+  const [authReady,    setAuthReady]    = useState(false);
+  const [userId,       setUserId]       = useState<string | null>(null);
   const [profile,      setProfile]      = useState<LocalVendorProfile | null>(null);
   const [malls,        setMalls]        = useState<Mall[]>([]);
   const [mallsLoading, setMallsLoading] = useState(true);
-  // Setup form state — only used when no profile exists
+  // First-time setup form
   const [showMallPick, setShowMallPick] = useState(false);
   const [displayName,  setDisplayName]  = useState("");
   const [boothNumber,  setBoothNumber]  = useState("");
   const [selectedMall, setSelectedMall] = useState<Mall | null>(null);
   const [capturing,    setCapturing]    = useState(false);
-  const [userId,       setUserId]       = useState<string | null>(null);
 
+  // ── Auth gate ──
   useEffect(() => {
-    ensureAnonSession().then(uid => {
-      setUserId(uid);
-      if (uid) {
-        try {
-          const raw = safeStorage.getItem(LOCAL_VENDOR_KEY);
-          if (raw) {
-            const saved = JSON.parse(raw) as LocalVendorProfile;
-            if (!saved.user_id) {
-              safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify({ ...saved, user_id: uid }));
-            }
-          }
-        } catch {}
-      }
+    getSession().then(s => {
+      if (!s?.user) { router.replace("/login"); return; }
+      setUserId(s.user.id);
+      setAuthReady(true);
     });
+  }, []);
 
+  // ── Load profile + malls after auth confirmed ──
+  useEffect(() => {
+    if (!authReady) return;
     const raw = safeStorage.getItem(LOCAL_VENDOR_KEY);
     if (raw) {
       try {
         const saved = JSON.parse(raw) as LocalVendorProfile;
-        setProfile(saved);
-        setDisplayName(saved.display_name);
-        setBoothNumber(saved.booth_number ?? "");
+        // Backfill user_id if session changed
+        if (userId && !saved.user_id) {
+          const updated = { ...saved, user_id: userId };
+          safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(updated));
+          setProfile(updated);
+        } else {
+          setProfile(saved);
+        }
       } catch {}
     }
     getAllMalls().then(data => { setMalls(data); setMallsLoading(false); });
-  }, []);
+  }, [authReady]);
 
   // Validate saved mall_id against live malls
   useEffect(() => {
     if (malls.length === 0 || mallsLoading || !profile) return;
     const match = malls.find(m => m.id === profile.mall_id);
-    if (match) {
-      setSelectedMall(match);
-    } else if (profile.mall_id) {
-      console.warn("[post] stale mall_id — resetting profile");
-      const cleaned: LocalVendorProfile = {
-        display_name: profile.display_name,
-        booth_number: profile.booth_number,
-        mall_id:      "",
-        mall_name:    "",
-        mall_city:    "",
-      };
-      safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(cleaned));
-      setProfile(cleaned);
-    }
+    if (match) setSelectedMall(match);
   }, [malls, mallsLoading]);
-
-  function handleReset() {
-    safeStorage.removeItem(LOCAL_VENDOR_KEY);
-    setProfile(null);
-    setDisplayName("");
-    setBoothNumber("");
-    setSelectedMall(null);
-  }
 
   function saveProfile() {
     if (!selectedMall || displayName.trim().length < 2) return;
@@ -127,7 +109,6 @@ export default function PostCapturePage() {
       mall_id:      selectedMall.id,
       mall_name:    selectedMall.name,
       mall_city:    selectedMall.city,
-      // New profile — no vendor_id yet, assigned on first publish
       user_id:      userId ?? undefined,
     };
     safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(p));
@@ -153,11 +134,9 @@ export default function PostCapturePage() {
     e.target.value = "";
   };
 
-  // Profile is valid if we have a saved profile with a real mall
   const hasValidProfile = !!profile && profile.mall_id.length > 0 && profile.display_name.trim().length >= 2;
-  // Setup form is valid enough to save
-  const formComplete = displayName.trim().length >= 2 && selectedMall !== null;
-  const canCapture   = hasValidProfile && !capturing;
+  const formComplete    = displayName.trim().length >= 2 && selectedMall !== null;
+  const canCapture      = hasValidProfile && !capturing;
 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "10px 12px", borderRadius: 9,
@@ -169,6 +148,8 @@ export default function PostCapturePage() {
     letterSpacing: "1.8px", display: "block", marginBottom: 6,
   };
 
+  if (!authReady) return null;
+
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
       <input ref={cameraRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={onFileChange} />
@@ -177,23 +158,14 @@ export default function PostCapturePage() {
       <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column" }}>
 
         {/* Nav */}
-        <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 14px", borderBottom: `1px solid ${C.border}`, background: C.bg }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button onClick={() => router.back()} style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer" }}>
-              <ArrowLeft size={15} style={{ color: C.textMid }} />
-            </button>
-            <div>
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: C.textPrimary, lineHeight: 1 }}>Post a find</div>
-              <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginTop: 2 }}>Share with your community</div>
-            </div>
+        <header style={{ display: "flex", alignItems: "center", padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 14px", borderBottom: `1px solid ${C.border}`, background: C.bg }}>
+          <button onClick={() => router.back()} style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer", marginRight: 12 }}>
+            <ArrowLeft size={15} style={{ color: C.textMid }} />
+          </button>
+          <div>
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: C.textPrimary, lineHeight: 1 }}>Post a find</div>
+            <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginTop: 2 }}>Share with your community</div>
           </div>
-          {/* Reset button — always available so vendor can clear their profile if needed */}
-          {profile && (
-            <button onClick={handleReset} style={{ display: "flex", alignItems: "center", gap: 4, padding: "6px 10px", borderRadius: 8, background: "none", border: `1px solid ${C.border}`, cursor: "pointer", fontSize: 10, color: C.textFaint }}>
-              <RotateCcw size={10} />
-              Reset
-            </button>
-          )}
         </header>
 
         <div style={{ flex: 1, padding: "16px 15px", paddingBottom: "max(32px, env(safe-area-inset-bottom, 32px))", display: "flex", flexDirection: "column", gap: 14 }}>
@@ -203,20 +175,16 @@ export default function PostCapturePage() {
             style={{ borderRadius: 14, background: C.surface, border: `1px solid ${C.border}`, overflow: "hidden" }}>
 
             {hasValidProfile ? (
-              /* ── Locked view — profile is set, show read-only identity ── */
+              /* Locked — read-only identity */
               <div style={{ padding: "13px 14px" }}>
-                <div style={{ fontSize: 8, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: 6 }}>
-                  Posting as
-                </div>
-                <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: C.textPrimary, marginBottom: 2 }}>
-                  {profile.display_name}
-                </div>
+                <div style={{ fontSize: 8, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: 6 }}>Posting as</div>
+                <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: C.textPrimary, marginBottom: 2 }}>{profile.display_name}</div>
                 <div style={{ fontSize: 11, color: C.textMuted }}>
                   {[profile.booth_number ? `Booth ${profile.booth_number}` : null, profile.mall_name, profile.mall_city].filter(Boolean).join(" · ")}
                 </div>
               </div>
             ) : (
-              /* ── Setup form — first time or after reset ── */
+              /* First-time setup form */
               <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: 12 }}>
                 <div style={{ fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600, color: C.textPrimary, marginBottom: 2 }}>
                   Set up your vendor profile
@@ -234,8 +202,6 @@ export default function PostCapturePage() {
                   <label style={labelStyle}>Your mall</label>
                   {mallsLoading ? (
                     <div style={{ padding: "10px 12px", fontSize: 12, color: C.textMuted }}>Loading malls…</div>
-                  ) : malls.length === 0 ? (
-                    <div style={{ padding: "10px 12px", fontSize: 12, color: C.textMid, lineHeight: 1.5 }}>No malls listed yet.</div>
                   ) : (
                     <>
                       <button onClick={() => setShowMallPick(s => !s)}
@@ -245,13 +211,12 @@ export default function PostCapturePage() {
                       </button>
                       <AnimatePresence>
                         {showMallPick && (
-                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} style={{ overflow: "hidden", marginTop: 4 }}>
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} style={{ overflow: "hidden", marginTop: 4 }}>
                             <div style={{ borderRadius: 9, border: `1px solid ${C.border}`, overflow: "hidden", background: "#fff", maxHeight: 200, overflowY: "auto" }}>
                               {malls.map(mall => (
                                 <button key={mall.id} onClick={() => { setSelectedMall(mall); setShowMallPick(false); }}
                                   style={{ width: "100%", padding: "11px 14px", background: selectedMall?.id === mall.id ? C.greenLight : "none", border: "none", borderBottom: `1px solid ${C.border}`, cursor: "pointer", textAlign: "left" }}>
-                                  <div style={{ fontFamily: "Georgia, serif", fontSize: 13, color: C.textPrimary, lineHeight: 1.2 }}>{mall.name}</div>
+                                  <div style={{ fontFamily: "Georgia, serif", fontSize: 13, color: C.textPrimary }}>{mall.name}</div>
                                   <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>{mall.city}, {mall.state}</div>
                                 </button>
                               ))}
@@ -283,7 +248,7 @@ export default function PostCapturePage() {
               <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: canCapture ? C.textPrimary : C.textFaint }}>
                 {capturing ? "Opening camera…" : "Take a photo"}
               </div>
-              {!hasValidProfile && !mallsLoading && (
+              {!hasValidProfile && (
                 <div style={{ fontSize: 11, color: C.textMuted, textAlign: "center", maxWidth: 210, lineHeight: 1.5 }}>
                   Complete your vendor profile above to continue
                 </div>
@@ -308,7 +273,6 @@ export default function PostCapturePage() {
           </motion.div>
         </div>
       </div>
-
       <style>{`.hidden { display: none; }`}</style>
     </div>
   );
