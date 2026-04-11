@@ -1,74 +1,121 @@
 // lib/auth.ts
-// Lightweight anonymous auth for vendor identity.
-// Uses Supabase Auth anonymous sign-in to create a stable device-level session.
-// The resulting user.id is stored in localStorage alongside the vendor profile
-// and linked to the vendor row in Supabase (vendors.user_id).
+// Supabase Auth — magic link (OTP) based authentication.
+// Three tiers: unauth (browse only), vendor (one booth), admin (full access).
 //
-// This replaces the localStorage vendor_id comparison for owner detection
-// with a proper session-based check — harder to spoof, survives page refresh.
+// Admin is determined by email match against NEXT_PUBLIC_ADMIN_EMAIL.
+// Sessions persist across browser restarts (Supabase default with pkce flow).
 //
-// Cross-device auth (multiple devices, one vendor) is NOT in scope yet.
-// The session persists as long as Supabase's cookie lives (~1 week by default).
+// Key exports:
+//   sendMagicLink(email)      — sends OTP email, returns { error }
+//   getSession()              — returns current Supabase session or null
+//   getUser()                 — returns current user or null
+//   signOut()                 — clears session
+//   isAdmin(user?)            — true if user email matches NEXT_PUBLIC_ADMIN_EMAIL
+//   getCachedUserId()         — sync read from localStorage (for owner detection)
+//   onAuthChange(cb)          — subscribe to auth state changes
 
 import { supabase } from "./supabase";
+import type { Session, User } from "@supabase/supabase-js";
 
 const SESSION_USER_KEY = "treehouse_auth_uid";
+const ADMIN_EMAIL      = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
+
+// ── Magic link ────────────────────────────────────────────────────────────────
 
 /**
- * Ensure an anonymous Supabase Auth session exists for this device.
- * Returns the user.id (UUID) or null if auth is unavailable.
- *
- * Safe to call multiple times — returns existing session if already signed in.
+ * Send a magic link OTP to the given email.
+ * Supabase emails a 6-digit code + link. On click/entry the user is signed in.
+ * The redirect URL lands back on /login?confirmed=1 which then routes to /my-shelf.
  */
-export async function ensureAnonSession(): Promise<string | null> {
+export async function sendMagicLink(email: string): Promise<{ error: string | null }> {
+  const { error } = await supabase.auth.signInWithOtp({
+    email: email.trim().toLowerCase(),
+    options: {
+      emailRedirectTo: `${getBaseUrl()}/login?confirmed=1`,
+      shouldCreateUser: true,
+    },
+  });
+  if (error) {
+    console.error("[auth] sendMagicLink:", error.message);
+    return { error: error.message };
+  }
+  return { error: null };
+}
+
+// ── Session helpers ───────────────────────────────────────────────────────────
+
+export async function getSession(): Promise<Session | null> {
   try {
-    // Check for existing session first
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user?.id) {
-      // Cache in localStorage for fast synchronous reads
       try { localStorage.setItem(SESSION_USER_KEY, session.user.id); } catch {}
-      return session.user.id;
     }
-
-    // No session — sign in anonymously
-    const { data, error } = await supabase.auth.signInAnonymously();
-    if (error || !data.user?.id) {
-      console.warn("[auth] signInAnonymously failed:", error?.message);
-      return null;
-    }
-
-    try { localStorage.setItem(SESSION_USER_KEY, data.user.id); } catch {}
-    return data.user.id;
-  } catch (err) {
-    console.warn("[auth] ensureAnonSession error:", err);
+    return session;
+  } catch {
     return null;
   }
 }
 
+export async function getUser(): Promise<User | null> {
+  const session = await getSession();
+  return session?.user ?? null;
+}
+
+export async function signOut(): Promise<void> {
+  try {
+    await supabase.auth.signOut();
+    localStorage.removeItem(SESSION_USER_KEY);
+  } catch {}
+}
+
 /**
- * Get the current session user ID synchronously from localStorage cache.
- * Returns null if no session has been established yet.
- * Use ensureAnonSession() to guarantee a session exists.
+ * Subscribe to auth state changes (sign in / sign out).
+ * Returns an unsubscribe function — call it in useEffect cleanup.
+ */
+export function onAuthChange(callback: (user: User | null) => void): () => void {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const user = session?.user ?? null;
+    if (user?.id) {
+      try { localStorage.setItem(SESSION_USER_KEY, user.id); } catch {}
+    } else {
+      try { localStorage.removeItem(SESSION_USER_KEY); } catch {}
+    }
+    callback(user);
+  });
+  return () => subscription.unsubscribe();
+}
+
+// ── Admin check ───────────────────────────────────────────────────────────────
+
+/**
+ * Returns true if the given user (or current session user) is the admin.
+ * Admin is determined by email match against NEXT_PUBLIC_ADMIN_EMAIL.
+ */
+export function isAdmin(user: User | null): boolean {
+  if (!user?.email || !ADMIN_EMAIL) return false;
+  return user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+}
+
+// ── Sync helpers (for owner detection without async) ─────────────────────────
+
+/**
+ * Sync read of the cached user ID from localStorage.
+ * Populated by getSession() / onAuthChange(). Use for owner detection.
  */
 export function getCachedUserId(): string | null {
   try { return localStorage.getItem(SESSION_USER_KEY); } catch { return null; }
 }
 
-/**
- * Check if the current session owns a vendor row.
- * Used in find detail to gate owner controls without an extra Supabase query.
- * Falls back to localStorage vendor_id comparison for backwards compatibility.
- */
-export async function isSessionOwner(postVendorUserId: string | null | undefined): Promise<boolean> {
-  if (!postVendorUserId) return false;
+// ── Legacy anon session (no-op — kept so import sites don't break) ────────────
 
-  // Try session check first
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user?.id) {
-      return session.user.id === postVendorUserId;
-    }
-  } catch {}
+/** @deprecated Use getSession() instead. No-op stub for backwards compatibility. */
+export async function ensureAnonSession(): Promise<string | null> {
+  return (await getSession())?.user?.id ?? null;
+}
 
-  return false;
+// ── Internal ──────────────────────────────────────────────────────────────────
+
+function getBaseUrl(): string {
+  if (typeof window !== "undefined") return window.location.origin;
+  return process.env.NEXT_PUBLIC_SITE_URL ?? "https://treehouse-treasure-search.vercel.app";
 }
