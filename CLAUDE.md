@@ -27,40 +27,44 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ## CURRENT ISSUE
 > Last updated: 2026-04-13
 
-**Status:** 🚧 QA sprint — UI fixes applied, mark-as-sold/delete controls restored.
+**Status:** ✅ Design system refactor complete — shared tokens, components, and unified terminology shipped.
 
 ---
 
 ## What was done (this session)
 
-### UI Polish — Feed
-- Removed booth label from masonry feed tiles
-- Removed item count from feed header
-- Changed feed body text to "Recently added" (was "What will you find today?")
+### Phase 1 — UI Audit
+Full systems-level audit across all major pages. Identified:
+- Design tokens copy-pasted into 5+ pages (no source of truth)
+- TabSwitcher, BoothFinderCard, ExploreBanner, ThreeColGrid, SkeletonGrid, vendorHueBg all duplicated
+- "Found" / "Found a home" / "Sold" — three terms for same state
+- "View the shelf" / "Find this here" — inconsistent section labels
+- Admin controls mixed into guest card layouts
+- Owner controls and location info in same card (different user intents)
 
-### UI Polish — Shelf / Booth pages
-- Removed "Explore →" link from top-right of public shelf (`/shelf/[slug]`) app bar
-- "Enter the Treehouse" button → "View more booths" (navigates to `/shelves`) in both `my-shelf` and `shelf/[slug]` ExploreBanner
-- LayoutGrid icon added to "View more booths" button
+### Phase 2-6 — Design System + Refactor Sprint
+**New files created:**
+- `lib/tokens.ts` — single `colors`, `radius`, `spacing` exports. All `C = {...}` objects eliminated.
+- `lib/utils.ts` — `flagKey`, `loadFollowedIds`, `loadBookmarkCount`, `vendorHueBg`, `mapsUrl`
+- `components/TabSwitcher.tsx` — shared, "Found a home" tab label
+- `components/BoothFinderCard.tsx` — shared, "Find it here in person" CTA
+- `components/ExploreBanner.tsx` — shared, `onPress` prop for button vs Link
+- `components/ShelfGrid.tsx` — `ThreeColGrid`, `SkeletonGrid`, `AvailableTile`, `FoundTile`, `ShelfGridStyles`
+- `components/AdminOnly.tsx` — wrapper for all admin-only UI elements
 
-### My Finds counter — Shelf page
-- `/shelf/[slug]` now reads localStorage bookmark count and passes `flaggedCount` to `BottomNav`
-- `BottomNav active` corrected to `"shelves"` on shelf page
+**Pages updated:**
+- `app/page.tsx` — imports tokens + utils
+- `app/find/[id]/page.tsx` — tokens + utils; owner controls moved to separate card below location; "Find it here"; "More from this shelf"; "Found a home" on shelf cards
+- `app/shelves/page.tsx` — tokens + utils + AdminOnly; admin controls wrapped; "Admin mode" text stripped
+- `app/my-shelf/page.tsx` — tokens + all 5 shared components; AddFindTile contrast improved
+- `app/shelf/[slug]/page.tsx` — tokens + all 5 shared components; back button standardized
 
-### Add Booth sheet — Keyboard clip fix
-- Sheet now has `maxHeight: "85dvh"` + `flexDirection: column`
-- Form content is in a scrollable inner div — no longer clipped when iOS keyboard slides up
-- Handle stays pinned at top, outside the scroll area
-
-### Toast centering — Post page
-- Root cause: Framer Motion's `animate` prop overwrites `transform` in `style`, breaking `translate(-50%, -50%)`
-- Fix: centering shell is a plain `div` with `position: fixed; inset: 0; display: flex; align-items: center; justify-content: center`
-- `motion.div` inside only animates `opacity`, `y`, `scale` — does not own positioning transform
-
-### Mark as sold / Delete restored — Find detail page
-- Root cause: `showOwnerControls` required `isMyPost && isCurator`, but `isCurator` was gated on the old `getMode()` system (no longer set after auth migration)
-- Fix: replaced `detectOwnership` (sync) + `isCurator` check with async `detectOwnershipAsync` that checks: (a) isAdmin via session, (b) `user.id === vendor.user_id`, (c) localStorage vendor_id match
-- `showOwnerControls` is now just `isMyPost` — no mode dependency
+**Terminology standardized:**
+- Sold item: **"Found a home"** everywhere (was "Found", "Found a home", "Sold")
+- Section label: **"Find it here"** (was "Find this here")
+- Section label: **"More from this shelf"** (was "View the shelf")
+- BoothBox label: **"Booth"** (was "Found In-Booth")
+- Admin hint on vendor cards: **"Manage"** (was "Tap to manage shelf")
 
 ### Known Gaps ⚠️
 - Feed doesn't refresh after posting
@@ -69,18 +73,19 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 - No PWA support
 - `/enhance-text` is mock
 - Admin PIN needs QA in production (SUPABASE_SERVICE_ROLE_KEY + ADMIN_PIN must be set in Vercel)
-- Mall location thumbnail (BoothFinderCard green gradient) — making this image-editable requires `image_url` column on `malls` table + new API route (deferred)
+- Mall location thumbnail (BoothFinderCard green gradient) — not image-editable (needs `malls.image_url` column)
 - `/vendor/[slug]` route now unused for guests — may be deprecated
 
 ---
 
 ## Next session starting point
-1. QA: mark-as-sold and delete controls visible when logged in as vendor/admin on find detail page
-2. QA: toast centered on post save
-3. QA: Add Booth sheet scrollable when keyboard is up
-4. Consider: mall thumbnail image upload (requires schema change — `malls.image_url` column + `/api/mall-image` route)
-5. Consider: feed refresh after posting (pull-to-refresh or cache bust on navigate-back)
-6. Consider: Supabase RLS now that auth + server routes are solid
+1. QA on prod: verify "Found a home" shows correctly on shelf pages and find detail
+2. QA on prod: verify AdminOnly wrapper hides controls from guest view
+3. Consider: feed refresh after posting (router.refresh() or timestamp param on navigate-back)
+4. Consider: pull-to-refresh on feed
+5. Consider: Supabase RLS (auth + server routes are solid — good time)
+6. Consider: mall thumbnail image upload (requires `malls.image_url` column + `/api/mall-image` route)
+7. Continue design system work: PageShell wrapper, Admin Context Bar, flagged page audit
 
 ---
 
@@ -163,6 +168,7 @@ SUPABASE_SERVICE_ROLE_KEY        Server-only service role key (set in .env.local
 2. session.user.id === post.vendor.user_id → true
 3. localStorage vendor_id === post.vendor_id → true
 No dependency on `getMode()` / curator mode.
+Owner controls now render in a **separate card** below the location card (not inside it).
 
 ---
 
@@ -170,16 +176,16 @@ No dependency on `getMode()` / curator mode.
 
 ### Ecosystem (warm parchment theme)
 ```
-/                   Discovery feed — "Recently added" label, no item count, no booth label on tiles
+/                   Discovery feed — "Recently added" label, masonry grid
 /login              Magic link login + Admin PIN tab
-/find/[id]          Find detail — back button, heart+share on image, Save CTA (all users), price, owner controls
+/find/[id]          Find detail — floating back button, heart+share on image, Save CTA, "Find it here" location card, owner controls card (separate)
 /flagged            My Finds — no auth required, always in nav
-/shelves            Booths — all vendor booths; guest → /shelf/[slug]; admin → manage; Add Booth sheet (scrollable)
+/shelves            Booths — all vendor booths; guest → /shelf/[slug]; admin → manage; Add Booth sheet
 /my-shelf           My Shelf (Curator/Admin) — auth-gated; admin gets vendor switcher; "View more booths" banner
-/shelf/[slug]       Public Saved Shelf — read-only; no explore link; "View more booths" banner; bookmark count in nav
+/shelf/[slug]       Public Saved Shelf — read-only; "View more booths" banner; bookmark count in nav
 /mall/[slug]        Mall profile
 /vendor/[slug]      Vendor profile (legacy — guests now routed to /shelf/[slug] from Booths)
-/post               Vendor capture — server-route image upload; centered toast (fixed inset-0 shell); correct redirect
+/post               Vendor capture — server-route image upload; centered toast; correct redirect
 /post/preview       Edit title/caption/price → "Save to Shelf" → confirmation (optional flow)
 /admin              Admin — auth-gated, isAdmin() check
 ```
@@ -202,24 +208,31 @@ No dependency on `getMode()` / curator mode.
 
 ## KEY FILES
 ```
+lib/tokens.ts             ← NEW: single source of truth for all ecosystem colors/spacing/radius
+lib/utils.ts              ← NEW: flagKey, loadFollowedIds, loadBookmarkCount, vendorHueBg, mapsUrl
 lib/auth.ts               Magic link auth
 lib/supabase.ts           Client with placeholder fallback for build time
 lib/posts.ts              Data access — all Supabase queries
 lib/mode.ts               Explorer/Curator mode (legacy — no longer used for owner controls)
 lib/safeStorage.ts        localStorage wrapper with sessionStorage + memory fallback
 types/treehouse.ts        Post, Vendor, Mall, LocalVendorProfile
-components/BottomNav.tsx  4-tab auth / 3-tab guest; Heart icon for My Finds; flaggedCount propagated to all pages
+components/AdminOnly.tsx  ← NEW: wraps any admin-only UI — import + use everywhere
+components/BottomNav.tsx  4-tab auth / 3-tab guest; Heart icon for My Finds; flaggedCount propagated
+components/TabSwitcher.tsx         ← NEW: shared Available/Found a home tab switcher
+components/BoothFinderCard.tsx     ← NEW: shared maps CTA card ("Find it here in person")
+components/ExploreBanner.tsx       ← NEW: shared "View more booths" banner
+components/ShelfGrid.tsx           ← NEW: ThreeColGrid, SkeletonGrid, AvailableTile, FoundTile, ShelfGridStyles
 components/ModeToggle.tsx Hidden when unauth
 components/DevAuthPanel.tsx  Localhost-only floating auth tier switcher
 app/login/page.tsx        Magic link login + Admin PIN tab
 app/layout.tsx            No max-width wrapper, DevAuthPanel mounted here
-app/page.tsx              Discovery feed — "Recently added", no item count, no booth label on tiles
+app/page.tsx              Discovery feed
 app/flagged/page.tsx      My Finds — Heart icon throughout
-app/shelves/page.tsx      Booths page — Add Booth sheet scrollable (maxHeight 85dvh + inner scroll div)
-app/my-shelf/page.tsx     My Shelf — hero upload, "View more booths" banner → /shelves
-app/shelf/[slug]/page.tsx Public Saved Shelf — no explore link, "View more booths" banner, bookmark count in nav
-app/find/[id]/page.tsx    Find detail — async owner detection, showOwnerControls = isMyPost
-app/post/page.tsx         Capture — toast centered via fixed inset-0 shell (not Framer transform)
+app/shelves/page.tsx      Booths page — AdminOnly wrapper on all admin controls
+app/my-shelf/page.tsx     My Shelf — hero upload, shared ShelfGrid components
+app/shelf/[slug]/page.tsx Public Saved Shelf — shared ShelfGrid components
+app/find/[id]/page.tsx    Find detail — owner controls in separate card below location
+app/post/page.tsx         Capture — toast centered via fixed inset-0 shell
 app/post/preview/page.tsx Preview + "Save to Shelf"
 app/admin/page.tsx        Admin UI
 app/api/vendor-hero/route.ts  Server-side banner upload (service role)
@@ -230,6 +243,12 @@ app/api/auth/admin-pin/route.ts  PIN login
 ---
 
 ## DESIGN SYSTEM
+
+### Token import pattern (use everywhere, never redefine locally)
+```ts
+import { colors } from "@/lib/tokens";
+import { flagKey, loadBookmarkCount, vendorHueBg, mapsUrl } from "@/lib/utils";
+```
 
 ### Ecosystem pages (warm parchment)
 ```
@@ -266,22 +285,26 @@ Georgia for: all headers, titles, captions, italic labels, CTA buttons
 System UI for: BottomNav labels, dropdown options, monospace data
 ```
 
-### Feed tile — current spec
+### Committed terminology (do not deviate)
 ```
-No booth label — title only below image
-No item count in feed header
-Body label: "Recently added" (or "Finds from [Mall]" when filtered)
-Heart button: top-right of image, filled green when saved
+Sold status:        "Found a home" — everywhere (feed badge, shelf tiles, detail page, tab label)
+Save action:        "Save" (button) / "My Finds" (nav)
+Location section:   "Find it here" (was "Find this here")
+Related items:      "More from this shelf" (was "View the shelf")
+Booth label:        "Booth 369" — always with word "Booth" (BoothBox label: "Booth")
+Admin hint:         "Manage" (was "Tap to manage shelf")
+Hero eyebrow:       "A curated shelf from" — keep
 ```
 
 ### Find detail page — key UI elements
 ```
-Back button:   top-left of hero image, frosted cream circle, ArrowLeft icon
-Heart button:  bottom-right of hero image (left of share), fills green when saved
-Share button:  bottom-right of hero image, Send icon (paper airplane)
-Price:         right-aligned next to availability dot, monospace, only when available
-Save CTA:      centered pill button under description, Heart icon, ALL users
-Owner controls: mark sold + delete — shown when isMyPost (auth OR admin OR localStorage match)
+Back button:    top-left of hero image, frosted cream circle, ArrowLeft 15px
+Heart button:   bottom-right of hero image (left of share), fills green when saved
+Share button:   bottom-right of hero image, Send icon
+Price:          right-aligned next to availability dot, monospace, only when available
+Save CTA:       centered pill button under description, Heart icon, ALL users
+Location card:  "Find it here" label → surface card with mall + vendor + booth
+Owner controls: SEPARATE surface card below location card — "Manage" label, mark sold + delete
 ```
 
 ### BottomNav — tabs
@@ -292,10 +315,18 @@ Icons: Home (lucide Home) · My Finds (lucide Heart) · Booths (lucide LayoutGri
 flaggedCount passed to BottomNav on ALL ecosystem pages
 ```
 
+### AdminOnly pattern
+```tsx
+import AdminOnly from "@/components/AdminOnly";
+// Wrap every admin-only UI element:
+<AdminOnly user={user}>
+  <button>Admin action</button>
+</AdminOnly>
+```
+
 ### Toast centering pattern (post page)
 ```
 // NEVER use position:fixed + translate(-50%,-50%) on a motion.div — Framer overwrites transform
-// Correct pattern:
 <div style={{ position:"fixed", inset:0, display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
   <motion.div style={{ pointerEvents:"auto", width:"min(300px, calc(100vw - 48px))", ... }}>
     ...
@@ -327,6 +358,8 @@ flaggedCount passed to BottomNav on ALL ecosystem pages
 - Admin default vendor: `5619b4bf-3d05-4843-8ee1-e8b747fc2d81` (Zen booth, no user_id)
 - Admin vendor switching: updates `?vendor=[id]` URL param via `window.history.replaceState`
 - Owner controls: `showOwnerControls = isMyPost` only — no `isCurator` / `getMode()` dependency
+- NEVER redefine a local `C = {...}` object — always import from `lib/tokens.ts`
+- NEVER copy-paste TabSwitcher, BoothFinderCard, ExploreBanner, ShelfGrid — always import from components
 
 ---
 
@@ -337,12 +370,16 @@ flaggedCount passed to BottomNav on ALL ecosystem pages
 - Admin PIN login — email_otp flow
 - Dev auth panel — localhost-only, tier switcher
 - BottomNav — 4-tab auth, 3-tab guest; Heart for My Finds; flaggedCount on all pages
-- Booths page — guest→/shelf/[slug], admin→manage; Add Booth sheet (keyboard-safe, scrollable)
-- My Shelf — auth-gated; admin vendor switcher; hero upload via server route ✅; "View more booths" banner
+- Booths page — guest→/shelf/[slug], admin→manage; Add Booth sheet (keyboard-safe, scrollable); AdminOnly wrapper on all admin controls ✅
+- My Shelf — auth-gated; admin vendor switcher; hero upload via server route ✅; shared ShelfGrid components ✅
 - Post flow — toast centered (fixed inset-0 shell), server-route image upload, correct booth redirect ✅
-- Find detail — back button, heart+share on image, Save CTA all users, price, owner controls (async auth-based)
-- Public Saved Shelf (/shelf/[slug]) — read-only, no explore link, "View more booths" banner, bookmark count ✅
+- Find detail — back button, heart+share on image, Save CTA all users, price, owner controls (async auth-based, separate card) ✅
+- Public Saved Shelf (/shelf/[slug]) — read-only, "View more booths" banner, bookmark count, shared ShelfGrid ✅
 - My Finds — no auth required, Heart icon, instant unsave
+- Shared design tokens (lib/tokens.ts) — no more local C objects ✅
+- Shared utilities (lib/utils.ts) — flagKey, vendorHueBg, mapsUrl, bookmark helpers ✅
+- Unified sold terminology — "Found a home" everywhere ✅
+- AdminOnly component — all admin UI wrapped ✅
 - All reseller intel routes (untouched)
 
 ## KNOWN GAPS ⚠️
@@ -354,6 +391,9 @@ flaggedCount passed to BottomNav on ALL ecosystem pages
 - Admin PIN needs prod QA (env vars in Vercel)
 - `/vendor/[slug]` route now unused for guests — may be deprecated
 - Mall thumbnail image (BoothFinderCard green gradient) not editable — needs `malls.image_url` column + API route
+- PageShell wrapper not yet created (structural boilerplate still repeated per page)
+- Admin Context Bar not yet created (persistent admin mode indicator)
+- `/flagged` page not yet audited against new design system
 
 ---
 
