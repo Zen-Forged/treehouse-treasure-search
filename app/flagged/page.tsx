@@ -2,7 +2,7 @@
 // My Finds — all items the user has saved locally.
 // No auth required — available to all user types.
 // Grouped by vendor/booth, sorted by booth number for in-store navigation.
-// Within each group: available items first, Found (sold) items last.
+// Within each group: available items first, Found a home (sold) items last.
 // Stale bookmark IDs (posts deleted from Supabase) are auto-cleaned from localStorage.
 
 "use client";
@@ -13,30 +13,12 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart } from "lucide-react";
 import { getPostsByIds } from "@/lib/posts";
+import { colors } from "@/lib/tokens";
+import { BOOKMARK_PREFIX, loadFollowedIds, loadBookmarkCount } from "@/lib/utils";
 import BottomNav from "@/components/BottomNav";
 import type { Post } from "@/types/treehouse";
 
-const BOOKMARK_PREFIX = "treehouse_bookmark_";
-
-// ─── Design tokens ─────────────────────────────────────────────────────────────
-const C = {
-  bg:          "#f5f2eb",
-  surface:     "#edeae1",
-  surfaceDeep: "#e4e0d6",
-  border:      "rgba(26,24,16,0.09)",
-  borderLight: "rgba(26,24,16,0.05)",
-  textPrimary: "#1c1a14",
-  textMid:     "#4a4840",
-  textMuted:   "#8a8476",
-  textFaint:   "#b4ae9e",
-  green:       "#1e4d2b",
-  greenSolid:  "rgba(30,77,43,0.90)",
-  header:      "rgba(245,242,235,0.96)",
-  bannerFrom:  "#1e3d24",
-  bannerTo:    "#2d5435",
-};
-
-// ─── Bookmark helpers ──────────────────────────────────────────────────────────
+// ─── Bookmark helpers (local — raw localStorage per RULES) ────────────────────
 
 function loadFlaggedIds(): string[] {
   const ids: string[] = [];
@@ -51,17 +33,6 @@ function loadFlaggedIds(): string[] {
   return ids;
 }
 
-function loadBookmarkCount(): number {
-  let count = 0;
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith(BOOKMARK_PREFIX) && localStorage.getItem(key) === "1") count++;
-    }
-  } catch {}
-  return count;
-}
-
 function removeBookmark(postId: string) {
   try { localStorage.removeItem(`${BOOKMARK_PREFIX}${postId}`); } catch {}
 }
@@ -69,9 +40,7 @@ function removeBookmark(postId: string) {
 function pruneStaleBookmarks(savedIds: string[], returnedIds: string[]) {
   const returnedSet = new Set(returnedIds);
   for (const id of savedIds) {
-    if (!returnedSet.has(id)) {
-      removeBookmark(id);
-    }
+    if (!returnedSet.has(id)) removeBookmark(id);
   }
 }
 
@@ -115,13 +84,13 @@ function EmptyFinds() {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
       style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 32px 0", textAlign: "center" }}>
-      <div style={{ width: 52, height: 52, borderRadius: "50%", background: C.surface, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 22 }}>
-        <Heart size={22} strokeWidth={1.6} style={{ color: C.textMuted }} />
+      <div style={{ width: 52, height: 52, borderRadius: "50%", background: colors.surface, border: `1px solid ${colors.border}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 22 }}>
+        <Heart size={22} strokeWidth={1.6} style={{ color: colors.textMuted }} />
       </div>
-      <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: C.textPrimary, marginBottom: 10, lineHeight: 1.3 }}>
+      <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: colors.textPrimary, marginBottom: 10, lineHeight: 1.3 }}>
         Nothing saved yet
       </div>
-      <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: C.textMuted, lineHeight: 1.75, maxWidth: 230, margin: 0 }}>
+      <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: colors.textMuted, lineHeight: 1.75, maxWidth: 230, margin: 0 }}>
         Tap the heart on any find to save it here, grouped by booth for your trip.
       </p>
     </motion.div>
@@ -152,26 +121,26 @@ function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsav
         <div style={{
           display: "flex", alignItems: "center", gap: 14,
           padding: "13px 14px",
-          background: C.surface, borderRadius: 14,
-          border: `1px solid ${C.border}`,
+          background: colors.surface, borderRadius: 14,
+          border: `1px solid ${colors.border}`,
           boxShadow: "0 2px 10px rgba(26,24,16,0.06), 0 1px 3px rgba(26,24,16,0.04)",
           opacity: isSold ? 0.65 : 1, transition: "opacity 0.2s",
         }}>
-          <div style={{ width: 64, height: 64, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: C.surfaceDeep, border: `1px solid ${C.borderLight}` }}>
+          <div style={{ width: 64, height: 64, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: colors.surfaceDeep, border: `1px solid ${colors.borderLight}` }}>
             {hasImg ? (
               <img src={post.image_url!} alt={post.title} onError={() => setImgErr(true)}
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
                   filter: isSold ? "grayscale(0.5) brightness(0.88)" : "brightness(0.99) saturate(0.95)" }} />
             ) : (
               <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Heart size={18} strokeWidth={1.6} style={{ color: C.textFaint }} />
+                <Heart size={18} strokeWidth={1.6} style={{ color: colors.textFaint }} />
               </div>
             )}
           </div>
 
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
-              fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600, color: C.textPrimary,
+              fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600, color: colors.textPrimary,
               lineHeight: 1.35, overflow: "hidden", textOverflow: "ellipsis",
               display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
               marginBottom: 4,
@@ -179,13 +148,13 @@ function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsav
               {post.title}
             </div>
             {post.price_asking != null && !isSold && (
-              <div style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 600, color: C.textMid, letterSpacing: "-0.2px" }}>
+              <div style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 600, color: colors.textMid, letterSpacing: "-0.2px" }}>
                 ${post.price_asking.toLocaleString()}
               </div>
             )}
             {isSold && (
-              <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1.2px", color: C.textMuted }}>
-                Found
+              <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1.2px", color: colors.textMuted }}>
+                Found a home
               </div>
             )}
           </div>
@@ -194,7 +163,7 @@ function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsav
             style={{
               flexShrink: 0, width: 30, height: 30, borderRadius: "50%",
               display: "flex", alignItems: "center", justifyContent: "center",
-              background: C.greenSolid, border: "none", cursor: "pointer",
+              background: colors.greenSolid, border: "none", cursor: "pointer",
               boxShadow: "0 1px 5px rgba(0,0,0,0.18)",
               WebkitTapHighlightColor: "transparent",
             }}>
@@ -213,7 +182,9 @@ function VendorBanner({ label, vendorName, allFound }: { label: string; vendorNa
   return (
     <div style={{
       width: "100%", borderRadius: 14, overflow: "hidden", marginBottom: 10, position: "relative",
-      background: allFound ? "linear-gradient(105deg, #3a3830 0%, #4a4840 100%)" : `linear-gradient(105deg, ${C.bannerFrom} 0%, ${C.bannerTo} 100%)`,
+      background: allFound
+        ? "linear-gradient(105deg, #3a3830 0%, #4a4840 100%)"
+        : `linear-gradient(105deg, ${colors.bannerFrom} 0%, ${colors.bannerTo} 100%)`,
       boxShadow: "0 2px 14px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.10)",
       opacity: allFound ? 0.72 : 1, transition: "opacity 0.2s",
     }}>
@@ -227,7 +198,7 @@ function VendorBanner({ label, vendorName, allFound }: { label: string; vendorNa
           </div>
           {allFound && (
             <div style={{ fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1.6px", color: "rgba(255,255,255,0.45)", marginTop: 3, lineHeight: 1 }}>
-              All found
+              All found a home
             </div>
           )}
         </div>
@@ -314,26 +285,26 @@ export default function MyFindsPage() {
     if (posts.length === 0 && bookmarkCount === 0) return "Nothing saved yet";
     if (posts.length === 0 && bookmarkCount > 0) return "Syncing your finds…";
     if (available > 0) return `${available} ${available === 1 ? "find" : "finds"} still available · ${groups.length} ${groups.length === 1 ? "booth" : "booths"}`;
-    return `${posts.length} ${posts.length === 1 ? "find" : "finds"} · all found`;
+    return `${posts.length} ${posts.length === 1 ? "find" : "finds"} · all found a home`;
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", position: "relative" }}>
+    <div style={{ minHeight: "100vh", background: colors.bg, maxWidth: 430, margin: "0 auto", position: "relative" }}>
 
       {/* ── Header ── */}
       <header style={{
         position: "sticky", top: 0, zIndex: 50,
-        background: C.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
-        borderBottom: `1px solid ${C.border}`, padding: "0 18px",
+        background: colors.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
+        borderBottom: `1px solid ${colors.border}`, padding: "0 18px",
       }}>
         <div style={{ paddingTop: "max(18px, env(safe-area-inset-top, 18px))", paddingBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
             <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
-            <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.3px", lineHeight: 1 }}>
+            <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: colors.textPrimary, letterSpacing: "-0.3px", lineHeight: 1 }}>
               My Finds
             </span>
           </div>
-          <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: C.textMuted, lineHeight: 1.4 }}>
+          <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: colors.textMuted, lineHeight: 1.4 }}>
             {subtitle()}
           </div>
         </div>
