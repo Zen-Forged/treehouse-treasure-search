@@ -7,10 +7,8 @@
 //   3. If no Supabase vendor found + localStorage has profile → use as pending identity
 //   4. If neither → show setup form (first-time vendor)
 //
-// Admin fix: if ?vendor=[id] is present in URL (set by My Shelf admin switcher),
-// the post is attributed to that vendor ID, not the admin's own user_id-linked vendor.
-//
-// After a successful save, page redirects to /my-shelf after 1.8s.
+// Image upload goes through /api/post-image (server route, service role key) to bypass RLS.
+// After save, redirects to /my-shelf?vendor=[id] so admin lands on the correct booth.
 
 "use client";
 
@@ -18,7 +16,7 @@ import { useRef, useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, ArrowLeft, ChevronDown, Check, Loader } from "lucide-react";
-import { getAllMalls, createPost, createVendor, uploadPostImage, getVendorByUserId, getVendorById, slugify } from "@/lib/posts";
+import { getAllMalls, createPost, createVendor, getVendorByUserId, getVendorById, slugify } from "@/lib/posts";
 import { safeStorage } from "@/lib/safeStorage";
 import { getSession, isAdmin } from "@/lib/auth";
 import type { Mall, Vendor } from "@/types/treehouse";
@@ -72,6 +70,26 @@ async function generateCaption(imageDataUrl: string): Promise<{ title: string; c
   }
 }
 
+// Upload via server route — uses service role key, bypasses RLS
+async function uploadImageViaServer(base64DataUrl: string, vendorId: string): Promise<string | null> {
+  try {
+    const res = await fetch("/api/post-image", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ base64DataUrl, vendorId }),
+    });
+    const json = await res.json();
+    if (!res.ok || json.error) {
+      console.error("[post] image upload failed:", json.error);
+      return null;
+    }
+    return json.url ?? null;
+  } catch (err) {
+    console.error("[post] uploadImageViaServer error:", err);
+    return null;
+  }
+}
+
 type SaveStage = "idle" | "generating" | "uploading" | "done" | "error";
 
 // ─── Inner component (needs useSearchParams) ───────────────────────────────────
@@ -85,28 +103,28 @@ function PostCaptureInner() {
   const [identityReady, setIdentityReady] = useState(false);
   const [userId,        setUserId]        = useState<string | null>(null);
   const [adminUser,     setAdminUser]     = useState(false);
+  const [vendorParam,   setVendorParam]   = useState<string | null>(null);
 
-  // resolvedVendor: the Supabase-confirmed vendor to post under
-  // For admin: may be set from ?vendor=[id] param (the booth they're managing)
   const [resolvedVendor, setResolvedVendor] = useState<Vendor | null>(null);
   const [localProfile,   setLocalProfile]   = useState<LocalVendorProfile | null>(null);
 
   const [malls,        setMalls]        = useState<Mall[]>([]);
   const [mallsLoading, setMallsLoading] = useState(true);
 
-  // First-time setup form state
   const [showMallPick, setShowMallPick] = useState(false);
   const [displayName,  setDisplayName]  = useState("");
   const [boothNumber,  setBoothNumber]  = useState("");
   const [selectedMall, setSelectedMall] = useState<Mall | null>(null);
 
-  // Save flow
   const [saveStage,  setSaveStage]  = useState<SaveStage>("idle");
   const [saveError,  setSaveError]  = useState<string | null>(null);
   const [previewImg, setPreviewImg] = useState<string | null>(null);
 
   // ── Identity resolution ──
   useEffect(() => {
+    const vParam = searchParams.get("vendor");
+    setVendorParam(vParam);
+
     getSession().then(async s => {
       const uid   = s?.user?.id ?? null;
       const admin = s?.user ? isAdmin(s.user) : false;
@@ -116,9 +134,8 @@ function PostCaptureInner() {
       getAllMalls().then(data => { setMalls(data); setMallsLoading(false); });
 
       // Admin with ?vendor=[id] param → post to that specific vendor's booth
-      const vendorParam = searchParams.get("vendor");
-      if (admin && vendorParam && uid) {
-        const v = await getVendorById(vendorParam);
+      if (admin && vParam && uid) {
+        const v = await getVendorById(vParam);
         if (v) {
           setResolvedVendor(v);
           setIdentityReady(true);
@@ -250,8 +267,8 @@ function PostCaptureInner() {
         setLocalProfile(updated);
       }
 
-      let imageUrl: string | null = null;
-      try { imageUrl = await uploadPostImage(compressed, vendorId); } catch {}
+      // Upload via server route — bypasses Supabase RLS
+      const imageUrl = await uploadImageViaServer(compressed, vendorId);
 
       const { data: post } = await createPost({
         vendor_id:      vendorId,
@@ -270,9 +287,12 @@ function PostCaptureInner() {
 
       setSaveStage("done");
 
-      // Redirect to My Shelf after save confirmation
+      // Redirect back to the correct shelf:
+      // - Admin with ?vendor param → /my-shelf?vendor=[id] (the booth they were managing)
+      // - Everyone else → /my-shelf
       setTimeout(() => {
-        router.push("/my-shelf");
+        const dest = vendorParam ? `/my-shelf?vendor=${vendorParam}` : "/my-shelf";
+        router.push(dest);
       }, 1800);
 
     } catch (err) {
@@ -280,7 +300,7 @@ function PostCaptureInner() {
       setSaveError("Something went wrong. Try again.");
       setSaveStage("error");
     }
-  }, [resolvedVendor, localProfile, userId, selectedMall]);
+  }, [resolvedVendor, localProfile, userId, selectedMall, vendorParam]);
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -307,216 +327,223 @@ function PostCaptureInner() {
 
   if (!identityReady) return null;
 
-  return (
-    <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
-      <input ref={cameraRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={onFileChange} />
-      <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
-
-      {/* ── Toast overlay — CENTERED in take-a-photo section ── */}
-      <AnimatePresence>
-        {(isSaving || saveStage === "done" || saveStage === "error") && (
-          <motion.div
-            key="toast"
-            initial={{ opacity: 0, y: 18, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0,  scale: 1 }}
-            exit={{ opacity: 0, y: 14, scale: 0.95 }}
-            transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-            style={{
-              position: "fixed",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              zIndex: 100,
-              maxWidth: 300,
-              width: "calc(100% - 48px)",
-              background: saveStage === "error"
-                ? "rgba(139,32,32,0.92)"
-                : saveStage === "done"
-                  ? "rgba(18,34,20,0.92)"
-                  : "rgba(26,24,16,0.88)",
-              backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
-              borderRadius: 20, padding: "20px 22px",
-              display: "flex", flexDirection: "column", alignItems: "center", gap: 14,
-              boxShadow: "0 8px 40px rgba(0,0,0,0.28)",
-              textAlign: "center",
-            }}
-          >
-            {previewImg && saveStage !== "error" && (
-              <div style={{ width: 56, height: 56, borderRadius: 12, overflow: "hidden", flexShrink: 0, background: "rgba(255,255,255,0.1)" }}>
-                <img src={previewImg} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+  // Toast rendered at root level (outside maxWidth container) so fixed positioning
+  // is relative to the viewport, not a transformed/constrained ancestor.
+  const toast = (
+    <AnimatePresence>
+      {(isSaving || saveStage === "done" || saveStage === "error") && (
+        <motion.div
+          key="toast"
+          initial={{ opacity: 0, y: 18, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0,  scale: 1 }}
+          exit={{ opacity: 0, y: 14, scale: 0.95 }}
+          transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+          style={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 1000,
+            width: "min(300px, calc(100vw - 48px))",
+            background: saveStage === "error"
+              ? "rgba(139,32,32,0.92)"
+              : saveStage === "done"
+                ? "rgba(18,34,20,0.92)"
+                : "rgba(26,24,16,0.88)",
+            backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
+            borderRadius: 20, padding: "20px 22px",
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 14,
+            boxShadow: "0 8px 40px rgba(0,0,0,0.28)",
+            textAlign: "center",
+          }}
+        >
+          {previewImg && saveStage !== "error" && (
+            <div style={{ width: 56, height: 56, borderRadius: 12, overflow: "hidden", flexShrink: 0 }}>
+              <img src={previewImg} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </div>
+          )}
+          {saveStage === "done" && (
+            <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Check size={18} style={{ color: "#fff" }} />
+            </div>
+          )}
+          {isSaving && (
+            <Loader size={20} style={{ color: "rgba(255,255,255,0.80)", animation: "spin 0.9s linear infinite" }} />
+          )}
+          <div>
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: "#fff", lineHeight: 1.3, marginBottom: 4 }}>
+              {saveStage === "generating" ? "Reading your find…" :
+               saveStage === "uploading"  ? "Saving to shelf…" :
+               saveStage === "done"       ? "Added to your shelf!" :
+                                           saveError ?? "Something went wrong"}
+            </div>
+            {isSaving && (
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>
+                {saveStage === "generating" ? "Writing a caption" : "Uploading image"}
               </div>
             )}
             {saveStage === "done" && (
-              <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Check size={18} style={{ color: "#fff" }} />
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>
+                Taking you to your shelf…
               </div>
             )}
-            {isSaving && (
-              <Loader size={20} style={{ color: "rgba(255,255,255,0.80)", animation: "spin 0.9s linear infinite" }} />
-            )}
-            <div>
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: "#fff", lineHeight: 1.3, marginBottom: 4 }}>
-                {saveStage === "generating" ? "Reading your find…" :
-                 saveStage === "uploading"  ? "Saving to shelf…" :
-                 saveStage === "done"       ? "Added to your shelf!" :
-                                             saveError ?? "Something went wrong"}
-              </div>
-              {isSaving && (
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>
-                  {saveStage === "generating" ? "Writing a caption" : "Uploading image"}
-                </div>
-              )}
-              {saveStage === "done" && (
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>
-                  Taking you to your shelf…
-                </div>
-              )}
-            </div>
-            {saveStage === "error" && (
-              <button onClick={() => { setSaveStage("idle"); setSaveError(null); setPreviewImg(null); }}
-                style={{ fontSize: 12, color: "rgba(255,255,255,0.80)", background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8, cursor: "pointer", padding: "8px 16px" }}>
-                Dismiss
-              </button>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column" }}>
-
-        {/* Nav */}
-        <header style={{ display: "flex", alignItems: "center", padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 14px", borderBottom: `1px solid ${C.border}`, background: C.bg }}>
-          <button onClick={() => router.back()} style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer", marginRight: 12, WebkitTapHighlightColor: "transparent" }}>
-            <ArrowLeft size={15} style={{ color: C.textMid }} />
-          </button>
-          <div>
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: C.textPrimary, lineHeight: 1 }}>Add to Shelf</div>
-            <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginTop: 2 }}>
-              {resolvedVendor ? resolvedVendor.display_name : "Share with your community"}
-            </div>
           </div>
-        </header>
+          {saveStage === "error" && (
+            <button onClick={() => { setSaveStage("idle"); setSaveError(null); setPreviewImg(null); }}
+              style={{ fontSize: 12, color: "rgba(255,255,255,0.80)", background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8, cursor: "pointer", padding: "8px 16px" }}>
+              Dismiss
+            </button>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 
-        <div style={{ flex: 1, padding: "16px 15px", paddingBottom: "max(32px, env(safe-area-inset-bottom, 32px))", display: "flex", flexDirection: "column", gap: 14 }}>
+  return (
+    <>
+      {toast}
 
-          {/* ── Vendor identity card ── */}
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
-            style={{ borderRadius: 14, background: C.surface, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+      <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
+        <input ref={cameraRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={onFileChange} />
+        <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
 
-            {hasValidIdentity ? (
-              <div style={{ padding: "13px 14px" }}>
-                <div style={{ fontSize: 8, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: 6 }}>Posting as</div>
-                <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: C.textPrimary, marginBottom: 2 }}>
-                  {resolvedVendor?.display_name ?? localProfile?.display_name}
-                </div>
-                <div style={{ fontSize: 11, color: C.textMuted }}>
-                  {[
-                    (resolvedVendor?.booth_number ?? localProfile?.booth_number) ? `Booth ${resolvedVendor?.booth_number ?? localProfile?.booth_number}` : null,
-                    (resolvedVendor?.mall as any)?.name ?? localProfile?.mall_name,
-                    (resolvedVendor?.mall as any)?.city ?? localProfile?.mall_city,
-                  ].filter(Boolean).join(" · ")}
-                </div>
+        <div style={{ position: "relative", zIndex: 1, flex: 1, display: "flex", flexDirection: "column" }}>
+
+          {/* Nav */}
+          <header style={{ display: "flex", alignItems: "center", padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 14px", borderBottom: `1px solid ${C.border}`, background: C.bg }}>
+            <button onClick={() => router.back()} style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer", marginRight: 12, WebkitTapHighlightColor: "transparent" }}>
+              <ArrowLeft size={15} style={{ color: C.textMid }} />
+            </button>
+            <div>
+              <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: C.textPrimary, lineHeight: 1 }}>Add to Shelf</div>
+              <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginTop: 2 }}>
+                {resolvedVendor ? resolvedVendor.display_name : "Share with your community"}
               </div>
-            ) : (
-              <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: 12 }}>
-                <div style={{ fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600, color: C.textPrimary, marginBottom: 2 }}>
-                  Set up your vendor profile
-                </div>
-                <div>
-                  <label style={labelStyle}>Vendor name</label>
-                  <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)}
-                    placeholder="e.g. Magnolia & Co." style={{ ...inputStyle, fontFamily: "Georgia, serif" }} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Booth number <span style={{ color: C.textFaint, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
-                  <input type="text" value={boothNumber} onChange={e => setBoothNumber(e.target.value)} placeholder="e.g. 42B" style={inputStyle} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Your mall</label>
-                  {mallsLoading ? (
-                    <div style={{ padding: "10px 12px", fontSize: 12, color: C.textMuted }}>Loading malls…</div>
-                  ) : (
-                    <>
-                      <button onClick={() => setShowMallPick(s => !s)}
-                        style={{ ...inputStyle, display: "flex", alignItems: "center", justifyContent: "space-between", border: `1px solid ${selectedMall ? C.greenBorder : C.inputBorder}`, cursor: "pointer", color: selectedMall ? C.textPrimary : C.textMuted, fontFamily: selectedMall ? "Georgia, serif" : "inherit" }}>
-                        <span>{selectedMall ? `${selectedMall.name} · ${selectedMall.city}` : "Select your mall"}</span>
-                        <ChevronDown size={13} style={{ color: C.textMuted, flexShrink: 0 }} />
-                      </button>
-                      <AnimatePresence>
-                        {showMallPick && (
-                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} style={{ overflow: "hidden", marginTop: 4 }}>
-                            <div style={{ borderRadius: 9, border: `1px solid ${C.border}`, overflow: "hidden", background: "#fff", maxHeight: 200, overflowY: "auto" }}>
-                              {malls.map(mall => (
-                                <button key={mall.id} onClick={() => { setSelectedMall(mall); setShowMallPick(false); }}
-                                  style={{ width: "100%", padding: "11px 14px", background: selectedMall?.id === mall.id ? C.greenLight : "none", border: "none", borderBottom: `1px solid ${C.border}`, cursor: "pointer", textAlign: "left" }}>
-                                  <div style={{ fontFamily: "Georgia, serif", fontSize: 13, color: C.textPrimary }}>{mall.name}</div>
-                                  <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>{mall.city}, {mall.state}</div>
-                                </button>
-                              ))}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </>
-                  )}
-                </div>
-                <button onClick={saveLocalProfile} disabled={!formComplete}
-                  style={{ width: "100%", padding: "12px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: formComplete ? "pointer" : "default", color: formComplete ? "#fff" : C.textFaint, background: formComplete ? C.green : C.surfaceDeep, border: "none", transition: "all 0.2s" }}>
-                  Save profile
-                </button>
-              </div>
-            )}
-          </motion.div>
+            </div>
+          </header>
 
-          {/* ── Photo capture ── */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.1 }}
-            style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", paddingLeft: 2 }}>Photograph your find</div>
+          <div style={{ flex: 1, padding: "16px 15px", paddingBottom: "max(32px, env(safe-area-inset-bottom, 32px))", display: "flex", flexDirection: "column", gap: 14 }}>
 
-            <motion.button onClick={() => canCapture && cameraRef.current?.click()} disabled={!canCapture}
-              style={{ width: "100%", padding: "48px 22px", borderRadius: 16, cursor: canCapture ? "pointer" : "default", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, background: canCapture ? C.surface : C.surfaceDeep, border: `1px dashed ${canCapture ? "rgba(30,77,43,0.3)" : C.border}`, transition: "all 0.2s" }}
-              whileTap={canCapture ? { scale: 0.98 } : {}}>
-              <div style={{ width: 52, height: 52, borderRadius: "50%", background: canCapture ? C.greenLight : C.surfaceDeep, border: `1px solid ${canCapture ? C.greenBorder : C.border}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Camera size={22} style={{ color: canCapture ? C.green : C.textFaint }} />
-              </div>
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: canCapture ? C.textPrimary : C.textFaint }}>
-                {isSaving ? "Saving…" : "Take a photo"}
-              </div>
-              {!hasValidIdentity && (
-                <div style={{ fontSize: 11, color: C.textMuted, textAlign: "center", maxWidth: 210, lineHeight: 1.5 }}>
-                  Complete your vendor profile above to continue
+            {/* ── Vendor identity card ── */}
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
+              style={{ borderRadius: 14, background: C.surface, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+
+              {hasValidIdentity ? (
+                <div style={{ padding: "13px 14px" }}>
+                  <div style={{ fontSize: 8, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: 6 }}>Posting as</div>
+                  <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: C.textPrimary, marginBottom: 2 }}>
+                    {resolvedVendor?.display_name ?? localProfile?.display_name}
+                  </div>
+                  <div style={{ fontSize: 11, color: C.textMuted }}>
+                    {[
+                      (resolvedVendor?.booth_number ?? localProfile?.booth_number) ? `Booth ${resolvedVendor?.booth_number ?? localProfile?.booth_number}` : null,
+                      (resolvedVendor?.mall as any)?.name ?? localProfile?.mall_name,
+                      (resolvedVendor?.mall as any)?.city ?? localProfile?.mall_city,
+                    ].filter(Boolean).join(" · ")}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{ fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600, color: C.textPrimary, marginBottom: 2 }}>
+                    Set up your vendor profile
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Vendor name</label>
+                    <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)}
+                      placeholder="e.g. Magnolia & Co." style={{ ...inputStyle, fontFamily: "Georgia, serif" }} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Booth number <span style={{ color: C.textFaint, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
+                    <input type="text" value={boothNumber} onChange={e => setBoothNumber(e.target.value)} placeholder="e.g. 42B" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Your mall</label>
+                    {mallsLoading ? (
+                      <div style={{ padding: "10px 12px", fontSize: 12, color: C.textMuted }}>Loading malls…</div>
+                    ) : (
+                      <>
+                        <button onClick={() => setShowMallPick(s => !s)}
+                          style={{ ...inputStyle, display: "flex", alignItems: "center", justifyContent: "space-between", border: `1px solid ${selectedMall ? C.greenBorder : C.inputBorder}`, cursor: "pointer", color: selectedMall ? C.textPrimary : C.textMuted, fontFamily: selectedMall ? "Georgia, serif" : "inherit" }}>
+                          <span>{selectedMall ? `${selectedMall.name} · ${selectedMall.city}` : "Select your mall"}</span>
+                          <ChevronDown size={13} style={{ color: C.textMuted, flexShrink: 0 }} />
+                        </button>
+                        <AnimatePresence>
+                          {showMallPick && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} style={{ overflow: "hidden", marginTop: 4 }}>
+                              <div style={{ borderRadius: 9, border: `1px solid ${C.border}`, overflow: "hidden", background: "#fff", maxHeight: 200, overflowY: "auto" }}>
+                                {malls.map(mall => (
+                                  <button key={mall.id} onClick={() => { setSelectedMall(mall); setShowMallPick(false); }}
+                                    style={{ width: "100%", padding: "11px 14px", background: selectedMall?.id === mall.id ? C.greenLight : "none", border: "none", borderBottom: `1px solid ${C.border}`, cursor: "pointer", textAlign: "left" }}>
+                                    <div style={{ fontFamily: "Georgia, serif", fontSize: 13, color: C.textPrimary }}>{mall.name}</div>
+                                    <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>{mall.city}, {mall.state}</div>
+                                  </button>
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </>
+                    )}
+                  </div>
+                  <button onClick={saveLocalProfile} disabled={!formComplete}
+                    style={{ width: "100%", padding: "12px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: formComplete ? "pointer" : "default", color: formComplete ? "#fff" : C.textFaint, background: formComplete ? C.green : C.surfaceDeep, border: "none", transition: "all 0.2s" }}>
+                    Save profile
+                  </button>
                 </div>
               )}
-            </motion.button>
+            </motion.div>
 
-            <button onClick={() => canCapture && galleryRef.current?.click()} disabled={!canCapture}
-              style={{ width: "100%", padding: "12px", borderRadius: 10, fontSize: 13, border: "none", color: canCapture ? C.green : C.textFaint, background: "transparent", cursor: canCapture ? "pointer" : "default", textDecoration: canCapture ? "underline" : "none", textDecorationColor: "rgba(30,77,43,0.3)" }}>
-              Choose from library
-            </button>
+            {/* ── Photo capture ── */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.1 }}
+              style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", paddingLeft: 2 }}>Photograph your find</div>
 
-            {hasValidIdentity && (
-              <button onClick={() => router.push("/my-shelf")}
-                style={{ width: "100%", padding: "11px", borderRadius: 10, fontSize: 13, border: `1px solid ${C.border}`, color: C.textMid, background: C.surface, cursor: "pointer", fontFamily: "Georgia, serif" }}>
-                View my shelf →
+              <motion.button onClick={() => canCapture && cameraRef.current?.click()} disabled={!canCapture}
+                style={{ width: "100%", padding: "48px 22px", borderRadius: 16, cursor: canCapture ? "pointer" : "default", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, background: canCapture ? C.surface : C.surfaceDeep, border: `1px dashed ${canCapture ? "rgba(30,77,43,0.3)" : C.border}`, transition: "all 0.2s" }}
+                whileTap={canCapture ? { scale: 0.98 } : {}}>
+                <div style={{ width: 52, height: 52, borderRadius: "50%", background: canCapture ? C.greenLight : C.surfaceDeep, border: `1px solid ${canCapture ? C.greenBorder : C.border}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Camera size={22} style={{ color: canCapture ? C.green : C.textFaint }} />
+                </div>
+                <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: canCapture ? C.textPrimary : C.textFaint }}>
+                  {isSaving ? "Saving…" : "Take a photo"}
+                </div>
+                {!hasValidIdentity && (
+                  <div style={{ fontSize: 11, color: C.textMuted, textAlign: "center", maxWidth: 210, lineHeight: 1.5 }}>
+                    Complete your vendor profile above to continue
+                  </div>
+                )}
+              </motion.button>
+
+              <button onClick={() => canCapture && galleryRef.current?.click()} disabled={!canCapture}
+                style={{ width: "100%", padding: "12px", borderRadius: 10, fontSize: 13, border: "none", color: canCapture ? C.green : C.textFaint, background: "transparent", cursor: canCapture ? "pointer" : "default", textDecoration: canCapture ? "underline" : "none", textDecorationColor: "rgba(30,77,43,0.3)" }}>
+                Choose from library
               </button>
-            )}
-          </motion.div>
 
-          {/* ── Tips ── */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.25 }}
-            style={{ borderRadius: 12, background: C.surface, border: `1px solid ${C.border}`, padding: "12px 14px" }}>
-            <div style={{ fontSize: 8, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: 8 }}>Posting tips</div>
-            {["Good light goes a long way — natural is best", "Get close enough to show the character of the piece", "One item per photo reads better than a crowded shelf"].map((tip, i) => (
-              <div key={i} style={{ display: "flex", gap: 8, marginBottom: i < 2 ? 6 : 0 }}>
-                <span style={{ fontSize: 9, color: C.textFaint, marginTop: 1, flexShrink: 0 }}>·</span>
-                <span style={{ fontSize: 11, color: C.textMid, lineHeight: 1.55 }}>{tip}</span>
-              </div>
-            ))}
-          </motion.div>
+              {hasValidIdentity && (
+                <button onClick={() => router.push("/my-shelf")}
+                  style={{ width: "100%", padding: "11px", borderRadius: 10, fontSize: 13, border: `1px solid ${C.border}`, color: C.textMid, background: C.surface, cursor: "pointer", fontFamily: "Georgia, serif" }}>
+                  View my shelf →
+                </button>
+              )}
+            </motion.div>
+
+            {/* ── Tips ── */}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.25 }}
+              style={{ borderRadius: 12, background: C.surface, border: `1px solid ${C.border}`, padding: "12px 14px" }}>
+              <div style={{ fontSize: 8, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: 8 }}>Posting tips</div>
+              {["Good light goes a long way — natural is best", "Get close enough to show the character of the piece", "One item per photo reads better than a crowded shelf"].map((tip, i) => (
+                <div key={i} style={{ display: "flex", gap: 8, marginBottom: i < 2 ? 6 : 0 }}>
+                  <span style={{ fontSize: 9, color: C.textFaint, marginTop: 1, flexShrink: 0 }}>·</span>
+                  <span style={{ fontSize: 11, color: C.textMid, lineHeight: 1.55 }}>{tip}</span>
+                </div>
+              ))}
+            </motion.div>
+          </div>
         </div>
       </div>
+
       <style>{`.hidden { display: none; } @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
-    </div>
+    </>
   );
 }
 
