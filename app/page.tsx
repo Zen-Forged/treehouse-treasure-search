@@ -1,6 +1,7 @@
 // app/page.tsx
 // Treehouse — Discovery Feed
 // Only available posts are shown — sold items are filtered at the query level.
+// Leaf icon: top-right of each tile image, always visible, toggleable from feed.
 // Mode toggle in header switches between Explorer (buyer) and Curator (vendor).
 
 "use client";
@@ -40,6 +41,8 @@ const C = {
 
 const SCROLL_KEY      = "treehouse_feed_scroll";
 const BOOKMARK_PREFIX = "treehouse_bookmark_";
+
+function flagKey(postId: string) { return `${BOOKMARK_PREFIX}${postId}`; }
 
 // ─── Bookmark helpers ──────────────────────────────────────────────────────────
 
@@ -126,7 +129,14 @@ function SkeletonMasonry() {
 
 // ─── Masonry tile ──────────────────────────────────────────────────────────────
 
-function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; isFollowed: boolean }) {
+function MasonryTile({
+  post, index, isFollowed, onToggleSave,
+}: {
+  post: Post;
+  index: number;
+  isFollowed: boolean;
+  onToggleSave: (postId: string) => void;
+}) {
   const [imgErr,    setImgErr]    = useState(false);
   const [imgHeight, setImgHeight] = useState<number | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -146,6 +156,12 @@ function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; i
     setImgHeight(computed);
   }
 
+  function handleLeafClick(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    onToggleSave(post.id);
+  }
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.32, delay: Math.min(index * 0.04, 0.3), ease: [0.25, 0.1, 0.25, 1] }}>
@@ -162,16 +178,24 @@ function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; i
                 onLoad={handleLoad} onError={() => setImgErr(true)}
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
                   filter: "brightness(0.99) saturate(0.96)" }} />
-              {isFollowed && (
-                <div style={{
-                  position: "absolute", bottom: 7, right: 7,
-                  width: 22, height: 22, borderRadius: "50%",
+              {/* Leaf — top-right corner, always visible, toggleable */}
+              <button
+                onClick={handleLeafClick}
+                aria-label={isFollowed ? "Remove from My Finds" : "Save to My Finds"}
+                style={{
+                  position: "absolute", top: 8, right: 8,
+                  width: 34, height: 34, borderRadius: "50%",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  background: C.greenSolid, boxShadow: "0 1px 5px rgba(0,0,0,0.22)",
-                }}>
-                  <PiLeafIcon size={12} style={{ color: "rgba(255,255,255,0.96)" }} />
-                </div>
-              )}
+                  background: isFollowed ? C.greenSolid : "rgba(0,0,0,0.30)",
+                  backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+                  border: "none", cursor: "pointer",
+                  transition: "background 0.18s, transform 0.12s",
+                  boxShadow: isFollowed ? "0 2px 8px rgba(30,77,43,0.40)" : "0 1px 5px rgba(0,0,0,0.22)",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                <PiLeafIcon size={17} strokeWidth={isFollowed ? 2.2 : 1.8} style={{ color: "rgba(255,255,255,0.96)" }} />
+              </button>
             </div>
           ) : (
             <div style={{ padding: "16px 13px 10px", minHeight: fallbackH, display: "flex", alignItems: "flex-start" }}>
@@ -201,7 +225,13 @@ function MasonryTile({ post, index, isFollowed }: { post: Post; index: number; i
 
 // ─── Two-column masonry ────────────────────────────────────────────────────────
 
-function MasonryGrid({ posts, followedIds }: { posts: Post[]; followedIds: Set<string> }) {
+function MasonryGrid({
+  posts, followedIds, onToggleSave,
+}: {
+  posts: Post[];
+  followedIds: Set<string>;
+  onToggleSave: (postId: string) => void;
+}) {
   const col1 = posts.filter((_, i) => i % 2 === 0);
   const col2 = posts.filter((_, i) => i % 2 === 1);
   const firstTileRef = useRef<HTMLDivElement>(null);
@@ -222,13 +252,13 @@ function MasonryGrid({ posts, followedIds }: { posts: Post[]; followedIds: Set<s
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {col1.map((post, i) => (
           <div key={post.id} ref={i === 0 ? firstTileRef : undefined}>
-            <MasonryTile post={post} index={i * 2} isFollowed={followedIds.has(post.id)} />
+            <MasonryTile post={post} index={i * 2} isFollowed={followedIds.has(post.id)} onToggleSave={onToggleSave} />
           </div>
         ))}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: offset }}>
         {col2.map((post, i) => (
-          <MasonryTile key={post.id} post={post} index={i * 2 + 1} isFollowed={followedIds.has(post.id)} />
+          <MasonryTile key={post.id} post={post} index={i * 2 + 1} isFollowed={followedIds.has(post.id)} onToggleSave={onToggleSave} />
         ))}
       </div>
     </div>
@@ -266,7 +296,7 @@ export default function DiscoveryFeedPage() {
   const [mallId,        setMallId]        = useState<string | null>(null);
   const [followedIds,   setFollowedIds]   = useState<Set<string>>(new Set());
   const [bookmarkCount, setBookmarkCount] = useState(0);
-  const [isAuthed,      setIsAuthed]      = useState<boolean | null>(null); // null = loading
+  const [isAuthed,      setIsAuthed]      = useState<boolean | null>(null);
   const hasFetched = useRef(false);
   const feedRef    = useRef<HTMLDivElement>(null);
 
@@ -298,7 +328,6 @@ export default function DiscoveryFeedPage() {
 
   useEffect(() => { getAllMalls().then(setMalls); }, []);
 
-  // Check auth state for "Curator Sign in" visibility — reactive via onAuthChange
   useEffect(() => {
     getSession().then(s => setIsAuthed(!!s?.user));
     const unsub = onAuthChange(user => setIsAuthed(!!user));
@@ -315,6 +344,23 @@ export default function DiscoveryFeedPage() {
       .catch(()  => { if (live) { setError(true);  setLoading(false); } });
     return () => { live = false; };
   }, []);
+
+  // Toggle save/unsave from feed tile
+  function handleToggleSave(postId: string) {
+    setFollowedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(postId)) {
+        try { localStorage.removeItem(flagKey(postId)); } catch {}
+        next.delete(postId);
+        setBookmarkCount(c => Math.max(0, c - 1));
+      } else {
+        try { localStorage.setItem(flagKey(postId), "1"); } catch {}
+        next.add(postId);
+        setBookmarkCount(c => c + 1);
+      }
+      return next;
+    });
+  }
 
   const filtered     = posts.filter(p => !mallId || p.mall_id === mallId);
   const selectedMall = malls.find(m => m.id === mallId) ?? null;
@@ -345,7 +391,6 @@ export default function DiscoveryFeedPage() {
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {/* "Vendor? Sign in" — only shown to unauthed users, fades in once auth state resolves */}
             {isAuthed === false && (
               <Link href="/login"
                 style={{
@@ -393,10 +438,12 @@ export default function DiscoveryFeedPage() {
 
           {loading ? <SkeletonMasonry /> : error ? (
             <div style={{ textAlign: "center", paddingTop: 60, fontFamily: "Georgia, serif", color: C.textMuted, fontSize: 14 }}>
-              Couldn't load finds. Check your connection and try again.
+              Couldn&apos;t load finds. Check your connection and try again.
             </div>
           ) : filtered.length === 0 ? <EmptyFeed /> : (
-            <AnimatePresence><MasonryGrid posts={filtered} followedIds={followedIds} /></AnimatePresence>
+            <AnimatePresence>
+              <MasonryGrid posts={filtered} followedIds={followedIds} onToggleSave={handleToggleSave} />
+            </AnimatePresence>
           )}
         </div>
       </main>

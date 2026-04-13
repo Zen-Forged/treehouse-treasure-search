@@ -8,7 +8,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, Trash2, Facebook, Tag } from "lucide-react";
+import { Send, Trash2, Facebook, Tag, ArrowLeft } from "lucide-react";
 import PiLeafIcon from "@/components/PiLeafIcon";
 import { getPost, getVendorPosts, updatePostStatus, deletePost } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
@@ -184,6 +184,7 @@ export default function FindDetailPage() {
     });
   }, [id]);
 
+  // Leaf icon — toggleable from detail page (add only; unselect from here too)
   function handleSave() {
     if (!id) return;
     const next = !isSaved;
@@ -222,9 +223,19 @@ export default function FindDetailPage() {
     else    setActionBusy(false);
   }
 
+  // "Add to path" — saves to My Finds and gives brief feedback
+  function handleAddToPath() {
+    if (!id) return;
+    if (!isSaved) {
+      setIsSaved(true);
+      try { safeStorage.setItem(flagKey(id), "1"); } catch {}
+    }
+    // Navigate to My Finds after a brief moment so user sees feedback
+    setTimeout(() => router.push("/flagged"), 320);
+  }
+
   const handleShelfReady = useCallback((hasItems: boolean) => { setShelfHasItems(hasItems); }, []);
 
-  // Owner controls: must be this device's vendor AND in Curator mode
   const showOwnerControls = isMyPost && isCurator;
 
   const mapsUrl = post?.mall?.address
@@ -254,6 +265,7 @@ export default function FindDetailPage() {
   const hasVendor   = !!post.vendor;
   const boothNumber = post.vendor?.booth_number ?? null;
   const hasBoothBox = !!boothNumber;
+  const hasContent  = !!(post.caption || post.description);
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
@@ -281,15 +293,32 @@ export default function FindDetailPage() {
           </div>
         )}
 
-        {/* Save + share buttons — bottom right of image */}
+        {/* Back button — top-left floating */}
+        <button
+          onClick={() => router.back()}
+          aria-label="Go back"
+          style={{
+            position: "absolute",
+            top: "max(14px, env(safe-area-inset-top, 14px))",
+            left: 14,
+            width: 36, height: 36, borderRadius: "50%",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "rgba(240,237,230,0.82)",
+            backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+            border: "1px solid rgba(26,24,16,0.10)",
+            cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(26,24,16,0.12)",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <ArrowLeft size={15} style={{ color: C.textMid }} />
+        </button>
+
+        {/* Share (paper airplane) + leaf — bottom-right of image */}
         <div style={{ position: "absolute", bottom: 12, right: 14, display: "flex", alignItems: "center", gap: 8 }}>
-          <button onClick={handleSave} aria-label={isSaved ? "Remove from Your Finds" : "Save to Your Finds"}
-            style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: isSaved ? C.greenSolid : "rgba(0,0,0,0.30)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", cursor: "pointer", transition: "background 0.18s" }}>
-            <PiLeafIcon size={16} strokeWidth={isSaved ? 2.2 : 1.8} style={{ color: "rgba(255,255,255,0.95)" }} />
-          </button>
           <button onClick={handleShare}
-            style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.30)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", cursor: "pointer" }}>
-            <Share2 size={14} style={{ color: copied ? "#a8d5b5" : "rgba(255,255,255,0.92)" }} />
+            style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.30)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
+            <Send size={14} style={{ color: copied ? "#a8d5b5" : "rgba(255,255,255,0.92)" }} />
           </button>
         </div>
 
@@ -319,8 +348,8 @@ export default function FindDetailPage() {
           </span>
         </motion.div>
 
-        {(post.caption || post.description) && (
-          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32, delay: 0.1 }} style={{ marginBottom: 32 }}>
+        {hasContent && (
+          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32, delay: 0.1 }} style={{ marginBottom: 24 }}>
             {post.caption && (
               <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 15, color: C.textMid, lineHeight: 1.85, margin: "0 0 10px" }}>
                 {post.caption}
@@ -331,6 +360,32 @@ export default function FindDetailPage() {
                 {post.description}
               </p>
             )}
+          </motion.div>
+        )}
+
+        {/* ── "Add to path" button — centered under description ── */}
+        {!isCurator && (
+          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.15 }}
+            style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
+            <button
+              onClick={handleAddToPath}
+              style={{
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "12px 28px", borderRadius: 28,
+                fontSize: 13, fontWeight: 600,
+                fontFamily: "Georgia, serif",
+                color: isSaved ? "rgba(255,255,255,0.97)" : C.green,
+                background: isSaved ? C.greenSolid : C.greenLight,
+                border: `1px solid ${isSaved ? "transparent" : C.greenBorder}`,
+                cursor: "pointer",
+                transition: "background 0.18s, color 0.18s",
+                boxShadow: isSaved ? "0 2px 12px rgba(30,77,43,0.25)" : "none",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <PiLeafIcon size={15} strokeWidth={isSaved ? 2.2 : 1.8} style={{ color: isSaved ? "rgba(255,255,255,0.97)" : C.green }} />
+              {isSaved ? "Added to My Finds" : "Add to path"}
+            </button>
           </motion.div>
         )}
       </div>
@@ -393,13 +448,13 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Save to Your Finds — Explorer mode only */}
+            {/* Leaf / Save — Explorer mode: toggleable add/remove */}
             {post.vendor && !isCurator && (
               <div style={{ padding: "13px 16px 15px" }}>
                 <button onClick={handleSave}
-                  style={{ width: "100%", padding: "11px 16px", borderRadius: 11, fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: isSaved ? "rgba(255,255,255,0.97)" : C.green, background: isSaved ? C.greenSolid : C.greenLight, border: `1px solid ${isSaved ? "transparent" : C.greenBorder}`, cursor: "pointer", fontFamily: "Georgia, serif", transition: "background 0.18s, color 0.18s, border-color 0.18s" }}>
+                  style={{ width: "100%", padding: "11px 16px", borderRadius: 11, fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: isSaved ? "rgba(255,255,255,0.97)" : C.green, background: isSaved ? C.greenSolid : C.greenLight, border: `1px solid ${isSaved ? "transparent" : C.greenBorder}`, cursor: "pointer", fontFamily: "Georgia, serif", transition: "background 0.18s, color 0.18s, border-color 0.18s", WebkitTapHighlightColor: "transparent" }}>
                   <PiLeafIcon size={14} strokeWidth={isSaved ? 2.2 : 1.8} style={{ color: isSaved ? "rgba(255,255,255,0.97)" : C.green }} />
-                  {isSaved ? "Saved to Your Finds" : "Save to Your Finds"}
+                  {isSaved ? "Remove from My Finds" : "Save to My Finds"}
                 </button>
               </div>
             )}
@@ -450,6 +505,8 @@ export default function FindDetailPage() {
 
       <div style={{ paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }} />
       <BottomNav active={null} />
+
+      <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
     </div>
   );
 }
