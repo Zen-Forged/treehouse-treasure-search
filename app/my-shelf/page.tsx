@@ -11,6 +11,9 @@
 //
 // Admin can switch vendors via ?vendor=[id] (set by Shelves page) or the
 // in-page vendor switcher pill in the app bar.
+//
+// AddFindTile passes ?vendor=[id] to /post so admin always posts to the
+// correct booth, not their own user_id-linked vendor.
 
 "use client";
 
@@ -323,13 +326,19 @@ function FoundTile({ post, index }: { post: Post; index: number }) {
   );
 }
 
-function AddFindTile({ index }: { index: number }) {
+// AddFindTile — passes ?vendor=[id] to /post so admin always posts to the
+// currently-viewed vendor booth, not their own user_id-linked vendor.
+function AddFindTile({ index, vendorId }: { index: number; vendorId?: string }) {
   const router = useRouter();
+  function handleAdd() {
+    const dest = vendorId ? `/post?vendor=${vendorId}` : "/post";
+    router.push(dest);
+  }
   return (
     <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: [0.25, 0.1, 0.25, 1] }}
       style={{ width: "100%", aspectRatio: "1" }}>
-      <button onClick={() => router.push("/post")}
+      <button onClick={handleAdd}
         style={{ width: "100%", height: "100%", borderRadius: 10, background: C.emptyTile, border: "none", cursor: "pointer", padding: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, WebkitTapHighlightColor: "transparent" }}>
         <ImagePlus size={18} strokeWidth={1.4} style={{ color: "rgba(28,26,20,0.22)" }} />
         <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(28,26,20,0.28)", textTransform: "uppercase", letterSpacing: "1.2px", lineHeight: 1 }}>Add</span>
@@ -439,9 +448,7 @@ function MyShelfInner() {
   const [heroUploading, setHeroUploading] = useState(false);
   const [allVendors,    setAllVendors]    = useState<Vendor[]>([]);
 
-  // Ref so loadVendor can access current user.id without stale closure issues
-  const userRef = useRef<User | null>(null);
-
+  const userRef       = useRef<User | null>(null);
   const heroLockedRef = useRef(false);
 
   // ── Step 1: Auth gate ──
@@ -455,12 +462,10 @@ function MyShelfInner() {
   }, []);
 
   // ── Step 2: Resolve vendor ──
-  // Capture `authedUser` as a non-null local so TypeScript is satisfied inside async closure.
-  // Priority: ?vendor param (admin override) → user_id lookup → admin default → NoBooth
   useEffect(() => {
     if (!authReady || !user) return;
 
-    const authedUser  = user; // non-null local — TypeScript can verify this
+    const authedUser  = user;
     const adminUser   = isAdmin(authedUser);
     const vendorParam = searchParams.get("vendor");
 
@@ -469,23 +474,19 @@ function MyShelfInner() {
         getVendorsByMall(MALL_ID).then(setAllVendors);
       }
 
-      // 1. Admin override via ?vendor=[id]
       if (adminUser && vendorParam) {
         const v = await getVendorById(vendorParam);
         if (v) { loadVendor(v, authedUser.id); return; }
       }
 
-      // 2. Standard user_id lookup
       const v = await getVendorByUserId(authedUser.id);
       if (v) { loadVendor(v, authedUser.id); return; }
 
-      // 3. Admin fallback — load the Zen default booth
       if (adminUser) {
         const defaultV = await getVendorById(ADMIN_DEFAULT_VENDOR_ID);
         if (defaultV) { loadVendor(defaultV, authedUser.id); return; }
       }
 
-      // 4. No vendor found
       setVendorReady(true);
     }
 
@@ -643,7 +644,7 @@ function MyShelfInner() {
             {tab === "available" && (
               <ThreeColGrid>
                 {available.map((post, i) => <AvailableTile key={post.id} post={post} index={i} />)}
-                <AddFindTile index={available.length} />
+                <AddFindTile index={available.length} vendorId={activeVendor.id} />
               </ThreeColGrid>
             )}
 
