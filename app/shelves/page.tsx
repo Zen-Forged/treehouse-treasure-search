@@ -244,7 +244,7 @@ function VendorCard({ vendor, index, adminUser }: { vendor: Vendor; index: numbe
     if (adminUser) {
       router.push(`/my-shelf?vendor=${vendor.id}`);
     } else {
-      router.push(`/vendor/${vendor.slug}`);
+      router.push(`/shelf/${vendor.slug}`);
     }
   }
 
