@@ -3,12 +3,14 @@
 // Redirects to /login if no session.
 //
 // IDENTITY RESOLUTION (authoritative order):
-//   1. getVendorByUserId(user.id) — Supabase is source of truth for logged-in users
-//   2. localStorage cache — written after Supabase confirms, used as fast-path hint only
-//   3. NoBooth state — shown when auth user has no linked vendor row yet
+//   1. ?vendor=[id] query param — admin override, loads any vendor by ID
+//   2. getVendorByUserId(user.id) — Supabase source of truth for logged-in users
+//   3. Admin fallback — if admin has no user_id-linked vendor, auto-loads the
+//      default admin booth (ADMIN_DEFAULT_VENDOR_ID) so My Shelf is never empty
+//   4. NoBooth state — shown only when none of the above resolves
 //
-// This ensures the correct shelf is always shown regardless of which device
-// the user logs in from.
+// Admin can switch vendors via ?vendor=[id] (set by Shelves page) or the
+// in-page vendor switcher pill in the app bar.
 
 "use client";
 
@@ -17,18 +19,23 @@ export const dynamic = "force-dynamic";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, ChevronRight, Share2, Check, ImagePlus, Pencil, Loader, LogOut } from "lucide-react";
+import { MapPin, ChevronRight, Share2, Check, ImagePlus, Pencil, Loader, LogOut, ChevronDown } from "lucide-react";
 import { PiLeaf } from "react-icons/pi";
 import {
-  getVendorByUserId, getVendorPosts, getAllMalls,
+  getVendorByUserId, getVendorById, getVendorsByMall, getVendorPosts, getAllMalls,
   uploadVendorHeroImage, updateVendorHeroImage,
 } from "@/lib/posts";
 import { getSession, signOut, isAdmin } from "@/lib/auth";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Post, type Vendor, type Mall } from "@/types/treehouse";
 import BottomNav from "@/components/BottomNav";
 import type { User } from "@supabase/supabase-js";
+
+// The Zen booth is the admin's default shelf when no user_id-linked vendor exists
+const ADMIN_DEFAULT_VENDOR_ID = "5619b4bf-3d05-4843-8ee1-e8b747fc2d81";
+const MALL_ID                 = "19a8ff7e-cb45-491f-9451-878e2dde5bf4";
 
 const C = {
   bg:          "#f5f2eb",
@@ -77,16 +84,90 @@ function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promis
   });
 }
 
+// ─── Admin vendor switcher ────────────────────────────────────────────────────
+
+function AdminVendorSwitcher({ vendors, activeId, onSelect }: {
+  vendors: Vendor[];
+  activeId: string;
+  onSelect: (v: Vendor) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const active = vendors.find(v => v.id === activeId);
+
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: "flex", alignItems: "center", gap: 5,
+          padding: "4px 9px", borderRadius: 8,
+          background: C.greenLight, border: `1px solid ${C.greenBorder}`,
+          cursor: "pointer", WebkitTapHighlightColor: "transparent",
+        }}
+      >
+        <span style={{ fontSize: 9, fontWeight: 700, color: C.green, textTransform: "uppercase", letterSpacing: "1.6px" }}>
+          {active?.display_name ?? "Switch booth"}
+        </span>
+        <ChevronDown size={10} style={{ color: C.green }} />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.96 }}
+            transition={{ duration: 0.15 }}
+            style={{
+              position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 200,
+              background: "#fff", borderRadius: 12, border: `1px solid ${C.border}`,
+              boxShadow: "0 8px 32px rgba(26,24,16,0.16)", minWidth: 200, overflow: "hidden",
+            }}
+          >
+            {vendors.map(v => (
+              <button
+                key={v.id}
+                onClick={() => { onSelect(v); setOpen(false); }}
+                style={{
+                  width: "100%", padding: "10px 14px", textAlign: "left",
+                  background: v.id === activeId ? C.greenLight : "none",
+                  border: "none", borderBottom: `1px solid ${C.border}`,
+                  cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.2 }}>
+                    {v.display_name}
+                  </div>
+                  {v.booth_number && (
+                    <div style={{ fontSize: 10, color: C.textMuted, fontFamily: "monospace", marginTop: 2 }}>
+                      Booth {v.booth_number}
+                    </div>
+                  )}
+                </div>
+                {v.id === activeId && <Check size={12} style={{ color: C.green, flexShrink: 0 }} />}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 // ─── Hero card ────────────────────────────────────────────────────────────────
 
-function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl, heroKey, onShare, hasCopied, hasSlug, onHeroImageChange, heroUploading, vendorId, isAdminUser, onSignOut }: {
+function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl, heroKey, onShare, hasCopied, hasSlug, onHeroImageChange, heroUploading, vendorId, isAdminUser, onSignOut, allVendors, onVendorSwitch }: {
   displayName: string; boothNumber: string | null; mallName?: string; mallCity?: string;
   heroImageUrl?: string | null; heroKey: number;
   onShare: () => void; hasCopied: boolean; hasSlug: boolean;
   onHeroImageChange: (file: File) => void; heroUploading: boolean;
   vendorId: string | undefined; isAdminUser: boolean; onSignOut: () => void;
+  allVendors: Vendor[]; onVendorSwitch: (v: Vendor) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
   return (
     <div style={{ padding: "max(14px, env(safe-area-inset-top, 14px)) 10px 0" }}>
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
@@ -101,11 +182,13 @@ function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {isAdminUser && (
-            <Link href="/admin"
-              style={{ fontSize: 9, fontWeight: 700, color: C.green, textTransform: "uppercase", letterSpacing: "1.6px", padding: "4px 9px", borderRadius: 8, background: C.greenLight, border: `1px solid ${C.greenBorder}`, textDecoration: "none" }}>
-              Admin
-            </Link>
+          {/* Admin vendor switcher — shown when admin and multiple vendors exist */}
+          {isAdminUser && allVendors.length > 0 && vendorId && (
+            <AdminVendorSwitcher
+              vendors={allVendors}
+              activeId={vendorId}
+              onSelect={onVendorSwitch}
+            />
           )}
           {hasSlug && (
             <AnimatePresence mode="wait">
@@ -347,14 +430,16 @@ function NoBooth({ onSignOut }: { onSignOut: () => void }) {
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Inner page (needs useSearchParams) ───────────────────────────────────────
 
-export default function MyShelfPage() {
-  const router = useRouter();
+function MyShelfInner() {
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+
   const [user,          setUser]          = useState<User | null>(null);
   const [authReady,     setAuthReady]     = useState(false);
   const [activeVendor,  setActiveVendor]  = useState<Vendor | null>(null);
-  const [vendorReady,   setVendorReady]   = useState(false); // true once Supabase lookup completes
+  const [vendorReady,   setVendorReady]   = useState(false);
   const [posts,         setPosts]         = useState<Post[]>([]);
   const [postsLoading,  setPostsLoading]  = useState(false);
   const [mall,          setMall]          = useState<Mall | null>(null);
@@ -363,11 +448,11 @@ export default function MyShelfPage() {
   const [heroImageUrl,  setHeroImageUrl]  = useState<string | null>(null);
   const [heroKey,       setHeroKey]       = useState(0);
   const [heroUploading, setHeroUploading] = useState(false);
+  const [allVendors,    setAllVendors]    = useState<Vendor[]>([]);
 
-  // Prevents the vendor-load effect from overwriting a freshly-uploaded hero image
   const heroLockedRef = useRef(false);
 
-  // ── Step 1: Auth gate — redirect if no session ──
+  // ── Step 1: Auth gate ──
   useEffect(() => {
     getSession().then(s => {
       if (!s?.user) { router.replace("/login"); return; }
@@ -376,48 +461,88 @@ export default function MyShelfPage() {
     });
   }, []);
 
-  // ── Step 2: Resolve vendor identity from Supabase using user_id (authoritative) ──
-  // This runs once auth is confirmed. The result is the single source of truth.
-  // localStorage is updated as a cache after we have the Supabase result.
+  // ── Step 2: Resolve vendor ──
+  // Priority: ?vendor param (admin override) → user_id lookup → admin default → NoBooth
   useEffect(() => {
     if (!authReady || !user) return;
 
-    getVendorByUserId(user.id).then(vendor => {
-      if (vendor) {
-        // Found in Supabase — this is the real identity
-        setActiveVendor(vendor);
-        if (vendor.hero_image_url && !heroLockedRef.current) {
-          setHeroImageUrl(vendor.hero_image_url);
-        }
+    const adminUser   = isAdmin(user);
+    const vendorParam = searchParams.get("vendor"); // admin override from Shelves page
 
-        // Write back to localStorage as cache so /post picks it up correctly
-        const cached: LocalVendorProfile = {
-          display_name: vendor.display_name,
-          booth_number: vendor.booth_number ?? "",
-          mall_id:      vendor.mall_id,
-          mall_name:    (vendor.mall as Mall | undefined)?.name ?? "",
-          mall_city:    (vendor.mall as Mall | undefined)?.city ?? "",
-          vendor_id:    vendor.id,
-          slug:         vendor.slug,
-          user_id:      user.id,
-        };
-        try { localStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(cached)); } catch {}
-
-        // Resolve mall display info
-        if (vendor.mall) {
-          setMall(vendor.mall as Mall);
-        } else {
-          getAllMalls().then(malls => {
-            setMall(malls.find(m => m.id === vendor.mall_id) ?? null);
-          });
-        }
+    async function resolve() {
+      // Load all vendors for the admin switcher (admin only)
+      if (adminUser) {
+        getVendorsByMall(MALL_ID).then(setAllVendors);
       }
-      // vendor === null means auth user has no linked vendor row yet → show NoBooth
+
+      // 1. Admin override via ?vendor=[id]
+      if (adminUser && vendorParam) {
+        const v = await getVendorById(vendorParam);
+        if (v) { loadVendor(v); return; }
+      }
+
+      // 2. Standard user_id lookup
+      const v = await getVendorByUserId(user.id);
+      if (v) { loadVendor(v); return; }
+
+      // 3. Admin fallback — load the Zen default booth
+      if (adminUser) {
+        const defaultV = await getVendorById(ADMIN_DEFAULT_VENDOR_ID);
+        if (defaultV) { loadVendor(defaultV); return; }
+      }
+
+      // 4. No vendor found
       setVendorReady(true);
-    });
+    }
+
+    resolve();
   }, [authReady, user?.id]);
 
-  // ── Step 3: Load posts once we have an active vendor ──
+  function loadVendor(vendor: Vendor) {
+    setActiveVendor(vendor);
+    if (vendor.hero_image_url && !heroLockedRef.current) {
+      setHeroImageUrl(vendor.hero_image_url);
+    }
+
+    // Write back to localStorage cache (so /post picks it up)
+    const cached: LocalVendorProfile = {
+      display_name: vendor.display_name,
+      booth_number: vendor.booth_number ?? "",
+      mall_id:      vendor.mall_id,
+      mall_name:    (vendor.mall as Mall | undefined)?.name ?? "",
+      mall_city:    (vendor.mall as Mall | undefined)?.city ?? "",
+      vendor_id:    vendor.id,
+      slug:         vendor.slug,
+      user_id:      user?.id,
+    };
+    try { localStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(cached)); } catch {}
+
+    if (vendor.mall) {
+      setMall(vendor.mall as Mall);
+    } else {
+      getAllMalls().then(malls => setMall(malls.find(m => m.id === vendor.mall_id) ?? null));
+    }
+
+    setVendorReady(true);
+  }
+
+  // Admin switches vendor from the in-page switcher
+  function handleVendorSwitch(vendor: Vendor) {
+    setActiveVendor(null);
+    setPosts([]);
+    setHeroImageUrl(null);
+    setVendorReady(false);
+    setPostsLoading(true);
+
+    // Update URL param so it persists on refresh
+    const url = new URL(window.location.href);
+    url.searchParams.set("vendor", vendor.id);
+    window.history.replaceState({}, "", url.toString());
+
+    loadVendor(vendor);
+  }
+
+  // ── Step 3: Load posts ──
   useEffect(() => {
     if (!activeVendor) return;
     setPostsLoading(true);
@@ -432,7 +557,6 @@ export default function MyShelfPage() {
     if (!activeVendor?.id) return;
     setHeroUploading(true);
     heroLockedRef.current = true;
-
     try {
       const reader  = new FileReader();
       const dataUrl = await new Promise<string>((res, rej) => {
@@ -440,12 +564,9 @@ export default function MyShelfPage() {
         reader.onerror = rej;
         reader.readAsDataURL(file);
       });
-      const compressed = await compressImage(dataUrl);
-
-      // Optimistic preview
+      const compressed  = await compressImage(dataUrl);
       setHeroImageUrl(compressed);
       setHeroKey(k => k + 1);
-
       const uploadedUrl = await uploadVendorHeroImage(compressed, activeVendor.id);
       if (uploadedUrl) {
         await updateVendorHeroImage(activeVendor.id, uploadedUrl);
@@ -479,7 +600,6 @@ export default function MyShelfPage() {
     router.replace("/");
   }
 
-  // Don't render anything until auth is confirmed (prevents flash before redirect)
   if (!authReady) return null;
 
   const available   = posts.filter(p => p.status === "available");
@@ -490,9 +610,7 @@ export default function MyShelfPage() {
   const mallName    = mall?.name ?? (activeVendor?.mall as Mall | undefined)?.name ?? "America's Antique Mall";
   const mallCity    = mall?.city ?? (activeVendor?.mall as Mall | undefined)?.city ?? "Louisville, KY";
   const adminUser   = isAdmin(user);
-
-  // Show skeleton while we wait for the Supabase vendor lookup
-  const loading = !vendorReady || postsLoading;
+  const loading     = !vendorReady || postsLoading;
 
   return (
     <div style={{ minHeight: "100dvh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
@@ -505,7 +623,10 @@ export default function MyShelfPage() {
           onShare={handleShare} hasCopied={copied} hasSlug={hasSlug}
           onHeroImageChange={handleHeroImageChange} heroUploading={heroUploading}
           vendorId={activeVendor.id}
-          isAdminUser={adminUser} onSignOut={handleSignOut}
+          isAdminUser={adminUser}
+          onSignOut={handleSignOut}
+          allVendors={allVendors}
+          onVendorSwitch={handleVendorSwitch}
         />
       ) : (
         <header style={{ background: C.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${C.border}`, padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -566,5 +687,15 @@ export default function MyShelfPage() {
         .hidden { display: none; }
       `}</style>
     </div>
+  );
+}
+
+// ─── Page — Suspense for useSearchParams ──────────────────────────────────────
+
+export default function MyShelfPage() {
+  return (
+    <Suspense>
+      <MyShelfInner />
+    </Suspense>
   );
 }
