@@ -55,9 +55,9 @@ function LoginInner() {
   const [sentTo, setSentTo] = useState("");
 
   // PIN state
-  const [pin,       setPin]       = useState("");
-  const [pinBusy,   setPinBusy]   = useState(false);
-  const [pinError,  setPinError]  = useState<string | null>(null);
+  const [pin,      setPin]      = useState("");
+  const [pinBusy,  setPinBusy]  = useState(false);
+  const [pinError, setPinError] = useState<string | null>(null);
 
   // ── Confirmed redirect from magic link ──
   useEffect(() => {
@@ -139,20 +139,22 @@ function LoginInner() {
         setPinBusy(false);
         return;
       }
-      // Use the hashed token to sign in without sending an email
+
+      // Set the session directly using access_token + refresh_token.
+      // This avoids the verifyOtp token expiry race condition.
       setScreen("pin-signing-in");
-      const { error: verifyErr } = await supabase.auth.verifyOtp({
-        email:    data.email,
-        token:    data.token,
-        type:     "magiclink",
+      const { error: sessionErr } = await supabase.auth.setSession({
+        access_token:  data.access_token,
+        refresh_token: data.refresh_token,
       });
-      if (verifyErr) {
+      if (sessionErr) {
         setScreen("enter-email");
         setTab("pin");
-        setPinError("Token verify failed: " + verifyErr.message);
+        setPinError("Sign-in failed: " + sessionErr.message);
         setPinBusy(false);
         return;
       }
+
       router.replace("/my-shelf");
     } catch (e) {
       setPinError("Network error. Try again.");
