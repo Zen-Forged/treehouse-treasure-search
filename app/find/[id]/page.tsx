@@ -8,8 +8,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Trash2, Facebook, Tag, ArrowLeft } from "lucide-react";
-import PiLeafIcon from "@/components/PiLeafIcon";
+import { Send, Trash2, Facebook, Tag, ArrowLeft, Heart } from "lucide-react";
 import { getPost, getVendorPosts, updatePostStatus, deletePost } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
@@ -184,8 +183,8 @@ export default function FindDetailPage() {
     });
   }, [id]);
 
-  // Leaf icon — toggleable from detail page (add only; unselect from here too)
-  function handleSave() {
+  // Unified save/unsave toggle — used by both the image icon and the CTA button
+  function handleToggleSave() {
     if (!id) return;
     const next = !isSaved;
     setIsSaved(next);
@@ -223,17 +222,6 @@ export default function FindDetailPage() {
     else    setActionBusy(false);
   }
 
-  // "Add to path" — saves to My Finds and gives brief feedback
-  function handleAddToPath() {
-    if (!id) return;
-    if (!isSaved) {
-      setIsSaved(true);
-      try { safeStorage.setItem(flagKey(id), "1"); } catch {}
-    }
-    // Navigate to My Finds after a brief moment so user sees feedback
-    setTimeout(() => router.push("/flagged"), 320);
-  }
-
   const handleShelfReady = useCallback((hasItems: boolean) => { setShelfHasItems(hasItems); }, []);
 
   const showOwnerControls = isMyPost && isCurator;
@@ -266,6 +254,7 @@ export default function FindDetailPage() {
   const boothNumber = post.vendor?.booth_number ?? null;
   const hasBoothBox = !!boothNumber;
   const hasContent  = !!(post.caption || post.description);
+  const hasPrice    = post.price_asking != null && !isSold;
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
@@ -293,7 +282,7 @@ export default function FindDetailPage() {
           </div>
         )}
 
-        {/* Back button — top-left floating */}
+        {/* Back button — top-left */}
         <button
           onClick={() => router.back()}
           aria-label="Go back"
@@ -314,8 +303,34 @@ export default function FindDetailPage() {
           <ArrowLeft size={15} style={{ color: C.textMid }} />
         </button>
 
-        {/* Share (paper airplane) + leaf — bottom-right of image */}
+        {/* Share + Heart — bottom-right of image */}
         <div style={{ position: "absolute", bottom: 12, right: 14, display: "flex", alignItems: "center", gap: 8 }}>
+          {/* Heart / Save icon */}
+          <button
+            onClick={handleToggleSave}
+            aria-label={isSaved ? "Remove from My Finds" : "Save"}
+            style={{
+              width: 36, height: 36, borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: isSaved ? C.greenSolid : "rgba(0,0,0,0.30)",
+              backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+              border: "none", cursor: "pointer",
+              transition: "background 0.18s",
+              boxShadow: isSaved ? "0 2px 8px rgba(30,77,43,0.40)" : "0 1px 5px rgba(0,0,0,0.20)",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <Heart
+              size={15}
+              strokeWidth={isSaved ? 0 : 1.8}
+              style={{
+                color: "rgba(255,255,255,0.95)",
+                fill: isSaved ? "rgba(255,255,255,0.95)" : "none",
+              }}
+            />
+          </button>
+
+          {/* Share / paper airplane */}
           <button onClick={handleShare}
             style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.30)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
             <Send size={14} style={{ color: copied ? "#a8d5b5" : "rgba(255,255,255,0.92)" }} />
@@ -329,7 +344,7 @@ export default function FindDetailPage() {
         )}
       </div>
 
-      {/* ── 2. Title + availability ── */}
+      {/* ── 2. Title + availability + price ── */}
       <div style={{ padding: "22px 20px 0" }}>
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32 }}>
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 700, color: C.textPrimary, lineHeight: 1.22, letterSpacing: "-0.5px", margin: "0 0 10px" }}>
@@ -338,14 +353,23 @@ export default function FindDetailPage() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.06 }}
-          style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 28 }}>
-          {!isSold && (
-            <motion.div animate={{ opacity: [1, 0.35, 1] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-              style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, flexShrink: 0 }} />
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          {/* Availability */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {!isSold && (
+              <motion.div animate={{ opacity: [1, 0.35, 1] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, flexShrink: 0 }} />
+            )}
+            <span style={{ fontSize: 12, fontWeight: 500, color: isSold ? C.textMuted : C.green, letterSpacing: "0.1px" }}>
+              {isSold ? "Found a home" : "Available"}
+            </span>
+          </div>
+          {/* Price — right-aligned, only when available */}
+          {hasPrice && (
+            <div style={{ fontFamily: "monospace", fontSize: 16, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.3px" }}>
+              ${post.price_asking!.toLocaleString()}
+            </div>
           )}
-          <span style={{ fontSize: 12, fontWeight: 500, color: isSold ? C.textMuted : C.green, letterSpacing: "0.1px" }}>
-            {isSold ? "Found a home" : "Available"}
-          </span>
         </motion.div>
 
         {hasContent && (
@@ -363,31 +387,36 @@ export default function FindDetailPage() {
           </motion.div>
         )}
 
-        {/* ── "Add to path" button — centered under description ── */}
-        {!isCurator && (
-          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.15 }}
-            style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
-            <button
-              onClick={handleAddToPath}
+        {/* ── Save CTA button — visible to ALL users ── */}
+        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.15 }}
+          style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
+          <button
+            onClick={handleToggleSave}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "12px 28px", borderRadius: 28,
+              fontSize: 13, fontWeight: 600,
+              fontFamily: "Georgia, serif",
+              color: isSaved ? "rgba(255,255,255,0.97)" : C.green,
+              background: isSaved ? C.greenSolid : C.greenLight,
+              border: `1px solid ${isSaved ? "transparent" : C.greenBorder}`,
+              cursor: "pointer",
+              transition: "background 0.18s, color 0.18s",
+              boxShadow: isSaved ? "0 2px 12px rgba(30,77,43,0.25)" : "none",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <Heart
+              size={15}
+              strokeWidth={isSaved ? 0 : 1.8}
               style={{
-                display: "flex", alignItems: "center", gap: 8,
-                padding: "12px 28px", borderRadius: 28,
-                fontSize: 13, fontWeight: 600,
-                fontFamily: "Georgia, serif",
                 color: isSaved ? "rgba(255,255,255,0.97)" : C.green,
-                background: isSaved ? C.greenSolid : C.greenLight,
-                border: `1px solid ${isSaved ? "transparent" : C.greenBorder}`,
-                cursor: "pointer",
-                transition: "background 0.18s, color 0.18s",
-                boxShadow: isSaved ? "0 2px 12px rgba(30,77,43,0.25)" : "none",
-                WebkitTapHighlightColor: "transparent",
+                fill: isSaved ? "rgba(255,255,255,0.97)" : "none",
               }}
-            >
-              <PiLeafIcon size={15} strokeWidth={isSaved ? 2.2 : 1.8} style={{ color: isSaved ? "rgba(255,255,255,0.97)" : C.green }} />
-              {isSaved ? "Added to My Finds" : "Add to path"}
-            </button>
-          </motion.div>
-        )}
+            />
+            {isSaved ? "Saved" : "Save"}
+          </button>
+        </motion.div>
       </div>
 
       {/* ── View the shelf ── */}
@@ -427,7 +456,7 @@ export default function FindDetailPage() {
             {post.mall && post.vendor && <div style={{ height: 1, background: C.border, margin: "0 16px" }} />}
 
             {post.vendor && (
-              <div style={{ padding: "11px 16px 0", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+              <div style={{ padding: "11px 16px 14px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
                 <div style={{ fontSize: 9, color: C.textFaint, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500, paddingTop: 2, flexShrink: 0, width: 48 }}>Vendor</div>
                 <div style={{ flex: 1, textAlign: "right" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 7 }}>
@@ -445,17 +474,6 @@ export default function FindDetailPage() {
                     </a>
                   )}
                 </div>
-              </div>
-            )}
-
-            {/* Leaf / Save — Explorer mode: toggleable add/remove */}
-            {post.vendor && !isCurator && (
-              <div style={{ padding: "13px 16px 15px" }}>
-                <button onClick={handleSave}
-                  style={{ width: "100%", padding: "11px 16px", borderRadius: 11, fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: isSaved ? "rgba(255,255,255,0.97)" : C.green, background: isSaved ? C.greenSolid : C.greenLight, border: `1px solid ${isSaved ? "transparent" : C.greenBorder}`, cursor: "pointer", fontFamily: "Georgia, serif", transition: "background 0.18s, color 0.18s, border-color 0.18s", WebkitTapHighlightColor: "transparent" }}>
-                  <PiLeafIcon size={14} strokeWidth={isSaved ? 2.2 : 1.8} style={{ color: isSaved ? "rgba(255,255,255,0.97)" : C.green }} />
-                  {isSaved ? "Remove from My Finds" : "Save to My Finds"}
-                </button>
               </div>
             )}
 

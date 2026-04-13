@@ -1,7 +1,8 @@
 // app/shelves/page.tsx
-// Shelves — all vendor booths at America's Antique Mall.
-// Public: browse vendor cards, tap to go to vendor profile.
-// Admin: each card has an edit button; tapping the card loads that booth in My Shelf.
+// Booths — all vendor booths at America's Antique Mall.
+// Public: browse booth cards, tap to go to vendor profile (read-only).
+// Admin: tap card → manage that booth in My Shelf.
+//        "Add Booth" button → inline sheet with display_name, booth_number, mall selection.
 
 "use client";
 
@@ -11,9 +12,9 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { MapPin, ChevronRight, Pencil } from "lucide-react";
-import { getVendorsByMall, getAllMalls } from "@/lib/posts";
+import { motion, AnimatePresence } from "framer-motion";
+import { MapPin, ChevronRight, Pencil, Plus, X, Check, Loader } from "lucide-react";
+import { getVendorsByMall, getAllMalls, createVendor, slugify } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
 import BottomNav from "@/components/BottomNav";
 import type { Vendor, Mall } from "@/types/treehouse";
@@ -31,18 +32,204 @@ const C = {
   green:       "#1e4d2b",
   greenLight:  "rgba(30,77,43,0.08)",
   greenBorder: "rgba(30,77,43,0.20)",
+  greenSolid:  "rgba(30,77,43,0.90)",
   header:      "rgba(245,242,235,0.96)",
-  bannerFrom:  "#1e3d24",
-  bannerTo:    "#2d5435",
+  red:         "#8b2020",
+  redBg:       "rgba(139,32,32,0.07)",
 };
 
-const MALL_ID = "19a8ff7e-cb45-491f-9451-878e2dde5bf4";
+const DEFAULT_MALL_ID = "19a8ff7e-cb45-491f-9451-878e2dde5bf4";
 
 function vendorHueBg(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
   const hues = [142, 168, 195, 220, 25, 340];
   return `hsl(${hues[h % hues.length]}, 18%, 82%)`;
+}
+
+// ─── Add Booth Sheet ──────────────────────────────────────────────────────────
+
+function AddBoothSheet({
+  malls,
+  onClose,
+  onCreated,
+}: {
+  malls: Mall[];
+  onClose: () => void;
+  onCreated: (vendor: Vendor) => void;
+}) {
+  const [displayName,  setDisplayName]  = useState("");
+  const [boothNumber,  setBoothNumber]  = useState("");
+  const [mallId,       setMallId]       = useState(DEFAULT_MALL_ID);
+  const [submitting,   setSubmitting]   = useState(false);
+  const [error,        setError]        = useState<string | null>(null);
+  const [done,         setDone]         = useState(false);
+
+  async function handleSubmit() {
+    if (!displayName.trim()) { setError("Booth name is required."); return; }
+    if (!mallId) { setError("Please select a mall."); return; }
+    setSubmitting(true);
+    setError(null);
+
+    const slug = slugify(displayName.trim());
+    const { data, error: createErr } = await createVendor({
+      mall_id:      mallId,
+      display_name: displayName.trim(),
+      booth_number: boothNumber.trim() || undefined,
+      slug,
+    });
+
+    if (createErr || !data) {
+      setError(createErr ?? "Something went wrong. Try again.");
+      setSubmitting(false);
+      return;
+    }
+
+    setDone(true);
+    setTimeout(() => {
+      onCreated(data);
+      onClose();
+    }, 800);
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "12px 14px",
+    borderRadius: 12, border: `1px solid ${C.border}`,
+    background: C.surface, fontSize: 14,
+    fontFamily: "Georgia, serif", color: C.textPrimary,
+    outline: "none", boxSizing: "border-box",
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: "block", fontSize: 9, fontWeight: 600,
+    textTransform: "uppercase" as const, letterSpacing: "1.8px",
+    color: C.textMuted, marginBottom: 6,
+  };
+
+  return (
+    <>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{
+          position: "fixed", inset: 0, zIndex: 200,
+          background: "rgba(28,26,20,0.42)",
+          backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
+        }}
+      />
+
+      {/* Sheet */}
+      <motion.div
+        initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 28, stiffness: 280 }}
+        style={{
+          position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
+          width: "100%", maxWidth: 430, zIndex: 300,
+          background: C.bg, borderRadius: "20px 20px 0 0",
+          padding: "0 20px calc(env(safe-area-inset-bottom, 0px) + 28px)",
+          boxShadow: "0 -8px 40px rgba(28,26,20,0.18)",
+        }}
+      >
+        {/* Handle */}
+        <div style={{ display: "flex", justifyContent: "center", paddingTop: 12, marginBottom: 20 }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: C.border }} />
+        </div>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+          <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: C.textPrimary }}>
+            Add a Booth
+          </div>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer" }}>
+            <X size={14} style={{ color: C.textMuted }} />
+          </button>
+        </div>
+
+        {/* Form */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          {/* Display name */}
+          <div>
+            <label style={labelStyle}>Booth Name *</label>
+            <input
+              value={displayName}
+              onChange={e => setDisplayName(e.target.value)}
+              placeholder="e.g. ZenForged Finds"
+              style={inputStyle}
+              autoFocus
+            />
+          </div>
+
+          {/* Booth number */}
+          <div>
+            <label style={labelStyle}>Booth Number</label>
+            <input
+              value={boothNumber}
+              onChange={e => setBoothNumber(e.target.value)}
+              placeholder="e.g. 369"
+              style={inputStyle}
+            />
+          </div>
+
+          {/* Mall selection */}
+          <div>
+            <label style={labelStyle}>Mall *</label>
+            <div style={{ position: "relative" }}>
+              <select
+                value={mallId}
+                onChange={e => setMallId(e.target.value)}
+                style={{
+                  ...inputStyle,
+                  appearance: "none", WebkitAppearance: "none",
+                  paddingRight: 36, cursor: "pointer",
+                }}
+              >
+                <option value="">Select a mall…</option>
+                {malls.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}{m.city ? ` · ${m.city}` : ""}
+                  </option>
+                ))}
+              </select>
+              <ChevronRight size={13} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%) rotate(90deg)", color: C.textMuted, pointerEvents: "none" }} />
+            </div>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div style={{ fontSize: 12, color: C.red, background: C.redBg, borderRadius: 10, padding: "10px 14px" }}>
+              {error}
+            </div>
+          )}
+
+          {/* Submit */}
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || done}
+            style={{
+              width: "100%", padding: "14px",
+              borderRadius: 14, border: "none",
+              background: done ? C.greenSolid : C.green,
+              color: "#fff", fontSize: 14, fontWeight: 600,
+              fontFamily: "Georgia, serif",
+              cursor: submitting || done ? "default" : "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              opacity: submitting ? 0.8 : 1,
+              transition: "background 0.2s",
+            }}
+          >
+            {done ? (
+              <><Check size={16} /> Booth added</>
+            ) : submitting ? (
+              <><Loader size={16} style={{ animation: "spin 0.9s linear infinite" }} /> Adding…</>
+            ) : (
+              "Add Booth"
+            )}
+          </button>
+        </div>
+      </motion.div>
+    </>
+  );
 }
 
 // ─── Vendor card ───────────────────────────────────────────────────────────────
@@ -53,8 +240,6 @@ function VendorCard({ vendor, index, adminUser }: { vendor: Vendor; index: numbe
   const heroUrl = (vendor as any).hero_image_url as string | null | undefined;
   const hasHero = !!heroUrl && !imgErr;
 
-  // Admin: tap card → load this booth in My Shelf
-  // Public: tap card → vendor profile page
   function handleCardTap() {
     if (adminUser) {
       router.push(`/my-shelf?vendor=${vendor.id}`);
@@ -89,7 +274,6 @@ function VendorCard({ vendor, index, adminUser }: { vendor: Vendor; index: numbe
           )}
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(20,18,12,0.55) 0%, transparent 60%)" }} />
 
-          {/* Booth pill */}
           {vendor.booth_number && (
             <div style={{
               position: "absolute", bottom: 10, left: 12, zIndex: 2,
@@ -103,7 +287,6 @@ function VendorCard({ vendor, index, adminUser }: { vendor: Vendor; index: numbe
             </div>
           )}
 
-          {/* Admin: edit button → vendor profile page (for future admin edit page) */}
           {adminUser && (
             <Link
               href={`/vendor/${vendor.slug}`}
@@ -170,24 +353,36 @@ function SkeletonCard() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function ShelvesPage() {
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [mall,    setMall]    = useState<Mall | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [user,    setUser]    = useState<User | null>(null);
+export default function BoothsPage() {
+  const [vendors,      setVendors]      = useState<Vendor[]>([]);
+  const [malls,        setMalls]        = useState<Mall[]>([]);
+  const [mall,         setMall]         = useState<Mall | null>(null);
+  const [loading,      setLoading]      = useState(true);
+  const [user,         setUser]         = useState<User | null>(null);
+  const [showAddSheet, setShowAddSheet] = useState(false);
 
   useEffect(() => {
     Promise.all([
       getSession(),
-      getVendorsByMall(MALL_ID),
+      getVendorsByMall(DEFAULT_MALL_ID),
       getAllMalls(),
-    ]).then(([session, vendorList, malls]) => {
+    ]).then(([session, vendorList, mallList]) => {
       setUser(session?.user ?? null);
       setVendors(vendorList);
-      setMall(malls.find(m => m.id === MALL_ID) ?? null);
+      setMalls(mallList);
+      setMall(mallList.find(m => m.id === DEFAULT_MALL_ID) ?? null);
       setLoading(false);
     });
   }, []);
+
+  function handleBoothCreated(vendor: Vendor) {
+    setVendors(prev => [...prev, vendor].sort((a, b) => {
+      if (!a.booth_number && !b.booth_number) return 0;
+      if (!a.booth_number) return 1;
+      if (!b.booth_number) return -1;
+      return a.booth_number.localeCompare(b.booth_number, undefined, { numeric: true });
+    }));
+  }
 
   const adminUser = isAdmin(user);
 
@@ -205,15 +400,31 @@ export default function ShelvesPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
               <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.3px", lineHeight: 1 }}>
-                Shelves
+                Booths
               </span>
             </div>
-            {adminUser && (
-              <Link href="/admin"
-                style={{ fontSize: 9, fontWeight: 700, color: C.green, textTransform: "uppercase", letterSpacing: "1.6px", padding: "4px 9px", borderRadius: 8, background: C.greenLight, border: `1px solid ${C.greenBorder}`, textDecoration: "none" }}>
-                Admin
-              </Link>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {adminUser && (
+                <button
+                  onClick={() => setShowAddSheet(true)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    padding: "5px 11px", borderRadius: 10,
+                    background: C.green, border: "none",
+                    cursor: "pointer", WebkitTapHighlightColor: "transparent",
+                  }}
+                >
+                  <Plus size={13} style={{ color: "#fff" }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", letterSpacing: "0.2px" }}>Add Booth</span>
+                </button>
+              )}
+              {adminUser && (
+                <Link href="/admin"
+                  style={{ fontSize: 9, fontWeight: 700, color: C.green, textTransform: "uppercase", letterSpacing: "1.6px", padding: "4px 9px", borderRadius: 8, background: C.greenLight, border: `1px solid ${C.greenBorder}`, textDecoration: "none" }}>
+                  Admin
+                </Link>
+              )}
+            </div>
           </div>
 
           {mall && (
@@ -247,8 +458,16 @@ export default function ShelvesPage() {
               No booths yet
             </div>
             <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: C.textMuted, lineHeight: 1.75, maxWidth: 230, margin: 0 }}>
-              Shelves will appear here once vendors start posting their finds.
+              Booths will appear here once vendors start posting their finds.
             </p>
+            {adminUser && (
+              <button
+                onClick={() => setShowAddSheet(true)}
+                style={{ marginTop: 24, padding: "12px 24px", borderRadius: 24, background: C.green, border: "none", color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: "Georgia, serif", cursor: "pointer" }}
+              >
+                Add the first booth
+              </button>
+            )}
           </motion.div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -259,11 +478,23 @@ export default function ShelvesPage() {
         )}
       </main>
 
+      {/* ── Add Booth Sheet ── */}
+      <AnimatePresence>
+        {showAddSheet && (
+          <AddBoothSheet
+            malls={malls}
+            onClose={() => setShowAddSheet(false)}
+            onCreated={handleBoothCreated}
+          />
+        )}
+      </AnimatePresence>
+
       <BottomNav active="shelves" />
 
       <style>{`
         @keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
         .skeleton-shimmer { background: linear-gradient(90deg, rgba(225,220,210,0.7) 25%, rgba(208,202,190,0.9) 50%, rgba(225,220,210,0.7) 75%); background-size: 800px 100%; animation: shimmer 1.6s infinite linear; }
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
       `}</style>
     </div>
   );

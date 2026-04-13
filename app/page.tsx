@@ -1,7 +1,7 @@
 // app/page.tsx
 // Treehouse — Discovery Feed
 // Only available posts are shown — sold items are filtered at the query level.
-// Leaf icon: top-right of each tile image, always visible, toggleable from feed.
+// Heart icon: top-right of each tile image, always visible, toggleable from feed.
 // Mode toggle in header switches between Explorer (buyer) and Curator (vendor).
 
 "use client";
@@ -11,8 +11,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Compass, ChevronDown } from "lucide-react";
-import PiLeafIcon from "@/components/PiLeafIcon";
+import { MapPin, Compass, ChevronDown, Heart } from "lucide-react";
 import { getFeedPosts, getAllMalls } from "@/lib/posts";
 import { getSession, onAuthChange } from "@/lib/auth";
 import BottomNav from "@/components/BottomNav";
@@ -57,17 +56,6 @@ function loadFollowedIds(): Set<string> {
     }
   } catch {}
   return followed;
-}
-
-function loadBookmarkCount(): number {
-  let count = 0;
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith(BOOKMARK_PREFIX) && localStorage.getItem(key) === "1") count++;
-    }
-  } catch {}
-  return count;
 }
 
 // ─── Empty state ───────────────────────────────────────────────────────────────
@@ -156,7 +144,7 @@ function MasonryTile({
     setImgHeight(computed);
   }
 
-  function handleLeafClick(e: React.MouseEvent) {
+  function handleHeartClick(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     onToggleSave(post.id);
@@ -178,10 +166,10 @@ function MasonryTile({
                 onLoad={handleLoad} onError={() => setImgErr(true)}
                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
                   filter: "brightness(0.99) saturate(0.96)" }} />
-              {/* Leaf — top-right corner, always visible, toggleable */}
+              {/* Heart — top-right corner, always visible, toggleable */}
               <button
-                onClick={handleLeafClick}
-                aria-label={isFollowed ? "Remove from My Finds" : "Save to My Finds"}
+                onClick={handleHeartClick}
+                aria-label={isFollowed ? "Remove from My Finds" : "Save"}
                 style={{
                   position: "absolute", top: 8, right: 8,
                   width: 34, height: 34, borderRadius: "50%",
@@ -194,7 +182,14 @@ function MasonryTile({
                   WebkitTapHighlightColor: "transparent",
                 }}
               >
-                <PiLeafIcon size={17} strokeWidth={isFollowed ? 2.2 : 1.8} style={{ color: "rgba(255,255,255,0.96)" }} />
+                <Heart
+                  size={16}
+                  strokeWidth={isFollowed ? 0 : 1.8}
+                  style={{
+                    color: "rgba(255,255,255,0.96)",
+                    fill: isFollowed ? "rgba(255,255,255,0.96)" : "none",
+                  }}
+                />
               </button>
             </div>
           ) : (
