@@ -27,61 +27,65 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ## CURRENT ISSUE
 > Last updated: 2026-04-13
 
-**Status:** 🚧 MVP launch sprint complete — 7 issues shipped, pending deploy + QA.
+**Status:** 🚧 QA sprint — most issues resolved, a few open items remain.
 
-**What was done (this session):**
+---
 
-### MVP launch sprint — all 7 issues shipped
+## What was done (this session)
 
-**Issue 1 — Admin save bug (banner + items)**
-- `app/my-shelf/page.tsx` — `AddFindTile` now accepts `vendorId` prop and passes `?vendor=[id]` to `/post`. This ensures admin posting from any booth's My Shelf goes to that vendor, not their own linked vendor.
-- `app/post/page.tsx` — Added `?vendor=[id]` query param resolution as step 1 of identity chain. Admin with param → `getVendorById(vendorParam)` → post to that booth. Wrapped in `Suspense` for `useSearchParams`.
-- Banner image upload was already correct (uses `activeVendor.id` throughout). No change needed.
+### Terminology + Icon Unification
+- Leaf icon → Heart icon (`lucide Heart`) everywhere (feed tiles, detail page, My Finds nav, empty states)
+- "Add to path" → "Save" / "Saved" (no navigation on tap)
+- "Save to My Finds" / "Remove from My Finds" → "Save" / "Saved" toggle
+- Save CTA button on detail page now visible to ALL users (not just Explorer mode)
+- Heart icon added to detail page hero image overlay (next to share/airplane icon)
+- Heart icon on feed tiles: filled when saved, outline when not
 
-**Issue 2 — Save confirmation position + redirect**
-- `app/post/page.tsx` — Toast moved from bottom-right to screen center (`position: fixed, top: 50%, left: 50%, transform: translate(-50%, -50%)`). Redesigned as a larger vertical card. After successful save, auto-redirects to `/my-shelf` after 1.8s with "Taking you to your shelf…" subtitle.
+### Price on Detail Page
+- `price_asking` now displayed right-aligned next to availability status
+- Only shown when item is available (not sold) and price is not null
 
-**Issue 3 — Back button on product photo**
-- `app/find/[id]/page.tsx` — Floating frosted back button added top-left of hero image. Frosted cream circle (`rgba(240,237,230,0.82)` + `blur(12px)`), safe-area-aware top position, `ArrowLeft` icon.
+### BottomNav — 4 tabs
+- Guest: Home · My Finds · Booths (3 tabs)
+- Auth: Home · My Finds · Booths · My Shelf (4 tabs)
+- Heart icon replaces leaf on My Finds tab
 
-**Issue 4 — Share icon → paper airplane**
-- `app/find/[id]/page.tsx` — Share icon changed from `Share2` to `Send` (lucide paper airplane). Same position (bottom-right of hero image).
+### Booths Page (renamed from Shelves)
+- Page title/header: "Booths"
+- Guest taps booth card → `/shelf/[slug]` (public read-only view) ✅
+- Admin taps booth card → `/my-shelf?vendor=[id]` (manage mode) ✅
+- Admin "Add Booth" button in header → inline bottom sheet
+- Add Booth sheet: display name, booth number, mall dropdown (all malls from Supabase)
+- Uses existing `createVendor()` + `slugify()`, refreshes list on success
 
-**Issue 5 — Leaf icon: top-right of feed tiles, larger**
-- `app/page.tsx` — Leaf button moved from bottom-right to top-right of image. Size increased to 17px. Always visible (not conditional on saved state). Frosted dark background when unsaved, green solid when saved.
+### Image Upload — Server Routes (bypasses RLS)
+- `/api/vendor-hero/route.ts` — banner image upload via service role key
+- `/api/post-image/route.ts` — post image upload via service role key
+- Both `my-shelf/page.tsx` and `post/page.tsx` now call server routes instead of client-side Supabase upload
+- Hero upload error surfacing: explicit error state shown below hero card
 
-**Issue 6 — Leaf toggleable from feed + detail**
-- `app/page.tsx` — Tapping leaf in feed now toggles save/unsave immediately. Badge count updates reactively.
-- `app/find/[id]/page.tsx` — Leaf button in location card now reads "Remove from My Finds" when saved and removes on tap. Full two-way toggle.
+### Post Flow Fixes
+- Toast re-centered using `createPortal(toastEl, document.body)` — renders outside constrained ancestor
+- After save: admin with `?vendor=[id]` redirects to `/my-shelf?vendor=[id]` (correct booth)
+- Regular vendors redirect to `/my-shelf`
 
-**"Add to path" button**
-- `app/find/[id]/page.tsx` — New centered "Add to path" button under description/caption text. Saves to My Finds and redirects to `/flagged` after 320ms. Shows "Added to My Finds" state. Hidden in Curator mode.
+### Known Gaps ⚠️
+- Feed doesn't refresh after posting (auto-redirects to /my-shelf, feed is stale)
+- No Supabase RLS (now feasible — auth is solid)
+- No pull-to-refresh on feed
+- No PWA support
+- `/enhance-text` is mock
+- Admin PIN needs QA in production (SUPABASE_SERVICE_ROLE_KEY + ADMIN_PIN must be set in Vercel)
+- `vendor-hero` Supabase Storage policies exist but were redundant after server route fix (can be cleaned up)
 
-**Issue 7 — My Finds always in nav**
-- `components/BottomNav.tsx` — "Your Finds" renamed to "My Finds". Always present for ALL users. Auth users: Home · My Finds · My Shelf (3 tabs). Unauth users: Home · My Finds (2 tabs). Removed Shelves from nav.
+---
 
-**Previous sessions:**
-- Shelves page + 3-tab nav
-- Admin vendor switcher dropdown in My Shelf
-- Admin PIN email_otp flow
-- Hero image persistence fix (heroLockedRef)
-- safeStorage Safari fallback
-- Auth sprint — magic link login
-
-**Next session starting point:**
-1. Deploy: `git add -A && git commit -m "feat: MVP launch sprint" && git push` then `npx vercel --prod` if webhook doesn't fire
-2. QA checklist:
-   - Admin: switch to non-linked booth → tap Add tile → confirm posting to that booth
-   - Admin: upload banner image for any booth → confirm saves + persists on reload
-   - Feed: tap leaf → confirm adds/removes from My Finds badge
-   - Find detail: "Add to path" → redirects to My Finds
-   - Find detail: back button top-left visible and working
-   - Find detail: share icon is paper airplane
-   - Nav: My Finds tab always visible (unauth and auth)
-   - Post page: save toast centered, auto-redirects to My Shelf
-3. Consider: Supabase RLS now feasible (auth is solid)
-4. Consider: feed refresh after posting (pull-to-refresh or navigate)
-5. Consider: restore Shelves tab if desired (was removed this session)
+## Next session starting point
+1. QA remaining flows: post image saves correctly with image visible in shelf after upload
+2. Consider: feed refresh after posting (pull-to-refresh or navigate-back cache bust)
+3. Consider: Supabase RLS now that auth + server routes are solid
+4. Consider: restore "Shelves" tab label vs "Booths" — confirm naming is final
+5. Consider: `/vendor/[slug]` route — now unused for guests, may be deprecated or repurposed
 
 ---
 
@@ -97,7 +101,7 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ```
 Next.js 14 App Router · TypeScript · Tailwind CSS · Framer Motion
 Anthropic SDK (claude-opus-4-5) · Supabase (Postgres + Storage + Auth) · SerpAPI · Vercel
-react-icons (PiLeaf from react-icons/pi)
+lucide-react (Heart replaces PiLeaf everywhere in ecosystem UI)
 ```
 
 ---
@@ -126,6 +130,7 @@ SUPABASE_SERVICE_ROLE_KEY        Server-only service role key (set in .env.local
   - Zen booth (admin default), id: `5619b4bf-3d05-4843-8ee1-e8b747fc2d81` — no user_id (admin loads by ID)
 - **Extra columns:** vendors table has `facebook_url text`, `user_id uuid`, `hero_image_url text`
 - **Unique constraint:** `vendors_mall_booth_unique` on `(mall_id, booth_number)`
+- **Storage policies:** vendor-hero INSERT/UPDATE policies exist (now redundant — server route used instead)
 
 ---
 
@@ -134,9 +139,9 @@ SUPABASE_SERVICE_ROLE_KEY        Server-only service role key (set in .env.local
 ### Three tiers
 | Tier | How | Can do |
 |---|---|---|
-| Unauth | No session | Browse feed, find detail, save to My Finds |
+| Unauth | No session | Browse feed, find detail, save to My Finds, view Booths → /shelf/[slug] |
 | Vendor | Magic link email | Post finds (one booth), My Shelf, mark sold, delete own posts |
-| Admin | Magic link OR Admin PIN | Everything + /admin + vendor switcher in My Shelf |
+| Admin | Magic link OR Admin PIN | Everything + /admin + vendor switcher in My Shelf + Add Booth |
 
 ### Key files
 - `lib/auth.ts` — `sendMagicLink`, `getSession`, `getUser`, `signOut`, `isAdmin(user)`, `onAuthChange`, `getCachedUserId`, `ensureAnonSession`
@@ -157,28 +162,32 @@ SUPABASE_SERVICE_ROLE_KEY        Server-only service role key (set in .env.local
 3. localStorage `th_vendor_profile` — cache only
 4. Setup form — first-time or unauth
 
-### Session persistence
-- Supabase Auth sessions persist across browser restarts (pkce flow default)
-- `treehouse_auth_uid` localStorage key caches user.id for sync owner detection
-
 ---
 
 ## ROUTE MAP
 
 ### Ecosystem (warm parchment theme)
 ```
-/                   Discovery feed — ModeToggle hidden for unauth, "Curator Sign in" for unauth
-/login              Magic link login — enter email → check email → confirming; + Admin PIN tab
-/find/[id]          Find detail — back button, share (paper airplane), "Add to path" CTA, leaf toggle
-/flagged            My Finds (Explorer) — no auth required, always in nav
-/shelves            Shelves — all vendor booths at America's Antique Mall; admin: tap to manage
+/                   Discovery feed
+/login              Magic link login + Admin PIN tab
+/find/[id]          Find detail — back button, heart+share on image, Save CTA (all users), price
+/flagged            My Finds — no auth required, always in nav
+/shelves            Booths — all vendor booths; guest → /shelf/[slug]; admin → manage
 /my-shelf           My Shelf (Curator/Admin) — auth-gated; admin gets vendor switcher
-/shelf/[slug]       Public Saved Shelf — read-only cinematic view, no editing, shareable link
+/shelf/[slug]       Public Saved Shelf — read-only cinematic view (guest booth destination)
 /mall/[slug]        Mall profile
-/vendor/[slug]      Vendor profile
-/post               Vendor capture — resolves identity from Supabase first, falls back to localStorage
+/vendor/[slug]      Vendor profile (legacy — guests now routed to /shelf/[slug] from Booths)
+/post               Vendor capture — server-route image upload; toast via portal; correct redirect
 /post/preview       Edit title/caption/price → "Save to Shelf" → confirmation (optional flow)
-/admin              Admin — auth-gated, isAdmin() check, access-denied for non-admins
+/admin              Admin — auth-gated, isAdmin() check
+```
+
+### API routes (ecosystem)
+```
+/api/vendor-hero    POST — server-side banner upload, service role key, bypasses RLS
+/api/post-image     POST — server-side post image upload, service role key, bypasses RLS
+/api/post-caption   POST — Claude Vision title + caption generation
+/api/debug          GET  — env var status + live Supabase test
 ```
 
 ### Reseller intel (dark theme — do not touch)
@@ -191,33 +200,29 @@ SUPABASE_SERVICE_ROLE_KEY        Server-only service role key (set in .env.local
 
 ## KEY FILES
 ```
-lib/auth.ts               Magic link auth — sendMagicLink, getSession, signOut, isAdmin, getCachedUserId, ensureAnonSession
+lib/auth.ts               Magic link auth
 lib/supabase.ts           Client with placeholder fallback for build time
-lib/posts.ts              Data access — getVendorByUserId, getVendorById, getFeedPosts, getPost,
-                          getVendorPosts, createPost, createVendor,
-                          uploadPostImage, uploadVendorHeroImage, updateVendorHeroImage, etc.
-lib/mode.ts               Explorer/Curator mode — getMode(), setMode()
+lib/posts.ts              Data access — all Supabase queries
+lib/mode.ts               Explorer/Curator mode
 lib/safeStorage.ts        localStorage wrapper with sessionStorage + memory fallback
-lib/postStore.ts          In-memory image store for /post/preview (legacy, still used by preview page)
-types/treehouse.ts        Post, Vendor (+ hero_image_url), Mall, LocalVendorProfile
-components/BottomNav.tsx  2-tab (unauth: Home · My Finds) / 3-tab (auth: Home · My Finds · My Shelf)
-components/ModeToggle.tsx Hidden when unauth, shown to logged-in users only
+types/treehouse.ts        Post, Vendor, Mall, LocalVendorProfile
+components/BottomNav.tsx  4-tab auth / 3-tab guest; Heart icon for My Finds
+components/ModeToggle.tsx Hidden when unauth
 components/DevAuthPanel.tsx  Localhost-only floating auth tier switcher
-components/PiLeafIcon.tsx PiLeaf from react-icons/pi wrapper
-components/MallHeroCard.tsx MallHeroCard + GenericMallHero exports
-app/login/page.tsx        Magic link login + Admin PIN tab; Suspense wrapper for useSearchParams
+app/login/page.tsx        Magic link login + Admin PIN tab
 app/layout.tsx            No max-width wrapper, DevAuthPanel mounted here
-app/page.tsx              Discovery feed — leaf icon top-right of tiles, toggleable save/unsave
-app/flagged/page.tsx      My Finds — no auth required
-app/shelves/page.tsx      Shelves — all vendor booths; admin taps → /my-shelf?vendor=[id]
-app/my-shelf/page.tsx     My Shelf — admin vendor switcher, AddFindTile passes ?vendor=[id] to /post
-app/shelf/[slug]/page.tsx Public Saved Shelf — read-only, no editing, cinematic hero, booth finder
-app/find/[id]/page.tsx    Find detail — back btn top-left, Send icon share, "Add to path" CTA, leaf toggle
-app/post/page.tsx         Capture — admin ?vendor param → correct booth; centered toast → redirects to /my-shelf
-app/post/preview/page.tsx Preview + "Save to Shelf" button — optional edit step
-app/admin/page.tsx        Admin UI — isAdmin() gate, sign-out, post management
-app/api/admin/posts/route.ts Admin API
-app/api/auth/admin-pin/route.ts PIN login — generateLink → email_otp → client verifyOtp type:"email"
+app/page.tsx              Discovery feed — Heart icon top-right of tiles
+app/flagged/page.tsx      My Finds — Heart icon throughout
+app/shelves/page.tsx      Booths page — guest→/shelf/slug, admin→/my-shelf?vendor=id, Add Booth sheet
+app/my-shelf/page.tsx     My Shelf — admin vendor switcher, hero upload via /api/vendor-hero
+app/shelf/[slug]/page.tsx Public Saved Shelf — read-only, guest booth destination
+app/find/[id]/page.tsx    Find detail — Heart on image, Save CTA all users, price display
+app/post/page.tsx         Capture — portal toast, /api/post-image upload, correct redirect
+app/post/preview/page.tsx Preview + "Save to Shelf"
+app/admin/page.tsx        Admin UI
+app/api/vendor-hero/route.ts  Server-side banner upload (service role)
+app/api/post-image/route.ts   Server-side post image upload (service role)
+app/api/auth/admin-pin/route.ts  PIN login
 ```
 
 ---
@@ -261,17 +266,18 @@ System UI for: BottomNav labels, dropdown options, monospace data
 
 ### Find detail page — key UI elements
 ```
-Back button: top-left of hero image, frosted cream circle, ArrowLeft icon
+Back button:  top-left of hero image, frosted cream circle, ArrowLeft icon
+Heart button: bottom-right of hero image (left of share), fills green when saved
 Share button: bottom-right of hero image, Send icon (paper airplane)
-Add to path: centered pill button under description, PiLeaf icon, redirects to /flagged
-Leaf in location card: toggleable — "Save to My Finds" / "Remove from My Finds"
+Price:        right-aligned next to availability dot, monospace, only when available
+Save CTA:     centered pill button under description, Heart icon, ALL users, toggles save/unsave
 ```
 
 ### BottomNav — tabs
 ```
-Unauth:  Home · My Finds  (2 tabs)
-Auth:    Home · My Finds · My Shelf  (3 tabs)
-Icons:   Home (lucide Home) · My Finds (PiLeaf) · My Shelf (lucide Store)
+Guest: Home · My Finds · Booths           (3 tabs)
+Auth:  Home · My Finds · Booths · My Shelf (4 tabs)
+Icons: Home (lucide Home) · My Finds (lucide Heart) · Booths (lucide LayoutGrid) · My Shelf (lucide Store)
 ```
 
 ---
@@ -282,58 +288,47 @@ Icons:   Home (lucide Home) · My Finds (PiLeaf) · My Shelf (lucide Store)
 - Always use `git add -A` — never individual paths (zsh glob-expands `[slug]`)
 - `filesystem:write_file` is the ONLY reliable way to write files
 - `str_replace` fails on bracket-path files — always full rewrite for `app/find/[id]/page.tsx`, `app/shelf/[slug]/page.tsx`
-- `useSearchParams()` requires Suspense wrapper — export default wraps inner component
+- `useSearchParams()` requires Suspense wrapper
+- Image uploads MUST go through server routes (`/api/post-image`, `/api/vendor-hero`) — client-side Supabase upload hits RLS wall
+- Toast/modal overlays that need true viewport centering MUST use `createPortal(el, document.body)` — `position: fixed` inside a `maxWidth` constrained ancestor doesn't center on viewport
+- New API route directories must be created in Terminal with `mkdir -p` before MCP can write into them
 - `getPostsByIds` has NO status filter — saved finds shown regardless of status
 - `getFeedPosts` and `getMallPosts` filter `.eq("status","available")`
 - safeStorage in all ecosystem client components EXCEPT raw localStorage for bookmark iteration
 - Badge count = raw localStorage key iteration, NOT posts.length
-- Identity resolution: Supabase (`getVendorByUserId`) > localStorage cache > setup form
-- localStorage is a CACHE of Supabase identity — never the source of truth for logged-in users
-- TypeScript + async closures: always capture state variables as non-null locals before async functions
 - Vercel project: `david-6613s-projects` scope (NOT zen-forged)
 - Vercel webhook unreliable → `npx vercel --prod` if push doesn't deploy
 - framer-motion: never two `transition` props on same motion.div
 - MINIMUM font size: 10px
 - Post type uses `price_asking` (not `price`) — `number | null`
-- DevAuthPanel only renders on localhost — checked via `window.location.hostname`
-- Admin PIN: server returns `email_otp` from generateLink; client calls verifyOtp({ type: "email" })
-- heroLockedRef in My Shelf: set to true during upload, released after 3s
 - Admin default vendor: `5619b4bf-3d05-4843-8ee1-e8b747fc2d81` (Zen booth, no user_id)
 - Admin vendor switching: updates `?vendor=[id]` URL param via `window.history.replaceState`
-- AddFindTile passes `?vendor=[id]` to /post — critical for admin to post to correct booth
-- Post page uses Suspense wrapper for useSearchParams (admin vendor param)
 
 ---
 
 ## WORKING ✅
-- Discovery feed — available-only, masonry, ModeToggle (auth-aware), PiLeaf top-right toggleable
-- Feed header — "Curator Sign in" pill for unauth users, hides when logged in
+- Discovery feed — available-only, masonry, ModeToggle (auth-aware), Heart top-right toggleable
+- Feed header — "Curator Sign in" pill for unauth users
 - Magic link auth — login page, session persistence, isAdmin check
-- Admin PIN login — email_otp flow, rate limited (needs Vercel env vars to work in prod)
-- Dev auth panel — localhost-only, tier switcher (guest/vendor/admin), magic link send, sign-out
-- BottomNav — My Finds always visible; 2-tab unauth, 3-tab auth; iOS padding; badge
-- ModeToggle — hidden for unauth users
-- Shelves page — all vendor booths at America's Antique Mall; admin manages from here
-- My Shelf — auth-gated; admin gets Zen booth by default + vendor switcher dropdown
-- My Shelf AddFindTile — passes ?vendor=[id] so admin posts to correct booth
-- Public Saved Shelf (/shelf/[slug]) — read-only cinematic view, no edit controls
-- Find detail — back button, paper airplane share, "Add to path" CTA, leaf toggle (add/remove)
-- Post flow — centered toast, auto-redirects to /my-shelf after save; admin posts to correct vendor
-- post/preview — "Save to Shelf" button, "Saved to shelf." done state
-- Admin — isAdmin() gate, access-denied screen, post management, sign-out
-- My Finds — no auth required, instant unsave, stale pruning
-- vendors.hero_image_url — column exists, upload/update functions in lib/posts.ts
-- safeStorage Safari fallback
+- Admin PIN login — email_otp flow
+- Dev auth panel — localhost-only, tier switcher
+- BottomNav — 4-tab auth, 3-tab guest; Heart for My Finds; Booths always visible
+- Booths page — guest→/shelf/[slug], admin→manage; Add Booth sheet
+- My Shelf — auth-gated; admin vendor switcher; banner upload via server route ✅
+- Post flow — portal toast centered, server-route image upload, correct booth redirect ✅
+- Find detail — back button, heart+share on image, Save CTA all users, price display
+- Public Saved Shelf (/shelf/[slug]) — read-only, guest booth destination ✅
+- My Finds — no auth required, Heart icon, instant unsave
 - All reseller intel routes (untouched)
 
 ## KNOWN GAPS ⚠️
-- Admin PIN needs QA in production (SUPABASE_SERVICE_ROLE_KEY + ADMIN_PIN must be set in Vercel)
-- Feed doesn't refresh after adding item from /post (auto-redirects to /my-shelf now, but feed is stale)
-- No Supabase RLS (now feasible — auth is real and identity is solid)
+- Feed doesn't refresh after posting
+- No Supabase RLS
 - No pull-to-refresh on feed
 - No PWA support
 - `/enhance-text` is mock
-- Shelves tab removed from BottomNav this session — accessible via /shelves URL directly
+- Admin PIN needs prod QA (env vars in Vercel)
+- `/vendor/[slug]` route now unused for guests — may be deprecated
 
 ---
 
@@ -351,7 +346,6 @@ npm run build 2>&1 | tail -30
 # Always stage everything
 git add -A && git commit -m "..." && git push
 
-# Admin PIN debug
-# Check Vercel function logs for "[admin-pin]" entries
-# Verify ADMIN_PIN and SUPABASE_SERVICE_ROLE_KEY are set in Vercel → Settings → Env Vars
+# New API route directories — must do in Terminal before MCP write
+mkdir -p app/api/your-route-name
 ```
