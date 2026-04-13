@@ -9,8 +9,8 @@
 //
 // Image upload goes through /api/post-image (server route, service role key) to bypass RLS.
 // Toast uses createPortal into a fixed inset-0 flex centering shell (not Framer transform) to avoid
-// Framer Motion overriding translate(-50%,-50%).
-// After save, redirects to /my-shelf?vendor=[id] so admin lands on the correct booth.
+// Framer Motion overriding translate(-50%, -50%).
+// After save, calls router.refresh() before router.push() so /my-shelf re-fetches fresh data.
 
 "use client";
 
@@ -337,6 +337,8 @@ function PostCaptureInner() {
 
       setTimeout(() => {
         const dest = vendorParam ? `/my-shelf?vendor=${vendorParam}` : "/my-shelf";
+        // refresh() invalidates the Next.js cache so /my-shelf re-fetches fresh data
+        router.refresh();
         router.push(dest);
       }, 1800);
 

@@ -4,6 +4,7 @@
 // Heart icon: top-right of each tile image, always visible, toggleable from feed.
 // No mode toggle — mode is now managed via authentication.
 // Header: plain "Sign in" link when unauthed, "Sign out" when authed.
+// Feed re-fetches when the page becomes visible after being hidden (e.g. after posting).
 
 "use client";
 
@@ -239,13 +240,26 @@ export default function DiscoveryFeedPage() {
   const [followedIds,   setFollowedIds]   = useState<Set<string>>(new Set());
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const [isAuthed,      setIsAuthed]      = useState<boolean | null>(null);
-  const hasFetched = useRef(false);
   const feedRef    = useRef<HTMLDivElement>(null);
+  // Track whether the page was hidden while the user navigated away
+  const wasHidden  = useRef(false);
 
   function syncBookmarks() {
     const ids = loadFollowedIds();
     setFollowedIds(ids);
     setBookmarkCount(ids.size);
+  }
+
+  async function loadFeed() {
+    let live = true;
+    setLoading(true); setError(false);
+    try {
+      const data = await getFeedPosts(80);
+      if (live) { setPosts(data); setLoading(false); }
+    } catch {
+      if (live) { setError(true); setLoading(false); }
+    }
+    return () => { live = false; };
   }
 
   useEffect(() => {
@@ -276,15 +290,23 @@ export default function DiscoveryFeedPage() {
     return unsub;
   }, []);
 
+  // Initial fetch
+  useEffect(() => { loadFeed(); }, []);
+
+  // Re-fetch when the user navigates back to this tab/page from another route.
+  // visibilitychange fires hidden→visible on SPA back-navigation in mobile browsers.
   useEffect(() => {
-    if (hasFetched.current) return;
-    hasFetched.current = true;
-    let live = true;
-    setLoading(true); setError(false);
-    getFeedPosts(80)
-      .then(data => { if (live) { setPosts(data); setLoading(false); } })
-      .catch(()  => { if (live) { setError(true);  setLoading(false); } });
-    return () => { live = false; };
+    function onVisibilityChange() {
+      if (document.visibilityState === "hidden") {
+        wasHidden.current = true;
+      } else if (document.visibilityState === "visible" && wasHidden.current) {
+        wasHidden.current = false;
+        syncBookmarks();
+        loadFeed();
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
   }, []);
 
   function handleToggleSave(postId: string) {
