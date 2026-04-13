@@ -10,7 +10,8 @@
 // Image upload goes through /api/post-image (server route, service role key) to bypass RLS.
 // Toast uses createPortal into a fixed inset-0 flex centering shell (not Framer transform) to avoid
 // Framer Motion overriding translate(-50%, -50%).
-// After save, calls router.refresh() before router.push() so /my-shelf re-fetches fresh data.
+// After save: clears feed scroll cache so feed lands at top showing the new post,
+// then calls router.refresh() + router.push() to /my-shelf.
 
 "use client";
 
@@ -24,6 +25,9 @@ import { safeStorage } from "@/lib/safeStorage";
 import { getSession, isAdmin } from "@/lib/auth";
 import type { Mall, Vendor } from "@/types/treehouse";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
+
+// Key must match SCROLL_KEY in app/page.tsx
+const FEED_SCROLL_KEY = "treehouse_feed_scroll";
 
 const C = {
   bg:          "#f0ede6",
@@ -337,7 +341,9 @@ function PostCaptureInner() {
 
       setTimeout(() => {
         const dest = vendorParam ? `/my-shelf?vendor=${vendorParam}` : "/my-shelf";
-        // refresh() invalidates the Next.js cache so /my-shelf re-fetches fresh data
+        // Clear saved scroll position so the feed lands at top showing the new post
+        try { sessionStorage.removeItem(FEED_SCROLL_KEY); } catch {}
+        // Invalidate Next.js cache so /my-shelf re-fetches fresh data
         router.refresh();
         router.push(dest);
       }, 1800);
