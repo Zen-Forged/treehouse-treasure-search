@@ -298,8 +298,9 @@ export default function PostCapturePage() {
       }
     : localProfile;
 
-  const hasValidIdentity = !!(activeIdentity?.mall_id ?? (resolvedVendor?.mall_id || localProfile?.mall_id)) &&
-                           !!(activeIdentity?.display_name?.trim());
+  // Identity is valid if either Supabase vendor or localStorage profile has mall + name
+  const hasValidIdentity = !!(resolvedVendor?.mall_id || localProfile?.mall_id) &&
+                           !!(resolvedVendor?.display_name?.trim() || localProfile?.display_name?.trim());
 
   const formComplete = displayName.trim().length >= 2 && selectedMall !== null;
   const isSaving     = saveStage === "generating" || saveStage === "uploading";
