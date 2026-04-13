@@ -12,8 +12,7 @@ import { Send, Trash2, Facebook, Tag, ArrowLeft, Heart } from "lucide-react";
 import { getPost, getVendorPosts, updatePostStatus, deletePost } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
-import { getMode } from "@/lib/mode";
-import { getCachedUserId } from "@/lib/auth";
+import { getCachedUserId, getSession, isAdmin } from "@/lib/auth";
 import BottomNav from "@/components/BottomNav";
 import type { Post } from "@/types/treehouse";
 
@@ -140,11 +139,22 @@ function ShelfSection({ vendorId, currentPostId, onReady }: { vendorId: string; 
 }
 
 // ─── Owner detection ───────────────────────────────────────────────────────────
+// Shows owner controls when:
+//   1. Session user_id matches vendor.user_id (auth-based ownership), OR
+//   2. localStorage vendor profile vendor_id matches post.vendor_id (legacy / unauth vendor)
+// Admin always gets controls.
 
-function detectOwnership(post: Post): boolean {
+async function detectOwnershipAsync(post: Post): Promise<boolean> {
   try {
-    const sessionUid = getCachedUserId();
+    // Check admin first
+    const session = await getSession();
+    if (session?.user && isAdmin(session.user)) return true;
+
+    // Auth-based ownership
+    const sessionUid = getCachedUserId() ?? session?.user?.id;
     if (sessionUid && post.vendor?.user_id && sessionUid === post.vendor.user_id) return true;
+
+    // localStorage vendor profile match (legacy / unauth)
     const raw = localStorage.getItem(LOCAL_VENDOR_KEY);
     if (raw) {
       const profile = JSON.parse(raw) as LocalVendorProfile;
@@ -166,24 +176,25 @@ export default function FindDetailPage() {
   const [loading,       setLoading]       = useState(true);
   const [copied,        setCopied]        = useState(false);
   const [isMyPost,      setIsMyPost]      = useState(false);
-  const [isCurator,     setIsCurator]     = useState(false);
   const [actionBusy,    setActionBusy]    = useState(false);
   const [showDelete,    setShowDelete]    = useState(false);
   const [shelfHasItems, setShelfHasItems] = useState(false);
   const [isSaved,       setIsSaved]       = useState(false);
 
   useEffect(() => {
-    setIsCurator(getMode() === "curator");
     if (!id) return;
     try { setIsSaved(safeStorage.getItem(flagKey(id)) === "1"); } catch {}
-    getPost(id).then(data => {
+    getPost(id).then(async data => {
       setPost(data);
       setLoading(false);
-      if (data) setIsMyPost(detectOwnership(data));
+      if (data) {
+        const isOwner = await detectOwnershipAsync(data);
+        setIsMyPost(isOwner);
+      }
     });
   }, [id]);
 
-  // Unified save/unsave toggle — used by both the image icon and the CTA button
+  // Unified save/unsave toggle
   function handleToggleSave() {
     if (!id) return;
     const next = !isSaved;
@@ -224,7 +235,8 @@ export default function FindDetailPage() {
 
   const handleShelfReady = useCallback((hasItems: boolean) => { setShelfHasItems(hasItems); }, []);
 
-  const showOwnerControls = isMyPost && isCurator;
+  // Owner controls: visible whenever isMyPost is true (auth + admin + localStorage vendor match)
+  const showOwnerControls = isMyPost;
 
   const mapsUrl = post?.mall?.address
     ? `https://maps.apple.com/?q=${encodeURIComponent(post.mall.address)}`
@@ -305,7 +317,6 @@ export default function FindDetailPage() {
 
         {/* Share + Heart — bottom-right of image */}
         <div style={{ position: "absolute", bottom: 12, right: 14, display: "flex", alignItems: "center", gap: 8 }}>
-          {/* Heart / Save icon */}
           <button
             onClick={handleToggleSave}
             aria-label={isSaved ? "Remove from My Finds" : "Save"}
@@ -320,17 +331,10 @@ export default function FindDetailPage() {
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            <Heart
-              size={15}
-              strokeWidth={isSaved ? 0 : 1.8}
-              style={{
-                color: "rgba(255,255,255,0.95)",
-                fill: isSaved ? "rgba(255,255,255,0.95)" : "none",
-              }}
-            />
+            <Heart size={15} strokeWidth={isSaved ? 0 : 1.8}
+              style={{ color: "rgba(255,255,255,0.95)", fill: isSaved ? "rgba(255,255,255,0.95)" : "none" }} />
           </button>
 
-          {/* Share / paper airplane */}
           <button onClick={handleShare}
             style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.30)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
             <Send size={14} style={{ color: copied ? "#a8d5b5" : "rgba(255,255,255,0.92)" }} />
@@ -354,7 +358,6 @@ export default function FindDetailPage() {
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.06 }}
           style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          {/* Availability */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {!isSold && (
               <motion.div animate={{ opacity: [1, 0.35, 1] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
@@ -364,7 +367,6 @@ export default function FindDetailPage() {
               {isSold ? "Found a home" : "Available"}
             </span>
           </div>
-          {/* Price — right-aligned, only when available */}
           {hasPrice && (
             <div style={{ fontFamily: "monospace", fontSize: 16, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.3px" }}>
               ${post.price_asking!.toLocaleString()}
@@ -387,7 +389,7 @@ export default function FindDetailPage() {
           </motion.div>
         )}
 
-        {/* ── Save CTA button — visible to ALL users ── */}
+        {/* Save CTA button — visible to ALL users */}
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.15 }}
           style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
           <button
@@ -395,8 +397,7 @@ export default function FindDetailPage() {
             style={{
               display: "flex", alignItems: "center", gap: 8,
               padding: "12px 28px", borderRadius: 28,
-              fontSize: 13, fontWeight: 600,
-              fontFamily: "Georgia, serif",
+              fontSize: 13, fontWeight: 600, fontFamily: "Georgia, serif",
               color: isSaved ? "rgba(255,255,255,0.97)" : C.green,
               background: isSaved ? C.greenSolid : C.greenLight,
               border: `1px solid ${isSaved ? "transparent" : C.greenBorder}`,
@@ -406,14 +407,8 @@ export default function FindDetailPage() {
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            <Heart
-              size={15}
-              strokeWidth={isSaved ? 0 : 1.8}
-              style={{
-                color: isSaved ? "rgba(255,255,255,0.97)" : C.green,
-                fill: isSaved ? "rgba(255,255,255,0.97)" : "none",
-              }}
-            />
+            <Heart size={15} strokeWidth={isSaved ? 0 : 1.8}
+              style={{ color: isSaved ? "rgba(255,255,255,0.97)" : C.green, fill: isSaved ? "rgba(255,255,255,0.97)" : "none" }} />
             {isSaved ? "Saved" : "Save"}
           </button>
         </motion.div>
@@ -477,7 +472,7 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Owner controls — Curator mode + ownership only */}
+            {/* Owner controls — visible to post owner and admin */}
             {showOwnerControls && (
               <div style={{ padding: "12px 16px 14px", borderTop: `1px solid ${C.border}` }}>
                 <button onClick={handleToggleSold} disabled={actionBusy}

@@ -8,10 +8,6 @@
 //   3. Admin fallback — if admin has no user_id-linked vendor, auto-loads the
 //      default admin booth (ADMIN_DEFAULT_VENDOR_ID) so My Shelf is never empty
 //   4. NoBooth state — shown only when none of the above resolves
-//
-// Booth switching is now handled by the Booths page (admin taps a card → /my-shelf?vendor=id).
-// Admin vendor switcher dropdown removed — Booths page is the control surface.
-// Logout removed from My Shelf — handled by the home feed header.
 
 "use client";
 
@@ -22,7 +18,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, ChevronRight, Share2, Check, ImagePlus, Pencil, Loader } from "lucide-react";
+import { MapPin, ChevronRight, Share2, Check, ImagePlus, Pencil, Loader, LayoutGrid } from "lucide-react";
 import { PiLeaf } from "react-icons/pi";
 import {
   getVendorByUserId, getVendorById, getVendorsByMall, getVendorPosts, getAllMalls,
@@ -98,7 +94,7 @@ function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
         onChange={e => { const f = e.target.files?.[0]; if (f) onHeroImageChange(f); e.target.value = ""; }} />
 
-      {/* App bar — logo + share only. No booth switcher, no logout. */}
+      {/* App bar */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, paddingLeft: 4, paddingRight: 4 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Image src="/logo.png" alt="Treehouse Finds" width={20} height={20} />
@@ -171,7 +167,6 @@ function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl
         </div>
       </div>
 
-      {/* Upload error — shown below hero card */}
       {heroError && (
         <div style={{ margin: "8px 10px 0", padding: "10px 14px", borderRadius: 10, background: "rgba(139,32,32,0.08)", border: "1px solid rgba(139,32,32,0.18)", fontSize: 12, color: "#8b2020", lineHeight: 1.5 }}>
           ⚠️ Upload error: {heroError}
@@ -250,8 +245,6 @@ function FoundTile({ post, index }: { post: Post; index: number }) {
   );
 }
 
-// AddFindTile — passes ?vendor=[id] to /post so admin always posts to the
-// currently-viewed vendor booth, not their own user_id-linked vendor.
 function AddFindTile({ index, vendorId }: { index: number; vendorId?: string }) {
   const router = useRouter();
   function handleAdd() {
@@ -302,6 +295,8 @@ function BoothFinderCard({ boothNumber, displayName, mallName, mallCity }: { boo
   );
 }
 
+// ─── Explore banner — "View more booths" navigates to /shelves ────────────────
+
 function ExploreBanner() {
   const router = useRouter();
   return (
@@ -311,9 +306,10 @@ function ExploreBanner() {
       </p>
       <h2 style={{ margin: "0 0 6px", fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>Explore more shelves nearby</h2>
       <p style={{ margin: "0 0 16px", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 12, color: "rgba(255,255,255,0.55)" }}>From local booths. Across Kentucky.</p>
-      <button onClick={() => router.push("/")}
+      <button onClick={() => router.push("/shelves")}
         style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 18px", borderRadius: 24, background: "rgba(255,255,255,0.95)", border: "none", cursor: "pointer", fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: C.bannerFrom, WebkitTapHighlightColor: "transparent" }}>
-        Enter the Treehouse <ChevronRight size={14} style={{ color: C.bannerFrom }} />
+        <LayoutGrid size={14} style={{ color: C.bannerFrom }} />
+        View more booths
       </button>
     </div>
   );
@@ -372,7 +368,6 @@ function MyShelfInner() {
   const userRef       = useRef<User | null>(null);
   const heroLockedRef = useRef(false);
 
-  // ── Step 1: Auth gate ──
   useEffect(() => {
     getSession().then(s => {
       if (!s?.user) { router.replace("/login"); return; }
@@ -382,7 +377,6 @@ function MyShelfInner() {
     });
   }, []);
 
-  // ── Step 2: Resolve vendor ──
   useEffect(() => {
     if (!authReady || !user) return;
 
@@ -437,7 +431,6 @@ function MyShelfInner() {
     setVendorReady(true);
   }
 
-  // ── Step 3: Load posts ──
   useEffect(() => {
     if (!activeVendor) return;
     setPostsLoading(true);
@@ -447,14 +440,13 @@ function MyShelfInner() {
     });
   }, [activeVendor?.id]);
 
-  // ── Hero image upload ──
   async function handleHeroImageChange(file: File) {
     if (!activeVendor?.id) return;
     setHeroUploading(true);
     setHeroError(null);
     heroLockedRef.current = true;
 
-    const vendorId   = activeVendor.id;
+    const vendorId    = activeVendor.id;
     const fallbackUrl = activeVendor.hero_image_url ?? null;
 
     try {
@@ -590,8 +582,6 @@ function MyShelfInner() {
     </div>
   );
 }
-
-// ─── Page — Suspense for useSearchParams ──────────────────────────────────────
 
 export default function MyShelfPage() {
   return (
