@@ -104,7 +104,6 @@ function SkeletonMasonry() {
               <div className="skeleton-shimmer" style={{ height: h }} />
               <div style={{ padding: "10px 11px 13px" }}>
                 <div className="skeleton-shimmer" style={{ height: 10, borderRadius: 4, marginBottom: 7, width: "80%" }} />
-                <div className="skeleton-shimmer" style={{ height: 9, borderRadius: 4, width: "45%" }} />
               </div>
             </motion.div>
           ))}
@@ -130,10 +129,6 @@ function MasonryTile({
   const hasImg = !!post.image_url && !imgErr;
   const fallbackHeights = [120, 145, 110, 160, 130, 105, 150, 125];
   const fallbackH = fallbackHeights[index % fallbackHeights.length];
-
-  const boothLabel = post.vendor?.booth_number
-    ? `Booth ${post.vendor.booth_number}`
-    : post.vendor?.display_name ?? null;
 
   function handleLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const img = e.currentTarget;
@@ -199,17 +194,12 @@ function MasonryTile({
           <div style={{ padding: "10px 11px 13px", borderTop: hasImg ? `1px solid ${C.borderLight}` : "none" }}>
             <div style={{
               fontFamily: "Georgia, serif", fontSize: 12, fontWeight: 600, color: C.textPrimary,
-              lineHeight: 1.35, marginBottom: boothLabel ? 5 : 0,
+              lineHeight: 1.35,
               overflow: "hidden", display: "-webkit-box",
               WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
             }}>
               {post.title}
             </div>
-            {boothLabel && (
-              <div style={{ fontSize: 10, color: C.textFaint, fontFamily: "monospace", letterSpacing: "0.4px", lineHeight: 1 }}>
-                {boothLabel}
-              </div>
-            )}
           </div>
         </div>
       </Link>
@@ -431,12 +421,9 @@ export default function DiscoveryFeedPage() {
 
         <div ref={feedRef} style={{ scrollMarginTop: 80 }}>
           {!loading && filtered.length > 0 && (
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 16 }}>
+            <div style={{ marginBottom: 16 }}>
               <span style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 15, color: C.textMid, fontWeight: 400, letterSpacing: "-0.1px" }}>
-                {selectedMall ? `Finds from ${selectedMall.name}` : "What will you find today?"}
-              </span>
-              <span style={{ fontSize: 11, color: C.textFaint, fontFamily: "Georgia, serif", fontStyle: "italic", flexShrink: 0, marginLeft: 8 }}>
-                {filtered.length}
+                {selectedMall ? `Finds from ${selectedMall.name}` : "Recently added"}
               </span>
             </div>
           )}

@@ -8,7 +8,8 @@
 //   4. Upload image + createPost → toast → redirect to /my-shelf
 //
 // Image upload goes through /api/post-image (server route, service role key) to bypass RLS.
-// Toast uses createPortal(el, document.body) for correct fixed centering.
+// Toast uses createPortal into a fixed inset-0 flex centering shell (not Framer transform) to avoid
+// Framer Motion overriding translate(-50%,-50%).
 // After save, redirects to /my-shelf?vendor=[id] so admin lands on the correct booth.
 
 "use client";
@@ -242,12 +243,10 @@ function PostCaptureInner() {
 
       const { title, caption } = await generateCaption(compressed);
 
-      // Populate editable fields with AI output
       setEditTitle(title);
       setEditDesc(caption);
       setEditPrice("");
 
-      // Show edit form — user can now adjust before saving
       setStage("editing");
     } catch (err) {
       console.error("[post] handleFile failed:", err);
@@ -372,73 +371,86 @@ function PostCaptureInner() {
 
   if (!identityReady) return null;
 
-  // ── Toast — rendered via portal into document.body for true viewport centering ──
+  // ── Toast — rendered via portal into document.body ──────────────────────────
+  // IMPORTANT: The centering shell is a plain fixed div (not motion.div).
+  // Framer Motion's `animate` prop overrides `transform` in `style`, which breaks
+  // translate(-50%, -50%) centering. Centering is handled by the shell flex layout;
+  // the motion.div only animates opacity, y, and scale.
   const showToast = stage === "saving" || stage === "done" || stage === "error";
   const toastEl = (
     <AnimatePresence>
       {showToast && (
-        <motion.div
-          key="toast"
-          initial={{ opacity: 0, y: 16, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0,  scale: 1 }}
-          exit={{ opacity: 0, y: 12, scale: 0.95 }}
-          transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+        <div
+          key="toast-shell"
           style={{
             position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
+            inset: 0,
             zIndex: 9999,
-            width: "min(300px, calc(100vw - 48px))",
-            background: stage === "error"
-              ? "rgba(139,32,32,0.92)"
-              : stage === "done"
-                ? "rgba(18,34,20,0.92)"
-                : "rgba(26,24,16,0.88)",
-            backdropFilter: "blur(14px)",
-            WebkitBackdropFilter: "blur(14px)",
-            borderRadius: 20,
-            padding: "20px 22px",
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 14,
-            boxShadow: "0 8px 40px rgba(0,0,0,0.30)",
-            textAlign: "center",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
           }}
         >
-          {previewImg && stage !== "error" && (
-            <div style={{ width: 56, height: 56, borderRadius: 12, overflow: "hidden" }}>
-              <img src={previewImg} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            </div>
-          )}
-          {stage === "done" && (
-            <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Check size={18} style={{ color: "#fff" }} />
-            </div>
-          )}
-          {stage === "saving" && (
-            <Loader size={20} style={{ color: "rgba(255,255,255,0.80)", animation: "spin 0.9s linear infinite" }} />
-          )}
-          <div>
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: "#fff", lineHeight: 1.3, marginBottom: 4 }}>
-              {stage === "saving" ? "Saving to shelf…"  :
-               stage === "done"   ? "Added to your shelf!" :
-                                    saveError ?? "Something went wrong"}
-            </div>
-            {stage === "saving" && (
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>Uploading image</div>
+          <motion.div
+            key="toast-inner"
+            initial={{ opacity: 0, y: 16, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0,  scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.95 }}
+            transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+            style={{
+              pointerEvents: "auto",
+              width: "min(300px, calc(100vw - 48px))",
+              background: stage === "error"
+                ? "rgba(139,32,32,0.92)"
+                : stage === "done"
+                  ? "rgba(18,34,20,0.92)"
+                  : "rgba(26,24,16,0.88)",
+              backdropFilter: "blur(14px)",
+              WebkitBackdropFilter: "blur(14px)",
+              borderRadius: 20,
+              padding: "20px 22px",
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 14,
+              boxShadow: "0 8px 40px rgba(0,0,0,0.30)",
+              textAlign: "center",
+            }}
+          >
+            {previewImg && stage !== "error" && (
+              <div style={{ width: 56, height: 56, borderRadius: 12, overflow: "hidden" }}>
+                <img src={previewImg} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              </div>
             )}
             {stage === "done" && (
-              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>Taking you to your shelf…</div>
+              <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Check size={18} style={{ color: "#fff" }} />
+              </div>
             )}
-          </div>
-          {stage === "error" && (
-            <button
-              onClick={() => { setStage("editing"); setSaveError(null); }}
-              style={{ fontSize: 12, color: "rgba(255,255,255,0.80)", background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8, cursor: "pointer", padding: "8px 16px" }}
-            >
-              Dismiss
-            </button>
-          )}
-        </motion.div>
+            {stage === "saving" && (
+              <Loader size={20} style={{ color: "rgba(255,255,255,0.80)", animation: "spin 0.9s linear infinite" }} />
+            )}
+            <div>
+              <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: "#fff", lineHeight: 1.3, marginBottom: 4 }}>
+                {stage === "saving" ? "Saving to shelf…"  :
+                 stage === "done"   ? "Added to your shelf!" :
+                                      saveError ?? "Something went wrong"}
+              </div>
+              {stage === "saving" && (
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>Uploading image</div>
+              )}
+              {stage === "done" && (
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>Taking you to your shelf…</div>
+              )}
+            </div>
+            {stage === "error" && (
+              <button
+                onClick={() => { setStage("editing"); setSaveError(null); }}
+                style={{ fontSize: 12, color: "rgba(255,255,255,0.80)", background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8, cursor: "pointer", padding: "8px 16px" }}
+              >
+                Dismiss
+              </button>
+            )}
+          </motion.div>
+        </div>
       )}
     </AnimatePresence>
   );
@@ -456,7 +468,6 @@ function PostCaptureInner() {
           {/* Nav */}
           <header style={{ display: "flex", alignItems: "center", padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 14px", borderBottom: `1px solid ${C.border}`, background: C.bg }}>
             <button onClick={() => {
-              // If editing, go back to capture view; otherwise go back in history
               if (stage === "editing") { setStage("idle"); setPreviewImg(null); pendingImageRef.current = null; }
               else router.back();
             }} style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer", marginRight: 12, WebkitTapHighlightColor: "transparent" }}>
@@ -474,12 +485,11 @@ function PostCaptureInner() {
 
           <div style={{ flex: 1, padding: "16px 15px", paddingBottom: "max(32px, env(safe-area-inset-bottom, 32px))", display: "flex", flexDirection: "column", gap: 14 }}>
 
-            {/* ── EDITING STAGE: preview image + editable fields ── */}
+            {/* ── EDITING STAGE ── */}
             {stage === "editing" && (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
                 style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
-                {/* Preview */}
                 {previewImg && (
                   <div style={{ borderRadius: 14, overflow: "hidden", position: "relative", maxHeight: 240 }}>
                     <img src={previewImg} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", maxHeight: 240 }} />
@@ -491,7 +501,6 @@ function PostCaptureInner() {
                   </div>
                 )}
 
-                {/* Title */}
                 <div>
                   <label style={labelStyle}>Title *</label>
                   <input
@@ -504,7 +513,6 @@ function PostCaptureInner() {
                   />
                 </div>
 
-                {/* Description / caption */}
                 <div>
                   <label style={labelStyle}>Caption <span style={{ color: C.textFaint, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
                   <textarea
@@ -516,7 +524,6 @@ function PostCaptureInner() {
                   />
                 </div>
 
-                {/* Price */}
                 <div>
                   <label style={labelStyle}>Price <span style={{ color: C.textFaint, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
                   <div style={{ position: "relative" }}>
@@ -532,14 +539,12 @@ function PostCaptureInner() {
                   </div>
                 </div>
 
-                {/* Save button */}
                 <button
                   onClick={handleSave}
                   disabled={!editTitle.trim()}
                   style={{
                     width: "100%", padding: "14px", borderRadius: 14,
-                    fontSize: 14, fontWeight: 600,
-                    fontFamily: "Georgia, serif",
+                    fontSize: 14, fontWeight: 600, fontFamily: "Georgia, serif",
                     color: editTitle.trim() ? "#fff" : C.textFaint,
                     background: editTitle.trim() ? C.green : C.surfaceDeep,
                     border: "none",
@@ -553,10 +558,9 @@ function PostCaptureInner() {
               </motion.div>
             )}
 
-            {/* ── CAPTURE STAGE: vendor identity + camera buttons ── */}
+            {/* ── CAPTURE STAGE ── */}
             {(stage === "idle" || stage === "generating") && (
               <>
-                {/* Vendor identity card */}
                 <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
                   style={{ borderRadius: 14, background: C.surface, border: `1px solid ${C.border}`, overflow: "hidden" }}>
 
@@ -625,7 +629,6 @@ function PostCaptureInner() {
                   )}
                 </motion.div>
 
-                {/* Photo capture */}
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.1 }}
                   style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", paddingLeft: 2 }}>Photograph your find</div>
@@ -665,7 +668,6 @@ function PostCaptureInner() {
                   )}
                 </motion.div>
 
-                {/* Tips */}
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.25 }}
                   style={{ borderRadius: 12, background: C.surface, border: `1px solid ${C.border}`, padding: "12px 14px" }}>
                   <div style={{ fontSize: 8, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: 8 }}>Posting tips</div>

@@ -16,8 +16,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { MapPin, ChevronRight, ArrowLeft } from "lucide-react";
-import { PiLeaf } from "react-icons/pi";
+import { MapPin, ChevronRight, ArrowLeft, Heart } from "lucide-react";
 import { getVendorBySlug, getVendorPosts, getAllMalls } from "@/lib/posts";
 import type { Post, Vendor, Mall } from "@/types/treehouse";
 import BottomNav from "@/components/BottomNav";
@@ -41,6 +40,18 @@ const C = {
 
 const GAP       = 6;
 const GRID_COLS = 3;
+const BOOKMARK_PREFIX = "treehouse_bookmark_";
+
+function loadBookmarkCount(): number {
+  let count = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(BOOKMARK_PREFIX) && localStorage.getItem(key) === "1") count++;
+    }
+  } catch {}
+  return count;
+}
 
 function mapsUrl(query: string) { return `https://maps.apple.com/?q=${encodeURIComponent(query)}`; }
 
@@ -72,11 +83,7 @@ function PublicVendorHero({ displayName, boothNumber, mallName, mallCity, heroIm
             Treehouse Finds
           </span>
         </div>
-        {/* No share/sign-out/admin — read-only */}
-        <Link href="/"
-          style={{ fontSize: 11, color: C.textMuted, textDecoration: "none", fontFamily: "Georgia, serif", fontStyle: "italic" }}>
-          Explore →
-        </Link>
+        {/* No explore link, no share/sign-out/admin — read-only */}
       </div>
 
       {/* Hero card (no edit button) */}
@@ -235,12 +242,17 @@ function SkeletonGrid() {
 export default function PublicShelfPage() {
   const { slug }  = useParams<{ slug: string }>();
   const router    = useRouter();
-  const [vendor,   setVendor]   = useState<Vendor | null>(null);
-  const [posts,    setPosts]    = useState<Post[]>([]);
-  const [mall,     setMall]     = useState<Mall | null>(null);
-  const [loading,  setLoading]  = useState(true);
-  const [notFound, setNotFound] = useState(false);
-  const [tab,      setTab]      = useState<"available" | "found">("available");
+  const [vendor,        setVendor]       = useState<Vendor | null>(null);
+  const [posts,         setPosts]        = useState<Post[]>([]);
+  const [mall,          setMall]         = useState<Mall | null>(null);
+  const [loading,       setLoading]      = useState(true);
+  const [notFound,      setNotFound]     = useState(false);
+  const [tab,           setTab]          = useState<"available" | "found">("available");
+  const [bookmarkCount, setBookmarkCount] = useState(0);
+
+  useEffect(() => {
+    setBookmarkCount(loadBookmarkCount());
+  }, []);
 
   useEffect(() => {
     if (!slug) return;
@@ -261,7 +273,7 @@ export default function PublicShelfPage() {
   if (notFound) {
     return (
       <div style={{ minHeight: "100dvh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: "0 24px" }}>
-        <PiLeaf size={32} style={{ color: C.textFaint }} />
+        <Heart size={32} style={{ color: C.textFaint }} />
         <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: C.textPrimary, textAlign: "center" }}>Shelf not found</div>
         <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: C.textMuted, textAlign: "center", lineHeight: 1.7, margin: 0 }}>
           This shelf may have moved or the link may be outdated.
@@ -304,7 +316,7 @@ export default function PublicShelfPage() {
           <SkeletonGrid />
         ) : posts.length === 0 ? (
           <div style={{ padding: "60px 32px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-            <PiLeaf size={28} style={{ color: C.textFaint }} />
+            <Heart size={28} style={{ color: C.textFaint }} />
             <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: C.textMuted, lineHeight: 1.7, margin: 0 }}>
               Nothing on the shelf yet — check back soon.
             </p>
@@ -326,7 +338,7 @@ export default function PublicShelfPage() {
                 </ThreeColGrid>
               ) : (
                 <div style={{ padding: "48px 32px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-                  <PiLeaf size={28} style={{ color: C.textFaint }} />
+                  <Heart size={28} style={{ color: C.textFaint }} />
                   <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: C.textMuted, lineHeight: 1.7, margin: 0 }}>
                     Nothing found yet — this shelf is wide open.
                   </p>
@@ -346,7 +358,7 @@ export default function PublicShelfPage() {
         )}
       </div>
 
-      <BottomNav active="home" />
+      <BottomNav active="shelves" flaggedCount={bookmarkCount} />
 
       <style>{`
         @keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
