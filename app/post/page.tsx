@@ -8,11 +8,13 @@
 //   4. If neither → show setup form (first-time vendor)
 //
 // Image upload goes through /api/post-image (server route, service role key) to bypass RLS.
+// Toast uses createPortal to render directly into document.body for correct fixed centering.
 // After save, redirects to /my-shelf?vendor=[id] so admin lands on the correct booth.
 
 "use client";
 
 import { useRef, useState, useEffect, useCallback, Suspense } from "react";
+import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, ArrowLeft, ChevronDown, Check, Loader } from "lucide-react";
@@ -70,7 +72,6 @@ async function generateCaption(imageDataUrl: string): Promise<{ title: string; c
   }
 }
 
-// Upload via server route — uses service role key, bypasses RLS
 async function uploadImageViaServer(base64DataUrl: string, vendorId: string): Promise<string | null> {
   try {
     const res = await fetch("/api/post-image", {
@@ -102,7 +103,6 @@ function PostCaptureInner() {
 
   const [identityReady, setIdentityReady] = useState(false);
   const [userId,        setUserId]        = useState<string | null>(null);
-  const [adminUser,     setAdminUser]     = useState(false);
   const [vendorParam,   setVendorParam]   = useState<string | null>(null);
 
   const [resolvedVendor, setResolvedVendor] = useState<Vendor | null>(null);
@@ -119,6 +119,10 @@ function PostCaptureInner() {
   const [saveStage,  setSaveStage]  = useState<SaveStage>("idle");
   const [saveError,  setSaveError]  = useState<string | null>(null);
   const [previewImg, setPreviewImg] = useState<string | null>(null);
+  const [mounted,    setMounted]    = useState(false);
+
+  // Portal mount guard — only render portal after client hydration
+  useEffect(() => { setMounted(true); }, []);
 
   // ── Identity resolution ──
   useEffect(() => {
@@ -129,18 +133,12 @@ function PostCaptureInner() {
       const uid   = s?.user?.id ?? null;
       const admin = s?.user ? isAdmin(s.user) : false;
       setUserId(uid);
-      setAdminUser(admin);
 
       getAllMalls().then(data => { setMalls(data); setMallsLoading(false); });
 
-      // Admin with ?vendor=[id] param → post to that specific vendor's booth
       if (admin && vParam && uid) {
         const v = await getVendorById(vParam);
-        if (v) {
-          setResolvedVendor(v);
-          setIdentityReady(true);
-          return;
-        }
+        if (v) { setResolvedVendor(v); setIdentityReady(true); return; }
       }
 
       if (uid) {
@@ -237,7 +235,7 @@ function PostCaptureInner() {
       if (!vendorId) {
         const baseSlug = slugify(activeDispName);
         const slug     = baseSlug + "-" + Date.now().toString(36);
-        const { data: vendor, error: vendorErr } = await createVendor({
+        const { data: vendor } = await createVendor({
           mall_id:      activeMallId,
           display_name: activeDispName,
           booth_number: activeBoothNum || undefined,
@@ -267,7 +265,6 @@ function PostCaptureInner() {
         setLocalProfile(updated);
       }
 
-      // Upload via server route — bypasses Supabase RLS
       const imageUrl = await uploadImageViaServer(compressed, vendorId);
 
       const { data: post } = await createPost({
@@ -287,9 +284,8 @@ function PostCaptureInner() {
 
       setSaveStage("done");
 
-      // Redirect back to the correct shelf:
-      // - Admin with ?vendor param → /my-shelf?vendor=[id] (the booth they were managing)
-      // - Everyone else → /my-shelf
+      // Admin with ?vendor param → back to that booth's shelf
+      // Everyone else → /my-shelf
       setTimeout(() => {
         const dest = vendorParam ? `/my-shelf?vendor=${vendorParam}` : "/my-shelf";
         router.push(dest);
@@ -327,38 +323,41 @@ function PostCaptureInner() {
 
   if (!identityReady) return null;
 
-  // Toast rendered at root level (outside maxWidth container) so fixed positioning
-  // is relative to the viewport, not a transformed/constrained ancestor.
-  const toast = (
+  // ── Toast via portal → renders directly into document.body.
+  // This guarantees position: fixed is relative to the viewport,
+  // not any transformed/maxWidth-constrained ancestor.
+  const toastEl = (
     <AnimatePresence>
       {(isSaving || saveStage === "done" || saveStage === "error") && (
         <motion.div
           key="toast"
-          initial={{ opacity: 0, y: 18, scale: 0.95 }}
+          initial={{ opacity: 0, y: 16, scale: 0.95 }}
           animate={{ opacity: 1, y: 0,  scale: 1 }}
-          exit={{ opacity: 0, y: 14, scale: 0.95 }}
+          exit={{ opacity: 0, y: 12, scale: 0.95 }}
           transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
           style={{
             position: "fixed",
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            zIndex: 1000,
+            zIndex: 9999,
             width: "min(300px, calc(100vw - 48px))",
             background: saveStage === "error"
               ? "rgba(139,32,32,0.92)"
               : saveStage === "done"
                 ? "rgba(18,34,20,0.92)"
                 : "rgba(26,24,16,0.88)",
-            backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
-            borderRadius: 20, padding: "20px 22px",
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
+            borderRadius: 20,
+            padding: "20px 22px",
             display: "flex", flexDirection: "column", alignItems: "center", gap: 14,
-            boxShadow: "0 8px 40px rgba(0,0,0,0.28)",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.30)",
             textAlign: "center",
           }}
         >
           {previewImg && saveStage !== "error" && (
-            <div style={{ width: 56, height: 56, borderRadius: 12, overflow: "hidden", flexShrink: 0 }}>
+            <div style={{ width: 56, height: 56, borderRadius: 12, overflow: "hidden" }}>
               <img src={previewImg} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             </div>
           )}
@@ -373,7 +372,7 @@ function PostCaptureInner() {
           <div>
             <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: "#fff", lineHeight: 1.3, marginBottom: 4 }}>
               {saveStage === "generating" ? "Reading your find…" :
-               saveStage === "uploading"  ? "Saving to shelf…" :
+               saveStage === "uploading"  ? "Saving to shelf…"  :
                saveStage === "done"       ? "Added to your shelf!" :
                                            saveError ?? "Something went wrong"}
             </div>
@@ -389,8 +388,10 @@ function PostCaptureInner() {
             )}
           </div>
           {saveStage === "error" && (
-            <button onClick={() => { setSaveStage("idle"); setSaveError(null); setPreviewImg(null); }}
-              style={{ fontSize: 12, color: "rgba(255,255,255,0.80)", background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8, cursor: "pointer", padding: "8px 16px" }}>
+            <button
+              onClick={() => { setSaveStage("idle"); setSaveError(null); setPreviewImg(null); }}
+              style={{ fontSize: 12, color: "rgba(255,255,255,0.80)", background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8, cursor: "pointer", padding: "8px 16px" }}
+            >
               Dismiss
             </button>
           )}
@@ -401,7 +402,7 @@ function PostCaptureInner() {
 
   return (
     <>
-      {toast}
+      {mounted && createPortal(toastEl, document.body)}
 
       <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
         <input ref={cameraRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={onFileChange} />
