@@ -15,47 +15,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Compass, ChevronDown, Heart } from "lucide-react";
 import { getFeedPosts, getAllMalls } from "@/lib/posts";
 import { getSession, signOut, onAuthChange } from "@/lib/auth";
+import { colors } from "@/lib/tokens";
+import { flagKey, loadFollowedIds } from "@/lib/utils";
 import BottomNav from "@/components/BottomNav";
 import { MallHeroCard, GenericMallHero } from "@/components/MallHeroCard";
 import type { Post, Mall } from "@/types/treehouse";
 
-// ─── Design tokens ─────────────────────────────────────────────────────────────
-const C = {
-  bg:           "#f5f2eb",
-  surface:      "#edeae1",
-  surfaceDeep:  "#e4e0d6",
-  border:       "rgba(26,24,16,0.09)",
-  borderLight:  "rgba(26,24,16,0.05)",
-  textPrimary:  "#1c1a14",
-  textMid:      "#4a4840",
-  textMuted:    "#8a8476",
-  textFaint:    "#b4ae9e",
-  green:        "#1e4d2b",
-  greenLight:   "rgba(30,77,43,0.08)",
-  greenSolid:   "rgba(30,77,43,0.90)",
-  greenBorder:  "rgba(30,77,43,0.20)",
-  header:       "rgba(245,242,235,0.96)",
-};
-
-const SCROLL_KEY      = "treehouse_feed_scroll";
-const BOOKMARK_PREFIX = "treehouse_bookmark_";
-
-function flagKey(postId: string) { return `${BOOKMARK_PREFIX}${postId}`; }
-
-// ─── Bookmark helpers ──────────────────────────────────────────────────────────
-
-function loadFollowedIds(): Set<string> {
-  const followed = new Set<string>();
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith(BOOKMARK_PREFIX) && localStorage.getItem(key) === "1") {
-        followed.add(key.slice(BOOKMARK_PREFIX.length));
-      }
-    }
-  } catch {}
-  return followed;
-}
+const SCROLL_KEY = "treehouse_feed_scroll";
 
 // ─── Empty state ───────────────────────────────────────────────────────────────
 
@@ -67,18 +33,18 @@ function EmptyFeed() {
       transition={{ duration: 0.45 }}
       style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 72, textAlign: "center" }}
     >
-      <div style={{ width: 52, height: 52, borderRadius: "50%", background: C.surface, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>
-        <Compass size={20} style={{ color: C.textMuted }} />
+      <div style={{ width: 52, height: 52, borderRadius: "50%", background: colors.surface, border: `1px solid ${colors.border}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>
+        <Compass size={20} style={{ color: colors.textMuted }} />
       </div>
-      <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: C.textPrimary, marginBottom: 10, lineHeight: 1.3 }}>
+      <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: colors.textPrimary, marginBottom: 10, lineHeight: 1.3 }}>
         The shelves are quiet.
       </div>
-      <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: C.textMuted, lineHeight: 1.7, maxWidth: 230, margin: "0 auto 28px" }}>
+      <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: colors.textMuted, lineHeight: 1.7, maxWidth: 230, margin: "0 auto 28px" }}>
         Be the first vendor to share a find in your area.
       </p>
       <button
         onClick={() => router.push("/post")}
-        style={{ padding: "12px 24px", borderRadius: 24, fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer", letterSpacing: "0.2px", background: C.green, border: "none", boxShadow: "0 2px 12px rgba(30,77,43,0.25)" }}
+        style={{ padding: "12px 24px", borderRadius: 24, fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer", letterSpacing: "0.2px", background: colors.green, border: "none", boxShadow: "0 2px 12px rgba(30,77,43,0.25)" }}
       >
         Post a find
       </button>
@@ -100,7 +66,7 @@ function SkeletonMasonry() {
         <div key={ci} style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: ci === 1 ? SKELETON_OFFSET : 0 }}>
           {col.map((h, i) => (
             <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: (ci * col.length + i) * 0.05 }}
-              style={{ borderRadius: 16, overflow: "hidden", background: C.surface, border: `1px solid ${C.border}` }}>
+              style={{ borderRadius: 16, overflow: "hidden", background: colors.surface, border: `1px solid ${colors.border}` }}>
               <div className="skeleton-shimmer" style={{ height: h }} />
               <div style={{ padding: "10px 11px 13px" }}>
                 <div className="skeleton-shimmer" style={{ height: 10, borderRadius: 4, marginBottom: 7, width: "80%" }} />
@@ -149,8 +115,8 @@ function MasonryTile({
       transition={{ duration: 0.32, delay: Math.min(index * 0.04, 0.3), ease: [0.25, 0.1, 0.25, 1] }}>
       <Link href={`/find/${post.id}`} style={{ display: "block", textDecoration: "none" }}>
         <div style={{
-          borderRadius: 16, overflow: "hidden", background: C.surface,
-          border: `1px solid ${C.border}`,
+          borderRadius: 16, overflow: "hidden", background: colors.surface,
+          border: `1px solid ${colors.border}`,
           boxShadow: "0 2px 10px rgba(26,24,16,0.07), 0 1px 3px rgba(26,24,16,0.04)",
           position: "relative",
         }}>
@@ -158,9 +124,7 @@ function MasonryTile({
             <div style={{ position: "relative", width: "100%", height: imgHeight ?? fallbackH }}>
               <img ref={imgRef} src={post.image_url!} alt={post.title}
                 onLoad={handleLoad} onError={() => setImgErr(true)}
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block",
-                  filter: "brightness(0.99) saturate(0.96)" }} />
-              {/* Heart — top-right corner, always visible, toggleable */}
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "brightness(0.99) saturate(0.96)" }} />
               <button
                 onClick={handleHeartClick}
                 aria-label={isFollowed ? "Remove from My Finds" : "Save"}
@@ -168,7 +132,7 @@ function MasonryTile({
                   position: "absolute", top: 8, right: 8,
                   width: 34, height: 34, borderRadius: "50%",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  background: isFollowed ? C.greenSolid : "rgba(0,0,0,0.30)",
+                  background: isFollowed ? colors.greenSolid : "rgba(0,0,0,0.30)",
                   backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
                   border: "none", cursor: "pointer",
                   transition: "background 0.18s, transform 0.12s",
@@ -176,24 +140,18 @@ function MasonryTile({
                   WebkitTapHighlightColor: "transparent",
                 }}
               >
-                <Heart
-                  size={16}
-                  strokeWidth={isFollowed ? 0 : 1.8}
-                  style={{
-                    color: "rgba(255,255,255,0.96)",
-                    fill: isFollowed ? "rgba(255,255,255,0.96)" : "none",
-                  }}
-                />
+                <Heart size={16} strokeWidth={isFollowed ? 0 : 1.8}
+                  style={{ color: "rgba(255,255,255,0.96)", fill: isFollowed ? "rgba(255,255,255,0.96)" : "none" }} />
               </button>
             </div>
           ) : (
             <div style={{ padding: "16px 13px 10px", minHeight: fallbackH, display: "flex", alignItems: "flex-start" }}>
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.35 }}>{post.title}</div>
+              <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: colors.textPrimary, lineHeight: 1.35 }}>{post.title}</div>
             </div>
           )}
-          <div style={{ padding: "10px 11px 13px", borderTop: hasImg ? `1px solid ${C.borderLight}` : "none" }}>
+          <div style={{ padding: "10px 11px 13px", borderTop: hasImg ? `1px solid ${colors.borderLight}` : "none" }}>
             <div style={{
-              fontFamily: "Georgia, serif", fontSize: 12, fontWeight: 600, color: C.textPrimary,
+              fontFamily: "Georgia, serif", fontSize: 12, fontWeight: 600, color: colors.textPrimary,
               lineHeight: 1.35,
               overflow: "hidden", display: "-webkit-box",
               WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
@@ -256,15 +214,15 @@ function MallDropdown({ malls, selectedId, onChange }: { malls: Mall[]; selected
   return (
     <div style={{ position: "relative", marginBottom: 10 }}>
       <div style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", gap: 5, pointerEvents: "none", zIndex: 1 }}>
-        <MapPin size={11} style={{ color: C.textMuted }} />
-        <span style={{ fontSize: 10, color: C.textMuted, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500 }}>Mall</span>
+        <MapPin size={11} style={{ color: colors.textMuted }} />
+        <span style={{ fontSize: 10, color: colors.textMuted, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500 }}>Mall</span>
       </div>
       <select value={selectedId ?? ""} onChange={e => onChange(e.target.value || null)}
-        style={{ width: "100%", appearance: "none", WebkitAppearance: "none", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 32px 8px 64px", fontSize: 12, color: C.textPrimary, fontFamily: "Georgia, serif", cursor: "pointer", outline: "none" }}>
+        style={{ width: "100%", appearance: "none", WebkitAppearance: "none", background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 10, padding: "8px 32px 8px 64px", fontSize: 12, color: colors.textPrimary, fontFamily: "Georgia, serif", cursor: "pointer", outline: "none" }}>
         <option value="">All malls</option>
         {malls.map(m => <option key={m.id} value={m.id}>{m.name}{m.city ? `, ${m.city}` : ""}</option>)}
       </select>
-      <ChevronDown size={13} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: C.textMuted, pointerEvents: "none" }} />
+      <ChevronDown size={13} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: colors.textMuted, pointerEvents: "none" }} />
     </div>
   );
 }
@@ -329,7 +287,6 @@ export default function DiscoveryFeedPage() {
     return () => { live = false; };
   }, []);
 
-  // Toggle save/unsave from feed tile
   function handleToggleSave(postId: string) {
     setFollowedIds(prev => {
       const next = new Set(prev);
@@ -363,39 +320,26 @@ export default function DiscoveryFeedPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", position: "relative" }}>
+    <div style={{ minHeight: "100vh", background: colors.bg, maxWidth: 430, margin: "0 auto", position: "relative" }}>
 
       {/* ── Header ── */}
-      <header style={{ position: "sticky", top: 0, zIndex: 50, background: C.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px" }}>
+      <header style={{ position: "sticky", top: 0, zIndex: 50, background: colors.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${colors.border}`, padding: "0 16px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "max(16px, env(safe-area-inset-top, 16px))", paddingBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
-            <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.3px", lineHeight: 1 }}>
+            <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: colors.textPrimary, letterSpacing: "-0.3px", lineHeight: 1 }}>
               Treehouse Finds
             </span>
           </div>
-          {/* Auth CTA — plain text, no pill */}
           {isAuthed === false && (
             <Link href="/login"
-              style={{
-                fontSize: 13, color: C.green,
-                fontFamily: "Georgia, serif", fontStyle: "italic",
-                textDecoration: "none",
-                whiteSpace: "nowrap",
-              }}>
+              style={{ fontSize: 13, color: colors.green, fontFamily: "Georgia, serif", fontStyle: "italic", textDecoration: "none", whiteSpace: "nowrap" }}>
               Sign in
             </Link>
           )}
           {isAuthed === true && (
-            <button
-              onClick={handleSignOut}
-              style={{
-                fontSize: 13, color: C.textMuted,
-                fontFamily: "Georgia, serif", fontStyle: "italic",
-                background: "none", border: "none", cursor: "pointer",
-                padding: 0, whiteSpace: "nowrap",
-                WebkitTapHighlightColor: "transparent",
-              }}>
+            <button onClick={handleSignOut}
+              style={{ fontSize: 13, color: colors.textMuted, fontFamily: "Georgia, serif", fontStyle: "italic", background: "none", border: "none", cursor: "pointer", padding: 0, whiteSpace: "nowrap", WebkitTapHighlightColor: "transparent" }}>
               Sign out
             </button>
           )}
@@ -422,14 +366,14 @@ export default function DiscoveryFeedPage() {
         <div ref={feedRef} style={{ scrollMarginTop: 80 }}>
           {!loading && filtered.length > 0 && (
             <div style={{ marginBottom: 16 }}>
-              <span style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 15, color: C.textMid, fontWeight: 400, letterSpacing: "-0.1px" }}>
+              <span style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 15, color: colors.textMid, fontWeight: 400, letterSpacing: "-0.1px" }}>
                 {selectedMall ? `Finds from ${selectedMall.name}` : "Recently added"}
               </span>
             </div>
           )}
 
           {loading ? <SkeletonMasonry /> : error ? (
-            <div style={{ textAlign: "center", paddingTop: 60, fontFamily: "Georgia, serif", color: C.textMuted, fontSize: 14 }}>
+            <div style={{ textAlign: "center", paddingTop: 60, fontFamily: "Georgia, serif", color: colors.textMuted, fontSize: 14 }}>
               Couldn&apos;t load finds. Check your connection and try again.
             </div>
           ) : filtered.length === 0 ? <EmptyFeed /> : (
