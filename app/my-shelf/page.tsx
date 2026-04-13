@@ -16,11 +16,10 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, ChevronRight, Share2, Check, ImagePlus, Pencil, Loader, LogOut, ChevronDown } from "lucide-react";
 import { PiLeaf } from "react-icons/pi";
@@ -33,7 +32,6 @@ import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Post, type Vendor, type
 import BottomNav from "@/components/BottomNav";
 import type { User } from "@supabase/supabase-js";
 
-// The Zen booth is the admin's default shelf when no user_id-linked vendor exists
 const ADMIN_DEFAULT_VENDOR_ID = "5619b4bf-3d05-4843-8ee1-e8b747fc2d81";
 const MALL_ID                 = "19a8ff7e-cb45-491f-9451-878e2dde5bf4";
 
@@ -182,13 +180,8 @@ function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {/* Admin vendor switcher — shown when admin and multiple vendors exist */}
           {isAdminUser && allVendors.length > 0 && vendorId && (
-            <AdminVendorSwitcher
-              vendors={allVendors}
-              activeId={vendorId}
-              onSelect={onVendorSwitch}
-            />
+            <AdminVendorSwitcher vendors={allVendors} activeId={vendorId} onSelect={onVendorSwitch} />
           )}
           {hasSlug && (
             <AnimatePresence mode="wait">
@@ -318,7 +311,9 @@ function FoundTile({ post, index }: { post: Post; index: number }) {
           : <div style={{ width: "100%", height: "100%", background: C.surface }} />
         }
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(20,18,12,0.72) 0%, transparent 100%)", padding: "18px 8px 8px" }}>
-          <div style={{ fontFamily: "Georgia, serif", fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.90)", lineHeight: 1.25, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>{post.title}</div>
+          <div style={{ fontFamily: "Georgia, serif", fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.90)", lineHeight: 1.25, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+            {post.title}
+          </div>
         </div>
         <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", fontSize: 7, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px", padding: "3px 8px", borderRadius: 5, background: "rgba(28,26,20,0.54)", color: "rgba(245,242,235,0.93)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", whiteSpace: "nowrap" }}>
           Found
@@ -351,8 +346,6 @@ function ThreeColGrid({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ─── Booth finder card ─────────────────────────────────────────────────────────
-
 function BoothFinderCard({ boothNumber, displayName, mallName, mallCity }: { boothNumber: string | null; displayName: string; mallName: string; mallCity?: string }) {
   const q = [mallName, mallCity].filter(Boolean).join(", ");
   return (
@@ -375,8 +368,6 @@ function BoothFinderCard({ boothNumber, displayName, mallName, mallCity }: { boo
     </a>
   );
 }
-
-// ─── Explore CTA ───────────────────────────────────────────────────────────────
 
 function ExploreBanner() {
   const router = useRouter();
@@ -406,8 +397,6 @@ function SkeletonGrid() {
     </div>
   );
 }
-
-// ─── No booth yet ──────────────────────────────────────────────────────────────
 
 function NoBooth({ onSignOut }: { onSignOut: () => void }) {
   return (
@@ -450,6 +439,9 @@ function MyShelfInner() {
   const [heroUploading, setHeroUploading] = useState(false);
   const [allVendors,    setAllVendors]    = useState<Vendor[]>([]);
 
+  // Ref so loadVendor can access current user.id without stale closure issues
+  const userRef = useRef<User | null>(null);
+
   const heroLockedRef = useRef(false);
 
   // ── Step 1: Auth gate ──
@@ -457,20 +449,22 @@ function MyShelfInner() {
     getSession().then(s => {
       if (!s?.user) { router.replace("/login"); return; }
       setUser(s.user);
+      userRef.current = s.user;
       setAuthReady(true);
     });
   }, []);
 
   // ── Step 2: Resolve vendor ──
+  // Capture `authedUser` as a non-null local so TypeScript is satisfied inside async closure.
   // Priority: ?vendor param (admin override) → user_id lookup → admin default → NoBooth
   useEffect(() => {
     if (!authReady || !user) return;
 
-    const adminUser   = isAdmin(user);
-    const vendorParam = searchParams.get("vendor"); // admin override from Shelves page
+    const authedUser  = user; // non-null local — TypeScript can verify this
+    const adminUser   = isAdmin(authedUser);
+    const vendorParam = searchParams.get("vendor");
 
     async function resolve() {
-      // Load all vendors for the admin switcher (admin only)
       if (adminUser) {
         getVendorsByMall(MALL_ID).then(setAllVendors);
       }
@@ -478,17 +472,17 @@ function MyShelfInner() {
       // 1. Admin override via ?vendor=[id]
       if (adminUser && vendorParam) {
         const v = await getVendorById(vendorParam);
-        if (v) { loadVendor(v); return; }
+        if (v) { loadVendor(v, authedUser.id); return; }
       }
 
       // 2. Standard user_id lookup
-      const v = await getVendorByUserId(user.id);
-      if (v) { loadVendor(v); return; }
+      const v = await getVendorByUserId(authedUser.id);
+      if (v) { loadVendor(v, authedUser.id); return; }
 
       // 3. Admin fallback — load the Zen default booth
       if (adminUser) {
         const defaultV = await getVendorById(ADMIN_DEFAULT_VENDOR_ID);
-        if (defaultV) { loadVendor(defaultV); return; }
+        if (defaultV) { loadVendor(defaultV, authedUser.id); return; }
       }
 
       // 4. No vendor found
@@ -498,13 +492,12 @@ function MyShelfInner() {
     resolve();
   }, [authReady, user?.id]);
 
-  function loadVendor(vendor: Vendor) {
+  function loadVendor(vendor: Vendor, userId: string) {
     setActiveVendor(vendor);
     if (vendor.hero_image_url && !heroLockedRef.current) {
       setHeroImageUrl(vendor.hero_image_url);
     }
 
-    // Write back to localStorage cache (so /post picks it up)
     const cached: LocalVendorProfile = {
       display_name: vendor.display_name,
       booth_number: vendor.booth_number ?? "",
@@ -513,7 +506,7 @@ function MyShelfInner() {
       mall_city:    (vendor.mall as Mall | undefined)?.city ?? "",
       vendor_id:    vendor.id,
       slug:         vendor.slug,
-      user_id:      user?.id,
+      user_id:      userId,
     };
     try { localStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(cached)); } catch {}
 
@@ -526,7 +519,6 @@ function MyShelfInner() {
     setVendorReady(true);
   }
 
-  // Admin switches vendor from the in-page switcher
   function handleVendorSwitch(vendor: Vendor) {
     setActiveVendor(null);
     setPosts([]);
@@ -534,12 +526,11 @@ function MyShelfInner() {
     setVendorReady(false);
     setPostsLoading(true);
 
-    // Update URL param so it persists on refresh
     const url = new URL(window.location.href);
     url.searchParams.set("vendor", vendor.id);
     window.history.replaceState({}, "", url.toString());
 
-    loadVendor(vendor);
+    loadVendor(vendor, userRef.current?.id ?? "");
   }
 
   // ── Step 3: Load posts ──
