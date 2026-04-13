@@ -3,17 +3,19 @@
 //
 // POST { pin: string }
 // → verifies PIN against ADMIN_PIN env var (server-only, never sent to client)
-// → uses Supabase service role to create a session directly for ADMIN_EMAIL
-// → returns { access_token, refresh_token } so the client can call supabase.auth.setSession()
+// → uses Supabase service role to generate a link for ADMIN_EMAIL
+// → extracts the email_otp (6-digit code) from the response
+// → returns { otp, email } so the client can call supabase.auth.verifyOtp({ type: "email" })
 //
-// WHY setSession instead of verifyOtp:
-//   verifyOtp tokens expire in ~60s and are single-use. Network latency + Vercel cold starts
-//   can cause the token to expire before the client can use it. setSession with a real
-//   access_token + refresh_token bypasses this entirely.
+// WHY email_otp instead of hashed_token/action_link token:
+//   The action_link token has a very short TTL (~60s) and is invalidated the moment the
+//   verify endpoint is hit. The email_otp is the underlying 6-digit code with a longer
+//   TTL and works reliably with verifyOtp({ type: "email" }).
 //
 // Security model:
 // - PIN is server-side only (never in NEXT_PUBLIC_* vars)
 // - Rate limited: max 5 attempts per IP per minute
+// - OTP is single-use (Supabase invalidates after first use)
 // - SUPABASE_SERVICE_ROLE_KEY is server-only
 
 import { NextRequest, NextResponse } from "next/server";
@@ -27,15 +29,14 @@ function rateLimit(ip: string): boolean {
   const entry = attempts.get(ip);
   if (!entry || entry.reset < now) {
     attempts.set(ip, { count: 1, reset: now + 60_000 });
-    return true; // allowed
+    return true;
   }
-  if (entry.count >= 5) return false; // blocked
+  if (entry.count >= 5) return false;
   entry.count++;
   return true;
 }
 
 export async function POST(req: NextRequest) {
-  // Rate limit by IP
   const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "unknown";
   if (!rateLimit(ip)) {
     return NextResponse.json({ error: "Too many attempts. Wait a minute." }, { status: 429 });
@@ -59,33 +60,25 @@ export async function POST(req: NextRequest) {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // Look up or create the admin user, then create a session directly.
-  // This avoids the short-lived verifyOtp token race condition.
-  const { data: userList, error: listErr } = await admin.auth.admin.listUsers();
-  if (listErr) {
-    console.error("[admin-pin] listUsers error:", listErr.message);
-    return NextResponse.json({ error: "Failed to look up admin user." }, { status: 500 });
-  }
-
-  const adminUser = userList.users.find(u => u.email === adminEmail);
-  if (!adminUser) {
-    console.error("[admin-pin] admin user not found for email:", adminEmail);
-    return NextResponse.json({ error: "Admin user not found. Sign in via magic link once first." }, { status: 404 });
-  }
-
-  // Create a session for the admin user directly — no token TTL risk
-  const { data: sessionData, error: sessionErr } = await admin.auth.admin.createSession({
-    user_id: adminUser.id,
+  const { data, error } = await admin.auth.admin.generateLink({
+    type:  "magiclink",
+    email: adminEmail,
   });
 
-  if (sessionErr || !sessionData?.session) {
-    console.error("[admin-pin] createSession error:", sessionErr?.message);
-    return NextResponse.json({ error: "Failed to create admin session." }, { status: 500 });
+  if (error || !data?.properties) {
+    console.error("[admin-pin] generateLink error:", error?.message);
+    return NextResponse.json({ error: "Failed to generate login token." }, { status: 500 });
   }
 
-  return NextResponse.json({
-    access_token:  sessionData.session.access_token,
-    refresh_token: sessionData.session.refresh_token,
-    email:         adminEmail,
-  });
+  // email_otp is the 6-digit code — more reliable than the action_link token
+  // which has a very short TTL and single-use restriction that causes race conditions
+  const otp = data.properties.email_otp;
+
+  if (!otp) {
+    console.error("[admin-pin] no email_otp in generateLink response:", JSON.stringify(data.properties));
+    return NextResponse.json({ error: "No OTP in response." }, { status: 500 });
+  }
+
+  console.log("[admin-pin] OTP generated successfully for:", adminEmail);
+  return NextResponse.json({ otp, email: adminEmail });
 }

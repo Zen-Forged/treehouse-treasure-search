@@ -140,23 +140,24 @@ function LoginInner() {
         return;
       }
 
-      // Set the session directly using access_token + refresh_token.
-      // This avoids the verifyOtp token expiry race condition.
+      // Verify the OTP server-generated for the admin email.
+      // type: "email" works with the email_otp returned by generateLink.
       setScreen("pin-signing-in");
-      const { error: sessionErr } = await supabase.auth.setSession({
-        access_token:  data.access_token,
-        refresh_token: data.refresh_token,
+      const { error: verifyErr } = await supabase.auth.verifyOtp({
+        email: data.email,
+        token: data.otp,
+        type:  "email",
       });
-      if (sessionErr) {
+      if (verifyErr) {
         setScreen("enter-email");
         setTab("pin");
-        setPinError("Sign-in failed: " + sessionErr.message);
+        setPinError("Sign-in failed: " + verifyErr.message);
         setPinBusy(false);
         return;
       }
 
       router.replace("/my-shelf");
-    } catch (e) {
+    } catch {
       setPinError("Network error. Try again.");
       setPinBusy(false);
       setScreen("enter-email");
