@@ -147,6 +147,20 @@ export async function getVendorByUserId(userId: string): Promise<Vendor | null> 
 }
 
 /**
+ * Look up a vendor directly by their Supabase row ID.
+ * Used by admin to load any vendor's shelf without needing user_id linkage.
+ */
+export async function getVendorById(id: string): Promise<Vendor | null> {
+  const { data, error } = await supabase
+    .from("vendors")
+    .select(`*, mall:malls ( id, name, city, state, slug, address )`)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) { console.error("[posts] getVendorById:", error.message); return null; }
+  return data as Vendor | null;
+}
+
+/**
  * Fetch all vendors at a given mall, sorted by booth number.
  * Used by admin and internal lookups.
  */

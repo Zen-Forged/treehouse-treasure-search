@@ -1,7 +1,7 @@
 // app/shelves/page.tsx
 // Shelves — all vendor booths at America's Antique Mall.
-// Public: anyone can browse.
-// Admin (logged in): sees an "Edit" button on each booth card.
+// Public: browse vendor cards, tap to go to vendor profile.
+// Admin: each card has an edit button; tapping the card loads that booth in My Shelf.
 
 "use client";
 
@@ -36,7 +36,7 @@ const C = {
   bannerTo:    "#2d5435",
 };
 
-const MALL_ID = "19a8ff7e-cb45-491f-9451-878e2dde5bf4"; // America's Antique Mall
+const MALL_ID = "19a8ff7e-cb45-491f-9451-878e2dde5bf4";
 
 function vendorHueBg(name: string): string {
   let h = 0;
@@ -48,9 +48,20 @@ function vendorHueBg(name: string): string {
 // ─── Vendor card ───────────────────────────────────────────────────────────────
 
 function VendorCard({ vendor, index, adminUser }: { vendor: Vendor; index: number; adminUser: boolean }) {
+  const router = useRouter();
   const [imgErr, setImgErr] = useState(false);
   const heroUrl = (vendor as any).hero_image_url as string | null | undefined;
   const hasHero = !!heroUrl && !imgErr;
+
+  // Admin: tap card → load this booth in My Shelf
+  // Public: tap card → vendor profile page
+  function handleCardTap() {
+    if (adminUser) {
+      router.push(`/my-shelf?vendor=${vendor.id}`);
+    } else {
+      router.push(`/vendor/${vendor.slug}`);
+    }
+  }
 
   return (
     <motion.div
@@ -58,90 +69,92 @@ function VendorCard({ vendor, index, adminUser }: { vendor: Vendor; index: numbe
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, delay: Math.min(index * 0.04, 0.3), ease: [0.25, 0.1, 0.25, 1] }}
     >
-      <Link href={`/vendor/${vendor.slug}`} style={{ textDecoration: "none", display: "block" }}>
-        <div style={{
+      <div
+        onClick={handleCardTap}
+        style={{
           borderRadius: 16, overflow: "hidden",
-          background: C.surface,
-          border: `1px solid ${C.border}`,
+          background: C.surface, border: `1px solid ${C.border}`,
           boxShadow: "0 2px 10px rgba(26,24,16,0.06)",
-          position: "relative",
-        }}>
-          {/* Hero / color band */}
-          <div style={{ height: 90, position: "relative", overflow: "hidden" }}>
-            {hasHero ? (
-              <img
-                src={heroUrl!}
-                alt=""
-                onError={() => setImgErr(true)}
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-              />
-            ) : (
-              <div style={{ width: "100%", height: "100%", background: vendorHueBg(vendor.display_name) }} />
-            )}
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(20,18,12,0.55) 0%, transparent 60%)" }} />
+          position: "relative", cursor: "pointer",
+          WebkitTapHighlightColor: "transparent",
+        }}
+      >
+        {/* Hero / color band */}
+        <div style={{ height: 90, position: "relative", overflow: "hidden" }}>
+          {hasHero ? (
+            <img src={heroUrl!} alt="" onError={() => setImgErr(true)}
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          ) : (
+            <div style={{ width: "100%", height: "100%", background: vendorHueBg(vendor.display_name) }} />
+          )}
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(20,18,12,0.55) 0%, transparent 60%)" }} />
 
-            {/* Booth pill — bottom-left of hero */}
-            {vendor.booth_number && (
-              <div style={{
-                position: "absolute", bottom: 10, left: 12, zIndex: 2,
-                padding: "3px 9px", borderRadius: 14,
-                background: "rgba(20,18,12,0.54)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
-                border: "1px solid rgba(255,255,255,0.18)",
-              }}>
-                <span style={{ fontFamily: "monospace", fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.95)", letterSpacing: "0.3px" }}>
-                  Booth {vendor.booth_number}
-                </span>
-              </div>
-            )}
-
-            {/* Admin edit button — top-right */}
-            {adminUser && (
-              <Link
-                href={`/admin?vendor=${vendor.id}`}
-                onClick={e => e.stopPropagation()}
-                style={{
-                  position: "absolute", top: 10, right: 10, zIndex: 10,
-                  width: 28, height: 28, borderRadius: "50%",
-                  background: "rgba(20,18,12,0.52)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
-                  border: "1px solid rgba(255,255,255,0.18)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  textDecoration: "none",
-                }}
-              >
-                <Pencil size={11} style={{ color: "rgba(255,255,255,0.88)" }} />
-              </Link>
-            )}
-          </div>
-
-          {/* Info row */}
-          <div style={{ padding: "11px 14px 13px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{
-                fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: C.textPrimary,
-                lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                marginBottom: 2,
-              }}>
-                {vendor.display_name}
-              </div>
-              {vendor.bio && (
-                <div style={{
-                  fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: C.textMuted,
-                  lineHeight: 1.45, overflow: "hidden", display: "-webkit-box",
-                  WebkitLineClamp: 1, WebkitBoxOrient: "vertical" as const,
-                }}>
-                  {vendor.bio}
-                </div>
-              )}
+          {/* Booth pill */}
+          {vendor.booth_number && (
+            <div style={{
+              position: "absolute", bottom: 10, left: 12, zIndex: 2,
+              padding: "3px 9px", borderRadius: 14,
+              background: "rgba(20,18,12,0.54)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+              border: "1px solid rgba(255,255,255,0.18)",
+            }}>
+              <span style={{ fontFamily: "monospace", fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.95)", letterSpacing: "0.3px" }}>
+                Booth {vendor.booth_number}
+              </span>
             </div>
-            <ChevronRight size={15} style={{ color: C.textFaint, flexShrink: 0 }} />
-          </div>
+          )}
+
+          {/* Admin: edit button → vendor profile page (for future admin edit page) */}
+          {adminUser && (
+            <Link
+              href={`/vendor/${vendor.slug}`}
+              onClick={e => e.stopPropagation()}
+              style={{
+                position: "absolute", top: 10, right: 10, zIndex: 10,
+                width: 28, height: 28, borderRadius: "50%",
+                background: "rgba(20,18,12,0.52)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+                border: "1px solid rgba(255,255,255,0.18)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                textDecoration: "none",
+              }}
+            >
+              <Pencil size={11} style={{ color: "rgba(255,255,255,0.88)" }} />
+            </Link>
+          )}
         </div>
-      </Link>
+
+        {/* Info row */}
+        <div style={{ padding: "11px 14px 13px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: C.textPrimary,
+              lineHeight: 1.25, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              marginBottom: 2,
+            }}>
+              {vendor.display_name}
+            </div>
+            {vendor.bio && (
+              <div style={{
+                fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: C.textMuted,
+                lineHeight: 1.45, overflow: "hidden", display: "-webkit-box",
+                WebkitLineClamp: 1, WebkitBoxOrient: "vertical" as const,
+              }}>
+                {vendor.bio}
+              </div>
+            )}
+            {adminUser && (
+              <div style={{ fontSize: 9, color: C.green, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1.4px", marginTop: 3 }}>
+                Tap to manage shelf
+              </div>
+            )}
+          </div>
+          <ChevronRight size={15} style={{ color: C.textFaint, flexShrink: 0 }} />
+        </div>
+      </div>
     </motion.div>
   );
 }
 
-// ─── Skeleton card ─────────────────────────────────────────────────────────────
+// ─── Skeleton ──────────────────────────────────────────────────────────────────
 
 function SkeletonCard() {
   return (
@@ -158,10 +171,10 @@ function SkeletonCard() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ShelvesPage() {
-  const [vendors,   setVendors]   = useState<Vendor[]>([]);
-  const [mall,      setMall]      = useState<Mall | null>(null);
-  const [loading,   setLoading]   = useState(true);
-  const [user,      setUser]      = useState<User | null>(null);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [mall,    setMall]    = useState<Mall | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [user,    setUser]    = useState<User | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -215,6 +228,7 @@ export default function ShelvesPage() {
           {!loading && vendors.length > 0 && (
             <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 12, color: C.textFaint, marginTop: 2 }}>
               {vendors.length} {vendors.length === 1 ? "booth" : "booths"} active
+              {adminUser && <span style={{ color: C.green, marginLeft: 6 }}>· Admin mode</span>}
             </div>
           )}
         </div>
