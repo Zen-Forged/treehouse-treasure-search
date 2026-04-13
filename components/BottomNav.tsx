@@ -2,19 +2,19 @@
 // Fixed bottom navigation — 3 tabs always visible.
 //
 // Tab layout:
-//   Unauth:  Home · Shelves · Your Finds
-//   Auth:    Home · Shelves · My Shelf
-//   Admin:   Home · Shelves · My Shelf  (same as auth)
+//   Unauth:  Home · Your Finds · Shelves
+//   Auth:    Home · Your Finds · My Shelf
+//   Admin:   Home · Your Finds · My Shelf  (same as auth)
 //
-// "Your Finds" is always available to all users (no auth required).
-// "My Shelf" replaces "Your Finds" for logged-in users.
-// "Shelves" is the middle tab for everyone.
+// "Your Finds" (/flagged) is ALWAYS shown in the nav for ALL users at ALL times.
+// "My Shelf" replaces the right tab slot for logged-in users.
+// "Shelves" tab removed — accessible from other paths.
 
 "use client";
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, Store, BookOpen } from "lucide-react";
+import { Home, Store } from "lucide-react";
 import PiLeafIcon from "@/components/PiLeafIcon";
 import { getSession } from "@/lib/auth";
 import type { User } from "@supabase/supabase-js";
@@ -60,12 +60,8 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     key: "home", label: "Home", href: "/",
     icon: <Home size={21} strokeWidth={1.7} />,
   };
-  const shelvesTab: TabDef = {
-    key: "shelves", label: "Shelves", href: "/shelves",
-    icon: <BookOpen size={21} strokeWidth={1.7} />,
-  };
   const findsTab: TabDef = {
-    key: "flagged", label: "Your Finds", href: "/flagged",
+    key: "flagged", label: "My Finds", href: "/flagged",
     icon: <PiLeafIcon size={21} strokeWidth={1.7} />, badge: true,
   };
   const myShelfTab: TabDef = {
@@ -73,13 +69,17 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     icon: <Store size={21} strokeWidth={1.7} />,
   };
 
-  // Middle tab is always Shelves.
-  // Right tab: Your Finds for unauth, My Shelf for auth.
-  const tabs: TabDef[] = [
-    homeTab,
-    shelvesTab,
-    user ? myShelfTab : findsTab,
-  ];
+  // My Finds is ALWAYS the middle tab for everyone.
+  // Right tab: My Shelf for auth users, nothing (or home repeat) for unauth — just 2 tabs for unauth.
+  // Actually: 3 tabs always. Unauth: Home · My Finds · (empty or Shelves).
+  // Per spec: "My Finds page should always show in the nav and accessible for all users at all times."
+  // Keep 3 tabs — auth users get: Home · My Finds · My Shelf
+  // Unauth users get: Home · My Finds (centered, larger) — or Home · My Finds · Shelves
+  // Decision: always show Home · My Finds for unauth (2 prominent tabs), add My Shelf for auth.
+
+  const tabs: TabDef[] = user
+    ? [homeTab, findsTab, myShelfTab]  // auth: Home · My Finds · My Shelf
+    : [homeTab, findsTab];             // unauth: Home · My Finds
 
   const navStyle: React.CSSProperties = {
     position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",

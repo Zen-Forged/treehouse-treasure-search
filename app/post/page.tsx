@@ -2,22 +2,25 @@
 // Vendor capture — auth-optional (soft gate).
 //
 // IDENTITY RESOLUTION (authoritative order):
-//   1. If auth session exists → getVendorByUserId(user.id) → locked identity from Supabase
-//   2. If no Supabase vendor found + localStorage has profile → use as pending identity
-//   3. If neither → show setup form (first-time vendor)
+//   1. If auth session + ?vendor=[id] query param (admin posting to specific booth)
+//   2. If auth session exists → getVendorByUserId(user.id) → locked identity from Supabase
+//   3. If no Supabase vendor found + localStorage has profile → use as pending identity
+//   4. If neither → show setup form (first-time vendor)
 //
-// This ensures posting always uses the correct vendor account, regardless of
-// which device localStorage was set on.
+// Admin fix: if ?vendor=[id] is present in URL (set by My Shelf admin switcher),
+// the post is attributed to that vendor ID, not the admin's own user_id-linked vendor.
+//
+// After a successful save, page redirects to /my-shelf after 1.8s.
 
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRef, useState, useEffect, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, ArrowLeft, ChevronDown, Check, Loader } from "lucide-react";
-import { getAllMalls, createPost, createVendor, uploadPostImage, getVendorByUserId, slugify } from "@/lib/posts";
+import { getAllMalls, createPost, createVendor, uploadPostImage, getVendorByUserId, getVendorById, slugify } from "@/lib/posts";
 import { safeStorage } from "@/lib/safeStorage";
-import { getSession } from "@/lib/auth";
+import { getSession, isAdmin } from "@/lib/auth";
 import type { Mall, Vendor } from "@/types/treehouse";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 
@@ -71,19 +74,22 @@ async function generateCaption(imageDataUrl: string): Promise<{ title: string; c
 
 type SaveStage = "idle" | "generating" | "uploading" | "done" | "error";
 
-export default function PostCapturePage() {
-  const router     = useRouter();
-  const cameraRef  = useRef<HTMLInputElement>(null);
-  const galleryRef = useRef<HTMLInputElement>(null);
+// ─── Inner component (needs useSearchParams) ───────────────────────────────────
+
+function PostCaptureInner() {
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const cameraRef    = useRef<HTMLInputElement>(null);
+  const galleryRef   = useRef<HTMLInputElement>(null);
 
   const [identityReady, setIdentityReady] = useState(false);
   const [userId,        setUserId]        = useState<string | null>(null);
+  const [adminUser,     setAdminUser]     = useState(false);
 
-  // resolvedVendor: the Supabase-confirmed vendor for this auth user (or null)
+  // resolvedVendor: the Supabase-confirmed vendor to post under
+  // For admin: may be set from ?vendor=[id] param (the booth they're managing)
   const [resolvedVendor, setResolvedVendor] = useState<Vendor | null>(null);
-
-  // localProfile: used only when no Supabase vendor is found yet (first-time / unauth)
-  const [localProfile, setLocalProfile] = useState<LocalVendorProfile | null>(null);
+  const [localProfile,   setLocalProfile]   = useState<LocalVendorProfile | null>(null);
 
   const [malls,        setMalls]        = useState<Mall[]>([]);
   const [mallsLoading, setMallsLoading] = useState(true);
@@ -100,23 +106,30 @@ export default function PostCapturePage() {
   const [previewImg, setPreviewImg] = useState<string | null>(null);
 
   // ── Identity resolution ──
-  // Priority: Supabase (by user_id) → localStorage → setup form
   useEffect(() => {
     getSession().then(async s => {
-      const uid = s?.user?.id ?? null;
+      const uid   = s?.user?.id ?? null;
+      const admin = s?.user ? isAdmin(s.user) : false;
       setUserId(uid);
+      setAdminUser(admin);
 
-      // Always load malls (needed for setup form and display)
       getAllMalls().then(data => { setMalls(data); setMallsLoading(false); });
 
+      // Admin with ?vendor=[id] param → post to that specific vendor's booth
+      const vendorParam = searchParams.get("vendor");
+      if (admin && vendorParam && uid) {
+        const v = await getVendorById(vendorParam);
+        if (v) {
+          setResolvedVendor(v);
+          setIdentityReady(true);
+          return;
+        }
+      }
+
       if (uid) {
-        // Auth session exists — look up vendor in Supabase first
         const vendor = await getVendorByUserId(uid);
         if (vendor) {
-          // Supabase has a vendor for this user — use it as the locked identity
           setResolvedVendor(vendor);
-
-          // Sync localStorage cache so it stays consistent
           const cached: LocalVendorProfile = {
             display_name: vendor.display_name,
             booth_number: vendor.booth_number ?? "",
@@ -131,15 +144,12 @@ export default function PostCapturePage() {
           setIdentityReady(true);
           return;
         }
-        // No Supabase vendor yet — fall through to localStorage
       }
 
-      // No auth vendor found — try localStorage as pending identity
       const raw = safeStorage.getItem(LOCAL_VENDOR_KEY);
       if (raw) {
         try {
           const saved = JSON.parse(raw) as LocalVendorProfile;
-          // Backfill user_id if we have a session but it wasn't stored
           if (uid && !saved.user_id) {
             const updated = { ...saved, user_id: uid };
             safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(updated));
@@ -154,7 +164,6 @@ export default function PostCapturePage() {
     });
   }, []);
 
-  // Validate saved mall_id against live malls (for first-time form pre-fill)
   useEffect(() => {
     if (malls.length === 0 || mallsLoading || !localProfile) return;
     const match = malls.find(m => m.id === localProfile.mall_id);
@@ -178,12 +187,10 @@ export default function PostCapturePage() {
   const handleFile = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) return;
 
-    // Determine which identity to post under
-    // resolvedVendor (Supabase) takes strict priority over localProfile
-    const activeVendorId   = resolvedVendor?.id ?? localProfile?.vendor_id ?? null;
-    const activeMallId     = resolvedVendor?.mall_id ?? localProfile?.mall_id ?? null;
-    const activeBoothNum   = resolvedVendor?.booth_number ?? localProfile?.booth_number ?? null;
-    const activeDispName   = resolvedVendor?.display_name ?? localProfile?.display_name ?? null;
+    const activeVendorId = resolvedVendor?.id ?? localProfile?.vendor_id ?? null;
+    const activeMallId   = resolvedVendor?.mall_id ?? localProfile?.mall_id ?? null;
+    const activeBoothNum = resolvedVendor?.booth_number ?? localProfile?.booth_number ?? null;
+    const activeDispName = resolvedVendor?.display_name ?? localProfile?.display_name ?? null;
 
     if (!activeMallId || !activeDispName) {
       setSaveError("No vendor identity found. Complete your profile first.");
@@ -195,7 +202,6 @@ export default function PostCapturePage() {
     setSaveError(null);
 
     try {
-      // Read + compress
       const reader  = new FileReader();
       const rawData = await new Promise<string>((res, rej) => {
         reader.onload  = e => res(e.target?.result as string);
@@ -205,16 +211,13 @@ export default function PostCapturePage() {
       const compressed = await compressImage(rawData);
       setPreviewImg(compressed);
 
-      // Generate AI title + caption
       const { title, caption } = await generateCaption(compressed);
 
       setSaveStage("uploading");
 
-      // Ensure vendor row exists — create if this is first-time (no resolvedVendor, no vendor_id in localProfile)
       let vendorId = activeVendorId;
 
       if (!vendorId) {
-        // First-time publish: create the vendor row linked to this user
         const baseSlug = slugify(activeDispName);
         const slug     = baseSlug + "-" + Date.now().toString(36);
         const { data: vendor, error: vendorErr } = await createVendor({
@@ -231,7 +234,6 @@ export default function PostCapturePage() {
         }
         vendorId = vendor.id;
 
-        // Update localStorage cache with new vendor_id
         const updated: LocalVendorProfile = {
           ...(localProfile ?? {
             display_name: activeDispName,
@@ -248,11 +250,9 @@ export default function PostCapturePage() {
         setLocalProfile(updated);
       }
 
-      // Upload image
       let imageUrl: string | null = null;
       try { imageUrl = await uploadPostImage(compressed, vendorId); } catch {}
 
-      // Create post
       const { data: post } = await createPost({
         vendor_id:      vendorId,
         mall_id:        activeMallId,
@@ -269,10 +269,11 @@ export default function PostCapturePage() {
       }
 
       setSaveStage("done");
+
+      // Redirect to My Shelf after save confirmation
       setTimeout(() => {
-        setSaveStage("idle");
-        setPreviewImg(null);
-      }, 2200);
+        router.push("/my-shelf");
+      }, 1800);
 
     } catch (err) {
       console.error("[post] save failed:", err);
@@ -287,18 +288,6 @@ export default function PostCapturePage() {
     e.target.value = "";
   };
 
-  // The "active identity" for display — Supabase vendor wins over localStorage
-  const activeIdentity = resolvedVendor
-    ? {
-        display_name: resolvedVendor.display_name,
-        booth_number: resolvedVendor.booth_number ?? "",
-        mall_name:    (resolvedVendor.mall as any)?.name ?? "",
-        mall_city:    (resolvedVendor.mall as any)?.city ?? "",
-        vendor_id:    resolvedVendor.id,
-      }
-    : localProfile;
-
-  // Identity is valid if either Supabase vendor or localStorage profile has mall + name
   const hasValidIdentity = !!(resolvedVendor?.mall_id || localProfile?.mall_id) &&
                            !!(resolvedVendor?.display_name?.trim() || localProfile?.display_name?.trim());
 
@@ -323,7 +312,7 @@ export default function PostCapturePage() {
       <input ref={cameraRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={onFileChange} />
       <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
 
-      {/* ── Toast overlay ── */}
+      {/* ── Toast overlay — CENTERED in take-a-photo section ── */}
       <AnimatePresence>
         {(isSaving || saveStage === "done" || saveStage === "error") && (
           <motion.div
@@ -334,49 +323,58 @@ export default function PostCapturePage() {
             transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
             style={{
               position: "fixed",
-              bottom: "max(80px, calc(env(safe-area-inset-bottom, 0px) + 72px))",
-              left: "50%", transform: "translateX(-50%)",
-              zIndex: 100, maxWidth: 320, width: "calc(100% - 40px)",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              zIndex: 100,
+              maxWidth: 300,
+              width: "calc(100% - 48px)",
               background: saveStage === "error"
                 ? "rgba(139,32,32,0.92)"
                 : saveStage === "done"
                   ? "rgba(18,34,20,0.92)"
                   : "rgba(26,24,16,0.88)",
               backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
-              borderRadius: 16, padding: "14px 18px",
-              display: "flex", alignItems: "center", gap: 12,
-              boxShadow: "0 4px 24px rgba(0,0,0,0.22)",
+              borderRadius: 20, padding: "20px 22px",
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 14,
+              boxShadow: "0 8px 40px rgba(0,0,0,0.28)",
+              textAlign: "center",
             }}
           >
             {previewImg && saveStage !== "error" && (
-              <div style={{ width: 40, height: 40, borderRadius: 8, overflow: "hidden", flexShrink: 0, background: "rgba(255,255,255,0.1)" }}>
+              <div style={{ width: 56, height: 56, borderRadius: 12, overflow: "hidden", flexShrink: 0, background: "rgba(255,255,255,0.1)" }}>
                 <img src={previewImg} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               </div>
             )}
             {saveStage === "done" && (
-              <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Check size={14} style={{ color: "#fff" }} />
+              <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Check size={18} style={{ color: "#fff" }} />
               </div>
             )}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: "#fff", lineHeight: 1.3 }}>
+            {isSaving && (
+              <Loader size={20} style={{ color: "rgba(255,255,255,0.80)", animation: "spin 0.9s linear infinite" }} />
+            )}
+            <div>
+              <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: "#fff", lineHeight: 1.3, marginBottom: 4 }}>
                 {saveStage === "generating" ? "Reading your find…" :
                  saveStage === "uploading"  ? "Saving to shelf…" :
-                 saveStage === "done"       ? "Added to your shelf" :
+                 saveStage === "done"       ? "Added to your shelf!" :
                                              saveError ?? "Something went wrong"}
               </div>
               {isSaving && (
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.54)", marginTop: 2 }}>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>
                   {saveStage === "generating" ? "Writing a caption" : "Uploading image"}
                 </div>
               )}
+              {saveStage === "done" && (
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>
+                  Taking you to your shelf…
+                </div>
+              )}
             </div>
-            {isSaving && (
-              <Loader size={14} style={{ color: "rgba(255,255,255,0.7)", animation: "spin 0.9s linear infinite", flexShrink: 0 }} />
-            )}
             {saveStage === "error" && (
               <button onClick={() => { setSaveStage("idle"); setSaveError(null); setPreviewImg(null); }}
-                style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", background: "none", border: "none", cursor: "pointer", padding: "4px 0", flexShrink: 0 }}>
+                style={{ fontSize: 12, color: "rgba(255,255,255,0.80)", background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8, cursor: "pointer", padding: "8px 16px" }}>
                 Dismiss
               </button>
             )}
@@ -388,12 +386,14 @@ export default function PostCapturePage() {
 
         {/* Nav */}
         <header style={{ display: "flex", alignItems: "center", padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 14px", borderBottom: `1px solid ${C.border}`, background: C.bg }}>
-          <button onClick={() => router.back()} style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer", marginRight: 12 }}>
+          <button onClick={() => router.back()} style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer", marginRight: 12, WebkitTapHighlightColor: "transparent" }}>
             <ArrowLeft size={15} style={{ color: C.textMid }} />
           </button>
           <div>
             <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: C.textPrimary, lineHeight: 1 }}>Add to Shelf</div>
-            <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginTop: 2 }}>Share with your community</div>
+            <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginTop: 2 }}>
+              {resolvedVendor ? resolvedVendor.display_name : "Share with your community"}
+            </div>
           </div>
         </header>
 
@@ -404,7 +404,6 @@ export default function PostCapturePage() {
             style={{ borderRadius: 14, background: C.surface, border: `1px solid ${C.border}`, overflow: "hidden" }}>
 
             {hasValidIdentity ? (
-              /* Locked identity — shows whichever source won */
               <div style={{ padding: "13px 14px" }}>
                 <div style={{ fontSize: 8, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginBottom: 6 }}>Posting as</div>
                 <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: C.textPrimary, marginBottom: 2 }}>
@@ -419,7 +418,6 @@ export default function PostCapturePage() {
                 </div>
               </div>
             ) : (
-              /* First-time setup form */
               <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: 12 }}>
                 <div style={{ fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600, color: C.textPrimary, marginBottom: 2 }}>
                   Set up your vendor profile
@@ -519,5 +517,15 @@ export default function PostCapturePage() {
       </div>
       <style>{`.hidden { display: none; } @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
     </div>
+  );
+}
+
+// ─── Page wrapper — Suspense for useSearchParams ───────────────────────────────
+
+export default function PostCapturePage() {
+  return (
+    <Suspense>
+      <PostCaptureInner />
+    </Suspense>
   );
 }
