@@ -60,6 +60,7 @@ function vendorHueBg(name: string): string {
 }
 
 // ─── Add Booth Sheet ──────────────────────────────────────────────────────────
+// Sheet uses maxHeight + overflowY: auto so the keyboard doesn't clip content.
 
 function AddBoothSheet({
   malls,
@@ -131,7 +132,7 @@ function AddBoothSheet({
         }}
       />
 
-      {/* Sheet */}
+      {/* Sheet — maxHeight prevents keyboard from clipping content */}
       <motion.div
         initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
         transition={{ type: "spring", damping: 28, stiffness: 280 }}
@@ -139,105 +140,114 @@ function AddBoothSheet({
           position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
           width: "100%", maxWidth: 430, zIndex: 300,
           background: C.bg, borderRadius: "20px 20px 0 0",
-          padding: "0 20px calc(env(safe-area-inset-bottom, 0px) + 28px)",
           boxShadow: "0 -8px 40px rgba(28,26,20,0.18)",
+          // Let the sheet grow but not exceed 85% of viewport
+          maxHeight: "85dvh",
+          display: "flex", flexDirection: "column",
         }}
       >
-        {/* Handle */}
-        <div style={{ display: "flex", justifyContent: "center", paddingTop: 12, marginBottom: 20 }}>
+        {/* Handle — fixed at top, never scrolls */}
+        <div style={{ flexShrink: 0, display: "flex", justifyContent: "center", paddingTop: 12, paddingBottom: 4 }}>
           <div style={{ width: 36, height: 4, borderRadius: 2, background: C.border }} />
         </div>
 
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-          <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: C.textPrimary }}>
-            Add a Booth
-          </div>
-          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer" }}>
-            <X size={14} style={{ color: C.textMuted }} />
-          </button>
-        </div>
-
-        {/* Form */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          {/* Display name */}
-          <div>
-            <label style={labelStyle}>Booth Name *</label>
-            <input
-              value={displayName}
-              onChange={e => setDisplayName(e.target.value)}
-              placeholder="e.g. ZenForged Finds"
-              style={inputStyle}
-              autoFocus
-            />
-          </div>
-
-          {/* Booth number */}
-          <div>
-            <label style={labelStyle}>Booth Number</label>
-            <input
-              value={boothNumber}
-              onChange={e => setBoothNumber(e.target.value)}
-              placeholder="e.g. 369"
-              style={inputStyle}
-            />
-          </div>
-
-          {/* Mall selection */}
-          <div>
-            <label style={labelStyle}>Mall *</label>
-            <div style={{ position: "relative" }}>
-              <select
-                value={mallId}
-                onChange={e => setMallId(e.target.value)}
-                style={{
-                  ...inputStyle,
-                  appearance: "none", WebkitAppearance: "none",
-                  paddingRight: 36, cursor: "pointer",
-                }}
-              >
-                <option value="">Select a mall…</option>
-                {malls.map(m => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}{m.city ? ` · ${m.city}` : ""}
-                  </option>
-                ))}
-              </select>
-              <ChevronRight size={13} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%) rotate(90deg)", color: C.textMuted, pointerEvents: "none" }} />
+        {/* Scrollable content area */}
+        <div style={{
+          flex: 1, overflowY: "auto", overflowX: "hidden",
+          padding: "8px 20px calc(env(safe-area-inset-bottom, 0px) + 28px)",
+          WebkitOverflowScrolling: "touch",
+        }}>
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: C.textPrimary }}>
+              Add a Booth
             </div>
+            <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer" }}>
+              <X size={14} style={{ color: C.textMuted }} />
+            </button>
           </div>
 
-          {/* Error */}
-          {error && (
-            <div style={{ fontSize: 12, color: C.red, background: C.redBg, borderRadius: 10, padding: "10px 14px" }}>
-              {error}
+          {/* Form */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            {/* Display name */}
+            <div>
+              <label style={labelStyle}>Booth Name *</label>
+              <input
+                value={displayName}
+                onChange={e => setDisplayName(e.target.value)}
+                placeholder="e.g. ZenForged Finds"
+                style={inputStyle}
+                autoFocus
+              />
             </div>
-          )}
 
-          {/* Submit */}
-          <button
-            onClick={handleSubmit}
-            disabled={submitting || done}
-            style={{
-              width: "100%", padding: "14px",
-              borderRadius: 14, border: "none",
-              background: done ? C.greenSolid : C.green,
-              color: "#fff", fontSize: 14, fontWeight: 600,
-              fontFamily: "Georgia, serif",
-              cursor: submitting || done ? "default" : "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              opacity: submitting ? 0.8 : 1,
-              transition: "background 0.2s",
-            }}
-          >
-            {done ? (
-              <><Check size={16} /> Booth added</>
-            ) : submitting ? (
-              <><Loader size={16} style={{ animation: "spin 0.9s linear infinite" }} /> Adding…</>
-            ) : (
-              "Add Booth"
+            {/* Booth number */}
+            <div>
+              <label style={labelStyle}>Booth Number</label>
+              <input
+                value={boothNumber}
+                onChange={e => setBoothNumber(e.target.value)}
+                placeholder="e.g. 369"
+                style={inputStyle}
+              />
+            </div>
+
+            {/* Mall selection */}
+            <div>
+              <label style={labelStyle}>Mall *</label>
+              <div style={{ position: "relative" }}>
+                <select
+                  value={mallId}
+                  onChange={e => setMallId(e.target.value)}
+                  style={{
+                    ...inputStyle,
+                    appearance: "none", WebkitAppearance: "none",
+                    paddingRight: 36, cursor: "pointer",
+                  }}
+                >
+                  <option value="">Select a mall…</option>
+                  {malls.map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}{m.city ? ` · ${m.city}` : ""}
+                    </option>
+                  ))}
+                </select>
+                <ChevronRight size={13} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%) rotate(90deg)", color: C.textMuted, pointerEvents: "none" }} />
+              </div>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div style={{ fontSize: 12, color: C.red, background: C.redBg, borderRadius: 10, padding: "10px 14px" }}>
+                {error}
+              </div>
             )}
-          </button>
+
+            {/* Submit */}
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || done}
+              style={{
+                width: "100%", padding: "14px",
+                borderRadius: 14, border: "none",
+                background: done ? C.greenSolid : C.green,
+                color: "#fff", fontSize: 14, fontWeight: 600,
+                fontFamily: "Georgia, serif",
+                cursor: submitting || done ? "default" : "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                opacity: submitting ? 0.8 : 1,
+                transition: "background 0.2s",
+              }}
+            >
+              {done ? (
+                <><Check size={16} /> Booth added</>
+              ) : submitting ? (
+                <><Loader size={16} style={{ animation: "spin 0.9s linear infinite" }} /> Adding…</>
+              ) : (
+                "Add Booth"
+              )}
+            </button>
+          </div>
         </div>
       </motion.div>
     </>

@@ -1,11 +1,6 @@
 // app/shelf/[slug]/page.tsx
 // Public Saved Shelf — read-only view of a vendor's shelf.
-// Identical cinematic layout to My Shelf but with no editing capability:
-//   - No hero image edit button
-//   - No "Add" tile
-//   - No sign-out button
-//   - No admin link
-// Linked from vendor's "Share" button in My Shelf.
+// No edit button, no Add tile, no sign-out, no admin link.
 
 "use client";
 
@@ -16,7 +11,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { MapPin, ChevronRight, ArrowLeft, Heart } from "lucide-react";
+import { MapPin, ChevronRight, ArrowLeft, Heart, LayoutGrid } from "lucide-react";
 import { getVendorBySlug, getVendorPosts, getAllMalls } from "@/lib/posts";
 import type { Post, Vendor, Mall } from "@/types/treehouse";
 import BottomNav from "@/components/BottomNav";
@@ -70,23 +65,17 @@ function PublicVendorHero({ displayName, boothNumber, mallName, mallCity, heroIm
 }) {
   return (
     <div style={{ padding: "max(14px, env(safe-area-inset-top, 14px)) 10px 0" }}>
-
-      {/* App bar */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, paddingLeft: 4, paddingRight: 4 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button onClick={onBack}
-            style={{ width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: `1px solid ${C.border}`, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
-            <ArrowLeft size={13} style={{ color: C.textMid }} />
-          </button>
-          <Image src="/logo.png" alt="Treehouse Finds" width={18} height={18} />
-          <span style={{ fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 700, color: C.green, letterSpacing: "0.4px" }}>
-            Treehouse Finds
-          </span>
-        </div>
-        {/* No explore link, no share/sign-out/admin — read-only */}
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 10, paddingLeft: 4, paddingRight: 4 }}>
+        <button onClick={onBack}
+          style={{ width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: `1px solid ${C.border}`, cursor: "pointer", WebkitTapHighlightColor: "transparent", marginRight: 8 }}>
+          <ArrowLeft size={13} style={{ color: C.textMid }} />
+        </button>
+        <Image src="/logo.png" alt="Treehouse Finds" width={18} height={18} />
+        <span style={{ fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 700, color: C.green, letterSpacing: "0.4px", marginLeft: 6 }}>
+          Treehouse Finds
+        </span>
       </div>
 
-      {/* Hero card (no edit button) */}
       <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", minHeight: 200 }}>
         {heroImageUrl
           ? <img src={heroImageUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
@@ -145,7 +134,7 @@ function TabSwitcher({ tab, availableCount, foundCount, onChange }: { tab: "avai
   );
 }
 
-// ─── Tiles (read-only — no owner controls) ─────────────────────────────────────
+// ─── Tiles ─────────────────────────────────────────────────────────────────────
 
 function ShelfTile({ post, index, sold }: { post: Post; index: number; sold?: boolean }) {
   const [imgErr, setImgErr] = useState(false);
@@ -207,7 +196,7 @@ function BoothFinderCard({ boothNumber, displayName, mallName, mallCity }: { boo
   );
 }
 
-// ─── Explore CTA ───────────────────────────────────────────────────────────────
+// ─── Explore CTA — "View more booths" → /shelves ──────────────────────────────
 
 function ExploreBanner() {
   return (
@@ -217,9 +206,10 @@ function ExploreBanner() {
       </p>
       <h2 style={{ margin: "0 0 6px", fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>Explore more shelves nearby</h2>
       <p style={{ margin: "0 0 16px", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 12, color: "rgba(255,255,255,0.55)" }}>From local booths. Across Kentucky.</p>
-      <Link href="/"
+      <Link href="/shelves"
         style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 18px", borderRadius: 24, background: "rgba(255,255,255,0.95)", textDecoration: "none", fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: C.bannerFrom }}>
-        Enter the Treehouse <ChevronRight size={14} style={{ color: C.bannerFrom }} />
+        <LayoutGrid size={14} style={{ color: C.bannerFrom }} />
+        View more booths
       </Link>
     </div>
   );
@@ -301,7 +291,6 @@ export default function PublicShelfPage() {
           onBack={() => router.back()}
         />
       ) : (
-        /* Header skeleton */
         <div style={{ padding: "max(14px, env(safe-area-inset-top, 14px)) 10px 0" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, paddingLeft: 4 }}>
             <div className="skeleton-shimmer" style={{ width: 18, height: 18, borderRadius: "50%" }} />
