@@ -159,11 +159,11 @@ function AdminVendorSwitcher({ vendors, activeId, onSelect }: {
 
 // ─── Hero card ────────────────────────────────────────────────────────────────
 
-function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl, heroKey, onShare, hasCopied, hasSlug, onHeroImageChange, heroUploading, vendorId, isAdminUser, onSignOut, allVendors, onVendorSwitch }: {
+function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl, heroKey, onShare, hasCopied, hasSlug, onHeroImageChange, heroUploading, heroError, vendorId, isAdminUser, onSignOut, allVendors, onVendorSwitch }: {
   displayName: string; boothNumber: string | null; mallName?: string; mallCity?: string;
   heroImageUrl?: string | null; heroKey: number;
   onShare: () => void; hasCopied: boolean; hasSlug: boolean;
-  onHeroImageChange: (file: File) => void; heroUploading: boolean;
+  onHeroImageChange: (file: File) => void; heroUploading: boolean; heroError: string | null;
   vendorId: string | undefined; isAdminUser: boolean; onSignOut: () => void;
   allVendors: Vendor[]; onVendorSwitch: (v: Vendor) => void;
 }) {
@@ -253,6 +253,13 @@ function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl
           </div>
         </div>
       </div>
+
+      {/* Upload error — shown below hero card */}
+      {heroError && (
+        <div style={{ margin: "8px 10px 0", padding: "10px 14px", borderRadius: 10, background: "rgba(139,32,32,0.08)", border: "1px solid rgba(139,32,32,0.18)", fontSize: 12, color: "#8b2020", lineHeight: 1.5 }}>
+          ⚠️ Upload error: {heroError}
+        </div>
+      )}
     </div>
   );
 }
@@ -446,6 +453,7 @@ function MyShelfInner() {
   const [heroImageUrl,  setHeroImageUrl]  = useState<string | null>(null);
   const [heroKey,       setHeroKey]       = useState(0);
   const [heroUploading, setHeroUploading] = useState(false);
+  const [heroError,     setHeroError]     = useState<string | null>(null);
   const [allVendors,    setAllVendors]    = useState<Vendor[]>([]);
 
   const userRef       = useRef<User | null>(null);
@@ -548,6 +556,7 @@ function MyShelfInner() {
   async function handleHeroImageChange(file: File) {
     if (!activeVendor?.id) return;
     setHeroUploading(true);
+    setHeroError(null);
     heroLockedRef.current = true;
     try {
       const reader  = new FileReader();
@@ -561,15 +570,23 @@ function MyShelfInner() {
       setHeroKey(k => k + 1);
       const uploadedUrl = await uploadVendorHeroImage(compressed, activeVendor.id);
       if (uploadedUrl) {
-        await updateVendorHeroImage(activeVendor.id, uploadedUrl);
-        setHeroImageUrl(uploadedUrl);
-        setHeroKey(k => k + 1);
-        setActiveVendor(v => v ? { ...v, hero_image_url: uploadedUrl } : v);
+        const dbOk = await updateVendorHeroImage(activeVendor.id, uploadedUrl);
+        if (dbOk) {
+          setHeroImageUrl(uploadedUrl);
+          setHeroKey(k => k + 1);
+          setActiveVendor(v => v ? { ...v, hero_image_url: uploadedUrl } : v);
+        } else {
+          setHeroError("Image uploaded but failed to save to database.");
+          setHeroImageUrl(activeVendor.hero_image_url ?? null);
+          setHeroKey(k => k + 1);
+        }
       } else {
+        setHeroError("Image upload to storage failed. Check Supabase bucket permissions.");
         setHeroImageUrl(activeVendor.hero_image_url ?? null);
         setHeroKey(k => k + 1);
       }
-    } catch {
+    } catch (err) {
+      setHeroError(`Unexpected error: ${err instanceof Error ? err.message : String(err)}`);
       setHeroImageUrl(activeVendor.hero_image_url ?? null);
       setHeroKey(k => k + 1);
     } finally {
@@ -619,6 +636,7 @@ function MyShelfInner() {
           onSignOut={handleSignOut}
           allVendors={allVendors}
           onVendorSwitch={handleVendorSwitch}
+          heroError={heroError}
         />
       ) : (
         <header style={{ background: C.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${C.border}`, padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>

@@ -1,6 +1,6 @@
 // app/flagged/page.tsx
-// Your Finds — all items the user has saved locally.
-// Explorer mode only (Curator sees My Shelf instead).
+// My Finds — all items the user has saved locally.
+// No auth required — available to all user types.
 // Grouped by vendor/booth, sorted by booth number for in-store navigation.
 // Within each group: available items first, Found (sold) items last.
 // Stale bookmark IDs (posts deleted from Supabase) are auto-cleaned from localStorage.
@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import PiLeafIcon from "@/components/PiLeafIcon";
+import { Heart } from "lucide-react";
 import { getPostsByIds } from "@/lib/posts";
 import BottomNav from "@/components/BottomNav";
 import type { Post } from "@/types/treehouse";
@@ -66,21 +66,16 @@ function removeBookmark(postId: string) {
   try { localStorage.removeItem(`${BOOKMARK_PREFIX}${postId}`); } catch {}
 }
 
-// Remove bookmark keys for IDs that Supabase no longer has rows for.
-// Keeps localStorage in sync so the count badge stays accurate.
 function pruneStaleBookmarks(savedIds: string[], returnedIds: string[]) {
   const returnedSet = new Set(returnedIds);
   for (const id of savedIds) {
     if (!returnedSet.has(id)) {
-      console.log(`[flagged] pruning stale bookmark: ${id}`);
       removeBookmark(id);
     }
   }
 }
 
 // ─── Grouping + sorting ────────────────────────────────────────────────────────
-// Groups by vendor. Falls back to unique key per post if vendor join is missing
-// so no post is ever silently dropped.
 
 function groupByBooth(posts: Post[]): Array<{ label: string; vendorName: string; posts: Post[]; allFound: boolean }> {
   const map = new Map<string, { label: string; vendorName: string; posts: Post[] }>();
@@ -121,13 +116,13 @@ function EmptyFinds() {
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
       style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 32px 0", textAlign: "center" }}>
       <div style={{ width: 52, height: 52, borderRadius: "50%", background: C.surface, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 22 }}>
-        <PiLeafIcon size={22} strokeWidth={1.6} style={{ color: C.textMuted }} />
+        <Heart size={22} strokeWidth={1.6} style={{ color: C.textMuted }} />
       </div>
       <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: C.textPrimary, marginBottom: 10, lineHeight: 1.3 }}>
-        No finds saved yet
+        Nothing saved yet
       </div>
       <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: C.textMuted, lineHeight: 1.75, maxWidth: 230, margin: 0 }}>
-        Tap the leaf on any find to save it here, grouped by booth for your trip.
+        Tap the heart on any find to save it here, grouped by booth for your trip.
       </p>
     </motion.div>
   );
@@ -169,7 +164,7 @@ function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsav
                   filter: isSold ? "grayscale(0.5) brightness(0.88)" : "brightness(0.99) saturate(0.95)" }} />
             ) : (
               <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <PiLeafIcon size={18} strokeWidth={1.6} style={{ color: C.textFaint }} />
+                <Heart size={18} strokeWidth={1.6} style={{ color: C.textFaint }} />
               </div>
             )}
           </div>
@@ -195,7 +190,7 @@ function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsav
             )}
           </div>
 
-          <button onClick={handleUnsave} aria-label="Remove from Your Finds"
+          <button onClick={handleUnsave} aria-label="Remove from My Finds"
             style={{
               flexShrink: 0, width: 30, height: 30, borderRadius: "50%",
               display: "flex", alignItems: "center", justifyContent: "center",
@@ -203,7 +198,7 @@ function FindRow({ post, index, onUnsave }: { post: Post; index: number; onUnsav
               boxShadow: "0 1px 5px rgba(0,0,0,0.18)",
               WebkitTapHighlightColor: "transparent",
             }}>
-            <PiLeafIcon size={14} strokeWidth={2.0} style={{ color: "rgba(255,255,255,0.95)" }} />
+            <Heart size={14} strokeWidth={2.0} style={{ color: "rgba(255,255,255,0.95)", fill: "rgba(255,255,255,0.95)" }} />
           </button>
         </div>
       </Link>
@@ -268,7 +263,7 @@ function BoothSection({ label, vendorName, posts, allFound, startIndex, onUnsave
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function YourFindsPage() {
+export default function MyFindsPage() {
   const [posts,         setPosts]         = useState<Post[]>([]);
   const [loading,       setLoading]       = useState(true);
   const [bookmarkCount, setBookmarkCount] = useState(0);
@@ -279,25 +274,17 @@ export default function YourFindsPage() {
 
   async function loadPosts() {
     const ids = loadFlaggedIds();
-    console.log(`[flagged] localStorage bookmark IDs: ${ids.length}`, ids);
-
     if (ids.length === 0) {
       setPosts([]);
       setLoading(false);
       return;
     }
-
     const data = await getPostsByIds(ids);
-    console.log(`[flagged] Supabase returned: ${data.length} posts`);
-
-    // Prune stale bookmarks whose posts no longer exist in Supabase
     if (data.length < ids.length) {
       const returnedIds = data.map(p => p.id);
       pruneStaleBookmarks(ids, returnedIds);
-      // Re-sync count after pruning
       setBookmarkCount(loadBookmarkCount());
     }
-
     setPosts(data);
     setLoading(false);
   }
@@ -308,10 +295,7 @@ export default function YourFindsPage() {
   }, []);
 
   useEffect(() => {
-    function onFocus() {
-      syncCount();
-      loadPosts();
-    }
+    function onFocus() { syncCount(); loadPosts(); }
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, []);
@@ -346,7 +330,7 @@ export default function YourFindsPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
             <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
             <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, letterSpacing: "-0.3px", lineHeight: 1 }}>
-              Your Finds
+              My Finds
             </span>
           </div>
           <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: C.textMuted, lineHeight: 1.4 }}>
