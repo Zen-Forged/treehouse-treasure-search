@@ -28,7 +28,6 @@ import { MapPin, ChevronRight, Share2, Check, ImagePlus, Pencil, Loader, LogOut,
 import { PiLeaf } from "react-icons/pi";
 import {
   getVendorByUserId, getVendorById, getVendorsByMall, getVendorPosts, getAllMalls,
-  uploadVendorHeroImage, updateVendorHeroImage,
 } from "@/lib/posts";
 import { getSession, signOut, isAdmin } from "@/lib/auth";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Post, type Vendor, type Mall } from "@/types/treehouse";
@@ -558,6 +557,11 @@ function MyShelfInner() {
     setHeroUploading(true);
     setHeroError(null);
     heroLockedRef.current = true;
+
+    // Capture vendor id before async work
+    const vendorId = activeVendor.id;
+    const fallbackUrl = activeVendor.hero_image_url ?? null;
+
     try {
       const reader  = new FileReader();
       const dataUrl = await new Promise<string>((res, rej) => {
@@ -565,29 +569,40 @@ function MyShelfInner() {
         reader.onerror = rej;
         reader.readAsDataURL(file);
       });
-      const compressed  = await compressImage(dataUrl);
+
+      const compressed = await compressImage(dataUrl);
+
+      // Show preview immediately
       setHeroImageUrl(compressed);
       setHeroKey(k => k + 1);
-      const uploadedUrl = await uploadVendorHeroImage(compressed, activeVendor.id);
-      if (uploadedUrl) {
-        const dbOk = await updateVendorHeroImage(activeVendor.id, uploadedUrl);
-        if (dbOk) {
-          setHeroImageUrl(uploadedUrl);
-          setHeroKey(k => k + 1);
-          setActiveVendor(v => v ? { ...v, hero_image_url: uploadedUrl } : v);
-        } else {
-          setHeroError("Image uploaded but failed to save to database.");
-          setHeroImageUrl(activeVendor.hero_image_url ?? null);
-          setHeroKey(k => k + 1);
-        }
-      } else {
-        setHeroError("Image upload to storage failed. Check Supabase bucket permissions.");
-        setHeroImageUrl(activeVendor.hero_image_url ?? null);
+
+      // Upload via server route (uses service role key — bypasses RLS)
+      const res = await fetch("/api/vendor-hero", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base64DataUrl: compressed, vendorId }),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok || json.error) {
+        setHeroError(json.error ?? "Upload failed.");
+        setHeroImageUrl(fallbackUrl);
         setHeroKey(k => k + 1);
+        return;
       }
+
+      if (json.warning) {
+        console.warn("[hero] ", json.warning);
+      }
+
+      setHeroImageUrl(json.url);
+      setHeroKey(k => k + 1);
+      setActiveVendor(v => v ? { ...v, hero_image_url: json.url } : v);
+
     } catch (err) {
       setHeroError(`Unexpected error: ${err instanceof Error ? err.message : String(err)}`);
-      setHeroImageUrl(activeVendor.hero_image_url ?? null);
+      setHeroImageUrl(fallbackUrl);
       setHeroKey(k => k + 1);
     } finally {
       setHeroUploading(false);
