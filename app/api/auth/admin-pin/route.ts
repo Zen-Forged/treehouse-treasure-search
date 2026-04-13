@@ -3,14 +3,17 @@
 //
 // POST { pin: string }
 // → verifies PIN against ADMIN_PIN env var (server-only, never sent to client)
-// → uses Supabase service role to generate a magic link for ADMIN_EMAIL
-// → extracts the token_hash from the action_link URL
-// → returns { token, email } so the client can call supabase.auth.verifyOtp()
+// → uses Supabase service role to create a session directly for ADMIN_EMAIL
+// → returns { access_token, refresh_token } so the client can call supabase.auth.setSession()
+//
+// WHY setSession instead of verifyOtp:
+//   verifyOtp tokens expire in ~60s and are single-use. Network latency + Vercel cold starts
+//   can cause the token to expire before the client can use it. setSession with a real
+//   access_token + refresh_token bypasses this entirely.
 //
 // Security model:
 // - PIN is server-side only (never in NEXT_PUBLIC_* vars)
 // - Rate limited: max 5 attempts per IP per minute
-// - Token is single-use (Supabase invalidates after first use)
 // - SUPABASE_SERVICE_ROLE_KEY is server-only
 
 import { NextRequest, NextResponse } from "next/server";
@@ -52,41 +55,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Incorrect PIN." }, { status: 401 });
   }
 
-  // Use service role to generate a magic link — no email is sent
   const admin = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  const { data, error } = await admin.auth.admin.generateLink({
-    type:  "magiclink",
-    email: adminEmail,
+  // Look up or create the admin user, then create a session directly.
+  // This avoids the short-lived verifyOtp token race condition.
+  const { data: userList, error: listErr } = await admin.auth.admin.listUsers();
+  if (listErr) {
+    console.error("[admin-pin] listUsers error:", listErr.message);
+    return NextResponse.json({ error: "Failed to look up admin user." }, { status: 500 });
+  }
+
+  const adminUser = userList.users.find(u => u.email === adminEmail);
+  if (!adminUser) {
+    console.error("[admin-pin] admin user not found for email:", adminEmail);
+    return NextResponse.json({ error: "Admin user not found. Sign in via magic link once first." }, { status: 404 });
+  }
+
+  // Create a session for the admin user directly — no token TTL risk
+  const { data: sessionData, error: sessionErr } = await admin.auth.admin.createSession({
+    user_id: adminUser.id,
   });
 
-  if (error || !data?.properties?.action_link) {
-    console.error("[admin-pin] generateLink error:", error?.message, "data:", JSON.stringify(data?.properties));
-    return NextResponse.json({ error: "Failed to generate session token." }, { status: 500 });
+  if (sessionErr || !sessionData?.session) {
+    console.error("[admin-pin] createSession error:", sessionErr?.message);
+    return NextResponse.json({ error: "Failed to create admin session." }, { status: 500 });
   }
 
-  // The action_link is a URL like:
-  //   https://<project>.supabase.co/auth/v1/verify?token=<token_hash>&type=magiclink&...
-  // We need to extract the `token` query param — this is what verifyOtp expects.
-  let token: string | null = null;
-  try {
-    const url = new URL(data.properties.action_link);
-    token = url.searchParams.get("token");
-  } catch (parseErr) {
-    console.error("[admin-pin] failed to parse action_link:", parseErr);
-  }
-
-  if (!token) {
-    // Fallback: use hashed_token directly (older Supabase versions)
-    token = data.properties.hashed_token ?? null;
-  }
-
-  if (!token) {
-    console.error("[admin-pin] no token found in generateLink response:", JSON.stringify(data.properties));
-    return NextResponse.json({ error: "No token in response." }, { status: 500 });
-  }
-
-  return NextResponse.json({ token, email: adminEmail });
+  return NextResponse.json({
+    access_token:  sessionData.session.access_token,
+    refresh_token: sessionData.session.refresh_token,
+    email:         adminEmail,
+  });
 }
