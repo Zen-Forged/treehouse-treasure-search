@@ -18,49 +18,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, ChevronRight, Share2, Check, ImagePlus, Pencil, Loader, LayoutGrid } from "lucide-react";
+import { MapPin, Share2, Check, ImagePlus, Pencil, Loader } from "lucide-react";
 import { PiLeaf } from "react-icons/pi";
-import {
-  getVendorByUserId, getVendorById, getVendorsByMall, getVendorPosts, getAllMalls,
-} from "@/lib/posts";
-import { getSession, signOut, isAdmin } from "@/lib/auth";
+import { getVendorByUserId, getVendorById, getVendorPosts, getAllMalls } from "@/lib/posts";
+import { getSession, isAdmin } from "@/lib/auth";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Post, type Vendor, type Mall } from "@/types/treehouse";
+import { colors } from "@/lib/tokens";
+import { vendorHueBg } from "@/lib/utils";
 import BottomNav from "@/components/BottomNav";
+import TabSwitcher from "@/components/TabSwitcher";
+import BoothFinderCard from "@/components/BoothFinderCard";
+import ExploreBanner from "@/components/ExploreBanner";
+import { ThreeColGrid, SkeletonGrid, AvailableTile, FoundTile, ShelfGridStyles } from "@/components/ShelfGrid";
 import type { User } from "@supabase/supabase-js";
 
 const ADMIN_DEFAULT_VENDOR_ID = "5619b4bf-3d05-4843-8ee1-e8b747fc2d81";
-const MALL_ID                 = "19a8ff7e-cb45-491f-9451-878e2dde5bf4";
-
-const C = {
-  bg:          "#f5f2eb",
-  surface:     "#edeae1",
-  surfaceDeep: "#e4e0d6",
-  border:      "rgba(26,24,16,0.09)",
-  textPrimary: "#1c1a14",
-  textMid:     "#4a4840",
-  textMuted:   "#8a8476",
-  textFaint:   "#b4ae9e",
-  green:       "#1e4d2b",
-  greenLight:  "rgba(30,77,43,0.08)",
-  greenBorder: "rgba(30,77,43,0.20)",
-  header:      "rgba(245,242,235,0.96)",
-  emptyTile:   "#dedad2",
-  bannerFrom:  "#1e3d24",
-  bannerTo:    "#2d5435",
-};
-
-const GAP       = 6;
-const GRID_COLS = 3;
-const BASE_URL  = "https://treehouse-treasure-search.vercel.app";
-
-function mapsUrl(query: string) { return `https://maps.apple.com/?q=${encodeURIComponent(query)}`; }
-
-function vendorHueBg(name: string): string {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
-  const hues = [142, 168, 195, 220, 25, 340];
-  return `hsl(${hues[h % hues.length]}, 22%, 78%)`;
-}
+const BASE_URL                = "https://treehouse-treasure-search.vercel.app";
 
 function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promise<string> {
   return new Promise(resolve => {
@@ -78,9 +51,45 @@ function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promis
   });
 }
 
-// ─── Hero card ────────────────────────────────────────────────────────────────
+// ─── Add Find tile ────────────────────────────────────────────────────────────
 
-function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl, heroKey, onShare, hasCopied, hasSlug, onHeroImageChange, heroUploading, heroError, vendorId }: {
+function AddFindTile({ index, vendorId }: { index: number; vendorId?: string }) {
+  const router = useRouter();
+  function handleAdd() {
+    router.push(vendorId ? `/post?vendor=${vendorId}` : "/post");
+  }
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: [0.25, 0.1, 0.25, 1] }}
+      style={{ width: "100%", aspectRatio: "1" }}
+    >
+      <button
+        onClick={handleAdd}
+        style={{
+          width: "100%", height: "100%", borderRadius: 10,
+          background: colors.emptyTile, border: "none", cursor: "pointer", padding: 0,
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6,
+          WebkitTapHighlightColor: "transparent",
+        }}
+      >
+        <ImagePlus size={18} strokeWidth={1.4} style={{ color: "rgba(28,26,20,0.38)" }} />
+        <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(28,26,20,0.42)", textTransform: "uppercase", letterSpacing: "1.2px", lineHeight: 1 }}>
+          Add
+        </span>
+      </button>
+    </motion.div>
+  );
+}
+
+// ─── Vendor hero card ─────────────────────────────────────────────────────────
+
+function VendorHero({
+  displayName, boothNumber, mallName, mallCity,
+  heroImageUrl, heroKey, onShare, hasCopied, hasSlug,
+  onHeroImageChange, heroUploading, heroError, vendorId,
+}: {
   displayName: string; boothNumber: string | null; mallName?: string; mallCity?: string;
   heroImageUrl?: string | null; heroKey: number;
   onShare: () => void; hasCopied: boolean; hasSlug: boolean;
@@ -98,7 +107,7 @@ function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, paddingLeft: 4, paddingRight: 4 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Image src="/logo.png" alt="Treehouse Finds" width={20} height={20} />
-          <span style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: C.green, letterSpacing: "0.4px" }}>
+          <span style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: colors.green, letterSpacing: "0.4px" }}>
             Treehouse Finds
           </span>
         </div>
@@ -107,15 +116,15 @@ function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl
             <AnimatePresence mode="wait">
               {hasCopied ? (
                 <motion.div key="copied" initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.88 }} transition={{ duration: 0.14 }}
-                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 11px", borderRadius: 18, background: C.greenLight, border: `1px solid ${C.greenBorder}` }}>
-                  <Check size={11} style={{ color: C.green }} />
-                  <span style={{ fontSize: 11, fontWeight: 600, color: C.green }}>Copied!</span>
+                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 11px", borderRadius: 18, background: colors.greenLight, border: `1px solid ${colors.greenBorder}` }}>
+                  <Check size={11} style={{ color: colors.green }} />
+                  <span style={{ fontSize: 11, fontWeight: 600, color: colors.green }}>Copied!</span>
                 </motion.div>
               ) : (
                 <motion.button key="share" onClick={onShare} initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.88 }} transition={{ duration: 0.14 }}
-                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 11px", borderRadius: 18, background: "none", border: `1px solid ${C.border}`, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
-                  <Share2 size={11} style={{ color: C.textMuted }} />
-                  <span style={{ fontSize: 11, fontWeight: 500, color: C.textMuted }}>Share</span>
+                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 11px", borderRadius: 18, background: "none", border: `1px solid ${colors.border}`, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
+                  <Share2 size={11} style={{ color: colors.textMuted }} />
+                  <span style={{ fontSize: 11, fontWeight: 500, color: colors.textMuted }}>Share</span>
                 </motion.button>
               )}
             </AnimatePresence>
@@ -123,10 +132,11 @@ function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl
         </div>
       </div>
 
-      {/* Hero card */}
+      {/* Hero banner */}
       <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", minHeight: 200 }}>
         {heroImageUrl
-          ? <img key={heroKey} src={heroImageUrl} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
+          ? <img key={heroKey} src={heroImageUrl} alt=""
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
           : <div style={{ position: "absolute", inset: 0, background: vendorHueBg(displayName) }} />
         }
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(18,34,20,0.82) 0%, rgba(18,34,20,0.40) 55%, transparent 100%)", zIndex: 1 }} />
@@ -151,7 +161,7 @@ function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl
           </h1>
           <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
             {boothNumber && (
-              <div style={{ padding: "4px 11px", borderRadius: 18, background: C.green, fontFamily: "Georgia, serif", fontSize: 10, fontWeight: 700, color: "#fff", letterSpacing: "1px", textTransform: "uppercase" }}>
+              <div style={{ padding: "4px 11px", borderRadius: 18, background: colors.green, fontFamily: "Georgia, serif", fontSize: 10, fontWeight: 700, color: "#fff", letterSpacing: "1px", textTransform: "uppercase" }}>
                 Booth {boothNumber}
               </div>
             )}
@@ -168,7 +178,7 @@ function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl
       </div>
 
       {heroError && (
-        <div style={{ margin: "8px 10px 0", padding: "10px 14px", borderRadius: 10, background: "rgba(139,32,32,0.08)", border: "1px solid rgba(139,32,32,0.18)", fontSize: 12, color: "#8b2020", lineHeight: 1.5 }}>
+        <div style={{ margin: "8px 10px 0", padding: "10px 14px", borderRadius: 10, background: colors.redBg, border: `1px solid ${colors.redBorder}`, fontSize: 12, color: colors.red, lineHeight: 1.5 }}>
           ⚠️ Upload error: {heroError}
         </div>
       )}
@@ -176,169 +186,22 @@ function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl
   );
 }
 
-// ─── Tab switcher ──────────────────────────────────────────────────────────────
-
-function TabSwitcher({ tab, availableCount, foundCount, onChange }: { tab: "available" | "found"; availableCount: number; foundCount: number; onChange: (t: "available" | "found") => void }) {
-  return (
-    <div style={{ display: "flex", margin: "12px 10px 8px", background: C.surface, borderRadius: 22, padding: 3, gap: 2 }}>
-      {(["available", "found"] as const).map(t => {
-        const active = tab === t;
-        const count  = t === "available" ? availableCount : foundCount;
-        return (
-          <button key={t} onClick={() => onChange(t)}
-            style={{ flex: 1, padding: "8px 12px", borderRadius: 19, border: "none", cursor: "pointer", background: active ? "#fff" : "transparent", boxShadow: active ? "0 1px 4px rgba(0,0,0,0.10)" : "none", transition: "background 0.18s", WebkitTapHighlightColor: "transparent", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-            <span style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: active ? 700 : 400, color: active ? C.textPrimary : C.textMuted }}>
-              {t === "available" ? "Available" : "Found"}
-            </span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: active ? C.green : C.textFaint }}>({count})</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-// ─── Tiles ────────────────────────────────────────────────────────────────────
-
-function AvailableTile({ post, index }: { post: Post; index: number }) {
-  const [imgErr, setImgErr] = useState(false);
-  return (
-    <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: [0.25, 0.1, 0.25, 1] }}
-      style={{ width: "100%", aspectRatio: "1", borderRadius: 10, overflow: "hidden", position: "relative" }}>
-      <Link href={`/find/${post.id}`} style={{ display: "block", width: "100%", height: "100%", textDecoration: "none" }}>
-        {post.image_url && !imgErr
-          ? <img src={post.image_url} alt={post.title} onError={() => setImgErr(true)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          : <div style={{ width: "100%", height: "100%", background: C.surface }} />
-        }
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(20,18,12,0.72) 0%, transparent 100%)", padding: "18px 8px 8px" }}>
-          <div style={{ fontFamily: "Georgia, serif", fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.92)", lineHeight: 1.25, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
-            {post.title}
-          </div>
-        </div>
-      </Link>
-    </motion.div>
-  );
-}
-
-function FoundTile({ post, index }: { post: Post; index: number }) {
-  const [imgErr, setImgErr] = useState(false);
-  return (
-    <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: [0.25, 0.1, 0.25, 1] }}
-      style={{ width: "100%", aspectRatio: "1", borderRadius: 10, overflow: "hidden", position: "relative", opacity: 0.62 }}>
-      <Link href={`/find/${post.id}`} style={{ display: "block", width: "100%", height: "100%", textDecoration: "none" }}>
-        {post.image_url && !imgErr
-          ? <img src={post.image_url} alt={post.title} onError={() => setImgErr(true)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "grayscale(0.55) brightness(0.82)" }} />
-          : <div style={{ width: "100%", height: "100%", background: C.surface }} />
-        }
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(20,18,12,0.72) 0%, transparent 100%)", padding: "18px 8px 8px" }}>
-          <div style={{ fontFamily: "Georgia, serif", fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.90)", lineHeight: 1.25, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
-            {post.title}
-          </div>
-        </div>
-        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", fontSize: 7, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.5px", padding: "3px 8px", borderRadius: 5, background: "rgba(28,26,20,0.54)", color: "rgba(245,242,235,0.93)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", whiteSpace: "nowrap" }}>
-          Found
-        </div>
-      </Link>
-    </motion.div>
-  );
-}
-
-function AddFindTile({ index, vendorId }: { index: number; vendorId?: string }) {
-  const router = useRouter();
-  function handleAdd() {
-    const dest = vendorId ? `/post?vendor=${vendorId}` : "/post";
-    router.push(dest);
-  }
-  return (
-    <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: [0.25, 0.1, 0.25, 1] }}
-      style={{ width: "100%", aspectRatio: "1" }}>
-      <button onClick={handleAdd}
-        style={{ width: "100%", height: "100%", borderRadius: 10, background: C.emptyTile, border: "none", cursor: "pointer", padding: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, WebkitTapHighlightColor: "transparent" }}>
-        <ImagePlus size={18} strokeWidth={1.4} style={{ color: "rgba(28,26,20,0.22)" }} />
-        <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(28,26,20,0.28)", textTransform: "uppercase", letterSpacing: "1.2px", lineHeight: 1 }}>Add</span>
-      </button>
-    </motion.div>
-  );
-}
-
-function ThreeColGrid({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ display: "grid", gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`, gap: GAP, padding: `0 ${GAP}px` }}>
-      {children}
-    </div>
-  );
-}
-
-function BoothFinderCard({ boothNumber, displayName, mallName, mallCity }: { boothNumber: string | null; displayName: string; mallName: string; mallCity?: string }) {
-  const q = [mallName, mallCity].filter(Boolean).join(", ");
-  return (
-    <a href={mapsUrl(q)} target="_blank" rel="noopener noreferrer"
-      style={{ display: "flex", alignItems: "stretch", margin: "20px 10px 0", borderRadius: 16, overflow: "hidden", border: `1px solid ${C.border}`, background: "#fff", textDecoration: "none" }}>
-      <div style={{ width: 100, flexShrink: 0, background: `linear-gradient(135deg, ${C.bannerFrom}, ${C.bannerTo})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <MapPin size={22} style={{ color: "rgba(255,255,255,0.40)" }} />
-      </div>
-      <div style={{ flex: 1, padding: "14px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 5 }}>
-          <MapPin size={11} style={{ color: C.textMuted, flexShrink: 0 }} />
-          <span style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: C.textPrimary }}>Find this booth in person</span>
-        </div>
-        <p style={{ margin: "0 0 3px", fontFamily: "Georgia, serif", fontSize: 12, color: C.textMid }}>{displayName}{boothNumber ? ` · Booth ${boothNumber}` : ""}</p>
-        <p style={{ margin: 0, fontFamily: "Georgia, serif", fontSize: 12, color: C.textMuted }}>{mallName}{mallCity ? `, ${mallCity}` : ""}</p>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", paddingRight: 14 }}>
-        <ChevronRight size={16} style={{ color: C.textFaint }} />
-      </div>
-    </a>
-  );
-}
-
-// ─── Explore banner — "View more booths" navigates to /shelves ────────────────
-
-function ExploreBanner() {
-  const router = useRouter();
-  return (
-    <div style={{ margin: "14px 10px 0", borderRadius: 16, background: `linear-gradient(110deg, ${C.bannerFrom} 0%, ${C.bannerTo} 100%)`, padding: "20px 18px" }}>
-      <p style={{ margin: "0 0 4px", fontFamily: "Georgia, serif", fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.50)", letterSpacing: "2px", textTransform: "uppercase" }}>
-        {"There's more to discover"}
-      </p>
-      <h2 style={{ margin: "0 0 6px", fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>Explore more shelves nearby</h2>
-      <p style={{ margin: "0 0 16px", fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 12, color: "rgba(255,255,255,0.55)" }}>From local booths. Across Kentucky.</p>
-      <button onClick={() => router.push("/shelves")}
-        style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 18px", borderRadius: 24, background: "rgba(255,255,255,0.95)", border: "none", cursor: "pointer", fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: C.bannerFrom, WebkitTapHighlightColor: "transparent" }}>
-        <LayoutGrid size={14} style={{ color: C.bannerFrom }} />
-        View more booths
-      </button>
-    </div>
-  );
-}
-
-function SkeletonGrid() {
-  return (
-    <div style={{ padding: `${GAP}px` }}>
-      <div style={{ display: "grid", gridTemplateColumns: `repeat(${GRID_COLS}, 1fr)`, gap: GAP }}>
-        {Array(9).fill(null).map((_, i) => (
-          <div key={i} className="skeleton-shimmer" style={{ borderRadius: 10, width: "100%", aspectRatio: "1" }} />
-        ))}
-      </div>
-    </div>
-  );
-}
+// ─── No booth state ───────────────────────────────────────────────────────────
 
 function NoBooth() {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
       style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 32px 0", textAlign: "center" }}>
-      <div style={{ width: 54, height: 54, borderRadius: "50%", background: C.surface, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 22 }}>
-        <PiLeaf size={22} style={{ color: C.textMuted }} />
+      <div style={{ width: 54, height: 54, borderRadius: "50%", background: colors.surface, border: `1px solid ${colors.border}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 22 }}>
+        <PiLeaf size={22} style={{ color: colors.textMuted }} />
       </div>
-      <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: C.textPrimary, marginBottom: 10, lineHeight: 1.3 }}>No booth set up yet</div>
-      <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: C.textMuted, lineHeight: 1.75, maxWidth: 230, margin: "0 0 28px" }}>
+      <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: colors.textPrimary, marginBottom: 10, lineHeight: 1.3 }}>
+        No booth set up yet
+      </div>
+      <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: colors.textMuted, lineHeight: 1.75, maxWidth: 230, margin: "0 0 28px" }}>
         Post your first find to create your booth identity and see your shelf here.
       </p>
-      <Link href="/post" style={{ display: "inline-block", padding: "12px 26px", borderRadius: 24, background: C.green, color: "rgba(255,255,255,0.96)", fontSize: 13, fontWeight: 600, textDecoration: "none", boxShadow: "0 2px 12px rgba(30,77,43,0.25)" }}>
+      <Link href="/post" style={{ display: "inline-block", padding: "12px 26px", borderRadius: 24, background: colors.green, color: "rgba(255,255,255,0.96)", fontSize: 13, fontWeight: 600, textDecoration: "none", boxShadow: "0 2px 12px rgba(30,77,43,0.25)" }}>
         Post a find
       </Link>
     </motion.div>
@@ -389,15 +252,12 @@ function MyShelfInner() {
         const v = await getVendorById(vendorParam);
         if (v) { loadVendor(v, authedUser.id); return; }
       }
-
       const v = await getVendorByUserId(authedUser.id);
       if (v) { loadVendor(v, authedUser.id); return; }
-
       if (adminUser) {
         const defaultV = await getVendorById(ADMIN_DEFAULT_VENDOR_ID);
         if (defaultV) { loadVendor(defaultV, authedUser.id); return; }
       }
-
       setVendorReady(true);
     }
 
@@ -407,9 +267,8 @@ function MyShelfInner() {
   function loadVendor(vendor: Vendor, userId: string) {
     setActiveVendor(vendor);
     if (vendor.hero_image_url && !heroLockedRef.current) {
-      setHeroImageUrl(vendor.hero_image_url);
+      setHeroImageUrl(vendor.hero_image_url as string);
     }
-
     const cached: LocalVendorProfile = {
       display_name: vendor.display_name,
       booth_number: vendor.booth_number ?? "",
@@ -421,13 +280,11 @@ function MyShelfInner() {
       user_id:      userId,
     };
     try { localStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(cached)); } catch {}
-
     if (vendor.mall) {
       setMall(vendor.mall as Mall);
     } else {
       getAllMalls().then(malls => setMall(malls.find(m => m.id === vendor.mall_id) ?? null));
     }
-
     setVendorReady(true);
   }
 
@@ -445,10 +302,8 @@ function MyShelfInner() {
     setHeroUploading(true);
     setHeroError(null);
     heroLockedRef.current = true;
-
     const vendorId    = activeVendor.id;
-    const fallbackUrl = activeVendor.hero_image_url ?? null;
-
+    const fallbackUrl = (activeVendor.hero_image_url as string | null) ?? null;
     try {
       const reader  = new FileReader();
       const dataUrl = await new Promise<string>((res, rej) => {
@@ -456,31 +311,20 @@ function MyShelfInner() {
         reader.onerror = rej;
         reader.readAsDataURL(file);
       });
-
       const compressed = await compressImage(dataUrl);
-
       setHeroImageUrl(compressed);
       setHeroKey(k => k + 1);
-
-      const res = await fetch("/api/vendor-hero", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ base64DataUrl: compressed, vendorId }),
-      });
-
+      const res  = await fetch("/api/vendor-hero", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ base64DataUrl: compressed, vendorId }) });
       const json = await res.json();
-
       if (!res.ok || json.error) {
         setHeroError(json.error ?? "Upload failed.");
         setHeroImageUrl(fallbackUrl);
         setHeroKey(k => k + 1);
         return;
       }
-
       setHeroImageUrl(json.url);
       setHeroKey(k => k + 1);
       setActiveVendor(v => v ? { ...v, hero_image_url: json.url } : v);
-
     } catch (err) {
       setHeroError(`Unexpected error: ${err instanceof Error ? err.message : String(err)}`);
       setHeroImageUrl(fallbackUrl);
@@ -512,7 +356,7 @@ function MyShelfInner() {
   const loading     = !vendorReady || postsLoading;
 
   return (
-    <div style={{ minHeight: "100dvh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100dvh", background: colors.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
 
       {activeVendor ? (
         <VendorHero
@@ -525,10 +369,10 @@ function MyShelfInner() {
           heroError={heroError}
         />
       ) : (
-        <header style={{ background: C.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${C.border}`, padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <header style={{ background: colors.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${colors.border}`, padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <Image src="/logo.png" alt="Treehouse Finds" width={24} height={24} />
-            <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.green }}>Treehouse Finds</span>
+            <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: colors.green }}>Treehouse Finds</span>
           </div>
         </header>
       )}
@@ -556,8 +400,8 @@ function MyShelfInner() {
                 </ThreeColGrid>
               ) : (
                 <div style={{ padding: "48px 32px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-                  <PiLeaf size={28} style={{ color: C.textFaint }} />
-                  <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: C.textMuted, lineHeight: 1.7, margin: 0 }}>
+                  <PiLeaf size={28} style={{ color: colors.textFaint }} />
+                  <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: colors.textMuted, lineHeight: 1.7, margin: 0 }}>
                     Nothing found yet —<br />your shelf is wide open.
                   </p>
                 </div>
@@ -573,9 +417,8 @@ function MyShelfInner() {
 
       <BottomNav active="my-shelf" />
 
+      <ShelfGridStyles />
       <style>{`
-        @keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
-        .skeleton-shimmer { background: linear-gradient(90deg, rgba(225,220,210,0.7) 25%, rgba(208,202,190,0.9) 50%, rgba(225,220,210,0.7) 75%); background-size: 800px 100%; animation: shimmer 1.6s infinite linear; }
         @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
         .hidden { display: none; }
       `}</style>
