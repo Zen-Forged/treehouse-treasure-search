@@ -38,7 +38,19 @@ const C = {
   redBg:       "rgba(139,32,32,0.07)",
 };
 
-const DEFAULT_MALL_ID = "19a8ff7e-cb45-491f-9451-878e2dde5bf4";
+const DEFAULT_MALL_ID   = "19a8ff7e-cb45-491f-9451-878e2dde5bf4";
+const BOOKMARK_PREFIX   = "treehouse_bookmark_";
+
+function loadBookmarkCount(): number {
+  let count = 0;
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(BOOKMARK_PREFIX) && localStorage.getItem(key) === "1") count++;
+    }
+  } catch {}
+  return count;
+}
 
 function vendorHueBg(name: string): string {
   let h = 0;
@@ -354,14 +366,16 @@ function SkeletonCard() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function BoothsPage() {
-  const [vendors,      setVendors]      = useState<Vendor[]>([]);
-  const [malls,        setMalls]        = useState<Mall[]>([]);
-  const [mall,         setMall]         = useState<Mall | null>(null);
-  const [loading,      setLoading]      = useState(true);
-  const [user,         setUser]         = useState<User | null>(null);
-  const [showAddSheet, setShowAddSheet] = useState(false);
+  const [vendors,       setVendors]      = useState<Vendor[]>([]);
+  const [malls,         setMalls]        = useState<Mall[]>([]);
+  const [mall,          setMall]         = useState<Mall | null>(null);
+  const [loading,       setLoading]      = useState(true);
+  const [user,          setUser]         = useState<User | null>(null);
+  const [showAddSheet,  setShowAddSheet] = useState(false);
+  const [bookmarkCount, setBookmarkCount] = useState(0);
 
   useEffect(() => {
+    setBookmarkCount(loadBookmarkCount());
     Promise.all([
       getSession(),
       getVendorsByMall(DEFAULT_MALL_ID),
@@ -489,7 +503,7 @@ export default function BoothsPage() {
         )}
       </AnimatePresence>
 
-      <BottomNav active="shelves" />
+      <BottomNav active="shelves" flaggedCount={bookmarkCount} />
 
       <style>{`
         @keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }

@@ -3,17 +3,15 @@
 // Redirects to /login if no session.
 //
 // IDENTITY RESOLUTION (authoritative order):
-//   1. ?vendor=[id] query param — admin override, loads any vendor by ID
+//   1. ?vendor=[id] query param — admin override (set by Booths page tap)
 //   2. getVendorByUserId(user.id) — Supabase source of truth for logged-in users
 //   3. Admin fallback — if admin has no user_id-linked vendor, auto-loads the
 //      default admin booth (ADMIN_DEFAULT_VENDOR_ID) so My Shelf is never empty
 //   4. NoBooth state — shown only when none of the above resolves
 //
-// Admin can switch vendors via ?vendor=[id] (set by Shelves page) or the
-// in-page vendor switcher pill in the app bar.
-//
-// AddFindTile passes ?vendor=[id] to /post so admin always posts to the
-// correct booth, not their own user_id-linked vendor.
+// Booth switching is now handled by the Booths page (admin taps a card → /my-shelf?vendor=id).
+// Admin vendor switcher dropdown removed — Booths page is the control surface.
+// Logout removed from My Shelf — handled by the home feed header.
 
 "use client";
 
@@ -24,7 +22,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, ChevronRight, Share2, Check, ImagePlus, Pencil, Loader, LogOut, ChevronDown } from "lucide-react";
+import { MapPin, ChevronRight, Share2, Check, ImagePlus, Pencil, Loader } from "lucide-react";
 import { PiLeaf } from "react-icons/pi";
 import {
   getVendorByUserId, getVendorById, getVendorsByMall, getVendorPosts, getAllMalls,
@@ -84,87 +82,14 @@ function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promis
   });
 }
 
-// ─── Admin vendor switcher ────────────────────────────────────────────────────
-
-function AdminVendorSwitcher({ vendors, activeId, onSelect }: {
-  vendors: Vendor[];
-  activeId: string;
-  onSelect: (v: Vendor) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const active = vendors.find(v => v.id === activeId);
-
-  return (
-    <div style={{ position: "relative" }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{
-          display: "flex", alignItems: "center", gap: 5,
-          padding: "4px 9px", borderRadius: 8,
-          background: C.greenLight, border: `1px solid ${C.greenBorder}`,
-          cursor: "pointer", WebkitTapHighlightColor: "transparent",
-        }}
-      >
-        <span style={{ fontSize: 9, fontWeight: 700, color: C.green, textTransform: "uppercase", letterSpacing: "1.6px" }}>
-          {active?.display_name ?? "Switch booth"}
-        </span>
-        <ChevronDown size={10} style={{ color: C.green }} />
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.96 }}
-            transition={{ duration: 0.15 }}
-            style={{
-              position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 200,
-              background: "#fff", borderRadius: 12, border: `1px solid ${C.border}`,
-              boxShadow: "0 8px 32px rgba(26,24,16,0.16)", minWidth: 200, overflow: "hidden",
-            }}
-          >
-            {vendors.map(v => (
-              <button
-                key={v.id}
-                onClick={() => { onSelect(v); setOpen(false); }}
-                style={{
-                  width: "100%", padding: "10px 14px", textAlign: "left",
-                  background: v.id === activeId ? C.greenLight : "none",
-                  border: "none", borderBottom: `1px solid ${C.border}`,
-                  cursor: "pointer", display: "flex", alignItems: "center", gap: 10,
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.2 }}>
-                    {v.display_name}
-                  </div>
-                  {v.booth_number && (
-                    <div style={{ fontSize: 10, color: C.textMuted, fontFamily: "monospace", marginTop: 2 }}>
-                      Booth {v.booth_number}
-                    </div>
-                  )}
-                </div>
-                {v.id === activeId && <Check size={12} style={{ color: C.green, flexShrink: 0 }} />}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
 // ─── Hero card ────────────────────────────────────────────────────────────────
 
-function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl, heroKey, onShare, hasCopied, hasSlug, onHeroImageChange, heroUploading, heroError, vendorId, isAdminUser, onSignOut, allVendors, onVendorSwitch }: {
+function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl, heroKey, onShare, hasCopied, hasSlug, onHeroImageChange, heroUploading, heroError, vendorId }: {
   displayName: string; boothNumber: string | null; mallName?: string; mallCity?: string;
   heroImageUrl?: string | null; heroKey: number;
   onShare: () => void; hasCopied: boolean; hasSlug: boolean;
   onHeroImageChange: (file: File) => void; heroUploading: boolean; heroError: string | null;
-  vendorId: string | undefined; isAdminUser: boolean; onSignOut: () => void;
-  allVendors: Vendor[]; onVendorSwitch: (v: Vendor) => void;
+  vendorId: string | undefined;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -173,7 +98,7 @@ function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
         onChange={e => { const f = e.target.files?.[0]; if (f) onHeroImageChange(f); e.target.value = ""; }} />
 
-      {/* App bar */}
+      {/* App bar — logo + share only. No booth switcher, no logout. */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, paddingLeft: 4, paddingRight: 4 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Image src="/logo.png" alt="Treehouse Finds" width={20} height={20} />
@@ -182,9 +107,6 @@ function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {isAdminUser && allVendors.length > 0 && vendorId && (
-            <AdminVendorSwitcher vendors={allVendors} activeId={vendorId} onSelect={onVendorSwitch} />
-          )}
           {hasSlug && (
             <AnimatePresence mode="wait">
               {hasCopied ? (
@@ -202,10 +124,6 @@ function VendorHero({ displayName, boothNumber, mallName, mallCity, heroImageUrl
               )}
             </AnimatePresence>
           )}
-          <button onClick={onSignOut}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: "50%", background: "none", border: `1px solid ${C.border}`, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
-            <LogOut size={12} style={{ color: C.textFaint }} />
-          </button>
         </div>
       </div>
 
@@ -413,7 +331,7 @@ function SkeletonGrid() {
   );
 }
 
-function NoBooth({ onSignOut }: { onSignOut: () => void }) {
+function NoBooth() {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
       style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 32px 0", textAlign: "center" }}>
@@ -424,12 +342,9 @@ function NoBooth({ onSignOut }: { onSignOut: () => void }) {
       <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: C.textMuted, lineHeight: 1.75, maxWidth: 230, margin: "0 0 28px" }}>
         Post your first find to create your booth identity and see your shelf here.
       </p>
-      <Link href="/post" style={{ display: "inline-block", padding: "12px 26px", borderRadius: 24, background: C.green, color: "rgba(255,255,255,0.96)", fontSize: 13, fontWeight: 600, textDecoration: "none", boxShadow: "0 2px 12px rgba(30,77,43,0.25)", marginBottom: 20 }}>
+      <Link href="/post" style={{ display: "inline-block", padding: "12px 26px", borderRadius: 24, background: C.green, color: "rgba(255,255,255,0.96)", fontSize: 13, fontWeight: 600, textDecoration: "none", boxShadow: "0 2px 12px rgba(30,77,43,0.25)" }}>
         Post a find
       </Link>
-      <button onClick={onSignOut} style={{ fontSize: 11, color: C.textFaint, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
-        Sign out
-      </button>
     </motion.div>
   );
 }
@@ -453,7 +368,6 @@ function MyShelfInner() {
   const [heroKey,       setHeroKey]       = useState(0);
   const [heroUploading, setHeroUploading] = useState(false);
   const [heroError,     setHeroError]     = useState<string | null>(null);
-  const [allVendors,    setAllVendors]    = useState<Vendor[]>([]);
 
   const userRef       = useRef<User | null>(null);
   const heroLockedRef = useRef(false);
@@ -477,10 +391,6 @@ function MyShelfInner() {
     const vendorParam = searchParams.get("vendor");
 
     async function resolve() {
-      if (adminUser) {
-        getVendorsByMall(MALL_ID).then(setAllVendors);
-      }
-
       if (adminUser && vendorParam) {
         const v = await getVendorById(vendorParam);
         if (v) { loadVendor(v, authedUser.id); return; }
@@ -527,20 +437,6 @@ function MyShelfInner() {
     setVendorReady(true);
   }
 
-  function handleVendorSwitch(vendor: Vendor) {
-    setActiveVendor(null);
-    setPosts([]);
-    setHeroImageUrl(null);
-    setVendorReady(false);
-    setPostsLoading(true);
-
-    const url = new URL(window.location.href);
-    url.searchParams.set("vendor", vendor.id);
-    window.history.replaceState({}, "", url.toString());
-
-    loadVendor(vendor, userRef.current?.id ?? "");
-  }
-
   // ── Step 3: Load posts ──
   useEffect(() => {
     if (!activeVendor) return;
@@ -558,8 +454,7 @@ function MyShelfInner() {
     setHeroError(null);
     heroLockedRef.current = true;
 
-    // Capture vendor id before async work
-    const vendorId = activeVendor.id;
+    const vendorId   = activeVendor.id;
     const fallbackUrl = activeVendor.hero_image_url ?? null;
 
     try {
@@ -572,11 +467,9 @@ function MyShelfInner() {
 
       const compressed = await compressImage(dataUrl);
 
-      // Show preview immediately
       setHeroImageUrl(compressed);
       setHeroKey(k => k + 1);
 
-      // Upload via server route (uses service role key — bypasses RLS)
       const res = await fetch("/api/vendor-hero", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -590,10 +483,6 @@ function MyShelfInner() {
         setHeroImageUrl(fallbackUrl);
         setHeroKey(k => k + 1);
         return;
-      }
-
-      if (json.warning) {
-        console.warn("[hero] ", json.warning);
       }
 
       setHeroImageUrl(json.url);
@@ -619,11 +508,6 @@ function MyShelfInner() {
     try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2200); } catch {}
   }
 
-  async function handleSignOut() {
-    await signOut();
-    router.replace("/");
-  }
-
   if (!authReady) return null;
 
   const available   = posts.filter(p => p.status === "available");
@@ -633,7 +517,6 @@ function MyShelfInner() {
   const hasSlug     = !!activeVendor?.slug;
   const mallName    = mall?.name ?? (activeVendor?.mall as Mall | undefined)?.name ?? "America's Antique Mall";
   const mallCity    = mall?.city ?? (activeVendor?.mall as Mall | undefined)?.city ?? "Louisville, KY";
-  const adminUser   = isAdmin(user);
   const loading     = !vendorReady || postsLoading;
 
   return (
@@ -647,10 +530,6 @@ function MyShelfInner() {
           onShare={handleShare} hasCopied={copied} hasSlug={hasSlug}
           onHeroImageChange={handleHeroImageChange} heroUploading={heroUploading}
           vendorId={activeVendor.id}
-          isAdminUser={adminUser}
-          onSignOut={handleSignOut}
-          allVendors={allVendors}
-          onVendorSwitch={handleVendorSwitch}
           heroError={heroError}
         />
       ) : (
@@ -659,9 +538,6 @@ function MyShelfInner() {
             <Image src="/logo.png" alt="Treehouse Finds" width={24} height={24} />
             <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.green }}>Treehouse Finds</span>
           </div>
-          <button onClick={handleSignOut} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: "50%", background: "none", border: `1px solid ${C.border}`, cursor: "pointer" }}>
-            <LogOut size={12} style={{ color: C.textFaint }} />
-          </button>
         </header>
       )}
 
@@ -669,7 +545,7 @@ function MyShelfInner() {
         {loading ? (
           <SkeletonGrid />
         ) : !activeVendor ? (
-          <NoBooth onSignOut={handleSignOut} />
+          <NoBooth />
         ) : (
           <>
             <TabSwitcher tab={tab} availableCount={available.length} foundCount={found.length} onChange={t => setTab(t)} />

@@ -2,7 +2,8 @@
 // Treehouse — Discovery Feed
 // Only available posts are shown — sold items are filtered at the query level.
 // Heart icon: top-right of each tile image, always visible, toggleable from feed.
-// Mode toggle in header switches between Explorer (buyer) and Curator (vendor).
+// No mode toggle — mode is now managed via authentication.
+// Header: plain "Sign in" link when unauthed, "Sign out" when authed.
 
 "use client";
 
@@ -13,12 +14,10 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Compass, ChevronDown, Heart } from "lucide-react";
 import { getFeedPosts, getAllMalls } from "@/lib/posts";
-import { getSession, onAuthChange } from "@/lib/auth";
+import { getSession, signOut, onAuthChange } from "@/lib/auth";
 import BottomNav from "@/components/BottomNav";
-import ModeToggle from "@/components/ModeToggle";
 import { MallHeroCard, GenericMallHero } from "@/components/MallHeroCard";
 import type { Post, Mall } from "@/types/treehouse";
-import type { AppMode } from "@/lib/mode";
 
 // ─── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -357,6 +356,11 @@ export default function DiscoveryFeedPage() {
     });
   }
 
+  async function handleSignOut() {
+    await signOut();
+    setIsAuthed(false);
+  }
+
   const filtered     = posts.filter(p => !mallId || p.mall_id === mallId);
   const selectedMall = malls.find(m => m.id === mallId) ?? null;
 
@@ -366,11 +370,6 @@ export default function DiscoveryFeedPage() {
   function handleGenericExplore() {
     if (malls.length === 1) setMallId(malls[0].id);
     feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  function handleModeChange(mode: AppMode) {
-    if (mode === "curator") router.push("/my-shelf");
-    else router.push("/flagged");
   }
 
   return (
@@ -385,20 +384,31 @@ export default function DiscoveryFeedPage() {
               Treehouse Finds
             </span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {isAuthed === false && (
-              <Link href="/login"
-                style={{
-                  fontSize: 11, color: C.green, fontFamily: "Georgia, serif", fontStyle: "italic",
-                  textDecoration: "none", padding: "5px 10px", borderRadius: 14,
-                  background: C.greenLight, border: `1px solid ${C.greenBorder}`,
-                  whiteSpace: "nowrap",
-                }}>
-                Curator Sign in
-              </Link>
-            )}
-            <ModeToggle onChange={handleModeChange} />
-          </div>
+          {/* Auth CTA — plain text, no pill */}
+          {isAuthed === false && (
+            <Link href="/login"
+              style={{
+                fontSize: 13, color: C.green,
+                fontFamily: "Georgia, serif", fontStyle: "italic",
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+              }}>
+              Sign in
+            </Link>
+          )}
+          {isAuthed === true && (
+            <button
+              onClick={handleSignOut}
+              style={{
+                fontSize: 13, color: C.textMuted,
+                fontFamily: "Georgia, serif", fontStyle: "italic",
+                background: "none", border: "none", cursor: "pointer",
+                padding: 0, whiteSpace: "nowrap",
+                WebkitTapHighlightColor: "transparent",
+              }}>
+              Sign out
+            </button>
+          )}
         </div>
         <MallDropdown malls={malls} selectedId={mallId} onChange={setMallId} />
       </header>
