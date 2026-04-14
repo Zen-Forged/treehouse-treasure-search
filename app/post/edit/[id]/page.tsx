@@ -9,6 +9,7 @@
 //
 // Image replacement goes through /api/post-image (server route, service role key).
 // If no new photo is picked, the existing image_url is kept unchanged.
+// Price validation: must be a positive number if provided.
 
 "use client";
 
@@ -93,6 +94,9 @@ const C = {
   greenSolid:  colors.greenSolid,
   input:       "rgba(255,255,255,0.7)",
   inputBorder: "rgba(26,26,24,0.14)",
+  red:         colors.red,
+  redBg:       colors.redBg,
+  redBorder:   colors.redBorder,
 };
 
 const inputStyle: React.CSSProperties = {
@@ -107,12 +111,6 @@ const labelStyle: React.CSSProperties = {
 };
 
 // ─── Stage machine ────────────────────────────────────────────────────────────
-// loading   → fetching post + verifying ownership
-// editing   → form ready, user can edit
-// saving    → uploading image + updating post row
-// done      → success, redirect fires
-// forbidden → not owner — shown briefly before redirect
-// error     → save failed
 
 type Stage = "loading" | "editing" | "saving" | "done" | "forbidden" | "error";
 
@@ -126,23 +124,21 @@ function EditPostInner() {
   const cameraRef  = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
-  const [post,         setPost]         = useState<Post | null>(null);
-  const [stage,        setStage]        = useState<Stage>("loading");
-  const [mounted,      setMounted]      = useState(false);
+  const [post,          setPost]          = useState<Post | null>(null);
+  const [stage,         setStage]         = useState<Stage>("loading");
+  const [mounted,       setMounted]       = useState(false);
+  const [priceError,    setPriceError]    = useState<string | null>(null);
 
-  // Editable fields
   const [editTitle,   setEditTitle]   = useState("");
   const [editCaption, setEditCaption] = useState("");
   const [editPrice,   setEditPrice]   = useState("");
 
-  // Image state
-  const [currentImageUrl,  setCurrentImageUrl]  = useState<string | null>(null);
-  const [newImagePreview,  setNewImagePreview]  = useState<string | null>(null); // new local preview
-  const pendingImageRef = useRef<string | null>(null); // compressed data URL for upload
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+  const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
+  const pendingImageRef = useRef<string | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
 
-  // ── Load post + verify ownership ──
   useEffect(() => {
     if (!postId) return;
     (async () => {
@@ -165,7 +161,6 @@ function EditPostInner() {
     })();
   }, [postId]);
 
-  // ── Handle new photo picked ──
   const handleFile = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) return;
     const reader = new FileReader();
@@ -193,12 +188,22 @@ function EditPostInner() {
   // ── Save changes ──
   async function handleSave() {
     if (!post || !editTitle.trim()) return;
+
+    // Price validation — must be a positive number if provided
+    if (editPrice.trim()) {
+      const priceVal = parseFloat(editPrice.trim());
+      if (isNaN(priceVal) || priceVal < 0) {
+        setPriceError("Price must be a positive number.");
+        return;
+      }
+    }
+    setPriceError(null);
+
     setStage("saving");
 
     try {
       let imageUrl = post.image_url ?? undefined;
 
-      // Upload new image if one was selected
       if (pendingImageRef.current) {
         const vendorId = post.vendor_id ?? post.vendor?.id;
         if (vendorId) {
@@ -216,10 +221,7 @@ function EditPostInner() {
         ...(imageUrl !== (post.image_url ?? undefined) ? { image_url: imageUrl } : {}),
       });
 
-      if (!ok) {
-        setStage("error");
-        return;
-      }
+      if (!ok) { setStage("error"); return; }
 
       setStage("done");
       setTimeout(() => {
@@ -233,7 +235,6 @@ function EditPostInner() {
     }
   }
 
-  // ── Toast (saving / done / error) — portal into body ──
   const showToast = stage === "saving" || stage === "done" || stage === "error";
   const toastEl = (
     <AnimatePresence>
@@ -248,11 +249,7 @@ function EditPostInner() {
             style={{
               pointerEvents: "auto",
               width: "min(300px, calc(100vw - 48px))",
-              background: stage === "error"
-                ? "rgba(139,32,32,0.92)"
-                : stage === "done"
-                  ? "rgba(18,34,20,0.92)"
-                  : "rgba(26,24,16,0.88)",
+              background: stage === "error" ? "rgba(139,32,32,0.92)" : stage === "done" ? "rgba(18,34,20,0.92)" : "rgba(26,24,16,0.88)",
               backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
               borderRadius: 20, padding: "22px 24px",
               display: "flex", flexDirection: "column", alignItems: "center", gap: 14,
@@ -267,18 +264,14 @@ function EditPostInner() {
             )}
             <div>
               <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: "#fff", lineHeight: 1.3, marginBottom: 4 }}>
-                {stage === "saving" ? "Saving changes…" :
-                 stage === "done"   ? "Listing updated!" :
-                                      "Something went wrong"}
+                {stage === "saving" ? "Saving changes…" : stage === "done" ? "Listing updated!" : "Something went wrong"}
               </div>
               {stage === "saving" && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>Just a moment…</div>}
               {stage === "done"   && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>Heading back to the listing…</div>}
             </div>
             {stage === "error" && (
-              <button
-                onClick={() => setStage("editing")}
-                style={{ fontSize: 12, color: "rgba(255,255,255,0.80)", background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8, cursor: "pointer", padding: "8px 16px" }}
-              >
+              <button onClick={() => setStage("editing")}
+                style={{ fontSize: 12, color: "rgba(255,255,255,0.80)", background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8, cursor: "pointer", padding: "8px 16px" }}>
                 Dismiss
               </button>
             )}
@@ -288,7 +281,6 @@ function EditPostInner() {
     </AnimatePresence>
   );
 
-  // ── Loading ──
   if (stage === "loading") {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -300,7 +292,6 @@ function EditPostInner() {
     );
   }
 
-  // ── Forbidden ──
   if (stage === "forbidden") {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 24px" }}>
@@ -323,94 +314,60 @@ function EditPostInner() {
         <input ref={cameraRef}  type="file" accept="image/*" capture="environment" className="hidden" onChange={onFileChange} />
         <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
 
-        {/* ── Header ── */}
-        <header style={{
-          display: "flex", alignItems: "center", gap: 12,
-          padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 14px",
-          borderBottom: `1px solid ${C.border}`,
-          background: C.bg, position: "sticky", top: 0, zIndex: 40,
-        }}>
-          <button
-            onClick={() => router.back()}
-            style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}
-          >
+        <header style={{ display: "flex", alignItems: "center", gap: 12, padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 14px", borderBottom: `1px solid ${C.border}`, background: C.bg, position: "sticky", top: 0, zIndex: 40 }}>
+          <button onClick={() => router.back()}
+            style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
             <ArrowLeft size={15} style={{ color: C.textMid }} />
           </button>
           <div>
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: C.textPrimary, lineHeight: 1 }}>
-              Edit Listing
-            </div>
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: C.textPrimary, lineHeight: 1 }}>Edit Listing</div>
             {post?.vendor && (
               <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginTop: 2 }}>
-                {post.vendor.display_name}
-                {post.vendor.booth_number ? ` · Booth ${post.vendor.booth_number}` : ""}
+                {post.vendor.display_name}{post.vendor.booth_number ? ` · Booth ${post.vendor.booth_number}` : ""}
               </div>
             )}
           </div>
         </header>
 
-        {/* ── Form ── */}
         <main style={{ flex: 1, padding: "18px 16px", paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))", display: "flex", flexDirection: "column", gap: 16 }}>
 
-          {/* ── Image section ── */}
+          {/* Photo */}
           <div>
             <label style={labelStyle}>Photo</label>
-
             {displayImage ? (
               <div style={{ position: "relative", borderRadius: 14, overflow: "hidden", background: C.surface }}>
-                <img
-                  src={displayImage}
-                  alt="Listing photo"
-                  style={{ width: "100%", maxHeight: 260, objectFit: "cover", display: "block" }}
-                />
-                {/* Replace photo overlay */}
+                <img src={displayImage} alt="Listing photo" style={{ width: "100%", maxHeight: 260, objectFit: "cover", display: "block" }} />
                 <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", padding: 12, gap: 8, background: "linear-gradient(to top, rgba(0,0,0,0.38) 0%, transparent 60%)" }}>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button
-                      onClick={() => cameraRef.current?.click()}
-                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: "rgba(255,255,255,0.20)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.30)", color: "#fff", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}
-                    >
-                      <Camera size={12} />
-                      Take new photo
+                    <button onClick={() => cameraRef.current?.click()}
+                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: "rgba(255,255,255,0.20)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.30)", color: "#fff", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
+                      <Camera size={12} /> Take new photo
                     </button>
-                    <button
-                      onClick={() => galleryRef.current?.click()}
-                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: "rgba(255,255,255,0.20)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.30)", color: "#fff", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}
-                    >
+                    <button onClick={() => galleryRef.current?.click()}
+                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: "rgba(255,255,255,0.20)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.30)", color: "#fff", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
                       Choose from library
                     </button>
                   </div>
                 </div>
-
-                {/* New image badge + clear */}
                 {newImagePreview && (
                   <div style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ padding: "4px 10px", borderRadius: 12, background: C.green, fontSize: 10, fontWeight: 600, color: "#fff" }}>
-                      New photo
-                    </div>
-                    <button
-                      onClick={clearNewImage}
-                      style={{ width: 24, height: 24, borderRadius: "50%", background: "rgba(0,0,0,0.45)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-                    >
+                    <div style={{ padding: "4px 10px", borderRadius: 12, background: C.green, fontSize: 10, fontWeight: 600, color: "#fff" }}>New photo</div>
+                    <button onClick={clearNewImage}
+                      style={{ width: 24, height: 24, borderRadius: "50%", background: "rgba(0,0,0,0.45)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
                       <X size={12} style={{ color: "#fff" }} />
                     </button>
                   </div>
                 )}
               </div>
             ) : (
-              /* No image — show picker area */
               <div style={{ display: "flex", gap: 10 }}>
-                <button
-                  onClick={() => cameraRef.current?.click()}
-                  style={{ flex: 1, padding: "28px 12px", borderRadius: 14, border: `1px dashed rgba(30,77,43,0.3)`, background: C.surface, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}
-                >
+                <button onClick={() => cameraRef.current?.click()}
+                  style={{ flex: 1, padding: "28px 12px", borderRadius: 14, border: `1px dashed rgba(30,77,43,0.3)`, background: C.surface, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
                   <Camera size={20} style={{ color: C.green }} />
                   <span style={{ fontFamily: "Georgia, serif", fontSize: 12, color: C.textMuted }}>Take photo</span>
                 </button>
-                <button
-                  onClick={() => galleryRef.current?.click()}
-                  style={{ flex: 1, padding: "28px 12px", borderRadius: 14, border: `1px dashed ${C.border}`, background: C.surface, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}
-                >
+                <button onClick={() => galleryRef.current?.click()}
+                  style={{ flex: 1, padding: "28px 12px", borderRadius: 14, border: `1px dashed ${C.border}`, background: C.surface, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 18 }}>🖼</span>
                   <span style={{ fontFamily: "Georgia, serif", fontSize: 12, color: C.textMuted }}>From library</span>
                 </button>
@@ -418,67 +375,50 @@ function EditPostInner() {
             )}
           </div>
 
-          {/* ── Title ── */}
+          {/* Title */}
           <div>
             <label style={labelStyle}>Title *</label>
-            <input
-              type="text"
-              value={editTitle}
-              onChange={e => setEditTitle(e.target.value)}
+            <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)}
               placeholder="What is this?"
               style={{ ...inputStyle, fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 600 }}
-              autoFocus={!displayImage}
-            />
+              autoFocus={!displayImage} />
           </div>
 
-          {/* ── Caption ── */}
+          {/* Caption */}
           <div>
-            <label style={labelStyle}>
-              Caption <span style={{ color: C.textFaint, textTransform: "none", letterSpacing: 0 }}>(optional)</span>
-            </label>
-            <textarea
-              value={editCaption}
-              onChange={e => setEditCaption(e.target.value)}
-              placeholder="A short description or story about this piece…"
-              rows={3}
-              style={{ ...inputStyle, fontFamily: "Georgia, serif", fontStyle: editCaption ? "italic" : "normal", lineHeight: 1.65, resize: "vertical" as const }}
-            />
+            <label style={labelStyle}>Caption <span style={{ color: C.textFaint, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
+            <textarea value={editCaption} onChange={e => setEditCaption(e.target.value)}
+              placeholder="A short description or story about this piece…" rows={3}
+              style={{ ...inputStyle, fontFamily: "Georgia, serif", fontStyle: editCaption ? "italic" : "normal", lineHeight: 1.65, resize: "vertical" as const }} />
           </div>
 
-          {/* ── Price ── */}
+          {/* Price */}
           <div>
-            <label style={labelStyle}>
-              Price <span style={{ color: C.textFaint, textTransform: "none", letterSpacing: 0 }}>(optional)</span>
-            </label>
+            <label style={labelStyle}>Price <span style={{ color: C.textFaint, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
             <div style={{ position: "relative" }}>
               <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontFamily: "monospace", fontSize: 14, color: C.textMuted, pointerEvents: "none" }}>$</span>
-              <input
-                type="number"
-                inputMode="decimal"
-                value={editPrice}
-                onChange={e => setEditPrice(e.target.value)}
+              <input type="number" inputMode="decimal" min="0" value={editPrice}
+                onChange={e => { setEditPrice(e.target.value); if (priceError) setPriceError(null); }}
                 placeholder="0.00"
-                style={{ ...inputStyle, paddingLeft: 26, fontFamily: "monospace" }}
-              />
+                style={{ ...inputStyle, paddingLeft: 26, fontFamily: "monospace", borderColor: priceError ? C.red : C.inputBorder }} />
             </div>
+            {priceError && (
+              <div style={{ fontSize: 11, color: C.red, marginTop: 5 }}>{priceError}</div>
+            )}
           </div>
 
-          {/* ── Save button ── */}
-          <button
-            onClick={handleSave}
-            disabled={!canSave}
+          {/* Save */}
+          <button onClick={handleSave} disabled={!canSave}
             style={{
               width: "100%", padding: "14px", borderRadius: 14,
               fontSize: 14, fontWeight: 600, fontFamily: "Georgia, serif",
               color: canSave ? "#fff" : C.textFaint,
               background: canSave ? C.green : C.surfaceDeep,
-              border: "none",
-              cursor: canSave ? "pointer" : "default",
+              border: "none", cursor: canSave ? "pointer" : "default",
               transition: "all 0.2s",
               boxShadow: canSave ? "0 2px 12px rgba(30,77,43,0.25)" : "none",
               marginTop: 4,
-            }}
-          >
+            }}>
             Save changes
           </button>
         </main>
@@ -488,8 +428,6 @@ function EditPostInner() {
     </>
   );
 }
-
-// ─── Page wrapper ─────────────────────────────────────────────────────────────
 
 export default function EditPostPage() {
   return (

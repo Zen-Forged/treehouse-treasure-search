@@ -12,6 +12,15 @@ export interface Mall {
   slug:       string;
   address:    string | null;
 
+  // ── Extended location data (added in 001_mall_locations seed) ──
+  phone?:           string | null;
+  website?:         string | null;
+  google_maps_url?: string | null;
+  latitude?:        number | null;
+  longitude?:       number | null;
+  category?:        string | null;  // peddlers_mall | antique_mall | flea_market | antique_store | antique_market
+  zip_code?:        string | null;
+
   // ── Mall Identity Layer (all optional — hero defaults gracefully without these) ──
   hero_title?:     string | null;
   hero_subtitle?:  string | null;
