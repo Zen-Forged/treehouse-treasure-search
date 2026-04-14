@@ -37,33 +37,6 @@ async function detectOwnershipAsync(post: Post): Promise<boolean> {
   return false;
 }
 
-// ─── Booth location box ────────────────────────────────────────────────────────
-
-function BoothBox({ boothNumber }: { boothNumber: string }) {
-  return (
-    <div style={{
-      position: "absolute", bottom: -22, left: 20,
-      background: colors.tag, border: `1.5px solid ${colors.tagBorder}`,
-      borderRadius: 8, padding: "6px 14px 7px",
-      boxShadow: "0 2px 8px rgba(26,24,16,0.10), 0 1px 3px rgba(26,24,16,0.06)",
-    }}>
-      <div style={{
-        fontFamily: "system-ui, sans-serif", fontSize: 8, fontWeight: 600,
-        textTransform: "uppercase" as const, letterSpacing: "1.8px",
-        color: colors.textMuted, lineHeight: 1, marginBottom: 4,
-      }}>
-        Booth
-      </div>
-      <div style={{
-        fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700,
-        color: colors.green, letterSpacing: "0.2px", lineHeight: 1,
-      }}>
-        {boothNumber}
-      </div>
-    </div>
-  );
-}
-
 // ─── Shelf card ────────────────────────────────────────────────────────────────
 
 function ShelfCard({ post }: { post: Post }) {
@@ -242,16 +215,15 @@ export default function FindDetailPage() {
     );
   }
 
-  const isSold      = post.status === "sold";
-  const hasVendor   = !!post.vendor;
+  const isSold    = post.status === "sold";
+  const hasVendor = !!post.vendor;
+  const hasContent = !!(post.caption || post.description);
+  const hasPrice  = post.price_asking != null;
+  const vendorSlug = post.vendor?.slug ?? null;
   const boothNumber = post.vendor?.booth_number ?? null;
-  const hasBoothBox = !!boothNumber;
-  const hasContent  = !!(post.caption || post.description);
-  const hasPrice    = post.price_asking != null;
-  const vendorSlug  = post.vendor?.slug ?? null;
 
-  // Mall location label for inline line
-  const mallLocationLabel = post.mall?.name
+  // Mall address line (without booth — booth goes on the right)
+  const mallLine = post.mall?.name
     ? post.mall.address
       ? `${post.mall.name} · ${post.mall.address}`
       : `${post.mall.name}${post.mall.city ? ` · ${post.mall.city}` : ""}`
@@ -260,8 +232,8 @@ export default function FindDetailPage() {
   return (
     <div style={{ minHeight: "100vh", background: colors.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
 
-      {/* ── 1. Hero image ── */}
-      <div style={{ position: "relative", width: "100%", marginBottom: hasBoothBox ? 34 : 0 }}>
+      {/* ── 1. Hero image — no bottom margin, no floating booth box ── */}
+      <div style={{ position: "relative", width: "100%" }}>
         {post.image_url ? (
           <img src={post.image_url} alt={post.title}
             style={{ width: "100%", height: "auto", display: "block", objectFit: "contain", filter: isSold ? "grayscale(0.35) brightness(0.88)" : "none" }} />
@@ -292,44 +264,70 @@ export default function FindDetailPage() {
             <Send size={14} style={{ color: copied ? "#a8d5b5" : "rgba(255,255,255,0.92)" }} />
           </button>
         </div>
-
-        {hasBoothBox && (
-          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.12 }}>
-            <BoothBox boothNumber={boothNumber!} />
-          </motion.div>
-        )}
       </div>
 
-      {/* ── 2. Content block ── */}
-      <div style={{ padding: "16px 20px 0" }}>
+      {/* ── 2. Mall + Booth row — tight against image, no gap ── */}
+      {(post.mall || boothNumber) && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25, delay: 0.04 }}
+          style={{
+            display: "flex", alignItems: "flex-start", justifyContent: "space-between",
+            gap: 12, padding: "10px 20px 0",
+          }}
+        >
+          {/* Left: pin + mall name + address (wraps to 2 lines naturally) */}
+          {mallLine && (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 5, flex: 1 }}>
+              <MapPin size={11} style={{ color: colors.green, flexShrink: 0, marginTop: 2 }} />
+              {mapLink ? (
+                <a
+                  href={mapLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    fontFamily: "Georgia, serif", fontSize: 12, color: colors.green,
+                    textDecoration: "none", borderBottom: `1px solid ${colors.greenBorder}`,
+                    lineHeight: 1.45,
+                  }}
+                >
+                  {mallLine} · Directions
+                </a>
+              ) : (
+                <span style={{ fontFamily: "Georgia, serif", fontSize: 12, color: colors.textMuted, lineHeight: 1.45 }}>
+                  {mallLine}
+                </span>
+              )}
+            </div>
+          )}
 
-        {/* Mall inline line — compact, left-aligned, right under image */}
-        {post.mall && mallLocationLabel && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25, delay: 0.04 }}
-            style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 10 }}
-          >
-            <MapPin size={11} style={{ color: colors.green, flexShrink: 0 }} />
-            {mapLink ? (
-              <a
-                href={mapLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  fontFamily: "Georgia, serif", fontSize: 12, color: colors.green,
-                  textDecoration: "none", borderBottom: `1px solid ${colors.greenBorder}`,
-                  lineHeight: 1.3,
-                }}
-              >
-                {mallLocationLabel} · Directions
-              </a>
-            ) : (
-              <span style={{ fontFamily: "Georgia, serif", fontSize: 12, color: colors.textMuted, lineHeight: 1.3 }}>
-                {mallLocationLabel}
-              </span>
-            )}
-          </motion.div>
-        )}
+          {/* Right: booth number badge */}
+          {boothNumber && (
+            <div style={{
+              flexShrink: 0,
+              background: colors.tag, border: `1.5px solid ${colors.tagBorder}`,
+              borderRadius: 8, padding: "4px 10px 5px",
+              textAlign: "center",
+            }}>
+              <div style={{
+                fontFamily: "system-ui, sans-serif", fontSize: 7, fontWeight: 600,
+                textTransform: "uppercase" as const, letterSpacing: "1.6px",
+                color: colors.textMuted, lineHeight: 1, marginBottom: 3,
+              }}>
+                Booth
+              </div>
+              <div style={{
+                fontFamily: "Georgia, serif", fontSize: 17, fontWeight: 700,
+                color: colors.green, letterSpacing: "0.2px", lineHeight: 1,
+              }}>
+                {boothNumber}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* ── 3. Content block ── */}
+      <div style={{ padding: "10px 20px 0" }}>
 
         {/* Title */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32 }}>
