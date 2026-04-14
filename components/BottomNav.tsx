@@ -2,12 +2,8 @@
 // Fixed bottom navigation.
 //
 // Tab layout:
-//   Guest:   Home · Find Map · Booths · (nothing — 3 tabs)
-//   Auth:    Home · Find Map · Booths · My Shelf  (4 tabs)
-//
-// "Find Map" (/flagged) is ALWAYS shown for ALL users.
-// "Booths" (/shelves) is ALWAYS shown for ALL users.
-// "My Shelf" is added as the 4th tab for authenticated users.
+//   Guest:   Home · Find Map · Booths            (3 tabs)
+//   Auth:    Home · Find Map · Booths · My Booth (4 tabs)
 
 "use client";
 
@@ -66,13 +62,13 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     key: "shelves", label: "Booths", href: "/shelves",
     icon: <LayoutGrid size={21} strokeWidth={1.7} />,
   };
-  const myShelfTab: TabDef = {
-    key: "my-shelf", label: "My Shelf", href: "/my-shelf",
+  const myBoothTab: TabDef = {
+    key: "my-shelf", label: "My Booth", href: "/my-shelf",
     icon: <Store size={21} strokeWidth={1.7} />,
   };
 
   const tabs: TabDef[] = user
-    ? [homeTab, findsTab, boothsTab, myShelfTab]
+    ? [homeTab, findsTab, boothsTab, myBoothTab]
     : [homeTab, findsTab, boothsTab];
 
   const navStyle: React.CSSProperties = {

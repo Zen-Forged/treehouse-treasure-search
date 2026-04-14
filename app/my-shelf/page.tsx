@@ -1,13 +1,10 @@
 // app/my-shelf/page.tsx
-// My Shelf — cinematic vendor profile page. Auth-gated.
-// Redirects to /login if no session.
-//
-// IDENTITY RESOLUTION (authoritative order):
-//   1. ?vendor=[id] query param — admin override (set by Booths page tap)
-//   2. getVendorByUserId(user.id) — Supabase source of truth for logged-in users
-//   3. Admin fallback — if admin has no user_id-linked vendor, auto-loads the
-//      default admin booth (ADMIN_DEFAULT_VENDOR_ID) so My Shelf is never empty
-//   4. NoBooth state — shown only when none of the above resolves
+// My Booth — cinematic vendor profile page. Auth-gated.
+// Changes:
+//   - Page renamed "My Booth" throughout (nav already updated in BottomNav)
+//   - Share icon → Send (airplane) icon, positioned on hero banner image
+//   - Header when no vendor: matches other pages (logo + "Treehouse Finds" + back chevron)
+//   - Share button on banner, top-right, same frosted circle style as product pages
 
 "use client";
 
@@ -18,7 +15,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Share2, Check, ImagePlus, Pencil, Loader } from "lucide-react";
+import { MapPin, Send, Check, ImagePlus, Pencil, Loader } from "lucide-react";
 import { PiLeaf } from "react-icons/pi";
 import { getVendorByUserId, getVendorById, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
@@ -84,6 +81,8 @@ function AddFindTile({ index, vendorId }: { index: number; vendorId?: string }) 
 }
 
 // ─── Vendor hero card ─────────────────────────────────────────────────────────
+// Item 13: Send (airplane) icon on banner image, top-right
+// Item 14: app bar matches other pages
 
 function VendorHero({
   displayName, boothNumber, mallName, mallCity,
@@ -103,32 +102,13 @@ function VendorHero({
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
         onChange={e => { const f = e.target.files?.[0]; if (f) onHeroImageChange(f); e.target.value = ""; }} />
 
-      {/* App bar */}
+      {/* App bar — item 14: matches other pages (logo + title + sign-out link style) */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, paddingLeft: 4, paddingRight: 4 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <Image src="/logo.png" alt="Treehouse Finds" width={20} height={20} />
-          <span style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: colors.green, letterSpacing: "0.4px" }}>
-            Treehouse Finds
+          <span style={{ fontFamily: "Georgia, serif", fontSize: 18, fontWeight: 700, color: colors.textPrimary, letterSpacing: "-0.2px" }}>
+            My Booth
           </span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {hasSlug && (
-            <AnimatePresence mode="wait">
-              {hasCopied ? (
-                <motion.div key="copied" initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.88 }} transition={{ duration: 0.14 }}
-                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 11px", borderRadius: 18, background: colors.greenLight, border: `1px solid ${colors.greenBorder}` }}>
-                  <Check size={11} style={{ color: colors.green }} />
-                  <span style={{ fontSize: 11, fontWeight: 600, color: colors.green }}>Copied!</span>
-                </motion.div>
-              ) : (
-                <motion.button key="share" onClick={onShare} initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.88 }} transition={{ duration: 0.14 }}
-                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 11px", borderRadius: 18, background: "none", border: `1px solid ${colors.border}`, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
-                  <Share2 size={11} style={{ color: colors.textMuted }} />
-                  <span style={{ fontSize: 11, fontWeight: 500, color: colors.textMuted }}>Share</span>
-                </motion.button>
-              )}
-            </AnimatePresence>
-          )}
         </div>
       </div>
 
@@ -142,14 +122,39 @@ function VendorHero({
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(18,34,20,0.82) 0%, rgba(18,34,20,0.40) 55%, transparent 100%)", zIndex: 1 }} />
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "50%", background: "linear-gradient(to top, rgba(18,34,20,0.72) 0%, transparent 100%)", zIndex: 1 }} />
 
+        {/* Edit banner button — top-left on banner */}
         {vendorId && (
           <button onClick={() => fileInputRef.current?.click()} disabled={heroUploading}
-            style={{ position: "absolute", top: 12, right: 12, zIndex: 10, width: 34, height: 34, borderRadius: "50%", background: "rgba(20,18,12,0.52)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", cursor: heroUploading ? "default" : "pointer", WebkitTapHighlightColor: "transparent" }}>
+            style={{ position: "absolute", top: 12, left: 12, zIndex: 10, width: 34, height: 34, borderRadius: "50%", background: "rgba(20,18,12,0.52)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", cursor: heroUploading ? "default" : "pointer", WebkitTapHighlightColor: "transparent" }}>
             {heroUploading
               ? <Loader size={13} style={{ color: "rgba(255,255,255,0.80)", animation: "spin 0.9s linear infinite" }} />
               : <Pencil size={13} style={{ color: "rgba(255,255,255,0.88)" }} />
             }
           </button>
+        )}
+
+        {/* Item 13: Send (airplane) share icon — top-right on banner, frosted circle */}
+        {hasSlug && (
+          <div style={{ position: "absolute", top: 12, right: 12, zIndex: 10 }}>
+            <AnimatePresence mode="wait">
+              {hasCopied ? (
+                <motion.div key="copied"
+                  initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.88 }}
+                  transition={{ duration: 0.14 }}
+                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 11px", borderRadius: 18, background: "rgba(30,77,43,0.85)", border: "1px solid rgba(255,255,255,0.18)" }}>
+                  <Check size={11} style={{ color: "#fff" }} />
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#fff" }}>Copied!</span>
+                </motion.div>
+              ) : (
+                <motion.button key="share" onClick={onShare}
+                  initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.88 }}
+                  transition={{ duration: 0.14 }}
+                  style={{ width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.30)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.15)", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
+                  <Send size={14} style={{ color: "rgba(255,255,255,0.92)" }} />
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
         )}
 
         <div style={{ position: "relative", zIndex: 2, padding: "100px 16px 18px" }}>
@@ -208,9 +213,9 @@ function NoBooth() {
   );
 }
 
-// ─── Inner page (needs useSearchParams) ───────────────────────────────────────
+// ─── Inner page ───────────────────────────────────────────────────────────────
 
-function MyShelfInner() {
+function MyBoothInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
 
@@ -369,11 +374,10 @@ function MyShelfInner() {
           heroError={heroError}
         />
       ) : (
-        <header style={{ background: colors.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${colors.border}`, padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Image src="/logo.png" alt="Treehouse Finds" width={24} height={24} />
-            <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: colors.green }}>Treehouse Finds</span>
-          </div>
+        /* Item 14: fallback header matches other pages */
+        <header style={{ background: colors.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${colors.border}`, padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 12px", display: "flex", alignItems: "center", gap: 10 }}>
+          <Image src="/logo.png" alt="Treehouse Finds" width={24} height={24} />
+          <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: colors.textPrimary, letterSpacing: "-0.3px" }}>My Booth</span>
         </header>
       )}
 
@@ -426,10 +430,10 @@ function MyShelfInner() {
   );
 }
 
-export default function MyShelfPage() {
+export default function MyBoothPage() {
   return (
     <Suspense>
-      <MyShelfInner />
+      <MyBoothInner />
     </Suspense>
   );
 }

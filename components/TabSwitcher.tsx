@@ -1,5 +1,6 @@
 // components/TabSwitcher.tsx
-// Reusable Available / Found tab switcher used on My Shelf and Public Shelf pages.
+// Reusable On Display / Found tab switcher used on My Booth and Public Shelf pages.
+// Item 8: "Available" → "On Display"
 
 "use client";
 
@@ -40,7 +41,7 @@ export default function TabSwitcher({ tab, availableCount, foundCount, onChange 
               fontWeight: active ? 700 : 400,
               color: active ? colors.textPrimary : colors.textMuted,
             }}>
-              {t === "available" ? "Available" : "Found a home"}
+              {t === "available" ? "On Display" : "Found a home"}
             </span>
             <span style={{
               fontSize: 11, fontWeight: 600,

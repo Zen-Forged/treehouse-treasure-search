@@ -1,15 +1,9 @@
 // app/page.tsx
 // Treehouse — Discovery Feed
-// Only available posts are shown — sold items are filtered at the query level.
-// Heart icon: top-right of each tile image, always visible, toggleable from feed.
-// No mode toggle — mode is now managed via authentication.
-// Header: plain "Sign in" link when unauthed, "Sign out" when authed.
-// Feed re-fetches when the page becomes visible after being hidden (e.g. after posting).
-// Animation: scroll-triggered tile entry (IntersectionObserver) + image warmth hover.
-// Back-nav: last-viewed post ID written to sessionStorage on tap; tile gets a brief
-//           warm highlight ring on return to orient the user.
-// Scroll restore: keys are read eagerly on mount into refs; the actual scrollTo fires
-//                 after loading flips false so the feed has real DOM height.
+// Changes:
+//   - Mall dropdown label: "All malls" → "All Treehouse Spots"
+//   - Feed label always shows "Recently added" (never "Finds from X" when mall selected)
+//   - MallHeroCard updated separately in MallHeroCard.tsx
 
 "use client";
 
@@ -129,7 +123,6 @@ function MasonryTile({
   const fallbackHeights = [120, 145, 110, 160, 130, 105, 150, 125];
   const fallbackH = fallbackHeights[index % fallbackHeights.length];
 
-  // Fade out the highlight ring after ~1.6s
   useEffect(() => {
     if (!isLastViewed) return;
     const t = setTimeout(() => setHighlighted(false), 1600);
@@ -296,7 +289,7 @@ function MasonryGrid({
   );
 }
 
-// ─── Mall dropdown ─────────────────────────────────────────────────────────────
+// ─── Mall dropdown — item 1: "All Treehouse Spots" ────────────────────────────
 
 function MallDropdown({ malls, selectedId, onChange }: { malls: Mall[]; selectedId: string | null; onChange: (id: string | null) => void }) {
   if (malls.length <= 1) return null;
@@ -304,11 +297,11 @@ function MallDropdown({ malls, selectedId, onChange }: { malls: Mall[]; selected
     <div style={{ position: "relative", marginBottom: 10 }}>
       <div style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", gap: 5, pointerEvents: "none", zIndex: 1 }}>
         <MapPin size={11} style={{ color: colors.textMuted }} />
-        <span style={{ fontSize: 10, color: colors.textMuted, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500 }}>Mall</span>
+        <span style={{ fontSize: 10, color: colors.textMuted, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500 }}>Spot</span>
       </div>
       <select value={selectedId ?? ""} onChange={e => onChange(e.target.value || null)}
         style={{ width: "100%", appearance: "none", WebkitAppearance: "none", background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 10, padding: "8px 32px 8px 64px", fontSize: 12, color: colors.textPrimary, fontFamily: "Georgia, serif", cursor: "pointer", outline: "none" }}>
-        <option value="">All malls</option>
+        <option value="">All Treehouse Spots</option>
         {malls.map(m => <option key={m.id} value={m.id}>{m.name}{m.city ? `, ${m.city}` : ""}</option>)}
       </select>
       <ChevronDown size={13} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: colors.textMuted, pointerEvents: "none" }} />
@@ -331,7 +324,6 @@ export default function DiscoveryFeedPage() {
   const [lastViewedId,  setLastViewedId]  = useState<string | null>(null);
   const feedRef          = useRef<HTMLDivElement>(null);
   const wasHidden        = useRef(false);
-  // Read eagerly on mount; applied after feed renders (when loading → false).
   const pendingScrollY   = useRef<number | null>(null);
   const scrollRestored   = useRef(false);
 
@@ -360,8 +352,6 @@ export default function DiscoveryFeedPage() {
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
-  // ── Mount: read saved state into refs; start tracking scroll. ──────────────
-  // Do NOT attempt scrollTo here — the feed has no height yet (it's loading).
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(SCROLL_KEY);
@@ -383,16 +373,12 @@ export default function DiscoveryFeedPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // ── After feed renders: fire the deferred scroll restore once. ─────────────
-  // Runs whenever `loading` changes. When it flips to false the tiles are in
-  // the DOM and the page has real height, so scrollTo lands correctly.
   useEffect(() => {
     if (loading) return;
     if (scrollRestored.current) return;
     if (pendingScrollY.current === null) return;
     scrollRestored.current = true;
     const y = pendingScrollY.current;
-    // rAF gives React one paint cycle to flush tile layout before we scroll.
     requestAnimationFrame(() => {
       window.scrollTo({ top: y, behavior: "instant" });
     });
@@ -499,10 +485,11 @@ export default function DiscoveryFeedPage() {
         </div>
 
         <div ref={feedRef} style={{ scrollMarginTop: 80 }}>
+          {/* Item 2: "Recently added" always shows, regardless of mall filter */}
           {!loading && filtered.length > 0 && (
             <div style={{ marginBottom: 16 }}>
               <span style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 15, color: colors.textMid, fontWeight: 400, letterSpacing: "-0.1px" }}>
-                {selectedMall ? `Finds from ${selectedMall.name}` : "Recently added"}
+                Recently added
               </span>
             </div>
           )}
