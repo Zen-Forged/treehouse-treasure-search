@@ -8,7 +8,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Trash2, Tag, ArrowLeft, Heart, Pencil, Store } from "lucide-react";
+import { Send, Trash2, Tag, ArrowLeft, Heart, Pencil, Store, MapPin } from "lucide-react";
 import { getPost, getVendorPosts, updatePostStatus, deletePost } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
@@ -38,7 +38,6 @@ async function detectOwnershipAsync(post: Post): Promise<boolean> {
 }
 
 // ─── Booth location box ────────────────────────────────────────────────────────
-// Item 5: booth number larger (20px) and green font
 
 function BoothBox({ boothNumber }: { boothNumber: string }) {
   return (
@@ -251,6 +250,13 @@ export default function FindDetailPage() {
   const hasPrice    = post.price_asking != null;
   const vendorSlug  = post.vendor?.slug ?? null;
 
+  // Mall location label for inline line
+  const mallLocationLabel = post.mall?.name
+    ? post.mall.address
+      ? `${post.mall.name} · ${post.mall.address}`
+      : `${post.mall.name}${post.mall.city ? ` · ${post.mall.city}` : ""}`
+    : null;
+
   return (
     <div style={{ minHeight: "100vh", background: colors.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
 
@@ -294,55 +300,63 @@ export default function FindDetailPage() {
         )}
       </div>
 
-      {/* ── 2. Mall location — above title, right-justified, tight spacing ──
-          Item 4: reduced top padding from 20px → 10px to tighten gap after image */}
-      {post.mall && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.28, delay: 0.05 }}
-          style={{ padding: "10px 20px 0", display: "flex", justifyContent: "flex-end" }}>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: colors.textPrimary, lineHeight: 1.25, marginBottom: 2 }}>
-              {post.mall.name}
-            </div>
-            {post.mall.address ? (
-              mapLink
-                ? <a href={mapLink} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: colors.green, textDecoration: "none", borderBottom: `1px solid ${colors.greenBorder}` }}>{post.mall.address}</a>
-                : <div style={{ fontSize: 11, color: colors.textMuted }}>{post.mall.address}</div>
-            ) : mapLink
-              ? <a href={mapLink} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: colors.green, textDecoration: "none", borderBottom: `1px solid ${colors.greenBorder}` }}>{post.mall.city}{post.mall.state ? `, ${post.mall.state}` : ""}</a>
-              : <div style={{ fontSize: 11, color: colors.textMuted }}>{post.mall.city}{post.mall.state ? `, ${post.mall.state}` : ""}</div>
-            }
-          </div>
-        </motion.div>
-      )}
+      {/* ── 2. Content block ── */}
+      <div style={{ padding: "16px 20px 0" }}>
 
-      {/* ── 3. Title + price + status ── */}
-      <div style={{ padding: "8px 20px 0" }}>
+        {/* Mall inline line — compact, left-aligned, right under image */}
+        {post.mall && mallLocationLabel && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25, delay: 0.04 }}
+            style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 10 }}
+          >
+            <MapPin size={11} style={{ color: colors.green, flexShrink: 0 }} />
+            {mapLink ? (
+              <a
+                href={mapLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontFamily: "Georgia, serif", fontSize: 12, color: colors.green,
+                  textDecoration: "none", borderBottom: `1px solid ${colors.greenBorder}`,
+                  lineHeight: 1.3,
+                }}
+              >
+                {mallLocationLabel} · Directions
+              </a>
+            ) : (
+              <span style={{ fontFamily: "Georgia, serif", fontSize: 12, color: colors.textMuted, lineHeight: 1.3 }}>
+                {mallLocationLabel}
+              </span>
+            )}
+          </motion.div>
+        )}
+
+        {/* Title */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32 }}>
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 700, color: colors.textPrimary, lineHeight: 1.22, letterSpacing: "-0.5px", margin: "0 0 8px" }}>
             {post.title}
           </h1>
         </motion.div>
 
-        {/* Price — green, under title */}
-        {hasPrice && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.28, delay: 0.05 }}
-            style={{ marginBottom: 8 }}>
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 18, fontWeight: 700, color: colors.green, letterSpacing: "-0.3px" }}>
+        {/* Price + status row */}
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.28, delay: 0.05 }}
+          style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}
+        >
+          {hasPrice && (
+            <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: colors.green, letterSpacing: "-0.3px" }}>
               ${post.price_asking!.toLocaleString()}
             </div>
-          </motion.div>
-        )}
-
-        {/* Status */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.06 }}
-          style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
-          {!isSold && (
-            <motion.div animate={{ opacity: [1, 0.35, 1] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-              style={{ width: 6, height: 6, borderRadius: "50%", background: colors.green, flexShrink: 0 }} />
           )}
-          <span style={{ fontSize: 12, fontWeight: 500, color: isSold ? colors.textMuted : colors.green, letterSpacing: "0.1px" }}>
-            {isSold ? "Found a home" : "On Display"}
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {!isSold && (
+              <motion.div animate={{ opacity: [1, 0.35, 1] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                style={{ width: 6, height: 6, borderRadius: "50%", background: colors.green, flexShrink: 0 }} />
+            )}
+            <span style={{ fontSize: 12, fontWeight: 500, color: isSold ? colors.textMuted : colors.green, letterSpacing: "0.1px" }}>
+              {isSold ? "Found a home" : "On Display"}
+            </span>
+          </div>
         </motion.div>
 
         {hasContent && (
@@ -381,79 +395,54 @@ export default function FindDetailPage() {
         </>
       )}
 
-      {/* ── Find it here ── */}
-      {post.mall && (
+      {/* ── Owner controls ── */}
+      {showOwnerControls && (
         <div style={{ padding: "0 20px", marginBottom: 28 }}>
-          <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2.2px", fontWeight: 500, marginBottom: 10 }}>
-            Find it here
-          </div>
-          <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.16 }}>
-            <div style={{ background: colors.surface, borderRadius: 14, border: `1px solid ${colors.border}`, overflow: "hidden", boxShadow: "0 2px 10px rgba(26,24,16,0.06)", padding: "14px 16px" }}>
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-                <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500, paddingTop: 2, flexShrink: 0, width: 48 }}>Mall</div>
-                <div style={{ flex: 1, textAlign: "right" }}>
-                  <div style={{ fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 700, color: colors.textPrimary, lineHeight: 1.25, marginBottom: 3 }}>{post.mall.name}</div>
-                  {post.mall.address ? (
-                    mapLink
-                      ? <a href={mapLink} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: colors.green, textDecoration: "none", borderBottom: `1px solid ${colors.greenBorder}` }}>{post.mall.address}</a>
-                      : <div style={{ fontSize: 11, color: colors.textMuted }}>{post.mall.address}</div>
-                  ) : mapLink
-                    ? <a href={mapLink} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: colors.green, textDecoration: "none", borderBottom: `1px solid ${colors.greenBorder}` }}>{post.mall.city}{post.mall.state ? `, ${post.mall.state}` : ""}</a>
-                    : <div style={{ fontSize: 11, color: colors.textMuted }}>{post.mall.city}{post.mall.state ? `, ${post.mall.state}` : ""}</div>
-                  }
-                </div>
-              </div>
+          <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.1 }}
+            style={{ background: colors.surface, borderRadius: 14, border: `1px solid ${colors.border}`, overflow: "hidden", padding: "12px 16px 14px" }}>
+            <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2px", fontWeight: 500, marginBottom: 10 }}>
+              Manage
             </div>
+            <button onClick={() => router.push(`/post/edit/${post.id}`)}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: "4px 0", marginBottom: 10, WebkitTapHighlightColor: "transparent" }}>
+              <Pencil size={11} style={{ color: colors.green }} />
+              <span style={{ fontSize: 11, color: colors.green, fontWeight: 500 }}>Edit listing</span>
+            </button>
+            <button onClick={handleToggleSold} disabled={actionBusy}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: actionBusy ? "default" : "pointer", padding: "4px 0", marginBottom: 10, opacity: actionBusy ? 0.5 : 1, WebkitTapHighlightColor: "transparent" }}>
+              <Tag size={11} style={{ color: isSold ? colors.green : colors.textFaint }} />
+              <span style={{ fontSize: 11, color: isSold ? colors.green : colors.textMuted, fontWeight: isSold ? 600 : 400 }}>
+                {isSold ? "Mark as available" : "Mark as sold"}
+              </span>
+            </button>
+            {!showDelete ? (
+              <button onClick={() => setShowDelete(true)}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: "4px 0", WebkitTapHighlightColor: "transparent" }}>
+                <Trash2 size={11} style={{ color: colors.textFaint }} />
+                <span style={{ fontSize: 11, color: colors.textFaint }}>Delete post</span>
+              </button>
+            ) : (
+              <AnimatePresence>
+                <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
+                  style={{ padding: "13px", borderRadius: 11, background: colors.redBg, border: `1px solid ${colors.redBorder}` }}>
+                  <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: colors.red, marginBottom: 4 }}>Delete this post?</div>
+                  <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 13, lineHeight: 1.65 }}>
+                    This can&apos;t be undone. The image and listing will be permanently removed.
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={handleDelete} disabled={actionBusy}
+                      style={{ flex: 1, padding: "10px", borderRadius: 9, fontSize: 13, fontWeight: 600, color: "#fff", background: colors.red, border: "none", cursor: "pointer", opacity: actionBusy ? 0.6 : 1 }}>
+                      {actionBusy ? "Deleting…" : "Yes, delete"}
+                    </button>
+                    <button onClick={() => setShowDelete(false)}
+                      style={{ flex: 1, padding: "10px", borderRadius: 9, fontSize: 13, color: colors.textMid, background: colors.surface, border: `1px solid ${colors.border}`, cursor: "pointer" }}>
+                      Cancel
+                    </button>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            )}
           </motion.div>
-
-          {/* Owner controls */}
-          {showOwnerControls && (
-            <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.1 }}
-              style={{ marginTop: 10, background: colors.surface, borderRadius: 14, border: `1px solid ${colors.border}`, overflow: "hidden", padding: "12px 16px 14px" }}>
-              <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2px", fontWeight: 500, marginBottom: 10 }}>
-                Manage
-              </div>
-              <button onClick={() => router.push(`/post/edit/${post.id}`)}
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: "4px 0", marginBottom: 10, WebkitTapHighlightColor: "transparent" }}>
-                <Pencil size={11} style={{ color: colors.green }} />
-                <span style={{ fontSize: 11, color: colors.green, fontWeight: 500 }}>Edit listing</span>
-              </button>
-              <button onClick={handleToggleSold} disabled={actionBusy}
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: actionBusy ? "default" : "pointer", padding: "4px 0", marginBottom: 10, opacity: actionBusy ? 0.5 : 1, WebkitTapHighlightColor: "transparent" }}>
-                <Tag size={11} style={{ color: isSold ? colors.green : colors.textFaint }} />
-                <span style={{ fontSize: 11, color: isSold ? colors.green : colors.textMuted, fontWeight: isSold ? 600 : 400 }}>
-                  {isSold ? "Mark as available" : "Mark as sold"}
-                </span>
-              </button>
-              {!showDelete ? (
-                <button onClick={() => setShowDelete(true)}
-                  style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: "4px 0", WebkitTapHighlightColor: "transparent" }}>
-                  <Trash2 size={11} style={{ color: colors.textFaint }} />
-                  <span style={{ fontSize: 11, color: colors.textFaint }}>Delete post</span>
-                </button>
-              ) : (
-                <AnimatePresence>
-                  <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-                    style={{ padding: "13px", borderRadius: 11, background: colors.redBg, border: `1px solid ${colors.redBorder}` }}>
-                    <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: colors.red, marginBottom: 4 }}>Delete this post?</div>
-                    <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 13, lineHeight: 1.65 }}>
-                      This can&apos;t be undone. The image and listing will be permanently removed.
-                    </div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={handleDelete} disabled={actionBusy}
-                        style={{ flex: 1, padding: "10px", borderRadius: 9, fontSize: 13, fontWeight: 600, color: "#fff", background: colors.red, border: "none", cursor: "pointer", opacity: actionBusy ? 0.6 : 1 }}>
-                        {actionBusy ? "Deleting…" : "Yes, delete"}
-                      </button>
-                      <button onClick={() => setShowDelete(false)}
-                        style={{ flex: 1, padding: "10px", borderRadius: 9, fontSize: 13, color: colors.textMid, background: colors.surface, border: `1px solid ${colors.border}`, cursor: "pointer" }}>
-                        Cancel
-                      </button>
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
-              )}
-            </motion.div>
-          )}
         </div>
       )}
 
