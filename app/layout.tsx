@@ -2,7 +2,11 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { FindSessionProvider } from "@/hooks/useSession";
-import DevAuthPanel from "@/components/DevAuthPanel";
+
+// DevAuthPanel is dev-only — never rendered in production
+const DevAuthPanel = process.env.NODE_ENV === "development"
+  ? require("@/components/DevAuthPanel").default
+  : () => null;
 
 export const metadata: Metadata = {
   title: "Treehouse",

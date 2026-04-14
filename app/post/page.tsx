@@ -4,6 +4,7 @@
 // FLOW:
 //   1. Pick photo (camera or gallery)
 //   2. AI generates title + caption → shown in editable form
+//      If AI fails, form opens with empty fields + a clear manual-entry notice
 //   3. User edits title, description, price → taps "Save to Shelf"
 //   4. Upload image + createPost → toast → redirect to /my-shelf
 //
@@ -19,7 +20,7 @@ import { useRef, useState, useEffect, useCallback, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, ArrowLeft, ChevronDown, Check, Loader, X } from "lucide-react";
+import { Camera, ArrowLeft, ChevronDown, Check, Loader, X, AlertCircle } from "lucide-react";
 import { getAllMalls, createPost, createVendor, getVendorByUserId, getVendorById, slugify } from "@/lib/posts";
 import { safeStorage } from "@/lib/safeStorage";
 import { getSession, isAdmin } from "@/lib/auth";
@@ -43,6 +44,9 @@ const C = {
   greenBorder: "rgba(30,77,43,0.18)",
   input:       "rgba(255,255,255,0.7)",
   inputBorder: "rgba(26,26,24,0.14)",
+  amber:       "#7a5c1e",
+  amberBg:     "rgba(122,92,30,0.08)",
+  amberBorder: "rgba(122,92,30,0.22)",
 };
 
 function compressImage(dataUrl: string, maxWidth = 1200, quality = 0.78): Promise<string> {
@@ -61,7 +65,7 @@ function compressImage(dataUrl: string, maxWidth = 1200, quality = 0.78): Promis
   });
 }
 
-async function generateCaption(imageDataUrl: string): Promise<{ title: string; caption: string }> {
+async function generateCaption(imageDataUrl: string): Promise<{ title: string; caption: string; aiSucceeded: boolean }> {
   try {
     const res = await fetch("/api/post-caption", {
       method:  "POST",
@@ -70,10 +74,14 @@ async function generateCaption(imageDataUrl: string): Promise<{ title: string; c
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    return { title: data.title ?? "", caption: data.caption ?? "" };
+    const title   = data.title   ?? "";
+    const caption = data.caption ?? "";
+    // Treat as failed if both fields came back empty
+    const aiSucceeded = !!(title || caption);
+    return { title, caption, aiSucceeded };
   } catch (err) {
     console.error("[post] generateCaption failed:", err);
-    return { title: "", caption: "" };
+    return { title: "", caption: "", aiSucceeded: false };
   }
 }
 
@@ -128,10 +136,11 @@ function PostCaptureInner() {
   const [boothNumber,  setBoothNumber]  = useState("");
   const [selectedMall, setSelectedMall] = useState<Mall | null>(null);
 
-  const [stage,       setStage]       = useState<Stage>("idle");
-  const [saveError,   setSaveError]   = useState<string | null>(null);
-  const [previewImg,  setPreviewImg]  = useState<string | null>(null);
-  const [mounted,     setMounted]     = useState(false);
+  const [stage,          setStage]          = useState<Stage>("idle");
+  const [saveError,      setSaveError]      = useState<string | null>(null);
+  const [previewImg,     setPreviewImg]     = useState<string | null>(null);
+  const [mounted,        setMounted]        = useState(false);
+  const [aiCapFailed,    setAiCapFailed]    = useState(false); // true when AI returned nothing
 
   // Editable fields populated by AI then user-editable
   const [editTitle,   setEditTitle]   = useState("");
@@ -233,6 +242,7 @@ function PostCaptureInner() {
 
     setStage("generating");
     setSaveError(null);
+    setAiCapFailed(false);
 
     try {
       const reader  = new FileReader();
@@ -245,11 +255,14 @@ function PostCaptureInner() {
       setPreviewImg(compressed);
       pendingImageRef.current = compressed;
 
-      const { title, caption } = await generateCaption(compressed);
+      const { title, caption, aiSucceeded } = await generateCaption(compressed);
 
       setEditTitle(title);
       setEditDesc(caption);
       setEditPrice("");
+
+      // If AI returned nothing, flag it so the editing form shows a notice
+      if (!aiSucceeded) setAiCapFailed(true);
 
       setStage("editing");
     } catch (err) {
@@ -277,6 +290,15 @@ function PostCaptureInner() {
     if (!title) {
       setSaveError("Please add a title before saving.");
       return;
+    }
+
+    // ── Price validation ──
+    if (editPrice.trim()) {
+      const priceVal = parseFloat(editPrice.trim());
+      if (isNaN(priceVal) || priceVal < 0) {
+        setSaveError("Price must be a positive number.");
+        return;
+      }
     }
 
     setStage("saving");
@@ -341,9 +363,7 @@ function PostCaptureInner() {
 
       setTimeout(() => {
         const dest = vendorParam ? `/my-shelf?vendor=${vendorParam}` : "/my-shelf";
-        // Clear saved scroll position so the feed lands at top showing the new post
         try { sessionStorage.removeItem(FEED_SCROLL_KEY); } catch {}
-        // Invalidate Next.js cache so /my-shelf re-fetches fresh data
         router.refresh();
         router.push(dest);
       }, 1800);
@@ -379,11 +399,6 @@ function PostCaptureInner() {
 
   if (!identityReady) return null;
 
-  // ── Toast — rendered via portal into document.body ──────────────────────────
-  // IMPORTANT: The centering shell is a plain fixed div (not motion.div).
-  // Framer Motion's `animate` prop overrides `transform` in `style`, which breaks
-  // translate(-50%, -50%) centering. Centering is handled by the shell flex layout;
-  // the motion.div only animates opacity, y, and scale.
   const showToast = stage === "saving" || stage === "done" || stage === "error";
   const toastEl = (
     <AnimatePresence>
@@ -391,12 +406,8 @@ function PostCaptureInner() {
         <div
           key="toast-shell"
           style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            position: "fixed", inset: 0, zIndex: 9999,
+            display: "flex", alignItems: "center", justifyContent: "center",
             pointerEvents: "none",
           }}
         >
@@ -414,13 +425,10 @@ function PostCaptureInner() {
                 : stage === "done"
                   ? "rgba(18,34,20,0.92)"
                   : "rgba(26,24,16,0.88)",
-              backdropFilter: "blur(14px)",
-              WebkitBackdropFilter: "blur(14px)",
-              borderRadius: 20,
-              padding: "20px 22px",
+              backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
+              borderRadius: 20, padding: "20px 22px",
               display: "flex", flexDirection: "column", alignItems: "center", gap: 14,
-              boxShadow: "0 8px 40px rgba(0,0,0,0.30)",
-              textAlign: "center",
+              boxShadow: "0 8px 40px rgba(0,0,0,0.30)", textAlign: "center",
             }}
           >
             {previewImg && stage !== "error" && (
@@ -442,12 +450,8 @@ function PostCaptureInner() {
                  stage === "done"   ? "Added to your shelf!" :
                                       saveError ?? "Something went wrong"}
               </div>
-              {stage === "saving" && (
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>Uploading image</div>
-              )}
-              {stage === "done" && (
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>Taking you to your shelf…</div>
-              )}
+              {stage === "saving" && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>Uploading image</div>}
+              {stage === "done"   && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>Taking you to your shelf…</div>}
             </div>
             {stage === "error" && (
               <button
@@ -476,7 +480,7 @@ function PostCaptureInner() {
           {/* Nav */}
           <header style={{ display: "flex", alignItems: "center", padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 14px", borderBottom: `1px solid ${C.border}`, background: C.bg }}>
             <button onClick={() => {
-              if (stage === "editing") { setStage("idle"); setPreviewImg(null); pendingImageRef.current = null; }
+              if (stage === "editing") { setStage("idle"); setPreviewImg(null); pendingImageRef.current = null; setAiCapFailed(false); }
               else router.back();
             }} style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer", marginRight: 12, WebkitTapHighlightColor: "transparent" }}>
               <ArrowLeft size={15} style={{ color: C.textMid }} />
@@ -502,25 +506,40 @@ function PostCaptureInner() {
                   <div style={{ borderRadius: 14, overflow: "hidden", position: "relative", maxHeight: 240 }}>
                     <img src={previewImg} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", maxHeight: 240 }} />
                     <button
-                      onClick={() => { setStage("idle"); setPreviewImg(null); pendingImageRef.current = null; }}
+                      onClick={() => { setStage("idle"); setPreviewImg(null); pendingImageRef.current = null; setAiCapFailed(false); }}
                       style={{ position: "absolute", top: 10, right: 10, width: 30, height: 30, borderRadius: "50%", background: "rgba(0,0,0,0.45)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
                       <X size={14} style={{ color: "#fff" }} />
                     </button>
                   </div>
                 )}
 
+                {/* ── AI caption failure notice ── */}
+                {aiCapFailed && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }}
+                    style={{ display: "flex", alignItems: "flex-start", gap: 9, padding: "10px 12px", borderRadius: 10, background: C.amberBg, border: `1px solid ${C.amberBorder}` }}
+                  >
+                    <AlertCircle size={13} style={{ color: C.amber, flexShrink: 0, marginTop: 1 }} />
+                    <span style={{ fontSize: 12, color: C.amber, lineHeight: 1.55 }}>
+                      Couldn't read this image automatically — fill in the title and details below.
+                    </span>
+                  </motion.div>
+                )}
+
+                {/* Title */}
                 <div>
                   <label style={labelStyle}>Title *</label>
                   <input
                     type="text"
                     value={editTitle}
-                    onChange={e => setEditTitle(e.target.value)}
+                    onChange={e => { setEditTitle(e.target.value); if (saveError === "Please add a title before saving.") setSaveError(null); }}
                     placeholder="What is this?"
                     style={{ ...inputStyle, fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 600 }}
                     autoFocus
                   />
                 </div>
 
+                {/* Caption */}
                 <div>
                   <label style={labelStyle}>Caption <span style={{ color: C.textFaint, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
                   <textarea
@@ -532,6 +551,7 @@ function PostCaptureInner() {
                   />
                 </div>
 
+                {/* Price */}
                 <div>
                   <label style={labelStyle}>Price <span style={{ color: C.textFaint, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
                   <div style={{ position: "relative" }}>
@@ -539,13 +559,22 @@ function PostCaptureInner() {
                     <input
                       type="number"
                       inputMode="decimal"
+                      min="0"
                       value={editPrice}
-                      onChange={e => setEditPrice(e.target.value)}
+                      onChange={e => { setEditPrice(e.target.value); if (saveError?.includes("Price")) setSaveError(null); }}
                       placeholder="0.00"
-                      style={{ ...inputStyle, paddingLeft: 26, fontFamily: "monospace" }}
+                      style={{ ...inputStyle, paddingLeft: 26, fontFamily: "monospace", borderColor: saveError?.includes("Price") ? "#8b2020" : C.inputBorder }}
                     />
                   </div>
+                  {saveError?.includes("Price") && (
+                    <div style={{ fontSize: 11, color: "#8b2020", marginTop: 5 }}>{saveError}</div>
+                  )}
                 </div>
+
+                {/* Title error inline */}
+                {saveError && saveError.includes("title") && (
+                  <div style={{ fontSize: 12, color: "#8b2020", marginTop: -6 }}>{saveError}</div>
+                )}
 
                 <button
                   onClick={handleSave}
@@ -614,7 +643,7 @@ function PostCaptureInner() {
                             <AnimatePresence>
                               {showMallPick && (
                                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} style={{ overflow: "hidden", marginTop: 4 }}>
-                                  <div style={{ borderRadius: 9, border: `1px solid ${C.border}`, overflow: "hidden", background: "#fff", maxHeight: 200, overflowY: "auto" }}>
+                                  <div style={{ borderRadius: 9, border: `1px solid ${C.border}`, overflow: "hidden", background: "#fff", maxHeight: 220, overflowY: "auto" }}>
                                     {malls.map(mall => (
                                       <button key={mall.id} onClick={() => { setSelectedMall(mall); setShowMallPick(false); }}
                                         style={{ width: "100%", padding: "11px 14px", background: selectedMall?.id === mall.id ? C.greenLight : "none", border: "none", borderBottom: `1px solid ${C.border}`, cursor: "pointer", textAlign: "left" }}>
@@ -696,8 +725,6 @@ function PostCaptureInner() {
     </>
   );
 }
-
-// ─── Page wrapper — Suspense for useSearchParams ───────────────────────────────
 
 export default function PostCapturePage() {
   return (
