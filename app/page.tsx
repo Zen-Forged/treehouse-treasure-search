@@ -8,6 +8,8 @@
 // Animation: scroll-triggered tile entry (IntersectionObserver) + image warmth hover.
 // Back-nav: last-viewed post ID written to sessionStorage on tap; tile gets a brief
 //           warm highlight ring on return to orient the user.
+// Scroll restore: keys are read eagerly on mount into refs; the actual scrollTo fires
+//                 after loading flips false so the feed has real DOM height.
 
 "use client";
 
@@ -25,8 +27,8 @@ import BottomNav from "@/components/BottomNav";
 import { MallHeroCard, GenericMallHero } from "@/components/MallHeroCard";
 import type { Post, Mall } from "@/types/treehouse";
 
-const SCROLL_KEY       = "treehouse_feed_scroll";
-const LAST_VIEWED_KEY  = "treehouse_last_viewed_post";
+const SCROLL_KEY      = "treehouse_feed_scroll";
+const LAST_VIEWED_KEY = "treehouse_last_viewed_post";
 
 // ─── Scroll-triggered reveal hook ─────────────────────────────────────────────
 
@@ -148,7 +150,6 @@ function MasonryTile({
     onToggleSave(post.id);
   }
 
-  // Write this post's ID before navigating to the detail page
   function handleTileClick() {
     try { sessionStorage.setItem(LAST_VIEWED_KEY, post.id); } catch {}
   }
@@ -328,8 +329,11 @@ export default function DiscoveryFeedPage() {
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const [isAuthed,      setIsAuthed]      = useState<boolean | null>(null);
   const [lastViewedId,  setLastViewedId]  = useState<string | null>(null);
-  const feedRef   = useRef<HTMLDivElement>(null);
-  const wasHidden = useRef(false);
+  const feedRef          = useRef<HTMLDivElement>(null);
+  const wasHidden        = useRef(false);
+  // Read eagerly on mount; applied after feed renders (when loading → false).
+  const pendingScrollY   = useRef<number | null>(null);
+  const scrollRestored   = useRef(false);
 
   function syncBookmarks() {
     const ids = loadFollowedIds();
@@ -356,25 +360,43 @@ export default function DiscoveryFeedPage() {
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
-  // Restore scroll position and pick up last-viewed ID for the highlight anchor.
+  // ── Mount: read saved state into refs; start tracking scroll. ──────────────
+  // Do NOT attempt scrollTo here — the feed has no height yet (it's loading).
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(SCROLL_KEY);
       if (saved) {
         const y = parseInt(saved, 10);
-        if (!isNaN(y) && y > 0) requestAnimationFrame(() => { window.scrollTo({ top: y, behavior: "instant" }); });
+        if (!isNaN(y) && y > 0) pendingScrollY.current = y;
       }
       const lastId = sessionStorage.getItem(LAST_VIEWED_KEY);
       if (lastId) {
         setLastViewedId(lastId);
-        // Clear immediately — highlight is a one-time signal on return, not a persistent marker.
         sessionStorage.removeItem(LAST_VIEWED_KEY);
       }
     } catch {}
-    function onScroll() { try { sessionStorage.setItem(SCROLL_KEY, String(Math.round(window.scrollY))); } catch {} }
+
+    function onScroll() {
+      try { sessionStorage.setItem(SCROLL_KEY, String(Math.round(window.scrollY))); } catch {}
+    }
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  // ── After feed renders: fire the deferred scroll restore once. ─────────────
+  // Runs whenever `loading` changes. When it flips to false the tiles are in
+  // the DOM and the page has real height, so scrollTo lands correctly.
+  useEffect(() => {
+    if (loading) return;
+    if (scrollRestored.current) return;
+    if (pendingScrollY.current === null) return;
+    scrollRestored.current = true;
+    const y = pendingScrollY.current;
+    // rAF gives React one paint cycle to flush tile layout before we scroll.
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: y, behavior: "instant" });
+    });
+  }, [loading]);
 
   useEffect(() => { getAllMalls().then(setMalls); }, []);
 
