@@ -2,15 +2,18 @@
 // Fixed bottom navigation.
 //
 // Tab layout:
-//   Guest:   Home · Find Map · Booths            (3 tabs)
-//   Auth:    Home · Find Map · Booths · My Booth (4 tabs)
+//   Guest:        Home · Find Map                    (2 tabs)
+//   Vendor:       Home · Find Map · My Booth         (3 tabs)
+//   Admin:        Home · Find Map · Booths · My Booth (4 tabs)
+//
+// Item 3: Booths tab is admin-only — hidden from vendors and guests.
 
 "use client";
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Home, Store, LayoutGrid, Heart } from "lucide-react";
-import { getSession } from "@/lib/auth";
+import { getSession, isAdmin } from "@/lib/auth";
 import type { User } from "@supabase/supabase-js";
 
 export type NavTab = "home" | "shelves" | "flagged" | "my-shelf" | null;
@@ -67,9 +70,16 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     icon: <Store size={21} strokeWidth={1.7} />,
   };
 
-  const tabs: TabDef[] = user
-    ? [homeTab, findsTab, boothsTab, myBoothTab]
-    : [homeTab, findsTab, boothsTab];
+  const adminUser = isAdmin(user);
+
+  // Guest: Home · Find Map
+  // Vendor (authed, not admin): Home · Find Map · My Booth
+  // Admin: Home · Find Map · Booths · My Booth
+  const tabs: TabDef[] = !user
+    ? [homeTab, findsTab]
+    : adminUser
+      ? [homeTab, findsTab, boothsTab, myBoothTab]
+      : [homeTab, findsTab, myBoothTab];
 
   const navStyle: React.CSSProperties = {
     position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",

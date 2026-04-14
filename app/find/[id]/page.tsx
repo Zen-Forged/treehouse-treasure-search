@@ -1,12 +1,4 @@
 // app/find/[id]/page.tsx
-// Find detail page.
-// Changes:
-//   - Mall name + address moved ABOVE item title, right-justified, no container
-//   - Price moved UNDER item title, green font
-//   - "Available" → "On Display"
-//   - "Save" CTA → "Explore the Booth" → routes to /shelf/[slug]
-//   - Vendor row removed from "Find it here" (already in hero banner)
-//   - Back nav on floating button (already present)
 
 "use client";
 
@@ -46,6 +38,7 @@ async function detectOwnershipAsync(post: Post): Promise<boolean> {
 }
 
 // ─── Booth location box ────────────────────────────────────────────────────────
+// Item 5: booth number larger (20px) and green font
 
 function BoothBox({ boothNumber }: { boothNumber: string }) {
   return (
@@ -55,10 +48,17 @@ function BoothBox({ boothNumber }: { boothNumber: string }) {
       borderRadius: 8, padding: "6px 14px 7px",
       boxShadow: "0 2px 8px rgba(26,24,16,0.10), 0 1px 3px rgba(26,24,16,0.06)",
     }}>
-      <div style={{ fontFamily: "system-ui, sans-serif", fontSize: 8, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "1.8px", color: colors.textMuted, lineHeight: 1, marginBottom: 4 }}>
+      <div style={{
+        fontFamily: "system-ui, sans-serif", fontSize: 8, fontWeight: 600,
+        textTransform: "uppercase" as const, letterSpacing: "1.8px",
+        color: colors.textMuted, lineHeight: 1, marginBottom: 4,
+      }}>
         Booth
       </div>
-      <div style={{ fontFamily: "monospace", fontSize: 16, fontWeight: 700, color: colors.textPrimary, letterSpacing: "0.2px", lineHeight: 1 }}>
+      <div style={{
+        fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700,
+        color: colors.green, letterSpacing: "0.2px", lineHeight: 1,
+      }}>
         {boothNumber}
       </div>
     </div>
@@ -215,9 +215,7 @@ export default function FindDetailPage() {
 
   function handleExploreBooth() {
     const slug = post?.vendor?.slug;
-    if (slug) {
-      router.push(`/shelf/${slug}`);
-    }
+    if (slug) router.push(`/shelf/${slug}`);
   }
 
   const showOwnerControls = isMyPost;
@@ -271,13 +269,13 @@ export default function FindDetailPage() {
           </div>
         )}
 
-        {/* Back button — top-left */}
+        {/* Back button */}
         <button onClick={() => router.back()} aria-label="Go back"
           style={{ position: "absolute", top: "max(14px, env(safe-area-inset-top, 14px))", left: 14, width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(240,237,230,0.82)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: `1px solid rgba(26,24,16,0.10)`, cursor: "pointer", boxShadow: "0 2px 8px rgba(26,24,16,0.12)", WebkitTapHighlightColor: "transparent" }}>
           <ArrowLeft size={15} style={{ color: colors.textMid }} />
         </button>
 
-        {/* Heart + Share — bottom-right of image */}
+        {/* Heart + Share */}
         <div style={{ position: "absolute", bottom: 12, right: 14, display: "flex", alignItems: "center", gap: 8 }}>
           <button onClick={handleToggleSave} aria-label={isSaved ? "Remove from My Finds" : "Save to My Finds"}
             style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: isSaved ? colors.greenSolid : "rgba(0,0,0,0.30)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", cursor: "pointer", transition: "background 0.18s", boxShadow: isSaved ? "0 2px 8px rgba(30,77,43,0.40)" : "0 1px 5px rgba(0,0,0,0.20)", WebkitTapHighlightColor: "transparent" }}>
@@ -296,10 +294,11 @@ export default function FindDetailPage() {
         )}
       </div>
 
-      {/* ── 2. Mall location — above title, right-justified ── */}
+      {/* ── 2. Mall location — above title, right-justified, tight spacing ──
+          Item 4: reduced top padding from 20px → 10px to tighten gap after image */}
       {post.mall && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.28, delay: 0.05 }}
-          style={{ padding: "20px 20px 0", display: "flex", justifyContent: "flex-end" }}>
+          style={{ padding: "10px 20px 0", display: "flex", justifyContent: "flex-end" }}>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: colors.textPrimary, lineHeight: 1.25, marginBottom: 2 }}>
               {post.mall.name}
@@ -316,15 +315,15 @@ export default function FindDetailPage() {
         </motion.div>
       )}
 
-      {/* ── 3. Title + price ── */}
-      <div style={{ padding: `${post.mall ? "10px" : "22px"} 20px 0` }}>
+      {/* ── 3. Title + price + status ── */}
+      <div style={{ padding: "8px 20px 0" }}>
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.32 }}>
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 700, color: colors.textPrimary, lineHeight: 1.22, letterSpacing: "-0.5px", margin: "0 0 8px" }}>
             {post.title}
           </h1>
         </motion.div>
 
-        {/* Price — under title, green */}
+        {/* Price — green, under title */}
         {hasPrice && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.28, delay: 0.05 }}
             style={{ marginBottom: 8 }}>
@@ -334,7 +333,7 @@ export default function FindDetailPage() {
           </motion.div>
         )}
 
-        {/* Availability status */}
+        {/* Status */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3, delay: 0.06 }}
           style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
           {!isSold && (
@@ -382,14 +381,13 @@ export default function FindDetailPage() {
         </>
       )}
 
-      {/* ── Find it here — mall only (vendor row removed, already in hero) ── */}
+      {/* ── Find it here ── */}
       {post.mall && (
         <div style={{ padding: "0 20px", marginBottom: 28 }}>
           <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2.2px", fontWeight: 500, marginBottom: 10 }}>
             Find it here
           </div>
           <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.16 }}>
-            {/* Mall row only */}
             <div style={{ background: colors.surface, borderRadius: 14, border: `1px solid ${colors.border}`, overflow: "hidden", boxShadow: "0 2px 10px rgba(26,24,16,0.06)", padding: "14px 16px" }}>
               <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
                 <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "1.8px", fontWeight: 500, paddingTop: 2, flexShrink: 0, width: 48 }}>Mall</div>
@@ -408,22 +406,18 @@ export default function FindDetailPage() {
             </div>
           </motion.div>
 
-          {/* Owner controls — separate surface below */}
+          {/* Owner controls */}
           {showOwnerControls && (
             <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.1 }}
               style={{ marginTop: 10, background: colors.surface, borderRadius: 14, border: `1px solid ${colors.border}`, overflow: "hidden", padding: "12px 16px 14px" }}>
               <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2px", fontWeight: 500, marginBottom: 10 }}>
                 Manage
               </div>
-
-              <button
-                onClick={() => router.push(`/post/edit/${post.id}`)}
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: "4px 0", marginBottom: 10, WebkitTapHighlightColor: "transparent" }}
-              >
+              <button onClick={() => router.push(`/post/edit/${post.id}`)}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: "4px 0", marginBottom: 10, WebkitTapHighlightColor: "transparent" }}>
                 <Pencil size={11} style={{ color: colors.green }} />
                 <span style={{ fontSize: 11, color: colors.green, fontWeight: 500 }}>Edit listing</span>
               </button>
-
               <button onClick={handleToggleSold} disabled={actionBusy}
                 style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: actionBusy ? "default" : "pointer", padding: "4px 0", marginBottom: 10, opacity: actionBusy ? 0.5 : 1, WebkitTapHighlightColor: "transparent" }}>
                 <Tag size={11} style={{ color: isSold ? colors.green : colors.textFaint }} />
@@ -431,7 +425,6 @@ export default function FindDetailPage() {
                   {isSold ? "Mark as available" : "Mark as sold"}
                 </span>
               </button>
-
               {!showDelete ? (
                 <button onClick={() => setShowDelete(true)}
                   style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: "4px 0", WebkitTapHighlightColor: "transparent" }}>
