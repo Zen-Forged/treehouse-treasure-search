@@ -1,9 +1,6 @@
 // app/page.tsx
 // Treehouse — Discovery Feed
-// Changes:
-//   - Mall dropdown label: "All malls" → "All Treehouse Spots"
-//   - Feed label always shows "Recently added" (never "Finds from X" when mall selected)
-//   - MallHeroCard updated separately in MallHeroCard.tsx
+// Item 6: Sign in link moved left, inline with logo+title group
 
 "use client";
 
@@ -289,7 +286,7 @@ function MasonryGrid({
   );
 }
 
-// ─── Mall dropdown — item 1: "All Treehouse Spots" ────────────────────────────
+// ─── Mall dropdown ────────────────────────────────────────────────────────────
 
 function MallDropdown({ malls, selectedId, onChange }: { malls: Mall[]; selectedId: string | null; onChange: (id: string | null) => void }) {
   if (malls.length <= 1) return null;
@@ -379,9 +376,7 @@ export default function DiscoveryFeedPage() {
     if (pendingScrollY.current === null) return;
     scrollRestored.current = true;
     const y = pendingScrollY.current;
-    requestAnimationFrame(() => {
-      window.scrollTo({ top: y, behavior: "instant" });
-    });
+    requestAnimationFrame(() => { window.scrollTo({ top: y, behavior: "instant" }); });
   }, [loading]);
 
   useEffect(() => { getAllMalls().then(setMalls); }, []);
@@ -445,26 +440,27 @@ export default function DiscoveryFeedPage() {
 
       {/* ── Header ── */}
       <header style={{ position: "sticky", top: 0, zIndex: 50, background: colors.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${colors.border}`, padding: "0 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "max(16px, env(safe-area-inset-top, 16px))", paddingBottom: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
-            <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: colors.textPrimary, letterSpacing: "-0.3px", lineHeight: 1 }}>
-              Treehouse Finds
-            </span>
-          </div>
+
+        {/* Item 6: Sign in sits inline with logo+title, not pushed to far right */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: "max(16px, env(safe-area-inset-top, 16px))", paddingBottom: 12 }}>
+          <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
+          <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: colors.textPrimary, letterSpacing: "-0.3px", lineHeight: 1 }}>
+            Treehouse Finds
+          </span>
           {isAuthed === false && (
             <Link href="/login"
-              style={{ fontSize: 13, color: colors.green, fontFamily: "Georgia, serif", fontStyle: "italic", textDecoration: "none", whiteSpace: "nowrap" }}>
-              Sign in
+              style={{ fontSize: 13, color: colors.green, fontFamily: "Georgia, serif", fontStyle: "italic", textDecoration: "none", whiteSpace: "nowrap", marginLeft: 2 }}>
+              · Sign in
             </Link>
           )}
           {isAuthed === true && (
             <button onClick={handleSignOut}
-              style={{ fontSize: 13, color: colors.textMuted, fontFamily: "Georgia, serif", fontStyle: "italic", background: "none", border: "none", cursor: "pointer", padding: 0, whiteSpace: "nowrap", WebkitTapHighlightColor: "transparent" }}>
-              Sign out
+              style={{ fontSize: 13, color: colors.textMuted, fontFamily: "Georgia, serif", fontStyle: "italic", background: "none", border: "none", cursor: "pointer", padding: 0, whiteSpace: "nowrap", WebkitTapHighlightColor: "transparent", marginLeft: 2 }}>
+              · Sign out
             </button>
           )}
         </div>
+
         <MallDropdown malls={malls} selectedId={mallId} onChange={setMallId} />
       </header>
 
@@ -485,7 +481,6 @@ export default function DiscoveryFeedPage() {
         </div>
 
         <div ref={feedRef} style={{ scrollMarginTop: 80 }}>
-          {/* Item 2: "Recently added" always shows, regardless of mall filter */}
           {!loading && filtered.length > 0 && (
             <div style={{ marginBottom: 16 }}>
               <span style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 15, color: colors.textMid, fontWeight: 400, letterSpacing: "-0.1px" }}>
