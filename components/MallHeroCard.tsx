@@ -1,14 +1,16 @@
 // components/MallHeroCard.tsx
-// Mall Identity Hero Card — full-width, place-based, no custom image required
-// Renders instantly for any mall with just name + city + state
+// Mall Identity Hero Card — full-width, place-based, no custom image required.
+// Item 2: MallHeroCard title reads "Treehouse Finds from [mall name]"
+//         Address shown underneath as hyperlink to maps.
 
 "use client";
 
 import { motion } from "framer-motion";
 import { MapPin, ArrowRight } from "lucide-react";
+import { mapsUrl } from "@/lib/utils";
 import type { Mall } from "@/types/treehouse";
 
-// ─── Palette (ecosystem tokens) ───────────────────────────────────────────────
+// ─── Palette ──────────────────────────────────────────────────────────────────
 
 const C = {
   green:       "#1e4d2b",
@@ -17,7 +19,6 @@ const C = {
   greenBorder: "rgba(30,77,43,0.26)",
   textPrimary: "#1a1a18",
   textMuted:   "#8a8478",
-  textFaint:   "#b0aa9e",
   border:      "rgba(26,26,24,0.10)",
   surface:     "#e8e4db",
   bg:          "#f0ede6",
@@ -43,11 +44,10 @@ function pickStyle(mallName: string): HeroStyle {
   return HERO_STYLES[Math.abs(hash) % HERO_STYLES.length];
 }
 
-// Subtle noise texture overlay as SVG data URI
 const NOISE_OVERLAY =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E\")";
 
-// ─── Generic hero (All malls / no mall selected) ───────────────────────────────
+// ─── Generic hero (all malls / no mall selected) ───────────────────────────────
 
 interface GenericHeroProps {
   onExplore: () => void;
@@ -81,19 +81,24 @@ export interface MallHeroProps {
 export function MallHeroCard({ mall, onExplore }: MallHeroProps) {
   const style    = (mall.hero_style as HeroStyle) ?? pickStyle(mall.name);
   const gradient = HERO_GRADIENTS[style] ?? HERO_GRADIENTS.default;
-  const title    = mall.hero_title   ?? mall.name;
-  const subtitle = mall.hero_subtitle ?? `Curated finds in ${mall.city}${mall.state ? `, ${mall.state}` : ""}`;
+  // Item 2: title reads "Treehouse Finds from [mall name]"
+  const title    = `Treehouse Finds from ${mall.name}`;
+  const address  = mall.address ?? null;
+  const mapLink  = address
+    ? mapsUrl(address)
+    : mapsUrl(`${mall.name} ${mall.city ?? ""} ${mall.state ?? ""}`);
 
   return (
     <MallHeroCardInner
       gradient={gradient}
       bgImage={mall.hero_image_url ?? undefined}
-      eyebrow="Welcome to"
+      eyebrow="Now showing"
       title={title}
-      subtitle={subtitle}
-      ctaLabel="Explore this mall →"
+      subtitle={undefined}
+      addressLine={address ?? (mall.city ? `${mall.city}${mall.state ? `, ${mall.state}` : ""}` : undefined)}
+      mapLink={mapLink}
+      ctaLabel="Explore this spot →"
       onExplore={onExplore}
-      locationLine={mall.city && mall.state ? `${mall.city}, ${mall.state}` : mall.city ?? undefined}
     />
   );
 }
@@ -101,17 +106,18 @@ export function MallHeroCard({ mall, onExplore }: MallHeroProps) {
 // ─── Shared inner renderer ─────────────────────────────────────────────────────
 
 interface InnerProps {
-  gradient:      string;
-  bgImage?:      string;
-  eyebrow:       string;
-  title:         string;
-  subtitle:      string;
-  ctaLabel:      string;
-  locationLine?: string;
-  onExplore:     () => void;
+  gradient:     string;
+  bgImage?:     string;
+  eyebrow:      string;
+  title:        string;
+  subtitle?:    string;
+  addressLine?: string;
+  mapLink?:     string;
+  ctaLabel:     string;
+  onExplore:    () => void;
 }
 
-function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLabel, locationLine, onExplore }: InnerProps) {
+function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, addressLine, mapLink, ctaLabel, onExplore }: InnerProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
@@ -128,10 +134,9 @@ function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLab
       }}
       onClick={onExplore}
     >
-      {/* ── Background layer ── */}
+      {/* Background */}
       <div style={{ position: "absolute", inset: 0, background: gradient, zIndex: 0 }} />
 
-      {/* Optional photo background */}
       {bgImage && (
         <div style={{
           position: "absolute", inset: 0,
@@ -141,7 +146,6 @@ function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLab
         }} />
       )}
 
-      {/* Noise texture overlay */}
       <div style={{
         position: "absolute", inset: 0,
         backgroundImage: NOISE_OVERLAY,
@@ -149,17 +153,15 @@ function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLab
         zIndex: 2, pointerEvents: "none",
       }} />
 
-      {/* Vignette */}
       <div style={{
         position: "absolute", inset: 0,
         background: "radial-gradient(ellipse at 60% 40%, transparent 30%, rgba(0,0,0,0.38) 100%)",
         zIndex: 3, pointerEvents: "none",
       }} />
 
-      {/* ── Content ── */}
+      {/* Content */}
       <div style={{ position: "relative", zIndex: 4, padding: "22px 20px 20px" }}>
 
-        {/* Eyebrow */}
         <div style={{
           fontSize: 10, fontWeight: 500, letterSpacing: "2.4px",
           textTransform: "uppercase",
@@ -170,48 +172,57 @@ function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLab
           {eyebrow}
         </div>
 
-        {/* Main title */}
         <div style={{
           fontFamily: "Georgia, serif",
-          fontSize: 24,
+          fontSize: 22,
           fontWeight: 700,
           color: "rgba(255,255,255,0.96)",
-          letterSpacing: "-0.4px",
-          lineHeight: 1.2,
-          marginBottom: locationLine ? 6 : 12,
+          letterSpacing: "-0.3px",
+          lineHeight: 1.25,
+          marginBottom: addressLine ? 8 : 12,
           textShadow: "0 1px 8px rgba(0,0,0,0.35)",
         }}>
           {title}
         </div>
 
-        {/* City, State pill */}
-        {locationLine && (
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: 4,
-            background: "rgba(255,255,255,0.10)", border: "1px solid rgba(255,255,255,0.14)",
-            borderRadius: 20, padding: "3px 9px 3px 7px", marginBottom: 10,
-          }}>
+        {/* Address — hyperlink to maps */}
+        {addressLine && mapLink && (
+          <a
+            href={mapLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 4,
+              marginBottom: 14, textDecoration: "none",
+            }}
+          >
             <MapPin size={9} style={{ color: "rgba(255,255,255,0.55)", flexShrink: 0 }} />
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.62)", letterSpacing: "0.8px", fontFamily: "system-ui, sans-serif" }}>
-              {locationLine}
+            <span style={{
+              fontSize: 11, color: "rgba(255,255,255,0.70)",
+              letterSpacing: "0.3px", fontFamily: "system-ui, sans-serif",
+              borderBottom: "1px solid rgba(255,255,255,0.30)",
+            }}>
+              {addressLine}
             </span>
+          </a>
+        )}
+
+        {/* Subtitle — generic hero only */}
+        {subtitle && (
+          <div style={{
+            fontSize: 12,
+            color: "rgba(255,255,255,0.60)",
+            lineHeight: 1.6,
+            marginBottom: 18,
+            maxWidth: 270,
+            fontFamily: "Georgia, serif",
+            fontStyle: "italic",
+          }}>
+            {subtitle}
           </div>
         )}
 
-        {/* Subtitle */}
-        <div style={{
-          fontSize: 12,
-          color: "rgba(255,255,255,0.60)",
-          lineHeight: 1.6,
-          marginBottom: 18,
-          maxWidth: 270,
-          fontFamily: "Georgia, serif",
-          fontStyle: "italic",
-        }}>
-          {subtitle}
-        </div>
-
-        {/* CTA button */}
         <button
           onClick={e => { e.stopPropagation(); onExplore(); }}
           style={{
@@ -224,6 +235,7 @@ function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLab
             border: "1px solid rgba(255,255,255,0.08)",
             cursor: "pointer",
             boxShadow: "0 2px 12px rgba(30,77,43,0.45), 0 1px 3px rgba(0,0,0,0.2)",
+            marginTop: subtitle ? 0 : 6,
           }}
         >
           {ctaLabel}
@@ -231,7 +243,6 @@ function MallHeroCardInner({ gradient, bgImage, eyebrow, title, subtitle, ctaLab
         </button>
       </div>
 
-      {/* Bottom shine line */}
       <div style={{
         position: "absolute", bottom: 0, left: 0, right: 0, height: 1,
         background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)",

@@ -1,8 +1,9 @@
 // app/shelves/page.tsx
-// Booths — all vendor booths at America's Antique Mall.
-// Public: browse booth cards, tap to go to vendor shelf (read-only).
-// Admin: tap card → manage that booth in My Shelf.
-//        "Add Booth" button → inline sheet with display_name, booth_number, mall selection.
+// Booths — all vendor booths.
+// Item 6: Add Booth sheet field order fixed → Mall Location first, Booth Number second, Booth Name third.
+//         Sheet cutoff fixed — paddingBottom accounts for safe area + keyboard.
+//         Empty state "Post a Find" → "Add a Booth".
+// Item 11: Back nav — consistent sticky header with back button on all inner states.
 
 "use client";
 
@@ -13,7 +14,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, ChevronRight, Pencil, Plus, X, Check, Loader } from "lucide-react";
+import { MapPin, ChevronRight, Pencil, Plus, X, Check, Loader, ChevronDown } from "lucide-react";
 import { getVendorsByMall, getAllMalls, createVendor, slugify } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
 import { colors } from "@/lib/tokens";
@@ -26,6 +27,7 @@ import type { User } from "@supabase/supabase-js";
 const DEFAULT_MALL_ID = "19a8ff7e-cb45-491f-9451-878e2dde5bf4";
 
 // ─── Add Booth Sheet ──────────────────────────────────────────────────────────
+// Item 6: order = Mall Location → Booth Number → Booth Name
 
 function AddBoothSheet({
   malls, onClose, onCreated,
@@ -34,16 +36,16 @@ function AddBoothSheet({
   onClose: () => void;
   onCreated: (vendor: Vendor) => void;
 }) {
-  const [displayName, setDisplayName] = useState("");
-  const [boothNumber, setBoothNumber] = useState("");
   const [mallId,      setMallId]      = useState(DEFAULT_MALL_ID);
+  const [boothNumber, setBoothNumber] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [submitting,  setSubmitting]  = useState(false);
   const [error,       setError]       = useState<string | null>(null);
   const [done,        setDone]        = useState(false);
 
   async function handleSubmit() {
     if (!displayName.trim()) { setError("Booth name is required."); return; }
-    if (!mallId) { setError("Please select a mall."); return; }
+    if (!mallId) { setError("Please select a mall location."); return; }
     setSubmitting(true);
     setError(null);
     const slug = slugify(displayName.trim());
@@ -91,7 +93,8 @@ function AddBoothSheet({
           width: "100%", maxWidth: 430, zIndex: 300,
           background: colors.bg, borderRadius: "20px 20px 0 0",
           boxShadow: "0 -8px 40px rgba(28,26,20,0.18)",
-          maxHeight: "85dvh", display: "flex", flexDirection: "column",
+          // Item 6 fix: maxHeight + flex layout prevents cutoff
+          maxHeight: "92dvh", display: "flex", flexDirection: "column",
         }}
       >
         {/* Handle */}
@@ -99,8 +102,13 @@ function AddBoothSheet({
           <div style={{ width: 36, height: 4, borderRadius: 2, background: colors.border }} />
         </div>
 
-        {/* Scrollable content */}
-        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 20px calc(env(safe-area-inset-bottom, 0px) + 28px)", WebkitOverflowScrolling: "touch" }}>
+        {/* Scrollable content — safe area + extra bottom pad so submit button never hides */}
+        <div style={{
+          flex: 1, overflowY: "auto", overflowX: "hidden",
+          padding: "8px 20px",
+          paddingBottom: "max(32px, calc(env(safe-area-inset-bottom, 0px) + 32px))",
+          WebkitOverflowScrolling: "touch",
+        }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
             <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: colors.textPrimary }}>
               Add a Booth
@@ -111,23 +119,30 @@ function AddBoothSheet({
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+
+            {/* 1. Mall Location */}
+            <div>
+              <label style={labelStyle}>Mall Location *</label>
+              <div style={{ position: "relative" }}>
+                <select value={mallId} onChange={e => setMallId(e.target.value)}
+                  style={{ ...inputStyle, appearance: "none", WebkitAppearance: "none", paddingRight: 36, cursor: "pointer" }}>
+                  <option value="">Select a location…</option>
+                  {malls.map(m => <option key={m.id} value={m.id}>{m.name}{m.city ? ` · ${m.city}` : ""}</option>)}
+                </select>
+                <ChevronDown size={13} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: colors.textMuted, pointerEvents: "none" }} />
+              </div>
+            </div>
+
+            {/* 2. Booth Number */}
+            <div>
+              <label style={labelStyle}>Booth Number</label>
+              <input value={boothNumber} onChange={e => setBoothNumber(e.target.value)} placeholder="e.g. 369" style={inputStyle} inputMode="numeric" />
+            </div>
+
+            {/* 3. Booth Name */}
             <div>
               <label style={labelStyle}>Booth Name *</label>
               <input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="e.g. ZenForged Finds" style={inputStyle} autoFocus />
-            </div>
-            <div>
-              <label style={labelStyle}>Booth Number</label>
-              <input value={boothNumber} onChange={e => setBoothNumber(e.target.value)} placeholder="e.g. 369" style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Mall *</label>
-              <div style={{ position: "relative" }}>
-                <select value={mallId} onChange={e => setMallId(e.target.value)} style={{ ...inputStyle, appearance: "none", WebkitAppearance: "none", paddingRight: 36, cursor: "pointer" }}>
-                  <option value="">Select a mall…</option>
-                  {malls.map(m => <option key={m.id} value={m.id}>{m.name}{m.city ? ` · ${m.city}` : ""}</option>)}
-                </select>
-                <ChevronRight size={13} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%) rotate(90deg)", color: colors.textMuted, pointerEvents: "none" }} />
-              </div>
             </div>
 
             {error && (
@@ -190,7 +205,6 @@ function VendorCard({ vendor, index, user }: { vendor: Vendor; index: number; us
             </div>
           )}
 
-          {/* Admin-only pencil — view vendor profile */}
           <AdminOnly user={user}>
             <Link
               href={`/vendor/${vendor.slug}`}
@@ -213,7 +227,6 @@ function VendorCard({ vendor, index, user }: { vendor: Vendor; index: number; us
                 {vendor.bio}
               </div>
             )}
-            {/* Admin hint — only shown in admin mode */}
             <AdminOnly user={user}>
               <div style={{ fontSize: 9, color: colors.green, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1.4px", marginTop: 3 }}>
                 Manage
@@ -276,8 +289,6 @@ export default function BoothsPage() {
     }));
   }
 
-  const adminUser = isAdmin(user);
-
   return (
     <div style={{ minHeight: "100vh", background: colors.bg, maxWidth: 430, margin: "0 auto", position: "relative" }}>
 
@@ -292,7 +303,6 @@ export default function BoothsPage() {
               </span>
             </div>
 
-            {/* Admin controls grouped together */}
             <AdminOnly user={user}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <button onClick={() => setShowAddSheet(true)}
@@ -340,10 +350,11 @@ export default function BoothsPage() {
             <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: colors.textMuted, lineHeight: 1.75, maxWidth: 230, margin: 0 }}>
               Booths will appear here once vendors start posting their finds.
             </p>
+            {/* Item 6: "Add a Booth" instead of "Post a Find" in empty state */}
             <AdminOnly user={user}>
               <button onClick={() => setShowAddSheet(true)}
                 style={{ marginTop: 24, padding: "12px 24px", borderRadius: 24, background: colors.green, border: "none", color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: "Georgia, serif", cursor: "pointer" }}>
-                Add the first booth
+                Add a Booth
               </button>
             </AdminOnly>
           </motion.div>
