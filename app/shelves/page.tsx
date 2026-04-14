@@ -1,9 +1,5 @@
 // app/shelves/page.tsx
 // Booths — all vendor booths.
-// Item 6: Add Booth sheet field order fixed → Mall Location first, Booth Number second, Booth Name third.
-//         Sheet cutoff fixed — paddingBottom accounts for safe area + keyboard.
-//         Empty state "Post a Find" → "Add a Booth".
-// Item 11: Back nav — consistent sticky header with back button on all inner states.
 
 "use client";
 
@@ -26,8 +22,9 @@ import type { User } from "@supabase/supabase-js";
 
 const DEFAULT_MALL_ID = "19a8ff7e-cb45-491f-9451-878e2dde5bf4";
 
-// ─── Add Booth Sheet ──────────────────────────────────────────────────────────
-// Item 6: order = Mall Location → Booth Number → Booth Name
+// ─── Add Booth Sheet ───────────────────────────────────────────────────────────
+// Fix: positioning wrapper div handles left/transform centering.
+// motion.div only handles y animation — never mix centering transform with Framer.
 
 function AddBoothSheet({
   malls, onClose, onCreated,
@@ -80,84 +77,135 @@ function AddBoothSheet({
 
   return (
     <>
+      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
-        style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(28,26,20,0.42)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }}
-      />
-      <motion.div
-        initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-        transition={{ type: "spring", damping: 28, stiffness: 280 }}
         style={{
-          position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
-          width: "100%", maxWidth: 430, zIndex: 300,
-          background: colors.bg, borderRadius: "20px 20px 0 0",
-          boxShadow: "0 -8px 40px rgba(28,26,20,0.18)",
-          // Item 6 fix: maxHeight + flex layout prevents cutoff
-          maxHeight: "92dvh", display: "flex", flexDirection: "column",
+          position: "fixed", inset: 0, zIndex: 200,
+          background: "rgba(28,26,20,0.42)",
+          backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
         }}
-      >
-        {/* Handle */}
-        <div style={{ flexShrink: 0, display: "flex", justifyContent: "center", paddingTop: 12, paddingBottom: 4 }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: colors.border }} />
-        </div>
+      />
 
-        {/* Scrollable content — safe area + extra bottom pad so submit button never hides */}
-        <div style={{
-          flex: 1, overflowY: "auto", overflowX: "hidden",
-          padding: "8px 20px",
-          paddingBottom: "max(32px, calc(env(safe-area-inset-bottom, 0px) + 32px))",
-          WebkitOverflowScrolling: "touch",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: colors.textPrimary }}>
-              Add a Booth
-            </div>
-            <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: colors.surface, border: `1px solid ${colors.border}`, cursor: "pointer" }}>
-              <X size={14} style={{ color: colors.textMuted }} />
-            </button>
+      {/* Positioning wrapper — handles centering. motion.div inside handles only y slide. */}
+      <div style={{
+        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 300,
+        display: "flex", justifyContent: "center",
+        pointerEvents: "none",
+      }}>
+        <motion.div
+          initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+          transition={{ type: "spring", damping: 28, stiffness: 280 }}
+          style={{
+            width: "100%", maxWidth: 430,
+            background: colors.bg,
+            borderRadius: "20px 20px 0 0",
+            boxShadow: "0 -8px 40px rgba(28,26,20,0.18)",
+            maxHeight: "92dvh",
+            display: "flex", flexDirection: "column",
+            pointerEvents: "auto",
+          }}
+        >
+          {/* Drag handle */}
+          <div style={{ flexShrink: 0, display: "flex", justifyContent: "center", paddingTop: 12, paddingBottom: 4 }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: colors.border }} />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-
-            {/* 1. Mall Location */}
-            <div>
-              <label style={labelStyle}>Mall Location *</label>
-              <div style={{ position: "relative" }}>
-                <select value={mallId} onChange={e => setMallId(e.target.value)}
-                  style={{ ...inputStyle, appearance: "none", WebkitAppearance: "none", paddingRight: 36, cursor: "pointer" }}>
-                  <option value="">Select a location…</option>
-                  {malls.map(m => <option key={m.id} value={m.id}>{m.name}{m.city ? ` · ${m.city}` : ""}</option>)}
-                </select>
-                <ChevronDown size={13} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: colors.textMuted, pointerEvents: "none" }} />
+          {/* Scrollable form body */}
+          <div style={{
+            flex: 1,
+            overflowY: "auto",
+            overflowX: "hidden",
+            padding: "8px 20px",
+            paddingBottom: "max(40px, calc(env(safe-area-inset-bottom, 0px) + 40px))",
+            WebkitOverflowScrolling: "touch",
+          }}>
+            {/* Header row */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+              <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: colors.textPrimary }}>
+                Add a Booth
               </div>
+              <button
+                onClick={onClose}
+                style={{ width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: colors.surface, border: `1px solid ${colors.border}`, cursor: "pointer" }}
+              >
+                <X size={14} style={{ color: colors.textMuted }} />
+              </button>
             </div>
 
-            {/* 2. Booth Number */}
-            <div>
-              <label style={labelStyle}>Booth Number</label>
-              <input value={boothNumber} onChange={e => setBoothNumber(e.target.value)} placeholder="e.g. 369" style={inputStyle} inputMode="numeric" />
-            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
 
-            {/* 3. Booth Name */}
-            <div>
-              <label style={labelStyle}>Booth Name *</label>
-              <input value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="e.g. ZenForged Finds" style={inputStyle} autoFocus />
-            </div>
-
-            {error && (
-              <div style={{ fontSize: 12, color: colors.red, background: colors.redBg, borderRadius: 10, padding: "10px 14px" }}>
-                {error}
+              {/* 1. Mall Location */}
+              <div>
+                <label style={labelStyle}>Mall Location *</label>
+                <div style={{ position: "relative" }}>
+                  <select
+                    value={mallId}
+                    onChange={e => setMallId(e.target.value)}
+                    style={{ ...inputStyle, appearance: "none", WebkitAppearance: "none", paddingRight: 36, cursor: "pointer" }}
+                  >
+                    <option value="">Select a location…</option>
+                    {malls.map(m => (
+                      <option key={m.id} value={m.id}>{m.name}{m.city ? ` · ${m.city}` : ""}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={13} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: colors.textMuted, pointerEvents: "none" }} />
+                </div>
               </div>
-            )}
 
-            <button onClick={handleSubmit} disabled={submitting || done}
-              style={{ width: "100%", padding: "14px", borderRadius: 14, border: "none", background: colors.green, color: "#fff", fontSize: 14, fontWeight: 600, fontFamily: "Georgia, serif", cursor: submitting || done ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, opacity: submitting ? 0.8 : 1, transition: "background 0.2s" }}>
-              {done ? <><Check size={16} /> Booth added</> : submitting ? <><Loader size={16} style={{ animation: "spin 0.9s linear infinite" }} /> Adding…</> : "Add Booth"}
-            </button>
+              {/* 2. Booth Number */}
+              <div>
+                <label style={labelStyle}>Booth Number</label>
+                <input
+                  value={boothNumber}
+                  onChange={e => setBoothNumber(e.target.value)}
+                  placeholder="e.g. 369"
+                  style={inputStyle}
+                  inputMode="numeric"
+                />
+              </div>
+
+              {/* 3. Booth Name */}
+              <div>
+                <label style={labelStyle}>Booth Name *</label>
+                <input
+                  value={displayName}
+                  onChange={e => setDisplayName(e.target.value)}
+                  placeholder="e.g. ZenForged Finds"
+                  style={inputStyle}
+                />
+              </div>
+
+              {error && (
+                <div style={{ fontSize: 12, color: colors.red, background: colors.redBg, borderRadius: 10, padding: "10px 14px" }}>
+                  {error}
+                </div>
+              )}
+
+              <button
+                onClick={handleSubmit}
+                disabled={submitting || done}
+                style={{
+                  width: "100%", padding: "14px", borderRadius: 14,
+                  border: "none", background: colors.green, color: "#fff",
+                  fontSize: 14, fontWeight: 600, fontFamily: "Georgia, serif",
+                  cursor: submitting || done ? "default" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  opacity: submitting ? 0.8 : 1, transition: "background 0.2s",
+                }}
+              >
+                {done
+                  ? <><Check size={16} /> Booth added</>
+                  : submitting
+                  ? <><Loader size={16} style={{ animation: "spin 0.9s linear infinite" }} /> Adding…</>
+                  : "Add Booth"
+                }
+              </button>
+            </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </>
   );
 }
@@ -350,7 +398,6 @@ export default function BoothsPage() {
             <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: colors.textMuted, lineHeight: 1.75, maxWidth: 230, margin: 0 }}>
               Booths will appear here once vendors start posting their finds.
             </p>
-            {/* Item 6: "Add a Booth" instead of "Post a Find" in empty state */}
             <AdminOnly user={user}>
               <button onClick={() => setShowAddSheet(true)}
                 style={{ marginTop: 24, padding: "12px 24px", borderRadius: 24, background: colors.green, border: "none", color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: "Georgia, serif", cursor: "pointer" }}>
