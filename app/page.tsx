@@ -6,6 +6,8 @@
 // Header: plain "Sign in" link when unauthed, "Sign out" when authed.
 // Feed re-fetches when the page becomes visible after being hidden (e.g. after posting).
 // Animation: scroll-triggered tile entry (IntersectionObserver) + image warmth hover.
+// Back-nav: last-viewed post ID written to sessionStorage on tap; tile gets a brief
+//           warm highlight ring on return to orient the user.
 
 "use client";
 
@@ -23,12 +25,10 @@ import BottomNav from "@/components/BottomNav";
 import { MallHeroCard, GenericMallHero } from "@/components/MallHeroCard";
 import type { Post, Mall } from "@/types/treehouse";
 
-const SCROLL_KEY = "treehouse_feed_scroll";
+const SCROLL_KEY       = "treehouse_feed_scroll";
+const LAST_VIEWED_KEY  = "treehouse_last_viewed_post";
 
 // ─── Scroll-triggered reveal hook ─────────────────────────────────────────────
-// Attaches an IntersectionObserver to the returned ref.
-// `visible` flips true once the element enters the viewport and stays true.
-// Tiles already in view on mount (above the fold) reveal immediately.
 
 function useScrollReveal(threshold = 0.1) {
   const ref = useRef<HTMLDivElement>(null);
@@ -37,21 +37,10 @@ function useScrollReveal(threshold = 0.1) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-
-    // Above-fold check — reveal immediately without observer.
     const rect = el.getBoundingClientRect();
-    if (rect.top < window.innerHeight) {
-      setVisible(true);
-      return;
-    }
-
+    if (rect.top < window.innerHeight) { setVisible(true); return; }
     const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          obs.disconnect();
-        }
-      },
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect(); } },
       { threshold, rootMargin: "0px 0px -20px 0px" }
     );
     obs.observe(el);
@@ -120,21 +109,30 @@ function SkeletonMasonry() {
 // ─── Masonry tile ──────────────────────────────────────────────────────────────
 
 function MasonryTile({
-  post, index, isFollowed, onToggleSave,
+  post, index, isFollowed, onToggleSave, isLastViewed,
 }: {
   post: Post;
   index: number;
   isFollowed: boolean;
   onToggleSave: (postId: string) => void;
+  isLastViewed: boolean;
 }) {
-  const [imgErr,    setImgErr]    = useState(false);
-  const [imgHeight, setImgHeight] = useState<number | null>(null);
-  const [hovered,   setHovered]   = useState(false);
+  const [imgErr,      setImgErr]      = useState(false);
+  const [imgHeight,   setImgHeight]   = useState<number | null>(null);
+  const [hovered,     setHovered]     = useState(false);
+  const [highlighted, setHighlighted] = useState(isLastViewed);
   const imgRef = useRef<HTMLImageElement>(null);
   const { ref: revealRef, visible } = useScrollReveal(0.1);
   const hasImg = !!post.image_url && !imgErr;
   const fallbackHeights = [120, 145, 110, 160, 130, 105, 150, 125];
   const fallbackH = fallbackHeights[index % fallbackHeights.length];
+
+  // Fade out the highlight ring after ~1.6s
+  useEffect(() => {
+    if (!isLastViewed) return;
+    const t = setTimeout(() => setHighlighted(false), 1600);
+    return () => clearTimeout(t);
+  }, [isLastViewed]);
 
   function handleLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const img = e.currentTarget;
@@ -150,13 +148,17 @@ function MasonryTile({
     onToggleSave(post.id);
   }
 
-  // Above-fold tiles get a small stagger delay; below-fold tiles get none
-  // because the scroll itself provides the timing rhythm.
+  // Write this post's ID before navigating to the detail page
+  function handleTileClick() {
+    try { sessionStorage.setItem(LAST_VIEWED_KEY, post.id); } catch {}
+  }
+
   const staggerDelay = Math.min(index * 0.04, 0.28);
 
   return (
     <div
       ref={revealRef}
+      data-post-id={post.id}
       style={{
         opacity:    visible ? 1 : 0,
         transform:  visible ? "translateY(0px)" : "translateY(16px)",
@@ -164,19 +166,22 @@ function MasonryTile({
         willChange: "opacity, transform",
       }}
     >
-      <Link href={`/find/${post.id}`} style={{ display: "block", textDecoration: "none" }}>
+      <Link href={`/find/${post.id}`} style={{ display: "block", textDecoration: "none" }} onClick={handleTileClick}>
         <div
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
           style={{
             borderRadius: 16, overflow: "hidden", background: colors.surface,
-            border: `1px solid ${colors.border}`,
-            // Slight shadow lift on hover — subtle depth signal.
-            boxShadow: hovered
-              ? "0 6px 20px rgba(26,24,16,0.13), 0 2px 6px rgba(26,24,16,0.07)"
-              : "0 2px 10px rgba(26,24,16,0.07), 0 1px 3px rgba(26,24,16,0.04)",
+            border: highlighted
+              ? `1.5px solid rgba(30,77,43,0.55)`
+              : `1px solid ${colors.border}`,
+            boxShadow: highlighted
+              ? `0 0 0 3px rgba(30,77,43,0.13), 0 4px 18px rgba(26,24,16,0.11)`
+              : hovered
+                ? "0 6px 20px rgba(26,24,16,0.13), 0 2px 6px rgba(26,24,16,0.07)"
+                : "0 2px 10px rgba(26,24,16,0.07), 0 1px 3px rgba(26,24,16,0.04)",
             position: "relative",
-            transition: "box-shadow 0.30s ease",
+            transition: "box-shadow 0.30s ease, border-color 0.60s ease",
           }}
         >
           {hasImg ? (
@@ -189,8 +194,6 @@ function MasonryTile({
                 onError={() => setImgErr(true)}
                 style={{
                   width: "100%", height: "100%", objectFit: "cover", display: "block",
-                  // Warmth hover: brightness + saturation lift, gentle scale inside overflow:hidden
-                  // so the card shell stays rigid while the image breathes.
                   filter: hovered
                     ? "brightness(1.04) saturate(1.10)"
                     : "brightness(0.99) saturate(0.96)",
@@ -242,11 +245,12 @@ function MasonryTile({
 // ─── Two-column masonry ────────────────────────────────────────────────────────
 
 function MasonryGrid({
-  posts, followedIds, onToggleSave,
+  posts, followedIds, onToggleSave, lastViewedId,
 }: {
   posts: Post[];
   followedIds: Set<string>;
   onToggleSave: (postId: string) => void;
+  lastViewedId: string | null;
 }) {
   const col1 = posts.filter((_, i) => i % 2 === 0);
   const col2 = posts.filter((_, i) => i % 2 === 1);
@@ -268,13 +272,23 @@ function MasonryGrid({
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {col1.map((post, i) => (
           <div key={post.id} ref={i === 0 ? firstTileRef : undefined}>
-            <MasonryTile post={post} index={i * 2} isFollowed={followedIds.has(post.id)} onToggleSave={onToggleSave} />
+            <MasonryTile
+              post={post} index={i * 2}
+              isFollowed={followedIds.has(post.id)}
+              onToggleSave={onToggleSave}
+              isLastViewed={post.id === lastViewedId}
+            />
           </div>
         ))}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: offset }}>
         {col2.map((post, i) => (
-          <MasonryTile key={post.id} post={post} index={i * 2 + 1} isFollowed={followedIds.has(post.id)} onToggleSave={onToggleSave} />
+          <MasonryTile
+            key={post.id} post={post} index={i * 2 + 1}
+            isFollowed={followedIds.has(post.id)}
+            onToggleSave={onToggleSave}
+            isLastViewed={post.id === lastViewedId}
+          />
         ))}
       </div>
     </div>
@@ -313,8 +327,9 @@ export default function DiscoveryFeedPage() {
   const [followedIds,   setFollowedIds]   = useState<Set<string>>(new Set());
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const [isAuthed,      setIsAuthed]      = useState<boolean | null>(null);
-  const feedRef    = useRef<HTMLDivElement>(null);
-  const wasHidden  = useRef(false);
+  const [lastViewedId,  setLastViewedId]  = useState<string | null>(null);
+  const feedRef   = useRef<HTMLDivElement>(null);
+  const wasHidden = useRef(false);
 
   function syncBookmarks() {
     const ids = loadFollowedIds();
@@ -341,12 +356,19 @@ export default function DiscoveryFeedPage() {
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
+  // Restore scroll position and pick up last-viewed ID for the highlight anchor.
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(SCROLL_KEY);
       if (saved) {
         const y = parseInt(saved, 10);
         if (!isNaN(y) && y > 0) requestAnimationFrame(() => { window.scrollTo({ top: y, behavior: "instant" }); });
+      }
+      const lastId = sessionStorage.getItem(LAST_VIEWED_KEY);
+      if (lastId) {
+        setLastViewedId(lastId);
+        // Clear immediately — highlight is a one-time signal on return, not a persistent marker.
+        sessionStorage.removeItem(LAST_VIEWED_KEY);
       }
     } catch {}
     function onScroll() { try { sessionStorage.setItem(SCROLL_KEY, String(Math.round(window.scrollY))); } catch {} }
@@ -469,7 +491,12 @@ export default function DiscoveryFeedPage() {
             </div>
           ) : filtered.length === 0 ? <EmptyFeed /> : (
             <AnimatePresence>
-              <MasonryGrid posts={filtered} followedIds={followedIds} onToggleSave={handleToggleSave} />
+              <MasonryGrid
+                posts={filtered}
+                followedIds={followedIds}
+                onToggleSave={handleToggleSave}
+                lastViewedId={lastViewedId}
+              />
             </AnimatePresence>
           )}
         </div>
