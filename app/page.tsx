@@ -63,10 +63,10 @@ function EmptyFeed() {
         Be the first vendor to share a find in your area.
       </p>
       <button
-        onClick={() => router.push("/post")}
+        onClick={() => router.push("/shelves")}
         style={{ padding: "12px 24px", borderRadius: 24, fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer", letterSpacing: "0.2px", background: colors.green, border: "none", boxShadow: "0 2px 12px rgba(30,77,43,0.25)" }}
       >
-        Post a find
+        Add a Booth
       </button>
     </motion.div>
   );
@@ -441,7 +441,6 @@ export default function DiscoveryFeedPage() {
       {/* ── Header ── */}
       <header style={{ position: "sticky", top: 0, zIndex: 50, background: colors.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${colors.border}`, padding: "0 16px" }}>
 
-        {/* Item 6: Sign in sits inline with logo+title, not pushed to far right */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: "max(16px, env(safe-area-inset-top, 16px))", paddingBottom: 12 }}>
           <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
           <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: colors.textPrimary, letterSpacing: "-0.3px", lineHeight: 1 }}>
