@@ -2,10 +2,10 @@
 // Fixed bottom navigation.
 //
 // Tab layout:
-//   Guest:   Home · My Finds · Booths · (nothing — 3 tabs)
-//   Auth:    Home · My Finds · Booths · My Shelf  (4 tabs)
+//   Guest:   Home · Find Map · Booths · (nothing — 3 tabs)
+//   Auth:    Home · Find Map · Booths · My Shelf  (4 tabs)
 //
-// "My Finds" (/flagged) is ALWAYS shown for ALL users.
+// "Find Map" (/flagged) is ALWAYS shown for ALL users.
 // "Booths" (/shelves) is ALWAYS shown for ALL users.
 // "My Shelf" is added as the 4th tab for authenticated users.
 
@@ -59,7 +59,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     icon: <Home size={21} strokeWidth={1.7} />,
   };
   const findsTab: TabDef = {
-    key: "flagged", label: "My Finds", href: "/flagged",
+    key: "flagged", label: "Find Map", href: "/flagged",
     icon: <Heart size={21} strokeWidth={1.7} />, badge: true,
   };
   const boothsTab: TabDef = {
@@ -71,8 +71,6 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     icon: <Store size={21} strokeWidth={1.7} />,
   };
 
-  // All users: Home · My Finds · Booths
-  // Auth users additionally get: My Shelf
   const tabs: TabDef[] = user
     ? [homeTab, findsTab, boothsTab, myShelfTab]
     : [homeTab, findsTab, boothsTab];
