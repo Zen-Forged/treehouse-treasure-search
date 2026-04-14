@@ -27,54 +27,100 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ## CURRENT ISSUE
 > Last updated: 2026-04-14
 
-**Status:** ✅ Sprint 1 complete. Ready to start Sprint 2.
+**Status:** ✅ Sprint 2 complete. Ready to start Sprint 3.
 
 ---
 
-## What was done (this session)
+## What was done (this session — Sprint 2)
 
-### Feed animations
-- `app/page.tsx`: scroll-triggered tile reveal via `useScrollReveal` hook (IntersectionObserver) — replaces mount-only Framer Motion animation; tiles below fold animate in as they scroll into view
-- `app/page.tsx`: image warmth hover — `brightness(1.04) saturate(1.10) scale(1.018)` on img inside overflow:hidden card shell; card shadow lifts on hover
-- `app/page.tsx`: above-fold tiles get stagger delay; below-fold tiles get none (scroll itself provides timing)
+### PWA
+- `public/manifest.json`: created with name, icons, standalone display, theme color `#1e4d2b`
+- `app/layout.tsx`: added manifest link, apple-touch-icon, PWA meta tags; theme color updated to `#1e4d2b`
 
-### Back-nav scroll anchor
-- `app/page.tsx`: on tile tap, writes `post.id` to `sessionStorage` under `LAST_VIEWED_KEY = "treehouse_last_viewed_post"`
-- `app/page.tsx`: on return, reads both `SCROLL_KEY` and `LAST_VIEWED_KEY`; scroll restore deferred until after feed loads (loading → false), so full page height exists before `scrollTo` fires
-- `app/page.tsx`: `isLastViewed` prop on `MasonryTile` — shows warm green ring (border + box-shadow halo) that fades after 1.6s; uses `pendingScrollY` ref + `scrollRestored` ref to fire only once
-- **Root cause of original bug:** scroll restore fired on mount via `rAF` but feed had no DOM height yet (skeleton state). Fix: read keys into refs on mount, fire `scrollTo` in a separate `useEffect` that depends on `loading`
+### Terminology & nav overhaul
+- "My Shelf" → **"My Booth"** everywhere (`BottomNav.tsx`, `app/my-shelf/page.tsx`, fallback header)
+- "Available" → **"On Display"** in `TabSwitcher.tsx` and `app/find/[id]/page.tsx`
+- "All malls" → **"All Treehouse Spots"** in feed dropdown (`app/page.tsx`)
+- Feed label always shows **"Recently added"** regardless of mall filter (was conditional)
+- "Save" CTA on find detail → **"Explore the Booth"** button, routes to `/shelf/[vendor-slug]`
+- ExploreBanner: "Explore more shelves nearby" → **"Explore more booths nearby"**; button → **"Discover more finds"** routing to `/` (cyclic loop)
+- Add Booth empty state: "Post a Find" → **"Add a Booth"**
 
-### Sprint 1 shipped
-- `app/layout.tsx`: `DevAuthPanel` gated to `NODE_ENV === "development"` only — never renders in production
-- `app/post/page.tsx`: AI caption failure fallback — `generateCaption` returns `aiSucceeded` boolean; if false, amber notice shown in editing form: "Couldn't read this image automatically — fill in the title and details below"; `aiCapFailed` state resets on back/retake
-- `app/post/page.tsx`: price validation — rejects negative or non-numeric values before save; inline error clears on edit
-- `app/post/edit/[id]/page.tsx`: price validation — same guard added to edit flow; `priceError` state with inline red error message
-- `types/treehouse.ts`: `Mall` type updated with 7 new columns: `phone`, `website`, `google_maps_url`, `latitude`, `longitude`, `category`, `zip_code`
-- Supabase: 29 mall locations seeded from CSV via SQL (confirmed ✅)
-- `SPRINT_PLAN.md`: full MVP beta sprint plan written to project root
+### BottomNav tab logic
+- **Guest:** Home · Find Map (2 tabs — Booths removed)
+- **Vendor:** Home · Find Map · My Booth (3 tabs)
+- **Admin:** Home · Find Map · Booths · My Booth (4 tabs — Booths admin-only)
+- Added `isAdmin` import to `BottomNav.tsx` for role-based tab rendering
 
-### Mall seed
-- All 29 KY/IN antique mall/flea market locations loaded into Supabase `malls` table
-- Schema: added `phone`, `website`, `google_maps_url`, `latitude numeric(10,7)`, `longitude numeric(10,7)`, `category`, `zip_code` columns
-- America's Antique Mall row updated in place (matched by slug `americas-antique-mall`)
-- `ON CONFLICT (slug) DO UPDATE` — safe to re-run
+### MallHeroCard
+- Eyebrow text → **"Treehouse Finds from"**; mall name is the title on the next line
+- Address shown as hyperlink to maps below the title
+- **"Explore this spot" button removed** from mall-specific heroes (generic hero keeps its CTA)
+- `HeroCard` now receives `showCta: boolean` prop — false for mall heroes, true for generic
+
+### Find detail page (`app/find/[id]/page.tsx`)
+- Mall location block moved **above item title**, right-justified, no container card
+- **Top padding reduced** from 20px → 10px between image and mall location (tighter spacing)
+- Price moved **under item title** in green Georgia font (18px, `colors.green`)
+- Booth number in `BoothBox`: font **20px Georgia, green** (was 16px monospace textPrimary)
+- Vendor row **removed** from "Find it here" card (redundant with hero)
+- "On Display" replaces "Available" status label
+
+### My Booth page (`app/my-shelf/page.tsx`)
+- Share icon → **Send (airplane)**, positioned on hero banner image top-right, frosted circle
+- Edit/pencil moved to top-left of banner for symmetry
+- App bar header: "My Booth" in `colors.textPrimary` matching other page headers
+- Fallback header (no vendor) also uses standard page header style
+
+### Add Booth sheet (`app/shelves/page.tsx`)
+- Field order: **Mall Location → Booth Number → Booth Name**
+- Sheet cutoff fixed: `maxHeight: "92dvh"` + proper flex + safe-area-aware padding
+- Submit button always reachable on all screen sizes
+
+### Home page (`app/page.tsx`)
+- **Sign in link** moved inline with logo+title group (was `space-between` pushed far right)
+- Rendered as `· Sign in` with `marginLeft: 2` for visual separation
 
 ---
 
-## Next session starting point — Sprint 2
+## Next session starting point — Sprint 3
 
-1. **Vendor bio field** — `bio` column exists in DB + is fetched, but no UI to set or display it. Add tap-to-edit on My Shelf hero section; display on public `/shelf/[slug]`
-2. **PWA manifest.json** — create `public/manifest.json`, reference in `layout.tsx`. Enables "Add to Home Screen" on iOS/Android
-3. **Scroll restore QA** — test deferred scroll restore on iPhone Safari + Chrome Android. Edge case: returning from detail page when mall filter is active
-4. **Hero image upload size guard** — add `file.size > 12MB` check before upload attempt in `app/my-shelf/page.tsx`
-5. **Feed content seeding** — post 10–15 real items with quality photos across 2–3 vendors before beta invite
-6. **Feedback mechanism** — add Tally.so "Send feedback" link somewhere accessible (bottom of My Shelf or admin page)
+### Priority 1 — Vendor bio field
+- `bio` column exists in DB + is fetched, but no UI to set or display it
+- Add inline tap-to-edit on My Booth hero section (below vendor name)
+- Display bio on public `/shelf/[slug]`
 
-### Sprint 3 (after Sprint 2)
-- Vendor bio edit via admin (`/vendor/[slug]` page)
-- Error monitoring (Vercel logs or Sentry free tier)
-- Rate limiting on `/api/post-caption`
-- Admin PIN production QA (confirm `ADMIN_PIN` + `SUPABASE_SERVICE_ROLE_KEY` in Vercel env vars)
+### Priority 2 — Find Map overhaul (`/flagged`)
+- Group saved finds by mall location
+- Per-mall route segments with car icon (driving between malls) and walk icon (within a mall)
+- Show find-to-find navigation within each mall group
+- Likely needs a lightweight map rendering approach (Mapbox static tiles or Google Maps embed)
+- This is the largest Sprint 3 feature — plan before building
+
+### Priority 3 — Hero image upload size guard
+- Add `file.size > 12_000_000` check before upload in `app/my-shelf/page.tsx`
+- Show inline error: "Image too large — please use a photo under 12MB"
+
+### Priority 4 — Admin PIN production QA
+- Confirm `ADMIN_PIN` and `SUPABASE_SERVICE_ROLE_KEY` are set in Vercel environment
+- Test full admin PIN flow on production URL
+
+### Priority 5 — Error monitoring
+- Add Sentry free tier OR lean on Vercel function logs
+- At minimum: wrap API routes in try/catch with structured `console.error`
+
+### Priority 6 — Rate limiting on `/api/post-caption`
+- Simple in-memory or Upstash Redis rate limiter (e.g. 10 req/min per IP)
+
+### Sprint 4 (after Sprint 3)
+- Feed content seeding — 10–15 real posts with quality photos before beta invite
+- Feedback mechanism — Tally.so "Send feedback" link on My Booth or admin page
+- Scroll restore QA on iPhone Safari + Chrome Android (edge case: mall filter active on return)
+- Supabase RLS — row-level security so vendors can only edit their own posts
+- Bookmarks cross-device sync (currently localStorage-only)
+- Pagination / infinite scroll (currently flat 80-post fetch)
+- Search
+- Terms of service / privacy policy
 
 ---
 
@@ -90,7 +136,7 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ```
 Next.js 14 App Router · TypeScript · Tailwind CSS · Framer Motion
 Anthropic SDK (claude-opus-4-5) · Supabase (Postgres + Storage + Auth) · SerpAPI · Vercel
-lucide-react (Heart replaces PiLeaf everywhere in ecosystem UI)
+lucide-react (Heart, Send, Store, Home, LayoutGrid icons in ecosystem UI)
 ```
 
 ---
@@ -130,9 +176,9 @@ SUPABASE_SERVICE_ROLE_KEY        Server-only service role key (set in .env.local
 ### Three tiers
 | Tier | How | Can do |
 |---|---|---|
-| Unauth | No session | Browse feed, find detail, save to My Finds, view Booths → /shelf/[slug] |
-| Vendor | Magic link email | Post finds (one booth), My Shelf, mark sold, delete own posts |
-| Admin | Magic link OR Admin PIN | Everything + /admin + vendor switcher in My Shelf + Add Booth |
+| Unauth | No session | Browse feed, find detail, save to My Finds |
+| Vendor | Magic link email | Post finds (one booth), My Booth, mark sold, delete own posts |
+| Admin | Magic link OR Admin PIN | Everything + /admin + vendor switcher in My Booth + Add Booth + Booths page |
 
 ### Key files
 - `lib/auth.ts` — `sendMagicLink`, `getSession`, `getUser`, `signOut`, `isAdmin(user)`, `onAuthChange`, `getCachedUserId`, `ensureAnonSession`
@@ -141,7 +187,7 @@ SUPABASE_SERVICE_ROLE_KEY        Server-only service role key (set in .env.local
 - `app/api/auth/admin-pin/route.ts` — POST { pin } → generateLink → returns { otp, email }; client calls verifyOtp({ type: "email" })
 - `components/DevAuthPanel.tsx` — dev-only floating panel (gated to NODE_ENV === "development" in layout.tsx ✅)
 
-### Identity resolution — My Shelf (authoritative order)
+### Identity resolution — My Booth (authoritative order)
 1. `?vendor=[id]` query param — admin override from Shelves page
 2. `getVendorByUserId(user.id)` — Supabase source of truth
 3. Admin fallback: `getVendorById(ADMIN_DEFAULT_VENDOR_ID)` — Zen booth
@@ -161,11 +207,11 @@ SUPABASE_SERVICE_ROLE_KEY        Server-only service role key (set in .env.local
 ```
 /                   Discovery feed — masonry, scroll-triggered reveals, warmth hover, back-nav anchor
 /login              Magic link login + Admin PIN tab
-/find/[id]          Find detail — floating back button, heart+share on image, Save CTA, "Find it here" card, owner controls card (separate)
-/flagged            My Finds — no auth required, always in nav
-/shelves            Booths — all vendor booths; guest → /shelf/[slug]; admin → manage; Add Booth sheet
-/my-shelf           My Shelf (Curator/Admin) — auth-gated; admin gets vendor switcher
-/shelf/[slug]       Public Saved Shelf — read-only
+/find/[id]          Find detail — floating back button, heart+share on image, "Explore the Booth" CTA, "Find it here" card (mall only), owner controls card
+/flagged            Find Map — saved finds grouped by mall location (overhaul Sprint 3)
+/shelves            Booths — ADMIN ONLY in nav; Add Booth sheet (Mall → Booth # → Booth Name order)
+/my-shelf           My Booth — auth-gated; admin gets vendor switcher; Send icon on banner
+/shelf/[slug]       Public Booth — read-only
 /mall/[slug]        Mall profile
 /post               Vendor capture — AI caption with fallback notice; price validation; server-route image upload
 /post/edit/[id]     Edit listing — price validation; image replacement
@@ -199,23 +245,24 @@ lib/posts.ts                Data access — all Supabase queries
 lib/safeStorage.ts          localStorage wrapper with sessionStorage + memory fallback
 types/treehouse.ts          Post, Vendor, Mall (with extended columns), LocalVendorProfile
 components/AdminOnly.tsx    Wraps any admin-only UI
-components/BottomNav.tsx    4-tab auth / 3-tab guest; Heart icon for My Finds
-components/TabSwitcher.tsx  Shared Available/Found a home tab switcher
+components/BottomNav.tsx    Role-based tabs: Guest(2) / Vendor(3) / Admin(4); isAdmin import
+components/TabSwitcher.tsx  "On Display" / "Found a home" tab switcher
 components/BoothFinderCard.tsx  Shared maps CTA card
-components/ExploreBanner.tsx    Shared "View more booths" banner
+components/ExploreBanner.tsx    "Discover more finds" → routes to /
 components/ShelfGrid.tsx    ThreeColGrid, SkeletonGrid, AvailableTile, FoundTile, ShelfGridStyles
-components/MallHeroCard.tsx MallHeroCard + GenericMallHero — used in feed header
+components/MallHeroCard.tsx MallHeroCard (no CTA) + GenericMallHero (with CTA) — showCta prop
 components/DevAuthPanel.tsx Dev-only floating auth panel (gated in layout.tsx)
-app/layout.tsx              DevAuthPanel gated to dev only ✅
-app/page.tsx                Feed — scroll-triggered reveals, warmth hover, deferred scroll restore, back-nav anchor
-app/flagged/page.tsx        My Finds — timeline grouped by booth
-app/shelves/page.tsx        Booths directory
-app/my-shelf/page.tsx       My Shelf — hero upload, shared ShelfGrid
-app/shelf/[slug]/page.tsx   Public Saved Shelf
-app/find/[id]/page.tsx      Find detail — owner controls in separate card
+app/layout.tsx              PWA manifest, apple-touch-icon, meta tags ✅
+app/page.tsx                Feed — "All Treehouse Spots" dropdown; "Recently added" always; sign-in inline
+app/flagged/page.tsx        Find Map — grouped by mall (Sprint 3 overhaul pending)
+app/shelves/page.tsx        Booths — Add Booth field order fixed; sheet cutoff fixed
+app/my-shelf/page.tsx       My Booth — Send icon on banner; standard header; edit icon top-left
+app/shelf/[slug]/page.tsx   Public Booth — read-only
+app/find/[id]/page.tsx      Find detail — mall above title, green price, green booth #, Explore CTA
 app/post/page.tsx           Capture — AI fallback notice, price validation, scroll cache cleared on publish
 app/post/edit/[id]/page.tsx Edit listing — price validation
 app/admin/page.tsx          Admin UI
+public/manifest.json        PWA manifest ✅
 SPRINT_PLAN.md              Full MVP beta sprint plan (4 sprints)
 supabase/seeds/             001_mall_locations.sql (reference — already run)
 ```
@@ -262,6 +309,45 @@ This is intentional — distinct form feel. Also adds amber palette for AI failu
 bg: #050f05  text: #f5f0e8  gold: #c8b47e  green: #6dbc6d
 ```
 
+### MallHeroCard pattern
+```tsx
+// Mall-specific hero: eyebrow = "Treehouse Finds from", title = mall.name, NO CTA button
+// Generic hero: eyebrow = "Treehouse Finds", title = "What will you find today?", HAS CTA button
+// showCta prop controls button visibility
+// Address shown as <a href={mapLink}> below title on mall heroes
+```
+
+### BottomNav tab logic
+```
+Guest (no user):   Home · Find Map                      (2 tabs)
+Vendor (authed):   Home · Find Map · My Booth           (3 tabs)
+Admin:             Home · Find Map · Booths · My Booth  (4 tabs)
+// isAdmin(user) from lib/auth — Booths tab only renders for admin
+```
+
+### Find detail page layout order
+```
+1. Hero image (full-bleed, back button top-left, heart+send bottom-right)
+2. Mall name + address (right-justified, 10px top padding — tight against image)
+3. Item title (Georgia 26px bold)
+4. Price (Georgia 18px, colors.green, under title)
+5. Status dot + "On Display" or "Found a home"
+6. Caption (italic Georgia 15px)
+7. Description (13px muted)
+8. "Explore the Booth" CTA → /shelf/[vendor-slug]
+9. Hairline divider
+10. "More from this shelf" horizontal scroll
+11. "Find it here" label + mall-only card (vendor row removed)
+12. Owner controls card (edit, mark sold, delete) — separate surface, isMyPost only
+```
+
+### Booth box styling (find detail)
+```tsx
+// boothNumber: Georgia 20px, fontWeight 700, color: colors.green
+// Label "Booth": system-ui 8px uppercase muted
+// Positioned absolute bottom-left of hero image, overlaps into content area
+```
+
 ### Animation patterns (feed)
 ```
 // Scroll-triggered reveal hook
@@ -270,101 +356,41 @@ function useScrollReveal(threshold = 0.1) {
   // Above-fold check on mount: rect.top < window.innerHeight → setVisible(true) immediately
 }
 
-// Tile reveal CSS (not Framer — fires on visible state change, not mount)
-opacity: visible ? 1 : 0
-transform: visible ? "translateY(0)" : "translateY(16px)"
-transition: `opacity 0.38s ease ${staggerDelay}s, transform 0.44s cubic-bezier(0.22,1,0.36,1) ${staggerDelay}s`
-
 // Image warmth hover (on <img> inside overflow:hidden container)
 filter: hovered ? "brightness(1.04) saturate(1.10)" : "brightness(0.99) saturate(0.96)"
 transform: hovered ? "scale(1.018)" : "scale(1)"
-transition: "filter 0.42s ease, transform 0.52s cubic-bezier(0.22,1,0.36,1)"
 // Scale on img NOT on card — overflow:hidden clips it cleanly
 ```
 
 ### Deferred scroll restore pattern
 ```ts
 // Keys: SCROLL_KEY = "treehouse_feed_scroll", LAST_VIEWED_KEY = "treehouse_last_viewed_post"
-
-// Mount effect — read into refs, DO NOT scrollTo yet (page has no height)
-const pendingScrollY = useRef<number | null>(null);
-const scrollRestored = useRef(false);
-// read sessionStorage into refs here
-
-// Post-render effect — fires when loading flips false (feed has DOM height)
-useEffect(() => {
-  if (loading) return;
-  if (scrollRestored.current) return;
-  if (pendingScrollY.current === null) return;
-  scrollRestored.current = true;
-  requestAnimationFrame(() => window.scrollTo({ top: pendingScrollY.current!, behavior: "instant" }));
-}, [loading]);
-
-// On tile tap — write last viewed ID
-function handleTileClick() {
-  try { sessionStorage.setItem(LAST_VIEWED_KEY, post.id); } catch {}
-}
-
-// Highlight ring on return — isLastViewed prop on MasonryTile
-// border: 1.5px solid rgba(30,77,43,0.55) + box-shadow halo
-// fades after 1.6s via setTimeout + CSS transition on border-color / box-shadow
+// Mount: read keys into refs — do NOT scrollTo (no DOM height yet)
+// Post-render: fire scrollTo in useEffect([loading]) when loading flips false
 ```
 
 ### Toast centering pattern
 ```
 // NEVER use position:fixed + translate(-50%,-50%) on a motion.div — Framer overwrites transform
 <div style={{ position:"fixed", inset:0, display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
-  <motion.div style={{ pointerEvents:"auto", width:"min(300px, calc(100vw - 48px))", ... }}>
-    ...
-  </motion.div>
+  <motion.div ...>...</motion.div>
 </div>
 ```
 
-### Feed scroll cache — post publish pattern
-```ts
-const FEED_SCROLL_KEY = "treehouse_feed_scroll"; // must match SCROLL_KEY in app/page.tsx
-try { sessionStorage.removeItem(FEED_SCROLL_KEY); } catch {}
-router.refresh();
-router.push(dest);
+### Committed terminology
 ```
-
-### AI caption failure pattern (post page)
-```ts
-// generateCaption returns { title, caption, aiSucceeded: boolean }
-// aiSucceeded = false when both fields are empty
-// Sets aiCapFailed state → shows amber AlertCircle notice in editing form
-// Resets aiCapFailed on back button / retake
-```
-
-### Price validation pattern (post + edit)
-```ts
-if (editPrice.trim()) {
-  const priceVal = parseFloat(editPrice.trim());
-  if (isNaN(priceVal) || priceVal < 0) {
-    // show inline error, return early — do NOT enter saving state
-    return;
-  }
-}
-```
-
-### Committed terminology (do not deviate)
-```
-Sold status:        "Found a home" — everywhere
-Save action:        "Save" (button) / "My Finds" (nav)
-Location section:   "Find it here"
-Related items:      "More from this shelf"
-Booth label:        "Booth 369" — always with word "Booth"
-Admin hint:         "Manage"
-Hero eyebrow:       "A curated shelf from"
-Flagged banner:     "All found a home"
-```
-
-### BottomNav — tabs
-```
-Guest: Home · My Finds · Booths            (3 tabs)
-Auth:  Home · My Finds · Booths · My Shelf (4 tabs)
-Icons: Home (lucide Home) · My Finds (lucide Heart) · Booths (lucide LayoutGrid) · My Shelf (lucide Store)
-flaggedCount passed to BottomNav on ALL ecosystem pages
+Sold status:          "Found a home" — everywhere
+Availability status:  "On Display" (was "Available")
+Save action:          heart icon only (no text CTA on find detail)
+Booth CTA:            "Explore the Booth" → /shelf/[slug]
+Location section:     "Find it here"
+Related items:        "More from this shelf"
+Booth label:          "Booth 369" — always with word "Booth"
+Admin hint:           "Manage"
+Hero eyebrow:         "A curated shelf from"
+Explore banner btn:   "Discover more finds" → /
+Nav tab (vendor):     "My Booth" (was "My Shelf")
+On Display tab:       "On Display" (was "Available")
 ```
 
 ### AdminOnly pattern
@@ -389,7 +415,7 @@ import AdminOnly from "@/components/AdminOnly";
 - Image uploads MUST go through server routes (`/api/post-image`, `/api/vendor-hero`) — client-side Supabase upload hits RLS wall
 - Toast centering: use fixed inset-0 flex shell — NOT `position:fixed` on `motion.div` (Framer overrides transform)
 - New API route directories must be created in Terminal with `mkdir -p` before MCP can write into them
-- New subdirectories (e.g. `supabase/seeds/`) must exist before `filesystem:write_file` — MCP can't create parent dirs
+- New subdirectories must exist before `filesystem:write_file` — MCP can't create parent dirs
 - `getPostsByIds` has NO status filter — saved finds shown regardless of status
 - `getFeedPosts` and `getMallPosts` filter `.eq("status","available")`
 - safeStorage in all ecosystem client components EXCEPT raw localStorage for bookmark iteration
@@ -404,45 +430,45 @@ import AdminOnly from "@/components/AdminOnly";
 - NEVER redefine a local `C = {...}` object — always import from `lib/tokens.ts` (exception: app/post/page.tsx — intentional)
 - NEVER copy-paste TabSwitcher, BoothFinderCard, ExploreBanner, ShelfGrid — always import from components
 - Feed re-fetch: visibilitychange hidden→visible fires on SPA back-navigation in mobile browsers
-- Scroll restore MUST be deferred until after feed renders — firing on mount causes silent scroll to 0 (page has no height yet)
+- Scroll restore MUST be deferred until after feed renders — firing on mount causes silent scroll to 0
 
 ---
 
 ## WORKING ✅
 - Discovery feed — available-only, masonry, scroll-triggered tile reveals, warmth hover, back-nav anchor with highlight ring
-- Feed scroll restore — deferred until loading → false; correct for tiles anywhere in the list
+- Feed scroll restore — deferred until loading → false
 - Feed re-fetches on return from other routes (visibilitychange pattern)
 - Feed scroll cache cleared on publish → lands at top showing new post
 - Magic link auth — login page, session persistence, isAdmin check
 - Admin PIN login — email_otp flow
 - DevAuthPanel — dev-only (gated in layout.tsx) ✅
-- BottomNav — 4-tab auth, 3-tab guest; Heart for My Finds; flaggedCount on all pages
-- Booths page — guest→/shelf/[slug], admin→manage; Add Booth sheet; AdminOnly wrapper ✅
-- My Shelf — auth-gated; admin vendor switcher; hero upload via server route; shared ShelfGrid ✅
-- Post flow — AI caption with fallback notice ✅; price validation ✅; toast, server-route image upload ✅
+- BottomNav — role-based tabs (Guest 2 / Vendor 3 / Admin 4); Booths admin-only ✅
+- Booths page — Add Booth sheet (Mall→Booth#→Name order, cutoff fixed) ✅
+- My Booth — auth-gated; admin vendor switcher; hero upload; Send icon on banner ✅
+- Post flow — AI caption with fallback notice ✅; price validation ✅
 - Edit listing — price validation ✅; image replacement
-- Find detail — back button, heart+share on image, Save CTA, owner controls (separate card) ✅
-- Public Saved Shelf — read-only, shared ShelfGrid ✅
-- My Finds — no auth required, Heart icon, instant unsave; "Found a home" terminology ✅
-- Mall locations — 29 locations in Supabase with full address, phone, coordinates, website ✅
-- Shared design tokens — no local C objects except post page (intentional) ✅
-- AdminOnly component — all admin UI wrapped ✅
+- Find detail — mall above title, green price, green booth #, "Explore the Booth" CTA ✅
+- Public Booth — read-only, shared ShelfGrid ✅
+- Find Map (`/flagged`) — saved finds; "Found a home" terminology ✅ (overhaul Sprint 3)
+- Mall locations — 29 locations in Supabase ✅
+- PWA manifest — Add to Home Screen enabled ✅
+- TabSwitcher — "On Display" / "Found a home" ✅
+- MallHeroCard — "Treehouse Finds from [name]", address hyperlink, no CTA button ✅
 - All reseller intel routes (untouched)
 
-## KNOWN GAPS / SPRINT 2 ⚠️
-- Vendor bio field — exists in DB, no UI to set or display
-- No PWA manifest.json — can't prompt "Add to Home Screen"
-- Scroll restore QA needed on iPhone Safari + Chrome Android
+## KNOWN GAPS / SPRINT 3 ⚠️
+- Vendor bio field — DB column exists, no UI to set or display
+- Find Map overhaul — grouped by mall, car/walk icons, route segments (largest Sprint 3 feature)
 - Hero image upload: no client-side size guard (12MB limit)
-- Feed needs content seeding before beta invite (10–15 real posts)
-- No feedback mechanism for beta users
+- Admin PIN not QA'd in production
 - No error monitoring (Sentry / Vercel logs)
 - No rate limiting on `/api/post-caption`
-- Admin PIN not QA'd in production (verify `ADMIN_PIN` + `SUPABASE_SERVICE_ROLE_KEY` in Vercel)
+- Feed needs content seeding before beta invite (10–15 real posts)
+- Feedback mechanism for beta users (Tally.so)
+- Scroll restore QA on iPhone Safari + Chrome Android
 - No Supabase RLS (Sprint 4)
-- No PWA support (Sprint 2)
-- Bookmarks localStorage-only — no cross-device sync (Sprint 4)
-- No pagination/infinite scroll — flat 80-post fetch (Sprint 4)
+- Bookmarks localStorage-only (Sprint 4)
+- No pagination/infinite scroll (Sprint 4)
 - No search (Sprint 4)
 - No terms of service / privacy policy (Sprint 4)
 
