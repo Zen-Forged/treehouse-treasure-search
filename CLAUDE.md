@@ -27,63 +27,33 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ## CURRENT ISSUE
 > Last updated: 2026-04-14
 
-**Status:** ✅ Sprint 2 complete. Ready to start Sprint 3.
+**Status:** Sprint 3 in progress. Find detail layout overhauled, sheet centering fixed.
 
 ---
 
-## What was done (this session — Sprint 2)
+## What was done (this session)
 
-### PWA
-- `public/manifest.json`: created with name, icons, standalone display, theme color `#1e4d2b`
-- `app/layout.tsx`: added manifest link, apple-touch-icon, PWA meta tags; theme color updated to `#1e4d2b`
-
-### Terminology & nav overhaul
-- "My Shelf" → **"My Booth"** everywhere (`BottomNav.tsx`, `app/my-shelf/page.tsx`, fallback header)
-- "Available" → **"On Display"** in `TabSwitcher.tsx` and `app/find/[id]/page.tsx`
-- "All malls" → **"All Treehouse Spots"** in feed dropdown (`app/page.tsx`)
-- Feed label always shows **"Recently added"** regardless of mall filter (was conditional)
-- "Save" CTA on find detail → **"Explore the Booth"** button, routes to `/shelf/[vendor-slug]`
-- ExploreBanner: "Explore more shelves nearby" → **"Explore more booths nearby"**; button → **"Discover more finds"** routing to `/` (cyclic loop)
-- Add Booth empty state: "Post a Find" → **"Add a Booth"**
-
-### BottomNav tab logic
-- **Guest:** Home · Find Map (2 tabs — Booths removed)
-- **Vendor:** Home · Find Map · My Booth (3 tabs)
-- **Admin:** Home · Find Map · Booths · My Booth (4 tabs — Booths admin-only)
-- Added `isAdmin` import to `BottomNav.tsx` for role-based tab rendering
-
-### MallHeroCard
-- Eyebrow text → **"Treehouse Finds from"**; mall name is the title on the next line
-- Address shown as hyperlink to maps below the title
-- **"Explore this spot" button removed** from mall-specific heroes (generic hero keeps its CTA)
-- `HeroCard` now receives `showCta: boolean` prop — false for mall heroes, true for generic
-
-### Find detail page (`app/find/[id]/page.tsx`)
-- Mall location block moved **above item title**, right-justified, no container card
-- **Top padding reduced** from 20px → 10px between image and mall location (tighter spacing)
-- Price moved **under item title** in green Georgia font (18px, `colors.green`)
-- Booth number in `BoothBox`: font **20px Georgia, green** (was 16px monospace textPrimary)
-- Vendor row **removed** from "Find it here" card (redundant with hero)
-- "On Display" replaces "Available" status label
-
-### My Booth page (`app/my-shelf/page.tsx`)
-- Share icon → **Send (airplane)**, positioned on hero banner image top-right, frosted circle
-- Edit/pencil moved to top-left of banner for symmetry
-- App bar header: "My Booth" in `colors.textPrimary` matching other page headers
-- Fallback header (no vendor) also uses standard page header style
-
-### Add Booth sheet (`app/shelves/page.tsx`)
-- Field order: **Mall Location → Booth Number → Booth Name**
-- Sheet cutoff fixed: `maxHeight: "92dvh"` + proper flex + safe-area-aware padding
-- Submit button always reachable on all screen sizes
+### Find detail page (`app/find/[id]/page.tsx`) — layout overhaul
+- **Floating BoothBox removed** — no more `position:absolute` badge overlapping image bottom; eliminated the `marginBottom: 34` gap it required
+- **Mall + Booth inline row** — replaces right-justified block AND removed "Find it here" card entirely
+  - Left: `MapPin` icon + mall name + address (wraps to 2 lines) + "· Directions" as tappable green link
+  - Right: compact booth badge (label + number), `flexShrink: 0`
+  - Layout: `space-between` flex row, `padding: "10px 20px 0"` — tight against image
+- **"Find it here" card removed** — mall info is now only in the inline row above the title (no duplication)
+- **Price + status on same row** — reduces vertical stacking
+- Hero wrapper `marginBottom` removed (was `hasBoothBox ? 34 : 0`)
 
 ### Home page (`app/page.tsx`)
-- **Sign in link** moved inline with logo+title group (was `space-between` pushed far right)
-- Rendered as `· Sign in` with `marginLeft: 2` for visual separation
+- `EmptyFeed` button: "Post a find" → **"Add a Booth"**, routes to `/shelves`
+
+### Add Booth sheet (`app/shelves/page.tsx`) — centering fix
+- **Root cause:** `left: "50%", transform: "translateX(-50%)"` on a `motion.div` was being overwritten by Framer's animation transform, shifting sheet to right half of screen
+- **Fix:** Static positioning wrapper `div` (`left:0, right:0, display:flex, justifyContent:center`) wraps the `motion.div`; `motion.div` handles only `y` slide animation — no centering transform on it
+- See **FRAMER MOTION TRANSFORM RULES** section below — this is a recurring issue
 
 ---
 
-## Next session starting point — Sprint 3
+## Next session starting point — Sprint 3 (continued)
 
 ### Priority 1 — Vendor bio field
 - `bio` column exists in DB + is fetched, but no UI to set or display it
@@ -207,7 +177,7 @@ SUPABASE_SERVICE_ROLE_KEY        Server-only service role key (set in .env.local
 ```
 /                   Discovery feed — masonry, scroll-triggered reveals, warmth hover, back-nav anchor
 /login              Magic link login + Admin PIN tab
-/find/[id]          Find detail — floating back button, heart+share on image, "Explore the Booth" CTA, "Find it here" card (mall only), owner controls card
+/find/[id]          Find detail — floating back button, heart+share on image, "Explore the Booth" CTA, owner controls card
 /flagged            Find Map — saved finds grouped by mall location (overhaul Sprint 3)
 /shelves            Booths — ADMIN ONLY in nav; Add Booth sheet (Mall → Booth # → Booth Name order)
 /my-shelf           My Booth — auth-gated; admin gets vendor switcher; Send icon on banner
@@ -253,12 +223,12 @@ components/ShelfGrid.tsx    ThreeColGrid, SkeletonGrid, AvailableTile, FoundTile
 components/MallHeroCard.tsx MallHeroCard (no CTA) + GenericMallHero (with CTA) — showCta prop
 components/DevAuthPanel.tsx Dev-only floating auth panel (gated in layout.tsx)
 app/layout.tsx              PWA manifest, apple-touch-icon, meta tags ✅
-app/page.tsx                Feed — "All Treehouse Spots" dropdown; "Recently added" always; sign-in inline
+app/page.tsx                Feed — "All Treehouse Spots" dropdown; "Recently added" always; sign-in inline; EmptyFeed → "Add a Booth" → /shelves
 app/flagged/page.tsx        Find Map — grouped by mall (Sprint 3 overhaul pending)
-app/shelves/page.tsx        Booths — Add Booth field order fixed; sheet cutoff fixed
+app/shelves/page.tsx        Booths — Add Booth sheet centering fixed (wrapper div pattern) ✅
 app/my-shelf/page.tsx       My Booth — Send icon on banner; standard header; edit icon top-left
 app/shelf/[slug]/page.tsx   Public Booth — read-only
-app/find/[id]/page.tsx      Find detail — mall above title, green price, green booth #, Explore CTA
+app/find/[id]/page.tsx      Find detail — inline mall+booth row, no floating BoothBox, no "Find it here" card ✅
 app/post/page.tsx           Capture — AI fallback notice, price validation, scroll cache cleared on publish
 app/post/edit/[id]/page.tsx Edit listing — price validation
 app/admin/page.tsx          Admin UI
@@ -325,27 +295,21 @@ Admin:             Home · Find Map · Booths · My Booth  (4 tabs)
 // isAdmin(user) from lib/auth — Booths tab only renders for admin
 ```
 
-### Find detail page layout order
+### Find detail page layout order (current)
 ```
 1. Hero image (full-bleed, back button top-left, heart+send bottom-right)
-2. Mall name + address (right-justified, 10px top padding — tight against image)
+2. Mall + Booth inline row (space-between, 10px top pad, tight against image)
+   LEFT:  MapPin + "Mall Name · Address · Directions" (green link, wraps 2 lines)
+   RIGHT: Booth badge (label "BOOTH" + number, flexShrink:0)
 3. Item title (Georgia 26px bold)
-4. Price (Georgia 18px, colors.green, under title)
-5. Status dot + "On Display" or "Found a home"
-6. Caption (italic Georgia 15px)
-7. Description (13px muted)
-8. "Explore the Booth" CTA → /shelf/[vendor-slug]
-9. Hairline divider
-10. "More from this shelf" horizontal scroll
-11. "Find it here" label + mall-only card (vendor row removed)
-12. Owner controls card (edit, mark sold, delete) — separate surface, isMyPost only
-```
-
-### Booth box styling (find detail)
-```tsx
-// boothNumber: Georgia 20px, fontWeight 700, color: colors.green
-// Label "Booth": system-ui 8px uppercase muted
-// Positioned absolute bottom-left of hero image, overlaps into content area
+4. Price + status dot + "On Display" / "Found a home" — same row
+5. Caption (italic Georgia 15px)
+6. Description (13px muted)
+7. "Explore the Booth" CTA → /shelf/[vendor-slug]
+8. Hairline divider
+9. "More from this shelf" horizontal scroll
+10. Owner controls card (edit, mark sold, delete) — isMyPost only
+NOTE: "Find it here" card removed — mall info lives only in row #2 above
 ```
 
 ### Animation patterns (feed)
@@ -369,21 +333,12 @@ transform: hovered ? "scale(1.018)" : "scale(1)"
 // Post-render: fire scrollTo in useEffect([loading]) when loading flips false
 ```
 
-### Toast centering pattern
-```
-// NEVER use position:fixed + translate(-50%,-50%) on a motion.div — Framer overwrites transform
-<div style={{ position:"fixed", inset:0, display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
-  <motion.div ...>...</motion.div>
-</div>
-```
-
 ### Committed terminology
 ```
 Sold status:          "Found a home" — everywhere
 Availability status:  "On Display" (was "Available")
 Save action:          heart icon only (no text CTA on find detail)
 Booth CTA:            "Explore the Booth" → /shelf/[slug]
-Location section:     "Find it here"
 Related items:        "More from this shelf"
 Booth label:          "Booth 369" — always with word "Booth"
 Admin hint:           "Manage"
@@ -391,6 +346,7 @@ Hero eyebrow:         "A curated shelf from"
 Explore banner btn:   "Discover more finds" → /
 Nav tab (vendor):     "My Booth" (was "My Shelf")
 On Display tab:       "On Display" (was "Available")
+Empty feed CTA:       "Add a Booth" → /shelves
 ```
 
 ### AdminOnly pattern
@@ -400,6 +356,50 @@ import AdminOnly from "@/components/AdminOnly";
   <button>Admin action</button>
 </AdminOnly>
 ```
+
+---
+
+## ⚠️ FRAMER MOTION TRANSFORM RULES — READ BEFORE WRITING ANY motion.div
+
+**Framer Motion owns the `transform` CSS property on every `motion.div`.** It uses `transform` to drive animations (slide, scale, rotate, fade-position). Any `transform` value you set in `style={}` on a `motion.div` will be silently overwritten at runtime by Framer's animation engine.
+
+### The two recurring failures in this repo:
+
+**1. Bottom sheet centering (FIXED in app/shelves/page.tsx)**
+```tsx
+// ❌ BROKEN — Framer overwrites translateX(-50%), sheet shifts to right half of screen
+<motion.div
+  initial={{ y: "100%" }} animate={{ y: 0 }}
+  style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)" }}
+/>
+
+// ✅ CORRECT — wrapper div handles centering, motion.div handles only y slide
+<div style={{ position: "fixed", bottom: 0, left: 0, right: 0, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
+  <motion.div
+    initial={{ y: "100%" }} animate={{ y: 0 }}
+    style={{ width: "100%", maxWidth: 430, pointerEvents: "auto" }}
+  />
+</div>
+```
+
+**2. Toast / modal centering (established pattern)**
+```tsx
+// ❌ BROKEN — Framer overwrites translate(-50%, -50%)
+<motion.div style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }} />
+
+// ✅ CORRECT — inset-0 flex shell centers it, motion.div has no transform
+<div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+  <motion.div style={{ pointerEvents: "auto" }} />
+</div>
+```
+
+### The rule, stated plainly:
+> **Never put centering `transform` on a `motion.div`.** If you need to center a `motion.div`, wrap it in a static `div` that handles all positioning and centering. The `motion.div` gets only width, background, border-radius, and animation props.
+
+### Pre-flight checklist — before writing any animated overlay/sheet/modal/toast:
+- [ ] Does this element need `transform: translate(...)` for centering? → Put it on a wrapper `div`, not the `motion.div`
+- [ ] Does the `motion.div` have both `initial`/`animate` AND a `style.transform`? → That transform will be overwritten. Restructure.
+- [ ] Never two `transition` props on the same `motion.div` — Framer silently ignores the second one
 
 ---
 
@@ -413,7 +413,7 @@ import AdminOnly from "@/components/AdminOnly";
 - `str_replace` also unreliable on regular paths — prefer `filesystem:write_file` for all rewrites
 - `useSearchParams()` requires Suspense wrapper
 - Image uploads MUST go through server routes (`/api/post-image`, `/api/vendor-hero`) — client-side Supabase upload hits RLS wall
-- Toast centering: use fixed inset-0 flex shell — NOT `position:fixed` on `motion.div` (Framer overrides transform)
+- **Framer transform conflicts — see FRAMER MOTION TRANSFORM RULES section above**
 - New API route directories must be created in Terminal with `mkdir -p` before MCP can write into them
 - New subdirectories must exist before `filesystem:write_file` — MCP can't create parent dirs
 - `getPostsByIds` has NO status filter — saved finds shown regardless of status
@@ -422,7 +422,6 @@ import AdminOnly from "@/components/AdminOnly";
 - Badge count = raw localStorage key iteration, NOT posts.length
 - Vercel project: `david-6613s-projects` scope (NOT zen-forged)
 - Vercel webhook unreliable → `npx vercel --prod` if push doesn't deploy
-- framer-motion: never two `transition` props on same motion.div
 - MINIMUM font size: 10px
 - Post type uses `price_asking` (not `price`) — `number | null`
 - Admin default vendor: `5619b4bf-3d05-4843-8ee1-e8b747fc2d81` (Zen booth, no user_id)
@@ -443,11 +442,11 @@ import AdminOnly from "@/components/AdminOnly";
 - Admin PIN login — email_otp flow
 - DevAuthPanel — dev-only (gated in layout.tsx) ✅
 - BottomNav — role-based tabs (Guest 2 / Vendor 3 / Admin 4); Booths admin-only ✅
-- Booths page — Add Booth sheet (Mall→Booth#→Name order, cutoff fixed) ✅
+- Booths page — Add Booth sheet centering fixed (wrapper div pattern) ✅
 - My Booth — auth-gated; admin vendor switcher; hero upload; Send icon on banner ✅
 - Post flow — AI caption with fallback notice ✅; price validation ✅
 - Edit listing — price validation ✅; image replacement
-- Find detail — mall above title, green price, green booth #, "Explore the Booth" CTA ✅
+- Find detail — inline mall+booth row, no floating BoothBox, no duplicate "Find it here" card ✅
 - Public Booth — read-only, shared ShelfGrid ✅
 - Find Map (`/flagged`) — saved finds; "Found a home" terminology ✅ (overhaul Sprint 3)
 - Mall locations — 29 locations in Supabase ✅
