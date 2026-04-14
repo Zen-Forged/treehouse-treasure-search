@@ -8,7 +8,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Trash2, Facebook, Tag, ArrowLeft, Heart } from "lucide-react";
+import { Send, Trash2, Facebook, Tag, ArrowLeft, Heart, Pencil } from "lucide-react";
 import { getPost, getVendorPosts, updatePostStatus, deletePost } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
@@ -402,6 +402,17 @@ export default function FindDetailPage() {
               <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2px", fontWeight: 500, marginBottom: 10 }}>
                 Manage
               </div>
+
+              {/* Edit listing */}
+              <button
+                onClick={() => router.push(`/post/edit/${post.id}`)}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: "4px 0", marginBottom: 10, WebkitTapHighlightColor: "transparent" }}
+              >
+                <Pencil size={11} style={{ color: colors.green }} />
+                <span style={{ fontSize: 11, color: colors.green, fontWeight: 500 }}>Edit listing</span>
+              </button>
+
+              {/* Mark as sold / available */}
               <button onClick={handleToggleSold} disabled={actionBusy}
                 style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: actionBusy ? "default" : "pointer", padding: "4px 0", marginBottom: 10, opacity: actionBusy ? 0.5 : 1, WebkitTapHighlightColor: "transparent" }}>
                 <Tag size={11} style={{ color: isSold ? colors.green : colors.textFaint }} />

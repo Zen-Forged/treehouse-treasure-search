@@ -101,6 +101,26 @@ export async function createPost(input: CreatePostInput): Promise<{ data: Post |
   return { data: data as Post, error: null };
 }
 
+export interface UpdatePostInput {
+  title?:        string;
+  caption?:      string;
+  price_asking?: number | null;
+  image_url?:    string;
+}
+
+/**
+ * Update editable fields on an existing post.
+ * Used by the edit flow — owners can update title, caption, price, and image.
+ */
+export async function updatePost(id: string, input: UpdatePostInput): Promise<boolean> {
+  const { error } = await supabase
+    .from("posts")
+    .update(input)
+    .eq("id", id);
+  if (error) { console.error("[posts] updatePost:", error.message); return false; }
+  return true;
+}
+
 export async function updatePostStatus(id: string, status: "available" | "sold"): Promise<boolean> {
   const { error } = await supabase
     .from("posts")

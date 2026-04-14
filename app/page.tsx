@@ -5,6 +5,7 @@
 // No mode toggle — mode is now managed via authentication.
 // Header: plain "Sign in" link when unauthed, "Sign out" when authed.
 // Feed re-fetches when the page becomes visible after being hidden (e.g. after posting).
+// Animation: scroll-triggered tile entry (IntersectionObserver) + image warmth hover.
 
 "use client";
 
@@ -23,6 +24,42 @@ import { MallHeroCard, GenericMallHero } from "@/components/MallHeroCard";
 import type { Post, Mall } from "@/types/treehouse";
 
 const SCROLL_KEY = "treehouse_feed_scroll";
+
+// ─── Scroll-triggered reveal hook ─────────────────────────────────────────────
+// Attaches an IntersectionObserver to the returned ref.
+// `visible` flips true once the element enters the viewport and stays true.
+// Tiles already in view on mount (above the fold) reveal immediately.
+
+function useScrollReveal(threshold = 0.1) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    // Above-fold check — reveal immediately without observer.
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight) {
+      setVisible(true);
+      return;
+    }
+
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          obs.disconnect();
+        }
+      },
+      { threshold, rootMargin: "0px 0px -20px 0px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [threshold]);
+
+  return { ref, visible };
+}
 
 // ─── Empty state ───────────────────────────────────────────────────────────────
 
@@ -92,7 +129,9 @@ function MasonryTile({
 }) {
   const [imgErr,    setImgErr]    = useState(false);
   const [imgHeight, setImgHeight] = useState<number | null>(null);
+  const [hovered,   setHovered]   = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
+  const { ref: revealRef, visible } = useScrollReveal(0.1);
   const hasImg = !!post.image_url && !imgErr;
   const fallbackHeights = [120, 145, 110, 160, 130, 105, 150, 125];
   const fallbackH = fallbackHeights[index % fallbackHeights.length];
@@ -111,21 +150,55 @@ function MasonryTile({
     onToggleSave(post.id);
   }
 
+  // Above-fold tiles get a small stagger delay; below-fold tiles get none
+  // because the scroll itself provides the timing rhythm.
+  const staggerDelay = Math.min(index * 0.04, 0.28);
+
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.32, delay: Math.min(index * 0.04, 0.3), ease: [0.25, 0.1, 0.25, 1] }}>
+    <div
+      ref={revealRef}
+      style={{
+        opacity:    visible ? 1 : 0,
+        transform:  visible ? "translateY(0px)" : "translateY(16px)",
+        transition: `opacity 0.38s ease ${staggerDelay}s, transform 0.44s cubic-bezier(0.22,1,0.36,1) ${staggerDelay}s`,
+        willChange: "opacity, transform",
+      }}
+    >
       <Link href={`/find/${post.id}`} style={{ display: "block", textDecoration: "none" }}>
-        <div style={{
-          borderRadius: 16, overflow: "hidden", background: colors.surface,
-          border: `1px solid ${colors.border}`,
-          boxShadow: "0 2px 10px rgba(26,24,16,0.07), 0 1px 3px rgba(26,24,16,0.04)",
-          position: "relative",
-        }}>
+        <div
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          style={{
+            borderRadius: 16, overflow: "hidden", background: colors.surface,
+            border: `1px solid ${colors.border}`,
+            // Slight shadow lift on hover — subtle depth signal.
+            boxShadow: hovered
+              ? "0 6px 20px rgba(26,24,16,0.13), 0 2px 6px rgba(26,24,16,0.07)"
+              : "0 2px 10px rgba(26,24,16,0.07), 0 1px 3px rgba(26,24,16,0.04)",
+            position: "relative",
+            transition: "box-shadow 0.30s ease",
+          }}
+        >
           {hasImg ? (
-            <div style={{ position: "relative", width: "100%", height: imgHeight ?? fallbackH }}>
-              <img ref={imgRef} src={post.image_url!} alt={post.title}
-                onLoad={handleLoad} onError={() => setImgErr(true)}
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: "brightness(0.99) saturate(0.96)" }} />
+            <div style={{ position: "relative", width: "100%", height: imgHeight ?? fallbackH, overflow: "hidden" }}>
+              <img
+                ref={imgRef}
+                src={post.image_url!}
+                alt={post.title}
+                onLoad={handleLoad}
+                onError={() => setImgErr(true)}
+                style={{
+                  width: "100%", height: "100%", objectFit: "cover", display: "block",
+                  // Warmth hover: brightness + saturation lift, gentle scale inside overflow:hidden
+                  // so the card shell stays rigid while the image breathes.
+                  filter: hovered
+                    ? "brightness(1.04) saturate(1.10)"
+                    : "brightness(0.99) saturate(0.96)",
+                  transform: hovered ? "scale(1.018)" : "scale(1)",
+                  transition: "filter 0.42s ease, transform 0.52s cubic-bezier(0.22,1,0.36,1)",
+                  transformOrigin: "center center",
+                }}
+              />
               <button
                 onClick={handleHeartClick}
                 aria-label={isFollowed ? "Remove from My Finds" : "Save"}
@@ -162,7 +235,7 @@ function MasonryTile({
           </div>
         </div>
       </Link>
-    </motion.div>
+    </div>
   );
 }
 
@@ -241,7 +314,6 @@ export default function DiscoveryFeedPage() {
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const [isAuthed,      setIsAuthed]      = useState<boolean | null>(null);
   const feedRef    = useRef<HTMLDivElement>(null);
-  // Track whether the page was hidden while the user navigated away
   const wasHidden  = useRef(false);
 
   function syncBookmarks() {
@@ -290,11 +362,8 @@ export default function DiscoveryFeedPage() {
     return unsub;
   }, []);
 
-  // Initial fetch
   useEffect(() => { loadFeed(); }, []);
 
-  // Re-fetch when the user navigates back to this tab/page from another route.
-  // visibilitychange fires hidden→visible on SPA back-navigation in mobile browsers.
   useEffect(() => {
     function onVisibilityChange() {
       if (document.visibilityState === "hidden") {
