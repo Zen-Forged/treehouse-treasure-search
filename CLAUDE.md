@@ -91,6 +91,9 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 - Pagination / infinite scroll (currently flat 80-post fetch)
 - Search
 - Terms of service / privacy policy
+- Bottom sheet polish — two candidates identified:
+  - Delete confirmation on `/find/[id]` — convert inline expand to bottom sheet (destructive actions feel more intentional on mobile)
+  - Mall picker on `/post` — 29-location list is cramped as an inline accordion; a sheet with a scrollable list would be cleaner
 
 ---
 
@@ -333,6 +336,34 @@ transform: hovered ? "scale(1.018)" : "scale(1)"
 // Post-render: fire scrollTo in useEffect([loading]) when loading flips false
 ```
 
+### Bottom sheet pattern (use for overlays, confirmations, pickers)
+```
+// Animation: spring-driven upward slide — "bottom sheet" or "action sheet"
+// initial={{ y: "100%" }} animate={{ y: 0 }}
+// transition={{ type: "spring", damping: 28, stiffness: 280 }}
+//
+// CRITICAL: Never put centering transform on the motion.div — see FRAMER MOTION TRANSFORM RULES
+// Always use a static wrapper div for positioning/centering:
+
+<div style={{ position:"fixed", bottom:0, left:0, right:0, zIndex:300,
+              display:"flex", justifyContent:"center", pointerEvents:"none" }}>
+  <motion.div
+    initial={{ y:"100%" }} animate={{ y:0 }} exit={{ y:"100%" }}
+    transition={{ type:"spring", damping:28, stiffness:280 }}
+    style={{ width:"100%", maxWidth:430, pointerEvents:"auto",
+             maxHeight:"92dvh", display:"flex", flexDirection:"column",
+             background:colors.bg, borderRadius:"20px 20px 0 0" }}
+  >
+    {/* drag handle */}
+    {/* scrollable content with paddingBottom safe-area */}
+  </motion.div>
+</div>
+
+// Identified Sprint 4 candidates for this pattern:
+// - Delete confirmation on /find/[id] (currently inline expand)
+// - Mall picker on /post (29-location list, cramped as inline accordion)
+```
+
 ### Committed terminology
 ```
 Sold status:          "Found a home" — everywhere
@@ -470,6 +501,9 @@ import AdminOnly from "@/components/AdminOnly";
 - No pagination/infinite scroll (Sprint 4)
 - No search (Sprint 4)
 - No terms of service / privacy policy (Sprint 4)
+- Bottom sheet polish (Sprint 4) — two candidates identified:
+  - Delete confirmation on `/find/[id]` — convert inline expand to bottom sheet (destructive actions feel more intentional on mobile)
+  - Mall picker on `/post` — 29-location list is cramped as an inline accordion; a sheet with scrollable list would be cleaner
 
 ---
 
