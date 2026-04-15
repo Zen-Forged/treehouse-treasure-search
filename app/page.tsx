@@ -1,6 +1,7 @@
 // app/page.tsx
 // Treehouse — Discovery Feed
 // Animation pass: spring-tap image selection + stagger entrance
+// Scroll-anchor safe: tiles above restored scroll position skip entrance animation
 
 "use client";
 
@@ -22,12 +23,15 @@ const SCROLL_KEY      = "treehouse_feed_scroll";
 const LAST_VIEWED_KEY = "treehouse_last_viewed_post";
 
 // ─── Scroll-triggered reveal hook ─────────────────────────────────────────────
+// skipAnimation: when true (returning user with saved scroll pos), tile is
+// immediately visible so layout is stable before scroll restoration fires.
 
-function useScrollReveal(threshold = 0.1) {
+function useScrollReveal(threshold = 0.1, skipAnimation = false) {
   const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(skipAnimation);
 
   useEffect(() => {
+    if (skipAnimation) { setVisible(true); return; }
     const el = ref.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -38,7 +42,7 @@ function useScrollReveal(threshold = 0.1) {
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [threshold]);
+  }, [threshold, skipAnimation]);
 
   return { ref, visible };
 }
@@ -102,22 +106,24 @@ function SkeletonMasonry() {
 // ─── Masonry tile ──────────────────────────────────────────────────────────────
 
 function MasonryTile({
-  post, index, isFollowed, onToggleSave, isLastViewed,
+  post, index, isFollowed, onToggleSave, isLastViewed, skipEntrance,
 }: {
   post: Post;
   index: number;
   isFollowed: boolean;
   onToggleSave: (postId: string) => void;
   isLastViewed: boolean;
+  // True when the feed is being restored to a saved scroll position —
+  // skips the entrance animation so layout is stable for scroll restoration
+  skipEntrance: boolean;
 }) {
   const [imgErr,      setImgErr]      = useState(false);
   const [imgHeight,   setImgHeight]   = useState<number | null>(null);
   const [hovered,     setHovered]     = useState(false);
   const [highlighted, setHighlighted] = useState(isLastViewed);
-  // Spring-tap image selection state
   const [tapped,      setTapped]      = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
-  const { ref: revealRef, visible } = useScrollReveal(0.1);
+  const { ref: revealRef, visible } = useScrollReveal(0.1, skipEntrance);
   const hasImg = !!post.image_url && !imgErr;
   const fallbackHeights = [120, 145, 110, 160, 130, 105, 150, 125];
   const fallbackH = fallbackHeights[index % fallbackHeights.length];
@@ -146,13 +152,13 @@ function MasonryTile({
     try { sessionStorage.setItem(LAST_VIEWED_KEY, post.id); } catch {}
   }
 
-  // Brief spring-pop on tap before navigation
   function handleTilePointerDown() {
     setTapped(true);
     setTimeout(() => setTapped(false), 320);
   }
 
-  const staggerDelay = Math.min(index * 0.04, 0.28);
+  // When skipEntrance is true, no stagger delay either — render immediately
+  const staggerDelay = skipEntrance ? 0 : Math.min(index * 0.04, 0.28);
 
   return (
     <div
@@ -161,8 +167,11 @@ function MasonryTile({
       style={{
         opacity:    visible ? 1 : 0,
         transform:  visible ? "translateY(0px)" : "translateY(16px)",
-        transition: `opacity 0.38s ease ${staggerDelay}s, transform 0.44s cubic-bezier(0.22,1,0.36,1) ${staggerDelay}s`,
-        willChange: "opacity, transform",
+        // No transition when skipping entrance — instant paint for layout stability
+        transition: skipEntrance
+          ? "none"
+          : `opacity 0.38s ease ${staggerDelay}s, transform 0.44s cubic-bezier(0.22,1,0.36,1) ${staggerDelay}s`,
+        willChange: skipEntrance ? "auto" : "opacity, transform",
       }}
     >
       <Link href={`/find/${post.id}`} style={{ display: "block", textDecoration: "none" }}
@@ -183,7 +192,6 @@ function MasonryTile({
                 ? "0 6px 20px rgba(26,24,16,0.13), 0 2px 6px rgba(26,24,16,0.07)"
                 : "0 2px 10px rgba(26,24,16,0.07), 0 1px 3px rgba(26,24,16,0.04)",
             position: "relative",
-            // Spring-tap scale: pops up slightly then settles
             transform: tapped ? "scale(1.045)" : "scale(1)",
             transition: tapped
               ? "transform 0.14s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.30s ease, border-color 0.60s ease"
@@ -227,14 +235,13 @@ function MasonryTile({
                   style={{ color: "rgba(255,255,255,0.96)", fill: isFollowed ? "rgba(255,255,255,0.96)" : "none" }} />
               </button>
 
-              {/* Spring-tap selection overlay — forest green tint */}
+              {/* Spring-tap selection overlay */}
               <div style={{
                 position: "absolute", inset: 0,
                 background: "rgba(30,77,43,0.09)",
                 opacity: tapped ? 1 : 0,
                 transition: tapped ? "opacity 0.08s ease" : "opacity 0.28s ease",
                 pointerEvents: "none",
-                borderRadius: 0,
               }} />
             </div>
           ) : (
@@ -261,12 +268,13 @@ function MasonryTile({
 // ─── Two-column masonry ────────────────────────────────────────────────────────
 
 function MasonryGrid({
-  posts, followedIds, onToggleSave, lastViewedId,
+  posts, followedIds, onToggleSave, lastViewedId, skipEntrance,
 }: {
   posts: Post[];
   followedIds: Set<string>;
   onToggleSave: (postId: string) => void;
   lastViewedId: string | null;
+  skipEntrance: boolean;
 }) {
   const col1 = posts.filter((_, i) => i % 2 === 0);
   const col2 = posts.filter((_, i) => i % 2 === 1);
@@ -293,6 +301,7 @@ function MasonryGrid({
               isFollowed={followedIds.has(post.id)}
               onToggleSave={onToggleSave}
               isLastViewed={post.id === lastViewedId}
+              skipEntrance={skipEntrance}
             />
           </div>
         ))}
@@ -304,6 +313,7 @@ function MasonryGrid({
             isFollowed={followedIds.has(post.id)}
             onToggleSave={onToggleSave}
             isLastViewed={post.id === lastViewedId}
+            skipEntrance={skipEntrance}
           />
         ))}
       </div>
@@ -348,6 +358,11 @@ export default function DiscoveryFeedPage() {
   const wasHidden        = useRef(false);
   const pendingScrollY   = useRef<number | null>(null);
   const scrollRestored   = useRef(false);
+
+  // True when we're returning to a saved scroll position.
+  // Passed down to MasonryGrid so tiles skip their entrance animation,
+  // keeping layout fully painted and stable before scroll restoration fires.
+  const isRestoringScroll = pendingScrollY.current !== null && !scrollRestored.current;
 
   function syncBookmarks() {
     const ids = loadFollowedIds();
@@ -524,6 +539,7 @@ export default function DiscoveryFeedPage() {
                 followedIds={followedIds}
                 onToggleSave={handleToggleSave}
                 lastViewedId={lastViewedId}
+                skipEntrance={isRestoringScroll}
               />
             </AnimatePresence>
           )}
