@@ -1,10 +1,51 @@
 // app/api/post-caption/route.ts
 // Generates a Treehouse title AND caption for a vendor find post.
 // Captions are short, slightly poetic, never transactional.
+//
+// Rate limiting: 10 requests per IP per 60s (in-memory).
+// Note: in-memory limits don't share state across Vercel instances.
+// Upgrade to Upstash Redis when instance count becomes a concern at scale.
 
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 
+// ---------------------------------------------------------------------------
+// Rate limiter — in-memory, per-IP, resets every WINDOW_MS
+// ---------------------------------------------------------------------------
+const RATE_LIMIT    = 10;   // max requests per window per IP
+const WINDOW_MS     = 60_000; // 60 seconds
+
+const ipMap = new Map<string, { count: number; windowStart: number }>();
+
+function checkRateLimit(ip: string): { allowed: boolean; remaining: number; resetInMs: number } {
+  const now = Date.now();
+  const entry = ipMap.get(ip);
+
+  if (!entry || now - entry.windowStart > WINDOW_MS) {
+    ipMap.set(ip, { count: 1, windowStart: now });
+    return { allowed: true, remaining: RATE_LIMIT - 1, resetInMs: WINDOW_MS };
+  }
+
+  if (entry.count >= RATE_LIMIT) {
+    const resetInMs = WINDOW_MS - (now - entry.windowStart);
+    return { allowed: false, remaining: 0, resetInMs };
+  }
+
+  entry.count += 1;
+  return { allowed: true, remaining: RATE_LIMIT - entry.count, resetInMs: WINDOW_MS - (now - entry.windowStart) };
+}
+
+function getClientIp(req: NextRequest): string {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown"
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Mock fallback — used when ANTHROPIC_API_KEY is absent or Claude fails
+// ---------------------------------------------------------------------------
 const MOCK_RESPONSES = [
   { title: "Mid-century ceramic vase", caption: "Quietly beautiful. The kind of thing that earns a permanent spot on the shelf." },
   { title: "Brass candlestick holder", caption: "Well-made and unhurried. Still very much at home in the world." },
@@ -13,14 +54,38 @@ const MOCK_RESPONSES = [
   { title: "Stoneware pottery bowl", caption: "Not flashy, but assured. The materials are real and the quality shows." },
 ];
 
+// ---------------------------------------------------------------------------
+// Route handler
+// ---------------------------------------------------------------------------
 export async function POST(req: NextRequest) {
+  // Rate limit check
+  const ip = getClientIp(req);
+  const { allowed, remaining, resetInMs } = checkRateLimit(ip);
+
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many requests. Please wait a moment before trying again." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After":          String(Math.ceil(resetInMs / 1000)),
+          "X-RateLimit-Limit":    String(RATE_LIMIT),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset":    String(Math.ceil((Date.now() + resetInMs) / 1000)),
+        },
+      }
+    );
+  }
+
   try {
     const { imageDataUrl } = await req.json();
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
     if (!apiKey) {
       const mock = MOCK_RESPONSES[Math.floor(Math.random() * MOCK_RESPONSES.length)];
-      return NextResponse.json(mock);
+      return NextResponse.json(mock, {
+        headers: { "X-RateLimit-Remaining": String(remaining) },
+      });
     }
 
     const system = `You are a writer for Treehouse, a local discovery app for antique and thrift finds.
@@ -60,7 +125,10 @@ Example: {"title":"Vintage brass candlestick","caption":"Carries its age quietly
       .replace(/\s*```$/, "");
 
     const parsed = JSON.parse(raw) as { title: string; caption: string };
-    return NextResponse.json({ title: parsed.title ?? "", caption: parsed.caption ?? "" });
+    return NextResponse.json(
+      { title: parsed.title ?? "", caption: parsed.caption ?? "" },
+      { headers: { "X-RateLimit-Remaining": String(remaining) } }
+    );
 
   } catch (err) {
     console.error("[post-caption]", err);
