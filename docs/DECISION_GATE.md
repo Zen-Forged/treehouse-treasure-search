@@ -1,0 +1,211 @@
+# Treehouse — Decision Gate
+> Version: 1.0 | Created: 2026-04-15 | Repo: Zen-Forged/treehouse-treasure-search
+> This document is the operating constitution for every agent and every session. Read it first. Every decision flows through it.
+
+---
+
+## Purpose
+
+This document exists to surface the right information at the right time. Before any work begins — feature, fix, or architectural change — the relevant gate checks below are applied. No agent proceeds without passing through this filter.
+
+The goal is to protect three things simultaneously:
+1. **The product** — Treehouse stays coherent, calm, and on-brand
+2. **The business** — Zen Forged LLC stays financially healthy and legally protected
+3. **The users** — vendors and shoppers are safe, their data is protected
+
+---
+
+## The Vision (anchor for all decisions)
+
+Treehouse is a **calm, story-driven local discovery experience** for vintage, antique, and thrift finds in Kentucky and Southern Indiana.
+
+- Buyers browse before making the trip
+- Vendors post finds for visibility without needing a full e-commerce stack
+- Mall operators get organic foot traffic through vendor content
+- Resellers (future premium) get comp and profit analysis
+
+**What Treehouse is NOT:**
+- Not a marketplace (no buying/selling on-platform)
+- Not a filter-heavy listings site
+- Not a social network
+- Not a fast-fashion or urgency-driven shopping experience
+
+**The feeling:** Calm. Intentional. Story-first. Like a thoughtful friend who noticed something worth sharing — not a storefront, not an algorithm.
+
+---
+
+## The Brand Rules
+
+Any feature, copy, or UI change is evaluated against these:
+
+| Rule | What it means in practice |
+|---|---|
+| No prices in the feed | Items feel like discoveries, not listings |
+| No urgency cues | No "only 1 left", no countdowns, no "SALE" badges |
+| Sold items stay visible | "Found a home" — they tell a story |
+| Copy is warm and observational | Never salesy, never hype, never transactional |
+| Layout breathes | Density is the enemy. Whitespace is intentional. |
+| Georgia for humanity | Headings, captions, and titles use serif. UI uses system font. |
+| Warm parchment palette | `#f5f2eb` bg, `#1e4d2b` green — earthy, not digital |
+| "Found a home" not "Sold" | Terminology is committed. See CLAUDE.md. |
+
+**When to flag:** If a requested feature or copy change would make Treehouse feel more like eBay, Etsy, or Facebook Marketplace — stop and discuss before building.
+
+---
+
+## The Business Rules
+
+| Rule | Detail |
+|---|---|
+| API costs are real | Anthropic + SerpAPI are pay-per-use. Rate limiting on `/api/post-caption` is required before beta. |
+| Vendor data is sacred | Vendors trust us with their booth identity. Never expose, delete, or corrupt vendor records. |
+| One mall in production | America's Antique Mall (`19a8ff7e-...`) is the only live mall. Changes affecting all malls affect this one. |
+| Vercel is the deployment | No other deployment targets. Never bypass Vercel CI/CD without explicit reason. |
+| Zen Forged LLC is the operator | David Butler / ZenForged Finds, Booth 369 is both operator and first vendor. Conflicts of interest between "owner" and "user" views should be flagged. |
+| No PII beyond what's necessary | Vendor email (for magic link auth) is the only PII collected. Do not add fields that collect personal data without deliberate review. |
+
+---
+
+## The Tech Rules
+
+These are non-negotiable. Violating them has broken production before.
+
+```
+git add -A                         Always — never individual paths (zsh glob-expands [slug])
+filesystem:write_file              ONLY reliable way to write files to disk from MCP
+str_replace                        Fails on bracket-path files — use write_file for those
+Read before rewriting              Always read current file contents before a full rewrite
+safeStorage                        Use instead of raw localStorage in all ecosystem client components
+export const dynamic               Required on all ecosystem pages importing supabase at module scope
+Framer Motion transforms           motion.div cannot have centering transform — use wrapper div
+Framer Motion transitions          Never two transition props on same motion.div — merge them
+Framer ease arrays                 Must use `as const` — e.g. [0.25,0.46,0.45,0.94] as const
+createVendor                       Handles 23505 duplicate key — do not revert this upsert logic
+env vars in Vercel functions       Must be read inside function bodies, not at module scope
+useSearchParams()                  Requires Suspense boundary
+New API route dirs                 Must be created in Terminal with mkdir -p before MCP can write
+```
+
+---
+
+## The Decision Gate — Three Levels
+
+Every significant request passes through this before work begins.
+
+### 🔴 STOP — Flag immediately, do not proceed
+
+These conditions require a conversation with David before any code is written or changed.
+
+| Trigger | Why |
+|---|---|
+| Supabase RLS disabled on a new table | Any authenticated user can read/write/delete any row |
+| API route with no auth or rate limiting | Direct cost and abuse exposure |
+| Secrets or keys appearing in client-side code | Security breach — keys must stay server-only |
+| Auth flow change | Magic link and admin PIN are the two auth paths — changes here break vendor access |
+| Deleting or overwriting production data | Irreversible |
+| Changing the publish flow (`/post`, `/api/post-image`, `createPost`) | Core vendor revenue path — highest blast radius |
+| Feature that contradicts the product vision | e.g., adding a "Buy Now" button, price in feed grid, urgency badge |
+| Deployment config change (vercel.json, next.config.js) | Can break production silently |
+| New external service integration | Cost, privacy, and dependency implications |
+
+### 🟡 SURFACE — Flag before proceeding, then get approval
+
+These don't stop work but must be called out explicitly before the session continues.
+
+| Trigger | Why |
+|---|---|
+| Architecture pattern change | Naming, file structure, data flow — easier to align upfront |
+| Token or API cost increase | Any change that significantly increases call volume to Anthropic or SerpAPI |
+| Component restructuring or deletion | May have invisible dependents |
+| Feature scope creep | Is this MVP or Sprint 4+? Does it belong in this sprint? |
+| Personal preference vs. product vision conflict | David's taste is good but the vision is the tie-breaker |
+| Tech debt accumulation | If a shortcut is taken, name it and log it in `docs/known-issues.md` |
+| Brand tone mismatch in copy | Copy should feel like Treehouse, not like an e-commerce template |
+| Performance implications | Unnecessary re-renders, unbounded fetches, large bundle additions |
+| Mobile edge cases (iPhone Safari, Android Chrome) | safeStorage, safe-area insets, scroll restore — these have bitten before |
+
+### 🟢 PROCEED — Standard work, no gate check needed
+
+| Type | Examples |
+|---|---|
+| Bug fixes | Typos, broken styles, off-by-one logic |
+| Styling consistency | Spacing, color, typography alignment with design system |
+| TypeScript improvements | Type tightening, removing `any` |
+| Documentation | CLAUDE.md, CONTEXT.md, this file, decision-log |
+| Test additions | Non-destructive — always welcome |
+| Input validation on existing patterns | Adding a size guard to an existing upload field |
+| CLAUDE.md / CONTEXT.md updates | Session close maintenance |
+
+---
+
+## Current Risk Register
+
+> Updated: 2026-04-15 | Source: codebase audit
+
+| Risk | Severity | Status | Owner |
+|---|---|---|---|
+| RLS disabled on `malls`, `vendors`, `posts` | 🔴 High | Open — Sprint 4 | Dev agent |
+| No rate limiting on `/api/post-caption` | 🔴 High | Open — Sprint 3 | Dev agent |
+| No error monitoring (Sentry / structured logs) | 🟡 Medium | Open — Sprint 3 | Dev agent |
+| Bookmarks localStorage-only (ITP wipe risk) | 🟡 Medium | Open — Sprint 4 | Dev agent |
+| No automated testing | 🟡 Medium | Open — Strategy needed | Dev + Product agents |
+| Admin PIN not QA'd in production | 🟡 Medium | Open — quick curl test | Dev agent |
+| Public Storage bucket (`post-images`) | 🟡 Medium | Intentional — monitor | Dev agent |
+| No terms of service / privacy policy | 🟡 Medium | Open — before public launch | David |
+| Feed pagination missing (flat 80-post fetch) | 🟢 Low | Open — Sprint 4 | Dev agent |
+| `/enhance-text` caption is mock (not real Claude call) | 🟢 Low | Open — future sprint | Dev agent |
+
+---
+
+## Agent Roster
+
+| Agent | Status | Scope |
+|---|---|---|
+| **Dev agent** | ✅ Active | Codebase, architecture, sprint execution, bug triage, deployment |
+| **Product agent** | 🔲 Sprint 3 | Backlog management, feature specs, sprint planning, scope decisions |
+| **Security agent** | 🔲 Sprint 3 | RLS audit, API surface review, secrets hygiene, auth hardening |
+| **Finance agent** | 🔲 Phase 2 | API cost tracking, booth revenue, burn rate, Zen Forged financials |
+| **Brand agent** | 🔲 Phase 2 | Tone review, copy consistency, launch messaging, design system governance |
+
+**How agents are activated:** An agent is created when the work it covers becomes a recurring bottleneck. Not before. Each agent gets a focused system prompt, relevant context files, and a defined scope. They report through the same three-level gate above.
+
+---
+
+## Sprint Context (current)
+
+| Sprint | Focus | Status |
+|---|---|---|
+| Sprint 1 | MVP core — feed, post flow, auth, booths | ✅ Complete |
+| Sprint 2 | UI polish — animations, detail page, scroll restore | ✅ Complete |
+| Sprint 3 | Vendor bio, Find Map overhaul, error monitoring, rate limiting | 🔄 In progress |
+| Sprint 4 | RLS, testing, pagination, search, terms of service | 🔲 Planned |
+
+---
+
+## How to Use This Document
+
+**Every Claude session:** Read this before the opening standup. It replaces the need to re-explain the product vision, brand rules, or tech constraints in every conversation.
+
+**Every agent:** Reference this as the operating constitution. When in doubt about whether to proceed, escalate to the appropriate gate level.
+
+**Every sprint:** Update the Risk Register when risks are resolved or discovered. Update the Sprint Context table at sprint boundaries.
+
+**David:** This is the document that prevents the system from optimizing for the wrong thing. If you ever feel like the work is drifting from the vision — this is where you come to re-anchor it.
+
+---
+
+## Related Documents
+
+| File | Purpose |
+|---|---|
+| `CLAUDE.md` | Live session whiteboard — current issue, what was done, next steps |
+| `CONTEXT.md` | Full architecture — schema, routes, data flow, design system |
+| `.claude/MASTER_PROMPT.md` | Operator rulebook — session structure, phase gating, approval boundaries |
+| `SPRINT_PLAN.md` | Sprint-level feature roadmap |
+| `docs/decision-log.md` | Architectural decisions and their rationale *(create when first decision is logged)* |
+| `docs/known-issues.md` | Active bugs, gaps, deferred items *(create when first issue is logged)* |
+
+---
+> This document is the operating constitution for the Treehouse system.
+> It is maintained by the Dev agent and reviewed by David at each sprint boundary.
+> Last updated: 2026-04-15
