@@ -1,6 +1,6 @@
 // app/page.tsx
 // Treehouse — Discovery Feed
-// Item 6: Sign in link moved left, inline with logo+title group
+// Animation pass: spring-tap image selection + stagger entrance
 
 "use client";
 
@@ -114,6 +114,8 @@ function MasonryTile({
   const [imgHeight,   setImgHeight]   = useState<number | null>(null);
   const [hovered,     setHovered]     = useState(false);
   const [highlighted, setHighlighted] = useState(isLastViewed);
+  // Spring-tap image selection state
+  const [tapped,      setTapped]      = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const { ref: revealRef, visible } = useScrollReveal(0.1);
   const hasImg = !!post.image_url && !imgErr;
@@ -144,6 +146,12 @@ function MasonryTile({
     try { sessionStorage.setItem(LAST_VIEWED_KEY, post.id); } catch {}
   }
 
+  // Brief spring-pop on tap before navigation
+  function handleTilePointerDown() {
+    setTapped(true);
+    setTimeout(() => setTapped(false), 320);
+  }
+
   const staggerDelay = Math.min(index * 0.04, 0.28);
 
   return (
@@ -157,7 +165,10 @@ function MasonryTile({
         willChange: "opacity, transform",
       }}
     >
-      <Link href={`/find/${post.id}`} style={{ display: "block", textDecoration: "none" }} onClick={handleTileClick}>
+      <Link href={`/find/${post.id}`} style={{ display: "block", textDecoration: "none" }}
+        onClick={handleTileClick}
+        onPointerDown={handleTilePointerDown}
+      >
         <div
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
@@ -172,7 +183,11 @@ function MasonryTile({
                 ? "0 6px 20px rgba(26,24,16,0.13), 0 2px 6px rgba(26,24,16,0.07)"
                 : "0 2px 10px rgba(26,24,16,0.07), 0 1px 3px rgba(26,24,16,0.04)",
             position: "relative",
-            transition: "box-shadow 0.30s ease, border-color 0.60s ease",
+            // Spring-tap scale: pops up slightly then settles
+            transform: tapped ? "scale(1.045)" : "scale(1)",
+            transition: tapped
+              ? "transform 0.14s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.30s ease, border-color 0.60s ease"
+              : "transform 0.32s cubic-bezier(0.22,1,0.36,1), box-shadow 0.30s ease, border-color 0.60s ease",
           }}
         >
           {hasImg ? (
@@ -211,6 +226,16 @@ function MasonryTile({
                 <Heart size={16} strokeWidth={isFollowed ? 0 : 1.8}
                   style={{ color: "rgba(255,255,255,0.96)", fill: isFollowed ? "rgba(255,255,255,0.96)" : "none" }} />
               </button>
+
+              {/* Spring-tap selection overlay — forest green tint */}
+              <div style={{
+                position: "absolute", inset: 0,
+                background: "rgba(30,77,43,0.09)",
+                opacity: tapped ? 1 : 0,
+                transition: tapped ? "opacity 0.08s ease" : "opacity 0.28s ease",
+                pointerEvents: "none",
+                borderRadius: 0,
+              }} />
             </div>
           ) : (
             <div style={{ padding: "16px 13px 10px", minHeight: fallbackH, display: "flex", alignItems: "flex-start" }}>
