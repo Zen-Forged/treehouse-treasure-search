@@ -19,17 +19,19 @@ import BottomNav from "@/components/BottomNav";
 import type { Post } from "@/types/treehouse";
 
 // ─── Page transition variants ──────────────────────────────────────────────────
-// Soft drift-in: content rises 14px and fades in over 340ms
-// Each content section staggers slightly for a layered, human feel
+// as const on the ease tuple tells TypeScript it's a fixed BezierDefinition,
+// not a generic number[] which Framer Motion's types won't accept
+
+const EASE = [0.25, 0.46, 0.45, 0.94] as const;
 
 const pageVariants = {
   hidden:  { opacity: 0, y: 14 },
-  visible: { opacity: 1, y: 0,  transition: { duration: 0.34, ease: [0.25, 0.46, 0.45, 0.94] } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.34, ease: EASE } },
 };
 
 const sectionVariants = (delay: number) => ({
   hidden:  { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0,  transition: { duration: 0.32, delay, ease: [0.25, 0.46, 0.45, 0.94] } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.32, delay, ease: EASE } },
 });
 
 // ─── Owner detection ───────────────────────────────────────────────────────────
@@ -234,11 +236,11 @@ export default function FindDetailPage() {
     );
   }
 
-  const isSold    = post.status === "sold";
-  const hasVendor = !!post.vendor;
+  const isSold     = post.status === "sold";
+  const hasVendor  = !!post.vendor;
   const hasContent = !!(post.caption || post.description);
-  const hasPrice  = post.price_asking != null;
-  const vendorSlug = post.vendor?.slug ?? null;
+  const hasPrice   = post.price_asking != null;
+  const vendorSlug  = post.vendor?.slug ?? null;
   const boothNumber = post.vendor?.booth_number ?? null;
 
   const mallLine = post.mall?.name
@@ -250,7 +252,7 @@ export default function FindDetailPage() {
   return (
     <div style={{ minHeight: "100vh", background: colors.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
 
-      {/* ── 1. Hero image — enters immediately, no transition (feels grounded) ── */}
+      {/* ── 1. Hero image ── */}
       <motion.div
         variants={pageVariants}
         initial="hidden"
@@ -270,23 +272,18 @@ export default function FindDetailPage() {
           </div>
         )}
 
-        {/* Back button — always visible immediately */}
         <button onClick={() => router.back()} aria-label="Go back"
           style={{ position: "absolute", top: "max(14px, env(safe-area-inset-top, 14px))", left: 14, width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(240,237,230,0.82)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: `1px solid rgba(26,24,16,0.10)`, cursor: "pointer", boxShadow: "0 2px 8px rgba(26,24,16,0.12)", WebkitTapHighlightColor: "transparent" }}>
           <ArrowLeft size={15} style={{ color: colors.textMid }} />
         </button>
 
-        {/* Heart + Share */}
         <div style={{ position: "absolute", bottom: 12, right: 14, display: "flex", alignItems: "center", gap: 8 }}>
           <motion.button
             onClick={handleToggleSave}
             aria-label={isSaved ? "Remove from My Finds" : "Save to My Finds"}
             whileTap={{ scale: 1.22 }}
             transition={{ type: "spring", stiffness: 400, damping: 17 }}
-            style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: isSaved ? colors.greenSolid : "rgba(0,0,0,0.30)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", cursor: "pointer", boxShadow: isSaved ? "0 2px 8px rgba(30,77,43,0.40)" : "0 1px 5px rgba(0,0,0,0.20)", WebkitTapHighlightColor: "transparent",
-              // Smooth background color transition
-              transition: "background 0.22s ease, box-shadow 0.22s ease",
-            }}
+            style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: isSaved ? colors.greenSolid : "rgba(0,0,0,0.30)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", cursor: "pointer", boxShadow: isSaved ? "0 2px 8px rgba(30,77,43,0.40)" : "0 1px 5px rgba(0,0,0,0.20)", WebkitTapHighlightColor: "transparent", transition: "background 0.22s ease, box-shadow 0.22s ease" }}
           >
             <Heart size={15} strokeWidth={isSaved ? 0 : 1.8} style={{ color: "rgba(255,255,255,0.95)", fill: isSaved ? "rgba(255,255,255,0.95)" : "none", transition: "fill 0.18s ease" }} />
           </motion.button>
@@ -297,31 +294,20 @@ export default function FindDetailPage() {
         </div>
       </motion.div>
 
-      {/* ── 2. Mall + Booth row — drifts in slightly after hero ── */}
+      {/* ── 2. Mall + Booth row ── */}
       {(post.mall || boothNumber) && (
         <motion.div
           variants={sectionVariants(0.06)}
           initial="hidden"
           animate="visible"
-          style={{
-            display: "flex", alignItems: "flex-start", justifyContent: "space-between",
-            gap: 12, padding: "10px 20px 0",
-          }}
+          style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, padding: "10px 20px 0" }}
         >
           {mallLine && (
             <div style={{ display: "flex", alignItems: "flex-start", gap: 5, flex: 1 }}>
               <MapPin size={11} style={{ color: colors.green, flexShrink: 0, marginTop: 2 }} />
               {mapLink ? (
-                <a
-                  href={mapLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    fontFamily: "Georgia, serif", fontSize: 12, color: colors.green,
-                    textDecoration: "none", borderBottom: `1px solid ${colors.greenBorder}`,
-                    lineHeight: 1.45,
-                  }}
-                >
+                <a href={mapLink} target="_blank" rel="noopener noreferrer"
+                  style={{ fontFamily: "Georgia, serif", fontSize: 12, color: colors.green, textDecoration: "none", borderBottom: `1px solid ${colors.greenBorder}`, lineHeight: 1.45 }}>
                   {mallLine} · Directions
                 </a>
               ) : (
@@ -331,25 +317,12 @@ export default function FindDetailPage() {
               )}
             </div>
           )}
-
           {boothNumber && (
-            <div style={{
-              flexShrink: 0,
-              background: colors.tag, border: `1.5px solid ${colors.tagBorder}`,
-              borderRadius: 8, padding: "4px 10px 5px",
-              textAlign: "center",
-            }}>
-              <div style={{
-                fontFamily: "system-ui, sans-serif", fontSize: 7, fontWeight: 600,
-                textTransform: "uppercase" as const, letterSpacing: "1.6px",
-                color: colors.textMuted, lineHeight: 1, marginBottom: 3,
-              }}>
+            <div style={{ flexShrink: 0, background: colors.tag, border: `1.5px solid ${colors.tagBorder}`, borderRadius: 8, padding: "4px 10px 5px", textAlign: "center" }}>
+              <div style={{ fontFamily: "system-ui, sans-serif", fontSize: 7, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "1.6px", color: colors.textMuted, lineHeight: 1, marginBottom: 3 }}>
                 Booth
               </div>
-              <div style={{
-                fontFamily: "Georgia, serif", fontSize: 17, fontWeight: 700,
-                color: colors.green, letterSpacing: "0.2px", lineHeight: 1,
-              }}>
+              <div style={{ fontFamily: "Georgia, serif", fontSize: 17, fontWeight: 700, color: colors.green, letterSpacing: "0.2px", lineHeight: 1 }}>
                 {boothNumber}
               </div>
             </div>
@@ -357,27 +330,17 @@ export default function FindDetailPage() {
         </motion.div>
       )}
 
-      {/* ── 3. Content block — layered stagger ── */}
+      {/* ── 3. Content block ── */}
       <div style={{ padding: "10px 20px 0" }}>
 
-        {/* Title */}
-        <motion.div
-          variants={sectionVariants(0.10)}
-          initial="hidden"
-          animate="visible"
-        >
+        <motion.div variants={sectionVariants(0.10)} initial="hidden" animate="visible">
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 700, color: colors.textPrimary, lineHeight: 1.22, letterSpacing: "-0.5px", margin: "0 0 8px" }}>
             {post.title}
           </h1>
         </motion.div>
 
-        {/* Price + status row */}
-        <motion.div
-          variants={sectionVariants(0.15)}
-          initial="hidden"
-          animate="visible"
-          style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}
-        >
+        <motion.div variants={sectionVariants(0.15)} initial="hidden" animate="visible"
+          style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           {hasPrice && (
             <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: colors.green, letterSpacing: "-0.3px" }}>
               ${post.price_asking!.toLocaleString()}
@@ -385,11 +348,8 @@ export default function FindDetailPage() {
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             {!isSold && (
-              <motion.div
-                animate={{ opacity: [1, 0.35, 1] }}
-                transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-                style={{ width: 6, height: 6, borderRadius: "50%", background: colors.green, flexShrink: 0 }}
-              />
+              <motion.div animate={{ opacity: [1, 0.35, 1] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+                style={{ width: 6, height: 6, borderRadius: "50%", background: colors.green, flexShrink: 0 }} />
             )}
             <span style={{ fontSize: 12, fontWeight: 500, color: isSold ? colors.textMuted : colors.green, letterSpacing: "0.1px" }}>
               {isSold ? "Found a home" : "On Display"}
@@ -398,12 +358,7 @@ export default function FindDetailPage() {
         </motion.div>
 
         {hasContent && (
-          <motion.div
-            variants={sectionVariants(0.20)}
-            initial="hidden"
-            animate="visible"
-            style={{ marginBottom: 24 }}
-          >
+          <motion.div variants={sectionVariants(0.20)} initial="hidden" animate="visible" style={{ marginBottom: 24 }}>
             {post.caption && (
               <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 15, color: colors.textMid, lineHeight: 1.85, margin: "0 0 10px" }}>
                 {post.caption}
@@ -417,14 +372,9 @@ export default function FindDetailPage() {
           </motion.div>
         )}
 
-        {/* Explore the Booth CTA */}
         {vendorSlug && (
-          <motion.div
-            variants={sectionVariants(0.24)}
-            initial="hidden"
-            animate="visible"
-            style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}
-          >
+          <motion.div variants={sectionVariants(0.24)} initial="hidden" animate="visible"
+            style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
             <button onClick={handleExploreBooth}
               style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 28px", borderRadius: 28, fontSize: 13, fontWeight: 600, fontFamily: "Georgia, serif", color: colors.green, background: colors.greenLight, border: `1px solid ${colors.greenBorder}`, cursor: "pointer", transition: "background 0.18s, color 0.18s", WebkitTapHighlightColor: "transparent" }}>
               <Store size={15} style={{ color: colors.green }} />
@@ -445,12 +395,8 @@ export default function FindDetailPage() {
       {/* ── Owner controls ── */}
       {showOwnerControls && (
         <div style={{ padding: "0 20px", marginBottom: 28 }}>
-          <motion.div
-            variants={sectionVariants(0.28)}
-            initial="hidden"
-            animate="visible"
-            style={{ background: colors.surface, borderRadius: 14, border: `1px solid ${colors.border}`, overflow: "hidden", padding: "12px 16px 14px" }}
-          >
+          <motion.div variants={sectionVariants(0.28)} initial="hidden" animate="visible"
+            style={{ background: colors.surface, borderRadius: 14, border: `1px solid ${colors.border}`, overflow: "hidden", padding: "12px 16px 14px" }}>
             <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2px", fontWeight: 500, marginBottom: 10 }}>
               Manage
             </div>
