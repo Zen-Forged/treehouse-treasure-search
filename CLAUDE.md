@@ -8,7 +8,7 @@
 PROJECT: Treehouse — Zen-Forged/treehouse-treasure-search — treehouse-treasure-search.vercel.app
 STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Vercel
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
-Read CLAUDE.md and CONTEXT.md. Then run the session opening standup from MASTER_PROMPT.md.
+Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
 CURRENT ISSUE:
 [paste the CURRENT ISSUE section below]
@@ -25,31 +25,35 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-14
+> Last updated: 2026-04-15
 
-**Status:** Sprint 3 in progress. Find detail layout overhauled, sheet centering fixed.
+**Status:** Animation polish pass complete. Spring-tap + detail page drift-in shipped.
 
 ---
 
 ## What was done (this session)
 
-### Find detail page (`app/find/[id]/page.tsx`) — layout overhaul
-- **Floating BoothBox removed** — no more `position:absolute` badge overlapping image bottom; eliminated the `marginBottom: 34` gap it required
-- **Mall + Booth inline row** — replaces right-justified block AND removed "Find it here" card entirely
-  - Left: `MapPin` icon + mall name + address (wraps to 2 lines) + "· Directions" as tappable green link
-  - Right: compact booth badge (label + number), `flexShrink: 0`
-  - Layout: `space-between` flex row, `padding: "10px 20px 0"` — tight against image
-- **"Find it here" card removed** — mall info is now only in the inline row above the title (no duplication)
-- **Price + status on same row** — reduces vertical stacking
-- Hero wrapper `marginBottom` removed (was `hasBoothBox ? 34 : 0`)
+### Animation vocabulary added — two pages
 
-### Home page (`app/page.tsx`)
-- `EmptyFeed` button: "Post a find" → **"Add a Booth"**, routes to `/shelves`
+**Feed (`app/page.tsx`) — spring-tap image selection**
+- `onPointerDown` on each tile triggers a brief spring-pop scale (`1.045`) with overshoot curve (`cubic-bezier(0.34,1.56,0.64,1)`) before navigation
+- Green tint overlay (`rgba(30,77,43,0.09)`) fades in on tap over the image
+- Settles back via slower ease (`0.32s cubic-bezier(0.22,1,0.36,1)`)
+- Existing hover/scroll-reveal behavior unchanged
 
-### Add Booth sheet (`app/shelves/page.tsx`) — centering fix
-- **Root cause:** `left: "50%", transform: "translateX(-50%)"` on a `motion.div` was being overwritten by Framer's animation transform, shifting sheet to right half of screen
-- **Fix:** Static positioning wrapper `div` (`left:0, right:0, display:flex, justifyContent:center`) wraps the `motion.div`; `motion.div` handles only `y` slide animation — no centering transform on it
-- See **FRAMER MOTION TRANSFORM RULES** section below — this is a recurring issue
+**Detail page (`app/find/[id]/page.tsx`) — layered drift-in**
+- `pageVariants`: hero image enters `y:14→0, opacity:0→1` over 340ms
+- `sectionVariants(delay)`: each content section staggers — mall row 60ms, title 100ms, price 150ms, caption 200ms, CTA 240ms, manage panel 280ms
+- Heart button on hero uses `motion.button` with `whileTap={{ scale:1.22 }}` spring
+- Easing throughout: `[0.25,0.46,0.45,0.94] as const` — required `as const` for TypeScript/Framer Motion type compat (see gotcha below)
+- `EASE` constant defined at module level, reused in both `pageVariants` and `sectionVariants`
+
+**Scroll-anchor fix (`app/page.tsx`) — `skipEntrance` prop**
+- Spring-tap entrance animation broke back-nav scroll anchor: tiles starting at `opacity:0, translateY:16px` caused unstable layout geometry when `window.scrollTo` fired
+- Fix: `skipEntrance` boolean prop threads from page → `MasonryGrid` → `MasonryTile`
+- `skipEntrance = true` when `pendingScrollY.current !== null && !scrollRestored.current` (i.e. returning user with saved scroll position)
+- When `skipEntrance`: `transition:"none"`, `willChange:"auto"`, `useScrollReveal` initializes `visible=true` immediately
+- Fresh visits still get full stagger entrance; returning visits render instantly for stable layout
 
 ---
 
@@ -178,9 +182,9 @@ SUPABASE_SERVICE_ROLE_KEY        Server-only service role key (set in .env.local
 
 ### Ecosystem (warm parchment theme)
 ```
-/                   Discovery feed — masonry, scroll-triggered reveals, warmth hover, back-nav anchor
+/                   Discovery feed — masonry, scroll-triggered reveals, spring-tap selection, back-nav anchor
 /login              Magic link login + Admin PIN tab
-/find/[id]          Find detail — floating back button, heart+share on image, "Explore the Booth" CTA, owner controls card
+/find/[id]          Find detail — layered drift-in, floating back button, spring heart, "Explore the Booth" CTA, owner controls
 /flagged            Find Map — saved finds grouped by mall location (overhaul Sprint 3)
 /shelves            Booths — ADMIN ONLY in nav; Add Booth sheet (Mall → Booth # → Booth Name order)
 /my-shelf           My Booth — auth-gated; admin gets vendor switcher; Send icon on banner
@@ -226,12 +230,12 @@ components/ShelfGrid.tsx    ThreeColGrid, SkeletonGrid, AvailableTile, FoundTile
 components/MallHeroCard.tsx MallHeroCard (no CTA) + GenericMallHero (with CTA) — showCta prop
 components/DevAuthPanel.tsx Dev-only floating auth panel (gated in layout.tsx)
 app/layout.tsx              PWA manifest, apple-touch-icon, meta tags ✅
-app/page.tsx                Feed — "All Treehouse Spots" dropdown; "Recently added" always; sign-in inline; EmptyFeed → "Add a Booth" → /shelves
+app/page.tsx                Feed — spring-tap tiles, skipEntrance scroll anchor fix, stagger entrance
 app/flagged/page.tsx        Find Map — grouped by mall (Sprint 3 overhaul pending)
 app/shelves/page.tsx        Booths — Add Booth sheet centering fixed (wrapper div pattern) ✅
 app/my-shelf/page.tsx       My Booth — Send icon on banner; standard header; edit icon top-left
 app/shelf/[slug]/page.tsx   Public Booth — read-only
-app/find/[id]/page.tsx      Find detail — inline mall+booth row, no floating BoothBox, no "Find it here" card ✅
+app/find/[id]/page.tsx      Find detail — layered drift-in, inline mall+booth row, spring heart ✅
 app/post/page.tsx           Capture — AI fallback notice, price validation, scroll cache cleared on publish
 app/post/edit/[id]/page.tsx Edit listing — price validation
 app/admin/page.tsx          Admin UI
@@ -315,15 +319,76 @@ Admin:             Home · Find Map · Booths · My Booth  (4 tabs)
 NOTE: "Find it here" card removed — mall info lives only in row #2 above
 ```
 
-### Animation patterns (feed)
-```
-// Scroll-triggered reveal hook
-function useScrollReveal(threshold = 0.1) {
-  // IntersectionObserver — visible flips true once, stays true, observer disconnects
-  // Above-fold check on mount: rect.top < window.innerHeight → setVisible(true) immediately
-}
+### Animation system (current)
 
-// Image warmth hover (on <img> inside overflow:hidden container)
+**Animation vocabulary — two durations, one spring:**
+```
+Micro-interactions (tap, hover):  0.14–0.18s
+Page/section transitions:         0.28–0.44s
+Spring (anything that "pops"):    type:"spring", stiffness:260, damping:20
+Ease (everything else):           [0.25,0.46,0.45,0.94] as const  ← MUST use as const
+```
+
+**⚠️ TypeScript gotcha — Framer Motion ease arrays:**
+```ts
+// ❌ BROKEN — TypeScript infers number[], Framer Motion rejects it
+const pageVariants = {
+  visible: { transition: { ease: [0.25, 0.46, 0.45, 0.94] } }
+};
+
+// ✅ CORRECT — as const narrows to readonly tuple, satisfies BezierDefinition
+const EASE = [0.25, 0.46, 0.45, 0.94] as const;
+const pageVariants = {
+  visible: { transition: { ease: EASE } }
+};
+```
+
+**Feed tile entrance (`app/page.tsx`):**
+```ts
+// Scroll-triggered stagger — fresh visits only
+// skipEntrance=true on back-navigation (pendingScrollY set, not yet restored)
+// When skipEntrance: transition:"none", willChange:"auto", visible initializes true immediately
+// This keeps layout geometry stable for window.scrollTo to land correctly
+
+const staggerDelay = skipEntrance ? 0 : Math.min(index * 0.04, 0.28);
+// outer div style:
+{
+  opacity: visible ? 1 : 0,
+  transform: visible ? "translateY(0px)" : "translateY(16px)",
+  transition: skipEntrance ? "none"
+    : `opacity 0.38s ease ${staggerDelay}s, transform 0.44s cubic-bezier(0.22,1,0.36,1) ${staggerDelay}s`,
+  willChange: skipEntrance ? "auto" : "opacity, transform",
+}
+```
+
+**Spring-tap on feed tiles:**
+```ts
+// onPointerDown → setTapped(true) → setTimeout 320ms → setTapped(false)
+// card style:
+transform: tapped ? "scale(1.045)" : "scale(1)",
+transition: tapped
+  ? "transform 0.14s cubic-bezier(0.34,1.56,0.64,1), ..."  // spring overshoot in
+  : "transform 0.32s cubic-bezier(0.22,1,0.36,1), ..."     // ease out
+// + green tint overlay: opacity: tapped ? 1 : 0
+```
+
+**Detail page layered drift-in (`app/find/[id]/page.tsx`):**
+```ts
+const EASE = [0.25, 0.46, 0.45, 0.94] as const;
+const pageVariants = {
+  hidden:  { opacity: 0, y: 14 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.34, ease: EASE } },
+};
+const sectionVariants = (delay: number) => ({
+  hidden:  { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.32, delay, ease: EASE } },
+});
+// Delays: hero 0, mall row 0.06, title 0.10, price 0.15, content 0.20, CTA 0.24, manage 0.28
+// Heart button: motion.button whileTap={{ scale:1.22 }} spring stiffness:400 damping:17
+```
+
+**Image warmth hover (feed tiles):**
+```ts
 filter: hovered ? "brightness(1.04) saturate(1.10)" : "brightness(0.99) saturate(0.96)"
 transform: hovered ? "scale(1.018)" : "scale(1)"
 // Scale on img NOT on card — overflow:hidden clips it cleanly
@@ -334,6 +399,7 @@ transform: hovered ? "scale(1.018)" : "scale(1)"
 // Keys: SCROLL_KEY = "treehouse_feed_scroll", LAST_VIEWED_KEY = "treehouse_last_viewed_post"
 // Mount: read keys into refs — do NOT scrollTo (no DOM height yet)
 // Post-render: fire scrollTo in useEffect([loading]) when loading flips false
+// CRITICAL: skipEntrance must be true during restoration or tile translateY offsets break layout
 ```
 
 ### Bottom sheet pattern (use for overlays, confirmations, pickers)
@@ -445,6 +511,8 @@ import AdminOnly from "@/components/AdminOnly";
 - `useSearchParams()` requires Suspense wrapper
 - Image uploads MUST go through server routes (`/api/post-image`, `/api/vendor-hero`) — client-side Supabase upload hits RLS wall
 - **Framer transform conflicts — see FRAMER MOTION TRANSFORM RULES section above**
+- **Framer ease arrays must use `as const` — see Animation system section above**
+- **skipEntrance prop MUST be true during scroll restoration — see Deferred scroll restore pattern**
 - New API route directories must be created in Terminal with `mkdir -p` before MCP can write into them
 - New subdirectories must exist before `filesystem:write_file` — MCP can't create parent dirs
 - `getPostsByIds` has NO status filter — saved finds shown regardless of status
@@ -461,12 +529,13 @@ import AdminOnly from "@/components/AdminOnly";
 - NEVER copy-paste TabSwitcher, BoothFinderCard, ExploreBanner, ShelfGrid — always import from components
 - Feed re-fetch: visibilitychange hidden→visible fires on SPA back-navigation in mobile browsers
 - Scroll restore MUST be deferred until after feed renders — firing on mount causes silent scroll to 0
+- Entrance animations that start at opacity:0/translateY must be bypassed during scroll restoration — unstable layout geometry will cause scrollTo to land at wrong position
 
 ---
 
 ## WORKING ✅
-- Discovery feed — available-only, masonry, scroll-triggered tile reveals, warmth hover, back-nav anchor with highlight ring
-- Feed scroll restore — deferred until loading → false
+- Discovery feed — available-only, masonry, scroll-triggered tile reveals, spring-tap selection, warmth hover, back-nav anchor with highlight ring
+- Feed scroll restore — deferred until loading → false; skipEntrance prevents geometry drift
 - Feed re-fetches on return from other routes (visibilitychange pattern)
 - Feed scroll cache cleared on publish → lands at top showing new post
 - Magic link auth — login page, session persistence, isAdmin check
@@ -477,7 +546,7 @@ import AdminOnly from "@/components/AdminOnly";
 - My Booth — auth-gated; admin vendor switcher; hero upload; Send icon on banner ✅
 - Post flow — AI caption with fallback notice ✅; price validation ✅
 - Edit listing — price validation ✅; image replacement
-- Find detail — inline mall+booth row, no floating BoothBox, no duplicate "Find it here" card ✅
+- Find detail — layered drift-in, inline mall+booth row, spring heart, no floating BoothBox ✅
 - Public Booth — read-only, shared ShelfGrid ✅
 - Find Map (`/flagged`) — saved finds; "Found a home" terminology ✅ (overhaul Sprint 3)
 - Mall locations — 29 locations in Supabase ✅
