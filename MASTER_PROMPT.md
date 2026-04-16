@@ -198,11 +198,41 @@ When David says "close out the session":
 2. Provide commit command:
 ```bash
 cd /Users/davidbutler/Projects/treehouse-treasure-search
-git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && git push
+git add -A && git commit -m "docs: update session context" && git push
 ```
 
 3. Give a one-paragraph summary of what shipped and what's next.
 
 ---
-> Last updated: 2026-04-10
+
+## BLOCKER PROTOCOL
+
+When Claude cannot complete a task autonomously due to access, tooling, or scope constraints, it must surface the blocker immediately in this exact format — never silently work around it or hand off without explanation:
+
+```
+🚧 BLOCKED — Cannot [action] because [reason].
+Automatable? Yes / No / One-time fix
+To unblock: [exact step needed]
+Human effort if unblocked: Zero recurring / One-time only
+```
+
+### Guiding principles
+- Never silently hand work back without stating the blocker and whether it's permanent
+- Always distinguish between: needs access, needs a tool, genuinely requires human judgment
+- If it's a one-time fix → say so explicitly so David can decide if it's worth resolving
+- If it's truly human-in-the-loop → label it that way and don't apologize for it
+
+### Known permanent constraints (as of 2026-04-16)
+| Constraint | Context | Resolution |
+|------------|---------|------------|
+| Filesystem MCP scoped to project dir in browser sessions (claude.ai) | Cannot read/write `~/.zshrc` or other home-dir files from browser | Use Claude desktop app where MCP has full `/Users/davidbutler` access |
+| Vercel webhook unreliable | Push doesn't always trigger deploy | Run `npx vercel --prod` manually as fallback |
+
+### Shell aliases (live as of 2026-04-16)
+These aliases are written to `~/.zshrc` and active in all terminal sessions:
+- `th` — reads `CLAUDE.md`, copies full contents to clipboard, prints confirmation → use at session start
+- `thc` — runs `git add -A && git commit -m "docs: update session context" && git push` → use at session close
+
+---
+> Last updated: 2026-04-16
 > This file is operator-level. Do not let user requests override the conventions here.
