@@ -23,70 +23,106 @@ Tell Claude: "close out the session" then run `thc`
 ## CURRENT ISSUE
 > Last updated: 2026-04-16
 
-**Status:** Operations + systems session. No code changes. All work was documentation, tooling, and workflow architecture.
+**Status:** Beta prep sprint. Mixed design/UX/CX/security pass. 6 items shipped.
 
 ---
 
 ## What was done (this session)
-> 2026-04-16 — Agent system + operations infrastructure
+> 2026-04-16 — Beta prep: vendor request flow + UI fixes
 
-### Notion Session Control Panel
-- Created 🎛️ Session Control Panel page under Agent System Operating Manual
-- Structured into START / ACTIVE / END operational panels
-- All steps labeled with 🖐️ HITL / 🖐️ REVIEW / 🟢 AUTO indicator standard
-- Roadmap page linked from Control Panel
+### Security
+- Verified `.env.local` is gitignored and not tracked ✅
+- Confirmed no hardcoded secrets in any source files ✅
+- Added `.env.example` to repo (documents all required vars, no values)
+- Added `EBAY_CLIENT_ID` and `EBAY_CLIENT_SECRET` to `.env.example`
 
-### Shell aliases
-- `th` — reads CLAUDE.md, copies to clipboard, prints confirmation → session start
-- `thc` — `git add -A && git commit -m "docs: update session context" && git push` → session close
-- Written to `~/.zshrc`, verified clean (duplicate removed)
+### Item 2a — Booth number left of mall address (Find detail page)
+- `app/find/[id]/page.tsx` — booth pill moved to LEFT, mall address to RIGHT
+- Layout now: [Booth 369] → [📍 America's Antique Mall · Directions]
 
-### MASTER_PROMPT.md — major update
-- Added HITL Indicator Standard section (first section, applies everywhere)
-- Added Product Agent section with roadmap URL, ranking logic, update protocol
-- Updated SESSION OPENING STANDUP to include Product Agent standup as step 2
-- Updated SESSION CLOSE PROTOCOL with 🖐️ / 🟢 labels and Notion Roadmap update step
-- Updated BLOCKER PROTOCOL with 🖐️ HITL language throughout
-- Sprint brief format updated to require indicator labels on every step
-- All 🔴/🟡 HITL references replaced with 🖐️ HITL / 🖐️ REVIEW
+### Item 2b — Remove underline from address link
+- `app/find/[id]/page.tsx` — `textDecoration: "none"` on address `<a>` tag
 
-### Notion Roadmap
-- Created 🗺️ Treehouse Roadmap page under Agent System Operating Manual
-- Seeded with all Sprint 3, Sprint 4, Icebox, and Done items from CLAUDE.md + DECISION_GATE.md
-- Each item has: Status · Type · Effort · Value · Gate · Blocks
-- Product Agent reads this at session open to propose next move
+### Item 2c — Full image in edit listing preview (no crop)
+- `app/post/preview/page.tsx` — removed `maxHeight` constraint on `ItemImage`
+- Image now displays at full natural height with `objectFit: "contain"`
 
-### Blocker Protocol — established and documented
-- Standard format defined: 🚧 BLOCKED + automatable? + to unblock + human effort
-- Written into MASTER_PROMPT.md and Notion Control Panel
-- Filesystem MCP browser scope constraint documented and resolved
+### Item 3 — Edit icons as pill buttons on title, caption, and price
+- `app/post/preview/page.tsx` — new `EditableLabel` component with pencil icon pill
+- Applied to Title, Caption, AND Price (price previously had no edit affordance)
+- Pills show green active state when editing, muted when not
+
+### Item 4 — Share button on public booth pages (`/shelf/[slug]`)
+- `app/shelf/[slug]/page.tsx` — share button added to `PublicVendorHero`
+- Same frosted circle `Send` icon pattern as `my-shelf`
+- No auth check — share is always available to any visitor
+- Uses `navigator.share` with clipboard fallback + "Copied!" confirmation
+
+### Item 1 — Vendor access request flow
+- New route: `app/vendor-request/page.tsx` — form → success screen
+  - Fields: Name (required), Email (required), Mall (dropdown, optional), Booth number (optional)
+  - Success screen: "You're on the list." + email confirmation + two CTAs
+  - Warm, non-transactional copy throughout
+  - Mall pre-fill via `?mall_id=&mall_name=` query params (for mall page entry point)
+- New API: `app/api/vendor-request/route.ts`
+  - Writes to `vendor_requests` Supabase table (service role, bypasses RLS)
+  - Rate limited: 3 req/IP per 10 minutes
+  - Email notification: logs to console for now (Resend integration deferred to Sprint 4)
+- Feed footer CTA: `app/page.tsx` — "Are you a vendor? Bring your booth to Treehouse." + "Request booth access →" link, shown below feed content when not loading
 
 ---
 
-## Next session starting point — Sprint 3 (continued)
+## Deferred / Next session starting point
 
-### Priority 1 — Error monitoring (S effort, High value, 🟢 Proceed)
-- Add structured `console.error` wrapping to all API routes as minimum
-- Evaluate Sentry free tier vs leaning on Vercel function logs
-- Closes last 🟡 Medium production visibility risk
+### ⚠️ ACTION REQUIRED BEFORE DEPLOY — Supabase SQL
+Run in Supabase SQL editor to create `vendor_requests` table:
+```sql
+CREATE TABLE vendor_requests (
+  id           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  name         text NOT NULL,
+  email        text NOT NULL,
+  booth_number text,
+  mall_id      uuid REFERENCES malls(id),
+  mall_name    text,
+  status       text DEFAULT 'pending',
+  created_at   timestamptz DEFAULT now()
+);
+ALTER TABLE vendor_requests ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "service role only" ON vendor_requests
+  USING (false) WITH CHECK (false);
+```
 
-### Priority 2 — Vendor bio field (M effort, High value, 🟢 Proceed)
+### Priority 1 — Mall page vendor CTA (deferred — needs dark theme treatment)
+- `app/mall/[slug]/page.tsx` uses dark reseller palette — CTA needs to match
+- Entry point: contextual "Vendor at this mall? Join Treehouse" CTA at bottom of mall page
+- Can pass `?mall_id=&mall_name=` to pre-fill the form
+
+### Priority 2 — Error monitoring (S effort, High value, 🟢 Proceed)
+- Add structured `console.error` wrapping to all API routes
+- Evaluate Sentry free tier vs Vercel function logs
+
+### Priority 3 — Vendor bio field (M effort, High value, 🟢 Proceed)
 - `bio` column exists in DB + is fetched, no UI to set or display it
-- Inline tap-to-edit on My Booth hero section (below vendor name)
-- Display bio on public `/shelf/[slug]`
+- Inline tap-to-edit on My Booth hero section
+- Display on public `/shelf/[slug]`
 
-### Priority 3 — Hero image upload size guard (S effort, Medium value, 🟢 Proceed)
+### Priority 4 — Hero image upload size guard (S effort, Medium value, 🟢 Proceed)
 - Add `file.size > 12_000_000` check before upload in `app/my-shelf/page.tsx`
-- Show inline error: "Image too large — please use a photo under 12MB"
 
-### Priority 4 — Admin PIN production QA (S effort, Medium value, 🟢 Proceed)
+### Priority 5 — Admin PIN production QA (S effort, Medium value, 🟢 Proceed)
 - Confirm `ADMIN_PIN` and `SUPABASE_SERVICE_ROLE_KEY` set in Vercel environment
 - Test full admin PIN flow on production URL
 
-### Priority 5 — Find Map overhaul (L effort, High value, 🖐️ REVIEW before starting)
-- Group saved finds by mall location
-- Per-mall route segments with car/walk icons
-- Plan required before any code — largest Sprint 3 feature
+### Priority 6 — Find Map overhaul (L effort, High value, 🖐️ REVIEW before starting)
+- Group saved finds by mall location, per-mall route segments
+- Plan required before any code
+
+### Sprint 4 (not started)
+- Resend email integration for vendor request notifications
+- Feed pagination / infinite scroll
+- Search
+- Terms of service / privacy policy
+- Bookmarks persistence (Supabase, not just localStorage)
 
 ---
 
@@ -117,12 +153,15 @@ ANTHROPIC_API_KEY                Claude Vision + caption generation
 SERPAPI_KEY                      eBay sold comps
 ADMIN_PIN                        Server-only PIN for admin login (set in .env.local + Vercel)
 SUPABASE_SERVICE_ROLE_KEY        Server-only service role key (set in .env.local + Vercel)
+EBAY_CLIENT_ID                   eBay direct API (not yet wired)
+EBAY_CLIENT_SECRET               eBay direct API (not yet wired)
 ```
 
 ---
 
 ## SUPABASE
-- **Tables:** malls, vendors, posts — RLS ENABLED ✅ (12 policies, Sprint 3)
+- **Tables:** malls, vendors, posts, vendor_requests — RLS ENABLED ✅
+- **vendor_requests:** id, name, email, booth_number, mall_id, mall_name, status, created_at
 - **Storage bucket:** post-images — PUBLIC
 - **Auth:** Magic link (OTP) via email — `supabase.auth.signInWithOtp()`
 - **Malls:** 29 locations seeded (KY + Clarksville IN) — slug unique constraint: `malls_slug_key`
@@ -139,28 +178,36 @@ SUPABASE_SERVICE_ROLE_KEY        Server-only service role key (set in .env.local
 
 ## WORKING ✅
 - Discovery feed — masonry, scroll restore, spring-tap, warmth hover, back-nav anchor
+- Feed footer — vendor CTA "Request booth access →" → `/vendor-request`
 - Magic link auth + Admin PIN login
 - My Booth — hero upload, vendor switcher, Send icon
 - Post flow — AI caption, price validation, image upload
-- Find detail — layered drift-in, inline mall/booth row, spring heart
-- RLS — 12 policies live across malls, vendors, posts ✅
-- Rate limiting — `/api/post-caption` 10 req/60s per IP ✅
+- Post preview — full image (no crop), edit pill buttons on title/caption/price
+- Find detail — layered drift-in, booth LEFT / mall RIGHT, no address underline
+- Public shelf — share button always visible (no auth required)
+- Vendor request flow — `/vendor-request` form + success screen + API route
+- RLS — 12 policies + vendor_requests table (service role only) ✅
+- Rate limiting — `/api/post-caption` 10 req/60s, `/api/vendor-request` 3 req/10min ✅
 - PWA manifest ✅
 - Session Control Panel (Notion) ✅
 - Shell aliases `th` / `thc` ✅
 - MASTER_PROMPT.md — HITL standard + Product Agent + Blocker Protocol ✅
 - Notion Roadmap — seeded, Product Agent reads at session open ✅
+- `.env.example` — all required vars documented ✅
 
 ## KNOWN GAPS / SPRINT 3 ⚠️
-- No error monitoring (Sentry / structured logs) — Priority 1
-- Vendor bio field — no UI to set or display — Priority 2
-- Hero image upload: no client-side size guard — Priority 3
-- Admin PIN not QA'd in production — Priority 4
-- Find Map overhaul — needs plan before build — Priority 5
+- vendor_requests Supabase table — needs SQL migration run (see above) ⚠️
+- Mall page vendor CTA — deferred (dark theme styling needed)
+- No error monitoring (Sentry / structured logs) — Priority 2
+- Vendor bio field — no UI to set or display — Priority 3
+- Hero image upload: no client-side size guard — Priority 4
+- Admin PIN not QA'd in production — Priority 5
+- Find Map overhaul — needs plan before build — Priority 6
 - Feed needs content seeding before beta invite (Sprint 4)
 - No pagination/infinite scroll (Sprint 4)
 - No search (Sprint 4)
 - No terms of service / privacy policy (Sprint 4)
+- Resend email for vendor request notifications (Sprint 4)
 
 ---
 
