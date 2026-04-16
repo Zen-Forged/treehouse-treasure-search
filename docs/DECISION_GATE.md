@@ -144,7 +144,7 @@ These don't stop work but must be called out explicitly before the session conti
 
 | Risk | Severity | Status | Owner |
 |---|---|---|---|
-| RLS disabled on `malls`, `vendors`, `posts` | 🔴 High | Open — Sprint 4 | Dev agent |
+| RLS disabled on `malls`, `vendors`, `posts` | 🔴 High | ✅ Resolved 2026-04-15 — 12 policies live, stale policies cleaned up (003_cleanup_old_rls_policies.sql) | Dev agent |
 | No rate limiting on `/api/post-caption` | 🔴 High | ✅ Resolved 2026-04-15 — in-memory 10 req/60s per IP; upgrade to Upstash Redis at scale | Dev agent |
 | No error monitoring (Sentry / structured logs) | 🟡 Medium | Open — Sprint 3 | Dev agent |
 | Bookmarks localStorage-only (ITP wipe risk) | 🟡 Medium | Open — Sprint 4 | Dev agent |
