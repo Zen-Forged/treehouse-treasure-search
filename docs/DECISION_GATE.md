@@ -93,6 +93,12 @@ Service-role-only tables           `vendor_requests` and any future service-role
 Admin API routes                   All /api/admin/* routes MUST call requireAdmin(req) server-side
                                    as the first line of the handler. UI gating alone is not enough —
                                    routes are directly reachable. No exceptions.
+DNS / email sending                Transactional email (magic links) sends from `kentuckytreehouse.com`
+                                   via Resend + Supabase custom SMTP (pending completion as of
+                                   2026-04-16). DNS authority in migration from Google Cloud DNS →
+                                   Cloudflare. DNSSEC must remain off until migration complete to
+                                   avoid a hard-fail on nameserver swap. See CLAUDE.md DNS STATE
+                                   section for current nameserver + zone state.
 ```
 
 ---
@@ -116,6 +122,7 @@ These conditions require a conversation with David before any code is written or
 | Feature that contradicts the product vision | e.g., adding a "Buy Now" button, price in feed grid, urgency badge |
 | Deployment config change (vercel.json, next.config.js) | Can break production silently |
 | New external service integration | Cost, privacy, and dependency implications |
+| DNS changes during nameserver migration window | Splitting DNS across two authoritative sources causes inconsistent resolution. Do not edit records in either zone until migration is verified via `dig NS +short`. |
 
 ### 🟡 SURFACE — Flag before proceeding, then get approval
 
@@ -149,7 +156,7 @@ These don't stop work but must be called out explicitly before the session conti
 
 ## Current Risk Register
 
-> Updated: 2026-04-16 | Source: codebase audit + vendor-request flow fix
+> Updated: 2026-04-16 (late PM) | Source: codebase audit + vendor-request flow fix + Resend SMTP setup
 
 | Risk | Severity | Status | Owner |
 |---|---|---|---|
@@ -157,6 +164,7 @@ These don't stop work but must be called out explicitly before the session conti
 | No rate limiting on `/api/post-caption` | 🔴 High | ✅ Resolved 2026-04-15 — in-memory 10 req/60s per IP; upgrade to Upstash Redis at scale | Dev agent |
 | Vendor approval + setup flows silently blocked by RLS | 🔴 High | ✅ Resolved 2026-04-16 — moved admin reads/writes of `vendor_requests` to `/api/admin/vendor-requests` and `/api/setup/lookup-vendor` using service role; browser anon client is read-only for ecosystem data | Dev agent |
 | `/api/admin/*` routes had no server-side auth check | 🔴 High | ✅ Resolved 2026-04-16 — added `requireAdmin()` (bearer token + email match) to `/api/admin/posts` and `/api/admin/vendor-requests`; UI was the only gate before, routes were directly reachable | Dev agent |
+| Magic link delivery broken for Yahoo/AOL (pre-beta blocker) | 🔴 High | 🟡 In Progress — Supabase default SMTP dispatches but Yahoo silently drops (confirmed via auth logs + empty inbox on 2026-04-16). Fix path: Resend + custom SMTP on `kentuckytreehouse.com`. Resend account + domain configured. DNSSEC confirmed off. Cloudflare nameservers assigned (`marissa.ns.cloudflare.com`, `vin.ns.cloudflare.com`). Pending: Tucows reseller login, nameserver swap at registrar, 24–48h propagation, add 3 Resend DNS records, verify, wire Supabase SMTP, end-to-end delivery test. Records + next steps documented in CLAUDE.md. | Dev agent |
 | No error monitoring (Sentry / structured logs) | 🟡 Medium | Open — Sprint 3 | Dev agent |
 | Bookmarks localStorage-only (ITP wipe risk) | 🟡 Medium | Open — Sprint 4 | Dev agent |
 | No automated testing | 🟡 Medium | Open — Strategy needed | Dev + Product agents |
@@ -164,6 +172,7 @@ These don't stop work but must be called out explicitly before the session conti
 | Public Storage bucket (`post-images`) | 🟡 Medium | Intentional — monitor | Dev agent |
 | No terms of service / privacy policy | 🟡 Medium | Open — before public launch | David |
 | Deprecated lib functions still in `lib/posts.ts` | 🟢 Low | Open — `getVendorByEmail`, `linkVendorToUser`, `getVendorRequests`, `createVendorFromRequest`, `markVendorRequestApproved` marked `@deprecated` 2026-04-16; remove once confirmed no other callers import them | Dev agent |
+| Orphaned Google Cloud DNS zone for `kentuckytreehouse.com` | 🟢 Low | Open — currently serving live DNS; becomes dead weight after Cloudflare migration completes. Find via different GCP project or Google account, clean up after migration verified. | Dev agent |
 | Feed pagination missing (flat 80-post fetch) | 🟢 Low | Open — Sprint 4 | Dev agent |
 | `/enhance-text` caption is mock (not real Claude call) | 🟢 Low | Open — future sprint | Dev agent |
 | `/api/debug-vendor-requests` left in production | 🟢 Low | Open — useful for QA; remove in a later cleanup sprint | Dev agent |
@@ -252,4 +261,4 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 ---
 > This document is the operating constitution for the Treehouse system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-16
+> Last updated: 2026-04-16 (late PM)
