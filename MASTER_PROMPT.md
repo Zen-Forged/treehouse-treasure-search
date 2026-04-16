@@ -4,26 +4,42 @@
 
 ---
 
+## HITL INDICATOR STANDARD
+
+Every step in every workflow, response, or document that involves a human touch-point must be labeled. No unlabeled steps.
+
+| Indicator | Label | Meaning |
+|-----------|-------|---------|
+| 🔴 HITL | Human Action Required | You must do this. Claude cannot proceed without it. Always includes exactly what to do and what Claude is waiting on. |
+| 🟡 HITL | Human Review Required | Claude has a recommendation ready. You approve or redirect. Review is a decision, not a discovery. |
+| 🟢 AUTO | Automated | Claude handles this end to end. No input needed unless a 🚧 BLOCKED surfaces. |
+
+### Rules
+- 🔴 HITL steps always state: what to do, what Claude is waiting on before proceeding
+- 🟡 HITL steps always include Claude's recommendation so the review takes seconds, not minutes
+- 🟢 AUTO steps never ask for confirmation mid-task unless a blocker surfaces
+- If a 🔴 HITL step becomes automatable, flag it with the BLOCKED protocol and a path to 🟢 AUTO
+- Labels apply in: session workflows, sprint briefs, sub-agent dispatches, and in-session responses
+
+---
+
 ## SESSION OPENING STANDUP
 
-When a session begins, Claude runs this standup before doing any work:
-
-### 1. Read context
+### 1. 🟢 AUTO — Read context
 - Read CLAUDE.md (already done via session opener)
 - Read CONTEXT.md for architecture reference if needed
 - Note the "Last updated" date on CURRENT ISSUE
 
-### 2. Run Product Agent standup (see PRODUCT AGENT section below)
+### 2. 🟢 AUTO — Run Product Agent standup
 - Read the Notion Roadmap: https://www.notion.so/34466c7e402b814abfecdb28f31b3f74
 - Identify In Progress items, Ready items ranked by effort vs. value, and any Blocked items
 - Propose the single highest-leverage next move before asking David where to start
 
-### 3. Check live state
-- Check the live site is up: treehouse-treasure-search.vercel.app
+### 3. 🟢 AUTO — Check live state
+- Confirm the live site is up: treehouse-treasure-search.vercel.app
 - Note any obvious issues from the last session's "Next session starting point"
 
-### 4. Report
-Deliver a brief standup in this format:
+### 4. 🟢 AUTO — Deliver standup report
 
 ```
 ## 🌿 Session Standup — [date]
@@ -31,12 +47,14 @@ Deliver a brief standup in this format:
 **Build:** [clean / broken — note any known errors]
 **Last session:** [one-line summary of what shipped]
 **In Progress:** [anything currently mid-flight]
-**Recommended next move:** [single item, with one-line rationale]
+**Recommended next move:** [single item + one-line rationale]
 **Also Ready:** [2–3 other Ready items if relevant]
 **Blocked — needs your input:** [any items that can't proceed without David]
 ```
 
-Then ask: "Want to start with [recommended item], or redirect?" unless the session opener specifies a CURRENT ISSUE directly.
+### 5. 🟡 HITL — Approve direction
+Claude asks: "Want to start with [recommended item], or redirect?"
+You approve or redirect in one message. Session begins.
 
 ---
 
@@ -64,7 +82,7 @@ Notion: https://www.notion.so/34466c7e402b814abfecdb28f31b3f74
 When work completes, is blocked, or scope changes:
 - Update the Status field in the Notion Roadmap (In Progress → Done, Backlog → Blocked, etc.)
 - If a new item surfaces during a session, flag it to David before adding it
-- At session close, the roadmap should reflect the actual state — not the planned state
+- At session close, the roadmap must reflect actual state — not planned state
 
 ---
 
@@ -101,7 +119,7 @@ When work completes, is blocked, or scope changes:
 
 ## SPRINT BRIEF FORMAT
 
-When planning a sprint, use this format:
+Every step in a sprint brief must carry a HITL label.
 
 ```
 ## Sprint: [name]
@@ -112,6 +130,7 @@ When planning a sprint, use this format:
 **What:** [description]
 **Files:** [list of files to change]
 **Why:** [brief rationale]
+**HITL:** [🔴 / 🟡 / 🟢 — with note if 🔴 or 🟡]
 
 ### Task 2 — [title]
 ...
@@ -123,9 +142,9 @@ When planning a sprint, use this format:
 [numbered list]
 
 ### Pre-deploy checklist
-[ ] npm run build clean
-[ ] git add -A && git commit && git push
-[ ] QA items
+[ ] 🟢 AUTO — npm run build clean
+[ ] 🔴 HITL — run: git add -A && git commit -m "..." && git push
+[ ] 🔴 HITL — QA on device
 ```
 
 ---
@@ -137,6 +156,7 @@ When a task is well-scoped and self-contained, it can be dispatched as a sub-age
 - A defined file list
 - Explicit out-of-scope constraints
 - A specific definition of done
+- HITL labels on every step
 
 Current candidate sub-agents (as of last session):
 - `share-shelf` — Wire native share sheet for My Shelf vendor URL
@@ -223,30 +243,32 @@ zsh:
 
 When David says "close out the session":
 
-1. Update CLAUDE.md:
-   - Set "Last updated" to today's date
-   - Update CURRENT ISSUE with what was done this session
-   - Update "Next session starting point" with deferred items
-   - Update WORKING ✅ and KNOWN GAPS ⚠️ sections
-   - Update any design system or route map entries that changed
+### 1. 🟢 AUTO — Update CLAUDE.md
+- Set "Last updated" to today's date
+- Update CURRENT ISSUE with what was done this session
+- Update "Next session starting point" with deferred items
+- Update WORKING ✅ and KNOWN GAPS ⚠️ sections
+- Update any design system or route map entries that changed
 
-2. Update the Notion Roadmap:
-   - Move completed items to Done
-   - Update Status on anything that moved (In Progress, Blocked, etc.)
-   - Flag any new items that surfaced and need to be added
+### 2. 🟢 AUTO — Update Notion Roadmap
+- Move completed items to Done
+- Update Status on anything that moved (In Progress, Blocked, etc.)
+- Flag any new items that surfaced during the session
 
-3. Provide commit command:
-```bash
-git add -A && git commit -m "docs: update session context" && git push
+### 3. 🟢 AUTO — Deliver close summary
+One paragraph: what shipped, what's next, any open risks.
+
+### 4. 🔴 HITL — Commit and push
+
 ```
-
-4. Give a one-paragraph summary of what shipped and what's next.
+thc
+```
 
 ---
 
 ## BLOCKER PROTOCOL
 
-When Claude cannot complete a task autonomously due to access, tooling, or scope constraints, it must surface the blocker immediately in this exact format — never silently work around it or hand off without explanation:
+When Claude cannot complete a task autonomously due to access, tooling, or scope constraints, it must surface the blocker immediately. Never silently work around it.
 
 ```
 🚧 BLOCKED — Cannot [action] because [reason].
@@ -259,18 +281,18 @@ Human effort if unblocked: Zero recurring / One-time only
 - Never silently hand work back without stating the blocker and whether it's permanent
 - Always distinguish between: needs access, needs a tool, genuinely requires human judgment
 - If it's a one-time fix → say so explicitly so David can decide if it's worth resolving
-- If it's truly human-in-the-loop → label it that way and don't apologize for it
+- If it's truly human-in-the-loop → label it 🔴 HITL and don't apologize for it
+- If a step is currently 🔴 HITL but could be automated → flag it with a path to 🟢 AUTO
 
 ### Known permanent constraints (as of 2026-04-16)
-| Constraint | Context | Resolution |
-|------------|---------|------------|
-| Filesystem MCP scoped to project dir in browser sessions (claude.ai) | Cannot read/write `~/.zshrc` or other home-dir files from browser | Use Claude desktop app where MCP has full `/Users/davidbutler` access |
-| Vercel webhook unreliable | Push doesn't always trigger deploy | Run `npx vercel --prod` manually as fallback |
+| Constraint | Context | Status |
+|------------|---------|--------|
+| Filesystem MCP scoped to project dir in browser sessions (claude.ai) | Cannot read/write `~/.zshrc` or home-dir files from browser | ✅ Resolved — desktop app has full `/Users/davidbutler` access |
+| Vercel webhook unreliable | Push doesn't always trigger deploy | 🟡 Known — `npx vercel --prod` as fallback |
 
 ### Shell aliases (live as of 2026-04-16)
-These aliases are written to `~/.zshrc` and active in all terminal sessions:
-- `th` — reads `CLAUDE.md`, copies full contents to clipboard, prints confirmation → use at session start
-- `thc` — runs `git add -A && git commit -m "docs: update session context" && git push` → use at session close
+- `th` — 🔴 HITL · session start · reads `CLAUDE.md`, copies to clipboard
+- `thc` — 🔴 HITL · session close · `git add -A && git commit -m "docs: update session context" && git push`
 
 ---
 > Last updated: 2026-04-16
