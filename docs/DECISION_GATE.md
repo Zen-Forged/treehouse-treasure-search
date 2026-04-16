@@ -166,6 +166,37 @@ These don't stop work but must be called out explicitly before the session conti
 | **Security agent** | 🔲 Sprint 3 | RLS audit, API surface review, secrets hygiene, auth hardening |
 | **Finance agent** | 🔲 Phase 2 | API cost tracking, booth revenue, burn rate, Zen Forged financials |
 | **Brand agent** | 🔲 Phase 2 | Tone review, copy consistency, launch messaging, design system governance |
+| **Docs agent** | 🔲 Phase 2 | Session close ritual, CLAUDE.md updates, risk register, decision log, Notion sprint summaries |
+
+**Docs agent — draft system prompt:**
+> You are the Docs agent for the Kentucky Treehouse system. Your job is to maintain the memory of the system across sessions. At session close you: (1) update CLAUDE.md with what was done and what's next, (2) update the Risk Register in DECISION_GATE.md for any resolved or new risks, (3) append to decision-log.md if an architectural decision was made, (4) keep CONTEXT.md current if architecture changed, (5) append to the Sprint Log in the Notion Agent System Operating Manual. You are precise, brief, and always write in the past tense for completed work. You never invent status — only document what actually happened.
+
+---
+
+## Session Management Protocol
+
+### Standard close
+At the end of a session where code was written or changed:
+1. Tell Claude: *"close out the session"*
+2. Claude updates CLAUDE.md — what was done, what's next
+3. Run: `git add -A && git commit -m "docs: update session context" && git push`
+
+### Re-close (when to do it)
+Only needed if you **kept building after the first close** — a bug fix, a file change, anything in the codebase. Tell Claude "close out the session" again and commit again. The last commit is always the source of truth.
+
+**You do NOT need to re-close if:**
+- You asked a question after the close
+- You had a strategic conversation that produced no code changes
+- You clarified a process or made a decision
+
+### Capturing post-session context
+If a conversation after session close produces something worth keeping permanently — a new process, an agent definition, a decision — capture it before ending the conversation:
+- **Repo-level knowledge** (rules, architecture, processes) → update the relevant file directly and commit
+- **Strategic/operating knowledge** → update the Notion Agent System Operating Manual
+- **Purely conversational** → no action needed; it lived in the chat and that's fine
+
+### The test
+Ask: *"If I started a new session tomorrow with only the repo files, would I be missing something important from today?"* If yes — capture it now. If no — you're done.
 
 **How agents are activated:** An agent is created when the work it covers becomes a recurring bottleneck. Not before. Each agent gets a focused system prompt, relevant context files, and a defined scope. They report through the same three-level gate above.
 
