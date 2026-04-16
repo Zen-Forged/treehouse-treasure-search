@@ -13,11 +13,16 @@ When a session begins, Claude runs this standup before doing any work:
 - Read CONTEXT.md for architecture reference if needed
 - Note the "Last updated" date on CURRENT ISSUE
 
-### 2. Check live state
+### 2. Run Product Agent standup (see PRODUCT AGENT section below)
+- Read the Notion Roadmap: https://www.notion.so/34466c7e402b814abfecdb28f31b3f74
+- Identify In Progress items, Ready items ranked by effort vs. value, and any Blocked items
+- Propose the single highest-leverage next move before asking David where to start
+
+### 3. Check live state
 - Check the live site is up: treehouse-treasure-search.vercel.app
 - Note any obvious issues from the last session's "Next session starting point"
 
-### 3. Report
+### 4. Report
 Deliver a brief standup in this format:
 
 ```
@@ -25,11 +30,41 @@ Deliver a brief standup in this format:
 
 **Build:** [clean / broken — note any known errors]
 **Last session:** [one-line summary of what shipped]
-**Outstanding from last session:** [numbered list of deferred items]
-**Proposed this session:** [what we should tackle, in priority order]
+**In Progress:** [anything currently mid-flight]
+**Recommended next move:** [single item, with one-line rationale]
+**Also Ready:** [2–3 other Ready items if relevant]
+**Blocked — needs your input:** [any items that can't proceed without David]
 ```
 
-Then ask: "Where do you want to start?" unless the session opener specifies a CURRENT ISSUE directly.
+Then ask: "Want to start with [recommended item], or redirect?" unless the session opener specifies a CURRENT ISSUE directly.
+
+---
+
+## PRODUCT AGENT
+
+The Product Agent runs at session open. Its job is to read the roadmap and propose — not decide.
+
+### Roadmap location
+Notion: https://www.notion.so/34466c7e402b814abfecdb28f31b3f74
+
+### Ranking logic (in order)
+1. **In Progress first** — finish what's started before starting something new
+2. **Gate level** — 🟢 Proceed items before 🟡 Surface items; never start a 🔴 Stop item without explicit discussion
+3. **Effort vs. Value** — S effort + High value = top of list; L effort items need explicit approval
+4. **Sprint alignment** — active sprint items before backlog; icebox only if nothing else is viable
+5. **Blocks** — skip any item with an unresolved dependency
+
+### What the Product Agent never does
+- Never starts work on a 🔴 Stop item without surfacing it first
+- Never proposes an L-effort item as the default next move without flagging the scope
+- Never skips a Ready S-effort High-value item in favor of something bigger
+- Never adds items to the roadmap without flagging it to David first
+
+### Updating the roadmap during a session
+When work completes, is blocked, or scope changes:
+- Update the Status field in the Notion Roadmap (In Progress → Done, Backlog → Blocked, etc.)
+- If a new item surfaces during a session, flag it to David before adding it
+- At session close, the roadmap should reflect the actual state — not the planned state
 
 ---
 
@@ -195,13 +230,17 @@ When David says "close out the session":
    - Update WORKING ✅ and KNOWN GAPS ⚠️ sections
    - Update any design system or route map entries that changed
 
-2. Provide commit command:
+2. Update the Notion Roadmap:
+   - Move completed items to Done
+   - Update Status on anything that moved (In Progress, Blocked, etc.)
+   - Flag any new items that surfaced and need to be added
+
+3. Provide commit command:
 ```bash
-cd /Users/davidbutler/Projects/treehouse-treasure-search
 git add -A && git commit -m "docs: update session context" && git push
 ```
 
-3. Give a one-paragraph summary of what shipped and what's next.
+4. Give a one-paragraph summary of what shipped and what's next.
 
 ---
 
