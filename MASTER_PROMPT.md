@@ -8,17 +8,17 @@
 
 Every step in every workflow, response, or document that involves a human touch-point must be labeled. No unlabeled steps.
 
-| Indicator | Label | Meaning |
-|-----------|-------|---------|
-| 🔴 HITL | Human Action Required | You must do this. Claude cannot proceed without it. Always includes exactly what to do and what Claude is waiting on. |
-| 🟡 HITL | Human Review Required | Claude has a recommendation ready. You approve or redirect. Review is a decision, not a discovery. |
-| 🟢 AUTO | Automated | Claude handles this end to end. No input needed unless a 🚧 BLOCKED surfaces. |
+| Indicator | Meaning |
+|-----------|---------|
+| 🖐️ HITL | **Human Action Required** — You must do this. Claude cannot proceed without it. Always includes exactly what to do and what Claude is waiting on. |
+| 🖐️ REVIEW | **Human Review Required** — Claude has a recommendation ready. You approve or redirect. Review is a decision, not a discovery. |
+| 🟢 AUTO | **Automated** — Claude handles this end to end. No input needed unless 🚧 BLOCKED surfaces. |
 
 ### Rules
-- 🔴 HITL steps always state: what to do, what Claude is waiting on before proceeding
-- 🟡 HITL steps always include Claude's recommendation so the review takes seconds, not minutes
+- 🖐️ HITL steps always state: what to do, what Claude is waiting on before proceeding
+- 🖐️ REVIEW steps always include Claude's recommendation so the review takes seconds, not minutes
 - 🟢 AUTO steps never ask for confirmation mid-task unless a blocker surfaces
-- If a 🔴 HITL step becomes automatable, flag it with the BLOCKED protocol and a path to 🟢 AUTO
+- If a 🖐️ HITL step becomes automatable, flag it with the BLOCKED protocol and a path to 🟢 AUTO
 - Labels apply in: session workflows, sprint briefs, sub-agent dispatches, and in-session responses
 
 ---
@@ -52,7 +52,7 @@ Every step in every workflow, response, or document that involves a human touch-
 **Blocked — needs your input:** [any items that can't proceed without David]
 ```
 
-### 5. 🟡 HITL — Approve direction
+### 5. 🖐️ REVIEW — Approve direction
 Claude asks: "Want to start with [recommended item], or redirect?"
 You approve or redirect in one message. Session begins.
 
@@ -67,13 +67,13 @@ Notion: https://www.notion.so/34466c7e402b814abfecdb28f31b3f74
 
 ### Ranking logic (in order)
 1. **In Progress first** — finish what's started before starting something new
-2. **Gate level** — 🟢 Proceed items before 🟡 Surface items; never start a 🔴 Stop item without explicit discussion
+2. **Gate level** — 🟢 Proceed items before 🖐️ REVIEW items; never start a 🚧 Stop item without explicit discussion
 3. **Effort vs. Value** — S effort + High value = top of list; L effort items need explicit approval
 4. **Sprint alignment** — active sprint items before backlog; icebox only if nothing else is viable
 5. **Blocks** — skip any item with an unresolved dependency
 
 ### What the Product Agent never does
-- Never starts work on a 🔴 Stop item without surfacing it first
+- Never starts work on a 🚧 Stop item without surfacing it first
 - Never proposes an L-effort item as the default next move without flagging the scope
 - Never skips a Ready S-effort High-value item in favor of something bigger
 - Never adds items to the roadmap without flagging it to David first
@@ -119,7 +119,7 @@ When work completes, is blocked, or scope changes:
 
 ## SPRINT BRIEF FORMAT
 
-Every step in a sprint brief must carry a HITL label.
+Every step in a sprint brief must carry an indicator label.
 
 ```
 ## Sprint: [name]
@@ -130,7 +130,7 @@ Every step in a sprint brief must carry a HITL label.
 **What:** [description]
 **Files:** [list of files to change]
 **Why:** [brief rationale]
-**HITL:** [🔴 / 🟡 / 🟢 — with note if 🔴 or 🟡]
+**Label:** [🖐️ HITL / 🖐️ REVIEW / 🟢 AUTO — with note if HITL or REVIEW]
 
 ### Task 2 — [title]
 ...
@@ -143,8 +143,8 @@ Every step in a sprint brief must carry a HITL label.
 
 ### Pre-deploy checklist
 [ ] 🟢 AUTO — npm run build clean
-[ ] 🔴 HITL — run: git add -A && git commit -m "..." && git push
-[ ] 🔴 HITL — QA on device
+[ ] 🖐️ HITL — run: git add -A && git commit -m "..." && git push
+[ ] 🖐️ HITL — QA on device
 ```
 
 ---
@@ -156,7 +156,7 @@ When a task is well-scoped and self-contained, it can be dispatched as a sub-age
 - A defined file list
 - Explicit out-of-scope constraints
 - A specific definition of done
-- HITL labels on every step
+- Indicator labels on every step
 
 Current candidate sub-agents (as of last session):
 - `share-shelf` — Wire native share sheet for My Shelf vendor URL
@@ -258,7 +258,7 @@ When David says "close out the session":
 ### 3. 🟢 AUTO — Deliver close summary
 One paragraph: what shipped, what's next, any open risks.
 
-### 4. 🔴 HITL — Commit and push
+### 4. 🖐️ HITL — Commit and push
 
 ```
 thc
@@ -268,7 +268,7 @@ thc
 
 ## BLOCKER PROTOCOL
 
-When Claude cannot complete a task autonomously due to access, tooling, or scope constraints, it must surface the blocker immediately. Never silently work around it.
+When Claude cannot complete a task autonomously due to access, tooling, or scope constraints, surface it immediately. Never silently work around it.
 
 ```
 🚧 BLOCKED — Cannot [action] because [reason].
@@ -281,8 +281,8 @@ Human effort if unblocked: Zero recurring / One-time only
 - Never silently hand work back without stating the blocker and whether it's permanent
 - Always distinguish between: needs access, needs a tool, genuinely requires human judgment
 - If it's a one-time fix → say so explicitly so David can decide if it's worth resolving
-- If it's truly human-in-the-loop → label it 🔴 HITL and don't apologize for it
-- If a step is currently 🔴 HITL but could be automated → flag it with a path to 🟢 AUTO
+- If it's truly human-in-the-loop → label it 🖐️ HITL and don't apologize for it
+- If a step is currently 🖐️ HITL but could be automated → flag it with a path to 🟢 AUTO
 
 ### Known permanent constraints (as of 2026-04-16)
 | Constraint | Context | Status |
@@ -291,8 +291,8 @@ Human effort if unblocked: Zero recurring / One-time only
 | Vercel webhook unreliable | Push doesn't always trigger deploy | 🟡 Known — `npx vercel --prod` as fallback |
 
 ### Shell aliases (live as of 2026-04-16)
-- `th` — 🔴 HITL · session start · reads `CLAUDE.md`, copies to clipboard
-- `thc` — 🔴 HITL · session close · `git add -A && git commit -m "docs: update session context" && git push`
+- `th` — 🖐️ HITL · session start · reads `CLAUDE.md`, copies to clipboard
+- `thc` — 🖐️ HITL · session close · `git add -A && git commit -m "docs: update session context" && git push`
 
 ---
 > Last updated: 2026-04-16
