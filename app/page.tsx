@@ -22,10 +22,6 @@ import type { Post, Mall } from "@/types/treehouse";
 const SCROLL_KEY      = "treehouse_feed_scroll";
 const LAST_VIEWED_KEY = "treehouse_last_viewed_post";
 
-// ─── Scroll-triggered reveal hook ─────────────────────────────────────────────
-// skipAnimation: when true (returning user with saved scroll pos), tile is
-// immediately visible so layout is stable before scroll restoration fires.
-
 function useScrollReveal(threshold = 0.1, skipAnimation = false) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(skipAnimation);
@@ -46,8 +42,6 @@ function useScrollReveal(threshold = 0.1, skipAnimation = false) {
 
   return { ref, visible };
 }
-
-// ─── Empty state ───────────────────────────────────────────────────────────────
 
 function EmptyFeed() {
   const router = useRouter();
@@ -76,8 +70,6 @@ function EmptyFeed() {
   );
 }
 
-// ─── Masonry skeleton ──────────────────────────────────────────────────────────
-
 const SKELETON_HEIGHTS = [130, 160, 170, 105, 115, 145, 155, 118];
 const SKELETON_OFFSET  = Math.round(SKELETON_HEIGHTS[0] * 0.5);
 
@@ -103,8 +95,6 @@ function SkeletonMasonry() {
   );
 }
 
-// ─── Masonry tile ──────────────────────────────────────────────────────────────
-
 function MasonryTile({
   post, index, isFollowed, onToggleSave, isLastViewed, skipEntrance,
 }: {
@@ -113,8 +103,6 @@ function MasonryTile({
   isFollowed: boolean;
   onToggleSave: (postId: string) => void;
   isLastViewed: boolean;
-  // True when the feed is being restored to a saved scroll position —
-  // skips the entrance animation so layout is stable for scroll restoration
   skipEntrance: boolean;
 }) {
   const [imgErr,      setImgErr]      = useState(false);
@@ -157,7 +145,6 @@ function MasonryTile({
     setTimeout(() => setTapped(false), 320);
   }
 
-  // When skipEntrance is true, no stagger delay either — render immediately
   const staggerDelay = skipEntrance ? 0 : Math.min(index * 0.04, 0.28);
 
   return (
@@ -167,7 +154,6 @@ function MasonryTile({
       style={{
         opacity:    visible ? 1 : 0,
         transform:  visible ? "translateY(0px)" : "translateY(16px)",
-        // No transition when skipping entrance — instant paint for layout stability
         transition: skipEntrance
           ? "none"
           : `opacity 0.38s ease ${staggerDelay}s, transform 0.44s cubic-bezier(0.22,1,0.36,1) ${staggerDelay}s`,
@@ -208,9 +194,7 @@ function MasonryTile({
                 onError={() => setImgErr(true)}
                 style={{
                   width: "100%", height: "100%", objectFit: "cover", display: "block",
-                  filter: hovered
-                    ? "brightness(1.04) saturate(1.10)"
-                    : "brightness(0.99) saturate(0.96)",
+                  filter: hovered ? "brightness(1.04) saturate(1.10)" : "brightness(0.99) saturate(0.96)",
                   transform: hovered ? "scale(1.018)" : "scale(1)",
                   transition: "filter 0.42s ease, transform 0.52s cubic-bezier(0.22,1,0.36,1)",
                   transformOrigin: "center center",
@@ -234,8 +218,6 @@ function MasonryTile({
                 <Heart size={16} strokeWidth={isFollowed ? 0 : 1.8}
                   style={{ color: "rgba(255,255,255,0.96)", fill: isFollowed ? "rgba(255,255,255,0.96)" : "none" }} />
               </button>
-
-              {/* Spring-tap selection overlay */}
               <div style={{
                 position: "absolute", inset: 0,
                 background: "rgba(30,77,43,0.09)",
@@ -264,8 +246,6 @@ function MasonryTile({
     </div>
   );
 }
-
-// ─── Two-column masonry ────────────────────────────────────────────────────────
 
 function MasonryGrid({
   posts, followedIds, onToggleSave, lastViewedId, skipEntrance,
@@ -321,8 +301,6 @@ function MasonryGrid({
   );
 }
 
-// ─── Mall dropdown ────────────────────────────────────────────────────────────
-
 function MallDropdown({ malls, selectedId, onChange }: { malls: Mall[]; selectedId: string | null; onChange: (id: string | null) => void }) {
   if (malls.length <= 1) return null;
   return (
@@ -341,8 +319,6 @@ function MallDropdown({ malls, selectedId, onChange }: { malls: Mall[]; selected
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 export default function DiscoveryFeedPage() {
   const router = useRouter();
   const [posts,         setPosts]         = useState<Post[]>([]);
@@ -359,9 +335,6 @@ export default function DiscoveryFeedPage() {
   const pendingScrollY   = useRef<number | null>(null);
   const scrollRestored   = useRef(false);
 
-  // True when we're returning to a saved scroll position.
-  // Passed down to MasonryGrid so tiles skip their entrance animation,
-  // keeping layout fully painted and stable before scroll restoration fires.
   const isRestoringScroll = pendingScrollY.current !== null && !scrollRestored.current;
 
   function syncBookmarks() {
@@ -480,7 +453,6 @@ export default function DiscoveryFeedPage() {
 
       {/* ── Header ── */}
       <header style={{ position: "sticky", top: 0, zIndex: 50, background: colors.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${colors.border}`, padding: "0 16px" }}>
-
         <div style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: "max(16px, env(safe-area-inset-top, 16px))", paddingBottom: 12 }}>
           <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
           <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: colors.textPrimary, letterSpacing: "-0.3px", lineHeight: 1 }}>
@@ -499,7 +471,6 @@ export default function DiscoveryFeedPage() {
             </button>
           )}
         </div>
-
         <MallDropdown malls={malls} selectedId={mallId} onChange={setMallId} />
       </header>
 
@@ -544,6 +515,22 @@ export default function DiscoveryFeedPage() {
             </AnimatePresence>
           )}
         </div>
+
+        {/* ── Vendor CTA — bottom of feed ── */}
+        {!loading && (
+          <div style={{ padding: "40px 6px 0", textAlign: "center" }}>
+            <div style={{ height: 1, background: colors.border, marginBottom: 24 }} />
+            <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: colors.textMuted, lineHeight: 1.75, margin: "0 0 14px" }}>
+              Are you a vendor? Bring your booth to Treehouse.
+            </p>
+            <Link
+              href="/vendor-request"
+              style={{ display: "inline-block", padding: "10px 22px", borderRadius: 24, fontSize: 12, fontWeight: 600, color: colors.green, background: colors.greenLight, border: `1px solid ${colors.greenBorder}`, textDecoration: "none", letterSpacing: "0.1px" }}
+            >
+              Request booth access →
+            </Link>
+          </div>
+        )}
       </main>
 
       <BottomNav active="home" flaggedCount={bookmarkCount} />

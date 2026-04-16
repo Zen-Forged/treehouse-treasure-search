@@ -18,10 +18,6 @@ import { flagKey, mapsUrl } from "@/lib/utils";
 import BottomNav from "@/components/BottomNav";
 import type { Post } from "@/types/treehouse";
 
-// ─── Page transition variants ──────────────────────────────────────────────────
-// as const on the ease tuple tells TypeScript it's a fixed BezierDefinition,
-// not a generic number[] which Framer Motion's types won't accept
-
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
 
 const pageVariants = {
@@ -33,8 +29,6 @@ const sectionVariants = (delay: number) => ({
   hidden:  { opacity: 0, y: 10 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.32, delay, ease: EASE } },
 });
-
-// ─── Owner detection ───────────────────────────────────────────────────────────
 
 async function detectOwnershipAsync(post: Post): Promise<boolean> {
   try {
@@ -53,8 +47,6 @@ async function detectOwnershipAsync(post: Post): Promise<boolean> {
   return false;
 }
 
-// ─── Shelf card ────────────────────────────────────────────────────────────────
-
 function ShelfCard({ post }: { post: Post }) {
   const [imgErr, setImgErr] = useState(false);
   const isSold = post.status === "sold";
@@ -68,15 +60,7 @@ function ShelfCard({ post }: { post: Post }) {
             <img src={post.image_url!} alt={post.title} loading="lazy" onError={() => setImgErr(true)}
               style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: isSold ? "grayscale(0.5) brightness(0.88)" : "brightness(0.99) saturate(0.96)" }} />
             {isSold && (
-              <div style={{
-                position: "absolute", top: "50%", left: "50%",
-                transform: "translate(-50%, -50%)",
-                fontSize: 6, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.3px",
-                padding: "2px 7px", borderRadius: 4,
-                background: "rgba(28,26,20,0.54)", color: "rgba(245,242,235,0.93)",
-                backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
-                whiteSpace: "nowrap",
-              }}>
+              <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", fontSize: 6, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.3px", padding: "2px 7px", borderRadius: 4, background: "rgba(28,26,20,0.54)", color: "rgba(245,242,235,0.93)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", whiteSpace: "nowrap" }}>
                 Found a home
               </div>
             )}
@@ -94,8 +78,6 @@ function ShelfCard({ post }: { post: Post }) {
   );
 }
 
-// ─── Shelf section ─────────────────────────────────────────────────────────────
-
 function ShelfSection({ vendorId, currentPostId, onReady }: { vendorId: string; currentPostId: string; onReady: (hasItems: boolean) => void }) {
   const [items, setItems] = useState<Post[]>([]);
   const [ready, setReady] = useState(false);
@@ -112,12 +94,7 @@ function ShelfSection({ vendorId, currentPostId, onReady }: { vendorId: string; 
   if (!ready || items.length === 0) return null;
 
   return (
-    <motion.div
-      variants={sectionVariants(0.18)}
-      initial="hidden"
-      animate="visible"
-      style={{ marginBottom: 32 }}
-    >
+    <motion.div variants={sectionVariants(0.18)} initial="hidden" animate="visible" style={{ marginBottom: 32 }}>
       <div style={{ paddingLeft: 20, paddingRight: 20, marginBottom: 12, display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
         <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2.2px", fontWeight: 500 }}>
           More from this shelf
@@ -137,8 +114,6 @@ function ShelfSection({ vendorId, currentPostId, onReady }: { vendorId: string; 
     </motion.div>
   );
 }
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function FindDetailPage() {
   const { id }  = useParams<{ id: string }>();
@@ -211,8 +186,6 @@ export default function FindDetailPage() {
     if (slug) router.push(`/shelf/${slug}`);
   }
 
-  const showOwnerControls = isMyPost;
-
   const mapLink = post?.mall?.address
     ? mapsUrl(post.mall.address)
     : post?.mall
@@ -239,11 +212,12 @@ export default function FindDetailPage() {
   const isSold     = post.status === "sold";
   const hasVendor  = !!post.vendor;
   const hasContent = !!(post.caption || post.description);
-  const hasPrice   = post.price_asking != null;
   const vendorSlug  = post.vendor?.slug ?? null;
   const boothNumber = post.vendor?.booth_number ?? null;
 
-  const mallLine = post.mall?.name
+  // ── Item 2a: booth number before mall address ──────────────────────────────
+  // Booth pill is now on the LEFT, mall address on the RIGHT
+  const mallName = post.mall?.name
     ? post.mall.address
       ? `${post.mall.name} · ${post.mall.address}`
       : `${post.mall.name}${post.mall.city ? ` · ${post.mall.city}` : ""}`
@@ -253,12 +227,7 @@ export default function FindDetailPage() {
     <div style={{ minHeight: "100vh", background: colors.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
 
       {/* ── 1. Hero image ── */}
-      <motion.div
-        variants={pageVariants}
-        initial="hidden"
-        animate="visible"
-        style={{ position: "relative", width: "100%" }}
-      >
+      <motion.div variants={pageVariants} initial="hidden" animate="visible" style={{ position: "relative", width: "100%" }}>
         {post.image_url ? (
           <img src={post.image_url} alt={post.title}
             style={{ width: "100%", height: "auto", display: "block", objectFit: "contain", filter: isSold ? "grayscale(0.35) brightness(0.88)" : "none" }} />
@@ -294,29 +263,15 @@ export default function FindDetailPage() {
         </div>
       </motion.div>
 
-      {/* ── 2. Mall + Booth row ── */}
+      {/* ── 2. Booth + Mall row — Item 2a: booth LEFT, mall RIGHT. Item 2b: no underline on address ── */}
       {(post.mall || boothNumber) && (
         <motion.div
           variants={sectionVariants(0.06)}
           initial="hidden"
           animate="visible"
-          style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, padding: "10px 20px 0" }}
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 20px 0" }}
         >
-          {mallLine && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 5, flex: 1 }}>
-              <MapPin size={11} style={{ color: colors.green, flexShrink: 0, marginTop: 2 }} />
-              {mapLink ? (
-                <a href={mapLink} target="_blank" rel="noopener noreferrer"
-                  style={{ fontFamily: "Georgia, serif", fontSize: 12, color: colors.green, textDecoration: "none", borderBottom: `1px solid ${colors.greenBorder}`, lineHeight: 1.45 }}>
-                  {mallLine} · Directions
-                </a>
-              ) : (
-                <span style={{ fontFamily: "Georgia, serif", fontSize: 12, color: colors.textMuted, lineHeight: 1.45 }}>
-                  {mallLine}
-                </span>
-              )}
-            </div>
-          )}
+          {/* LEFT — Booth pill */}
           {boothNumber && (
             <div style={{ flexShrink: 0, background: colors.tag, border: `1.5px solid ${colors.tagBorder}`, borderRadius: 8, padding: "4px 10px 5px", textAlign: "center" }}>
               <div style={{ fontFamily: "system-ui, sans-serif", fontSize: 7, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "1.6px", color: colors.textMuted, lineHeight: 1, marginBottom: 3 }}>
@@ -325,6 +280,23 @@ export default function FindDetailPage() {
               <div style={{ fontFamily: "Georgia, serif", fontSize: 17, fontWeight: 700, color: colors.green, letterSpacing: "0.2px", lineHeight: 1 }}>
                 {boothNumber}
               </div>
+            </div>
+          )}
+
+          {/* RIGHT — Mall + address, no underline (Item 2b) */}
+          {mallName && (
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 5, flex: 1, justifyContent: "flex-end" }}>
+              <MapPin size={11} style={{ color: colors.green, flexShrink: 0, marginTop: 2 }} />
+              {mapLink ? (
+                <a href={mapLink} target="_blank" rel="noopener noreferrer"
+                  style={{ fontFamily: "Georgia, serif", fontSize: 12, color: colors.green, textDecoration: "none", lineHeight: 1.45, textAlign: "right" }}>
+                  {mallName} · Directions
+                </a>
+              ) : (
+                <span style={{ fontFamily: "Georgia, serif", fontSize: 12, color: colors.textMuted, lineHeight: 1.45, textAlign: "right" }}>
+                  {mallName}
+                </span>
+              )}
             </div>
           )}
         </motion.div>
@@ -341,11 +313,6 @@ export default function FindDetailPage() {
 
         <motion.div variants={sectionVariants(0.15)} initial="hidden" animate="visible"
           style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          {hasPrice && (
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: colors.green, letterSpacing: "-0.3px" }}>
-              ${post.price_asking!.toLocaleString()}
-            </div>
-          )}
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             {!isSold && (
               <motion.div animate={{ opacity: [1, 0.35, 1] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
@@ -393,7 +360,7 @@ export default function FindDetailPage() {
       )}
 
       {/* ── Owner controls ── */}
-      {showOwnerControls && (
+      {isMyPost && (
         <div style={{ padding: "0 20px", marginBottom: 28 }}>
           <motion.div variants={sectionVariants(0.28)} initial="hidden" animate="visible"
             style={{ background: colors.surface, borderRadius: 14, border: `1px solid ${colors.border}`, overflow: "hidden", padding: "12px 16px 14px" }}>

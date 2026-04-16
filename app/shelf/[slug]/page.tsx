@@ -1,6 +1,7 @@
 // app/shelf/[slug]/page.tsx
 // Public Saved Shelf — read-only view of a vendor's shelf.
 // No edit button, no Add tile, no sign-out, no admin link.
+// Item 4: Share button always visible — anyone can share a booth.
 
 "use client";
 
@@ -10,8 +11,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { MapPin, ArrowLeft, Heart } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { MapPin, ArrowLeft, Heart, Send, Check } from "lucide-react";
 import { getVendorBySlug, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { colors } from "@/lib/tokens";
 import { vendorHueBg, loadBookmarkCount } from "@/lib/utils";
@@ -22,13 +23,17 @@ import { ThreeColGrid, SkeletonGrid, AvailableTile, FoundTile, ShelfGridStyles }
 import BottomNav from "@/components/BottomNav";
 import type { Post, Vendor, Mall } from "@/types/treehouse";
 
-// ─── Read-only hero card ───────────────────────────────────────────────────────
+const BASE_URL = "https://treehouse-treasure-search.vercel.app";
+
+// ─── Read-only hero card — Item 4: share button always present ─────────────────
 
 function PublicVendorHero({
   displayName, boothNumber, mallName, mallCity, heroImageUrl, onBack,
+  onShare, hasCopied,
 }: {
   displayName: string; boothNumber: string | null; mallName?: string; mallCity?: string;
   heroImageUrl?: string | null; onBack: () => void;
+  onShare: () => void; hasCopied: boolean;
 }) {
   return (
     <div style={{ padding: "max(14px, env(safe-area-inset-top, 14px)) 10px 0" }}>
@@ -55,6 +60,28 @@ function PublicVendorHero({
         }
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(18,34,20,0.82) 0%, rgba(18,34,20,0.40) 55%, transparent 100%)", zIndex: 1 }} />
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "50%", background: "linear-gradient(to top, rgba(18,34,20,0.72) 0%, transparent 100%)", zIndex: 1 }} />
+
+        {/* Item 4: Share button — top-right, same frosted circle pattern as my-shelf */}
+        <div style={{ position: "absolute", top: 12, right: 12, zIndex: 10 }}>
+          <AnimatePresence mode="wait">
+            {hasCopied ? (
+              <motion.div key="copied"
+                initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.88 }}
+                transition={{ duration: 0.14 }}
+                style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 11px", borderRadius: 18, background: "rgba(30,77,43,0.85)", border: "1px solid rgba(255,255,255,0.18)" }}>
+                <Check size={11} style={{ color: "#fff" }} />
+                <span style={{ fontSize: 11, fontWeight: 600, color: "#fff" }}>Copied!</span>
+              </motion.div>
+            ) : (
+              <motion.button key="share" onClick={onShare}
+                initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.88 }}
+                transition={{ duration: 0.14 }}
+                style={{ width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.30)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.15)", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
+                <Send size={14} style={{ color: "rgba(255,255,255,0.92)" }} />
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
 
         <div style={{ position: "relative", zIndex: 2, padding: "100px 16px 18px" }}>
           <p style={{ fontFamily: "Georgia, serif", fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.52)", letterSpacing: "2px", textTransform: "uppercase", margin: "0 0 5px" }}>
@@ -97,6 +124,7 @@ export default function PublicShelfPage() {
   const [notFound,      setNotFound]      = useState(false);
   const [tab,           setTab]           = useState<"available" | "found">("available");
   const [bookmarkCount, setBookmarkCount] = useState(0);
+  const [copied,        setCopied]        = useState(false);
 
   useEffect(() => { setBookmarkCount(loadBookmarkCount()); }, []);
 
@@ -115,6 +143,16 @@ export default function PublicShelfPage() {
       setLoading(false);
     });
   }, [slug]);
+
+  async function handleShare() {
+    if (!vendor?.slug) return;
+    const url  = `${BASE_URL}/shelf/${vendor.slug}`;
+    const name = vendor.display_name;
+    if (navigator.share) {
+      try { await navigator.share({ title: `${name} on Treehouse`, text: `Check out finds from ${name}.`, url }); return; } catch {}
+    }
+    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2200); } catch {}
+  }
 
   if (notFound) {
     return (
@@ -149,6 +187,8 @@ export default function PublicShelfPage() {
           mallCity={mallCity}
           heroImageUrl={vendor.hero_image_url as string | null | undefined}
           onBack={() => router.back()}
+          onShare={handleShare}
+          hasCopied={copied}
         />
       ) : (
         /* Hero skeleton */

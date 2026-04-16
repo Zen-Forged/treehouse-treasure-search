@@ -1,7 +1,5 @@
 // app/post/preview/page.tsx
 // Vendor post flow — Step 2: Preview + edit before saving to shelf.
-// Optional step — /post now saves directly, but this page remains for cases
-// where the postStore has an image (e.g. navigating from a direct camera capture).
 
 "use client";
 
@@ -25,6 +23,7 @@ const C = {
   textMuted:   "#8a8478",
   textFaint:   "#b0aa9e",
   green:       "#1e4d2b",
+  greenLight:  "rgba(30,77,43,0.08)",
   greenBorder: "rgba(30,77,43,0.18)",
   input:       "rgba(255,255,255,0.7)",
   inputBorder: "rgba(26,26,24,0.14)",
@@ -76,10 +75,59 @@ async function generateTitleAndCaption(imageDataUrl: string): Promise<{ title: s
   }
 }
 
+// ── Item 2c: Full image — no maxHeight constraint, objectFit contain ──────────
 function ItemImage({ src }: { src: string }) {
   return (
-    <div style={{ width: "100%", borderRadius: 14, overflow: "hidden", background: C.surface }}>
-      <img src={src} alt="Your find" style={{ width: "100%", height: "auto", display: "block", objectFit: "contain", maxHeight: "50vh" }} />
+    <div style={{
+      width: "100%",
+      borderRadius: 14,
+      overflow: "hidden",
+      background: C.surface,
+      // Show full image without cropping — vendor needs to see exactly what they captured
+    }}>
+      <img
+        src={src}
+        alt="Your find"
+        style={{
+          width: "100%",
+          height: "auto",
+          display: "block",
+          objectFit: "contain",
+        }}
+      />
+    </div>
+  );
+}
+
+// ── Item 3: Edit field label row — pencil icon always visible ─────────────────
+function EditableLabel({
+  label, isEditing, onToggle,
+}: {
+  label: string;
+  isEditing: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+      <label style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase" as const, letterSpacing: "1.8px", lineHeight: 1 }}>
+        {label}
+      </label>
+      <button
+        onClick={onToggle}
+        style={{
+          display: "flex", alignItems: "center", gap: 5,
+          background: isEditing ? C.greenLight : C.surface,
+          border: `1px solid ${isEditing ? C.greenBorder : C.border}`,
+          borderRadius: 20, padding: "4px 10px",
+          cursor: "pointer", WebkitTapHighlightColor: "transparent",
+          transition: "background 0.15s, border-color 0.15s",
+        }}
+      >
+        <Pencil size={10} style={{ color: isEditing ? C.green : C.textMuted }} />
+        <span style={{ fontSize: 10, fontWeight: 600, color: isEditing ? C.green : C.textMuted, letterSpacing: "0.2px" }}>
+          {isEditing ? "Done" : "Edit"}
+        </span>
+      </button>
     </div>
   );
 }
@@ -99,6 +147,7 @@ export default function PostPreviewPage() {
   const [price,     setPrice]     = useState("");
   const [editTitle, setEditTitle] = useState(false);
   const [editCap,   setEditCap]   = useState(false);
+  const [editPrice, setEditPrice] = useState(false);
 
   const started = useRef(false);
 
@@ -234,12 +283,8 @@ export default function PostPreviewPage() {
 
   const inputStyle: React.CSSProperties = {
     width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 9,
-    background: C.input, border: `1px solid ${C.inputBorder}`,
+    background: C.input, border: `1px solid ${C.greenBorder}`,
     color: C.textPrimary, fontSize: 14, outline: "none",
-  };
-  const labelStyle: React.CSSProperties = {
-    fontSize: 9, color: C.textMuted, textTransform: "uppercase",
-    letterSpacing: "1.8px", display: "block", marginBottom: 6,
   };
 
   // ── Loading ───────────────────────────────────────────────────────────────
@@ -248,7 +293,7 @@ export default function PostPreviewPage() {
       <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20 }}>
         {image && (
           <div style={{ width: "78%", borderRadius: 14, overflow: "hidden", opacity: 0.55 }}>
-            <img src={image} alt="" style={{ width: "100%", height: "auto", maxHeight: "40vh", objectFit: "contain" }} />
+            <img src={image} alt="" style={{ width: "100%", height: "auto", objectFit: "contain" }} />
           </div>
         )}
         <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.8, repeat: Infinity }}
@@ -267,43 +312,21 @@ export default function PostPreviewPage() {
           style={{ width: 62, height: 62, borderRadius: "50%", background: "rgba(30,77,43,0.1)", border: `1px solid ${C.greenBorder}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Check size={28} style={{ color: C.green }} />
         </motion.div>
-
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} style={{ textAlign: "center" }}>
           <div style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, marginBottom: 8 }}>Saved to shelf.</div>
-          <div style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6 }}>It's live in the Treehouse feed.</div>
+          <div style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6 }}>It&apos;s live in the Treehouse feed.</div>
         </motion.div>
-
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
-          <button
-            onClick={() => router.push("/my-shelf")}
-            style={{ width: "100%", padding: "14px", borderRadius: 13, fontSize: 14, fontWeight: 600, color: "#fff", background: C.green, border: "none", cursor: "pointer" }}
-          >
+          <button onClick={() => router.push("/my-shelf")}
+            style={{ width: "100%", padding: "14px", borderRadius: 13, fontSize: 14, fontWeight: 600, color: "#fff", background: C.green, border: "none", cursor: "pointer" }}>
             View my shelf
           </button>
-
-          <a
-            href={FACEBOOK_PAGE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "block", width: "100%", padding: "13px",
-              borderRadius: 13, fontSize: 13, fontWeight: 500,
-              color: C.textMid, background: C.surface,
-              border: `1px solid ${C.border}`,
-              textAlign: "center", textDecoration: "none", boxSizing: "border-box",
-            }}
-          >
+          <a href={FACEBOOK_PAGE_URL} target="_blank" rel="noopener noreferrer"
+            style={{ display: "block", width: "100%", padding: "13px", borderRadius: 13, fontSize: 13, fontWeight: 500, color: C.textMid, background: C.surface, border: `1px solid ${C.border}`, textAlign: "center", textDecoration: "none", boxSizing: "border-box" }}>
             Visit us on Facebook
           </a>
-
-          <button
-            onClick={() => router.push("/post")}
-            style={{
-              width: "100%", padding: "12px", borderRadius: 13, fontSize: 12,
-              color: C.textFaint, background: "transparent", border: "none", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-            }}
-          >
+          <button onClick={() => router.push("/post")}
+            style={{ width: "100%", padding: "12px", borderRadius: 13, fontSize: 12, color: C.textFaint, background: "transparent", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
             <Camera size={13} style={{ color: C.textFaint }} />
             Add another find
           </button>
@@ -317,7 +340,7 @@ export default function PostPreviewPage() {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: "0 24px" }}>
         <div style={{ fontFamily: "Georgia, serif", fontSize: 18, color: C.textPrimary, textAlign: "center" }}>Something went wrong.</div>
-        <div style={{ fontSize: 13, color: C.textMuted, textAlign: "center", lineHeight: 1.6 }}>The post couldn't be saved.</div>
+        <div style={{ fontSize: 13, color: C.textMuted, textAlign: "center", lineHeight: 1.6 }}>The post couldn&apos;t be saved.</div>
         {errorDetail && (
           <div style={{ fontSize: 11, color: C.textFaint, textAlign: "left", lineHeight: 1.7, fontFamily: "monospace", background: C.surface, padding: "10px 14px", borderRadius: 8, border: `1px solid ${C.border}`, width: "100%", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
             {errorDetail}
@@ -351,25 +374,20 @@ export default function PostPreviewPage() {
         </div>
       </header>
 
-      <main style={{ flex: 1, padding: "14px 15px", paddingBottom: "max(110px, env(safe-area-inset-bottom, 110px))", display: "flex", flexDirection: "column", gap: 14, overflowY: "auto" }}>
+      <main style={{ flex: 1, padding: "14px 15px", paddingBottom: "max(110px, env(safe-area-inset-bottom, 110px))", display: "flex", flexDirection: "column", gap: 16, overflowY: "auto" }}>
 
+        {/* Item 2c: Full image — no maxHeight, no cropping */}
         {image && <ItemImage src={image} />}
 
-        {/* Title */}
+        {/* Item 3: Title — Edit button always visible as pill */}
         <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-            <label style={{ ...labelStyle, marginBottom: 0 }}>Title</label>
-            <button onClick={() => setEditTitle(e => !e)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: "2px 4px" }}>
-              <Pencil size={10} style={{ color: C.textMuted }} />
-              <span style={{ fontSize: 9, color: C.textMuted }}>{editTitle ? "Done" : "Edit"}</span>
-            </button>
-          </div>
+          <EditableLabel label="Title" isEditing={editTitle} onToggle={() => setEditTitle(e => !e)} />
           <AnimatePresence mode="wait">
             {editTitle ? (
               <motion.div key="title-edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <input type="text" value={title} onChange={e => setTitle(e.target.value)}
                   placeholder="e.g. Mid-century ceramic vase"
-                  style={{ ...inputStyle, border: `1px solid ${C.greenBorder}`, fontFamily: "Georgia, serif" }}
+                  style={{ ...inputStyle, fontFamily: "Georgia, serif" }}
                   autoFocus
                 />
               </motion.div>
@@ -387,20 +405,14 @@ export default function PostPreviewPage() {
           </AnimatePresence>
         </div>
 
-        {/* Caption */}
+        {/* Item 3: Caption — Edit button always visible as pill */}
         <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-            <label style={{ ...labelStyle, marginBottom: 0 }}>Caption</label>
-            <button onClick={() => setEditCap(e => !e)} style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: "2px 4px" }}>
-              <Pencil size={10} style={{ color: C.textMuted }} />
-              <span style={{ fontSize: 9, color: C.textMuted }}>{editCap ? "Done" : "Edit"}</span>
-            </button>
-          </div>
+          <EditableLabel label="Caption" isEditing={editCap} onToggle={() => setEditCap(e => !e)} />
           <AnimatePresence mode="wait">
             {editCap ? (
               <motion.div key="cap-edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <textarea rows={4} value={caption} onChange={e => setCaption(e.target.value)}
-                  style={{ ...inputStyle, fontFamily: "Georgia, serif", lineHeight: 1.65, resize: "none", border: `1px solid ${C.greenBorder}` } as React.CSSProperties}
+                  style={{ ...inputStyle, fontFamily: "Georgia, serif", lineHeight: 1.65, resize: "none" } as React.CSSProperties}
                 />
               </motion.div>
             ) : (
@@ -417,16 +429,36 @@ export default function PostPreviewPage() {
           </AnimatePresence>
         </div>
 
-        {/* Price */}
+        {/* Item 3: Price — Edit button added, consistent with title/caption pattern */}
         <div>
-          <label style={labelStyle}>
-            Asking price <span style={{ color: C.textFaint, textTransform: "none", letterSpacing: 0 }}>(optional)</span>
-          </label>
-          <div style={{ position: "relative" }}>
-            <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontFamily: "monospace", fontSize: 14, color: C.textMuted, pointerEvents: "none" }}>$</span>
-            <input type="number" inputMode="decimal" min="0" step="1" value={price} onChange={e => setPrice(e.target.value)} placeholder="0"
-              style={{ ...inputStyle, paddingLeft: 22, fontFamily: "monospace" }} />
-          </div>
+          <EditableLabel
+            label={`Asking price ${!editPrice ? "(optional — tap Edit to set)" : "(optional)"}`}
+            isEditing={editPrice}
+            onToggle={() => setEditPrice(e => !e)}
+          />
+          <AnimatePresence mode="wait">
+            {editPrice ? (
+              <motion.div key="price-edit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <div style={{ position: "relative" }}>
+                  <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontFamily: "monospace", fontSize: 14, color: C.textMuted, pointerEvents: "none" }}>$</span>
+                  <input type="number" inputMode="decimal" min="0" step="1" value={price} onChange={e => setPrice(e.target.value)} placeholder="0"
+                    style={{ ...inputStyle, paddingLeft: 22, fontFamily: "monospace" }}
+                    autoFocus
+                  />
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div key="price-display" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={() => setEditPrice(true)}
+                style={{ padding: "10px 13px", borderRadius: 9, background: C.surface, border: `1px solid ${C.border}`, cursor: "text" }}
+              >
+                {price
+                  ? <p style={{ fontSize: 15, color: C.textPrimary, lineHeight: 1.3, margin: 0, fontFamily: "monospace", fontWeight: 600 }}>${price}</p>
+                  : <p style={{ fontSize: 13, color: C.textFaint, margin: 0, fontStyle: "italic" }}>No price set</p>
+                }
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Attribution */}
