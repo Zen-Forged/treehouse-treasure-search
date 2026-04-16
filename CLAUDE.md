@@ -23,58 +23,54 @@ Tell Claude: "close out the session" then run `thc`
 ## CURRENT ISSUE
 > Last updated: 2026-04-16
 
-**Status:** Beta prep sprint. Mixed design/UX/CX/security pass. 6 items shipped.
+**Status:** Beta prep sprint + investor documentation infrastructure.
 
 ---
 
 ## What was done (this session)
-> 2026-04-16 — Beta prep: vendor request flow + UI fixes
+> 2026-04-16 — Beta prep: UI fixes, vendor request flow, investor update system
 
-### Security
+### Security audit
 - Verified `.env.local` is gitignored and not tracked ✅
 - Confirmed no hardcoded secrets in any source files ✅
-- Added `.env.example` to repo (documents all required vars, no values)
-- Added `EBAY_CLIENT_ID` and `EBAY_CLIENT_SECRET` to `.env.example`
+- Added `.env.example` to repo — documents all required vars including EBAY_CLIENT_ID/SECRET
 
 ### Item 2a — Booth number left of mall address (Find detail page)
-- `app/find/[id]/page.tsx` — booth pill moved to LEFT, mall address to RIGHT
+- `app/find/[id]/page.tsx` — booth pill moved to LEFT, mall address RIGHT
 - Layout now: [Booth 369] → [📍 America's Antique Mall · Directions]
 
 ### Item 2b — Remove underline from address link
-- `app/find/[id]/page.tsx` — `textDecoration: "none"` on address `<a>` tag
+- `app/find/[id]/page.tsx` — `textDecoration: "none"` on address link
 
 ### Item 2c — Full image in edit listing preview (no crop)
 - `app/post/preview/page.tsx` — removed `maxHeight` constraint on `ItemImage`
-- Image now displays at full natural height with `objectFit: "contain"`
 
 ### Item 3 — Edit icons as pill buttons on title, caption, and price
-- `app/post/preview/page.tsx` — new `EditableLabel` component with pencil icon pill
-- Applied to Title, Caption, AND Price (price previously had no edit affordance)
-- Pills show green active state when editing, muted when not
+- `app/post/preview/page.tsx` — new `EditableLabel` component
+- Applied to Title, Caption, AND Price — consistent tap-to-edit with green active state
 
 ### Item 4 — Share button on public booth pages (`/shelf/[slug]`)
-- `app/shelf/[slug]/page.tsx` — share button added to `PublicVendorHero`
-- Same frosted circle `Send` icon pattern as `my-shelf`
-- No auth check — share is always available to any visitor
-- Uses `navigator.share` with clipboard fallback + "Copied!" confirmation
+- `app/shelf/[slug]/page.tsx` — share button in `PublicVendorHero`, always visible, no auth required
 
 ### Item 1 — Vendor access request flow
-- New route: `app/vendor-request/page.tsx` — form → success screen
-  - Fields: Name (required), Email (required), Mall (dropdown, optional), Booth number (optional)
-  - Success screen: "You're on the list." + email confirmation + two CTAs
-  - Warm, non-transactional copy throughout
-  - Mall pre-fill via `?mall_id=&mall_name=` query params (for mall page entry point)
-- New API: `app/api/vendor-request/route.ts`
-  - Writes to `vendor_requests` Supabase table (service role, bypasses RLS)
-  - Rate limited: 3 req/IP per 10 minutes
-  - Email notification: logs to console for now (Resend integration deferred to Sprint 4)
-- Feed footer CTA: `app/page.tsx` — "Are you a vendor? Bring your booth to Treehouse." + "Request booth access →" link, shown below feed content when not loading
+- `app/vendor-request/page.tsx` — form + success screen
+- `app/api/vendor-request/route.ts` — DB write (service role), rate limit 3/10min, console log notification
+- `app/page.tsx` — feed footer CTA "Are you a vendor? Request booth access →"
+- Mall page CTA deferred — dark theme styling needed
+
+### Investor documentation infrastructure
+- Google Drive folder created: **Treehouse Finds — Investor Updates**
+  - Folder ID: `1l2toRdb-1sKCuYcJ25OKYzMqNMu2kBWW`
+  - Drive link: https://drive.google.com/drive/folders/1l2toRdb-1sKCuYcJ25OKYzMqNMu2kBWW
+- First investor update PDF uploaded: **Treehouse Finds — Investor Update — April 16 2026**
+- Notion process doc created under Agent System Operating Manual: 📋 Investor Update — Process & Cadence
+  - Cadence: end of each sprint (weekly once beta launches)
+  - Trigger: David says "generate investor update" at session close
+  - No additional access setup needed — Drive MCP already connected
 
 ---
 
-## Deferred / Next session starting point
-
-### ⚠️ ACTION REQUIRED BEFORE DEPLOY — Supabase SQL
+## ⚠️ ACTION REQUIRED BEFORE DEPLOY — Supabase SQL
 Run in Supabase SQL editor to create `vendor_requests` table:
 ```sql
 CREATE TABLE vendor_requests (
@@ -92,37 +88,48 @@ CREATE POLICY "service role only" ON vendor_requests
   USING (false) WITH CHECK (false);
 ```
 
-### Priority 1 — Mall page vendor CTA (deferred — needs dark theme treatment)
-- `app/mall/[slug]/page.tsx` uses dark reseller palette — CTA needs to match
-- Entry point: contextual "Vendor at this mall? Join Treehouse" CTA at bottom of mall page
-- Can pass `?mall_id=&mall_name=` to pre-fill the form
+---
+
+## Next session starting point — Sprint 3 (continued)
+
+### Priority 1 — Mall page vendor CTA (S effort, deferred)
+- `app/mall/[slug]/page.tsx` uses dark reseller palette — CTA needs dark theme styling
+- Pass `?mall_id=&mall_name=` to pre-fill the vendor request form
 
 ### Priority 2 — Error monitoring (S effort, High value, 🟢 Proceed)
 - Add structured `console.error` wrapping to all API routes
 - Evaluate Sentry free tier vs Vercel function logs
 
 ### Priority 3 — Vendor bio field (M effort, High value, 🟢 Proceed)
-- `bio` column exists in DB + is fetched, no UI to set or display it
-- Inline tap-to-edit on My Booth hero section
-- Display on public `/shelf/[slug]`
+- `bio` column exists in DB + is fetched, no UI to set or display
+- Inline tap-to-edit on My Booth hero; display on public `/shelf/[slug]`
 
 ### Priority 4 — Hero image upload size guard (S effort, Medium value, 🟢 Proceed)
-- Add `file.size > 12_000_000` check before upload in `app/my-shelf/page.tsx`
+- Add `file.size > 12_000_000` check in `app/my-shelf/page.tsx`
 
 ### Priority 5 — Admin PIN production QA (S effort, Medium value, 🟢 Proceed)
-- Confirm `ADMIN_PIN` and `SUPABASE_SERVICE_ROLE_KEY` set in Vercel environment
+- Confirm `ADMIN_PIN` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel env
 - Test full admin PIN flow on production URL
 
 ### Priority 6 — Find Map overhaul (L effort, High value, 🖐️ REVIEW before starting)
-- Group saved finds by mall location, per-mall route segments
+- Group saved finds by mall, per-mall route segments
 - Plan required before any code
 
 ### Sprint 4 (not started)
-- Resend email integration for vendor request notifications
+- Resend email for vendor request notifications
 - Feed pagination / infinite scroll
 - Search
 - Terms of service / privacy policy
-- Bookmarks persistence (Supabase, not just localStorage)
+- Bookmarks persistence (Supabase)
+
+---
+
+## INVESTOR UPDATE SYSTEM
+- **Google Drive folder:** https://drive.google.com/drive/folders/1l2toRdb-1sKCuYcJ25OKYzMqNMu2kBWW
+- **Folder ID:** `1l2toRdb-1sKCuYcJ25OKYzMqNMu2kBWW`
+- **Cadence:** End of each sprint (weekly once beta launches)
+- **Trigger:** Say "generate investor update" at session close
+- **Process doc:** Notion → Agent System Operating Manual → 📋 Investor Update — Process & Cadence
 
 ---
 
@@ -148,11 +155,11 @@ lucide-react (Heart, Send, Store, Home, LayoutGrid icons in ecosystem UI)
 NEXT_PUBLIC_SUPABASE_URL         https://zogxkarpwlaqmamfzceb.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY    eyJhbGci... (full JWT — in .env.local and Vercel)
 NEXT_PUBLIC_ADMIN_EMAIL          david@zenforged.com
-NEXT_PUBLIC_DEV_VENDOR_EMAIL     vendor@test.com (optional — dev panel vendor test email)
+NEXT_PUBLIC_DEV_VENDOR_EMAIL     vendor@test.com (optional)
 ANTHROPIC_API_KEY                Claude Vision + caption generation
 SERPAPI_KEY                      eBay sold comps
-ADMIN_PIN                        Server-only PIN for admin login (set in .env.local + Vercel)
-SUPABASE_SERVICE_ROLE_KEY        Server-only service role key (set in .env.local + Vercel)
+ADMIN_PIN                        Server-only PIN for admin login
+SUPABASE_SERVICE_ROLE_KEY        Server-only service role key
 EBAY_CLIENT_ID                   eBay direct API (not yet wired)
 EBAY_CLIENT_SECRET               eBay direct API (not yet wired)
 ```
@@ -161,16 +168,15 @@ EBAY_CLIENT_SECRET               eBay direct API (not yet wired)
 
 ## SUPABASE
 - **Tables:** malls, vendors, posts, vendor_requests — RLS ENABLED ✅
-- **vendor_requests:** id, name, email, booth_number, mall_id, mall_name, status, created_at
+- **vendor_requests:** id, name, email, booth_number, mall_id, mall_name, status, created_at (⚠️ run SQL above if not yet created)
 - **Storage bucket:** post-images — PUBLIC
 - **Auth:** Magic link (OTP) via email — `supabase.auth.signInWithOtp()`
-- **Malls:** 29 locations seeded (KY + Clarksville IN) — slug unique constraint: `malls_slug_key`
+- **Malls:** 29 locations seeded (KY + Clarksville IN)
 - **Primary mall:** America's Antique Mall, id: `19a8ff7e-cb45-491f-9451-878e2dde5bf4`, slug: `americas-antique-mall`
 - **Known vendors:**
   - ZenForged Finds, booth 369, id: `65a879f1-c43c-481b-974f-379792a36db8` — user_id SET ✅
-  - Zen booth (admin default), id: `5619b4bf-3d05-4843-8ee1-e8b747fc2d81` — no user_id (admin loads by ID)
+  - Zen booth (admin default), id: `5619b4bf-3d05-4843-8ee1-e8b747fc2d81`
 - **Extra columns vendors:** `facebook_url text`, `user_id uuid`, `hero_image_url text`, `bio text`
-- **Extra columns malls:** `phone text`, `website text`, `google_maps_url text`, `latitude numeric(10,7)`, `longitude numeric(10,7)`, `category text`, `zip_code text`
 - **Unique constraint vendors:** `vendors_mall_booth_unique` on `(mall_id, booth_number)`
 - **Unique constraint malls:** `malls_slug_key` on `(slug)`
 
@@ -186,28 +192,28 @@ EBAY_CLIENT_SECRET               eBay direct API (not yet wired)
 - Find detail — layered drift-in, booth LEFT / mall RIGHT, no address underline
 - Public shelf — share button always visible (no auth required)
 - Vendor request flow — `/vendor-request` form + success screen + API route
-- RLS — 12 policies + vendor_requests table (service role only) ✅
+- RLS — 12 policies + vendor_requests (service role only) ✅
 - Rate limiting — `/api/post-caption` 10 req/60s, `/api/vendor-request` 3 req/10min ✅
 - PWA manifest ✅
+- `.env.example` — all required vars documented ✅
 - Session Control Panel (Notion) ✅
 - Shell aliases `th` / `thc` ✅
 - MASTER_PROMPT.md — HITL standard + Product Agent + Blocker Protocol ✅
-- Notion Roadmap — seeded, Product Agent reads at session open ✅
-- `.env.example` — all required vars documented ✅
+- Notion Roadmap — seeded ✅
+- Investor update system — Drive folder + first PDF + Notion process doc ✅
 
 ## KNOWN GAPS / SPRINT 3 ⚠️
-- vendor_requests Supabase table — needs SQL migration run (see above) ⚠️
-- Mall page vendor CTA — deferred (dark theme styling needed)
-- No error monitoring (Sentry / structured logs) — Priority 2
-- Vendor bio field — no UI to set or display — Priority 3
-- Hero image upload: no client-side size guard — Priority 4
+- vendor_requests table — needs SQL migration run (see above) ⚠️
+- Mall page vendor CTA — deferred (dark theme)
+- No error monitoring — Priority 2
+- Vendor bio field — no UI — Priority 3
+- Hero image upload: no size guard — Priority 4
 - Admin PIN not QA'd in production — Priority 5
-- Find Map overhaul — needs plan before build — Priority 6
-- Feed needs content seeding before beta invite (Sprint 4)
+- Find Map overhaul — needs plan — Priority 6
+- Feed content seeding before beta invite (Sprint 4)
 - No pagination/infinite scroll (Sprint 4)
 - No search (Sprint 4)
 - No terms of service / privacy policy (Sprint 4)
-- Resend email for vendor request notifications (Sprint 4)
 
 ---
 
