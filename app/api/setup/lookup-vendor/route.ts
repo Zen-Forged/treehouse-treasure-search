@@ -4,13 +4,20 @@
 // Flow: user signs in via magic link → lands on /setup → client POSTs here.
 // Server:
 //   1. Identify authenticated user from bearer token (requireAuth)
-//   2. Look up pending vendor_request by email
+//   2. Look up vendor_request by email (any status except 'rejected')
 //   3. Find the matching vendor row (display_name + mall_id, user_id IS NULL)
 //   4. Link vendor.user_id = user.id, return the vendor row with mall joined
 //
 // This bundles the old getVendorByEmail + linkVendorToUser into one server
 // call with no race window — and works despite vendor_requests RLS because
 // the service role client bypasses it.
+//
+// Status filter note: we use .neq("status", "rejected") rather than an allow-
+// list of ["pending", "approved"] because the vendor row's existence (with
+// user_id IS NULL) is the real gate — not the request status. A pending
+// request with no vendor row yet will fall through to the "not ready" 404
+// below, which is correct. Rejected requests are the only state we need to
+// actively block.
 
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/adminAuth";
@@ -29,12 +36,29 @@ export async function POST(req: Request) {
     );
   }
 
-  // 1. Look up pending vendor_request by email
+  // 0. Short-circuit: user is already linked to a vendor row.
+  // Handles the "signed in again after setup completed" case.
+  const { data: alreadyLinkedVendor } = await auth.service
+    .from("vendors")
+    .select(`*, mall:malls ( id, name, city, state, slug, address )`)
+    .eq("user_id", auth.user.id)
+    .maybeSingle();
+
+  if (alreadyLinkedVendor) {
+    return NextResponse.json({
+      ok: true,
+      vendor: alreadyLinkedVendor,
+      alreadyLinked: true,
+    });
+  }
+
+  // 1. Look up vendor_request by email (any status except rejected).
+  // Newest first, in case the same email has multiple requests.
   const { data: requests, error: requestErr } = await auth.service
     .from("vendor_requests")
-    .select("name, mall_id, booth_number, mall_name")
+    .select("name, mall_id, booth_number, mall_name, status")
     .eq("email", email)
-    .eq("status", "pending")
+    .neq("status", "rejected")
     .order("created_at", { ascending: false })
     .limit(1);
 
@@ -47,22 +71,10 @@ export async function POST(req: Request) {
   }
 
   if (!requests || requests.length === 0) {
-    // Also check: maybe the request was already approved and the vendor is
-    // linked already — in that case, return the vendor linked to this user.
-    const { data: existingVendor } = await auth.service
-      .from("vendors")
-      .select(`*, mall:malls ( id, name, city, state, slug, address )`)
-      .eq("user_id", auth.user.id)
-      .maybeSingle();
-
-    if (existingVendor) {
-      return NextResponse.json({ ok: true, vendor: existingVendor, alreadyLinked: true });
-    }
-
     return NextResponse.json(
       {
         error:
-          "No vendor account found for this email. Contact admin if you believe this is an error.",
+          "No vendor request found for this email. Contact admin if you believe this is an error.",
       },
       { status: 404 }
     );
@@ -77,7 +89,9 @@ export async function POST(req: Request) {
     );
   }
 
-  // 2. Find matching vendor row — display_name + mall_id, user_id unset
+  // 2. Find matching vendor row — display_name + mall_id, user_id unset.
+  // If not found, the admin hasn't approved yet (approval is what creates
+  // the vendor row).
   const { data: vendor, error: vendorErr } = await auth.service
     .from("vendors")
     .select("id")
@@ -98,13 +112,13 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error:
-          "Vendor account not ready yet. An admin needs to approve your request first.",
+          "Your vendor account isn't ready yet. An admin needs to approve your request first.",
       },
       { status: 404 }
     );
   }
 
-  // 3. Link vendor.user_id = user.id
+  // 3. Link vendor.user_id = user.id (with race-safe guard)
   const { data: linked, error: linkErr } = await auth.service
     .from("vendors")
     .update({ user_id: auth.user.id })
