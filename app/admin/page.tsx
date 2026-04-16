@@ -1,6 +1,11 @@
 // app/admin/page.tsx
 // Admin — gated to NEXT_PUBLIC_ADMIN_EMAIL via Supabase Auth session.
 // Non-admin or unauth users see a sign-in prompt.
+//
+// Enhanced with vendor request management:
+//   - View pending vendor requests
+//   - Create vendor accounts from requests  
+//   - Copy email template for manual notification
 
 "use client";
 
@@ -8,8 +13,9 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut } from "lucide-react";
+import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, UserCheck, Copy, Users, Store } from "lucide-react";
 import { getSession, isAdmin, signOut } from "@/lib/auth";
+import { getVendorRequests, createVendorFromRequest, markVendorRequestApproved } from "@/lib/posts";
 import { colors } from "@/lib/tokens";
 import type { User } from "@supabase/supabase-js";
 
@@ -23,22 +29,41 @@ interface AdminPost {
   vendor?: { id: string; display_name: string; booth_number: string | null };
 }
 
+interface VendorRequest {
+  id:           string;
+  name:         string;
+  email:        string;
+  booth_number: string | null;
+  mall_id:      string | null;
+  mall_name:    string | null;
+  status:       string;
+  created_at:   string;
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const [user,       setUser]       = useState<User | null>(null);
   const [authReady,  setAuthReady]  = useState(false);
   const [posts,      setPosts]      = useState<AdminPost[]>([]);
+  const [requests,   setRequests]   = useState<VendorRequest[]>([]);
   const [loading,    setLoading]    = useState(true);
+  const [requestsLoading, setRequestsLoading] = useState(true);
   const [selected,   setSelected]   = useState<Set<string>>(new Set());
   const [busy,       setBusy]       = useState(false);
+  const [requestBusy, setRequestBusy] = useState<Set<string>>(new Set());
   const [result,     setResult]     = useState<string | null>(null);
+  const [requestResult, setRequestResult] = useState<string | null>(null);
   const [confirmAll, setConfirmAll] = useState(false);
+  const [activeTab, setActiveTab] = useState<"posts" | "requests">("requests");
 
   useEffect(() => {
     getSession().then(s => {
       setUser(s?.user ?? null);
       setAuthReady(true);
-      if (s?.user && isAdmin(s.user)) fetchPosts();
+      if (s?.user && isAdmin(s.user)) {
+        fetchPosts();
+        fetchVendorRequests();
+      }
     });
   }, []);
 
@@ -49,6 +74,19 @@ export default function AdminPage() {
     const json = await res.json();
     setPosts(json.posts ?? []);
     setLoading(false);
+  }
+
+  async function fetchVendorRequests() {
+    setRequestsLoading(true);
+    setRequestResult(null);
+    try {
+      const data = await getVendorRequests();
+      setRequests(data);
+    } catch (err) {
+      console.error("Failed to fetch vendor requests:", err);
+      setRequestResult("Error: Failed to load vendor requests");
+    }
+    setRequestsLoading(false);
   }
 
   function toggleSelect(id: string) {
@@ -84,6 +122,94 @@ export default function AdminPage() {
     setBusy(false);
   }
 
+  async function approveVendorRequest(request: VendorRequest) {
+    if (requestBusy.has(request.id)) return;
+    setRequestBusy(prev => new Set([...prev, request.id]));
+    setRequestResult(null);
+
+    try {
+      // Create vendor account from request
+      const result = await createVendorFromRequest({
+        name: request.name,
+        email: request.email,
+        booth_number: request.booth_number,
+        mall_id: request.mall_id!,
+        mall_name: request.mall_name,
+      });
+
+      if (result.error) {
+        setRequestResult(`Error creating vendor for ${request.name}: ${result.error}`);
+        setRequestBusy(prev => { const next = new Set(prev); next.delete(request.id); return next; });
+        return;
+      }
+
+      // Mark request as approved
+      const marked = await markVendorRequestApproved(request.id);
+      if (!marked) {
+        setRequestResult(`Warning: Vendor created but failed to mark request as approved for ${request.name}`);
+      }
+
+      // Show email template
+      const emailTemplate = generateEmailTemplate(request);
+      setRequestResult(`✓ Vendor account created for ${request.name}. Copy the email template below and send manually.`);
+      
+      // Copy email to clipboard
+      try {
+        await navigator.clipboard.writeText(emailTemplate);
+        setRequestResult(prev => `${prev}\n\n📋 Email template copied to clipboard!`);
+      } catch (err) {
+        console.log("Clipboard copy failed, showing template manually");
+      }
+
+      // Refresh the requests list
+      await fetchVendorRequests();
+
+    } catch (err) {
+      console.error("Vendor approval error:", err);
+      setRequestResult(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+    }
+
+    setRequestBusy(prev => { const next = new Set(prev); next.delete(request.id); return next; });
+  }
+
+  function generateEmailTemplate(request: VendorRequest): string {
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://treehouse-treasure-search.vercel.app";
+    const setupUrl = `${baseUrl}/setup`;
+    
+    return `Subject: Your Treehouse vendor account is ready!
+
+Hi ${request.name},
+
+Great news! Your vendor access request for Treehouse has been approved. Your booth account is now set up and ready to use.
+
+To get started:
+1. Click this link to complete your account setup: ${setupUrl}
+2. Sign in with this email address: ${request.email}
+3. Start posting finds to share with browsers before they make the trip
+
+Your booth details:
+- Name: ${request.name}
+- ${request.booth_number ? `Booth: ${request.booth_number}` : "Booth: Not specified"}
+- ${request.mall_name ? `Mall: ${request.mall_name}` : "Mall: Not specified"}
+
+Once you're set up, you can manage your booth and post finds at treehouse-treasure-search.vercel.app
+
+Welcome to Treehouse!
+
+Best regards,
+The Treehouse Team`;
+  }
+
+  async function copyEmailTemplate(request: VendorRequest) {
+    const template = generateEmailTemplate(request);
+    try {
+      await navigator.clipboard.writeText(template);
+      setRequestResult(`📋 Email template for ${request.name} copied to clipboard!`);
+    } catch (err) {
+      setRequestResult(`Error: Could not copy to clipboard`);
+    }
+  }
+
   async function handleSignOut() {
     await signOut();
     router.replace("/");
@@ -113,6 +239,7 @@ export default function AdminPage() {
   }
 
   const allSelected = posts.length > 0 && selected.size === posts.length;
+  const pendingRequests = requests.filter(r => r.status === "pending");
 
   return (
     <div style={{ minHeight: "100vh", background: colors.bg, maxWidth: 430, margin: "0 auto", paddingBottom: 100 }}>
@@ -138,60 +265,190 @@ export default function AdminPage() {
         <div style={{ fontSize: 12, color: colors.textPrimary }}>{user.email}</div>
       </div>
 
-      {/* Posts section */}
-      <div style={{ margin: "24px 20px 0" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2px" }}>
-            All posts ({posts.length})
-          </div>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <button onClick={fetchPosts} disabled={loading || busy}
-              style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: colors.textMuted }}>
-              <RefreshCw size={11} style={{ opacity: loading ? 0.4 : 1 }} /> Refresh
-            </button>
-            {posts.length > 0 && (
-              <button onClick={toggleAll}
-                style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: colors.textMid }}>
-                {allSelected ? <CheckSquare size={13} style={{ color: colors.green }} /> : <Square size={13} />}
-                {allSelected ? "Deselect all" : "Select all"}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {result && (
-          <div style={{ padding: "10px 12px", borderRadius: 9, marginBottom: 12, background: result.startsWith("✓") ? colors.greenLight : colors.redBg, border: `1px solid ${result.startsWith("✓") ? colors.greenBorder : colors.redBorder}`, fontSize: 12, color: result.startsWith("✓") ? colors.green : colors.red }}>
-            {result}
-          </div>
-        )}
-
-        {loading ? (
-          <div style={{ fontSize: 13, color: colors.textFaint, padding: "20px 0", textAlign: "center" }}>Loading…</div>
-        ) : posts.length === 0 ? (
-          <div style={{ fontSize: 13, color: colors.textFaint, padding: "20px 0", textAlign: "center", fontStyle: "italic", fontFamily: "Georgia, serif" }}>No posts in database.</div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {posts.map(post => {
-              const isSel = selected.has(post.id);
-              return (
-                <div key={post.id} onClick={() => toggleSelect(post.id)}
-                  style={{ background: isSel ? colors.greenLight : colors.surface, border: `1px solid ${isSel ? colors.greenBorder : colors.border}`, borderRadius: 11, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", transition: "background 0.15s, border-color 0.15s" }}>
-                  {isSel ? <CheckSquare size={15} style={{ color: colors.green, flexShrink: 0 }} /> : <Square size={15} style={{ color: colors.textFaint, flexShrink: 0 }} />}
-                  {post.image_url && <img src={post.image_url} alt="" style={{ width: 36, height: 36, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 500, color: colors.textPrimary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{post.title}</div>
-                    <div style={{ fontSize: 10, color: colors.textMuted, marginTop: 1 }}>{post.vendor?.display_name ?? "no vendor"} · {post.status}</div>
-                    <div style={{ fontSize: 9, color: colors.textFaint, fontFamily: "monospace", marginTop: 1 }}>vendor_id: {post.vendor_id?.slice(0, 12)}…</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+      {/* Tab switcher */}
+      <div style={{ margin: "20px 20px 0", display: "flex", gap: 8 }}>
+        <button 
+          onClick={() => setActiveTab("requests")}
+          style={{ 
+            flex: 1, padding: "10px", borderRadius: 10, fontSize: 13, fontWeight: 500,
+            background: activeTab === "requests" ? colors.green : "none",
+            color: activeTab === "requests" ? "#fff" : colors.textMid,
+            border: `1px solid ${activeTab === "requests" ? colors.green : colors.border}`,
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6
+          }}>
+          <Users size={13} /> 
+          Vendor Requests {pendingRequests.length > 0 && (
+            <span style={{ 
+              background: activeTab === "requests" ? "rgba(255,255,255,0.2)" : colors.green, 
+              color: activeTab === "requests" ? "#fff" : "#fff",
+              padding: "2px 6px", borderRadius: 10, fontSize: 10, fontWeight: 700 
+            }}>
+              {pendingRequests.length}
+            </span>
+          )}
+        </button>
+        <button 
+          onClick={() => setActiveTab("posts")}
+          style={{ 
+            flex: 1, padding: "10px", borderRadius: 10, fontSize: 13, fontWeight: 500,
+            background: activeTab === "posts" ? colors.green : "none",
+            color: activeTab === "posts" ? "#fff" : colors.textMid,
+            border: `1px solid ${activeTab === "posts" ? colors.green : colors.border}`,
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6
+          }}>
+          <Store size={13} /> Posts ({posts.length})
+        </button>
       </div>
 
-      {/* Action bar */}
-      {(selected.size > 0 || posts.length > 0) && (
+      {/* Vendor Requests Tab */}
+      {activeTab === "requests" && (
+        <div style={{ margin: "24px 20px 0" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2px" }}>
+              Vendor requests ({requests.length})
+            </div>
+            <button onClick={fetchVendorRequests} disabled={requestsLoading}
+              style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: colors.textMuted }}>
+              <RefreshCw size={11} style={{ opacity: requestsLoading ? 0.4 : 1 }} /> Refresh
+            </button>
+          </div>
+
+          {requestResult && (
+            <div style={{ 
+              padding: "12px", borderRadius: 10, marginBottom: 12, 
+              background: requestResult.startsWith("✓") || requestResult.includes("📋") ? colors.greenLight : colors.redBg, 
+              border: `1px solid ${requestResult.startsWith("✓") || requestResult.includes("📋") ? colors.greenBorder : colors.redBorder}`, 
+              fontSize: 12, 
+              color: requestResult.startsWith("✓") || requestResult.includes("📋") ? colors.green : colors.red,
+              whiteSpace: "pre-wrap" 
+            }}>
+              {requestResult}
+            </div>
+          )}
+
+          {requestsLoading ? (
+            <div style={{ fontSize: 13, color: colors.textFaint, padding: "20px 0", textAlign: "center" }}>Loading requests…</div>
+          ) : requests.length === 0 ? (
+            <div style={{ fontSize: 13, color: colors.textFaint, padding: "20px 0", textAlign: "center", fontStyle: "italic", fontFamily: "Georgia, serif" }}>No vendor requests yet.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {requests.map(request => {
+                const isPending = request.status === "pending";
+                const isBusy = requestBusy.has(request.id);
+                return (
+                  <div key={request.id}
+                    style={{ 
+                      background: isPending ? colors.surface : colors.bg, 
+                      border: `1px solid ${isPending ? colors.border : colors.textFaint}`, 
+                      borderRadius: 12, padding: "14px 16px", 
+                      opacity: isPending ? 1 : 0.6
+                    }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: colors.textPrimary, marginBottom: 4 }}>
+                          {request.name}
+                        </div>
+                        <div style={{ fontSize: 12, color: colors.textMid, marginBottom: 2 }}>
+                          {request.email}
+                        </div>
+                        <div style={{ fontSize: 11, color: colors.textMuted }}>
+                          {request.booth_number ? `Booth ${request.booth_number}` : "No booth specified"} • {request.mall_name || "No mall specified"}
+                        </div>
+                        <div style={{ fontSize: 10, color: colors.textFaint, fontFamily: "monospace", marginTop: 4 }}>
+                          {new Date(request.created_at).toLocaleDateString()} • {request.status}
+                        </div>
+                      </div>
+                      
+                      {isPending && (
+                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                          <button 
+                            onClick={() => copyEmailTemplate(request)}
+                            disabled={isBusy}
+                            style={{ 
+                              padding: "6px 8px", borderRadius: 8, fontSize: 11, 
+                              background: "none", color: colors.textMuted, 
+                              border: `1px solid ${colors.border}`, cursor: "pointer",
+                              opacity: isBusy ? 0.5 : 1, display: "flex", alignItems: "center", gap: 4 
+                            }}>
+                            <Copy size={10} />
+                          </button>
+                          <button 
+                            onClick={() => approveVendorRequest(request)}
+                            disabled={isBusy}
+                            style={{ 
+                              padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 500,
+                              background: colors.green, color: "#fff", border: "none", cursor: "pointer",
+                              opacity: isBusy ? 0.5 : 1, display: "flex", alignItems: "center", gap: 4 
+                            }}>
+                            <UserCheck size={11} /> {isBusy ? "..." : "Approve"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Posts Tab */}
+      {activeTab === "posts" && (
+        <div style={{ margin: "24px 20px 0" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2px" }}>
+              All posts ({posts.length})
+            </div>
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <button onClick={fetchPosts} disabled={loading || busy}
+                style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: colors.textMuted }}>
+                <RefreshCw size={11} style={{ opacity: loading ? 0.4 : 1 }} /> Refresh
+              </button>
+              {posts.length > 0 && (
+                <button onClick={toggleAll}
+                  style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: colors.textMid }}>
+                  {allSelected ? <CheckSquare size={13} style={{ color: colors.green }} /> : <Square size={13} />}
+                  {allSelected ? "Deselect all" : "Select all"}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {result && (
+            <div style={{ padding: "10px 12px", borderRadius: 9, marginBottom: 12, background: result.startsWith("✓") ? colors.greenLight : colors.redBg, border: `1px solid ${result.startsWith("✓") ? colors.greenBorder : colors.redBorder}`, fontSize: 12, color: result.startsWith("✓") ? colors.green : colors.red }}>
+              {result}
+            </div>
+          )}
+
+          {loading ? (
+            <div style={{ fontSize: 13, color: colors.textFaint, padding: "20px 0", textAlign: "center" }}>Loading…</div>
+          ) : posts.length === 0 ? (
+            <div style={{ fontSize: 13, color: colors.textFaint, padding: "20px 0", textAlign: "center", fontStyle: "italic", fontFamily: "Georgia, serif" }}>No posts in database.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {posts.map(post => {
+                const isSel = selected.has(post.id);
+                return (
+                  <div key={post.id} onClick={() => toggleSelect(post.id)}
+                    style={{ background: isSel ? colors.greenLight : colors.surface, border: `1px solid ${isSel ? colors.greenBorder : colors.border}`, borderRadius: 11, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", transition: "background 0.15s, border-color 0.15s" }}>
+                    {isSel ? <CheckSquare size={15} style={{ color: colors.green, flexShrink: 0 }} /> : <Square size={15} style={{ color: colors.textFaint, flexShrink: 0 }} />}
+                    {post.image_url && <img src={post.image_url} alt="" style={{ width: 36, height: 36, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: colors.textPrimary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{post.title}</div>
+                      <div style={{ fontSize: 10, color: colors.textMuted, marginTop: 1 }}>{post.vendor?.display_name ?? "no vendor"} · {post.status}</div>
+                      <div style={{ fontSize: 9, color: colors.textFaint, fontFamily: "monospace", marginTop: 1 }}>vendor_id: {post.vendor_id?.slice(0, 12)}…</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Action bar - only show for posts tab */}
+      {activeTab === "posts" && (selected.size > 0 || posts.length > 0) && (
         <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: colors.header, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderTop: `1px solid ${colors.border}`, padding: "12px 20px", paddingBottom: "max(16px, env(safe-area-inset-bottom, 16px))", display: "flex", gap: 10 }}>
           {selected.size > 0 && (
             <button onClick={deleteSelected} disabled={busy}

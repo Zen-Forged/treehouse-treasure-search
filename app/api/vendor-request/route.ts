@@ -23,6 +23,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+// ---------------------------------------------------------------------------
+// Error logging utility
+// ---------------------------------------------------------------------------
+function logError(message: string, context: { ip: string; error?: any; details?: Record<string, any> }) {
+  const timestamp = new Date().toISOString();
+  const { ip, error, details = {} } = context;
+  
+  console.error(`[vendor-request] ${timestamp} - ${message}`, {
+    ip,
+    userAgent: context.details?.userAgent || 'unknown',
+    error: error instanceof Error ? {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    } : error,
+    ...details
+  });
+}
+
 // Simple in-memory rate limiter — max 3 requests per IP per 10 minutes
 const attempts = new Map<string, { count: number; reset: number }>();
 function rateLimit(ip: string): boolean {
@@ -39,58 +58,127 @@ function rateLimit(ip: string): boolean {
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "unknown";
+  const userAgent = req.headers.get("user-agent") || "unknown";
+  
   if (!rateLimit(ip)) {
+    logError("Rate limit exceeded", {
+      ip,
+      details: { userAgent, rateLimitMaxRequests: 3, rateLimitWindowMinutes: 10 }
+    });
+    
     return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
   }
 
-  const body = await req.json().catch(() => ({}));
-  const { name, email, booth_number, mall_id, mall_name } = body;
+  try {
+    const body = await req.json().catch((parseError) => {
+      logError("JSON parse error", { 
+        ip, 
+        error: parseError,
+        details: { userAgent, contentType: req.headers.get("content-type") }
+      });
+      throw new Error("Invalid JSON body");
+    });
+    
+    const { name, email, booth_number, mall_id, mall_name } = body;
 
-  if (!name?.trim() || !email?.trim()) {
-    return NextResponse.json({ error: "Name and email are required." }, { status: 400 });
+    if (!name?.trim() || !email?.trim()) {
+      logError("Validation error: missing required fields", {
+        ip,
+        details: { 
+          userAgent, 
+          hasName: !!name?.trim(), 
+          hasEmail: !!email?.trim(),
+          boothNumber: booth_number || null,
+          mallName: mall_name || null
+        }
+      });
+      
+      return NextResponse.json({ error: "Name and email are required." }, { status: 400 });
+    }
+
+    // Basic email format check
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      logError("Validation error: invalid email format", {
+        ip,
+        details: { 
+          userAgent, 
+          emailLength: email.length,
+          name: name.trim()
+        }
+      });
+      
+      return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
+    }
+
+    const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+    const serviceKey   = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+    const adminEmail   = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
+
+    if (!supabaseUrl || !serviceKey) {
+      logError("Configuration error: missing Supabase environment variables", {
+        ip,
+        error: new Error("Missing required environment variables"),
+        details: { 
+          userAgent,
+          hasSupabaseUrl: !!supabaseUrl,
+          hasServiceKey: !!serviceKey,
+          hasAdminEmail: !!adminEmail
+        }
+      });
+      
+      return NextResponse.json({ error: "Service unavailable." }, { status: 503 });
+    }
+
+    // Use service role to bypass RLS on vendor_requests
+    const supabase = createClient(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const insertPayload = {
+      name:         name.trim(),
+      email:        email.trim().toLowerCase(),
+      booth_number: booth_number?.trim() || null,
+      mall_id:      mall_id || null,
+      mall_name:    mall_name?.trim() || null,
+      status:       "pending",
+    };
+
+    const { error: insertError } = await supabase.from("vendor_requests").insert(insertPayload);
+
+    if (insertError) {
+      logError("Database insert error", {
+        ip,
+        error: insertError,
+        details: { 
+          userAgent,
+          insertPayload: { ...insertPayload, email: "[redacted]" }, // Don't log email in error context
+          errorCode: insertError.code,
+          errorDetails: insertError.details,
+          errorHint: insertError.hint
+        }
+      });
+      
+      return NextResponse.json({ error: "Could not save your request. Please try again." }, { status: 500 });
+    }
+
+    // Success logging and notification
+    console.log(
+      `[vendor-request] ${new Date().toISOString()} - New request from ${name} (${email}) — ` +
+      `Booth: ${booth_number || "not specified"} — Mall: ${mall_name || "not specified"} — IP: ${ip}`
+    );
+
+    // TODO Sprint 4: Send email via Resend
+    // await sendAdminNotification({ name, email, booth_number, mall_name, adminEmail });
+
+    return NextResponse.json({ ok: true });
+    
+  } catch (err) {
+    logError("Unexpected error", {
+      ip,
+      error: err,
+      details: { userAgent }
+    });
+    
+    return NextResponse.json({ error: "An unexpected error occurred. Please try again." }, { status: 500 });
   }
-
-  // Basic email format check
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-    return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
-  }
-
-  const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  const serviceKey   = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
-  const adminEmail   = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
-
-  if (!supabaseUrl || !serviceKey) {
-    console.error("[vendor-request] Missing Supabase env vars");
-    return NextResponse.json({ error: "Service unavailable." }, { status: 503 });
-  }
-
-  // Use service role to bypass RLS on vendor_requests
-  const supabase = createClient(supabaseUrl, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-
-  const { error: insertError } = await supabase.from("vendor_requests").insert({
-    name:         name.trim(),
-    email:        email.trim().toLowerCase(),
-    booth_number: booth_number?.trim() || null,
-    mall_id:      mall_id || null,
-    mall_name:    mall_name?.trim() || null,
-    status:       "pending",
-  });
-
-  if (insertError) {
-    console.error("[vendor-request] Insert error:", insertError.message);
-    return NextResponse.json({ error: "Could not save your request. Please try again." }, { status: 500 });
-  }
-
-  // Notify admin — log to console (upgrade to Resend/SendGrid in Sprint 4)
-  console.log(
-    `[vendor-request] New request from ${name} (${email}) — ` +
-    `Booth: ${booth_number || "not specified"} — Mall: ${mall_name || "not specified"}`
-  );
-
-  // TODO Sprint 4: Send email via Resend
-  // await sendAdminNotification({ name, email, booth_number, mall_name, adminEmail });
-
-  return NextResponse.json({ ok: true });
 }

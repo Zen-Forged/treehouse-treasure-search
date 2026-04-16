@@ -181,6 +181,77 @@ export async function getVendorById(id: string): Promise<Vendor | null> {
 }
 
 /**
+ * Look up vendor records that match a given email in vendor_requests.
+ * Used by setup flow to find the vendor account created by admin for this email.
+ * Searches by cross-referencing with vendor_requests table entries.
+ * Returns null if no matching vendor found or vendor already has user_id linked.
+ */
+export async function getVendorByEmail(email: string): Promise<Vendor | null> {
+  try {
+    // Query vendor_requests to get name and mall info for this email
+    const { data: requests, error: requestError } = await supabase
+      .from("vendor_requests")
+      .select("name, mall_id, booth_number, mall_name")
+      .eq("email", email.trim().toLowerCase())
+      .eq("status", "pending");
+    
+    if (requestError || !requests || requests.length === 0) {
+      console.error("[posts] getVendorByEmail: no pending requests found for", email);
+      return null;
+    }
+    
+    // Use the most recent request (in case of duplicates)
+    const request = requests[0];
+    
+    // Look for vendor by name and mall - admin may have created vendor from this request
+    const { data, error } = await supabase
+      .from("vendors")
+      .select(`*, mall:malls ( id, name, city, state, slug, address )`)
+      .eq("display_name", request.name)
+      .eq("mall_id", request.mall_id)
+      .is("user_id", null) // Only return unlinked vendor accounts
+      .maybeSingle();
+    
+    if (error) { 
+      console.error("[posts] getVendorByEmail vendor lookup:", error.message); 
+      return null; 
+    }
+    
+    return data as Vendor | null;
+  } catch (err) {
+    console.error("[posts] getVendorByEmail exception:", err);
+    return null;
+  }
+}
+
+/**
+ * Link an existing vendor row to an authenticated user's user_id.
+ * Used by setup flow to claim a vendor account that was pre-created by admin.
+ * Returns updated vendor record with user_id populated.
+ */
+export async function linkVendorToUser(vendorId: string, userId: string): Promise<{ data: Vendor | null; error: string | null }> {
+  try {
+    const { data, error } = await supabase
+      .from("vendors")
+      .update({ user_id: userId })
+      .eq("id", vendorId)
+      .is("user_id", null) // Only link if not already linked
+      .select(`*, mall:malls ( id, name, city, state, slug, address )`)
+      .single();
+    
+    if (error) {
+      console.error("[posts] linkVendorToUser:", error.message);
+      return { data: null, error: error.message };
+    }
+    
+    return { data: data as Vendor, error: null };
+  } catch (err) {
+    console.error("[posts] linkVendorToUser exception:", err);
+    return { data: null, error: String(err) };
+  }
+}
+
+/**
  * Fetch all vendors at a given mall, sorted by booth number.
  * Used by admin and internal lookups.
  */
@@ -252,12 +323,109 @@ export async function createVendor(input: CreateVendorInput): Promise<{ data: Ve
   };
 }
 
+/**
+ * Update a vendor's bio field.
+ * Used by the inline bio editor on My Booth page.
+ */
+export async function updateVendorBio(vendorId: string, bio: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("vendors")
+    .update({ bio: bio.trim() || null })
+    .eq("id", vendorId);
+  if (error) { console.error("[posts] updateVendorBio:", error.message); return false; }
+  return true;
+}
+
 export function slugify(name: string): string {
   return name.toLowerCase().trim()
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .slice(0, 50);
+}
+
+// ── VENDOR REQUESTS ───────────────────────────────────────────────────────────
+
+/**
+ * Fetch all pending vendor requests for admin review.
+ * Returns requests in reverse chronological order (newest first).
+ */
+export async function getVendorRequests(): Promise<Array<{
+  id: string;
+  name: string;
+  email: string;
+  booth_number: string | null;
+  mall_id: string | null;
+  mall_name: string | null;
+  status: string;
+  created_at: string;
+}>> {
+  const { data, error } = await supabase
+    .from("vendor_requests")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(50);
+  
+  if (error) { 
+    console.error("[posts] getVendorRequests:", error.message); 
+    return []; 
+  }
+  
+  return data ?? [];
+}
+
+/**
+ * Create a vendor account from an approved vendor request.
+ * Used by admin to convert pending requests into actual vendor accounts.
+ * Does NOT link user_id - that happens during setup flow.
+ */
+export async function createVendorFromRequest(request: {
+  name: string;
+  email: string;
+  booth_number: string | null;
+  mall_id: string;
+  mall_name: string | null;
+}): Promise<{ data: Vendor | null; error: string | null }> {
+  const slug = slugify(request.name);
+  
+  const vendorInput: CreateVendorInput = {
+    mall_id: request.mall_id,
+    display_name: request.name,
+    booth_number: request.booth_number || undefined,
+    slug,
+    // user_id is intentionally omitted - gets linked during setup
+  };
+  
+  const result = await createVendor(vendorInput);
+  
+  if (result.data) {
+    console.log("[posts] createVendorFromRequest: created vendor", {
+      vendor_id: result.data.id,
+      name: request.name,
+      email: request.email,
+      booth: request.booth_number,
+    });
+  }
+  
+  return result;
+}
+
+/**
+ * Mark a vendor request as approved.
+ * Used after admin creates vendor account from the request.
+ */
+export async function markVendorRequestApproved(requestId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("vendor_requests")
+    .update({ status: "approved" })
+    .eq("id", requestId);
+  
+  if (error) { 
+    console.error("[posts] markVendorRequestApproved:", error.message); 
+    return false; 
+  }
+  
+  return true;
 }
 
 // ── MALLS ─────────────────────────────────────────────────────────────────────

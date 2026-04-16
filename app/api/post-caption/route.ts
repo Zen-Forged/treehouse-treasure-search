@@ -44,6 +44,25 @@ function getClientIp(req: NextRequest): string {
 }
 
 // ---------------------------------------------------------------------------
+// Error logging utility
+// ---------------------------------------------------------------------------
+function logError(message: string, context: { ip: string; error?: any; details?: Record<string, any> }) {
+  const timestamp = new Date().toISOString();
+  const { ip, error, details = {} } = context;
+  
+  console.error(`[post-caption] ${timestamp} - ${message}`, {
+    ip,
+    userAgent: context.details?.userAgent || 'unknown',
+    error: error instanceof Error ? {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    } : error,
+    ...details
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Mock fallback — used when ANTHROPIC_API_KEY is absent or Claude fails
 // ---------------------------------------------------------------------------
 const MOCK_RESPONSES = [
@@ -60,9 +79,16 @@ const MOCK_RESPONSES = [
 export async function POST(req: NextRequest) {
   // Rate limit check
   const ip = getClientIp(req);
+  const userAgent = req.headers.get("user-agent") || "unknown";
+  
   const { allowed, remaining, resetInMs } = checkRateLimit(ip);
 
   if (!allowed) {
+    logError("Rate limit exceeded", { 
+      ip, 
+      details: { userAgent, rateLimitRemaining: 0, resetInMs } 
+    });
+    
     return NextResponse.json(
       { error: "Too many requests. Please wait a moment before trying again." },
       {
@@ -78,10 +104,24 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { imageDataUrl } = await req.json();
+    const body = await req.json().catch((parseError) => {
+      logError("JSON parse error", { 
+        ip, 
+        error: parseError,
+        details: { userAgent, contentType: req.headers.get("content-type") }
+      });
+      throw new Error("Invalid JSON body");
+    });
+    
+    const { imageDataUrl } = body;
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
     if (!apiKey) {
+      logError("API key not configured, using mock response", { 
+        ip,
+        details: { userAgent, hasImage: !!imageDataUrl }
+      });
+      
       const mock = MOCK_RESPONSES[Math.floor(Math.random() * MOCK_RESPONSES.length)];
       return NextResponse.json(mock, {
         headers: { "X-RateLimit-Remaining": String(remaining) },
@@ -124,14 +164,28 @@ Example: {"title":"Vintage brass candlestick","caption":"Carries its age quietly
       .replace(/^```json\s*/i, "")
       .replace(/\s*```$/, "");
 
-    const parsed = JSON.parse(raw) as { title: string; caption: string };
-    return NextResponse.json(
-      { title: parsed.title ?? "", caption: parsed.caption ?? "" },
-      { headers: { "X-RateLimit-Remaining": String(remaining) } }
-    );
+    try {
+      const parsed = JSON.parse(raw) as { title: string; caption: string };
+      return NextResponse.json(
+        { title: parsed.title ?? "", caption: parsed.caption ?? "" },
+        { headers: { "X-RateLimit-Remaining": String(remaining) } }
+      );
+    } catch (parseError) {
+      logError("Claude response JSON parse error", {
+        ip,
+        error: parseError,
+        details: { userAgent, claudeResponse: raw.slice(0, 200) }
+      });
+      throw parseError;
+    }
 
   } catch (err) {
-    console.error("[post-caption]", err);
+    logError("Unexpected error", {
+      ip,
+      error: err,
+      details: { userAgent }
+    });
+    
     const mock = MOCK_RESPONSES[Math.floor(Math.random() * MOCK_RESPONSES.length)];
     return NextResponse.json(mock);
   }

@@ -304,6 +304,13 @@ function MyBoothInner() {
 
   async function handleHeroImageChange(file: File) {
     if (!activeVendor?.id) return;
+    
+    // Size guard: reject files larger than 12MB
+    if (file.size > 12_000_000) {
+      setHeroError("Image too large. Please choose a photo smaller than 12MB.");
+      return;
+    }
+    
     setHeroUploading(true);
     setHeroError(null);
     heroLockedRef.current = true;
