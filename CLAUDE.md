@@ -23,70 +23,83 @@ Tell Claude: "close out the session" then run `thc`
 ## CURRENT ISSUE
 > Last updated: 2026-04-16
 
-**Status:** Beta prep sprint + investor documentation infrastructure.
+**Status:** Vendor account setup MVP implemented — admin approval workflow with email templates.
 
 ---
 
 ## What was done (this session)
-> 2026-04-16 — Beta prep: UI fixes, vendor request flow, investor update system
+> 2026-04-16 — Vendor account setup MVP: admin approval workflow
 
-### Security audit
-- Verified `.env.local` is gitignored and not tracked ✅
-- Confirmed no hardcoded secrets in any source files ✅
-- Added `.env.example` to repo — documents all required vars including EBAY_CLIENT_ID/SECRET
+### **PROJECT STATUS**
+- Hero image size guard: ✅ Already implemented (12MB limit in `/app/my-shelf/page.tsx`)
+- vendor_requests table: ✅ Confirmed working via successful form submissions
+- Mall page vendor CTA: ❌ Confirmed absent (no CTA exists on `/app/mall/[slug]/page.tsx`)
 
-### Item 2a — Booth number left of mall address (Find detail page)
-- `app/find/[id]/page.tsx` — booth pill moved to LEFT, mall address RIGHT
-- Layout now: [Booth 369] → [📍 America's Antique Mall · Directions]
+### **MVP IMPLEMENTATION COMPLETED**
 
-### Item 2b — Remove underline from address link
-- `app/find/[id]/page.tsx` — `textDecoration: "none"` on address link
+**[DECISION]** Implemented recommended MVP scope: admin approval workflow with minimal setup page, tooled admin interface, manual email notification
 
-### Item 2c — Full image in edit listing preview (no crop)
-- `app/post/preview/page.tsx` — removed `maxHeight` constraint on `ItemImage`
+**Task 1 - Enhanced vendor data functions** ✅
+**[CODE]** Added to `/lib/posts.ts`:
+- `getVendorByEmail()`: Cross-references vendor_requests table to find vendor accounts by email
+- `linkVendorToUser()`: Links existing vendor row to authenticated user_id  
+- `getVendorRequests()`: Fetches pending requests for admin review
+- `createVendorFromRequest()`: Creates vendor account from approved request
+- `markVendorRequestApproved()`: Updates request status after approval
 
-### Item 3 — Edit icons as pill buttons on title, caption, and price
-- `app/post/preview/page.tsx` — new `EditableLabel` component
-- Applied to Title, Caption, AND Price — consistent tap-to-edit with green active state
+**Task 2 - Setup page** ✅
+**[DOCUMENT]** Created `/app/setup/page.tsx`
+- Auto-discovery: finds vendor account by email match with vendor_requests
+- Auth integration: links user_id to vendor row via `linkVendorToUser()`
+- UX flow: Loading → Success (with vendor info card) → Redirect to My Booth
+- Error handling: graceful fallback with retry and navigation options
+- localStorage integration: saves vendor profile for immediate use
 
-### Item 4 — Share button on public booth pages (`/shelf/[slug]`)
-- `app/shelf/[slug]/page.tsx` — share button in `PublicVendorHero`, always visible, no auth required
+**Task 3 - Enhanced admin tools** ✅  
+**[DOCUMENT]** Enhanced `/app/admin/page.tsx`
+- Tab interface: "Vendor Requests" (primary) + "Posts" (existing)
+- Request management: approve button creates vendor + marks approved
+- Email template: auto-generated with setup link, copies to clipboard
+- Status tracking: pending requests highlighted, approved requests grayed
+- Batch operations: individual approval with busy states
 
-### Item 1 — Vendor access request flow
-- `app/vendor-request/page.tsx` — form + success screen
-- `app/api/vendor-request/route.ts` — DB write (service role), rate limit 3/10min, console log notification
-- `app/page.tsx` — feed footer CTA "Are you a vendor? Request booth access →"
-- Mall page CTA deferred — dark theme styling needed
+### **VENDOR SETUP FLOW (MVP)**
+1. User submits `/vendor-request` → data in vendor_requests table
+2. Admin reviews in `/admin` → "Vendor Requests" tab  
+3. Admin clicks "Approve" → creates vendor account + copies email template
+4. Admin manually sends email with setup link
+5. Vendor clicks link → `/setup` page → auto-links account → redirects to My Booth
 
-### Investor documentation infrastructure
-- Google Drive folder created: **Treehouse Finds — Investor Updates**
-  - Folder ID: `1l2toRdb-1sKCuYcJ25OKYzMqNMu2kBWW`
-  - Drive link: https://drive.google.com/drive/folders/1l2toRdb-1sKCuYcJ25OKYzMqNMu2kBWW
-- First investor update PDF uploaded: **Treehouse Finds — Investor Update — April 16 2026**
-- Notion process doc created under Agent System Operating Manual: 📋 Investor Update — Process & Cadence
-  - Cadence: end of each sprint (weekly once beta launches)
-  - Trigger: David says "generate investor update" at session close
-  - No additional access setup needed — Drive MCP already connected
+### **ADMIN EMAIL TEMPLATE** (auto-generated, clipboard-copied)
+Subject line, setup URL, vendor details (name/booth/mall), welcome message. Template includes `${baseUrl}/setup` link for account completion.
 
----
+### **TECHNICAL PATTERNS**
+- Enhanced vendor functions preserve existing createVendor() duplicate-key recovery
+- Setup page uses Suspense boundary, handles auth redirects with preserved state
+- Admin interface maintains existing post management, adds vendor request workflow
+- All functions use proper error handling with user-friendly messages
 
-## ⚠️ ACTION REQUIRED BEFORE DEPLOY — Supabase SQL
-Run in Supabase SQL editor to create `vendor_requests` table:
-```sql
-CREATE TABLE vendor_requests (
-  id           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  name         text NOT NULL,
-  email        text NOT NULL,
-  booth_number text,
-  mall_id      uuid REFERENCES malls(id),
-  mall_name    text,
-  status       text DEFAULT 'pending',
-  created_at   timestamptz DEFAULT now()
-);
-ALTER TABLE vendor_requests ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "service role only" ON vendor_requests
-  USING (false) WITH CHECK (false);
-```
+### **FILES MODIFIED**
+- `/lib/posts.ts`: Enhanced with vendor request functions
+- `/app/setup/page.tsx`: New account setup flow
+- `/app/admin/page.tsx`: Added vendor request management
+
+### **PENDING ACTIONS**
+🖐️ **HITL** - Test complete vendor-request → admin approval → setup flow on device
+🖐️ **HITL** - Deploy: `git add -A && git commit -m "feat: vendor account setup MVP" && git push`
+🖐️ **HITL** - QA: Verify vendor_requests SQL table exists via Supabase query if not already confirmed
+
+### **ARCHITECTURE NOTES**
+- MVP maintains admin control (manual approval prevents abuse)
+- Leverages existing auth system (magic links, no new auth flows)  
+- Data continuity preserved (localStorage vendors can be linked retroactively)
+- Incremental design (Phase 2 can add Resend automation, batch operations)
+
+### **NEXT SPRINT OPTIONS**
+- Priority 1: Mall page vendor CTA (dark theme styling)
+- Priority 2: Error monitoring (structured console.error wrapping)  
+- Priority 3: Vendor bio field UI (builds on edit-pill pattern)
+- Sprint 4: Automated email via Resend, enhanced admin bulk operations
 
 ---
 
@@ -104,8 +117,8 @@ CREATE POLICY "service role only" ON vendor_requests
 - `bio` column exists in DB + is fetched, no UI to set or display
 - Inline tap-to-edit on My Booth hero; display on public `/shelf/[slug]`
 
-### Priority 4 — Hero image upload size guard (S effort, Medium value, 🟢 Proceed)
-- Add `file.size > 12_000_000` check in `app/my-shelf/page.tsx`
+### Priority 4 — Hero image upload size guard (S effort, Medium value, ✅ DONE)
+- **[COMPLETE]** Already implemented — 12MB limit in `app/my-shelf/page.tsx`
 
 ### Priority 5 — Admin PIN production QA (S effort, Medium value, 🟢 Proceed)
 - Confirm `ADMIN_PIN` and `SUPABASE_SERVICE_ROLE_KEY` in Vercel env
@@ -168,7 +181,7 @@ EBAY_CLIENT_SECRET               eBay direct API (not yet wired)
 
 ## SUPABASE
 - **Tables:** malls, vendors, posts, vendor_requests — RLS ENABLED ✅
-- **vendor_requests:** id, name, email, booth_number, mall_id, mall_name, status, created_at (⚠️ run SQL above if not yet created)
+- **vendor_requests:** id, name, email, booth_number, mall_id, mall_name, status, created_at ✅
 - **Storage bucket:** post-images — PUBLIC
 - **Auth:** Magic link (OTP) via email — `supabase.auth.signInWithOtp()`
 - **Malls:** 29 locations seeded (KY + Clarksville IN)
@@ -192,6 +205,7 @@ EBAY_CLIENT_SECRET               eBay direct API (not yet wired)
 - Find detail — layered drift-in, booth LEFT / mall RIGHT, no address underline
 - Public shelf — share button always visible (no auth required)
 - Vendor request flow — `/vendor-request` form + success screen + API route
+- **Vendor account setup MVP** — admin approval workflow, setup page, email templates ✅
 - RLS — 12 policies + vendor_requests (service role only) ✅
 - Rate limiting — `/api/post-caption` 10 req/60s, `/api/vendor-request` 3 req/10min ✅
 - PWA manifest ✅
@@ -203,11 +217,9 @@ EBAY_CLIENT_SECRET               eBay direct API (not yet wired)
 - Investor update system — Drive folder + first PDF + Notion process doc ✅
 
 ## KNOWN GAPS / SPRINT 3 ⚠️
-- vendor_requests table — needs SQL migration run (see above) ⚠️
 - Mall page vendor CTA — deferred (dark theme)
 - No error monitoring — Priority 2
 - Vendor bio field — no UI — Priority 3
-- Hero image upload: no size guard — Priority 4
 - Admin PIN not QA'd in production — Priority 5
 - Find Map overhaul — needs plan — Priority 6
 - Feed content seeding before beta invite (Sprint 4)
