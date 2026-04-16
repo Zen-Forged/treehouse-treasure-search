@@ -84,6 +84,15 @@ createVendor                       Handles 23505 duplicate key — do not revert
 env vars in Vercel functions       Must be read inside function bodies, not at module scope
 useSearchParams()                  Requires Suspense boundary
 New API route dirs                 Must be created in Terminal with mkdir -p before MCP can write
+Service-role-only tables           `vendor_requests` and any future service-role-only table MUST be
+                                   accessed via /api/* routes using requireAdmin or requireAuth from
+                                   lib/adminAuth.ts. NEVER via browser anon client — RLS silently
+                                   returns empty results with no error (broke vendor-request flow on
+                                   2026-04-16). Use authFetch() from lib/authFetch.ts on the client
+                                   to attach the bearer token.
+Admin API routes                   All /api/admin/* routes MUST call requireAdmin(req) server-side
+                                   as the first line of the handler. UI gating alone is not enough —
+                                   routes are directly reachable. No exceptions.
 ```
 
 ---
@@ -140,20 +149,24 @@ These don't stop work but must be called out explicitly before the session conti
 
 ## Current Risk Register
 
-> Updated: 2026-04-15 | Source: codebase audit
+> Updated: 2026-04-16 | Source: codebase audit + vendor-request flow fix
 
 | Risk | Severity | Status | Owner |
 |---|---|---|---|
 | RLS disabled on `malls`, `vendors`, `posts` | 🔴 High | ✅ Resolved 2026-04-15 — 12 policies live, stale policies cleaned up (003_cleanup_old_rls_policies.sql) | Dev agent |
 | No rate limiting on `/api/post-caption` | 🔴 High | ✅ Resolved 2026-04-15 — in-memory 10 req/60s per IP; upgrade to Upstash Redis at scale | Dev agent |
+| Vendor approval + setup flows silently blocked by RLS | 🔴 High | ✅ Resolved 2026-04-16 — moved admin reads/writes of `vendor_requests` to `/api/admin/vendor-requests` and `/api/setup/lookup-vendor` using service role; browser anon client is read-only for ecosystem data | Dev agent |
+| `/api/admin/*` routes had no server-side auth check | 🔴 High | ✅ Resolved 2026-04-16 — added `requireAdmin()` (bearer token + email match) to `/api/admin/posts` and `/api/admin/vendor-requests`; UI was the only gate before, routes were directly reachable | Dev agent |
 | No error monitoring (Sentry / structured logs) | 🟡 Medium | Open — Sprint 3 | Dev agent |
 | Bookmarks localStorage-only (ITP wipe risk) | 🟡 Medium | Open — Sprint 4 | Dev agent |
 | No automated testing | 🟡 Medium | Open — Strategy needed | Dev + Product agents |
 | Admin PIN not QA'd in production | 🟡 Medium | Open — quick curl test | Dev agent |
 | Public Storage bucket (`post-images`) | 🟡 Medium | Intentional — monitor | Dev agent |
 | No terms of service / privacy policy | 🟡 Medium | Open — before public launch | David |
+| Deprecated lib functions still in `lib/posts.ts` | 🟢 Low | Open — `getVendorByEmail`, `linkVendorToUser`, `getVendorRequests`, `createVendorFromRequest`, `markVendorRequestApproved` marked `@deprecated` 2026-04-16; remove once confirmed no other callers import them | Dev agent |
 | Feed pagination missing (flat 80-post fetch) | 🟢 Low | Open — Sprint 4 | Dev agent |
 | `/enhance-text` caption is mock (not real Claude call) | 🟢 Low | Open — future sprint | Dev agent |
+| `/api/debug-vendor-requests` left in production | 🟢 Low | Open — useful for QA; remove in a later cleanup sprint | Dev agent |
 
 ---
 
@@ -239,4 +252,4 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 ---
 > This document is the operating constitution for the Treehouse system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-15
+> Last updated: 2026-04-16

@@ -2,10 +2,12 @@
 // Admin — gated to NEXT_PUBLIC_ADMIN_EMAIL via Supabase Auth session.
 // Non-admin or unauth users see a sign-in prompt.
 //
-// Enhanced with vendor request management:
-//   - View pending vendor requests
-//   - Create vendor accounts from requests  
-//   - Copy email template for manual notification
+// All data access goes through server API routes (authFetch attaches the
+// bearer token for server-side requireAdmin gating):
+//   GET  /api/admin/posts              — list posts
+//   DEL  /api/admin/posts              — delete posts (selected or all)
+//   GET  /api/admin/vendor-requests    — list vendor requests
+//   POST /api/admin/vendor-requests    — { action: "approve", requestId }
 
 "use client";
 
@@ -15,7 +17,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, UserCheck, Copy, Users, Store } from "lucide-react";
 import { getSession, isAdmin, signOut } from "@/lib/auth";
-import { getVendorRequests, createVendorFromRequest, markVendorRequestApproved } from "@/lib/posts";
+import { authFetch } from "@/lib/authFetch";
 import { colors } from "@/lib/tokens";
 import type { User } from "@supabase/supabase-js";
 
@@ -70,9 +72,20 @@ export default function AdminPage() {
   async function fetchPosts() {
     setLoading(true);
     setResult(null);
-    const res  = await fetch("/api/admin/posts");
-    const json = await res.json();
-    setPosts(json.posts ?? []);
+    try {
+      const res  = await authFetch("/api/admin/posts");
+      const json = await res.json();
+      if (!res.ok) {
+        setResult(`Error: ${json.error || "Failed to load posts"}`);
+        setPosts([]);
+      } else {
+        setPosts(json.posts ?? []);
+      }
+    } catch (err) {
+      console.error("fetchPosts error:", err);
+      setResult("Error: Failed to load posts");
+      setPosts([]);
+    }
     setLoading(false);
   }
 
@@ -80,11 +93,18 @@ export default function AdminPage() {
     setRequestsLoading(true);
     setRequestResult(null);
     try {
-      const data = await getVendorRequests();
-      setRequests(data);
+      const res  = await authFetch("/api/admin/vendor-requests");
+      const json = await res.json();
+      if (!res.ok) {
+        setRequestResult(`Error: ${json.error || "Failed to load vendor requests"}`);
+        setRequests([]);
+      } else {
+        setRequests(json.requests ?? []);
+      }
     } catch (err) {
       console.error("Failed to fetch vendor requests:", err);
       setRequestResult("Error: Failed to load vendor requests");
+      setRequests([]);
     }
     setRequestsLoading(false);
   }
@@ -99,7 +119,10 @@ export default function AdminPage() {
   async function deleteSelected() {
     if (selected.size === 0 || busy) return;
     setBusy(true); setResult(null);
-    const res  = await fetch("/api/admin/posts", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: Array.from(selected) }) });
+    const res  = await authFetch("/api/admin/posts", {
+      method: "DELETE",
+      body: JSON.stringify({ ids: Array.from(selected) }),
+    });
     const json = await res.json();
     if (json.ok) {
       setResult(`✓ Deleted ${json.postsDeleted} post${json.postsDeleted !== 1 ? "s" : ""} + ${json.storageDeleted} image${json.storageDeleted !== 1 ? "s" : ""}`);
@@ -112,7 +135,10 @@ export default function AdminPage() {
   async function deleteAll() {
     if (busy) return;
     setBusy(true); setResult(null); setConfirmAll(false);
-    const res  = await fetch("/api/admin/posts", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deleteAll: true }) });
+    const res  = await authFetch("/api/admin/posts", {
+      method: "DELETE",
+      body: JSON.stringify({ deleteAll: true }),
+    });
     const json = await res.json();
     if (json.ok) {
       setResult(`✓ Nuked ${json.postsDeleted} post${json.postsDeleted !== 1 ? "s" : ""} + ${json.storageDeleted} image${json.storageDeleted !== 1 ? "s" : ""}`);
@@ -128,32 +154,23 @@ export default function AdminPage() {
     setRequestResult(null);
 
     try {
-      // Create vendor account from request
-      const result = await createVendorFromRequest({
-        name: request.name,
-        email: request.email,
-        booth_number: request.booth_number,
-        mall_id: request.mall_id!,
-        mall_name: request.mall_name,
+      const res = await authFetch("/api/admin/vendor-requests", {
+        method: "POST",
+        body: JSON.stringify({ action: "approve", requestId: request.id }),
       });
+      const json = await res.json();
 
-      if (result.error) {
-        setRequestResult(`Error creating vendor for ${request.name}: ${result.error}`);
+      if (!res.ok || !json.ok) {
+        setRequestResult(`Error approving ${request.name}: ${json.error || "Unknown error"}`);
         setRequestBusy(prev => { const next = new Set(prev); next.delete(request.id); return next; });
         return;
       }
 
-      // Mark request as approved
-      const marked = await markVendorRequestApproved(request.id);
-      if (!marked) {
-        setRequestResult(`Warning: Vendor created but failed to mark request as approved for ${request.name}`);
-      }
+      const warning = json.warning ? `\n⚠️ ${json.warning}` : "";
+      setRequestResult(`✓ Vendor account created for ${request.name}. Copy the email template below and send manually.${warning}`);
 
-      // Show email template
+      // Copy email template to clipboard
       const emailTemplate = generateEmailTemplate(request);
-      setRequestResult(`✓ Vendor account created for ${request.name}. Copy the email template below and send manually.`);
-      
-      // Copy email to clipboard
       try {
         await navigator.clipboard.writeText(emailTemplate);
         setRequestResult(prev => `${prev}\n\n📋 Email template copied to clipboard!`);
@@ -175,7 +192,7 @@ export default function AdminPage() {
   function generateEmailTemplate(request: VendorRequest): string {
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://treehouse-treasure-search.vercel.app";
     const setupUrl = `${baseUrl}/setup`;
-    
+
     return `Subject: Your Treehouse vendor account is ready!
 
 Hi ${request.name},
@@ -267,29 +284,29 @@ The Treehouse Team`;
 
       {/* Tab switcher */}
       <div style={{ margin: "20px 20px 0", display: "flex", gap: 8 }}>
-        <button 
+        <button
           onClick={() => setActiveTab("requests")}
-          style={{ 
+          style={{
             flex: 1, padding: "10px", borderRadius: 10, fontSize: 13, fontWeight: 500,
             background: activeTab === "requests" ? colors.green : "none",
             color: activeTab === "requests" ? "#fff" : colors.textMid,
             border: `1px solid ${activeTab === "requests" ? colors.green : colors.border}`,
             cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6
           }}>
-          <Users size={13} /> 
+          <Users size={13} />
           Vendor Requests {pendingRequests.length > 0 && (
-            <span style={{ 
-              background: activeTab === "requests" ? "rgba(255,255,255,0.2)" : colors.green, 
+            <span style={{
+              background: activeTab === "requests" ? "rgba(255,255,255,0.2)" : colors.green,
               color: activeTab === "requests" ? "#fff" : "#fff",
-              padding: "2px 6px", borderRadius: 10, fontSize: 10, fontWeight: 700 
+              padding: "2px 6px", borderRadius: 10, fontSize: 10, fontWeight: 700
             }}>
               {pendingRequests.length}
             </span>
           )}
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab("posts")}
-          style={{ 
+          style={{
             flex: 1, padding: "10px", borderRadius: 10, fontSize: 13, fontWeight: 500,
             background: activeTab === "posts" ? colors.green : "none",
             color: activeTab === "posts" ? "#fff" : colors.textMid,
@@ -314,13 +331,13 @@ The Treehouse Team`;
           </div>
 
           {requestResult && (
-            <div style={{ 
-              padding: "12px", borderRadius: 10, marginBottom: 12, 
-              background: requestResult.startsWith("✓") || requestResult.includes("📋") ? colors.greenLight : colors.redBg, 
-              border: `1px solid ${requestResult.startsWith("✓") || requestResult.includes("📋") ? colors.greenBorder : colors.redBorder}`, 
-              fontSize: 12, 
+            <div style={{
+              padding: "12px", borderRadius: 10, marginBottom: 12,
+              background: requestResult.startsWith("✓") || requestResult.includes("📋") ? colors.greenLight : colors.redBg,
+              border: `1px solid ${requestResult.startsWith("✓") || requestResult.includes("📋") ? colors.greenBorder : colors.redBorder}`,
+              fontSize: 12,
               color: requestResult.startsWith("✓") || requestResult.includes("📋") ? colors.green : colors.red,
-              whiteSpace: "pre-wrap" 
+              whiteSpace: "pre-wrap"
             }}>
               {requestResult}
             </div>
@@ -337,10 +354,10 @@ The Treehouse Team`;
                 const isBusy = requestBusy.has(request.id);
                 return (
                   <div key={request.id}
-                    style={{ 
-                      background: isPending ? colors.surface : colors.bg, 
-                      border: `1px solid ${isPending ? colors.border : colors.textFaint}`, 
-                      borderRadius: 12, padding: "14px 16px", 
+                    style={{
+                      background: isPending ? colors.surface : colors.bg,
+                      border: `1px solid ${isPending ? colors.border : colors.textFaint}`,
+                      borderRadius: 12, padding: "14px 16px",
                       opacity: isPending ? 1 : 0.6
                     }}>
                     <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
@@ -358,27 +375,27 @@ The Treehouse Team`;
                           {new Date(request.created_at).toLocaleDateString()} • {request.status}
                         </div>
                       </div>
-                      
+
                       {isPending && (
                         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                          <button 
+                          <button
                             onClick={() => copyEmailTemplate(request)}
                             disabled={isBusy}
-                            style={{ 
-                              padding: "6px 8px", borderRadius: 8, fontSize: 11, 
-                              background: "none", color: colors.textMuted, 
+                            style={{
+                              padding: "6px 8px", borderRadius: 8, fontSize: 11,
+                              background: "none", color: colors.textMuted,
                               border: `1px solid ${colors.border}`, cursor: "pointer",
-                              opacity: isBusy ? 0.5 : 1, display: "flex", alignItems: "center", gap: 4 
+                              opacity: isBusy ? 0.5 : 1, display: "flex", alignItems: "center", gap: 4
                             }}>
                             <Copy size={10} />
                           </button>
-                          <button 
+                          <button
                             onClick={() => approveVendorRequest(request)}
                             disabled={isBusy}
-                            style={{ 
+                            style={{
                               padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 500,
                               background: colors.green, color: "#fff", border: "none", cursor: "pointer",
-                              opacity: isBusy ? 0.5 : 1, display: "flex", alignItems: "center", gap: 4 
+                              opacity: isBusy ? 0.5 : 1, display: "flex", alignItems: "center", gap: 4
                             }}>
                             <UserCheck size={11} /> {isBusy ? "..." : "Approve"}
                           </button>

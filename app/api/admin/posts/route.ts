@@ -1,31 +1,38 @@
 // app/api/admin/posts/route.ts
+// Admin-gated endpoint for managing posts.
+// Gated by requireAdmin (server-side check of bearer token + email match).
+// Prior to 2026-04-16 this route had no server-side auth check — the UI was
+// the only gate, which meant any authenticated user could hit it directly.
+// Closed via lib/adminAuth.ts.
+
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { requireAdmin } from "@/lib/adminAuth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const url  = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anon) return NextResponse.json({ error: "Missing env vars" }, { status: 500 });
-  const supabase = createClient(url, anon);
-  const { data, error } = await supabase
+export async function GET(req: Request) {
+  const auth = await requireAdmin(req);
+  if (!auth.ok) return auth.response;
+
+  const { data, error } = await auth.service
     .from("posts")
-    .select("id, title, status, image_url, vendor_id, created_at, vendor:vendors(id, display_name, booth_number)")
+    .select(
+      "id, title, status, image_url, vendor_id, created_at, vendor:vendors(id, display_name, booth_number)"
+    )
     .order("created_at", { ascending: false });
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ posts: data ?? [] });
 }
 
 export async function DELETE(req: Request) {
-  const url  = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anon) return NextResponse.json({ error: "Missing env vars" }, { status: 500 });
-  const supabase = createClient(url, anon);
-  const body = await req.json() as { ids?: string[]; deleteAll?: boolean };
+  const auth = await requireAdmin(req);
+  if (!auth.ok) return auth.response;
+
+  const body = (await req.json()) as { ids?: string[]; deleteAll?: boolean };
   const { ids, deleteAll } = body;
 
-  const fetchQuery = supabase.from("posts").select("id, image_url");
+  const fetchQuery = auth.service.from("posts").select("id, image_url");
   const { data: posts, error: fetchErr } = deleteAll
     ? await fetchQuery.neq("id", "00000000-0000-0000-0000-000000000000")
     : await fetchQuery.in("id", ids ?? []);
@@ -40,11 +47,13 @@ export async function DELETE(req: Request) {
   }
   let storageDeleted = 0;
   if (storagePaths.length > 0) {
-    const { data: removed } = await supabase.storage.from("post-images").remove(storagePaths);
+    const { data: removed } = await auth.service.storage
+      .from("post-images")
+      .remove(storagePaths);
     storageDeleted = removed?.length ?? 0;
   }
 
-  const deleteQuery = supabase.from("posts").delete({ count: "exact" });
+  const deleteQuery = auth.service.from("posts").delete({ count: "exact" });
   const { error: deleteErr, count } = deleteAll
     ? await deleteQuery.neq("id", "00000000-0000-0000-0000-000000000000")
     : await deleteQuery.in("id", ids ?? []);

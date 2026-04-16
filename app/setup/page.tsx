@@ -2,31 +2,31 @@
 // Vendor account setup page — links authenticated user to pre-created vendor account.
 //
 // FLOW:
-//   1. User lands here from email link after admin approval 
+//   1. User lands here from email link after admin approval
 //   2. Must be signed in (redirects to magic link if not)
-//   3. Auto-discover vendor account by email match with vendor_requests
-//   4. Link user_id to vendor row via linkVendorToUser()
+//   3. POST /api/setup/lookup-vendor — server-side: finds pending vendor_request
+//      by email, locates matching unlinked vendor row, sets user_id, returns vendor
+//   4. Save vendor profile to localStorage for immediate use
 //   5. Success: show vendor info card + redirect to My Booth
 //   6. Error: graceful fallback with retry and navigation options
-//
-// Uses localStorage to save vendor profile immediately for use across app.
-// Suspense boundary handles auth loading states with preserved return navigation.
 
 "use client";
+
+export const dynamic = "force-dynamic";
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Loader, ArrowRight, AlertCircle, RefreshCw } from "lucide-react";
-import { getVendorByEmail, linkVendorToUser } from "@/lib/posts";
 import { getUser } from "@/lib/auth";
+import { authFetch } from "@/lib/authFetch";
 import { safeStorage } from "@/lib/safeStorage";
 import type { Vendor } from "@/types/treehouse";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 
 const C = {
   bg:          "#f0ede6",
-  surface:     "#e8e4db", 
+  surface:     "#e8e4db",
   surfaceDeep: "#dedad0",
   border:      "rgba(26,26,24,0.1)",
   textPrimary: "#1a1a18",
@@ -55,6 +55,7 @@ function SetupContent() {
 
   useEffect(() => {
     setupVendorAccount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const setupVendorAccount = async () => {
@@ -71,42 +72,39 @@ function SetupContent() {
 
       setState("linking");
 
-      // Look for vendor account by email match
-      const vendor = await getVendorByEmail(user.email);
-      if (!vendor) {
-        setResult({ 
-          errorMessage: "No vendor account found for this email. Contact admin if you believe this is an error."
+      // Server-side lookup + link in one call
+      const res = await authFetch("/api/setup/lookup-vendor", {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      const json = await res.json();
+
+      if (!res.ok || !json.ok || !json.vendor) {
+        setResult({
+          errorMessage: json.error || "Failed to set up vendor account."
         });
         setState("error");
         return;
       }
 
-      // Link the vendor account to this user
-      const linkResult = await linkVendorToUser(vendor.id, user.id);
-      if (linkResult.error || !linkResult.data) {
-        setResult({ 
-          errorMessage: linkResult.error || "Failed to link vendor account"
-        });
-        setState("error");
-        return;
-      }
+      const vendor = json.vendor as Vendor;
 
       // Save vendor profile to localStorage for immediate app use
       const profile: LocalVendorProfile = {
-        display_name: linkResult.data.display_name,
-        booth_number: linkResult.data.booth_number || "",
-        mall_id: linkResult.data.mall_id,
-        mall_name: linkResult.data.mall?.name || "",
-        mall_city: linkResult.data.mall?.city || "",
-        vendor_id: linkResult.data.id,
-        slug: linkResult.data.slug,
-        facebook_url: linkResult.data.facebook_url || undefined,
+        display_name: vendor.display_name,
+        booth_number: vendor.booth_number || "",
+        mall_id: vendor.mall_id,
+        mall_name: vendor.mall?.name || "",
+        mall_city: vendor.mall?.city || "",
+        vendor_id: vendor.id,
+        slug: vendor.slug,
+        facebook_url: vendor.facebook_url || undefined,
         user_id: user.id,
       };
-      
+
       safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(profile));
 
-      setResult({ vendor: linkResult.data });
+      setResult({ vendor });
       setState("success");
 
       // Auto-redirect to My Booth after 3 seconds
@@ -116,7 +114,7 @@ function SetupContent() {
 
     } catch (error) {
       console.error("[setup] setupVendorAccount error:", error);
-      setResult({ 
+      setResult({
         errorMessage: "An unexpected error occurred. Please try again."
       });
       setState("error");
@@ -136,17 +134,17 @@ function SetupContent() {
   };
 
   return (
-    <div style={{ 
-      minHeight: "100vh", 
+    <div style={{
+      minHeight: "100vh",
       backgroundColor: C.bg,
       color: C.textPrimary,
     }}>
-      <div style={{ 
-        maxWidth: "500px", 
-        margin: "0 auto", 
+      <div style={{
+        maxWidth: "500px",
+        margin: "0 auto",
         padding: "80px 24px 40px",
       }}>
-        
+
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: "48px" }}>
           <h1 style={{
@@ -188,10 +186,10 @@ function SetupContent() {
                 exit={{ opacity: 0 }}
                 style={{ textAlign: "center" }}
               >
-                <Loader 
-                  size={48} 
+                <Loader
+                  size={48}
                   color={C.green}
-                  style={{ 
+                  style={{
                     marginBottom: "16px",
                     animation: "spin 1s linear infinite"
                   }}
@@ -204,8 +202,8 @@ function SetupContent() {
                 }}>
                   Finding your vendor account...
                 </h2>
-                <p style={{ 
-                  color: C.textMuted, 
+                <p style={{
+                  color: C.textMuted,
                   fontSize: "15px",
                   lineHeight: "1.4"
                 }}>
@@ -222,10 +220,10 @@ function SetupContent() {
                 exit={{ opacity: 0 }}
                 style={{ textAlign: "center" }}
               >
-                <Loader 
-                  size={48} 
+                <Loader
+                  size={48}
                   color={C.green}
-                  style={{ 
+                  style={{
                     marginBottom: "16px",
                     animation: "spin 1s linear infinite"
                   }}
@@ -238,8 +236,8 @@ function SetupContent() {
                 }}>
                   Linking your account...
                 </h2>
-                <p style={{ 
-                  color: C.textMuted, 
+                <p style={{
+                  color: C.textMuted,
                   fontSize: "15px",
                   lineHeight: "1.4"
                 }}>
@@ -283,9 +281,9 @@ function SetupContent() {
                 }}>
                   Welcome to Treehouse!
                 </h2>
-                
-                <p style={{ 
-                  color: C.textMuted, 
+
+                <p style={{
+                  color: C.textMuted,
                   fontSize: "15px",
                   marginBottom: "24px",
                   lineHeight: "1.4"
@@ -310,7 +308,7 @@ function SetupContent() {
                   }}>
                     {result.vendor.display_name}
                   </div>
-                  
+
                   {result.vendor.booth_number && (
                     <div style={{
                       fontSize: "14px",
@@ -320,7 +318,7 @@ function SetupContent() {
                       Booth #{result.vendor.booth_number}
                     </div>
                   )}
-                  
+
                   <div style={{
                     fontSize: "14px",
                     color: C.textMuted,
@@ -395,9 +393,9 @@ function SetupContent() {
                 }}>
                   Setup incomplete
                 </h2>
-                
-                <p style={{ 
-                  color: C.textMuted, 
+
+                <p style={{
+                  color: C.textMuted,
                   fontSize: "15px",
                   marginBottom: "20px",
                   lineHeight: "1.4"
@@ -430,7 +428,7 @@ function SetupContent() {
                     <RefreshCw size={14} />
                     Try Again
                   </button>
-                  
+
                   <button
                     onClick={handleGoHome}
                     style={{
@@ -478,8 +476,8 @@ function SetupContent() {
 export default function SetupPage() {
   return (
     <Suspense fallback={
-      <div style={{ 
-        minHeight: "100vh", 
+      <div style={{
+        minHeight: "100vh",
         backgroundColor: C.bg,
         display: "flex",
         alignItems: "center",

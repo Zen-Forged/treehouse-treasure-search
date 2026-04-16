@@ -181,10 +181,12 @@ export async function getVendorById(id: string): Promise<Vendor | null> {
 }
 
 /**
- * Look up vendor records that match a given email in vendor_requests.
- * Used by setup flow to find the vendor account created by admin for this email.
- * Searches by cross-referencing with vendor_requests table entries.
- * Returns null if no matching vendor found or vendor already has user_id linked.
+ * @deprecated Use POST /api/setup/lookup-vendor instead.
+ *
+ * This function uses the browser anon client, which is blocked by the
+ * service-role-only RLS policy on `vendor_requests`. It silently returns
+ * null for all callers. Left in place temporarily so any third caller
+ * doesn't break; will be removed in a future sprint.
  */
 export async function getVendorByEmail(email: string): Promise<Vendor | null> {
   try {
@@ -194,29 +196,27 @@ export async function getVendorByEmail(email: string): Promise<Vendor | null> {
       .select("name, mall_id, booth_number, mall_name")
       .eq("email", email.trim().toLowerCase())
       .eq("status", "pending");
-    
+
     if (requestError || !requests || requests.length === 0) {
       console.error("[posts] getVendorByEmail: no pending requests found for", email);
       return null;
     }
-    
-    // Use the most recent request (in case of duplicates)
+
     const request = requests[0];
-    
-    // Look for vendor by name and mall - admin may have created vendor from this request
+
     const { data, error } = await supabase
       .from("vendors")
       .select(`*, mall:malls ( id, name, city, state, slug, address )`)
       .eq("display_name", request.name)
       .eq("mall_id", request.mall_id)
-      .is("user_id", null) // Only return unlinked vendor accounts
+      .is("user_id", null)
       .maybeSingle();
-    
-    if (error) { 
-      console.error("[posts] getVendorByEmail vendor lookup:", error.message); 
-      return null; 
+
+    if (error) {
+      console.error("[posts] getVendorByEmail vendor lookup:", error.message);
+      return null;
     }
-    
+
     return data as Vendor | null;
   } catch (err) {
     console.error("[posts] getVendorByEmail exception:", err);
@@ -225,9 +225,11 @@ export async function getVendorByEmail(email: string): Promise<Vendor | null> {
 }
 
 /**
- * Link an existing vendor row to an authenticated user's user_id.
- * Used by setup flow to claim a vendor account that was pre-created by admin.
- * Returns updated vendor record with user_id populated.
+ * @deprecated Use POST /api/setup/lookup-vendor instead.
+ *
+ * This function uses the browser anon client. In practice it only works for
+ * vendors whose RLS policy allows self-updates; consolidation into the
+ * server-side lookup endpoint closes the race window and simplifies the flow.
  */
 export async function linkVendorToUser(vendorId: string, userId: string): Promise<{ data: Vendor | null; error: string | null }> {
   try {
@@ -235,15 +237,15 @@ export async function linkVendorToUser(vendorId: string, userId: string): Promis
       .from("vendors")
       .update({ user_id: userId })
       .eq("id", vendorId)
-      .is("user_id", null) // Only link if not already linked
+      .is("user_id", null)
       .select(`*, mall:malls ( id, name, city, state, slug, address )`)
       .single();
-    
+
     if (error) {
       console.error("[posts] linkVendorToUser:", error.message);
       return { data: null, error: error.message };
     }
-    
+
     return { data: data as Vendor, error: null };
   } catch (err) {
     console.error("[posts] linkVendorToUser exception:", err);
@@ -347,8 +349,12 @@ export function slugify(name: string): string {
 // ── VENDOR REQUESTS ───────────────────────────────────────────────────────────
 
 /**
- * Fetch all pending vendor requests for admin review.
- * Returns requests in reverse chronological order (newest first).
+ * @deprecated Use GET /api/admin/vendor-requests instead.
+ *
+ * This function uses the browser anon client, which is blocked by the
+ * service-role-only RLS policy on `vendor_requests`. It silently returns
+ * an empty array. Left in place temporarily so any third caller doesn't
+ * break; will be removed in a future sprint.
  */
 export async function getVendorRequests(): Promise<Array<{
   id: string;
@@ -365,19 +371,20 @@ export async function getVendorRequests(): Promise<Array<{
     .select("*")
     .order("created_at", { ascending: false })
     .limit(50);
-  
-  if (error) { 
-    console.error("[posts] getVendorRequests:", error.message); 
-    return []; 
+
+  if (error) {
+    console.error("[posts] getVendorRequests:", error.message);
+    return [];
   }
-  
+
   return data ?? [];
 }
 
 /**
- * Create a vendor account from an approved vendor request.
- * Used by admin to convert pending requests into actual vendor accounts.
- * Does NOT link user_id - that happens during setup flow.
+ * @deprecated Use POST /api/admin/vendor-requests { action: "approve", requestId } instead.
+ *
+ * The new endpoint bundles vendor creation + request status update into a
+ * single admin-gated server call using the service role key.
  */
 export async function createVendorFromRequest(request: {
   name: string;
@@ -387,17 +394,16 @@ export async function createVendorFromRequest(request: {
   mall_name: string | null;
 }): Promise<{ data: Vendor | null; error: string | null }> {
   const slug = slugify(request.name);
-  
+
   const vendorInput: CreateVendorInput = {
     mall_id: request.mall_id,
     display_name: request.name,
     booth_number: request.booth_number || undefined,
     slug,
-    // user_id is intentionally omitted - gets linked during setup
   };
-  
+
   const result = await createVendor(vendorInput);
-  
+
   if (result.data) {
     console.log("[posts] createVendorFromRequest: created vendor", {
       vendor_id: result.data.id,
@@ -406,25 +412,28 @@ export async function createVendorFromRequest(request: {
       booth: request.booth_number,
     });
   }
-  
+
   return result;
 }
 
 /**
- * Mark a vendor request as approved.
- * Used after admin creates vendor account from the request.
+ * @deprecated Use POST /api/admin/vendor-requests { action: "approve", requestId } instead.
+ *
+ * This function uses the browser anon client, which is blocked by the
+ * service-role-only RLS policy on `vendor_requests`. It silently returns
+ * false with no visible error.
  */
 export async function markVendorRequestApproved(requestId: string): Promise<boolean> {
   const { error } = await supabase
     .from("vendor_requests")
     .update({ status: "approved" })
     .eq("id", requestId);
-  
-  if (error) { 
-    console.error("[posts] markVendorRequestApproved:", error.message); 
-    return false; 
+
+  if (error) {
+    console.error("[posts] markVendorRequestApproved:", error.message);
+    return false;
   }
-  
+
   return true;
 }
 
