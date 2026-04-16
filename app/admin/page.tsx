@@ -124,7 +124,7 @@ export default function AdminPage() {
 
   async function approveVendorRequest(request: VendorRequest) {
     if (requestBusy.has(request.id)) return;
-    setRequestBusy(prev => new Set([...prev, request.id]));
+    setRequestBusy(prev => { const next = new Set(prev); next.add(request.id); return next; });
     setRequestResult(null);
 
     try {
