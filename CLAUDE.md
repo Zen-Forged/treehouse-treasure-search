@@ -25,13 +25,34 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-15
+> Last updated: 2026-04-16
 
-**Status:** Animation polish pass complete. Spring-tap + detail page drift-in shipped.
+**Status:** Security hardening complete. Both 🔴 High risks resolved and deployed.
 
 ---
 
 ## What was done (this session)
+> 2026-04-16 — Agent system foundation + security hardening
+
+### Agent system foundation
+- Created `docs/DECISION_GATE.md` — operating constitution for all agents and sessions
+- Defines product vision, brand rules, business rules, tech rules, three-level decision gate, risk register, agent roster
+- Updated `CLAUDE.md` session startup line to load `docs/DECISION_GATE.md` automatically
+
+### Rate limiting — `/api/post-caption`
+- Added in-memory rate limiter: 10 req/60s per IP
+- Standard HTTP headers: `Retry-After`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
+- Returns 429 with user-friendly message when limit hit
+- Note: in-memory only — upgrade to Upstash Redis at scale (multi-instance)
+
+### RLS — all three tables
+- Wrote `supabase/migrations/002_enable_rls.sql` — 12 policies across malls, vendors, posts
+- `is_treehouse_admin()` helper function — single email check, used by all admin policies
+- Discovered and removed 15 stale/dangerous old policies via `003_cleanup_old_rls_policies.sql`
+- Verified: `anon delete posts` and `anon update posts` were live before cleanup — now gone
+- Confirmed ZenForged Finds vendor row has `user_id` set correctly before enabling
+- Applied in Supabase dashboard, verified 12 clean policies, tested live app
+- Both red risks now resolved and deployed
 
 ### Animation vocabulary added — two pages
 
@@ -58,6 +79,11 @@ git add CLAUDE.md CONTEXT.md && git commit -m "docs: update session context" && 
 ---
 
 ## Next session starting point — Sprint 3 (continued)
+
+### Priority 0 — Error monitoring (highest value next move)
+- Add structured `console.error` wrapping to all API routes as minimum
+- Evaluate Sentry free tier vs leaning on Vercel function logs
+- This closes the last 🟡 Medium risk that affects production visibility
 
 ### Priority 1 — Vendor bio field
 - `bio` column exists in DB + is fetched, but no UI to set or display it
