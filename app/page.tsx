@@ -44,7 +44,11 @@ function useScrollReveal(threshold = 0.1, skipAnimation = false) {
 }
 
 function EmptyFeed() {
-  const router = useRouter();
+  // Orphan cleanup (session 10): removed "Add a Booth" CTA that routed to
+  // /shelves. That button was a dead end for shoppers (the only audience for
+  // an empty feed) — vendor onboarding lives at /vendor-request, which is
+  // already surfaced by the footer CTA below the feed. Kept the empty-state
+  // copy unchanged.
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
@@ -57,15 +61,9 @@ function EmptyFeed() {
       <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: colors.textPrimary, marginBottom: 10, lineHeight: 1.3 }}>
         The shelves are quiet.
       </div>
-      <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: colors.textMuted, lineHeight: 1.7, maxWidth: 230, margin: "0 auto 28px" }}>
-        Be the first vendor to share a find in your area.
+      <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: colors.textMuted, lineHeight: 1.7, maxWidth: 230, margin: "0 auto" }}>
+        Check back soon — new finds land here the moment a vendor posts them.
       </p>
-      <button
-        onClick={() => router.push("/shelves")}
-        style={{ padding: "12px 24px", borderRadius: 24, fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer", letterSpacing: "0.2px", background: colors.green, border: "none", boxShadow: "0 2px 12px rgba(30,77,43,0.25)" }}
-      >
-        Add a Booth
-      </button>
     </motion.div>
   );
 }

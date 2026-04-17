@@ -189,7 +189,7 @@ These don't stop work but must be called out explicitly before the session conti
 
 ## Current Risk Register
 
-> Updated: 2026-04-17 (session 8 — onboarding scope-out complete; T4a email infra shipped; 3 session-7 🟡 risks resolved; KI-003 🔴 newly open as pre-beta blocker; Tech Rules expanded with email best-effort and onboarding-scope requirements)
+> Updated: 2026-04-17 (session 9 — KI-001/002/003 all resolved and Flow 2/3 onboarding verified end-to-end; KI-004 approve-endpoint 23505 silent-reuse newly open pending scoping session; new 🟡 `/setup` 401 race polish item)
 
 | Risk | Severity | Status | Owner |
 |---|---|---|---|
@@ -207,14 +207,14 @@ These don't stop work but must be called out explicitly before the session conti
 | Vendor approval does not trigger any email to the vendor — vendor has no organic way to know they've been approved | 🟡 Medium | ✅ Resolved 2026-04-17 session 8 — T4a shipped: `lib/email.ts` wraps Resend REST API, `sendRequestReceived` wired into `/api/vendor-request`, `sendApprovalInstructions` wired into `/api/admin/vendor-requests` approve. Both emails verified arriving in production. | Dev agent |
 | `/setup` bootstrap requires vendor to arrive via `/login?redirect=/setup` — no organic path exists | 🟡 Medium | ✅ Resolved 2026-04-17 session 8 — T4a approval email now carries the `/login?redirect=/setup` URL directly, so the vendor has an organic path. | Dev agent |
 | `/my-shelf` does not self-heal on stale or empty localStorage — DB state and client state can diverge silently | 🟡 Medium | ⚠️ Re-diagnosed 2026-04-17 session 8 — original framing was wrong. `/my-shelf` reads from DB via `getVendorByUserId` and `/post` also already does this. The real bug manifests differently and is tracked as KI-003 below. | Dev agent |
-| **"Posting as Zen · booth 300" persists post-T4a — vendor completes full approval flow but still posts under stale identity (KI-003)** | 🔴 **High** | **Open — session 8 discovery, pre-beta blocker. Root cause needs diagnosis. `/post` code already calls `getVendorByUserId()` on mount but something is falling through. Three candidate causes: (A) `/setup`'s link step silently failed, (B) session authed as wrong user when `/post` loads, (C) race in `/post`'s identity resolution. Tracked in docs/known-issues.md. Recommended sprint: T4c elevated to blocking, runs before T4b.** | Dev agent |
+| **"Posting as Zen · booth 300" persists post-T4a — vendor completes full approval flow but still posts under stale identity (KI-003)** | 🔴 **High** | ✅ Resolved 2026-04-17 session 9 — three-part fix: (1) `/login` mount useEffect + `onAuthChange` now read `redirect ?? next` so approval-email CTA (`?redirect=/setup`) is honored alongside the magic-link round-trip (`?next=/setup`); (2) `/post` no longer falls through to localStorage when signed-in + no DB vendor (kills the symptom class); (3) `/my-shelf` self-heals by calling `/api/setup/lookup-vendor` when signed-in + no linked vendor. Flow 2 onboarding end-to-end verified working on device. | Dev agent |
 | CLAUDE.md "Known vendors" section was stale — claimed vendors were linked to auth that were not | 🟢 Low | ✅ Resolved 2026-04-17 session 7 — section rewritten to reflect post-reset truth. Docs agent verifies schema-vs-docs drift at each session close going forward. | Docs agent |
 | `/vendor-request` success screen is generic — loses the "in-person magic moment" when admin is standing there approving in real time | 🟢 Low | ⚠️ Obsoleted by T4a — vendor now gets an email on both submit and approve. Real-time poll no longer needed. Copy still needs a light update (T4c) to reinforce that receipt email was sent. | Dev agent |
 | PWA install experience is improvised (user has to find "Add to Home Screen" manually) | 🟢 Low | Open — Sprint 5. | Dev agent |
 | No error monitoring (Sentry / structured logs) | 🟡 Medium | Open — Sprint 3/4 carryover | Dev agent |
 | Bookmarks localStorage-only (ITP wipe risk) | 🟡 Medium | Open — Sprint 5 | Dev agent |
 | No automated testing | 🟡 Medium | Open — Sprint 6+ | Dev + Product agents |
-| Admin PIN not QA'd in production | 🟡 Medium | ⚠️ Partial — session 8 QA confirmed PIN works but revealed KI-001 (wrong post-auth destination). Full QA closes once KI-001 ships. | Dev agent |
+| Admin PIN not QA'd in production | 🟡 Medium | ✅ Resolved 2026-04-17 session 9 — KI-001 shipped, PIN flow lands on /admin. | Dev agent |
 | Public Storage bucket (`post-images`) | 🟡 Medium | Intentional — monitor | Dev agent |
 | No terms of service / privacy policy | 🟡 Medium | Open — before public launch beyond in-person beta | David |
 | Deprecated lib functions still in `lib/posts.ts` | 🟢 Low | Open — `getVendorByEmail`, `linkVendorToUser`, `getVendorRequests`, `createVendorFromRequest`, `markVendorRequestApproved` marked `@deprecated` 2026-04-16; remove once confirmed no other callers import them | Dev agent |
@@ -227,9 +227,11 @@ These don't stop work but must be called out explicitly before the session conti
 | Supabase OTP email template variables not validated at deploy time (session 6 discovery) | 🟢 Low | ✅ Resolved 2026-04-17 session 6 | Dev agent |
 | Test vendor from session 5 end-to-end test needs cleanup-or-document decision | 🟢 Low | ✅ Resolved 2026-04-17 session 7 — full DB reset wiped all test data. | Dev agent |
 | Post-reset stale vendor row `David Butler / booth 123` (unlinked) from session 7 QA | 🟢 Low | ⚠️ Superseded — session 8 QA created fresh rows. Current state in Known Vendors section of CLAUDE.md. Link state unverified pending KI-003 diagnosis. | Dev agent |
-| **KI-001** — Admin PIN sign-in redirects to `/my-shelf` instead of `/admin` | 🟡 Medium | Open — new session 8. One-line fix in `app/login/page.tsx → handlePin()`. Ship as part of T4c or bundle into T4b (which removes PIN tab from /login entirely). | Dev agent |
-| **KI-002** — Toast centering breaks on `/admin` (recurring Framer Motion transform-overwrite issue) | 🟡 Medium | Open — new session 8. Apply the known-good wrapper-div pattern from `/post`. Tech Rule updated to flag the recurrence. Ship in T4c. Consider extracting `<CenteredToast>` component. | Dev agent |
-| **KI-003** — "Posting as Zen · booth 300" persists post-T4a — pre-beta blocker | 🔴 High | Open — new session 8 (see detailed row above). Root cause unknown. Blocks all real vendor onboarding. | Dev agent |
+| **KI-001** — Admin PIN sign-in redirects to `/my-shelf` instead of `/admin` | 🟡 Medium | ✅ Resolved 2026-04-17 session 9 — `handlePin()` now `router.replace("/admin")`. | Dev agent |
+| **KI-002** — Toast centering breaks on `/admin` (recurring Framer Motion transform-overwrite issue) | 🟡 Medium | ✅ Resolved 2026-04-17 session 9 — wrapper-div pattern applied (outer div does centering, inner motion.div animates only opacity+y). | Dev agent |
+| **KI-003** — "Posting as Zen · booth 300" persists post-T4a — pre-beta blocker | 🔴 High | ✅ Resolved 2026-04-17 session 9 — see detailed row above. Flow 2 onboarding end-to-end verified working. | Dev agent |
+| **KI-004** — approve-endpoint 23505 silent-reuse of existing vendor rows on `(mall_id, booth_number)` collision | 🟡 Medium | Open — new session 9. Approve endpoint silently reuses stale unlinked vendor rows on booth collision, producing ambiguous state where `lookup-vendor` can't find the vendor row matching the new request's name. Deferred pending a dedicated scoping session for the pre-seeding → claim-booth flow (Flow 1). Not urgent while test data is non-colliding. Full detail in docs/known-issues.md. | Dev agent + Product agent |
+| **`/setup` 401 race** — transient "Setup Incomplete" flash caused by Supabase server-side token validation lag (~500ms) after OTP verify | 🟡 Medium | Open — new session 9. Surfaced during KI-003 end-to-end QA. Fix #3 (`/my-shelf` self-heal) catches and self-corrects, so the user ultimately lands in the right place — but the brief flash is bad UX. Fix scope: ~10-line retry-with-backoff around `authFetch` in `/setup`'s `setupVendorAccount()`. 🟢 S, ~30 min. | Dev agent |
 | Email #1/#2 send via Resend direct — no retry/DLQ | 🟡 Medium | Open — new session 8. Best-effort delivery acceptable for beta. Revisit at scale (upgrade to queue-based send with retry). | Dev agent |
 | `/shelves` page's admin `AddBoothSheet` will be orphaned after T4b | 🟢 Low | Open — new session 8. Remove as part of T4b when canonical Add-Booth surface ships inside `/admin`. | Dev agent |
 | `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` obsolete since T4a automated approval emails | 🟢 Low | Open — new session 8. Retire in a doc cleanup pass. | Docs agent |
@@ -300,7 +302,7 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 | Sprint 1 | MVP core — feed, post flow, auth, booths | ✅ Complete |
 | Sprint 2 | UI polish — animations, detail page, scroll restore | ✅ Complete |
 | Sprint 3 | Vendor bio, Find Map overhaul, error monitoring, rate limiting | 🔄 Carryovers folded into Sprint 4 |
-| Sprint 4 | Beta-readiness — custom domain, OTP auth, `/admin` polish, vendor onboarding | 🔄 In progress. Shipped: T1 (custom domain, s6), T2 (OTP code entry, s6), T3 (`/admin` polish, s7), onboarding scope-out + `docs/onboarding-journey.md` (s8), T4a (email infrastructure, s8). Remaining: T4c (orphan cleanup + KI-003 fix, 🔴 blocking), T4b (admin surface consolidation), T4d (pre-beta QA pass). |
+| Sprint 4 | Beta-readiness — custom domain, OTP auth, `/admin` polish, vendor onboarding | 🔄 In progress. Shipped: T1 (custom domain, s6), T2 (OTP code entry, s6), T3 (`/admin` polish, s7), onboarding scope-out + `docs/onboarding-journey.md` (s8), T4a (email infrastructure, s8), KI-001/002/003 (s9 — Flow 2 onboarding end-to-end verified working). Remaining: `/setup` 401 race polish, T4b (admin surface consolidation), T4c remainder (orphan cleanup non-critical items), T4d (pre-beta QA pass), KI-004 scoping session. |
 | Sprint 5 | Guest-user UX + onboarding polish — "Curator Sign In" rename, `/welcome` landing, PWA install prompts, vendor onboarding Loom | 🔲 Planned |
 | Sprint 6+ | "Claim this booth" flow, QR-code approval, Universal Links, native app eval, feed pagination, ToS/privacy, admin-cleanup tool | 🔲 Parked |
 
@@ -333,4 +335,4 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 ---
 > This document is the operating constitution for the Treehouse system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-17 (session 8)
+> Last updated: 2026-04-17 (session 9)
