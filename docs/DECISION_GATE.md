@@ -103,6 +103,15 @@ DNS / email sending                Transactional email (magic links) sends from 
 Post-auth redirects                Use safeRedirect(next, fallback) helper in app/login/page.tsx.
                                    Only same-origin relative paths are honored; rejects absolute
                                    and protocol-relative URLs. Added session 5 (2026-04-17).
+OTP email templates                Supabase `signInWithOtp` sends BOTH magic link AND 6-digit code,
+                                   but the default email templates for Magic Link and Confirm
+                                   Signup only render the link. The code must be explicitly added
+                                   via `{{ .Token }}` in a selectable element (`<code>` with
+                                   `user-select: all; -webkit-user-select: all`). Confirm Signup
+                                   template is a separate save from Magic Link — update both.
+                                   Supabase OTP Length setting (Auth → Providers → Email) must
+                                   match the app's input length (default is 8; we use 6).
+                                   Added session 6 (2026-04-17).
 ```
 
 ---
@@ -161,7 +170,7 @@ These don't stop work but must be called out explicitly before the session conti
 
 ## Current Risk Register
 
-> Updated: 2026-04-17 (session 5 — emailRedirectTo resolved, Sprint 4/5 scope items added)
+> Updated: 2026-04-17 (session 6 — T1 custom domain + T2 OTP auth shipped; 3 risks resolved; new tech rule added for OTP email templates)
 
 | Risk | Severity | Status | Owner |
 |---|---|---|---|
@@ -171,11 +180,11 @@ These don't stop work but must be called out explicitly before the session conti
 | `/api/admin/*` routes had no server-side auth check | 🔴 High | ✅ Resolved 2026-04-16 — added `requireAdmin()` (bearer token + email match) to `/api/admin/posts` and `/api/admin/vendor-requests`; UI was the only gate before, routes were directly reachable | Dev agent |
 | Magic link delivery broken for Yahoo/AOL (pre-beta blocker) | 🔴 High | ✅ Resolved 2026-04-17 — Resend SMTP via Shopify DNS + Resend→Supabase native integration. End-to-end Yahoo test passed. | Dev agent |
 | `emailRedirectTo` hardcoded in `lib/auth.ts` — loses `/setup` redirect across magic-link round trip | 🟡 Medium | ✅ Resolved 2026-04-17 session 5 — `sendMagicLink(email, redirectTo?)` now accepts optional path, `safeRedirect()` helper in `app/login/page.tsx` validates same-origin relative paths only. Verified end-to-end with fresh email → `/setup` → admin approval → `/my-shelf`. | Dev agent |
-| Magic link breaks PWA session continuity (Safari opens outside PWA context) | 🟡 Medium | Open — Sprint 4. Fix: switch to OTP 6-digit code entry as primary flow (magic link as fallback). Keeps entire auth flow inside the PWA home-screen app context. **NEW 2026-04-17 session 5.** | Dev agent |
+| Magic link breaks PWA session continuity (Safari opens outside PWA context) | 🟡 Medium | ✅ Resolved 2026-04-17 session 6 — OTP 6-digit code entry is now the primary auth path with clipboard paste button. Entire flow stays in home-screen PWA context. Magic link remains as fallback. Verified end-to-end on iPhone PWA. | Dev agent |
 | "Sign In" button is unlabeled for audience — any shopper clicking it can authenticate and hit a dead-end `/my-shelf` | 🟡 Medium | Open — Sprint 5. Fix: Option B — rename to "Curator Sign In" + add `/welcome` landing for signed-in non-vendors with warm "still curator-only" copy + "Request a booth" CTA. **NEW 2026-04-17 session 5.** | Dev agent |
-| Vercel URL (`treehouse-treasure-search.vercel.app`) is a tech-flavored URL for vendor-facing onboarding | 🟢 Low | Open — Sprint 4. Fix: point `app.kentuckytreehouse.com` (or root) at Vercel. 15-min task. **NEW 2026-04-17 session 5.** | Dev agent |
-| `/admin` approval UX has dead copy-paste email template flow (obsolete since Resend SMTP) | 🟢 Low | Open — Sprint 4. Fix: remove template/clipboard code; replace with "approved — vendor has been emailed" toast. **NEW 2026-04-17 session 5.** | Dev agent |
-| `/vendor-request` success screen is generic — loses the "in-person magic moment" when admin is standing there approving in real time | 🟢 Low | Open — Sprint 4. Fix: real-time approval poll OR in-person variant of success screen. **NEW 2026-04-17 session 5.** | Dev agent |
+| Vercel URL (`treehouse-treasure-search.vercel.app`) is a tech-flavored URL for vendor-facing onboarding | 🟢 Low | ✅ Resolved 2026-04-17 session 6 — `app.kentuckytreehouse.com` live (CNAME in Shopify DNS → Vercel, HTTP/2, cert issued). Supabase Auth Site URL + Redirect URLs aligned. `.vercel.app` remains live as safety net for ~1 week. | Dev agent |
+| `/admin` approval UX has dead copy-paste email template flow (obsolete since Resend SMTP) | 🟢 Low | Open — Sprint 4 (T3). Fix: remove template/clipboard code; replace with "approved — vendor has been emailed" toast. **NEW 2026-04-17 session 5.** | Dev agent |
+| `/vendor-request` success screen is generic — loses the "in-person magic moment" when admin is standing there approving in real time | 🟢 Low | Open — Sprint 4 (T4). Fix: real-time approval poll OR in-person variant of success screen. **NEW 2026-04-17 session 5.** | Dev agent |
 | PWA install experience is improvised (user has to find "Add to Home Screen" manually) | 🟢 Low | Open — Sprint 5. Low priority while onboarding is in-person (David walks vendors through install). Escalates to 🟡 Medium if/when remote onboarding starts. **NEW 2026-04-17 session 5.** | Dev agent |
 | No error monitoring (Sentry / structured logs) | 🟡 Medium | Open — Sprint 3/4 carryover | Dev agent |
 | Bookmarks localStorage-only (ITP wipe risk) | 🟡 Medium | Open — Sprint 5 | Dev agent |
@@ -190,6 +199,7 @@ These don't stop work but must be called out explicitly before the session conti
 | Feed pagination missing (flat 80-post fetch) | 🟢 Low | Open — Sprint 6+ | Dev agent |
 | `/enhance-text` caption is mock (not real Claude call) | 🟢 Low | Open — future sprint | Dev agent |
 | `/api/debug-vendor-requests` left in production | 🟢 Low | Open — useful for QA; remove in a later cleanup sprint | Dev agent |
+| Supabase OTP email template variables not validated at deploy time (session 6 discovery) | 🟢 Low | ✅ Resolved 2026-04-17 session 6 — new Tech Rule added: email templates for `signInWithOtp` must include `{{ .Token }}` in a selectable element (`<code>` with `user-select: all`) AND Supabase OTP Length must match the app input length (6 digits). Both Magic Link and Confirm Signup templates updated. The "Save changes" button in Supabase template editor can silently no-op between tab switches — always verify with Preview tab. | Dev agent |
 | Test vendor from session 5 end-to-end test needs cleanup-or-document decision | 🟢 Low | Open — if throwaway email, clean up per SQL in CLAUDE.md; if real, document in Known vendors. **NEW 2026-04-17 session 5.** | Dev agent |
 
 ---
@@ -257,8 +267,8 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 |---|---|---|
 | Sprint 1 | MVP core — feed, post flow, auth, booths | ✅ Complete |
 | Sprint 2 | UI polish — animations, detail page, scroll restore | ✅ Complete |
-| Sprint 3 | Vendor bio, Find Map overhaul, error monitoring, rate limiting | 🔄 In progress (carryover into Sprint 4) |
-| Sprint 4 | Beta-readiness — custom domain, OTP auth, `/admin` polish, `/vendor-request` magic moment | 🔲 Next |
+| Sprint 3 | Vendor bio, Find Map overhaul, error monitoring, rate limiting | 🔄 Carryovers folded into Sprint 4 |
+| Sprint 4 | Beta-readiness — custom domain, OTP auth, `/admin` polish, `/vendor-request` magic moment | 🔄 In progress (T1 + T2 shipped 2026-04-17 session 6; T3 + T4 remaining) |
 | Sprint 5 | Guest-user UX + onboarding polish — "Curator Sign In" rename, `/welcome` landing, PWA install prompts, vendor onboarding Loom | 🔲 Planned |
 | Sprint 6+ | QR-code approval, Universal Links, native app eval, feed pagination, ToS/privacy, admin-cleanup tool | 🔲 Parked |
 
@@ -290,4 +300,4 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 ---
 > This document is the operating constitution for the Treehouse system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-17 (session 5)
+> Last updated: 2026-04-17 (session 6)

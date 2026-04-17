@@ -50,14 +50,110 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-17 late PM (session 5 — emailRedirectTo hardcode FIXED, end-to-end vendor onboarding verified, Sprint 4+ roadmap scoped)
+> Last updated: 2026-04-17 evening (session 6 — Sprint 4 T1 + T2 shipped: custom domain live, OTP auth in PWA, clipboard paste, agent roster formalized)
 
-**Status:** ✅ **Magic link `redirect` param now preserved across the round trip.** Full vendor onboarding was verified end-to-end this session: new email → magic link → `/setup` → waits for admin approval → admin approves in `/admin` → vendor redirected to `/my-shelf` → post flow shows correct booth/vendor context. Additionally, major strategic scoping work completed for Sprint 4 (beta-readiness), Sprint 5 (guest-user UX + onboarding polish), and Sprint 6+ (distribution / native). No remaining pre-beta blockers.
+**Status:** ✅ **T1 and T2 of Sprint 4 both shipped in one session.** `https://app.kentuckytreehouse.com` is now live (Vercel, HTTP/2, cert issued). OTP 6-digit code entry replaces the magic-link-as-primary auth flow; magic link still works as fallback. Clipboard paste button with auto-submit added. Supabase Auth URLs, email templates (Magic Link + Confirm Signup), and OTP Length (8→6) all updated. Verified end-to-end on iPhone PWA. Agent roster formally activated: Dev + Product + Docs agents. Notion Roadmap fully resynced.
 
 ---
 
-## What was done (this session — 2026-04-17 late PM)
-> One code fix + two strategic conversations that reshape the Sprint 4+ roadmap
+## What was done (this session — 2026-04-17 evening, session 6)
+> Biggest session 4 unlock so far — two major Sprint 4 items shipped plus meta-agent activation work
+
+### T1 — Custom domain live
+
+`app.kentuckytreehouse.com` now points at Vercel. Configuration:
+- CNAME added in Shopify DNS (authoritative): `app` → `d21d0d632a8983e0.vercel-dns-017.com.` (Vercel's new unique per-project IP-range-expansion record, not the old shared `cname.vercel-dns.com`)
+- Nameservers stay Shopify — ignored the "Vercel DNS" tab's nameserver-transfer path (would have broken Shopify storefront + email)
+- Supabase Auth Site URL updated to `https://app.kentuckytreehouse.com` (lowercase)
+- Supabase Redirect URLs list: added `https://app.kentuckytreehouse.com/**`; kept `https://treehouse-treasure-search.vercel.app/**` as safety net for ~1 week; `http://localhost:3000/**` for dev
+
+The old `.vercel.app` URL still resolves — can stay in place indefinitely as a secondary. For all new vendor-facing comms, investor updates, social sharing, etc., use `app.kentuckytreehouse.com`.
+
+### T2 — OTP 6-digit code entry
+
+Rewrote `app/login/page.tsx` to make code entry the primary path. Magic link still works as fallback (email includes both, same `signInWithOtp` call).
+
+**Code changes (2 commits):**
+- `83f1f6f` feat(auth): OTP 6-digit code entry — primary path, magic link as fallback
+- `55a9bb7` feat(auth): clipboard paste button for OTP code entry
+
+**New Screen state:** `enter-code` between `enter-email` and `confirming`. After email send, user lands on code entry screen with: email-echo card, monospace 6-digit input (auto-advance, auto-submit on 6th digit, paste-friendly, `autocomplete="one-time-code"` for iOS keyboard-bar autofill), clipboard paste button (hides gracefully if Clipboard API unavailable, regex-extracts first 6 digits from clipboard text), 30-second resend cooldown with live countdown, fallback line *"Or tap the link we emailed you — either works"*, inline error handling for invalid/expired codes, and smart back-button (code screen → email entry, not out of `/login`).
+
+**Admin PIN flow:** untouched. Already used `verifyOtp` under the hood.
+
+**Redirect preservation from session 5:** intact. OTP path reads `searchParams.get("redirect")` on verifyOtp success and calls `safeRedirect()`. Magic link path still uses the `?next=` round-trip mechanism.
+
+### Supabase configuration updates (dashboard-only, no code)
+
+- **OTP Length:** changed `8` → `6` (Auth → Providers → Email → OTP Length). Default was 8; app UI is designed around 6.
+- **Magic Link email template:** replaced stock template ("Follow this link to log in") with Treehouse-branded HTML including `{{ .Token }}` in a selectable `<code>` element. Subject: "Your Treehouse sign-in code".
+- **Confirm Signup email template:** same HTML, subject "Welcome to Treehouse — your sign-in code". Caught mid-session that the first save didn't stick — second save verified with Preview tab.
+
+**Known iOS Mail quirk (not a bug):** Code in email is selectable via tap-and-hold (iOS native pattern), not one-tap-copy. This is an OS security boundary; nothing we can do from the email template. The paste button in the app is the counterweight.
+
+### Meta-agent work
+
+**Agent roster formalized** (was unlabeled "planned" across several agents since DECISION_GATE.md creation on 2026-04-15):
+- ✅ Active: Dev agent, Product agent (always ran de-facto at standup), Docs agent (now owns session close + Notion sync + Risk Register maintenance)
+- 🔲 Sprint 5: Security agent (activation trigger = RLS-for-posts work)
+- 🔲 Phase 2: Finance, Brand agents
+
+**Standup now includes Agent Roster preamble** — one line confirming who's active: `**Active agents:** Dev · Product · Docs`. Added to DECISION_GATE.md as a standing standup requirement.
+
+### Notion Roadmap fully resynced
+
+Before T1 work began, the Notion Roadmap was still on Sprint 3 shape (missing session-5 re-scope). Full rewrite:
+- Sprint 3 retired (all items Done or carried into Sprint 4)
+- Sprint 4 Active: T1–T4 + 8 Sprint 3 carryovers
+- Sprint 5 Planned: Curator Sign In rename, /welcome, PWA install onboarding, vendor Loom, bookmarks persistence, RLS, Find Map
+- Sprint 6+ Parked: QR approval, Universal Links, native app eval, admin-cleanup, pagination, search, ToS
+- Icebox: /enhance-text real Claude, testing, pull-to-refresh, Upstash, anon auth, Facebook Graph, Poshmark/Mercari, etc.
+- Done: added session 3/4/5/6 ship items
+
+At session close: T1 and T2 flipped to ✅ Done 2026-04-17.
+
+### Files modified this session
+- `app/login/page.tsx` — full rewrite: OTP code entry screen, paste button, `handleVerify`, `handleResend`, `handlePasteCode`, cooldown timer
+- `docs/DECISION_GATE.md` — agent roster activation, standup agent check section, Risk Register updates
+- `CLAUDE.md` (this file)
+- Notion Roadmap (external — fully resynced)
+- Supabase dashboard: Site URL, Redirect URLs, OTP Length, both email templates (external, no code)
+- Shopify DNS: added `app` CNAME (external, no code)
+- Vercel: added `app.kentuckytreehouse.com` domain (external, no code)
+
+---
+
+## Next session starting point — Sprint 4 continuation
+
+**T1 and T2 are done.** Remaining Sprint 4 items, in recommended order:
+
+**🟡 T3 — `/admin` mobile-first approval polish.** Remove dead copy-paste email template workflow (obsolete since Resend SMTP + branded templates shipped). Tighten thumb-reach on approve button. Post-approval toast with vendor details, long enough to verbally confirm with in-person person. Optional: prominent "N pending" banner at top when pending > 0. Est. 2 hours.
+
+**🟡 T4 — `/vendor-request` in-person magic moment.** Design decision point: real-time approval poll OR dedicated in-person success variant that auto-redirects to `/setup` once approved. Recommend poll against a new ungated `/api/vendor-request/status?id=...` endpoint keyed on request ID — single-digit beta volume means poll cost is negligible. Est. 2–3 hours.
+
+**🟢 Sprint 3 carryover cleanup (small items):**
+- Admin PIN production QA (curl test, ~5 min)
+- Hero image upload size guard (12MB client check)
+- Vendor bio field UI (tap-to-edit + public display)
+- Error monitoring (Sentry or structured logs)
+- Feed content seeding (10–15 real posts) — required before beta invite
+- Beta feedback mechanism (Tally.so link)
+
+**🟢 Cleanup items:**
+- Session 5 test vendor cleanup-or-document (if real email → add to Known vendors; if throwaway → SQL cleanup)
+- Optional: remove `.vercel.app` safety-net entry from Supabase Redirect URLs after ~1 week
+- Optional: add "Tap and hold the code to copy it" hint line to both email templates (small onboarding friction reducer)
+
+### Things to validate next session
+- iOS keyboard-bar OTP autofill suggestion — untested. If it fires, Treehouse auth becomes a 2-tap flow (tap input → tap suggested code). Paste button is the fallback regardless.
+- Confirm Signup OTP flow works with `type: "email"` for brand-new users (confirmed in session 6 end-to-end, but watch for Supabase quirks at scale).
+
+---
+
+## ARCHIVE — What was done earlier (2026-04-17 late PM, session 5)
+> emailRedirectTo fix + strategic Sprint 4+ scoping
+
+**Status at session 5 close:** ✅ Magic link `redirect` param preserved across round trip. Full vendor onboarding verified end-to-end.
 
 ### Code change — `emailRedirectTo` no longer loses `/setup` across the magic-link round trip
 
@@ -65,104 +161,24 @@ Small surgical patch across two files. The bug: `sendMagicLink()` hardcoded `ema
 
 **Fix:**
 - `lib/auth.ts` — `sendMagicLink(email, redirectTo?)` now accepts optional second arg. When provided, it's URL-encoded and appended as `&next=...` to the confirmation URL.
-- `app/login/page.tsx` — new `safeRedirect(next, fallback)` helper validates same-origin relative paths only (rejects absolute URLs, rejects protocol-relative `//evil.com`, falls back to `/my-shelf`). The confirmed-loop, already-signed-in shortcut, `onAuthChange` callback, and BroadcastChannel handler all honor `?next=` when present. PIN flow untouched — still goes straight to `/my-shelf`.
+- `app/login/page.tsx` — new `safeRedirect(next, fallback)` helper validates same-origin relative paths only (rejects absolute URLs, rejects protocol-relative `//evil.com`, falls back to `/my-shelf`). The confirmed-loop, already-signed-in shortcut, `onAuthChange` callback, and BroadcastChannel handler all honor `?next=` when present. PIN flow untouched.
 - `handleSend()` reads `searchParams.get("redirect")` and passes through to `sendMagicLink`.
 
-**Verified end-to-end:** David used a new test email, landed on `/setup`, saw "waiting for admin approval" state (expected — new email, not yet approved), approved the request from `/admin`, watched the vendor's screen flip to approved, got redirected to `/my-shelf`, confirmed post flow rendered correct booth/vendor context. Full first-time vendor onboarding journey now works without any manual nav step.
+**Verified end-to-end:** new test email → `/setup` → waiting state → admin approval → `/my-shelf` → correct booth context.
 
-### Strategic scoping — Sprint 4/5/6 roadmap reshape
+### Strategic scoping — Sprint 4/5/6 roadmap reshape (session 5)
 
-Two product conversations produced concrete sprint items:
+Two product conversations produced concrete sprint items: (A) "Sign In" button mislabeled for audience → Sprint 5 rename + `/welcome` landing. (B) PWA + magic link break illusion → Sprint 4 OTP code entry (now shipped in session 6). Custom domain filed Sprint 4 (now shipped in session 6). PWA install onboarding, vendor onboarding Loom → Sprint 5. Native app eval → Sprint 6+.
 
-#### Topic A — The "Sign In" button is mislabeled for its audience
-
-Any shopper can click "Sign In" today, get a magic link, authenticate, and land on `/my-shelf` with no vendor profile — dead end, confusing. Treehouse's vision explicitly treats buyers as unauthenticated ("Follow the Find" is localStorage-only). **Decision: Option B — add a friendly guest-facing redirect** (`/welcome` landing for signed-in non-vendors with warm "still curator-only" copy + "Request a booth" CTA). Rename "Sign In" → "Curator Sign In" everywhere. **Filed: Sprint 5.**
-
-Rationale: Option A (rename + rely on copy) leaks confusion. Option C (real guest accounts) crosses a 🔴 STOP Decision Gate threshold — contradicts "not a marketplace" vision. Option B converts the accidental sign-in into a brand moment.
-
-#### Topic B — PWA install + magic link both break the "feels like an app" illusion
-
-The Vercel PWA loses its session every time a user taps a magic link (email opens in Safari → sign-in happens in Safari → PWA has no shared session). This is a platform constraint, not a bug.
-
-**Decision: switch to OTP 6-digit code entry** for auth (magic link stays as fallback). User reads code from Mail, switches back to PWA, types code — entire flow stays in home-screen app. **Filed: Sprint 4.** This is the single biggest UX unlock for PWA usage.
-
-Related decisions:
-- **Custom domain — `kentuckytreehouse.com` → Vercel.** Filed: Sprint 4. Quick 15-min perception win; should happen before any beta invites.
-- **PWA install onboarding experience** (iOS/Android-aware install prompts, animated walkthrough). Filed: Sprint 5.
-- **Native app evaluation.** Filed: Sprint 6+ (post-product-market-fit decision).
-
-#### Topic C — In-person vendor onboarding flow
-
-David will onboard the first ~5 vendors in person, meeting them at the mall to walk through install + first post. David is a reseller (online, not mall booth) — meeting vendors in person is a deliberate scheduled onboarding session, not incidental.
-
-**Decision: admin approval stays on `/admin`, not `/my-shelf`.** Keeps admin-vs-vendor role separation clean (Decision Gate flags this: "Zen Forged LLC is the operator — conflicts of interest between owner and user views should be flagged").
-
-**Sprint 4 scope for `/admin` mobile-first approval view:**
-- Existing bones are solid: tab-switcher with pending-count badge, per-row Approve button, refresh. Work is tightening for the in-person mobile moment.
-- Remove the "copy email template" workflow — obsolete once Resend-based magic link delivery ships and OTP entry lands. Current flow has admin copy-pasting a template manually; that's vestigial from pre-SMTP days.
-- Add explicit "just approved — vendor has been emailed" confirmation toast. Long enough to verbally confirm with the person standing in front of you.
-- Poll or manual-refresh for new pending requests (beta volume is single-digits/day — no WebSocket needed).
-
-**Sprint 4 scope for `/vendor-request` + post-submission experience:**
-- The current `/vendor-request` success screen says "We'll review your request and be in touch soon." For in-person moment, want real-time status flip when admin approves — or at minimum an alternative success screen variant that says "David is approving this now — hold tight."
-- Consider a `/vendor-request/pending` state that auto-redirects to `/setup` (or `/my-shelf`) once the request is approved. Could poll a new ungated `/api/vendor-request/status?id=...` endpoint that returns `{ status: "pending" | "approved" }` keyed on request ID.
-
-**Sprint 5 scope (non-in-person fallback):**
-- Vendor onboarding Loom/doc — for when David isn't physically there. Not code, but a deliverable.
-
-### Files modified this session
+### Files modified this session (session 5)
 - `lib/auth.ts` — `sendMagicLink` accepts optional `redirectTo` param
 - `app/login/page.tsx` — `safeRedirect` helper + forwards `?redirect=` to `sendMagicLink` + honors `?next=` post-auth
-- `CLAUDE.md` (this file)
+- `CLAUDE.md`
 - `docs/DECISION_GATE.md` — Risk Register updates + Sprint Context update
 
 ---
 
-## Next session starting point — Sprint 4 kickoff
-
-**Sprint 4 theme: "beta-readiness."** The goal is: end of Sprint 4, David can confidently onboard the first ~5 vendors in person at the mall in under 10 minutes each, and the app feels real (custom domain, OTP in-PWA auth, polished admin approval moment).
-
-### Sprint 4 items (in recommended execution order)
-
-**🟢 T1 — Custom domain.** Point `kentuckytreehouse.com` (or `app.kentuckytreehouse.com` — tbd) to the Vercel deployment. Decide subdomain vs root based on whether root is serving any Shopify storefront content. Est. 15 min.
-
-**🟡 T2 — Switch magic link flow to OTP code entry.** New screen after "enter email": "Enter the 6-digit code we sent to [email]." `supabase.auth.verifyOtp({ email, token, type: "email" })` — same primitive as PIN flow uses. Keep the magic link clickable as a fallback. Honor `?redirect=` param end-to-end. Est. 3–4 hours including design + test.
-
-**🟡 T3 — `/admin` mobile-first approval polish.** Remove copy-paste email template workflow (dead code). Tighten approve button for thumb-reach. Post-approval toast with vendor details long enough to verbally confirm with in-person person. Consider prominent top-of-page "N pending" banner when pending > 0. Est. 2 hours.
-
-**🟡 T4 — `/vendor-request` → in-person pending state.** Success screen: new variant OR real-time poll for approval. If approved, auto-redirect to `/setup` (which then links vendor and redirects to `/my-shelf`). This is the "magic moment" of in-person onboarding — design it as a product moment. Est. 2–3 hours.
-
-**🟢 T5 — Finish Sprint 3 leftovers before beta invites:**
-- Error monitoring (P1)
-- Vendor bio UI (P2)
-- Admin PIN production QA (P3 — quick curl)
-- Branded Supabase email template (reputation polish)
-
-**Out of scope for Sprint 4** (deferred to Sprint 5):
-- Rename "Sign In" → "Curator Sign In" everywhere
-- `/welcome` landing for signed-in non-vendors
-- PWA install onboarding experience (animated walkthrough)
-- Vendor onboarding Loom/doc
-- Mall page vendor CTA, Find Map overhaul
-
-### Skipped this session (explicit)
-- "No-redirect baseline" sanity test (sign out → `/login` → Yahoo → lands `/my-shelf`). Low risk, skipped by decision. If future behavior seems off on base-case sign-in, this is the first thing to re-verify.
-
-### Sprint 5 (parked, ordered for posterity)
-1. 🟡 Rename "Sign In" → "Curator Sign In" + `/welcome` guest-friendly landing (Option B)
-2. 🟡 PWA install onboarding (iOS/Android-aware prompts, animated walkthrough)
-3. 🟡 Vendor onboarding Loom/doc (non-in-person fallback)
-4. 🟡 Bookmarks persistence (Sprint 4 from old planning — moved; localStorage-only still fine for in-person beta)
-
-### Sprint 6+ (parked)
-- QR-code approval handshake (vendor shows admin a QR on `/vendor-request` success → admin scans → one-tap approve)
-- Universal Links setup (iOS `apple-app-site-association`)
-- Native app evaluation
-- Feed pagination, search, ToS/privacy, `admin-cleanup` tool
-
----
-
-## ARCHIVE — What was done earlier (2026-04-17 early AM, session 4)
+## ARCHIVE — Session 4 (2026-04-17 early AM)
 > DNS pivot + Resend SMTP + Yahoo magic link verification
 
 Session 4 opened assuming DNS was split Google Cloud DNS / Cloudflare pending swap. Discovery: Shopify was actually authoritative. Pivoted from Path B (Cloudflare migration) to Path A (add Resend DNS records directly in Shopify DNS UI — 3 records, resolved in ~2 min). Resend→Supabase native SMTP integration configured. End-to-end Yahoo magic link test passed (email delivered to junk folder, acceptable for new sending domain). Small data recovery mid-session after accidentally deleting a `vendor_requests` row — recovered via subquery-based re-insert.
@@ -383,21 +399,32 @@ Note: the `admin-cleanup` Sprint 6+ item will collapse this to one click.
 - Notion Roadmap — seeded ✅
 - Investor update system — Drive folder + first PDF + Notion process doc ✅
 
+### Working ✅ additions (session 6 — 2026-04-17)
+- Custom domain `app.kentuckytreehouse.com` — live, HTTP/2, cert issued
+- Supabase Auth Site URL + Redirect URLs aligned to custom domain
+- OTP 6-digit code entry as primary auth path — verified end-to-end on iPhone PWA (`83f1f6f`, `55a9bb7`)
+- Clipboard paste button on OTP input — regex-extracts first 6 digits from clipboard text, auto-submits, hides gracefully if Clipboard API unavailable
+- Supabase OTP Length = 6 (was 8); app UI matches
+- Branded email templates for both Magic Link and Confirm Signup flows — `{{ .Token }}` in selectable `<code>` element
+- Agent roster formalized: Dev · Product · Docs active; standup now includes Agent Roster preamble line
+
 ## KNOWN GAPS ⚠️
 
 ### 🔴 Pre-beta blockers (must resolve before any real vendor onboarding)
 None open. ✅
 
-### 🟡 Sprint 4 (beta-readiness — next session)
-- Custom domain — `app.kentuckytreehouse.com` → Vercel. Est. 15 min. **NEW 2026-04-17 session 5.**
-- Switch magic link flow to OTP 6-digit code entry primary, magic link fallback. Biggest PWA UX unlock. Est. 3–4 hours. **NEW 2026-04-17 session 5.**
-- `/admin` mobile-first approval polish — remove dead copy-paste email template flow, tighten thumb-reach, post-approval toast. Est. 2 hours. **NEW 2026-04-17 session 5.**
-- `/vendor-request` → post-submission real-time approval state. "Magic moment" of in-person onboarding. Est. 2–3 hours. **NEW 2026-04-17 session 5.**
+### 🟡 Sprint 4 (beta-readiness — in progress)
+- ✅ Custom domain `app.kentuckytreehouse.com` → Vercel. Shipped 2026-04-17 session 6.
+- ✅ OTP 6-digit code entry (primary flow) + clipboard paste button. Shipped 2026-04-17 session 6.
+- `/admin` mobile-first approval polish — remove dead copy-paste email template flow, tighten thumb-reach, post-approval toast. Est. 2 hours.
+- `/vendor-request` → post-submission real-time approval state. "Magic moment" of in-person onboarding. Est. 2–3 hours.
 - Sprint 3 leftovers to clean up before beta invites:
   - Error monitoring (P1)
   - Vendor bio UI (P2)
   - Admin PIN production QA (P3 — quick curl)
-  - Branded Supabase email template (reputation polish)
+  - Hero image upload size guard (12MB client check)
+  - Feed content seeding (10–15 real posts) before beta invite
+  - Beta feedback mechanism (Tally.so link)
 
 ### 🟡 Sprint 5 (guest-user UX + onboarding polish — parked)
 - Rename "Sign In" → "Curator Sign In" everywhere + `/welcome` guest-friendly landing for signed-in non-vendors (Option B from session 5 scoping). **NEW 2026-04-17 session 5.**
