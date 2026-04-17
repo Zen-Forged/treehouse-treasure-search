@@ -303,7 +303,9 @@ function LoginInner() {
         return;
       }
 
-      router.replace("/my-shelf");
+      // Admin PIN sign-in lands on /admin (KI-001 — session 9).
+      // Public email OTP still honors ?redirect= via safeRedirect above.
+      router.replace("/admin");
     } catch {
       setPinError("Network error. Try again.");
       setPinBusy(false);
