@@ -72,11 +72,27 @@ function SetupContent() {
 
       setState("linking");
 
+      // Session 10 — /setup 401 race polish:
+      // Supabase's auth server takes ~500ms to make a just-issued OTP token
+      // validatable from other servers. requireAuth() can 401 during that
+      // replication window even though the token is valid client-side.
+      // Retry once after 800ms on a 401 before surfacing the error state.
+      // If the retry also 401s, we fall through to the existing error UI.
+      const callLookupVendor = async (): Promise<Response> => {
+        const first = await authFetch("/api/setup/lookup-vendor", {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+        if (first.status !== 401) return first;
+        await new Promise(r => setTimeout(r, 800));
+        return authFetch("/api/setup/lookup-vendor", {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+      };
+
       // Server-side lookup + link in one call
-      const res = await authFetch("/api/setup/lookup-vendor", {
-        method: "POST",
-        body: JSON.stringify({}),
-      });
+      const res = await callLookupVendor();
       const json = await res.json();
 
       if (!res.ok || !json.ok || !json.vendor) {
