@@ -1,7 +1,7 @@
 # Treehouse — Known Issues
 > Active bugs, gaps, and deferred items. Referenced by `docs/DECISION_GATE.md`.
 > Created: 2026-04-17 (session 8 — logging the three QA issues surfaced during T4a post-deploy).
-> Last updated: 2026-04-17 (session 9 — KI-001/002/003 all resolved; KI-004 added).
+> Last updated: 2026-04-17 (session 10 — `/setup` 401 race moved to Resolved).
 
 ---
 
@@ -69,18 +69,49 @@ async function callLookupVendor(): Promise<Response> {
 
 ## Deferred items (not bugs — scope-deferred decisions)
 
-### `/api/debug-vendor-requests` still in production
-Unauthenticated diagnostic endpoint that exposes `vendor_requests` data. Flagged 🟡 security during session 7. Not blocking beta but worth retiring in a cleanup sprint.
-
 ### Cloudflare DNS zone orphaned for `kentuckytreehouse.com`
 Nameservers assigned but not authoritative. Dormant, no cost. Delete at leisure.
-
-### Three session-9 DB orphan vendors
-`John Doe / 1234`, `Claude Code / 123`, `David Butler / 123 at AAM` — all `user_id=NULL`, leftover from session 7-8 test data. Collision hazards for KI-004. Clean up via SQL (see KI-004 mitigation section) or avoid by using non-colliding booth numbers in tests.
 
 ---
 
 ## Resolved
+
+### ✅ `/setup` 401 race — transient "Setup Incomplete" flash during Supabase token replication window
+**Resolved:** 2026-04-17 session 10
+**Root cause:** Supabase's auth server takes ~500ms to make a just-issued OTP token validatable via `service.auth.getUser(token)` from a different server. `requireAuth()` on `/api/setup/lookup-vendor` was 401ing during that replication window even though the token was valid client-side. Session-9's `/my-shelf` self-heal was silently catching and correcting this a few hundred ms later, but `/setup` was visibly flashing the "Setup Incomplete" error state en route.
+
+**Fix:** `app/setup/page.tsx` — in `setupVendorAccount()`, wrapped the single `authFetch` call in a `callLookupVendor()` helper that retries once with 800ms backoff on a 401 response. If the retry also returns 401, falls through to the existing error UI unchanged. 14 lines of new code, one line changed. No new imports. No touch to the error state, localStorage write path, or success flow.
+
+```ts
+const callLookupVendor = async (): Promise<Response> => {
+  const first = await authFetch("/api/setup/lookup-vendor", { method: "POST", body: JSON.stringify({}) });
+  if (first.status !== 401) return first;
+  await new Promise(r => setTimeout(r, 800));
+  return authFetch("/api/setup/lookup-vendor", { method: "POST", body: JSON.stringify({}) });
+};
+```
+
+**Commit:** `fix(setup): retry lookup-vendor once on 401 to absorb OTP token replication lag`
+
+**Verified:** QA walkthrough pending on Session 11. If the 800ms window turns out to be insufficient on a real device, expand to 1200ms or add a second retry — but the fallback path is the existing error UI, so there's no regression risk.
+
+### ✅ T4c orphan cleanup — dead-end CTAs removed from shopper path
+**Resolved:** 2026-04-17 session 10
+**Fix (three surfaces, one commit):**
+
+1. **`app/page.tsx` EmptyFeed** — removed "Add a Booth" button that routed to `/shelves` (dead end). Copy revised for the actual audience (shoppers on an empty feed) from *"Be the first vendor to share a find in your area"* to *"Check back soon — new finds land here the moment a vendor posts them."*
+
+2. **`app/my-shelf/page.tsx` NoBooth** — removed "Post a find" Link that routed to `/post` (dead end post-Session-9 guard). Copy revised from *"No booth set up yet" / "Post your first find to create your booth identity..."* to *"No booth linked to this account" / "If you're a vendor awaiting approval, your booth will appear here once setup is complete. Questions? Reach out to the admin directly."* Cleaned up now-unused `Link` import.
+
+3. **`app/api/debug-vendor-requests/route.ts`** — deleted. Unauthenticated diagnostic endpoint that exposed `vendor_requests` data, 🟡 security item from Session 7. Verified no references in the codebase before deletion.
+
+**Commit:** `chore(ui): orphan cleanup — remove dead-end CTAs + debug endpoint`
+
+### ✅ Three session-9 DB orphan vendors
+**Resolved:** 2026-04-17 session 10 (🖐️ HITL)
+`John Doe / 1234`, `Claude Code / 123`, `David Butler / 123 at AAM` — all `user_id=NULL`, leftover from session 7-8 test data. Deleted via SQL before Session 10 code work. KI-004 collision hazard surface cleared.
+
+---
 
 ### ✅ KI-001 — Admin PIN sign-in redirected to `/my-shelf` instead of `/admin`
 **Resolved:** 2026-04-17 session 9
@@ -126,4 +157,4 @@ Nameservers assigned but not authoritative. Dormant, no cost. Delete at leisure.
 
 ---
 
-> Last updated: 2026-04-17 (session 9)
+> Last updated: 2026-04-17 (session 10)

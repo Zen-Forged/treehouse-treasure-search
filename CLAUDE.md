@@ -50,59 +50,111 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-17 late-night (session 9 — KI-001, KI-002, KI-003 all resolved; Flow 2/3 onboarding end-to-end verified working; KI-004 approve-endpoint 23505 silent-reuse newly logged; session-9 findings surfaced a small 🟡 `/setup` 401 race worth a polish pass)
+> Last updated: 2026-04-17 late-night (session 10 — `/setup` 401 race polish shipped; T4c orphan cleanup A/B/E shipped; onboarding journey is now both working AND clean end-to-end)
 
-**Status:** ✅✅✅ **Session 9 unblocked beta onboarding.** All three session-8 QA issues resolved; end-to-end Flow 2 onboarding verified working on David's iPhone (email CTA → OTP → auto-linked vendor → My Booth renders correctly). One new issue logged (KI-004, approve-endpoint 23505 silent-reuse) — intentionally deferred to a dedicated scoping session per David's call.
+**Status:** ✅✅ **Session 10 polished the onboarding journey that Session 9 unblocked.** Two commits shipped. No remaining pre-beta blockers. Sprint 4 is 75% complete — T4b (admin surface consolidation), T4c remainder (copy polish), T4d (pre-beta QA), and KI-004 (claim-booth scoping) are all that's left.
 
-### What shipped (4 fixes, 1 commit)
-1. **KI-001** (admin PIN → `/admin`) — one-line fix in `handlePin()`
-2. **KI-002** (toast centering on /admin) — wrapper-div pattern lifted from /post
-3. **KI-003** (onboarding journey broken) — three-part fix:
-   - `/login` reads `redirect ?? next` in mount effect + `onAuthChange` (param-name mismatch was the root cause)
-   - `/post` no longer falls through to localStorage when signed-in + no DB vendor (kills the "posting as Zen · booth 300" class of symptoms permanently)
-   - `/my-shelf` self-heals by calling `/api/setup/lookup-vendor` when signed-in + no linked vendor
-4. **Diagnostic logging** added to `lib/adminAuth.ts` `requireAuth()` — logs distinguish 'no bearer token' vs 'getUser rejected token' failure modes. Kept in production (low-noise, future-useful).
+### What shipped (2 commits)
+1. **Orphan cleanup (T4c partial — A + B + E)** — `app/page.tsx` EmptyFeed "Add a Booth" button removed (routed to /shelves dead-end); `app/my-shelf/page.tsx` NoBooth "Post a find" button removed (post-self-heal-failure state had no valid CTA); `app/api/debug-vendor-requests/route.ts` deleted (unauthenticated diagnostic endpoint, 🟡 security item). Copy in both empty states revised to match the new no-button state. Unused `Link` import cleaned up in my-shelf.
+2. **`/setup` 401 race polish** — `setupVendorAccount()` in `app/setup/page.tsx` now retries `/api/setup/lookup-vendor` once with 800ms backoff on 401 response. Absorbs the ~500ms Supabase token-replication window that was flashing "Setup Incomplete" before `/my-shelf` self-heal caught it. 14 lines of new code, one line changed. No new imports, no touch to error state or localStorage write path.
+
+### Orientation lock check (no-op discovery)
+David asked about locking UI to portrait. Verified `public/manifest.json` already has `"orientation": "portrait"` on line 8 — locks installed PWA. No browser-tab CSS layer added (deliberate — fighting Safari landscape creates more bugs than it solves at max-width: 430px).
+
+### Supabase cleanup (pre-session)
+David ran the three-orphan cleanup SQL before we started coding: `John Doe / 1234`, `Claude Code / 123`, `David Butler / 123 at AAM` deleted. KI-004 collision hazards cleared. DB is clean heading into Session 11.
 
 ---
 
-## 🌱 Next session opener — T4b and polish (READ FIRST)
+## 🌱 Next session opener — T4b, T4c copy, KI-004 scoping, T4d (READ FIRST)
 
-**Session 9 shipped the critical path. Beta onboarding is no longer blocked.** Remaining Sprint 4 work: T4b (admin surface consolidation), T4d (pre-beta QA pass), plus a handful of polish items and a scoping session for KI-004.
+**Session 10 cleared all the cosmetic tax on the onboarding journey.** No remaining pre-beta blockers. Four bounded pieces of work left in Sprint 4, each a clean standalone session.
 
-### Recommended Session 10 execution order
+### Recommended Session 11 options (pick by time/energy budget)
 
-1. **🟡 `/setup` 401 race polish** (30 min, optional)
-   - Session-9 QA showed `/setup` flashes "Setup Incomplete" briefly before `/my-shelf` self-heal catches it and lands the vendor correctly. The underlying cause is a ~500ms race between `verifyOtp` resolving client-side and Supabase's auth server validating the token server-side.
-   - Fix: add a single retry-with-backoff to `setupVendorAccount()` in `app/setup/page.tsx` on 401 response. 800ms wait, then retry once. If still 401, fall through to current error state.
-   - Worth doing because the brief "Setup Incomplete" flash is bad UX even though it self-corrects.
-2. **KI-004 scoping session** — pre-seeding → claim-booth flow. Per David: "Everything is captured that is available (booth #, mall, booth name). Once I speak with the booth owner or they reach out, I'd add their email and initiate the handoff to them." That's a clean mental model. Needs its own scope-out before code — touches Flow 1 and the approve-endpoint 23505 branch.
-3. **T4c remainder** — the session-9 fixes resolved the 🔴 blocking item (KI-003) but several 🟢 S orphan-cleanup items are still open. Bundle into T4b or ship as a follow-up:
-   - Remove EmptyFeed "Add a Booth" CTA (routes to /shelves)
-   - Gate `/my-shelf` NoBooth "Post a find" button behind `activeVendor !== null`
-   - Revise `/api/setup/lookup-vendor` error copy
-   - Revise `/vendor-request` success screen copy
-   - Retire `/api/debug-vendor-requests` (🟡 security)
-4. **T4b — admin surface consolidation** (~4 hours)
-   - Add Booth tab in /admin (Flow 1 home)
-   - Add Vendor in-person flow in /admin (Flow 2 capture)
-   - Remove Admin PIN tab from /login (gate moves behind /admin)
+1. **Short (~1 hour) — T4c remainder copy polish**
+   - Revise `/api/setup/lookup-vendor` error copy (currently surfaces raw "Unauthorized" / "Your vendor account isn't ready yet" strings — could be warmer and more actionable)
+   - Revise `/vendor-request` success screen copy (currently generic, should reinforce "receipt email sent — check your inbox" now that T4a is live)
+   - Best done as a focused copy pass with David's voice on deck rather than bundled into code work.
+
+2. **Medium (~2 hours) — KI-004 scoping session (no code)**
+   - Product Agent maps the pre-seeding → claim-booth flow against `docs/onboarding-journey.md` Flow 1.
+   - David's operating model (captured in `docs/known-issues.md` KI-004): "Everything is captured that's available — booth #, mall, booth name. Once I speak with the owner or they reach out, I'd add their email and initiate the handoff."
+   - Output: implementation spec that the eventual fix can be executed against. Needs product decisions on: where the admin "add email to a pre-seeded booth" surface lives, whether it converts the row to a vendor_request or links directly, and what approve-endpoint does with 23505 collisions absent an intentional handoff.
+
+3. **Long (~4 hours) — T4b admin surface consolidation**
+   - Add Booth tab in `/admin` (Flow 1 home)
+   - Add Vendor in-person flow in `/admin` (Flow 2 capture)
+   - Remove Admin PIN tab from `/login` (gate moves behind `/admin`)
    - Remove admin "Booths" BottomNav tab
-   - Remove `AddBoothSheet` from /shelves
-5. **T4d — pre-beta QA pass** walking all three flows against the mapped journey
+   - Remove `AddBoothSheet` from `/shelves`
+   - Best done in one focused session rather than split — touches four surfaces.
 
-### Stale state from session 9
+4. **Pre-beta gate (~2 hours) — T4d QA pass**
+   - Walk all three flows (Pre-Seeded, Demo, Vendor-Initiated) end-to-end against `docs/onboarding-journey.md`.
+   - Generate a punch list of anything that surfaces.
+   - Best run AFTER T4b so the admin surfaces are in final form.
 
-- **DB orphans** (all `user_id=NULL`, `mall_id=d8d0fed1-...` or America's Antique Mall):
-  - `John Doe / booth 1234` (created ~16:31)
-  - `Claude Code / booth 123` (created ~16:00)
-  - `David Butler / booth 123 / AAM` (session 7-8 residue)
-  - These are collision hazards for KI-004. Session 10 should either clean them up via SQL or intentionally use non-colliding booth numbers until KI-004 is scoped.
-- **Successful session-9 test vendor** (linked): a `+test3`-style email alias from David's Gmail is now an auth.users + vendor_requests(approved) + vendors(linked) chain. Not colliding with anything, can be left alone or cleaned later.
-- **David's iPhone:** currently signed in as the session-9 test vendor. `th_vendor_profile` holds that vendor. Sign out and clear Safari data before Session 10 starts if testing onboarding again.
+### Suggested order if doing all four: T4c copy → KI-004 scoping → T4b → T4d
+
+### State heading into Session 11
+
+- **DB:** clean. Three session-9 orphans (`John Doe / 1234`, `Claude Code / 123`, `David Butler / 123 at AAM`) deleted via SQL at Session 10 open. KI-004 collision hazards cleared. Safe to use any booth number in tests.
+- **David's iPhone:** should still be signed in as the session-9 `+test3`-style Gmail alias. That vendor is linked cleanly (auth.users + vendor_requests(approved) + vendors(linked) chain). Sign out and clear Safari data before re-testing onboarding.
+- **Production:** two deploys this session, both verified working on device. No rollback concerns.
 
 ---
 
-## What was done (this session — 2026-04-17, session 9)
+## What was done (this session — 2026-04-17, session 10)
+
+### Phase 1 — Supabase cleanup (🖐️ HITL, pre-code)
+
+David ran the three-orphan diagnostic + delete SQL from CLAUDE.md's cleanup pattern before any code work. Deleted `John Doe / 1234`, `Claude Code / 123`, `David Butler / 123 at AAM` — all `user_id=NULL`, all collision hazards for KI-004. DB is clean heading into Session 11. Non-colliding booth numbers are still recommended for test traffic until KI-004 ships, but the active-hazard surface is cleared.
+
+### Phase 2 — Orientation lock (no-op discovery)
+
+David asked about locking the UI to portrait. Verified `public/manifest.json` line 8 already has `"orientation": "portrait"` — locks the installed PWA to portrait cleanly. No change needed. Deliberately skipped adding a browser-tab CSS landscape layer (Safari's orientation-media-query behavior is quirky, and the max-width: 430px layout degrades gracefully in landscape — force-rotating with CSS creates more bugs than it prevents).
+
+### Phase 3 — T4c orphan cleanup batch (A + B + E)
+
+From the five T4c orphan-cleanup items, we shipped the three that cleared dead-end CTAs from the shopper path and the unauthenticated diagnostic endpoint. C and D (copy revisions on lookup-vendor errors + vendor-request success) deliberately saved for a focused copy pass with David's voice on deck.
+
+**Orphan A — `app/page.tsx` EmptyFeed**
+- Removed the "Add a Booth" button that routed to `/shelves` (a dead-end surface scheduled for removal with T4b's `AddBoothSheet` retirement).
+- Removed unused `useRouter` hook usage in `EmptyFeed`.
+- Revised copy from *"Be the first vendor to share a find in your area."* to *"Check back soon — new finds land here the moment a vendor posts them."* — original copy was selling a now-removed button; new copy addresses the actual audience (shoppers on an empty feed).
+
+**Orphan B — `app/my-shelf/page.tsx` NoBooth**
+- Removed the "Post a find" Link that routed to `/post`. This state only renders when a signed-in user has no linked vendor AND the Session-9 self-heal already failed — meaning they're either a shopper who signed in by accident, or a vendor whose approval never completed. In both cases `/post` is a dead end (the Session-9 `/post` guard kicks signed-in users with no DB vendor to a setup state).
+- Revised copy from *"No booth set up yet" / "Post your first find to create your booth identity..."* to *"No booth linked to this account" / "If you're a vendor awaiting approval, your booth will appear here once setup is complete. Questions? Reach out to the admin directly."* — original copy implied self-service account creation (which isn't the onboarding model anymore post-T4a). New copy acknowledges the two realistic audiences (shopper-who-signed-in, vendor-still-waiting).
+- Removed now-unused `Link` import from `next/link`.
+
+**Orphan E — `/api/debug-vendor-requests` retired**
+- Deleted `app/api/debug-vendor-requests/route.ts` — unauthenticated diagnostic endpoint that exposed `vendor_requests` data. 🟡 Security item flagged in Session 7 Risk Register.
+- Verified via search that nothing in the codebase imports from or references this route before deletion.
+
+Shipped as one commit: `chore(ui): orphan cleanup — remove dead-end CTAs + debug endpoint`.
+
+### Phase 4 — `/setup` 401 race polish
+
+Surfaced in Session 9 QA: after OTP verify, `/setup` flashes the "Setup Incomplete" error state briefly before `/my-shelf`'s Session-9 self-heal catches it a few hundred ms later. Root cause is Supabase's auth server taking ~500ms to make a just-issued OTP token validatable via `service.auth.getUser(token)` from a different server. `requireAuth()` on `/api/setup/lookup-vendor` was 401ing during that replication window.
+
+**Fix** — in `app/setup/page.tsx` `setupVendorAccount()`: wrapped the single `authFetch` call in a `callLookupVendor()` helper that retries once with 800ms backoff on a 401 response. If the retry also 401s, falls through to the existing error UI unchanged (no new failure modes). 14 lines of new code, one line changed. No new imports. No touch to the error state, localStorage write path, or success flow.
+
+Shipped as one commit: `fix(setup): retry lookup-vendor once on 401 to absorb OTP token replication lag`.
+
+### Files modified this session
+- `app/page.tsx` — Orphan A (EmptyFeed button removal + copy revision + unused hook cleanup)
+- `app/my-shelf/page.tsx` — Orphan B (NoBooth button removal + copy revision + unused Link import cleanup)
+- `app/api/debug-vendor-requests/route.ts` — deleted (Orphan E)
+- `app/setup/page.tsx` — 401 race retry helper
+- `CLAUDE.md` (this file) — session close
+- `docs/DECISION_GATE.md` — Risk Register updates
+- `docs/known-issues.md` — `/setup` 401 race moved to Resolved
+
+---
+
+## ARCHIVE — What was done earlier (2026-04-17, session 9)
 
 ### Phase 1 — Warm-up commit: KI-001 + KI-002 (small, surgical)
 
@@ -532,10 +584,16 @@ Note: the `admin-cleanup` Sprint 6+ item will collapse this to one click.
 - **`/my-shelf` self-heal** — non-admin signed-in users with no linked vendor auto-call lookup-vendor before falling through to NoBooth. Makes /my-shelf a valid Flow 2/3 landing point even if /setup is skipped or raced.
 - **`requireAuth` diagnostic logging** — 401 responses now distinguish missing-header vs rejected-token in Vercel function logs
 
+### Working ✅ additions (session 10 — 2026-04-17)
+- **`/setup` 401 race absorbed** — `setupVendorAccount()` retries once with 800ms backoff on 401, eliminating the "Setup Incomplete" flash during the Supabase token-replication window. Existing error UI preserved for genuine failures.
+- **Shopper path de-orphaned** — EmptyFeed no longer offers a dead-end "Add a Booth" button; NoBooth no longer offers a dead-end "Post a find" button. Copy in both states now matches their actual audience.
+- **`/api/debug-vendor-requests` retired** — unauthenticated diagnostic endpoint removed (🟡 security item cleared).
+- **PWA orientation lock verified** — `public/manifest.json` locks installed PWA to portrait. Browser-tab landscape left alone by design.
+
 ## KNOWN GAPS ⚠️
 
 ### 🔴 Pre-beta blockers
-_None as of session 9 close._ KI-003 was the last blocker and is resolved.
+_None as of session 10 close._ No blockers remain; Sprint 4 is in polish-and-consolidation territory.
 
 ### 🟡 Sprint 4 remainder
 - ✅ Custom domain `app.kentuckytreehouse.com` → Vercel (session 6)
@@ -546,10 +604,11 @@ _None as of session 9 close._ KI-003 was the last blocker and is resolved.
 - ✅ KI-001 admin PIN redirect (session 9)
 - ✅ KI-002 toast centering (session 9)
 - ✅ KI-003 onboarding journey fix (session 9)
-- 🟡 **`/setup` 401 race polish** — new session-9 observation. `/setup` flashes Setup Incomplete briefly before /my-shelf self-heal catches it. ~10-line retry-with-backoff in `setupVendorAccount()`. 🟢 S, ~30 min.
-- 🟡 T4c remainder (orphan cleanup — non-critical items) — EmptyFeed CTA removal, NoBooth gate, error copy revisions, retire /api/debug-vendor-requests. Bundle into T4b or ship standalone.
-- 🟡 T4b — admin surface consolidation (Add Booth tab in /admin, Add Vendor in-person flow, remove Admin PIN from /login, remove Booths from BottomNav)
-- 🟡 T4d — pre-beta QA pass walking all three flows end-to-end
+- ✅ `/setup` 401 race polish (session 10)
+- ✅ T4c partial — orphans A + B + E (session 10): EmptyFeed CTA removal, NoBooth button removal, `/api/debug-vendor-requests` retirement
+- 🟡 T4c remainder (copy polish) — orphans C + D: `/api/setup/lookup-vendor` error copy + `/vendor-request` success screen copy. Focused copy session.
+- 🟡 T4b — admin surface consolidation (Add Booth tab in /admin, Add Vendor in-person flow, remove Admin PIN from /login, remove Booths from BottomNav, retire `AddBoothSheet` from /shelves) — ~4 hours.
+- 🟡 T4d — pre-beta QA pass walking all three flows end-to-end against `docs/onboarding-journey.md`.
 - **KI-004** — approve-endpoint 23505 silent-reuse. Needs a dedicated scoping session per David's call (pre-seeding → claim-booth flow model). Not urgent.
 - Sprint 3 leftovers still pending beta invites:
   - Error monitoring (Sentry or structured logs)
@@ -575,7 +634,7 @@ _None as of session 9 close._ KI-003 was the last blocker and is resolved.
 
 ### 🟢 Cleanup (not urgent)
 - Deprecated vendor-request functions still in `lib/posts.ts`
-- `/api/debug-vendor-requests` still in production — flagged 🟡 security in session 8 Risk Register (unauthenticated, exposes vendor_requests data)
+- ✅ `/api/debug-vendor-requests` retired session 10
 - Cloudflare nameservers for `kentuckytreehouse.com` — dormant, no cost
 - `/shelves` AddBoothSheet — orphan after T4b ships, remove then
 - `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` — obsolete since T4a; automated emails supersede the copy-paste template. Retire in a doc cleanup pass.
