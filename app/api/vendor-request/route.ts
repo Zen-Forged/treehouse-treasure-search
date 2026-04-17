@@ -1,8 +1,13 @@
 // app/api/vendor-request/route.ts
 // POST { name, email, booth_number, mall_id, mall_name }
-// → writes to vendor_requests table (Supabase)
-// → sends notification email to NEXT_PUBLIC_ADMIN_EMAIL via Resend (if configured)
-//    or logs to console as fallback
+// → writes to vendor_requests table (Supabase, service-role to bypass RLS)
+// → sends EMAIL #1 "Request received" receipt to vendor via Resend
+//   (per docs/onboarding-journey.md — Sprint 4 T4a)
+//
+// Email is best-effort — a failed send logs but does not fail the HTTP
+// response, because the vendor_requests row was successfully created and
+// admin can still approve from /admin. Vendor not receiving the receipt
+// email is a UX regression, not a data integrity issue.
 //
 // Table required (run in Supabase SQL editor):
 //   CREATE TABLE vendor_requests (
@@ -22,6 +27,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { sendRequestReceived } from "@/lib/email";
 
 // ---------------------------------------------------------------------------
 // Error logging utility
@@ -134,12 +140,16 @@ export async function POST(req: NextRequest) {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
+    const trimmedName  = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedMall  = mall_name?.trim() || null;
+
     const insertPayload = {
-      name:         name.trim(),
-      email:        email.trim().toLowerCase(),
+      name:         trimmedName,
+      email:        trimmedEmail,
       booth_number: booth_number?.trim() || null,
       mall_id:      mall_id || null,
-      mall_name:    mall_name?.trim() || null,
+      mall_name:    trimmedMall,
       status:       "pending",
     };
 
@@ -161,14 +171,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Could not save your request. Please try again." }, { status: 500 });
     }
 
-    // Success logging and notification
+    // Success logging
     console.log(
-      `[vendor-request] ${new Date().toISOString()} - New request from ${name} (${email}) — ` +
-      `Booth: ${booth_number || "not specified"} — Mall: ${mall_name || "not specified"} — IP: ${ip}`
+      `[vendor-request] ${new Date().toISOString()} - New request from ${trimmedName} (${trimmedEmail}) — ` +
+      `Booth: ${booth_number || "not specified"} — Mall: ${trimmedMall || "not specified"} — IP: ${ip}`
     );
 
-    // TODO Sprint 4: Send email via Resend
-    // await sendAdminNotification({ name, email, booth_number, mall_name, adminEmail });
+    // ── Email #1: Request received (best-effort) ──
+    // Per docs/onboarding-journey.md: fires consistently for Flows 2 and 3
+    // (admin-initiated and vendor-initiated). Serves as data-integrity check —
+    // a typo'd email will bounce and the vendor will notice before admin
+    // wastes time approving a dead-letter request.
+    const emailResult = await sendRequestReceived({
+      name:     trimmedName,
+      email:    trimmedEmail,
+      mallName: trimmedMall,
+    });
+
+    if (!emailResult.ok) {
+      // Log but don't fail the request — the vendor_requests row is already
+      // saved and the admin can still approve from /admin.
+      logError("Request received email failed to send", {
+        ip,
+        error: emailResult.error,
+        details: { userAgent, vendorEmail: trimmedEmail },
+      });
+    }
 
     return NextResponse.json({ ok: true });
     

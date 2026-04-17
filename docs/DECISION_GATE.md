@@ -170,7 +170,7 @@ These don't stop work but must be called out explicitly before the session conti
 
 ## Current Risk Register
 
-> Updated: 2026-04-17 (session 6 — T1 custom domain + T2 OTP auth shipped; 3 risks resolved; new tech rule added for OTP email templates)
+> Updated: 2026-04-17 (session 7 — T3 shipped; 🔴 High-severity onboarding scope risk added; 3 🟡 Medium risks added under the scope-risk parent; 2 🟢 Low risks resolved via DB reset + T3 ship; Known vendors drift flagged and resolved)
 
 | Risk | Severity | Status | Owner |
 |---|---|---|---|
@@ -183,7 +183,12 @@ These don't stop work but must be called out explicitly before the session conti
 | Magic link breaks PWA session continuity (Safari opens outside PWA context) | 🟡 Medium | ✅ Resolved 2026-04-17 session 6 — OTP 6-digit code entry is now the primary auth path with clipboard paste button. Entire flow stays in home-screen PWA context. Magic link remains as fallback. Verified end-to-end on iPhone PWA. | Dev agent |
 | "Sign In" button is unlabeled for audience — any shopper clicking it can authenticate and hit a dead-end `/my-shelf` | 🟡 Medium | Open — Sprint 5. Fix: Option B — rename to "Curator Sign In" + add `/welcome` landing for signed-in non-vendors with warm "still curator-only" copy + "Request a booth" CTA. **NEW 2026-04-17 session 5.** | Dev agent |
 | Vercel URL (`treehouse-treasure-search.vercel.app`) is a tech-flavored URL for vendor-facing onboarding | 🟢 Low | ✅ Resolved 2026-04-17 session 6 — `app.kentuckytreehouse.com` live (CNAME in Shopify DNS → Vercel, HTTP/2, cert issued). Supabase Auth Site URL + Redirect URLs aligned. `.vercel.app` remains live as safety net for ~1 week. | Dev agent |
-| `/admin` approval UX has dead copy-paste email template flow (obsolete since Resend SMTP) | 🟢 Low | Open — Sprint 4 (T3). Fix: remove template/clipboard code; replace with "approved — vendor has been emailed" toast. **NEW 2026-04-17 session 5.** | Dev agent |
+| `/admin` approval UX has dead copy-paste email template flow (obsolete since Resend SMTP) | 🟢 Low | ✅ Resolved 2026-04-17 session 7 — T3 shipped: email template flow removed, structured toast replaces inline banner, Approve button sized for 44px iOS thumb-reach. | Dev agent |
+| **Onboarding journey scope is ambiguous across sessions — Dev agent has been building against shifting assumptions** | 🔴 **High** | **Open — session 7 discovery; blocks all remaining Sprint 4 execution until scope-out complete. Three distinct failures surfaced in one QA pass: (1) approve endpoint sends no email; (2) `/setup` has no organic path from `/login`; (3) `/my-shelf` has no self-heal on stale localStorage. Fix: Product Agent runs full journey mapping at next standup, outputs canonical `docs/onboarding-journey.md`.** | Product + Dev agents |
+| Vendor approval does not trigger any email to the vendor — vendor has no organic way to know they've been approved | 🟡 Medium | Open — surfaced session 7 as consequence of the broader scope ambiguity above. Fix decision deferred to onboarding scope-out. Options: (a) approve endpoint fires `signInWithOtp()` automatically, (b) admin notifies vendor out-of-band, (c) vendor-request success screen polls for approval and self-directs. | Product + Dev agents |
+| `/setup` bootstrap requires vendor to arrive via `/login?redirect=/setup` — no organic path exists | 🟡 Medium | Open — surfaced session 7. A vendor who goes to `/login` directly lands on `/my-shelf` with no profile bootstrap. Fix decision deferred to onboarding scope-out. | Dev agent |
+| `/my-shelf` does not self-heal on stale or empty localStorage — DB state and client state can diverge silently | 🟡 Medium | Open — surfaced session 7. In QA, David's iPhone showed "posting as Zen · booth 300" after a database reset wiped the Zen vendor entirely. Fix decision deferred to onboarding scope-out. | Dev agent |
+| CLAUDE.md "Known vendors" section was stale — claimed vendors were linked to auth that were not | 🟢 Low | ✅ Resolved 2026-04-17 session 7 — section rewritten to reflect post-reset truth. Docs agent to verify schema-vs-docs drift as part of each session close going forward. | Docs agent |
 | `/vendor-request` success screen is generic — loses the "in-person magic moment" when admin is standing there approving in real time | 🟢 Low | Open — Sprint 4 (T4). Fix: real-time approval poll OR in-person variant of success screen. **NEW 2026-04-17 session 5.** | Dev agent |
 | PWA install experience is improvised (user has to find "Add to Home Screen" manually) | 🟢 Low | Open — Sprint 5. Low priority while onboarding is in-person (David walks vendors through install). Escalates to 🟡 Medium if/when remote onboarding starts. **NEW 2026-04-17 session 5.** | Dev agent |
 | No error monitoring (Sentry / structured logs) | 🟡 Medium | Open — Sprint 3/4 carryover | Dev agent |
@@ -200,7 +205,8 @@ These don't stop work but must be called out explicitly before the session conti
 | `/enhance-text` caption is mock (not real Claude call) | 🟢 Low | Open — future sprint | Dev agent |
 | `/api/debug-vendor-requests` left in production | 🟢 Low | Open — useful for QA; remove in a later cleanup sprint | Dev agent |
 | Supabase OTP email template variables not validated at deploy time (session 6 discovery) | 🟢 Low | ✅ Resolved 2026-04-17 session 6 — new Tech Rule added: email templates for `signInWithOtp` must include `{{ .Token }}` in a selectable element (`<code>` with `user-select: all`) AND Supabase OTP Length must match the app input length (6 digits). Both Magic Link and Confirm Signup templates updated. The "Save changes" button in Supabase template editor can silently no-op between tab switches — always verify with Preview tab. | Dev agent |
-| Test vendor from session 5 end-to-end test needs cleanup-or-document decision | 🟢 Low | Open — if throwaway email, clean up per SQL in CLAUDE.md; if real, document in Known vendors. **NEW 2026-04-17 session 5.** | Dev agent |
+| Test vendor from session 5 end-to-end test needs cleanup-or-document decision | 🟢 Low | ✅ Resolved 2026-04-17 session 7 — full DB reset wiped all test data including this row. | Dev agent |
+| Post-reset stale vendor row `David Butler / booth 123 / America's Antique Mall` (unlinked) from session 7 QA | 🟢 Low | Open — session 7. Keep for QA re-run or clean up pending scope-out outcome. | Dev agent |
 
 ---
 
@@ -268,7 +274,7 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 | Sprint 1 | MVP core — feed, post flow, auth, booths | ✅ Complete |
 | Sprint 2 | UI polish — animations, detail page, scroll restore | ✅ Complete |
 | Sprint 3 | Vendor bio, Find Map overhaul, error monitoring, rate limiting | 🔄 Carryovers folded into Sprint 4 |
-| Sprint 4 | Beta-readiness — custom domain, OTP auth, `/admin` polish, `/vendor-request` magic moment | 🔄 In progress (T1 + T2 shipped 2026-04-17 session 6; T3 + T4 remaining) |
+| Sprint 4 | Beta-readiness — custom domain, OTP auth, `/admin` polish, `/vendor-request` magic moment | 🔄 In progress (T1 + T2 shipped 2026-04-17 session 6; T3 shipped 2026-04-17 session 7; **T4 blocked pending onboarding scope-out at next session open — session 7 surfaced the broader scope-ambiguity risk that T4 sits inside**) |
 | Sprint 5 | Guest-user UX + onboarding polish — "Curator Sign In" rename, `/welcome` landing, PWA install prompts, vendor onboarding Loom | 🔲 Planned |
 | Sprint 6+ | QR-code approval, Universal Links, native app eval, feed pagination, ToS/privacy, admin-cleanup tool | 🔲 Parked |
 
@@ -300,4 +306,4 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 ---
 > This document is the operating constitution for the Treehouse system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-17 (session 6)
+> Last updated: 2026-04-17 (session 7)
