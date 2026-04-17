@@ -437,37 +437,50 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Approval toast — bottom-anchored, 6s, tap to dismiss */}
+      {/* Approval toast — wrapper-div pattern (KI-002, session 9).
+          Framer Motion overwrites inline transform when animating y, so centering
+          must live on an outer non-animated element. See MASTER_PROMPT.md →
+          KNOWN PLATFORM GOTCHAS and DECISION_GATE.md → Tech Rules. */}
       <AnimatePresence>
         {toast && (
-          <motion.div
-            key="approval-toast"
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 40 }}
-            transition={{ type: "spring", stiffness: 380, damping: 32 }}
-            onClick={() => setToast(null)}
-            role="status"
-            aria-live="polite"
+          <div
+            key="approval-toast-shell"
             style={{
               position: "fixed",
-              left: "50%",
+              left: 0,
+              right: 0,
               bottom: "max(20px, env(safe-area-inset-bottom, 20px))",
-              transform: "translateX(-50%)",
-              width: "calc(100% - 32px)",
-              maxWidth: 398,
-              background: toast.kind === "success" ? colors.greenLight : colors.redBg,
-              border: `1px solid ${toast.kind === "success" ? colors.greenBorder : colors.redBorder}`,
-              borderRadius: 14,
-              padding: "14px 16px",
-              boxShadow: "0 10px 28px rgba(26,26,24,0.14)",
-              cursor: "pointer",
               zIndex: 100,
               display: "flex",
-              alignItems: "flex-start",
-              gap: 12,
+              justifyContent: "center",
+              padding: "0 16px",
+              pointerEvents: "none",
             }}
           >
+            <motion.div
+              key="approval-toast"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              transition={{ type: "spring", stiffness: 380, damping: 32 }}
+              onClick={() => setToast(null)}
+              role="status"
+              aria-live="polite"
+              style={{
+                pointerEvents: "auto",
+                width: "100%",
+                maxWidth: 398,
+                background: toast.kind === "success" ? colors.greenLight : colors.redBg,
+                border: `1px solid ${toast.kind === "success" ? colors.greenBorder : colors.redBorder}`,
+                borderRadius: 14,
+                padding: "14px 16px",
+                boxShadow: "0 10px 28px rgba(26,26,24,0.14)",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 12,
+              }}
+            >
             <div style={{ flex: 1, minWidth: 0 }}>
               {toast.kind === "success" ? (
                 <>
@@ -524,7 +537,8 @@ export default function AdminPage() {
             >
               <X size={16} />
             </button>
-          </motion.div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
