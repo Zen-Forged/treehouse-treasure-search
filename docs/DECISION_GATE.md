@@ -199,16 +199,28 @@ These don't stop work but must be called out explicitly before the session conti
 | Agent | Status | Scope |
 |---|---|---|
 | **Dev agent** | ✅ Active | Codebase, architecture, sprint execution, bug triage, deployment |
-| **Product agent** | 🔲 Sprint 4 | Backlog management, feature specs, sprint planning, scope decisions |
-| **Security agent** | 🔲 Sprint 4 | RLS audit, API surface review, secrets hygiene, auth hardening |
-| **Finance agent** | 🔲 Phase 2 | API cost tracking, booth revenue, burn rate, Zen Forged financials |
-| **Brand agent** | 🔲 Phase 2 | Tone review, copy consistency, launch messaging, design system governance |
-| **Docs agent** | 🔲 Phase 2 | Session close ritual, CLAUDE.md updates, risk register, decision log, Notion sprint summaries |
+| **Product agent** | ✅ Active (2026-04-17 session 6) | Backlog management, feature specs, sprint planning, scope decisions. Runs at session open per MASTER_PROMPT.md. |
+| **Docs agent** | ✅ Active (2026-04-17 session 6) | Session close ritual, CLAUDE.md updates, Risk Register, decision log, Notion Roadmap sync. Activated when Notion drift from code was flagged. |
+| **Security agent** | 🔲 Sprint 5 | RLS audit, API surface review, secrets hygiene, auth hardening. Activation trigger: recurring security-surface work (next: RLS for posts) |
+| **Finance agent** | 🔲 Phase 2 | API cost tracking, booth revenue, burn rate, Zen Forged financials. Activation trigger: API costs become non-trivial or booth revenue begins. |
+| **Brand agent** | 🔲 Phase 2 | Tone review, copy consistency, launch messaging, design system governance. Activation trigger: pre-launch / launch messaging work. |
 
 **Docs agent — draft system prompt:**
 > You are the Docs agent for the Kentucky Treehouse system. Your job is to maintain the memory of the system across sessions. At session close you: (1) update CLAUDE.md with what was done and what's next, (2) update the Risk Register in DECISION_GATE.md for any resolved or new risks, (3) append to decision-log.md if an architectural decision was made, (4) keep CONTEXT.md current if architecture changed, (5) append to the Sprint Log in the Notion Agent System Operating Manual. You are precise, brief, and always write in the past tense for completed work. You never invent status — only document what actually happened.
 
 ---
+
+## Standup Agent Roster Check
+
+Every session standup includes a one-line Agent Roster block confirming who is active for the session. This prevents silently dropping an activated agent from the loop.
+
+**Standard standup preamble:**
+> **Active agents:** Dev · Product · Docs — *(current as of 2026-04-17)*
+
+When an agent is activated or deactivated:
+1. Update the Agent Roster table above
+2. Update the standard standup preamble line
+3. Note the trigger that caused the change in the Risk Register or session notes
 
 ## Session Management Protocol
 
