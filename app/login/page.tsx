@@ -5,6 +5,11 @@
 //
 // BroadcastChannel syncs auth across tabs (magic link opens in new tab on mobile).
 // useSearchParams wrapped in Suspense per Next.js 14 App Router requirement.
+//
+// Redirect flow:
+//   /login?redirect=/setup  → passed to sendMagicLink as `next` param
+//   email round trip lands on /login?confirmed=1&next=/setup
+//   post-auth polling reads `next` and forwards (validated as safe relative path)
 
 "use client";
 
@@ -41,6 +46,22 @@ type TabMode = "email" | "pin";
 
 const AUTH_CHANNEL = "treehouse_auth";
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Only follow same-origin relative paths. Rejects:
+ *   - Missing / empty values
+ *   - Absolute URLs (https://evil.com)
+ *   - Protocol-relative URLs (//evil.com)
+ *   - Anything not starting with `/`
+ */
+function safeRedirect(next: string | null, fallback = "/my-shelf"): string {
+  if (!next) return fallback;
+  if (!next.startsWith("/")) return fallback;
+  if (next.startsWith("//")) return fallback;
+  return next;
+}
+
 // ─── Inner component ──────────────────────────────────────────────────────────
 
 function LoginInner() {
@@ -62,6 +83,7 @@ function LoginInner() {
   // ── Confirmed redirect from magic link ──
   useEffect(() => {
     const confirmed = searchParams.get("confirmed");
+    const postAuthDest = safeRedirect(searchParams.get("next"));
 
     if (confirmed === "1") {
       setScreen("confirming");
@@ -76,7 +98,7 @@ function LoginInner() {
             bc.postMessage({ type: "signed_in", userId: session.user.id });
             bc.close();
           } catch {}
-          router.replace("/my-shelf");
+          router.replace(postAuthDest);
         } else if (attempts > 20) {
           clearInterval(interval);
           setScreen("enter-email");
@@ -86,12 +108,12 @@ function LoginInner() {
       return () => clearInterval(interval);
     }
 
-    // Already logged in
-    getSession().then(s => { if (s?.user) router.replace("/my-shelf"); });
+    // Already logged in — honor redirect if present, otherwise /my-shelf
+    getSession().then(s => { if (s?.user) router.replace(postAuthDest); });
 
     // Supabase auth state change (same-tab magic link flow)
     const unsub = onAuthChange(user => {
-      if (user) router.replace("/my-shelf");
+      if (user) router.replace(postAuthDest);
     });
 
     // BroadcastChannel — detect auth from another tab
@@ -100,7 +122,7 @@ function LoginInner() {
       bc = new BroadcastChannel(AUTH_CHANNEL);
       bc.onmessage = (e) => {
         if (e.data?.type === "signed_in") {
-          getSession().then(s => { if (s?.user) router.replace("/my-shelf"); });
+          getSession().then(s => { if (s?.user) router.replace(postAuthDest); });
         }
       };
     } catch {}
@@ -116,7 +138,11 @@ function LoginInner() {
     const trimmed = email.trim().toLowerCase();
     if (!trimmed.includes("@")) { setError("Please enter a valid email address."); return; }
     setBusy(true); setError(null);
-    const { error: err } = await sendMagicLink(trimmed);
+
+    // Forward the incoming ?redirect= param through the magic-link round trip.
+    const redirect = searchParams.get("redirect") ?? undefined;
+    const { error: err } = await sendMagicLink(trimmed, redirect);
+
     setBusy(false);
     if (err) { setError("Couldn't send the link. Try again in a moment."); return; }
     setSentTo(trimmed);
@@ -351,7 +377,7 @@ function LoginInner() {
   );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── UI helpers ───────────────────────────────────────────────────────────────
 
 function ErrorBanner({ message }: { message: string }) {
   return (
