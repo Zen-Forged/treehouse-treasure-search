@@ -357,19 +357,20 @@ T4 was sitting inside the broader scope ambiguity and can't stay as a single tic
 - ✅ Both use warm Brand-Rules copy
 - ✅ End-to-end email delivery verified in production
 
-**T4c — Orphan cleanup + KI-003 diagnosis and fix** 🔴 **BLOCKING — RUNS BEFORE T4b**
+**T4c — Orphan cleanup + KI-003 diagnosis and fix** ✅ **PARTIALLY SHIPPED SESSION 9 — blocking item resolved**
 
-Elevated from original post-T4b position because session 8 QA revealed KI-003 (stale vendor identity) is still breaking the end-to-end journey despite T4a shipping. No real vendor onboarding can happen until this is fixed.
+The 🔴 blocking piece (KI-003 — stale vendor identity post-approval) is resolved as of session 9. The remaining orphan-cleanup items are non-critical and can ship with T4b or standalone.
 
-- **KI-001 fix** — admin PIN → `/admin` (one-line change in `handlePin()`)
-- **KI-002 fix** — toast centering on /admin (apply known-good wrapper-div pattern from `/post`)
-- **KI-003 diagnosis + fix** — root cause of "posting as Zen · booth 300" post-approval. Three candidate causes; diagnosis first, then surgical fix
-- Remove "Add a Booth" button from EmptyFeed
-- Gate "Post a find" in My Shelf NoBooth state behind `activeVendor !== null`
-- Revise `/api/setup/lookup-vendor` error copy
-- Revise `/vendor-request` success screen copy
-- Retire `/api/debug-vendor-requests` (🟡 security)
-- **Est:** 3 hours (1-2h diagnosis + 1-2h cleanup batch).
+- ✅ **KI-001 fix** — admin PIN → `/admin` (session 9)
+- ✅ **KI-002 fix** — toast centering on /admin via wrapper-div pattern (session 9)
+- ✅ **KI-003 diagnosis + fix** — three-part fix: `/login` redirect-param unification, `/post` localStorage guard, `/my-shelf` self-heal. Flow 2 onboarding end-to-end verified working (session 9)
+- 🟡 Remove "Add a Booth" button from EmptyFeed — still open
+- 🟡 Gate "Post a find" in My Shelf NoBooth state behind `activeVendor !== null` — still open
+- 🟡 Revise `/api/setup/lookup-vendor` error copy — still open
+- 🟡 Revise `/vendor-request` success screen copy — still open
+- 🟡 Retire `/api/debug-vendor-requests` (🟡 security) — still open
+- 🟡 **New session-9 polish item:** `/setup` 401 race retry-with-backoff in `setupVendorAccount()` (see docs/known-issues.md) — still open
+- **Est for remaining:** 1–1.5 hours total. Bundle into T4b or ship standalone.
 
 **T4b — Admin surface consolidation** (ran *after* T4c)
 - Add new "Add Booth" tab to `/admin` (Flow 1 home) — pure vendors row creation, no request/email
@@ -387,7 +388,7 @@ Elevated from original post-T4b position because session 8 QA revealed KI-003 (s
 - Document any gaps found
 - **Est:** 1–2 hours.
 
-**Updated total remaining:** ~8–9 hours (T4c → T4b → T4d, dependency-ordered).
+**Updated total remaining:** ~5–6.5 hours (T4b → T4c remainder → T4d → KI-004 scoping session). Session 9 landed the blocking critical path; what's left is polish and consolidation.
 
 ### Out of scope for T4 (explicitly)
 
@@ -424,4 +425,4 @@ None of these change, but calling out explicitly:
 
 ---
 
-> Last updated: 2026-04-17 (session 8 — T4a status updated to ✅ shipped; T4c elevated to 🔴 blocking per KI-003 discovery; remaining effort recalculated)
+> Last updated: 2026-04-17 (session 9 — T4c's 🔴 blocking piece resolved; KI-001/002/003 all shipped; Flow 2 end-to-end verified working on device; KI-004 logged for dedicated scoping session)

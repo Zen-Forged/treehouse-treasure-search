@@ -50,43 +50,121 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-17 late-late evening (session 8 — onboarding scope-out complete, T4a email infrastructure shipped end-to-end; three post-deploy QA issues logged to docs/known-issues.md)
+> Last updated: 2026-04-17 late-night (session 9 — KI-001, KI-002, KI-003 all resolved; Flow 2/3 onboarding end-to-end verified working; KI-004 approve-endpoint 23505 silent-reuse newly logged; session-9 findings surfaced a small 🟡 `/setup` 401 race worth a polish pass)
 
-**Status:** ✅✅ **Huge session.** Two major landings:
-1. **Onboarding scope-out complete** — three flows mapped (Pre-Seeded, Demo, Vendor-Initiated), canonical spec written at `docs/onboarding-journey.md`, T4 re-scoped into T4a/T4b/T4c/T4d with dependency ordering
-2. **T4a shipped end-to-end** — Resend email infrastructure via `lib/email.ts` + wired into `/api/vendor-request` (Email #1 receipt) and `/api/admin/vendor-requests` (Email #2 approval). **Both emails verified arriving in production.**
+**Status:** ✅✅✅ **Session 9 unblocked beta onboarding.** All three session-8 QA issues resolved; end-to-end Flow 2 onboarding verified working on David's iPhone (email CTA → OTP → auto-linked vendor → My Booth renders correctly). One new issue logged (KI-004, approve-endpoint 23505 silent-reuse) — intentionally deferred to a dedicated scoping session per David's call.
 
-⚠️ **Three post-deploy QA issues surfaced and logged to `docs/known-issues.md`:** admin PIN redirect wrong destination (KI-001), toast not centered on /admin (KI-002), and critically — the "posting as Zen · booth 300" bug is **still happening post-T4a** (KI-003, 🔴 High). The session-7 hypothesis that `/post` was reading stale localStorage turned out to be partially wrong — `/post` already calls `getVendorByUserId` on mount. The real cause needs diagnosis.
-
----
-
-## 🚨 Next session opener — T4c is now 🔴 blocking (READ FIRST)
-
-**Session 8 confirmed T4a works (emails arrive) but revealed the end-to-end journey is still broken.** A vendor can now get Email #1 (receipt), get Email #2 (approval), sign in via OTP, land on the right page, and *still* post as a stale vendor ("Zen · booth 300"). This blocks beta — you cannot onboard a real vendor until KI-003 is resolved.
-
-Per `docs/onboarding-journey.md` re-scoped sprint ordering, **T4c was positioned as an orphan-cleanup pass after T4b**. Session 8 discovered T4c needs to **run before T4b** because KI-003 is the actual journey-breaking bug.
-
-### Recommended Session 9 execution order
-
-1. **🔴 Diagnose KI-001/002/003** — start here, ship fixes as a batch
-   - **KI-001** (admin PIN → wrong destination): one-line fix in `app/login/page.tsx` `handlePin()`. 🟢 S.
-   - **KI-002** (toast not centered on /admin): wrapper-div pattern already used in `/post`. 🟢 S.
-   - **KI-003** (stale vendor identity post-approval): **diagnosis first, then fix.** The Session 8 scope-out assumed the bug was in `/post`, but `/post` already reads from DB. Real cause is one of:
-     - (A) `/setup`'s lookup-vendor link step silently failed → check Vercel logs for errors
-     - (B) Session authed as wrong user at `/post` load → check `getSession()` return value on device
-     - (C) Race in `/post`'s identity resolution → re-read `app/post/page.tsx` lines ~167–230
-   - **Prep:** clear David's iPhone `th_vendor_profile` localStorage before reproducing, otherwise the repro fights the stale cache on every attempt
-2. **Then T4b — admin surface consolidation** (Add Booth tab in /admin, Add Vendor in-person flow, remove Admin PIN tab from /login, remove Booths from BottomNav). ~4 hours.
-3. **Then T4d — pre-beta QA pass** — walk all three flows end-to-end against the fixed journey.
-
-### Stale-state callout for the fresh session
-
-- **David's iPhone localStorage:** has `th_vendor_profile` for `Zen / booth 300`. Clear before any repro via Sign Out from `/admin` gate or browser data clear.
-- **DB state:** `David Butler / booth 123 / America's Antique Mall` vendor row exists from session 8 QA. May or may not be linked to `dbutlerproductions@yahoo.com`'s `auth.users.id` — verify with the diagnostic SQL in "HOW TO CLEAR AN EMAIL FROM SUPABASE" section before deciding to clean it up vs. repro against it.
+### What shipped (4 fixes, 1 commit)
+1. **KI-001** (admin PIN → `/admin`) — one-line fix in `handlePin()`
+2. **KI-002** (toast centering on /admin) — wrapper-div pattern lifted from /post
+3. **KI-003** (onboarding journey broken) — three-part fix:
+   - `/login` reads `redirect ?? next` in mount effect + `onAuthChange` (param-name mismatch was the root cause)
+   - `/post` no longer falls through to localStorage when signed-in + no DB vendor (kills the "posting as Zen · booth 300" class of symptoms permanently)
+   - `/my-shelf` self-heals by calling `/api/setup/lookup-vendor` when signed-in + no linked vendor
+4. **Diagnostic logging** added to `lib/adminAuth.ts` `requireAuth()` — logs distinguish 'no bearer token' vs 'getUser rejected token' failure modes. Kept in production (low-noise, future-useful).
 
 ---
 
-## What was done (this session — 2026-04-17, session 8)
+## 🌱 Next session opener — T4b and polish (READ FIRST)
+
+**Session 9 shipped the critical path. Beta onboarding is no longer blocked.** Remaining Sprint 4 work: T4b (admin surface consolidation), T4d (pre-beta QA pass), plus a handful of polish items and a scoping session for KI-004.
+
+### Recommended Session 10 execution order
+
+1. **🟡 `/setup` 401 race polish** (30 min, optional)
+   - Session-9 QA showed `/setup` flashes "Setup Incomplete" briefly before `/my-shelf` self-heal catches it and lands the vendor correctly. The underlying cause is a ~500ms race between `verifyOtp` resolving client-side and Supabase's auth server validating the token server-side.
+   - Fix: add a single retry-with-backoff to `setupVendorAccount()` in `app/setup/page.tsx` on 401 response. 800ms wait, then retry once. If still 401, fall through to current error state.
+   - Worth doing because the brief "Setup Incomplete" flash is bad UX even though it self-corrects.
+2. **KI-004 scoping session** — pre-seeding → claim-booth flow. Per David: "Everything is captured that is available (booth #, mall, booth name). Once I speak with the booth owner or they reach out, I'd add their email and initiate the handoff to them." That's a clean mental model. Needs its own scope-out before code — touches Flow 1 and the approve-endpoint 23505 branch.
+3. **T4c remainder** — the session-9 fixes resolved the 🔴 blocking item (KI-003) but several 🟢 S orphan-cleanup items are still open. Bundle into T4b or ship as a follow-up:
+   - Remove EmptyFeed "Add a Booth" CTA (routes to /shelves)
+   - Gate `/my-shelf` NoBooth "Post a find" button behind `activeVendor !== null`
+   - Revise `/api/setup/lookup-vendor` error copy
+   - Revise `/vendor-request` success screen copy
+   - Retire `/api/debug-vendor-requests` (🟡 security)
+4. **T4b — admin surface consolidation** (~4 hours)
+   - Add Booth tab in /admin (Flow 1 home)
+   - Add Vendor in-person flow in /admin (Flow 2 capture)
+   - Remove Admin PIN tab from /login (gate moves behind /admin)
+   - Remove admin "Booths" BottomNav tab
+   - Remove `AddBoothSheet` from /shelves
+5. **T4d — pre-beta QA pass** walking all three flows against the mapped journey
+
+### Stale state from session 9
+
+- **DB orphans** (all `user_id=NULL`, `mall_id=d8d0fed1-...` or America's Antique Mall):
+  - `John Doe / booth 1234` (created ~16:31)
+  - `Claude Code / booth 123` (created ~16:00)
+  - `David Butler / booth 123 / AAM` (session 7-8 residue)
+  - These are collision hazards for KI-004. Session 10 should either clean them up via SQL or intentionally use non-colliding booth numbers until KI-004 is scoped.
+- **Successful session-9 test vendor** (linked): a `+test3`-style email alias from David's Gmail is now an auth.users + vendor_requests(approved) + vendors(linked) chain. Not colliding with anything, can be left alone or cleaned later.
+- **David's iPhone:** currently signed in as the session-9 test vendor. `th_vendor_profile` holds that vendor. Sign out and clear Safari data before Session 10 starts if testing onboarding again.
+
+---
+
+## What was done (this session — 2026-04-17, session 9)
+
+### Phase 1 — Warm-up commit: KI-001 + KI-002 (small, surgical)
+
+**KI-001** — `app/login/page.tsx` `handlePin()` final `router.replace("/my-shelf")` → `router.replace("/admin")`. Preserved the public email-OTP branch's `safeRedirect(?redirect=)` logic unchanged. One-line change with 2-line explanatory comment.
+
+**KI-002** — `app/admin/page.tsx` approval toast rewrapped in the known-good centering pattern. The outer non-animated `<div>` does `position:fixed; left:0; right:0; flex justifyContent:center`, and the inner `<motion.div>` animates only opacity+y. Previous version had `left:50%; transform:translateX(-50%)` directly on the `motion.div` and Framer Motion's y-animation overwrote the centering translate.
+
+Shipped as one commit (`fix(admin): KI-001 PIN redirect to /admin + KI-002 toast centering`). QA'd on device: PIN flow lands on /admin, toast centers on approvals.
+
+### Phase 2 — KI-003 diagnosis
+
+Clean-slate Flow 2 repro against a fresh `+test2`-style Gmail alias revealed two cascading bugs:
+
+**Bug A (primary)** — `/login`'s mount useEffect read `searchParams.get("next")` but the approval email CTA (`lib/email.ts` `sendApprovalInstructions`) uses `?redirect=/setup`. When a user arriving via the approval email already had a persisted Supabase session (iPhone PWA, prior test, etc.), the mount effect fired on load, found the existing session, and immediately `router.replace`d to `/my-shelf` — skipping `/setup` entirely. David's QA repro never saw `/setup` flash on screen, confirming the mount effect was eating the redirect before OTP entry even rendered.
+
+**Bug B (secondary, deferred as KI-004)** — `/api/admin/vendor-requests` approve endpoint's 23505 duplicate-key handler silently reuses an existing `vendors` row on `(mall_id, booth_number)` collision without checking whether that row belongs to a different onboarding. Produces ambiguous state where approval succeeds + email sends + a stale vendor exists that doesn't match the new vendor_request's name — so `/api/setup/lookup-vendor` later can't find a matching unlinked row and returns 404.
+
+Diagnostic SQL against the real DB confirmed Bug B was already in play from earlier session residue: three orphan `vendors` rows (`John Doe/1234`, `Claude Code/123`, `David Butler/123 at AAM`), all `user_id=NULL`.
+
+### Phase 3 — KI-003 three-part fix
+
+**Fix 1 — `app/login/page.tsx`** — mount useEffect + `onAuthChange` callback now read `searchParams.get("redirect") ?? searchParams.get("next")`. Added a 9-line comment block explaining the dual-param history (`next` for magic-link round-trip, `redirect` for approval email CTA) so the next person doesn't re-introduce the mismatch.
+
+**Fix 2 — `app/post/page.tsx`** — identity resolution useEffect no longer falls through to `safeStorage.getItem(LOCAL_VENDOR_KEY)` when `uid` is truthy. Unauth users still get the localStorage path (the "post without account" option is preserved). Signed-in users with no DB-linked vendor now render the `!hasValidIdentity` branch ("Set up your vendor profile" form) instead of silently surfacing whatever stale profile was last written to the device. Permanently eliminates the "posting as Zen · booth 300" symptom class.
+
+**Fix 3 — `app/my-shelf/page.tsx`** — non-admin signed-in users with no linked vendor now call `/api/setup/lookup-vendor` as a self-heal step before falling through to NoBooth. Makes `/my-shelf` a valid Flow 2/3 landing point even if `/setup` was skipped or raced. Idempotent via lookup-vendor's step-0 short-circuit (already-linked users get their existing row back without re-linking). Imported `authFetch` for the call.
+
+### Phase 4 — `/setup` 401 diagnosis → diagnostic logging
+
+Post-deploy QA surfaced a new symptom: `/setup` flashed briefly then showed "Setup Incomplete" with error text "Unauthorized". Fix #3 (my-shelf self-heal) caught and corrected this on second attempt, so the user ultimately landed on `/my-shelf` with the correct vendor — but the flash is visible bad UX.
+
+Root cause: `/api/setup/lookup-vendor`'s `requireAuth()` call to `service.auth.getUser(token)` is rejecting a freshly-issued OTP token because Supabase's auth-server validation has a ~500ms replication window after `verifyOtp` resolves on the client. The token is valid from the client's perspective (stored directly from the verify response) but not yet validatable from a different server.
+
+Added three targeted `console.error` log lines to `lib/adminAuth.ts` `requireAuth()` covering: (a) service client unavailable, (b) no bearer token on the request, (c) getUser rejecting the token. Pure observability change, no behavior impact. Left in production for future 401 debugging.
+
+Deferred fix: a ~10-line retry-with-backoff in `app/setup/page.tsx` `setupVendorAccount()` on 401 response. Scoped as a 🟢 S polish item for Session 10.
+
+### Phase 5 — End-to-end verification
+
+David's final QA: submitted a fresh `/vendor-request`, admin-approved, tapped the approval email on iPhone, entered OTP, saw `/setup` flash briefly, landed on `/my-shelf` showing the new vendor name + booth + mall correctly. **Flow 2 onboarding end-to-end verified working.** KI-003 closed.
+
+### Phase 6 — KI-004 scope handoff
+
+David's human-side product thinking on the pre-seeding → claim-booth flow: *"Everything is captured that is available (booth #, mall, booth name). Once I speak with the booth owner or they reach out etc., I'd just add their email and initiate the handoff to them so they could manage that booth. But trying to keep this simple for MVP."*
+
+Logged as KI-004 for a dedicated scoping session in the near future. Not urgent — the three DB orphans it protects against are known and avoidable with non-colliding booth numbers during testing.
+
+### Files modified this session
+- `app/login/page.tsx` — KI-001 one-liner + Fix 1 mount effect & onAuthChange dual-param read
+- `app/admin/page.tsx` — KI-002 wrapper-div pattern for toast
+- `app/post/page.tsx` — Fix 2 localStorage guard
+- `app/my-shelf/page.tsx` — Fix 3 self-heal + authFetch import
+- `lib/adminAuth.ts` — diagnostic logging on 401 branches
+- `CLAUDE.md` (this file) — session close
+- `docs/known-issues.md` — KI-001/002/003 moved to Resolved; KI-004 added
+- `docs/DECISION_GATE.md` — Risk Register updates
+- `docs/onboarding-journey.md` — T4c status updated
+
+---
+
+## ARCHIVE — What was done earlier (2026-04-17 late-late evening, session 8)
+> Onboarding scope-out + T4a email infrastructure shipped end-to-end
 
 ### Phase 1 — Onboarding scope-out (Product Agent, no code)
 
@@ -158,14 +236,14 @@ Three issues surfaced during T4a post-deploy QA. All logged to `docs/known-issue
 - **KI-002 🟡** Toast not centered on `/admin` (recurring Framer Motion transform-overwrite issue)
 - **KI-003 🔴 High** "Posting as Zen · booth 300" still happens post-approval — original hypothesis was `/post` reading stale localStorage, but `/post` already does `getVendorByUserId()` on mount. Real cause unknown; diagnostic question deferred to next session
 
-### Files modified this session
+### Files modified (session 8)
 - `docs/onboarding-journey.md` — new (canonical spec)
 - `docs/known-issues.md` — new (three issues logged)
 - `lib/email.ts` — new (Resend wrapper)
 - `app/api/vendor-request/route.ts` — +email call, removed TODO
 - `app/api/admin/vendor-requests/route.ts` — +email call, +warnings array
 - `.env.example` — +RESEND_API_KEY, +NEXT_PUBLIC_SITE_URL
-- `CLAUDE.md` (this file) — session close update
+- `CLAUDE.md` — session close update
 - Vercel env vars: RESEND_API_KEY (external, no code)
 - Resend dashboard: API key generated (external, no code)
 
@@ -446,30 +524,33 @@ Note: the `admin-cleanup` Sprint 6+ item will collapse this to one click.
 - Branded email templates for Magic Link and Confirm Signup (session 6)
 - Agent roster formalized: Dev · Product · Docs active (session 6)
 
-### Working ✅ additions (session 8 — 2026-04-17)
-- **`docs/onboarding-journey.md` canonical spec** — three flows mapped, email matrix, data shape, orphan inventory, re-scoped T4a/b/c/d
-- **`docs/known-issues.md`** — bug tracking alive (three issues logged: KI-001, KI-002, KI-003)
-- **`lib/email.ts` Resend REST wrapper** — two transactional email functions, best-effort delivery, local-dev friendly no-op
-- **Email #1 (receipt) wired into `/api/vendor-request`** — fires on successful `vendor_requests` insert, logs failures without blocking response
-- **Email #2 (approval + sign-in) wired into `/api/admin/vendor-requests`** — fires on approve, surfaces failures via `warning` field in admin toast
-- **End-to-end email delivery verified in production** — both emails arrived in vendor inbox ✅
+### Working ✅ additions (session 9 — 2026-04-17)
+- **KI-001, KI-002, KI-003 all resolved** — full diff in `docs/known-issues.md` Resolved section
+- **Flow 2 onboarding end-to-end verified working on iPhone** — approval email CTA → OTP → /setup → /my-shelf with correct vendor rendered
+- **`/login` redirect-param tolerance** — accepts both `?redirect=` (email CTA path) and `?next=` (magic-link round-trip path) in mount effect + onAuthChange
+- **`/post` signed-in localStorage guard** — signed-in users never fall through to stale cache; "posting as Zen · booth 300" symptom class permanently eliminated
+- **`/my-shelf` self-heal** — non-admin signed-in users with no linked vendor auto-call lookup-vendor before falling through to NoBooth. Makes /my-shelf a valid Flow 2/3 landing point even if /setup is skipped or raced.
+- **`requireAuth` diagnostic logging** — 401 responses now distinguish missing-header vs rejected-token in Vercel function logs
 
 ## KNOWN GAPS ⚠️
 
-### 🔴 Pre-beta blockers (must resolve before any real vendor onboarding)
-- **KI-003** — "Posting as Zen · booth 300" persists post-T4a. Vendor can complete full approval flow but still post under stale identity. Root cause needs diagnosis (logged in `docs/known-issues.md`). Blocks all real vendor onboarding until fixed.
+### 🔴 Pre-beta blockers
+_None as of session 9 close._ KI-003 was the last blocker and is resolved.
 
-### 🟡 Sprint 4 remainder (in-progress — see docs/onboarding-journey.md for re-scoped ordering)
+### 🟡 Sprint 4 remainder
 - ✅ Custom domain `app.kentuckytreehouse.com` → Vercel (session 6)
 - ✅ OTP 6-digit code entry + clipboard paste (session 6)
 - ✅ T3 `/admin` mobile-first approval polish (session 7)
 - ✅ Onboarding scope-out + `docs/onboarding-journey.md` (session 8)
 - ✅ T4a email infrastructure + Email #1 + Email #2 (session 8)
-- 🔴 **T4c** — orphan cleanup + KI-003 fix. **Elevated to blocking, runs before T4b.**
+- ✅ KI-001 admin PIN redirect (session 9)
+- ✅ KI-002 toast centering (session 9)
+- ✅ KI-003 onboarding journey fix (session 9)
+- 🟡 **`/setup` 401 race polish** — new session-9 observation. `/setup` flashes Setup Incomplete briefly before /my-shelf self-heal catches it. ~10-line retry-with-backoff in `setupVendorAccount()`. 🟢 S, ~30 min.
+- 🟡 T4c remainder (orphan cleanup — non-critical items) — EmptyFeed CTA removal, NoBooth gate, error copy revisions, retire /api/debug-vendor-requests. Bundle into T4b or ship standalone.
 - 🟡 T4b — admin surface consolidation (Add Booth tab in /admin, Add Vendor in-person flow, remove Admin PIN from /login, remove Booths from BottomNav)
 - 🟡 T4d — pre-beta QA pass walking all three flows end-to-end
-- **KI-001** — admin PIN redirects to `/my-shelf` (should be `/admin`). Bundled into T4b or shipped standalone.
-- **KI-002** — toast not centered on `/admin`. Bundled into T4c.
+- **KI-004** — approve-endpoint 23505 silent-reuse. Needs a dedicated scoping session per David's call (pre-seeding → claim-booth flow model). Not urgent.
 - Sprint 3 leftovers still pending beta invites:
   - Error monitoring (Sentry or structured logs)
   - Vendor bio UI (tap-to-edit + public display)

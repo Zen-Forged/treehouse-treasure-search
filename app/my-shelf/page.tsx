@@ -12,7 +12,6 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState, Suspense } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Send, Check, ImagePlus, Pencil, Loader } from "lucide-react";
@@ -195,6 +194,13 @@ function VendorHero({
 // ─── No booth state ───────────────────────────────────────────────────────────
 
 function NoBooth() {
+  // Orphan cleanup (session 10): removed "Post a find" Link that routed to
+  // /post. This state only renders when a signed-in user has no linked
+  // vendor AND the /my-shelf self-heal failed — meaning they're either a
+  // shopper who signed in by accident or a vendor whose approval never
+  // completed. In both cases /post is a dead end (the post-flow guard sends
+  // signed-in users with no DB vendor back to a profile setup state).
+  // Copy revised to match the new no-button state.
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
       style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 32px 0", textAlign: "center" }}>
@@ -202,14 +208,11 @@ function NoBooth() {
         <PiLeaf size={22} style={{ color: colors.textMuted }} />
       </div>
       <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: colors.textPrimary, marginBottom: 10, lineHeight: 1.3 }}>
-        No booth set up yet
+        No booth linked to this account
       </div>
-      <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: colors.textMuted, lineHeight: 1.75, maxWidth: 230, margin: "0 0 28px" }}>
-        Post your first find to create your booth identity and see your shelf here.
+      <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: colors.textMuted, lineHeight: 1.75, maxWidth: 260, margin: "0 auto" }}>
+        If you’re a vendor awaiting approval, your booth will appear here once setup is complete. Questions? Reach out to the admin directly.
       </p>
-      <Link href="/post" style={{ display: "inline-block", padding: "12px 26px", borderRadius: 24, background: colors.green, color: "rgba(255,255,255,0.96)", fontSize: 13, fontWeight: 600, textDecoration: "none", boxShadow: "0 2px 12px rgba(30,77,43,0.25)" }}>
-        Post a find
-      </Link>
     </motion.div>
   );
 }
