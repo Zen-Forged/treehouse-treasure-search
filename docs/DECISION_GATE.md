@@ -80,7 +80,11 @@ str_replace                        Fails on bracket-path files — use write_fil
 Read before rewriting              Always read current file contents before a full rewrite
 safeStorage                        Use instead of raw localStorage in all ecosystem client components
 export const dynamic               Required on all ecosystem pages importing supabase at module scope
-Framer Motion transforms           motion.div cannot have centering transform — use wrapper div
+Framer Motion transforms           motion.div cannot have centering transform — use wrapper div.
+                                   Recurring bug: session 7 /admin toast re-introduced this when
+                                   applying left:50% + translateX(-50%) inline on a motion.div
+                                   that animates y. Framer replaces the transform entirely.
+                                   (See docs/known-issues.md KI-002.)
 Framer Motion transitions          Never two transition props on same motion.div — merge them
 Framer ease arrays                 Must use `as const` — e.g. [0.25,0.46,0.45,0.94] as const
 createVendor                       Handles 23505 duplicate key — do not revert this upsert logic
@@ -96,10 +100,13 @@ Service-role-only tables           `vendor_requests` and any future service-role
 Admin API routes                   All /api/admin/* routes MUST call requireAdmin(req) server-side
                                    as the first line of the handler. UI gating alone is not enough —
                                    routes are directly reachable. No exceptions.
-DNS / email sending                Transactional email (magic links) sends from `kentuckytreehouse.com`
-                                   via Resend + Supabase custom SMTP. Shopify remains authoritative
-                                   for the zone; Resend records (`resend._domainkey`, `send` TXT/MX)
-                                   live in Shopify DNS. See CLAUDE.md DNS STATE section.
+DNS / email sending                Transactional email sends from `kentuckytreehouse.com` via TWO
+                                   channels: (1) Supabase Auth OTP emails via Resend SMTP integration,
+                                   (2) our own transactional emails (receipt, approval) via Resend
+                                   REST API in lib/email.ts using RESEND_API_KEY env var. Shopify
+                                   remains authoritative for the zone; Resend records (`resend.
+                                   _domainkey`, `send` TXT/MX) live in Shopify DNS. See CLAUDE.md
+                                   DNS STATE section.
 Post-auth redirects                Use safeRedirect(next, fallback) helper in app/login/page.tsx.
                                    Only same-origin relative paths are honored; rejects absolute
                                    and protocol-relative URLs. Added session 5 (2026-04-17).
@@ -112,6 +119,17 @@ OTP email templates                Supabase `signInWithOtp` sends BOTH magic lin
                                    Supabase OTP Length setting (Auth → Providers → Email) must
                                    match the app's input length (default is 8; we use 6).
                                    Added session 6 (2026-04-17).
+Transactional email best-effort    `lib/email.ts` functions return `{ ok, error? }` and never throw.
+                                   Callers MUST log the error but return HTTP success if the
+                                   underlying transaction (DB insert, status update) succeeded —
+                                   email is a notification, not part of the transaction. Added
+                                   session 8 (2026-04-17).
+Onboarding flow work               All vendor onboarding-adjacent work (sign-in, approval,
+                                   `/setup`, `/post` identity resolution) must scope against
+                                   `docs/onboarding-journey.md` before code. Three committed
+                                   flows: Pre-Seeded, Demo, Vendor-Initiated. If a proposed
+                                   change doesn't fit one of these three, pause and re-scope
+                                   the journey doc first. Added session 8 (2026-04-17).
 ```
 
 ---
@@ -136,6 +154,7 @@ These conditions require a conversation with David before any code is written or
 | Deployment config change (vercel.json, next.config.js) | Can break production silently |
 | New external service integration | Cost, privacy, and dependency implications |
 | DNS changes during nameserver migration window | Splitting DNS across two authoritative sources causes inconsistent resolution. Currently: Shopify is sole authority; Cloudflare is dormant. No migration in progress. |
+| Onboarding change not scoped against `docs/onboarding-journey.md` | Three flows are committed. Drift-by-patch is what drove the session-7 scope crisis. Added session 8. |
 
 ### 🟡 SURFACE — Flag before proceeding, then get approval
 
@@ -170,7 +189,7 @@ These don't stop work but must be called out explicitly before the session conti
 
 ## Current Risk Register
 
-> Updated: 2026-04-17 (session 7 — T3 shipped; 🔴 High-severity onboarding scope risk added; 3 🟡 Medium risks added under the scope-risk parent; 2 🟢 Low risks resolved via DB reset + T3 ship; Known vendors drift flagged and resolved)
+> Updated: 2026-04-17 (session 8 — onboarding scope-out complete; T4a email infra shipped; 3 session-7 🟡 risks resolved; KI-003 🔴 newly open as pre-beta blocker; Tech Rules expanded with email best-effort and onboarding-scope requirements)
 
 | Risk | Severity | Status | Owner |
 |---|---|---|---|
@@ -181,32 +200,39 @@ These don't stop work but must be called out explicitly before the session conti
 | Magic link delivery broken for Yahoo/AOL (pre-beta blocker) | 🔴 High | ✅ Resolved 2026-04-17 — Resend SMTP via Shopify DNS + Resend→Supabase native integration. End-to-end Yahoo test passed. | Dev agent |
 | `emailRedirectTo` hardcoded in `lib/auth.ts` — loses `/setup` redirect across magic-link round trip | 🟡 Medium | ✅ Resolved 2026-04-17 session 5 — `sendMagicLink(email, redirectTo?)` now accepts optional path, `safeRedirect()` helper in `app/login/page.tsx` validates same-origin relative paths only. Verified end-to-end with fresh email → `/setup` → admin approval → `/my-shelf`. | Dev agent |
 | Magic link breaks PWA session continuity (Safari opens outside PWA context) | 🟡 Medium | ✅ Resolved 2026-04-17 session 6 — OTP 6-digit code entry is now the primary auth path with clipboard paste button. Entire flow stays in home-screen PWA context. Magic link remains as fallback. Verified end-to-end on iPhone PWA. | Dev agent |
-| "Sign In" button is unlabeled for audience — any shopper clicking it can authenticate and hit a dead-end `/my-shelf` | 🟡 Medium | Open — Sprint 5. Fix: Option B — rename to "Curator Sign In" + add `/welcome` landing for signed-in non-vendors with warm "still curator-only" copy + "Request a booth" CTA. **NEW 2026-04-17 session 5.** | Dev agent |
-| Vercel URL (`treehouse-treasure-search.vercel.app`) is a tech-flavored URL for vendor-facing onboarding | 🟢 Low | ✅ Resolved 2026-04-17 session 6 — `app.kentuckytreehouse.com` live (CNAME in Shopify DNS → Vercel, HTTP/2, cert issued). Supabase Auth Site URL + Redirect URLs aligned. `.vercel.app` remains live as safety net for ~1 week. | Dev agent |
+| "Sign In" button is unlabeled for audience — any shopper clicking it can authenticate and hit a dead-end `/my-shelf` | 🟡 Medium | Open — Sprint 5. Fix: Option B — rename to "Curator Sign In" + add `/welcome` landing for signed-in non-vendors with warm "still curator-only" copy + "Request a booth" CTA. | Dev agent |
+| Vercel URL (`treehouse-treasure-search.vercel.app`) is a tech-flavored URL for vendor-facing onboarding | 🟢 Low | ✅ Resolved 2026-04-17 session 6 — `app.kentuckytreehouse.com` live (CNAME in Shopify DNS → Vercel, HTTP/2, cert issued). | Dev agent |
 | `/admin` approval UX has dead copy-paste email template flow (obsolete since Resend SMTP) | 🟢 Low | ✅ Resolved 2026-04-17 session 7 — T3 shipped: email template flow removed, structured toast replaces inline banner, Approve button sized for 44px iOS thumb-reach. | Dev agent |
-| **Onboarding journey scope is ambiguous across sessions — Dev agent has been building against shifting assumptions** | 🔴 **High** | **Open — session 7 discovery; blocks all remaining Sprint 4 execution until scope-out complete. Three distinct failures surfaced in one QA pass: (1) approve endpoint sends no email; (2) `/setup` has no organic path from `/login`; (3) `/my-shelf` has no self-heal on stale localStorage. Fix: Product Agent runs full journey mapping at next standup, outputs canonical `docs/onboarding-journey.md`.** | Product + Dev agents |
-| Vendor approval does not trigger any email to the vendor — vendor has no organic way to know they've been approved | 🟡 Medium | Open — surfaced session 7 as consequence of the broader scope ambiguity above. Fix decision deferred to onboarding scope-out. Options: (a) approve endpoint fires `signInWithOtp()` automatically, (b) admin notifies vendor out-of-band, (c) vendor-request success screen polls for approval and self-directs. | Product + Dev agents |
-| `/setup` bootstrap requires vendor to arrive via `/login?redirect=/setup` — no organic path exists | 🟡 Medium | Open — surfaced session 7. A vendor who goes to `/login` directly lands on `/my-shelf` with no profile bootstrap. Fix decision deferred to onboarding scope-out. | Dev agent |
-| `/my-shelf` does not self-heal on stale or empty localStorage — DB state and client state can diverge silently | 🟡 Medium | Open — surfaced session 7. In QA, David's iPhone showed "posting as Zen · booth 300" after a database reset wiped the Zen vendor entirely. Fix decision deferred to onboarding scope-out. | Dev agent |
-| CLAUDE.md "Known vendors" section was stale — claimed vendors were linked to auth that were not | 🟢 Low | ✅ Resolved 2026-04-17 session 7 — section rewritten to reflect post-reset truth. Docs agent to verify schema-vs-docs drift as part of each session close going forward. | Docs agent |
-| `/vendor-request` success screen is generic — loses the "in-person magic moment" when admin is standing there approving in real time | 🟢 Low | Open — Sprint 4 (T4). Fix: real-time approval poll OR in-person variant of success screen. **NEW 2026-04-17 session 5.** | Dev agent |
-| PWA install experience is improvised (user has to find "Add to Home Screen" manually) | 🟢 Low | Open — Sprint 5. Low priority while onboarding is in-person (David walks vendors through install). Escalates to 🟡 Medium if/when remote onboarding starts. **NEW 2026-04-17 session 5.** | Dev agent |
+| Onboarding journey scope is ambiguous across sessions — Dev agent has been building against shifting assumptions | 🔴 High | ✅ Resolved 2026-04-17 session 8 — Product Agent ran full scope-out. `docs/onboarding-journey.md` created as canonical spec with three committed flows (Pre-Seeded, Demo, Vendor-Initiated). T4 re-scoped into T4a/b/c/d. New Tech Rule added requiring all onboarding work to scope against the doc. | Product + Dev agents |
+| Vendor approval does not trigger any email to the vendor — vendor has no organic way to know they've been approved | 🟡 Medium | ✅ Resolved 2026-04-17 session 8 — T4a shipped: `lib/email.ts` wraps Resend REST API, `sendRequestReceived` wired into `/api/vendor-request`, `sendApprovalInstructions` wired into `/api/admin/vendor-requests` approve. Both emails verified arriving in production. | Dev agent |
+| `/setup` bootstrap requires vendor to arrive via `/login?redirect=/setup` — no organic path exists | 🟡 Medium | ✅ Resolved 2026-04-17 session 8 — T4a approval email now carries the `/login?redirect=/setup` URL directly, so the vendor has an organic path. | Dev agent |
+| `/my-shelf` does not self-heal on stale or empty localStorage — DB state and client state can diverge silently | 🟡 Medium | ⚠️ Re-diagnosed 2026-04-17 session 8 — original framing was wrong. `/my-shelf` reads from DB via `getVendorByUserId` and `/post` also already does this. The real bug manifests differently and is tracked as KI-003 below. | Dev agent |
+| **"Posting as Zen · booth 300" persists post-T4a — vendor completes full approval flow but still posts under stale identity (KI-003)** | 🔴 **High** | **Open — session 8 discovery, pre-beta blocker. Root cause needs diagnosis. `/post` code already calls `getVendorByUserId()` on mount but something is falling through. Three candidate causes: (A) `/setup`'s link step silently failed, (B) session authed as wrong user when `/post` loads, (C) race in `/post`'s identity resolution. Tracked in docs/known-issues.md. Recommended sprint: T4c elevated to blocking, runs before T4b.** | Dev agent |
+| CLAUDE.md "Known vendors" section was stale — claimed vendors were linked to auth that were not | 🟢 Low | ✅ Resolved 2026-04-17 session 7 — section rewritten to reflect post-reset truth. Docs agent verifies schema-vs-docs drift at each session close going forward. | Docs agent |
+| `/vendor-request` success screen is generic — loses the "in-person magic moment" when admin is standing there approving in real time | 🟢 Low | ⚠️ Obsoleted by T4a — vendor now gets an email on both submit and approve. Real-time poll no longer needed. Copy still needs a light update (T4c) to reinforce that receipt email was sent. | Dev agent |
+| PWA install experience is improvised (user has to find "Add to Home Screen" manually) | 🟢 Low | Open — Sprint 5. | Dev agent |
 | No error monitoring (Sentry / structured logs) | 🟡 Medium | Open — Sprint 3/4 carryover | Dev agent |
 | Bookmarks localStorage-only (ITP wipe risk) | 🟡 Medium | Open — Sprint 5 | Dev agent |
 | No automated testing | 🟡 Medium | Open — Sprint 6+ | Dev + Product agents |
-| Admin PIN not QA'd in production | 🟡 Medium | Open — Sprint 3/4 carryover; quick curl test | Dev agent |
+| Admin PIN not QA'd in production | 🟡 Medium | ⚠️ Partial — session 8 QA confirmed PIN works but revealed KI-001 (wrong post-auth destination). Full QA closes once KI-001 ships. | Dev agent |
 | Public Storage bucket (`post-images`) | 🟡 Medium | Intentional — monitor | Dev agent |
 | No terms of service / privacy policy | 🟡 Medium | Open — before public launch beyond in-person beta | David |
 | Deprecated lib functions still in `lib/posts.ts` | 🟢 Low | Open — `getVendorByEmail`, `linkVendorToUser`, `getVendorRequests`, `createVendorFromRequest`, `markVendorRequestApproved` marked `@deprecated` 2026-04-16; remove once confirmed no other callers import them | Dev agent |
-| Magic link emails landing in Yahoo junk folder on first send | 🟡 Medium | Accepted — expected for any new sending domain. Resolution: passive reputation seasoning as real usage grows + users marking "not junk". Branded email template (Sprint 4 item) will help marginally. | Dev agent |
+| Magic link emails landing in Yahoo junk folder on first send | 🟡 Medium | Accepted — expected for any new sending domain. Resolution: passive reputation seasoning. | Dev agent |
 | DNS archaeology assumption from session 3 was wrong (Google Cloud DNS) | 🟢 Low | ✅ Resolved 2026-04-17 — Shopify is actual DNS authority, Squarespace is registrar | Dev agent |
 | Orphaned Cloudflare DNS zone for `kentuckytreehouse.com` | 🟢 Low | Open — dormant; no cost | Dev agent |
 | Feed pagination missing (flat 80-post fetch) | 🟢 Low | Open — Sprint 6+ | Dev agent |
 | `/enhance-text` caption is mock (not real Claude call) | 🟢 Low | Open — future sprint | Dev agent |
-| `/api/debug-vendor-requests` left in production | 🟢 Low | Open — useful for QA; remove in a later cleanup sprint | Dev agent |
-| Supabase OTP email template variables not validated at deploy time (session 6 discovery) | 🟢 Low | ✅ Resolved 2026-04-17 session 6 — new Tech Rule added: email templates for `signInWithOtp` must include `{{ .Token }}` in a selectable element (`<code>` with `user-select: all`) AND Supabase OTP Length must match the app input length (6 digits). Both Magic Link and Confirm Signup templates updated. The "Save changes" button in Supabase template editor can silently no-op between tab switches — always verify with Preview tab. | Dev agent |
-| Test vendor from session 5 end-to-end test needs cleanup-or-document decision | 🟢 Low | ✅ Resolved 2026-04-17 session 7 — full DB reset wiped all test data including this row. | Dev agent |
-| Post-reset stale vendor row `David Butler / booth 123 / America's Antique Mall` (unlinked) from session 7 QA | 🟢 Low | Open — session 7. Keep for QA re-run or clean up pending scope-out outcome. | Dev agent |
+| `/api/debug-vendor-requests` left in production (unauthenticated; exposes vendor_requests data) | 🟡 Medium | Open — escalated from 🟢 Low in session 8. Unauthenticated diagnostic endpoint. Retire in T4c or a dedicated security cleanup. | Dev agent |
+| Supabase OTP email template variables not validated at deploy time (session 6 discovery) | 🟢 Low | ✅ Resolved 2026-04-17 session 6 | Dev agent |
+| Test vendor from session 5 end-to-end test needs cleanup-or-document decision | 🟢 Low | ✅ Resolved 2026-04-17 session 7 — full DB reset wiped all test data. | Dev agent |
+| Post-reset stale vendor row `David Butler / booth 123` (unlinked) from session 7 QA | 🟢 Low | ⚠️ Superseded — session 8 QA created fresh rows. Current state in Known Vendors section of CLAUDE.md. Link state unverified pending KI-003 diagnosis. | Dev agent |
+| **KI-001** — Admin PIN sign-in redirects to `/my-shelf` instead of `/admin` | 🟡 Medium | Open — new session 8. One-line fix in `app/login/page.tsx → handlePin()`. Ship as part of T4c or bundle into T4b (which removes PIN tab from /login entirely). | Dev agent |
+| **KI-002** — Toast centering breaks on `/admin` (recurring Framer Motion transform-overwrite issue) | 🟡 Medium | Open — new session 8. Apply the known-good wrapper-div pattern from `/post`. Tech Rule updated to flag the recurrence. Ship in T4c. Consider extracting `<CenteredToast>` component. | Dev agent |
+| **KI-003** — "Posting as Zen · booth 300" persists post-T4a — pre-beta blocker | 🔴 High | Open — new session 8 (see detailed row above). Root cause unknown. Blocks all real vendor onboarding. | Dev agent |
+| Email #1/#2 send via Resend direct — no retry/DLQ | 🟡 Medium | Open — new session 8. Best-effort delivery acceptable for beta. Revisit at scale (upgrade to queue-based send with retry). | Dev agent |
+| `/shelves` page's admin `AddBoothSheet` will be orphaned after T4b | 🟢 Low | Open — new session 8. Remove as part of T4b when canonical Add-Booth surface ships inside `/admin`. | Dev agent |
+| `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` obsolete since T4a automated approval emails | 🟢 Low | Open — new session 8. Retire in a doc cleanup pass. | Docs agent |
 
 ---
 
@@ -274,9 +300,9 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 | Sprint 1 | MVP core — feed, post flow, auth, booths | ✅ Complete |
 | Sprint 2 | UI polish — animations, detail page, scroll restore | ✅ Complete |
 | Sprint 3 | Vendor bio, Find Map overhaul, error monitoring, rate limiting | 🔄 Carryovers folded into Sprint 4 |
-| Sprint 4 | Beta-readiness — custom domain, OTP auth, `/admin` polish, `/vendor-request` magic moment | 🔄 In progress (T1 + T2 shipped 2026-04-17 session 6; T3 shipped 2026-04-17 session 7; **T4 blocked pending onboarding scope-out at next session open — session 7 surfaced the broader scope-ambiguity risk that T4 sits inside**) |
+| Sprint 4 | Beta-readiness — custom domain, OTP auth, `/admin` polish, vendor onboarding | 🔄 In progress. Shipped: T1 (custom domain, s6), T2 (OTP code entry, s6), T3 (`/admin` polish, s7), onboarding scope-out + `docs/onboarding-journey.md` (s8), T4a (email infrastructure, s8). Remaining: T4c (orphan cleanup + KI-003 fix, 🔴 blocking), T4b (admin surface consolidation), T4d (pre-beta QA pass). |
 | Sprint 5 | Guest-user UX + onboarding polish — "Curator Sign In" rename, `/welcome` landing, PWA install prompts, vendor onboarding Loom | 🔲 Planned |
-| Sprint 6+ | QR-code approval, Universal Links, native app eval, feed pagination, ToS/privacy, admin-cleanup tool | 🔲 Parked |
+| Sprint 6+ | "Claim this booth" flow, QR-code approval, Universal Links, native app eval, feed pagination, ToS/privacy, admin-cleanup tool | 🔲 Parked |
 
 ---
 
@@ -300,10 +326,11 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 | `CONTEXT.md` | Full architecture — schema, routes, data flow, design system |
 | `.claude/MASTER_PROMPT.md` | Operator rulebook — session structure, phase gating, approval boundaries |
 | `SPRINT_PLAN.md` | Sprint-level feature roadmap |
+| `docs/onboarding-journey.md` | **Canonical vendor onboarding spec — three flows, email matrix, re-scoped T4.** All onboarding-adjacent work scopes against this first. *(created session 8)* |
+| `docs/known-issues.md` | Active bugs, gaps, deferred items *(created session 8 — three issues logged: KI-001, KI-002, KI-003)* |
 | `docs/decision-log.md` | Architectural decisions and their rationale *(create when first decision is logged)* |
-| `docs/known-issues.md` | Active bugs, gaps, deferred items *(create when first issue is logged)* |
 
 ---
 > This document is the operating constitution for the Treehouse system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-17 (session 7)
+> Last updated: 2026-04-17 (session 8)
