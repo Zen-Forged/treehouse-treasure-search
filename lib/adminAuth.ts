@@ -56,6 +56,7 @@ export type AuthResult =
 export async function requireAuth(req: Request): Promise<AuthResult> {
   const service = getServiceClient();
   if (!service) {
+    console.error("[requireAuth] service client unavailable — missing env vars?");
     return {
       ok: false,
       response: NextResponse.json({ error: "Service unavailable." }, { status: 503 }),
@@ -64,6 +65,11 @@ export async function requireAuth(req: Request): Promise<AuthResult> {
 
   const token = getBearerToken(req);
   if (!token) {
+    const hasHeader = !!(req.headers.get("authorization") ?? req.headers.get("Authorization"));
+    console.error(
+      `[requireAuth] no bearer token. header present: ${hasHeader}. ` +
+      `method: ${req.method}. url: ${req.url}`,
+    );
     return {
       ok: false,
       response: NextResponse.json({ error: "Unauthorized." }, { status: 401 }),
@@ -72,6 +78,12 @@ export async function requireAuth(req: Request): Promise<AuthResult> {
 
   const { data, error } = await service.auth.getUser(token);
   if (error || !data?.user) {
+    console.error(
+      `[requireAuth] getUser rejected token. ` +
+      `token length: ${token.length}. ` +
+      `token prefix: ${token.slice(0, 12)}…. ` +
+      `error: ${error?.message ?? "no user returned"}`,
+    );
     return {
       ok: false,
       response: NextResponse.json({ error: "Unauthorized." }, { status: 401 }),
