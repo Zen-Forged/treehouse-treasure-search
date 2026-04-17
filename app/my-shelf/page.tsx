@@ -19,6 +19,7 @@ import { MapPin, Send, Check, ImagePlus, Pencil, Loader } from "lucide-react";
 import { PiLeaf } from "react-icons/pi";
 import { getVendorByUserId, getVendorById, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
+import { authFetch } from "@/lib/authFetch";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Post, type Vendor, type Mall } from "@/types/treehouse";
 import { colors } from "@/lib/tokens";
 import { vendorHueBg } from "@/lib/utils";
@@ -259,6 +260,30 @@ function MyBoothInner() {
       }
       const v = await getVendorByUserId(authedUser.id);
       if (v) { loadVendor(v, authedUser.id); return; }
+
+      // Self-heal (KI-003 — session 9): if this signed-in user has no linked
+      // vendor, try to link one by calling /api/setup/lookup-vendor. This is the
+      // same endpoint /setup uses during first-run onboarding. Running it here
+      // makes /my-shelf a valid landing point for the Flow 2/3 journey even if
+      // the user bypassed /setup (e.g. approval-email CTA lands them directly
+      // on /my-shelf via /login's redirect handling). Admin users skip this —
+      // they fall through to ADMIN_DEFAULT_VENDOR_ID instead.
+      if (!adminUser) {
+        try {
+          const res  = await authFetch("/api/setup/lookup-vendor", {
+            method: "POST",
+            body:   JSON.stringify({}),
+          });
+          const json = await res.json();
+          if (res.ok && json?.ok && json.vendor) {
+            loadVendor(json.vendor as Vendor, authedUser.id);
+            return;
+          }
+        } catch (err) {
+          console.error("[my-shelf] self-heal lookup-vendor failed:", err);
+        }
+      }
+
       if (adminUser) {
         const defaultV = await getVendorById(ADMIN_DEFAULT_VENDOR_ID);
         if (defaultV) { loadVendor(defaultV, authedUser.id); return; }
