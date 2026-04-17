@@ -50,174 +50,153 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-16 (session 3 of the day — Resend SMTP setup, DNS migration in flight)
+> Last updated: 2026-04-17 (session 4 — Yahoo magic link delivery RESOLVED, full end-to-end verified)
 
-**Status:** Resend account created and domain added. DNS migration in flight — Path B chosen (move DNS from Google Cloud DNS to Cloudflare for cleaner long-term ops). Cloudflare has records pre-imported and assigned nameservers; Tucows nameservers NOT yet swapped. DNSSEC confirmed off. No code changes this session. Session closed mid-migration on fatigue — pick up next session with nameserver swap + propagation + Resend records.
+**Status:** ✅ **Pre-beta blocker is DEAD.** Resend SMTP live, Yahoo delivery confirmed, end-to-end magic link + vendor linking flow verified from a logged-out browser through to `/my-shelf` rendering as the correct vendor. Email landed in Yahoo junk on first send (expected for new sending domain) — reputation will season passively as usage grows. No code changes this session — all work was infrastructure (DNS + SMTP + Supabase auth) plus a small data recovery.
 
 ---
 
-## What was done (this session — 2026-04-16 late PM)
-> Resend account setup + DNS migration decision made and staged (Cloudflare chosen over Google Cloud DNS)
+## What was done (this session — 2026-04-17 early AM)
+> DNS discovery pivot + Resend verification + Supabase SMTP integration + end-to-end Yahoo test passed
 
-### Context
-Session opened to wire Resend + custom SMTP for `kentuckytreehouse.com` to fix the pre-beta Yahoo magic link deliverability blocker. Path was well-defined at session open. What wasn't defined: where DNS for `kentuckytreehouse.com` actually lives.
+### The DNS pivot — Path A instead of Path B
 
-### The DNS archaeology
-Hours of hunting revealed the split nobody had documented:
-- **Registrar:** Tucows (through an unidentified reseller — see "Unknowns" below)
-- **Nameservers (live):** `NS-CLOUD-D1` through `NS-CLOUD-D4.GOOGLEDOMAINS.COM` — Google Cloud DNS
-- **Google Cloud project containing Shopify OAuth integration:** `kentuckytreehouse0001` (under `zenforged.com` org)
-- **Google Cloud DNS zone for kentuckytreehouse.com:** NOT in the `kentuckytreehouse0001` project — zone list was empty. Presumably living in a different GCP project on a different Google account we didn't hunt down.
-- **Cloudflare:** fully configured with records pre-imported (A, AAAA, CNAMEs for Shopify, MX, SPF, DMARC) but NOT active — nameservers at Tucows still point to Google Cloud DNS.
+Session 3 ended mid-Cloudflare-migration (Path B), assuming DNS was split between Google Cloud DNS and a pending Cloudflare swap. This session opened with the plan to complete that migration.
 
-### The decision — Path B: Cloudflare migration
-Two viable paths surfaced. Picked Path B.
+**Discovery that collapsed the plan:** David logged into the domain settings to find the Tucows reseller and found that **Shopify was managing DNS** for `kentuckytreehouse.com`, not Google Cloud DNS. The `dig ns-cloud-d1...d4.googledomains.com` result from session 3 appears to have been stale or misread. The actual live records were clearly Shopify-managed (A → `23.227.38.65`, AAAA → `2620:0127:f00f:5::`, CNAMEs to `shops.myshopify.com`, plus Shopify-issued DKIM records `h3f._domainkey` etc.).
 
-**Path A (rejected):** Find the orphaned Google Cloud DNS zone (different GCP project or different Google account), add 3 Resend records there. Fast (~15–30 min) but leaves DNS on a UI we find less pleasant and doesn't solve the underlying "DNS is configured in two places" weirdness.
+**Resolution:** Pivoted from Path B (Cloudflare migration) to Path A (add Resend records in the existing DNS UI — Shopify). This collapsed a 24–48h migration into a ~10-minute task.
 
-**Path B (chosen):** Complete the Cloudflare migration that was staged but never activated. Swap nameservers at Tucows from Google Cloud DNS → Cloudflare. Wait 24–48h for propagation. Add 3 Resend records in Cloudflare's UI. Verify. Cleaner long-term; slower today.
+**Also resolved:** The Tucows reseller mystery. Resend detected the domain's provider as **Squarespace** — so the registrar is Squarespace (likely inherited from Google Domains → Squarespace acquisition in 2023). The "Tucows reseller" framing from session 3 was incorrect.
 
-Rationale for Path B: (1) DNSSEC check cleared (`dig DNSKEY +short` empty — safe to migrate), (2) Cloudflare's UI is meaningfully better than Google Cloud DNS for ongoing DNS work, (3) Free CDN + DDoS + analytics come along for the ride, (4) all current records already imported into Cloudflare so the swap is low-risk.
+### DNS records added in Shopify DNS
 
-### Progress made
-- ✅ Resend account created
-- ✅ Domain `kentuckytreehouse.com` added in Resend, region `us-east-1`
-- ✅ Resend generated 3 DNS records (DKIM TXT, SPF TXT, MX — no DMARC since existing `p=none` record is fine as-is)
-- ✅ Cloudflare activation page reached — nameservers assigned: `marissa.ns.cloudflare.com`, `vin.ns.cloudflare.com`
-- ✅ DNSSEC confirmed off at registrar — safe to proceed with migration
-- ✅ Existing DMARC verified acceptable (`v=DMARC1; p=none` — will add `rua=mailto:david@zenforged.com` later as a nicety)
-- ✅ Existing SPF at root verified non-conflicting (`v=spf1 include:_spf.hostedemail.com ~all` — no overlap with Resend's `send` subdomain SPF)
+Three records, all resolved within 2 minutes:
 
-### NOT done yet (top of queue next session)
-- ❌ Tucows reseller login not identified — need to find via email receipt search
-- ❌ Nameservers NOT yet swapped at registrar
-- ❌ 3 Resend records NOT yet added in Cloudflare (wait until after propagation completes)
-- ❌ Resend verification NOT attempted
-- ❌ Supabase SMTP settings NOT updated
-- ❌ End-to-end magic link delivery test NOT performed
+| Type | Name | Value |
+|------|------|-------|
+| TXT | `resend._domainkey` | `v=DKIM1; k=rsa; p=MIGfMA0G...` (full key) |
+| TXT | `send` | `v=spf1 include:amazonses.com ~all` |
+| MX | `send` | `feedback-smtp.us-east-1.amazonses.com` (priority 10) |
 
-### The 3 Resend records — documented here for next session
+Verified via `dig` from local machine — all three resolved cleanly. Resend verified the domain ~2 minutes after the records were added.
 
-When Cloudflare is the live authority (i.e., `dig NS +short` returns Cloudflare nameservers), add these in Cloudflare → DNS → Records:
+### Resend → Supabase SMTP integration (native OAuth flow)
 
-**Record 1 — DKIM TXT**
-- Type: `TXT`
-- Name: `resend._domainkey`
-- Content: `v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCreHnVOPd1o636qlAvsUsxFF2vPN/h3EOMpfMdH0z2PpkvbS+Cyj0yBuHSNiLozS4Zvi+lgaZWP8JGR0q8a6rStIT7U4BP/H5HvoIp3+3bKfz929pW1WcDDjCBV4eXxADjLfpw2urNFB8jylwAmqDWh5a2aX2ulS27HKBEGkV9oQIDAQAB`
-- TTL: Auto
-- Proxy status: **DNS only** (grey cloud — critical)
+Used Resend's native Supabase integration (Settings → Integrations → Connect to Supabase) rather than manually copying SMTP credentials. Integration configured with:
 
-**Record 2 — SPF TXT for send subdomain**
-- Type: `TXT`
-- Name: `send`
-- Content: `v=spf1 include:amazonses.com ~all`
-- TTL: Auto
-- Proxy status: **DNS only**
+- **Sender name:** `Kentucky Treehouse`
+- **Sender email:** `hello@kentuckytreehouse.com`
+- **Host:** `smtp.resend.com` (port 465)
+- **User:** `resend`
+- **Password:** auto-generated Resend API key named "Supabase Integration"
 
-**Record 3 — MX for send subdomain**
-- Type: `MX`
-- Name: `send`
-- Mail server: `feedback-smtp.us-east-1.amazonses.com`
-- Priority: `10`
-- TTL: Auto
-- (MX records are always DNS-only in Cloudflare — no toggle needed)
+The integration pushed the config directly into Supabase Auth → SMTP Settings. No env vars in Vercel needed — Supabase sends the mail, not the Vercel app.
 
-### Unknowns still open for next session
+### End-to-end magic link test — PASSED ✅
 
-1. **Tucows reseller login.** Tucows is a wholesale registrar — they don't have a consumer login. The domain was registered through one of their resellers (Hover? OpenSRS? Domainbox? Something from Google Domains migration?). Resolution: search email inbox for `kentuckytreehouse.com` registration / renewal receipts. Whoever sent it is where you log in to change nameservers.
+Tested with `dbutlerproductions@yahoo.com` (previously blocked by Supabase default SMTP in session 2). Results:
 
-2. **The orphaned Google Cloud DNS zone.** Currently serving live DNS for the domain. After Cloudflare migration completes and is verified, this zone becomes dead weight. Whether to clean it up depends on finding it — which requires logging into whichever Google account originally owned Google Domains for this domain. Not urgent; not a blocker. Just hygiene.
+- ✅ Supabase dispatched magic link via Resend
+- ✅ Email arrived in Yahoo **junk folder** (expected for first-ever send from new domain — reputation will season)
+- ✅ Clicked magic link → authenticated, landed on `/login?confirmed=1` → auto-redirected to `/my-shelf`
+- ⚠️ `/setup` linking flow was **skipped** (routing bug — see below)
+- ✅ Manually navigated to `/setup` → linking completed → `vendors.user_id` set for David Butler / Booth 963 / All Peddlers
+- ✅ `/my-shelf` correctly renders David Butler's booth with correct mall + booth number
+- ✅ "Post a find" shows correct vendor context ("Posting As David Butler")
 
-### Files modified
+### Data recovery mid-session
+
+During QA setup, accidentally deleted the `vendor_requests` row for `dbutlerproductions@yahoo.com` (was attempting to clear the `auth.users` row for a clean test). Diagnosed via a 3-table `UNION ALL` query and recovered by re-inserting the `vendor_requests` row with `status = 'approved'`, pulling `mall_id` and `mall_name` from the existing `vendors` row via subquery to guarantee referential integrity. `vendors` row was untouched — only the historical request record was deleted and recreated.
+
+### Files modified this session
 - `CLAUDE.md` (this file)
-- `docs/DECISION_GATE.md` (Risk Register — Yahoo magic link deliverability status updated)
+- `docs/DECISION_GATE.md` (Risk Register — Yahoo magic link blocker → Resolved)
 
-No code changes this session.
+No application code changes this session.
 
 ---
 
-## Next session starting point — 2026-04-17
+## NEW BUG discovered — `emailRedirectTo` hardcoded in `lib/auth.ts`
 
-### 🔴 First item (continued): Complete Cloudflare DNS migration + Resend setup
+Surfaced during the end-to-end test. `sendMagicLink()` hardcodes the redirect URL to `/login?confirmed=1`, which means anyone routed to `/login?redirect=/setup` loses the `/setup` destination across the magic-link round trip. Result: users complete sign-in but never trigger the `/setup` vendor-linking flow unless they manually navigate there.
 
-**Phase 1 — Find Tucows reseller + swap nameservers (15 min)**
+**Current workaround:** Post-authentication, user manually navigates to `/setup` once. The `lookup-vendor` route short-circuits if already linked, so re-triggering is idempotent. But this should be a no-touch flow.
 
-1. 🖐️ HITL — Search Gmail/all email for `kentuckytreehouse.com` → find the registration or most recent renewal receipt → identify reseller (Hover, OpenSRS, etc.)
-2. 🖐️ HITL — Log in to reseller admin panel → domains → `kentuckytreehouse.com` → Nameservers
-3. 🖐️ HITL — Replace the 4 Google Cloud nameservers (`ns-cloud-d1` through `d4.googledomains.com`) with the 2 Cloudflare nameservers:
-   - `marissa.ns.cloudflare.com`
-   - `vin.ns.cloudflare.com`
-4. 🖐️ HITL — Save
+**Fix (next session):** Update `sendMagicLink(email, redirectTo?)` to accept an optional override, and update `/login` to pass the `redirect` query param through. ~5 line change in `lib/auth.ts` + `app/login/page.tsx`.
 
-**Phase 2 — Wait for propagation (6–48h, usually 6–12h)**
+---
 
-Do not touch anything. Site continues to work throughout (records identical in both zones during transition).
+## Next session starting point — 2026-04-17+
 
-**Phase 3 — Verify migration, then add Resend records (10 min)**
+### 🟢 First item: Fix `emailRedirectTo` hardcode bug
 
-1. 🟢 AUTO — Run `dig kentuckytreehouse.com NS +short` → expect Cloudflare nameservers
-2. 🖐️ HITL — In Cloudflare dashboard → DNS → add the 3 Resend records documented above (all DNS-only, not Proxied)
-3. 🖐️ HITL — Optional: edit existing `_dmarc` record content to add reporting address (`v=DMARC1; p=none; rua=mailto:david@zenforged.com`)
-4. 🖐️ HITL — Resend dashboard → Domains → `kentuckytreehouse.com` → click Verify DNS records → expect all green within 5 min
+Small surgical change. Makes the magic link flow complete without manual navigation. Est. 10 min including build/deploy.
 
-**Phase 4 — SMTP credentials + Supabase wiring (5 min)**
+**Files:**
+- `lib/auth.ts` — add optional `redirectTo` param to `sendMagicLink`
+- `app/login/page.tsx` — read `searchParams.get("redirect")` and pass through to `sendMagicLink`
 
-1. 🖐️ HITL — Resend dashboard → API Keys or SMTP section → generate SMTP credentials. Note: SMTP creds specifically, not API key — Supabase needs SMTP protocol.
-2. 🖐️ HITL — Paste the 4 values (host, port, user, pass) in chat so next-session Claude can verify them
-3. 🟢 AUTO — Walk through Supabase dashboard → Authentication → SMTP Settings → enable custom SMTP → paste Resend creds → sender email `info@kentuckytreehouse.com` → sender name `Kentucky Treehouse` → save
+### 🟢 Second item: Quick Gmail delivery test
 
-**Phase 5 — End-to-end delivery test (5 min)**
+5 min sanity check. Same flow as tonight's Yahoo test but with a Gmail address. If Yahoo works, Gmail should work, but belt-and-suspenders is cheap.
 
-Clear test email from Supabase first (Steps 1+2 of the cleanup doc in this file). Then from a logged-out browser:
-1. `/vendor-request` → submit with Yahoo address → sign in as admin → approve → click magic link → expect landing on `/setup` in <30s
-2. Same flow with Gmail → same expectation
-3. If both arrive: 🟢 ship it, update Risk Register (Yahoo blocker → Resolved)
-4. If either fails: triage deliverability (usually DMARC policy or DKIM alignment)
+### 🟡 Third item: Branded Supabase email template
 
-**Phase 6 — Close out the open loops**
+Replace the default Supabase "Magic Link" template with a branded Treehouse version. Value: deliverability (less phishing-like) + brand consistency + incremental reputation boost. Est. 30–45 min for HTML + copy + test send.
 
-1. 🖐️ HITL — Gmail-based QA of 2026-04-16 AM deploys (migrations + status filter fix) that never got verified on device — can likely be folded into Phase 5's Gmail test if that vendor record is the one being used
-2. 🟢 AUTO — Update CLAUDE.md working/gaps sections; update Risk Register
+**Deliverable components:**
+- Subject line: "Sign in to Kentucky Treehouse" (or similar warm phrasing)
+- Body: warm/observational Treehouse tone, simple HTML with color palette (`#f5f2eb` bg, `#1e4d2b` green)
+- Footer: "You're receiving this because you requested a sign-in link. If this wasn't you, you can safely ignore this email."
+- Test: send to both a Yahoo + Gmail address, mark as not-spam where needed
 
-### 🟡 Second (deferred from last session): `qa-agent` sub-agent build (S effort, High value, 🟢 Proceed)
+### 🟡 Fourth item: Mark-as-not-junk reputation seasoning
 
-Full scope captured in session 2 archive below. Still valid, still the right next move after Resend lands.
+Not technical work — habit-forming. For every real magic link that lands in junk over the next 2–4 weeks, mark as "not junk" / add to contacts. Add a note for beta vendors in onboarding copy to do the same.
 
-### Sprint 3 items (remaining)
-Unchanged from last session — error monitoring (P1), vendor bio UI (P2), admin PIN production QA (P3), mall page vendor CTA (P4), find map overhaul (P5).
+### 🟡 Fifth item: `qa-agent` sub-agent build
+
+Deferred again. Still valid, still S effort + High value + 🟢 Proceed. Good fit for a session where all P0/P1 infrastructure work is settled.
+
+### Sprint 3 items (remaining — unchanged)
+Error monitoring (P1), vendor bio UI (P2), admin PIN production QA (P3), mall page vendor CTA (P4), find map overhaul (P5).
 
 ### Sprint 4 (not started)
 Feed pagination, search, ToS/privacy, bookmarks persistence, `admin-cleanup` tool.
 
 ---
 
-## ARCHIVE — What was done earlier today (2026-04-16 PM, session 2)
-> Setup flow status-filter bug fix + Sprint 4 candidates captured
+## ARCHIVE — What was done earlier (2026-04-16 late PM, session 3)
+> Resend account setup + DNS migration decision (later reversed in session 4)
+
+Session 3 created the Resend account, added the domain, generated DNS records, and chose Path B (Cloudflare migration) based on the incorrect premise that DNS lived at Google Cloud DNS. Session 4 discovered DNS actually lived at Shopify, pivoted to Path A, and completed the setup. Cloudflare nameservers (`marissa.ns.cloudflare.com`, `vin.ns.cloudflare.com`) remain assigned but **not active** — Shopify nameservers still authoritative. No action needed; Cloudflare side is dormant at no cost.
+
+---
+
+## ARCHIVE — Session 2 (2026-04-16 PM)
+> Setup flow status-filter bug fix — now verified end-to-end in session 4
 
 ### The bug
-After last session's migration to `/api/setup/lookup-vendor`, the approved test vendor (`dbutlerproductions@yahoo.com` → David Butler, All Peddlers booth 963) hit `/setup` and got a generic "No vendor account found for this email" error despite the vendor_request row being in `approved` state and the matching `vendors` row existing with `user_id IS NULL`.
+After the migration to `/api/setup/lookup-vendor`, the approved test vendor hit `/setup` and got a generic "No vendor account found for this email" error despite the vendor_request row being in `approved` state and the matching `vendors` row existing with `user_id IS NULL`.
 
-Root cause: the handler filtered vendor_requests with `.eq("status", "pending")`. That filter is inverted for the setup flow — `approved` is exactly the state where a vendor *should* be able to link. The query returned zero rows, fell through to the empty-state 404, surfaced as "No vendor account found."
+Root cause: the handler filtered vendor_requests with `.eq("status", "pending")`. That filter is inverted for the setup flow — `approved` is exactly the state where a vendor *should* be able to link.
 
 ### Implementation
 - Rewrote `/app/api/setup/lookup-vendor/route.ts`: `.eq("status", "pending")` → `.neq("status", "rejected")`. The vendor row's existence (with `user_id IS NULL`) is the real gate — not the request status. Only `rejected` should actively block.
 - Moved the already-linked short-circuit to the top of the handler.
-- Tightened error copy to distinguish three failure modes: "No vendor request found for this email" vs "Your vendor account isn't ready yet..." vs generic 500.
+- Tightened error copy to distinguish three failure modes.
 
-### Files modified
-- `app/api/setup/lookup-vendor/route.ts`
-- `CLAUDE.md`
-
-### Blocked — end-to-end QA
-Magic link delivery to `dbutlerproductions@yahoo.com` failed silently. Supabase auth logs showed dispatch success; email never arrived. Known Supabase default SMTP deliverability issue with Yahoo/AOL. Triggered the Resend setup work in session 3 (this session).
+### Verification (completed in session 4)
+End-to-end verified via the Yahoo magic link test. `/setup` correctly locates approved vendor, links `user_id`, redirects to `/my-shelf` which now renders the correct vendor context.
 
 ---
 
-## ARCHIVE — Session 1 this morning (2026-04-16 AM)
+## ARCHIVE — Session 1 (2026-04-16 AM)
 > RLS-blocked vendor-request flow fix + admin API hardening
 
 ### Bug
-Admin "Vendor Requests" tab rendered empty. Root cause: `vendor_requests` has service-role-only RLS policy. Three functions in `lib/posts.ts` (`getVendorRequests`, `markVendorRequestApproved`, `getVendorByEmail`) used browser anon client, which RLS silently blocked. `/setup` flow broken same way.
+Admin "Vendor Requests" tab rendered empty. Root cause: `vendor_requests` has service-role-only RLS policy. Three functions in `lib/posts.ts` used browser anon client, which RLS silently blocked. `/setup` flow broken same way.
 
 Pre-existing companion bug: `/api/admin/posts` had NO server-side auth check — UI gating was the only gate.
 
@@ -228,16 +207,12 @@ Ecosystem tables with service-role-only RLS (`vendor_requests`, any future equiv
 - `lib/adminAuth.ts` (new) — `getServiceClient`, `requireAuth`, `requireAdmin` helpers
 - `lib/authFetch.ts` (new) — client bearer-token fetch wrapper
 - `app/api/admin/vendor-requests/route.ts` (new) — GET list + POST approve, both requireAdmin-gated
-- `app/api/setup/lookup-vendor/route.ts` (new — patched in session 2) — requireAuth, lookup + link in one call
-- `app/api/admin/posts/route.ts` (hardened) — requireAdmin added to GET + DELETE; switched anon → service role
-- `app/admin/page.tsx` (migrated) — all data access via authFetch to `/api/admin/*`
-- `app/setup/page.tsx` (migrated) — single authFetch call to lookup-vendor
+- `app/api/setup/lookup-vendor/route.ts` (new — patched in session 2, verified in session 4)
+- `app/api/admin/posts/route.ts` (hardened)
+- `app/admin/page.tsx` (migrated)
+- `app/setup/page.tsx` (migrated)
 - `lib/posts.ts` — five functions marked @deprecated
-- `docs/DECISION_GATE.md` — Tech Rules + Risk Register updated
-
-### Auth pattern (Option B — bearer header)
-- Client: `lib/authFetch.ts` reads Supabase session, adds `Authorization: Bearer <access_token>`
-- Server: `lib/adminAuth.ts` extracts bearer, validates via `service.auth.getUser(token)`, checks admin email
+- `docs/DECISION_GATE.md`
 
 ---
 
@@ -263,6 +238,7 @@ Ecosystem tables with service-role-only RLS (`vendor_requests`, any future equiv
 Next.js 14 App Router · TypeScript · Tailwind CSS · Framer Motion
 Anthropic SDK (claude-opus-4-5) · Supabase (Postgres + Storage + Auth) · SerpAPI · Vercel
 lucide-react (Heart, Send, Store, Home, LayoutGrid icons in ecosystem UI)
+Resend (SMTP provider for Supabase Auth magic links, via native Resend→Supabase integration)
 ```
 
 ---
@@ -281,36 +257,34 @@ EBAY_CLIENT_ID                   eBay direct API (not yet wired)
 EBAY_CLIENT_SECRET               eBay direct API (not yet wired)
 ```
 
-Planned additions (after Resend SMTP lands next session):
-```
-RESEND_SMTP_HOST                 (from Resend dashboard)
-RESEND_SMTP_PORT                 (from Resend dashboard)
-RESEND_SMTP_USER                 (from Resend dashboard)
-RESEND_SMTP_PASS                 (from Resend dashboard)
-```
-Note: these live in Supabase Auth → SMTP Settings, not Vercel env. The Vercel app itself does not send mail — Supabase does.
+**SMTP note:** Resend SMTP credentials are NOT stored as Vercel env vars. They live in Supabase Auth → SMTP Settings (configured via Resend's native integration 2026-04-17). The Vercel app itself does not send mail — Supabase does.
 
 ---
 
-## DNS STATE (as of 2026-04-16 late PM)
+## DNS STATE (as of 2026-04-17)
 
-Captured here so next session doesn't re-do the archaeology.
+**Registrar:** Squarespace Domains (inherited from Google Domains acquisition in 2023)
+**Authoritative nameservers:** Shopify's default nameservers (Shopify manages DNS)
+**DNSSEC:** Off
 
-**Registrar:** Tucows Domains Inc. (via unidentified reseller — resolve by email receipt search)
-**Current live nameservers:** `ns-cloud-d1` through `ns-cloud-d4.googledomains.com` (Google Cloud DNS)
-**Cloudflare assigned nameservers (pending activation):** `marissa.ns.cloudflare.com`, `vin.ns.cloudflare.com`
-**DNSSEC status:** Off (confirmed `dig DNSKEY +short` returned empty — safe to migrate)
-
-**Live records currently serving (via Google Cloud DNS, pre-imported into Cloudflare):**
+**Live records (via Shopify DNS):**
 - A `kentuckytreehouse.com` → `23.227.38.65` (Shopify)
-- AAAA `kentuckytreehouse.com` → `2620:127:f00f:5::` (Shopify IPv6)
-- CNAME `account` → `shops.myshopify.com` (Shopify proxy)
+- AAAA `kentuckytreehouse.com` → `2620:0127:f00f:5::` (Shopify IPv6)
 - CNAME `www` → `shops.myshopify.com`
-- MX `kentuckytreehouse.com` → `mx.kentuckytreehouse.com` (inbound forwarding)
+- CNAME `account` → `shops.myshopify.com`
+- CNAME `h3f._domainkey` → `dkim1.fa0cb6bc6910.p371.email.myshopify.com` (Shopify DKIM 1)
+- CNAME `h3f2._domainkey` → `dkim2.fa0cb6bc6910.p371.email.myshopify.com` (Shopify DKIM 2)
+- CNAME `h3f3._domainkey` → `dkim3.fa0cb6bc6910.p371.email.myshopify.com` (Shopify DKIM 3)
+- CNAME `mailerh3f` → `fa0cb6bc6910.p371.email.myshopify.com` (Shopify mail routing)
+- MX `@` → `mx.kentuckytreehouse.com.cust.b.hostedemail.com` priority 1 (inbound via HostedEmail)
+- TXT `_provider` → `shopify`
 - TXT `_dmarc` → `v=DMARC1; p=none`
-- TXT `kentuckytreehouse.com` → `v=spf1 include:_spf.hostedemail.com ~all` (root SPF for inbound)
+- TXT `@` → `v=spf1 include:_spf.hostedemail.com ~all` (root SPF for inbound)
+- **TXT `resend._domainkey` → `v=DKIM1; k=rsa; p=MIGfMA0G...` (Resend DKIM, added 2026-04-17)**
+- **TXT `send` → `v=spf1 include:amazonses.com ~all` (Resend SPF for `send` subdomain, added 2026-04-17)**
+- **MX `send` → `feedback-smtp.us-east-1.amazonses.com` priority 10 (Resend MX for `send` subdomain, added 2026-04-17)**
 
-**Live Google Cloud DNS zone location:** unknown — not in `kentuckytreehouse0001` GCP project (checked); likely in a different project on a different Google account. Not blocking — stays dormant after Cloudflare migration.
+**Dormant:** Cloudflare account has nameservers assigned (`marissa.ns.cloudflare.com`, `vin.ns.cloudflare.com`) but is not authoritative. Leftover from session 3's Path B plan. No cost to leaving it in place. Delete or reuse at your discretion.
 
 ---
 
@@ -319,14 +293,14 @@ Captured here so next session doesn't re-do the archaeology.
 - **vendor_requests:** id, name, email, booth_number, mall_id, mall_name, status, created_at ✅
 - **vendor_requests RLS:** service-role-only (`USING (false) WITH CHECK (false)`) — must be accessed via `/api/*` routes
 - **Storage bucket:** post-images — PUBLIC
-- **Auth:** Magic link (OTP) via email — `supabase.auth.signInWithOtp()`
+- **Auth:** Magic link (OTP) via email — `supabase.auth.signInWithOtp()`, now routed through Resend SMTP (2026-04-17)
 - **Malls:** 29 locations seeded (KY + Clarksville IN)
 - **Primary mall:** America's Antique Mall, id: `19a8ff7e-cb45-491f-9451-878e2dde5bf4`, slug: `americas-antique-mall`
 - **Known vendors:**
   - ZenForged Finds, booth 369, id: `65a879f1-c43c-481b-974f-379792a36db8` — user_id SET ✅
   - Zen booth (admin default), id: `5619b4bf-3d05-4843-8ee1-e8b747fc2d81`
-  - **David Butler, All Peddlers booth 963, id: `225ea786-adf4-480f-be39-fc78b392a5bb` — user_id NULL (approved, awaiting first /setup link)**
-- **Pending vendor_requests (as of 2026-04-16):**
+  - **David Butler, All Peddlers booth 963, id: `225ea786-adf4-480f-be39-fc78b392a5bb` — user_id SET ✅ (linked to dbutlerproductions@yahoo.com, 2026-04-17)**
+- **Pending vendor_requests (as of 2026-04-17):**
   - `Do Well`, `dbutler80020@yahoo.com`, Crestwood booth 456 — pending
   - `David Johnson`, `dbutler80020@yahoo.com`, Shepherdsville booth 254 — pending
 - **Extra columns vendors:** `facebook_url text`, `user_id uuid`, `hero_image_url text`, `bio text`
@@ -357,23 +331,40 @@ Captured here so next session doesn't re-do the archaeology.
 ---
 
 ## HOW TO CLEAR AN EMAIL FROM SUPABASE (for QA iterations)
-> Captured from 2026-04-16 session — use when you want to reset a test email's state
+> Captured from 2026-04-16 session — use when you want to reset a test email's state.
+> ⚠️ CAUTION: In session 4 the `vendor_requests` row was accidentally deleted during this cleanup. The SQL pattern below (from diagnostic query) is safer than clicking rows in the dashboard.
 
 Touches up to 3 tables: `auth.users`, `public.vendor_requests`, `public.vendors`.
 
-**Step 1 — Delete auth user**
-1. https://supabase.com/dashboard/project/zogxkarpwlaqmamfzceb/auth/users
-2. Search for email → three-dot menu → Delete user
+**Preferred: SQL diagnostic + surgical delete**
 
-**Step 2 — Delete vendor_request row(s)**
-1. https://supabase.com/dashboard/project/zogxkarpwlaqmamfzceb/editor → `vendor_requests` table
-2. Filter `email = <target>` → select rows → trash icon
+```sql
+-- Diagnostic: see current state across all 3 tables
+SELECT 'vendor_requests' AS tbl, id::text, name AS name_or_display, email, booth_number, status, created_at
+FROM public.vendor_requests WHERE email = 'TARGET@example.com'
+UNION ALL
+SELECT 'vendors', id::text, display_name, NULL, booth_number,
+  CASE WHEN user_id IS NULL THEN 'unlinked' ELSE 'linked' END, created_at
+FROM public.vendors WHERE display_name = 'TARGET_NAME'
+UNION ALL
+SELECT 'auth.users', id::text, raw_user_meta_data->>'full_name', email, NULL, 'auth', created_at
+FROM auth.users WHERE email = 'TARGET@example.com';
+```
 
-**Step 3 — Delete vendor row (only if request was already approved)**
-1. `vendors` table → filter `display_name = <n>` + verify `mall_id` matches before deleting
-2. Watch for multi-match by display_name — always confirm `mall_id` first
+**Step 1 — Delete auth user only (safest for re-test)**
+```sql
+DELETE FROM auth.users WHERE email = 'TARGET@example.com' RETURNING id, email;
+```
 
-For most QA iterations, Steps 1 + 2 are enough. Do Step 3 only if admin already approved.
+**Step 2 — Delete vendor_request only if testing a full re-request flow**
+```sql
+DELETE FROM public.vendor_requests WHERE email = 'TARGET@example.com' RETURNING id, name, status;
+```
+
+**Step 3 — Unlink a vendor row without deleting it (for re-testing /setup flow)**
+```sql
+UPDATE public.vendors SET user_id = NULL WHERE display_name = 'TARGET_NAME' RETURNING id, display_name, user_id;
+```
 
 Note: the `admin-cleanup` Sprint 4 item will collapse this to one click.
 
@@ -383,6 +374,7 @@ Note: the `admin-cleanup` Sprint 4 item will collapse this to one click.
 - Discovery feed — masonry, scroll restore, spring-tap, warmth hover, back-nav anchor
 - Feed footer — vendor CTA "Request booth access →" → `/vendor-request`
 - Magic link auth + Admin PIN login
+- **Magic link delivery via Resend SMTP — verified end-to-end 2026-04-17 for Yahoo ✅**
 - My Booth — hero upload, vendor switcher, Send icon
 - Post flow — AI caption, price validation, image upload
 - Post preview — full image (no crop), edit pill buttons on title/caption/price
@@ -392,7 +384,7 @@ Note: the `admin-cleanup` Sprint 4 item will collapse this to one click.
 - Vendor account setup — admin approval workflow, setup page, email templates ✅
 - Vendor-request admin + setup routed through server API with admin gating ✅ (2026-04-16 AM)
 - `/api/admin/*` server-side admin check via `requireAdmin` ✅ (2026-04-16 AM)
-- Setup lookup status-filter fix — approved vendors can now link ✅ (2026-04-16 PM, code shipped, not yet end-to-end verified)
+- Setup lookup status-filter fix — **verified end-to-end 2026-04-17** (approved vendor → magic link → setup → /my-shelf renders correct booth)
 - RLS — 12 policies + vendor_requests (service role only) ✅
 - Rate limiting — `/api/post-caption` 10 req/60s, `/api/vendor-request` 3 req/10min ✅
 - PWA manifest ✅
@@ -406,20 +398,22 @@ Note: the `admin-cleanup` Sprint 4 item will collapse this to one click.
 ## KNOWN GAPS ⚠️
 
 ### 🔴 Pre-beta blockers (must resolve before any real vendor onboarding)
-- **Magic link delivery broken for Yahoo/AOL addresses** — Supabase default SMTP dispatches but Yahoo drops/spam-bins. Fix in flight: Resend + Cloudflare-hosted DNS for `kentuckytreehouse.com`. DNS migration staged (Cloudflare ready, Tucows nameservers NOT yet swapped). Next session: complete nameserver swap, wait for propagation, add Resend records, verify, wire Supabase SMTP, end-to-end test.
+None open. ✅ Yahoo magic link delivery was the last open 🔴 and is now resolved.
 
 ### 🟡 Sprint 3 (in progress)
+- `emailRedirectTo` hardcoded in `lib/auth.ts` — magic link redirect param not preserved across round trip. Workaround: manual navigation to `/setup` post-auth. Fix: small surgical change in next session. **NEW — surfaced 2026-04-17.**
+- Magic link emails landing in Yahoo junk on first send. Expected for new sending domain. Reputation will season with use; no technical fix required. Branded email template (next session) will help marginally. **NEW — noted 2026-04-17.**
 - No error monitoring — Priority 1
 - Vendor bio field — no UI — Priority 2
 - Admin PIN not QA'd in production — Priority 3
 - Mall page vendor CTA — deferred (dark theme) — Priority 4
 - Find Map overhaul — needs plan — Priority 5
-- 2026-04-16 deploy not yet end-to-end verified on device — Gmail-based QA pending (fold into Resend verification flow next session)
+- Branded Supabase email template — currently using default, unbranded template. Low-risk polish item. **NEW — noted 2026-04-17.**
 
 ### 🟢 Cleanup (not urgent)
 - Deprecated vendor-request functions still in `lib/posts.ts` — remove once confirmed no other callers
 - `/api/debug-vendor-requests` still in production — retire after QA settles
-- Orphaned Google Cloud DNS zone for `kentuckytreehouse.com` — find and delete after Cloudflare migration completes and is verified
+- Cloudflare nameservers for `kentuckytreehouse.com` are assigned but not active (dormant from session 3's Path B plan). No cost to keeping; delete if preferred. **UPDATED 2026-04-17.**
 - Feed content seeding before beta invite (Sprint 4)
 - No pagination/infinite scroll (Sprint 4)
 - No search (Sprint 4)
@@ -469,6 +463,12 @@ Check Supabase auth logs (magic link dispatch status):
 https://supabase.com/dashboard/project/zogxkarpwlaqmamfzceb/logs/auth-logs
 ```
 
+Check Resend delivery logs:
+
+```
+https://resend.com/emails
+```
+
 Check DNS state for `kentuckytreehouse.com`:
 
 ```bash
@@ -481,6 +481,14 @@ dig kentuckytreehouse.com +short
 
 ```bash
 dig resend._domainkey.kentuckytreehouse.com TXT +short
+```
+
+```bash
+dig send.kentuckytreehouse.com TXT +short
+```
+
+```bash
+dig send.kentuckytreehouse.com MX +short
 ```
 
 ---
