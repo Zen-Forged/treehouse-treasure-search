@@ -1,73 +1,24 @@
 # Treehouse — Known Issues
 > Active bugs, gaps, and deferred items. Referenced by `docs/DECISION_GATE.md`.
 > Created: 2026-04-17 (session 8 — logging the three QA issues surfaced during T4a post-deploy).
-> Last updated: 2026-04-17 (session 10 — `/setup` 401 race moved to Resolved).
+> Last updated: 2026-04-17 (session 13 — KI-004 resolved, in-mall diagnostic tooling shipped).
 
 ---
 
 ## Open issues
 
-### 🟡 KI-004 — Approve endpoint silently reuses stale vendor rows on booth-number collision
-**Surfaced:** 2026-04-17 session 9 (during KI-003 diagnosis)
-**File:** `app/api/admin/vendor-requests/route.ts` — the 23505 duplicate-key branch (~line 103)
-**Behavior:** When `INSERT INTO vendors (mall_id, booth_number, display_name, slug)` hits the `(mall_id, booth_number)` unique constraint, the current handler silently fetches the existing row and returns it as the newly-approved vendor — regardless of whether that existing row is unlinked (`user_id=NULL`), linked to a different user, or has a completely different `display_name` than the incoming request.
-
-**Why this is a problem:**
-- If a prior vendor_request was approved for the same (mall, booth) and left its `vendors` row unlinked (e.g. that vendor never completed `/setup`), the new approval will reuse that stale row.
-- `/api/setup/lookup-vendor` then can't find a matching row by `(display_name = request.name, mall_id = request.mall_id, user_id IS NULL)` because the existing row's `display_name` doesn't match the new request's name → returns 404 "Your vendor account isn't ready yet."
-- Net result: approval succeeds, email fires, user gets the "sign in to your booth" CTA, but the backing vendor row is a ghost.
-
-**Repro (session 9):** DB had three orphan `user_id=NULL` vendors from session 7-8 residue (`John Doe/1234`, `Claude Code/123`, `David Butler/123 at AAM`). Any new vendor_request approved for `(America's Antique Mall, booth 123)` would silently reuse the `David Butler` row instead of creating a new vendor with the new request's name.
-
-**Product scope handoff from David (session 9):** *"Everything is captured that is available — booth number, mall, booth name (if available). Once I speak with the booth owner or they reach out etc., then I'd just add their email and initiate the handoff to them so they could manage that booth. But trying to keep this simple for MVP. Seeding is something that I'll just be doing so I have content."*
-
-That's a clean mental model for the pre-seeded → claim-booth flow. Needs a dedicated scoping session to design:
-- The admin-side "add email to a pre-seeded booth" surface (likely lives in `/admin`)
-- The data-model implications (does this convert the pre-seeded row into a vendor_request, or link directly?)
-- What approve should do with a 23505 collision in the absence of an intentional handoff: reject hard? warn and proceed? allow reuse only if unlinked AND display_name matches? These need product-level answers before code.
-
-**Why not fixed in session 9:** David explicitly called for scoping this separately rather than snap-deciding it during bug-fix work. Correct call — the fix touches Flow 1 semantics and belongs with that work.
-
-**Mitigation while open:** Session 10+ tests should use non-colliding booth numbers (pick booth numbers that aren't present in the three session-9 orphan rows). The orphans can also be cleaned up via SQL if they become annoying:
-
-```sql
--- Only run after confirming none of these should be kept
-DELETE FROM public.vendors
-WHERE user_id IS NULL
-  AND display_name IN ('John Doe', 'Claude Code', 'David Butler');
-```
-
-**Fix scope (for the eventual scoping session):** Design the Flow 1 claim-booth model first, then tighten the 23505 branch to reject-on-collision unless it's an intentional handoff (marked via a `claim` flag or by checking for a matching pre-seeded row).
-**Recommended sprint:** Sprint 4+ after scoping session, or Sprint 5 depending on urgency.
-
----
-
-### 🟡 `/setup` 401 race — transient "Setup Incomplete" flash before /my-shelf self-heal catches it
-**Surfaced:** 2026-04-17 session 9 (during KI-003 end-to-end QA)
-**Files:** `app/setup/page.tsx` `setupVendorAccount()` — and observable via `lib/adminAuth.ts` diagnostic logging (added session 9)
-**Behavior:** After OTP verify, `/setup` fires `/api/setup/lookup-vendor` with the bearer token attached by `authFetch`. The token is accepted by the client (stored from the `verifyOtp` response) but Supabase's auth server takes up to ~500ms to make that token validatable via `service.auth.getUser(token)` from a different server. During that replication window, `requireAuth()` returns 401 "Unauthorized" → `/setup` flashes the "Setup Incomplete" error state.
-
-**Why this doesn't break the journey anymore:** Fix #3 from session 9 (the `/my-shelf` self-heal) calls the same endpoint a few hundred ms later when the user navigates to My Booth. By then the token validates cleanly, the self-heal links the vendor, and the page renders correctly. The user ultimately lands in the right place — but sees a brief "Setup Incomplete" flash en route.
-
-**Repro:** Submit a fresh `/vendor-request`, admin-approve, tap the approval email on a device where no Supabase session exists yet (Safari data cleared), enter OTP. `/setup` will flash briefly and show "Setup Incomplete" with text "Unauthorized" before you can navigate away.
-
-**Fix scope:** ~10-line retry-with-backoff around the `authFetch` call in `setupVendorAccount()`. On 401 response, `setTimeout` 800ms, retry once. If still 401 after retry, fall through to the existing error state.
-
-```ts
-// Rough sketch:
-async function callLookupVendor(): Promise<Response> {
-  const res = await authFetch("/api/setup/lookup-vendor", { method: "POST", body: JSON.stringify({}) });
-  if (res.status !== 401) return res;
-  await new Promise(r => setTimeout(r, 800));
-  return authFetch("/api/setup/lookup-vendor", { method: "POST", body: JSON.stringify({}) });
-}
-```
-
-**Recommended sprint:** Session 10 polish pass (🟢 S, ~30 min).
+_None currently open. See Resolved section below for session 13 work._
 
 ---
 
 ## Deferred items (not bugs — scope-deferred decisions)
+
+### Flow 1 "Claim this booth" — pre-seeded → vendor claim
+**Context:** David's session-9 product scope: *"Everything is captured that is available — booth number, mall, booth name (if available). Once I speak with the booth owner or they reach out etc., then I'd just add their email and initiate the handoff to them so they could manage that booth."*
+
+The KI-004 resolution in session 13 tightened the approve endpoint to *fail loudly* on a booth collision with a name mismatch. The claim-booth flow can later add an explicit `claim: true` flag on vendor_request to turn that rejection into a deliberate handoff, without changing any of the session-13 code. That is a purely additive future change.
+
+**Not blocked:** admin can still pre-seed booths manually via SQL and hand them off via email today. The flow is just manual.
 
 ### Cloudflare DNS zone orphaned for `kentuckytreehouse.com`
 Nameservers assigned but not authoritative. Dormant, no cost. Delete at leisure.
@@ -75,6 +26,41 @@ Nameservers assigned but not authoritative. Dormant, no cost. Delete at leisure.
 ---
 
 ## Resolved
+
+### ✅ KI-004 — Approve endpoint silent-reuse on booth collision + opaque error on slug collision
+**Resolved:** 2026-04-17 session 13
+**Surfaced originally:** 2026-04-17 session 9 (booth-collision silent-reuse)
+**Additional surface discovered:** 2026-04-17 session 13 live test — same handler was also silently failing on `vendors_slug_key` collisions (not just `vendors_mall_booth_unique`). Two `David Butler` vendor_requests at different booths would both try to create slug `david-butler`, the second would hit 23505 on the slug constraint, and the recovery code (which only checked for booth constraint) would fall through to a booth-by-(mall, booth_number) `.single()` lookup that returned zero rows and threw *"Cannot coerce the result to a single JSON object."* Admin saw the generic *"Vendor exists but couldn't be loaded"* toast.
+
+**Root cause, in full:** The `vendors` table has **four** unique constraints (`vendors_pkey`, `vendors_slug_key`, `vendors_mall_booth_unique`, `vendors_user_id_key`). The previous 23505 handler:
+1. Assumed any 23505 was the booth constraint
+2. Did a blind lookup by `(mall_id, booth_number).single()` — which fails on zero rows
+3. If the lookup succeeded (booth constraint was the actual trigger), silently reused whatever row it found — regardless of whether that row was linked, unlinked, same-name, or different-name
+
+**Fix (one commit, four files):**
+
+1. **`app/api/admin/vendor-requests/route.ts`** — rewritten with constraint-aware handling. Pre-flight booth check runs BEFORE the insert and branches cleanly: safe-claim (unlinked + name match), reject (unlinked + name mismatch, with conflict details in response), hard-reject (already-linked booth, with named detail). Slug collision auto-resolves by appending a suffix (`david-butler` → `david-butler-2` → `-3` ...) up to 20 attempts. Every error response includes `diagnosis` code + `conflict` object so admin UI can render specifics.
+
+2. **`app/api/admin/diagnose-request/route.ts`** (NEW) — admin-gated diagnostic endpoint. Returns the full collision picture for any `requestId`: the request row, booth collisions, slug collisions, auth.users matches, a diagnosis code, and a human-readable suggested action. Exists so admin can self-triage in-mall without running SQL.
+
+3. **`app/admin/page.tsx`** — "Diagnose" link on every pending request row; full diagnosis panel renders inline on tap. Approval error toast now carries diagnosis/conflict fields and exposes a "Run full diagnosis" button that opens the same panel.
+
+4. **`docs/admin-runbook.md`** (NEW) — 9-recipe SQL runbook for in-mall triage. Covers: request state lookup, booth occupancy inspection, freeing a booth, cleaning up test vendors, finding unlinked rows, auth status lookup, request reset, constraint inspection, deep diagnostic dump.
+
+**Policy commits (session 13):**
+- Slug collision → auto-append suffix (`-2`, `-3`, ...). Clean URLs for the common case, graceful degradation.
+- Booth collision + unlinked + matching name → safe claim (reuse existing row). This is the original KI-004 "safe reuse" branch, now explicitly gated on name match.
+- Booth collision + unlinked + different name → reject with named details. Admin renames the request or cleans up the stale row.
+- Booth collision + already linked → hard reject with named details. Pick a different booth or unlink the claim via SQL.
+- All error paths use `.maybeSingle()` instead of `.single()` so zero-row results return null instead of throwing "Cannot coerce..."
+
+**Verified in repro:** The pending `dbutler80020+4@gmail.com` request (David Butler, All Peddlers, booth 200) will now approve cleanly with auto-assigned slug `david-butler-2`, because the existing David Butler at booth 245 holds `david-butler`.
+
+**Commit:** `fix(admin): KI-004 — constraint-aware vendor approval + in-mall diagnostic tooling`
+
+**Why not a separate claim-booth scoping session anymore:** David's session-9 call was "fix this properly later, not as snap-decision bug-fix work." Session 13's fix preserves all of that optionality — the claim-booth flow can still be built later as an additive `claim: true` flag on vendor_request without touching this code path. Today's fix is the right minimum: fail loudly where we used to corrupt silently.
+
+---
 
 ### ✅ `/setup` 401 race — transient "Setup Incomplete" flash during Supabase token replication window
 **Resolved:** 2026-04-17 session 10
@@ -157,4 +143,4 @@ const callLookupVendor = async (): Promise<Response> => {
 
 ---
 
-> Last updated: 2026-04-17 (session 10)
+> Last updated: 2026-04-17 (session 13)
