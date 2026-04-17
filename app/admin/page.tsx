@@ -8,11 +8,18 @@
 //   DEL  /api/admin/posts              — delete posts (selected or all)
 //   GET  /api/admin/vendor-requests    — list vendor requests
 //   POST /api/admin/vendor-requests    — { action: "approve", requestId }
+//   POST /api/admin/diagnose-request   — { requestId } → collision picture
 //
 // Session 7 (2026-04-17) — T3 mobile-first approval polish:
 //  - Removed obsolete email template copy flow (Resend SMTP sends on approve)
 //  - Approve button sized for 44px iOS thumb-reach minimum
 //  - Post-approval toast: structured, durable (6s), bottom-anchored, animated
+//
+// Session 13 (2026-04-17) — KI-004 resolution + in-mall diagnostic UI:
+//  - Inline "Diagnose" link on every pending request row
+//  - On approval error: error toast exposes "Diagnose" button + details panel
+//  - Diagnosis panel renders collision specifics from /api/admin/diagnose-request
+//  - Approve toast surfaces `note` field (e.g. "slug was taken, assigned X-2")
 
 "use client";
 
@@ -21,7 +28,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, UserCheck, Users, Store, X } from "lucide-react";
+import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, UserCheck, Users, Store, X, Stethoscope } from "lucide-react";
 import { getSession, isAdmin, signOut } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { colors } from "@/lib/tokens";
@@ -48,11 +55,57 @@ interface VendorRequest {
   created_at:   string;
 }
 
-type Toast =
-  | { kind: "success"; name: string; email: string; booth: string | null; mall: string | null; warning?: string }
-  | { kind: "error"; message: string };
+interface DiagnosisConflict {
+  display_name: string;
+  booth_number: string | null;
+  user_id:      string | null;
+  slug:         string;
+}
 
-const TOAST_DURATION_MS = 6000;
+interface DiagnosisVendorSnapshot {
+  id:           string;
+  display_name: string;
+  booth_number: string | null;
+  slug:         string;
+  user_id:      string | null;
+  mall_id:      string;
+  created_at:   string;
+}
+
+interface DiagnosisAuthUser {
+  id:                 string;
+  email:              string;
+  email_confirmed_at: string | null;
+  last_sign_in_at:    string | null;
+  created_at:         string;
+}
+
+interface DiagnosisReport {
+  request: {
+    id:           string;
+    name:         string;
+    email:        string;
+    booth_number: string | null;
+    mall_id:      string | null;
+    mall_name:    string | null;
+    status:       string;
+    created_at:   string;
+  };
+  conflicts: {
+    booth_collision: DiagnosisVendorSnapshot[];
+    name_collision:  DiagnosisVendorSnapshot[];
+    auth_user:       DiagnosisAuthUser | null;
+  };
+  diagnosis:        string;
+  suggested_action: string;
+}
+
+type Toast =
+  | { kind: "success"; name: string; email: string; booth: string | null; mall: string | null; warning?: string; note?: string }
+  | { kind: "error"; message: string; requestId?: string; diagnosis?: string; conflict?: DiagnosisConflict };
+
+const TOAST_DURATION_MS_SUCCESS = 6000;
+const TOAST_DURATION_MS_ERROR   = 12000; // errors linger longer so admin can act
 
 export default function AdminPage() {
   const router = useRouter();
@@ -70,6 +123,11 @@ export default function AdminPage() {
   const [confirmAll, setConfirmAll] = useState(false);
   const [activeTab, setActiveTab] = useState<"posts" | "requests">("requests");
 
+  // Diagnosis panel — per-request loading + result state
+  const [diagnosisBusy,    setDiagnosisBusy]    = useState<Set<string>>(new Set());
+  const [diagnosisReports, setDiagnosisReports] = useState<Record<string, DiagnosisReport>>({});
+  const [diagnosisErrors,  setDiagnosisErrors]  = useState<Record<string, string>>({});
+
   useEffect(() => {
     getSession().then(s => {
       setUser(s?.user ?? null);
@@ -81,10 +139,11 @@ export default function AdminPage() {
     });
   }, []);
 
-  // Auto-dismiss toast
+  // Auto-dismiss toast (duration depends on kind)
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), TOAST_DURATION_MS);
+    const duration = toast.kind === "error" ? TOAST_DURATION_MS_ERROR : TOAST_DURATION_MS_SUCCESS;
+    const t = setTimeout(() => setToast(null), duration);
     return () => clearTimeout(t);
   }, [toast]);
 
@@ -178,7 +237,13 @@ export default function AdminPage() {
       const json = await res.json();
 
       if (!res.ok || !json.ok) {
-        setToast({ kind: "error", message: `Couldn't approve ${request.name}: ${json.error || "unknown error"}` });
+        setToast({
+          kind: "error",
+          message: `Couldn't approve ${request.name}: ${json.error || "unknown error"}`,
+          requestId: request.id,
+          diagnosis: json.diagnosis,
+          conflict: json.conflict,
+        });
         setRequestBusy(prev => { const next = new Set(prev); next.delete(request.id); return next; });
         return;
       }
@@ -190,15 +255,48 @@ export default function AdminPage() {
         booth: request.booth_number,
         mall: request.mall_name,
         warning: json.warning,
+        note: json.note,
       });
 
       await fetchVendorRequests();
     } catch (err) {
       console.error("Vendor approval error:", err);
-      setToast({ kind: "error", message: err instanceof Error ? err.message : "Unknown error" });
+      setToast({ kind: "error", message: err instanceof Error ? err.message : "Unknown error", requestId: request.id });
     }
 
     setRequestBusy(prev => { const next = new Set(prev); next.delete(request.id); return next; });
+  }
+
+  async function diagnoseRequest(requestId: string) {
+    if (diagnosisBusy.has(requestId)) return;
+    setDiagnosisBusy(prev => { const next = new Set(prev); next.add(requestId); return next; });
+    setDiagnosisErrors(prev => { const next = { ...prev }; delete next[requestId]; return next; });
+
+    try {
+      const res = await authFetch("/api/admin/diagnose-request", {
+        method: "POST",
+        body: JSON.stringify({ requestId }),
+      });
+      const json = await res.json();
+
+      if (!res.ok) {
+        setDiagnosisErrors(prev => ({ ...prev, [requestId]: json.error || "Diagnosis failed" }));
+      } else {
+        setDiagnosisReports(prev => ({ ...prev, [requestId]: json }));
+      }
+    } catch (err) {
+      setDiagnosisErrors(prev => ({
+        ...prev,
+        [requestId]: err instanceof Error ? err.message : "Diagnosis failed",
+      }));
+    }
+
+    setDiagnosisBusy(prev => { const next = new Set(prev); next.delete(requestId); return next; });
+  }
+
+  function dismissDiagnosis(requestId: string) {
+    setDiagnosisReports(prev => { const next = { ...prev }; delete next[requestId]; return next; });
+    setDiagnosisErrors(prev => { const next = { ...prev }; delete next[requestId]; return next; });
   }
 
   async function handleSignOut() {
@@ -313,6 +411,9 @@ export default function AdminPage() {
               {requests.map(request => {
                 const isPending = request.status === "pending";
                 const isBusy = requestBusy.has(request.id);
+                const isDiagnosing = diagnosisBusy.has(request.id);
+                const report = diagnosisReports[request.id];
+                const diagErr = diagnosisErrors[request.id];
                 return (
                   <div key={request.id}
                     style={{
@@ -351,6 +452,47 @@ export default function AdminPage() {
                         </button>
                       )}
                     </div>
+
+                    {/* Diagnose control — always available for every request */}
+                    <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      {!report && !diagErr && (
+                        <button
+                          onClick={() => diagnoseRequest(request.id)}
+                          disabled={isDiagnosing}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 5,
+                            background: "none", border: "none", cursor: "pointer",
+                            fontSize: 11, color: colors.textMid, padding: 0,
+                            opacity: isDiagnosing ? 0.5 : 1,
+                          }}>
+                          <Stethoscope size={12} />
+                          {isDiagnosing ? "Diagnosing…" : "Diagnose"}
+                        </button>
+                      )}
+                      {(report || diagErr) && (
+                        <button
+                          onClick={() => dismissDiagnosis(request.id)}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 5,
+                            background: "none", border: "none", cursor: "pointer",
+                            fontSize: 11, color: colors.textFaint, padding: 0,
+                          }}>
+                          Hide diagnosis
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Inline diagnosis panel */}
+                    {diagErr && (
+                      <div style={{
+                        marginTop: 10, padding: "10px 12px", borderRadius: 8,
+                        background: colors.redBg, border: `1px solid ${colors.redBorder}`,
+                        fontSize: 11, color: colors.red, lineHeight: 1.5,
+                      }}>
+                        {diagErr}
+                      </div>
+                    )}
+                    {report && <DiagnosisPanel report={report} />}
                   </div>
                 );
               })}
@@ -502,6 +644,14 @@ export default function AdminPage() {
                   <div style={{ fontSize: 11, color: colors.textMuted }}>
                     {toast.booth ? `Booth ${toast.booth}` : "No booth"} · {toast.mall || "No mall"}
                   </div>
+                  {toast.note && (
+                    <div style={{
+                      fontSize: 11, color: colors.textMid, marginTop: 6,
+                      fontStyle: "italic"
+                    }}>
+                      ℹ️ {toast.note}
+                    </div>
+                  )}
                   {toast.warning && (
                     <div style={{
                       fontSize: 11, color: colors.red, marginTop: 6,
@@ -517,11 +667,41 @@ export default function AdminPage() {
                     fontSize: 9, color: colors.red, textTransform: "uppercase",
                     letterSpacing: "1.8px", marginBottom: 4, fontWeight: 600
                   }}>
-                    Error
+                    {toast.diagnosis ? `Error · ${toast.diagnosis}` : "Error"}
                   </div>
                   <div style={{ fontSize: 13, color: colors.textPrimary, lineHeight: 1.5 }}>
                     {toast.message}
                   </div>
+                  {toast.conflict && (
+                    <div style={{
+                      marginTop: 6, padding: "6px 8px", borderRadius: 6,
+                      background: "rgba(139,32,32,0.04)",
+                      fontSize: 10, color: colors.textMid, fontFamily: "monospace",
+                      lineHeight: 1.5,
+                    }}>
+                      <div>Existing: {toast.conflict.display_name}</div>
+                      <div>Booth: {toast.conflict.booth_number ?? "(none)"}</div>
+                      <div>Slug: {toast.conflict.slug}</div>
+                      <div>Linked: {toast.conflict.user_id ? "yes" : "no"}</div>
+                    </div>
+                  )}
+                  {toast.requestId && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const rid = toast.requestId!;
+                        setToast(null);
+                        diagnoseRequest(rid);
+                      }}
+                      style={{
+                        marginTop: 10, padding: "6px 12px", borderRadius: 6,
+                        background: colors.red, color: "#fff", border: "none",
+                        fontSize: 11, fontWeight: 600, cursor: "pointer",
+                        display: "flex", alignItems: "center", gap: 5,
+                      }}>
+                      <Stethoscope size={11} /> Run full diagnosis
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -541,6 +721,133 @@ export default function AdminPage() {
           </div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// ── Diagnosis Panel ─────────────────────────────────────────────────────────
+
+function DiagnosisPanel({ report }: { report: DiagnosisReport }) {
+  const hasBooth = report.conflicts.booth_collision.length > 0;
+  const hasName  = report.conflicts.name_collision.length > 0;
+  const hasAuth  = report.conflicts.auth_user !== null;
+
+  const severityColor =
+    report.diagnosis === "no_conflict" || report.diagnosis === "booth_unlinked_name_match"
+      ? colors.green
+      : report.diagnosis === "slug_collision"
+        ? colors.textMid  // will auto-resolve, informational only
+        : colors.red;
+
+  const severityBg =
+    report.diagnosis === "no_conflict" || report.diagnosis === "booth_unlinked_name_match"
+      ? colors.greenLight
+      : report.diagnosis === "slug_collision"
+        ? colors.surface
+        : colors.redBg;
+
+  const severityBorder =
+    report.diagnosis === "no_conflict" || report.diagnosis === "booth_unlinked_name_match"
+      ? colors.greenBorder
+      : report.diagnosis === "slug_collision"
+        ? colors.border
+        : colors.redBorder;
+
+  return (
+    <div style={{
+      marginTop: 10, padding: "12px 14px", borderRadius: 10,
+      background: severityBg, border: `1px solid ${severityBorder}`,
+    }}>
+      <div style={{
+        fontSize: 9, color: severityColor, textTransform: "uppercase",
+        letterSpacing: "1.8px", marginBottom: 6, fontWeight: 600,
+      }}>
+        Diagnosis · {report.diagnosis}
+      </div>
+      <div style={{
+        fontSize: 12, color: colors.textPrimary, lineHeight: 1.5, marginBottom: 10,
+      }}>
+        {report.suggested_action}
+      </div>
+
+      {(hasBooth || hasName || hasAuth) && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+          {hasBooth && (
+            <DiagnosisSection
+              label="Booth collision"
+              rows={report.conflicts.booth_collision.map(v => ({
+                primary: v.display_name,
+                secondary: `booth ${v.booth_number ?? "(none)"} · slug ${v.slug}`,
+                tertiary: v.user_id ? `linked · user ${v.user_id.slice(0, 8)}…` : "unlinked",
+                danger: !!v.user_id,
+              }))}
+            />
+          )}
+          {hasName && (
+            <DiagnosisSection
+              label="Slug / name collision"
+              rows={report.conflicts.name_collision.map(v => ({
+                primary: v.display_name,
+                secondary: `slug ${v.slug} · booth ${v.booth_number ?? "(none)"}`,
+                tertiary: v.user_id ? `linked · user ${v.user_id.slice(0, 8)}…` : "unlinked",
+                danger: false, // auto-resolved by suffix — informational
+              }))}
+            />
+          )}
+          {hasAuth && report.conflicts.auth_user && (
+            <DiagnosisSection
+              label="Existing auth user for this email"
+              rows={[{
+                primary: report.conflicts.auth_user.email,
+                secondary:
+                  `signed in ${report.conflicts.auth_user.last_sign_in_at
+                    ? new Date(report.conflicts.auth_user.last_sign_in_at).toLocaleDateString()
+                    : "never"}`,
+                tertiary: `user ${report.conflicts.auth_user.id.slice(0, 8)}…`,
+                danger: false,
+              }]}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DiagnosisSection({
+  label,
+  rows,
+}: {
+  label: string;
+  rows: { primary: string; secondary: string; tertiary: string; danger: boolean }[];
+}) {
+  return (
+    <div>
+      <div style={{
+        fontSize: 9, color: colors.textFaint, textTransform: "uppercase",
+        letterSpacing: "1.5px", marginBottom: 4,
+      }}>
+        {label}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {rows.map((row, i) => (
+          <div key={i} style={{
+            padding: "6px 8px", borderRadius: 6,
+            background: row.danger ? "rgba(139,32,32,0.06)" : colors.bg,
+            border: `1px solid ${row.danger ? colors.redBorder : colors.border}`,
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: colors.textPrimary }}>
+              {row.primary}
+            </div>
+            <div style={{ fontSize: 10, color: colors.textMuted, fontFamily: "monospace", marginTop: 1 }}>
+              {row.secondary}
+            </div>
+            <div style={{ fontSize: 10, color: row.danger ? colors.red : colors.textMid, marginTop: 1 }}>
+              {row.tertiary}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
