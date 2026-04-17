@@ -50,246 +50,156 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-17 late-night (session 11 — Design agent activated, design system scaffolded, agent orchestration tightened)
+> Last updated: 2026-04-17 late-night (session 12 — Design agent's first full direction pass shipped; docs/design-system.md v0.2 committed)
 
-**Status:** 🪴 **Session 11 was a system-infrastructure session, not a feature session.** No production code changed. Four docs updated to activate the Design agent and establish `docs/design-system.md` as canonical source of truth for all multi-screen UI work. Sets up the next several sessions (Booth page redesign, Find Detail polish, Feed header rework) to scope against a shared system instead of drifting per-screen as sessions 1–10 did.
+**Status:** 🪴 **Session 12 was the Design agent's first real pass.** No production code changed. One doc updated: `docs/design-system.md` moved from v0.1 scaffold to v0.2 with committed direction for cross-cutting primitives (typography, headers, buttons, cards, Location Statement) and four priority screens (Booth page both states, Find Detail, Feed header + mall sheet, Find Map). Two mockups generated for Booth page public + owner states. Session 13 can open with a crisp Dev sprint brief against v0.2.
+
+### What shipped (1 commit, 1 file)
+1. **`docs/design-system.md`** — v0.1 scaffold → v0.2 direction pass. Six unresolved sections resolved: Booth page direction, Find Detail direction, Feed header + mall selector, Find Map emotional redesign, Header pattern system, Button system, Card pattern system, Location statement pattern. One deferred section explicitly marked PENDING with triggers: featured tiles, 2-column editorial grid, portrait-aspect variety, mall page, vendor directory, onboarding visual pass, `/admin` visual pass, dark mode, cleanup pass.
+2. **`CLAUDE.md`** (this file) — session 12 close note.
+
+### Key commitments for Dev agent to execute against
+
+**Cross-cutting primitives (all committed):**
+- **Typography:** Georgia reserved for emotional beats only (hero vendor names, find titles, curator's statements, pull-quote captions, empty-state headlines). system-ui carries ~90% of the chrome (eyebrows, meta, tabs, buttons, body, labels). Mono for booth numbers and data.
+- **Header modes:** A (cinematic, over hero image — Booth, Find Detail), B (editorial, sticky blur with logo — Feed, Find Map, admin), C (minimal, back + title — forms and onboarding).
+- **Buttons:** 4 variants — Primary (filled green), Secondary (green-tinted bg), Ghost (transparent + border), Link (inline green). Destructive variant = Ghost with red.
+- **Cards:** 1 canonical base (surface + border + radius.md + no shadow) with 4 composition variants (Plain, Thumbnail, Metric, CTA).
+- **`<LocationStatement>` component:** single-line format `⌂ Booth 369 · Mall name · City` with optional address + Directions link. Compact variant (white, over images) and full variant (inside cards).
+- **Terminology:** "Mall" everywhere in UI (Treehouse Spot retired entirely). "On Display" / "Found homes" for tabs. Georgia italic "Found a home" caption for sold tiles.
+
+**Booth page direction (both states):**
+- Header Mode A (cinematic hero, no sticky bar)
+- 3-column 1:1 square grid preserved — no titles or meta on/under tiles (tap through for the story) — supports future 9-item free-tier limit and matches older-vendor familiar mental model
+- Curator's statement (Georgia italic 16px pull-quote) directly under hero
+- Tabs "On Display" / "Found homes" (existing TabSwitcher, relabeled)
+- Owner "Add" tile as first square in On Display grid (emptyTile bg, dashed green border)
+- Sold tiles: 0.5 opacity + grayscale + small italic "Found a home" caption in bottom-left (one exception to no-text-on-tiles rule)
+- Location CTA card at bottom: full Location Statement + "Explore the full mall" Secondary button with vendor-hue swatch
+- Owner-only: edit-banner pencil top-left of hero, "Edit your story" Link below curator's statement, "Add" tile, Home · My Booth nav
+
+**Find Detail fixes:**
+- Title: 28px Georgia 700 (dominant)
+- Caption: 17px Georgia italic (pull-quote)
+- Availability: floating pill bottom-left on hero image, out of content flow
+- Location card: single `<LocationStatement>` full-form + full-width Secondary "Explore {vendor}'s shelf →" with hue swatch
+
+**Feed header + mall sheet:**
+- Mode B header: logo + wordmark left, quiet user-circle icon top-right (32×32 ghost)
+- Sign-in icon opens bottom sheet (Curator Sign In / Request booth access / browse copy)
+- Mall selector becomes `<MallSheet>` — search + scrollable list + "All Malls" default. Canonical bottom-sheet pattern — reused on Find Map filter, /post, /vendor-request.
+
+**Find Map emotional pass:**
+- Opening italic Georgia pull-quote ("A Saturday made of stops")
+- Dotted green spine at 0.30 alpha, `PiLeaf` icons at each stop, mono "~ 8 min drive" between stops
+- Stop cards as canonical CTA card variant
+- Bottom "Open all N stops in Maps →" Secondary button (multi-waypoint Apple Maps URL)
+
+### Context for the next session
+
+Session 12 produced direction. Session 13 produces code. The recommended first implementation session is the Booth page redesign, because:
+- It consolidates the most new primitives in one place (`<LocationStatement>`, CTA card variant, Curator's Statement block, terminology commitments)
+- It's the highest-leverage page for vendor pride — what they'll text friends
+- It's bounded (both states already exist in `app/my-shelf/page.tsx` and `app/shelf/[slug]/page.tsx` — this is a redesign of existing surfaces, not new routes)
+
+Estimated session 13 scope (~3–4 hours):
+1. Build `<LocationStatement>` component (~30 min)
+2. Update `/my-shelf` and `/shelf/[slug]` to new Booth direction (~90 min)
+3. Add Curator's Statement block with read-only/ghost states (~45 min)
+4. Update BoothFinderCard → CTA card variant at bottom of Booth page (~30 min)
+5. Terminology pass: "Sold" / "Available" → "Found homes" / "On Display" on affected surfaces (~15 min)
+6. QA + deploy (~30 min)
+
+**NOT in session 13 scope (explicitly deferred):**
+- Find Detail redesign (separate session — depends on Location Statement component from session 13)
+- Feed header + mall bottom sheet (separate session — bottom sheet is its own bounded piece)
+- Find Map redesign (separate session — emotional pass, needs dedicated energy)
+- Typography cleanup pass across all pages (separate dedicated session post-Booth)
+- Any PENDING items
+
+### Review calls settled this session
+- **Typography split** → Georgia emotional beats only. System-ui for chrome. ✅
+- **Booth grid** → 3-column 1:1 square preserved (not 2-column editorial). Preserves 9-item free-tier narrative, matches older-vendor mental model. ✅
+- **Title treatment on Booth grid** → No titles or meta on/under tiles. Pure images, tap through for the story. ✅
+- **Featured tiles** → Deferred to PENDING. All tiles same 1:1 square at launch. ✅
+- **"Treehouse Spot" terminology** → Retired from product entirely. "Mall" everywhere. ✅
+
+### Files modified this session
+- `docs/design-system.md` — v0.1 → v0.2 (full rewrite, direction committed)
+- `CLAUDE.md` (this file) — session 12 close
+
+---
+
+## 🌿 Next session opener — Session 13 Booth page redesign (READ FIRST)
+
+**Session 12 produced unambiguous direction for the Booth page. Session 13 executes.**
+
+Recommended session 13 opener:
+
+```
+CURRENT ISSUE:
+Booth page redesign against docs/design-system.md v0.2. Scope: /my-shelf and /shelf/[slug]. Build <LocationStatement> component, add Curator's Statement block (Georgia italic pull-quote), convert BoothFinderCard to CTA card variant at bottom with full-form Location Statement + "Explore the full mall" Secondary button, terminology pass to "On Display" / "Found homes" / "Found a home". 3-col 1:1 grid preserved with no titles on tiles. Owner "Add" tile as first square. Mode A cinematic header unchanged. Do NOT touch Find Detail, Feed header, or Find Map — those are separate sessions. Start with a Sprint Brief, get approval, then execute.
+```
+
+**Before that session begins, David should:**
+- Re-read the Booth page section of `docs/design-system.md` on his phone to see if the direction still reads well after a night's sleep
+- Flag anything to revisit before code starts
+
+---
+
+## ARCHIVE — What was done earlier (2026-04-17 late-night, session 11)
+> Design agent activated, design system scaffolded, agent orchestration tightened
+
+**Status:** 🪴 **Session 11 was a system-infrastructure session, not a feature session.** No production code changed. Four docs updated to activate the Design agent and establish `docs/design-system.md` as canonical source of truth for all multi-screen UI work.
 
 ### What shipped (1 commit, 4 files)
 1. **`docs/DECISION_GATE.md`** — Agent Roster expanded to include Design agent with full system prompt draft; new Tech Rule added ("Multi-screen UI work… must scope against `docs/design-system.md` before code" — mirrors the onboarding-journey rule pattern); standup preamble updated; Related Documents table updated.
 2. **`MASTER_PROMPT.md`** — Session opening standup now includes a Design agent standup (step 3, conditional on UI work being in scope). Standup report template updated with `Active agents` and `Design check` lines. New DESIGN AGENT section added after SESSION OPENING STANDUP explaining the agent's scope, what it does at session open, what it never does, and how the design system gets updated.
 3. **`docs/design-system.md`** — Scaffolded. Contains: purpose, brand metaphor, currently-committed tokens/typography/terminology/motion/interaction commitments (pulled from `lib/tokens.ts` and DECISION_GATE Brand Rules), and a set of **unresolved sections** (Booth page direction, Find Detail direction, Feed header / mall selector direction, Find Map emotional redesign, Header pattern system, Button system, Card pattern system, Location statement pattern) that the Design agent's first real pass will fill in. Explicitly labeled v0.1 (scaffold, not yet authoritative) so no one mistakes the doc for complete direction.
-4. **`CLAUDE.md`** (this file) — session 11 close note.
+4. **`CLAUDE.md`** — session 11 close note.
 
-### Context for the next session
+### Context
 
-Session 11 was triggered by a strategic conversation about why per-screen design work across sessions 1–10 produced drift — three themes, inconsistent sold terminology, four button styles, a Booth page that doesn't inspire vendor pride. David named the orchestration problem directly: we need an agent that holds the whole visual system in its head, not just better mockups per page. This session activates that agent and puts its scope document in place, but defers the actual design direction work (Booth page, Find Detail, Feed header, Find Map, header system, button system, card system, location statement) to the next session where we'll do it with intent.
-
-The orphan cleanup from session 10 — `/mall/[slug]`, `/vendor/[slug]`, `/post/preview`, `/flow-test` — was NOT executed this session. David deliberately parked it pending post-MVP to avoid rushing deletions while a redesign is mid-flight. Orphan routes are documented in `docs/design-system.md` terminology commitments (violated by `/mall/[slug]` and `/vendor/[slug]`) and in the Sprint 6+ cleanup list below.
-
----
-
-## 🌿 Next session opener — Design agent's first real pass (READ FIRST)
-
-**Session 11 put the scaffolding in place. Session 12's job is to do the actual design work — inside a system, not per-screen.**
-
-The recommended first pass is a **single focused session** that produces design direction for the entire Booth page redesign and the cross-cutting patterns it depends on (header system, button system, location statement pattern, card pattern). That's 4–5 of the unresolved sections in `docs/design-system.md` resolved at once, because they're genuinely interdependent — you can't design the Booth page without deciding the header mode, and you can't do that without resolving the button system, and so on.
-
-**Expected output of session 12:**
-- `docs/design-system.md` updated: unresolved sections above turn into committed sections with rationale
-- Visual mockups (via visualizer) for the Booth page in both public and owner states
-- A clear sprint brief for Dev to execute in session 13
-
-**NOT expected in session 12:** Any production code changes. The work is design direction only.
-
----
-
-## What was done (this session — 2026-04-17, session 11)
-
-### Phase 1 — Strategic conversation (no code)
-
-David's session opener was effectively "get me a UX read" that evolved into a conversation about how the product should feel (premium, earthy, digital-meets-physical-world, vendors-proud-to-share), why per-screen design hasn't gotten us there, and what orchestration layer is missing. Key decisions from the conversation:
-
-- **Design drift is an orchestration problem, not a design problem.** Each session shipped something competent in isolation, but without a system to hold the whole product accountable to, they accumulated into three themes / inconsistent terminology / four buttons.
-- **Activate a Design agent now**, as a peer to Dev / Product / Docs. Same activation pattern as Docs agent in session 6.
-- **Don't formalize a separate Orchestrator agent yet** — the role is too coupled to session-level judgment. Keep orchestration in the session-opening ritual plus the cross-agent handoff protocols in MASTER_PROMPT.md and DECISION_GATE.md.
-- **Scaffold the design system doc this session. Fill in the direction next session.** Resist the urge to do both at once — the direction pass deserves its own focused session with energy.
-
-### Phase 2 — DECISION_GATE.md updates
-
-- Added new Tech Rule: "Multi-screen UI work… must scope against `docs/design-system.md` before code" — explicitly mirrors the onboarding-journey rule from session 8, which has been the system's highest-value guardrail
-- Added Design agent to Agent Roster table with full scope description and session 11 activation date
-- Added a draft system prompt for the Design agent (mirrors the Docs agent draft pattern)
-- Updated standup preamble to include Design in the active agents list
-- Added `docs/design-system.md` to the Related Documents table
-- Noted Brand agent's voice scope currently sits inside Design until Brand activates in Phase 2
-
-### Phase 3 — MASTER_PROMPT.md updates
-
-- Session Opening Standup now has 6 steps instead of 5 (Design agent standup inserted as step 3, conditional on UI work being in scope)
-- Standup report template updated with `Active agents` line and `Design check` line
-- Added new DESIGN AGENT section before PRODUCT AGENT, documenting what the agent does at session open, what it never does, how the design system gets updated, and how it plays with the future Brand agent
-
-### Phase 4 — docs/design-system.md scaffolded
-
-New file, ~280 lines. Structure:
-- Purpose (naming the specific drift that triggered the doc)
-- Explicit status label: v0.1 scaffold, not yet authoritative
-- Brand metaphor: what Treehouse should feel like, what it should not
-- Currently committed (behavior-backed): color tokens, radius, spacing, typography, terminology, motion, interaction — pulled from `lib/tokens.ts` and DECISION_GATE Brand Rules
-- Unresolved, pending Design agent's first pass: Booth page direction, Find Detail direction, Feed header / mall selector direction, Find Map emotional redesign, Header pattern system, Button system, Card pattern system, Location statement pattern
-- Maintenance protocol: before any multi-screen UI work, review; David reviews; Dev executes; drift returns to doc before shipping; Docs agent verifies at close
-
-### Files modified this session
-- `docs/DECISION_GATE.md` — 5 edits (Tech Rule, Agent Roster table + draft prompt, standup preamble, Related Documents, footer date)
-- `MASTER_PROMPT.md` — 2 edits (Session Opening Standup expanded, new DESIGN AGENT section)
-- `docs/design-system.md` — new file, scaffolded
-- `CLAUDE.md` (this file) — session 11 close
+Session 11 was triggered by a strategic conversation about why per-screen design work across sessions 1–10 produced drift — three themes, inconsistent sold terminology, four button styles, a Booth page that doesn't inspire vendor pride. David named the orchestration problem directly: we need an agent that holds the whole visual system in its head, not just better mockups per page. This session activated that agent and put its scope document in place; session 12 did the actual design direction work.
 
 ---
 
 ## ARCHIVE — What was done earlier (2026-04-17 late-night, session 10)
 > /setup 401 race polish shipped; T4c orphan cleanup A/B/E shipped; onboarding journey is now both working AND clean end-to-end
 
-**Status:** ✅✅ **Session 10 polished the onboarding journey that Session 9 unblocked.** Two commits shipped. No remaining pre-beta blockers. Sprint 4 is 75% complete — T4b (admin surface consolidation), T4c remainder (copy polish), T4d (pre-beta QA), and KI-004 (claim-booth scoping) are all that's left.
+**Status:** ✅✅ **Session 10 polished the onboarding journey that Session 9 unblocked.** Two commits shipped.
 
 ### What shipped (2 commits)
-1. **Orphan cleanup (T4c partial — A + B + E)** — `app/page.tsx` EmptyFeed "Add a Booth" button removed (routed to /shelves dead-end); `app/my-shelf/page.tsx` NoBooth "Post a find" button removed (post-self-heal-failure state had no valid CTA); `app/api/debug-vendor-requests/route.ts` deleted (unauthenticated diagnostic endpoint, 🟡 security item). Copy in both empty states revised to match the new no-button state. Unused `Link` import cleaned up in my-shelf.
-2. **`/setup` 401 race polish** — `setupVendorAccount()` in `app/setup/page.tsx` now retries `/api/setup/lookup-vendor` once with 800ms backoff on 401 response. Absorbs the ~500ms Supabase token-replication window that was flashing "Setup Incomplete" before `/my-shelf` self-heal caught it. 14 lines of new code, one line changed. No new imports, no touch to error state or localStorage write path.
+1. **Orphan cleanup (T4c partial — A + B + E)** — `app/page.tsx` EmptyFeed "Add a Booth" button removed; `app/my-shelf/page.tsx` NoBooth "Post a find" button removed; `app/api/debug-vendor-requests/route.ts` deleted.
+2. **`/setup` 401 race polish** — `setupVendorAccount()` in `app/setup/page.tsx` now retries once with 800ms backoff on 401 response. Absorbs the ~500ms Supabase token-replication window that was flashing "Setup Incomplete" before `/my-shelf` self-heal caught it.
 
 ### Orientation lock check (no-op discovery)
-David asked about locking UI to portrait. Verified `public/manifest.json` already has `"orientation": "portrait"` on line 8 — locks installed PWA. No browser-tab CSS layer added (deliberate — fighting Safari landscape creates more bugs than it solves at max-width: 430px).
+Verified `public/manifest.json` already has `"orientation": "portrait"` on line 8 — locks installed PWA.
 
 ### Supabase cleanup (pre-session)
-David ran the three-orphan cleanup SQL before we started coding: `John Doe / 1234`, `Claude Code / 123`, `David Butler / 123 at AAM` deleted. KI-004 collision hazards cleared. DB is clean heading into Session 11.
-
----
-
-## 🌱 Next session opener — T4b, T4c copy, KI-004 scoping, T4d (READ FIRST)
-
-**Session 10 cleared all the cosmetic tax on the onboarding journey.** No remaining pre-beta blockers. Four bounded pieces of work left in Sprint 4, each a clean standalone session.
-
-### Recommended Session 11 options (pick by time/energy budget)
-
-1. **Short (~1 hour) — T4c remainder copy polish**
-   - Revise `/api/setup/lookup-vendor` error copy (currently surfaces raw "Unauthorized" / "Your vendor account isn't ready yet" strings — could be warmer and more actionable)
-   - Revise `/vendor-request` success screen copy (currently generic, should reinforce "receipt email sent — check your inbox" now that T4a is live)
-   - Best done as a focused copy pass with David's voice on deck rather than bundled into code work.
-
-2. **Medium (~2 hours) — KI-004 scoping session (no code)**
-   - Product Agent maps the pre-seeding → claim-booth flow against `docs/onboarding-journey.md` Flow 1.
-   - David's operating model (captured in `docs/known-issues.md` KI-004): "Everything is captured that's available — booth #, mall, booth name. Once I speak with the owner or they reach out, I'd add their email and initiate the handoff."
-   - Output: implementation spec that the eventual fix can be executed against. Needs product decisions on: where the admin "add email to a pre-seeded booth" surface lives, whether it converts the row to a vendor_request or links directly, and what approve-endpoint does with 23505 collisions absent an intentional handoff.
-
-3. **Long (~4 hours) — T4b admin surface consolidation**
-   - Add Booth tab in `/admin` (Flow 1 home)
-   - Add Vendor in-person flow in `/admin` (Flow 2 capture)
-   - Remove Admin PIN tab from `/login` (gate moves behind `/admin`)
-   - Remove admin "Booths" BottomNav tab
-   - Remove `AddBoothSheet` from `/shelves`
-   - Best done in one focused session rather than split — touches four surfaces.
-
-4. **Pre-beta gate (~2 hours) — T4d QA pass**
-   - Walk all three flows (Pre-Seeded, Demo, Vendor-Initiated) end-to-end against `docs/onboarding-journey.md`.
-   - Generate a punch list of anything that surfaces.
-   - Best run AFTER T4b so the admin surfaces are in final form.
-
-### Suggested order if doing all four: T4c copy → KI-004 scoping → T4b → T4d
-
-### State heading into Session 11
-
-- **DB:** clean. Three session-9 orphans (`John Doe / 1234`, `Claude Code / 123`, `David Butler / 123 at AAM`) deleted via SQL at Session 10 open. KI-004 collision hazards cleared. Safe to use any booth number in tests.
-- **David's iPhone:** should still be signed in as the session-9 `+test3`-style Gmail alias. That vendor is linked cleanly (auth.users + vendor_requests(approved) + vendors(linked) chain). Sign out and clear Safari data before re-testing onboarding.
-- **Production:** two deploys this session, both verified working on device. No rollback concerns.
-
----
-
-## What was done (this session — 2026-04-17, session 10)
-
-### Phase 1 — Supabase cleanup (🖐️ HITL, pre-code)
-
-David ran the three-orphan diagnostic + delete SQL from CLAUDE.md's cleanup pattern before any code work. Deleted `John Doe / 1234`, `Claude Code / 123`, `David Butler / 123 at AAM` — all `user_id=NULL`, all collision hazards for KI-004. DB is clean heading into Session 11. Non-colliding booth numbers are still recommended for test traffic until KI-004 ships, but the active-hazard surface is cleared.
-
-### Phase 2 — Orientation lock (no-op discovery)
-
-David asked about locking the UI to portrait. Verified `public/manifest.json` line 8 already has `"orientation": "portrait"` — locks the installed PWA to portrait cleanly. No change needed. Deliberately skipped adding a browser-tab CSS landscape layer (Safari's orientation-media-query behavior is quirky, and the max-width: 430px layout degrades gracefully in landscape — force-rotating with CSS creates more bugs than it prevents).
-
-### Phase 3 — T4c orphan cleanup batch (A + B + E)
-
-From the five T4c orphan-cleanup items, we shipped the three that cleared dead-end CTAs from the shopper path and the unauthenticated diagnostic endpoint. C and D (copy revisions on lookup-vendor errors + vendor-request success) deliberately saved for a focused copy pass with David's voice on deck.
-
-**Orphan A — `app/page.tsx` EmptyFeed**
-- Removed the "Add a Booth" button that routed to `/shelves` (a dead-end surface scheduled for removal with T4b's `AddBoothSheet` retirement).
-- Removed unused `useRouter` hook usage in `EmptyFeed`.
-- Revised copy from *"Be the first vendor to share a find in your area."* to *"Check back soon — new finds land here the moment a vendor posts them."* — original copy was selling a now-removed button; new copy addresses the actual audience (shoppers on an empty feed).
-
-**Orphan B — `app/my-shelf/page.tsx` NoBooth**
-- Removed the "Post a find" Link that routed to `/post`. This state only renders when a signed-in user has no linked vendor AND the Session-9 self-heal already failed — meaning they're either a shopper who signed in by accident, or a vendor whose approval never completed. In both cases `/post` is a dead end (the Session-9 `/post` guard kicks signed-in users with no DB vendor to a setup state).
-- Revised copy from *"No booth set up yet" / "Post your first find to create your booth identity..."* to *"No booth linked to this account" / "If you're a vendor awaiting approval, your booth will appear here once setup is complete. Questions? Reach out to the admin directly."* — original copy implied self-service account creation (which isn't the onboarding model anymore post-T4a). New copy acknowledges the two realistic audiences (shopper-who-signed-in, vendor-still-waiting).
-- Removed now-unused `Link` import from `next/link`.
-
-**Orphan E — `/api/debug-vendor-requests` retired**
-- Deleted `app/api/debug-vendor-requests/route.ts` — unauthenticated diagnostic endpoint that exposed `vendor_requests` data. 🟡 Security item flagged in Session 7 Risk Register.
-- Verified via search that nothing in the codebase imports from or references this route before deletion.
-
-Shipped as one commit: `chore(ui): orphan cleanup — remove dead-end CTAs + debug endpoint`.
-
-### Phase 4 — `/setup` 401 race polish
-
-Surfaced in Session 9 QA: after OTP verify, `/setup` flashes the "Setup Incomplete" error state briefly before `/my-shelf`'s Session-9 self-heal catches it a few hundred ms later. Root cause is Supabase's auth server taking ~500ms to make a just-issued OTP token validatable via `service.auth.getUser(token)` from a different server. `requireAuth()` on `/api/setup/lookup-vendor` was 401ing during that replication window.
-
-**Fix** — in `app/setup/page.tsx` `setupVendorAccount()`: wrapped the single `authFetch` call in a `callLookupVendor()` helper that retries once with 800ms backoff on a 401 response. If the retry also 401s, falls through to the existing error UI unchanged (no new failure modes). 14 lines of new code, one line changed. No new imports. No touch to the error state, localStorage write path, or success flow.
-
-Shipped as one commit: `fix(setup): retry lookup-vendor once on 401 to absorb OTP token replication lag`.
-
-### Files modified this session
-- `app/page.tsx` — Orphan A (EmptyFeed button removal + copy revision + unused hook cleanup)
-- `app/my-shelf/page.tsx` — Orphan B (NoBooth button removal + copy revision + unused Link import cleanup)
-- `app/api/debug-vendor-requests/route.ts` — deleted (Orphan E)
-- `app/setup/page.tsx` — 401 race retry helper
-- `CLAUDE.md` (this file) — session close
-- `docs/DECISION_GATE.md` — Risk Register updates
-- `docs/known-issues.md` — `/setup` 401 race moved to Resolved
+Three-orphan cleanup SQL ran before coding: `John Doe / 1234`, `Claude Code / 123`, `David Butler / 123 at AAM` deleted. KI-004 collision hazards cleared.
 
 ---
 
 ## ARCHIVE — What was done earlier (2026-04-17, session 9)
 
-### Phase 1 — Warm-up commit: KI-001 + KI-002 (small, surgical)
-
-**KI-001** — `app/login/page.tsx` `handlePin()` final `router.replace("/my-shelf")` → `router.replace("/admin")`. Preserved the public email-OTP branch's `safeRedirect(?redirect=)` logic unchanged. One-line change with 2-line explanatory comment.
-
-**KI-002** — `app/admin/page.tsx` approval toast rewrapped in the known-good centering pattern. The outer non-animated `<div>` does `position:fixed; left:0; right:0; flex justifyContent:center`, and the inner `<motion.div>` animates only opacity+y. Previous version had `left:50%; transform:translateX(-50%)` directly on the `motion.div` and Framer Motion's y-animation overwrote the centering translate.
-
-Shipped as one commit (`fix(admin): KI-001 PIN redirect to /admin + KI-002 toast centering`). QA'd on device: PIN flow lands on /admin, toast centers on approvals.
+### Phase 1 — Warm-up commit: KI-001 + KI-002
+**KI-001** — `app/login/page.tsx` `handlePin()` final `router.replace("/my-shelf")` → `router.replace("/admin")`.
+**KI-002** — `app/admin/page.tsx` approval toast rewrapped in the known-good centering pattern (outer non-animated div does `position:fixed; left:0; right:0; flex justifyContent:center`, inner motion.div animates only opacity+y).
 
 ### Phase 2 — KI-003 diagnosis
-
-Clean-slate Flow 2 repro against a fresh `+test2`-style Gmail alias revealed two cascading bugs:
-
-**Bug A (primary)** — `/login`'s mount useEffect read `searchParams.get("next")` but the approval email CTA (`lib/email.ts` `sendApprovalInstructions`) uses `?redirect=/setup`. When a user arriving via the approval email already had a persisted Supabase session (iPhone PWA, prior test, etc.), the mount effect fired on load, found the existing session, and immediately `router.replace`d to `/my-shelf` — skipping `/setup` entirely. David's QA repro never saw `/setup` flash on screen, confirming the mount effect was eating the redirect before OTP entry even rendered.
-
-**Bug B (secondary, deferred as KI-004)** — `/api/admin/vendor-requests` approve endpoint's 23505 duplicate-key handler silently reuses an existing `vendors` row on `(mall_id, booth_number)` collision without checking whether that row belongs to a different onboarding. Produces ambiguous state where approval succeeds + email sends + a stale vendor exists that doesn't match the new vendor_request's name — so `/api/setup/lookup-vendor` later can't find a matching unlinked row and returns 404.
-
-Diagnostic SQL against the real DB confirmed Bug B was already in play from earlier session residue: three orphan `vendors` rows (`John Doe/1234`, `Claude Code/123`, `David Butler/123 at AAM`), all `user_id=NULL`.
+Clean-slate Flow 2 repro revealed two cascading bugs: `/login` mount useEffect read `searchParams.get("next")` but approval email uses `?redirect=/setup`; approve endpoint's 23505 duplicate-key handler silently reuses existing vendors row on booth collision (deferred as KI-004).
 
 ### Phase 3 — KI-003 three-part fix
-
-**Fix 1 — `app/login/page.tsx`** — mount useEffect + `onAuthChange` callback now read `searchParams.get("redirect") ?? searchParams.get("next")`. Added a 9-line comment block explaining the dual-param history (`next` for magic-link round-trip, `redirect` for approval email CTA) so the next person doesn't re-introduce the mismatch.
-
-**Fix 2 — `app/post/page.tsx`** — identity resolution useEffect no longer falls through to `safeStorage.getItem(LOCAL_VENDOR_KEY)` when `uid` is truthy. Unauth users still get the localStorage path (the "post without account" option is preserved). Signed-in users with no DB-linked vendor now render the `!hasValidIdentity` branch ("Set up your vendor profile" form) instead of silently surfacing whatever stale profile was last written to the device. Permanently eliminates the "posting as Zen · booth 300" symptom class.
-
-**Fix 3 — `app/my-shelf/page.tsx`** — non-admin signed-in users with no linked vendor now call `/api/setup/lookup-vendor` as a self-heal step before falling through to NoBooth. Makes `/my-shelf` a valid Flow 2/3 landing point even if `/setup` was skipped or raced. Idempotent via lookup-vendor's step-0 short-circuit (already-linked users get their existing row back without re-linking). Imported `authFetch` for the call.
+Fix 1: `app/login/page.tsx` — mount useEffect + `onAuthChange` callback now read `searchParams.get("redirect") ?? searchParams.get("next")`.
+Fix 2: `app/post/page.tsx` — identity resolution useEffect no longer falls through to `safeStorage.getItem(LOCAL_VENDOR_KEY)` when `uid` is truthy.
+Fix 3: `app/my-shelf/page.tsx` — non-admin signed-in users with no linked vendor now call `/api/setup/lookup-vendor` as self-heal before falling through to NoBooth.
 
 ### Phase 4 — `/setup` 401 diagnosis → diagnostic logging
-
-Post-deploy QA surfaced a new symptom: `/setup` flashed briefly then showed "Setup Incomplete" with error text "Unauthorized". Fix #3 (my-shelf self-heal) caught and corrected this on second attempt, so the user ultimately landed on `/my-shelf` with the correct vendor — but the flash is visible bad UX.
-
-Root cause: `/api/setup/lookup-vendor`'s `requireAuth()` call to `service.auth.getUser(token)` is rejecting a freshly-issued OTP token because Supabase's auth-server validation has a ~500ms replication window after `verifyOtp` resolves on the client. The token is valid from the client's perspective (stored directly from the verify response) but not yet validatable from a different server.
-
-Added three targeted `console.error` log lines to `lib/adminAuth.ts` `requireAuth()` covering: (a) service client unavailable, (b) no bearer token on the request, (c) getUser rejecting the token. Pure observability change, no behavior impact. Left in production for future 401 debugging.
-
-Deferred fix: a ~10-line retry-with-backoff in `app/setup/page.tsx` `setupVendorAccount()` on 401 response. Scoped as a 🟢 S polish item for Session 10.
+Added three targeted `console.error` log lines to `lib/adminAuth.ts` `requireAuth()` for 401 branch observability. Retry-with-backoff deferred to session 10.
 
 ### Phase 5 — End-to-end verification
-
-David's final QA: submitted a fresh `/vendor-request`, admin-approved, tapped the approval email on iPhone, entered OTP, saw `/setup` flash briefly, landed on `/my-shelf` showing the new vendor name + booth + mall correctly. **Flow 2 onboarding end-to-end verified working.** KI-003 closed.
-
-### Phase 6 — KI-004 scope handoff
-
-David's human-side product thinking on the pre-seeding → claim-booth flow: *"Everything is captured that is available (booth #, mall, booth name). Once I speak with the booth owner or they reach out etc., I'd just add their email and initiate the handoff to them so they could manage that booth. But trying to keep this simple for MVP."*
-
-Logged as KI-004 for a dedicated scoping session in the near future. Not urgent — the three DB orphans it protects against are known and avoidable with non-colliding booth numbers during testing.
-
-### Files modified this session
-- `app/login/page.tsx` — KI-001 one-liner + Fix 1 mount effect & onAuthChange dual-param read
-- `app/admin/page.tsx` — KI-002 wrapper-div pattern for toast
-- `app/post/page.tsx` — Fix 2 localStorage guard
-- `app/my-shelf/page.tsx` — Fix 3 self-heal + authFetch import
-- `lib/adminAuth.ts` — diagnostic logging on 401 branches
-- `CLAUDE.md` (this file) — session close
-- `docs/known-issues.md` — KI-001/002/003 moved to Resolved; KI-004 added
-- `docs/DECISION_GATE.md` — Risk Register updates
-- `docs/onboarding-journey.md` — T4c status updated
+Flow 2 onboarding end-to-end verified working on iPhone.
 
 ---
 
@@ -297,85 +207,15 @@ Logged as KI-004 for a dedicated scoping session in the near future. Not urgent 
 > Onboarding scope-out + T4a email infrastructure shipped end-to-end
 
 ### Phase 1 — Onboarding scope-out (Product Agent, no code)
+- **`docs/onboarding-journey.md`** created as canonical spec. Three flows committed: Pre-Seeded, Demo, Vendor-Initiated.
 
-Per session-7 flag from David: *"first thing in the standup we need to truly scope out the onboarding journey."* Ran the full Product Agent scope-out before any code.
+### Phase 2 — T4a email infrastructure
+- **New file: `lib/email.ts`** (~260 lines) — Resend REST API wrapper
+- **Wired into:** `app/api/vendor-request/route.ts` + `app/api/admin/vendor-requests/route.ts`
+- **End-to-end QA verified:** Email #1 (receipt) and Email #2 (approval) both arriving in production
 
-**Outputs:**
-- **`docs/onboarding-journey.md`** — new canonical spec. Three flows documented with state diagrams, email matrix, data shape decisions, orphan inventory, re-scoped T4. ~380 lines.
-- **Three flows committed:**
-  - **Flow 1 — Pre-Seeded (Admin alone):** David seeds booths at malls he has no relationship with. No vendor contact, no auth, no emails. Creates `vendors` rows with `user_id=NULL`. Future Sprint 6+ hook: "claim this booth."
-  - **Flow 2 — Demo (Admin + vendor in-person):** admin captures vendor details + approves in same session. Vendor receives both emails (receipt + approval). OTP sign-in. Lands on /setup → /my-shelf.
-  - **Flow 3 — Vendor-initiated (remote, async):** vendor submits `/vendor-request` → gets receipt email → admin approves async → vendor gets approval email → OTP sign-in. Same convergence point as Flow 2.
-- **Data shape decisions:**
-  - `display_name` = public booth name; `vendor_requests.name` = person's name (today's model stands, no migration)
-  - Hero photo on `/vendor-request` = email/booth only, no photo upload on public form (admin captures during Flow 2)
-  - "Email must match" enforcement pinned to `/api/setup/lookup-vendor` — if no approved request for signed-in user's email, clear error message
-- **Orphan inventory (for T4c implementation):**
-  - Remove EmptyFeed "Add a Booth" CTA (routes to /shelves — pure orphan)
-  - Remove "Admin PIN" tab from `/login` (moves behind /admin)
-  - Remove admin "Booths" BottomNav tab (Add-Booth surface lives inside /admin as third tab)
-  - Gate `/my-shelf` NoBooth state "Post a find" button behind `activeVendor !== null`
-  - Fix `/post` to prefer DB vendor over localStorage (SESSION 8 UPDATE: this one turned out to already be coded correctly — see KI-003 for what's actually wrong)
-  - Revise error copy on `/api/setup/lookup-vendor` and `/vendor-request` success
-- **Re-scoped T4** broken into:
-  - **T4a** (email infra, 3h) — ✅ **shipped session 8**
-  - **T4b** (admin surface consolidation, 4h)
-  - **T4c** (orphan cleanup + self-heal, 2h) — **now 🔴 blocking, runs before T4b**
-  - **T4d** (pre-beta QA pass against mapped journey, 1-2h)
-
-### Phase 2 — T4a email infrastructure ✅ shipped
-
-**New file: `lib/email.ts`** (~260 lines)
-- Resend REST API wrapper (no SDK dependency — uses native `fetch`)
-- Two exported functions: `sendRequestReceived(payload)`, `sendApprovalInstructions(payload)`
-- Best-effort: returns `{ ok: false, error: string }` on failure but never throws — upstream callers log and continue
-- No-ops with warning if `RESEND_API_KEY` unset (keeps local dev frictionless)
-- From-address: `Treehouse <hello@kentuckytreehouse.com>` (verified via Shopify DNS from session 4)
-- Reply-to set to `NEXT_PUBLIC_ADMIN_EMAIL` for vendor replies
-- Inline-styled HTML email shell with brand-appropriate warm copy (Georgia serif, parchment bg, green CTA button)
-- HTML-escape helper for user-provided name/mall values
-- Email masking helper for log lines (redacts local part)
-
-**Wired into: `app/api/vendor-request/route.ts`**
-- Calls `sendRequestReceived()` after successful `vendor_requests` insert
-- Best-effort: logs via existing `logError()` helper on email failure, still returns 200 OK (vendor_requests row saved, admin can still approve)
-- Removed obsolete TODO comment about Sprint 4 Resend integration
-
-**Wired into: `app/api/admin/vendor-requests/route.ts`**
-- Calls `sendApprovalInstructions()` after successful vendor row creation + request status flip
-- Surfaces email failures via `warning` field on response (existing admin UI toast already renders warnings)
-- Collects multiple warnings if both the status update AND the email fail
-- Admin approval never fails due to email — vendor exists, status is approved, admin can reach out manually
-
-**Updated: `.env.example`**
-- Added `RESEND_API_KEY=` with detailed comment
-- Added `NEXT_PUBLIC_SITE_URL=` (previously undocumented, used by `lib/email.ts` for absolute sign-in URLs)
-
-**HITL steps David completed:**
-- Created Resend API key scoped to "Sending access" + `kentuckytreehouse.com` domain
-- Added `RESEND_API_KEY` to `.env.local` and Vercel (all three environments)
-- Verified `kentuckytreehouse.com` domain in Resend dashboard (SPF/DKIM/DMARC all green from session 4's DNS work)
-- `npm run build` clean, committed, `git push` triggered Vercel deploy
-- **End-to-end QA verified:** Email #1 (receipt) and Email #2 (approval) both arrived in vendor inbox ✅
-
-### Phase 3 — QA issues logged (not fixed this session)
-
-Three issues surfaced during T4a post-deploy QA. All logged to `docs/known-issues.md` with severity, repro, and recommended sprint.
-
-- **KI-001 🟡** Admin PIN redirects to `/my-shelf` (should be `/admin`)
-- **KI-002 🟡** Toast not centered on `/admin` (recurring Framer Motion transform-overwrite issue)
-- **KI-003 🔴 High** "Posting as Zen · booth 300" still happens post-approval — original hypothesis was `/post` reading stale localStorage, but `/post` already does `getVendorByUserId()` on mount. Real cause unknown; diagnostic question deferred to next session
-
-### Files modified (session 8)
-- `docs/onboarding-journey.md` — new (canonical spec)
-- `docs/known-issues.md` — new (three issues logged)
-- `lib/email.ts` — new (Resend wrapper)
-- `app/api/vendor-request/route.ts` — +email call, removed TODO
-- `app/api/admin/vendor-requests/route.ts` — +email call, +warnings array
-- `.env.example` — +RESEND_API_KEY, +NEXT_PUBLIC_SITE_URL
-- `CLAUDE.md` — session close update
-- Vercel env vars: RESEND_API_KEY (external, no code)
-- Resend dashboard: API key generated (external, no code)
+### Phase 3 — QA issues logged
+KI-001, KI-002, KI-003 logged to `docs/known-issues.md`.
 
 ---
 
@@ -383,75 +223,27 @@ Three issues surfaced during T4a post-deploy QA. All logged to `docs/known-issue
 > Sprint 4 T3 shipped, onboarding fragility exposed, scope-out flagged
 
 ### T3 — `/admin` mobile-first approval polish ✅
-Rewrote `app/admin/page.tsx` to polish the in-person approval moment. Removed obsolete copy-paste email template flow (dead code: `generateEmailTemplate`, `copyEmailTemplate`, Copy button, Copy import, clipboard branch). Added structured `Toast` discriminated-union with success/error variants, 6s auto-dismiss, spring animation, eyebrow label, Georgia-serif vendor name. Tightened Approve button to 44px iOS thumb-reach minimum. Mid-session copy fix: toast eyebrow corrected from *"✓ Approved · emailed [name]"* (factually wrong — approve sent no email) to *"✓ Approved · ready to sign in"*. The corrected copy was accurate for session 7 but should be revisited post-session-8 T4a — the approve endpoint now DOES send an email, so *"✓ Approved · emailed [name]"* is again accurate. KI-002 (toast centering) was introduced in this session's toast work.
+Rewrote `app/admin/page.tsx` to polish the in-person approval moment. Removed obsolete copy-paste email template flow.
 
 ### Database reset — full clean slate
-Executed 7-block SQL cleanup (diagnostic → delete posts → vendor_requests → vendors → auth.users except david@zenforged.com → verify counts → verify auth user). Plus storage pass deleting 25 orphaned image files. Post-reset: 1 auth user, 0 vendor_requests, 0 vendors, 0 posts, empty bucket. Corrected stale "Known vendors" entries in this file that had falsely claimed ZenForged Finds #369 and David Butler #963 were linked to auth.
+Executed 7-block SQL cleanup. Plus storage pass deleting 25 orphaned image files.
 
 ### QA pass findings — three onboarding failures from one clean slate
-1. Approve endpoint sent no email (vendor had no organic way to know they were approved)
+1. Approve endpoint sent no email
 2. No organic path to `/setup` from `/login`
 3. `/my-shelf` showed stale localStorage identity after device cache survived DB reset
 
-These findings drove the session 8 onboarding scope-out. Items 1 and 2 resolved by T4a (session 8). Item 3 re-diagnosed as KI-003 in session 8 — the bug is not where we thought.
-
 ---
 
-## ARCHIVE — What was done earlier (2026-04-17 evening, session 6)
-> Biggest session 4 unlock so far — two major Sprint 4 items shipped plus meta-agent activation work
+## ARCHIVE — Earlier sessions (1–6)
+> Condensed for brevity — full history available in git log
 
-### T1 — Custom domain live
-`app.kentuckytreehouse.com` live via Shopify DNS CNAME → Vercel. Supabase Auth Site URL + Redirect URLs aligned. Old `.vercel.app` URL remains as secondary.
-
-### T2 — OTP 6-digit code entry
-Rewrote `app/login/page.tsx` to make 6-digit code entry the primary auth path. Magic link in same email still works as fallback. New `enter-code` screen: email echo, monospace input with auto-advance/auto-submit/paste-friendly/`autocomplete="one-time-code"`, clipboard paste button, 30s resend cooldown, smart back-button. Redirect preservation from session 5 intact. Admin PIN flow untouched.
-
-### Supabase configuration updates (dashboard-only)
-OTP Length: 8 → 6. Branded email templates for Magic Link + Confirm Signup with `{{ .Token }}` in selectable `<code>` element. Known iOS Mail quirk: code is tap-and-hold copyable, not one-tap — paste button counterweight.
-
-### Meta-agent work
-Agent roster formalized: ✅ Dev, Product, Docs active. 🔲 Security Sprint 5, Finance/Brand Phase 2. Standup preamble updated.
-
-### Files modified (session 6)
-- `app/login/page.tsx` — full rewrite (OTP code entry)
-- `docs/DECISION_GATE.md` — agent roster + risk register
-- `CLAUDE.md`
-- Supabase dashboard, Shopify DNS, Vercel (external)
-
----
-
-## ARCHIVE — What was done earlier (2026-04-17 late PM, session 5)
-> emailRedirectTo fix + strategic Sprint 4+ scoping
-
-`lib/auth.ts → sendMagicLink(email, redirectTo?)` now accepts optional redirect path, appended as `&next=` to confirm URL. `app/login/page.tsx → safeRedirect(next, fallback)` helper validates same-origin relative paths only (rejects absolute URLs, protocol-relative `//evil.com`). Full vendor onboarding verified end-to-end. Two product conversations produced concrete sprint items for 5/6+.
-
----
-
-## ARCHIVE — Session 4 (2026-04-17 early AM)
-> DNS pivot + Resend SMTP + Yahoo magic link verification
-
-Pivoted from Cloudflare migration (Path B) to direct Shopify DNS Resend records (Path A) after discovering Shopify is actually authoritative. Resend → Supabase native SMTP integration. End-to-end Yahoo magic link test passed. Small mid-session data recovery after accidentally deleting a `vendor_requests` row.
-
----
-
-## ARCHIVE — Session 3 (2026-04-16 late PM)
-> Resend account setup + DNS migration decision (later reversed in session 4)
-
-Created Resend account, chose Path B (Cloudflare) based on the incorrect premise that DNS lived at Google Cloud DNS. Session 4 corrected this. Cloudflare nameservers remain dormant at no cost.
-
----
-
-## ARCHIVE — Session 2 (2026-04-16 PM)
-> Setup flow status-filter bug fix — verified end-to-end in session 4
-
-`/setup` rejected approved vendors because `lookup-vendor` filtered `vendor_requests` with `.eq("status", "pending")`. Rewrote to `.neq("status", "rejected")`.
-
----
-
-## ARCHIVE — Session 1 (2026-04-16 AM)
-> RLS-blocked vendor-request flow fix + admin API hardening
-
-Moved `vendor_requests` access from browser anon client (RLS-blocked) to server API routes using service role + `requireAdmin`. Five functions in `lib/posts.ts` marked `@deprecated`.
+- **Session 6** — Custom domain `app.kentuckytreehouse.com` live; OTP 6-digit code entry primary auth path; meta-agent work (Dev · Product · Docs active)
+- **Session 5** — `emailRedirectTo` fix + strategic Sprint 4+ scoping; `safeRedirect(next, fallback)` helper
+- **Session 4** — DNS pivot Path B → Path A (Shopify authoritative); Resend → Supabase SMTP; Yahoo magic link verified
+- **Session 3** — Resend account setup; DNS migration decision (later reversed in session 4)
+- **Session 2** — Setup flow status-filter bug fix: `lookup-vendor` `.eq("status", "pending")` → `.neq("status", "rejected")`
+- **Session 1** — RLS-blocked vendor-request flow fix; admin API hardening with `requireAdmin` + service role
 
 ---
 
@@ -472,7 +264,9 @@ Moved `vendor_requests` access from browser anon client (RLS-blocked) to server 
 
 **Operator note:** David Butler is an **online reseller** (Zen Forged LLC, ZenForged Finds online sales). He is not a physical storefront operator at any mall. In-person vendor onboarding sessions are deliberate scheduled meetups, not incidental. This matters for scoping — "in person" is a product choice, not a default.
 
-**Onboarding canonical spec:** See `docs/onboarding-journey.md` for the three committed flows (Pre-Seeded, Demo, Vendor-Initiated). All onboarding-adjacent work scopes against that document before code.
+**Onboarding canonical spec:** See `docs/onboarding-journey.md` for the three committed flows (Pre-Seeded, Demo, Vendor-Initiated).
+
+**Design canonical spec:** See `docs/design-system.md` v0.2 for the visual + interaction system. All multi-screen UI work scopes against it before code.
 
 ---
 
@@ -503,49 +297,42 @@ EBAY_CLIENT_ID                   eBay direct API (not yet wired)
 EBAY_CLIENT_SECRET               eBay direct API (not yet wired)
 ```
 
-**SMTP note:** Resend SMTP credentials live in Supabase Auth → SMTP Settings (for OTP emails). Resend API key in Vercel env (for `lib/email.ts` transactional emails). Two separate uses of Resend — one via SMTP (Supabase-managed), one via REST API (our code, session 8).
+**SMTP note:** Resend SMTP credentials live in Supabase Auth → SMTP Settings (for OTP emails). Resend API key in Vercel env (for `lib/email.ts` transactional emails).
 
 ---
 
 ## DNS STATE (as of 2026-04-17)
 
-**Registrar:** Squarespace Domains (inherited from Google Domains acquisition in 2023)
-**Authoritative nameservers:** Shopify's default nameservers (Shopify manages DNS)
+**Registrar:** Squarespace Domains
+**Authoritative nameservers:** Shopify's default nameservers
 **DNSSEC:** Off
 
 **Live records (via Shopify DNS):**
 - A `kentuckytreehouse.com` → `23.227.38.65` (Shopify)
-- AAAA `kentuckytreehouse.com` → `2620:0127:f00f:5::` (Shopify IPv6)
+- AAAA `kentuckytreehouse.com` → `2620:0127:f00f:5::`
 - CNAME `www` → `shops.myshopify.com`
 - CNAME `account` → `shops.myshopify.com`
-- CNAME `app` → `d21d0d632a8983e0.vercel-dns-017.com.` (Vercel — session 6)
-- CNAME `h3f._domainkey` → `dkim1.fa0cb6bc6910.p371.email.myshopify.com` (Shopify DKIM 1)
-- CNAME `h3f2._domainkey` → `dkim2.fa0cb6bc6910.p371.email.myshopify.com` (Shopify DKIM 2)
-- CNAME `h3f3._domainkey` → `dkim3.fa0cb6bc6910.p371.email.myshopify.com` (Shopify DKIM 3)
-- CNAME `mailerh3f` → `fa0cb6bc6910.p371.email.myshopify.com` (Shopify mail routing)
-- MX `@` → `mx.kentuckytreehouse.com.cust.b.hostedemail.com` priority 1 (inbound via HostedEmail)
+- CNAME `app` → `d21d0d632a8983e0.vercel-dns-017.com.` (Vercel)
+- CNAME DKIM records for Shopify email
+- MX `@` → `mx.kentuckytreehouse.com.cust.b.hostedemail.com` priority 1
 - TXT `_provider` → `shopify`
 - TXT `_dmarc` → `v=DMARC1; p=none`
-- TXT `@` → `v=spf1 include:_spf.hostedemail.com ~all` (root SPF for inbound)
-- TXT `resend._domainkey` → `v=DKIM1; k=rsa; p=MIGfMA0G...` (Resend DKIM, session 4)
-- TXT `send` → `v=spf1 include:amazonses.com ~all` (Resend SPF for `send` subdomain, session 4)
-- MX `send` → `feedback-smtp.us-east-1.amazonses.com` priority 10 (Resend MX for `send` subdomain, session 4)
+- TXT `@` → `v=spf1 include:_spf.hostedemail.com ~all`
+- TXT `resend._domainkey` → `v=DKIM1; k=rsa; p=MIGfMA0G...` (Resend DKIM)
+- TXT `send` → `v=spf1 include:amazonses.com ~all` (Resend SPF)
+- MX `send` → `feedback-smtp.us-east-1.amazonses.com` priority 10
 
-**Dormant:** Cloudflare account has nameservers assigned (`marissa.ns.cloudflare.com`, `vin.ns.cloudflare.com`) but is not authoritative. Leftover from session 3's Path B plan. No cost to leaving it in place.
+**Dormant:** Cloudflare account has nameservers assigned but is not authoritative. Leftover from session 3's Path B plan.
 
 ---
 
 ## SUPABASE
 - **Tables:** malls, vendors, posts, vendor_requests — RLS ENABLED ✅
-- **vendor_requests:** id, name, email, booth_number, mall_id, mall_name, status, created_at ✅
 - **vendor_requests RLS:** service-role-only (`USING (false) WITH CHECK (false)`) — must be accessed via `/api/*` routes
 - **Storage bucket:** post-images — PUBLIC
-- **Auth:** Magic link (OTP) via email — `supabase.auth.signInWithOtp()`, routed through Resend SMTP. 6-digit code entry is primary path since session 6.
+- **Auth:** Magic link (OTP) via email, 6-digit code entry is primary path since session 6.
 - **Malls:** 29 locations seeded (KY + Clarksville IN)
 - **Primary mall:** America's Antique Mall, id: `19a8ff7e-cb45-491f-9451-878e2dde5bf4`, slug: `americas-antique-mall`
-- **Known vendors (as of session 8 close):**
-  - `David Butler / booth 123 / America's Antique Mall` — created via T4a end-to-end QA. `user_id` link state unverified (see KI-003 — diagnostic needed). `dbutlerproductions@yahoo.com` is the auth email.
-  - `Claude Code / booth 123 / All Peddlers, Louisville` — appears in session 8 screenshot, approved status. `dbutler80020@gmail.com` is the auth email. Link state also unverified pending KI-003 diagnosis.
 - **Extra columns vendors:** `facebook_url text`, `user_id uuid`, `hero_image_url text`, `bio text`
 - **Unique constraint vendors:** `vendors_mall_booth_unique` on `(mall_id, booth_number)`
 - **Unique constraint malls:** `malls_slug_key` on `(slug)`
@@ -555,41 +342,22 @@ EBAY_CLIENT_SECRET               eBay direct API (not yet wired)
 ## AUTH & SERVER API PATTERN
 
 **Client → Server auth bridge (Option B — bearer header):**
-- Client: import `authFetch` from `@/lib/authFetch` instead of calling `fetch()` directly to any gated route
-- Server: first line of every `/api/admin/*` handler must be `const auth = await requireAdmin(req); if (!auth.ok) return auth.response;`
-- For auth-required-but-not-admin routes (like `/api/setup/*`), use `requireAuth()` instead
+- Client: import `authFetch` from `@/lib/authFetch`
+- Server: first line of every `/api/admin/*` handler: `const auth = await requireAdmin(req); if (!auth.ok) return auth.response;`
+- For auth-required-but-not-admin routes: `requireAuth()`
 
-**Redirect-preservation pattern (as of session 5):**
-- Clients navigating to `/login?redirect=/some-path` have that path preserved across the magic-link round trip via a `next` query param
-- `lib/auth.ts → sendMagicLink(email, redirectTo?)` accepts the path; appends as `&next=<encoded>` to the confirm URL
-- `app/login/page.tsx → safeRedirect(next, fallback)` validates same-origin relative paths only — rejects absolute URLs and protocol-relative (`//evil.com`)
+**Redirect-preservation pattern (session 5):**
+- `lib/auth.ts → sendMagicLink(email, redirectTo?)` appends path as `&next=`
+- `app/login/page.tsx → safeRedirect(next, fallback)` validates same-origin relative paths only
 
-**Email pattern (as of session 8 — T4a):**
+**Email pattern (session 8 — T4a):**
 - `lib/email.ts` — Resend REST API wrapper, two functions: `sendRequestReceived`, `sendApprovalInstructions`
-- Best-effort delivery — callers never fail their HTTP response on email error, just log
-- No-ops with warning if `RESEND_API_KEY` unset (local dev friendly)
-- Called from `/api/vendor-request` (Email #1) and `/api/admin/vendor-requests` (Email #2)
-- Sends from `hello@kentuckytreehouse.com` via verified Resend domain (session 4 DNS records)
-
-**Gated routes:**
-- `GET /api/admin/posts` — requireAdmin
-- `DELETE /api/admin/posts` — requireAdmin
-- `GET /api/admin/vendor-requests` — requireAdmin
-- `POST /api/admin/vendor-requests` — requireAdmin (action="approve")
-- `POST /api/setup/lookup-vendor` — requireAuth
-
-**Ungated routes (by design):**
-- `POST /api/vendor-request` — public submission (rate-limited 3/10min per IP)
-- `POST /api/post-caption` — rate-limited 10/60s per IP
-- `GET /api/debug`, `GET /api/debug-vendor-requests` — diagnostic (remove later)
+- Best-effort delivery — callers never fail HTTP response on email error
 
 ---
 
 ## HOW TO CLEAR AN EMAIL FROM SUPABASE (for QA iterations)
-> Captured from 2026-04-16 session — use when you want to reset a test email's state.
-> ⚠️ CAUTION: In session 4 the `vendor_requests` row was accidentally deleted during this cleanup. The SQL pattern below (from diagnostic query) is safer than clicking rows in the dashboard.
-
-Touches up to 3 tables: `auth.users`, `public.vendor_requests`, `public.vendors`.
+> ⚠️ CAUTION: In session 4 the `vendor_requests` row was accidentally deleted during cleanup. Use the SQL diagnostic pattern below.
 
 **Preferred: SQL diagnostic + surgical delete**
 
@@ -616,12 +384,10 @@ DELETE FROM auth.users WHERE email = 'TARGET@example.com' RETURNING id, email;
 DELETE FROM public.vendor_requests WHERE email = 'TARGET@example.com' RETURNING id, name, status;
 ```
 
-**Step 3 — Unlink a vendor row without deleting it (for re-testing /setup flow)**
+**Step 3 — Unlink a vendor row without deleting it**
 ```sql
 UPDATE public.vendors SET user_id = NULL WHERE display_name = 'TARGET_NAME' RETURNING id, display_name, user_id;
 ```
-
-Note: the `admin-cleanup` Sprint 6+ item will collapse this to one click.
 
 ---
 
@@ -629,8 +395,8 @@ Note: the `admin-cleanup` Sprint 6+ item will collapse this to one click.
 - Discovery feed — masonry, scroll restore, spring-tap, warmth hover, back-nav anchor
 - Feed footer — vendor CTA "Request booth access →" → `/vendor-request`
 - Magic link auth + Admin PIN login
-- Magic link delivery via Resend SMTP — verified end-to-end for Yahoo (session 4)
-- Magic link `?redirect=` param preserved across round trip (session 5)
+- Magic link delivery via Resend SMTP — verified end-to-end for Yahoo
+- Magic link `?redirect=` param preserved across round trip
 - My Booth — hero upload, vendor switcher, Send icon
 - Post flow — AI caption, price validation, image upload
 - Post preview — full image (no crop), edit pill buttons on title/caption/price
@@ -638,35 +404,24 @@ Note: the `admin-cleanup` Sprint 6+ item will collapse this to one click.
 - Public shelf — share button always visible (no auth required)
 - Vendor request flow — `/vendor-request` form + success screen + API route
 - Vendor account setup — admin approval workflow, setup page
-- Vendor-request admin + setup routed through server API with admin gating (session 1)
-- `/api/admin/*` server-side admin check via `requireAdmin` (session 1)
-- Setup lookup status-filter fix (session 2)
 - RLS — 12 policies + vendor_requests (service role only)
 - Rate limiting — `/api/post-caption` 10 req/60s, `/api/vendor-request` 3 req/10min
 - PWA manifest
-- `.env.example` — all required vars documented
 - MASTER_PROMPT.md — HITL standard + Product Agent + Blocker Protocol
 - Notion Roadmap — seeded
 - Investor update system — Drive folder + first PDF + Notion process doc
 - Custom domain `app.kentuckytreehouse.com` (session 6)
 - OTP 6-digit code entry as primary auth path (session 6)
-- Clipboard paste button on OTP input (session 6)
 - Branded email templates for Magic Link and Confirm Signup (session 6)
-- Agent roster formalized: Dev · Product · Docs active (session 6)
-
-### Working ✅ additions (session 9 — 2026-04-17)
-- **KI-001, KI-002, KI-003 all resolved** — full diff in `docs/known-issues.md` Resolved section
-- **Flow 2 onboarding end-to-end verified working on iPhone** — approval email CTA → OTP → /setup → /my-shelf with correct vendor rendered
-- **`/login` redirect-param tolerance** — accepts both `?redirect=` (email CTA path) and `?next=` (magic-link round-trip path) in mount effect + onAuthChange
-- **`/post` signed-in localStorage guard** — signed-in users never fall through to stale cache; "posting as Zen · booth 300" symptom class permanently eliminated
-- **`/my-shelf` self-heal** — non-admin signed-in users with no linked vendor auto-call lookup-vendor before falling through to NoBooth. Makes /my-shelf a valid Flow 2/3 landing point even if /setup is skipped or raced.
-- **`requireAuth` diagnostic logging** — 401 responses now distinguish missing-header vs rejected-token in Vercel function logs
-
-### Working ✅ additions (session 10 — 2026-04-17)
-- **`/setup` 401 race absorbed** — `setupVendorAccount()` retries once with 800ms backoff on 401, eliminating the "Setup Incomplete" flash during the Supabase token-replication window. Existing error UI preserved for genuine failures.
-- **Shopper path de-orphaned** — EmptyFeed no longer offers a dead-end "Add a Booth" button; NoBooth no longer offers a dead-end "Post a find" button. Copy in both states now matches their actual audience.
-- **`/api/debug-vendor-requests` retired** — unauthenticated diagnostic endpoint removed (🟡 security item cleared).
-- **PWA orientation lock verified** — `public/manifest.json` locks installed PWA to portrait. Browser-tab landscape left alone by design.
+- Agent roster: Dev · Product · Docs · Design active (session 11)
+- KI-001, KI-002, KI-003 all resolved (session 9)
+- Flow 2 onboarding end-to-end verified working on iPhone (session 9)
+- `/setup` 401 race absorbed with retry+backoff (session 10)
+- Shopper path de-orphaned (session 10)
+- `/api/debug-vendor-requests` retired (session 10)
+- PWA orientation lock verified (session 10)
+- Design agent activated, `docs/design-system.md` v0.1 scaffolded (session 11)
+- `docs/design-system.md` v0.2 — full direction pass for Booth, Find Detail, Feed header, Find Map, plus cross-cutting primitives (session 12)
 
 ## KNOWN GAPS ⚠️
 
@@ -674,26 +429,23 @@ Note: the `admin-cleanup` Sprint 6+ item will collapse this to one click.
 _None as of session 10 close._ No blockers remain; Sprint 4 is in polish-and-consolidation territory.
 
 ### 🟡 Sprint 4 remainder
-- ✅ Custom domain `app.kentuckytreehouse.com` → Vercel (session 6)
-- ✅ OTP 6-digit code entry + clipboard paste (session 6)
-- ✅ T3 `/admin` mobile-first approval polish (session 7)
-- ✅ Onboarding scope-out + `docs/onboarding-journey.md` (session 8)
-- ✅ T4a email infrastructure + Email #1 + Email #2 (session 8)
-- ✅ KI-001 admin PIN redirect (session 9)
-- ✅ KI-002 toast centering (session 9)
-- ✅ KI-003 onboarding journey fix (session 9)
-- ✅ `/setup` 401 race polish (session 10)
-- ✅ T4c partial — orphans A + B + E (session 10): EmptyFeed CTA removal, NoBooth button removal, `/api/debug-vendor-requests` retirement
 - 🟡 T4c remainder (copy polish) — orphans C + D: `/api/setup/lookup-vendor` error copy + `/vendor-request` success screen copy. Focused copy session.
 - 🟡 T4b — admin surface consolidation (Add Booth tab in /admin, Add Vendor in-person flow, remove Admin PIN from /login, remove Booths from BottomNav, retire `AddBoothSheet` from /shelves) — ~4 hours.
 - 🟡 T4d — pre-beta QA pass walking all three flows end-to-end against `docs/onboarding-journey.md`.
 - **KI-004** — approve-endpoint 23505 silent-reuse. Needs a dedicated scoping session per David's call (pre-seeding → claim-booth flow model). Not urgent.
-- Sprint 3 leftovers still pending beta invites:
-  - Error monitoring (Sentry or structured logs)
-  - Vendor bio UI (tap-to-edit + public display)
-  - Hero image upload size guard (12MB client check) — actually already present in my-shelf, verify coverage
-  - Feed content seeding (10–15 real posts) — required before beta invite
-  - Beta feedback mechanism (Tally.so link)
+
+### 🟡 Design execution (new as of session 12)
+- **Session 13 candidate (recommended next):** Booth page redesign against `docs/design-system.md` v0.2. Build `<LocationStatement>`, add Curator's Statement block, convert BoothFinderCard to CTA card variant, terminology pass.
+- **Session 14 candidate:** Find Detail polish (hierarchy fix + single Location Statement + weighted "Explore the Booth" button).
+- **Session 15 candidate:** Feed header + mall bottom sheet (`<MallSheet>` as canonical bottom-sheet pattern).
+- **Session 16 candidate:** Find Map emotional redesign.
+
+Sprint 3 leftovers still pending beta invites:
+- Error monitoring (Sentry or structured logs)
+- Vendor bio UI — partly superseded by Curator's Statement design direction, but the tap-to-edit + public display still needs to ship
+- Hero image upload size guard (12MB client check) — verify coverage
+- Feed content seeding (10–15 real posts) — required before beta invite
+- Beta feedback mechanism (Tally.so link)
 
 ### 🟡 Sprint 5 (guest-user UX + onboarding polish — parked)
 - Rename "Sign In" → "Curator Sign In" everywhere + `/welcome` guest-friendly landing for signed-in non-vendors
@@ -702,7 +454,7 @@ _None as of session 10 close._ No blockers remain; Sprint 4 is in polish-and-con
 - Bookmarks persistence (localStorage → DB-backed, ITP wipe mitigation)
 
 ### 🟢 Sprint 6+ (parked)
-- "Claim this booth" flow for Flow 1 pre-seeded vendors (Sprint 6+ hook from onboarding-journey.md)
+- "Claim this booth" flow for Flow 1 pre-seeded vendors
 - QR-code approval handshake
 - Universal Links setup (iOS `apple-app-site-association`)
 - Native app evaluation (Capacitor/Expo/React Native wrapper)
@@ -712,10 +464,10 @@ _None as of session 10 close._ No blockers remain; Sprint 4 is in polish-and-con
 
 ### 🟢 Cleanup (not urgent)
 - Deprecated vendor-request functions still in `lib/posts.ts`
-- ✅ `/api/debug-vendor-requests` retired session 10
 - Cloudflare nameservers for `kentuckytreehouse.com` — dormant, no cost
 - `/shelves` AddBoothSheet — orphan after T4b ships, remove then
-- `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` — obsolete since T4a; automated emails supersede the copy-paste template. Retire in a doc cleanup pass.
+- `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` — obsolete since T4a
+- Design cleanup pass: inline Georgia → system-ui on chrome; inline `C` color objects → `colors` import; magic-number spacing → spacing tokens — bundled as a single dedicated session post-Booth redesign
 
 ---
 
@@ -725,10 +477,6 @@ Run one at a time:
 
 ```bash
 curl -s https://treehouse-treasure-search.vercel.app/api/debug | python3 -m json.tool
-```
-
-```bash
-curl -s https://treehouse-treasure-search.vercel.app/api/debug-vendor-requests | python3 -m json.tool
 ```
 
 ```bash
@@ -767,7 +515,7 @@ Check Resend delivery logs:
 https://resend.com/emails
 ```
 
-Check Vercel function logs (for lib/email.ts send errors):
+Check Vercel function logs:
 
 ```
 https://vercel.com/david-6613s-projects/treehouse-treasure-search/logs
@@ -785,14 +533,6 @@ dig kentuckytreehouse.com +short
 
 ```bash
 dig resend._domainkey.kentuckytreehouse.com TXT +short
-```
-
-```bash
-dig send.kentuckytreehouse.com TXT +short
-```
-
-```bash
-dig send.kentuckytreehouse.com MX +short
 ```
 
 ---
