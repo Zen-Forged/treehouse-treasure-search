@@ -8,6 +8,11 @@
 //   DEL  /api/admin/posts              — delete posts (selected or all)
 //   GET  /api/admin/vendor-requests    — list vendor requests
 //   POST /api/admin/vendor-requests    — { action: "approve", requestId }
+//
+// Session 7 (2026-04-17) — T3 mobile-first approval polish:
+//  - Removed obsolete email template copy flow (Resend SMTP sends on approve)
+//  - Approve button sized for 44px iOS thumb-reach minimum
+//  - Post-approval toast: structured, durable (6s), bottom-anchored, animated
 
 "use client";
 
@@ -15,7 +20,8 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, UserCheck, Copy, Users, Store } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, UserCheck, Users, Store, X } from "lucide-react";
 import { getSession, isAdmin, signOut } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { colors } from "@/lib/tokens";
@@ -42,6 +48,12 @@ interface VendorRequest {
   created_at:   string;
 }
 
+type Toast =
+  | { kind: "success"; name: string; email: string; booth: string | null; mall: string | null; warning?: string }
+  | { kind: "error"; message: string };
+
+const TOAST_DURATION_MS = 6000;
+
 export default function AdminPage() {
   const router = useRouter();
   const [user,       setUser]       = useState<User | null>(null);
@@ -54,7 +66,7 @@ export default function AdminPage() {
   const [busy,       setBusy]       = useState(false);
   const [requestBusy, setRequestBusy] = useState<Set<string>>(new Set());
   const [result,     setResult]     = useState<string | null>(null);
-  const [requestResult, setRequestResult] = useState<string | null>(null);
+  const [toast,      setToast]      = useState<Toast | null>(null);
   const [confirmAll, setConfirmAll] = useState(false);
   const [activeTab, setActiveTab] = useState<"posts" | "requests">("requests");
 
@@ -68,6 +80,13 @@ export default function AdminPage() {
       }
     });
   }, []);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), TOAST_DURATION_MS);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   async function fetchPosts() {
     setLoading(true);
@@ -91,19 +110,18 @@ export default function AdminPage() {
 
   async function fetchVendorRequests() {
     setRequestsLoading(true);
-    setRequestResult(null);
     try {
       const res  = await authFetch("/api/admin/vendor-requests");
       const json = await res.json();
       if (!res.ok) {
-        setRequestResult(`Error: ${json.error || "Failed to load vendor requests"}`);
+        setToast({ kind: "error", message: json.error || "Failed to load vendor requests" });
         setRequests([]);
       } else {
         setRequests(json.requests ?? []);
       }
     } catch (err) {
       console.error("Failed to fetch vendor requests:", err);
-      setRequestResult("Error: Failed to load vendor requests");
+      setToast({ kind: "error", message: "Failed to load vendor requests" });
       setRequests([]);
     }
     setRequestsLoading(false);
@@ -151,7 +169,6 @@ export default function AdminPage() {
   async function approveVendorRequest(request: VendorRequest) {
     if (requestBusy.has(request.id)) return;
     setRequestBusy(prev => { const next = new Set(prev); next.add(request.id); return next; });
-    setRequestResult(null);
 
     try {
       const res = await authFetch("/api/admin/vendor-requests", {
@@ -161,70 +178,27 @@ export default function AdminPage() {
       const json = await res.json();
 
       if (!res.ok || !json.ok) {
-        setRequestResult(`Error approving ${request.name}: ${json.error || "Unknown error"}`);
+        setToast({ kind: "error", message: `Couldn't approve ${request.name}: ${json.error || "unknown error"}` });
         setRequestBusy(prev => { const next = new Set(prev); next.delete(request.id); return next; });
         return;
       }
 
-      const warning = json.warning ? `\n⚠️ ${json.warning}` : "";
-      setRequestResult(`✓ Vendor account created for ${request.name}. Copy the email template below and send manually.${warning}`);
+      setToast({
+        kind: "success",
+        name: request.name,
+        email: request.email,
+        booth: request.booth_number,
+        mall: request.mall_name,
+        warning: json.warning,
+      });
 
-      // Copy email template to clipboard
-      const emailTemplate = generateEmailTemplate(request);
-      try {
-        await navigator.clipboard.writeText(emailTemplate);
-        setRequestResult(prev => `${prev}\n\n📋 Email template copied to clipboard!`);
-      } catch (err) {
-        console.log("Clipboard copy failed, showing template manually");
-      }
-
-      // Refresh the requests list
       await fetchVendorRequests();
-
     } catch (err) {
       console.error("Vendor approval error:", err);
-      setRequestResult(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+      setToast({ kind: "error", message: err instanceof Error ? err.message : "Unknown error" });
     }
 
     setRequestBusy(prev => { const next = new Set(prev); next.delete(request.id); return next; });
-  }
-
-  function generateEmailTemplate(request: VendorRequest): string {
-    const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://treehouse-treasure-search.vercel.app";
-    const setupUrl = `${baseUrl}/setup`;
-
-    return `Subject: Your Treehouse vendor account is ready!
-
-Hi ${request.name},
-
-Great news! Your vendor access request for Treehouse has been approved. Your booth account is now set up and ready to use.
-
-To get started:
-1. Click this link to complete your account setup: ${setupUrl}
-2. Sign in with this email address: ${request.email}
-3. Start posting finds to share with browsers before they make the trip
-
-Your booth details:
-- Name: ${request.name}
-- ${request.booth_number ? `Booth: ${request.booth_number}` : "Booth: Not specified"}
-- ${request.mall_name ? `Mall: ${request.mall_name}` : "Mall: Not specified"}
-
-Once you're set up, you can manage your booth and post finds at treehouse-treasure-search.vercel.app
-
-Welcome to Treehouse!
-
-Best regards,
-The Treehouse Team`;
-  }
-
-  async function copyEmailTemplate(request: VendorRequest) {
-    const template = generateEmailTemplate(request);
-    try {
-      await navigator.clipboard.writeText(template);
-      setRequestResult(`📋 Email template for ${request.name} copied to clipboard!`);
-    } catch (err) {
-      setRequestResult(`Error: Could not copy to clipboard`);
-    }
   }
 
   async function handleSignOut() {
@@ -330,19 +304,6 @@ The Treehouse Team`;
             </button>
           </div>
 
-          {requestResult && (
-            <div style={{
-              padding: "12px", borderRadius: 10, marginBottom: 12,
-              background: requestResult.startsWith("✓") || requestResult.includes("📋") ? colors.greenLight : colors.redBg,
-              border: `1px solid ${requestResult.startsWith("✓") || requestResult.includes("📋") ? colors.greenBorder : colors.redBorder}`,
-              fontSize: 12,
-              color: requestResult.startsWith("✓") || requestResult.includes("📋") ? colors.green : colors.red,
-              whiteSpace: "pre-wrap"
-            }}>
-              {requestResult}
-            </div>
-          )}
-
           {requestsLoading ? (
             <div style={{ fontSize: 13, color: colors.textFaint, padding: "20px 0", textAlign: "center" }}>Loading requests…</div>
           ) : requests.length === 0 ? (
@@ -357,10 +318,10 @@ The Treehouse Team`;
                     style={{
                       background: isPending ? colors.surface : colors.bg,
                       border: `1px solid ${isPending ? colors.border : colors.textFaint}`,
-                      borderRadius: 12, padding: "14px 16px",
+                      borderRadius: 12, padding: "16px 18px",
                       opacity: isPending ? 1 : 0.6
                     }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: colors.textPrimary, marginBottom: 4 }}>
                           {request.name}
@@ -377,29 +338,17 @@ The Treehouse Team`;
                       </div>
 
                       {isPending && (
-                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                          <button
-                            onClick={() => copyEmailTemplate(request)}
-                            disabled={isBusy}
-                            style={{
-                              padding: "6px 8px", borderRadius: 8, fontSize: 11,
-                              background: "none", color: colors.textMuted,
-                              border: `1px solid ${colors.border}`, cursor: "pointer",
-                              opacity: isBusy ? 0.5 : 1, display: "flex", alignItems: "center", gap: 4
-                            }}>
-                            <Copy size={10} />
-                          </button>
-                          <button
-                            onClick={() => approveVendorRequest(request)}
-                            disabled={isBusy}
-                            style={{
-                              padding: "6px 12px", borderRadius: 8, fontSize: 11, fontWeight: 500,
-                              background: colors.green, color: "#fff", border: "none", cursor: "pointer",
-                              opacity: isBusy ? 0.5 : 1, display: "flex", alignItems: "center", gap: 4
-                            }}>
-                            <UserCheck size={11} /> {isBusy ? "..." : "Approve"}
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => approveVendorRequest(request)}
+                          disabled={isBusy}
+                          style={{
+                            padding: "10px 18px", borderRadius: 10, fontSize: 13, fontWeight: 600,
+                            background: colors.green, color: "#fff", border: "none", cursor: "pointer",
+                            opacity: isBusy ? 0.5 : 1, display: "flex", alignItems: "center", gap: 6,
+                            minHeight: 44, flexShrink: 0, whiteSpace: "nowrap"
+                          }}>
+                          <UserCheck size={14} /> {isBusy ? "…" : "Approve"}
+                        </button>
                       )}
                     </div>
                   </div>
@@ -487,6 +436,97 @@ The Treehouse Team`;
           )}
         </div>
       )}
+
+      {/* Approval toast — bottom-anchored, 6s, tap to dismiss */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key="approval-toast"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            transition={{ type: "spring", stiffness: 380, damping: 32 }}
+            onClick={() => setToast(null)}
+            role="status"
+            aria-live="polite"
+            style={{
+              position: "fixed",
+              left: "50%",
+              bottom: "max(20px, env(safe-area-inset-bottom, 20px))",
+              transform: "translateX(-50%)",
+              width: "calc(100% - 32px)",
+              maxWidth: 398,
+              background: toast.kind === "success" ? colors.greenLight : colors.redBg,
+              border: `1px solid ${toast.kind === "success" ? colors.greenBorder : colors.redBorder}`,
+              borderRadius: 14,
+              padding: "14px 16px",
+              boxShadow: "0 10px 28px rgba(26,26,24,0.14)",
+              cursor: "pointer",
+              zIndex: 100,
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 12,
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {toast.kind === "success" ? (
+                <>
+                  <div style={{
+                    fontSize: 9, color: colors.green, textTransform: "uppercase",
+                    letterSpacing: "1.8px", marginBottom: 4, fontWeight: 600
+                  }}>
+                    ✓ Approved · emailed {toast.name.split(" ")[0]}
+                  </div>
+                  <div style={{
+                    fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600,
+                    color: colors.textPrimary, marginBottom: 2
+                  }}>
+                    {toast.name}
+                  </div>
+                  <div style={{ fontSize: 11, color: colors.textMid, marginBottom: 2 }}>
+                    {toast.email}
+                  </div>
+                  <div style={{ fontSize: 11, color: colors.textMuted }}>
+                    {toast.booth ? `Booth ${toast.booth}` : "No booth"} · {toast.mall || "No mall"}
+                  </div>
+                  {toast.warning && (
+                    <div style={{
+                      fontSize: 11, color: colors.red, marginTop: 6,
+                      fontStyle: "italic"
+                    }}>
+                      ⚠️ {toast.warning}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div style={{
+                    fontSize: 9, color: colors.red, textTransform: "uppercase",
+                    letterSpacing: "1.8px", marginBottom: 4, fontWeight: 600
+                  }}>
+                    Error
+                  </div>
+                  <div style={{ fontSize: 13, color: colors.textPrimary, lineHeight: 1.5 }}>
+                    {toast.message}
+                  </div>
+                </>
+              )}
+            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); setToast(null); }}
+              aria-label="Dismiss"
+              style={{
+                background: "none", border: "none", cursor: "pointer",
+                padding: 4, marginTop: -2, marginRight: -4,
+                color: toast.kind === "success" ? colors.green : colors.red,
+                flexShrink: 0,
+              }}
+            >
+              <X size={16} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
