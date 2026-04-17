@@ -6,7 +6,7 @@
 // Sessions persist across browser restarts (Supabase default with pkce flow).
 //
 // Key exports:
-//   sendMagicLink(email)      — sends OTP email, returns { error }
+//   sendMagicLink(email, redirectTo?) — sends OTP email, returns { error }
 //   getSession()              — returns current Supabase session or null
 //   getUser()                 — returns current user or null
 //   signOut()                 — clears session
@@ -25,13 +25,25 @@ const ADMIN_EMAIL      = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
 /**
  * Send a magic link OTP to the given email.
  * Supabase emails a 6-digit code + link. On click/entry the user is signed in.
- * The redirect URL lands back on /login?confirmed=1 which then routes to /my-shelf.
+ *
+ * The redirect URL always lands back on /login?confirmed=1 (where the post-auth
+ * polling loop lives). If `redirectTo` is provided, it is appended as a `next`
+ * query param so /login can forward the user after confirmation completes.
+ * /login validates `next` is a safe same-origin relative path before following it.
  */
-export async function sendMagicLink(email: string): Promise<{ error: string | null }> {
+export async function sendMagicLink(
+  email: string,
+  redirectTo?: string,
+): Promise<{ error: string | null }> {
+  const base = getBaseUrl();
+  const confirmUrl = redirectTo
+    ? `${base}/login?confirmed=1&next=${encodeURIComponent(redirectTo)}`
+    : `${base}/login?confirmed=1`;
+
   const { error } = await supabase.auth.signInWithOtp({
     email: email.trim().toLowerCase(),
     options: {
-      emailRedirectTo: `${getBaseUrl()}/login?confirmed=1`,
+      emailRedirectTo: confirmUrl,
       shouldCreateUser: true,
     },
   });
