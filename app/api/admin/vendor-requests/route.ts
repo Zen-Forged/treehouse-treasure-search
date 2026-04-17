@@ -2,14 +2,23 @@
 // Admin-gated server API for vendor_requests table operations.
 //
 // GET   → list all vendor_requests (newest first, limit 50)
-// POST  → { action: "approve", requestId } → creates vendor + marks request approved
+// POST  → { action: "approve", requestId } → creates vendor + marks request
+//         approved + sends EMAIL #2 "Your booth is ready" to vendor via Resend
+//         (per docs/onboarding-journey.md — Sprint 4 T4a)
 //
 // Gated by requireAdmin() — email must match NEXT_PUBLIC_ADMIN_EMAIL.
 // Uses SUPABASE_SERVICE_ROLE_KEY to bypass RLS on vendor_requests
 // (which has service-role-only policy).
+//
+// Email is best-effort — a failed send is surfaced via the `warning` field
+// on the response (admin UI already renders this inside the approval toast),
+// but still returns ok:true so the approval is not undone. The vendor row
+// exists, the request is marked approved, and admin can manually re-send or
+// reach out to the vendor out-of-band.
 
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
+import { sendApprovalInstructions } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -150,21 +159,45 @@ export async function POST(req: Request) {
     .update({ status: "approved" })
     .eq("id", body.requestId);
 
+  // Collect warnings to surface to the admin UI — rendered inside the
+  // success toast. Non-fatal issues don't downgrade the response to an
+  // error status; they just give the admin visibility.
+  const warnings: string[] = [];
+
   if (updateErr) {
-    // Vendor was created but status flip failed — surface as a warning,
-    // but don't fail the whole operation.
     console.error(
       "[admin/vendor-requests] mark approved failed:",
       updateErr.message
     );
-    return NextResponse.json({
-      ok: true,
-      vendor: vendorRow,
-      warning: "Vendor created but request status update failed.",
-    });
+    warnings.push("Vendor created but request status update failed.");
   }
 
-  return NextResponse.json({ ok: true, vendor: vendorRow });
+  // 5. Email #2: Approval + sign-in instructions (best-effort)
+  // Per docs/onboarding-journey.md: fires for both Flow 2 (Demo, in-person)
+  // and Flow 3 (Vendor-Initiated, remote). The vendor needs a notification
+  // to return to the app — this email is the only organic re-entry point.
+  const emailResult = await sendApprovalInstructions({
+    name:        request.name,
+    email:       request.email,
+    mallName:    request.mall_name,
+    boothNumber: request.booth_number,
+  });
+
+  if (!emailResult.ok) {
+    console.error(
+      "[admin/vendor-requests] approval email failed:",
+      emailResult.error,
+    );
+    warnings.push(
+      `Approval email failed to send — reach out to ${request.email} manually.`
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    vendor: vendorRow,
+    ...(warnings.length > 0 ? { warning: warnings.join(" ") } : {}),
+  });
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────

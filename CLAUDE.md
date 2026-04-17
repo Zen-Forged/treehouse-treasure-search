@@ -50,13 +50,133 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-17 evening (session 6 — Sprint 4 T1 + T2 shipped: custom domain live, OTP auth in PWA, clipboard paste, agent roster formalized)
+> Last updated: 2026-04-17 late evening (session 7 — Sprint 4 T3 shipped, underlying onboarding flow revealed as fragile; scope re-think flagged for next standup)
 
-**Status:** ✅ **T1 and T2 of Sprint 4 both shipped in one session.** `https://app.kentuckytreehouse.com` is now live (Vercel, HTTP/2, cert issued). OTP 6-digit code entry replaces the magic-link-as-primary auth flow; magic link still works as fallback. Clipboard paste button with auto-submit added. Supabase Auth URLs, email templates (Magic Link + Confirm Signup), and OTP Length (8→6) all updated. Verified end-to-end on iPhone PWA. Agent roster formally activated: Dev + Product + Docs agents. Notion Roadmap fully resynced.
+**Status:** ✅ **T3 shipped** (`/admin` mobile-first approval polish: email template flow removed, structured approval toast, thumb-reach Approve button). 🚨 **Onboarding flow revealed as fragile across three separate QA attempts in this session — surfacing as the dominant blocker going into Sprint 4 remainder.** Database was fully reset mid-session for a clean test pass; test still exposed the same `/setup`-bootstrap gap from three angles. **David has flagged the onboarding journey for a full scope-out at the top of the next standup before any more sprint execution happens.**
 
 ---
 
-## What was done (this session — 2026-04-17 evening, session 6)
+## 🚨 Next session opener — onboarding scope-out (READ FIRST)
+
+> This is a **Product Agent priority escalation.** Do not propose sprint items at standup. Run a full onboarding journey scoping conversation before any code.
+
+**David's words, verbatim:** *"first thing in the standup we need to truly scope out the onboarding journey as I believe a lot of this is being caused since the scope has been changing quite a bit."*
+
+### What this session surfaced that drives this flag
+
+Across three separate QA attempts after a clean database reset, the vendor onboarding pipeline failed in three different ways — all rooted in the same scope ambiguity:
+
+1. **The approve endpoint sends no email.** T3's toast originally read *"✓ Approved · emailed [name]"* — factually wrong. `/api/admin/vendor-requests` only flips `vendor_requests.status` and inserts a `vendors` row; it does not trigger `signInWithOtp()` or any other email. The vendor has no organic way to know they've been approved. This was shipped as a factual lie today and corrected mid-session.
+
+2. **The vendor has no organic path to `/setup`.** `/setup` is the route that bootstraps the `th_vendor_profile` in localStorage by calling `/api/setup/lookup-vendor`. The only existing way to arrive there is via a magic link with `?next=/setup` (session 5 fix) or by manually typing `/login?redirect=/setup`. A vendor who goes to `/login` directly (via the "Sign In" header button, or any other organic path) skips `/setup` entirely, lands on `/my-shelf`, and falls back to whatever stale localStorage profile exists on-device. In David's QA pass this showed up as *"posting as Zen · booth 300"* — a stale profile from session 1 testing, still on the device after database wipe.
+
+3. **`/my-shelf` has no self-heal.** If the device's localStorage is stale or empty, `/my-shelf` does not attempt to call `lookup-vendor` on mount to bootstrap from scratch. It assumes the profile is pre-populated by `/setup`. Database state and client state can diverge silently and without recovery.
+
+### The underlying scope question
+
+The Dev agent has been building against shifting assumptions about who drives the email, when the email fires, who controls the post-approval hand-off, and where the vendor lands. Pieces of the flow have been built for in-person onboarding (admin approves while vendor watches), and pieces have been built for remote onboarding (vendor submits a request, admin approves later, vendor gets notified somehow). These two modes have materially different requirements and the current implementation half-serves both.
+
+**Specific scope questions Sprint 4 has been dodging:**
+- When the admin approves, who sends the email — the server (auto-`signInWithOtp`), the admin manually (copy-paste, removed in T3), or no one (vendor initiates later from memory)?
+- Is the canonical vendor sign-in URL `/login`, `/login?redirect=/setup`, or something new (e.g., `/welcome` from the Sprint 5 backlog)?
+- Should `/my-shelf` self-bootstrap if localStorage is empty but the DB has a vendor row for the signed-in user? Yes/no is a real design decision, not an oversight.
+- Is the vendor-request success screen a dead-end or a live waiting room (T4's open design question)? 
+- Does "in-person approval" and "remote approval" need the same flow, or two different flows?
+
+### What the standup should do
+
+1. **Pause all sprint execution.** Do not propose T4 or carryover items until the journey is mapped.
+2. **Walk the journey end-to-end** from vendor's first touchpoint (request form, word of mouth, in-person meeting) through their first published post. For each handoff, name who drives it (vendor, admin, system), what the state is (DB row present, user_id linked, localStorage populated), and what the next trigger is (tap, email arrival, time passing).
+3. **Identify the minimum coherent path.** Probably one in-person path AND one remote path, with a single convergence point on `/setup` or its equivalent.
+4. **Re-scope T4 against the mapped journey.** The "vendor-request magic moment" may be the whole journey, not just a poll on one screen.
+5. **Document the mapped journey in a new file** — `docs/onboarding-journey.md` — as the canonical reference. CLAUDE.md, MASTER_PROMPT.md, and the Notion Roadmap all reference partial versions today. One source of truth.
+
+### Data artifacts from this session worth preserving
+
+- Database was fully reset mid-session (all vendors, vendor_requests, posts, auth.users except `david@zenforged.com`, storage files). Known vendors list in this file — outdated as of this session — rewritten below.
+- Test vendor `David Butler / booth 123 / America's Antique Mall` was approved via `/admin` during QA, vendor row was created but `user_id` never got linked because `/setup` never ran. Row still exists in DB, unlinked, as of session close.
+- Stale `th_vendor_profile` for "Zen / booth 300" was still on David's iPhone at session close, despite the `Zen` vendor row being deleted from the database during the reset.
+
+---
+
+## What was done (this session — 2026-04-17, session 7)
+
+### T3 — `/admin` mobile-first approval polish ✅
+
+Rewrote `app/admin/page.tsx` to polish the in-person approval moment. Three sub-tasks, one copy-fix follow-up:
+
+**Removed dead code:**
+- `generateEmailTemplate()` function
+- `copyEmailTemplate()` function
+- The `Copy` button next to Approve
+- The `Copy` import from lucide-react
+- The clipboard-copy branch inside `approveVendorRequest` success handler
+
+Why: Resend SMTP has been live since session 4; the copy-paste email template flow was obsolete and created doubt in an in-person moment (*"do I still need to copy something?"*).
+
+**Added structured toast:**
+- New `Toast` discriminated-union type with `success` and `error` variants
+- Bottom-anchored, spring-animated entry, 6-second auto-dismiss, tap-or-X to dismiss early
+- Success variant: eyebrow label, Georgia-serif vendor name, email on its own line, booth · mall line, optional warning line
+- Error variant: same container, red styling, free-form message
+- `AnimatePresence` wraps it for clean enter/exit
+- Toast state replaces both `requestResult` inline banners
+
+**Tightened Approve button:**
+- `padding: 10px 18px` (was `6px 12px`)
+- `fontSize: 13` (was `11`)
+- `fontWeight: 600` (was `500`)
+- Icon size `14` (was `11`)
+- `minHeight: 44` for 44px iOS thumb-reach minimum
+- Card padding bumped from `14px 16px` to `16px 18px`
+- Card inner alignment changed from `flex-start` to `center` so the bigger button sits level with the text block
+
+**Mid-session copy fix (shipped same session):**
+- Original toast eyebrow: `✓ Approved · emailed {firstName}` — **this was factually wrong, approve sends no email**
+- Corrected to: `✓ Approved · ready to sign in`
+- This correction is what's driving the onboarding scope-out for next session (see above) — the wrong copy surfaced the missing email-on-approve step as a product gap
+
+**Shipped as:**
+- Commit: `feat(admin): mobile-first approval polish — remove email template flow, structured toast confirmation, thumb-reach Approve button`
+- Commit: `fix(admin): correct approval toast copy — approve doesn't send email`
+
+### Database reset — full clean slate
+
+Executed in Supabase SQL Editor via the Docs agent cleanup protocol, broken into 7 separate blocks (diagnostic → delete posts → delete vendor_requests → delete vendors → delete auth.users except `david@zenforged.com` → verify counts → verify single remaining auth user). Plus a storage pass against `storage.objects` where `bucket_id = 'post-images'` to delete the 25 orphaned image files.
+
+Post-reset state (before QA pass):
+- `auth.users` → 1 (`david@zenforged.com`)
+- `vendor_requests` → 0
+- `vendors` → 0
+- `posts` → 0
+- `post-images` bucket → empty
+
+Post-reset discovery: the CLAUDE.md "Known vendors" section was stale. `ZenForged Finds #369` was listed as `user_id SET ✅` but the diagnostic showed `user_id = NULL`. Same for `David Butler / All Peddlers #963`. Neither had actually been linked to auth at any point we can verify. These have been removed from the Known vendors list below.
+
+### QA pass findings — the three onboarding gaps
+
+See **Next session opener** at top of file. These are the input data for the scope-out conversation, not session-7 deliverables.
+
+---
+
+## Next session starting point
+
+**🚨 Run onboarding scope-out before anything else** — see top-of-file section. No sprint item should be executed until the journey is mapped and documented in `docs/onboarding-journey.md`.
+
+After scope-out is complete, likely re-scoped Sprint 4 remainder:
+- **T4** — to be re-scoped against the mapped journey. Probably expands from "real-time approval poll" to "the missing backbone of vendor sign-in."
+- **Remaining Sprint 4 items** — error monitoring, vendor bio field, admin PIN QA, hero image size guard, feed seeding, Tally.so feedback link — all still valid, none of them blocked by the scope-out
+- **The unlinked test vendor row** `David Butler / booth 123 / America's Antique Mall` needs to be cleaned up (or claimed, depending on what comes out of the scope-out) — SQL pattern in the HOW TO CLEAR AN EMAIL FROM SUPABASE section of this file
+- **David's iPhone** has stale `th_vendor_profile` for `Zen / booth 300` in localStorage — will need to be cleared on-device before any fresh QA pass, either via Sign Out from `/admin` gate or via browser data clear
+
+### Things to validate next session (after scope-out)
+- Whether the re-scoped onboarding flow still uses `/login?redirect=/setup` as the canonical URL or replaces it with something organic
+- Whether `/my-shelf` should self-bootstrap on empty-localStorage + signed-in-user
+- Whether the approve endpoint should fire `signInWithOtp()` automatically (in which case T3's ORIGINAL toast copy becomes correct again and should be re-restored)
+
+---
+
+## ARCHIVE — What was done earlier (2026-04-17 evening, session 6)
 > Biggest session 4 unlock so far — two major Sprint 4 items shipped plus meta-agent activation work
 
 ### T1 — Custom domain live
@@ -292,14 +412,10 @@ EBAY_CLIENT_SECRET               eBay direct API (not yet wired)
 - **Auth:** Magic link (OTP) via email — `supabase.auth.signInWithOtp()`, now routed through Resend SMTP (2026-04-17). **Sprint 4: switching to OTP 6-digit code entry as primary flow, magic link as fallback.**
 - **Malls:** 29 locations seeded (KY + Clarksville IN)
 - **Primary mall:** America's Antique Mall, id: `19a8ff7e-cb45-491f-9451-878e2dde5bf4`, slug: `americas-antique-mall`
-- **Known vendors:**
-  - ZenForged Finds, booth 369, id: `65a879f1-c43c-481b-974f-379792a36db8` — user_id SET ✅
-  - Zen booth (admin default), id: `5619b4bf-3d05-4843-8ee1-e8b747fc2d81`
-  - David Butler, All Peddlers booth 963, id: `225ea786-adf4-480f-be39-fc78b392a5bb` — user_id SET ✅ (linked to dbutlerproductions@yahoo.com, 2026-04-17)
-  - **New test vendor from session 5 end-to-end test — linked via admin approval 2026-04-17. Details TBD — cleanup item below.**
-- **Pending vendor_requests (as of 2026-04-17):**
-  - `Do Well`, `dbutler80020@yahoo.com`, Crestwood booth 456 — pending
-  - `David Johnson`, `dbutler80020@yahoo.com`, Shepherdsville booth 254 — pending
+- **Known vendors:** *(none — database fully reset 2026-04-17 session 7 for a clean test pass; reset also corrected stale CLAUDE.md entries that had claimed `ZenForged Finds #369` and `David Butler #963` were linked to auth when they were not)*
+- **Stale vendor row as of session 7 close:** `David Butler / booth 123 / America's Antique Mall`, `user_id = NULL` — created during QA but never linked because `/setup` didn't run. Cleanup or claim pending scope-out outcome.
+- **Pending vendor_requests (as of 2026-04-17 session 7 close):**
+  - `David Butler`, `dbutlerproductions@yahoo.com`, booth 123 at America's Antique Mall — status: approved, awaiting linked signin. Same DB row as the stale vendor above.
 - **Extra columns vendors:** `facebook_url text`, `user_id uuid`, `hero_image_url text`, `bio text`
 - **Unique constraint vendors:** `vendors_mall_booth_unique` on `(mall_id, booth_number)`
 - **Unique constraint malls:** `malls_slug_key` on `(slug)`
