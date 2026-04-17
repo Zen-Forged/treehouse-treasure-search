@@ -50,7 +50,85 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-17 late-night (session 10 — `/setup` 401 race polish shipped; T4c orphan cleanup A/B/E shipped; onboarding journey is now both working AND clean end-to-end)
+> Last updated: 2026-04-17 late-night (session 11 — Design agent activated, design system scaffolded, agent orchestration tightened)
+
+**Status:** 🪴 **Session 11 was a system-infrastructure session, not a feature session.** No production code changed. Four docs updated to activate the Design agent and establish `docs/design-system.md` as canonical source of truth for all multi-screen UI work. Sets up the next several sessions (Booth page redesign, Find Detail polish, Feed header rework) to scope against a shared system instead of drifting per-screen as sessions 1–10 did.
+
+### What shipped (1 commit, 4 files)
+1. **`docs/DECISION_GATE.md`** — Agent Roster expanded to include Design agent with full system prompt draft; new Tech Rule added ("Multi-screen UI work… must scope against `docs/design-system.md` before code" — mirrors the onboarding-journey rule pattern); standup preamble updated; Related Documents table updated.
+2. **`MASTER_PROMPT.md`** — Session opening standup now includes a Design agent standup (step 3, conditional on UI work being in scope). Standup report template updated with `Active agents` and `Design check` lines. New DESIGN AGENT section added after SESSION OPENING STANDUP explaining the agent's scope, what it does at session open, what it never does, and how the design system gets updated.
+3. **`docs/design-system.md`** — Scaffolded. Contains: purpose, brand metaphor, currently-committed tokens/typography/terminology/motion/interaction commitments (pulled from `lib/tokens.ts` and DECISION_GATE Brand Rules), and a set of **unresolved sections** (Booth page direction, Find Detail direction, Feed header / mall selector direction, Find Map emotional redesign, Header pattern system, Button system, Card pattern system, Location statement pattern) that the Design agent's first real pass will fill in. Explicitly labeled v0.1 (scaffold, not yet authoritative) so no one mistakes the doc for complete direction.
+4. **`CLAUDE.md`** (this file) — session 11 close note.
+
+### Context for the next session
+
+Session 11 was triggered by a strategic conversation about why per-screen design work across sessions 1–10 produced drift — three themes, inconsistent sold terminology, four button styles, a Booth page that doesn't inspire vendor pride. David named the orchestration problem directly: we need an agent that holds the whole visual system in its head, not just better mockups per page. This session activates that agent and puts its scope document in place, but defers the actual design direction work (Booth page, Find Detail, Feed header, Find Map, header system, button system, card system, location statement) to the next session where we'll do it with intent.
+
+The orphan cleanup from session 10 — `/mall/[slug]`, `/vendor/[slug]`, `/post/preview`, `/flow-test` — was NOT executed this session. David deliberately parked it pending post-MVP to avoid rushing deletions while a redesign is mid-flight. Orphan routes are documented in `docs/design-system.md` terminology commitments (violated by `/mall/[slug]` and `/vendor/[slug]`) and in the Sprint 6+ cleanup list below.
+
+---
+
+## 🌿 Next session opener — Design agent's first real pass (READ FIRST)
+
+**Session 11 put the scaffolding in place. Session 12's job is to do the actual design work — inside a system, not per-screen.**
+
+The recommended first pass is a **single focused session** that produces design direction for the entire Booth page redesign and the cross-cutting patterns it depends on (header system, button system, location statement pattern, card pattern). That's 4–5 of the unresolved sections in `docs/design-system.md` resolved at once, because they're genuinely interdependent — you can't design the Booth page without deciding the header mode, and you can't do that without resolving the button system, and so on.
+
+**Expected output of session 12:**
+- `docs/design-system.md` updated: unresolved sections above turn into committed sections with rationale
+- Visual mockups (via visualizer) for the Booth page in both public and owner states
+- A clear sprint brief for Dev to execute in session 13
+
+**NOT expected in session 12:** Any production code changes. The work is design direction only.
+
+---
+
+## What was done (this session — 2026-04-17, session 11)
+
+### Phase 1 — Strategic conversation (no code)
+
+David's session opener was effectively "get me a UX read" that evolved into a conversation about how the product should feel (premium, earthy, digital-meets-physical-world, vendors-proud-to-share), why per-screen design hasn't gotten us there, and what orchestration layer is missing. Key decisions from the conversation:
+
+- **Design drift is an orchestration problem, not a design problem.** Each session shipped something competent in isolation, but without a system to hold the whole product accountable to, they accumulated into three themes / inconsistent terminology / four buttons.
+- **Activate a Design agent now**, as a peer to Dev / Product / Docs. Same activation pattern as Docs agent in session 6.
+- **Don't formalize a separate Orchestrator agent yet** — the role is too coupled to session-level judgment. Keep orchestration in the session-opening ritual plus the cross-agent handoff protocols in MASTER_PROMPT.md and DECISION_GATE.md.
+- **Scaffold the design system doc this session. Fill in the direction next session.** Resist the urge to do both at once — the direction pass deserves its own focused session with energy.
+
+### Phase 2 — DECISION_GATE.md updates
+
+- Added new Tech Rule: "Multi-screen UI work… must scope against `docs/design-system.md` before code" — explicitly mirrors the onboarding-journey rule from session 8, which has been the system's highest-value guardrail
+- Added Design agent to Agent Roster table with full scope description and session 11 activation date
+- Added a draft system prompt for the Design agent (mirrors the Docs agent draft pattern)
+- Updated standup preamble to include Design in the active agents list
+- Added `docs/design-system.md` to the Related Documents table
+- Noted Brand agent's voice scope currently sits inside Design until Brand activates in Phase 2
+
+### Phase 3 — MASTER_PROMPT.md updates
+
+- Session Opening Standup now has 6 steps instead of 5 (Design agent standup inserted as step 3, conditional on UI work being in scope)
+- Standup report template updated with `Active agents` line and `Design check` line
+- Added new DESIGN AGENT section before PRODUCT AGENT, documenting what the agent does at session open, what it never does, how the design system gets updated, and how it plays with the future Brand agent
+
+### Phase 4 — docs/design-system.md scaffolded
+
+New file, ~280 lines. Structure:
+- Purpose (naming the specific drift that triggered the doc)
+- Explicit status label: v0.1 scaffold, not yet authoritative
+- Brand metaphor: what Treehouse should feel like, what it should not
+- Currently committed (behavior-backed): color tokens, radius, spacing, typography, terminology, motion, interaction — pulled from `lib/tokens.ts` and DECISION_GATE Brand Rules
+- Unresolved, pending Design agent's first pass: Booth page direction, Find Detail direction, Feed header / mall selector direction, Find Map emotional redesign, Header pattern system, Button system, Card pattern system, Location statement pattern
+- Maintenance protocol: before any multi-screen UI work, review; David reviews; Dev executes; drift returns to doc before shipping; Docs agent verifies at close
+
+### Files modified this session
+- `docs/DECISION_GATE.md` — 5 edits (Tech Rule, Agent Roster table + draft prompt, standup preamble, Related Documents, footer date)
+- `MASTER_PROMPT.md` — 2 edits (Session Opening Standup expanded, new DESIGN AGENT section)
+- `docs/design-system.md` — new file, scaffolded
+- `CLAUDE.md` (this file) — session 11 close
+
+---
+
+## ARCHIVE — What was done earlier (2026-04-17 late-night, session 10)
+> /setup 401 race polish shipped; T4c orphan cleanup A/B/E shipped; onboarding journey is now both working AND clean end-to-end
 
 **Status:** ✅✅ **Session 10 polished the onboarding journey that Session 9 unblocked.** Two commits shipped. No remaining pre-beta blockers. Sprint 4 is 75% complete — T4b (admin surface consolidation), T4c remainder (copy polish), T4d (pre-beta QA), and KI-004 (claim-booth scoping) are all that's left.
 
