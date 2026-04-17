@@ -32,6 +32,8 @@ Treehouse is a **calm, story-driven local discovery experience** for vintage, an
 
 **The feeling:** Calm. Intentional. Story-first. Like a thoughtful friend who noticed something worth sharing — not a storefront, not an algorithm.
 
+**Operator note:** David Butler (Zen Forged LLC) is an **online reseller**, not a physical mall booth operator. In-person vendor onboarding is a deliberate scheduled activity, not incidental foot traffic. The ZenForged Finds booth (#369 at America's Antique Mall) exists in the data model and serves as a test vendor / operator persona, but David's primary sales channel is online.
+
 ---
 
 ## The Brand Rules
@@ -48,6 +50,7 @@ Any feature, copy, or UI change is evaluated against these:
 | Georgia for humanity | Headings, captions, and titles use serif. UI uses system font. |
 | Warm parchment palette | `#f5f2eb` bg, `#1e4d2b` green — earthy, not digital |
 | "Found a home" not "Sold" | Terminology is committed. See CLAUDE.md. |
+| Auth is for curators, not shoppers | Shoppers browse without an account. Sign-in is a curator action. Guest-user accounts contradict the vision. |
 
 **When to flag:** If a requested feature or copy change would make Treehouse feel more like eBay, Etsy, or Facebook Marketplace — stop and discuss before building.
 
@@ -61,7 +64,7 @@ Any feature, copy, or UI change is evaluated against these:
 | Vendor data is sacred | Vendors trust us with their booth identity. Never expose, delete, or corrupt vendor records. |
 | One mall in production | America's Antique Mall (`19a8ff7e-...`) is the only live mall. Changes affecting all malls affect this one. |
 | Vercel is the deployment | No other deployment targets. Never bypass Vercel CI/CD without explicit reason. |
-| Zen Forged LLC is the operator | David Butler / ZenForged Finds, Booth 369 is both operator and first vendor. Conflicts of interest between "owner" and "user" views should be flagged. |
+| Zen Forged LLC is the operator | David Butler is an online reseller; ZenForged Finds (Booth 369) is the test vendor / operator persona. Conflicts of interest between "owner" and "vendor" views should be flagged. Admin role and vendor role live in the same account — keep admin UI on `/admin` and vendor UI on `/my-shelf` cleanly separated. |
 | No PII beyond what's necessary | Vendor email (for magic link auth) is the only PII collected. Do not add fields that collect personal data without deliberate review. |
 
 ---
@@ -94,11 +97,12 @@ Admin API routes                   All /api/admin/* routes MUST call requireAdmi
                                    as the first line of the handler. UI gating alone is not enough —
                                    routes are directly reachable. No exceptions.
 DNS / email sending                Transactional email (magic links) sends from `kentuckytreehouse.com`
-                                   via Resend + Supabase custom SMTP (pending completion as of
-                                   2026-04-16). DNS authority in migration from Google Cloud DNS →
-                                   Cloudflare. DNSSEC must remain off until migration complete to
-                                   avoid a hard-fail on nameserver swap. See CLAUDE.md DNS STATE
-                                   section for current nameserver + zone state.
+                                   via Resend + Supabase custom SMTP. Shopify remains authoritative
+                                   for the zone; Resend records (`resend._domainkey`, `send` TXT/MX)
+                                   live in Shopify DNS. See CLAUDE.md DNS STATE section.
+Post-auth redirects                Use safeRedirect(next, fallback) helper in app/login/page.tsx.
+                                   Only same-origin relative paths are honored; rejects absolute
+                                   and protocol-relative URLs. Added session 5 (2026-04-17).
 ```
 
 ---
@@ -119,10 +123,10 @@ These conditions require a conversation with David before any code is written or
 | Auth flow change | Magic link and admin PIN are the two auth paths — changes here break vendor access |
 | Deleting or overwriting production data | Irreversible |
 | Changing the publish flow (`/post`, `/api/post-image`, `createPost`) | Core vendor revenue path — highest blast radius |
-| Feature that contradicts the product vision | e.g., adding a "Buy Now" button, price in feed grid, urgency badge |
+| Feature that contradicts the product vision | e.g., adding a "Buy Now" button, price in feed grid, urgency badge, guest-user accounts for shoppers |
 | Deployment config change (vercel.json, next.config.js) | Can break production silently |
 | New external service integration | Cost, privacy, and dependency implications |
-| DNS changes during nameserver migration window | Splitting DNS across two authoritative sources causes inconsistent resolution. Do not edit records in either zone until migration is verified via `dig NS +short`. |
+| DNS changes during nameserver migration window | Splitting DNS across two authoritative sources causes inconsistent resolution. Currently: Shopify is sole authority; Cloudflare is dormant. No migration in progress. |
 
 ### 🟡 SURFACE — Flag before proceeding, then get approval
 
@@ -139,6 +143,7 @@ These don't stop work but must be called out explicitly before the session conti
 | Brand tone mismatch in copy | Copy should feel like Treehouse, not like an e-commerce template |
 | Performance implications | Unnecessary re-renders, unbounded fetches, large bundle additions |
 | Mobile edge cases (iPhone Safari, Android Chrome) | safeStorage, safe-area insets, scroll restore — these have bitten before |
+| Auth UX change | Magic link → OTP code, redirect preservation, post-auth landing — low-risk individually but compounds fast |
 
 ### 🟢 PROCEED — Standard work, no gate check needed
 
@@ -156,7 +161,7 @@ These don't stop work but must be called out explicitly before the session conti
 
 ## Current Risk Register
 
-> Updated: 2026-04-17 | Source: Yahoo magic link delivery end-to-end verified
+> Updated: 2026-04-17 (session 5 — emailRedirectTo resolved, Sprint 4/5 scope items added)
 
 | Risk | Severity | Status | Owner |
 |---|---|---|---|
@@ -164,21 +169,28 @@ These don't stop work but must be called out explicitly before the session conti
 | No rate limiting on `/api/post-caption` | 🔴 High | ✅ Resolved 2026-04-15 — in-memory 10 req/60s per IP; upgrade to Upstash Redis at scale | Dev agent |
 | Vendor approval + setup flows silently blocked by RLS | 🔴 High | ✅ Resolved 2026-04-16 — moved admin reads/writes of `vendor_requests` to `/api/admin/vendor-requests` and `/api/setup/lookup-vendor` using service role; browser anon client is read-only for ecosystem data | Dev agent |
 | `/api/admin/*` routes had no server-side auth check | 🔴 High | ✅ Resolved 2026-04-16 — added `requireAdmin()` (bearer token + email match) to `/api/admin/posts` and `/api/admin/vendor-requests`; UI was the only gate before, routes were directly reachable | Dev agent |
-| Magic link delivery broken for Yahoo/AOL (pre-beta blocker) | 🔴 High | ✅ Resolved 2026-04-17 — Path pivoted from Cloudflare migration to adding 3 Resend records directly in Shopify DNS (discovery: Shopify was already authoritative for the domain, not Google Cloud DNS as session 3 assumed). Resend verified the domain; Resend→Supabase native SMTP integration configured; end-to-end magic link test passed for `dbutlerproductions@yahoo.com` — email delivered (junk folder on first send, acceptable), magic link click authenticated, `/setup` linking completed, `/my-shelf` rendered correct vendor. Sender identity: `Kentucky Treehouse <hello@kentuckytreehouse.com>`. | Dev agent |
-| No error monitoring (Sentry / structured logs) | 🟡 Medium | Open — Sprint 3 | Dev agent |
-| Bookmarks localStorage-only (ITP wipe risk) | 🟡 Medium | Open — Sprint 4 | Dev agent |
-| No automated testing | 🟡 Medium | Open — Strategy needed | Dev + Product agents |
-| Admin PIN not QA'd in production | 🟡 Medium | Open — quick curl test | Dev agent |
+| Magic link delivery broken for Yahoo/AOL (pre-beta blocker) | 🔴 High | ✅ Resolved 2026-04-17 — Resend SMTP via Shopify DNS + Resend→Supabase native integration. End-to-end Yahoo test passed. | Dev agent |
+| `emailRedirectTo` hardcoded in `lib/auth.ts` — loses `/setup` redirect across magic-link round trip | 🟡 Medium | ✅ Resolved 2026-04-17 session 5 — `sendMagicLink(email, redirectTo?)` now accepts optional path, `safeRedirect()` helper in `app/login/page.tsx` validates same-origin relative paths only. Verified end-to-end with fresh email → `/setup` → admin approval → `/my-shelf`. | Dev agent |
+| Magic link breaks PWA session continuity (Safari opens outside PWA context) | 🟡 Medium | Open — Sprint 4. Fix: switch to OTP 6-digit code entry as primary flow (magic link as fallback). Keeps entire auth flow inside the PWA home-screen app context. **NEW 2026-04-17 session 5.** | Dev agent |
+| "Sign In" button is unlabeled for audience — any shopper clicking it can authenticate and hit a dead-end `/my-shelf` | 🟡 Medium | Open — Sprint 5. Fix: Option B — rename to "Curator Sign In" + add `/welcome` landing for signed-in non-vendors with warm "still curator-only" copy + "Request a booth" CTA. **NEW 2026-04-17 session 5.** | Dev agent |
+| Vercel URL (`treehouse-treasure-search.vercel.app`) is a tech-flavored URL for vendor-facing onboarding | 🟢 Low | Open — Sprint 4. Fix: point `app.kentuckytreehouse.com` (or root) at Vercel. 15-min task. **NEW 2026-04-17 session 5.** | Dev agent |
+| `/admin` approval UX has dead copy-paste email template flow (obsolete since Resend SMTP) | 🟢 Low | Open — Sprint 4. Fix: remove template/clipboard code; replace with "approved — vendor has been emailed" toast. **NEW 2026-04-17 session 5.** | Dev agent |
+| `/vendor-request` success screen is generic — loses the "in-person magic moment" when admin is standing there approving in real time | 🟢 Low | Open — Sprint 4. Fix: real-time approval poll OR in-person variant of success screen. **NEW 2026-04-17 session 5.** | Dev agent |
+| PWA install experience is improvised (user has to find "Add to Home Screen" manually) | 🟢 Low | Open — Sprint 5. Low priority while onboarding is in-person (David walks vendors through install). Escalates to 🟡 Medium if/when remote onboarding starts. **NEW 2026-04-17 session 5.** | Dev agent |
+| No error monitoring (Sentry / structured logs) | 🟡 Medium | Open — Sprint 3/4 carryover | Dev agent |
+| Bookmarks localStorage-only (ITP wipe risk) | 🟡 Medium | Open — Sprint 5 | Dev agent |
+| No automated testing | 🟡 Medium | Open — Sprint 6+ | Dev + Product agents |
+| Admin PIN not QA'd in production | 🟡 Medium | Open — Sprint 3/4 carryover; quick curl test | Dev agent |
 | Public Storage bucket (`post-images`) | 🟡 Medium | Intentional — monitor | Dev agent |
-| No terms of service / privacy policy | 🟡 Medium | Open — before public launch | David |
+| No terms of service / privacy policy | 🟡 Medium | Open — before public launch beyond in-person beta | David |
 | Deprecated lib functions still in `lib/posts.ts` | 🟢 Low | Open — `getVendorByEmail`, `linkVendorToUser`, `getVendorRequests`, `createVendorFromRequest`, `markVendorRequestApproved` marked `@deprecated` 2026-04-16; remove once confirmed no other callers import them | Dev agent |
-| `emailRedirectTo` hardcoded in `lib/auth.ts` — loses `/setup` redirect across magic-link round trip | 🟡 Medium | Open — surfaced 2026-04-17. Workaround: manual navigation to `/setup` post-auth (the lookup route short-circuits on already-linked). Fix: accept optional `redirectTo` param in `sendMagicLink()` and pass through from `/login`. ~5-line change. | Dev agent |
-| Magic link emails landing in Yahoo junk folder on first send | 🟡 Medium | Accepted — expected for any new sending domain. Resolution: passive reputation seasoning as real usage grows + users marking "not junk". Branded email template (Sprint 3 item) will help marginally. | Dev agent |
-| DNS archaeology assumption from session 3 was wrong (Google Cloud DNS) | 🟢 Low | ✅ Resolved 2026-04-17 — Shopify is actual DNS authority, Squarespace is registrar (inherited from Google Domains acquisition). Documented in CLAUDE.md DNS STATE. | Dev agent |
-| Orphaned Cloudflare DNS zone for `kentuckytreehouse.com` | 🟢 Low | Open — inverted from session 3's framing. Cloudflare has nameservers assigned but is dormant (Shopify remains authoritative). No cost to keeping; delete at leisure. | Dev agent |
-| Feed pagination missing (flat 80-post fetch) | 🟢 Low | Open — Sprint 4 | Dev agent |
+| Magic link emails landing in Yahoo junk folder on first send | 🟡 Medium | Accepted — expected for any new sending domain. Resolution: passive reputation seasoning as real usage grows + users marking "not junk". Branded email template (Sprint 4 item) will help marginally. | Dev agent |
+| DNS archaeology assumption from session 3 was wrong (Google Cloud DNS) | 🟢 Low | ✅ Resolved 2026-04-17 — Shopify is actual DNS authority, Squarespace is registrar | Dev agent |
+| Orphaned Cloudflare DNS zone for `kentuckytreehouse.com` | 🟢 Low | Open — dormant; no cost | Dev agent |
+| Feed pagination missing (flat 80-post fetch) | 🟢 Low | Open — Sprint 6+ | Dev agent |
 | `/enhance-text` caption is mock (not real Claude call) | 🟢 Low | Open — future sprint | Dev agent |
 | `/api/debug-vendor-requests` left in production | 🟢 Low | Open — useful for QA; remove in a later cleanup sprint | Dev agent |
+| Test vendor from session 5 end-to-end test needs cleanup-or-document decision | 🟢 Low | Open — if throwaway email, clean up per SQL in CLAUDE.md; if real, document in Known vendors. **NEW 2026-04-17 session 5.** | Dev agent |
 
 ---
 
@@ -187,8 +199,8 @@ These don't stop work but must be called out explicitly before the session conti
 | Agent | Status | Scope |
 |---|---|---|
 | **Dev agent** | ✅ Active | Codebase, architecture, sprint execution, bug triage, deployment |
-| **Product agent** | 🔲 Sprint 3 | Backlog management, feature specs, sprint planning, scope decisions |
-| **Security agent** | 🔲 Sprint 3 | RLS audit, API surface review, secrets hygiene, auth hardening |
+| **Product agent** | 🔲 Sprint 4 | Backlog management, feature specs, sprint planning, scope decisions |
+| **Security agent** | 🔲 Sprint 4 | RLS audit, API surface review, secrets hygiene, auth hardening |
 | **Finance agent** | 🔲 Phase 2 | API cost tracking, booth revenue, burn rate, Zen Forged financials |
 | **Brand agent** | 🔲 Phase 2 | Tone review, copy consistency, launch messaging, design system governance |
 | **Docs agent** | 🔲 Phase 2 | Session close ritual, CLAUDE.md updates, risk register, decision log, Notion sprint summaries |
@@ -233,8 +245,10 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 |---|---|---|
 | Sprint 1 | MVP core — feed, post flow, auth, booths | ✅ Complete |
 | Sprint 2 | UI polish — animations, detail page, scroll restore | ✅ Complete |
-| Sprint 3 | Vendor bio, Find Map overhaul, error monitoring, rate limiting | 🔄 In progress |
-| Sprint 4 | RLS, testing, pagination, search, terms of service | 🔲 Planned |
+| Sprint 3 | Vendor bio, Find Map overhaul, error monitoring, rate limiting | 🔄 In progress (carryover into Sprint 4) |
+| Sprint 4 | Beta-readiness — custom domain, OTP auth, `/admin` polish, `/vendor-request` magic moment | 🔲 Next |
+| Sprint 5 | Guest-user UX + onboarding polish — "Curator Sign In" rename, `/welcome` landing, PWA install prompts, vendor onboarding Loom | 🔲 Planned |
+| Sprint 6+ | QR-code approval, Universal Links, native app eval, feed pagination, ToS/privacy, admin-cleanup tool | 🔲 Parked |
 
 ---
 
@@ -264,4 +278,4 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 ---
 > This document is the operating constitution for the Treehouse system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-17
+> Last updated: 2026-04-17 (session 5)
