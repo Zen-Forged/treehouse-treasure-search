@@ -21,17 +21,18 @@
 //  - Diagnosis panel renders collision specifics from /api/admin/diagnose-request
 //  - Approve toast surfaces `note` field (e.g. "slug was taken, assigned X-2")
 //
-// Session 13 fix — toast stacking: rendered via createPortal to document.body
-// so it escapes the admin page's stacking context (which was trapping it
-// behind the expanded diagnosis panel and subsequent request cards). Also
-// bumped zIndex to 9999 as defensive redundancy.
+// Session 13 fix — toast stacking:
+//  - zIndex: 100 → 9999 (defensive against any future high-z content)
+//  - Solid opaque backgrounds (was rgba with ~0.08 alpha, caused bleed-through)
+//  - Stronger shadow for clear elevation over content
+//  - Kept inline render (NOT portaled — portal + AnimatePresence introduced
+//    a regression where Approve clicks did not fire)
 
 "use client";
 
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, UserCheck, Users, Store, X, Stethoscope } from "lucide-react";
@@ -134,12 +135,7 @@ export default function AdminPage() {
   const [diagnosisReports, setDiagnosisReports] = useState<Record<string, DiagnosisReport>>({});
   const [diagnosisErrors,  setDiagnosisErrors]  = useState<Record<string, string>>({});
 
-  // Portal target — set once mounted so SSR doesn't try to render into
-  // a non-existent document.body.
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
-
   useEffect(() => {
-    setPortalTarget(document.body);
     getSession().then(s => {
       setUser(s?.user ?? null);
       setAuthReady(true);
@@ -340,147 +336,6 @@ export default function AdminPage() {
 
   const allSelected = posts.length > 0 && selected.size === posts.length;
   const pendingRequests = requests.filter(r => r.status === "pending");
-
-  // Toast content — rendered via portal to escape page stacking context.
-  // See session 13 fix: inline toast was appearing BEHIND diagnosis panel
-  // and subsequent request cards because the admin page's flex children
-  // were winning on z-index with z-index: 100.
-  const toastNode = toast ? (
-    <div
-      key="approval-toast-shell"
-      style={{
-        position: "fixed",
-        left: 0,
-        right: 0,
-        bottom: "max(20px, env(safe-area-inset-bottom, 20px))",
-        zIndex: 9999,
-        display: "flex",
-        justifyContent: "center",
-        padding: "0 16px",
-        pointerEvents: "none",
-      }}
-    >
-      <motion.div
-        key="approval-toast"
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 40 }}
-        transition={{ type: "spring", stiffness: 380, damping: 32 }}
-        onClick={() => setToast(null)}
-        role="status"
-        aria-live="polite"
-        style={{
-          pointerEvents: "auto",
-          width: "100%",
-          maxWidth: 398,
-          background: toast.kind === "success" ? "#f0ede6" : "#fff",
-          border: `1px solid ${toast.kind === "success" ? colors.greenBorder : colors.redBorder}`,
-          borderRadius: 14,
-          padding: "14px 16px",
-          boxShadow: "0 10px 32px rgba(26,26,24,0.18)",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 12,
-        }}
-      >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {toast.kind === "success" ? (
-            <>
-              <div style={{
-                fontSize: 9, color: colors.green, textTransform: "uppercase",
-                letterSpacing: "1.8px", marginBottom: 4, fontWeight: 600
-              }}>
-                ✓ Approved · ready to sign in
-              </div>
-              <div style={{
-                fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600,
-                color: colors.textPrimary, marginBottom: 2
-              }}>
-                {toast.name}
-              </div>
-              <div style={{ fontSize: 11, color: colors.textMid, marginBottom: 2 }}>
-                {toast.email}
-              </div>
-              <div style={{ fontSize: 11, color: colors.textMuted }}>
-                {toast.booth ? `Booth ${toast.booth}` : "No booth"} · {toast.mall || "No mall"}
-              </div>
-              {toast.note && (
-                <div style={{
-                  fontSize: 11, color: colors.textMid, marginTop: 6,
-                  fontStyle: "italic"
-                }}>
-                  ℹ️ {toast.note}
-                </div>
-              )}
-              {toast.warning && (
-                <div style={{
-                  fontSize: 11, color: colors.red, marginTop: 6,
-                  fontStyle: "italic"
-                }}>
-                  ⚠️ {toast.warning}
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <div style={{
-                fontSize: 9, color: colors.red, textTransform: "uppercase",
-                letterSpacing: "1.8px", marginBottom: 4, fontWeight: 600
-              }}>
-                {toast.diagnosis ? `Error · ${toast.diagnosis}` : "Error"}
-              </div>
-              <div style={{ fontSize: 13, color: colors.textPrimary, lineHeight: 1.5 }}>
-                {toast.message}
-              </div>
-              {toast.conflict && (
-                <div style={{
-                  marginTop: 6, padding: "6px 8px", borderRadius: 6,
-                  background: "rgba(139,32,32,0.04)",
-                  fontSize: 10, color: colors.textMid, fontFamily: "monospace",
-                  lineHeight: 1.5,
-                }}>
-                  <div>Existing: {toast.conflict.display_name}</div>
-                  <div>Booth: {toast.conflict.booth_number ?? "(none)"}</div>
-                  <div>Slug: {toast.conflict.slug}</div>
-                  <div>Linked: {toast.conflict.user_id ? "yes" : "no"}</div>
-                </div>
-              )}
-              {toast.requestId && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const rid = toast.requestId!;
-                    setToast(null);
-                    diagnoseRequest(rid);
-                  }}
-                  style={{
-                    marginTop: 10, padding: "6px 12px", borderRadius: 6,
-                    background: colors.red, color: "#fff", border: "none",
-                    fontSize: 11, fontWeight: 600, cursor: "pointer",
-                    display: "flex", alignItems: "center", gap: 5,
-                  }}>
-                  <Stethoscope size={11} /> Run full diagnosis
-                </button>
-              )}
-            </>
-          )}
-        </div>
-        <button
-          onClick={(e) => { e.stopPropagation(); setToast(null); }}
-          aria-label="Dismiss"
-          style={{
-            background: "none", border: "none", cursor: "pointer",
-            padding: 4, marginTop: -2, marginRight: -4,
-            color: toast.kind === "success" ? colors.green : colors.red,
-            flexShrink: 0,
-          }}
-        >
-          <X size={16} />
-        </button>
-      </motion.div>
-    </div>
-  ) : null;
 
   return (
     <div style={{ minHeight: "100vh", background: colors.bg, maxWidth: 430, margin: "0 auto", paddingBottom: 100 }}>
@@ -731,12 +586,147 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Approval toast — portaled to document.body to escape page stacking
-          context. Previous inline render was appearing BEHIND the diagnosis
-          panel and subsequent request cards. Solid background (not translucent)
-          defends against any transparency bleed-through. See session 13. */}
+      {/* Approval toast — wrapper-div pattern (KI-002, session 9).
+          Session 13 fixes: zIndex: 100 → 9999 defensively, solid opaque
+          backgrounds (was rgba 0.08 alpha which caused bleed-through), and
+          stronger shadow for elevation clarity. */}
       <AnimatePresence>
-        {toast && portalTarget && createPortal(toastNode, portalTarget)}
+        {toast && (
+          <div
+            key="approval-toast-shell"
+            style={{
+              position: "fixed",
+              left: 0,
+              right: 0,
+              bottom: "max(20px, env(safe-area-inset-bottom, 20px))",
+              zIndex: 9999,
+              display: "flex",
+              justifyContent: "center",
+              padding: "0 16px",
+              pointerEvents: "none",
+            }}
+          >
+            <motion.div
+              key="approval-toast"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              transition={{ type: "spring", stiffness: 380, damping: 32 }}
+              onClick={() => setToast(null)}
+              role="status"
+              aria-live="polite"
+              style={{
+                pointerEvents: "auto",
+                width: "100%",
+                maxWidth: 398,
+                background: toast.kind === "success" ? "#f0ede6" : "#fff",
+                border: `1px solid ${toast.kind === "success" ? colors.greenBorder : colors.redBorder}`,
+                borderRadius: 14,
+                padding: "14px 16px",
+                boxShadow: "0 10px 32px rgba(26,26,24,0.18)",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 12,
+              }}
+            >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {toast.kind === "success" ? (
+                <>
+                  <div style={{
+                    fontSize: 9, color: colors.green, textTransform: "uppercase",
+                    letterSpacing: "1.8px", marginBottom: 4, fontWeight: 600
+                  }}>
+                    ✓ Approved · ready to sign in
+                  </div>
+                  <div style={{
+                    fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600,
+                    color: colors.textPrimary, marginBottom: 2
+                  }}>
+                    {toast.name}
+                  </div>
+                  <div style={{ fontSize: 11, color: colors.textMid, marginBottom: 2 }}>
+                    {toast.email}
+                  </div>
+                  <div style={{ fontSize: 11, color: colors.textMuted }}>
+                    {toast.booth ? `Booth ${toast.booth}` : "No booth"} · {toast.mall || "No mall"}
+                  </div>
+                  {toast.note && (
+                    <div style={{
+                      fontSize: 11, color: colors.textMid, marginTop: 6,
+                      fontStyle: "italic"
+                    }}>
+                      ℹ️ {toast.note}
+                    </div>
+                  )}
+                  {toast.warning && (
+                    <div style={{
+                      fontSize: 11, color: colors.red, marginTop: 6,
+                      fontStyle: "italic"
+                    }}>
+                      ⚠️ {toast.warning}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div style={{
+                    fontSize: 9, color: colors.red, textTransform: "uppercase",
+                    letterSpacing: "1.8px", marginBottom: 4, fontWeight: 600
+                  }}>
+                    {toast.diagnosis ? `Error · ${toast.diagnosis}` : "Error"}
+                  </div>
+                  <div style={{ fontSize: 13, color: colors.textPrimary, lineHeight: 1.5 }}>
+                    {toast.message}
+                  </div>
+                  {toast.conflict && (
+                    <div style={{
+                      marginTop: 6, padding: "6px 8px", borderRadius: 6,
+                      background: "rgba(139,32,32,0.04)",
+                      fontSize: 10, color: colors.textMid, fontFamily: "monospace",
+                      lineHeight: 1.5,
+                    }}>
+                      <div>Existing: {toast.conflict.display_name}</div>
+                      <div>Booth: {toast.conflict.booth_number ?? "(none)"}</div>
+                      <div>Slug: {toast.conflict.slug}</div>
+                      <div>Linked: {toast.conflict.user_id ? "yes" : "no"}</div>
+                    </div>
+                  )}
+                  {toast.requestId && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const rid = toast.requestId!;
+                        setToast(null);
+                        diagnoseRequest(rid);
+                      }}
+                      style={{
+                        marginTop: 10, padding: "6px 12px", borderRadius: 6,
+                        background: colors.red, color: "#fff", border: "none",
+                        fontSize: 11, fontWeight: 600, cursor: "pointer",
+                        display: "flex", alignItems: "center", gap: 5,
+                      }}>
+                      <Stethoscope size={11} /> Run full diagnosis
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); setToast(null); }}
+              aria-label="Dismiss"
+              style={{
+                background: "none", border: "none", cursor: "pointer",
+                padding: 4, marginTop: -2, marginRight: -4,
+                color: toast.kind === "success" ? colors.green : colors.red,
+                flexShrink: 0,
+              }}
+            >
+              <X size={16} />
+            </button>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
     </div>
   );
