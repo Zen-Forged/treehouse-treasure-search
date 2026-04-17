@@ -35,26 +35,66 @@ Every step in every workflow, response, or document that involves a human touch-
 - Identify In Progress items, Ready items ranked by effort vs. value, and any Blocked items
 - Propose the single highest-leverage next move before asking David where to start
 
-### 3. 🟢 AUTO — Check live state
+### 3. 🟢 AUTO — Run Design Agent standup (if UI work is in scope)
+- Skim `docs/design-system.md` to confirm current system state
+- If the recommended next move touches more than one screen or introduces a new visual/interaction pattern, flag it and propose scoping against the design system first
+- If the recommended next move is a per-screen polish item that would drift from the system, say so explicitly and propose a system-aligned alternative
+- Skip this step entirely for pure-logic work (API routes, auth, data migrations, docs-only changes)
+
+### 4. 🟢 AUTO — Check live state
 - Confirm the live site is up: treehouse-treasure-search.vercel.app
 - Note any obvious issues from the last session's "Next session starting point"
 
-### 4. 🟢 AUTO — Deliver standup report
+### 5. 🟢 AUTO — Deliver standup report
 
 ```
 ## 🌿 Session Standup — [date]
 
+**Active agents:** Dev · Product · Docs · Design
 **Build:** [clean / broken — note any known errors]
 **Last session:** [one-line summary of what shipped]
 **In Progress:** [anything currently mid-flight]
 **Recommended next move:** [single item + one-line rationale]
+**Design check:** [how the recommended move relates to the design system — or "N/A — no UI" if pure-logic work]
 **Also Ready:** [2–3 other Ready items if relevant]
 **Blocked — needs your input:** [any items that can't proceed without David]
 ```
 
-### 5. 🖐️ REVIEW — Approve direction
+### 6. 🖐️ REVIEW — Approve direction
 Claude asks: "Want to start with [recommended item], or redirect?"
 You approve or redirect in one message. Session begins.
+
+---
+
+## DESIGN AGENT
+
+The Design agent runs at session open alongside Product. Its job is to hold the whole product's visual and interaction language in its head and prevent cross-screen drift.
+
+### Source of truth
+`docs/design-system.md` is canonical. Any UI decision that isn't documented there is either (a) about to be made, in which case the doc needs updating first, or (b) a per-screen exception that should be called out and reviewed.
+
+### What the Design agent does at session open
+1. Confirm the design system doc is current — if a prior session shipped UI without updating the doc, flag it
+2. Read the Product agent's recommended next move
+3. Ask: does this touch UI? Does it touch more than one screen? Does it introduce a new visual or interaction pattern?
+4. If yes to any of those — propose scoping the change against the system *before* Dev writes code
+5. If no — stay quiet and let Dev execute
+
+### What the Design agent never does
+- Never writes production code
+- Never makes product decisions (feature cuts, scope changes)
+- Never ships without David's approval
+- Never allows a per-screen fix that would drift the system without explicit documentation of the tradeoff
+
+### Updating the design system
+When a new pattern is needed (e.g., bottom sheet for mall selector, editorial 2-column booth grid, integrated location line):
+1. Design agent drafts a short spec in `docs/design-system.md`
+2. David reviews
+3. Once approved, Dev executes against the documented spec
+4. Any drift discovered during Dev work comes back to the doc before shipping
+
+### How this plays with Brand (future agent)
+Brand agent is parked until Phase 2 (pre-launch messaging). Until then, copy voice and tone review live inside Design agent's scope. When Brand activates, copy ownership transfers — Design keeps the visual system, Brand takes voice.
 
 ---
 
