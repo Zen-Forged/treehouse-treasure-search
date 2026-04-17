@@ -93,9 +93,24 @@ function LoginInner() {
   const [pinError, setPinError] = useState<string | null>(null);
 
   // ── Confirmed redirect from magic link (fallback path) ──
+  //
+  // Redirect param naming note: two parallel paths in the codebase converge here.
+  //   • `next`     — used by lib/auth.ts sendMagicLink's emailRedirectTo
+  //                    (the Supabase-sent magic link round trip lands on
+  //                     /login?confirmed=1&next=/setup)
+  //   • `redirect` — used by lib/email.ts approval email CTA
+  //                    (/login?redirect=/setup — tapped BEFORE session exists,
+  //                     then OTP entered on /login)
+  // Both must be honored here; prefer `redirect` (more explicit) then fall back
+  // to `next`. Fix for KI-003 (session 9) — mount effect was previously only
+  // reading `next`, so users arriving via the approval email with a valid
+  // session (e.g. PWA with persisted Supabase session) would be redirected to
+  // /my-shelf instead of /setup, skipping the vendor-link step entirely.
   useEffect(() => {
     const confirmed = searchParams.get("confirmed");
-    const postAuthDest = safeRedirect(searchParams.get("next"));
+    const postAuthDest = safeRedirect(
+      searchParams.get("redirect") ?? searchParams.get("next")
+    );
 
     if (confirmed === "1") {
       setScreen("confirming");

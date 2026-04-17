@@ -189,18 +189,22 @@ function PostCaptureInner() {
         }
       }
 
-      const raw = safeStorage.getItem(LOCAL_VENDOR_KEY);
-      if (raw) {
-        try {
-          const saved = JSON.parse(raw) as LocalVendorProfile;
-          if (uid && !saved.user_id) {
-            const updated = { ...saved, user_id: uid };
-            safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(updated));
-            setLocalProfile(updated);
-          } else {
+      // Defensive (KI-003 — session 9): only fall through to localStorage when
+      // NOT signed in. A signed-in user with no DB vendor has an onboarding
+      // gap (setup didn't run, or approval didn't create a linked vendor).
+      // Falling through to localStorage in that case surfaces whatever stale
+      // profile was last written — historically that's manifested as
+      // "Posting as Zen · booth 300" after a new user signs in on a device that
+      // previously hosted a different vendor. Better to show the vendor-profile
+      // form (hasValidIdentity=false branch) than to silently post-as-someone-else.
+      if (!uid) {
+        const raw = safeStorage.getItem(LOCAL_VENDOR_KEY);
+        if (raw) {
+          try {
+            const saved = JSON.parse(raw) as LocalVendorProfile;
             setLocalProfile(saved);
-          }
-        } catch {}
+          } catch {}
+        }
       }
 
       setIdentityReady(true);
