@@ -21,7 +21,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, ArrowLeft, Check, Loader, Shield } from "lucide-react";
+import { Mail, ArrowLeft, Check, Loader, Shield, Clipboard } from "lucide-react";
 import { sendMagicLink, getSession, onAuthChange } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 
@@ -79,12 +79,13 @@ function LoginInner() {
   const [sentTo, setSentTo] = useState("");
 
   // OTP state
-  const [code,         setCode]         = useState("");
-  const [codeBusy,     setCodeBusy]     = useState(false);
-  const [codeError,    setCodeError]    = useState<string | null>(null);
-  const [resendIn,     setResendIn]     = useState(0);
-  const [resendNotice, setResendNotice] = useState<string | null>(null);
-  const codeInputRef                    = useRef<HTMLInputElement>(null);
+  const [code,          setCode]          = useState("");
+  const [codeBusy,      setCodeBusy]      = useState(false);
+  const [codeError,     setCodeError]     = useState<string | null>(null);
+  const [resendIn,      setResendIn]      = useState(0);
+  const [resendNotice,  setResendNotice]  = useState<string | null>(null);
+  const [canPaste,      setCanPaste]      = useState(false);
+  const codeInputRef                     = useRef<HTMLInputElement>(null);
 
   // PIN state
   const [pin,      setPin]      = useState("");
@@ -159,6 +160,40 @@ function LoginInner() {
       return () => clearTimeout(t);
     }
   }, [screen]);
+
+  // ── Detect clipboard API availability (for paste button visibility) ──
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    // Clipboard read requires: secure context (HTTPS), readText API support, user gesture
+    // We can only probe feature support here; permission is requested on tap.
+    const supported = !!(navigator.clipboard && typeof navigator.clipboard.readText === "function");
+    setCanPaste(supported);
+  }, []);
+
+  // ── Paste from clipboard ──
+  async function handlePasteCode() {
+    if (!navigator.clipboard?.readText) return;
+    try {
+      const text = await navigator.clipboard.readText();
+      // Extract first run of 6 consecutive digits from clipboard text.
+      // Handles emails that may include extra whitespace, punctuation, or prose.
+      const match = text.match(/\d{6}/);
+      if (!match) {
+        setCodeError("No 6-digit code found on your clipboard.");
+        return;
+      }
+      const digits = match[0];
+      setCode(digits);
+      setCodeError(null);
+      setResendNotice(null);
+      if (!codeBusy) {
+        handleVerify(digits);
+      }
+    } catch {
+      // User denied clipboard permission or browser blocked it
+      setCodeError("Couldn't read clipboard. Paste or type the code instead.");
+    }
+  }
 
   // ── Magic link + OTP code send ──
   async function handleSend() {
@@ -448,6 +483,17 @@ function LoginInner() {
                     style={{ width: "100%", padding: "14px 14px", borderRadius: 11, background: C.input, border: `1px solid ${codeError ? C.redBorder : C.inputBorder}`, color: C.textPrimary, fontSize: 24, outline: "none", boxSizing: "border-box", letterSpacing: "0.5em", textAlign: "center", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", opacity: codeBusy ? 0.6 : 1 }}
                   />
                 </div>
+
+                {/* Paste from clipboard — hidden if Clipboard API unavailable */}
+                {canPaste && (
+                  <button
+                    onClick={handlePasteCode}
+                    disabled={codeBusy}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, width: "100%", padding: "10px", borderRadius: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.textMid, fontSize: 13, fontFamily: "Georgia, serif", fontWeight: 600, cursor: codeBusy ? "default" : "pointer", opacity: codeBusy ? 0.5 : 1 }}>
+                    <Clipboard size={13} style={{ color: C.green }} />
+                    Paste code from clipboard
+                  </button>
+                )}
 
                 {codeError && <ErrorBanner message={codeError} />}
                 {resendNotice && !codeError && (
