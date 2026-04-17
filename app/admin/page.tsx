@@ -475,7 +475,7 @@ export default function AdminPage() {
                     fontSize: 9, color: colors.green, textTransform: "uppercase",
                     letterSpacing: "1.8px", marginBottom: 4, fontWeight: 600
                   }}>
-                    ✓ Approved · emailed {toast.name.split(" ")[0]}
+                    ✓ Approved · ready to sign in
                   </div>
                   <div style={{
                     fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600,
