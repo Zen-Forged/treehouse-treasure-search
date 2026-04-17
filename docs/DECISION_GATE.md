@@ -156,7 +156,7 @@ These don't stop work but must be called out explicitly before the session conti
 
 ## Current Risk Register
 
-> Updated: 2026-04-16 (late PM) | Source: codebase audit + vendor-request flow fix + Resend SMTP setup
+> Updated: 2026-04-17 | Source: Yahoo magic link delivery end-to-end verified
 
 | Risk | Severity | Status | Owner |
 |---|---|---|---|
@@ -164,7 +164,7 @@ These don't stop work but must be called out explicitly before the session conti
 | No rate limiting on `/api/post-caption` | 🔴 High | ✅ Resolved 2026-04-15 — in-memory 10 req/60s per IP; upgrade to Upstash Redis at scale | Dev agent |
 | Vendor approval + setup flows silently blocked by RLS | 🔴 High | ✅ Resolved 2026-04-16 — moved admin reads/writes of `vendor_requests` to `/api/admin/vendor-requests` and `/api/setup/lookup-vendor` using service role; browser anon client is read-only for ecosystem data | Dev agent |
 | `/api/admin/*` routes had no server-side auth check | 🔴 High | ✅ Resolved 2026-04-16 — added `requireAdmin()` (bearer token + email match) to `/api/admin/posts` and `/api/admin/vendor-requests`; UI was the only gate before, routes were directly reachable | Dev agent |
-| Magic link delivery broken for Yahoo/AOL (pre-beta blocker) | 🔴 High | 🟡 In Progress — Supabase default SMTP dispatches but Yahoo silently drops (confirmed via auth logs + empty inbox on 2026-04-16). Fix path: Resend + custom SMTP on `kentuckytreehouse.com`. Resend account + domain configured. DNSSEC confirmed off. Cloudflare nameservers assigned (`marissa.ns.cloudflare.com`, `vin.ns.cloudflare.com`). Pending: Tucows reseller login, nameserver swap at registrar, 24–48h propagation, add 3 Resend DNS records, verify, wire Supabase SMTP, end-to-end delivery test. Records + next steps documented in CLAUDE.md. | Dev agent |
+| Magic link delivery broken for Yahoo/AOL (pre-beta blocker) | 🔴 High | ✅ Resolved 2026-04-17 — Path pivoted from Cloudflare migration to adding 3 Resend records directly in Shopify DNS (discovery: Shopify was already authoritative for the domain, not Google Cloud DNS as session 3 assumed). Resend verified the domain; Resend→Supabase native SMTP integration configured; end-to-end magic link test passed for `dbutlerproductions@yahoo.com` — email delivered (junk folder on first send, acceptable), magic link click authenticated, `/setup` linking completed, `/my-shelf` rendered correct vendor. Sender identity: `Kentucky Treehouse <hello@kentuckytreehouse.com>`. | Dev agent |
 | No error monitoring (Sentry / structured logs) | 🟡 Medium | Open — Sprint 3 | Dev agent |
 | Bookmarks localStorage-only (ITP wipe risk) | 🟡 Medium | Open — Sprint 4 | Dev agent |
 | No automated testing | 🟡 Medium | Open — Strategy needed | Dev + Product agents |
@@ -172,7 +172,10 @@ These don't stop work but must be called out explicitly before the session conti
 | Public Storage bucket (`post-images`) | 🟡 Medium | Intentional — monitor | Dev agent |
 | No terms of service / privacy policy | 🟡 Medium | Open — before public launch | David |
 | Deprecated lib functions still in `lib/posts.ts` | 🟢 Low | Open — `getVendorByEmail`, `linkVendorToUser`, `getVendorRequests`, `createVendorFromRequest`, `markVendorRequestApproved` marked `@deprecated` 2026-04-16; remove once confirmed no other callers import them | Dev agent |
-| Orphaned Google Cloud DNS zone for `kentuckytreehouse.com` | 🟢 Low | Open — currently serving live DNS; becomes dead weight after Cloudflare migration completes. Find via different GCP project or Google account, clean up after migration verified. | Dev agent |
+| `emailRedirectTo` hardcoded in `lib/auth.ts` — loses `/setup` redirect across magic-link round trip | 🟡 Medium | Open — surfaced 2026-04-17. Workaround: manual navigation to `/setup` post-auth (the lookup route short-circuits on already-linked). Fix: accept optional `redirectTo` param in `sendMagicLink()` and pass through from `/login`. ~5-line change. | Dev agent |
+| Magic link emails landing in Yahoo junk folder on first send | 🟡 Medium | Accepted — expected for any new sending domain. Resolution: passive reputation seasoning as real usage grows + users marking "not junk". Branded email template (Sprint 3 item) will help marginally. | Dev agent |
+| DNS archaeology assumption from session 3 was wrong (Google Cloud DNS) | 🟢 Low | ✅ Resolved 2026-04-17 — Shopify is actual DNS authority, Squarespace is registrar (inherited from Google Domains acquisition). Documented in CLAUDE.md DNS STATE. | Dev agent |
+| Orphaned Cloudflare DNS zone for `kentuckytreehouse.com` | 🟢 Low | Open — inverted from session 3's framing. Cloudflare has nameservers assigned but is dormant (Shopify remains authoritative). No cost to keeping; delete at leisure. | Dev agent |
 | Feed pagination missing (flat 80-post fetch) | 🟢 Low | Open — Sprint 4 | Dev agent |
 | `/enhance-text` caption is mock (not real Claude call) | 🟢 Low | Open — future sprint | Dev agent |
 | `/api/debug-vendor-requests` left in production | 🟢 Low | Open — useful for QA; remove in a later cleanup sprint | Dev agent |
@@ -261,4 +264,4 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 ---
 > This document is the operating constitution for the Treehouse system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-16 (late PM)
+> Last updated: 2026-04-17
