@@ -1,5 +1,5 @@
 # Treehouse — Design System
-> Version: 0.2 | Last updated: 2026-04-17 session 12 | Owned by: Design agent
+> Version: 1.0 | Last updated: 2026-04-17 session 15 | Owned by: Design agent
 > This document is the canonical source of truth for the Treehouse visual and interaction system.
 > Any multi-screen UI work must scope against this document before code is written.
 
@@ -7,293 +7,342 @@
 
 ## Purpose
 
-This document exists to prevent the cross-screen drift that accumulated across sessions 1–10. It names the system explicitly and holds every new change accountable to it. When it disagrees with the code, the code is the thing that changes — unless the disagreement surfaces a better direction, in which case the doc updates first, then code.
+This document holds the Treehouse design language in one place so every screen speaks the same voice. It replaces the v0.2 "canonical primitive" vocabulary (`<LocationStatement>`, `<BoothLocationCTA>`, four-button system) that was committed in session 12 and shipped on the Booth page in session 14. Session 15 found the real direction through an extended mockup exploration on Find Detail — this doc now encodes that direction as v1.0 and flags session 14's Booth page code for a second pass against the new language.
 
 ---
 
 ## Status
 
-**v0.2 — first full direction pass complete.** Cross-cutting patterns and four priority screens are committed. A handful of decisions are deliberately deferred and labeled `PENDING` with a clear owner. Implementation (Dev agent) can proceed against v0.2 for Booth page, Find Detail polish, Feed header, and Find Map.
+**v1.0 — direction locked.** Find Detail mockup committed. Full rewrite of primitives, typography, and material vocabulary. Booth page (shipped session 14) needs a second pass to align. Feed, Find Map, and remaining screens scope against this doc before code.
 
 ---
 
-## The brand metaphor
+## The tagline
+
+**Embrace the Search. Treasure the Find. Share the Story.**
+
+This is the backbone of Kentucky Treehouse. It is the anchor every design decision returns to. When a proposed pattern is questioned, the tiebreaker is *which of these three does it serve, and does it serve it honestly?*
+
+- **Embrace the Search** — discovery is part of the value, not friction to be removed. No filters pretending to save time. No algorithm picking for you. The app respects the hunt.
+- **Treasure the Find** — the object matters. Photograph it with weight, describe it with care, name the price honestly. Don't hide it behind card chrome.
+- **Share the Story** — finds accumulate. They become a personal path, a journey, a treasure hunt. The system supports this by design, not by feature.
+
+### The operating voice
+
+- **Presence over pressure.** No countdowns, no urgency, no "only N left."
+- **Story over speed.** The page should reward slow reading, not scan-and-move.
+- **Rooted in reality, yet elevated for perspective.** The app is a threshold to the physical world, not a replacement for it. Every digital gesture points back at a real booth, a real mall, a real object.
+
+---
+
+## The brand metaphor — refined v1.0
 
 Treehouse should feel like:
-- A well-bound field notebook
-- A small-batch shop's curated display
-- A thoughtful museum audio guide
-- A magazine feature on a local artisan
+- A field journal kept by someone who loves the hunt
+- A well-bound notebook where finds are tipped in like specimens
+- A small printed chapbook — restrained, confident, warm
+- A personal map of where the good things are
 
 Treehouse should **not** feel like:
 - An e-commerce marketplace (Etsy, eBay, Facebook Marketplace)
 - A SaaS dashboard
 - A generic AI app
-- A project management tool
 - A social network feed
+- A skeuomorphic costume drama (brass rivets, leather textures everywhere, tape on every photo)
 
-When in doubt about any specific design decision, the tiebreaker is: *which of the above does this choice push us toward?*
+The key refinement from v0.2: **the journal metaphor is the target, but restraint is the discipline.** The field journal aesthetic fails when it becomes decorative — when every chrome element is restyled as period material. It succeeds when the metaphor lives in a few load-bearing gestures (paper, type, quoted reflections, placed objects) and everything else steps back.
 
-**Audience note (committed v0.2):** Many of our vendors are 50+ and value pages that feel familiar and calm, not visually novel. When the choice is between "premium editorial magazine" and "comfortable, legible, familiar" — pick familiar, and let premium come from restraint and materiality, not from unusual layouts.
+**Audience note (unchanged from v0.2):** Many of our vendors are 50+ and value pages that feel familiar and calm, not visually novel. When the choice is between "premium editorial magazine" and "comfortable, legible, familiar" — pick familiar, and let premium come from restraint and materiality, not from unusual layouts.
+
+---
+
+## The cartographic vocabulary — COMMITTED v1.0
+
+The most important language commitment in v1.0 and the one that structures every location decision across the app.
+
+> **The mall is a pin on the map. The booth is an X on the spot.**
+
+Two glyphs, one visual pair:
+
+- **Pin glyph** — an outlined teardrop with a filled dot inside, the conventional map-pin silhouette. Represents the mall (the broader, zoom-out location).
+- **Compass-X glyph** — two crossed lines at 45°, no frame. Represents the booth (the exact spot inside the mall).
+- **Connecting tick** — a thin vertical line runs from just beneath the pin to just above the X, centered on the glyph column. Binds them into a single cartographic mark that reads as *zoom*: that place → this spot within it.
+
+The pair is reusable wherever location is named: Find Detail, Booth page, Feed, Find Map. It becomes the app's cartographic grammar.
+
+**What retires with this commitment:**
+- The v0.2 `<LocationStatement>` component (`components/LocationStatement.tsx`) — its icon + mono + separator grammar reads as data display, not as place-naming. Deprecated. Session 14 Booth page usages get replaced during the Booth v1.0 pass.
+- The `<BoothLocationCTA>` component (`components/BoothLocationCTA.tsx`) — its CTA-card-with-swatch treatment reads as marketplace chrome. Deprecated.
+- Mono type for booth numbers — retired. Booth numbers are set in **IM Fell English**, which reads as *address* rather than *record*.
+- The word "Directions" as explicit link copy — retired. Tapping the address opens maps, per platform convention. A dotted underline signals the affordance.
+
+---
+
+## The material vocabulary — COMMITTED v1.0
+
+One skeuomorphic signature per find, used sparingly and with intent.
+
+### The booth post-it
+
+A small cream-yellow note (`#faf3dc`) placed on the top-left edge of the find's photograph:
+- Slight rotation (`-3deg`) so it reads as *placed*, not aligned
+- Soft drop shadow beneath (`0 4px 8px rgba(42,26,10,0.20)`)
+- Hairline border via `0 0 0 0.5px rgba(42,26,10,0.08)` to separate it from the photo
+- Contents: eyebrow label "BOOTH" in IM Fell English italic 9.5px uppercase tracked 0.25em muted ink, then the booth number in IM Fell English 27px at primary ink (`#2a1a0a`), both centered within the note
+
+The post-it is the *someone was here and placed this* gesture. It reads immediately as "this find is at this booth" without needing a pill, a badge, or a card to contain the information. It's the one skeuomorphic element on the page.
+
+### The status pill
+
+A simple rounded pill marker for find status:
+- `1.5px solid rgba(42,26,10,0.72)` border — darker ink for real contrast
+- `border-radius: 999px`
+- `background: rgba(247,239,217,0.55)` with `backdrop-filter: blur(4px)` so the pill stays legible over any imagery
+- Label in IM Fell English italic 11px uppercase tracked 0.14em at near-primary ink (`#1c1208`)
+- **No rotation.** The post-it carries the *placed* feeling. The pill is a clarity marker — a straightforward label of state.
+- Position: bottom-right of the photograph by default
+
+States:
+- `on display` — default, at rest
+- `found a home` — sold state, visual treatment deferred (design decision parked session 15, likely a muted red-brown border + fainter ink; revisit when designing the sold state)
+
+### Design discipline
+
+Two material objects on any single photograph is the maximum. The post-it and pill together do two distinct jobs (placement vs. state); adding a third object (paperclip, stamp, tape) is decoration. The instinct to add more material cues should be caught before it ships.
 
 ---
 
 ## Cross-cutting primitives
 
-### Color tokens (source: `lib/tokens.ts` — unchanged from v0.1)
+### Paper as surface
 
-All color tokens stay as implemented in `lib/tokens.ts`. Pages must `import { colors } from "@/lib/tokens"` — no local `C` objects. Cleanup pass tracked as a follow-on.
+The page background is warm parchment (`#f1ead8`). There are **no cards, borders, or rounded halos around content blocks.** The paper *is* the container. Section divisions happen through whitespace, hairline rules, and ornamental marks — never through card chrome.
 
-### Typography rule — COMMITTED v0.2
+Optional paper-grain texture via radial gradients at low opacity. Subtle. The grain should read as "this is paper" on second glance, not as "look at the paper texture" on first.
 
-Three faces, each with an explicit job. Georgia is reserved for emotional beats. System-ui carries the chrome.
+### Color tokens (`lib/tokens.ts` — largely unchanged, additions noted)
 
-| Use | Face | Why |
+The existing palette in `lib/tokens.ts` stays valid. Pages continue to `import { colors } from "@/lib/tokens"` — no local `C` objects.
+
+**Additions / refinements for v1.0** (to be added to `lib/tokens.ts` in the Booth v1.0 sprint):
+- `paperCream` `#f1ead8` — page background (currently `bg`, rename for clarity)
+- `postit` `#faf3dc` — the post-it note surface
+- `inkPrimary` `#2a1a0a` — primary ink (warmer/deeper than current `textPrimary`)
+- `inkMid` `#4a3520` — mid ink for quoted captions
+- `inkMuted` `#7a6244` — muted ink for secondary copy
+- `inkFaint` `rgba(42,26,10,0.28)` — hairline rules, dotted underlines
+- `priceInk` `#6a4a30` — softened ink for price beside titles
+
+Existing status/red tokens retained. Green (`#1e4d2b`) retained as the ecosystem brand accent but used more sparingly — it shows up as the dotted green spine on Find Map and as incidental accents, not as the default button fill.
+
+### Typography system — COMMITTED v1.0
+
+Three faces, each with an explicit role. The v0.2 instinct to do 90% of typography in system-ui is **reversed** — system-ui is now the *precision* face, not the default.
+
+| Use | Face | Role |
 |---|---|---|
-| Hero vendor names, find titles on detail pages, curator's statements, pull-quote captions, empty-state headlines | **Georgia** | The soul. Rare by design — earns its weight through restraint. |
-| Eyebrow labels, meta text, tab labels, button labels, body copy, form labels, UI chrome, addresses (non-numeric) | **system-ui** (`-apple-system, "Segoe UI", Roboto, sans-serif`) | The voice. Calm, modern, legible at small sizes. Does 90% of the typography load. |
-| Booth numbers, dates, timestamps, prices (if shown), any data that benefits from precision | **system-ui monospace** (`ui-monospace, SFMono-Regular, Menlo, monospace`) | Data affordance — signals factual, precise content. |
-| Italic pull-quote captions on Find Detail and the curator's statement on Booth | **Georgia italic** | The emotional beat. One per screen maximum. |
+| Page masthead ("Treehouse *Finds*") | **IM Fell English** 15px regular, italic on "Finds" | The global anchor — the journal announcing itself. |
+| Titles, booth numbers, vendor names, mall names, eyebrow labels, status pill labels | **IM Fell English** | The editorial voice. Carries the bulk of the chrome. |
+| Quoted captions, "Visit the shelf →", "more from this shelf…" | **IM Fell English italic** | The reflective voice. |
+| Margin notes, journey notes (Feed, Find Map) | **Caveat** 500/600 | The human presence. Used **sparingly — 1 per screen maximum**. Represents the hand-written moment, not the decorative gesture. |
+| Address lines, any data that must be scannable and precise (timestamps, dimensions, technical labels) | **system-ui** (`-apple-system, "Segoe UI", Roboto, sans-serif`) | The precision voice. |
+| **Mono** | — | **Retired.** Booth numbers are set in IM Fell English. Timestamps and other precise data use system-ui. No mono anywhere in the ecosystem layer. |
 
-**Committed sizes:**
+**Committed sizes (v1.0):**
 
-| Role | Size | Face | Weight | Notes |
-|---|---|---|---|---|
-| Display | 30px | Georgia | 500 | Hero vendor name |
-| Title | 22–28px | Georgia | 500–700 | Find detail title, page titles |
-| Subtitle | 15–17px | Georgia italic | 400 | Pull-quotes, curator statements |
-| Body | 14px | system-ui | 400 | Card body copy, descriptions |
-| Meta | 12–13px | system-ui | 500 | Location statements, status, timestamps |
-| Eyebrow | 10–11px | system-ui | 600 uppercase | Section labels, tab labels, 1.4–1.6px tracking |
-| Data | 13px | mono | 500–600 | Booth numbers |
+| Role | Size | Face | Notes |
+|---|---|---|---|
+| Page title / find title | 30px | IM Fell English 400, -0.005em tracking, line-height 1.15 | Paired with price after em-dash in `priceInk` |
+| Quoted caption | 17px | IM Fell English italic, line-height 1.6, **centered** | Always in typographic quotation marks (“ ”) at 24px in muted ink |
+| Section head (mall name, vendor name) | 16–17px | IM Fell English 400, line-height 1.25 | |
+| Address / precise data | 13px | system-ui 400, line-height 1.5, muted ink, dotted underline when tappable | |
+| "Visit the shelf →" | 14px | IM Fell English italic, dotted underline | The primary navigation out of a find |
+| "more from this shelf…" | 10px | IM Fell English italic, uppercase, 0.22em tracking, muted ink | Trailing ellipsis always, no leading dash |
+| Status pill label | 11px | IM Fell English italic, uppercase, 0.14em tracking, near-primary ink | |
+| Post-it "BOOTH" eyebrow | 9.5px | IM Fell English italic, uppercase, 0.25em tracking, muted ink | |
+| Post-it booth number | 27px | IM Fell English 400, -0.01em tracking | |
+| Shelf thumbnail label | 11px | IM Fell English italic, mid ink | |
+| Masthead | 15px | IM Fell English 400 with italic "Finds" | Centered in header row |
 
-**Cleanup follow-on:** every page has inline Georgia at 9/10/11/12/13px doing chrome work (booth pills, eyebrow labels, empty-state copy). Migration to system-ui happens in a dedicated cleanup pass, not the Booth-redesign sprint.
+**Georgia retires from the ecosystem layer.** All serif type is IM Fell English. This is deliberate — IM Fell has a stronger editorial personality and consistently anchors the journal metaphor. Georgia was a general-purpose serif; IM Fell is *this product's* serif.
 
-### Header pattern system — COMMITTED v0.2
+### Ornamental marks
 
-Three modes. Every screen maps to exactly one.
+Two small ornaments are committed. Both in IM Fell English so they feel typographic rather than decorative.
+
+- **Diamond** `◆` at 10px, 42% ink opacity — used between hairline rules as a section divider. Replaces the cross (`✚`) which carried religious baggage. Replaces horizontal card borders. This is the divider for the product.
+- **Ellipsis** `…` — used at the end of continuation labels ("more from this shelf…") to invite the next thing rather than announce the current thing.
+
+### Header pattern system — v1.0
+
+Three modes carried over from v0.2, with the masthead treatment now unifying modes A and B.
 
 | Mode | Look | Used for |
 |---|---|---|
-| **A — Cinematic** | No sticky bar. Navigation floats as frosted circles over the hero image. Title lives over or directly beneath the image. | Booth page (both states), Find Detail |
-| **B — Editorial** | Sticky `colors.header` bg, `backdrop-filter: blur(24px)`, logo + "Treehouse Finds" wordmark left, context action right. Page title in content area, not in the bar. | Feed, Find Map, `/flagged`, `/admin` |
-| **C — Minimal** | Transparent bg, `1px solid colors.border` bottom, no blur. Back button left, title center, no right action (or very subtle). | `/post`, `/post/preview`, `/vendor-request`, `/setup`, `/login` |
+| **A — Cinematic** | Three-column grid header: back arrow left, centered masthead wordmark, save + share icons right. Hero image sits just beneath. | Find Detail, Booth page (public and owner) |
+| **B — Editorial** | Same three-column masthead layout. Context actions (search, filter, menu) replace the save + share cluster on the right depending on page. | Feed, Find Map, `/flagged`, `/admin` |
+| **C — Minimal** | Back arrow + page title only. No masthead. Used for onboarding and focused forms where the journal voice would crowd the task. | `/post`, `/post/preview`, `/vendor-request`, `/setup`, `/login` |
 
-### Button system — COMMITTED v0.2
+The masthead wordmark is the **global anchor**. It appears centered in the header on every Mode A and Mode B page and uses IM Fell English at 15px with italic "Finds." This is the single most reused element in the app.
 
-Four variants. Every inline button in the codebase migrates to one of these.
+### Icon treatment
 
-| Variant | Style | When | Examples |
-|---|---|---|---|
-| **Primary** | Filled `colors.green`, white text, 14px system-ui 600, 44px min-height, `radius.md`, 16px horizontal padding | Single primary action per screen, max one | "Request booth access", "Approve", "Publish" |
-| **Secondary** | `colors.greenLight` bg, `colors.green` text, `1px solid colors.greenBorder`, same dims as Primary | Context bridges, navigational actions | "Explore the Booth", "Explore the full mall", "Open in Maps" |
-| **Ghost** | Transparent, `colors.textMid`, `1px solid colors.border`, same dims | Quiet alternatives, cancels, dismissals | "Cancel", "Back to feed" |
-| **Link** | No bg, no border, `colors.green`, system-ui 500, inline-height | Inline with prose or tertiary actions | "Keep exploring →", "Directions →", "Edit your story" |
-
-**Destructive:** Ghost variant with `colors.red` text and `colors.redBorder`. Only for delete / cancel-with-consequence. Never Primary.
-
-**Tap feedback:** all variants `whileTap={{ scale: 0.97 }}` except Link.
-
-### Card pattern system — COMMITTED v0.2
-
-One canonical card. Four composition variants.
-
-**Canonical base:**
-- `background: colors.surface`
-- `border: 1px solid colors.border`
-- `border-radius: radius.md` (12)
-- `padding: spacing.cardPad` (14–16)
-- No shadow. The border does the lift.
-
-**Variants:**
-1. **Plain** — base only. Admin list items, simple cards.
-2. **Thumbnail** — small square image left, content right, 12px gap.
-3. **Metric** — content left, right-aligned number/action. Admin approval card.
-4. **CTA** — base + full-width button at bottom inside the padding. Find Detail location card, Booth page location card, Find Map stop cards.
-
-### Location statement pattern — COMMITTED v0.2
-
-Canonical form:
-```
-⌂  Booth 369 · America's Antique Mall · Louisville
-   1555 Hurstbourne Pkwy      Directions →
-```
-
-- Leading icon: `MapPin` 14px, `colors.textMuted`
-- Line 1: `Booth {N}` (mono 13px `colors.textPrimary` 600) · `{Mall name}` (system-ui 13px `colors.textPrimary` 500) · `{City}` (system-ui 13px `colors.textMuted` 400)
-- Line 2 (optional, full form only): address (system-ui 12px `colors.textMuted`) + trailing "Directions →" Link button, right-aligned on same line
-
-**Compact variant** — just the row-1 data line, white or light color on dark backgrounds. Used on hero banners over images.
-
-**Component name:** `<LocationStatement>` in `components/LocationStatement.tsx`. Spec committed by Design agent; Dev implements during Booth page redesign.
-
-### Motion commitments (unchanged from v0.1)
-
-- Entry: `initial={{ opacity: 0, y: 8–16 }} animate={{ opacity: 1, y: 0 }}`
-- Ease: `[0.25, 0.46, 0.45, 0.94] as const` or `[0.25, 0.1, 0.25, 1]`
-- Grid stagger: `Math.min(index * 0.04, 0.28)`
-- Tap feedback: `whileTap={{ scale: 0.97 }}` or spring-based scale on grid tiles
-- **Never** mix a centering transform with Framer Motion's `y` animation — use a wrapper div for centering (see DECISION_GATE Tech Rules for the recurring gotcha)
-
-### Interaction commitments (unchanged from v0.1)
-
-- Mobile-first, max-width 430px
-- Bottom nav `backdrop-filter: blur(24px)`, respects `safe-area-inset-bottom`
-- Tap targets minimum 44×44
-- `safeStorage` wrapper for all client localStorage
-
-### Terminology commitments — COMMITTED v0.2
-
-| Concept | Word | Forbidden alternatives |
-|---|---|---|
-| Sold item | "Found a home" (caption) / "Found homes" (plural, tab label) | "Sold", "Unavailable", "Found" alone |
-| Vendor's physical location | "Booth" | "Shop", "Stall" |
-| Single item | "Find" | "Listing", "Item", "Product" |
-| Vendor's collection | "Shelf" | "Inventory", "Store" |
-| Mall | "Mall" everywhere in UI | "Treehouse Spot" — retired from the product entirely |
-| Available item | "On Display" (tab label) | "Available" is an internal data term only |
-| Vendor (user-facing) | "Curator" where emotional ("A curated shelf from", "Curator Sign In"); "Vendor" where transactional (admin screens) | Mixing within one screen |
+Header and chrome icons sit inside small faded circles (`rgba(42,26,10,0.06)` background, 28–32px diameter) so they read as *marks* rather than *buttons*. Stroke-only icons at 14–15px sized within. No filled/outlined button backgrounds on chrome actions.
 
 ---
 
 ## Screen-specific direction
 
-### Booth page — COMMITTED v0.2
+### Find Detail — COMMITTED v1.0 (locked session 15)
 
-Two states of the same surface: `/shelf/[slug]` (public) and `/my-shelf` (owner).
+**Order top-to-bottom:**
+1. **Masthead row** — back arrow (left), "Treehouse *Finds*" wordmark (centered), save + share icons (right)
+2. **Photograph** — 4:5 aspect, full-width within 22px horizontal padding
+   - **Post-it** anchored top-left, overlapping the photo's top edge
+   - **Status pill** anchored bottom-right
+3. **Title + price** — IM Fell English 30px at primary ink, em-dash, price in `priceInk`
+4. **Quoted caption** — IM Fell English italic 17px, centered, in typographic quotes
+5. **Diamond divider** — hairline rules flanking a small `◆`
+6. **Cartographic block** — pin glyph + mall name + dotted-underline address line, connecting tick, X glyph + vendor name + booth number + "Visit the shelf →" link
+7. **"more from this shelf…"** section — eyebrow label, horizontal scroll of three vendor thumbnails with italic labels
+8. Bottom padding + bottom nav
 
-**Layout:**
-- Header Mode A (cinematic, hero-driven)
-- **3-column grid, 1:1 square tiles** (preserved from current implementation — matches the future 9-item free-tier limit and the familiar vendor mental model)
-- 10px gap between tiles (`spacing.tileGap`)
-- **No titles or meta rendered on or below tiles** — tiles are pure image. Tap through for the story. Keeps the page visually calm and respects the older-vendor audience's preference for predictable, familiar layouts.
-- All photos are portrait-sourced and rendered in the square tile via `object-fit: cover` — no aspect ratio variance at launch
+**What retires on Find Detail:**
+- The split booth-pill (left) / mall-address (right) row from current production
+- The centered oval "Explore the Booth" button
+- The Georgia caption style
+- The pulsing green dot status indicator
+- The inline description paragraph beneath the caption (description data retires from Find Detail entirely — the quoted caption is the description now; dimensions/condition/specs are fields on the post/edit flow but not surfaced here)
 
-**Hero (both states):**
-- Dark gradient overlay (unchanged from current)
-- Eyebrow "A curated shelf from" (system-ui 10px 600 uppercase, 1.6px tracking, white 58% alpha)
-- Vendor display name (Georgia 30px 500, white)
-- Location Statement compact variant (white text, 13px mixed mono + system-ui)
-- Top-right: Send icon share button (frosted dark circle, unchanged behavior)
-- Top-left owner-only: edit-banner pencil button (frosted dark circle)
+**What's new:**
+- Booth post-it material gesture
+- Status pill as straight clarity marker
+- Price named after title in softer ink
+- Cartographic pin + X block with connecting tick
+- Diamond divider
+- "Visit the shelf →" in IM Fell English italic with dotted underline
+- "more from this shelf…" label with ellipsis continuation
 
-**Curator's statement:**
-- Directly below hero, ~22px top padding
-- Italic Georgia 16px, line-height 1.7, `colors.textMid`, centered, max 3 lines visible with expander
-- Empty state: public hides the block entirely; owner shows ghost italic prompt ("Add your story so visitors know who's behind the booth") with a Link-variant "Edit your story" underneath
+### Booth page — NEEDS SECOND PASS
 
-**Tabs:**
-- Existing `TabSwitcher` component, re-labeled "On Display" / "Found homes"
-- Counts in mono 11px muted
-- Default tab: On Display
-- Visual weight: Found homes is visibly secondary (lighter label weight when inactive)
+Session 14 shipped the v0.2 Booth page using `<LocationStatement>` and `<BoothLocationCTA>`. Those components are now deprecated. The Booth page needs a v1.0 pass that:
 
-**Grid (On Display):**
-- Owner: first tile is "Add" — same 1:1 square as other tiles, `colors.emptyTile` bg, 1.5px dashed `colors.greenBorder`, centered stacked `ImagePlus` icon + "Add" eyebrow in green
-- Public: no Add tile; grid starts at first find
-- All other tiles: 1:1 square, `object-fit: cover` on the find's hero image, `border-radius: 10px`
+- Applies the cartographic pin + X block to the Booth location surface (replacing `<BoothLocationCTA>`)
+- Retires the mono booth number in favor of IM Fell English
+- Switches from Georgia to IM Fell English throughout
+- Applies the masthead wordmark treatment to the hero
+- Decides whether the 3-column grid stays (likely yes — it matches the familiar mental model for older vendors) or shifts to a more editorial 2-column polaroid arrangement (flagged `PENDING` pending vendor feedback)
+- Revisits the Curator's Statement block (still deferred per session 14 — David's call, revisit post-beta)
 
-**Grid (Found homes):**
-- Same 1:1 square tiles at 0.5 opacity + grayscale filter
-- Small "Found a home" italic Georgia 10px caption appears inside the bottom-left of each tile on a subtle dark gradient overlay — this is the one exception to the "no text on tiles" rule, because sold status needs to read immediately
-- Empty state: `PiLeaf` icon + italic Georgia "Nothing found a home yet — your shelf is wide open"
+Tracked as a Design sprint for after Find Detail ships.
 
-**Location card at bottom:**
-- CTA card variant
-- Full-form Location Statement (icon + row 1 + row 2 + Directions Link)
-- Secondary button below: "Explore the full mall" with small vendor-hue swatch on left
-- Routes to the future mall page (MVP: static link to the mall's maps URL; dedicated mall profile is a Sprint 6+ feature)
+### Feed header + mall bottom sheet — scope against v1.0 before code
 
-**Owner-only vs public differences:**
+**Header:** Mode B with the unified masthead. Left: search/menu icon. Center: "Treehouse *Finds*" wordmark. Right: user-circle icon.
 
-| Element | Public | Owner |
-|---|---|---|
-| Header left icon | Back arrow | "My Booth" title with logo |
-| Hero edit-banner button | Hidden | Present (top-left) |
-| Hero share button | Present | Present |
-| Curator's statement | Read-only, hidden if empty | Read-only, shows ghost state if empty; "Edit your story" link always below |
-| Add tile | Hidden | First tile in On Display grid |
-| Tile tap-hold contextual menu | N/A | Stub (future polish — mark as found a home, delete, edit) |
-| Bottom nav | Home · Your Finds (explorer mode) | Home · My Booth (curator mode) |
+**Sign-in affordance and mall selector:** unchanged from v0.2 direction — bottom sheet for sign-in, `<MallSheet>` bottom sheet for mall selection. Both get re-specced against v1.0 typography and material vocabulary before implementation. The `<MallSheet>` remains the canonical bottom-sheet pattern for `/post`, `/vendor-request`, and Find Map filter.
 
-### Find Detail — COMMITTED v0.2
+### Find Map — scope against v1.0 before code
 
-Header Mode A. Three specific fixes, no rebuild.
+Emotional redesign still committed. Uses:
+- One margin note in Caveat as the opening pull ("A Saturday made of stops")
+- The cartographic pin glyph for each stop
+- "~ 8 min drive" between stops in system-ui (precision data)
+- "Open all N stops in Maps →" as the bottom action in IM Fell English italic
 
-1. **Hierarchy fix — dominant title, pull-quote caption, quiet availability**
-   - Title: 28px Georgia 700, letter-spacing -0.4px
-   - Caption: 17px Georgia italic, line-height 1.75, max-width 32ch
-   - Availability: moves to a small floating pill bottom-left of the hero image (pulsing green dot + "Available" or muted + "Found a home"), out of the content flow
-
-2. **Location: single Location Statement replaces split card**
-   - Retire the current booth-pill-left / address-link-right layout
-   - Use the full-form `<LocationStatement>` inside a CTA card variant
-
-3. **"Explore the Booth" gets weight**
-   - Full-width Secondary button inside the location CTA card
-   - Label: `"Explore {vendor.display_name}'s shelf →"`
-   - Small 12×12 vendor-hue swatch (from `vendorHueBg()`) to the left of the label — visual thread to the Booth page hero
-
-**Order:** hero image (with floating availability pill) → title → italic caption → description (if any) → divider → shelf scroll → location CTA card → owner-only delete at bottom
-
-### Feed header + mall bottom sheet — COMMITTED v0.2
-
-**Header:** Mode B (editorial). Logo + "Treehouse Finds" wordmark left. Quiet user-circle icon top-right (32×32 ghost circle).
-
-**Sign-in affordance:**
-- User-circle icon opens a bottom sheet
-- Signed-out state: two buttons — "Curator Sign In" (Primary) / "Request booth access" (Secondary) — plus copy "Not a vendor? Keep browsing — Treehouse is for everyone."
-- Signed-in state: "My Booth" / "Sign out" / admin link if applicable
-
-**Mall selector:**
-- Retire the native `<select>`
-- New `<MallSheet>` component — bottom sheet with search input + scrollable list of malls
-- Each row: mall name + city + "{N} finds" count, check on the right when selected
-- Top row: "All Malls" default
-- **This becomes the canonical bottom-sheet pattern** — reused on Find Map filter, `/post` mall selector, `/vendor-request` mall selector
-
-### Find Map emotional redesign — COMMITTED v0.2
-
-Header Mode B.
-
-**Opening:** italic Georgia 18px pull-quote, rotates by context. Starter set:
-- "A Saturday made of stops."
-- "Your next field trip."
-- "Three stops, one afternoon." (when N=3)
-
-**Spine:** dotted vertical line (2px dashed, `colors.green` at 0.30 alpha). At each stop, small filled `PiLeaf` icon (12px). Between stops, mono 11px muted annotation: `~ 8 min drive`.
-
-**Stop cards:** canonical CTA card variant. Eyebrow "3 finds here" in system-ui 10px uppercase. Mall name Georgia 17px. Full-form Location Statement with address + per-stop "Directions →" Link.
-
-**Bottom CTA:** Secondary button full-width "Open all {N} stops in Maps →" building a multi-waypoint Apple Maps URL (Google Maps URL fallback — see implementation notes when Dev picks this up).
-
-**Empty state:** italic Georgia pull-quote "Your next Saturday starts with a single find." + Primary button "Browse the feed →"
+Full spec drafted before Dev writes code.
 
 ---
 
-## Remaining `PENDING` — deferred to future Design passes
+## Pattern retirement log
 
-| Item | Owner | Trigger for the pass |
+Patterns removed from the system in v1.0 that shipped in v0.2:
+
+| Retired | Replaced by | Why |
 |---|---|---|
-| Featured-tile rhythm in Booth grid (aspect ratio breaks, hero finds) | Design agent | Trigger: tiered pricing introduction, bookmark-driven promotion, OR enough post-launch vendor photo data to see natural patterns |
-| 2-column editorial grid exploration | Design agent | Trigger: post-launch feedback from vendors and shoppers suggests 3-column feels crowded |
-| Portrait-aspect variety (3:4 tiles) | Design agent | Trigger: vendor photo intake moves beyond MVP square-crop pipeline |
-| Mall page (`/mall/[slug]`) visual direction | Design agent | Trigger: mall-page redesign is prioritized (currently orphan route awaiting retirement or rebuild) |
-| Vendor directory / cross-vendor discovery | Design agent | Trigger: discovery-of-other-vendors feature is scoped (Sprint 6+) |
-| Onboarding screens pattern pass (`/vendor-request`, `/setup`, `/login`) | Design agent | Trigger: Sprint 5 "Curator Sign In" rename — bundle visual pass with copy pass |
-| `/admin` page visual pass | Design agent | Trigger: T4b admin surface consolidation |
-| Dark mode for ecosystem | Design agent | Not yet prioritized; reseller layer is dark but that's a separate aesthetic |
-| Cleanup pass: inline Georgia → system-ui on chrome; inline `C` objects → `colors` import; magic-number spacing → spacing tokens | Dev agent + Design agent review | Trigger: dedicated cleanup session after Booth redesign ships |
+| `<LocationStatement>` component | Cartographic pin + X block | Data-display grammar; read as record not place |
+| `<BoothLocationCTA>` component | Inline cartographic block | Marketplace CTA chrome; eroded the journal voice |
+| Four-button system (Primary/Secondary/Ghost/Link) | IM Fell English italic links with dotted underlines | Button chrome tips Treehouse toward generic app aesthetic |
+| Georgia as the primary serif | IM Fell English | Georgia is general-purpose; IM Fell is *this product's* voice |
+| Mono for booth numbers and data | IM Fell English (booth) / system-ui (precise data) | Mono signaled *record*; this product names *places* |
+| Pulsing green status dot | Straight status pill | Tech/IoT feel; pill with typographic label fits the voice |
+| Card pattern system (Plain/Thumbnail/Metric/CTA) | Paper as surface, whitespace + hairline ornaments | Card halos are dashboard grammar; paper is notebook grammar |
+| "Directions" as explicit link word | Dotted underline on the address alone | Platform convention; less chrome |
+
+---
+
+## Copy commitments — COMMITTED v1.0
+
+| Rule | Reason |
+|---|---|
+| Captions always in typographic quotation marks (“ ”) | They're reflections, not specs. Whether AI-generated or human-edited, they represent someone's voice writing about how an object feels. |
+| Captions read as *how it feels*, never *what it's made of* | Material, age, dimensions, condition go in structured fields (not shown on Find Detail). The caption is emotional, not technical. |
+| Prices named honestly — "$35" after the title, not hidden | *Treasure the Find* means naming the object's price in the open. Setting it in slightly softer ink keeps the title the subject while the price is a quiet fact alongside. |
+| No "might pair with," "related items," "you may also like" | Marketplace language. Treehouse does not run a recommendation engine. "more from this shelf…" is the only adjacency, and it names the vendor — not the category. |
+| No urgency copy ("Only 1 left," "Sold quickly," countdown timers, flash-sale language) | Presence over pressure. |
+| Continuations use ellipsis ("more from this shelf…"), not dashes | Invites the next thing rather than announcing the current thing. Story-shaped. |
+| Never narrate the metaphor | The design does the work. "Turn back to the booth" was rejected as overwriting because it told the user what the journal was. "Visit the shelf →" is the right voice — rooted, quiet, functional. |
+
+---
+
+## Motion commitments (unchanged from v0.2)
+
+- Entry: `initial={{ opacity: 0, y: 8–16 }} animate={{ opacity: 1, y: 0 }}`
+- Ease: `[0.25, 0.46, 0.45, 0.94] as const` or `[0.25, 0.1, 0.25, 1]`
+- Grid stagger: `Math.min(index * 0.04, 0.28)`
+- Tap feedback: `whileTap={{ scale: 0.97 }}` for links and marks, spring-based scale on grid tiles
+- **Never** mix a centering transform with Framer Motion's `y` animation — use a wrapper div for centering (see DECISION_GATE Tech Rules for the recurring gotcha)
+
+---
+
+## Interaction commitments (unchanged from v0.2)
+
+- Mobile-first, max-width 430px
+- Bottom nav `backdrop-filter: blur(24px)`, respects `safe-area-inset-bottom`
+- Tap targets minimum 44×44 (links that are smaller visually use padding to meet this)
+- `safeStorage` wrapper for all client localStorage
+
+---
+
+## Terminology commitments (carried from v0.2, unchanged)
+
+| Concept | Word | Forbidden alternatives |
+|---|---|---|
+| Sold item | "Found a home" | "Sold", "Unavailable" |
+| Vendor's physical location | "Booth" | "Shop", "Stall" |
+| Single item | "Find" | "Listing", "Item", "Product" |
+| Vendor's collection | "Shelf" | "Inventory", "Store" |
+| Mall | "Mall" everywhere in UI | "Treehouse Spot" retired |
+| Available item | "On Display" | "Available" is internal data only |
+| Vendor (user-facing) | "Curator" where emotional; "Vendor" where transactional | No mixing within one screen |
+
+---
+
+## Remaining `PENDING` — v1.0
+
+| Item | Trigger for the pass |
+|---|---|
+| Sold state visual treatment (status pill color + type when a find is "found a home") | When Booth v1.0 pass ships — both the grid sold tile and the Find Detail pill need a coordinated sold treatment |
+| Booth page v1.0 second pass | Next Design sprint after Find Detail code ships |
+| Feed + Find Map v1.0 pass | After Booth page v1.0 lands |
+| Onboarding screens (`/vendor-request`, `/setup`, `/login`) v1.0 pass | Sprint 5 — bundle with "Curator Sign In" rename |
+| `/admin` visual pass | T4b admin surface consolidation |
+| Dark mode | Not prioritized |
+| Featured-tile rhythm in Booth grid | Trigger: tiered pricing OR enough post-launch vendor photo data to see natural patterns |
+| Portrait-aspect variety (3:4 tiles) | Trigger: vendor photo intake moves beyond MVP square-crop pipeline |
+| Vendor directory / cross-vendor discovery | Sprint 6+ |
+| Token additions to `lib/tokens.ts` | Bundle with Booth v1.0 sprint |
+| Cleanup pass: inline Georgia → IM Fell English on chrome; inline `C` objects → `colors` import; magic-number spacing → spacing tokens | Dedicated cleanup session after Find Detail + Booth v1.0 both ship |
 
 ---
 
 ## How this document gets maintained
 
-1. **Before any multi-screen UI work:** Design agent reviews this doc, flags any `PENDING` sections that bear on the work, and drafts updates if new patterns are being introduced
-2. **David reviews** the proposed design spec before Dev writes code
-3. **Once approved,** Dev executes against the documented spec
-4. **Drift discovered during Dev work** comes back to this doc before shipping — doc updates to match, or code corrects to match doc, with the choice deliberate
-5. **At session close,** Docs agent verifies no UI shipped without a corresponding doc update
+1. **Before any multi-screen UI work:** Design agent reviews this doc, flags any `PENDING` sections that bear on the work, and drafts updates if new patterns are being introduced.
+2. **David reviews** the proposed design spec before Dev writes code.
+3. **Once approved,** Dev executes against the documented spec.
+4. **Drift discovered during Dev work** comes back to this doc before shipping — doc updates to match, or code corrects to match doc, with the choice deliberate.
+5. **At session close,** Docs agent verifies no UI shipped without a corresponding doc update.
 
 ---
 
@@ -301,13 +350,13 @@ Header Mode B.
 
 | File | Purpose |
 |---|---|
-| `lib/tokens.ts` | Implemented color, radius, spacing tokens (code-level source of truth) |
-| `docs/DECISION_GATE.md` | Brand Rules, Tech Rules, Agent Roster |
+| `lib/tokens.ts` | Implemented color, radius, spacing tokens (code-level source of truth). v1.0 additions bundled with Booth v1.0 sprint. |
+| `docs/DECISION_GATE.md` | Brand Rules, Tech Rules, Agent Roster. The tagline lives here as a core anchor. |
 | `docs/onboarding-journey.md` | Sister canonical spec for onboarding flows |
-| `CONTEXT.md` | Architecture reference; legacy design-system section to migrate here over time |
+| `CONTEXT.md` | Architecture reference |
 | `.claude/MASTER_PROMPT.md` | Session-open protocol — includes Design agent standup |
 
 ---
 > This document is the canonical source of truth for the Treehouse design system.
 > It is maintained by the Design agent and reviewed by David at each design-adjacent session.
-> Last updated: 2026-04-17 (session 12 — first full direction pass; Booth / Find Detail / Feed / Find Map committed)
+> Last updated: 2026-04-17 (session 15 — v1.0 direction lock; journal vocabulary committed; Find Detail spec locked; Booth page flagged for second pass)
