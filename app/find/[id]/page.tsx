@@ -43,19 +43,19 @@ import type { Post } from "@/types/treehouse";
 // ── v1.1 inline tokens ─────────────────────────────────────────────────────────
 // TODO(booth-v1.0): promote these to lib/tokens.ts during the Booth v1.1 sprint.
 const v1 = {
-  paperCream:  "#f1ead8",
-  postit:      "#faf3dc",
+  paperCream:  "#e8ddc7", // v1.1b — warmer/browner (was #f1ead8)
+  postit:      "#fffaea", // v1.1b — brighter cream to separate from paper (was #faf3dc)
   inkPrimary:  "#2a1a0a",
   inkMid:      "#4a3520",
-  inkMuted:    "#7a6244",
+  inkMuted:    "#6b5538", // v1.1b — darkened for WCAG AA on new paper (was #7a6244)
   inkFaint:    "rgba(42,26,10,0.28)",
   inkHairline: "rgba(42,26,10,0.18)",
   priceInk:    "#6a4a30",
-  pillBg:      "rgba(247,239,217,0.88)", // v1.1 — stronger opacity for legibility
+  pillBg:      "rgba(247,239,217,0.88)",
   pillBorder:  "rgba(42,26,10,0.72)",
   pillInk:     "#1c1208",
   iconBubble:  "rgba(42,26,10,0.06)",
-  imageRadius: 6, // v1.1 — tipped-in specimen, not raw file
+  imageRadius: 6,
 } as const;
 
 const FONT_IM_FELL = 'var(--font-im-fell), "IM Fell English", Georgia, serif';
@@ -265,7 +265,7 @@ function ShelfSection({
       >
         More from this shelf…
       </div>
-      {/* v1.1 — strip insets to 22px so first thumbnail aligns with the photograph above */}
+      {/* v1.1c — defensive marginLeft on first thumbnail to guarantee 22px screen-edge inset */}
       <div
         className="hide-scrollbar"
         style={{
@@ -273,15 +273,22 @@ function ShelfSection({
           gap: 12,
           overflowX: "auto",
           overflowY: "hidden",
-          paddingLeft: 22,
+          paddingLeft: 0,
           paddingRight: 22,
           paddingBottom: 4,
           scrollSnapType: "x mandatory",
           WebkitOverflowScrolling: "touch",
         }}
       >
-        {items.map((item) => (
-          <div key={item.id} style={{ scrollSnapAlign: "start", flexShrink: 0 }}>
+        {items.map((item, idx) => (
+          <div
+            key={item.id}
+            style={{
+              scrollSnapAlign: "start",
+              flexShrink: 0,
+              marginLeft: idx === 0 ? 22 : 0,
+            }}
+          >
             <ShelfCard post={item} />
           </div>
         ))}
@@ -598,7 +605,8 @@ export default function FindDetailPage() {
                 background: v1.postit,
                 transform: "rotate(-3deg)",
                 transformOrigin: "bottom left",
-                boxShadow: `0 4px 8px rgba(42,26,10,0.20), 0 0 0 0.5px rgba(42,26,10,0.08)`,
+                // v1.1c — triple-dial contrast: stronger shadow + visible hairline edge
+                boxShadow: `0 6px 14px rgba(42,26,10,0.28), 0 0 0 0.5px rgba(42,26,10,0.16)`,
                 padding: "12px 8px 10px",
                 display: "flex",
                 flexDirection: "column",
@@ -610,7 +618,7 @@ export default function FindDetailPage() {
                 style={{
                   fontFamily: FONT_IM_FELL,
                   fontStyle: "italic",
-                  fontSize: 12,
+                  fontSize: 14,
                   color: v1.inkMuted,
                   lineHeight: 1,
                   marginBottom: 6,
@@ -850,7 +858,7 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Vendor row — v1.1: vendor name + booth pill inline; "Visit the shelf →" below in system-ui */}
+            {/* Vendor row — v1.1c: vendor name on top, shelf-link pill below (pill IS the link, retires standalone "Visit the shelf →") */}
             {(vendorName || boothNumber) && (
               <div>
                 {vendorName && (
@@ -860,20 +868,24 @@ export default function FindDetailPage() {
                       fontSize: 18,
                       color: v1.inkPrimary,
                       lineHeight: 1.3,
-                      marginBottom: 8,
-                      display: "flex",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      gap: 10,
+                      marginBottom: 10,
                     }}
                   >
-                    <span>{vendorName}</span>
-                    {boothNumber && (
-                      <Pill>Booth {boothNumber}</Pill>
-                    )}
+                    {vendorName}
                   </div>
                 )}
-                {vendorSlug && (
+                {boothNumber && vendorSlug && (
+                  <Link
+                    href={`/shelf/${vendorSlug}`}
+                    style={{ textDecoration: "none", display: "inline-block", WebkitTapHighlightColor: "transparent" }}
+                  >
+                    <Pill>Booth {boothNumber} →</Pill>
+                  </Link>
+                )}
+                {boothNumber && !vendorSlug && (
+                  <Pill>Booth {boothNumber}</Pill>
+                )}
+                {!boothNumber && vendorSlug && (
                   <Link
                     href={`/shelf/${vendorSlug}`}
                     style={{
