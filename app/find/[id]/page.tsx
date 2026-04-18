@@ -51,29 +51,13 @@ import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
 import { getCachedUserId, getSession, isAdmin } from "@/lib/auth";
 import { flagKey, mapsUrl } from "@/lib/utils";
+import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import BottomNav from "@/components/BottomNav";
 import type { Post } from "@/types/treehouse";
 
-// ── v1.1 inline tokens ─────────────────────────────────────────────────────────
-// TODO(booth-v1.0): promote these to lib/tokens.ts during the Booth v1.1 sprint.
-const v1 = {
-  paperCream:  "#e8ddc7", // v1.1b — warmer/browner (was #f1ead8)
-  postit:      "#fffaea", // v1.1b — brighter cream to separate from paper (was #faf3dc)
-  inkPrimary:  "#2a1a0a",
-  inkMid:      "#4a3520",
-  inkMuted:    "#6b5538", // v1.1b — darkened for WCAG AA on new paper (was #7a6244)
-  inkFaint:    "rgba(42,26,10,0.28)",
-  inkHairline: "rgba(42,26,10,0.18)",
-  priceInk:    "#6a4a30",
-  pillBg:      "rgba(247,239,217,0.88)",
-  pillBorder:  "rgba(42,26,10,0.72)",
-  pillInk:     "#1c1208",
-  iconBubble:  "rgba(42,26,10,0.06)",
-  imageRadius: 6,
-} as const;
-
-const FONT_IM_FELL = 'var(--font-im-fell), "IM Fell English", Georgia, serif';
-const FONT_SYS     = '-apple-system, "Segoe UI", Roboto, system-ui, sans-serif';
+// ── v1.1 tokens ─────────────────────────────────────────────────────────────
+// Imported from lib/tokens.ts (canonical since session 19A). v1 palette +
+// fonts match docs/design-system.md v1.1h.
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
 

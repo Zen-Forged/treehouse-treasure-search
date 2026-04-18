@@ -11,9 +11,10 @@
 //   - <ShelfView>            — horizontal scroll with larger 4:5 tiles
 //   - <BoothCloser>          — diamond divider + quiet IM Fell italic closing line
 //
-// All primitives use the v1 inline token set — matches Find Detail exactly.
-// Token promotion to lib/tokens.ts is the final step of this sprint; do not
-// promote mid-build.
+// v1.1h tokens (v1, FONT_IM_FELL, FONT_SYS) are imported from lib/tokens.ts —
+// canonical since session 19A. They are re-exported here so existing imports
+// from "@/components/BoothPage" in app/my-shelf and app/shelf/[slug] continue
+// to resolve without touching those files.
 //
 // See docs/design-system.md §Booth page (v1.1h) for the committed spec.
 
@@ -24,28 +25,12 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Send, Pencil, Check, Loader, ImagePlus } from "lucide-react";
 import { vendorHueBg, mapsUrl } from "@/lib/utils";
+import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import type { Post } from "@/types/treehouse";
 
-// ── v1 inline tokens ─────────────────────────────────────────────────────────
-// Promoted to lib/tokens.ts at the end of the Booth v1.1h sprint.
-export const v1 = {
-  paperCream:   "#e8ddc7",
-  postit:       "#fffaea",
-  inkPrimary:   "#2a1a0a",
-  inkMid:       "#4a3520",
-  inkMuted:     "#6b5538",
-  inkFaint:     "rgba(42,26,10,0.28)",
-  inkHairline:  "rgba(42,26,10,0.18)",
-  priceInk:     "#6a4a30",
-  red:          "#8b2020",
-  redBg:        "rgba(139,32,32,0.07)",
-  redBorder:    "rgba(139,32,32,0.18)",
-  imageRadius:  6,
-  bannerRadius: 16,
-} as const;
-
-export const FONT_IM_FELL = 'var(--font-im-fell), "IM Fell English", Georgia, serif';
-export const FONT_SYS     = '-apple-system, "Segoe UI", Roboto, system-ui, sans-serif';
+// Re-export canonical v1.1h tokens so consumers of BoothPage primitives
+// (app/my-shelf, app/shelf/[slug]) keep their existing imports working.
+export { v1, FONT_IM_FELL, FONT_SYS };
 
 const EASE = [0.25, 0.1, 0.25, 1] as const;
 

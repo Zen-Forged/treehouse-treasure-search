@@ -46,30 +46,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Heart } from "lucide-react";
 import { getPostsByIds } from "@/lib/posts";
 import { BOOKMARK_PREFIX, loadBookmarkCount, mapsUrl } from "@/lib/utils";
+import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import BottomNav from "@/components/BottomNav";
 import type { Post } from "@/types/treehouse";
 
-// ── v1.1f inline tokens ────────────────────────────────────────────────────────
-// TODO(booth-v1.1f): promote to lib/tokens.ts during the Booth sprint.
-const v1 = {
-  paperCream:  "#e8ddc7",
-  postit:      "#fffaea",
-  inkPrimary:  "#2a1a0a",
-  inkMid:      "#4a3520",
-  inkMuted:    "#6b5538",
-  inkFaint:    "rgba(42,26,10,0.28)",
-  inkHairline: "rgba(42,26,10,0.18)",
-  priceInk:    "#6a4a30",
-  pillBg:      "rgba(247,239,217,0.88)",
-  pillBorder:  "rgba(42,26,10,0.72)",
-  pillInk:     "#1c1208",
-  iconBubble:  "rgba(42,26,10,0.06)",
-  green:       "#1e4d2b",
-  imageRadius: 6,
-} as const;
-
-const FONT_IM_FELL = 'var(--font-im-fell), "IM Fell English", Georgia, serif';
-const FONT_SYS     = '-apple-system, "Segoe UI", Roboto, system-ui, sans-serif';
+// ── v1.1f tokens (imported from lib/tokens.ts) ───
+// Imported from lib/tokens.ts (canonical since session 19A). v1 palette +
+// fonts match docs/design-system.md v1.1h.
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
 
