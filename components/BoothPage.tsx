@@ -571,6 +571,7 @@ function WindowTile({ post, index }: { post: Post; index: number }) {
             border: `1px solid ${v1.inkHairline}`,
             overflow: "hidden",
             background: v1.postit,
+            boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
           }}
         >
           {post.image_url && !imgErr ? (
@@ -692,6 +693,7 @@ function ShelfTile({ post, index }: { post: Post; index: number }) {
             border: `1px solid ${v1.inkHairline}`,
             overflow: "hidden",
             background: v1.postit,
+            boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
           }}
         >
           {post.image_url && !imgErr ? (

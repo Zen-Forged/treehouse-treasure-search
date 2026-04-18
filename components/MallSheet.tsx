@@ -138,7 +138,16 @@ export default function MallSheet({
             aria-hidden="true"
           />
 
-          {/* ── 2. Sheet container ──────────────────────────────────────── */}
+          {/* ── 2. Sheet container ────────────────────────────────────────
+              Centering: use `left: 0, right: 0, margin: 0 auto, maxWidth: 430`
+              rather than `left: 50% + translateX(-50%)`. Framer Motion's `y`
+              animation sets `transform` on the element and wipes out the
+              static `translateX(-50%)` mid-animation, which was pinning the
+              sheet to the right half of the viewport (see DECISION_GATE Tech
+              Rules: never combine a centering transform with a Framer y
+              animation on the same element). The margin-auto pattern is
+              transform-free and matches the 430px column-centering used by
+              every page wrapper in the app. */}
           <motion.div
             role="dialog"
             aria-modal="true"
@@ -149,9 +158,10 @@ export default function MallSheet({
             transition={{ duration: 0.34, ease: EASE }}
             style={{
               position: "fixed",
-              left: "50%",
-              transform: "translateX(-50%)",
+              left: 0,
+              right: 0,
               bottom: 0,
+              margin: "0 auto",
               width: "100%",
               maxWidth: 430,
               maxHeight: "78vh",

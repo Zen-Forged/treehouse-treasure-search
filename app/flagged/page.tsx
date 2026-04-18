@@ -217,6 +217,7 @@ function FindTile({
           border: `1px solid ${v1.inkHairline}`,
           overflow: "hidden",
           background: v1.postit,
+          boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
         }}
       >
         {hasImg ? (
@@ -579,11 +580,18 @@ export default function FindMapPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.34, ease: EASE }}
         style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 40,
           display: "grid",
           gridTemplateColumns: "1fr auto 1fr",
           alignItems: "center",
           padding: "max(14px, env(safe-area-inset-top, 14px)) 18px 14px",
           gap: 12,
+          background: "rgba(232,221,199,0.96)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          borderBottom: `1px solid ${v1.inkHairline}`,
         }}
       >
         <div style={{ justifySelf: "start" }}>

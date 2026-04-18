@@ -164,6 +164,7 @@ function ShelfCard({ post }: { post: Post }) {
           background: v1.postit,
           borderRadius: v1.imageRadius, // v1.1
           border: `1px solid ${v1.inkHairline}`, // v1.1d — match hero photo border
+          boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)", // v1.1i-polish
           opacity: isSold ? 0.62 : 1,
           transition: "opacity 0.2s",
         }}
@@ -371,17 +372,24 @@ function SoldLanding({
         flexDirection: "column",
       }}
     >
-      {/* 1. Masthead — same chrome as normal Find Detail */}
+      {/* 1. Masthead — same chrome as normal Find Detail, sticky to top */}
       <motion.div
         variants={pageVariants}
         initial="hidden"
         animate="visible"
         style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 40,
           display: "grid",
           gridTemplateColumns: "1fr auto 1fr",
           alignItems: "center",
           padding: "max(14px, env(safe-area-inset-top, 14px)) 18px 14px",
           gap: 12,
+          background: "rgba(232,221,199,0.96)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          borderBottom: `1px solid ${v1.inkHairline}`,
         }}
       >
         <div style={{ justifySelf: "start" }}>
@@ -726,11 +734,18 @@ export default function FindDetailPage() {
         initial="hidden"
         animate="visible"
         style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 40,
           display: "grid",
           gridTemplateColumns: "1fr auto 1fr",
           alignItems: "center",
           padding: "max(14px, env(safe-area-inset-top, 14px)) 18px 14px",
           gap: 12,
+          background: "rgba(232,221,199,0.96)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          borderBottom: `1px solid ${v1.inkHairline}`,
         }}
       >
         <div style={{ justifySelf: "start" }}>
@@ -771,7 +786,8 @@ export default function FindDetailPage() {
             overflow: "visible", // allow post-it overhang
           }}
         >
-          {/* Photograph — v1.1d: 6px radius + 1px inkHairline border for warm-tone separation */}
+          {/* Photograph — v1.1d: 6px radius + 1px inkHairline border for warm-tone separation
+              v1.1i-polish: subtle paper-tone drop-shadow to lift the photo off the page */}
           {post.image_url ? (
             <img
               src={post.image_url}
@@ -783,6 +799,7 @@ export default function FindDetailPage() {
                 display: "block",
                 borderRadius: v1.imageRadius,
                 border: `1px solid ${v1.inkHairline}`,
+                boxShadow: "0 3px 12px rgba(42,26,10,0.10), 0 1px 3px rgba(42,26,10,0.06)",
                 filter: isSold ? "grayscale(0.35) brightness(0.9)" : "none",
               }}
             />
@@ -794,6 +811,7 @@ export default function FindDetailPage() {
                 background: v1.postit,
                 borderRadius: v1.imageRadius,
                 border: `1px solid ${v1.inkHairline}`,
+                boxShadow: "0 3px 12px rgba(42,26,10,0.10), 0 1px 3px rgba(42,26,10,0.06)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
