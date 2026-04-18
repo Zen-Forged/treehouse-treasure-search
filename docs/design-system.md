@@ -13,7 +13,7 @@ This document holds the Treehouse design language in one place so every screen s
 
 ## Status
 
-**v1.1 — legibility + restraint pass.** v1.0 direction held up on first real-device test. Refinements in this version: (a) typography bumped 1–2px across small type to serve the 50+ demographic committed in the audience note — IM Fell retained everywhere, no face changes; (b) eyebrow labels retire uppercase+letter-spacing and move to Title Case / sentence case — the tracked-uppercase treatment read as SaaS dashboard chrome, not journal voice; (c) post-it relocated from top-left (collision risk with photo subject, legibility loss against dark backgrounds) to bottom-left (pairs with status pill as a single ground-line of placed objects, groups location signals together); (d) photographs and shelf thumbnails gain a subtle 6px corner radius to read as *tipped-in specimen* rather than raw file; (e) X glyph in the cartographic block anchors to the vendor-name baseline, not the shelf link below it. Booth page (shipped session 14) still needs a v1.1 second pass. Feed, Find Map, and remaining screens scope against this doc before code.
+**v1.1 — legibility + restraint pass.** v1.0 direction held up on first real-device test. Refinements in this version: (a) typography bumped 1–2px across small type to serve the 50+ demographic committed in the audience note — IM Fell retained everywhere, no face changes; (b) eyebrow labels retire uppercase+letter-spacing and move to Title Case / sentence case — the tracked-uppercase treatment read as SaaS dashboard chrome, not journal voice; (c) post-it relocated from top-left to bottom-left, sized up to anchor the note, and warmed brighter to separate from the paper; (d) paper background tuned warmer/browner (`#f1ead8` → `#e8ddc7`) to shed the yellow cast — `inkMuted` darkened to `#6b5538` to maintain WCAG AA on the new surface; (e) photographs and shelf thumbnails gain a subtle 6px corner radius to read as *tipped-in specimen* rather than raw file; (f) X glyph in the cartographic block anchors to the vendor-name baseline; (g) the booth-number pill on the vendor line becomes the primary tap target to the vendor's shelf, retiring the standalone "Visit the shelf →" link — one visual object, one job. Booth page (shipped session 14) still needs a v1.1 second pass. Feed, Find Map, and remaining screens scope against this doc before code.
 
 ---
 
@@ -84,13 +84,16 @@ One skeuomorphic signature per find, used sparingly and with intent.
 
 ### The booth post-it
 
-A small cream-yellow note (`#faf3dc`) placed on the **bottom-left** edge of the find's photograph (updated v1.1 — v1.0 placed it top-left but that position created collision risk with the photo's subject and legibility loss against dark photo backgrounds):
+A small cream note placed on the bottom-left edge of the find's photograph, overhanging the lower frame:
+- Color `#fffaea` — a near-white cream that reads as a distinct object against the warmer paper background (updated v1.1 from `#faf3dc` which was too close to the paper to separate)
 - Slight rotation (`-3deg`) so it reads as *placed*, not aligned
-- Soft drop shadow beneath (`0 4px 8px rgba(42,26,10,0.20)`)
-- Hairline border via `0 0 0 0.5px rgba(42,26,10,0.08)` to separate it from the photo
+- Drop shadow `0 6px 14px rgba(42,26,10,0.28)` beneath (updated v1.1 from `0 4px 8px rgba(42,26,10,0.20)` — more lift sells the paper-on-paper relationship)
+- Hairline edge via `0 0 0 0.5px rgba(42,26,10,0.16)` (updated v1.1 from 0.08 — visible paper-to-paper edge)
 - Overlaps the photo's bottom edge slightly so the note appears tucked against the lower frame
-- **Dimensions: 92×84px** (updated v1.1 from 78×72 — the booth numeral should anchor the note; smaller dimensions made it float as a label rather than land as an object)
-- Contents: eyebrow label "Booth" in IM Fell English italic 12px Title Case in muted ink, then the booth number in IM Fell English **36px** at primary ink (`#2a1a0a`), both centered within the note. The numeral is intentionally large — it is the visual anchor of the note and therefore of the photograph's location claim.
+- Dimensions: 92×84px
+- Contents: eyebrow label "Booth" in IM Fell English italic **14px** Title Case in muted ink (updated v1.1 from 12px — was still too small to read as a label), then the booth number in IM Fell English 36px at primary ink (`#2a1a0a`), both centered within the note. The numeral is intentionally large — it is the visual anchor of the note and therefore of the photograph's location claim.
+
+The three dials together (brighter surface, stronger shadow, visible edge) create "paper on paper" separation — the note feels like a physical object sitting on the page, not drawn on it. Each dial alone risks either underselling the separation or making it scream; together at modest strength they sell the gesture.
 
 The post-it is the *someone was here and placed this* gesture. It reads immediately as "this find is at this booth" without needing a pill, a badge, or a card to contain the information. It's the one skeuomorphic element on the page. Pairing it with the status pill on the same bottom edge of the photograph creates a single grounded line of placed objects rather than two competing focal points.
 
@@ -110,9 +113,15 @@ States:
 
 ### Pill as a linking primitive (v1.1)
 
-When a booth number needs to appear *outside* the post-it — specifically on the vendor line of the cartographic block — it is set in the same status-pill treatment (same border, same background, same IM Fell italic 13px Title Case). This visually ties the booth number to its "On Display" twin on the photograph even though they sit in different parts of the page. The user reads *On Display* on the photograph and *Booth 123456* on the vendor line as a matched pair.
+Two pill roles are committed. Same visual treatment, different jobs:
 
-The pill treatment is reserved for these two roles only — status labels on photographs and booth-number markers in body chrome. It does not generalize into a button or tag primitive.
+**Status pill** (on the photograph, bottom-right): reads state. Not tappable. "On Display" or "Found a Home".
+
+**Shelf-link pill** (on the vendor line of the cartographic block): reads "Booth 123456 →" and *is the tap target to the vendor's shelf page*. Trailing arrow (`→`) inside the pill signals the tappable affordance without adding a separate link below. This retires the standalone "Visit the shelf →" text link from v1.0 — the vendor row now reads as a single coherent pointer to that vendor's shelf (vendor name on top, tappable booth pill below) instead of three redundant pointers (name + pill + text link).
+
+The visual match between the two pills is deliberate: reader sees "On Display" on the photograph and "Booth 123456 →" on the vendor line as a matched pair that together name *where this find is and how to go deeper into that booth's shelf*. The only visual difference is the arrow — status pills never carry one, shelf-link pills always do.
+
+The pill treatment is reserved for these two roles only. It does not generalize into a button, tag, or filter primitive.
 
 ### Design discipline
 
@@ -130,14 +139,14 @@ Optional paper-grain texture via radial gradients at low opacity. Subtle. The gr
 
 ### Color tokens (`lib/tokens.ts` — largely unchanged, additions noted)
 
-The existing palette in `lib/tokens.ts` stays valid. Pages continue to `import { colors } from "@/lib/tokens"` — no local `C` objects.
+The existing palette in `lib/tokens.ts` stays valid for legacy pages. v1.1 pages inline the palette below until the Booth v1.1 sprint promotes it to `lib/tokens.ts`. Pages continue to `import { colors } from "@/lib/tokens"` for legacy tokens — no local `C` objects.
 
-**Additions / refinements for v1.0** (to be added to `lib/tokens.ts` in the Booth v1.0 sprint):
-- `paperCream` `#f1ead8` — page background (currently `bg`, rename for clarity)
-- `postit` `#faf3dc` — the post-it note surface
-- `inkPrimary` `#2a1a0a` — primary ink (warmer/deeper than current `textPrimary`)
+**v1.1 palette** (to be added to `lib/tokens.ts` in the Booth v1.1 sprint):
+- `paperCream` `#e8ddc7` — page background (updated v1.1 from `#f1ead8` — warmer/browner to shed the yellow cast; reads as aged paper rather than fresh cream)
+- `postit` `#fffaea` — post-it note surface (updated v1.1 from `#faf3dc` — brighter to separate from the browner paper)
+- `inkPrimary` `#2a1a0a` — primary ink (warmer/deeper than legacy `textPrimary`)
 - `inkMid` `#4a3520` — mid ink for quoted captions
-- `inkMuted` `#7a6244` — muted ink for secondary copy
+- `inkMuted` `#6b5538` — muted ink for secondary copy (updated v1.1 from `#7a6244` — darkened to maintain WCAG AA against the new paper; retains the muted character at the new contrast level)
 - `inkFaint` `rgba(42,26,10,0.28)` — hairline rules, dotted underlines
 - `priceInk` `#6a4a30` — softened ink for price beside titles
 
@@ -168,11 +177,12 @@ Three faces, each with an explicit role. The v0.2 instinct to do 90% of typograp
 | Quoted caption | 19px | IM Fell English italic, line-height 1.65, **centered** | Always in typographic quotation marks (“ ”) at 26px in muted ink. v1.0 was 17px |
 | Section head (mall name, vendor name) | 18px | IM Fell English 400, line-height 1.3 | v1.0 was 16–17px |
 | Address / precise data | 14px | system-ui 400, line-height 1.55, muted ink, dotted underline when tappable | v1.0 was 13px. system-ui is the precision voice — its familiar shapes make small sizes readable |
-| "Visit the shelf →" | 14px | **system-ui 400**, dotted underline, muted ink | Updated v1.1 — was IM Fell italic 14px. Matches the address line exactly (same face, same weight, same size, same color, same underline style). Pairing them as indistinguishable chrome is the point |
+| "Visit the shelf →" (standalone text link) | — | **Retired v1.1** | The shelf-link pill on the vendor line now carries this role |
+| Shelf-link pill label ("Booth NNN →") | 13px | IM Fell English italic, Title Case, near-primary ink, trailing arrow `→` | New v1.1 — matches status pill treatment; arrow signals tappable affordance; is the primary navigation out of a find |
 | "More from this shelf…" | **15px** | IM Fell English italic, Title Case, no letter-spacing, muted ink | Updated v1.1 — was 13px; bumped to section-announcement floor. Trailing ellipsis always |
 | Status pill label | 13px | IM Fell English italic, **Title Case**, near-primary ink | Updated v1.1 — was 11px uppercase tracked 0.14em |
 | Booth pill label (on vendor line) | 13px | IM Fell English italic, Title Case, near-primary ink | New v1.1 — matches status pill treatment to visually link "On Display" and "Booth 123456" |
-| Post-it "Booth" eyebrow | **12px** | IM Fell English italic, Title Case, no letter-spacing, muted ink | Updated v1.1 — 1px bump for legibility floor |
+| Post-it "Booth" eyebrow | **14px** | IM Fell English italic, Title Case, no letter-spacing, muted ink | Updated v1.1 — was 12px but still reading as undersized against the 36px numeral; 14px gives the eyebrow real label weight without competing with the numeral |
 | Post-it booth number | **36px** | IM Fell English 400, -0.01em tracking | Updated v1.1 — was 28px. The numeral is the visual anchor of the note and fills the space with authority |
 | Shelf thumbnail label | 13px | IM Fell English italic, mid ink | v1.0 was 11px |
 | Masthead | 16px | IM Fell English 400 with italic "Finds" | v1.0 was 15px — matches address size, still clearly secondary to title |
@@ -217,7 +227,7 @@ Header and chrome icons sit inside small faded circles (`rgba(42,26,10,0.06)` ba
 3. **Title + price** — IM Fell English 32px at primary ink, em-dash, price in `priceInk`
 4. **Quoted caption** — IM Fell English italic 19px, centered, in typographic quotes
 5. **Diamond divider** — hairline rules flanking a small `◆`
-6. **Cartographic block** — pin glyph anchored to mall name baseline + mall name + dotted-underline address line in system-ui; connecting tick; X glyph **anchored to the vendor name baseline** (updated v1.1 — previously drifted to the "Visit the shelf" line below); vendor name + **booth pill (Booth 123456)** on the vendor line as a linked twin to the "On Display" pill on the photograph; "Visit the shelf →" in **system-ui 500** with dotted underline
+6. **Cartographic block** — pin glyph anchored to mall name baseline + mall name + dotted-underline address line in system-ui; connecting tick; X glyph anchored to the vendor name baseline; vendor name on its own line, **shelf-link pill ("Booth 123456 →") directly below the vendor name** — this pill is the tap target to the vendor's shelf (updated v1.1 — retires the standalone "Visit the shelf →" link from v1.0; the pill does both the labeling and the linking as one object)
 7. **"More from this shelf…"** section — eyebrow in Title Case (no uppercase tracking), **horizontal scroll strip inset to match the 22px page margin** — first thumbnail aligns with the photograph's left edge above it, not the screen edge. Thumbnails get **6px corner radius** to match the hero photograph.
 8. Bottom padding + bottom nav
 
@@ -230,15 +240,17 @@ Header and chrome icons sit inside small faded circles (`rgba(42,26,10,0.06)` ba
 - **Uppercase + letter-spacing on labels** (v1.1 — retired per the new Title Case commitment)
 - **Top-left post-it position** (v1.1 — retired for collision and legibility)
 - **Full-bleed-left shelf strip** (v1.1 — strip now insets to the 22px page margin like the photograph)
+- **Standalone "Visit the shelf →" text link** (v1.1 — retired; the shelf-link pill below the vendor name does this job with less chrome)
 
 **What's new in v1.1:**
-- Post-it at bottom-left pairing with status pill on the same photo edge
-- 6px corner radius on the hero photograph and shelf thumbnails
-- Pill styling replicated on the booth-number marker on the vendor line (visual twin to the status pill)
-- X glyph anchored to the vendor name, not the shelf link
-- "Visit the shelf →" in system-ui 500 (ties to address line as a shared functional-chrome voice)
+- Warmer/browner paper background and darker `inkMuted` to hold WCAG AA on the new surface
+- Post-it at bottom-left, sized 92×84, numeral 36px, eyebrow 14px Title Case, warmer `#fffaea` cream with stronger shadow + visible hairline edge (the three dials together sell paper-on-paper)
+- Status pill on photograph (bottom-right) — reads state
+- Shelf-link pill on vendor line — reads "Booth NNN →" and navigates to `/shelf/[slug]`. Retires standalone "Visit the shelf →"
+- 6px corner radius on hero photograph and shelf thumbnails
+- X glyph anchored to vendor name baseline
 - All labels Title Case, no uppercase tracking
-- Shelf strip insets to 22px (first thumbnail aligns with the photograph)
+- Shelf strip first thumbnail explicitly anchored at 22px page margin
 
 ### Booth page — NEEDS SECOND PASS
 
@@ -319,11 +331,11 @@ Synthesized from WCAG 2.1/2.2, Apple HIG, Material Design 3, and Nielsen Norman 
 
 Material Design 3 allows 11px for decorative metadata; we deliberately push one notch higher because our audience skews older than average consumer mobile. This is a **floor, not a default** — sizes should drift larger when legibility matters and restraint isn't served by going small.
 
-### Contrast
+### Contrast (recalculated v1.1 against new paper `#e8ddc7`)
 
-- `inkPrimary` (`#2a1a0a`) on `paperCream` (`#f1ead8`) — contrast ratio 11.8:1 (WCAG AAA)
-- `inkMid` (`#4a3520`) on `paperCream` — 8.6:1 (WCAG AAA)
-- `inkMuted` (`#7a6244`) on `paperCream` — 4.8:1 (WCAG AA for body text, AAA for large text)
+- `inkPrimary` (`#2a1a0a`) on `paperCream` (`#e8ddc7`) — ~10.1:1 (WCAG AAA)
+- `inkMid` (`#4a3520`) on `paperCream` — ~7.4:1 (WCAG AAA)
+- `inkMuted` (`#6b5538`) on `paperCream` — ~5.1:1 (WCAG AA for body text at all sizes, AAA for large text). `inkMuted` was darkened from `#7a6244` to clear AA at 14px address/link sizes on the new paper — the old muted ink would have dropped to ~4.2:1 and failed AA for small text
 - `inkFaint` (`rgba(42,26,10,0.28)`) reserved for hairline rules and dotted underline strokes — never for reading copy
 - All tappable underlines use `inkFaint` for the stroke color and are paired with a readable ink color for the text itself (address in `inkMuted`, not `inkFaint`)
 
@@ -411,4 +423,4 @@ Material Design 3 allows 11px for decorative metadata; we deliberately push one 
 ---
 > This document is the canonical source of truth for the Treehouse design system.
 > It is maintained by the Design agent and reviewed by David at each design-adjacent session.
-> Last updated: 2026-04-18 (session 16 — v1.1 legibility + restraint pass based on on-device feedback from first v1.0 Find Detail build; size bump, Title Case commitment, post-it relocation + anchor sizing, image corner radius, pill-as-linking-primitive, shelf strip alignment fix, accessibility font-size floor committed)
+> Last updated: 2026-04-18 (session 16 — v1.1 legibility + restraint pass based on on-device feedback from first v1.0 Find Detail build; size bump, Title Case commitment, post-it relocation + anchor sizing + triple-dial contrast, paper color calibration + `inkMuted` darkening for WCAG AA, image corner radius, shelf-link pill replaces standalone text link, shelf strip alignment fix, accessibility font-size floor committed)
