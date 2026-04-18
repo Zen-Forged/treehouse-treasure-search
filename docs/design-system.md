@@ -1,5 +1,5 @@
 # Treehouse — Design System
-> Version: 1.1 | Last updated: 2026-04-18 session 16 | Owned by: Design agent
+> Version: 1.1e | Last updated: 2026-04-18 session 17 | Owned by: Design agent
 > This document is the canonical source of truth for the Treehouse visual and interaction system.
 > Any multi-screen UI work must scope against this document before code is written.
 
@@ -14,6 +14,8 @@ This document holds the Treehouse design language in one place so every screen s
 ## Status
 
 **v1.1 — legibility + restraint pass.** v1.0 direction held up on first real-device test. Refinements in this version: (a) typography bumped 1–2px across small type to serve the 50+ demographic committed in the audience note — IM Fell retained everywhere, no face changes; (b) eyebrow labels retire uppercase+letter-spacing and move to Title Case / sentence case — the tracked-uppercase treatment read as SaaS dashboard chrome, not journal voice; (c) post-it relocated from top-left to bottom-right, sized up to anchor the note, warmed brighter, rotated `+3deg`, and carries a small push pin at top-center as a restrained second detail; (d) paper background tuned warmer/browner (`#f1ead8` → `#e8ddc7`) to shed the yellow cast — `inkMuted` darkened to `#6b5538` to maintain WCAG AA on the new surface; (e) photographs and shelf thumbnails gain a subtle 6px corner radius **and a 1px `inkHairline` border** to separate warm-toned images from the paper; (f) X glyph in the cartographic block anchors to the vendor-name baseline; (g) **status pill retired** — "On Display" is redundant on a browse page where every visible find is available, and the sold state is already carried by the photograph's grayscale treatment; (h) vendor row becomes `[name] → Explore [Booth NNN →]` with "Explore" matching the mall address voice (system-ui 400 dotted-underline) and the booth pill as the shelf-link tap target; (i) BottomNav chrome patched to the new paper tone with a stronger top hairline — full chrome rework still scoped for Booth v1.1. Booth page (shipped session 14) still needs a v1.1 second pass. Feed, Find Map, and remaining screens scope against this doc before code.
+
+**v1.1e — on-device polish pass (session 17).** Narrow, surgical refinements from a live iPhone pass against v1.1d. No new primitives; several existing primitives adjusted: (a) **app-wide background aligned to `paperCream`** (`#e8ddc7`) — `app/layout.tsx` `<body>` inline style and `app/globals.css` `@layer base body` rule both updated from the legacy `#f0ede6`; the old warm parchment was still bleeding through on routes that hadn't yet inlined the v1.1 palette; (b) **masthead wordmark set as a single Title Case style — italic on "Finds" retired, size 16 → 18px, letter-spacing tightened to `-0.005em`** — IM Fell English ships only at 400 weight (no 700), so "heavier presence" is achieved through size + un-italicized tracking rather than a bolder face; (c) **save + share relocated off the masthead onto the photograph's top-right corner as frosted `paperCream` translucent bubbles with `backdrop-filter: blur(8px)`** — consolidates interactive chrome near the image itself, matches the convention most users recognize from other photo-first interfaces; (d) **icon bubble default size 34 → 38px**, back-arrow and on-image icons 17–18px for consistent weight; (e) **vendor row label updated to "Explore booth →"** (trailing arrow moves into the label) with the **shelf-link pill slimmed to a pure numeric badge** — "Booth" word and arrow both removed from inside the pill; the label now carries the verb + direction, the pill carries the number; pill numeral bumped 13 → 16px IM Fell (non-italic), horizontal padding tightened to `2px 9px`; (f) **X glyph vertical alignment recalibrated** — `paddingTop: 5 → 3` to sit on vendor-name ascender rather than riding low. These changes are all internal polish; no doc-level primitives added or retired.
 
 ---
 
@@ -104,18 +106,21 @@ The v1.1 status pill ("On Display" / "Found a Home" in the bottom-right of the p
 
 The pill *treatment* survives as a primitive, but only in one role (the shelf-link pill below). The word "pill" in this doc now refers to that single role.
 
-### The shelf-link pill (v1.1d — sole pill role)
+### The shelf-link pill (v1.1e — pure numeric badge)
 
-A rounded pill used on the vendor line of the cartographic block. Tappable — navigates to `/shelf/[slug]`. Reads "Booth 123456 →" with a trailing arrow inside the pill as the tappable affordance.
+A rounded pill used on the vendor line of the cartographic block. Paired inline with an "Explore booth →" label (system-ui 400 dotted-underline); the **label carries the verb and the tap-affordance arrow**, while the **pill carries only the number**. The label and pill are wrapped in a single `Link` so the whole row is the tap target.
 
 - `1.5px solid rgba(42,26,10,0.72)` border
 - `border-radius: 999px`
 - `background: rgba(247,239,217,0.88)` with `backdrop-filter: blur(4px)`
-- Label in IM Fell English italic 13px Title Case at near-primary ink (`#1c1208`)
-- Trailing `→` inside the label signals tap affordance
+- Contents: booth number only — no "Booth" word, no arrow
+- Numeral in IM Fell English 16px (non-italic) at near-primary ink (`#1c1208`)
+- Horizontal padding `2px 9px` — tight enough to read as a number-token rather than a stub of a button
 - No rotation
 
 The pill treatment is reserved for this single role only. It does not generalize into a button, tag, filter, or status primitive.
+
+**What retired from this primitive in v1.1e:** the "Booth" prefix word inside the pill (moved into the label), the trailing arrow inside the pill (moved into the label), the italic style on the numeral (retired — non-italic reads more like a number than a word), and the earlier 13px size (bumped to 16px for legibility at the new tighter padding).
 
 ### Design discipline
 
@@ -127,7 +132,9 @@ Two material objects on any single photograph is the maximum. The post-it and pi
 
 ### Paper as surface
 
-The page background is warm parchment (`#f1ead8`). There are **no cards, borders, or rounded halos around content blocks.** The paper *is* the container. Section divisions happen through whitespace, hairline rules, and ornamental marks — never through card chrome.
+The page background is warm parchment (`#e8ddc7` — `paperCream`). There are **no cards, borders, or rounded halos around content blocks.** The paper *is* the container. Section divisions happen through whitespace, hairline rules, and ornamental marks — never through card chrome.
+
+The background is committed **globally** — `app/layout.tsx` `<body>` and `app/globals.css` `@layer base body` both set `#e8ddc7` (updated v1.1e from the legacy `#f0ede6`). Any page that sets its own background must match this value or inherit. Routes that still show a lighter parchment are running pre-v1.1 palette and need an update.
 
 Optional paper-grain texture via radial gradients at low opacity. Subtle. The grain should read as "this is paper" on second glance, not as "look at the paper texture" on first.
 
@@ -156,7 +163,7 @@ Three faces, each with an explicit role. The v0.2 instinct to do 90% of typograp
 
 | Use | Face | Role |
 |---|---|---|
-| Page masthead ("Treehouse *Finds*") | **IM Fell English** 15px regular, italic on "Finds" | The global anchor — the journal announcing itself. |
+| Page masthead ("Treehouse Finds") | **IM Fell English** 18px, Title Case single style, `-0.005em` tracking | The global anchor — the journal announcing itself. Italic on "Finds" retired v1.1e; single style reads as more present without a bolder face (IM Fell ships 400 only). |
 | Titles, booth numbers, vendor names, mall names, eyebrow labels, status pill labels | **IM Fell English** | The editorial voice. Carries the bulk of the chrome. |
 | Quoted captions, "Visit the shelf →", "more from this shelf…" | **IM Fell English italic** | The reflective voice. |
 | Margin notes, journey notes (Feed, Find Map) | **Caveat** 500/600 | The human presence. Used **sparingly — 1 per screen maximum**. Represents the hand-written moment, not the decorative gesture. |
@@ -172,15 +179,15 @@ Three faces, each with an explicit role. The v0.2 instinct to do 90% of typograp
 | Section head (mall name, vendor name) | 18px | IM Fell English 400, line-height 1.3 | v1.0 was 16–17px |
 | Address / precise data | 14px | system-ui 400, line-height 1.55, muted ink, dotted underline when tappable | v1.0 was 13px. system-ui is the precision voice — its familiar shapes make small sizes readable |
 | "Visit the shelf →" (standalone text link) | — | **Retired v1.1** | The shelf-link pill on the vendor line now carries this role |
-| Shelf-link pill label ("Booth NNN →") | 13px | IM Fell English italic, Title Case, near-primary ink, trailing arrow `→` | New v1.1 — matches the retired status pill treatment; arrow signals tappable affordance; is the primary navigation out of a find |
-| "Explore" label (v1.1d) | 14px | system-ui 400, muted ink, dotted underline (matches mall address voice) | New v1.1d — inline with the shelf-link pill. Names the verb so the pill reads as tappable at a glance |
+| Shelf-link pill numeral (on vendor line) | **16px** | IM Fell English 400 (non-italic), near-primary ink, no leading word, no trailing arrow | Updated v1.1e — was 13px italic with "Booth NNN →". The label carries the verb and arrow now; the pill is just the number. Non-italic reads as number-token rather than word. |
+| "Explore booth →" label (v1.1e) | 14px | system-ui 400, muted ink, dotted underline (matches mall address voice), trailing arrow inline | Updated v1.1e — was "Explore" alone with the arrow living inside the pill. Consolidating the verb + direction in the label makes the row read as tappable at a glance and leaves the pill free to read as a pure numeric token. |
 | "More from this shelf…" | **15px** | IM Fell English italic, Title Case, no letter-spacing, muted ink | Updated v1.1 — was 13px; bumped to section-announcement floor. Trailing ellipsis always |
 | Status pill label | — | **Retired v1.1d** | "On Display" was redundant on a browse page; sold state is carried by the photograph's grayscale treatment |
 | Booth pill label (on vendor line) | 13px | IM Fell English italic, Title Case, near-primary ink | Now called the *shelf-link pill*; only surviving pill role |
 | Post-it "Booth" eyebrow | **14px** | IM Fell English italic, Title Case, no letter-spacing, muted ink | Updated v1.1 — was 12px but still reading as undersized against the 36px numeral; 14px gives the eyebrow real label weight without competing with the numeral |
 | Post-it booth number | **36px** | IM Fell English 400, -0.01em tracking | Updated v1.1 — was 28px. The numeral is the visual anchor of the note and fills the space with authority |
 | Shelf thumbnail label | 13px | IM Fell English italic, mid ink | v1.0 was 11px |
-| Masthead | 16px | IM Fell English 400 with italic "Finds" | v1.0 was 15px — matches address size, still clearly secondary to title |
+| Masthead | **18px** | IM Fell English 400 Title Case single style, `-0.005em` tracking | Updated v1.1e — was 16px with italic on "Finds"; italic retired, size bumped for presence without loading a heavier face |
 | Manage section eyebrow | **15px** | IM Fell English italic, Title Case, no letter-spacing, muted ink | Updated v1.1 — matches "More from this shelf…" at section-announcement floor |
 
 **Georgia retires from the ecosystem layer.** All serif type is IM Fell English. This is deliberate — IM Fell has a stronger editorial personality and consistently anchors the journal metaphor. Georgia was a general-purpose serif; IM Fell is *this product's* serif.
@@ -202,28 +209,34 @@ Three modes carried over from v0.2, with the masthead treatment now unifying mod
 | **B — Editorial** | Same three-column masthead layout. Context actions (search, filter, menu) replace the save + share cluster on the right depending on page. | Feed, Find Map, `/flagged`, `/admin` |
 | **C — Minimal** | Back arrow + page title only. No masthead. Used for onboarding and focused forms where the journal voice would crowd the task. | `/post`, `/post/preview`, `/vendor-request`, `/setup`, `/login` |
 
-The masthead wordmark is the **global anchor**. It appears centered in the header on every Mode A and Mode B page and uses IM Fell English at 15px with italic "Finds." This is the single most reused element in the app.
+The masthead wordmark is the **global anchor**. It appears centered in the header on every Mode A and Mode B page and uses IM Fell English at **18px in a single Title Case style** (no italic on "Finds"), with `-0.005em` tracking (updated v1.1e). This is the single most reused element in the app.
 
 ### Icon treatment
 
-Header and chrome icons sit inside small faded circles (`rgba(42,26,10,0.06)` background, 28–32px diameter) so they read as *marks* rather than *buttons*. Stroke-only icons at 14–15px sized within. No filled/outlined button backgrounds on chrome actions.
+Header and chrome icons sit inside small circles so they read as *marks* rather than *buttons*. Two variants committed:
+
+- **Paper variant** (default chrome, used on masthead back button and manage actions): `rgba(42,26,10,0.06)` background, **38px diameter** (updated v1.1e from 34), stroke-only icon at 17–18px. No border, no shadow. The faded circle reads as a soft mark on the paper.
+- **Frosted variant** (used on the photograph's top-right for save + share — v1.1e): `rgba(232,221,199,0.78)` translucent paperCream background with `backdrop-filter: blur(8px)`, `0.5px solid rgba(42,26,10,0.12)` hairline edge, **38px diameter**, stroke-only icon at 17px. The frosted treatment reads as a floating mark over any photograph — warm tones, cool tones, light, dark — without a heavy colored bubble.
+
+**Save + share location (v1.1e):** on Find Detail, save and share live in the top-right corner of the photograph (12px inset from the top-right), in the frosted variant, with 8px gap between them. The masthead right-slot on Find Detail is intentionally empty. Rationale: consolidating the interactive chrome near the image itself matches the convention most photo-first interfaces use; the slight cost to the photograph's calm is offset by the post-it's opposite-corner placement keeping the image balanced, and by removing two icons' worth of weight from the masthead so the wordmark can grow to 18px without crowding.
 
 ---
 
 ## Screen-specific direction
 
-### Find Detail — COMMITTED v1.1 (updated session 16 on-device pass)
+### Find Detail — COMMITTED v1.1e (updated session 17 on-device polish pass)
 
 **Order top-to-bottom:**
-1. **Masthead row** — back arrow (left), "Treehouse *Finds*" wordmark (centered, 16px), save + share icons (right)
-2. **Photograph** — 4:5 aspect, full-width within 22px horizontal padding, **6px corner radius, 1px `inkHairline` border** (new v1.1d — critical separation for warm-toned images against the paper)
-   - **Post-it** anchored **bottom-right**, overlapping the photo's bottom-right corner, rotated `+3deg` (updated v1.1d — was bottom-left in v1.1c; moved after status pill retirement opened the right corner)
-   - **Push pin** at top-center of the post-it (new v1.1d — second detail on the post-it, matte ink, no shine)
+1. **Masthead row** — back arrow (left, 38px bubble), **"Treehouse Finds" wordmark (centered, 18px, Title Case single style)**, right slot empty
+2. **Photograph** — 4:5 aspect, full-width within 22px horizontal padding, **6px corner radius, 1px `inkHairline` border** (new v1.1d)
+   - **Save + share** (v1.1e) in the top-right corner of the photograph as frosted paperCream bubbles, 12px inset, 8px gap
+   - **Post-it** anchored **bottom-right**, overlapping the photo's bottom-right corner, rotated `+3deg`
+   - **Push pin** at top-center of the post-it (matte ink, no shine)
 3. **Title + price** — IM Fell English 32px at primary ink, em-dash, price in `priceInk`
 4. **Quoted caption** — IM Fell English italic 19px, centered, in typographic quotes
 5. **Diamond divider** — hairline rules flanking a small `◆`
-6. **Cartographic block** — pin glyph anchored to mall name baseline + mall name + dotted-underline address line in system-ui; connecting tick; X glyph anchored to the vendor name baseline; vendor name on its own line; **"Explore" label (system-ui 400 dotted-underline, matches mall address voice) + shelf-link pill ("Booth 123456 →") inline on the line below vendor name** (updated v1.1d — "Explore" verb helps 50+ users recognize the pill as tappable; pill remains the tap target and is wrapped with the same link)
-7. **"More from this shelf…"** section — eyebrow in Title Case (no uppercase tracking), **horizontal scroll strip inset to match the 22px page margin** — first thumbnail aligns with the photograph's left edge above it, not the screen edge. Thumbnails get **6px corner radius** to match the hero photograph.
+6. **Cartographic block** — pin glyph anchored to mall name baseline + mall name + dotted-underline address line in system-ui; connecting tick; X glyph anchored to the vendor-name baseline (v1.1e `paddingTop: 3` recalibration); vendor name on its own line; **"Explore booth →" label (system-ui 400 dotted-underline, trailing arrow inline) + shelf-link pill (just the booth number, IM Fell 16px non-italic) inline on the line below vendor name** (updated v1.1e — the label now carries verb + direction; the pill is a pure numeric badge; entire row is a single `Link`)
+7. **"More from this shelf…"** section — eyebrow in Title Case (no uppercase tracking), horizontal scroll strip inset to 22px page margin, thumbnails at 6px corner radius
 8. Bottom padding + bottom nav
 
 **What retires on Find Detail:**
@@ -238,6 +251,9 @@ Header and chrome icons sit inside small faded circles (`rgba(42,26,10,0.06)` ba
 - **Full-bleed-left shelf strip** (v1.1 — strip now insets to the 22px page margin like the photograph)
 - **Standalone "Visit the shelf →" text link** (v1.1 — retired; the shelf-link pill below the vendor name does this job with less chrome)
 - **Status pill on photograph** (v1.1d — retired; "On Display" is redundant on a browse page where every visible find is available, and the sold state is carried by the photograph's grayscale treatment)
+- **Save + share in the masthead** (v1.1e — relocated to the photograph's top-right corner; the masthead's right slot is now intentionally empty)
+- **Italic "Finds" in the masthead wordmark** (v1.1e — retired; single Title Case style at 18px reads as more present without loading a bolder face)
+- **"Booth" word and trailing arrow inside the shelf-link pill** (v1.1e — both relocated; the label now reads "Explore booth →" and the pill is a pure numeric badge)
 
 **What's new in v1.1:**
 - Warmer/browner paper background and darker `inkMuted` to hold WCAG AA on the new surface
@@ -304,6 +320,9 @@ Patterns removed from the system in v1.0 that shipped in v0.2:
 | Pulsing green status dot | Straight status pill | Tech/IoT feel; pill with typographic label fits the voice |
 | Card pattern system (Plain/Thumbnail/Metric/CTA) | Paper as surface, whitespace + hairline ornaments | Card halos are dashboard grammar; paper is notebook grammar |
 | "Directions" as explicit link word | Dotted underline on the address alone | Platform convention; less chrome |
+| Italic on "Finds" in the masthead wordmark (v1.1e) | IM Fell English Title Case single style at 18px, `-0.005em` tracking | IM Fell ships 400 only — single-style + slight size bump reads as more present without a bolder face; italic on "Finds" was two styles competing for a line that only needs to announce one thing |
+| "Booth" word and trailing arrow inside the shelf-link pill (v1.1e) | "Explore booth →" label carries verb + direction; pill carries only the number | Separating verb from token lets the pill read as a clean numeric badge and lets the label carry the tap-affordance signal closer to the address voice it sits next to |
+| Save + share in the masthead right slot (v1.1e) | Save + share as frosted bubbles in the photograph's top-right corner | Consolidates interactive chrome near the image itself, freeing masthead weight for the wordmark and matching the convention most photo-first interfaces use |
 
 ---
 

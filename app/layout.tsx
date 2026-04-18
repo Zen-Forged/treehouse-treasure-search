@@ -60,7 +60,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Treehouse" />
       </head>
-      <body style={{ margin: 0, padding: 0, minHeight: "100vh", background: "#f0ede6" }}>
+      <body style={{ margin: 0, padding: 0, minHeight: "100vh", background: "#e8ddc7" }}>
         <FindSessionProvider>
           {children}
           <DevAuthPanel />
