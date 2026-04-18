@@ -1,32 +1,46 @@
 // app/my-shelf/page.tsx
-// My Booth — cinematic vendor profile page. Auth-gated.
-// Changes:
-//   - Page renamed "My Booth" throughout (nav already updated in BottomNav)
-//   - Share icon → Send (airplane) icon, positioned on hero banner image
-//   - Header when no vendor: matches other pages (logo + "Treehouse Finds" + back chevron)
-//   - Share button on banner, top-right, same frosted circle style as product pages
+// My Booth — vendor profile page, v1.1h. Auth-gated.
+//
+// Booth page v1.1h commitments (see docs/design-system.md §Booth page):
+//   - Banner is a pure photograph; vendor name relocates to IM Fell 32px title below
+//   - Booth post-it pinned to banner (bottom-right, +6deg, "Booth Location" eyebrow + 36px numeral)
+//   - Small pin + mall + dotted-underline address block below the title
+//   - Window View (default): 3-col 4:5 portrait grid, AddFindTile top-left
+//   - Shelf View: horizontal scroll, 52vw/210px max tiles, 22px left padding
+//   - Found homes tab retired; sold items don't render on this page
+//   - ExploreBanner retired; diamond-divider quiet closer instead
+//   - Georgia retired from this page
+//
+// All auth / self-heal / hero upload wiring preserved from session 10 Flow 2 close.
 
 "use client";
 
 export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState, Suspense } from "react";
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Send, Check, ImagePlus, Pencil, Loader } from "lucide-react";
+import { motion } from "framer-motion";
 import { PiLeaf } from "react-icons/pi";
 import { getVendorByUserId, getVendorById, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Post, type Vendor, type Mall } from "@/types/treehouse";
-import { colors } from "@/lib/tokens";
-import { vendorHueBg } from "@/lib/utils";
 import BottomNav from "@/components/BottomNav";
-import TabSwitcher from "@/components/TabSwitcher";
-import BoothLocationCTA from "@/components/BoothLocationCTA";
-import ExploreBanner from "@/components/ExploreBanner";
-import { ThreeColGrid, SkeletonGrid, AvailableTile, FoundTile, ShelfGridStyles } from "@/components/ShelfGrid";
+import {
+  BoothHero,
+  BoothTitleBlock,
+  MallBlock,
+  DiamondDivider,
+  ViewToggle,
+  WindowView,
+  ShelfView,
+  BoothCloser,
+  BoothPageStyles,
+  v1,
+  FONT_IM_FELL,
+  FONT_SYS,
+  type BoothView,
+} from "@/components/BoothPage";
 import type { User } from "@supabase/supabase-js";
 
 const ADMIN_DEFAULT_VENDOR_ID = "5619b4bf-3d05-4843-8ee1-e8b747fc2d81";
@@ -48,172 +62,121 @@ function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promis
   });
 }
 
-// ─── Add Find tile ────────────────────────────────────────────────────────────
+// ─── Masthead (Mode A, owner variant — no back arrow, no right slot) ──────────
 
-function AddFindTile({ index, vendorId }: { index: number; vendorId?: string }) {
-  const router = useRouter();
-  function handleAdd() {
-    router.push(vendorId ? `/post?vendor=${vendorId}` : "/post");
-  }
+function Masthead() {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.97 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: [0.25, 0.1, 0.25, 1] }}
-      style={{ width: "100%", aspectRatio: "1" }}
+    <div
+      style={{
+        padding: "max(14px, env(safe-area-inset-top, 14px)) 22px 12px",
+        display: "grid",
+        gridTemplateColumns: "38px 1fr 38px",
+        alignItems: "center",
+        gap: 12,
+      }}
     >
-      <button
-        onClick={handleAdd}
+      <div />
+      <div
         style={{
-          width: "100%", height: "100%", borderRadius: 10,
-          background: colors.emptyTile, border: "none", cursor: "pointer", padding: 0,
-          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6,
-          WebkitTapHighlightColor: "transparent",
+          fontFamily: FONT_IM_FELL,
+          fontSize: 18,
+          color: v1.inkPrimary,
+          letterSpacing: "-0.005em",
+          textAlign: "center",
         }}
       >
-        <ImagePlus size={18} strokeWidth={1.4} style={{ color: "rgba(28,26,20,0.38)" }} />
-        <span style={{ fontSize: 9, fontWeight: 600, color: "rgba(28,26,20,0.42)", textTransform: "uppercase", letterSpacing: "1.2px", lineHeight: 1 }}>
-          Add
-        </span>
-      </button>
-    </motion.div>
-  );
-}
-
-// ─── Vendor hero card ─────────────────────────────────────────────────────────
-// Item 13: Send (airplane) icon on banner image, top-right
-// Item 14: app bar matches other pages
-
-function VendorHero({
-  displayName, boothNumber, mallName, mallCity,
-  heroImageUrl, heroKey, onShare, hasCopied, hasSlug,
-  onHeroImageChange, heroUploading, heroError, vendorId,
-}: {
-  displayName: string; boothNumber: string | null; mallName?: string; mallCity?: string;
-  heroImageUrl?: string | null; heroKey: number;
-  onShare: () => void; hasCopied: boolean; hasSlug: boolean;
-  onHeroImageChange: (file: File) => void; heroUploading: boolean; heroError: string | null;
-  vendorId: string | undefined;
-}) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  return (
-    <div style={{ padding: "max(14px, env(safe-area-inset-top, 14px)) 10px 0" }}>
-      <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
-        onChange={e => { const f = e.target.files?.[0]; if (f) onHeroImageChange(f); e.target.value = ""; }} />
-
-      {/* App bar — item 14: matches other pages (logo + title + sign-out link style) */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, paddingLeft: 4, paddingRight: 4 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Image src="/logo.png" alt="Treehouse Finds" width={20} height={20} />
-          <span style={{ fontFamily: "Georgia, serif", fontSize: 18, fontWeight: 700, color: colors.textPrimary, letterSpacing: "-0.2px" }}>
-            My Booth
-          </span>
-        </div>
+        Treehouse Finds
       </div>
-
-      {/* Hero banner */}
-      <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", minHeight: 200 }}>
-        {heroImageUrl
-          ? <img key={heroKey} src={heroImageUrl} alt=""
-              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
-          : <div style={{ position: "absolute", inset: 0, background: vendorHueBg(displayName) }} />
-        }
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to right, rgba(18,34,20,0.82) 0%, rgba(18,34,20,0.40) 55%, transparent 100%)", zIndex: 1 }} />
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "50%", background: "linear-gradient(to top, rgba(18,34,20,0.72) 0%, transparent 100%)", zIndex: 1 }} />
-
-        {/* Edit banner button — top-left on banner */}
-        {vendorId && (
-          <button onClick={() => fileInputRef.current?.click()} disabled={heroUploading}
-            style={{ position: "absolute", top: 12, left: 12, zIndex: 10, width: 34, height: 34, borderRadius: "50%", background: "rgba(20,18,12,0.52)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", cursor: heroUploading ? "default" : "pointer", WebkitTapHighlightColor: "transparent" }}>
-            {heroUploading
-              ? <Loader size={13} style={{ color: "rgba(255,255,255,0.80)", animation: "spin 0.9s linear infinite" }} />
-              : <Pencil size={13} style={{ color: "rgba(255,255,255,0.88)" }} />
-            }
-          </button>
-        )}
-
-        {/* Item 13: Send (airplane) share icon — top-right on banner, frosted circle */}
-        {hasSlug && (
-          <div style={{ position: "absolute", top: 12, right: 12, zIndex: 10 }}>
-            <AnimatePresence mode="wait">
-              {hasCopied ? (
-                <motion.div key="copied"
-                  initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.88 }}
-                  transition={{ duration: 0.14 }}
-                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 11px", borderRadius: 18, background: "rgba(30,77,43,0.85)", border: "1px solid rgba(255,255,255,0.18)" }}>
-                  <Check size={11} style={{ color: "#fff" }} />
-                  <span style={{ fontSize: 11, fontWeight: 600, color: "#fff" }}>Copied!</span>
-                </motion.div>
-              ) : (
-                <motion.button key="share" onClick={onShare}
-                  initial={{ opacity: 0, scale: 0.88 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.88 }}
-                  transition={{ duration: 0.14 }}
-                  style={{ width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.30)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.15)", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
-                  <Send size={14} style={{ color: "rgba(255,255,255,0.92)" }} />
-                </motion.button>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
-
-        <div style={{ position: "relative", zIndex: 2, padding: "100px 16px 18px" }}>
-          <p style={{ fontFamily: "Georgia, serif", fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.52)", letterSpacing: "2px", textTransform: "uppercase", margin: "0 0 5px" }}>
-            A curated shelf from
-          </p>
-          <h1 style={{ fontFamily: "Georgia, serif", fontSize: 30, fontWeight: 700, color: "#fff", lineHeight: 1.1, margin: "0 0 5px", textShadow: "0 2px 12px rgba(0,0,0,0.22)" }}>
-            {displayName}
-          </h1>
-          <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
-            {boothNumber && (
-              <div style={{ padding: "4px 11px", borderRadius: 18, background: colors.green, fontFamily: "Georgia, serif", fontSize: 10, fontWeight: 700, color: "#fff", letterSpacing: "1px", textTransform: "uppercase" }}>
-                Booth {boothNumber}
-              </div>
-            )}
-            {mallName && (
-              <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                <MapPin size={9} style={{ color: "rgba(255,255,255,0.52)", flexShrink: 0 }} />
-                <span style={{ fontFamily: "Georgia, serif", fontSize: 10, color: "rgba(255,255,255,0.62)" }}>
-                  {mallName}{mallCity ? ` · ${mallCity}` : ""}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {heroError && (
-        <div style={{ margin: "8px 10px 0", padding: "10px 14px", borderRadius: 10, background: colors.redBg, border: `1px solid ${colors.redBorder}`, fontSize: 12, color: colors.red, lineHeight: 1.5 }}>
-          ⚠️ Upload error: {heroError}
-        </div>
-      )}
+      <div />
     </div>
   );
 }
 
-// ─── No booth state ───────────────────────────────────────────────────────────
+// ─── No booth state (preserved from session 10) ───────────────────────────────
 
 function NoBooth() {
-  // Orphan cleanup (session 10): removed "Post a find" Link that routed to
-  // /post. This state only renders when a signed-in user has no linked
-  // vendor AND the /my-shelf self-heal failed — meaning they're either a
-  // shopper who signed in by accident or a vendor whose approval never
-  // completed. In both cases /post is a dead end (the post-flow guard sends
-  // signed-in users with no DB vendor back to a profile setup state).
-  // Copy revised to match the new no-button state.
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-      style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 32px 0", textAlign: "center" }}>
-      <div style={{ width: 54, height: 54, borderRadius: "50%", background: colors.surface, border: `1px solid ${colors.border}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 22 }}>
-        <PiLeaf size={22} style={{ color: colors.textMuted }} />
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "80px 32px 0",
+        textAlign: "center",
+      }}
+    >
+      <div
+        style={{
+          width: 54,
+          height: 54,
+          borderRadius: "50%",
+          background: "rgba(42,26,10,0.06)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 22,
+        }}
+      >
+        <PiLeaf size={22} style={{ color: v1.inkMuted }} />
       </div>
-      <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: colors.textPrimary, marginBottom: 10, lineHeight: 1.3 }}>
+      <div
+        style={{
+          fontFamily: FONT_IM_FELL,
+          fontSize: 24,
+          color: v1.inkPrimary,
+          marginBottom: 10,
+          lineHeight: 1.2,
+        }}
+      >
         No booth linked to this account
       </div>
-      <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: colors.textMuted, lineHeight: 1.75, maxWidth: 260, margin: "0 auto" }}>
-        If you’re a vendor awaiting approval, your booth will appear here once setup is complete. Questions? Reach out to the admin directly.
+      <p
+        style={{
+          fontFamily: FONT_IM_FELL,
+          fontStyle: "italic",
+          fontSize: 15,
+          color: v1.inkMuted,
+          lineHeight: 1.65,
+          maxWidth: 280,
+          margin: "0 auto",
+        }}
+      >
+        If you&rsquo;re a vendor awaiting approval, your booth will appear here once setup is complete. Questions? Reach out to the admin directly.
       </p>
     </motion.div>
+  );
+}
+
+// ─── Skeleton (while loading) ─────────────────────────────────────────────────
+
+function Skeleton() {
+  return (
+    <div style={{ padding: "0 10px" }}>
+      <div
+        className="booth-shimmer"
+        style={{ borderRadius: v1.bannerRadius, minHeight: 260, width: "100%" }}
+      />
+      <div style={{ padding: "36px 22px 6px" }}>
+        <div className="booth-shimmer" style={{ height: 14, width: 120, borderRadius: 4, marginBottom: 8 }} />
+        <div className="booth-shimmer" style={{ height: 34, width: 240, borderRadius: 6 }} />
+      </div>
+      <div style={{ padding: "16px 22px" }}>
+        <div className="booth-shimmer" style={{ height: 22, width: 200, borderRadius: 4, marginBottom: 6 }} />
+        <div className="booth-shimmer" style={{ height: 16, width: 240, borderRadius: 4 }} />
+      </div>
+      <style>{`
+        @keyframes boothshimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
+        .booth-shimmer {
+          background: linear-gradient(90deg, rgba(225,220,210,0.4) 25%, rgba(208,202,190,0.65) 50%, rgba(225,220,210,0.4) 75%);
+          background-size: 800px 100%;
+          animation: boothshimmer 1.6s infinite linear;
+        }
+      `}</style>
+    </div>
   );
 }
 
@@ -231,22 +194,21 @@ function MyBoothInner() {
   const [postsLoading,  setPostsLoading]  = useState(false);
   const [mall,          setMall]          = useState<Mall | null>(null);
   const [copied,        setCopied]        = useState(false);
-  const [tab,           setTab]           = useState<"available" | "found">("available");
+  const [view,          setView]          = useState<BoothView>("window");
   const [heroImageUrl,  setHeroImageUrl]  = useState<string | null>(null);
   const [heroKey,       setHeroKey]       = useState(0);
   const [heroUploading, setHeroUploading] = useState(false);
   const [heroError,     setHeroError]     = useState<string | null>(null);
 
-  const userRef       = useRef<User | null>(null);
   const heroLockedRef = useRef(false);
 
   useEffect(() => {
     getSession().then(s => {
       if (!s?.user) { router.replace("/login"); return; }
       setUser(s.user);
-      userRef.current = s.user;
       setAuthReady(true);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -264,13 +226,8 @@ function MyBoothInner() {
       const v = await getVendorByUserId(authedUser.id);
       if (v) { loadVendor(v, authedUser.id); return; }
 
-      // Self-heal (KI-003 — session 9): if this signed-in user has no linked
-      // vendor, try to link one by calling /api/setup/lookup-vendor. This is the
-      // same endpoint /setup uses during first-run onboarding. Running it here
-      // makes /my-shelf a valid landing point for the Flow 2/3 journey even if
-      // the user bypassed /setup (e.g. approval-email CTA lands them directly
-      // on /my-shelf via /login's redirect handling). Admin users skip this —
-      // they fall through to ADMIN_DEFAULT_VENDOR_ID instead.
+      // Self-heal (KI-003 — session 9): signed-in user with no linked vendor
+      // tries /api/setup/lookup-vendor before falling through to NoBooth.
       if (!adminUser) {
         try {
           const res  = await authFetch("/api/setup/lookup-vendor", {
@@ -295,6 +252,7 @@ function MyBoothInner() {
     }
 
     resolve();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authReady, user?.id]);
 
   function loadVendor(vendor: Vendor, userId: string) {
@@ -332,13 +290,10 @@ function MyBoothInner() {
 
   async function handleHeroImageChange(file: File) {
     if (!activeVendor?.id) return;
-    
-    // Size guard: reject files larger than 12MB
     if (file.size > 12_000_000) {
       setHeroError("Image too large. Please choose a photo smaller than 12MB.");
       return;
     }
-    
     setHeroUploading(true);
     setHeroError(null);
     heroLockedRef.current = true;
@@ -387,83 +342,104 @@ function MyBoothInner() {
   if (!authReady) return null;
 
   const available   = posts.filter(p => p.status === "available");
-  const found       = posts.filter(p => p.status === "sold");
   const displayName = activeVendor?.display_name ?? "";
   const boothNumber = activeVendor?.booth_number  ?? null;
-  const hasSlug     = !!activeVendor?.slug;
   const mallName    = mall?.name ?? (activeVendor?.mall as Mall | undefined)?.name ?? "America's Antique Mall";
   const mallCity    = mall?.city ?? (activeVendor?.mall as Mall | undefined)?.city ?? "Louisville, KY";
+  const address     = mall?.address ?? null;
   const loading     = !vendorReady || postsLoading;
 
   return (
-    <div style={{ minHeight: "100dvh", background: colors.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
+    <div
+      style={{
+        minHeight: "100dvh",
+        background: v1.paperCream,
+        maxWidth: 430,
+        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <Masthead />
 
-      {activeVendor ? (
-        <VendorHero
-          displayName={displayName} boothNumber={boothNumber}
-          mallName={mallName} mallCity={mallCity}
-          heroImageUrl={heroImageUrl} heroKey={heroKey}
-          onShare={handleShare} hasCopied={copied} hasSlug={hasSlug}
-          onHeroImageChange={handleHeroImageChange} heroUploading={heroUploading}
-          vendorId={activeVendor.id}
-          heroError={heroError}
-        />
-      ) : (
-        /* Item 14: fallback header matches other pages */
-        <header style={{ background: colors.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderBottom: `1px solid ${colors.border}`, padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 12px", display: "flex", alignItems: "center", gap: 10 }}>
-          <Image src="/logo.png" alt="Treehouse Finds" width={24} height={24} />
-          <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: colors.textPrimary, letterSpacing: "-0.3px" }}>My Booth</span>
-        </header>
-      )}
-
-      <div style={{ flex: 1, overflowY: "auto", paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }}>
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
+        }}
+      >
         {loading ? (
-          <SkeletonGrid />
+          <Skeleton />
         ) : !activeVendor ? (
           <NoBooth />
         ) : (
           <>
-            <TabSwitcher tab={tab} availableCount={available.length} foundCount={found.length} onChange={t => setTab(t)} />
+            <BoothHero
+              displayName={displayName}
+              boothNumber={boothNumber}
+              heroImageUrl={heroImageUrl}
+              heroKey={heroKey}
+              onShare={handleShare}
+              hasCopied={copied}
+              canEdit={true}
+              heroUploading={heroUploading}
+              onHeroImageChange={handleHeroImageChange}
+            />
 
-            {tab === "available" && (
-              <ThreeColGrid>
-                {available.map((post, i) => <AvailableTile key={post.id} post={post} index={i} />)}
-                <AddFindTile index={available.length} vendorId={activeVendor.id} />
-              </ThreeColGrid>
+            {heroError && (
+              <div
+                style={{
+                  margin: "8px 22px 0",
+                  padding: "10px 14px",
+                  borderRadius: 6,
+                  background: v1.redBg,
+                  border: `1px solid ${v1.redBorder}`,
+                  fontSize: 12,
+                  color: v1.red,
+                  lineHeight: 1.5,
+                  fontFamily: FONT_SYS,
+                }}
+              >
+                ⚠️ Upload error: {heroError}
+              </div>
             )}
 
-            {tab === "found" && (
-              found.length > 0 ? (
-                <ThreeColGrid>
-                  {found.map((post, i) => <FoundTile key={post.id} post={post} index={i} />)}
-                </ThreeColGrid>
+            <BoothTitleBlock displayName={displayName} />
+            <MallBlock mallName={mallName} mallCity={mallCity} address={address} />
+            <DiamondDivider topPad={22} bottomPad={12} horizontalPad={44} />
+            <ViewToggle view={view} onChange={setView} />
+
+            {view === "window" ? (
+              <WindowView posts={available} vendorId={activeVendor.id} showAddTile={true} />
+            ) : (
+              available.length > 0 ? (
+                <ShelfView posts={available} />
               ) : (
-                <div style={{ padding: "48px 32px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-                  <PiLeaf size={28} style={{ color: colors.textFaint }} />
+                <div
+                  style={{
+                    padding: "48px 28px",
+                    textAlign: "center",
+                    fontFamily: FONT_IM_FELL,
+                    fontStyle: "italic",
+                    fontSize: 15,
+                    color: v1.inkMuted,
+                    lineHeight: 1.65,
+                  }}
+                >
+                  The shelf is empty — switch to Window View to add your first find.
                 </div>
               )
             )}
 
-            <BoothLocationCTA
-              boothNumber={boothNumber}
-              displayName={displayName}
-              mallName={mallName}
-              mallCity={mallCity}
-              address={mall?.address ?? null}
-            />
-            <ExploreBanner />
-            <div style={{ height: 12 }} />
+            <BoothCloser />
           </>
         )}
       </div>
 
       <BottomNav active="my-shelf" />
 
-      <ShelfGridStyles />
-      <style>{`
-        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        .hidden { display: none; }
-      `}</style>
+      <BoothPageStyles />
     </div>
   );
 }
