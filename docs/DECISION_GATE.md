@@ -17,6 +17,20 @@ The goal is to protect three things simultaneously:
 
 ## The Vision (anchor for all decisions)
 
+### The tagline (committed session 15)
+
+**Embrace the Search. Treasure the Find. Share the Story.**
+
+This is the backbone of Kentucky Treehouse. When a proposed feature, copy change, or design decision is questioned, the tiebreaker is *which of these three does it serve, and does it serve it honestly?* If it serves none of them — or if it works against any one of them — it does not belong in the product.
+
+- **Embrace the Search** — discovery is part of the value, not friction to be removed. No filters pretending to save time. No algorithm picking for you. The app respects the hunt.
+- **Treasure the Find** — the object matters. Photograph it with weight, describe it with care, name the price honestly.
+- **Share the Story** — finds accumulate. They become a personal path, a journey, a treasure hunt. The system supports this by design, not by feature.
+
+**The operating voice:** Presence over pressure. Story over speed. Rooted in reality yet elevated for perspective. The app is a **threshold** to the physical world, not a replacement for it — every digital gesture points back at a real booth, a real mall, a real object.
+
+### The product
+
 Treehouse is a **calm, story-driven local discovery experience** for vintage, antique, and thrift finds in Kentucky and Southern Indiana.
 
 - Buyers browse before making the trip
@@ -47,12 +61,19 @@ Any feature, copy, or UI change is evaluated against these:
 | Sold items stay visible | "Found a home" — they tell a story |
 | Copy is warm and observational | Never salesy, never hype, never transactional |
 | Layout breathes | Density is the enemy. Whitespace is intentional. |
-| Georgia for humanity | Headings, captions, and titles use serif. UI uses system font. |
-| Warm parchment palette | `#f5f2eb` bg, `#1e4d2b` green — earthy, not digital |
+| **IM Fell English** for the editorial voice | Titles, captions, labels, status, eyebrows, booth numbers, mall names — all set in IM Fell English. Georgia is retired from the ecosystem layer (session 15). See `docs/design-system.md` v1.0. |
+| **Caveat** for rare handwritten moments only | One per screen maximum. Margin notes and journey notes (Feed, Find Map) — never decorative. |
+| **system-ui** for precise data | Addresses, timestamps, technical labels. The precision voice. Mono is retired. |
+| Warm parchment palette | `#f1ead8` paper bg, `#1e4d2b` green — earthy, not digital |
+| Paper as surface | No card chrome around content. No border halos. Paper *is* the container. Section divisions use whitespace, hairline rules, and the diamond (`◆`) ornament. |
+| Cartographic language | The mall is a pin on the map. The booth is an X on the spot. Connected by a thin vertical tick. This is the location grammar everywhere in the product. |
+| Material restraint | One skeuomorphic gesture per find (the booth post-it). Two material objects on a single photograph is the maximum. A third (paperclip, stamp, tape) is decoration. |
+| Captions always quoted | They're reflections, not specs. Always in typographic quotation marks (“ ”), centered, italic. About *how it feels*, never *what it's made of*. |
 | "Found a home" not "Sold" | Terminology is committed. See CLAUDE.md. |
+| No narrating the metaphor | The design does the work, the language stays out of its way. "Turn back to the booth" was rejected for this reason; "Visit the shelf →" is the right voice. |
 | Auth is for curators, not shoppers | Shoppers browse without an account. Sign-in is a curator action. Guest-user accounts contradict the vision. |
 
-**When to flag:** If a requested feature or copy change would make Treehouse feel more like eBay, Etsy, or Facebook Marketplace — stop and discuss before building.
+**When to flag:** If a requested feature or copy change would make Treehouse feel more like eBay, Etsy, or Facebook Marketplace — stop and discuss before building. The tagline is the tiebreaker.
 
 ---
 
@@ -139,6 +160,12 @@ Multi-screen UI work               Any UI change touching more than one screen, 
                                    doc first — or explicitly decide to diverge and document why.
                                    Mirrors the onboarding-journey rule pattern. Added session 11
                                    (2026-04-17) when Design agent was activated.
+Session close build check          A session is not closed until `npm run build` has run green
+                                   against the committed state of the repo. Docs cannot claim
+                                   files exist on disk that don't. Added session 14 after
+                                   `lib/imageUpload.ts` orphan was discovered — CLAUDE.md had
+                                   documented a file as shipped that was never committed.
+                                   Docs agent responsibility at `thc`.
 ```
 
 ---
@@ -164,6 +191,7 @@ These conditions require a conversation with David before any code is written or
 | New external service integration | Cost, privacy, and dependency implications |
 | DNS changes during nameserver migration window | Splitting DNS across two authoritative sources causes inconsistent resolution. Currently: Shopify is sole authority; Cloudflare is dormant. No migration in progress. |
 | Onboarding change not scoped against `docs/onboarding-journey.md` | Three flows are committed. Drift-by-patch is what drove the session-7 scope crisis. Added session 8. |
+| UI change not scoped against `docs/design-system.md` v1.0 | Journal vocabulary is committed. Drift-by-patch is what drove the session-14 → 15 redirection. Added session 15. |
 
 ### 🟡 SURFACE — Flag before proceeding, then get approval
 
@@ -198,7 +226,7 @@ These don't stop work but must be called out explicitly before the session conti
 
 ## Current Risk Register
 
-> Updated: 2026-04-17 (session 10 — `/setup` 401 race resolved; T4c orphans A/B/E resolved; `/api/debug-vendor-requests` retired; KI-004 still open pending scoping session)
+> Updated: 2026-04-17 (session 15 — design direction redirected; `docs/design-system.md` v1.0 committed; Booth page v0.2 components deprecated pending second pass)
 
 | Risk | Severity | Status | Owner |
 |---|---|---|---|
@@ -207,43 +235,39 @@ These don't stop work but must be called out explicitly before the session conti
 | Vendor approval + setup flows silently blocked by RLS | 🔴 High | ✅ Resolved 2026-04-16 — moved admin reads/writes of `vendor_requests` to `/api/admin/vendor-requests` and `/api/setup/lookup-vendor` using service role; browser anon client is read-only for ecosystem data | Dev agent |
 | `/api/admin/*` routes had no server-side auth check | 🔴 High | ✅ Resolved 2026-04-16 — added `requireAdmin()` (bearer token + email match) to `/api/admin/posts` and `/api/admin/vendor-requests`; UI was the only gate before, routes were directly reachable | Dev agent |
 | Magic link delivery broken for Yahoo/AOL (pre-beta blocker) | 🔴 High | ✅ Resolved 2026-04-17 — Resend SMTP via Shopify DNS + Resend→Supabase native integration. End-to-end Yahoo test passed. | Dev agent |
-| `emailRedirectTo` hardcoded in `lib/auth.ts` — loses `/setup` redirect across magic-link round trip | 🟡 Medium | ✅ Resolved 2026-04-17 session 5 — `sendMagicLink(email, redirectTo?)` now accepts optional path, `safeRedirect()` helper in `app/login/page.tsx` validates same-origin relative paths only. Verified end-to-end with fresh email → `/setup` → admin approval → `/my-shelf`. | Dev agent |
-| Magic link breaks PWA session continuity (Safari opens outside PWA context) | 🟡 Medium | ✅ Resolved 2026-04-17 session 6 — OTP 6-digit code entry is now the primary auth path with clipboard paste button. Entire flow stays in home-screen PWA context. Magic link remains as fallback. Verified end-to-end on iPhone PWA. | Dev agent |
-| "Sign In" button is unlabeled for audience — any shopper clicking it can authenticate and hit a dead-end `/my-shelf` | 🟡 Medium | Open — Sprint 5. Fix: Option B — rename to "Curator Sign In" + add `/welcome` landing for signed-in non-vendors with warm "still curator-only" copy + "Request a booth" CTA. | Dev agent |
-| Vercel URL (`treehouse-treasure-search.vercel.app`) is a tech-flavored URL for vendor-facing onboarding | 🟢 Low | ✅ Resolved 2026-04-17 session 6 — `app.kentuckytreehouse.com` live (CNAME in Shopify DNS → Vercel, HTTP/2, cert issued). | Dev agent |
-| `/admin` approval UX has dead copy-paste email template flow (obsolete since Resend SMTP) | 🟢 Low | ✅ Resolved 2026-04-17 session 7 — T3 shipped: email template flow removed, structured toast replaces inline banner, Approve button sized for 44px iOS thumb-reach. | Dev agent |
-| Onboarding journey scope is ambiguous across sessions — Dev agent has been building against shifting assumptions | 🔴 High | ✅ Resolved 2026-04-17 session 8 — Product Agent ran full scope-out. `docs/onboarding-journey.md` created as canonical spec with three committed flows (Pre-Seeded, Demo, Vendor-Initiated). T4 re-scoped into T4a/b/c/d. New Tech Rule added requiring all onboarding work to scope against the doc. | Product + Dev agents |
-| Vendor approval does not trigger any email to the vendor — vendor has no organic way to know they've been approved | 🟡 Medium | ✅ Resolved 2026-04-17 session 8 — T4a shipped: `lib/email.ts` wraps Resend REST API, `sendRequestReceived` wired into `/api/vendor-request`, `sendApprovalInstructions` wired into `/api/admin/vendor-requests` approve. Both emails verified arriving in production. | Dev agent |
-| `/setup` bootstrap requires vendor to arrive via `/login?redirect=/setup` — no organic path exists | 🟡 Medium | ✅ Resolved 2026-04-17 session 8 — T4a approval email now carries the `/login?redirect=/setup` URL directly, so the vendor has an organic path. | Dev agent |
-| `/my-shelf` does not self-heal on stale or empty localStorage — DB state and client state can diverge silently | 🟡 Medium | ⚠️ Re-diagnosed 2026-04-17 session 8 — original framing was wrong. `/my-shelf` reads from DB via `getVendorByUserId` and `/post` also already does this. The real bug manifests differently and is tracked as KI-003 below. | Dev agent |
-| **"Posting as Zen · booth 300" persists post-T4a — vendor completes full approval flow but still posts under stale identity (KI-003)** | 🔴 **High** | ✅ Resolved 2026-04-17 session 9 — three-part fix: (1) `/login` mount useEffect + `onAuthChange` now read `redirect ?? next` so approval-email CTA (`?redirect=/setup`) is honored alongside the magic-link round-trip (`?next=/setup`); (2) `/post` no longer falls through to localStorage when signed-in + no DB vendor (kills the symptom class); (3) `/my-shelf` self-heals by calling `/api/setup/lookup-vendor` when signed-in + no linked vendor. Flow 2 onboarding end-to-end verified working on device. | Dev agent |
-| CLAUDE.md "Known vendors" section was stale — claimed vendors were linked to auth that were not | 🟢 Low | ✅ Resolved 2026-04-17 session 7 — section rewritten to reflect post-reset truth. Docs agent verifies schema-vs-docs drift at each session close going forward. | Docs agent |
-| `/vendor-request` success screen is generic — loses the "in-person magic moment" when admin is standing there approving in real time | 🟢 Low | ⚠️ Obsoleted by T4a — vendor now gets an email on both submit and approve. Real-time poll no longer needed. Copy still needs a light update (T4c) to reinforce that receipt email was sent. | Dev agent |
-| PWA install experience is improvised (user has to find "Add to Home Screen" manually) | 🟢 Low | Open — Sprint 5. | Dev agent |
+| `emailRedirectTo` hardcoded in `lib/auth.ts` — loses `/setup` redirect across magic-link round trip | 🟡 Medium | ✅ Resolved 2026-04-17 session 5 | Dev agent |
+| Magic link breaks PWA session continuity (Safari opens outside PWA context) | 🟡 Medium | ✅ Resolved 2026-04-17 session 6 — OTP 6-digit code entry is now the primary auth path. | Dev agent |
+| "Sign In" button is unlabeled for audience | 🟡 Medium | Open — Sprint 5. Fix: rename to "Curator Sign In" + add `/welcome` landing for signed-in non-vendors. | Dev agent |
+| Vercel URL is a tech-flavored URL for vendor-facing onboarding | 🟢 Low | ✅ Resolved 2026-04-17 session 6 — `app.kentuckytreehouse.com` live. | Dev agent |
+| `/admin` approval UX has dead copy-paste email template flow | 🟢 Low | ✅ Resolved 2026-04-17 session 7 | Dev agent |
+| Onboarding journey scope is ambiguous across sessions | 🔴 High | ✅ Resolved 2026-04-17 session 8 — `docs/onboarding-journey.md` committed. | Product + Dev agents |
+| Vendor approval does not trigger any email to the vendor | 🟡 Medium | ✅ Resolved 2026-04-17 session 8 — T4a shipped. | Dev agent |
+| `/setup` bootstrap requires vendor to arrive via `/login?redirect=/setup` | 🟡 Medium | ✅ Resolved 2026-04-17 session 8 — T4a approval email carries URL directly. | Dev agent |
+| **KI-003** — "Posting as Zen · booth 300" stale identity post-T4a | 🔴 **High** | ✅ Resolved 2026-04-17 session 9 — three-part fix. Flow 2 verified on device. | Dev agent |
+| CLAUDE.md "Known vendors" stale | 🟢 Low | ✅ Resolved 2026-04-17 session 7 | Docs agent |
+| PWA install experience improvised | 🟢 Low | Open — Sprint 5 | Dev agent |
 | No error monitoring (Sentry / structured logs) | 🟡 Medium | Open — Sprint 3/4 carryover | Dev agent |
 | Bookmarks localStorage-only (ITP wipe risk) | 🟡 Medium | Open — Sprint 5 | Dev agent |
 | No automated testing | 🟡 Medium | Open — Sprint 6+ | Dev + Product agents |
-| Admin PIN not QA'd in production | 🟡 Medium | ✅ Resolved 2026-04-17 session 9 — KI-001 shipped, PIN flow lands on /admin. | Dev agent |
+| Admin PIN not QA'd in production | 🟡 Medium | ✅ Resolved session 9 — KI-001 shipped | Dev agent |
 | Public Storage bucket (`post-images`) | 🟡 Medium | Intentional — monitor | Dev agent |
 | No terms of service / privacy policy | 🟡 Medium | Open — before public launch beyond in-person beta | David |
-| Deprecated lib functions still in `lib/posts.ts` | 🟢 Low | Open — `getVendorByEmail`, `linkVendorToUser`, `getVendorRequests`, `createVendorFromRequest`, `markVendorRequestApproved` marked `@deprecated` 2026-04-16; remove once confirmed no other callers import them | Dev agent |
-| Magic link emails landing in Yahoo junk folder on first send | 🟡 Medium | Accepted — expected for any new sending domain. Resolution: passive reputation seasoning. | Dev agent |
-| DNS archaeology assumption from session 3 was wrong (Google Cloud DNS) | 🟢 Low | ✅ Resolved 2026-04-17 — Shopify is actual DNS authority, Squarespace is registrar | Dev agent |
-| Orphaned Cloudflare DNS zone for `kentuckytreehouse.com` | 🟢 Low | Open — dormant; no cost | Dev agent |
-| Feed pagination missing (flat 80-post fetch) | 🟢 Low | Open — Sprint 6+ | Dev agent |
-| `/enhance-text` caption is mock (not real Claude call) | 🟢 Low | Open — future sprint | Dev agent |
-| `/api/debug-vendor-requests` left in production (unauthenticated; exposes vendor_requests data) | 🟡 Medium | ✅ Resolved 2026-04-17 session 10 — route deleted in T4c orphan-cleanup batch. Verified no other code referenced it before deletion. | Dev agent |
-| Supabase OTP email template variables not validated at deploy time (session 6 discovery) | 🟢 Low | ✅ Resolved 2026-04-17 session 6 | Dev agent |
-| Test vendor from session 5 end-to-end test needs cleanup-or-document decision | 🟢 Low | ✅ Resolved 2026-04-17 session 7 — full DB reset wiped all test data. | Dev agent |
-| Post-reset stale vendor row `David Butler / booth 123` (unlinked) from session 7 QA | 🟢 Low | ⚠️ Superseded — session 8 QA created fresh rows. Current state in Known Vendors section of CLAUDE.md. Link state unverified pending KI-003 diagnosis. | Dev agent |
-| **KI-001** — Admin PIN sign-in redirects to `/my-shelf` instead of `/admin` | 🟡 Medium | ✅ Resolved 2026-04-17 session 9 — `handlePin()` now `router.replace("/admin")`. | Dev agent |
-| **KI-002** — Toast centering breaks on `/admin` (recurring Framer Motion transform-overwrite issue) | 🟡 Medium | ✅ Resolved 2026-04-17 session 9 — wrapper-div pattern applied (outer div does centering, inner motion.div animates only opacity+y). | Dev agent |
-| **KI-003** — "Posting as Zen · booth 300" persists post-T4a — pre-beta blocker | 🔴 High | ✅ Resolved 2026-04-17 session 9 — see detailed row above. Flow 2 onboarding end-to-end verified working. | Dev agent |
-| **KI-004** — approve-endpoint 23505 silent-reuse of existing vendor rows on `(mall_id, booth_number)` collision | 🟡 Medium | Open — new session 9. Approve endpoint silently reuses stale unlinked vendor rows on booth collision, producing ambiguous state where `lookup-vendor` can't find the vendor row matching the new request's name. Deferred pending a dedicated scoping session for the pre-seeding → claim-booth flow (Flow 1). Not urgent while test data is non-colliding. Full detail in docs/known-issues.md. | Dev agent + Product agent |
-| **`/setup` 401 race** — transient "Setup Incomplete" flash caused by Supabase server-side token validation lag (~500ms) after OTP verify | 🟡 Medium | ✅ Resolved 2026-04-17 session 10 — `setupVendorAccount()` retries once with 800ms backoff on 401 response. Absorbs the replication window; if retry also 401s, falls through to existing error UI unchanged. 14 lines of new code, no new imports. | Dev agent |
-| Email #1/#2 send via Resend direct — no retry/DLQ | 🟡 Medium | Open — new session 8. Best-effort delivery acceptable for beta. Revisit at scale (upgrade to queue-based send with retry). | Dev agent |
-| `/shelves` page's admin `AddBoothSheet` will be orphaned after T4b | 🟢 Low | Open — new session 8. Remove as part of T4b when canonical Add-Booth surface ships inside `/admin`. | Dev agent |
-| `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` obsolete since T4a automated approval emails | 🟢 Low | Open — new session 8. Retire in a doc cleanup pass. | Docs agent |
+| Deprecated lib functions still in `lib/posts.ts` | 🟢 Low | Open — remove once confirmed no callers | Dev agent |
+| Magic link emails in Yahoo junk on first send | 🟡 Medium | Accepted — passive reputation seasoning | Dev agent |
+| Orphaned Cloudflare DNS zone | 🟢 Low | Open — dormant, no cost | Dev agent |
+| Feed pagination missing | 🟢 Low | Open — Sprint 6+ | Dev agent |
+| `/enhance-text` caption is mock | 🟢 Low | Open — future sprint | Dev agent |
+| `/api/debug-vendor-requests` left in production | 🟡 Medium | ✅ Resolved session 10 — deleted in T4c orphan cleanup | Dev agent |
+| **KI-001** — Admin PIN sign-in redirect | 🟡 Medium | ✅ Resolved session 9 | Dev agent |
+| **KI-002** — Toast centering breaks on `/admin` | 🟡 Medium | ✅ Resolved session 9 | Dev agent |
+| **KI-004** — approve-endpoint 23505 silent-reuse on booth collision | 🟡 Medium | ✅ Resolved session 13 — constraint-aware approval with slug auto-suffix | Dev agent |
+| `/setup` 401 race | 🟡 Medium | ✅ Resolved session 10 — retry+backoff. | Dev agent |
+| Email send has no retry/DLQ | 🟡 Medium | Open — best-effort acceptable for beta | Dev agent |
+| `/shelves` `AddBoothSheet` will be orphaned after T4b | 🟢 Low | Open — remove in T4b | Dev agent |
+| `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` obsolete | 🟢 Low | Open — doc cleanup | Docs agent |
+| **Design direction drifted toward generic across sessions 12–14** | 🟡 **Medium** | ✅ Resolved session 15 — `docs/design-system.md` rewritten v0.2 → v1.0 with journal vocabulary committed (cartographic pin+X, IM Fell English, post-it material gesture, paper-as-surface, tagline anchor). Booth page (shipped session 14) flagged for v1.0 second pass; its `LocationStatement` and `BoothLocationCTA` components deprecated in the doc. | Design agent |
+| **Booth page `LocationStatement` / `BoothLocationCTA` components deprecated** | 🟢 Low | Open — code still in repo and functional on `/my-shelf` and `/shelf/[slug]`, but v1.0 spec retires them. Dedicated Booth v1.0 Design sprint will replace them with the cartographic pin+X block. Not blocking; existing Booth page is functional. | Design + Dev agents |
+| **lib/tokens.ts token additions for v1.0** (post-it, ink scale, price ink, paperCream rename) | 🟢 Low | Open — bundled with Booth v1.0 sprint. Find Detail code build (session 16) can inline these values temporarily and they formalize in the Booth sprint. | Dev agent |
 
 ---
 
@@ -262,19 +286,23 @@ These don't stop work but must be called out explicitly before the session conti
 **Docs agent — draft system prompt:**
 > You are the Docs agent for the Kentucky Treehouse system. Your job is to maintain the memory of the system across sessions. At session close you: (1) update CLAUDE.md with what was done and what's next, (2) update the Risk Register in DECISION_GATE.md for any resolved or new risks, (3) append to decision-log.md if an architectural decision was made, (4) keep CONTEXT.md current if architecture changed, (5) append to the Sprint Log in the Notion Agent System Operating Manual. You are precise, brief, and always write in the past tense for completed work. You never invent status — only document what actually happened.
 
-**Design agent — draft system prompt:**
-> You are the Design agent for the Kentucky Treehouse system. Your job is to hold the entire product's visual and interaction language in your head at once, and to prevent cross-screen drift. You think like a senior product designer who cares about earthy materiality, cinematic restraint, and the feeling of calm intention. You believe the app should feel like a well-bound field notebook or a small-batch shop — not like a marketplace, not like a SaaS dashboard, and not like a generic AI app.
+**Design agent — draft system prompt (updated session 15):**
+> You are the Design agent for the Kentucky Treehouse system. Your job is to hold the entire product's visual and interaction language in your head at once, and to prevent cross-screen drift. You think like a senior product designer who cares about earthy materiality, editorial restraint, and the feeling of calm intention. You believe the app should feel like a field journal kept by someone who loves the hunt — not like a marketplace, not like a SaaS dashboard, not like a generic AI app, and not like a skeuomorphic costume drama.
+>
+> The backbone is the tagline: **Embrace the Search. Treasure the Find. Share the Story.** Every decision returns to it. Presence over pressure. Story over speed. Rooted in reality yet elevated for perspective.
 >
 > Your responsibilities:
-> 1. Own `docs/design-system.md` as the canonical source of truth for typography, spacing, color, components, motion, copy voice, and interaction patterns. Keep it current; update it before any UI code changes.
-> 2. Run a design standup at session open alongside Product — brief read of what's on the screen today, where the seams are, and what the next proposed move does to the system.
+> 1. Own `docs/design-system.md` v1.0 as the canonical source of truth for typography, spacing, color, components, motion, copy voice, and interaction patterns. Keep it current; update it before any UI code changes.
+> 2. Run a design standup at session open alongside Product.
 > 3. Review every UI-touching sprint brief before Dev writes code. Flag cross-screen drift. Call out when a per-screen fix would make the system worse. Propose system-level alternatives.
-> 4. Maintain the living design direction doc — when a new pattern is needed (bottom sheets, location statements, editorial grids), produce a short spec and update the system doc before Dev builds.
-> 5. Hold the brand feeling firm: warm parchment, Georgia for soul and system sans for voice, earthy palette, no marketplace density, no urgency signals. Push back when a proposal would dilute the brand even if it would ship faster.
+> 4. Maintain the living design direction doc — when a new pattern is needed, draft a short spec and update the system doc before Dev builds.
+> 5. Hold the brand feeling firm: warm parchment, IM Fell English as the editorial voice, system-ui for precise data, Caveat reserved for rare handwritten beats (one per screen max), cartographic pin-and-X for location everywhere, paper as surface (no card chrome), one skeuomorphic gesture per find (the booth post-it). Push back when a proposal would dilute the brand even if it would ship faster.
 >
 > You do not write production code — that's Dev's job. You do not make product decisions — that's Product's job. You do not decide what ships — that's David's job. Your output is clarity: a crisp visual/interaction system that Dev can execute against without drift, and a set of design decisions documented with rationale.
 >
 > You are honest, direct, and never flatter. You tell David when a proposed direction would weaken the system. You are patient with iteration — premium design is rarely first-pass — but you hold the line on the commitments already made in `docs/design-system.md` unless there's a deliberate reason to change them, in which case you update the doc.
+>
+> Specific trap to avoid: the "canonical primitive" impulse. Every time the system reaches for "we need a reusable component for this," it tends to produce the most generic version of that primitive. v0.2 did this (`<LocationStatement>`, `<BoothLocationCTA>`, four-button system) and the product started to feel like Etsy. v1.0 corrects this by leading with *language and material* — the cartographic pin+X, the post-it, the paper surface — and letting composition fall out of those commitments rather than out of a component library.
 
 ---
 
@@ -283,7 +311,7 @@ These don't stop work but must be called out explicitly before the session conti
 Every session standup includes a one-line Agent Roster block confirming who is active for the session. This prevents silently dropping an activated agent from the loop.
 
 **Standard standup preamble:**
-> **Active agents:** Dev · Product · Docs · Design — *(current as of 2026-04-17 session 11)*
+> **Active agents:** Dev · Product · Docs · Design — *(current as of 2026-04-17 session 15)*
 
 When an agent is activated or deactivated:
 1. Update the Agent Roster table above
@@ -326,8 +354,9 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 | Sprint 1 | MVP core — feed, post flow, auth, booths | ✅ Complete |
 | Sprint 2 | UI polish — animations, detail page, scroll restore | ✅ Complete |
 | Sprint 3 | Vendor bio, Find Map overhaul, error monitoring, rate limiting | 🔄 Carryovers folded into Sprint 4 |
-| Sprint 4 | Beta-readiness — custom domain, OTP auth, `/admin` polish, vendor onboarding | 🔄 In progress. Shipped: T1 (custom domain, s6), T2 (OTP code entry, s6), T3 (`/admin` polish, s7), onboarding scope-out + `docs/onboarding-journey.md` (s8), T4a (email infrastructure, s8), KI-001/002/003 (s9 — Flow 2 onboarding end-to-end verified working), `/setup` 401 race polish + T4c orphans A/B/E (s10). Remaining: T4c copy polish (orphans C + D), T4b (admin surface consolidation), T4d (pre-beta QA pass), KI-004 scoping session. |
+| Sprint 4 | Beta-readiness — custom domain, OTP auth, `/admin` polish, vendor onboarding | 🔄 In progress. Shipped: T1/T2/T3/T4a, KI-001/002/003/004, `/setup` 401 polish, T4c partial. Remaining: T4c copy polish (orphans C+D), T4b (admin surface consolidation), T4d (pre-beta QA pass). |
 | Sprint 5 | Guest-user UX + onboarding polish — "Curator Sign In" rename, `/welcome` landing, PWA install prompts, vendor onboarding Loom | 🔲 Planned |
+| **Design sprints (parallel to Sprint 4 tail)** | **v1.0 execution against `docs/design-system.md`** | 🔄 Session 15: direction lock. Session 16 candidate: Find Detail code build against v1.0 spec. Session 17 candidate: Booth page v1.0 second pass. Subsequent: Feed + Find Map. |
 | Sprint 6+ | "Claim this booth" flow, QR-code approval, Universal Links, native app eval, feed pagination, ToS/privacy, admin-cleanup tool | 🔲 Parked |
 
 ---
@@ -340,7 +369,7 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 
 **Every sprint:** Update the Risk Register when risks are resolved or discovered. Update the Sprint Context table at sprint boundaries.
 
-**David:** This is the document that prevents the system from optimizing for the wrong thing. If you ever feel like the work is drifting from the vision — this is where you come to re-anchor it.
+**David:** This is the document that prevents the system from optimizing for the wrong thing. If you ever feel like the work is drifting from the vision — this is where you come to re-anchor it. The tagline is the anchor.
 
 ---
 
@@ -353,11 +382,12 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 | `.claude/MASTER_PROMPT.md` | Operator rulebook — session structure, phase gating, approval boundaries |
 | `SPRINT_PLAN.md` | Sprint-level feature roadmap |
 | `docs/onboarding-journey.md` | **Canonical vendor onboarding spec — three flows, email matrix, re-scoped T4.** All onboarding-adjacent work scopes against this first. *(created session 8)* |
-| `docs/design-system.md` | **Canonical visual + interaction system — typography, spacing, color, components, motion, copy voice.** All multi-screen UI work scopes against this first. Owned by Design agent. *(scaffolded session 11)* |
-| `docs/known-issues.md` | Active bugs, gaps, deferred items *(created session 8 — three issues logged: KI-001, KI-002, KI-003)* |
+| `docs/design-system.md` | **Canonical visual + interaction system — v1.0.** Journal vocabulary, cartographic pin+X, IM Fell English typography, post-it material gesture, Find Detail spec locked. All multi-screen UI work scopes against this first. Owned by Design agent. *(rewritten session 15)* |
+| `docs/known-issues.md` | Active bugs, gaps, deferred items |
+| `docs/admin-runbook.md` | 9-recipe SQL triage guide for in-mall use *(created session 13)* |
 | `docs/decision-log.md` | Architectural decisions and their rationale *(create when first decision is logged)* |
 
 ---
 > This document is the operating constitution for the Treehouse system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-17 (session 11 — Design agent activated, design system scaffolded)
+> Last updated: 2026-04-17 (session 15 — tagline anchor committed; Brand Rules updated for v1.0 design direction; Design agent prompt refreshed)

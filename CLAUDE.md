@@ -50,229 +50,156 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-17 late-night (session 14 — Booth page v0.2 redesign shipped; `lib/imageUpload.ts` reconstructed)
+> Last updated: 2026-04-17 (session 15 — design direction relocked; `docs/design-system.md` v1.0 committed; Find Detail spec locked in mockup; no production code changed)
+
+**Status:** 🪴 **Session 15 was a design-direction session, not a feature session.** No production code changed. Two docs updated: `docs/design-system.md` rewritten v0.2 → v1.0 with full journal vocabulary committed; `docs/DECISION_GATE.md` updated with tagline anchor, refreshed Brand Rules, refreshed Design agent prompt, and updated Risk Register. Find Detail mockup landed after an extended iteration pass that redirected the entire design language.
+
+### What shipped (2 doc updates, 0 code changes)
+
+**`docs/design-system.md` — v0.2 → v1.0 full rewrite:**
+- **Tagline anchor committed:** *Embrace the Search. Treasure the Find. Share the Story.* Operating voice: presence over pressure, story over speed, rooted in reality yet elevated for perspective. Threshold to the physical world, not a replacement for it.
+- **Cartographic vocabulary committed:** the mall is a pin on the map, the booth is an X on the spot, connected by a thin vertical tick. Single reusable grammar for location across Find Detail, Booth page, Feed, Find Map.
+- **Material vocabulary committed:** booth post-it as the one skeuomorphic signature per find (cream paper, slight rotation, soft shadow, placed top-left on photograph). Status pill as straight clarity marker (pill outline, near-primary ink, no rotation). Max two material objects per photograph.
+- **Typography system rewritten:** IM Fell English is now the editorial voice (titles, captions, labels, booth numbers, mall names, status). Georgia retired from the ecosystem layer. Caveat reserved for rare handwritten beats — one per screen maximum. system-ui reserved for precise data (addresses, timestamps). Mono retired entirely.
+- **Paper as surface:** no card chrome, no border halos around content. Section divisions via whitespace, hairline rules, and the diamond (`◆`) ornament. The cross (`✚`) divider was retired for religious connotations.
+- **Find Detail spec locked:** masthead wordmark ("Treehouse *Finds*" centered), photograph with post-it top-left + status pill bottom-right, title + price (em-dash, softer ink on price), centered quoted caption, diamond divider, cartographic pin+X block with connecting tick, IM Fell English italic "Visit the shelf →" link with dotted underline, "more from this shelf…" thumbnails (no leading dash, trailing ellipsis).
+- **v0.2 pattern retirement log:** `<LocationStatement>` deprecated. `<BoothLocationCTA>` deprecated. Four-button system retired. Georgia retired from ecosystem. Mono retired. Pulsing green status dot retired. Card pattern system retired. The word "Directions" as explicit link copy retired.
+- **Copy commitments:** captions always in typographic quotation marks (“ ”), centered, italic — about *how it feels*, never *what it's made of*. Price named honestly after title in softer ink. No "might pair with" / "related items" language. No narrating the metaphor ("Turn back to the booth" was rejected for this reason; "Visit the shelf →" is the right voice).
+
+**`docs/DECISION_GATE.md` — targeted updates:**
+- Tagline inserted at the top of "The Vision" section as a committed brand anchor with operating voice
+- Brand Rules table updated: Georgia rule replaced with IM Fell English / Caveat / system-ui commitments, paper-as-surface rule added, cartographic language rule added, material restraint rule added, captions-always-quoted rule added, no-narrating-the-metaphor rule added
+- New STOP gate added: "UI change not scoped against `docs/design-system.md` v1.0" — mirrors the onboarding-journey drift-prevention rule
+- Risk Register: added "Design direction drifted toward generic across sessions 12–14" as a resolved risk with session-15 context; added Booth page component deprecation as a tracked low-severity item; added `lib/tokens.ts` token additions as a tracked low-severity item pending Booth v1.0 sprint
+- Design agent prompt rewritten to reflect v1.0 language — names the "canonical primitive trap" explicitly so the next Design agent doesn't fall back into v0.2 vocabulary
+- Sprint Context: Design sprints now tracked as a parallel track to Sprint 4 tail
+- Related Documents: updated to reflect design-system.md v1.0 status
+- Tech Rules: "session close build check" rule (added session 14) is now documented here
+
+### The design-direction redirection — narrative summary
+
+Session 15 opened as a Find Detail polish sprint against v0.2 but evolved into a fundamental redirection of the entire design language. The trigger was David's pushback on the first mockup: the cards, buttons, and canonical primitives committed in v0.2 were producing "generic app" aesthetics regardless of small corrections. The session worked through extended iteration (6+ mockup passes on Find Detail alone) to find the real direction — a restrained field-journal voice rooted in:
+
+1. **Material gestures, not UI components** — post-it note replacing a card-wrapped booth badge
+2. **Cartographic language, not data display** — pin + X glyphs binding mall and booth as a zoom relationship, replacing the v0.2 `<LocationStatement>` icon+mono+separator grammar
+3. **Editorial typography, not UI typography** — IM Fell English doing the work that v0.2 assigned 90% to system-ui
+4. **Paper as surface, not cards on surface** — section dividers become typographic ornaments, not border halos
+5. **Quoted captions as reflections** — captions are about *how it feels*, never specs
+6. **One handwritten beat per screen** — Caveat reserved for margin notes that represent genuine human presence, not decoration
+7. **Restraint is the discipline** — the journal metaphor fails when it becomes costume (paperclips, tape, brass fittings on every surface). It succeeds when a few load-bearing gestures carry the weight and everything else steps back.
+
+The tagline **Embrace the Search. Treasure the Find. Share the Story.** emerged mid-session as the tiebreaker for every decision going forward.
+
+### Implications for prior work
+
+**Booth page (shipped session 14) needs a v1.0 second pass.** The components built and shipped in session 14 (`components/LocationStatement.tsx`, `components/BoothLocationCTA.tsx`, the updated `ShelfGrid.tsx` terminology pass, the `TabSwitcher` relabeling) remain functional in production but do not align with v1.0 language. The cartographic pin+X block replaces `<LocationStatement>`. The post-it + paper-as-surface treatment replaces `<BoothLocationCTA>`. Georgia → IM Fell English throughout. Tracked as a dedicated Design sprint after Find Detail code ships.
+
+**No production breakage.** The deprecated components still render on `/my-shelf` and `/shelf/[slug]` exactly as they did at session-14 close. Users see no change. The deprecation is internal to the design system doc; code replacement is a separate sprint.
+
+### Context for the next session
+
+Two session-16 candidates, both independent of Sprint 4 tail:
+
+**Session 16 candidate A — Find Detail code build against v1.0 spec.** The mockup is locked. `docs/design-system.md` v1.0 has the full spec. This session writes the `/find/[id]/page.tsx` rewrite: masthead wordmark, post-it, status pill, centered quoted caption, diamond divider, cartographic pin+X block, "Visit the shelf →" link, "more from this shelf…" thumbnails. Requires loading IM Fell English + Caveat fonts (Google Fonts), possibly inlining new token values that formalize later in the Booth sprint. Estimated ~3 hours including QA.
+
+**Session 16 candidate B — Sprint 4 tail batch (T4c + T4b + T4d).** Copy polish, admin surface consolidation, pre-beta QA pass. ~5.5 hours of focused work. Boring-but-important; clears the pre-beta runway.
+
+**Recommended:** 16A first. Momentum is on design after session 15's redirection, and Find Detail is the surface that proves the v1.0 language in production. Sprint 4 tail can batch afterward.
+
+### Sprint 4 tail still queued
+
+- 🟡 T4c remainder (copy polish): `/api/setup/lookup-vendor` error copy + `/vendor-request` success screen copy. ~30 min.
+- 🟡 T4b admin surface consolidation: Add Booth tab in `/admin`, Add Vendor in-person flow, remove Admin PIN from `/login`, remove Booths from BottomNav, retire `AddBoothSheet` from `/shelves`. ~4 hours.
+- 🟡 T4d pre-beta QA pass walking all three onboarding flows. ~1 hour.
+- 🟢 Session 13 test data cleanup (5+ "David Butler" variants in DB). ~5 min SQL via `docs/admin-runbook.md` Recipe 4.
+
+### Files touched this session
+- `docs/design-system.md` — full rewrite v0.2 → v1.0
+- `docs/DECISION_GATE.md` — tagline anchor added, Brand Rules updated, Design agent prompt refreshed, Risk Register updated, Tech Rule for session-close build check documented, STOP gate added for design-system drift
+- `CLAUDE.md` (this file) — session 15 close
+
+---
+
+## ARCHIVE — What was done earlier (2026-04-17 late-night, session 14)
+> Booth page v0.2 redesign shipped; `lib/imageUpload.ts` reconstructed
 
 **Status:** 🌿 **Session 14 executed the Design agent's first Dev pass against `docs/design-system.md` v0.2.** Booth page redesign landed on both `/my-shelf` and `/shelf/[slug]`. Pre-existing build break on `@/lib/imageUpload` imports (orphaned from session 13's uncommitted image-upload migration) was diagnosed and fixed mid-session so everything ships together. Curator's Statement block was explicitly deferred pending vendor feedback — David's call, not a miss.
+
+**Session-15 note on session 14 work:** The components shipped this session (`LocationStatement`, `BoothLocationCTA`, `ShelfGrid` rewrite, `TabSwitcher` relabeling) are still live in production and functional. As of session 15 they are *deprecated per `docs/design-system.md` v1.0* but remain in the repo. The Booth v1.0 second pass will replace them. Users see no change in the meantime.
 
 ### What shipped (one commit, multiple files)
 
 **Session 14 design work:**
-1. **`components/LocationStatement.tsx`** (NEW) — canonical location-pattern primitive per v0.2 spec. Two variants (`compact` row-1-only, `full` row-1 + row-2 with address + Directions Link). Two tones (`light` default, `dark` for hero overlays — built in for session 15's Find Detail pass). MapPin 14px icon + mono booth number + system-ui mall + muted city on row 1. Graceful omission when boothNumber is null.
-2. **`components/BoothLocationCTA.tsx`** (NEW) — canonical CTA card variant wrapping `<LocationStatement variant="full">` + Secondary button "Explore the full mall" with 14×14 vendor-hue swatch. Routes to `mapsUrl(mallName, city)` until dedicated mall profile page ships (Sprint 6+); button label is future-safe.
-3. **`components/ShelfGrid.tsx`** (REWRITE) — three batched changes per v0.2: (a) grid gap 6 → `spacing.tileGap` (10) for more breathing room, (b) `AvailableTile`: pure image, no title overlay, (c) `FoundTile`: 0.5 opacity + full grayscale + italic Georgia "Found a home" caption bottom-left on subtle gradient (replaces the centered translucent badge).
-4. **`components/TabSwitcher.tsx`** (EDIT) — inactive label "Found a home" → "Found homes" (plural) per v0.2 terminology table.
-5. **`app/my-shelf/page.tsx`** (EDIT) — `BoothFinderCard` → `BoothLocationCTA`, address prop threaded from `mall?.address`, Found-homes empty-state copy removed (icon stays — copy was reading awkward; David's call).
+1. **`components/LocationStatement.tsx`** (NEW) — canonical location-pattern primitive per v0.2 spec. Deprecated in v1.0. 
+2. **`components/BoothLocationCTA.tsx`** (NEW) — canonical CTA card variant. Deprecated in v1.0.
+3. **`components/ShelfGrid.tsx`** (REWRITE) — three batched changes per v0.2: (a) grid gap 6 → `spacing.tileGap` (10), (b) `AvailableTile`: pure image, no title overlay, (c) `FoundTile`: 0.5 opacity + full grayscale + italic Georgia "Found a home" caption bottom-left on subtle gradient. Grid structure survives v1.0; Georgia caption will be swapped to IM Fell English in the Booth v1.0 pass.
+4. **`components/TabSwitcher.tsx`** (EDIT) — inactive label "Found a home" → "Found homes" (plural) per v0.2 terminology table. Survives v1.0.
+5. **`app/my-shelf/page.tsx`** (EDIT) — `BoothFinderCard` → `BoothLocationCTA`, address prop threaded from `mall?.address`, Found-homes empty-state copy removed.
 6. **`app/shelf/[slug]/page.tsx`** (EDIT) — same treatment as `/my-shelf` for the public state.
-7. **`components/BoothFinderCard.tsx`** (DELETED) — orphan after Task 6; tree kept pruned.
+7. **`components/BoothFinderCard.tsx`** (DELETED) — orphan after Task 6.
 
 **Session 13 carry-ins (discovered mid-session, shipped together):**
-8. **`lib/imageUpload.ts`** (NEW — reconstruction) — Session 13's CLAUDE.md documented this file as "single source of truth" but it was never actually committed. Three consumers (`app/post/page.tsx`, `app/post/edit/[id]/page.tsx`, `app/post/preview/page.tsx`) had been migrated to import from it, breaking the build. Reconstructed from the documented contract: `compressImage(dataUrl, maxWidth?, quality?)` + `uploadPostImageViaServer(base64DataUrl, vendorId)` (THROWS on failure — callers must try/catch and abort writes). Defensive error handling on both paths.
-9. **`app/post/page.tsx`, `app/post/edit/[id]/page.tsx`, `app/post/preview/page.tsx`, `lib/posts.ts`** (pre-session mods) — session-13 image-upload migration work that was on disk but not committed. Verified consistent with the documented pattern; committed as part of this session to make the build green.
+8. **`lib/imageUpload.ts`** (NEW — reconstruction) — Session 13's CLAUDE.md documented this file as "single source of truth" but it was never actually committed. Reconstructed from the documented contract.
+9. **`app/post/page.tsx`, `app/post/edit/[id]/page.tsx`, `app/post/preview/page.tsx`, `lib/posts.ts`** (pre-session mods) — session-13 image-upload migration work that was on disk but not committed.
 
-### Curator's Statement block — deferred deliberately
-Spec'd in `docs/design-system.md` v0.2 as Georgia italic pull-quote below the hero with owner edit affordance. David pulled it from session-14 scope before Sprint Brief finalization: *"I want a bit more control over how these are configured and identifying if users actually want them."* The `bio` column on `vendors` stays dormant data until vendor-facing feedback shapes the editor pattern. Revisit trigger: post-beta, once 3+ vendors have asked for a way to describe themselves OR once we've heard none have.
+### Task-4 ("titles on tiles") mockup-first protocol (session 14)
+Before removing titles from `AvailableTile`, Claude generated a disposable side-by-side mockup showing current vs. v0.2. David approved the no-titles direction with eyes on the comparison. Worth keeping as a pattern: when a design-system change has a visible perceptual cost, mockup the change before code. This protocol continued in session 15 where the mockup-first approach caught the fundamental direction drift before any Find Detail code was written.
 
-### Task-4 ("titles on tiles") mockup-first protocol
-Before removing titles from `AvailableTile`, Claude generated a disposable side-by-side mockup showing current vs. v0.2. David approved the no-titles direction with eyes on the comparison. Worth keeping as a pattern: when a design-system change has a visible perceptual cost, mockup the change before code. Adds ~5 minutes to the session and de-risks the biggest bet of the sprint.
-
-### `lib/imageUpload.ts` reconstruction — root cause + lesson
-**Root cause:** Session 13 closed without running `npm run build` before `thc`. CLAUDE.md was updated to describe the image-upload pattern as shipped, but the module itself was never created and the four consumer-file migrations were never committed. Session-close captured nothing because nothing was staged.
-
-**New session-close tech rule (added to DECISION_GATE):** *A session is not closed until `npm run build` has run green against the committed state of the repo.* Docs cannot claim files exist on disk that don't. This is the Docs agent's responsibility at `thc`.
-
-### Context for the next session
-
-Booth redesign is done. Next three Design sessions are queued and independent:
-- **Session 15 candidate — Find Detail polish:** hierarchy fix (28px Georgia 700 title, 17px italic caption, floating availability pill bottom-left of hero), retire split booth-pill/address card, adopt `<LocationStatement variant="full">` + Secondary "Explore {vendor}'s shelf →" with hue swatch. `<LocationStatement>` already built — this is a composition session, not a primitives session.
-- **Session 16 candidate — Feed header + `<MallSheet>`:** Mode B editorial header with logo + user-circle icon, bottom-sheet pattern for mall selector + sign-in affordance. Becomes canonical bottom-sheet for `/post`, `/vendor-request`, Find Map filter.
-- **Session 17 candidate — Find Map emotional redesign:** italic Georgia pull-quote opener, dotted green spine with `PiLeaf` markers, CTA card variant for stops, multi-waypoint Apple Maps URL "Open all N stops" button.
-
-Sprint 4 tail is still queued independent of Design:
-- **T4c copy polish (orphans C + D)** — `/api/setup/lookup-vendor` error copy + `/vendor-request` success screen copy. 🟢 S effort, ~30 min.
-- **T4b — admin surface consolidation.** 🟡 M effort, ~4 hours.
-- **T4d — pre-beta QA pass** walking all three flows end-to-end. 🟢 S effort, ~1 hour.
-
-### Test data hygiene (nice-to-have, not blocking)
-Session 13 live test left 5+ "David Butler" variant vendor_requests and vendor rows scattered in the DB. Still not blocking. Recipe 4 in `docs/admin-runbook.md` is the canonical approach.
-
-### Files touched this session
-- **NEW** `components/LocationStatement.tsx`
-- **NEW** `components/BoothLocationCTA.tsx`
-- **NEW** `lib/imageUpload.ts` (reconstruction of session-13 orphan)
-- **REWRITE** `components/ShelfGrid.tsx`
-- **EDIT** `components/TabSwitcher.tsx`
-- **EDIT** `app/my-shelf/page.tsx`
-- **EDIT** `app/shelf/[slug]/page.tsx`
-- **DELETE** `components/BoothFinderCard.tsx`
-- **COMMIT** pre-existing session-13 mods in `app/post/page.tsx`, `app/post/edit/[id]/page.tsx`, `app/post/preview/page.tsx`, `lib/posts.ts`
-- `CLAUDE.md` (this file) — session 14 close
+### `lib/imageUpload.ts` reconstruction — root cause + new tech rule
+Session 13 closed without running `npm run build` before `thc`. CLAUDE.md was updated to describe the image-upload pattern as shipped, but the module itself was never created. New session-close tech rule (added to DECISION_GATE session 14, formalized session 15): *A session is not closed until `npm run build` has run green against the committed state of the repo.*
 
 ---
 
 ## ARCHIVE — What was done earlier (2026-04-17 late-night, session 13)
 > KI-004 resolved, in-mall diagnostic tooling shipped, toast visual polish
 
-**Status:** ✅✅✅ **Session 13 resolved a pre-beta blocker surfaced during live test.** KI-004 closed. In-mall diagnostic UI shipped. Admin runbook created. All 5 QA tests passed on device. Two commits shipped.
+**Status:** ✅✅✅ **Session 13 resolved a pre-beta blocker surfaced during live test.** KI-004 closed. In-mall diagnostic UI shipped. Admin runbook created. All 5 QA tests passed on device.
 
-### What shipped (2 commits, 5 files)
-1. **`app/api/admin/diagnose-request/route.ts`** (NEW) — admin-gated diagnostic endpoint. Takes `requestId`, returns full collision picture: the request row, booth collisions, slug collisions, auth.users row (if any), a diagnosis code, and a human-readable suggested action. Uses `auth.admin.listUsers({ perPage: 1000 })` for email lookup — pragmatic now, won't scale past a few thousand users.
-2. **`app/api/admin/vendor-requests/route.ts`** (REWRITE) — constraint-aware approval with pre-flight booth check, auto-suffix slug collision resolution, and named error responses carrying `diagnosis` + `conflict` for UI rendering. Resolves KI-004's original silent-reuse bug AND the slug-collision variant discovered during session 13 live test.
-3. **`app/admin/page.tsx`** (REWRITE + polish) — "Diagnose" link on every request, inline DiagnosisPanel component, error toast exposes "Run full diagnosis" button with conflict details. Toast visual polish: `zIndex: 100 → 9999`, solid opaque backgrounds (was rgba 0.08 alpha, caused bleed-through), stronger shadow.
-4. **`docs/admin-runbook.md`** (NEW) — 9-recipe SQL runbook for in-mall triage: request state lookup, booth occupancy, freeing a booth, test vendor cleanup, unlinked row audit, auth status lookup, request reset, constraint inspection, deep diagnostic dump.
-5. **`docs/known-issues.md`** (UPDATE) — KI-004 moved to Resolved with full session-13 analysis.
+Key shipped: `app/api/admin/diagnose-request/route.ts` (NEW diagnostic endpoint), `app/api/admin/vendor-requests/route.ts` (REWRITE — constraint-aware approval), `app/admin/page.tsx` (REWRITE — Diagnose links, inline DiagnosisPanel, toast polish), `docs/admin-runbook.md` (NEW — 9 SQL recipes).
 
-### KI-004 — the bug, the diagnosis, the fix
-
-**What we thought it was:** booth-collision silent-reuse (identified session 9).
-
-**What it actually was** (discovered session 13 via live test + Vercel log diagnosis): a BROADER bug. The 23505 handler assumed any duplicate-key error was a booth-constraint violation, but `vendors` has FOUR unique constraints (booth, slug, user_id, pkey). A slug collision would silently fall through to a booth-by-(mall, booth_number) `.single()` lookup that returned zero rows, throwing "Cannot coerce the result to a single JSON object" — surfaced to admin as a generic "Vendor exists but couldn't be loaded" toast. The live repro: two David Butler vendor requests at different booths both trying to create slug `david-butler`, the second hitting `vendors_slug_key` instead of `vendors_mall_booth_unique`.
-
-**The fix policy (committed):**
+**Fix policy for vendor approval (still committed):**
 - Booth collision + unlinked + name match → safe claim (reuse existing row)
 - Booth collision + unlinked + name differs → reject with named details
 - Booth collision + already linked → hard reject with named details
-- Slug collision → auto-append `-2`, `-3`, … up to 20 attempts (preserves clean URLs for common case, graceful degradation for duplicates)
-- All recovery paths use `.maybeSingle()` not `.single()` — zero rows return null instead of throwing
+- Slug collision → auto-append `-2`, `-3`… up to 20 attempts
+- All recovery paths use `.maybeSingle()` not `.single()`
 - All error responses include `diagnosis` code + `conflict` object for admin UI rendering
 
-### QA verification (all 5 tests passed on device)
-1. Re-approval of stuck `dbutler80020+4@gmail.com` (slug-collision path) — success toast with note "Slug 'david-butler' was taken; assigned 'david-butler-2' instead."
-2. Proactive Diagnose on healthy request — green panel, diagnosis `no_conflict`
-3. Diagnose on already-claimed booth — red panel, diagnosis `booth_already_claimed`
-4. Error toast on blocked approval — diagnosis + conflict details monospace + "Run full diagnosis" button
-5. Dismiss + re-open diagnosis — clean state transition
-
-### Toast visual polish — final state
-**Working pattern** (keep this, it's load-bearing): outer non-animated `<div>` does `position:fixed; left:0; right:0; bottom:env(...); display:flex; justify-content:center; pointer-events:none`. Inner `<motion.div>` animates opacity+y only and carries `pointer-events:auto`. Framer Motion can't fight the centering because centering lives on the shell.
-
-Session 13 additions: `zIndex: 9999` (was 100 — too low once the content sitting near the toast started being complex), solid opaque backgrounds `#f0ede6` success / `#fff` error (was rgba ~0.08 alpha — let content behind bleed through), `boxShadow` opacity `0.14 → 0.18` (clearer elevation).
-
-### Lesson logged — don't over-engineer presentation bugs
-Session 13 included one failed iteration: I pushed a `createPortal(toastNode, document.body)` change to fix the stacking issue, which introduced a regression where Approve button clicks stopped firing entirely. Rolled back to inline render with just the z-index + opacity + shadow fixes. **Rule for future:** when working code has a presentation bug, fix the presentation, not the architecture. Three-line changes are better than portal refactors.
+**Toast visual polish — final state:** outer non-animated `<div>` does centering, inner `<motion.div>` animates opacity+y only with `pointer-events:auto`. zIndex 9999, solid opaque backgrounds, `boxShadow` opacity 0.18.
 
 ## Image uploads
-- `lib/imageUpload.ts` is the single source of truth. Import `compressImage`
-  and `uploadPostImageViaServer`. Never write another copy.
-- `uploadPostImageViaServer` THROWS on failure. Callers MUST try/catch and
-  abort the post/update on throw. Never write a post row with image_url: null.
-- `lib/posts.ts:uploadPostImage` is deprecated (anon client, can't see bucket
-  through RLS). Don't use. Logs a warning if something still calls it.
-- `lib/posts.ts:uploadVendorHeroImage` is orphaned (my-shelf uses
-  /api/vendor-hero directly). Safe to delete next sprint.
-
-### Context for the next session
-
-Sprint 4 is VERY close to done. Remaining items:
-- **T4c copy polish (orphans C + D)** — `/api/setup/lookup-vendor` error copy + `/vendor-request` success screen copy. 🟢 S effort, ~30 min.
-- **T4b — admin surface consolidation** — Add Booth tab in `/admin`, Add Vendor in-person flow, remove Admin PIN from `/login`, remove Booths from BottomNav, retire `AddBoothSheet` from `/shelves`. 🟡 M effort, ~4 hours.
-- **T4d — pre-beta QA pass** — walk all three flows end-to-end against `docs/onboarding-journey.md`. 🟢 S effort, ~1 hour.
-
-Then Sprint 4 ships and beta invites unblock.
-
-**Design agent work** (sessions 14–16) remains queued and independent of the Sprint 4 tail:
-- Session 14 candidate: Booth page redesign against `docs/design-system.md` v0.2 (the session-13 recommended start that got preempted)
-- Session 15 candidate: Find Detail polish
-- Session 16 candidate: Feed header + mall bottom sheet
-- Session 17 candidate: Find Map emotional redesign
-
-### Test data hygiene (nice-to-have, not blocking)
-Session 13 live test left 5+ "David Butler" variant vendor_requests and vendor rows scattered in the DB. None block anything now that approval is collision-aware, but a 5-minute cleanup pass is worth scheduling before beta invites go out. Recipe 4 in `docs/admin-runbook.md` is the canonical approach.
-
-### Files modified this session
-- **NEW** `app/api/admin/diagnose-request/route.ts`
-- **REWRITE** `app/api/admin/vendor-requests/route.ts`
-- **REWRITE** `app/admin/page.tsx`
-- **NEW** `docs/admin-runbook.md`
-- **UPDATE** `docs/known-issues.md`
-- `CLAUDE.md` (this file) — session 13 close
-
----
-
-## 🌿 Next session opener — either T4 remainder OR Design session 14
-
-Two viable openers depending on energy:
-
-**If you want to ship Sprint 4:**
-```
-CURRENT ISSUE:
-Sprint 4 tail — finish T4b (admin surface consolidation), T4c (copy polish on /api/setup/lookup-vendor error + /vendor-request success), and T4d (pre-beta QA pass walking Flows 1/2/3 against docs/onboarding-journey.md). Start with the Sprint Brief laying out task order, get approval, then execute. Budget ~5 hours across the three items.
-```
-
-**If you want to get design moving:**
-```
-CURRENT ISSUE:
-Booth page redesign against docs/design-system.md v0.2. Scope: /my-shelf and /shelf/[slug]. Build <LocationStatement> component, add Curator's Statement block (Georgia italic pull-quote), convert BoothFinderCard to CTA card variant at bottom with full-form Location Statement + "Explore the full mall" Secondary button, terminology pass to "On Display" / "Found homes" / "Found a home". 3-col 1:1 grid preserved with no titles on tiles. Owner "Add" tile as first square. Mode A cinematic header unchanged. Do NOT touch Find Detail, Feed header, or Find Map — those are separate sessions. Start with a Sprint Brief, get approval, then execute.
-```
-
-Recommended: Design session 14 first — Sprint 4 tail items are boring-but-important and can be batched into one dedicated session. Design has been waiting longer and the Booth page is the highest-leverage surface for vendor pride (what they'll text friends after you set them up in-mall).
+- `lib/imageUpload.ts` is the single source of truth. Import `compressImage` and `uploadPostImageViaServer`. Never write another copy.
+- `uploadPostImageViaServer` THROWS on failure. Callers MUST try/catch and abort the post/update on throw. Never write a post row with image_url: null.
+- `lib/posts.ts:uploadPostImage` is deprecated (anon client, can't see bucket through RLS). Don't use.
+- `lib/posts.ts:uploadVendorHeroImage` is orphaned. Safe to delete next sprint.
 
 ---
 
 ## ARCHIVE — What was done earlier (2026-04-17 late-night, session 12)
 > Design agent's first full direction pass shipped; docs/design-system.md v0.2 committed
 
-**Status:** 🪴 **Session 12 was the Design agent's first real pass.** No production code changed. One doc updated: `docs/design-system.md` moved from v0.1 scaffold to v0.2 with committed direction for cross-cutting primitives (typography, headers, buttons, cards, Location Statement) and four priority screens (Booth page both states, Find Detail, Feed header + mall sheet, Find Map). Two mockups generated for Booth page public + owner states. Session 13 was supposed to open with a crisp Dev sprint brief against v0.2, but the in-mall test surfaced KI-004 as a blocker and the Booth redesign deferred to session 14+.
+**Status:** 🪴 **Session 12 was the Design agent's first real pass.** No production code changed. One doc updated: `docs/design-system.md` moved from v0.1 scaffold to v0.2 with committed direction for cross-cutting primitives (typography, headers, buttons, cards, Location Statement) and four priority screens.
 
-### Key commitments for Dev agent to execute against (Booth redesign)
-
-**Cross-cutting primitives (all committed):**
-- **Typography:** Georgia reserved for emotional beats only (hero vendor names, find titles, curator's statements, pull-quote captions, empty-state headlines). system-ui carries ~90% of the chrome (eyebrows, meta, tabs, buttons, body, labels). Mono for booth numbers and data.
-- **Header modes:** A (cinematic, over hero image — Booth, Find Detail), B (editorial, sticky blur with logo — Feed, Find Map, admin), C (minimal, back + title — forms and onboarding).
-- **Buttons:** 4 variants — Primary (filled green), Secondary (green-tinted bg), Ghost (transparent + border), Link (inline green). Destructive variant = Ghost with red.
-- **Cards:** 1 canonical base (surface + border + radius.md + no shadow) with 4 composition variants (Plain, Thumbnail, Metric, CTA).
-- **`<LocationStatement>` component:** single-line format `⌂ Booth 369 · Mall name · City` with optional address + Directions link. Compact variant (white, over images) and full variant (inside cards).
-- **Terminology:** "Mall" everywhere in UI (Treehouse Spot retired entirely). "On Display" / "Found homes" for tabs. Georgia italic "Found a home" caption for sold tiles.
-
-**Booth page direction (both states):**
-- Header Mode A (cinematic hero, no sticky bar)
-- 3-column 1:1 square grid preserved — no titles or meta on/under tiles (tap through for the story) — supports future 9-item free-tier limit and matches older-vendor familiar mental model
-- Curator's statement (Georgia italic 16px pull-quote) directly under hero
-- Tabs "On Display" / "Found homes" (existing TabSwitcher, relabeled)
-- Owner "Add" tile as first square in On Display grid (emptyTile bg, dashed green border)
-- Sold tiles: 0.5 opacity + grayscale + small italic "Found a home" caption in bottom-left (one exception to no-text-on-tiles rule)
-- Location CTA card at bottom: full Location Statement + "Explore the full mall" Secondary button with vendor-hue swatch
-- Owner-only: edit-banner pencil top-left of hero, "Edit your story" Link below curator's statement, "Add" tile, Home · My Booth nav
-
-**Find Detail fixes:**
-- Title: 28px Georgia 700 (dominant)
-- Caption: 17px Georgia italic (pull-quote)
-- Availability: floating pill bottom-left on hero image, out of content flow
-- Location card: single `<LocationStatement>` full-form + full-width Secondary "Explore {vendor}'s shelf →" with hue swatch
-
-**Feed header + mall sheet:**
-- Mode B header: logo + wordmark left, quiet user-circle icon top-right (32×32 ghost)
-- Sign-in icon opens bottom sheet (Curator Sign In / Request booth access / browse copy)
-- Mall selector becomes `<MallSheet>` — search + scrollable list + "All Malls" default. Canonical bottom-sheet pattern — reused on Find Map filter, /post, /vendor-request.
-
-**Find Map emotional pass:**
-- Opening italic Georgia pull-quote ("A Saturday made of stops")
-- Dotted green spine at 0.30 alpha, `PiLeaf` icons at each stop, mono "~ 8 min drive" between stops
-- Stop cards as canonical CTA card variant
-- Bottom "Open all N stops in Maps →" Secondary button (multi-waypoint Apple Maps URL)
+**Session-15 note on session 12 work:** v0.2 was rewritten in session 15 to v1.0. The v0.2 vocabulary (`<LocationStatement>`, `<BoothLocationCTA>`, four-button system, Georgia-as-primary-serif, mono for booth numbers) is retired per v1.0. The "Cards, Buttons, LocationStatement" framing of v0.2 produced generic marketplace aesthetics when actually composed — this was the core finding of session 15. v1.0 replaces the component-first framing with a language-first framing (cartographic pin+X, post-it material gesture, paper-as-surface, IM Fell English editorial voice).
 
 ---
 
 ## ARCHIVE — What was done earlier (2026-04-17 late-night, session 11)
 > Design agent activated, design system scaffolded, agent orchestration tightened
 
-**Status:** 🪴 **Session 11 was a system-infrastructure session, not a feature session.** Four docs updated to activate the Design agent and establish `docs/design-system.md` as canonical source of truth for all multi-screen UI work. DECISION_GATE Agent Roster expanded; MASTER_PROMPT standup updated with Design agent hooks; `docs/design-system.md` v0.1 scaffolded.
+**Status:** 🪴 **Session 11 was a system-infrastructure session, not a feature session.** Four docs updated to activate the Design agent and establish `docs/design-system.md` as canonical source of truth for all multi-screen UI work.
 
 ---
 
 ## ARCHIVE — What was done earlier (2026-04-17 late-night, session 10)
-> /setup 401 race polish shipped; T4c orphan cleanup A/B/E shipped; onboarding journey is now both working AND clean end-to-end
+> /setup 401 race polish shipped; T4c orphan cleanup A/B/E shipped
 
 **Status:** ✅✅ **Session 10 polished the onboarding journey that Session 9 unblocked.** Two commits shipped.
 
-### What shipped (2 commits)
-1. **Orphan cleanup (T4c partial — A + B + E)** — `app/page.tsx` EmptyFeed "Add a Booth" button removed; `app/my-shelf/page.tsx` NoBooth "Post a find" button removed; `app/api/debug-vendor-requests/route.ts` deleted.
-2. **`/setup` 401 race polish** — `setupVendorAccount()` in `app/setup/page.tsx` now retries once with 800ms backoff on 401 response. Absorbs the ~500ms Supabase token-replication window that was flashing "Setup Incomplete" before `/my-shelf` self-heal caught it.
+1. Orphan cleanup (T4c partial — A + B + E) — `app/page.tsx` EmptyFeed "Add a Booth" button removed; `app/my-shelf/page.tsx` NoBooth "Post a find" button removed; `app/api/debug-vendor-requests/route.ts` deleted.
+2. `/setup` 401 race polish — `setupVendorAccount()` in `app/setup/page.tsx` now retries once with 800ms backoff on 401 response.
 
-### Orientation lock check (no-op discovery)
-Verified `public/manifest.json` already has `"orientation": "portrait"` on line 8 — locks installed PWA.
-
-### Supabase cleanup (pre-session)
-Three-orphan cleanup SQL ran before coding: `John Doe / 1234`, `Claude Code / 123`, `David Butler / 123 at AAM` deleted. KI-004 collision hazards cleared.
+Verified `public/manifest.json` already has `"orientation": "portrait"`. Supabase cleanup pre-session: three-orphan cleanup SQL ran.
 
 ---
 
@@ -280,7 +207,7 @@ Three-orphan cleanup SQL ran before coding: `John Doe / 1234`, `Claude Code / 12
 
 ### Phase 1 — Warm-up commit: KI-001 + KI-002
 **KI-001** — `app/login/page.tsx` `handlePin()` final `router.replace("/my-shelf")` → `router.replace("/admin")`.
-**KI-002** — `app/admin/page.tsx` approval toast rewrapped in the known-good centering pattern (outer non-animated div does `position:fixed; left:0; right:0; flex justifyContent:center`, inner motion.div animates only opacity+y).
+**KI-002** — `app/admin/page.tsx` approval toast rewrapped in the known-good centering pattern.
 
 ### Phase 2 — KI-003 diagnosis
 Clean-slate Flow 2 repro revealed two cascading bugs: `/login` mount useEffect read `searchParams.get("next")` but approval email uses `?redirect=/setup`; approve endpoint's 23505 duplicate-key handler silently reuses existing vendors row on booth collision (deferred as KI-004, now RESOLVED session 13).
@@ -291,7 +218,7 @@ Fix 2: `app/post/page.tsx` — identity resolution useEffect no longer falls thr
 Fix 3: `app/my-shelf/page.tsx` — non-admin signed-in users with no linked vendor now call `/api/setup/lookup-vendor` as self-heal before falling through to NoBooth.
 
 ### Phase 4 — `/setup` 401 diagnosis → diagnostic logging
-Added three targeted `console.error` log lines to `lib/adminAuth.ts` `requireAuth()` for 401 branch observability. Retry-with-backoff deferred to session 10.
+Added three targeted `console.error` log lines to `lib/adminAuth.ts` `requireAuth()` for 401 branch observability.
 
 ### Phase 5 — End-to-end verification
 Flow 2 onboarding end-to-end verified working on iPhone.
@@ -302,42 +229,25 @@ Flow 2 onboarding end-to-end verified working on iPhone.
 > Onboarding scope-out + T4a email infrastructure shipped end-to-end
 
 ### Phase 1 — Onboarding scope-out (Product Agent, no code)
-- **`docs/onboarding-journey.md`** created as canonical spec. Three flows committed: Pre-Seeded, Demo, Vendor-Initiated.
+`docs/onboarding-journey.md` created as canonical spec. Three flows committed: Pre-Seeded, Demo, Vendor-Initiated.
 
 ### Phase 2 — T4a email infrastructure
-- **New file: `lib/email.ts`** (~260 lines) — Resend REST API wrapper
-- **Wired into:** `app/api/vendor-request/route.ts` + `app/api/admin/vendor-requests/route.ts`
-- **End-to-end QA verified:** Email #1 (receipt) and Email #2 (approval) both arriving in production
+New file `lib/email.ts` (~260 lines) — Resend REST API wrapper. Wired into `app/api/vendor-request/route.ts` + `app/api/admin/vendor-requests/route.ts`. End-to-end QA verified in production.
 
 ### Phase 3 — QA issues logged
 KI-001, KI-002, KI-003 logged to `docs/known-issues.md`.
 
 ---
 
-## ARCHIVE — What was done earlier (2026-04-17 late evening, session 7)
-> Sprint 4 T3 shipped, onboarding fragility exposed, scope-out flagged
+## ARCHIVE — Earlier sessions (1–7)
+> Condensed — full history available in git log
 
-### T3 — `/admin` mobile-first approval polish ✅
-Rewrote `app/admin/page.tsx` to polish the in-person approval moment. Removed obsolete copy-paste email template flow.
-
-### Database reset — full clean slate
-Executed 7-block SQL cleanup. Plus storage pass deleting 25 orphaned image files.
-
-### QA pass findings — three onboarding failures from one clean slate
-1. Approve endpoint sent no email
-2. No organic path to `/setup` from `/login`
-3. `/my-shelf` showed stale localStorage identity after device cache survived DB reset
-
----
-
-## ARCHIVE — Earlier sessions (1–6)
-> Condensed for brevity — full history available in git log
-
+- **Session 7** — `/admin` mobile-first approval polish (T3); full database reset; QA pass exposed onboarding fragility
 - **Session 6** — Custom domain `app.kentuckytreehouse.com` live; OTP 6-digit code entry primary auth path; meta-agent work (Dev · Product · Docs active)
 - **Session 5** — `emailRedirectTo` fix + strategic Sprint 4+ scoping; `safeRedirect(next, fallback)` helper
 - **Session 4** — DNS pivot Path B → Path A (Shopify authoritative); Resend → Supabase SMTP; Yahoo magic link verified
 - **Session 3** — Resend account setup; DNS migration decision (later reversed in session 4)
-- **Session 2** — Setup flow status-filter bug fix: `lookup-vendor` `.eq("status", "pending")` → `.neq("status", "rejected")`
+- **Session 2** — Setup flow status-filter bug fix
 - **Session 1** — RLS-blocked vendor-request flow fix; admin API hardening with `requireAdmin` + service role
 
 ---
@@ -359,11 +269,13 @@ Executed 7-block SQL cleanup. Plus storage pass deleting 25 orphaned image files
 
 **Operator note:** David Butler is an **online reseller** (Zen Forged LLC, ZenForged Finds online sales). He is not a physical storefront operator at any mall. In-person vendor onboarding sessions are deliberate scheduled meetups, not incidental. This matters for scoping — "in person" is a product choice, not a default.
 
+**Tagline (committed session 15):** *Embrace the Search. Treasure the Find. Share the Story.* Anchored in `docs/DECISION_GATE.md`.
+
 **Onboarding canonical spec:** See `docs/onboarding-journey.md` for the three committed flows (Pre-Seeded, Demo, Vendor-Initiated).
 
-**Design canonical spec:** See `docs/design-system.md` v0.2 for the visual + interaction system. All multi-screen UI work scopes against it before code.
+**Design canonical spec:** See `docs/design-system.md` v1.0 for the visual + interaction system. All multi-screen UI work scopes against it before code. v1.0 (session 15) committed journal vocabulary: cartographic pin+X, IM Fell English editorial voice, post-it material gesture, paper-as-surface.
 
-**Admin runbook:** See `docs/admin-runbook.md` for in-mall SQL triage recipes. 9 recipes covering request state, booth occupancy, freeing booths, test vendor cleanup, and deep diagnostic dumps. For 95% of admin issues, the Diagnose panel on `/admin` is sufficient — the runbook covers the remaining 5%.
+**Admin runbook:** See `docs/admin-runbook.md` for in-mall SQL triage recipes.
 
 ---
 
@@ -374,6 +286,10 @@ Anthropic SDK (claude-opus-4-5) · Supabase (Postgres + Storage + Auth) · SerpA
 lucide-react (Heart, Send, Store, Home, LayoutGrid, Stethoscope icons in ecosystem UI)
 Resend (dual use: SMTP provider for Supabase Auth OTP emails,
          AND direct Resend REST API for transactional emails via lib/email.ts)
+
+Design v1.0 fonts (session 16+ code build):
+  IM Fell English (editorial voice) · Caveat (rare handwritten beats) · system-ui (precise data)
+  Loaded via Google Fonts.
 ```
 
 ---
@@ -404,20 +320,7 @@ EBAY_CLIENT_SECRET               eBay direct API (not yet wired)
 **Authoritative nameservers:** Shopify's default nameservers
 **DNSSEC:** Off
 
-**Live records (via Shopify DNS):**
-- A `kentuckytreehouse.com` → `23.227.38.65` (Shopify)
-- AAAA `kentuckytreehouse.com` → `2620:0127:f00f:5::`
-- CNAME `www` → `shops.myshopify.com`
-- CNAME `account` → `shops.myshopify.com`
-- CNAME `app` → `d21d0d632a8983e0.vercel-dns-017.com.` (Vercel)
-- CNAME DKIM records for Shopify email
-- MX `@` → `mx.kentuckytreehouse.com.cust.b.hostedemail.com` priority 1
-- TXT `_provider` → `shopify`
-- TXT `_dmarc` → `v=DMARC1; p=none`
-- TXT `@` → `v=spf1 include:_spf.hostedemail.com ~all`
-- TXT `resend._domainkey` → `v=DKIM1; k=rsa; p=MIGfMA0G...` (Resend DKIM)
-- TXT `send` → `v=spf1 include:amazonses.com ~all` (Resend SPF)
-- MX `send` → `feedback-smtp.us-east-1.amazonses.com` priority 10
+Key records (via Shopify DNS): A `@` → `23.227.38.65`, CNAME `app` → Vercel, Resend DKIM + SPF + MX on `send`/`resend._domainkey`. Full record list in session-14 archive.
 
 **Dormant:** Cloudflare account has nameservers assigned but is not authoritative. Leftover from session 3's Path B plan.
 
@@ -431,7 +334,7 @@ EBAY_CLIENT_SECRET               eBay direct API (not yet wired)
 - **Malls:** 29 locations seeded (KY + Clarksville IN)
 - **Primary mall:** America's Antique Mall, id: `19a8ff7e-cb45-491f-9451-878e2dde5bf4`, slug: `americas-antique-mall`
 - **Extra columns vendors:** `facebook_url text`, `user_id uuid`, `hero_image_url text`, `bio text`
-- **Unique constraints on vendors** (ALL FOUR — relevant for approve-endpoint logic):
+- **Unique constraints on vendors** (ALL FOUR):
   - `vendors_pkey` PRIMARY KEY (id)
   - `vendors_slug_key` UNIQUE (slug) — globally unique; auto-suffix on collision per session 13
   - `vendors_mall_booth_unique` UNIQUE (mall_id, booth_number) — pre-flight checked on approve
@@ -450,122 +353,78 @@ EBAY_CLIENT_SECRET               eBay direct API (not yet wired)
 - `lib/auth.ts → sendMagicLink(email, redirectTo?)` appends path as `&next=`
 - `app/login/page.tsx → safeRedirect(next, fallback)` validates same-origin relative paths only
 
-**Email pattern (session 8 — T4a):**
-- `lib/email.ts` — Resend REST API wrapper, two functions: `sendRequestReceived`, `sendApprovalInstructions`
-- Best-effort delivery — callers never fail HTTP response on email error
+**Email pattern (session 8):**
+- `lib/email.ts` — Resend REST API wrapper. Best-effort delivery.
 
 **Vendor approval pattern (session 13 — KI-004):**
 - `/api/admin/vendor-requests` POST performs pre-flight booth check before insert
-- Slug collisions auto-resolve via suffix loop (`david-butler` → `david-butler-2` → `-3`…)
+- Slug collisions auto-resolve via suffix loop
 - All collision errors return `{error, diagnosis, conflict}` for UI rendering
-- `/api/admin/diagnose-request` is the reusable diagnostic surface for any request in any state
-
----
-
-## HOW TO CLEAR AN EMAIL FROM SUPABASE (for QA iterations)
-> ⚠️ CAUTION: In session 4 the `vendor_requests` row was accidentally deleted during cleanup. Use `docs/admin-runbook.md` Recipe 4 for the full pattern. Short version below.
-
-**Preferred: SQL diagnostic + surgical delete**
-
-```sql
--- Diagnostic: see current state across all 3 tables
-SELECT 'vendor_requests' AS tbl, id::text, name AS name_or_display, email, booth_number, status, created_at
-FROM public.vendor_requests WHERE email = 'TARGET@example.com'
-UNION ALL
-SELECT 'vendors', id::text, display_name, NULL, booth_number,
-  CASE WHEN user_id IS NULL THEN 'unlinked' ELSE 'linked' END, created_at
-FROM public.vendors WHERE display_name = 'TARGET_NAME'
-UNION ALL
-SELECT 'auth.users', id::text, raw_user_meta_data->>'full_name', email, NULL, 'auth', created_at
-FROM auth.users WHERE email = 'TARGET@example.com';
-```
-
-For anything more complex, use `docs/admin-runbook.md` Recipes 1–9.
 
 ---
 
 ## WORKING ✅
-- Discovery feed — masonry, scroll restore, spring-tap, warmth hover, back-nav anchor
-- Feed footer — vendor CTA "Request booth access →" → `/vendor-request`
-- Magic link auth + Admin PIN login
-- Magic link delivery via Resend SMTP — verified end-to-end for Yahoo
+- Discovery feed, magic link auth, Admin PIN login, OTP delivery
 - Magic link `?redirect=` param preserved across round trip
-- My Booth — hero upload, vendor switcher, Send icon
-- Post flow — AI caption, price validation, image upload
-- Post preview — full image (no crop), edit pill buttons on title/caption/price
-- Find detail — layered drift-in, booth LEFT / mall RIGHT, no address underline
-- Public shelf — share button always visible (no auth required)
-- Vendor request flow — `/vendor-request` form + success screen + API route
-- Vendor account setup — admin approval workflow, setup page
+- My Booth, Post flow, Post preview, Find detail, Public shelf
+- Vendor request flow, Vendor account setup, admin approval workflow
 - RLS — 12 policies + vendor_requests (service role only)
 - Rate limiting — `/api/post-caption` 10 req/60s, `/api/vendor-request` 3 req/10min
-- PWA manifest
-- MASTER_PROMPT.md — HITL standard + Product Agent + Blocker Protocol
-- Notion Roadmap — seeded
-- Investor update system — Drive folder + first PDF + Notion process doc
-- Custom domain `app.kentuckytreehouse.com` (session 6)
-- OTP 6-digit code entry as primary auth path (session 6)
-- Branded email templates for Magic Link and Confirm Signup (session 6)
-- Agent roster: Dev · Product · Docs · Design active (session 11)
-- KI-001, KI-002, KI-003 all resolved (session 9)
-- Flow 2 onboarding end-to-end verified working on iPhone (session 9)
-- `/setup` 401 race absorbed with retry+backoff (session 10)
-- Shopper path de-orphaned (session 10)
-- `/api/debug-vendor-requests` retired (session 10)
-- PWA orientation lock verified (session 10)
-- Design agent activated, `docs/design-system.md` v0.1 scaffolded (session 11)
-- `docs/design-system.md` v0.2 — full direction pass for Booth, Find Detail, Feed header, Find Map, plus cross-cutting primitives (session 12)
-- **KI-004 resolved** — constraint-aware vendor approval with slug auto-suffix (session 13)
-- **Admin diagnostic UI** — "Diagnose" on every request, full collision panel, named error toasts (session 13)
-- **`docs/admin-runbook.md`** — 9-recipe SQL triage guide for in-mall use (session 13)
-- **Toast visual polish** — z-index 9999, solid backgrounds, stronger shadow (session 13)
+- Custom domain `app.kentuckytreehouse.com`
+- Branded email templates for Magic Link and Confirm Signup
+- Agent roster: Dev · Product · Docs · Design active
+- KI-001, KI-002, KI-003, KI-004 all resolved
+- Flow 2 onboarding end-to-end verified working on iPhone
+- `/setup` 401 race absorbed with retry+backoff
+- Design agent activated, `docs/design-system.md` v1.0 committed (session 15)
+- Admin diagnostic UI, `docs/admin-runbook.md` with 9 SQL recipes
+- Booth page redesign (v0.2 language) — shipped session 14, functional in production, marked deprecated in v1.0 spec pending second pass
 
 ## KNOWN GAPS ⚠️
 
 ### 🔴 Pre-beta blockers
-_None as of session 13 close._ No blockers remain; Sprint 4 is finishing polish + consolidation.
+_None as of session 15 close._
 
 ### 🟡 Sprint 4 remainder
-- 🟡 T4c remainder (copy polish) — orphans C + D: `/api/setup/lookup-vendor` error copy + `/vendor-request` success screen copy. Focused copy session, ~30 min.
-- 🟡 T4b — admin surface consolidation (Add Booth tab in /admin, Add Vendor in-person flow, remove Admin PIN from /login, remove Booths from BottomNav, retire `AddBoothSheet` from /shelves) — ~4 hours.
-- 🟡 T4d — pre-beta QA pass walking all three flows end-to-end against `docs/onboarding-journey.md`.
-- 🟢 Session 13 test data cleanup — 5+ "David Butler" variants in DB. Not blocking; 5-minute SQL cleanup via `docs/admin-runbook.md` Recipe 4.
+- 🟡 T4c remainder (copy polish) — `/api/setup/lookup-vendor` error copy + `/vendor-request` success screen copy. ~30 min.
+- 🟡 T4b — admin surface consolidation. ~4 hours.
+- 🟡 T4d — pre-beta QA pass walking all three flows end-to-end.
+- 🟢 Session 13 test data cleanup — 5+ "David Butler" variants in DB. ~5 min SQL via admin-runbook Recipe 4.
 
-### 🟡 Design execution (sessions 14+)
-- **Session 14 candidate:** Booth page redesign against `docs/design-system.md` v0.2. Build `<LocationStatement>`, add Curator's Statement block, convert BoothFinderCard to CTA card variant, terminology pass.
-- **Session 15 candidate:** Find Detail polish (hierarchy fix + single Location Statement + weighted "Explore the Booth" button).
-- **Session 16 candidate:** Feed header + mall bottom sheet (`<MallSheet>` as canonical bottom-sheet pattern).
-- **Session 17 candidate:** Find Map emotional redesign.
+### 🟡 Design v1.0 execution (sessions 16+)
+- **Session 16 candidate A** — Find Detail code build against v1.0 spec. Mockup locked session 15.
+- **Session 17 candidate** — Booth page v1.0 second pass (replaces `<LocationStatement>` + `<BoothLocationCTA>`, swaps Georgia → IM Fell English, applies cartographic pin+X, masthead wordmark).
+- **Session 18 candidate** — Feed header + `<MallSheet>` bottom sheet pattern against v1.0.
+- **Session 19 candidate** — Find Map emotional redesign against v1.0.
+- **Session 20 candidate** — Cleanup pass: inline Georgia → IM Fell English on chrome; inline `C` objects → `colors` import; magic-number spacing → spacing tokens; `lib/tokens.ts` additions for post-it/ink scale.
 
-Sprint 3 leftovers still pending beta invites:
+### 🟡 Sprint 3 leftovers still pending beta invites
 - Error monitoring (Sentry or structured logs)
-- Vendor bio UI — partly superseded by Curator's Statement design direction, but the tap-to-edit + public display still needs to ship
-- Hero image upload size guard (12MB client check) — verify coverage
+- Hero image upload size guard — verify coverage
 - Feed content seeding (10–15 real posts) — required before beta invite
 - Beta feedback mechanism (Tally.so link)
 
 ### 🟡 Sprint 5 (guest-user UX + onboarding polish — parked)
-- Rename "Sign In" → "Curator Sign In" everywhere + `/welcome` guest-friendly landing for signed-in non-vendors
+- Rename "Sign In" → "Curator Sign In" + `/welcome` guest-friendly landing
 - PWA install onboarding experience
 - Vendor onboarding Loom/doc
-- Bookmarks persistence (localStorage → DB-backed, ITP wipe mitigation)
+- Bookmarks persistence (localStorage → DB-backed)
 
 ### 🟢 Sprint 6+ (parked)
-- "Claim this booth" flow for Flow 1 pre-seeded vendors (now a purely additive change — just add `claim: true` flag on vendor_request to override the session-13 reject-on-booth-collision policy)
+- "Claim this booth" flow for Flow 1 pre-seeded vendors
 - QR-code approval handshake
 - Universal Links setup (iOS `apple-app-site-association`)
-- Native app evaluation (Capacitor/Expo/React Native wrapper)
+- Native app evaluation
 - `admin-cleanup` tool (collapse the 3-table SQL reset to one click)
 - Feed pagination, search, ToS/privacy
-- Mall page vendor CTA, Find Map overhaul
-- Upgrade `/api/admin/diagnose-request` email lookup from `listUsers({perPage:1000})` to `getUserByEmail()` once `@supabase/supabase-js` supports it — pragmatic now, won't scale past a few thousand users
+- Mall page vendor CTA, vendor directory, Find Map overhaul
 
 ### 🟢 Cleanup (not urgent)
 - Deprecated vendor-request functions still in `lib/posts.ts`
-- Cloudflare nameservers for `kentuckytreehouse.com` — dormant, no cost
-- `/shelves` AddBoothSheet — orphan after T4b ships, remove then
+- Cloudflare nameservers — dormant, no cost
+- `/shelves` AddBoothSheet — orphan after T4b ships
 - `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` — obsolete since T4a
-- Design cleanup pass: inline Georgia → system-ui on chrome; inline `C` color objects → `colors` import; magic-number spacing → spacing tokens — bundled as a single dedicated session post-Booth redesign
+- Design v0.2 components deprecated but still in code (`LocationStatement`, `BoothLocationCTA`) — replaced in Booth v1.0 sprint
 
 ---
 
@@ -601,25 +460,22 @@ Source `.env.local` into the current shell for a one-off curl with auth:
 cd ~/Projects/treehouse-treasure-search && set -a && source .env.local && set +a
 ```
 
-Check Supabase auth logs (magic link dispatch status):
-
+Check Supabase auth logs:
 ```
 https://supabase.com/dashboard/project/zogxkarpwlaqmamfzceb/logs/auth-logs
 ```
 
 Check Resend delivery logs:
-
 ```
 https://resend.com/emails
 ```
 
 Check Vercel function logs:
-
 ```
 https://vercel.com/david-6613s-projects/treehouse-treasure-search/logs
 ```
 
-Check DNS state for `kentuckytreehouse.com`:
+Check DNS state:
 
 ```bash
 dig kentuckytreehouse.com NS +short
