@@ -185,7 +185,11 @@ function FindTile({
 }) {
   const [imgErr, setImgErr] = useState(false);
   const hasImg = !!post.image_url && !imgErr;
-  const isSold = post.status === "sold";
+  // v1.1i: sold saves render identical to available saves on this page. The
+  // reveal happens on tap-through via Find Detail's 3B sold landing state.
+  // Three-part contract: bookmark key preserved + tile visible here + 3B is
+  // the reveal. Do NOT add a status filter to getPostsByIds — sold rows must
+  // still hydrate so the tile stays tappable.
 
   function handleUnsave(e: React.MouseEvent) {
     e.preventDefault();
@@ -226,8 +230,6 @@ function FindTile({
               height: "100%",
               objectFit: "cover",
               display: "block",
-              filter: isSold ? "grayscale(0.5) brightness(0.88)" : "none",
-              opacity: isSold ? 0.62 : 1,
             }}
           />
         ) : (
@@ -295,21 +297,10 @@ function FindTile({
         {post.title}
       </div>
 
-      {/* Price (system-ui, priceInk) — or "Found a home" for sold */}
-      {isSold ? (
-        <div
-          style={{
-            marginTop: 2,
-            fontFamily: FONT_IM_FELL,
-            fontStyle: "italic",
-            fontSize: 12.5,
-            color: v1.inkMuted,
-            lineHeight: 1.4,
-          }}
-        >
-          Found a home
-        </div>
-      ) : typeof post.price_asking === "number" && post.price_asking > 0 ? (
+      {/* Price (system-ui, priceInk). Sold-state "Found a home" caption
+          retired v1.1i — sold saves render identical to available saves;
+          3B sold landing is the reveal on tap-through. */}
+      {typeof post.price_asking === "number" && post.price_asking > 0 && (
         <div
           style={{
             marginTop: 2,
@@ -322,7 +313,7 @@ function FindTile({
         >
           ${Math.round(post.price_asking)}
         </div>
-      ) : null}
+      )}
     </Link>
   );
 }
