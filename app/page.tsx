@@ -263,7 +263,7 @@ function MasonryTile({
               : `1px solid ${v1.inkHairline}`,
             boxShadow: highlighted
               ? `0 0 0 3px rgba(30,77,43,0.13), 0 4px 14px rgba(42,26,10,0.11)`
-              : "0 1px 4px rgba(42,26,10,0.06)",
+              : "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
             transform: tapped ? "scale(1.028)" : "scale(1)",
             transition: tapped
               ? "transform 0.14s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.30s ease, border-color 0.60s ease"
@@ -758,11 +758,18 @@ export default function DiscoveryFeedPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.34, ease: EASE }}
         style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 40,
           display: "grid",
           gridTemplateColumns: "1fr auto 1fr",
           alignItems: "center",
           padding: "max(14px, env(safe-area-inset-top, 14px)) 18px 12px",
           gap: 12,
+          background: "rgba(232,221,199,0.96)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          borderBottom: `1px solid ${v1.inkHairline}`,
         }}
       >
         {/* Left slot — empty. Nav Shelf lands here in 21B per CLAUDE.md. */}

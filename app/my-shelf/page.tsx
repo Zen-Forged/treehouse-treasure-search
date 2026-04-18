@@ -68,11 +68,18 @@ function Masthead() {
   return (
     <div
       style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 40,
         padding: "max(14px, env(safe-area-inset-top, 14px)) 22px 12px",
         display: "grid",
         gridTemplateColumns: "38px 1fr 38px",
         alignItems: "center",
         gap: 12,
+        background: "rgba(232,221,199,0.96)",
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)",
+        borderBottom: `1px solid ${v1.inkHairline}`,
       }}
     >
       <div />
@@ -360,8 +367,6 @@ function MyBoothInner() {
         flexDirection: "column",
       }}
     >
-      <Masthead />
-
       <div
         style={{
           flex: 1,
@@ -369,6 +374,7 @@ function MyBoothInner() {
           paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
         }}
       >
+        <Masthead />
         {loading ? (
           <Skeleton />
         ) : !activeVendor ? (
