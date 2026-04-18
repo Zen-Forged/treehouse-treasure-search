@@ -120,6 +120,8 @@ function XGlyph({ size = 16 }: { size?: number }) {
 // marker on the vendor line of the cartographic block. The visual match is the point —
 // the reader sees the two pills as a linked pair even though they sit in different places.
 function Pill({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  // Renamed role-wise: this is now the ShelfLinkPill (sole pill role post v1.1d status-pill retirement).
+  // Kept the name `Pill` in code to minimize diff churn.
   return (
     <span
       style={{
@@ -164,6 +166,7 @@ function ShelfCard({ post }: { post: Post }) {
           overflow: "hidden",
           background: v1.postit,
           borderRadius: v1.imageRadius, // v1.1
+          border: `1px solid ${v1.inkHairline}`, // v1.1d — match hero photo border
           opacity: isSold ? 0.62 : 1,
           transition: "opacity 0.2s",
         }}
@@ -559,7 +562,7 @@ export default function FindDetailPage() {
             overflow: "visible", // allow post-it overhang
           }}
         >
-          {/* Photograph — v1.1 6px radius */}
+          {/* Photograph — v1.1d: 6px radius + 1px inkHairline border for warm-tone separation */}
           {post.image_url ? (
             <img
               src={post.image_url}
@@ -570,6 +573,7 @@ export default function FindDetailPage() {
                 objectFit: "cover",
                 display: "block",
                 borderRadius: v1.imageRadius,
+                border: `1px solid ${v1.inkHairline}`,
                 filter: isSold ? "grayscale(0.35) brightness(0.9)" : "none",
               }}
             />
@@ -580,6 +584,7 @@ export default function FindDetailPage() {
                 height: "100%",
                 background: v1.postit,
                 borderRadius: v1.imageRadius,
+                border: `1px solid ${v1.inkHairline}`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -593,27 +598,41 @@ export default function FindDetailPage() {
             </div>
           )}
 
-          {/* v1.1b — post-it dimensions upsized, numeral anchors the note */}
+          {/* v1.1d — post-it moved BOTTOM-RIGHT with +3deg rotation, push pin at top-center */}
           {boothNumber && (
             <div
               style={{
                 position: "absolute",
                 bottom: -14,
-                left: -12,
+                right: -12,
                 width: 92,
                 minHeight: 84,
                 background: v1.postit,
-                transform: "rotate(-3deg)",
-                transformOrigin: "bottom left",
-                // v1.1c — triple-dial contrast: stronger shadow + visible hairline edge
+                transform: "rotate(3deg)",
+                transformOrigin: "bottom right",
                 boxShadow: `0 6px 14px rgba(42,26,10,0.28), 0 0 0 0.5px rgba(42,26,10,0.16)`,
-                padding: "12px 8px 10px",
+                padding: "14px 8px 10px",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
+              {/* Push pin — top-center, matte ink, appears to go through the note */}
+              <div
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  top: -4,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "rgba(42,26,10,0.72)",
+                  boxShadow: `inset 0 0 0 2px rgba(42,26,10,0.55), 0 1px 2px rgba(42,26,10,0.35)`,
+                }}
+              />
               <div
                 style={{
                   fontFamily: FONT_IM_FELL,
@@ -639,17 +658,6 @@ export default function FindDetailPage() {
               </div>
             </div>
           )}
-
-          {/* Status pill — bottom-right, Title Case, 13px */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: 10,
-              right: 10,
-            }}
-          >
-            <Pill>{isSold ? "Found a Home" : "On Display"}</Pill>
-          </div>
         </div>
       </motion.div>
 
@@ -858,7 +866,7 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Vendor row — v1.1c: vendor name on top, shelf-link pill below (pill IS the link, retires standalone "Visit the shelf →") */}
+            {/* Vendor row — v1.1d: vendor name on top; "Explore" label + shelf-link pill inline below, both wrapped in the Link */}
             {(vendorName || boothNumber) && (
               <div>
                 {vendorName && (
@@ -877,8 +885,29 @@ export default function FindDetailPage() {
                 {boothNumber && vendorSlug && (
                   <Link
                     href={`/shelf/${vendorSlug}`}
-                    style={{ textDecoration: "none", display: "inline-block", WebkitTapHighlightColor: "transparent" }}
+                    style={{
+                      textDecoration: "none",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 10,
+                      WebkitTapHighlightColor: "transparent",
+                    }}
                   >
+                    <span
+                      style={{
+                        fontFamily: FONT_SYS,
+                        fontWeight: 400,
+                        fontSize: 14,
+                        color: v1.inkMuted,
+                        textDecoration: "underline",
+                        textDecorationStyle: "dotted",
+                        textDecorationColor: v1.inkFaint,
+                        textUnderlineOffset: 3,
+                        lineHeight: 1.55,
+                      }}
+                    >
+                      Explore
+                    </span>
                     <Pill>Booth {boothNumber} →</Pill>
                   </Link>
                 )}
