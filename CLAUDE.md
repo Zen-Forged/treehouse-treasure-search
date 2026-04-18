@@ -50,9 +50,83 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-18 (session 16 — Find Detail v1.0 → v1.1d code build + design-system doc evolution; nav shelf exploration mockup in progress)
+> Last updated: 2026-04-18 (session 17 — Find Detail v1.1e/v1.1f on-device polish + Find Map v1.1g full redesign; paper-cream bg globalized; glyph hierarchy locked)
 
-**Status:** 🎨 **Session 16 built Find Detail against `docs/design-system.md` v1.0, then evolved the doc + code through four iteration passes based on on-device QA feedback (v1.0 → v1.1 → v1.1b → v1.1c → v1.1d).** Code shipped for Find Detail + BottomNav minimal chrome patch. Session 16 closed with a nav-shelf metaphor exploration (David's idea: "what if BottomNav looks like a wood shelf?") — 4 mockup approaches saved to `docs/mockups/nav-shelf-exploration.html`, decision held for session 17.
+**Status:** ✅✅ **Session 17 shipped two full pieces of work: (1) a two-pass polish refinement of Find Detail from v1.1d → v1.1e → v1.1f based on live iPhone QA, and (2) a complete mockup-first redesign of `/flagged` (the Find Map page) from v0.2 marketplace chrome → v1.1g journal vocabulary.** Plus a glyph hierarchy commitment that locks `pin = mall` / `X = booth` as a cross-cutting rule. All code built green. Doc evolved v1.1d → v1.1e → v1.1f → v1.1g in three targeted update passes across the session. Nav-shelf exploration remains held from session 16 (David's call — redirected session-17 scope into polish + Find Map instead).
+
+### What shipped (3 commits)
+
+**Commit 1 — Find Detail v1.1e polish pass (session 17 morning):**
+- `app/layout.tsx` — body inline background `#f0ede6` → `#e8ddc7` (paperCream)
+- `app/globals.css` — `@layer base body` background `#f0ede6` → `#e8ddc7`. The pre-v1.1c warm parchment was still the default everywhere Find Detail wasn't. Now paperCream is globally committed
+- `app/find/[id]/page.tsx` — ten on-device polish items:
+  - Masthead wordmark: italic on "Finds" retired, Title Case single style, 16 → 18px, letter-spacing tightened to `-0.005em`
+  - Save + share relocated OFF the masthead ONTO the photograph's top-right corner as frosted paperCream translucent bubbles (`backdrop-filter: blur(8px)`, 0.5px inkHairline edge, 38px diameter)
+  - Icon bubble default size 34 → 38, on-image icons 17px, back-arrow 18px
+  - New `IconBubble` `variant` prop: `"paper"` (default chrome) or `"frosted"` (on-photograph overlay)
+  - Vendor row label: `Explore` → `Explore booth →` (trailing arrow moves INTO the label)
+  - Shelf-link pill slimmed to a pure numeric badge: no "Booth" word, no arrow, numeral bumped 13 → 16px IM Fell non-italic, horizontal padding tightened to `2px 9px`
+  - X glyph `paddingTop: 5 → 3` for vendor-name ascender alignment
+- `docs/design-system.md` — v1.1d → v1.1e Status paragraph, shelf-link pill rewritten as pure numeric badge role, paper-as-surface section updated to note the global body commitment, typography table updated (masthead + pill numeral + "Explore booth" label rows), icon treatment section rewritten for paper + frosted variants, Find Detail screen-spec refreshed, three new retirement-log entries
+- Commit: `design: find detail v1.1e polish pass (masthead, on-image save+share, numeric pill, app bg alignment)`
+
+**Commit 2 — Find Detail v1.1f same-session follow-up (session 17 mid-morning):**
+- `app/find/[id]/page.tsx`:
+  - Frosted icon-bubble bg now state-independent — the v1.1e green-tint active state blended into warm/dark photos; now the bubble stays `rgba(232,221,199,0.78)` paperCream and only the glyph color/fill flips to green when saved. Holding a stable creme bubble and letting the glyph carry the state is the clearer read
+  - Post-it pulled inward from the viewport edge: `right: -12 → 4`. Was kissing the screen edge on narrow phones; now sits fully inside the 22px page margin
+  - Post-it rotation bumped `+3deg → +6deg`. Committed rotation range documented in doc: `+3` to `+8 degrees`, `+6deg` as the default. Rationale: below `+3` rotation is invisible, above ~`+10` text becomes hard to parse and the note reads as fallen rather than placed
+  - Post-it eyebrow stacks: "Booth" / "Location" on two lines, 14px IM Fell italic muted, `line-height: 1.1` so the two words read as one label. "Booth" alone was lightweight for what the pin points at; "Booth Location" names the gesture honestly (marks *where*, not *what*). `minHeight: 84 → 92` to accommodate without crowding the 36px numeral
+- `docs/design-system.md` — v1.1e → v1.1f Status paragraph; booth post-it primitive spec updated with new rotation value, inset, dimensions, stacked eyebrow, two new rationale subsections; icon treatment frosted variant updated for state-independent bg; Find Detail screen-spec refreshed
+- Commit: `design: find detail v1.1f (frosted state, post-it inset+tilt+stacked eyebrow)`
+
+**Commit 3 — Find Map v1.1g full redesign (session 17 afternoon):**
+- Product decision: `/flagged` route name kept (backwards compatibility), UI everywhere reads "Find Map." No URL migration. Glyph hierarchy committed as a doc-level rule: pin = mall (page-level anchor, appears once), X = booth (per-stop marker, appears once per stop). Locked.
+- Mockup-first protocol: 3-approach exploration first (`docs/mockups/find-map-exploration.html`) with Journal Itinerary / Pinned Postcards / Map Journal at real mobile dimensions. Approach A (Journal Itinerary) selected. Then v1.1g refinement mockup (`docs/mockups/find-map-v2.html`) iterated 4 times with David before code:
+  - v2 with X glyph spine, Booth pill row, mall pin anchor, Caveat opener + ordinal labels + end-of-path marker + bottom Maps action
+  - v3 dropped ordinal labels + end-of-path marker + Caveat note per David; added intro voice at top + chapter-break closer with "Continue exploring" link
+  - v4 final spec: dropped Continue link (BottomNav handles it), threshold horizontal-scroll for 3+ finds per stop, prices on each find, closer pulled from IM Fell 19px primary → 16px mid for quieter emotional weight
+- `app/flagged/page.tsx` — full rewrite against v1.1g spec. Full layout: Mode A masthead → "Find Map" subheader (IM Fell 30px) → intro voice ("Your saved finds are mapped below. Each one is waiting in its place, ready when you are." IM Fell italic 15px) → pin glyph + mall name + dotted-underline address → diamond divider → per-stop itinerary (X glyph on spine, hairline tick between stops, `Booth [NNN pill]` row wrapping Link to `/shelf/[slug]`, vendor italic, saved-count, 2-up grid or horizontal-scroll for 3+) → each find as 4:5 photo with 6px radius + inkHairline border + frosted paperCream heart top-right (unsave) + italic title + system-ui priceInk price (or "Found a home" italic muted for sold) → diamond rule + closer line • Empty state re-dressed in v1.1g. Skeleton loader re-dressed. All v0.2 localStorage scanning, stale pruning, grouping/sorting, focus rehydration, unsave gesture wiring, `BottomNav flaggedCount` passthrough preserved intact
+- `docs/design-system.md` — v1.1f → v1.1g Status paragraph covering the Find Map redesign and the three doc-level commitments (glyph hierarchy locked, Find Map spec, Find tile primitive); cartographic vocabulary section gains the explicit glyph hierarchy rule as a cross-cutting commitment; Find Map section went from `PENDING — scope against v1.0 before code` stub → full committed spec; Find tile primitive documented as reusable on any saved-finds surface; three v1.0 doc commitments we overrode logged with rationale (no Caveat margin-note on Find Map, no drive-times, no bottom Maps action)
+- Commit: `design: find map v1.1g (full /flagged redesign against v1.1 language; glyph hierarchy locked)`
+
+### Mockups archived
+- `docs/mockups/find-map-exploration.html` — 3-approach exploration (Journal / Postcards / Map Journal). Historical record of the mockup-first decision. Can delete after v1.1g is QA'd and beta-blocker-free, or keep as reference when the Approach C "decorative map" question comes up again in a future pass
+- `docs/mockups/find-map-v2.html` — final-spec mockup for Find Map v1.1g. Historical record; can delete after v1.1g is QA'd
+
+### Glyph hierarchy — committed cross-cutting rule
+
+**pin = mall. X = booth. Locked.** These two cartographic glyphs do not swap, substitute, or appear interchangeably across the product. On any page that shows both a mall and its booths, the pin appears *once* (mall anchor, page-level) and the X appears *once per booth stop* (inline, content-level). This glyph-concept binding is what lets the cartographic language actually mean something: readers who learn the pair on one page immediately parse it on every other. Find Detail uses this grammar already (pin + mall + tick + X + booth). Find Map establishes the paginated version (one pin at top, N X's down the spine). Booth page v1.1g pass should follow.
+
+### Tool-environment notes from this session
+
+No new gotchas. The session 16 lesson about `create_file` vs `filesystem:write_file` held; used `filesystem:write_file` and `filesystem:edit_file` exclusively throughout. `filesystem:edit_file` targeted edits handled both the large rewrites (Find Map page) and the narrow doc refinements cleanly.
+
+### Session 18 candidates
+
+**18A — Booth page v1.1g second pass (highest design debt).** Replaces `<LocationStatement>` + `<BoothLocationCTA>` with v1.1g cartographic pin+X block + masthead. Swaps Georgia → IM Fell English throughout. Applies `paperCream` global (already committed). Applies photograph 1px inkHairline border + 6px radius across the shelf grid. First opportunity to promote `v1` inline tokens from Find Detail + Find Map into `lib/tokens.ts`. Decides 3-column vs 2-column polaroid arrangement (parked since session 14). ~3–4 hours.
+
+**18B — Feed header + `<MallSheet>` bottom sheet against v1.1g.** The feed is the front door and is still entirely v0.2. Mode B masthead pattern, pin-glyph in the mall selector, find tiles (now a committed primitive from v1.1g) reused in the feed grid. ~3 hours.
+
+**18C — Nav Shelf decision + implementation (still held from sessions 16–17).** David reviews `docs/mockups/nav-shelf-exploration.html` on device, picks from A/B/C/D. Small implementation: BottomNav styling update + doc BottomNav subsection rewrite. ~45 min. Worth parking until Booth page ships so the full-chrome rework can bundle with the nav-shelf decision.
+
+**18D — Sprint 4 tail batch (T4c copy polish + T4b admin surface consolidation + T4d pre-beta QA walk).** Non-design work; still needed pre-beta. ~5.5 hours focused.
+
+**Recommended:** 18A first. Booth page is the biggest design debt remaining and has been flagged since session 15. Everything else stacks cleanly after.
+
+### Files touched this session
+- `app/layout.tsx` — body background to paperCream
+- `app/globals.css` — `@layer base body` background to paperCream
+- `app/find/[id]/page.tsx` — two polish passes (v1.1e, v1.1f)
+- `app/flagged/page.tsx` — full rewrite to v1.1g
+- `docs/design-system.md` — v1.1d → v1.1e → v1.1f → v1.1g (three targeted edit passes)
+- `docs/mockups/find-map-exploration.html` — NEW, 3-approach exploration
+- `docs/mockups/find-map-v2.html` — NEW, final-spec mockup, iterated 4 times
+- `CLAUDE.md` (this file) — session 17 close
+
+---
+
+## ARCHIVE — What was done earlier (2026-04-18, session 16)
+> Find Detail v1.0 code build + 4 iteration passes v1.0 → v1.1d; BottomNav minimal chrome patch; nav-shelf exploration mockup
 
 ### What shipped (code + docs, committed incrementally)
 
@@ -120,23 +194,16 @@ Secondary gotcha refresher: `filesystem:edit_file` `oldText` must match exact by
 - Pill primitive collapsed from 2 roles (status + shelf-link) to 1 role (shelf-link only) after status retirement
 - Multiple retirements logged: bottom-left post-it, standalone "Visit the shelf →" link, status pill, top-left post-it
 
-### Session 17 candidates
+### Session 16 candidates were
 
-**17A — Nav Shelf decision + implementation (recommended first).** David reviews `docs/mockups/nav-shelf-exploration.html` on device, picks one of A/B/C/D (or rejects all and sticks with v1.1d minimal patch). Implementation is small: `components/BottomNav.tsx` styling update + `docs/design-system.md` BottomNav subsection rewrite. ~45 min depending on approach.
+17A (nav-shelf) **held** into session 17 and beyond. 17B (Booth page) **held** — still the next recommended design sprint (now called 18A). 17C (Sprint 4 tail) **held** — still queued (now 18D).
 
-**17B — Booth page v1.1d second pass.** Replaces `<LocationStatement>` + `<BoothLocationCTA>` with cartographic pin+X block + post-it language. Swaps Georgia → IM Fell English throughout. Applies masthead wordmark. Promotes `v1` inline tokens to `lib/tokens.ts` (first token-file update since Booth v1.0 sprint was scoped). Decides on 3-column vs 2-column polaroid arrangement (parked session 14). ~3–4 hours.
-
-**17C — Sprint 4 tail batch (T4b + T4c + T4d).** Non-design work. Still needed pre-beta. ~5.5 hours focused.
-
-**Recommended:** 17A first (small, momentum-preserving, unblocks chrome consistency across all pages), then 17B (biggest design debt remaining), then 17C in a dedicated non-design session.
-
-### Files touched this session
+### Files touched in session 16
 - `app/layout.tsx` — IM Fell + Caveat font loading
-- `app/find/[id]/page.tsx` — full rewrite + 4 iteration passes
+- `app/find/[id]/page.tsx` — full rewrite + 4 iteration passes (superseded by session 17 v1.1e/v1.1f polish)
 - `components/BottomNav.tsx` — minimal chrome patch (bg + border)
-- `docs/design-system.md` — v1.0 → v1.1d (many targeted edits)
-- `docs/mockups/nav-shelf-exploration.html` — NEW, 4 approaches for session 17 review
-- `CLAUDE.md` (this file) — session 16 close
+- `docs/design-system.md` — v1.0 → v1.1d (many targeted edits; further evolved in session 17 to v1.1g)
+- `docs/mockups/nav-shelf-exploration.html` — NEW, 4 approaches (still held for future review)
 
 ---
 
@@ -364,7 +431,7 @@ KI-001, KI-002, KI-003 logged to `docs/known-issues.md`.
 
 **Onboarding canonical spec:** See `docs/onboarding-journey.md` for the three committed flows (Pre-Seeded, Demo, Vendor-Initiated).
 
-**Design canonical spec:** See `docs/design-system.md` v1.0 for the visual + interaction system. All multi-screen UI work scopes against it before code. v1.0 (session 15) committed journal vocabulary: cartographic pin+X, IM Fell English editorial voice, post-it material gesture, paper-as-surface.
+**Design canonical spec:** See `docs/design-system.md` v1.1g for the visual + interaction system. All multi-screen UI work scopes against it before code. v1.1g (session 17) locked the glyph hierarchy (pin = mall, X = booth), committed the Find Map spec, and committed the Find tile primitive as reusable on any saved-finds surface.
 
 **Admin runbook:** See `docs/admin-runbook.md` for in-mall SQL triage recipes.
 
@@ -467,11 +534,14 @@ Key records (via Shopify DNS): A `@` → `23.227.38.65`, CNAME `app` → Vercel,
 - KI-001, KI-002, KI-003, KI-004 all resolved
 - Flow 2 onboarding end-to-end verified working on iPhone
 - `/setup` 401 race absorbed with retry+backoff
-- Design agent activated, `docs/design-system.md` v1.1d committed (sessions 15–16)
+- Design agent activated, `docs/design-system.md` at **v1.1g** (sessions 15–17)
 - Admin diagnostic UI, `docs/admin-runbook.md` with 9 SQL recipes
-- Booth page redesign (v0.2 language) — shipped session 14, functional in production, marked deprecated in v1.1d spec pending second pass
-- **Find Detail shipped against v1.1d spec (session 16)** — masthead, photograph with 1px hairline border, post-it bottom-right with push pin, title + price, quoted caption, diamond divider, cartographic pin+X block, vendor row with "Explore [Booth NNN →]" pill link, shelf strip with defensive alignment, owner manage block. IM Fell English + Caveat loaded via Google Fonts in root layout.
-- **BottomNav minimal chrome patch (session 16)** — background paperCream translucent, top border inkHairline. Full rework deferred to Booth v1.1 sprint.
+- Booth page redesign (v0.2 language) — shipped session 14, functional in production, marked deprecated in v1.1g spec pending second pass
+- **Find Detail shipped against v1.1f spec (sessions 16–17)** — masthead Title Case single style 18px, photograph with 1px hairline border, post-it bottom-right with push pin + stacked "Booth Location" eyebrow + `+6deg` rotation + 4px inset, title + price em-dash, quoted caption, diamond divider, cartographic pin+X block, X-aligned vendor row with "Explore booth →" label + numeric-only shelf-link pill, frosted on-image save+share top-right (state-independent bg), shelf strip with defensive alignment, owner manage block. IM Fell English + Caveat loaded via Google Fonts in root layout.
+- **Find Map shipped against v1.1g spec (session 17)** — `/flagged` full redesign: Mode A masthead, "Find Map" subheader, intro voice, pin+mall anchor, diamond divider, X-glyph itinerary spine with hairline ticks, `Booth [NNN pill]` row wrapping Link to `/shelf/[slug]`, vendor italic, saved-count, 2-up grid (≤2 finds) or horizontal scroll (≥3 finds), find tiles with frosted heart unsave + prices + sold-state treatment, empty state, chapter-break closer. All v0.2 localStorage / pruning / grouping / focus-rehydration / unsave wiring preserved intact.
+- **App-wide background paperCream `#e8ddc7` globally committed** (session 17) — `app/layout.tsx` body inline + `app/globals.css` `@layer base body`. Legacy `#f0ede6` retired.
+- **BottomNav minimal chrome patch (session 16)** — background paperCream translucent, top border inkHairline. Full rework still deferred to Booth v1.1g sprint.
+- **Glyph hierarchy locked (session 17)** — pin = mall, X = booth, cross-cutting rule documented in `docs/design-system.md` Cartographic Vocabulary.
 
 ## KNOWN GAPS ⚠️
 
@@ -484,12 +554,11 @@ _None as of session 15 close._
 - 🟡 T4d — pre-beta QA pass walking all three flows end-to-end.
 - 🟢 Session 13 test data cleanup — 5+ "David Butler" variants in DB. ~5 min SQL via admin-runbook Recipe 4.
 
-### 🟡 Design v1.1d execution (sessions 17+)
-- **Session 17 candidate A** — Nav Shelf decision + implementation. David picks from 4 mockups in `docs/mockups/nav-shelf-exploration.html` (A Suggestion / B Grain / C Full Shelf / D Line Alone). Ship chosen treatment.
-- **Session 17 candidate B** — Booth page v1.1d second pass (replaces `<LocationStatement>` + `<BoothLocationCTA>`, swaps Georgia → IM Fell English, applies cartographic pin+X, masthead wordmark, post-it vocabulary where applicable, 1px hairline photo borders). First opportunity to promote `v1` inline tokens to `lib/tokens.ts`.
-- **Session 18 candidate** — Feed header + `<MallSheet>` bottom sheet pattern against v1.1d.
-- **Session 19 candidate** — Find Map emotional redesign against v1.1d.
-- **Session 20 candidate** — Cleanup pass: inline Georgia → IM Fell English on chrome; inline `C` objects → `colors` import; magic-number spacing → spacing tokens; `lib/tokens.ts` additions for post-it/ink scale/paper palette.
+### 🟡 Design v1.1g execution (sessions 18+)
+- **Session 18 candidate A** — Booth page v1.1g second pass (replaces `<LocationStatement>` + `<BoothLocationCTA>`, swaps Georgia → IM Fell English, applies cartographic pin+X, masthead wordmark, post-it vocabulary where applicable, 1px hairline photo borders). First opportunity to promote `v1` inline tokens from Find Detail + Find Map to `lib/tokens.ts`.
+- **Session 18 candidate B** — Feed header + `<MallSheet>` bottom sheet pattern against v1.1g. Find tile primitive reused from Find Map.
+- **Session 18 candidate C** — Nav Shelf decision + implementation (still held from session 16). David picks from 4 mockups in `docs/mockups/nav-shelf-exploration.html` (A Suggestion / B Grain / C Full Shelf / D Line Alone). Ship chosen treatment.
+- **Session 19 candidate** — Cleanup pass: inline Georgia → IM Fell English on chrome; inline `C` objects → `colors` import; magic-number spacing → spacing tokens; `lib/tokens.ts` consolidation for post-it/ink scale/paper palette / Find tile primitive.
 
 ### 🟡 Sprint 3 leftovers still pending beta invites
 - Error monitoring (Sentry or structured logs)
@@ -517,8 +586,9 @@ _None as of session 15 close._
 - Cloudflare nameservers — dormant, no cost
 - `/shelves` AddBoothSheet — orphan after T4b ships
 - `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` — obsolete since T4a
-- Design v0.2 components deprecated but still in code (`LocationStatement`, `BoothLocationCTA`) — replaced in Booth v1.1d sprint (session 17 candidate B)
-- `v1` inline tokens on Find Detail and BottomNav — first opportunity to promote to `lib/tokens.ts` is the Booth v1.1d sprint
+- Design v0.2 components deprecated but still in code (`LocationStatement`, `BoothLocationCTA`) — replaced in Booth v1.1g sprint (session 18 candidate A)
+- `v1` inline tokens on Find Detail + Find Map + BottomNav — promote to `lib/tokens.ts` during Booth v1.1g sprint (now includes the Find tile primitive tokens)
+- `docs/mockups/find-map-exploration.html` and `docs/mockups/find-map-v2.html` — historical record; can delete once Find Map v1.1g is QA'd clean on device
 
 ---
 

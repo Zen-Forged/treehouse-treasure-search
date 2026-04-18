@@ -61,12 +61,13 @@ Any feature, copy, or UI change is evaluated against these:
 | Sold items stay visible | "Found a home" — they tell a story |
 | Copy is warm and observational | Never salesy, never hype, never transactional |
 | Layout breathes | Density is the enemy. Whitespace is intentional. |
-| **IM Fell English** for the editorial voice | Titles, captions, labels, status, eyebrows, booth numbers, mall names — all set in IM Fell English. Georgia is retired from the ecosystem layer (session 15). See `docs/design-system.md` v1.0. |
-| **Caveat** for rare handwritten moments only | One per screen maximum. Margin notes and journey notes (Feed, Find Map) — never decorative. |
+| **IM Fell English** for the editorial voice | Titles, captions, labels, status, eyebrows, booth numbers, mall names — all set in IM Fell English. Georgia is retired from the ecosystem layer (session 15). See `docs/design-system.md` v1.1g. |
+| **Caveat** for rare handwritten moments only | One per screen maximum. Margin notes — never decorative. Find Map tried a Caveat opener and retired it in v1.1g; prose voice did the same job more honestly. |
 | **system-ui** for precise data | Addresses, timestamps, technical labels. The precision voice. Mono is retired. |
-| Warm parchment palette | `#f1ead8` paper bg, `#1e4d2b` green — earthy, not digital |
+| Warm parchment palette | `#e8ddc7` paper bg (paperCream, committed globally session 17), `#1e4d2b` green — earthy, not digital |
 | Paper as surface | No card chrome around content. No border halos. Paper *is* the container. Section divisions use whitespace, hairline rules, and the diamond (`◆`) ornament. |
 | Cartographic language | The mall is a pin on the map. The booth is an X on the spot. Connected by a thin vertical tick. This is the location grammar everywhere in the product. |
+| **Glyph hierarchy locked (session 17)** | **pin = mall. X = booth.** These two glyphs never swap, substitute, or appear interchangeably. On any page that names both, the pin appears once (mall anchor, page-level) and the X appears once per booth stop (inline, content-level). Locked in `docs/design-system.md` v1.1g. |
 | Material restraint | One skeuomorphic gesture per find (the booth post-it). Two material objects on a single photograph is the maximum. A third (paperclip, stamp, tape) is decoration. |
 | Captions always quoted | They're reflections, not specs. Always in typographic quotation marks (“ ”), centered, italic. About *how it feels*, never *what it's made of*. |
 | "Found a home" not "Sold" | Terminology is committed. See CLAUDE.md. |
@@ -191,7 +192,7 @@ These conditions require a conversation with David before any code is written or
 | New external service integration | Cost, privacy, and dependency implications |
 | DNS changes during nameserver migration window | Splitting DNS across two authoritative sources causes inconsistent resolution. Currently: Shopify is sole authority; Cloudflare is dormant. No migration in progress. |
 | Onboarding change not scoped against `docs/onboarding-journey.md` | Three flows are committed. Drift-by-patch is what drove the session-7 scope crisis. Added session 8. |
-| UI change not scoped against `docs/design-system.md` v1.0 | Journal vocabulary is committed. Drift-by-patch is what drove the session-14 → 15 redirection. Added session 15. |
+| UI change not scoped against `docs/design-system.md` v1.1g | Journal vocabulary is committed. Drift-by-patch is what drove the session-14 → 15 redirection. Added session 15, version-bumped to v1.1g session 17. |
 
 ### 🟡 SURFACE — Flag before proceeding, then get approval
 
@@ -226,7 +227,7 @@ These don't stop work but must be called out explicitly before the session conti
 
 ## Current Risk Register
 
-> Updated: 2026-04-17 (session 15 — design direction redirected; `docs/design-system.md` v1.0 committed; Booth page v0.2 components deprecated pending second pass)
+> Updated: 2026-04-18 (session 17 — Find Detail v1.1f polish shipped; Find Map v1.1g full redesign shipped; glyph hierarchy locked; `docs/design-system.md` at v1.1g)
 
 | Risk | Severity | Status | Owner |
 |---|---|---|---|
@@ -265,9 +266,12 @@ These don't stop work but must be called out explicitly before the session conti
 | Email send has no retry/DLQ | 🟡 Medium | Open — best-effort acceptable for beta | Dev agent |
 | `/shelves` `AddBoothSheet` will be orphaned after T4b | 🟢 Low | Open — remove in T4b | Dev agent |
 | `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` obsolete | 🟢 Low | Open — doc cleanup | Docs agent |
-| **Design direction drifted toward generic across sessions 12–14** | 🟡 **Medium** | ✅ Resolved session 15 — `docs/design-system.md` rewritten v0.2 → v1.0 with journal vocabulary committed (cartographic pin+X, IM Fell English, post-it material gesture, paper-as-surface, tagline anchor). Booth page (shipped session 14) flagged for v1.0 second pass; its `LocationStatement` and `BoothLocationCTA` components deprecated in the doc. | Design agent |
-| **Booth page `LocationStatement` / `BoothLocationCTA` components deprecated** | 🟢 Low | Open — code still in repo and functional on `/my-shelf` and `/shelf/[slug]`, but v1.0 spec retires them. Dedicated Booth v1.0 Design sprint will replace them with the cartographic pin+X block. Not blocking; existing Booth page is functional. | Design + Dev agents |
-| **lib/tokens.ts token additions for v1.0** (post-it, ink scale, price ink, paperCream rename) | 🟢 Low | Open — bundled with Booth v1.0 sprint. Find Detail code build (session 16) can inline these values temporarily and they formalize in the Booth sprint. | Dev agent |
+| **Design direction drifted toward generic across sessions 12–14** | 🟡 **Medium** | ✅ Resolved session 15 — `docs/design-system.md` rewritten v0.2 → v1.0 with journal vocabulary committed. Doc has continued to evolve v1.1 → v1.1g across sessions 16–17 as Find Detail + Find Map shipped against it. | Design agent |
+| **Booth page `LocationStatement` / `BoothLocationCTA` components deprecated** | 🟢 Low | Open — code still in repo and functional on `/my-shelf` and `/shelf/[slug]`, but v1.1g spec retires them. Dedicated Booth v1.1g Design sprint will replace them with the cartographic pin+X block. Not blocking; existing Booth page is functional. Scoped as session 18 candidate A. | Design + Dev agents |
+| **lib/tokens.ts token additions for v1.1g** (post-it, ink scale, price ink, paperCream, Find tile primitive) | 🟢 Low | Open — bundled with Booth v1.1g sprint. Find Detail + Find Map inline `v1` values temporarily; they formalize in the Booth sprint. | Dev agent |
+| **Find Map v0.2 (page called "My Finds") pre-beta chrome mismatch** | 🟡 Medium | ✅ Resolved session 17 — `/flagged` full redesign to v1.1g shipped (journal itinerary, pin+mall anchor, X-glyph spine, Booth pill rows, find tiles with prices + unsave heart, intro voice + chapter-break closer). All v0.2 localStorage / pruning / grouping / focus-rehydration / unsave wiring preserved. | Design + Dev agents |
+| **Glyph hierarchy not documented as a cross-cutting rule** (risk: future screens pick the wrong glyph and dilute the language) | 🟢 Low | ✅ Resolved session 17 — pin = mall, X = booth locked in `docs/design-system.md` v1.1g Cartographic Vocabulary section. Propagates to Booth redesign (18A), Feed redesign (18B), and any future location-naming surface. | Design agent |
+| **App-wide background color inconsistent across routes** (Find Detail used paperCream; `/flagged` and chrome elsewhere still used legacy `#f0ede6`) | 🟢 Low | ✅ Resolved session 17 — `app/layout.tsx` body inline + `app/globals.css` `@layer base body` both committed to `#e8ddc7` paperCream. Global bg commitment documented in design-system doc "Paper as surface" section. | Design + Dev agents |
 
 ---
 
@@ -311,7 +315,7 @@ These don't stop work but must be called out explicitly before the session conti
 Every session standup includes a one-line Agent Roster block confirming who is active for the session. This prevents silently dropping an activated agent from the loop.
 
 **Standard standup preamble:**
-> **Active agents:** Dev · Product · Docs · Design — *(current as of 2026-04-17 session 15)*
+> **Active agents:** Dev · Product · Docs · Design — *(current as of 2026-04-18 session 17)*
 
 When an agent is activated or deactivated:
 1. Update the Agent Roster table above
@@ -356,7 +360,7 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 | Sprint 3 | Vendor bio, Find Map overhaul, error monitoring, rate limiting | 🔄 Carryovers folded into Sprint 4 |
 | Sprint 4 | Beta-readiness — custom domain, OTP auth, `/admin` polish, vendor onboarding | 🔄 In progress. Shipped: T1/T2/T3/T4a, KI-001/002/003/004, `/setup` 401 polish, T4c partial. Remaining: T4c copy polish (orphans C+D), T4b (admin surface consolidation), T4d (pre-beta QA pass). |
 | Sprint 5 | Guest-user UX + onboarding polish — "Curator Sign In" rename, `/welcome` landing, PWA install prompts, vendor onboarding Loom | 🔲 Planned |
-| **Design sprints (parallel to Sprint 4 tail)** | **v1.0 execution against `docs/design-system.md`** | 🔄 Session 15: direction lock. Session 16 candidate: Find Detail code build against v1.0 spec. Session 17 candidate: Booth page v1.0 second pass. Subsequent: Feed + Find Map. |
+| **Design sprints (parallel to Sprint 4 tail)** | **v1.1g execution against `docs/design-system.md`** | 🔄 Session 15: direction lock v0.2 → v1.0. Session 16: Find Detail v1.0 → v1.1d code build. Session 17: Find Detail polish v1.1e → v1.1f; Find Map v1.1g full redesign; glyph hierarchy locked; paperCream globalized. Session 18 candidate: Booth page v1.1g second pass. Subsequent: Feed + `<MallSheet>` + Nav Shelf + cleanup pass. |
 | Sprint 6+ | "Claim this booth" flow, QR-code approval, Universal Links, native app eval, feed pagination, ToS/privacy, admin-cleanup tool | 🔲 Parked |
 
 ---
@@ -382,7 +386,7 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 | `.claude/MASTER_PROMPT.md` | Operator rulebook — session structure, phase gating, approval boundaries |
 | `SPRINT_PLAN.md` | Sprint-level feature roadmap |
 | `docs/onboarding-journey.md` | **Canonical vendor onboarding spec — three flows, email matrix, re-scoped T4.** All onboarding-adjacent work scopes against this first. *(created session 8)* |
-| `docs/design-system.md` | **Canonical visual + interaction system — v1.0.** Journal vocabulary, cartographic pin+X, IM Fell English typography, post-it material gesture, Find Detail spec locked. All multi-screen UI work scopes against this first. Owned by Design agent. *(rewritten session 15)* |
+| `docs/design-system.md` | **Canonical visual + interaction system — v1.1g.** Journal vocabulary, cartographic pin+X (glyph hierarchy locked session 17), IM Fell English typography, post-it material gesture at +6deg with stacked "Booth Location" eyebrow, paper-as-surface globally committed at `#e8ddc7`, Find Detail v1.1f spec, Find Map v1.1g spec, Find tile primitive. All multi-screen UI work scopes against this first. Owned by Design agent. *(rewritten session 15, evolved through v1.1g in sessions 16–17)* |
 | `docs/known-issues.md` | Active bugs, gaps, deferred items |
 | `docs/admin-runbook.md` | 9-recipe SQL triage guide for in-mall use *(created session 13)* |
 | `docs/decision-log.md` | Architectural decisions and their rationale *(create when first decision is logged)* |
@@ -390,4 +394,4 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 ---
 > This document is the operating constitution for the Treehouse system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-17 (session 15 — tagline anchor committed; Brand Rules updated for v1.0 design direction; Design agent prompt refreshed)
+> Last updated: 2026-04-18 (session 17 — Find Detail v1.1f polish shipped; Find Map v1.1g full redesign shipped; glyph hierarchy locked; `docs/design-system.md` at v1.1g; paperCream globalized; Risk Register updated)
