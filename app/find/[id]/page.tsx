@@ -347,7 +347,194 @@ function IconBubble({
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+// SoldLanding ─ Find Detail 3B (v1.1i). Full-page end-of-path layout that
+// replaces the normal Find Detail when a shopper lands on a sold find. Owner
+// path stays on the normal layout (manage affordances). No photograph, no
+// post-it, no price — the page IS the closure.
+function SoldLanding({
+  vendorSlug,
+  vendorName,
+  onBack,
+}: {
+  vendorSlug: string | null;
+  vendorName: string | null;
+  onBack: () => void;
+}) {
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: v1.paperCream,
+        maxWidth: 430,
+        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* 1. Masthead — same chrome as normal Find Detail */}
+      <motion.div
+        variants={pageVariants}
+        initial="hidden"
+        animate="visible"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr auto 1fr",
+          alignItems: "center",
+          padding: "max(14px, env(safe-area-inset-top, 14px)) 18px 14px",
+          gap: 12,
+        }}
+      >
+        <div style={{ justifySelf: "start" }}>
+          <IconBubble onClick={onBack} ariaLabel="Go back">
+            <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+          </IconBubble>
+        </div>
+        <div
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontSize: 18,
+            color: v1.inkPrimary,
+            letterSpacing: "-0.005em",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Treehouse Finds
+        </div>
+        <div style={{ justifySelf: "end" }} aria-hidden="true" />
+      </motion.div>
+
+      {/* 2. Headline — "This find / found a home." with hard line break */}
+      <motion.div
+        variants={sectionVariants(0.08)}
+        initial="hidden"
+        animate="visible"
+        style={{ padding: "90px 32px 0", textAlign: "center" }}
+      >
+        <div
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontSize: 30,
+            color: v1.inkPrimary,
+            lineHeight: 1.2,
+            letterSpacing: "-0.005em",
+          }}
+        >
+          This find
+          <br />
+          found a home.
+        </div>
+      </motion.div>
+
+      {/* 3. Explanation */}
+      <motion.div
+        variants={sectionVariants(0.14)}
+        initial="hidden"
+        animate="visible"
+        style={{
+          padding: "14px 32px 0",
+          display: "flex",
+          justifyContent: "center",
+          textAlign: "center",
+        }}
+      >
+        <div
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontStyle: "italic",
+            fontSize: 16,
+            color: v1.inkMuted,
+            lineHeight: 1.65,
+            maxWidth: 300,
+          }}
+        >
+          The piece you saved has been claimed by someone else. That&rsquo;s the way of good things.
+        </div>
+      </motion.div>
+
+      {/* 4. Diamond divider (closer, 60px inset) */}
+      <motion.div
+        variants={sectionVariants(0.18)}
+        initial="hidden"
+        animate="visible"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "20px 60px 16px",
+        }}
+      >
+        <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+        <div
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontSize: 11,
+            color: "rgba(42,26,10,0.42)",
+            lineHeight: 1,
+          }}
+        >
+          ◆
+        </div>
+        <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+      </motion.div>
+
+      {/* 5 + 6. Primary + secondary links */}
+      <motion.div
+        variants={sectionVariants(0.22)}
+        initial="hidden"
+        animate="visible"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 22,
+          padding: "4px 32px 0",
+        }}
+      >
+        {vendorSlug && vendorName && (
+          <Link
+            href={`/shelf/${vendorSlug}`}
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontStyle: "italic",
+              fontSize: 15,
+              color: v1.inkMid,
+              textDecoration: "underline",
+              textDecorationStyle: "dotted",
+              textDecorationColor: v1.inkFaint,
+              textUnderlineOffset: 3,
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            Visit {vendorName}&rsquo;s shelf →
+          </Link>
+        )}
+        <Link
+          href="/"
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontStyle: "italic",
+            fontSize: 15,
+            color: v1.inkMid,
+            textDecoration: "underline",
+            textDecorationStyle: "dotted",
+            textDecorationColor: v1.inkFaint,
+            textUnderlineOffset: 3,
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          Back to Treehouse Finds
+        </Link>
+      </motion.div>
+
+      {/* Fill remaining height so BottomNav sits at the bottom */}
+      <div style={{ flex: 1, minHeight: 20 }} />
+
+      <div style={{ paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }} />
+      <BottomNav active={null} />
+    </div>
+  );
+}
+
 export default function FindDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -498,6 +685,28 @@ export default function FindDetailPage() {
   const mallName    = post.mall?.name ?? null;
   const mallAddr    = post.mall?.address ?? null;
   const price       = post.price_asking;
+
+  // ── 3B sold landing state (v1.1i, docs/design-system.md §Find Detail sold
+  // landing state). When a shopper deep-links or bookmark-taps through to a
+  // find that has since sold, replace the normal Find Detail layout entirely
+  // with a quiet end-of-path page. Owner exception: owners of the sold find
+  // still see the normal layout (including manage affordances) so they can
+  // mark it available again, edit, or delete — 3B is a shopper-facing surface.
+  if (isSold && !isMyPost) {
+    return (
+      <SoldLanding
+        vendorSlug={vendorSlug}
+        vendorName={vendorName}
+        onBack={() => router.back()}
+      />
+    );
+  }
+
+  // Note (v1.1i): the grayscale/opacity treatment applied to the hero photograph
+  // when `isSold` is now dead code for the shopper path (3B branches out above).
+  // It only ever renders for the owner viewing their own sold find. Cleanup is
+  // parked for a future pass — leaving the branch in place is a no-op on the
+  // shopper flow.
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
