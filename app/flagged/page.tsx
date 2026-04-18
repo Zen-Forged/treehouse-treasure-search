@@ -50,7 +50,7 @@ import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import BottomNav from "@/components/BottomNav";
 import type { Post } from "@/types/treehouse";
 
-// ── v1.1f tokens (imported from lib/tokens.ts) ───
+// ── v1.1f tokens ─────────────────────────────────────────────────────────────
 // Imported from lib/tokens.ts (canonical since session 19A). v1 palette +
 // fonts match docs/design-system.md v1.1h.
 

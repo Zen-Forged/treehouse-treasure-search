@@ -50,7 +50,91 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-18 (session 18 — Booth page v1.1h full redesign; post-it becomes cross-page primitive; Window View + Shelf View ways-of-seeing; Georgia cleared from the last major surface)
+> Last updated: 2026-04-18 (session 19 — 19A token consolidation shipped; `lib/tokens.ts` now canonical source for v1.1h `v1` palette + fonts; three inline duplicates retired)
+
+**Status:** ✅ **Session 19 opened with 19A — token consolidation cleanup — as the post-session-18 palate-cleanser.** `lib/tokens.ts` extended with canonical `v1` + `fonts` exports alongside the untouched v0.2 `colors` export. The three inline `v1` objects previously duplicated across `app/find/[id]/page.tsx`, `app/flagged/page.tsx`, and `components/BoothPage.tsx` were retired; all three now import from `@/lib/tokens`. `BoothPage.tsx` re-exports `v1`/`FONT_IM_FELL`/`FONT_SYS` so `/my-shelf` and `/shelf/[slug]` imports resolve unchanged. 19B (Feed + `<MallSheet>` redesign against v1.1h) deliberately deferred to its own session given the mockup-first protocol and ~3hr scope. **Build check + commit is HITL at session close — see below.**
+
+### What shipped (pending single commit)
+
+**`lib/tokens.ts` — extended, v0.2 tokens untouched:**
+- Added canonical `v1` export (14 keys: `paperCream`, `postit`, `inkPrimary`, `inkMid`, `inkMuted`, `inkFaint`, `inkHairline`, `priceInk`, `pillBg`, `pillBorder`, `pillInk`, `iconBubble`, `green`, `red`, `redBg`, `redBorder`, `imageRadius: 6`, `bannerRadius: 16`) — the union of values previously duplicated across the three pages, byte-identical to what was inline.
+- Added `fonts` export (`imFell`, `sys`) plus named convenience exports `FONT_IM_FELL` and `FONT_SYS` matching the constants previously declared in each page.
+- Left `colors`, `radius`, `spacing` exports **completely untouched** — the feed and every other v0.2 consumer is unaffected. The two token sets coexist by design during migration; v0.2 retires only when the last v0.2 consumer migrates to v1.1h.
+- File-top docstring explicitly names this coexistence and why (palette mismatch: `#f5f2eb` vs `#e8ddc7`, different ink scales) so the next editor doesn't merge them prematurely.
+
+**`components/BoothPage.tsx` — inline `v1` + font consts retired:**
+- Imports `v1`, `FONT_IM_FELL`, `FONT_SYS` from `@/lib/tokens`.
+- **Re-exports** the same symbols so `app/my-shelf/page.tsx` and `app/shelf/[slug]/page.tsx` keep their existing `import { v1, FONT_IM_FELL, FONT_SYS } from "@/components/BoothPage"` working unchanged. No edits needed on either Booth page.
+- File-top comment updated from "v1 inline token set — matches Find Detail exactly. Token promotion to lib/tokens.ts is the final step of this sprint; do not promote mid-build." → a committed-as-of-session-19A statement.
+
+**`app/find/[id]/page.tsx` — inline `v1` + font consts retired:**
+- Imports `v1`, `FONT_IM_FELL`, `FONT_SYS` from `@/lib/tokens`.
+- Inline `v1 = { ... } as const` block deleted; comment header trimmed to `// ── v1.1 tokens ──` with a two-line "imported from lib/tokens.ts" annotation.
+- Zero behavioral or visual change — token values are byte-identical.
+
+**`app/flagged/page.tsx` — inline `v1` + font consts retired:**
+- Same treatment as Find Detail.
+- `green` key (only used by Find Map for the saved-heart fill) carried into canonical `v1` in `lib/tokens.ts` so the heart still renders correctly.
+- Comment header preserved at full box-drawing rule length.
+
+### Tool-environment note from this session
+
+**Session-16 gotcha resurfaced:** `filesystem:edit_file` `oldText` anchoring on comment headers with box-drawing rules (`─────`) is unreliable across files because the rule lengths drift by a character here and there. Workaround that worked cleanly: anchor `oldText` on the unique `const v1 = {` line (not the comment header), then do a separate targeted edit to replace the comment. This is now documented via example in the tool-lesson lineage stretching back to session 16. For future Dev agents: when `edit_file` fails with a "Could not find exact match" error and the failing anchor is a comment rule, drop the comment from the anchor and replace it in a separate edit.
+
+No other gotchas. `filesystem:write_file` worked exclusively for the single full rewrite (`lib/tokens.ts`). `filesystem:edit_file` handled the three targeted retirements.
+
+### Why 19B deferred to its own session
+
+Session 19 opened with 19A → 19B bundled as the intended scope. Mid-session the decision was made to ship 19A alone and open 19B fresh. Rationale:
+
+1. **Mockup-first protocol holds.** Session 17 (Find Map) and session 18 (Booth page) both demonstrated that v1.1h redesigns benefit from 1–2 iterations of static HTML mockups before any code is written, with David reviewing between iterations. Rolling a 45-min cleanup and a 3-hour mockup-first redesign into one session would compress the design conversation too tightly.
+2. **Clean commit hygiene.** 19A is a surgical refactor with zero visual change. 19B is a substantial multi-screen redesign with visual change. Keeping them in separate commits preserves the ability to bisect and revert cleanly if 19B surfaces a regression.
+3. **Design agent readiness.** 19B scopes against v1.1h Feed + `<MallSheet>` + Find tile primitive reuse from Find Map. The Design agent should open session 20 (or a fresh 19) with a dedicated standup on feed header pattern, mall selector as bottom sheet, and the feed grid retired from its v0.2 masonry treatment toward a v1.1h vocabulary.
+
+### Post-sprint loose ends (deliberately deferred)
+
+- **Mockup HTML cleanup** — `docs/mockups/booth-v1-1g.html`, `docs/mockups/booth-v1-1g-v2.html`, `docs/mockups/find-map-exploration.html`, `docs/mockups/find-map-v2.html` can retire after on-device QA confirms v1.1g + v1.1h hold. No urgency.
+- **`components/ShelfGrid.tsx` ruthless deletion** — zero current callers per session 18 audit, retention comments in-file. Could delete in a future cleanup session if a thorough grep confirms no legacy consumers. Still no urgency.
+- **Feed + other v0.2 consumers still import `colors`** — this is intended state until 19B (Feed redesign) migrates the feed to v1.1h. At that point the remaining v0.2 consumers (vendor profile page, mall page, `/post`, `/post/preview`, `/admin`, `BottomNav` local `C`) can be audited and a decision made on whether to migrate them or retire the v0.2 token set entirely.
+
+### Session 20 candidates
+
+**20A — Feed header + `<MallSheet>` bottom sheet against v1.1h** (~3 hours). The feed is the front door and is still entirely v0.2. Mode B masthead pattern, pin-glyph in the mall selector, Find tile primitive reused from Find Map in the feed grid. **This is the top-of-queue design sprint now that token consolidation is complete.** Mockup-first protocol — 1–2 iterations in `docs/mockups/feed-v1-1h.html` before code.
+
+**20B — Nav Shelf decision + BottomNav full chrome rework** (~1 hour including David's A/B/C/D selection in `docs/mockups/nav-shelf-exploration.html`). Still held from sessions 16–19. BottomNav hasn't had a full chrome pass since v1.1d's minimal patch; a v1.1h-era rework can land in one sprint once David picks.
+
+**20C — Sprint 4 tail batch** (T4c copy polish + T4b admin surface consolidation + T4d pre-beta QA walk). ~5.5 hours focused. Non-design work; priority is rising as design-debt shrinks.
+
+**Recommended:** 20A in its own session with full design scoping time. 20B as a shorter follow-on or bundled with 20A if bandwidth allows.
+
+### Files touched this session
+- `lib/tokens.ts` — extended with canonical `v1` + `fonts` + `FONT_IM_FELL` + `FONT_SYS` exports (v0.2 tokens untouched)
+- `components/BoothPage.tsx` — inline `v1` + font consts retired; imports and re-exports from `@/lib/tokens`
+- `app/find/[id]/page.tsx` — inline `v1` + font consts retired; imports from `@/lib/tokens`
+- `app/flagged/page.tsx` — inline `v1` + font consts retired; imports from `@/lib/tokens`
+- `CLAUDE.md` (this file) — session 19 close
+
+### 🔆 Session close HITL
+
+Session close includes a required build verification per the session-14 tech rule. **You must run these before declaring the session truly closed:**
+
+```bash
+cd ~/Projects/treehouse-treasure-search && npm run build 2>&1 | tail -30
+```
+
+If the build is green, commit:
+
+```bash
+git add -A && git commit -m "refactor(tokens): promote v1.1h palette + fonts to lib/tokens.ts (19A)" && git push
+```
+
+Then `thc` for the standard docs-update commit (this CLAUDE.md edit).
+
+If the build fails, surface the error — most likely cause is a missed import somewhere in the three migrated files. All three were verified by reading, so a failure would be something the Dev agent missed. Rollback is `git checkout -- lib/tokens.ts components/BoothPage.tsx app/find/\[id\]/page.tsx app/flagged/page.tsx` and a fresh session.
+
+---
+
+## ARCHIVE — What was done earlier (2026-04-18, session 18)
 
 **Status:** ✅✅ **Session 18 shipped the Booth page redesign that's been the biggest outstanding design debt since session 15.** Both `/my-shelf` (owner) and `/shelf/[slug]` (public) rebuilt from the ground up against v1.1h: banner becomes a pure photograph with the booth post-it pinned to it (same primitive as Find Detail), vendor display name becomes the IM Fell 32px page title, mall + address demote to a small pin-prefixed block, and the availability tabs (On Display / Found homes) retire in favor of Window View (3-col 4:5 grid) + Shelf View (horizontal scroll, 52vw tiles). Four v0.2 components retired and deleted in the same commit. Build green. Commit `9271ecc` on main. Token promotion to `lib/tokens.ts` remains parked as final cleanup (safer post-QA).
 
@@ -578,6 +662,7 @@ Key records (via Shopify DNS): A `@` → `23.227.38.65`, CNAME `app` → Vercel,
 - `/setup` 401 race absorbed with retry+backoff
 - Design agent activated, `docs/design-system.md` at **v1.1h** (sessions 15–18)
 - Admin diagnostic UI, `docs/admin-runbook.md` with 9 SQL recipes
+- **Design v1.1h token consolidation (session 19A)** — `lib/tokens.ts` is now the canonical source of truth for the v1.1h `v1` palette + fonts (`FONT_IM_FELL`, `FONT_SYS`). Find Detail, Find Map, and BoothPage all import from it. Inline duplicates retired. `BoothPage.tsx` re-exports `v1`/`FONT_IM_FELL`/`FONT_SYS` so `/my-shelf` and `/shelf/[slug]` imports resolve unchanged. v0.2 `colors`/`radius`/`spacing` exports coexist in the same file for unmigrated surfaces (feed + vendor profile + mall page + post flow + admin + BottomNav local `C`).
 - Booth page redesign shipped against **v1.1h** spec (session 18) — both `/my-shelf` and `/shelf/[slug]`: banner as pure photograph with booth post-it pinned to it (cross-page primitive shared with Find Detail), vendor display name as IM Fell 32px page title, small pin-prefixed mall+address block as secondary location statement, Window View (3-col 4:5 portrait grid) + Shelf View (horizontal scroll with 52vw/210px tiles, 22px left padding on first tile) replacing availability tabs, AddFindTile in top-left cell of Window View (owner only), banner edit button top-left + frosted share bubble top-right, diamond-divider quiet closer. Sold items retired from the page entirely. Four v0.2 components deleted: `<LocationStatement>`, `<BoothLocationCTA>`, `<ExploreBanner>`, `<TabSwitcher>`. Georgia cleared from the last major surface.
 - **Find Detail shipped against v1.1f spec (sessions 16–17)** — masthead Title Case single style 18px, photograph with 1px hairline border, post-it bottom-right with push pin + stacked "Booth Location" eyebrow + `+6deg` rotation + 4px inset, title + price em-dash, quoted caption, diamond divider, cartographic pin+X block, X-aligned vendor row with "Explore booth →" label + numeric-only shelf-link pill, frosted on-image save+share top-right (state-independent bg), shelf strip with defensive alignment, owner manage block. IM Fell English + Caveat loaded via Google Fonts in root layout.
 - **Find Map shipped against v1.1g spec (session 17)** — `/flagged` full redesign: Mode A masthead, "Find Map" subheader, intro voice, pin+mall anchor, diamond divider, X-glyph itinerary spine with hairline ticks, `Booth [NNN pill]` row wrapping Link to `/shelf/[slug]`, vendor italic, saved-count, 2-up grid (≤2 finds) or horizontal scroll (≥3 finds), find tiles with frosted heart unsave + prices + sold-state treatment, empty state, chapter-break closer. All v0.2 localStorage / pruning / grouping / focus-rehydration / unsave wiring preserved intact.
@@ -596,11 +681,10 @@ _None as of session 15 close._
 - 🟡 T4d — pre-beta QA pass walking all three flows end-to-end.
 - 🟢 Session 13 test data cleanup — 5+ "David Butler" variants in DB. ~5 min SQL via admin-runbook Recipe 4.
 
-### 🟡 Design v1.1h execution (sessions 19+)
-- **Session 19 candidate A** — Token consolidation cleanup. Promote `v1` inline tokens to `lib/tokens.ts`, rewire Find Detail + Find Map + BoothPage to import from the canonical source. ~45 min.
-- **Session 19 candidate B** — Feed header + `<MallSheet>` bottom sheet pattern against v1.1h. Find tile primitive reused from Find Map. ~3 hours.
-- **Session 19 candidate C** — Nav Shelf decision + BottomNav full chrome rework. David picks from 4 mockups in `docs/mockups/nav-shelf-exploration.html` (A Suggestion / B Grain / C Full Shelf / D Line Alone), ship chosen treatment plus the BottomNav chrome pass that's been deferred since v1.1d's minimal patch. ~1 hour.
-- **Session 20 candidate** — Onboarding screens (`/vendor-request`, `/setup`, `/login`) v1.0 pass, bundled with "Curator Sign In" rename (Sprint 5 scope).
+### 🟡 Design v1.1h execution (sessions 20+)
+- **Session 20 candidate A** — Feed header + `<MallSheet>` bottom sheet pattern against v1.1h. Find tile primitive reused from Find Map. Mockup-first protocol — 1–2 iterations in `docs/mockups/feed-v1-1h.html` before code. ~3 hours. **Top-of-queue design sprint.**
+- **Session 20 candidate B** — Nav Shelf decision + BottomNav full chrome rework. David picks from 4 mockups in `docs/mockups/nav-shelf-exploration.html` (A Suggestion / B Grain / C Full Shelf / D Line Alone), ship chosen treatment plus the BottomNav chrome pass that's been deferred since v1.1d's minimal patch. ~1 hour.
+- **Session 21 candidate** — Onboarding screens (`/vendor-request`, `/setup`, `/login`) v1.1h pass, bundled with "Curator Sign In" rename (Sprint 5 scope).
 
 ### 🟡 Sprint 3 leftovers still pending beta invites
 - Error monitoring (Sentry or structured logs)
@@ -630,7 +714,6 @@ _None as of session 15 close._
 - `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` — obsolete since T4a
 - Design v0.2 components retired and deleted in session 18: `components/LocationStatement.tsx`, `components/BoothLocationCTA.tsx`, `components/ExploreBanner.tsx`, `components/TabSwitcher.tsx`
 - `components/ShelfGrid.tsx` — parked with retention comments (session 18); zero current callers but retention rationale documented in-file. Can delete in a future cleanup if grep across full codebase confirms no legacy consumers
-- `v1` inline tokens on Find Detail + Find Map + BoothPage — promote to `lib/tokens.ts` as session-19 opener (~45 min)
 - `docs/mockups/find-map-exploration.html`, `docs/mockups/find-map-v2.html`, `docs/mockups/booth-v1-1g.html`, `docs/mockups/booth-v1-1g-v2.html` — historical record; can delete once on-device QA confirms v1.1g + v1.1h hold
 
 ---
