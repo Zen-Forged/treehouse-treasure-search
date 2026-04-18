@@ -1,5 +1,5 @@
 // app/find/[id]/page.tsx
-// Find Detail — v1.1e (docs/design-system.md §Find Detail, updated session 17)
+// Find Detail — v1.1f (docs/design-system.md §Find Detail, updated session 17)
 //
 // Layout top-to-bottom:
 //   1. Masthead row (Mode A): back · "Treehouse Finds" wordmark (16px) · save + share
@@ -31,7 +31,11 @@
 // - Vendor row: "Explore" → "Explore booth →", pill slimmed to pure numeric badge
 // - Pill numeral bumped 13 → 16px IM Fell, padding tightened
 // - X glyph vertical alignment recalibrated to vendor-name baseline
-// - App-wide background aligned to paperCream (#e8ddc7) via app/layout.tsx + globals.css
+// v1.1f — session 17 follow-up polish pass:
+// - Saved heart state: frosted bubble bg stays constant; only icon color/fill flips to green
+//   (green-tinted bg was blending into warm/dark photos)
+// - Post-it: inset from screen edge (right: -12 → 4), rotation +3 → +6deg, eyebrow stacks "Booth / Location"
+// - Post-it minHeight 84 → 92 to accommodate the two-line eyebrow without crowding the 36px numeral
 
 "use client";
 
@@ -327,9 +331,11 @@ function IconBubble({
   variant?: "paper" | "frosted";
 }) {
   const paperBg = active ? "rgba(30,77,43,0.14)" : v1.iconBubble;
-  const frostedBg = active
-    ? "rgba(30,77,43,0.22)"
-    : "rgba(232,221,199,0.78)"; // paperCream translucent — reads as frosted over any photo
+  // v1.1f — frosted bg stays constant regardless of active state; only the icon
+  // inside flips color/fill to signal the saved state. Against warm/dark photos the
+  // green-tinted translucent bg was blending into the image; holding paperCream tone
+  // keeps the bubble as a stable mark and lets the heart glyph carry the state.
+  const frostedBg = "rgba(232,221,199,0.78)"; // paperCream translucent — reads as frosted over any photo
 
   return (
     <button
@@ -637,17 +643,18 @@ export default function FindDetailPage() {
             </IconBubble>
           </div>
 
-          {/* v1.1d — post-it moved BOTTOM-RIGHT with +3deg rotation, push pin at top-center */}
+          {/* v1.1d — post-it moved BOTTOM-RIGHT with push pin at top-center
+              v1.1f — inset from screen edge, rotation bumped +3 → +6deg, "Booth Location" stacked */}
           {boothNumber && (
             <div
               style={{
                 position: "absolute",
                 bottom: -14,
-                right: -12,
+                right: 4, // v1.1f — was -12; pulled inward so post-it sits fully inside the 22px page margin
                 width: 92,
-                minHeight: 84,
+                minHeight: 92, // v1.1f — was 84; grown to accommodate stacked "Booth Location" eyebrow without crowding the numeral
                 background: v1.postit,
-                transform: "rotate(3deg)",
+                transform: "rotate(6deg)", // v1.1f — was 3deg; more casual placed-verb without becoming fallen-over
                 transformOrigin: "bottom right",
                 boxShadow: `0 6px 14px rgba(42,26,10,0.28), 0 0 0 0.5px rgba(42,26,10,0.16)`,
                 padding: "14px 8px 10px",
@@ -678,11 +685,12 @@ export default function FindDetailPage() {
                   fontStyle: "italic",
                   fontSize: 14,
                   color: v1.inkMuted,
-                  lineHeight: 1,
+                  lineHeight: 1.1, // v1.1f — tight so "Booth" / "Location" read as one stacked label
                   marginBottom: 6,
+                  textAlign: "center",
                 }}
               >
-                Booth
+                Booth<br />Location
               </div>
               <div
                 style={{
