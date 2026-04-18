@@ -24,8 +24,8 @@ interface BottomNavProps {
 }
 
 const C = {
-  bg:         "rgba(245,242,235,0.97)",
-  border:     "rgba(26,24,16,0.09)",
+  bg:         "rgba(232,221,199,0.96)", // v1.1d — paperCream translucent to match Find Detail
+  border:     "rgba(42,26,10,0.18)",     // v1.1d — inkHairline for visible separation
   textMuted:  "#8a8476",
   green:      "#1e4d2b",
   greenLight: "rgba(30,77,43,0.10)",
