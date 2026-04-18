@@ -1,5 +1,5 @@
 # Treehouse — Design System
-> Version: 1.1h | Last updated: 2026-04-18 session 18 | Owned by: Design agent
+> Version: 1.1i | Last updated: 2026-04-18 session 20 | Owned by: Design agent
 > This document is the canonical source of truth for the Treehouse visual and interaction system.
 > Any multi-screen UI work must scope against this document before code is written.
 
@@ -30,6 +30,16 @@ This document holds the Treehouse design language in one place so every screen s
 (c) **`ExploreBanner` retires, closer adopts Find Map pattern.** The session-14 green-gradient "Discover more finds" CTA card contradicted paper-as-surface and spoke marketplace voice. Replaced with the Find Map closer pattern: diamond divider + quiet IM Fell italic line ("The shelf ends here. More booths await you."), centered, no link. BottomNav's Home carries the navigation.
 
 What the v2 mockup overrode from v1: **vendor name relocates off the banner onto the title block** (v1 kept it on the banner — a mall-as-hero residue from copy-pasting Find Map's grammar); **cartographic block collapses to pin+mall+address** (v1 had the full pin+tick+X+booth-pill block — redundant once the post-it carries the booth above); **Shelf View tiles bump 42vw/170px → 52vw/210px** with 22px left padding on the first tile (v1 had tiles flush to the screen edge, which read as *falling off the page* rather than *a shelf beginning*).
+
+**v1.1i — Feed redesign + MallSheet primitive + sold retires from shopper discovery (session 20).** Three linked commitments land with this pass, resolving the last major v0.2 surface in the ecosystem layer:
+
+(a) **Feed adopts paper masonry + feed hero.** The front door retains its v0.2 tree-masonry gestalt (2-column, varied tile heights, 50% dynamic right-column offset) because the branching composition deepens the treehouse metaphor in a way the uniform 4:5 grid from Find Map / Booth does not. The masonry retiles on paper (6px radius + 1px inkHairline border on each tile — the committed photograph primitive) with no titles and no prices — the photograph IS the find on this page, and the price reveal is part of the narrative arc when the user taps through. This is the one committed case where the Feed deliberately diverges from the single 4:5 Find tile primitive used on every other photograph surface; the rationale is documented below in the Feed screen-specific direction. The header is a new **feed hero block on paper** (Header 2 treatment from the v1.1h v1 mockup exploration) — masthead wordmark + IM Fell italic eyebrow ("Finds from across" or "Finds from") + IM Fell 26px mall/geography name as the tappable selector + dotted-underline address line (when a specific mall is selected) or subtle geo subtitle (when All is selected). No gradient, no CTA. The mall name is the tap target; tapping opens the `<MallSheet>` bottom sheet.
+
+(b) **`<MallSheet>` bottom sheet committed as the canonical mall selector.** Replaces the v0.2 inline `ChevronDown` dropdown on the feed. Paper surface, no card chrome, 20px top corner radius, draggable handle, IM Fell header + italic subhead + diamond divider + mall rows. Each mall row uses the **pin glyph** (locked cartographic vocabulary — pin = mall) with mall name in IM Fell 18px and city in system-ui 13px muted; find-count on the right in system-ui italic muted. The **All malls row** is special: no pin glyph (it isn't a place — it's a filter choice), italic IM Fell 19px label alone with a find-count on the right. Active row (whether a specific mall or All) carries a 1px hairline underline on its label text in inkPrimary, matching the Booth page's ViewToggle active treatment. This is the first cross-cutting use of the text-link-with-hairline-underline active-state pattern beyond Booth. The `<MallSheet>` primitive lands as a dedicated component and is reusable by `/post` and `/vendor-request` in a future sprint.
+
+(c) **Sold retires from shopper discovery surfaces (MVP).** "Found a home" as a visible label and the grayscale+opacity treatment on sold photographs retire from the feed and Find Map for the MVP window. Sold data still exists in Supabase and still appears on the Booth pages (public shelf + My Shelf) because the vendor's story/credibility benefits from showing what's moved. The **terminology commitment itself stays** — "Found a home" remains the committed word for the sold state when it does surface — but the shopper-facing discovery paths now show only available finds. Find Detail gets a new **sold landing state (3B)**: if a shopper deep-links or bookmark-taps through to a find that has since sold, the page replaces the normal layout entirely with a quiet "This find / found a home." full-page closer in IM Fell 30px, a one-sentence italic muted explanation, a diamond divider, and two italic dotted-underline IM Fell links ("Visit [vendor]'s shelf →" and "Back to Treehouse Finds"). No photograph, no post-it, no price — the page is *end-of-path*, matching the Find Map closer voice ("End of the map. Not the end of the search."). This is a full-page treatment, not a toast overlay; the rationale is that dimming-but-still-there creates "is this page real or not?" ambiguity that honest end-of-path language avoids. Find Map keeps the bookmark key when a saved find sells, so the user's saved list never silently changes behind them — the 3B page IS the closure, reached by the same tap that would have shown the find.
+
+The 3A alternative (photograph visible one last time with a quiet toast + redirect offer) was explored and is tracked as a post-MVP design direction pending real sold-find data; the interaction questions it raises (auto-redirect timing, saved-state memory, do we show other vendor finds beneath, does the post-it change) are not worth solving before we have on-device behavioral signal.
 
 ---
 
@@ -380,11 +390,129 @@ The shared `components/BottomNav.tsx` is used by every page and still carries th
 
 Green accent (`#1e4d2b`) and muted ink (`#8a8476` legacy) retained for now.
 
-### Feed header + mall bottom sheet — scope against v1.0 before code
+### Feed — COMMITTED v1.1i (session 20)
 
-**Header:** Mode B with the unified masthead. Left: search/menu icon. Center: "Treehouse *Finds*" wordmark. Right: user-circle icon.
+The front door at route `/`. The one screen in the product where a shopper arrives without context and where *embracing the search* is the operational goal. Every design choice on this page is subordinate to that: the photograph is the invitation, not a card around the photograph.
 
-**Sign-in affordance and mall selector:** unchanged from v0.2 direction — bottom sheet for sign-in, `<MallSheet>` bottom sheet for mall selection. Both get re-specced against v1.0 typography and material vocabulary before implementation. The `<MallSheet>` remains the canonical bottom-sheet pattern for `/post`, `/vendor-request`, and Find Map filter.
+**Order top-to-bottom:**
+1. **Masthead row** (Mode B) — left slot menu icon (38px paper bubble), centered "Treehouse Finds" wordmark (18px Title Case single style), right slot profile/user-circle icon (38px paper bubble)
+2. **Feed hero on paper** (Header 2) — 22px horizontal padding, 20px top padding, 6px bottom padding
+   - **Eyebrow** — IM Fell English italic 15px muted, line-height 1.4. Copy is state-dependent:
+     - When All malls is selected: "Finds from across"
+     - When a specific mall is selected: "Finds from"
+   - **Mall/geography name** — IM Fell English 26px primary ink, line-height 1.2, `-0.005em` tracking. **Tappable** — opens `<MallSheet>`. Paired inline with a small 14×14px chevron-down glyph in muted ink at the baseline to signal the affordance. Copy is state-dependent:
+     - All malls: "Kentucky"
+     - Specific mall: the mall's display name
+   - **Address / geo line** — state-dependent:
+     - All malls: IM Fell italic 13.5px muted, reads "Kentucky & Southern Indiana" — no pin glyph, no tap affordance (it's a geography summary, not a location)
+     - Specific mall: pin glyph (13×16px muted) + system-ui 14px muted dotted-underline address, tappable via `mapsUrl(address)`
+3. **Diamond divider** — `◆` flanked by hairline rules, 16px top padding / 14px bottom
+4. **Paper masonry** — 22px horizontal padding, 2-column grid, 12px gap
+   - **Column offset** — right column begins with a top margin equal to 50% of the first-left-column tile's rendered height (live-measured via `ResizeObserver` on the first tile). This creates the "branching" gestalt that deepens the treehouse metaphor. Skeleton uses a fixed 65px offset to prevent layout jump during initial load
+   - **Tile** — full-width within its column, natural aspect ratio (variable height — the photograph's own aspect ratio determines the tile height, which is what produces the branching effect), **6px corner radius**, **1px `inkHairline` border**, overflow hidden, background `postit` (shows through while image loads)
+   - **No title, no price, no caption** on tiles. The photograph is the entire tile. This is the deliberate divergence from the 4:5 Find tile primitive used elsewhere; the rationale is that the Feed is the one surface where *embracing the search* means letting the photograph alone do the work, and the price reveal happens on Find Detail after the user's tap has declared interest. Price in the grid would read as a marketplace listing filter; title in the grid would read as catalog metadata. Neither serves the front-door gesture
+   - **Frosted heart top-right** — identical to Find Map's find tile heart: 30×30px paperCream translucent bubble (`rgba(232,221,199,0.78)` with `backdrop-filter: blur(8px)`), 0.5px inkHairline edge, heart icon 14px. **State-independent bubble background** — when saved, only the glyph color flips to filled green; the bubble stays paperCream (matches v1.1f Find Detail save-state treatment). Tap toggles the bookmark via `flagKey(postId)` in `safeStorage`, stops propagation so the tap doesn't navigate
+   - **Sold items do not render** — `getFeedPosts` already filters `status: "available"` at the data layer; the client never sees sold rows on the feed. No grayscale treatment, no "Found a home" caption anywhere in the grid. See v1.1i sold-retirement commitment
+   - **Tap the tile** — navigates to `/find/[id]`
+5. **Empty state** — "The shelves are quiet." (IM Fell 20px primary) + "Check back soon — new finds land here the moment a vendor posts them." (IM Fell italic 14px muted, max-width 230px, centered). 72px top padding. No CTA (shoppers have nothing to do if the feed is empty; vendor onboarding lives at `/vendor-request` which is reachable via BottomNav context elsewhere)
+6. **Bottom nav** — standard BottomNav chrome (v1.1d minimal patch)
+
+**What retires on the Feed (v1.1i):**
+- `<MallHeroCard>` gradient card primitive (dark-gradient hero with noise overlay, eyebrow "Treehouse Finds from", CTA button "Explore the shelves") — contradicts paper-as-surface and reads as marketplace marketing chrome
+- `<GenericMallHero>` — the All-malls variant of `MallHeroCard`; replaced by the feed hero's All-malls state
+- Inline `ChevronDown` mall dropdown in the masthead — replaced by the `<MallSheet>` bottom sheet, triggered by tapping the mall/geography name in the hero
+- v0.2 tile surface (cream `#edeae1` with warm border) — retiled on paper with 6px radius + inkHairline border
+- "Found a home" badge on sold tiles + sold-tile grayscale/opacity treatment — retired with the sold-retirement commitment; sold posts no longer appear in the grid at all
+- v0.2 mall hero's cinematic gradient treatment (`default` / `golden` / `forest` / `terracotta` / `slate` gradient variants) — retired entirely; paper-as-surface replaces the gradient chrome
+- Raw `localStorage` calls in the feed — already migrated to `safeStorage`; the v1.1i rewrite preserves this
+- `colors` (v0.2 legacy palette) imports — feed migrates to the `v1` token set in `lib/tokens.ts` to match Find Detail / Find Map / Booth
+
+**What's new on the Feed (v1.1i):**
+- Feed hero block on paper with state-dependent eyebrow + 26px mall/geography name as tappable MallSheet trigger
+- Frosted hearts on every tile for save-from-feed (previously: save only reachable from Find Detail)
+- Paper masonry tiles at 6px radius + inkHairline border (matches every other photograph surface in the app)
+- First-load default is All malls with "Finds from across / Kentucky" copy; a saved mall selection from `localStorage` overrides the default on return visits
+- Sold posts filtered at both data layer and presentation (zero sold posts visible on the feed under any condition)
+
+**Open questions deferred past v1.1i:**
+- Whether saved-but-sold finds should show a tiny signal on the Find Map tile before tap-through (currently: sold saves render identically to available saves; 3B is the reveal on tap). Decision deferred until there's real on-device behavior data
+- Pull-to-refresh on the feed — tracked as a Sprint 3 carryover, not in v1.1i scope
+- Feed pagination beyond the first 80 posts — Sprint 6+
+- Caveat margin-note as a rare Feed accent (per the one-per-screen rule) — held; the current v1.1i spec has no Caveat anywhere on the Feed, and adding one is a deliberate future design choice, not an oversight
+- Vendor directory / cross-vendor discovery surface — Sprint 6+
+
+### MallSheet — COMMITTED v1.1i (session 20)
+
+The canonical bottom-sheet primitive for mall selection. Committed on the Feed as the first user; reusable by `/post` and `/vendor-request` in a future sprint.
+
+**Structure:**
+1. **Backdrop** — `rgba(30, 20, 10, 0.38)` dim overlay across the full viewport beneath the sheet. Tap dismisses
+2. **Sheet container** — anchored to the bottom of the 430px viewport, slides up on open. Background `paperCream`, top corner radius 20px, `0 -8px 30px rgba(30, 20, 10, 0.28)` shadow, max-height 78% of viewport, scrollable internally. Respects `env(safe-area-inset-bottom)` so the bottom row doesn't sit behind BottomNav chrome
+3. **Drag handle** — 44×4px rounded-rectangle in `inkFaint`, centered, 12px below the top edge. Visual drag affordance even though the sheet is also dismissible via backdrop tap
+4. **Header** — "Choose a mall" in IM Fell English 22px primary, `-0.005em` tracking, 22px horizontal padding
+5. **Subhead** — "Kentucky & Southern Indiana — tap to filter the feed." in IM Fell italic 14px muted, 22px horizontal padding, 14px bottom padding
+6. **Diamond divider** — `◆` flanked by hairline rules, 4px top / 12px bottom padding, 22px horizontal padding
+7. **All-malls row** — first row, special treatment:
+   - **No pin glyph** in the left column (violating the pin-per-row pattern deliberately, because All isn't a place)
+   - Label: IM Fell English *italic* 19px primary ink, "All malls"
+   - Right: find-count in system-ui italic 13px muted (e.g., "1 mall live · more soon" for the beta-era single-mall reality; or "N malls" when multi-mall ships)
+   - Active state (when All is the current filter): 1px hairline underline on the "All malls" label in inkPrimary (matches Booth page ViewToggle active treatment; matches the first cross-cutting use of this active-state pattern)
+   - Grid: `1fr auto` two-column (no left pin column)
+8. **Mall row** (repeating, one per mall in the system):
+   - **Pin glyph** 18×22px in left column (primary ink when active, muted ink when inactive)
+   - **Mall name + city** stacked in middle column: mall name IM Fell 18px primary, `-0.005em` tracking, line-height 1.25; city in system-ui 13px muted (e.g., "Louisville, KY" or "Clarksville, IN")
+   - **Find-count** in right column: system-ui italic 12.5px muted (e.g., "42 finds"). Shows "—" (em-dash) for malls with no live content during beta
+   - Active state: 1px hairline underline on the mall name label in inkPrimary; row background `rgba(42, 26, 10, 0.03)` subtle wash
+   - Grid: `24px 1fr auto` three-column
+   - Bottom border: 1px inkHairline (except on the last row)
+9. **Sort** — mall rows sorted alphabetically by `name`; All malls always first regardless of sort
+
+**Props contract** (for the eventual `components/MallSheet.tsx`):
+```
+<MallSheet
+  open={boolean}
+  onClose={() => void}
+  malls={Mall[]}
+  activeMallId={string | null}  // null means All is active
+  onSelect={(mallId: string | null) => void}  // null selects All
+  findCounts?={Record<string, number>}  // optional per-mall counts; falls back to "—"
+/>
+```
+
+Selection invokes `onSelect` with the mall ID (or null for All) and the consumer is responsible for persisting the choice to `safeStorage` and closing the sheet via `onClose`.
+
+**What retires with MallSheet (v1.1i):**
+- Inline `ChevronDown` mall dropdown on the feed (v0.2) — replaced by MallSheet-triggering mall name in the feed hero
+- Any ad-hoc mall pickers across other pages — they migrate to MallSheet in future sprints (`/post`, `/vendor-request`, admin flows)
+
+### Find Detail sold landing state — COMMITTED v1.1i (session 20)
+
+Applies when a shopper arrives at `/find/[id]` and the fetched `post.status === "sold"`. The normal Find Detail layout (photograph, post-it, title, caption, cartographic block, shelf strip) does not render; it is replaced entirely by the sold-landing layout below.
+
+**Order top-to-bottom:**
+1. **Masthead row** — back arrow (left, 38px paper bubble), "Treehouse Finds" wordmark (centered, 18px Title Case single style), right slot empty. **Same masthead as the normal Find Detail** so the chrome feels continuous; the body is what changes
+2. **Headline** — IM Fell English 30px primary ink, line-height 1.2, `-0.005em` tracking, centered, 90px top padding, 32px horizontal padding. Copy: **"This find / found a home."** — set with a hard line break between "find" and "found" so the two-line composition reads as a quiet statement rather than a run-on sentence. Width naturally wraps at 430px; margin plus line break produce the cadence
+3. **Explanation** — IM Fell English italic 16px muted, line-height 1.65, centered, max-width 300px, 14px top padding. Copy: **"The piece you saved has been claimed by someone else. That's the way of good things."** The closing fragment ("That's the way of good things.") is deliberate — it names the emotional reality honestly rather than apologizing for the outcome
+4. **Diamond divider** — `◆` flanked by hairline rules, 20px top / 16px bottom padding, 60px horizontal padding (more inset than the Feed/Find Map diamond to read as a closer, not a section break)
+5. **Primary link** — "Visit [vendor display name]'s shelf →" in IM Fell English italic 15px mid-ink, dotted underline in inkFaint, `textUnderlineOffset: 3`, centered. Wraps a `<Link>` to `/shelf/[vendor-slug]`. The vendor's Booth page still shows sold items (per v1.1i commitment), so this is a meaningful next step — the shopper can see more of this vendor's work even though this specific piece is gone
+6. **Secondary link** — "Back to Treehouse Finds" in IM Fell English italic 15px mid-ink, dotted underline, centered, 22px top padding from primary link. Wraps a `<Link>` to `/`
+7. **Bottom nav** — standard BottomNav chrome, flaggedCount badge still works
+
+**Why this treatment and not the others:**
+- **3A (dim the page + toast)** — was explored and rejected for the MVP. The ambiguity of a dimmed-but-still-there page creates a "is this real or not?" read, and the interaction design questions it raises (auto-redirect timing, does the post-it change, do we show other vendor finds beneath, does the saved-state memory matter) are not solvable without real on-device behavior data. Tracked as a post-MVP design direction worth revisiting
+- **3C (render as normal)** — rejected because it shows a price that isn't real and could send a shopper on a wasted trip. Violates "rooted in reality"
+- **3B** — chosen because it's honest, unambiguous, and matches the journal voice already committed on Find Map's closer line. End-of-path is a legitimate page state in this product
+
+**Bookmark behavior when a saved find sells:**
+The bookmark key in `safeStorage` is **not pruned** when a saved find sells. The user's Find Map continues to show the find in its itinerary (same tile treatment as an available save, no visible sold signal on the tile), and tapping through routes to this 3B sold landing state. The rationale: a user's saved list should not silently change behind them; the 3B page IS the closure, reached by the same tap that would have shown the find. Clearing the bookmark (either via the frosted heart on the 3B page if we add one in a future iteration, or via the Find Map tile's heart) remains the user's explicit action
+
+**Open questions deferred past v1.1i:**
+- Whether the 3B page itself should have an unsave affordance (currently: no — unsaving is done from Find Map). Trigger: real usage data showing whether users naturally return to Find Map to clean up or if they expect to unsave from 3B
+- Whether saved-but-sold Find Map tiles should show a tiny signal (a small dot, a faint hairline tint) before tap-through. Held for on-device data
+
+### Feed header + mall bottom sheet — SUPERSEDED by v1.1i
+
+This section's v1.0 scaffolding ("scope against v1.0 before code") has been fully superseded by the committed **Feed** and **MallSheet** sections above (v1.1i, session 20). Retained here only as a breadcrumb: earlier drafts staged a bottom-sheet pattern without committing to specifics; the v1.1i commitment finalizes the spec and retires v0.2 `MallHeroCard` from the feed entirely.
 
 ### Find Map — COMMITTED v1.1g (session 17 redesign)
 
@@ -413,6 +541,8 @@ The page at route `/flagged` is called "Find Map" in the UI. The route name stay
 - Title — IM Fell italic 13px mid-ink, max 2 lines with ellipsis
 - Price — system-ui 13px `priceInk` (`#6a4a30`), `-0.005em` tracking (matches Find Detail price treatment)
 - Sold state — photo gets 50% grayscale + 62% opacity filter; price replaces with "Found a home" in IM Fell italic 12.5px muted
+**Sold state — UPDATED v1.1i:** sold saves still render in Find Map (their bookmark keys are not pruned when a find sells, and `getPostsByIds` still hydrates sold rows), but the **sold-state grayscale + opacity + "Found a home" caption treatment retires** per the v1.1i sold-retirement commitment. Sold saves render visually identical to available saves on the Find tile — the reveal happens on tap-through via the Find Detail 3B sold landing state. The `isSold` branch inside the Find tile becomes dead code after this sprint and should be removed. Do **not** add a status filter to `getPostsByIds`: doing so would prevent sold saves from hydrating, which would leave the user's bookmark key dangling with no tap-target and no way to reach the 3B closure — the Find Map tile is what takes the user to 3B. Keeping the bookmark alive + keeping the tile visible + letting 3B be the reveal is the committed three-part contract; removing any one of them breaks the other two.
+
 - Tile wraps a Link to `/find/[id]`; the heart button stops propagation so tapping it doesn't navigate
 
 **Empty state:** "Nothing saved yet" (IM Fell 24px primary) + "Tap the heart on any find to save it here. Your trip comes together as you go." (IM Fell italic 15px muted, max-width 280px). No CTA link; BottomNav "Home" returns to the feed.
@@ -451,6 +581,9 @@ Patterns removed from the system in v1.0 that shipped in v0.2:
 | Save + share in the masthead right slot (v1.1e) | Save + share as frosted bubbles in the photograph's top-right corner | Consolidates interactive chrome near the image itself, freeing masthead weight for the wordmark and matching the convention most photo-first interfaces use |
 | Vendor name text overlay on the Booth hero banner (v1.1h) | Vendor name relocates to IM Fell 32px page title below the banner | The banner was doing two jobs (photograph + title canvas); splitting them lets the banner be a pure photograph and lets the vendor name read as the page's headline |
 | `MapPin · America's Antique Mall · Louisville` inline line on Booth banner (v1.1h) | Small pin-prefixed mall block below the title | Mall is context, not banner-header material; demoting it to a small block acknowledges the Booth page's subject is the booth, not the mall |
+| `<MallHeroCard>` + `<GenericMallHero>` gradient hero cards (v1.1i) | Feed hero on paper (IM Fell italic eyebrow + 26px mall/geography name as MallSheet trigger + state-dependent address/geo line) | Dark gradient + noise overlay + CTA button read as marketplace marketing chrome and contradicted paper-as-surface. The paper hero lets the feed's front-door voice match the rest of the app without sacrificing mall identity |
+| Inline `ChevronDown` mall dropdown in the feed masthead (v1.1i) | `<MallSheet>` bottom sheet triggered by tapping the mall/geography name in the feed hero | Inline dropdown is a control, not a place-selection gesture. Bottom sheet with pin-glyph-per-row and a no-glyph italic All row treats mall selection as a cartographic choice |
+| Sold-state grayscale + opacity + "Found a home" caption on feed and Find Map tiles (v1.1i) | Sold filtered from feed at data layer; sold saves on Find Map render identical to available saves, with 3B sold landing state on Find Detail as the reveal | "Found a home" as a visible label on a browse/discovery surface reads as a marketplace status cue; retiring it from shopper-facing paths lets those surfaces stay about what's available. Sold still renders on the Booth page because the vendor's story/credibility benefits from showing what's moved
 
 ---
 
@@ -536,25 +669,28 @@ Material Design 3 allows 11px for decorative metadata; we deliberately push one 
 | Vendor (user-facing) | "Curator" where emotional; "Vendor" where transactional | No mixing within one screen |
 | Booth page inventory views (v1.1h) | "Window View" (grid) / "Shelf View" (horizontal scroll) | Do not revert to availability tab labels |
 
+**Sold-label surface policy (v1.1i):** the word "Found a home" remains the committed terminology for the sold state when it does surface, but for the MVP window it appears in only two places: (1) the Find Detail sold landing state headline ("This find / found a home."), and (2) the Booth page if/when sold-history surfaces are re-added post-beta. The feed and Find Map do not show sold posts or any "Found a home" labeling during MVP.
+
 ---
 
 ## Remaining `PENDING`
 
 | Item | Trigger for the pass |
 |---|---|
-| Feed + `<MallSheet>` v1.1 pass | Next Design sprint after Booth v1.1h ships (session 18B candidate) |
-| Nav Shelf decision + implementation | David reviews `docs/mockups/nav-shelf-exploration.html` A/B/C/D; ship chosen treatment; bundle with BottomNav full chrome rework (session 18C) |
-| BottomNav full chrome rework | After Booth v1.1h ships; bundle with Nav Shelf decision |
+| Nav Shelf decision + implementation | David reviews `docs/mockups/nav-shelf-exploration.html` A/B/C/D; ship chosen treatment; bundle with BottomNav full chrome rework |
+| BottomNav full chrome rework | Bundle with Nav Shelf decision |
 | Onboarding screens (`/vendor-request`, `/setup`, `/login`) v1.0 pass | Sprint 5 — bundle with "Curator Sign In" rename |
 | `/admin` visual pass | T4b admin surface consolidation |
+| `<MallSheet>` migration to `/post` and `/vendor-request` | When those surfaces get their v1.0 passes (Sprint 5). The primitive is committed in v1.1i; the migration is mechanical |
+| 3A Find Detail sold landing state (photograph-still-visible treatment) | Post-MVP, when there's real on-device sold-find behavior data. Decisions needed before committing: auto-redirect timing, saved-state memory, does the post-it change, do we show other vendor finds beneath |
+| Find Map saved-but-sold tile signal | Post-MVP on-device data — do users expect *any* visible cue on a sold save before tap-through, or is 3B a clean enough reveal? |
 | Dark mode | Not prioritized |
 | Curator's Statement / vendor bio block on Booth page | Post-beta; parked pending real vendor feedback |
-| Sold-history surface for a future "vendor story" view | Post-beta; `FoundTile` retained against this future |
+| Sold-history surface for a future "vendor story" view | Post-beta; `FoundTile` retained against this future. Would re-surface "Found a home" terminology on the Booth page — in scope for that sprint, not MVP |
 | Featured-tile rhythm in Booth Window View grid | Trigger: tiered pricing OR enough post-launch vendor photo data to see natural patterns |
 | Portrait-aspect variety (3:4 tiles) | Trigger: vendor photo intake moves beyond MVP square-crop pipeline |
 | Vendor directory / cross-vendor discovery | Sprint 6+ |
-| Token additions to `lib/tokens.ts` | Final step of Booth v1.1h sprint (after page renders correctly against inline tokens) |
-| Cleanup pass: inline `C` objects → `colors` import across older pages; magic-number spacing → spacing tokens; `v1` inline tokens on Find Detail + Find Map + Booth → `lib/tokens.ts` | Dedicated cleanup session after Booth v1.1h ships |
+| Cleanup pass: inline `C` objects → `colors` import across older pages; magic-number spacing → spacing tokens | Dedicated cleanup session after Feed v1.1i ships (Find Detail / Find Map / Booth / Feed all on `v1` tokens after this sprint; older pages — vendor profile, mall page, post flow, admin — still on `colors`) |
 
 ---
 
@@ -581,4 +717,4 @@ Material Design 3 allows 11px for decorative metadata; we deliberately push one 
 ---
 > This document is the canonical source of truth for the Treehouse design system.
 > It is maintained by the Design agent and reviewed by David at each design-adjacent session.
-> Last updated: 2026-04-18 (session 18 — v1.1h pass: Booth page redesign; post-it as cross-page primitive; Window View + Shelf View; `<LocationStatement>` + `<BoothLocationCTA>` + `<ExploreBanner>` retired; Georgia cleared from the last major surface)
+> Last updated: 2026-04-18 (session 20 — v1.1i pass: Feed paper masonry + feed hero on paper; `<MallSheet>` committed as canonical bottom-sheet primitive; sold retires from shopper discovery surfaces with Find Detail 3B sold landing state as the reveal; `<MallHeroCard>` + `<GenericMallHero>` retired)
