@@ -89,7 +89,8 @@ A small cream-yellow note (`#faf3dc`) placed on the **bottom-left** edge of the 
 - Soft drop shadow beneath (`0 4px 8px rgba(42,26,10,0.20)`)
 - Hairline border via `0 0 0 0.5px rgba(42,26,10,0.08)` to separate it from the photo
 - Overlaps the photo's bottom edge slightly so the note appears tucked against the lower frame
-- Contents: eyebrow label "Booth" in IM Fell English italic 11px Title Case tracked normally in muted ink, then the booth number in IM Fell English 28px at primary ink (`#2a1a0a`), both centered within the note
+- **Dimensions: 92×84px** (updated v1.1 from 78×72 — the booth numeral should anchor the note; smaller dimensions made it float as a label rather than land as an object)
+- Contents: eyebrow label "Booth" in IM Fell English italic 12px Title Case in muted ink, then the booth number in IM Fell English **36px** at primary ink (`#2a1a0a`), both centered within the note. The numeral is intentionally large — it is the visual anchor of the note and therefore of the photograph's location claim.
 
 The post-it is the *someone was here and placed this* gesture. It reads immediately as "this find is at this booth" without needing a pill, a badge, or a card to contain the information. It's the one skeuomorphic element on the page. Pairing it with the status pill on the same bottom edge of the photograph creates a single grounded line of placed objects rather than two competing focal points.
 
@@ -167,15 +168,15 @@ Three faces, each with an explicit role. The v0.2 instinct to do 90% of typograp
 | Quoted caption | 19px | IM Fell English italic, line-height 1.65, **centered** | Always in typographic quotation marks (“ ”) at 26px in muted ink. v1.0 was 17px |
 | Section head (mall name, vendor name) | 18px | IM Fell English 400, line-height 1.3 | v1.0 was 16–17px |
 | Address / precise data | 14px | system-ui 400, line-height 1.55, muted ink, dotted underline when tappable | v1.0 was 13px. system-ui is the precision voice — its familiar shapes make small sizes readable |
-| "Visit the shelf →" | 14px | **system-ui 500**, dotted underline, muted ink | Updated v1.1 — was IM Fell italic 14px. Pairing it with the address in system-ui ties the two navigation affordances together as *functional chrome* rather than editorial voice, and serves the 50+ demographic |
-| "More from this shelf…" | 13px | IM Fell English italic, **Title Case, no letter-spacing**, muted ink | Updated v1.1 — was 10px uppercase tracked 0.22em. Trailing ellipsis always |
+| "Visit the shelf →" | 14px | **system-ui 400**, dotted underline, muted ink | Updated v1.1 — was IM Fell italic 14px. Matches the address line exactly (same face, same weight, same size, same color, same underline style). Pairing them as indistinguishable chrome is the point |
+| "More from this shelf…" | **15px** | IM Fell English italic, Title Case, no letter-spacing, muted ink | Updated v1.1 — was 13px; bumped to section-announcement floor. Trailing ellipsis always |
 | Status pill label | 13px | IM Fell English italic, **Title Case**, near-primary ink | Updated v1.1 — was 11px uppercase tracked 0.14em |
 | Booth pill label (on vendor line) | 13px | IM Fell English italic, Title Case, near-primary ink | New v1.1 — matches status pill treatment to visually link "On Display" and "Booth 123456" |
-| Post-it "Booth" eyebrow | 11px | IM Fell English italic, **Title Case, no letter-spacing**, muted ink | Updated v1.1 — was 9.5px uppercase tracked 0.25em. Now legible and on-voice |
-| Post-it booth number | 28px | IM Fell English 400, -0.01em tracking | v1.0 was 27px — 1px bump for visual weight parity with the new larger title |
+| Post-it "Booth" eyebrow | **12px** | IM Fell English italic, Title Case, no letter-spacing, muted ink | Updated v1.1 — 1px bump for legibility floor |
+| Post-it booth number | **36px** | IM Fell English 400, -0.01em tracking | Updated v1.1 — was 28px. The numeral is the visual anchor of the note and fills the space with authority |
 | Shelf thumbnail label | 13px | IM Fell English italic, mid ink | v1.0 was 11px |
 | Masthead | 16px | IM Fell English 400 with italic "Finds" | v1.0 was 15px — matches address size, still clearly secondary to title |
-| Manage section eyebrow | 13px | IM Fell English italic, Title Case, no letter-spacing, muted ink | Updated v1.1 — was 10px uppercase tracked 0.22em |
+| Manage section eyebrow | **15px** | IM Fell English italic, Title Case, no letter-spacing, muted ink | Updated v1.1 — matches "More from this shelf…" at section-announcement floor |
 
 **Georgia retires from the ecosystem layer.** All serif type is IM Fell English. This is deliberate — IM Fell has a stronger editorial personality and consistently anchors the journal metaphor. Georgia was a general-purpose serif; IM Fell is *this product's* serif.
 
@@ -302,6 +303,40 @@ Patterns removed from the system in v1.0 that shipped in v0.2:
 
 ---
 
+## Accessibility commitments — COMMITTED v1.1
+
+Synthesized from WCAG 2.1/2.2, Apple HIG, Material Design 3, and Nielsen Norman Group research, calibrated for Treehouse's 35–65 demographic:
+
+### Minimum font-size floor
+
+| Text role | Floor | Notes |
+|---|---|---|
+| Primary reading content (captions, titles, descriptions) | **16px** | Body-adjacent copy the user is meant to read slowly |
+| Section-announcement labels ("More from this shelf…", "Manage") | **15px** | Strong role — announces a new region of content |
+| Secondary labels meant to be read (address, pill labels, booth eyebrows, Visit the shelf link) | **13–14px** | Read at a glance, not sustained reading |
+| Decorative / non-essential chrome | **12px floor** | Reserved for marks the user doesn't need to read — currently unused on Find Detail |
+| **Absolute floor, any use** | **12px** | Nothing below this size, anywhere |
+
+Material Design 3 allows 11px for decorative metadata; we deliberately push one notch higher because our audience skews older than average consumer mobile. This is a **floor, not a default** — sizes should drift larger when legibility matters and restraint isn't served by going small.
+
+### Contrast
+
+- `inkPrimary` (`#2a1a0a`) on `paperCream` (`#f1ead8`) — contrast ratio 11.8:1 (WCAG AAA)
+- `inkMid` (`#4a3520`) on `paperCream` — 8.6:1 (WCAG AAA)
+- `inkMuted` (`#7a6244`) on `paperCream` — 4.8:1 (WCAG AA for body text, AAA for large text)
+- `inkFaint` (`rgba(42,26,10,0.28)`) reserved for hairline rules and dotted underline strokes — never for reading copy
+- All tappable underlines use `inkFaint` for the stroke color and are paired with a readable ink color for the text itself (address in `inkMuted`, not `inkFaint`)
+
+### Tap targets
+
+44×44px minimum (Apple HIG), achieved via padding where the visual element is smaller. This was already committed in v0.2; v1.1 reaffirms.
+
+### Dynamic type
+
+`maximumScale: 1, userScalable: false` is currently set in `app/layout.tsx` viewport metadata. This is the one accessibility commitment we're *not* honoring — it prevents users from pinch-to-zoom. **Flagged for Sprint 5 resolution**: remove the scale lock, verify layout doesn't break at 200% text zoom, commit to Dynamic Type support. Until then, the size floor above is a stand-in.
+
+---
+
 ## Motion commitments (unchanged from v0.2)
 
 - Entry: `initial={{ opacity: 0, y: 8–16 }} animate={{ opacity: 1, y: 0 }}`
@@ -376,4 +411,4 @@ Patterns removed from the system in v1.0 that shipped in v0.2:
 ---
 > This document is the canonical source of truth for the Treehouse design system.
 > It is maintained by the Design agent and reviewed by David at each design-adjacent session.
-> Last updated: 2026-04-18 (session 16 — v1.1 legibility + restraint pass based on on-device feedback from first v1.0 Find Detail build; size bump, Title Case commitment, post-it relocation, image corner radius, pill-as-linking-primitive, shelf strip alignment fix)
+> Last updated: 2026-04-18 (session 16 — v1.1 legibility + restraint pass based on on-device feedback from first v1.0 Find Detail build; size bump, Title Case commitment, post-it relocation + anchor sizing, image corner radius, pill-as-linking-primitive, shelf strip alignment fix, accessibility font-size floor committed)
