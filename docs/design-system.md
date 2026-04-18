@@ -1,5 +1,5 @@
 # Treehouse — Design System
-> Version: 1.1f | Last updated: 2026-04-18 session 17 | Owned by: Design agent
+> Version: 1.1g | Last updated: 2026-04-18 session 17 | Owned by: Design agent
 > This document is the canonical source of truth for the Treehouse visual and interaction system.
 > Any multi-screen UI work must scope against this document before code is written.
 
@@ -18,6 +18,8 @@ This document holds the Treehouse design language in one place so every screen s
 **v1.1e — on-device polish pass (session 17).** Narrow, surgical refinements from a live iPhone pass against v1.1d. No new primitives; several existing primitives adjusted: (a) **app-wide background aligned to `paperCream`** (`#e8ddc7`) — `app/layout.tsx` `<body>` inline style and `app/globals.css` `@layer base body` rule both updated from the legacy `#f0ede6`; the old warm parchment was still bleeding through on routes that hadn't yet inlined the v1.1 palette; (b) **masthead wordmark set as a single Title Case style — italic on "Finds" retired, size 16 → 18px, letter-spacing tightened to `-0.005em`** — IM Fell English ships only at 400 weight (no 700), so "heavier presence" is achieved through size + un-italicized tracking rather than a bolder face; (c) **save + share relocated off the masthead onto the photograph's top-right corner as frosted `paperCream` translucent bubbles with `backdrop-filter: blur(8px)`** — consolidates interactive chrome near the image itself, matches the convention most users recognize from other photo-first interfaces; (d) **icon bubble default size 34 → 38px**, back-arrow and on-image icons 17–18px for consistent weight; (e) **vendor row label updated to "Explore booth →"** (trailing arrow moves into the label) with the **shelf-link pill slimmed to a pure numeric badge** — "Booth" word and arrow both removed from inside the pill; the label now carries the verb + direction, the pill carries the number; pill numeral bumped 13 → 16px IM Fell (non-italic), horizontal padding tightened to `2px 9px`; (f) **X glyph vertical alignment recalibrated** — `paddingTop: 5 → 3` to sit on vendor-name ascender rather than riding low. These changes are all internal polish; no doc-level primitives added or retired.
 
 **v1.1f — same-session second polish pass (session 17).** Three refinements from immediate on-device follow-up to v1.1e: (a) **frosted icon-bubble background is now state-independent** — when the save heart is active, only the glyph color/fill flips to green; the bubble itself stays `rgba(232,221,199,0.78)` paperCream. Rationale: the v1.1e active-state bg (`rgba(30,77,43,0.22)` green tint) blended into warm and dark photos, losing the bubble as a mark and losing the state signal simultaneously. Holding a stable creme bubble and letting the glyph carry the state is the clearer read. (b) **Post-it inset from the screen edge** — `right: -12 → 4`. The overhang was kissing the viewport edge on narrow phones; pulling the note fully inside the 22px page margin reads as *placed on the photograph* rather than *sliding off the page*. (c) **Post-it rotation bumped `+3 → +6deg`** — still well under the threshold where the text becomes unreadable in a glance (roughly 8–10° on a rectangular note), but noticeably more casual. Anything approaching 35–45° would read as *fallen*, not *placed*, and would crowd the stacked eyebrow. **+6° is the new committed rotation** for the booth post-it. (d) **Post-it eyebrow stacks: "Booth" / "Location"** on two lines, same 14px IM Fell italic muted ink, line-height `1.1` so the two words read as one label. "Booth" alone was lightweight for what the pin points at; "Booth Location" names the gesture honestly (this marks *where*, not *what*). Post-it `minHeight: 84 → 92` to accommodate the two-line eyebrow without pressing on the 36px numeral below.
+
+**v1.1g — Find Map redesign (session 17).** Full redesign of `/flagged` (the page the app calls "Find Map") against v1.1 language. Three doc-level commitments land with this redesign: (a) **glyph hierarchy locked** — pin = mall, X = booth. These two cartographic glyphs do not swap, substitute, or appear interchangeably across the product. The pin shows up once per page at the mall anchor; the X shows up once per booth/stop. This rule propagates to Booth page redesign, Feed, and any future screen that names location. (b) **Find Map spec committed** — masthead (Mode A) → "Find Map" subheader (IM Fell 30px) → intro voice (IM Fell italic 15px, one paragraph) → pin + mall anchor + dotted-underline address → diamond divider → per-stop itinerary (X glyph on spine + hairline tick, `Booth [NNN pill]` row linking to `/shelf/[slug]`, vendor italic, saved-count, 2-up grid or 3+ horizontal scroll) → diamond divider + closer line ("End of the map. Not the end of the search.") No bottom action link; BottomNav handles exit navigation. (c) **Find tile pattern committed for any page that lists saved finds** — 4:5 photo (6px radius + 1px inkHairline border) with frosted paperCream heart top-right (tap to unsave), IM Fell italic title 13px mid-ink, price in system-ui 13px priceInk (or "Found a home" italic muted for sold). Entries that were in the v1.0 doc but overridden: no Caveat margin-note on Find Map (tried in mockup, read as voice-adjacent chrome when the intro copy did the same job honestly); no between-stop drive-time data (all saved finds are at one mall in production, revisit when multi-mall ships); no bottom "Open all N stops in Maps →" action (adds a navigation layer BottomNav already handles). The v0.2 `/flagged` page is fully retired — dark-gradient booth pills, mono booth numbers, "BOOTH" uppercase tracking, Georgia serif, card chrome on find rows, green "View Booth" CTA, `EndOfPath` component, and "First/Next/Last stop" ordinal labels all retired.
 
 ---
 
@@ -73,6 +75,8 @@ Two glyphs, one visual pair:
 - **Connecting tick** — a thin vertical line runs from just beneath the pin to just above the X, centered on the glyph column. Binds them into a single cartographic mark that reads as *zoom*: that place → this spot within it.
 
 The pair is reusable wherever location is named: Find Detail, Booth page, Feed, Find Map. It becomes the app's cartographic grammar.
+
+**Glyph hierarchy — COMMITTED v1.1g:** The pin-to-mall and X-to-booth bindings are *locked*. The pin never represents a booth; the X never represents a mall. They do not swap, substitute, or appear interchangeably anywhere in the product. On any page that shows both a mall and its booths, the pin appears *once* (mall anchor, page-level) and the X appears *once per booth stop* (inline, content-level). This glyph-concept binding is what lets the cartographic language actually mean something: readers who learn the pair on one page immediately parse it on every other.
 
 **What retires with this commitment:**
 - The v0.2 `<LocationStatement>` component (`components/LocationStatement.tsx`) — its icon + mono + separator grammar reads as data display, not as place-naming. Deprecated. Session 14 Booth page usages get replaced during the Booth v1.0 pass.
@@ -301,15 +305,65 @@ Tracked as a Design sprint for after Find Detail ships.
 
 **Sign-in affordance and mall selector:** unchanged from v0.2 direction — bottom sheet for sign-in, `<MallSheet>` bottom sheet for mall selection. Both get re-specced against v1.0 typography and material vocabulary before implementation. The `<MallSheet>` remains the canonical bottom-sheet pattern for `/post`, `/vendor-request`, and Find Map filter.
 
-### Find Map — scope against v1.0 before code
+### Find Map — COMMITTED v1.1g (session 17 redesign)
 
-Emotional redesign still committed. Uses:
-- One margin note in Caveat as the opening pull ("A Saturday made of stops")
-- The cartographic pin glyph for each stop
-- "~ 8 min drive" between stops in system-ui (precision data)
-- "Open all N stops in Maps →" as the bottom action in IM Fell English italic
+The page at route `/flagged` is called "Find Map" in the UI. The route name stays for backwards compatibility; the product name is Find Map everywhere users see it.
 
-Full spec drafted before Dev writes code.
+**Purpose:** a saved-finds itinerary grouped by booth. The user visits this page to plan a Saturday trip to a mall. Each stop shows the booth, the vendor, and the specific finds they've saved there.
+
+**Order top-to-bottom:**
+1. **Masthead row** (Mode A) — back arrow (left, 38px) + "Treehouse Finds" wordmark (centered, 18px Title Case) + empty right slot
+2. **"Find Map" subheader** — IM Fell 30px primary ink, establishes the page identity
+3. **Intro voice** — "Your saved finds are mapped below. Each one is waiting in its place, ready when you are." IM Fell italic 15px muted, one paragraph, line-height 1.65. Orients the user and names the emotional premise (the finds are *waiting*, not *listed*)
+4. **Mall anchor** — pin glyph (22px) + mall name (IM Fell 22px primary) on one row; dotted-underline address (system-ui 14px muted) on the next row, indented to align with the mall name. The pin appears *only here on this page*
+5. **Diamond divider** — `◆` flanked by hairline rules
+6. **Per-stop itinerary** — a vertical spine with X glyphs at each stop and hairline ticks between them. Content per stop:
+   - Booth row — `Booth` label (system-ui 14px muted) + numeric pill (IM Fell 16px non-italic, `2px 9px` padding, v1.1f shelf-link pill spec). Entire row wraps a Link to `/shelf/[slug]`; the row is the tap target
+   - Vendor name — IM Fell italic 18px mid-ink
+   - Saved count — "N saved finds" (system-ui 12.5px muted)
+   - Finds container — **2-up grid** when a stop has 1 or 2 finds; **horizontal scroll** when a stop has 3+ finds (fixed 42vw / 170px max tile width, 10px gap, scroll-snap-start). The switch is by count, not by user preference; the unsave re-flow from scroll → grid is a natural reward as finds are removed
+   - Each find is a *find tile* (see primitive below)
+7. **Closer** — diamond-rule divider, then "End of the map. Not the end of the search." (IM Fell 16px mid-ink, line-height 1.4, no link). BottomNav handles navigation away
+
+**Find tile primitive (committed v1.1g, reusable on any saved-finds surface):**
+- 4:5 photograph with 6px corner radius and 1px `inkHairline` border (matches Find Detail hero + shelf thumbnails)
+- Frosted `paperCream` translucent heart bubble top-right, 30×30px, `backdrop-filter: blur(8px)`, 0.5px inkHairline edge — exact Find Detail chrome
+- Heart is always filled green on this page (Find Map is by definition the saved-finds list; bubble never shows an unsaved state here). Tap unsaves the find and removes it from local state
+- Title — IM Fell italic 13px mid-ink, max 2 lines with ellipsis
+- Price — system-ui 13px `priceInk` (`#6a4a30`), `-0.005em` tracking (matches Find Detail price treatment)
+- Sold state — photo gets 50% grayscale + 62% opacity filter; price replaces with "Found a home" in IM Fell italic 12.5px muted
+- Tile wraps a Link to `/find/[id]`; the heart button stops propagation so tapping it doesn't navigate
+
+**Empty state:** "Nothing saved yet" (IM Fell 24px primary) + "Tap the heart on any find to save it here. Your trip comes together as you go." (IM Fell italic 15px muted, max-width 280px). No CTA link; BottomNav "Home" returns to the feed.
+
+**Behavior preserved from v0.2 (do not retire):**
+- localStorage bookmark scanning via `BOOKMARK_PREFIX` in `lib/utils.ts`
+- Stale bookmark pruning — posts deleted from Supabase get their localStorage keys cleaned up on next page load
+- Grouping by vendor, sorted by booth number (numeric-aware `localeCompare`)
+- Within a group: available finds first, sold finds last
+- Focus event refresh — visiting a find and returning rehydrates the page so unsave actions elsewhere sync back
+- Unsave gesture wiring
+- `BottomNav flaggedCount` passthrough
+- Skeleton loader during initial fetch
+
+**What retired from v0.2:**
+- Page title "My Finds" → now "Find Map" (matches the BottomNav label that was already correct)
+- Georgia serif throughout
+- Mono type for booth numbers → IM Fell English (per v1.0 commitment)
+- Uppercase `BOOTH` tracked label → Title Case `Booth` label (per v1.1 commitment)
+- Dark-gradient booth pill → v1.1f shelf-link pill (numeric-only paperCream pill)
+- Card chrome on find rows (borders, shadows, rounded halos) → paper-as-surface, no card
+- Green "View Booth" CTA button → the `Booth [NNN pill]` row is the tap target to `/shelf/[slug]`
+- `EndOfPath` component — closer now does the closing work with voice, not with a lone marker
+- `stopLabel()` helper returning "First stop / Next stop / Last stop" — the page's vertical order is the order; ordinal labels were redundant chrome
+- `allFound` group-level sort priority (groups with all sold items used to drop to the bottom of the page) — sold finds still render with grayscale at their natural position within a group; the group stays in booth-number order so the itinerary isn't reshuffled by sold state
+- "All found a home" dimmed group-header styling — no longer needed now that groups don't re-sort
+- Dark-gradient disabled pill variant — retired with the group-level `allFound` logic
+
+**What was in the v1.0 doc but overridden in v1.1g with rationale:**
+- **Caveat margin-note as the page opener** — tried in mockup, read as voice-adjacent chrome when the intro copy did the same orienting job honestly. Caveat is reserved for *genuine* handwritten moments; using it as a decorative opener on this page would have diluted the "one margin note per screen maximum" rule. Retired for Find Map
+- **"~ 8 min drive" between stops in system-ui** — all saved finds are at one mall in production, so there is no between-stop drive. Revisit when multi-mall ships
+- **"Open all N stops in Maps →" as the bottom IM Fell italic action** — dropped for simplicity. BottomNav handles exit navigation; adding another navigation layer at the page bottom fights the page's intent (plan the trip, then leave) and crowds the closer's emotional beat
 
 ---
 
