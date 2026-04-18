@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Find Map Exploration</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Caveat:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --paper-deep:   #dcd0b6;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --ink-pill:    rgba(42, 26, 10, 0.72);
+    --pill-bg:    rgba(247, 239, 217, 0.88);
+    --green:       #1e4d2b;
+    --green-muted: rgba(30, 77, 43, 0.5);
+
+    --im-fell: "IM Fell English", Georgia, serif;
+    --caveat:  "Caveat", "Bradley Hand", cursive;
+    --sys:     -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+
+  .page-wrap {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+  }
+
+  h1 {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 28px;
+    margin: 0 0 6px;
+    text-align: center;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 0 48px;
+    line-height: 1.6;
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 430px);
+    gap: 36px;
+    justify-content: center;
+  }
+  @media (max-width: 1380px) {
+    .grid { grid-template-columns: repeat(2, 430px); }
+  }
+  @media (max-width: 920px) {
+    .grid { grid-template-columns: 430px; }
+  }
+
+  .option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .option-label {
+    font-family: var(--im-fell);
+    font-style: italic;
+    color: #e8ddc7;
+    font-size: 15px;
+    margin-bottom: 4px;
+  }
+  .option-title {
+    font-family: var(--im-fell);
+    color: #e8ddc7;
+    font-size: 22px;
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+  }
+  .option-blurb {
+    color: rgba(232, 221, 199, 0.55);
+    font-size: 12.5px;
+    margin-bottom: 18px;
+    text-align: center;
+    line-height: 1.55;
+    max-width: 400px;
+    font-style: italic;
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 430px;
+    background: var(--paper);
+    border-radius: 42px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+    position: relative;
+    border: 8px solid #121015;
+  }
+
+  /* ─── Shared header (stays identical across approaches so differences are in the body) ─── */
+  .header {
+    padding: 48px 22px 18px;
+    display: grid;
+    grid-template-columns: 38px 1fr 38px;
+    align-items: center;
+    gap: 12px;
+    background: var(--paper);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .back-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(42, 26, 10, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-primary);
+  }
+  .wordmark {
+    font-family: var(--im-fell);
+    font-size: 18px;
+    color: var(--ink-primary);
+    letter-spacing: -0.005em;
+    text-align: center;
+  }
+
+  /* ─── Shared subtitle line ─── */
+  .subheader {
+    padding: 0 22px 4px;
+    font-family: var(--im-fell);
+    font-size: 28px;
+    color: var(--ink-primary);
+    line-height: 1.15;
+    letter-spacing: -0.005em;
+  }
+  .stop-count {
+    padding: 6px 22px 0;
+    font-family: var(--sys);
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.55;
+  }
+  .caveat-note {
+    padding: 14px 22px 0;
+    font-family: var(--caveat);
+    font-size: 24px;
+    color: var(--ink-mid);
+    line-height: 1.25;
+    letter-spacing: 0.005em;
+  }
+
+  /* ─── Bottom action (shared, committed in design-system doc) ─── */
+  .bottom-action {
+    padding: 24px 22px 18px;
+    text-align: center;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 17px;
+    color: var(--ink-primary);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--ink-faint);
+    text-underline-offset: 4px;
+  }
+
+  /* ─── Bottom nav (shared, shows v1.1d minimal patch) ─── */
+  .bottom-nav {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(232, 221, 199, 0.96);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid var(--ink-hairline);
+    padding: 14px 0 22px;
+    display: flex;
+    justify-content: space-around;
+  }
+  .bn-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-family: var(--sys);
+    font-size: 10px;
+    color: var(--ink-muted);
+  }
+  .bn-item.active { color: var(--green); }
+  .bn-icon {
+    font-family: var(--im-fell);
+    font-size: 18px;
+  }
+
+  /* Pin glyph (SVG-safe inline emoji-less; rendered via span for the mockup) */
+  .pin {
+    width: 18px;
+    height: 22px;
+    flex-shrink: 0;
+    display: inline-block;
+  }
+  .pin-lg { width: 22px; height: 27px; }
+  .pin-sm { width: 14px; height: 17px; }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     APPROACH A — JOURNAL ITINERARY
+     ══════════════════════════════════════════════════════════════════════ */
+  .a-body {
+    padding: 18px 22px 160px;
+  }
+  .a-stop {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    column-gap: 14px;
+    padding-bottom: 28px;
+  }
+  .a-spine {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 2px;
+  }
+  .a-tick {
+    width: 1px;
+    flex: 1;
+    min-height: 60px;
+    background: var(--ink-hairline);
+    margin: 6px 0 0;
+  }
+  .a-content { min-width: 0; }
+  .a-booth-row {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  .a-booth-num {
+    font-family: var(--im-fell);
+    font-size: 26px;
+    color: var(--ink-primary);
+    letter-spacing: -0.005em;
+    line-height: 1.1;
+  }
+  .a-booth-label {
+    font-family: var(--sys);
+    font-size: 13px;
+    color: var(--ink-muted);
+    letter-spacing: -0.005em;
+  }
+  .a-vendor {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 17px;
+    color: var(--ink-mid);
+    line-height: 1.3;
+    margin-bottom: 12px;
+  }
+  .a-saved {
+    font-family: var(--sys);
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin-bottom: 12px;
+  }
+  .a-finds {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .a-find {
+    display: block;
+  }
+  .a-find-img {
+    width: 100%;
+    aspect-ratio: 4/5;
+    border-radius: 6px;
+    border: 1px solid var(--ink-hairline);
+    background-size: cover;
+    background-position: center;
+    display: block;
+  }
+  .a-find-img.sold {
+    filter: grayscale(0.5) brightness(0.88);
+    opacity: 0.62;
+  }
+  .a-find-title {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-mid);
+    line-height: 1.4;
+    margin-top: 6px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     APPROACH B — PINNED POSTCARDS
+     ══════════════════════════════════════════════════════════════════════ */
+  .b-body {
+    padding: 30px 22px 160px;
+  }
+  .b-stop {
+    position: relative;
+    margin-bottom: 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .b-postit-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 6px;
+  }
+  .b-postit {
+    position: relative;
+    background: var(--postit);
+    box-shadow: 0 6px 14px rgba(42, 26, 10, 0.28), 0 0 0 0.5px rgba(42, 26, 10, 0.16);
+    padding: 16px 14px 12px;
+    width: 150px;
+    text-align: center;
+    transform: rotate(-4deg);
+  }
+  .b-postit.stop-2 { transform: rotate(5deg); }
+  .b-postit.stop-3 { transform: rotate(-3deg); }
+  .b-postit .pin-dot {
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ink-pill);
+    box-shadow: inset 0 0 0 2px rgba(42, 26, 10, 0.55), 0 1px 2px rgba(42, 26, 10, 0.35);
+  }
+  .b-postit-label {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.1;
+    margin-bottom: 5px;
+  }
+  .b-postit-num {
+    font-family: var(--im-fell);
+    font-size: 30px;
+    color: var(--ink-primary);
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+  .b-vendor {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--ink-mid);
+    line-height: 1.3;
+    text-align: center;
+    margin: 14px 0 14px;
+  }
+  .b-finds {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .b-find-img {
+    width: 100%;
+    aspect-ratio: 4/5;
+    border-radius: 6px;
+    border: 1px solid var(--ink-hairline);
+    background-size: cover;
+    background-position: center;
+  }
+  .b-find-img.sold {
+    filter: grayscale(0.5) brightness(0.88);
+    opacity: 0.62;
+  }
+  .b-find-title {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 12.5px;
+    color: var(--ink-mid);
+    line-height: 1.4;
+    margin-top: 5px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .b-tick-down {
+    width: 1px;
+    height: 24px;
+    background: var(--ink-hairline);
+    margin: 14px auto 0;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     APPROACH C — MAP JOURNAL
+     ══════════════════════════════════════════════════════════════════════ */
+  .c-body {
+    padding: 18px 22px 160px;
+  }
+  .c-map-wrap {
+    margin-bottom: 22px;
+    padding: 18px 6px 10px;
+    position: relative;
+  }
+  .c-map {
+    width: 100%;
+    display: block;
+  }
+  .c-map-caption {
+    text-align: center;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin-top: 8px;
+  }
+  .c-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 22px 18px;
+  }
+  .c-divider .rule {
+    flex: 1;
+    height: 1px;
+    background: var(--ink-hairline);
+  }
+  .c-divider .diamond {
+    font-family: var(--im-fell);
+    font-size: 10px;
+    color: rgba(42, 26, 10, 0.42);
+    line-height: 1;
+  }
+
+  /* Approach C uses Approach A's body for the itinerary itself */
+  .c-itinerary { }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     Decorator: photos are solid colors, not real images
+     (color-picked from a moody thrift palette for plausibility)
+     ══════════════════════════════════════════════════════════════════════ */
+  .ph-1 { background-color: #8a7355; background-image: linear-gradient(135deg, #8a7355 0%, #6b5a40 100%); }
+  .ph-2 { background-color: #4d6155; background-image: linear-gradient(135deg, #4d6155 0%, #3a4a40 100%); }
+  .ph-3 { background-color: #7a4a3a; background-image: linear-gradient(135deg, #7a4a3a 0%, #5c3828 100%); }
+  .ph-4 { background-color: #8f8070; background-image: linear-gradient(135deg, #8f8070 0%, #6a5d50 100%); }
+  .ph-5 { background-color: #5e4a38; background-image: linear-gradient(135deg, #5e4a38 0%, #3f3124 100%); }
+  .ph-6 { background-color: #6a7868; background-image: linear-gradient(135deg, #6a7868 0%, #4c584a 100%); }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+  <h1>Find Map — v1.1f exploration</h1>
+  <p class="subtitle">
+    Three redesign directions for <code style="background:rgba(255,255,255,0.06);padding:1px 6px;border-radius:3px;">/flagged</code>. Same data, same header, same bottom action. The body of each stop is what differs. Sample data: 6 saved finds across 3 booths at America's Antique Mall.
+  </p>
+
+  <div class="grid">
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         APPROACH A — JOURNAL ITINERARY (restraint-first)
+         ══════════════════════════════════════════════════════════════════════ -->
+    <div class="option">
+      <div class="option-label">Approach A</div>
+      <div class="option-title">Journal itinerary</div>
+      <div class="option-blurb">Thin hairline spine, pin glyph at each stop, paper throughout. Finds as 2-up photos with italic titles. No card chrome anywhere. The restrained option.</div>
+
+      <div class="phone">
+        <div class="header">
+          <div class="back-btn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="wordmark">Treehouse Finds</div>
+          <div></div>
+        </div>
+
+        <div class="subheader">Find Map</div>
+        <div class="caveat-note">A Saturday made of stops.</div>
+        <div class="stop-count" style="padding-top:14px;">3 stops at America's Antique Mall · 6 finds saved</div>
+
+        <div class="a-body">
+
+          <!-- Stop 1 -->
+          <div class="a-stop">
+            <div class="a-spine">
+              <svg class="pin pin-lg" viewBox="0 0 18 22" fill="none">
+                <path d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z" stroke="#2a1a0a" stroke-width="1.3" fill="none"/>
+                <circle cx="9" cy="8.3" r="2" fill="#2a1a0a"/>
+              </svg>
+              <div class="a-tick"></div>
+            </div>
+            <div class="a-content">
+              <div class="a-booth-row">
+                <div class="a-booth-num">102</div>
+                <div class="a-booth-label">First stop</div>
+              </div>
+              <div class="a-vendor">Hollow Oak Mercantile</div>
+              <div class="a-saved">2 saved finds</div>
+              <div class="a-finds">
+                <div class="a-find">
+                  <div class="a-find-img ph-1"></div>
+                  <div class="a-find-title">Brass apothecary scale</div>
+                </div>
+                <div class="a-find">
+                  <div class="a-find-img ph-2"></div>
+                  <div class="a-find-title">Hand-bound field journal</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stop 2 -->
+          <div class="a-stop">
+            <div class="a-spine">
+              <svg class="pin pin-lg" viewBox="0 0 18 22" fill="none">
+                <path d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z" stroke="#2a1a0a" stroke-width="1.3" fill="none"/>
+                <circle cx="9" cy="8.3" r="2" fill="#2a1a0a"/>
+              </svg>
+              <div class="a-tick"></div>
+            </div>
+            <div class="a-content">
+              <div class="a-booth-row">
+                <div class="a-booth-num">247</div>
+                <div class="a-booth-label">Next stop</div>
+              </div>
+              <div class="a-vendor">Signal & Salt</div>
+              <div class="a-saved">3 saved finds</div>
+              <div class="a-finds">
+                <div class="a-find">
+                  <div class="a-find-img ph-3"></div>
+                  <div class="a-find-title">Weathered oak step stool</div>
+                </div>
+                <div class="a-find">
+                  <div class="a-find-img ph-4"></div>
+                  <div class="a-find-title">Ceramic botanist's pitcher</div>
+                </div>
+                <div class="a-find" style="grid-column: 1 / span 2; max-width: 50%;">
+                  <div class="a-find-img ph-5"></div>
+                  <div class="a-find-title">Antique letterpress drawer</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stop 3 (last) -->
+          <div class="a-stop" style="padding-bottom:0;">
+            <div class="a-spine">
+              <svg class="pin pin-lg" viewBox="0 0 18 22" fill="none">
+                <path d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z" stroke="#2a1a0a" stroke-width="1.3" fill="none"/>
+                <circle cx="9" cy="8.3" r="2" fill="#2a1a0a"/>
+              </svg>
+            </div>
+            <div class="a-content">
+              <div class="a-booth-row">
+                <div class="a-booth-num">369</div>
+                <div class="a-booth-label">Last stop</div>
+              </div>
+              <div class="a-vendor">ZenForged Finds</div>
+              <div class="a-saved">1 saved find</div>
+              <div class="a-finds">
+                <div class="a-find">
+                  <div class="a-find-img ph-6"></div>
+                  <div class="a-find-title">Cast-iron kettle, c. 1920</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bottom-action">
+            Open all 3 stops in Maps →
+          </div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="bn-item"><div class="bn-icon">◇</div>Home</div>
+          <div class="bn-item active"><div class="bn-icon">✦</div>Finds</div>
+          <div class="bn-item"><div class="bn-icon">◯</div>Me</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         APPROACH B — PINNED POSTCARDS
+         ══════════════════════════════════════════════════════════════════════ -->
+    <div class="option">
+      <div class="option-label">Approach B</div>
+      <div class="option-title">Pinned postcards</div>
+      <div class="option-blurb">Each stop gets its own booth post-it (same language as Find Detail), centered, with the push pin. Ticks connect the post-its. Higher material weight; more material gestures per page.</div>
+
+      <div class="phone">
+        <div class="header">
+          <div class="back-btn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="wordmark">Treehouse Finds</div>
+          <div></div>
+        </div>
+
+        <div class="subheader">Find Map</div>
+        <div class="caveat-note">A Saturday made of stops.</div>
+        <div class="stop-count" style="padding-top:14px;">3 stops at America's Antique Mall · 6 finds saved</div>
+
+        <div class="b-body">
+
+          <!-- Stop 1 -->
+          <div class="b-stop">
+            <div class="b-postit-wrap">
+              <div class="b-postit">
+                <div class="pin-dot"></div>
+                <div class="b-postit-label">First stop · Booth</div>
+                <div class="b-postit-num">102</div>
+              </div>
+            </div>
+            <div class="b-vendor">Hollow Oak Mercantile</div>
+            <div class="b-finds">
+              <div>
+                <div class="b-find-img ph-1"></div>
+                <div class="b-find-title">Brass apothecary scale</div>
+              </div>
+              <div>
+                <div class="b-find-img ph-2"></div>
+                <div class="b-find-title">Hand-bound field journal</div>
+              </div>
+            </div>
+            <div class="b-tick-down"></div>
+          </div>
+
+          <!-- Stop 2 -->
+          <div class="b-stop">
+            <div class="b-postit-wrap">
+              <div class="b-postit stop-2">
+                <div class="pin-dot"></div>
+                <div class="b-postit-label">Next stop · Booth</div>
+                <div class="b-postit-num">247</div>
+              </div>
+            </div>
+            <div class="b-vendor">Signal &amp; Salt</div>
+            <div class="b-finds">
+              <div>
+                <div class="b-find-img ph-3"></div>
+                <div class="b-find-title">Weathered oak step stool</div>
+              </div>
+              <div>
+                <div class="b-find-img ph-4"></div>
+                <div class="b-find-title">Ceramic botanist's pitcher</div>
+              </div>
+              <div style="grid-column: 1 / span 2; width: 50%;">
+                <div class="b-find-img ph-5"></div>
+                <div class="b-find-title">Antique letterpress drawer</div>
+              </div>
+            </div>
+            <div class="b-tick-down"></div>
+          </div>
+
+          <!-- Stop 3 (last) -->
+          <div class="b-stop" style="margin-bottom:0;">
+            <div class="b-postit-wrap">
+              <div class="b-postit stop-3">
+                <div class="pin-dot"></div>
+                <div class="b-postit-label">Last stop · Booth</div>
+                <div class="b-postit-num">369</div>
+              </div>
+            </div>
+            <div class="b-vendor">ZenForged Finds</div>
+            <div class="b-finds">
+              <div>
+                <div class="b-find-img ph-6"></div>
+                <div class="b-find-title">Cast-iron kettle, c. 1920</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bottom-action">
+            Open all 3 stops in Maps →
+          </div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="bn-item"><div class="bn-icon">◇</div>Home</div>
+          <div class="bn-item active"><div class="bn-icon">✦</div>Finds</div>
+          <div class="bn-item"><div class="bn-icon">◯</div>Me</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         APPROACH C — MAP JOURNAL
+         ══════════════════════════════════════════════════════════════════════ -->
+    <div class="option">
+      <div class="option-label">Approach C</div>
+      <div class="option-title">Map journal</div>
+      <div class="option-blurb">Opens with a small hand-drawn mall map as the page's opening beat (not a real map — visual anchor only), then drops into the Journal itinerary below. Adds charm at the cost of one decorative beat.</div>
+
+      <div class="phone">
+        <div class="header">
+          <div class="back-btn">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="wordmark">Treehouse Finds</div>
+          <div></div>
+        </div>
+
+        <div class="subheader">Find Map</div>
+        <div class="caveat-note">A Saturday made of stops.</div>
+
+        <div class="c-map-wrap">
+          <!-- Hand-drawn feel: irregular mall outline with 3 pins + ink ticks -->
+          <svg class="c-map" viewBox="0 0 360 200" xmlns="http://www.w3.org/2000/svg">
+            <!-- Mall outline, hand-wobbly -->
+            <path d="M28 50 Q 30 38, 45 36 L 150 32 Q 170 30, 172 44 L 178 68 Q 185 72, 210 70 L 320 66 Q 336 66, 338 82 L 340 150 Q 338 168, 320 166 L 60 170 Q 32 172, 28 156 L 26 70 Q 25 58, 28 50 Z"
+              fill="none"
+              stroke="#2a1a0a"
+              stroke-width="1.4"
+              stroke-linejoin="round"
+              opacity="0.82"/>
+            <!-- Inner "walk path" ticks -->
+            <path d="M75 95 Q 150 110, 220 95 Q 280 88, 300 120"
+              fill="none"
+              stroke="rgba(42,26,10,0.35)"
+              stroke-width="1"
+              stroke-dasharray="2 4"/>
+            <!-- Mall label -->
+            <text x="180" y="146" font-family="IM Fell English, Georgia, serif" font-style="italic" font-size="13" fill="rgba(42,26,10,0.62)" text-anchor="middle">America's Antique Mall</text>
+
+            <!-- Pin 1 -->
+            <g transform="translate(75, 88)">
+              <path d="M0 -10c-3.4 0-6.1 2.66-6.1 5.95 0 4.45 6.1 10.75 6.1 10.75s6.1-6.3 6.1-10.75C6.1 -7.34 3.4 -10 0 -10z" stroke="#2a1a0a" stroke-width="1.2" fill="#fffaea"/>
+              <circle cx="0" cy="-4" r="1.7" fill="#2a1a0a"/>
+              <text x="0" y="20" font-family="IM Fell English, Georgia, serif" font-size="11" fill="#2a1a0a" text-anchor="middle">102</text>
+            </g>
+            <!-- Pin 2 -->
+            <g transform="translate(220, 88)">
+              <path d="M0 -10c-3.4 0-6.1 2.66-6.1 5.95 0 4.45 6.1 10.75 6.1 10.75s6.1-6.3 6.1-10.75C6.1 -7.34 3.4 -10 0 -10z" stroke="#2a1a0a" stroke-width="1.2" fill="#fffaea"/>
+              <circle cx="0" cy="-4" r="1.7" fill="#2a1a0a"/>
+              <text x="0" y="20" font-family="IM Fell English, Georgia, serif" font-size="11" fill="#2a1a0a" text-anchor="middle">247</text>
+            </g>
+            <!-- Pin 3 -->
+            <g transform="translate(300, 115)">
+              <path d="M0 -10c-3.4 0-6.1 2.66-6.1 5.95 0 4.45 6.1 10.75 6.1 10.75s6.1-6.3 6.1-10.75C6.1 -7.34 3.4 -10 0 -10z" stroke="#2a1a0a" stroke-width="1.2" fill="#fffaea"/>
+              <circle cx="0" cy="-4" r="1.7" fill="#2a1a0a"/>
+              <text x="0" y="20" font-family="IM Fell English, Georgia, serif" font-size="11" fill="#2a1a0a" text-anchor="middle">369</text>
+            </g>
+          </svg>
+          <div class="c-map-caption">3 stops · 6 finds</div>
+        </div>
+
+        <div class="c-divider">
+          <div class="rule"></div>
+          <div class="diamond">◆</div>
+          <div class="rule"></div>
+        </div>
+
+        <div class="a-body" style="padding-top:0;">
+
+          <!-- Stop 1 -->
+          <div class="a-stop">
+            <div class="a-spine">
+              <svg class="pin pin-lg" viewBox="0 0 18 22" fill="none">
+                <path d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z" stroke="#2a1a0a" stroke-width="1.3" fill="none"/>
+                <circle cx="9" cy="8.3" r="2" fill="#2a1a0a"/>
+              </svg>
+              <div class="a-tick"></div>
+            </div>
+            <div class="a-content">
+              <div class="a-booth-row">
+                <div class="a-booth-num">102</div>
+                <div class="a-booth-label">First stop</div>
+              </div>
+              <div class="a-vendor">Hollow Oak Mercantile</div>
+              <div class="a-saved">2 saved finds</div>
+              <div class="a-finds">
+                <div class="a-find">
+                  <div class="a-find-img ph-1"></div>
+                  <div class="a-find-title">Brass apothecary scale</div>
+                </div>
+                <div class="a-find">
+                  <div class="a-find-img ph-2"></div>
+                  <div class="a-find-title">Hand-bound field journal</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stop 2 -->
+          <div class="a-stop">
+            <div class="a-spine">
+              <svg class="pin pin-lg" viewBox="0 0 18 22" fill="none">
+                <path d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z" stroke="#2a1a0a" stroke-width="1.3" fill="none"/>
+                <circle cx="9" cy="8.3" r="2" fill="#2a1a0a"/>
+              </svg>
+              <div class="a-tick"></div>
+            </div>
+            <div class="a-content">
+              <div class="a-booth-row">
+                <div class="a-booth-num">247</div>
+                <div class="a-booth-label">Next stop</div>
+              </div>
+              <div class="a-vendor">Signal &amp; Salt</div>
+              <div class="a-saved">3 saved finds</div>
+              <div class="a-finds">
+                <div class="a-find">
+                  <div class="a-find-img ph-3"></div>
+                  <div class="a-find-title">Weathered oak step stool</div>
+                </div>
+                <div class="a-find">
+                  <div class="a-find-img ph-4"></div>
+                  <div class="a-find-title">Ceramic botanist's pitcher</div>
+                </div>
+                <div class="a-find" style="grid-column: 1 / span 2; max-width: 50%;">
+                  <div class="a-find-img ph-5"></div>
+                  <div class="a-find-title">Antique letterpress drawer</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stop 3 (last) -->
+          <div class="a-stop" style="padding-bottom:0;">
+            <div class="a-spine">
+              <svg class="pin pin-lg" viewBox="0 0 18 22" fill="none">
+                <path d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z" stroke="#2a1a0a" stroke-width="1.3" fill="none"/>
+                <circle cx="9" cy="8.3" r="2" fill="#2a1a0a"/>
+              </svg>
+            </div>
+            <div class="a-content">
+              <div class="a-booth-row">
+                <div class="a-booth-num">369</div>
+                <div class="a-booth-label">Last stop</div>
+              </div>
+              <div class="a-vendor">ZenForged Finds</div>
+              <div class="a-saved">1 saved find</div>
+              <div class="a-finds">
+                <div class="a-find">
+                  <div class="a-find-img ph-6"></div>
+                  <div class="a-find-title">Cast-iron kettle, c. 1920</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bottom-action">
+            Open all 3 stops in Maps →
+          </div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="bn-item"><div class="bn-icon">◇</div>Home</div>
+          <div class="bn-item active"><div class="bn-icon">✦</div>Finds</div>
+          <div class="bn-item"><div class="bn-icon">◯</div>Me</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

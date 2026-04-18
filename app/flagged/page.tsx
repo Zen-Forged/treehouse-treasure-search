@@ -1,26 +1,79 @@
 // app/flagged/page.tsx
-// My Finds — saved items grouped by booth, displayed as a trip itinerary timeline.
-// No auth required — available to all user types.
-// Grouped by vendor/booth, sorted by booth number for in-store navigation.
-// Within each group: available items first, Found a home (sold) items last.
-// Stale bookmark IDs (posts deleted from Supabase) are auto-cleaned from localStorage.
+// Find Map — v1.1f (docs/design-system.md §Find Map, session 17)
+//
+// Layout top-to-bottom:
+//   1. Masthead row (Mode A): back · "Treehouse Finds" wordmark · empty right slot
+//   2. "Find Map" subheader (IM Fell 30px primary)
+//   3. Intro voice (IM Fell italic 15px muted, one paragraph) — orients the page
+//   4. Mall anchor — pin glyph + mall name (IM Fell 22px) + dotted-underline address
+//   5. Diamond divider ◆
+//   6. Itinerary spine — X glyph at each stop, hairline tick between stops
+//      Per stop: [Booth [NNN pill]] → vendor italic → "N saved finds" → finds grid/scroll
+//      Finds: 2-up grid when count ≤ 2; horizontal scroll when count ≥ 3
+//      Each find: 4:5 photo (6px radius + inkHairline border) with frosted heart top-right,
+//                 italic title, price in system-ui priceInk (or "Found a home" for sold)
+//   7. Closer — diamond rule + "End of the map. Not the end of the search." (IM Fell 16px mid)
+//
+// v1.1f glyph hierarchy commitment:
+//   pin = mall (appears once at top of page)
+//   X   = booth (appears once per stop on the spine)
+//
+// Preserved from v0.2 /flagged (do not retire):
+//   - localStorage bookmark scanning (BOOKMARK_PREFIX)
+//   - Stale bookmark pruning (posts deleted in Supabase get removed from localStorage)
+//   - Grouping by vendor, sorted by booth number
+//   - Focus event refresh (visiting a find and returning rehydrates state)
+//   - Unsave gesture (tap heart → remove bookmark → remove post from local state)
+//   - BottomNav flaggedCount passthrough
+//   - Skeleton loader
+//
+// Retired from v0.2 (no longer needed):
+//   - "First stop / Next stop / Last stop" ordinal labels (visual order IS the order)
+//   - EndOfPath component (closer replaces it)
+//   - "Found a home" sort priority (sold items still render with grayscale at natural position)
+//   - Dark-gradient booth pills, mono booth numbers, uppercase "BOOTH" labels
+//   - Card chrome on find rows (paper-as-surface now)
+//   - Green "View Booth" CTA (booth-row pill+label now handles that)
+//   - Georgia serif (IM Fell committed as serif voice)
 
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart } from "lucide-react";
+import { ArrowLeft, Heart } from "lucide-react";
 import { getPostsByIds } from "@/lib/posts";
-import { colors } from "@/lib/tokens";
-import { BOOKMARK_PREFIX, loadFollowedIds, loadBookmarkCount } from "@/lib/utils";
+import { BOOKMARK_PREFIX, loadBookmarkCount, mapsUrl } from "@/lib/utils";
 import BottomNav from "@/components/BottomNav";
 import type { Post } from "@/types/treehouse";
 
-export const dynamic = "force-dynamic";
+// ── v1.1f inline tokens ────────────────────────────────────────────────────────
+// TODO(booth-v1.1f): promote to lib/tokens.ts during the Booth sprint.
+const v1 = {
+  paperCream:  "#e8ddc7",
+  postit:      "#fffaea",
+  inkPrimary:  "#2a1a0a",
+  inkMid:      "#4a3520",
+  inkMuted:    "#6b5538",
+  inkFaint:    "rgba(42,26,10,0.28)",
+  inkHairline: "rgba(42,26,10,0.18)",
+  priceInk:    "#6a4a30",
+  pillBg:      "rgba(247,239,217,0.88)",
+  pillBorder:  "rgba(42,26,10,0.72)",
+  pillInk:     "#1c1208",
+  iconBubble:  "rgba(42,26,10,0.06)",
+  green:       "#1e4d2b",
+  imageRadius: 6,
+} as const;
 
-// ─── Bookmark helpers (raw localStorage per RULES) ───────────────────────────
+const FONT_IM_FELL = 'var(--font-im-fell), "IM Fell English", Georgia, serif';
+const FONT_SYS     = '-apple-system, "Segoe UI", Roboto, system-ui, sans-serif';
+
+const EASE = [0.25, 0.46, 0.45, 0.94] as const;
+
+// ── Bookmark helpers (raw localStorage per tech rules) ─────────────────────────
 
 function loadFlaggedIds(): string[] {
   const ids: string[] = [];
@@ -46,86 +99,107 @@ function pruneStaleBookmarks(savedIds: string[], returnedIds: string[]) {
   }
 }
 
-// ─── Grouping + sorting ───────────────────────────────────────────────────────
+// ── Grouping ───────────────────────────────────────────────────────────────────
 
 type BoothGroup = {
-  label: string;
+  boothNumber: string | null; // null for orphaned posts with no booth
   vendorName: string;
   vendorSlug?: string;
   posts: Post[];
-  allFound: boolean;
 };
 
 function groupByBooth(posts: Post[]): BoothGroup[] {
-  const map = new Map<string, { label: string; vendorName: string; vendorSlug?: string; posts: Post[] }>();
+  const map = new Map<string, BoothGroup>();
 
   for (const post of posts) {
-    const booth      = post.vendor?.booth_number ?? post.location_label ?? null;
+    const booth      = post.vendor?.booth_number ?? null;
     const vendorName = post.vendor?.display_name ?? "Unknown Vendor";
     const vendorSlug = post.vendor?.slug;
     const key        = post.vendor?.id ?? `__orphan__${post.id}`;
-    if (!map.has(key)) map.set(key, { label: booth ?? "No booth listed", vendorName, vendorSlug, posts: [] });
+    if (!map.has(key)) map.set(key, { boothNumber: booth, vendorName, vendorSlug, posts: [] });
     map.get(key)!.posts.push(post);
   }
 
-  return Array.from(map.values())
-    .map(group => {
-      const sorted = [
-        ...group.posts.filter(p => p.status !== "sold"),
-        ...group.posts.filter(p => p.status === "sold"),
-      ];
-      const allFound = sorted.every(p => p.status === "sold");
-      return { ...group, posts: sorted, allFound };
-    })
-    .sort((a, b) => {
-      if (!a.allFound && b.allFound) return -1;
-      if (a.allFound && !b.allFound) return 1;
-      const aNo = a.label === "No booth listed";
-      const bNo = b.label === "No booth listed";
-      if (aNo && !bNo) return 1;
-      if (!aNo && bNo) return -1;
-      const cmp = a.label.localeCompare(b.label, undefined, { numeric: true });
-      return cmp !== 0 ? cmp : a.vendorName.localeCompare(b.vendorName);
-    });
+  // Sort within each group: available first, sold last
+  const groups = Array.from(map.values()).map((g) => ({
+    ...g,
+    posts: [
+      ...g.posts.filter((p) => p.status !== "sold"),
+      ...g.posts.filter((p) => p.status === "sold"),
+    ],
+  }));
+
+  // Sort stops: by booth number (numeric-aware), no-booth stops last
+  return groups.sort((a, b) => {
+    if (!a.boothNumber && b.boothNumber) return 1;
+    if (a.boothNumber && !b.boothNumber) return -1;
+    if (!a.boothNumber && !b.boothNumber) return a.vendorName.localeCompare(b.vendorName);
+    const cmp = a.boothNumber!.localeCompare(b.boothNumber!, undefined, { numeric: true });
+    return cmp !== 0 ? cmp : a.vendorName.localeCompare(b.vendorName);
+  });
 }
 
-// ─── Stop label ───────────────────────────────────────────────────────────────
-
-function stopLabel(index: number, total: number): string {
-  if (total === 1) return "Your only stop";
-  if (index === 0) return "First stop";
-  if (index === total - 1) return "Last stop";
-  return "Next stop";
-}
-
-// ─── Empty state ──────────────────────────────────────────────────────────────
-
-function EmptyFinds() {
+// ── Glyph primitives ───────────────────────────────────────────────────────────
+function PinGlyph({ size = 22 }: { size?: number }) {
+  // Mall glyph. Matches Find Detail's pin; larger here because it's the page anchor.
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-      style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 32px 0", textAlign: "center" }}
-    >
-      <div style={{
-        width: 52, height: 52, borderRadius: "50%",
-        background: colors.surface, border: `1px solid ${colors.border}`,
-        display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 22,
-      }}>
-        <Heart size={22} strokeWidth={1.6} style={{ color: colors.textMuted }} />
-      </div>
-      <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: colors.textPrimary, marginBottom: 10, lineHeight: 1.3 }}>
-        No stops planned yet
-      </div>
-      <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: colors.textMuted, lineHeight: 1.75, maxWidth: 230, margin: 0 }}>
-        Tap the heart on any find to add it to your trip, grouped by booth.
-      </p>
-    </motion.div>
+    <svg width={size} height={size * (22 / 18)} viewBox="0 0 18 22" fill="none" aria-hidden="true">
+      <path
+        d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z"
+        stroke={v1.inkPrimary}
+        strokeWidth="1.3"
+        fill="none"
+      />
+      <circle cx="9" cy="8.3" r="2" fill={v1.inkPrimary} />
+    </svg>
   );
 }
 
-// ─── Find card ────────────────────────────────────────────────────────────────
+function XGlyph({ size = 18 }: { size?: number }) {
+  // Booth glyph. Same shape as Find Detail's vendor-row X.
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <line x1="3" y1="3"  x2="13" y2="13" stroke={v1.inkPrimary} strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="13" y1="3" x2="3"  y2="13" stroke={v1.inkPrimary} strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
 
-function FindCard({ post, index, onUnsave }: { post: Post; index: number; onUnsave: (id: string) => void }) {
+// ── Booth pill (numeric badge, matches Find Detail vendor row v1.1f) ──────────
+function BoothPill({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "2px 9px",
+        borderRadius: 999,
+        background: v1.pillBg,
+        backdropFilter: "blur(4px)",
+        WebkitBackdropFilter: "blur(4px)",
+        border: `1.5px solid ${v1.pillBorder}`,
+        fontFamily: FONT_IM_FELL,
+        fontSize: 16,
+        color: v1.pillInk,
+        lineHeight: 1.25,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+// ── Find tile (photo + heart + title + price) ─────────────────────────────────
+function FindTile({
+  post,
+  onUnsave,
+  widthMode,
+}: {
+  post: Post;
+  onUnsave: (id: string) => void;
+  widthMode: "grid" | "scroll"; // grid = takes full grid column; scroll = fixed width for horizontal scroll
+}) {
   const [imgErr, setImgErr] = useState(false);
   const hasImg = !!post.image_url && !imgErr;
   const isSold = post.status === "sold";
@@ -137,224 +211,339 @@ function FindCard({ post, index, onUnsave }: { post: Post; index: number; onUnsa
     onUnsave(post.id);
   }
 
+  const tileStyle: React.CSSProperties =
+    widthMode === "scroll"
+      ? { flexShrink: 0, width: "42vw", maxWidth: 170, scrollSnapAlign: "start" }
+      : {};
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -4, transition: { duration: 0.18 } }}
-      transition={{ duration: 0.28, delay: Math.min(index * 0.05, 0.25) }}
+    <Link
+      href={`/find/${post.id}`}
+      style={{ textDecoration: "none", color: "inherit", display: "block", ...tileStyle }}
     >
-      <Link href={`/find/${post.id}`} style={{ textDecoration: "none", display: "block" }}>
-        <div style={{
-          display: "flex", alignItems: "center", gap: 14,
-          padding: "12px 14px",
-          background: colors.surface,
-          borderRadius: 14,
-          border: `1px solid ${colors.border}`,
-          boxShadow: "0 2px 10px rgba(26,24,16,0.06), 0 1px 3px rgba(26,24,16,0.04)",
-          opacity: isSold ? 0.62 : 1,
-        }}>
-          {/* Thumbnail */}
-          <div style={{
-            width: 62, height: 62, borderRadius: 10, overflow: "hidden",
-            flexShrink: 0, background: colors.surfaceDeep,
-            border: `1px solid ${colors.border}`,
-          }}>
-            {hasImg ? (
-              <img
-                src={post.image_url!}
-                alt={post.title}
-                onError={() => setImgErr(true)}
-                style={{
-                  width: "100%", height: "100%", objectFit: "cover", display: "block",
-                  filter: isSold ? "grayscale(0.6) brightness(0.86)" : "none",
-                }}
-              />
-            ) : (
-              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Heart size={18} strokeWidth={1.6} style={{ color: colors.textFaint }} />
-              </div>
-            )}
-          </div>
-
-          {/* Text */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{
-              fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600,
-              color: colors.textPrimary, lineHeight: 1.35,
-              overflow: "hidden", textOverflow: "ellipsis",
-              display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const,
-              marginBottom: 5,
-            }}>
-              {post.title}
-            </div>
-            {isSold ? (
-              <div style={{ fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1.2px", color: colors.textMuted }}>
-                Found a home
-              </div>
-            ) : post.price_asking != null ? (
-              <div style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 600, color: colors.textMid, letterSpacing: "-0.2px" }}>
-                ${post.price_asking.toLocaleString()}
-              </div>
-            ) : null}
-          </div>
-
-          {/* Unsave button */}
-          <button
-            onClick={handleUnsave}
-            aria-label="Remove from My Finds"
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          aspectRatio: "4/5",
+          borderRadius: v1.imageRadius,
+          border: `1px solid ${v1.inkHairline}`,
+          overflow: "hidden",
+          background: v1.postit,
+        }}
+      >
+        {hasImg ? (
+          <img
+            src={post.image_url!}
+            alt={post.title}
+            loading="lazy"
+            onError={() => setImgErr(true)}
             style={{
-              flexShrink: 0, width: 30, height: 30, borderRadius: "50%",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: colors.greenSolid, border: "none", cursor: "pointer",
-              boxShadow: "0 1px 5px rgba(0,0,0,0.18)",
-              WebkitTapHighlightColor: "transparent",
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+              filter: isSold ? "grayscale(0.5) brightness(0.88)" : "none",
+              opacity: isSold ? 0.62 : 1,
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: FONT_IM_FELL,
+              fontStyle: "italic",
+              fontSize: 13,
+              color: v1.inkFaint,
             }}
           >
-            <Heart size={14} strokeWidth={2.0} style={{ color: "rgba(255,255,255,0.95)", fill: "rgba(255,255,255,0.95)" }} />
-          </button>
+            no photograph
+          </div>
+        )}
+
+        {/* Frosted heart — top-right. Always filled green (this page is the saved list) */}
+        <button
+          onClick={handleUnsave}
+          aria-label="Remove from saved"
+          style={{
+            position: "absolute",
+            top: 6,
+            right: 6,
+            width: 30,
+            height: 30,
+            borderRadius: "50%",
+            background: "rgba(232,221,199,0.78)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            border: `0.5px solid rgba(42,26,10,0.12)`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 0,
+            cursor: "pointer",
+            WebkitTapHighlightColor: "transparent",
+            zIndex: 2,
+          }}
+        >
+          <Heart size={14} strokeWidth={0} style={{ color: v1.green, fill: v1.green }} />
+        </button>
+      </div>
+
+      {/* Title (IM Fell italic) */}
+      <div
+        style={{
+          marginTop: 6,
+          fontFamily: FONT_IM_FELL,
+          fontStyle: "italic",
+          fontSize: 13,
+          color: v1.inkMid,
+          lineHeight: 1.4,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical" as const,
+        }}
+      >
+        {post.title}
+      </div>
+
+      {/* Price (system-ui, priceInk) — or "Found a home" for sold */}
+      {isSold ? (
+        <div
+          style={{
+            marginTop: 2,
+            fontFamily: FONT_IM_FELL,
+            fontStyle: "italic",
+            fontSize: 12.5,
+            color: v1.inkMuted,
+            lineHeight: 1.4,
+          }}
+        >
+          Found a home
         </div>
-      </Link>
-    </motion.div>
+      ) : typeof post.price_asking === "number" && post.price_asking > 0 ? (
+        <div
+          style={{
+            marginTop: 2,
+            fontFamily: FONT_SYS,
+            fontSize: 13,
+            color: v1.priceInk,
+            lineHeight: 1.4,
+            letterSpacing: "-0.005em",
+          }}
+        >
+          ${Math.round(post.price_asking)}
+        </div>
+      ) : null}
+    </Link>
   );
 }
 
-// ─── Timeline stop ────────────────────────────────────────────────────────────
-
-function TimelineStop({
-  group, stopIndex, totalStops, postStartIndex, isLast, onUnsave,
+// ── Stop ──────────────────────────────────────────────────────────────────────
+function Stop({
+  group,
+  isLast,
+  onUnsave,
 }: {
   group: BoothGroup;
-  stopIndex: number;
-  totalStops: number;
-  postStartIndex: number;
   isLast: boolean;
   onUnsave: (id: string) => void;
 }) {
-  const displayBooth = group.label === "No booth listed" ? null : group.label;
-  const label = group.allFound ? "All found a home" : stopLabel(stopIndex, totalStops);
-  const dotColor = group.allFound ? colors.textFaint : colors.green;
-  const lineColor = "rgba(30,77,43,0.18)";
+  const useScroll = group.posts.length >= 3;
+  const savedLabel = `${group.posts.length} saved find${group.posts.length === 1 ? "" : "s"}`;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -4, transition: { duration: 0.18 } }}
-      transition={{ duration: 0.32, delay: Math.min(stopIndex * 0.06, 0.3) }}
-      style={{ display: "flex", gap: 0, marginBottom: isLast ? 0 : 0 }}
+      transition={{ duration: 0.32, ease: EASE }}
+      style={{
+        display: "grid",
+        gridTemplateColumns: "26px 1fr",
+        columnGap: 14,
+        paddingBottom: isLast ? 0 : 30,
+      }}
     >
-      {/* ── Timeline spine ── */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 32, flexShrink: 0 }}>
-        {/* Dot */}
-        <div style={{
-          width: 12, height: 12, borderRadius: "50%",
-          background: dotColor,
-          border: `2px solid ${group.allFound ? colors.surfaceDeep : colors.green}`,
-          boxShadow: group.allFound ? "none" : `0 0 0 3px rgba(30,77,43,0.12)`,
-          marginTop: 4, flexShrink: 0, zIndex: 1,
-        }} />
-        {/* Line down */}
+      {/* Spine column: X glyph + hairline tick down */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 6 }}>
+        <XGlyph size={18} />
         {!isLast && (
-          <div style={{
-            width: 2, flex: 1, minHeight: 24,
-            background: lineColor,
-            marginTop: 4,
-          }} />
+          <div
+            style={{
+              width: 1,
+              flex: 1,
+              minHeight: 60,
+              background: v1.inkHairline,
+              marginTop: 8,
+            }}
+          />
         )}
       </div>
 
-      {/* ── Content ── */}
-      <div style={{ flex: 1, minWidth: 0, paddingLeft: 10, paddingBottom: isLast ? 0 : 32 }}>
-        {/* Stop header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-          {/* Booth pill */}
-          {displayBooth ? (
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              background: group.allFound
-                ? "linear-gradient(105deg, #3a3830 0%, #4a4840 100%)"
-                : `linear-gradient(105deg, ${colors.bannerFrom} 0%, ${colors.bannerTo} 100%)`,
-              borderRadius: 20, padding: "5px 13px",
-              opacity: group.allFound ? 0.6 : 1,
-            }}>
-              <span style={{ fontSize: 8, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1.6px", color: "rgba(255,255,255,0.55)", lineHeight: 1 }}>
+      {/* Content column */}
+      <div style={{ minWidth: 0 }}>
+        {/* Booth row: label + numeric pill, wrapped in Link to /shelf/[slug] */}
+        {group.boothNumber ? (
+          group.vendorSlug ? (
+            <Link
+              href={`/shelf/${group.vendorSlug}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 10,
+                textDecoration: "none",
+                color: "inherit",
+                marginBottom: 8,
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <span style={{ fontFamily: FONT_SYS, fontSize: 14, color: v1.inkMuted, lineHeight: 1.55 }}>
                 Booth
               </span>
-              <span style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.96)", letterSpacing: "0.3px", lineHeight: 1 }}>
-                {displayBooth}
-              </span>
-            </div>
+              <BoothPill>{group.boothNumber}</BoothPill>
+            </Link>
           ) : (
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600, color: colors.textMuted, fontStyle: "italic" }}>
-              No booth listed
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 10,
+                marginBottom: 8,
+              }}
+            >
+              <span style={{ fontFamily: FONT_SYS, fontSize: 14, color: v1.inkMuted, lineHeight: 1.55 }}>
+                Booth
+              </span>
+              <BoothPill>{group.boothNumber}</BoothPill>
             </div>
-          )}
-
-          {/* Connector line */}
-          <div style={{ flex: 1, height: 1, background: lineColor }} />
-        </div>
-
-        {/* Vendor name + stop label */}
-        <div style={{ marginBottom: 10 }}>
-          <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 700, color: colors.textPrimary, lineHeight: 1.2, marginBottom: 3 }}>
-            {group.vendorName}
+          )
+        ) : (
+          <div
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontStyle: "italic",
+              fontSize: 15,
+              color: v1.inkMuted,
+              marginBottom: 8,
+            }}
+          >
+            No booth listed
           </div>
-          <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 12, color: colors.textMuted, lineHeight: 1 }}>
-            {group.posts.length} {group.posts.length === 1 ? "saved find" : "saved finds"} · {label}
+        )}
+
+        {/* Vendor name */}
+        <div
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontStyle: "italic",
+            fontSize: 18,
+            color: v1.inkMid,
+            lineHeight: 1.3,
+            marginBottom: 4,
+          }}
+        >
+          {group.vendorName}
+        </div>
+
+        {/* Saved count */}
+        <div
+          style={{
+            fontFamily: FONT_SYS,
+            fontSize: 12.5,
+            color: v1.inkMuted,
+            marginBottom: 12,
+          }}
+        >
+          {savedLabel}
+        </div>
+
+        {/* Finds — grid or horizontal scroll */}
+        {useScroll ? (
+          <div
+            className="hide-scrollbar"
+            style={{
+              display: "flex",
+              gap: 10,
+              overflowX: "auto",
+              overflowY: "hidden",
+              paddingBottom: 4,
+              scrollSnapType: "x mandatory",
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
+            {group.posts.map((post) => (
+              <FindTile key={post.id} post={post} onUnsave={onUnsave} widthMode="scroll" />
+            ))}
+            <div style={{ flexShrink: 0, width: 10 }} />
           </div>
-        </div>
-
-        {/* Find cards */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
-          {group.posts.map((post, i) => (
-            <FindCard key={post.id} post={post} index={postStartIndex + i} onUnsave={onUnsave} />
-          ))}
-        </div>
-
-        {/* View Booth button */}
-        {group.vendorSlug && (
-          <Link href={`/shelf/${group.vendorSlug}`} style={{ textDecoration: "none", display: "block" }}>
-            <div style={{
-              width: "100%", padding: "11px 0",
-              background: colors.greenLight,
-              border: `1px solid ${colors.greenBorder}`,
-              borderRadius: 12, textAlign: "center",
-              fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 600,
-              color: colors.green, letterSpacing: "-0.1px",
-            }}>
-              View Booth
-            </div>
-          </Link>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 10,
+            }}
+          >
+            {group.posts.map((post) => (
+              <FindTile key={post.id} post={post} onUnsave={onUnsave} widthMode="grid" />
+            ))}
+          </div>
         )}
       </div>
     </motion.div>
   );
 }
 
-// ─── End of path ──────────────────────────────────────────────────────────────
-
-function EndOfPath() {
+// ── Empty state ───────────────────────────────────────────────────────────────
+function EmptyState() {
   return (
-    <div style={{ display: "flex", gap: 0, alignItems: "center" }}>
-      <div style={{ width: 32, flexShrink: 0, display: "flex", justifyContent: "center" }}>
-        <div style={{
-          width: 10, height: 10, borderRadius: "50%",
-          border: `2px solid ${colors.textFaint}`,
-          background: colors.bg,
-        }} />
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.34, ease: EASE }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        padding: "60px 32px 0",
+        textAlign: "center",
+      }}
+    >
+      <div
+        style={{
+          fontFamily: FONT_IM_FELL,
+          fontSize: 24,
+          color: v1.inkPrimary,
+          lineHeight: 1.3,
+          marginBottom: 12,
+        }}
+      >
+        Nothing saved yet
       </div>
-      <div style={{ paddingLeft: 10 }}>
-        <span style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: colors.textFaint }}>
-          End of path
-        </span>
+      <div
+        style={{
+          fontFamily: FONT_IM_FELL,
+          fontStyle: "italic",
+          fontSize: 15,
+          color: v1.inkMuted,
+          lineHeight: 1.65,
+          maxWidth: 280,
+        }}
+      >
+        Tap the heart on any find to save it here. Your trip comes together as you go.
       </div>
-    </div>
+    </motion.div>
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
-export default function MyFindsPage() {
+// ══════════════════════════════════════════════════════════════════════════════
+export default function FindMapPage() {
   const [posts,         setPosts]         = useState<Post[]>([]);
   const [loading,       setLoading]       = useState(true);
   const [bookmarkCount, setBookmarkCount] = useState(0);
@@ -386,86 +575,289 @@ export default function MyFindsPage() {
     setBookmarkCount(prev => Math.max(0, prev - 1));
   }
 
-  const groups    = groupByBooth(posts);
-  const available = posts.filter(p => p.status !== "sold").length;
-  // Only count active (non-allFound) groups as real stops
-  const activeStops = groups.filter(g => !g.allFound).length;
+  const groups = groupByBooth(posts);
 
-  const subtitle = () => {
-    if (loading) return "";
-    if (posts.length === 0 && bookmarkCount === 0) return "No stops planned";
-    if (posts.length === 0 && bookmarkCount > 0) return "Syncing your finds…";
-    if (available > 0) return `${activeStops} ${activeStops === 1 ? "stop" : "stops"} to visit · ${posts[0]?.vendor?.mall?.name ?? "Vendor Mall"}`;
-    return `${posts.length} ${posts.length === 1 ? "find" : "finds"} · all found a home`;
-  };
-
-  let postIndex = 0;
+  // Mall anchor — derive from the first post with a mall. In production today every
+  // saved find will be at America's Antique Mall, but we derive rather than hard-code
+  // so the page stays correct when multi-mall ships.
+  const mall = posts.find((p) => p.mall)?.mall ?? null;
+  const mallLink = mall?.address
+    ? mapsUrl(mall.address)
+    : mall
+    ? mapsUrl(`${mall.name} ${mall.city} ${mall.state}`)
+    : null;
 
   return (
-    <div style={{ minHeight: "100vh", background: colors.bg, maxWidth: 430, margin: "0 auto", position: "relative" }}>
-
-      {/* ── Header ── */}
-      <header style={{
-        position: "sticky", top: 0, zIndex: 50,
-        background: colors.header, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
-        borderBottom: `1px solid ${colors.border}`,
-        padding: "0 18px",
-      }}>
-        <div style={{ paddingTop: "max(18px, env(safe-area-inset-top, 18px))", paddingBottom: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-            <Image src="/logo.png" alt="Treehouse" width={24} height={24} />
-            <span style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: colors.textPrimary, letterSpacing: "-0.3px", lineHeight: 1 }}>
-              Find Map
-            </span>
-          </div>
-          <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: colors.textMuted, lineHeight: 1.4 }}>
-            {subtitle()}
-          </div>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: v1.paperCream,
+        maxWidth: 430,
+        margin: "0 auto",
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* ── 1. Masthead (Mode A) ──────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.34, ease: EASE }}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr auto 1fr",
+          alignItems: "center",
+          padding: "max(14px, env(safe-area-inset-top, 14px)) 18px 14px",
+          gap: 12,
+        }}
+      >
+        <div style={{ justifySelf: "start" }}>
+          <button
+            onClick={() => history.back()}
+            aria-label="Go back"
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: "50%",
+              background: v1.iconBubble,
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+          </button>
         </div>
-      </header>
+        <div
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontSize: 18,
+            color: v1.inkPrimary,
+            letterSpacing: "-0.005em",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Treehouse Finds
+        </div>
+        <div style={{ justifySelf: "end" }} aria-hidden="true" />
+      </motion.div>
 
-      {/* ── Content ── */}
-      <main style={{ padding: "24px 16px 0", paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }}>
+      {/* ── 2. "Find Map" subheader ──────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.34, delay: 0.04, ease: EASE }}
+        style={{ padding: "10px 22px 4px" }}
+      >
+        <div
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontSize: 30,
+            color: v1.inkPrimary,
+            lineHeight: 1.15,
+            letterSpacing: "-0.005em",
+          }}
+        >
+          Find Map
+        </div>
+      </motion.div>
+
+      {/* ── 3. Intro voice ───────────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.34, delay: 0.08, ease: EASE }}
+        style={{ padding: "10px 22px 0" }}
+      >
+        <div
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontStyle: "italic",
+            fontSize: 15,
+            color: v1.inkMuted,
+            lineHeight: 1.65,
+          }}
+        >
+          Your saved finds are mapped below. Each one is waiting in its place, ready when you are.
+        </div>
+      </motion.div>
+
+      {/* ── 4. Mall anchor (pin + name + address) ────────────────────────── */}
+      {!loading && mall && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.34, delay: 0.12, ease: EASE }}
+          style={{ paddingTop: 18, paddingBottom: 6 }}
+        >
+          <div
+            style={{
+              padding: "0 22px 6px",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 22 }}>
+              <PinGlyph size={22} />
+            </div>
+            <div
+              style={{
+                fontFamily: FONT_IM_FELL,
+                fontSize: 22,
+                color: v1.inkPrimary,
+                lineHeight: 1.2,
+                letterSpacing: "-0.005em",
+              }}
+            >
+              {mall.name}
+            </div>
+          </div>
+          {mall.address && (
+            <div style={{ paddingLeft: 56, paddingRight: 22 }}>
+              {mallLink ? (
+                <a
+                  href={mallLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    fontFamily: FONT_SYS,
+                    fontSize: 14,
+                    color: v1.inkMuted,
+                    textDecoration: "underline",
+                    textDecorationStyle: "dotted",
+                    textDecorationColor: v1.inkFaint,
+                    textUnderlineOffset: 3,
+                    lineHeight: 1.55,
+                  }}
+                >
+                  {mall.address}
+                </a>
+              ) : (
+                <span
+                  style={{
+                    fontFamily: FONT_SYS,
+                    fontSize: 14,
+                    color: v1.inkMuted,
+                    lineHeight: 1.55,
+                  }}
+                >
+                  {mall.address}
+                </span>
+              )}
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* ── 5. Diamond divider (only when we have content below) ─────────── */}
+      {!loading && groups.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.34, delay: 0.16, ease: EASE }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "14px 44px 18px",
+          }}
+        >
+          <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+          <div
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontSize: 11,
+              color: "rgba(42,26,10,0.42)",
+              lineHeight: 1,
+            }}
+          >
+            ◆
+          </div>
+          <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+        </motion.div>
+      )}
+
+      {/* ── 6. Itinerary / loading / empty ───────────────────────────────── */}
+      <main
+        style={{
+          padding: "0 22px",
+          paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
+          flex: 1,
+        }}
+      >
         {loading ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {[78, 64, 72].map((h, i) => (
-              <div key={i} className="skeleton-shimmer" style={{ height: h, borderRadius: 16 }} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 20 }}>
+            {[140, 190, 120].map((h, i) => (
+              <div key={i} className="skeleton-shimmer" style={{ height: h, borderRadius: 8 }} />
             ))}
           </div>
         ) : posts.length === 0 ? (
-          <EmptyFinds />
+          <EmptyState />
         ) : (
-          <AnimatePresence initial={false}>
-            {groups.map((group, i) => {
-              const start = postIndex;
-              postIndex += group.posts.length;
-              return (
-                <TimelineStop
-                  key={group.label + group.vendorName}
+          <>
+            <AnimatePresence initial={false}>
+              {groups.map((group, i) => (
+                <Stop
+                  key={(group.boothNumber ?? "nb") + "·" + group.vendorName}
                   group={group}
-                  stopIndex={i}
-                  totalStops={groups.length}
-                  postStartIndex={start}
                   isLast={i === groups.length - 1}
                   onUnsave={handleUnsave}
                 />
-              );
-            })}
-            <EndOfPath key="end-of-path" />
-          </AnimatePresence>
+              ))}
+            </AnimatePresence>
+
+            {/* ── 7. Closer ─────────────────────────────────────────────── */}
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.34, delay: 0.24, ease: EASE }}
+              style={{ paddingTop: 28, textAlign: "center" }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "0 22px 22px",
+                }}
+              >
+                <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+                <div
+                  style={{
+                    fontFamily: FONT_IM_FELL,
+                    fontSize: 11,
+                    color: "rgba(42,26,10,0.42)",
+                    lineHeight: 1,
+                  }}
+                >
+                  ◆
+                </div>
+                <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+              </div>
+              <div
+                style={{
+                  fontFamily: FONT_IM_FELL,
+                  fontSize: 16,
+                  color: v1.inkMid,
+                  lineHeight: 1.4,
+                  letterSpacing: "-0.005em",
+                  padding: "0 28px",
+                }}
+              >
+                End of the map. Not the end of the search.
+              </div>
+            </motion.div>
+          </>
         )}
       </main>
 
       <BottomNav active="flagged" flaggedCount={bookmarkCount} />
-
-      <style>{`
-        @keyframes shimmer { 0%{background-position:-400px 0} 100%{background-position:400px 0} }
-        .skeleton-shimmer {
-          background: linear-gradient(90deg, rgba(225,220,210,0.7) 25%, rgba(208,202,190,0.9) 50%, rgba(225,220,210,0.7) 75%);
-          background-size: 800px 100%;
-          animation: shimmer 1.6s infinite linear;
-        }
-      `}</style>
     </div>
   );
 }
