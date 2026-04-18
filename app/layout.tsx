@@ -1,5 +1,6 @@
 // app/layout.tsx
 import type { Metadata, Viewport } from "next";
+import { IM_Fell_English, Caveat } from "next/font/google";
 import "./globals.css";
 import { FindSessionProvider } from "@/hooks/useSession";
 
@@ -7,6 +8,24 @@ import { FindSessionProvider } from "@/hooks/useSession";
 const DevAuthPanel = process.env.NODE_ENV === "development"
   ? require("@/components/DevAuthPanel").default
   : () => null;
+
+// v1.0 typography — loaded once at root so every screen can reference the
+// CSS variables via `font-family: var(--font-im-fell)` etc. without
+// per-page font requests. See docs/design-system.md §Typography v1.0.
+const imFell = IM_Fell_English({
+  weight: ["400"],
+  style:  ["normal", "italic"],
+  subsets: ["latin"],
+  variable: "--font-im-fell",
+  display: "swap",
+});
+
+const caveat = Caveat({
+  weight: ["500"],
+  subsets: ["latin"],
+  variable: "--font-caveat",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Treehouse",
@@ -32,7 +51,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${imFell.variable} ${caveat.variable}`}>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/logo.png" />

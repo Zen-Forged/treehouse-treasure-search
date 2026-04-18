@@ -1,4 +1,17 @@
 // app/find/[id]/page.tsx
+// Find Detail — v1.0 (docs/design-system.md §Find Detail, locked session 15)
+//
+// Layout top-to-bottom:
+//   1. Masthead row (Mode A): back · "Treehouse Finds" wordmark · save + share
+//   2. Photograph with post-it top-left (material gesture) + status pill bottom-right
+//   3. Title + price (em-dash, price in softer ink)
+//   4. Quoted caption (centered IM Fell italic, typographic quotes)
+//   5. Diamond divider ◆
+//   6. Cartographic block — pin + mall + address; connecting tick; X + vendor + booth + "Visit the shelf →"
+//   7. "more from this shelf…" horizontal strip
+//   8. Owner Manage block (paper-as-surface, preserved behavior per session 16 Decision 1a)
+//
+// v1.0 tokens are inlined here pending the Booth v1.0 sprint which formalizes them in lib/tokens.ts.
 
 "use client";
 
@@ -8,15 +21,35 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Trash2, Tag, ArrowLeft, Heart, Pencil, Store, MapPin } from "lucide-react";
+import { ArrowLeft, Send, Heart, Pencil, Tag, Trash2 } from "lucide-react";
 import { getPost, getVendorPosts, updatePostStatus, deletePost } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
 import { getCachedUserId, getSession, isAdmin } from "@/lib/auth";
-import { colors } from "@/lib/tokens";
 import { flagKey, mapsUrl } from "@/lib/utils";
 import BottomNav from "@/components/BottomNav";
 import type { Post } from "@/types/treehouse";
+
+// ── v1.0 inline tokens ─────────────────────────────────────────────────────────
+// TODO(booth-v1.0): promote these to lib/tokens.ts during the Booth v1.0 sprint.
+// Keeping inline for this session to avoid cross-screen token drift mid-flight.
+const v1 = {
+  paperCream:  "#f1ead8",
+  postit:      "#faf3dc",
+  inkPrimary:  "#2a1a0a",
+  inkMid:      "#4a3520",
+  inkMuted:    "#7a6244",
+  inkFaint:    "rgba(42,26,10,0.28)",
+  inkHairline: "rgba(42,26,10,0.18)",
+  priceInk:    "#6a4a30",
+  pillBg:      "rgba(247,239,217,0.55)",
+  pillBorder:  "rgba(42,26,10,0.72)",
+  pillInk:     "#1c1208",
+  iconBubble:  "rgba(42,26,10,0.06)",
+} as const;
+
+const FONT_IM_FELL = 'var(--font-im-fell), "IM Fell English", Georgia, serif';
+const FONT_SYS     = '-apple-system, "Segoe UI", Roboto, system-ui, sans-serif';
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
 
@@ -30,6 +63,7 @@ const sectionVariants = (delay: number) => ({
   visible: { opacity: 1, y: 0, transition: { duration: 0.32, delay, ease: EASE } },
 });
 
+// ── Ownership detection (unchanged from v0.2) ──────────────────────────────────
 async function detectOwnershipAsync(post: Post): Promise<boolean> {
   try {
     const session = await getSession();
@@ -47,44 +81,122 @@ async function detectOwnershipAsync(post: Post): Promise<boolean> {
   return false;
 }
 
+// ── Cartographic glyphs ────────────────────────────────────────────────────────
+// Pin: outlined teardrop with filled dot. Represents the mall (zoom-out).
+function PinGlyph({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size * (22 / 18)} viewBox="0 0 18 22" fill="none" aria-hidden="true">
+      <path
+        d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z"
+        stroke={v1.inkPrimary}
+        strokeWidth="1.3"
+        fill="none"
+      />
+      <circle cx="9" cy="8.3" r="2" fill={v1.inkPrimary} />
+    </svg>
+  );
+}
+
+// X: two crossed lines at 45°, no frame. Represents the booth (exact spot).
+function XGlyph({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <line x1="3" y1="3"  x2="13" y2="13" stroke={v1.inkPrimary} strokeWidth="1.4" strokeLinecap="round" />
+      <line x1="13" y1="3" x2="3"  y2="13" stroke={v1.inkPrimary} strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// ── Shelf card (v1.0) ──────────────────────────────────────────────────────────
 function ShelfCard({ post }: { post: Post }) {
   const [imgErr, setImgErr] = useState(false);
   const isSold = post.status === "sold";
   const hasImg = !!post.image_url && !imgErr;
 
   return (
-    <Link href={`/find/${post.id}`} style={{ display: "block", textDecoration: "none", flexShrink: 0, width: "42vw", maxWidth: 170 }}>
-      <div style={{ borderRadius: 14, overflow: "hidden", background: colors.surface, border: `1px solid ${colors.border}`, boxShadow: "0 2px 8px rgba(26,24,16,0.06)", position: "relative", opacity: isSold ? 0.62 : 1, transition: "opacity 0.2s" }}>
+    <Link
+      href={`/find/${post.id}`}
+      style={{ display: "block", textDecoration: "none", flexShrink: 0, width: "42vw", maxWidth: 170 }}
+    >
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          aspectRatio: "3/4",
+          overflow: "hidden",
+          background: v1.postit,
+          opacity: isSold ? 0.62 : 1,
+          transition: "opacity 0.2s",
+        }}
+      >
         {hasImg ? (
-          <div style={{ position: "relative", width: "100%", aspectRatio: "3/4", overflow: "hidden" }}>
-            <img src={post.image_url!} alt={post.title} loading="lazy" onError={() => setImgErr(true)}
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", filter: isSold ? "grayscale(0.5) brightness(0.88)" : "brightness(0.99) saturate(0.96)" }} />
-            {isSold && (
-              <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", fontSize: 6, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.3px", padding: "2px 7px", borderRadius: 4, background: "rgba(28,26,20,0.54)", color: "rgba(245,242,235,0.93)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)", whiteSpace: "nowrap" }}>
-                Found a home
-              </div>
-            )}
-          </div>
+          <img
+            src={post.image_url!}
+            alt={post.title}
+            loading="lazy"
+            onError={() => setImgErr(true)}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+              filter: isSold ? "grayscale(0.5) brightness(0.88)" : "none",
+            }}
+          />
         ) : (
-          <div style={{ aspectRatio: "3/4", padding: "12px 10px", display: "flex", alignItems: "flex-end", background: colors.surface }}>
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 11, fontWeight: 600, color: colors.textMid, lineHeight: 1.3 }}>{post.title}</div>
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              padding: "12px 10px",
+              display: "flex",
+              alignItems: "flex-end",
+              background: v1.postit,
+            }}
+          >
+            <div style={{ fontFamily: FONT_IM_FELL, fontSize: 12, color: v1.inkMuted, lineHeight: 1.25 }}>
+              {post.title}
+            </div>
           </div>
         )}
       </div>
-      <div style={{ marginTop: 6, paddingLeft: 2, fontFamily: "Georgia, serif", fontSize: 10, color: colors.textMuted, lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>
+      <div
+        style={{
+          marginTop: 8,
+          paddingLeft: 2,
+          fontFamily: FONT_IM_FELL,
+          fontStyle: "italic",
+          fontSize: 11,
+          color: v1.inkMid,
+          lineHeight: 1.4,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical" as const,
+        }}
+      >
         {post.title}
       </div>
     </Link>
   );
 }
 
-function ShelfSection({ vendorId, currentPostId, onReady }: { vendorId: string; currentPostId: string; onReady: (hasItems: boolean) => void }) {
+function ShelfSection({
+  vendorId,
+  currentPostId,
+  onReady,
+}: {
+  vendorId: string;
+  currentPostId: string;
+  onReady: (hasItems: boolean) => void;
+}) {
   const [items, setItems] = useState<Post[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    getVendorPosts(vendorId, 12).then(posts => {
-      const filtered = posts.filter(p => p.id !== currentPostId);
+    getVendorPosts(vendorId, 12).then((posts) => {
+      const filtered = posts.filter((p) => p.id !== currentPostId);
       setItems(filtered);
       setReady(true);
       onReady(filtered.length > 0);
@@ -94,30 +206,92 @@ function ShelfSection({ vendorId, currentPostId, onReady }: { vendorId: string; 
   if (!ready || items.length === 0) return null;
 
   return (
-    <motion.div variants={sectionVariants(0.18)} initial="hidden" animate="visible" style={{ marginBottom: 32 }}>
-      <div style={{ paddingLeft: 20, paddingRight: 20, marginBottom: 12, display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-        <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2.2px", fontWeight: 500 }}>
-          More from this shelf
-        </div>
-        <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: colors.textFaint }}>
-          {items.length} {items.length === 1 ? "item" : "items"}
-        </div>
+    <motion.div
+      variants={sectionVariants(0.22)}
+      initial="hidden"
+      animate="visible"
+      style={{ marginBottom: 32 }}
+    >
+      <div
+        style={{
+          paddingLeft: 22,
+          paddingRight: 22,
+          marginBottom: 14,
+          fontFamily: FONT_IM_FELL,
+          fontStyle: "italic",
+          fontSize: 10,
+          color: v1.inkMuted,
+          textTransform: "uppercase",
+          letterSpacing: "0.22em",
+        }}
+      >
+        more from this shelf…
       </div>
-      <div style={{ display: "flex", gap: 10, overflowX: "auto", overflowY: "hidden", paddingLeft: 20, paddingRight: 20, paddingBottom: 4, scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", msOverflowStyle: "none", scrollbarWidth: "none" }} className="hide-scrollbar">
-        {items.map(item => (
+      <div
+        className="hide-scrollbar"
+        style={{
+          display: "flex",
+          gap: 12,
+          overflowX: "auto",
+          overflowY: "hidden",
+          paddingLeft: 22,
+          paddingRight: 22,
+          paddingBottom: 4,
+          scrollSnapType: "x mandatory",
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
+        {items.map((item) => (
           <div key={item.id} style={{ scrollSnapAlign: "start", flexShrink: 0 }}>
             <ShelfCard post={item} />
           </div>
         ))}
-        <div style={{ flexShrink: 0, width: 8 }} />
+        <div style={{ flexShrink: 0, width: 10 }} />
       </div>
     </motion.div>
   );
 }
 
+// ── Icon bubble (shared chrome treatment for masthead actions) ─────────────────
+function IconBubble({
+  onClick,
+  ariaLabel,
+  children,
+  active,
+}: {
+  onClick: () => void;
+  ariaLabel: string;
+  children: React.ReactNode;
+  active?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={ariaLabel}
+      style={{
+        width: 32,
+        height: 32,
+        borderRadius: "50%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: active ? "rgba(30,77,43,0.14)" : v1.iconBubble,
+        border: "none",
+        cursor: "pointer",
+        padding: 0,
+        WebkitTapHighlightColor: "transparent",
+        transition: "background 0.18s ease",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 export default function FindDetailPage() {
-  const { id }  = useParams<{ id: string }>();
-  const router  = useRouter();
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
 
   const [post,          setPost]          = useState<Post | null>(null);
   const [loading,       setLoading]       = useState(true);
@@ -125,13 +299,13 @@ export default function FindDetailPage() {
   const [isMyPost,      setIsMyPost]      = useState(false);
   const [actionBusy,    setActionBusy]    = useState(false);
   const [showDelete,    setShowDelete]    = useState(false);
-  const [shelfHasItems, setShelfHasItems] = useState(false);
+  const [, setShelfHasItems]              = useState(false);
   const [isSaved,       setIsSaved]       = useState(false);
 
   useEffect(() => {
     if (!id) return;
     try { setIsSaved(safeStorage.getItem(flagKey(id)) === "1"); } catch {}
-    getPost(id).then(async data => {
+    getPost(id).then(async (data) => {
       setPost(data);
       setLoading(false);
       if (data) {
@@ -154,7 +328,13 @@ export default function FindDetailPage() {
   async function handleShare() {
     const url = window.location.href;
     if (navigator.share) {
-      try { await navigator.share({ title: post?.title ?? "A Treehouse find", text: post?.caption ?? "", url }); } catch {}
+      try {
+        await navigator.share({
+          title: post?.title ?? "A Treehouse find",
+          text:  post?.caption ?? "",
+          url,
+        });
+      } catch {}
     } else {
       await navigator.clipboard.writeText(url).catch(() => {});
       setCopied(true);
@@ -167,7 +347,7 @@ export default function FindDetailPage() {
     const next = post.status === "sold" ? "available" : "sold";
     setActionBusy(true);
     const ok = await updatePostStatus(post.id, next);
-    if (ok) setPost(p => p ? { ...p, status: next } : p);
+    if (ok) setPost((p) => (p ? { ...p, status: next } : p));
     setActionBusy(false);
   }
 
@@ -179,12 +359,9 @@ export default function FindDetailPage() {
     else    setActionBusy(false);
   }
 
-  const handleShelfReady = useCallback((hasItems: boolean) => { setShelfHasItems(hasItems); }, []);
-
-  function handleExploreBooth() {
-    const slug = post?.vendor?.slug;
-    if (slug) router.push(`/shelf/${slug}`);
-  }
+  const handleShelfReady = useCallback((hasItems: boolean) => {
+    setShelfHasItems(hasItems);
+  }, []);
 
   const mapLink = post?.mall?.address
     ? mapsUrl(post.mall.address)
@@ -192,228 +369,690 @@ export default function FindDetailPage() {
     ? mapsUrl(`${post.mall.name} ${post.mall.city} ${post.mall.state}`)
     : null;
 
+  // ── Loading / 404 states ─────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: colors.bg, maxWidth: 430, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ fontFamily: "Georgia, serif", fontStyle: "italic", color: colors.textFaint, fontSize: 14 }}>Loading…</div>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: v1.paperCream,
+          maxWidth: 430,
+          margin: "0 auto",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", color: v1.inkMuted, fontSize: 14 }}>
+          Loading…
+        </div>
       </div>
     );
   }
 
   if (!post) {
     return (
-      <div style={{ minHeight: "100vh", background: colors.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
-        <div style={{ fontFamily: "Georgia, serif", fontSize: 18, color: colors.textPrimary }}>This find has moved on.</div>
-        <button onClick={() => router.push("/")} style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: colors.green, background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>Browse the feed</button>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: v1.paperCream,
+          maxWidth: 430,
+          margin: "0 auto",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 18,
+          padding: 24,
+        }}
+      >
+        <div style={{ fontFamily: FONT_IM_FELL, fontSize: 22, color: v1.inkPrimary, textAlign: "center" }}>
+          This find has moved on.
+        </div>
+        <button
+          onClick={() => router.push("/")}
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontStyle: "italic",
+            fontSize: 14,
+            color: v1.inkPrimary,
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            textDecoration: "underline",
+            textDecorationStyle: "dotted",
+            textUnderlineOffset: 4,
+          }}
+        >
+          Browse the feed
+        </button>
       </div>
     );
   }
 
-  const isSold     = post.status === "sold";
-  const hasVendor  = !!post.vendor;
-  const hasContent = !!(post.caption || post.description);
+  const isSold      = post.status === "sold";
+  const hasVendor   = !!post.vendor;
   const vendorSlug  = post.vendor?.slug ?? null;
+  const vendorName  = post.vendor?.display_name ?? null;
   const boothNumber = post.vendor?.booth_number ?? null;
+  const mallName    = post.mall?.name ?? null;
+  const mallAddr    = post.mall?.address ?? null;
+  const price       = post.price_asking;
 
-  // ── Item 2a: booth number before mall address ──────────────────────────────
-  // Booth pill is now on the LEFT, mall address on the RIGHT
-  const mallName = post.mall?.name
-    ? post.mall.address
-      ? `${post.mall.name} · ${post.mall.address}`
-      : `${post.mall.name}${post.mall.city ? ` · ${post.mall.city}` : ""}`
-    : null;
-
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: "100vh", background: colors.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: v1.paperCream,
+        maxWidth: 430,
+        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* ── 1. Masthead row (Mode A) ────────────────────────────────────────── */}
+      <motion.div
+        variants={pageVariants}
+        initial="hidden"
+        animate="visible"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr auto 1fr",
+          alignItems: "center",
+          padding: "max(14px, env(safe-area-inset-top, 14px)) 18px 14px",
+          gap: 12,
+        }}
+      >
+        {/* LEFT — back */}
+        <div style={{ justifySelf: "start" }}>
+          <IconBubble onClick={() => router.back()} ariaLabel="Go back">
+            <ArrowLeft size={15} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+          </IconBubble>
+        </div>
 
-      {/* ── 1. Hero image ── */}
-      <motion.div variants={pageVariants} initial="hidden" animate="visible" style={{ position: "relative", width: "100%" }}>
-        {post.image_url ? (
-          <img src={post.image_url} alt={post.title}
-            style={{ width: "100%", height: "auto", display: "block", objectFit: "contain", filter: isSold ? "grayscale(0.35) brightness(0.88)" : "none" }} />
-        ) : (
-          <div style={{ height: 120, background: colors.surface }} />
-        )}
+        {/* CENTER — masthead wordmark */}
+        <div
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontSize: 15,
+            color: v1.inkPrimary,
+            letterSpacing: "0.01em",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Treehouse <span style={{ fontStyle: "italic" }}>Finds</span>
+        </div>
 
-        {isSold && (
-          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.6px", padding: "5px 12px", borderRadius: 6, background: "rgba(28,26,20,0.54)", color: "rgba(245,242,235,0.95)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", whiteSpace: "nowrap" }}>
-            Found a home
-          </div>
-        )}
-
-        <button onClick={() => router.back()} aria-label="Go back"
-          style={{ position: "absolute", top: "max(14px, env(safe-area-inset-top, 14px))", left: 14, width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(240,237,230,0.82)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: `1px solid rgba(26,24,16,0.10)`, cursor: "pointer", boxShadow: "0 2px 8px rgba(26,24,16,0.12)", WebkitTapHighlightColor: "transparent" }}>
-          <ArrowLeft size={15} style={{ color: colors.textMid }} />
-        </button>
-
-        <div style={{ position: "absolute", bottom: 12, right: 14, display: "flex", alignItems: "center", gap: 8 }}>
-          <motion.button
-            onClick={handleToggleSave}
-            aria-label={isSaved ? "Remove from My Finds" : "Save to My Finds"}
-            whileTap={{ scale: 1.22 }}
-            transition={{ type: "spring", stiffness: 400, damping: 17 }}
-            style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: isSaved ? colors.greenSolid : "rgba(0,0,0,0.30)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", cursor: "pointer", boxShadow: isSaved ? "0 2px 8px rgba(30,77,43,0.40)" : "0 1px 5px rgba(0,0,0,0.20)", WebkitTapHighlightColor: "transparent", transition: "background 0.22s ease, box-shadow 0.22s ease" }}
-          >
-            <Heart size={15} strokeWidth={isSaved ? 0 : 1.8} style={{ color: "rgba(255,255,255,0.95)", fill: isSaved ? "rgba(255,255,255,0.95)" : "none", transition: "fill 0.18s ease" }} />
-          </motion.button>
-          <button onClick={handleShare}
-            style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.30)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "none", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
-            <Send size={14} style={{ color: copied ? "#a8d5b5" : "rgba(255,255,255,0.92)" }} />
-          </button>
+        {/* RIGHT — save + share cluster */}
+        <div style={{ justifySelf: "end", display: "flex", alignItems: "center", gap: 8 }}>
+          <IconBubble onClick={handleToggleSave} ariaLabel={isSaved ? "Remove from saved" : "Save"} active={isSaved}>
+            <Heart
+              size={14}
+              strokeWidth={isSaved ? 0 : 1.6}
+              style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
+            />
+          </IconBubble>
+          <IconBubble onClick={handleShare} ariaLabel="Share">
+            <Send size={13} strokeWidth={1.6} style={{ color: copied ? "#1e4d2b" : v1.inkPrimary }} />
+          </IconBubble>
         </div>
       </motion.div>
 
-      {/* ── 2. Booth + Mall row — Item 2a: booth LEFT, mall RIGHT. Item 2b: no underline on address ── */}
-      {(post.mall || boothNumber) && (
-        <motion.div
-          variants={sectionVariants(0.06)}
-          initial="hidden"
-          animate="visible"
-          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 20px 0" }}
+      {/* ── 2. Photograph with post-it + status pill ────────────────────────── */}
+      <motion.div
+        variants={sectionVariants(0.04)}
+        initial="hidden"
+        animate="visible"
+        style={{ padding: "0 22px", marginBottom: 26, position: "relative" }}
+      >
+        <div
+          style={{
+            position: "relative",
+            width: "100%",
+            aspectRatio: "4/5",
+            overflow: "visible", // allow post-it overhang
+          }}
         >
-          {/* LEFT — Booth pill */}
+          {post.image_url ? (
+            <img
+              src={post.image_url}
+              alt={post.title}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+                filter: isSold ? "grayscale(0.35) brightness(0.9)" : "none",
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                background: v1.postit,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: FONT_IM_FELL,
+                fontStyle: "italic",
+                fontSize: 13,
+                color: v1.inkFaint,
+              }}
+            >
+              no photograph
+            </div>
+          )}
+
+          {/* Booth post-it — top-left, overlapping photo edge */}
           {boothNumber && (
-            <div style={{ flexShrink: 0, background: colors.tag, border: `1.5px solid ${colors.tagBorder}`, borderRadius: 8, padding: "4px 10px 5px", textAlign: "center" }}>
-              <div style={{ fontFamily: "system-ui, sans-serif", fontSize: 7, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "1.6px", color: colors.textMuted, lineHeight: 1, marginBottom: 3 }}>
+            <div
+              style={{
+                position: "absolute",
+                top: -8,
+                left: -8,
+                width: 66,
+                minHeight: 62,
+                background: v1.postit,
+                transform: "rotate(-3deg)",
+                transformOrigin: "top left",
+                boxShadow: `0 4px 8px rgba(42,26,10,0.20), 0 0 0 0.5px rgba(42,26,10,0.08)`,
+                padding: "8px 6px 6px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: FONT_IM_FELL,
+                  fontStyle: "italic",
+                  fontSize: 9.5,
+                  color: v1.inkMuted,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.25em",
+                  lineHeight: 1,
+                  marginBottom: 4,
+                }}
+              >
                 Booth
               </div>
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 17, fontWeight: 700, color: colors.green, letterSpacing: "0.2px", lineHeight: 1 }}>
+              <div
+                style={{
+                  fontFamily: FONT_IM_FELL,
+                  fontSize: 27,
+                  color: v1.inkPrimary,
+                  letterSpacing: "-0.01em",
+                  lineHeight: 1,
+                }}
+              >
                 {boothNumber}
               </div>
             </div>
           )}
 
-          {/* RIGHT — Mall + address, no underline (Item 2b) */}
-          {mallName && (
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 5, flex: 1, justifyContent: "flex-end" }}>
-              <MapPin size={11} style={{ color: colors.green, flexShrink: 0, marginTop: 2 }} />
-              {mapLink ? (
-                <a href={mapLink} target="_blank" rel="noopener noreferrer"
-                  style={{ fontFamily: "Georgia, serif", fontSize: 12, color: colors.green, textDecoration: "none", lineHeight: 1.45, textAlign: "right" }}>
-                  {mallName} · Directions
-                </a>
-              ) : (
-                <span style={{ fontFamily: "Georgia, serif", fontSize: 12, color: colors.textMuted, lineHeight: 1.45, textAlign: "right" }}>
+          {/* Status pill — bottom-right, straight */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 10,
+              right: 10,
+              padding: "5px 11px 4px",
+              borderRadius: 999,
+              background: v1.pillBg,
+              backdropFilter: "blur(4px)",
+              WebkitBackdropFilter: "blur(4px)",
+              border: `1.5px solid ${v1.pillBorder}`,
+              fontFamily: FONT_IM_FELL,
+              fontStyle: "italic",
+              fontSize: 11,
+              color: v1.pillInk,
+              textTransform: "uppercase",
+              letterSpacing: "0.14em",
+              lineHeight: 1,
+            }}
+          >
+            {isSold ? "found a home" : "on display"}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ── 3. Title + price ────────────────────────────────────────────────── */}
+      <motion.div
+        variants={sectionVariants(0.10)}
+        initial="hidden"
+        animate="visible"
+        style={{ padding: "0 22px", marginBottom: 18 }}
+      >
+        <h1
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontSize: 30,
+            fontWeight: 400,
+            color: v1.inkPrimary,
+            lineHeight: 1.15,
+            letterSpacing: "-0.005em",
+            margin: 0,
+          }}
+        >
+          {post.title}
+          {typeof price === "number" && price > 0 && (
+            <>
+              {" "}
+              <span style={{ color: v1.priceInk }}>— ${Math.round(price)}</span>
+            </>
+          )}
+        </h1>
+      </motion.div>
+
+      {/* ── 4. Quoted caption ───────────────────────────────────────────────── */}
+      {post.caption && (
+        <motion.div
+          variants={sectionVariants(0.14)}
+          initial="hidden"
+          animate="visible"
+          style={{ padding: "0 30px", marginBottom: 28, textAlign: "center" }}
+        >
+          <span
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontStyle: "italic",
+              fontSize: 24,
+              color: v1.inkMuted,
+              lineHeight: 0,
+              verticalAlign: "-0.1em",
+              marginRight: 2,
+            }}
+          >
+            “
+          </span>
+          <span
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontStyle: "italic",
+              fontSize: 17,
+              color: v1.inkMid,
+              lineHeight: 1.6,
+            }}
+          >
+            {post.caption}
+          </span>
+          <span
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontStyle: "italic",
+              fontSize: 24,
+              color: v1.inkMuted,
+              lineHeight: 0,
+              verticalAlign: "-0.1em",
+              marginLeft: 2,
+            }}
+          >
+            ”
+          </span>
+        </motion.div>
+      )}
+
+      {/* ── 5. Diamond divider ──────────────────────────────────────────────── */}
+      {(mallName || boothNumber) && (
+        <motion.div
+          variants={sectionVariants(0.16)}
+          initial="hidden"
+          animate="visible"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "0 44px",
+            marginBottom: 22,
+          }}
+        >
+          <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+          <div
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontSize: 10,
+              color: "rgba(42,26,10,0.42)",
+              lineHeight: 1,
+            }}
+          >
+            ◆
+          </div>
+          <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+        </motion.div>
+      )}
+
+      {/* ── 6. Cartographic block — pin + tick + X ──────────────────────────── */}
+      {(mallName || vendorName || boothNumber) && (
+        <motion.div
+          variants={sectionVariants(0.18)}
+          initial="hidden"
+          animate="visible"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "28px 1fr",
+            columnGap: 12,
+            padding: "0 28px",
+            marginBottom: 30,
+          }}
+        >
+          {/* Glyph column */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              paddingTop: 2,
+            }}
+          >
+            {mallName && <PinGlyph size={18} />}
+            {mallName && (vendorName || boothNumber) && (
+              <div
+                style={{
+                  width: 1,
+                  flex: 1,
+                  minHeight: 34,
+                  background: v1.inkHairline,
+                  margin: "6px 0",
+                }}
+              />
+            )}
+            {(vendorName || boothNumber) && <XGlyph size={14} />}
+          </div>
+
+          {/* Content column */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            {/* Mall row */}
+            {mallName && (
+              <div style={{ paddingTop: 0 }}>
+                <div
+                  style={{
+                    fontFamily: FONT_IM_FELL,
+                    fontSize: 17,
+                    color: v1.inkPrimary,
+                    lineHeight: 1.25,
+                    marginBottom: 3,
+                  }}
+                >
                   {mallName}
-                </span>
-              )}
+                </div>
+                {mallAddr && (
+                  mapLink ? (
+                    <a
+                      href={mapLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        fontFamily: FONT_SYS,
+                        fontSize: 13,
+                        color: v1.inkMuted,
+                        textDecoration: "underline",
+                        textDecorationStyle: "dotted",
+                        textDecorationColor: v1.inkFaint,
+                        textUnderlineOffset: 3,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {mallAddr}
+                    </a>
+                  ) : (
+                    <span
+                      style={{
+                        fontFamily: FONT_SYS,
+                        fontSize: 13,
+                        color: v1.inkMuted,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {mallAddr}
+                    </span>
+                  )
+                )}
+              </div>
+            )}
+
+            {/* Vendor row */}
+            {(vendorName || boothNumber) && (
+              <div>
+                {vendorName && (
+                  <div
+                    style={{
+                      fontFamily: FONT_IM_FELL,
+                      fontSize: 17,
+                      color: v1.inkPrimary,
+                      lineHeight: 1.25,
+                      marginBottom: 3,
+                    }}
+                  >
+                    {vendorName}
+                    {boothNumber && (
+                      <span style={{ color: v1.inkMuted }}> — Booth {boothNumber}</span>
+                    )}
+                  </div>
+                )}
+                {vendorSlug && (
+                  <Link
+                    href={`/shelf/${vendorSlug}`}
+                    style={{
+                      fontFamily: FONT_IM_FELL,
+                      fontStyle: "italic",
+                      fontSize: 14,
+                      color: v1.inkPrimary,
+                      textDecoration: "underline",
+                      textDecorationStyle: "dotted",
+                      textDecorationColor: v1.inkFaint,
+                      textUnderlineOffset: 3,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Visit the shelf →
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── 7. "more from this shelf…" ──────────────────────────────────────── */}
+      {hasVendor && (
+        <ShelfSection
+          vendorId={post.vendor!.id}
+          currentPostId={post.id}
+          onReady={handleShelfReady}
+        />
+      )}
+
+      {/* ── 8. Owner Manage block — paper-as-surface (Decision 1a, session 16) ── */}
+      {isMyPost && (
+        <motion.div
+          variants={sectionVariants(0.28)}
+          initial="hidden"
+          animate="visible"
+          style={{ padding: "8px 26px 28px" }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+            <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+            <div
+              style={{
+                fontFamily: FONT_IM_FELL,
+                fontStyle: "italic",
+                fontSize: 10,
+                color: v1.inkMuted,
+                textTransform: "uppercase",
+                letterSpacing: "0.22em",
+              }}
+            >
+              manage
             </div>
+            <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+          </div>
+
+          {!showDelete ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
+              <button
+                onClick={() => router.push(`/post/edit/${post.id}`)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 7,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "6px 4px",
+                  fontFamily: FONT_IM_FELL,
+                  fontStyle: "italic",
+                  fontSize: 14,
+                  color: v1.inkPrimary,
+                  textDecoration: "underline",
+                  textDecorationStyle: "dotted",
+                  textDecorationColor: v1.inkFaint,
+                  textUnderlineOffset: 3,
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                <Pencil size={12} strokeWidth={1.6} style={{ color: v1.inkMuted }} />
+                Edit this find
+              </button>
+
+              <button
+                onClick={handleToggleSold}
+                disabled={actionBusy}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 7,
+                  background: "none",
+                  border: "none",
+                  cursor: actionBusy ? "default" : "pointer",
+                  padding: "6px 4px",
+                  fontFamily: FONT_IM_FELL,
+                  fontStyle: "italic",
+                  fontSize: 14,
+                  color: v1.inkPrimary,
+                  textDecoration: "underline",
+                  textDecorationStyle: "dotted",
+                  textDecorationColor: v1.inkFaint,
+                  textUnderlineOffset: 3,
+                  opacity: actionBusy ? 0.5 : 1,
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                <Tag size={12} strokeWidth={1.6} style={{ color: v1.inkMuted }} />
+                {isSold ? "Mark as on display" : "Mark as found a home"}
+              </button>
+
+              <button
+                onClick={() => setShowDelete(true)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 7,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "6px 4px",
+                  fontFamily: FONT_IM_FELL,
+                  fontStyle: "italic",
+                  fontSize: 12,
+                  color: v1.inkMuted,
+                  textDecoration: "underline",
+                  textDecorationStyle: "dotted",
+                  textDecorationColor: v1.inkFaint,
+                  textUnderlineOffset: 3,
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                <Trash2 size={11} strokeWidth={1.6} style={{ color: v1.inkMuted }} />
+                Delete this find
+              </button>
+            </div>
+          ) : (
+            <AnimatePresence>
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={{
+                  padding: "16px 18px",
+                  textAlign: "center",
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: FONT_IM_FELL,
+                    fontSize: 18,
+                    color: v1.inkPrimary,
+                    marginBottom: 8,
+                  }}
+                >
+                  Delete this find?
+                </div>
+                <div
+                  style={{
+                    fontFamily: FONT_IM_FELL,
+                    fontStyle: "italic",
+                    fontSize: 13,
+                    color: v1.inkMuted,
+                    marginBottom: 18,
+                    lineHeight: 1.55,
+                  }}
+                >
+                  This can’t be undone. The photograph and listing will be permanently removed.
+                </div>
+                <div style={{ display: "flex", gap: 24, justifyContent: "center" }}>
+                  <button
+                    onClick={handleDelete}
+                    disabled={actionBusy}
+                    style={{
+                      fontFamily: FONT_IM_FELL,
+                      fontStyle: "italic",
+                      fontSize: 14,
+                      color: "#8b2020",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "6px 4px",
+                      textDecoration: "underline",
+                      textDecorationStyle: "dotted",
+                      textDecorationColor: "rgba(139,32,32,0.4)",
+                      textUnderlineOffset: 3,
+                      opacity: actionBusy ? 0.6 : 1,
+                      WebkitTapHighlightColor: "transparent",
+                    }}
+                  >
+                    {actionBusy ? "Deleting…" : "Yes, delete"}
+                  </button>
+                  <button
+                    onClick={() => setShowDelete(false)}
+                    style={{
+                      fontFamily: FONT_IM_FELL,
+                      fontStyle: "italic",
+                      fontSize: 14,
+                      color: v1.inkMuted,
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "6px 4px",
+                      textDecoration: "underline",
+                      textDecorationStyle: "dotted",
+                      textDecorationColor: v1.inkFaint,
+                      textUnderlineOffset: 3,
+                      WebkitTapHighlightColor: "transparent",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </motion.div>
+            </AnimatePresence>
           )}
         </motion.div>
       )}
 
-      {/* ── 3. Content block ── */}
-      <div style={{ padding: "10px 20px 0" }}>
-
-        <motion.div variants={sectionVariants(0.10)} initial="hidden" animate="visible">
-          <h1 style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 700, color: colors.textPrimary, lineHeight: 1.22, letterSpacing: "-0.5px", margin: "0 0 8px" }}>
-            {post.title}
-          </h1>
-        </motion.div>
-
-        <motion.div variants={sectionVariants(0.15)} initial="hidden" animate="visible"
-          style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            {!isSold && (
-              <motion.div animate={{ opacity: [1, 0.35, 1] }} transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-                style={{ width: 6, height: 6, borderRadius: "50%", background: colors.green, flexShrink: 0 }} />
-            )}
-            <span style={{ fontSize: 12, fontWeight: 500, color: isSold ? colors.textMuted : colors.green, letterSpacing: "0.1px" }}>
-              {isSold ? "Found a home" : "On Display"}
-            </span>
-          </div>
-        </motion.div>
-
-        {hasContent && (
-          <motion.div variants={sectionVariants(0.20)} initial="hidden" animate="visible" style={{ marginBottom: 24 }}>
-            {post.caption && (
-              <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 15, color: colors.textMid, lineHeight: 1.85, margin: "0 0 10px" }}>
-                {post.caption}
-              </p>
-            )}
-            {post.description && (
-              <p style={{ fontSize: 13, color: colors.textMuted, lineHeight: 1.8, margin: 0 }}>
-                {post.description}
-              </p>
-            )}
-          </motion.div>
-        )}
-
-        {vendorSlug && (
-          <motion.div variants={sectionVariants(0.24)} initial="hidden" animate="visible"
-            style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
-            <button onClick={handleExploreBooth}
-              style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 28px", borderRadius: 28, fontSize: 13, fontWeight: 600, fontFamily: "Georgia, serif", color: colors.green, background: colors.greenLight, border: `1px solid ${colors.greenBorder}`, cursor: "pointer", transition: "background 0.18s, color 0.18s", WebkitTapHighlightColor: "transparent" }}>
-              <Store size={15} style={{ color: colors.green }} />
-              Explore the Booth
-            </button>
-          </motion.div>
-        )}
-      </div>
-
-      {/* ── More from this shelf ── */}
-      {hasVendor && (
-        <>
-          {shelfHasItems && <div style={{ height: 1, background: colors.border, margin: "0 0 24px" }} />}
-          <ShelfSection vendorId={post.vendor!.id} currentPostId={post.id} onReady={handleShelfReady} />
-        </>
-      )}
-
-      {/* ── Owner controls ── */}
-      {isMyPost && (
-        <div style={{ padding: "0 20px", marginBottom: 28 }}>
-          <motion.div variants={sectionVariants(0.28)} initial="hidden" animate="visible"
-            style={{ background: colors.surface, borderRadius: 14, border: `1px solid ${colors.border}`, overflow: "hidden", padding: "12px 16px 14px" }}>
-            <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2px", fontWeight: 500, marginBottom: 10 }}>
-              Manage
-            </div>
-            <button onClick={() => router.push(`/post/edit/${post.id}`)}
-              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: "4px 0", marginBottom: 10, WebkitTapHighlightColor: "transparent" }}>
-              <Pencil size={11} style={{ color: colors.green }} />
-              <span style={{ fontSize: 11, color: colors.green, fontWeight: 500 }}>Edit listing</span>
-            </button>
-            <button onClick={handleToggleSold} disabled={actionBusy}
-              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: actionBusy ? "default" : "pointer", padding: "4px 0", marginBottom: 10, opacity: actionBusy ? 0.5 : 1, WebkitTapHighlightColor: "transparent" }}>
-              <Tag size={11} style={{ color: isSold ? colors.green : colors.textFaint }} />
-              <span style={{ fontSize: 11, color: isSold ? colors.green : colors.textMuted, fontWeight: isSold ? 600 : 400 }}>
-                {isSold ? "Mark as available" : "Mark as sold"}
-              </span>
-            </button>
-            {!showDelete ? (
-              <button onClick={() => setShowDelete(true)}
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: "4px 0", WebkitTapHighlightColor: "transparent" }}>
-                <Trash2 size={11} style={{ color: colors.textFaint }} />
-                <span style={{ fontSize: 11, color: colors.textFaint }}>Delete post</span>
-              </button>
-            ) : (
-              <AnimatePresence>
-                <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-                  style={{ padding: "13px", borderRadius: 11, background: colors.redBg, border: `1px solid ${colors.redBorder}` }}>
-                  <div style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: 700, color: colors.red, marginBottom: 4 }}>Delete this post?</div>
-                  <div style={{ fontSize: 12, color: colors.textMuted, marginBottom: 13, lineHeight: 1.65 }}>
-                    This can&apos;t be undone. The image and listing will be permanently removed.
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={handleDelete} disabled={actionBusy}
-                      style={{ flex: 1, padding: "10px", borderRadius: 9, fontSize: 13, fontWeight: 600, color: "#fff", background: colors.red, border: "none", cursor: "pointer", opacity: actionBusy ? 0.6 : 1 }}>
-                      {actionBusy ? "Deleting…" : "Yes, delete"}
-                    </button>
-                    <button onClick={() => setShowDelete(false)}
-                      style={{ flex: 1, padding: "10px", borderRadius: 9, fontSize: 13, color: colors.textMid, background: colors.surface, border: `1px solid ${colors.border}`, cursor: "pointer" }}>
-                      Cancel
-                    </button>
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-            )}
-          </motion.div>
-        </div>
-      )}
-
       <div style={{ paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }} />
       <BottomNav active={null} />
-
-      <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
     </div>
   );
 }
