@@ -7,7 +7,8 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, Pencil, Camera } from "lucide-react";
-import { createPost, createVendor, uploadPostImage, slugify } from "@/lib/posts";
+import { createPost, createVendor, slugify } from "@/lib/posts";
+import { compressImage, uploadPostImageViaServer } from "@/lib/imageUpload";
 import { postStore } from "@/lib/postStore";
 import { safeStorage } from "@/lib/safeStorage";
 import { ensureAnonSession } from "@/lib/auth";
@@ -32,30 +33,13 @@ const C = {
 
 const FACEBOOK_PAGE_URL = "https://www.facebook.com/KentuckyTreehouse";
 
-function compressForUpload(dataUrl: string, maxWidth = 1200, quality = 0.78): Promise<string> {
-  return new Promise(resolve => {
-    const img = new window.Image();
-    img.onload = () => {
-      const scale  = Math.min(1, maxWidth / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width  = Math.round(img.width  * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const result = canvas.toDataURL("image/jpeg", quality);
-      if (result.length > 1_000_000) {
-        const canvas2 = document.createElement("canvas");
-        const scale2  = 0.75;
-        canvas2.width  = Math.round(canvas.width  * scale2);
-        canvas2.height = Math.round(canvas.height * scale2);
-        canvas2.getContext("2d")!.drawImage(canvas, 0, 0, canvas2.width, canvas2.height);
-        resolve(canvas2.toDataURL("image/jpeg", 0.72));
-      } else {
-        resolve(result);
-      }
-    };
-    img.onerror = () => resolve(dataUrl);
-    img.src = dataUrl;
-  });
+// compressForUpload: wraps the shared compressImage with a secondary pass if
+// the first pass still produced a >1MB result. Preserves the pre-refactor
+// behavior of being defensive about large phone photos.
+async function compressForUpload(dataUrl: string, maxWidth = 1200, quality = 0.78): Promise<string> {
+  const first = await compressImage(dataUrl, maxWidth, quality);
+  if (first.length <= 1_000_000) return first;
+  return compressImage(first, Math.round(maxWidth * 0.75), 0.72);
 }
 
 async function generateTitleAndCaption(imageDataUrl: string): Promise<{ title: string; caption: string }> {
@@ -237,14 +221,32 @@ export default function PostPreviewPage() {
       }
 
       let uploadImage = image;
-      try { uploadImage = await compressForUpload(image, 1200, 0.78); } catch {}
+      try { uploadImage = await compressForUpload(image, 1200, 0.78); } catch (compErr) {
+        console.error("[publish] compression failed:", compErr);
+        setErrorDetail(
+          `Couldn't process that image.\n` +
+          `${compErr instanceof Error ? compErr.message : String(compErr)}\n` +
+          `Try re-selecting the photo.`
+        );
+        throw new Error("compression failed");
+      }
 
-      let imageUrl: string | null = null;
+      // Upload via the server route (service role key, bypasses RLS).
+      // Session 14: the old path called uploadPostImage (anon client) which
+      // couldn't see the bucket through storage.buckets RLS and silently
+      // returned null — letting the post get written with image_url: null.
+      // Now: hard failure on any upload error, no post row created.
+      let imageUrl: string;
       try {
-        imageUrl = await uploadPostImage(uploadImage, vendorId);
-        if (!imageUrl) console.warn("[publish] image upload returned null — posting without image");
+        imageUrl = await uploadPostImageViaServer(uploadImage, vendorId);
       } catch (uploadErr) {
-        console.warn("[publish] image upload threw:", uploadErr);
+        console.error("[publish] image upload failed, aborting publish:", uploadErr);
+        setErrorDetail(
+          `Image upload failed.\n` +
+          `${uploadErr instanceof Error ? uploadErr.message : String(uploadErr)}\n` +
+          `Your post was NOT saved — try again.`
+        );
+        throw new Error("upload failed");
       }
 
       const priceNum = price.trim() ? parseFloat(price.replace(/[^0-9.]/g, "")) : null;
@@ -254,7 +256,7 @@ export default function PostPreviewPage() {
         mall_id:        profile.mall_id,
         title:          title.trim(),
         caption:        caption.trim() || undefined,
-        image_url:      imageUrl ?? undefined,
+        image_url:      imageUrl,
         price_asking:   priceNum && !isNaN(priceNum) ? priceNum : null,
         location_label: profile.booth_number ? `Booth ${profile.booth_number}` : undefined,
       });

@@ -455,7 +455,23 @@ export async function getMallBySlug(slug: string): Promise<Mall | null> {
 
 // ── IMAGE UPLOAD ──────────────────────────────────────────────────────────────
 
+/**
+ * @deprecated Use `uploadPostImageViaServer` from `lib/imageUpload` instead.
+ *
+ * This function uses the browser anon client to write directly to Supabase
+ * Storage. That doesn't work: even with RLS disabled on app tables, the
+ * default RLS on `storage.buckets` hides the bucket from the anon role, so
+ * `.upload()` silently fails with "Bucket not found" and this returns null.
+ * Callers then wrote post rows with image_url: null — the session-14 orphan
+ * bug.
+ *
+ * All three post pages have been migrated to `/api/post-image` (service role).
+ * This export is kept only to avoid breaking any stray caller we haven't
+ * found; it now logs a loud warning so any remaining caller surfaces during
+ * testing. Delete in a future sprint once we're confident nothing imports it.
+ */
 export async function uploadPostImage(base64DataUrl: string, vendorId: string): Promise<string | null> {
+  console.warn("[posts] uploadPostImage is deprecated — use uploadPostImageViaServer from lib/imageUpload");
   try {
     const [header, base64] = base64DataUrl.split(",");
     const mimeType = header.match(/data:([^;]+);/)?.[1] ?? "image/jpeg";

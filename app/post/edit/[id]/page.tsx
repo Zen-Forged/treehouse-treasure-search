@@ -21,6 +21,7 @@ import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Camera, X, Check, Loader } from "lucide-react";
 import { getPost, updatePost } from "@/lib/posts";
+import { compressImage, uploadPostImageViaServer } from "@/lib/imageUpload";
 import { getSession, isAdmin, getCachedUserId } from "@/lib/auth";
 import { colors } from "@/lib/tokens";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
@@ -28,38 +29,6 @@ import { safeStorage } from "@/lib/safeStorage";
 import type { Post } from "@/types/treehouse";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function compressImage(dataUrl: string, maxWidth = 1200, quality = 0.78): Promise<string> {
-  return new Promise(resolve => {
-    const img = new window.Image();
-    img.onload = () => {
-      const scale  = Math.min(1, maxWidth / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width  = Math.round(img.width  * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL("image/jpeg", quality));
-    };
-    img.onerror = () => resolve(dataUrl);
-    img.src = dataUrl;
-  });
-}
-
-async function uploadImageViaServer(base64DataUrl: string, vendorId: string): Promise<string | null> {
-  try {
-    const res = await fetch("/api/post-image", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ base64DataUrl, vendorId }),
-    });
-    const json = await res.json();
-    if (!res.ok || json.error) { console.error("[edit] image upload failed:", json.error); return null; }
-    return json.url ?? null;
-  } catch (err) {
-    console.error("[edit] uploadImageViaServer error:", err);
-    return null;
-  }
-}
 
 async function detectOwnership(post: Post): Promise<boolean> {
   try {
@@ -128,6 +97,7 @@ function EditPostInner() {
   const [stage,         setStage]         = useState<Stage>("loading");
   const [mounted,       setMounted]       = useState(false);
   const [priceError,    setPriceError]    = useState<string | null>(null);
+  const [errorDetail,   setErrorDetail]   = useState<string | null>(null);
 
   const [editTitle,   setEditTitle]   = useState("");
   const [editCaption, setEditCaption] = useState("");
@@ -163,15 +133,21 @@ function EditPostInner() {
 
   const handleFile = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    const rawData = await new Promise<string>((res, rej) => {
-      reader.onload  = e => res(e.target?.result as string);
-      reader.onerror = rej;
-      reader.readAsDataURL(file);
-    });
-    const compressed = await compressImage(rawData);
-    setNewImagePreview(compressed);
-    pendingImageRef.current = compressed;
+    try {
+      const reader = new FileReader();
+      const rawData = await new Promise<string>((res, rej) => {
+        reader.onload  = e => res(e.target?.result as string);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+      const compressed = await compressImage(rawData);
+      setNewImagePreview(compressed);
+      pendingImageRef.current = compressed;
+    } catch (err) {
+      console.error("[edit] handleFile failed:", err);
+      setErrorDetail(err instanceof Error ? err.message : "Couldn't read that image.");
+      setStage("error");
+    }
   }, []);
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -200,15 +176,28 @@ function EditPostInner() {
     setPriceError(null);
 
     setStage("saving");
+    setErrorDetail(null);
 
     try {
       let imageUrl = post.image_url ?? undefined;
 
+      // If the vendor picked a new photo, upload it. Any failure aborts the
+      // save — we do NOT silently keep the old URL and pretend everything
+      // worked (session 14 lesson: silent upload failures create orphans).
       if (pendingImageRef.current) {
         const vendorId = post.vendor_id ?? post.vendor?.id;
-        if (vendorId) {
-          const uploaded = await uploadImageViaServer(pendingImageRef.current, vendorId);
-          if (uploaded) imageUrl = uploaded;
+        if (!vendorId) {
+          setErrorDetail("Missing vendor id — cannot upload new photo.");
+          setStage("error");
+          return;
+        }
+        try {
+          imageUrl = await uploadPostImageViaServer(pendingImageRef.current, vendorId);
+        } catch (err) {
+          console.error("[edit] image upload failed, aborting save:", err);
+          setErrorDetail(err instanceof Error ? err.message : "Couldn't upload new photo.");
+          setStage("error");
+          return;
         }
       }
 
@@ -231,6 +220,7 @@ function EditPostInner() {
 
     } catch (err) {
       console.error("[edit] save failed:", err);
+      setErrorDetail(err instanceof Error ? err.message : "Couldn't save changes.");
       setStage("error");
     }
   }
@@ -264,13 +254,13 @@ function EditPostInner() {
             )}
             <div>
               <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: "#fff", lineHeight: 1.3, marginBottom: 4 }}>
-                {stage === "saving" ? "Saving changes…" : stage === "done" ? "Listing updated!" : "Something went wrong"}
+                {stage === "saving" ? "Saving changes…" : stage === "done" ? "Listing updated!" : (errorDetail ?? "Something went wrong")}
               </div>
               {stage === "saving" && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>Just a moment…</div>}
               {stage === "done"   && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>Heading back to the listing…</div>}
             </div>
             {stage === "error" && (
-              <button onClick={() => setStage("editing")}
+              <button onClick={() => { setStage("editing"); setErrorDetail(null); }}
                 style={{ fontSize: 12, color: "rgba(255,255,255,0.80)", background: "rgba(255,255,255,0.12)", border: "none", borderRadius: 8, cursor: "pointer", padding: "8px 16px" }}>
                 Dismiss
               </button>

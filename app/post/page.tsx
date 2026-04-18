@@ -22,6 +22,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, ArrowLeft, ChevronDown, Check, Loader, X, AlertCircle } from "lucide-react";
 import { getAllMalls, createPost, createVendor, getVendorByUserId, getVendorById, slugify } from "@/lib/posts";
+import { compressImage, uploadPostImageViaServer } from "@/lib/imageUpload";
 import { safeStorage } from "@/lib/safeStorage";
 import { getSession, isAdmin } from "@/lib/auth";
 import type { Mall, Vendor } from "@/types/treehouse";
@@ -49,22 +50,6 @@ const C = {
   amberBorder: "rgba(122,92,30,0.22)",
 };
 
-function compressImage(dataUrl: string, maxWidth = 1200, quality = 0.78): Promise<string> {
-  return new Promise(resolve => {
-    const img = new window.Image();
-    img.onload = () => {
-      const scale  = Math.min(1, maxWidth / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width  = Math.round(img.width  * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL("image/jpeg", quality));
-    };
-    img.onerror = () => resolve(dataUrl);
-    img.src = dataUrl;
-  });
-}
-
 async function generateCaption(imageDataUrl: string): Promise<{ title: string; caption: string; aiSucceeded: boolean }> {
   try {
     const res = await fetch("/api/post-caption", {
@@ -82,25 +67,6 @@ async function generateCaption(imageDataUrl: string): Promise<{ title: string; c
   } catch (err) {
     console.error("[post] generateCaption failed:", err);
     return { title: "", caption: "", aiSucceeded: false };
-  }
-}
-
-async function uploadImageViaServer(base64DataUrl: string, vendorId: string): Promise<string | null> {
-  try {
-    const res = await fetch("/api/post-image", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ base64DataUrl, vendorId }),
-    });
-    const json = await res.json();
-    if (!res.ok || json.error) {
-      console.error("[post] image upload failed:", json.error);
-      return null;
-    }
-    return json.url ?? null;
-  } catch (err) {
-    console.error("[post] uploadImageViaServer error:", err);
-    return null;
   }
 }
 
@@ -271,7 +237,7 @@ function PostCaptureInner() {
       setStage("editing");
     } catch (err) {
       console.error("[post] handleFile failed:", err);
-      setSaveError("Something went wrong reading that image.");
+      setSaveError(err instanceof Error ? err.message : "Something went wrong reading that image.");
       setStage("error");
     }
   }, [resolvedVendor, localProfile]);
@@ -343,7 +309,18 @@ function PostCaptureInner() {
         setLocalProfile(updated);
       }
 
-      const imageUrl = await uploadImageViaServer(compressed, vendorId);
+      // Upload image. Throws on any failure — we do NOT proceed to createPost
+      // with a null URL. That's how we ended up with the "Unclear image - item
+      // not visible" orphan in session 14.
+      let imageUrl: string;
+      try {
+        imageUrl = await uploadPostImageViaServer(compressed, vendorId);
+      } catch (err) {
+        console.error("[post] upload failed, aborting post create:", err);
+        setSaveError(err instanceof Error ? err.message : "Couldn't upload image. Try again.");
+        setStage("error");
+        return;
+      }
 
       const priceNum = editPrice.trim() ? parseFloat(editPrice.trim()) : null;
 
@@ -352,7 +329,7 @@ function PostCaptureInner() {
         mall_id:        activeMallId,
         title,
         caption:        editDesc.trim() || undefined,
-        image_url:      imageUrl ?? undefined,
+        image_url:      imageUrl,
         price_asking:   priceNum != null && !isNaN(priceNum) ? priceNum : null,
         location_label: activeBoothNum ? `Booth ${activeBoothNum}` : undefined,
       });
