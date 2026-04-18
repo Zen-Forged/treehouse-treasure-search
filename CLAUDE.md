@@ -50,7 +50,98 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-17 (session 15 — design direction relocked; `docs/design-system.md` v1.0 committed; Find Detail spec locked in mockup; no production code changed)
+> Last updated: 2026-04-18 (session 16 — Find Detail v1.0 → v1.1d code build + design-system doc evolution; nav shelf exploration mockup in progress)
+
+**Status:** 🎨 **Session 16 built Find Detail against `docs/design-system.md` v1.0, then evolved the doc + code through four iteration passes based on on-device QA feedback (v1.0 → v1.1 → v1.1b → v1.1c → v1.1d).** Code shipped for Find Detail + BottomNav minimal chrome patch. Session 16 closed with a nav-shelf metaphor exploration (David's idea: "what if BottomNav looks like a wood shelf?") — 4 mockup approaches saved to `docs/mockups/nav-shelf-exploration.html`, decision held for session 17.
+
+### What shipped (code + docs, committed incrementally)
+
+**Code files modified:**
+- `app/layout.tsx` — added IM Fell English (400 normal + italic) and Caveat (500) via `next/font/google` exposed as `--font-im-fell` and `--font-caveat` CSS variables on `<html>` className. Required prerequisite for Find Detail v1.0 build.
+- `app/find/[id]/page.tsx` — full rewrite v1.0, then iterative refinement through v1.1 → v1.1d using `filesystem:edit_file` targeted edits
+- `components/BottomNav.tsx` — two-line minimal patch: background `rgba(245,242,235,0.97)` → `rgba(232,221,199,0.96)` (paperCream translucent); top border `rgba(26,24,16,0.09)` → `rgba(42,26,10,0.18)` (inkHairline). Full chrome rework deferred to Booth v1.1 sprint.
+- `docs/mockups/nav-shelf-exploration.html` — NEW. Four nav-as-wood-shelf approaches (A Suggestion, B Grain, C Full Shelf, D Line Alone) rendered at real mobile dimensions with surrounding page context. Pending David's review + selection in session 17.
+
+**Docs updated:**
+- `docs/design-system.md` — evolved v1.0 → v1.1d across the session via many targeted edits (see change log below)
+
+### Design evolution: v1.0 → v1.1d
+
+**v1.0 initial build** — masthead wordmark · photograph with post-it top-left + status pill bottom-right · title + price em-dash · centered quoted caption · diamond divider · cartographic pin+X block · "Visit the shelf →" IM Fell italic · "more from this shelf…" strip · Owner Manage block. Inline `v1` token object.
+
+**v1.1 — legibility pass** from on-device feedback:
+- Typography +1–2px across small type for 50+ audience (title 30→32, caption 17→19, pill 11→13, eyebrows grown)
+- Title Case everywhere, uppercase + letter-spacing retired (was SaaS dashboard chrome)
+- Post-it top-left → bottom-left (collision + legibility)
+- 6px corner radius on hero photo + shelf thumbnails
+- X glyph anchored to vendor name baseline (was drifting to shelf link)
+- "Visit the shelf →" IM Fell italic → system-ui 400 matching address voice
+- Shelf strip insets to 22px page margin
+- Booth number styled as pill on vendor line (visual twin to status pill)
+
+**v1.1b — post-it anchor + accessibility floor:**
+- Post-it dimensions 78×72 → 92×84, numeral 28→36, eyebrow 11→12
+- Accessibility font-size floor committed in doc: 16px primary reading, 15px section announcements, 13–14px secondary, 12px absolute floor. Calibrated against WCAG 2.1/2.2, Apple HIG, Material Design 3, NN/g.
+- "More from this shelf…" and Manage eyebrows 13→15
+- "Visit the shelf" weight 500→400 (exact match to address line)
+
+**v1.1c — paper calibration + post-it contrast:**
+- `paperCream` `#f1ead8` → `#e8ddc7` (warmer/browner, sheds yellow cast)
+- `inkMuted` `#7a6244` → `#6b5538` (darkened to maintain WCAG AA 5.1:1 on new paper; old would have dropped to 4.2:1 failing AA at 14px)
+- Post-it triple-dial contrast: color `#faf3dc` → `#fffaea`, shadow `0 4px 8px/0.20` → `0 6px 14px/0.28`, hairline edge `0.08` → `0.16`
+- Vendor row restructured: name alone on top, shelf-link pill below (retires standalone "Visit the shelf →")
+- Defensive `marginLeft: 22` on first shelf thumbnail; container `paddingLeft: 0`
+- Post-it "Booth" eyebrow 12→14
+
+**v1.1d — status pill retirement + post-it relocation + push pin + Explore label:**
+- **Status pill fully retired.** "On Display" was redundant chrome on a browse page where every visible find is by definition available. Sold state is carried by photograph grayscale treatment.
+- **Photo 1px `inkHairline` border** added to hero photo AND shelf thumbnails. Critical separation for warm-toned subjects against paper. Feature not workaround — paper-tone-respecting photography is the brand intent; the hairline is what makes it hold the page.
+- **Post-it moved bottom-left → bottom-right** with `rotate(+3deg)` opposing direction, `transformOrigin: bottom right`, `right: -12, bottom: -14`. Single grounded object on the photo's bottom-right corner post status-pill removal.
+- **Push pin added** at top-center of post-it: 8px circle `rgba(42,26,10,0.72)` with inset `0 0 0 2px rgba(42,26,10,0.55)` ring and `0 1px 2px rgba(42,26,10,0.35)` lift shadow. Matte ink, no shine, no metallic highlight. The pin is a second detail *on the post-it* (not a third object on the photo), reinforcing the *placed* verb beyond rotation alone.
+- **Vendor row becomes `[Name]` on top, `Explore [Booth NNN →]` inline below** — "Explore" matches mall address voice exactly (system-ui 400 dotted-underline, inkMuted, 14px). Whole row wrapped in single `Link` to `/shelf/[slug]`. Names the verb so the pill reads as tappable at a glance for 50+ users.
+- **BottomNav minimal chrome patch** — bg paperCream translucent, border inkHairline. Full chrome rework deferred to Booth v1.1 sprint.
+
+### 🔆 Tool lesson surfaced this session — IMPORTANT for future Dev agents
+
+**`create_file` does NOT write to the mounted filesystem in this environment.** It returns "File created successfully" but the file is unchanged on disk. **`filesystem:write_file` is the ONLY reliable write tool.** `filesystem:edit_file` works for targeted edits. `str_replace` fails on bracket-path files.
+
+This is documented in `docs/DECISION_GATE.md` Tech Rules but was missed on the first pass this session (wasted one round-trip each on `app/layout.tsx` and `app/find/[id]/page.tsx` before diagnosing). **Future Dev agents: before your first file write in any session, verify you're using `filesystem:write_file` or `filesystem:edit_file` exclusively for Mac filesystem operations.**
+
+Secondary gotcha refresher: `filesystem:edit_file` `oldText` must match exact bytes including box-drawing comment rule lengths and rare Unicode characters. Prefer unique surrounding content (function signatures, variable names) over comment-header rules as anchors. When a long block edit fails, decompose into smaller targeted edits rather than re-transcribing.
+
+### Design-system doc evolution
+
+`docs/design-system.md` is now at **v1.1d**. Net additions across the session:
+- Accessibility commitments section: font-size floor table, WCAG contrast ratios for every ink on new paper, tap-target reaffirmation, Dynamic Type flagged for Sprint 5
+- Paper color + ink palette recalibrated with new hex values and contrast math
+- Push-pin spec + pin-restraint rule ("single pin only, matte ink, no shine — second pin or drawing pin head tips into costume")
+- "Explore" label pattern documented
+- BottomNav minimal-patch subsection added
+- Pill primitive collapsed from 2 roles (status + shelf-link) to 1 role (shelf-link only) after status retirement
+- Multiple retirements logged: bottom-left post-it, standalone "Visit the shelf →" link, status pill, top-left post-it
+
+### Session 17 candidates
+
+**17A — Nav Shelf decision + implementation (recommended first).** David reviews `docs/mockups/nav-shelf-exploration.html` on device, picks one of A/B/C/D (or rejects all and sticks with v1.1d minimal patch). Implementation is small: `components/BottomNav.tsx` styling update + `docs/design-system.md` BottomNav subsection rewrite. ~45 min depending on approach.
+
+**17B — Booth page v1.1d second pass.** Replaces `<LocationStatement>` + `<BoothLocationCTA>` with cartographic pin+X block + post-it language. Swaps Georgia → IM Fell English throughout. Applies masthead wordmark. Promotes `v1` inline tokens to `lib/tokens.ts` (first token-file update since Booth v1.0 sprint was scoped). Decides on 3-column vs 2-column polaroid arrangement (parked session 14). ~3–4 hours.
+
+**17C — Sprint 4 tail batch (T4b + T4c + T4d).** Non-design work. Still needed pre-beta. ~5.5 hours focused.
+
+**Recommended:** 17A first (small, momentum-preserving, unblocks chrome consistency across all pages), then 17B (biggest design debt remaining), then 17C in a dedicated non-design session.
+
+### Files touched this session
+- `app/layout.tsx` — IM Fell + Caveat font loading
+- `app/find/[id]/page.tsx` — full rewrite + 4 iteration passes
+- `components/BottomNav.tsx` — minimal chrome patch (bg + border)
+- `docs/design-system.md` — v1.0 → v1.1d (many targeted edits)
+- `docs/mockups/nav-shelf-exploration.html` — NEW, 4 approaches for session 17 review
+- `CLAUDE.md` (this file) — session 16 close
+
+---
+
+## ARCHIVE — What was done earlier (2026-04-17, session 15)
+> Design direction relocked; `docs/design-system.md` v1.0 committed; Find Detail spec locked in mockup; no production code changed
 
 **Status:** 🪴 **Session 15 was a design-direction session, not a feature session.** No production code changed. Two docs updated: `docs/design-system.md` rewritten v0.2 → v1.0 with full journal vocabulary committed; `docs/DECISION_GATE.md` updated with tagline anchor, refreshed Brand Rules, refreshed Design agent prompt, and updated Risk Register. Find Detail mockup landed after an extended iteration pass that redirected the entire design language.
 
@@ -376,9 +467,11 @@ Key records (via Shopify DNS): A `@` → `23.227.38.65`, CNAME `app` → Vercel,
 - KI-001, KI-002, KI-003, KI-004 all resolved
 - Flow 2 onboarding end-to-end verified working on iPhone
 - `/setup` 401 race absorbed with retry+backoff
-- Design agent activated, `docs/design-system.md` v1.0 committed (session 15)
+- Design agent activated, `docs/design-system.md` v1.1d committed (sessions 15–16)
 - Admin diagnostic UI, `docs/admin-runbook.md` with 9 SQL recipes
-- Booth page redesign (v0.2 language) — shipped session 14, functional in production, marked deprecated in v1.0 spec pending second pass
+- Booth page redesign (v0.2 language) — shipped session 14, functional in production, marked deprecated in v1.1d spec pending second pass
+- **Find Detail shipped against v1.1d spec (session 16)** — masthead, photograph with 1px hairline border, post-it bottom-right with push pin, title + price, quoted caption, diamond divider, cartographic pin+X block, vendor row with "Explore [Booth NNN →]" pill link, shelf strip with defensive alignment, owner manage block. IM Fell English + Caveat loaded via Google Fonts in root layout.
+- **BottomNav minimal chrome patch (session 16)** — background paperCream translucent, top border inkHairline. Full rework deferred to Booth v1.1 sprint.
 
 ## KNOWN GAPS ⚠️
 
@@ -391,12 +484,12 @@ _None as of session 15 close._
 - 🟡 T4d — pre-beta QA pass walking all three flows end-to-end.
 - 🟢 Session 13 test data cleanup — 5+ "David Butler" variants in DB. ~5 min SQL via admin-runbook Recipe 4.
 
-### 🟡 Design v1.0 execution (sessions 16+)
-- **Session 16 candidate A** — Find Detail code build against v1.0 spec. Mockup locked session 15.
-- **Session 17 candidate** — Booth page v1.0 second pass (replaces `<LocationStatement>` + `<BoothLocationCTA>`, swaps Georgia → IM Fell English, applies cartographic pin+X, masthead wordmark).
-- **Session 18 candidate** — Feed header + `<MallSheet>` bottom sheet pattern against v1.0.
-- **Session 19 candidate** — Find Map emotional redesign against v1.0.
-- **Session 20 candidate** — Cleanup pass: inline Georgia → IM Fell English on chrome; inline `C` objects → `colors` import; magic-number spacing → spacing tokens; `lib/tokens.ts` additions for post-it/ink scale.
+### 🟡 Design v1.1d execution (sessions 17+)
+- **Session 17 candidate A** — Nav Shelf decision + implementation. David picks from 4 mockups in `docs/mockups/nav-shelf-exploration.html` (A Suggestion / B Grain / C Full Shelf / D Line Alone). Ship chosen treatment.
+- **Session 17 candidate B** — Booth page v1.1d second pass (replaces `<LocationStatement>` + `<BoothLocationCTA>`, swaps Georgia → IM Fell English, applies cartographic pin+X, masthead wordmark, post-it vocabulary where applicable, 1px hairline photo borders). First opportunity to promote `v1` inline tokens to `lib/tokens.ts`.
+- **Session 18 candidate** — Feed header + `<MallSheet>` bottom sheet pattern against v1.1d.
+- **Session 19 candidate** — Find Map emotional redesign against v1.1d.
+- **Session 20 candidate** — Cleanup pass: inline Georgia → IM Fell English on chrome; inline `C` objects → `colors` import; magic-number spacing → spacing tokens; `lib/tokens.ts` additions for post-it/ink scale/paper palette.
 
 ### 🟡 Sprint 3 leftovers still pending beta invites
 - Error monitoring (Sentry or structured logs)
@@ -424,7 +517,8 @@ _None as of session 15 close._
 - Cloudflare nameservers — dormant, no cost
 - `/shelves` AddBoothSheet — orphan after T4b ships
 - `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` — obsolete since T4a
-- Design v0.2 components deprecated but still in code (`LocationStatement`, `BoothLocationCTA`) — replaced in Booth v1.0 sprint
+- Design v0.2 components deprecated but still in code (`LocationStatement`, `BoothLocationCTA`) — replaced in Booth v1.1d sprint (session 17 candidate B)
+- `v1` inline tokens on Find Detail and BottomNav — first opportunity to promote to `lib/tokens.ts` is the Booth v1.1d sprint
 
 ---
 
