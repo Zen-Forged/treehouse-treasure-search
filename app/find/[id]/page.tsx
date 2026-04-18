@@ -1,5 +1,5 @@
 // app/find/[id]/page.tsx
-// Find Detail — v1.1 (docs/design-system.md §Find Detail, updated session 16)
+// Find Detail — v1.1e (docs/design-system.md §Find Detail, updated session 17)
 //
 // Layout top-to-bottom:
 //   1. Masthead row (Mode A): back · "Treehouse Finds" wordmark (16px) · save + share
@@ -22,6 +22,16 @@
 // - X glyph anchors to vendor name baseline (was drifting to "Visit the shelf" below)
 // - "Visit the shelf →" moved IM Fell italic → system-ui 500 (matches address voice)
 // - Shelf strip insets to page margin (first thumbnail aligns with photograph)
+//
+// v1.1e — on-device polish pass from session 17:
+// - Masthead wordmark: italic retired on "Finds" (Title Case single style), 16 → 18px, tighter tracking
+// - Save + Share relocated off masthead onto photograph top-right as frosted cream circles
+// - Back button bubble 34 → 38, icon 16 → 18 for on-image icon parity
+// - On-image save + share bubbles 38px, icons 17px
+// - Vendor row: "Explore" → "Explore booth →", pill slimmed to pure numeric badge
+// - Pill numeral bumped 13 → 16px IM Fell, padding tightened
+// - X glyph vertical alignment recalibrated to vendor-name baseline
+// - App-wide background aligned to paperCream (#e8ddc7) via app/layout.tsx + globals.css
 
 "use client";
 
@@ -120,22 +130,21 @@ function XGlyph({ size = 16 }: { size?: number }) {
 // marker on the vendor line of the cartographic block. The visual match is the point —
 // the reader sees the two pills as a linked pair even though they sit in different places.
 function Pill({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  // Renamed role-wise: this is now the ShelfLinkPill (sole pill role post v1.1d status-pill retirement).
-  // Kept the name `Pill` in code to minimize diff churn.
+  // v1.1e — pure numeric badge role (no "Booth" word, no arrow, no gloss — just the number).
+  // The label ("Explore booth →") now carries the action signal; the pill is the token.
   return (
     <span
       style={{
         display: "inline-flex",
         alignItems: "center",
-        padding: "4px 11px 3px",
+        padding: "2px 9px",
         borderRadius: 999,
         background: v1.pillBg,
         backdropFilter: "blur(4px)",
         WebkitBackdropFilter: "blur(4px)",
         border: `1.5px solid ${v1.pillBorder}`,
         fontFamily: FONT_IM_FELL,
-        fontStyle: "italic",
-        fontSize: 13,
+        fontSize: 16,
         color: v1.pillInk,
         lineHeight: 1.25,
         whiteSpace: "nowrap",
@@ -302,30 +311,41 @@ function ShelfSection({
 }
 
 // ── Icon bubble ────────────────────────────────────────────────────────────────
+// v1.1e: default size bumped 34 → 38 for on-image parity.
+// `variant="frosted"` renders the overlay treatment used on the photograph (save + share).
 function IconBubble({
   onClick,
   ariaLabel,
   children,
   active,
+  variant = "paper",
 }: {
   onClick: () => void;
   ariaLabel: string;
   children: React.ReactNode;
   active?: boolean;
+  variant?: "paper" | "frosted";
 }) {
+  const paperBg = active ? "rgba(30,77,43,0.14)" : v1.iconBubble;
+  const frostedBg = active
+    ? "rgba(30,77,43,0.22)"
+    : "rgba(232,221,199,0.78)"; // paperCream translucent — reads as frosted over any photo
+
   return (
     <button
       onClick={onClick}
       aria-label={ariaLabel}
       style={{
-        width: 34,
-        height: 34,
+        width: 38,
+        height: 38,
         borderRadius: "50%",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: active ? "rgba(30,77,43,0.14)" : v1.iconBubble,
-        border: "none",
+        background: variant === "frosted" ? frostedBg : paperBg,
+        backdropFilter: variant === "frosted" ? "blur(8px)" : undefined,
+        WebkitBackdropFilter: variant === "frosted" ? "blur(8px)" : undefined,
+        border: variant === "frosted" ? `0.5px solid rgba(42,26,10,0.12)` : "none",
         cursor: "pointer",
         padding: 0,
         WebkitTapHighlightColor: "transparent",
@@ -501,7 +521,7 @@ export default function FindDetailPage() {
         flexDirection: "column",
       }}
     >
-      {/* ── 1. Masthead row (Mode A) ────────────────────────────────────────── */}
+      {/* ── 1. Masthead row — v1.1e: back + wordmark only; save/share move to photograph ── */}
       <motion.div
         variants={pageVariants}
         initial="hidden"
@@ -516,38 +536,28 @@ export default function FindDetailPage() {
       >
         <div style={{ justifySelf: "start" }}>
           <IconBubble onClick={() => router.back()} ariaLabel="Go back">
-            <ArrowLeft size={16} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+            <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
           </IconBubble>
         </div>
 
-        {/* v1.1 — masthead 15 → 16 */}
+        {/* v1.1e — masthead wordmark: Title Case single style, no italic, 18px, tighter tracking */}
         <div
           style={{
             fontFamily: FONT_IM_FELL,
-            fontSize: 16,
+            fontSize: 18,
             color: v1.inkPrimary,
-            letterSpacing: "0.01em",
+            letterSpacing: "-0.005em",
             whiteSpace: "nowrap",
           }}
         >
-          Treehouse <span style={{ fontStyle: "italic" }}>Finds</span>
+          Treehouse Finds
         </div>
 
-        <div style={{ justifySelf: "end", display: "flex", alignItems: "center", gap: 8 }}>
-          <IconBubble onClick={handleToggleSave} ariaLabel={isSaved ? "Remove from saved" : "Save"} active={isSaved}>
-            <Heart
-              size={15}
-              strokeWidth={isSaved ? 0 : 1.6}
-              style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
-            />
-          </IconBubble>
-          <IconBubble onClick={handleShare} ariaLabel="Share">
-            <Send size={14} strokeWidth={1.6} style={{ color: copied ? "#1e4d2b" : v1.inkPrimary }} />
-          </IconBubble>
-        </div>
+        {/* Right slot intentionally empty — save + share now live on the photograph */}
+        <div style={{ justifySelf: "end" }} aria-hidden="true" />
       </motion.div>
 
-      {/* ── 2. Photograph with post-it (BOTTOM-LEFT) + status pill (bottom-right) ── */}
+      {/* ── 2. Photograph with post-it (bottom-right) + save/share (top-right, v1.1e) ── */}
       <motion.div
         variants={sectionVariants(0.04)}
         initial="hidden"
@@ -597,6 +607,35 @@ export default function FindDetailPage() {
               no photograph
             </div>
           )}
+
+          {/* v1.1e — save + share as frosted overlay bubbles, top-right of photograph */}
+          <div
+            style={{
+              position: "absolute",
+              top: 12,
+              right: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              zIndex: 2,
+            }}
+          >
+            <IconBubble
+              onClick={handleToggleSave}
+              ariaLabel={isSaved ? "Remove from saved" : "Save"}
+              active={isSaved}
+              variant="frosted"
+            >
+              <Heart
+                size={17}
+                strokeWidth={isSaved ? 0 : 1.6}
+                style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
+              />
+            </IconBubble>
+            <IconBubble onClick={handleShare} ariaLabel="Share" variant="frosted">
+              <Send size={17} strokeWidth={1.6} style={{ color: copied ? "#1e4d2b" : v1.inkPrimary }} />
+            </IconBubble>
+          </div>
 
           {/* v1.1d — post-it moved BOTTOM-RIGHT with +3deg rotation, push pin at top-center */}
           {boothNumber && (
@@ -807,9 +846,9 @@ export default function FindDetailPage() {
                 }}
               />
             )}
-            {/* X aligned to vendor name baseline */}
+            {/* X aligned to vendor name baseline — v1.1e paddingTop calibrated to ascender */}
             {(vendorName || boothNumber) && (
-              <div style={{ paddingTop: 5, marginBottom: 0 }}>
+              <div style={{ paddingTop: 3, marginBottom: 0 }}>
                 <XGlyph size={15} />
               </div>
             )}
@@ -906,13 +945,13 @@ export default function FindDetailPage() {
                         lineHeight: 1.55,
                       }}
                     >
-                      Explore
+                      Explore booth →
                     </span>
-                    <Pill>Booth {boothNumber} →</Pill>
+                    <Pill>{boothNumber}</Pill>
                   </Link>
                 )}
                 {boothNumber && !vendorSlug && (
-                  <Pill>Booth {boothNumber}</Pill>
+                  <Pill>{boothNumber}</Pill>
                 )}
                 {!boothNumber && vendorSlug && (
                   <Link
