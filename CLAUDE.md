@@ -50,9 +50,108 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-18 (session 20 — v1.1i design spec committed to `docs/design-system.md`; Feed + `<MallSheet>` + Find Detail 3B sold landing state fully scoped; code sprint deferred to session 21)
+> Last updated: 2026-04-18 (session 21A — v1.1i code sprint shipped + v1.1i-polish shipped; pending David's on-device QA walk on next sprint)
 
-**Status:** 📘 **Session 20 was a pure design-direction session.** Two doc/mockup commits ship; zero production code changed. `docs/design-system.md` advanced v1.1h → v1.1i with three linked commitments: Feed redesign (paper masonry + feed hero on paper), `<MallSheet>` bottom-sheet primitive, and sold retires from shopper discovery surfaces (feed filters sold at data layer; Find Map keeps bookmark + tile + uses new Find Detail 3B sold landing state as the reveal; Booth pages retain sold for vendor story credibility). Two mockups committed: `docs/mockups/feed-v1-1h.html` (v1: 3 grids × 2 headers exploration) and `docs/mockups/feed-v1-1h-v2.html` (v2: C2 refined + MallSheet refined + 3A/3B/3C Find Detail sold-state variants). David picked **C2** for the feed (paper masonry + feed hero on paper, no titles, no prices — branching composition deepens the treehouse metaphor; price reveal becomes part of the narrative arc on Find Detail) and **3B** for the sold landing state (full-page closer, same masthead as normal Find Detail, "This find / found a home." headline + italic muted explanation + diamond divider + two italic dotted-underline links). 3A tracked as post-MVP design direction pending real on-device sold-find behavior data.
+**Status:** ✅✅ **Session 21A shipped the v1.1i code sprint AND a same-session v1.1i-polish pass from on-device QA feedback.** Two commits landed on main: `53a382d` (v1.1i core: Feed paper masonry + `<MallSheet>` + Find Detail 3B sold landing + Find Map `isSold` retire + MallHeroCard deletion) and a v1.1i-polish commit following David's iPhone QA screenshot. Build green both times. Polish pass addressed three on-device issues: (1) MallSheet was off-center on iPhone because Framer Motion's `y` animation was wiping the static `translateX(-50%)` mid-animation — fixed by switching to transform-free `left: 0, right: 0, margin: 0 auto` centering, (2) mastheads across Home / Find Map / Find Detail (normal + 3B) / My Shelf / Public Shelf now `position: sticky` with paperCream translucent bg + backdrop-blur + inkHairline bottom border (mirrors BottomNav chrome at the opposite edge), (3) subtle two-layer paper-tone drop-shadows added to product photographs on Home masonry tiles, Find Map FindTile photos, Find Detail hero photo (slightly stronger — it's the largest photo on any page), Find Detail ShelfCard thumbnails, Booth Window View + Shelf View tiles. Booth banner (`BoothHero`) left untouched per David's explicit instruction (hero image, different visual role). **Next session (22) opens with David's on-device QA walk of the deployed polish commit.**
+
+### What shipped this session (two commits)
+
+**Commit 1 — `53a382d` — v1.1i core:**
+- `components/MallSheet.tsx` NEW (~270 lines) — canonical mall-selection bottom-sheet primitive matching the props contract locked in `docs/design-system.md` v1.1i. paperCream surface, 20px top radius, drag handle, IM Fell 22px "Choose a mall" header + italic subhead + diamond divider, All-malls row (no pin, italic, active-underline) + pin-glyph mall rows (name + city + find-count + active-underline). Backdrop tap-to-dismiss, body scroll lock, safe-area-inset aware. Sort: All first, then alphabetical.
+- `app/page.tsx` full rewrite against Feed v1.1i spec — Mode B masthead (logo-placeholder left at 0.72 opacity / wordmark / sign-in-sign-out text link right), paper feed hero (state-dependent "Finds from across / Finds from" eyebrow + 26px mall/geography name as MallSheet trigger + chevron-down glyph + inline pin+dotted address OR italic "Kentucky & Southern Indiana" subtitle), diamond divider, paper masonry (2-col, 50% right-column offset preserved via ResizeObserver on first tile, 6px radius + 1px inkHairline border on every tile, photograph-only, no titles, no prices, frosted paperCream heart top-right with state-independent bg + green glyph when saved), empty state, retoned vendor CTA (diamond divider + italic muted IM Fell prompt + italic dotted-underline link). `safeStorage` mall persistence via `treehouse_saved_mall_id`. All scroll-restore + last-viewed + visibility-reload behaviors preserved from v0.2.
+- `app/find/[id]/page.tsx` — new `SoldLanding` component defined before the default export, early branch `if (isSold && !isMyPost) return <SoldLanding …/>` at the top of the render path. 3B layout composition: masthead → "This find / found a home." headline (IM Fell 30px, hard line break) → italic muted explanation ("The piece you saved has been claimed by someone else. That's the way of good things.", max-width 300) → diamond divider @ 60px inset → "Visit [vendor]'s shelf →" + "Back to Treehouse Finds" italic dotted-underline links → BottomNav. Owner exception documented inline. Dead-code note on hero-photo grayscale filter (parked for future cleanup).
+- `app/flagged/page.tsx` — `FindTile.isSold` fully retired: no photo grayscale/opacity filter, no "Found a home" price caption. Three-part-contract comment block added explaining why the bookmark key stays + tile stays visible + 3B is the reveal (and why `getPostsByIds` must NOT gain a status filter).
+- `components/MallHeroCard.tsx` — DELETED. Zero remaining callers after `app/page.tsx` migrated off the v0.2 hero.
+
+**Commit 2 — v1.1i-polish (same session, post-QA):**
+- `components/MallSheet.tsx` — centering fix. Sheet container was using `position: fixed, left: 50%, transform: translateX(-50%), width: 100%, maxWidth: 430` which pairs the static centering transform with Framer Motion's `y` animation. Framer sets `transform: translateY(…)` on the element, wiping the static `translateX(-50%)` mid-animation — the sheet's left edge ended up pinned to mid-viewport on David's iPhone. Fixed by switching to `position: fixed, left: 0, right: 0, bottom: 0, margin: 0 auto, width: 100%, maxWidth: 430`. Transform-free centering, matches the column-centering pattern every page wrapper uses. Long in-file comment explains the root cause for future Dev agents. **This failure mode is now documented twice — once inline in `MallSheet.tsx` and once in the DECISION_GATE Tech Rule lineage (the original rule since session 15: never combine a centering transform with a Framer y-animation on the same element; session 21A demonstrates the failure mode on a real device).**
+- **Sticky mastheads** across five pages: `app/page.tsx`, `app/flagged/page.tsx`, `app/find/[id]/page.tsx` (normal + SoldLanding), `app/my-shelf/page.tsx`, `app/shelf/[slug]/page.tsx`. Each masthead now gets `position: sticky, top: 0, zIndex: 40, background: rgba(232,221,199,0.96), backdropFilter: blur(24px), WebkitBackdropFilter: blur(24px), borderBottom: 1px solid v1.inkHairline`. Mirrors BottomNav's chrome pattern at the opposite edge (paperCream translucent + blur + inkHairline separator).
+- **My Shelf / Public Shelf — masthead moved inside overflow-auto scroll container.** Sticky's containing block is the nearest scrolling ancestor. Both Booth pages use a `<div style={{ flex: 1, overflowY: "auto" }}>` scroll container as the scroll context. Masthead was previously outside this container, so sticky anchored to the window (which wasn't scrolling) instead of the scroll container. Moving Masthead inside the overflow-auto div makes sticky correctly anchor to the scroll context. No visual change when not scrolling; correct pin behavior when scrolling.
+- **Drop-shadows on product photographs** — two shadow strengths. Tile-strength `0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)` on: Home MasonryTile (replaces previous `0 1px 4px`, preserves the elaborate highlighted-tile multi-layer path), Find Map FindTile photo wrapper, Find Detail ShelfCard thumbnails, Booth WindowTile, Booth ShelfTile. Hero-strength `0 3px 12px rgba(42,26,10,0.10), 0 1px 3px rgba(42,26,10,0.06)` on Find Detail hero photo (largest photo on any page, earns slightly stronger lift). **Skipped per David's instruction:** Booth banner `BoothHero` (vendor mall image hero, different visual role — already has its own scrim + post-it + share bubble composition). Shadows are tone-matched to `inkHairline`, warm/low-opacity/short-throw — sits the photo *on* the paper, doesn't float it above. Paper-as-surface intact.
+
+### Scope calls surfaced during the core sprint (David's awareness, not blocking)
+
+- Feed masthead left slot — kept low-opacity logo as neutral placeholder. Nav Shelf lands here in 21B (deferred).
+- Feed masthead right slot — kept v0.2 sign-in/sign-out as IM Fell italic dotted-underline text link. Didn't invent a profile/user-circle icon because no profile page exists yet.
+- Find Detail 3B owner exception — guarded with `isSold && !isMyPost`. Owners retain normal layout with manage affordances ("Mark as On Display" etc). Spec framed 3B as shopper-facing.
+- Hero-photo `isSold` grayscale filter on Find Detail — dead code for shopper path (3B branches out), no-op for owner. Left in place with comment; cleanup parked.
+- Vendor CTA at feed bottom — kept (only vendor-onboarding surface visible to shoppers). Re-voiced to v1 palette: diamond divider + italic muted IM Fell prompt + italic dotted-underline link.
+
+### Three-part v1.1i sold contract — committed and enforced in code
+
+The spec's three-part contract is now binding across three files. **Breaking any one breaks all three.**
+
+1. `safeStorage` bookmark key NOT pruned when a saved find sells — enforced in `app/flagged/page.tsx` (no new pruning logic added; existing behavior preserved)
+2. Find Map FindTile renders sold saves identical to available saves — enforced by the `isSold` retirement in `FindTile` (no grayscale, no opacity, no "Found a home" caption)
+3. Find Detail 3B IS the reveal on tap-through — enforced by the `if (isSold && !isMyPost) return <SoldLanding/>` branch
+
+**Do NOT add a status filter to `getPostsByIds`.** That would break path 2 (tile wouldn't render) and path 3 (can't navigate to what doesn't load). The three-part contract is also documented in `docs/design-system.md` v1.1i and in the in-file comment at the top of `FindTile` in `app/flagged/page.tsx`.
+
+### Tool-environment lessons reinforced this session
+
+- **`filesystem:edit_file` + unicode box-drawing rules remains unreliable.** Hit the `═══…` / `─────` anchor-mismatch bug AGAIN mid-session when trying to clean up a duplicate `export default function FindDetailPage()` in `app/find/[id]/page.tsx`. Workaround that finally worked: drop the rule line from the `oldText` anchor entirely; anchor on unique non-unicode content (function signatures, `}\n\nexport default`, etc.). Then a separate surgical remove of the orphan rule line. **This lesson keeps repeating across sessions 16, 19A, 21A — it needs permanent elevation in DECISION_GATE Tech Rules. Next session's Docs agent should add it explicitly.** Proposed wording: *"When `filesystem:edit_file` fails with "Could not find exact match" and the failing anchor contains box-drawing characters (───, ═══), drop the rule line from the anchor entirely. Anchor on unique code content (function signatures, variable names, `}\n\nexport default`, etc.) instead. Do a separate surgical edit to handle the orphaned rule if needed."*
+- **Framer Motion y-animation vs static transform centering** — the MallSheet bug is the second appearance of this category (first was flagged in DECISION_GATE after the Find Detail icon-bubble work). New standard: **use `left: 0, right: 0, margin: 0 auto` for column-centering any element that also has Framer Motion transforms.** Not `left: 50% + translateX(-50%)`. Documented in the in-file MallSheet comment and ready for DECISION_GATE promotion.
+- **`filesystem:write_file` remained the reliable full-rewrite tool.** `filesystem:edit_file` handled the surgical polish edits with minor anchor tuning.
+
+### 🔆 Session 22 HITL — starts here
+
+David's instruction at session close: **"will start with QA feedback on next sprint."**
+
+Before QA walk on iPhone:
+1. Clear stale `th_vendor_profile` on iPhone (KI-003 precondition from session 18) — open https://app.kentuckytreehouse.com, Settings → Safari → Advanced → Website Data → search "kentuckytreehouse" → Remove
+2. Hard refresh the site after deploy completes
+
+QA walk checklist (on-device):
+- **Feed** loads with "Finds from across / Kentucky" eyebrow+title and "Kentucky & Southern Indiana" italic subtitle
+- **Scroll Home** → masthead stays pinned to top with soft paperCream tint + crisp inkHairline bottom border
+- **Masonry tiles** have gentle paper-tone lift (not floaty, not flat — tone-matched shadow should feel like the photo is resting on paper, not floating above a marketplace card)
+- **Tap mall name** → MallSheet slides up **centered within the 430px column** (bug fix verification)
+- **Tap America's Antique Mall** → sheet dismisses, hero flips to "Finds from / America's Antique Mall" + pin + dotted-underline address (tappable → Apple Maps)
+- **Hard refresh** → saved mall persists; feed reopens on America's Antique Mall
+- **Tap All malls row** in sheet → resets to geography view, saved key cleared
+- **Tap a heart on a feed tile** → green fill appears; tile doesn't navigate (tap propagation stopped)
+- **Find Map** → scroll → masthead pinned; FindTile photos have matching subtle lift; saved finds visible including any sold ones (identical rendering to available ones)
+- **Find Detail** → scroll down past the hero photo → masthead pinned with crisp bottom hairline; hero photo has slightly stronger shadow than tiles (largest photo on any page)
+- **My Shelf / `/shelf/[slug]`** → scroll → masthead pinned; Window View + Shelf View tiles have lift; **banner has no shadow** (check preserved — hero image, different visual role)
+- **3B reveal** — flip a post to `sold` in Supabase, deep-link to `/find/[id]` → sold landing renders (headline + italic explanation + diamond + vendor shelf link + home link), masthead sticky here too
+- **Owner path on sold find** — as admin or as the post owner, deep-link to a sold find → normal Find Detail layout with manage affordances ("Mark as On Display" etc), NOT 3B
+
+### Session 22 candidate queue
+
+- **22A — QA feedback from on-device walk** (David's stated next-session opener). Any iteration on sticky masthead chrome, shadow strength, MallSheet behavior, 3B composition.
+- **22B — KI-003 diagnosis** (vendors posting under stale identity after approval — pre-beta blocker per session-18 context, still parked)
+- **22C — Sprint 5: onboarding v1.0 pass + `<MallSheet>` migration** to `/post` and `/vendor-request` (second + third consumers of the new primitive)
+- **22D — 21B Nav Shelf decision + BottomNav full chrome rework** (held since sessions 16–20; David picks from 4 mockups in `docs/mockups/nav-shelf-exploration.html`)
+- **22E — Sprint 4 tail batch** (T4c copy polish + T4b admin surface consolidation + T4d pre-beta QA walk)
+
+### Files touched this session
+- `components/MallSheet.tsx` — NEW (core) + centering fix (polish)
+- `app/page.tsx` — full rewrite (core) + sticky masthead + tile shadow bump (polish)
+- `app/find/[id]/page.tsx` — SoldLanding + 3B branch (core) + sticky mastheads ×2 + hero photo shadow + ShelfCard shadow (polish)
+- `app/flagged/page.tsx` — `isSold` retirement in FindTile (core) + sticky masthead + FindTile photo shadow (polish)
+- `app/my-shelf/page.tsx` — sticky masthead + moved inside scroll container (polish only)
+- `app/shelf/[slug]/page.tsx` — sticky masthead + moved inside scroll container (polish only)
+- `components/BoothPage.tsx` — WindowTile + ShelfTile shadows (polish only); BoothHero banner untouched per instruction
+- `components/MallHeroCard.tsx` — DELETED (core)
+- `CLAUDE.md` (this file) — session 21A close
+
+### Session 21A close HITL — already complete
+
+All HITL steps already ran this session:
+
+1. ✅ Core commit `53a382d` pushed to main
+2. ✅ `rm components/MallHeroCard.tsx` ran cleanly post-build
+3. ✅ Polish commit pushed to main
+4. ✅ Vercel deploy triggered on push (pending verification this deploys cleanly — David noted first polish push didn't deploy; second push after `git push` confirmed cleared the webhook)
+
+Open item for Session 22 start: verify the deployed state matches the committed state, THEN run QA walk.
+
+---
+
+## ARCHIVE — What was done earlier (2026-04-18, session 20)
+> Pure design-direction session; v1.1i spec committed to `docs/design-system.md`; two mockups on disk; no production code changed. Fully realized in code by session 21A.
+
+**Status:** 📘 **Session 20 was a pure design-direction session.** `docs/design-system.md` advanced v1.1h → v1.1i with three linked commitments: Feed redesign (paper masonry + feed hero on paper), `<MallSheet>` bottom-sheet primitive, and sold retires from shopper discovery surfaces. David picked **C2** for the feed and **3B** for the sold landing state. The session-21A code sprint realized all three in production.
 
 ### What shipped this session (2 commits' worth of doc/mockup work)
 
@@ -94,48 +193,14 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 7. **Public Booth page sold policy:** NOT extended — `/shelf/[slug]` continues to show sold posts because vendor story/credibility benefits
 8. **Find Map behavior when a saved find sells:** keep the bookmark key so the 3B page resolves via the saved tile tap. Three-part contract (bookmark + tile + 3B) locked
 
-### Files touched this session
+### Files touched (session 20)
 - `docs/design-system.md` — v1.1h → v1.1i (seven targeted edits; no full rewrite)
 - `docs/mockups/feed-v1-1h.html` — NEW, v1 exploration (3×2 = 6 variants + MallSheet)
 - `docs/mockups/feed-v1-1h-v2.html` — NEW, v2 refined (C2 locked + sold-state 3-way)
-- `CLAUDE.md` (this file) — session 20 close
+- `CLAUDE.md` — session 20 close (later archived in session 21A)
 
-### Session 21 scope (deferred by David's call at session close)
-
-**21A — Feed + MallSheet + Find Detail 3B code sprint.** ~2–2.5 hours including build + on-device QA. Spec is locked in `docs/design-system.md` v1.1i. Task graph:
-
-1. 🟢 AUTO — Create `components/MallSheet.tsx` matching the props contract in the spec
-2. 🟢 AUTO — Full rewrite `app/page.tsx` against the Feed spec: Mode B masthead, feed hero on paper with All-malls + specific-mall states, paper masonry retiled (6px + inkHairline border, `ResizeObserver` preserved), frosted hearts on every tile, `<MallSheet>` wiring, `safeStorage` mall persistence, migrate from `colors` → `v1` tokens
-3. 🟢 AUTO — Add 3B branch to `app/find/[id]/page.tsx` at top of render: if `post.status === "sold"` render sold-landing layout in place of normal Find Detail content
-4. 🟢 AUTO — Retire `isSold` grayscale + "Found a home" caption branch in `app/flagged/page.tsx` FindTile (dead code per v1.1i Sold-state update)
-5. 🟢 AUTO — `components/MallHeroCard.tsx` retention audit: grep for remaining callers (`/mall/[slug]` specifically). If none beyond feed, delete the file. If found, retention comment
-6. 🟢 AUTO — `npm run build 2>&1 | tail -30`
-7. 🖐️ HITL — commit + push
-8. 🖐️ HITL — QA on device walking: (a) feed loads with All-malls hero copy, (b) MallSheet opens and selects America's Antique Mall, (c) mall persists across refresh, (d) heart on a feed tile saves + reflects on Find Map, (e) heart on a feed tile unsaves cleanly, (f) a sold find deep-link shows 3B (test by manually flipping a post status in Supabase)
-
-**Out of scope for 21A:** BottomNav full chrome rework (held); Nav Shelf decision (held); `<MallSheet>` migration to `/post` + `/vendor-request` (Sprint 5); 3A sold landing treatment (post-MVP); Sprint 4 tail (T4b/T4c/T4d).
-
-**Other session-21 candidates (not 21A):**
-- **21B — Nav Shelf decision + BottomNav full chrome rework** (~1 hour once David picks from 4 existing mockups in `docs/mockups/nav-shelf-exploration.html`)
-- **21C — Sprint 4 tail batch** (T4c copy polish + T4b admin surface consolidation + T4d pre-beta QA walk, ~5.5 hours)
-
-### 🔆 Session 20 close HITL
-
-```bash
-cd ~/Projects/treehouse-treasure-search && npm run build 2>&1 | tail -30
-```
-
-(Build check required per the session-14 tech rule even on doc-only sessions — the committed state of the repo must build green.)
-
-If green:
-
-```bash
-git add -A && git commit -m "design(v1.1i): feed paper masonry + MallSheet primitive + Find Detail 3B sold landing state" && git push
-```
-
-Then `thc` for the standard docs-update commit (this CLAUDE.md edit).
-
-If the build fails, it's not from this session's work (no code changed). Surface the error and diagnose before committing.
+### Session 21 scope (shipped in session 21A)
+All 21A tasks landed on main across two commits. Retention notes preserved in the session 21A block at top.
 
 ---
 
@@ -751,7 +816,7 @@ Key records (via Shopify DNS): A `@` → `23.227.38.65`, CNAME `app` → Vercel,
 - `/setup` 401 race absorbed with retry+backoff
 - Design agent activated, `docs/design-system.md` at **v1.1i** (sessions 15–20)
 - Admin diagnostic UI, `docs/admin-runbook.md` with 9 SQL recipes
-- **Design v1.1i spec committed (session 20, pre-code)** — Feed redesign + `<MallSheet>` primitive + Find Detail 3B sold landing state all locked in `docs/design-system.md`. Two mockups on disk (`docs/mockups/feed-v1-1h.html` v1 exploration + `docs/mockups/feed-v1-1h-v2.html` v2 with C2 refined and sold-state variants). Code sprint deferred to session 21A.
+- **Design v1.1i shipped in code (session 21A)** — Feed paper masonry + `<MallSheet>` primitive + Find Detail 3B sold landing state + Find Map `isSold` retirement + MallHeroCard deletion, all landed on main. v1.1i-polish follow-up added sticky mastheads (Home, Find Map, Find Detail normal + 3B, My Shelf, Public Shelf), MallSheet centering fix (transform-free `left:0/right:0/margin:0 auto`), and subtle paper-tone drop-shadows on product photographs (Home tiles, Find Map FindTiles, Find Detail hero + shelf thumbnails, Booth Window/Shelf tiles — banner exempt).
 - **Design v1.1h token consolidation (session 19A)** — `lib/tokens.ts` is now the canonical source of truth for the v1.1h `v1` palette + fonts (`FONT_IM_FELL`, `FONT_SYS`). Find Detail, Find Map, and BoothPage all import from it. Inline duplicates retired. `BoothPage.tsx` re-exports `v1`/`FONT_IM_FELL`/`FONT_SYS` so `/my-shelf` and `/shelf/[slug]` imports resolve unchanged. v0.2 `colors`/`radius`/`spacing` exports coexist in the same file for unmigrated surfaces (feed + vendor profile + mall page + post flow + admin + BottomNav local `C`).
 - Booth page redesign shipped against **v1.1h** spec (session 18) — both `/my-shelf` and `/shelf/[slug]`: banner as pure photograph with booth post-it pinned to it (cross-page primitive shared with Find Detail), vendor display name as IM Fell 32px page title, small pin-prefixed mall+address block as secondary location statement, Window View (3-col 4:5 portrait grid) + Shelf View (horizontal scroll with 52vw/210px tiles, 22px left padding on first tile) replacing availability tabs, AddFindTile in top-left cell of Window View (owner only), banner edit button top-left + frosted share bubble top-right, diamond-divider quiet closer. Sold items retired from the page entirely. Four v0.2 components deleted: `<LocationStatement>`, `<BoothLocationCTA>`, `<ExploreBanner>`, `<TabSwitcher>`. Georgia cleared from the last major surface.
 - **Find Detail shipped against v1.1f spec (sessions 16–17)** — masthead Title Case single style 18px, photograph with 1px hairline border, post-it bottom-right with push pin + stacked "Booth Location" eyebrow + `+6deg` rotation + 4px inset, title + price em-dash, quoted caption, diamond divider, cartographic pin+X block, X-aligned vendor row with "Explore booth →" label + numeric-only shelf-link pill, frosted on-image save+share top-right (state-independent bg), shelf strip with defensive alignment, owner manage block. IM Fell English + Caveat loaded via Google Fonts in root layout.
@@ -771,10 +836,12 @@ _None as of session 15 close._
 - 🟡 T4d — pre-beta QA pass walking all three flows end-to-end.
 - 🟢 Session 13 test data cleanup — 5+ "David Butler" variants in DB. ~5 min SQL via admin-runbook Recipe 4.
 
-### 🟡 Design v1.1i execution (sessions 21+)
-- **Session 21 candidate A (21A)** — Feed + `<MallSheet>` + Find Detail 3B code sprint against the spec now locked in `docs/design-system.md` v1.1i. New `components/MallSheet.tsx`, full rewrite of `app/page.tsx`, 3B branch on `app/find/[id]/page.tsx`, retirement of `isSold` treatment on `app/flagged/page.tsx` FindTile, `components/MallHeroCard.tsx` retention audit (delete if no remaining callers). ~2–2.5 hours. **Top-of-queue — spec is locked, no more design iteration needed before code.**
-- **Session 21 candidate B (21B)** — Nav Shelf decision + BottomNav full chrome rework. David picks from 4 mockups in `docs/mockups/nav-shelf-exploration.html` (A Suggestion / B Grain / C Full Shelf / D Line Alone), ship chosen treatment plus the BottomNav chrome pass that's been deferred since v1.1d's minimal patch. ~1 hour.
-- **Session 22 candidate** — Onboarding screens (`/vendor-request`, `/setup`, `/login`) v1.1i pass, bundled with "Curator Sign In" rename (Sprint 5 scope). `<MallSheet>` primitive from 21A gets its second consumer here.
+### 🟡 Design v1.1i follow-on work (sessions 22+)
+- **Session 22A — QA walk of v1.1i + v1.1i-polish** (David's stated next-session opener). Iteration on anything surfaced on-device: sticky masthead chrome strength, shadow tone/throw, MallSheet centering verification, 3B composition legibility, etc.
+- **Session 22B — KI-003 diagnosis** (vendors posting under stale identity after approval; pre-beta blocker; still parked).
+- **Session 22C (or later) — Sprint 5: onboarding v1.0 pass + `<MallSheet>` migration** to `/post` and `/vendor-request` (second + third consumers of the primitive built in 21A).
+- **Session 22D (or later) — 21B Nav Shelf decision + BottomNav full chrome rework** (held since sessions 16–20; David picks from 4 mockups in `docs/mockups/nav-shelf-exploration.html`).
+- **Post-MVP candidates** — 3A Find Detail sold landing state (photograph-still-visible treatment), Find Map saved-but-sold tile signal, `docs/design-system.md` PENDING table entries.
 
 ### 🟡 Sprint 3 leftovers still pending beta invites
 - Error monitoring (Sentry or structured logs)
@@ -802,8 +869,10 @@ _None as of session 15 close._
 - Cloudflare nameservers — dormant, no cost
 - `/shelves` AddBoothSheet — orphan after T4b ships
 - `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` — obsolete since T4a
-- Design v0.2 components retired and deleted in session 18: `components/LocationStatement.tsx`, `components/BoothLocationCTA.tsx`, `components/ExploreBanner.tsx`, `components/TabSwitcher.tsx`
+- Design v0.2 components retired and deleted across sessions: `components/LocationStatement.tsx`, `components/BoothLocationCTA.tsx`, `components/ExploreBanner.tsx`, `components/TabSwitcher.tsx` (session 18), `components/MallHeroCard.tsx` (session 21A)
 - `components/ShelfGrid.tsx` — parked with retention comments (session 18); zero current callers but retention rationale documented in-file. Can delete in a future cleanup if grep across full codebase confirms no legacy consumers
+- **`CONTEXT.md` is stale** — last updated 2026-04-07 (pre-v1.1i). Sections 8–10 still describe v0.2 feed/detail/palette. Non-urgent; CLAUDE.md is the authoritative session-state doc. Recommend refreshing after beta launch when the v1.1i surface area stabilizes.
+- `docs/mockups/feed-v1-1h.html` + `docs/mockups/feed-v1-1h-v2.html` — historical record; can delete after on-device QA confirms v1.1i-polish holds
 - `docs/mockups/find-map-exploration.html`, `docs/mockups/find-map-v2.html`, `docs/mockups/booth-v1-1g.html`, `docs/mockups/booth-v1-1g-v2.html` — historical record; can delete once on-device QA confirms v1.1g + v1.1h hold
 
 ---
