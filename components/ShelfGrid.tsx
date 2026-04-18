@@ -1,12 +1,29 @@
 // components/ShelfGrid.tsx
-// Shared grid layout and tile components for vendor shelf pages.
-// Used by My Shelf (/my-shelf) and Public Shelf (/shelf/[slug]).
+// Grid layout and tile components.
 //
-// v0.2 design-system pass (session 14):
+// STATUS (session 18 / v1.1h):
+//   - Booth pages (/my-shelf, /shelf/[slug]) no longer use this file.
+//   - Their replacement primitives live in components/BoothPage.tsx (WindowView,
+//     ShelfView, AddFindTile) using v1.1h design language.
+//
+// This file is retained because:
+//   (a) ShelfGridStyles may still be injected by other surfaces that use
+//       skeleton-shimmer — double-check before deletion.
+//   (b) FoundTile encodes a committed sold-state treatment (0.5 opacity +
+//       grayscale + IM Fell italic bottom-left caption) that a future
+//       post-beta "vendor story" or "sold history" surface will want to reuse
+//       without redesigning. Parked against that future.
+//   (c) ThreeColGrid, AvailableTile, SkeletonGrid — check callers before
+//       retiring; currently not re-imported from the new BoothPage.tsx but may
+//       have legacy consumers elsewhere in the codebase.
+//
+// If a session-close grep finds zero callers, this entire file can be deleted
+// in a cleanup commit.
+//
+// v0.2 design-system notes (kept for historical reference):
 //   - Grid gap 6 → spacing.tileGap (10) — more breathing room
-//   - AvailableTile: no title overlay, pure image (tap through for story)
-//   - FoundTile: italic Georgia "Found a home" caption bottom-left, replacing
-//     centered badge. This is the one exception to the "no text on tiles" rule.
+//   - AvailableTile: pure image, no title overlay, tap through for the story
+//   - FoundTile: 0.5 opacity + grayscale + italic Georgia caption bottom-left
 
 "use client";
 
@@ -57,7 +74,7 @@ export function SkeletonGrid() {
 }
 
 // ─── Available tile ───────────────────────────────────────────────────────────
-// v0.2: pure image — no title, no meta. Tap through for the story.
+// v0.2 legacy: pure image, square aspect. Superseded by WindowView in BoothPage.tsx.
 
 export function AvailableTile({ post, index }: { post: Post; index: number }) {
   const [imgErr, setImgErr] = useState(false);
@@ -80,8 +97,12 @@ export function AvailableTile({ post, index }: { post: Post; index: number }) {
 }
 
 // ─── Found (sold) tile ────────────────────────────────────────────────────────
-// v0.2: 0.5 opacity + grayscale + italic Georgia caption bottom-left on subtle
-// dark gradient. One exception to the no-text rule — sold status must read.
+// PARKED v1.1h: Sold finds no longer render on the Booth page; the On Display /
+// Found homes tabs were replaced by Window View / Shelf View, both of which
+// show only available inventory. This treatment is retained intact for a
+// future post-beta "vendor story" or "sold history" surface that will want the
+// same sold-state visual language. Do not delete without cross-checking the
+// remaining callers (likely zero at this point but verify in cleanup pass).
 
 export function FoundTile({ post, index }: { post: Post; index: number }) {
   const [imgErr, setImgErr] = useState(false);
@@ -99,7 +120,6 @@ export function FoundTile({ post, index }: { post: Post; index: number }) {
                 filter: "grayscale(1) brightness(0.88)" }} />
           : <div style={{ width: "100%", height: "100%", background: colors.surface }} />
         }
-        {/* Subtle dark gradient at bottom-left to carry the italic caption */}
         <div style={{
           position: "absolute", bottom: 0, left: 0, right: 0,
           background: "linear-gradient(to top, rgba(20,18,12,0.62) 0%, transparent 100%)",
