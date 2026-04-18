@@ -1,17 +1,27 @@
 // app/find/[id]/page.tsx
-// Find Detail — v1.0 (docs/design-system.md §Find Detail, locked session 15)
+// Find Detail — v1.1 (docs/design-system.md §Find Detail, updated session 16)
 //
 // Layout top-to-bottom:
-//   1. Masthead row (Mode A): back · "Treehouse Finds" wordmark · save + share
-//   2. Photograph with post-it top-left (material gesture) + status pill bottom-right
-//   3. Title + price (em-dash, price in softer ink)
-//   4. Quoted caption (centered IM Fell italic, typographic quotes)
+//   1. Masthead row (Mode A): back · "Treehouse Finds" wordmark (16px) · save + share
+//   2. Photograph (6px radius) with post-it BOTTOM-LEFT + status pill bottom-right (both Title Case)
+//   3. Title + price (32px, em-dash, price in softer ink)
+//   4. Quoted caption (centered IM Fell italic, 19px, typographic quotes)
 //   5. Diamond divider ◆
-//   6. Cartographic block — pin + mall + address; connecting tick; X + vendor + booth + "Visit the shelf →"
-//   7. "more from this shelf…" horizontal strip
-//   8. Owner Manage block (paper-as-surface, preserved behavior per session 16 Decision 1a)
+//   6. Cartographic block — pin + mall + address (system-ui); tick; X anchored to vendor line;
+//      vendor name + booth pill (Booth 123456, matches status pill); "Visit the shelf →" in system-ui
+//   7. "More from this shelf…" strip — Title Case eyebrow, inset to 22px page margin,
+//      6px radius on thumbnails
+//   8. Owner Manage block (paper-as-surface, Title Case, larger type)
 //
-// v1.0 tokens are inlined here pending the Booth v1.0 sprint which formalizes them in lib/tokens.ts.
+// v1.1 commitments from on-device feedback in session 16:
+// - Typography bumped +1–2px across small type for the 50+ audience
+// - Title Case, no uppercase/letter-spacing on labels (was SaaS dashboard chrome)
+// - Post-it moved top-left → bottom-left (collision + legibility)
+// - 6px corner radius on photograph and shelf thumbnails
+// - Booth number gets status-pill styling on the vendor line (twin to "On Display")
+// - X glyph anchors to vendor name baseline (was drifting to "Visit the shelf" below)
+// - "Visit the shelf →" moved IM Fell italic → system-ui 500 (matches address voice)
+// - Shelf strip insets to page margin (first thumbnail aligns with photograph)
 
 "use client";
 
@@ -30,9 +40,8 @@ import { flagKey, mapsUrl } from "@/lib/utils";
 import BottomNav from "@/components/BottomNav";
 import type { Post } from "@/types/treehouse";
 
-// ── v1.0 inline tokens ─────────────────────────────────────────────────────────
-// TODO(booth-v1.0): promote these to lib/tokens.ts during the Booth v1.0 sprint.
-// Keeping inline for this session to avoid cross-screen token drift mid-flight.
+// ── v1.1 inline tokens ─────────────────────────────────────────────────────────
+// TODO(booth-v1.0): promote these to lib/tokens.ts during the Booth v1.1 sprint.
 const v1 = {
   paperCream:  "#f1ead8",
   postit:      "#faf3dc",
@@ -42,10 +51,11 @@ const v1 = {
   inkFaint:    "rgba(42,26,10,0.28)",
   inkHairline: "rgba(42,26,10,0.18)",
   priceInk:    "#6a4a30",
-  pillBg:      "rgba(247,239,217,0.55)",
+  pillBg:      "rgba(247,239,217,0.88)", // v1.1 — stronger opacity for legibility
   pillBorder:  "rgba(42,26,10,0.72)",
   pillInk:     "#1c1208",
   iconBubble:  "rgba(42,26,10,0.06)",
+  imageRadius: 6, // v1.1 — tipped-in specimen, not raw file
 } as const;
 
 const FONT_IM_FELL = 'var(--font-im-fell), "IM Fell English", Georgia, serif';
@@ -63,7 +73,7 @@ const sectionVariants = (delay: number) => ({
   visible: { opacity: 1, y: 0, transition: { duration: 0.32, delay, ease: EASE } },
 });
 
-// ── Ownership detection (unchanged from v0.2) ──────────────────────────────────
+// ── Ownership detection (unchanged) ────────────────────────────────────────────
 async function detectOwnershipAsync(post: Post): Promise<boolean> {
   try {
     const session = await getSession();
@@ -82,7 +92,6 @@ async function detectOwnershipAsync(post: Post): Promise<boolean> {
 }
 
 // ── Cartographic glyphs ────────────────────────────────────────────────────────
-// Pin: outlined teardrop with filled dot. Represents the mall (zoom-out).
 function PinGlyph({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size * (22 / 18)} viewBox="0 0 18 22" fill="none" aria-hidden="true">
@@ -97,7 +106,6 @@ function PinGlyph({ size = 18 }: { size?: number }) {
   );
 }
 
-// X: two crossed lines at 45°, no frame. Represents the booth (exact spot).
 function XGlyph({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -107,7 +115,37 @@ function XGlyph({ size = 16 }: { size?: number }) {
   );
 }
 
-// ── Shelf card (v1.0) ──────────────────────────────────────────────────────────
+// ── Status-pill primitive (v1.1) ───────────────────────────────────────────────
+// Used for on-photo status ("On Display" / "Found a Home") AND for the booth-number
+// marker on the vendor line of the cartographic block. The visual match is the point —
+// the reader sees the two pills as a linked pair even though they sit in different places.
+function Pill({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "4px 11px 3px",
+        borderRadius: 999,
+        background: v1.pillBg,
+        backdropFilter: "blur(4px)",
+        WebkitBackdropFilter: "blur(4px)",
+        border: `1.5px solid ${v1.pillBorder}`,
+        fontFamily: FONT_IM_FELL,
+        fontStyle: "italic",
+        fontSize: 13,
+        color: v1.pillInk,
+        lineHeight: 1.25,
+        whiteSpace: "nowrap",
+        ...style,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+// ── Shelf card (v1.1) ──────────────────────────────────────────────────────────
 function ShelfCard({ post }: { post: Post }) {
   const [imgErr, setImgErr] = useState(false);
   const isSold = post.status === "sold";
@@ -125,6 +163,7 @@ function ShelfCard({ post }: { post: Post }) {
           aspectRatio: "3/4",
           overflow: "hidden",
           background: v1.postit,
+          borderRadius: v1.imageRadius, // v1.1
           opacity: isSold ? 0.62 : 1,
           transition: "opacity 0.2s",
         }}
@@ -154,7 +193,7 @@ function ShelfCard({ post }: { post: Post }) {
               background: v1.postit,
             }}
           >
-            <div style={{ fontFamily: FONT_IM_FELL, fontSize: 12, color: v1.inkMuted, lineHeight: 1.25 }}>
+            <div style={{ fontFamily: FONT_IM_FELL, fontSize: 13, color: v1.inkMuted, lineHeight: 1.25 }}>
               {post.title}
             </div>
           </div>
@@ -166,7 +205,7 @@ function ShelfCard({ post }: { post: Post }) {
           paddingLeft: 2,
           fontFamily: FONT_IM_FELL,
           fontStyle: "italic",
-          fontSize: 11,
+          fontSize: 13, // v1.1 bump 11 → 13
           color: v1.inkMid,
           lineHeight: 1.4,
           overflow: "hidden",
@@ -212,6 +251,7 @@ function ShelfSection({
       animate="visible"
       style={{ marginBottom: 32 }}
     >
+      {/* v1.1 — eyebrow Title Case, no uppercase/letter-spacing, inset to page margin */}
       <div
         style={{
           paddingLeft: 22,
@@ -219,14 +259,13 @@ function ShelfSection({
           marginBottom: 14,
           fontFamily: FONT_IM_FELL,
           fontStyle: "italic",
-          fontSize: 10,
+          fontSize: 13,
           color: v1.inkMuted,
-          textTransform: "uppercase",
-          letterSpacing: "0.22em",
         }}
       >
-        more from this shelf…
+        More from this shelf…
       </div>
+      {/* v1.1 — strip insets to 22px so first thumbnail aligns with the photograph above */}
       <div
         className="hide-scrollbar"
         style={{
@@ -252,7 +291,7 @@ function ShelfSection({
   );
 }
 
-// ── Icon bubble (shared chrome treatment for masthead actions) ─────────────────
+// ── Icon bubble ────────────────────────────────────────────────────────────────
 function IconBubble({
   onClick,
   ariaLabel,
@@ -269,8 +308,8 @@ function IconBubble({
       onClick={onClick}
       aria-label={ariaLabel}
       style={{
-        width: 32,
-        height: 32,
+        width: 34,
+        height: 34,
         borderRadius: "50%",
         display: "flex",
         alignItems: "center",
@@ -383,7 +422,7 @@ export default function FindDetailPage() {
           justifyContent: "center",
         }}
       >
-        <div style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", color: v1.inkMuted, fontSize: 14 }}>
+        <div style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", color: v1.inkMuted, fontSize: 15 }}>
           Loading…
         </div>
       </div>
@@ -406,21 +445,22 @@ export default function FindDetailPage() {
           padding: 24,
         }}
       >
-        <div style={{ fontFamily: FONT_IM_FELL, fontSize: 22, color: v1.inkPrimary, textAlign: "center" }}>
+        <div style={{ fontFamily: FONT_IM_FELL, fontSize: 24, color: v1.inkPrimary, textAlign: "center" }}>
           This find has moved on.
         </div>
         <button
           onClick={() => router.push("/")}
           style={{
-            fontFamily: FONT_IM_FELL,
-            fontStyle: "italic",
-            fontSize: 14,
-            color: v1.inkPrimary,
+            fontFamily: FONT_SYS,
+            fontWeight: 500,
+            fontSize: 15,
+            color: v1.inkMuted,
             background: "none",
             border: "none",
             cursor: "pointer",
             textDecoration: "underline",
             textDecorationStyle: "dotted",
+            textDecorationColor: v1.inkFaint,
             textUnderlineOffset: 4,
           }}
         >
@@ -464,18 +504,17 @@ export default function FindDetailPage() {
           gap: 12,
         }}
       >
-        {/* LEFT — back */}
         <div style={{ justifySelf: "start" }}>
           <IconBubble onClick={() => router.back()} ariaLabel="Go back">
-            <ArrowLeft size={15} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+            <ArrowLeft size={16} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
           </IconBubble>
         </div>
 
-        {/* CENTER — masthead wordmark */}
+        {/* v1.1 — masthead 15 → 16 */}
         <div
           style={{
             fontFamily: FONT_IM_FELL,
-            fontSize: 15,
+            fontSize: 16,
             color: v1.inkPrimary,
             letterSpacing: "0.01em",
             whiteSpace: "nowrap",
@@ -484,27 +523,26 @@ export default function FindDetailPage() {
           Treehouse <span style={{ fontStyle: "italic" }}>Finds</span>
         </div>
 
-        {/* RIGHT — save + share cluster */}
         <div style={{ justifySelf: "end", display: "flex", alignItems: "center", gap: 8 }}>
           <IconBubble onClick={handleToggleSave} ariaLabel={isSaved ? "Remove from saved" : "Save"} active={isSaved}>
             <Heart
-              size={14}
+              size={15}
               strokeWidth={isSaved ? 0 : 1.6}
               style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
             />
           </IconBubble>
           <IconBubble onClick={handleShare} ariaLabel="Share">
-            <Send size={13} strokeWidth={1.6} style={{ color: copied ? "#1e4d2b" : v1.inkPrimary }} />
+            <Send size={14} strokeWidth={1.6} style={{ color: copied ? "#1e4d2b" : v1.inkPrimary }} />
           </IconBubble>
         </div>
       </motion.div>
 
-      {/* ── 2. Photograph with post-it + status pill ────────────────────────── */}
+      {/* ── 2. Photograph with post-it (BOTTOM-LEFT) + status pill (bottom-right) ── */}
       <motion.div
         variants={sectionVariants(0.04)}
         initial="hidden"
         animate="visible"
-        style={{ padding: "0 22px", marginBottom: 26, position: "relative" }}
+        style={{ padding: "0 22px", marginBottom: 28, position: "relative" }}
       >
         <div
           style={{
@@ -514,6 +552,7 @@ export default function FindDetailPage() {
             overflow: "visible", // allow post-it overhang
           }}
         >
+          {/* Photograph — v1.1 6px radius */}
           {post.image_url ? (
             <img
               src={post.image_url}
@@ -523,6 +562,7 @@ export default function FindDetailPage() {
                 height: "100%",
                 objectFit: "cover",
                 display: "block",
+                borderRadius: v1.imageRadius,
                 filter: isSold ? "grayscale(0.35) brightness(0.9)" : "none",
               }}
             />
@@ -532,12 +572,13 @@ export default function FindDetailPage() {
                 width: "100%",
                 height: "100%",
                 background: v1.postit,
+                borderRadius: v1.imageRadius,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontFamily: FONT_IM_FELL,
                 fontStyle: "italic",
-                fontSize: 13,
+                fontSize: 14,
                 color: v1.inkFaint,
               }}
             >
@@ -545,36 +586,35 @@ export default function FindDetailPage() {
             </div>
           )}
 
-          {/* Booth post-it — top-left, overlapping photo edge */}
+          {/* v1.1 — post-it moved BOTTOM-LEFT, overlapping bottom edge */}
           {boothNumber && (
             <div
               style={{
                 position: "absolute",
-                top: -8,
-                left: -8,
-                width: 66,
-                minHeight: 62,
+                bottom: -12,
+                left: -10,
+                width: 78,
+                minHeight: 72,
                 background: v1.postit,
                 transform: "rotate(-3deg)",
-                transformOrigin: "top left",
+                transformOrigin: "bottom left",
                 boxShadow: `0 4px 8px rgba(42,26,10,0.20), 0 0 0 0.5px rgba(42,26,10,0.08)`,
-                padding: "8px 6px 6px",
+                padding: "10px 6px 8px",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
+              {/* v1.1 — Title Case, no uppercase/tracking, bumped size */}
               <div
                 style={{
                   fontFamily: FONT_IM_FELL,
                   fontStyle: "italic",
-                  fontSize: 9.5,
+                  fontSize: 11,
                   color: v1.inkMuted,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.25em",
                   lineHeight: 1,
-                  marginBottom: 4,
+                  marginBottom: 5,
                 }}
               >
                 Booth
@@ -582,7 +622,7 @@ export default function FindDetailPage() {
               <div
                 style={{
                   fontFamily: FONT_IM_FELL,
-                  fontSize: 27,
+                  fontSize: 28,
                   color: v1.inkPrimary,
                   letterSpacing: "-0.01em",
                   lineHeight: 1,
@@ -593,46 +633,33 @@ export default function FindDetailPage() {
             </div>
           )}
 
-          {/* Status pill — bottom-right, straight */}
+          {/* Status pill — bottom-right, Title Case, 13px */}
           <div
             style={{
               position: "absolute",
               bottom: 10,
               right: 10,
-              padding: "5px 11px 4px",
-              borderRadius: 999,
-              background: v1.pillBg,
-              backdropFilter: "blur(4px)",
-              WebkitBackdropFilter: "blur(4px)",
-              border: `1.5px solid ${v1.pillBorder}`,
-              fontFamily: FONT_IM_FELL,
-              fontStyle: "italic",
-              fontSize: 11,
-              color: v1.pillInk,
-              textTransform: "uppercase",
-              letterSpacing: "0.14em",
-              lineHeight: 1,
             }}
           >
-            {isSold ? "found a home" : "on display"}
+            <Pill>{isSold ? "Found a Home" : "On Display"}</Pill>
           </div>
         </div>
       </motion.div>
 
-      {/* ── 3. Title + price ────────────────────────────────────────────────── */}
+      {/* ── 3. Title + price — v1.1 32px ─────────────────────────────────────── */}
       <motion.div
         variants={sectionVariants(0.10)}
         initial="hidden"
         animate="visible"
-        style={{ padding: "0 22px", marginBottom: 18 }}
+        style={{ padding: "0 22px", marginBottom: 20 }}
       >
         <h1
           style={{
             fontFamily: FONT_IM_FELL,
-            fontSize: 30,
+            fontSize: 32,
             fontWeight: 400,
             color: v1.inkPrimary,
-            lineHeight: 1.15,
+            lineHeight: 1.18,
             letterSpacing: "-0.005em",
             margin: 0,
           }}
@@ -647,19 +674,19 @@ export default function FindDetailPage() {
         </h1>
       </motion.div>
 
-      {/* ── 4. Quoted caption ───────────────────────────────────────────────── */}
+      {/* ── 4. Quoted caption — v1.1 19px ────────────────────────────────────── */}
       {post.caption && (
         <motion.div
           variants={sectionVariants(0.14)}
           initial="hidden"
           animate="visible"
-          style={{ padding: "0 30px", marginBottom: 28, textAlign: "center" }}
+          style={{ padding: "0 30px", marginBottom: 30, textAlign: "center" }}
         >
           <span
             style={{
               fontFamily: FONT_IM_FELL,
               fontStyle: "italic",
-              fontSize: 24,
+              fontSize: 26,
               color: v1.inkMuted,
               lineHeight: 0,
               verticalAlign: "-0.1em",
@@ -672,9 +699,9 @@ export default function FindDetailPage() {
             style={{
               fontFamily: FONT_IM_FELL,
               fontStyle: "italic",
-              fontSize: 17,
+              fontSize: 19,
               color: v1.inkMid,
-              lineHeight: 1.6,
+              lineHeight: 1.65,
             }}
           >
             {post.caption}
@@ -683,7 +710,7 @@ export default function FindDetailPage() {
             style={{
               fontFamily: FONT_IM_FELL,
               fontStyle: "italic",
-              fontSize: 24,
+              fontSize: 26,
               color: v1.inkMuted,
               lineHeight: 0,
               verticalAlign: "-0.1em",
@@ -713,7 +740,7 @@ export default function FindDetailPage() {
           <div
             style={{
               fontFamily: FONT_IM_FELL,
-              fontSize: 10,
+              fontSize: 11,
               color: "rgba(42,26,10,0.42)",
               lineHeight: 1,
             }}
@@ -724,7 +751,7 @@ export default function FindDetailPage() {
         </motion.div>
       )}
 
-      {/* ── 6. Cartographic block — pin + tick + X ──────────────────────────── */}
+      {/* ── 6. Cartographic block — v1.1 pin + tick + X (anchored to vendor line) ── */}
       {(mallName || vendorName || boothNumber) && (
         <motion.div
           variants={sectionVariants(0.18)}
@@ -733,47 +760,58 @@ export default function FindDetailPage() {
           style={{
             display: "grid",
             gridTemplateColumns: "28px 1fr",
-            columnGap: 12,
+            columnGap: 14,
             padding: "0 28px",
-            marginBottom: 30,
+            marginBottom: 32,
           }}
         >
-          {/* Glyph column */}
+          {/* Glyph column — pin at top of mall row, X at top of vendor row,
+              tick fills the gap between them */}
           <div
             style={{
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              paddingTop: 2,
             }}
           >
-            {mallName && <PinGlyph size={18} />}
+            {/* Pin aligned to mall name baseline */}
+            {mallName && (
+              <div style={{ paddingTop: 3, marginBottom: 0 }}>
+                <PinGlyph size={18} />
+              </div>
+            )}
+            {/* Tick */}
             {mallName && (vendorName || boothNumber) && (
               <div
                 style={{
                   width: 1,
                   flex: 1,
-                  minHeight: 34,
+                  minHeight: 48,
                   background: v1.inkHairline,
                   margin: "6px 0",
                 }}
               />
             )}
-            {(vendorName || boothNumber) && <XGlyph size={14} />}
+            {/* X aligned to vendor name baseline */}
+            {(vendorName || boothNumber) && (
+              <div style={{ paddingTop: 5, marginBottom: 0 }}>
+                <XGlyph size={15} />
+              </div>
+            )}
           </div>
 
           {/* Content column */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
             {/* Mall row */}
             {mallName && (
-              <div style={{ paddingTop: 0 }}>
+              <div>
                 <div
                   style={{
                     fontFamily: FONT_IM_FELL,
-                    fontSize: 17,
+                    fontSize: 18,
                     color: v1.inkPrimary,
-                    lineHeight: 1.25,
-                    marginBottom: 3,
+                    lineHeight: 1.3,
+                    marginBottom: 4,
                   }}
                 >
                   {mallName}
@@ -786,13 +824,13 @@ export default function FindDetailPage() {
                       rel="noopener noreferrer"
                       style={{
                         fontFamily: FONT_SYS,
-                        fontSize: 13,
+                        fontSize: 14,
                         color: v1.inkMuted,
                         textDecoration: "underline",
                         textDecorationStyle: "dotted",
                         textDecorationColor: v1.inkFaint,
                         textUnderlineOffset: 3,
-                        lineHeight: 1.5,
+                        lineHeight: 1.55,
                       }}
                     >
                       {mallAddr}
@@ -801,9 +839,9 @@ export default function FindDetailPage() {
                     <span
                       style={{
                         fontFamily: FONT_SYS,
-                        fontSize: 13,
+                        fontSize: 14,
                         color: v1.inkMuted,
-                        lineHeight: 1.5,
+                        lineHeight: 1.55,
                       }}
                     >
                       {mallAddr}
@@ -813,22 +851,26 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Vendor row */}
+            {/* Vendor row — v1.1: vendor name + booth pill inline; "Visit the shelf →" below in system-ui */}
             {(vendorName || boothNumber) && (
               <div>
                 {vendorName && (
                   <div
                     style={{
                       fontFamily: FONT_IM_FELL,
-                      fontSize: 17,
+                      fontSize: 18,
                       color: v1.inkPrimary,
-                      lineHeight: 1.25,
-                      marginBottom: 3,
+                      lineHeight: 1.3,
+                      marginBottom: 8,
+                      display: "flex",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: 10,
                     }}
                   >
-                    {vendorName}
+                    <span>{vendorName}</span>
                     {boothNumber && (
-                      <span style={{ color: v1.inkMuted }}> — Booth {boothNumber}</span>
+                      <Pill>Booth {boothNumber}</Pill>
                     )}
                   </div>
                 )}
@@ -836,15 +878,15 @@ export default function FindDetailPage() {
                   <Link
                     href={`/shelf/${vendorSlug}`}
                     style={{
-                      fontFamily: FONT_IM_FELL,
-                      fontStyle: "italic",
+                      fontFamily: FONT_SYS,
+                      fontWeight: 500,
                       fontSize: 14,
-                      color: v1.inkPrimary,
+                      color: v1.inkMuted,
                       textDecoration: "underline",
                       textDecorationStyle: "dotted",
                       textDecorationColor: v1.inkFaint,
                       textUnderlineOffset: 3,
-                      lineHeight: 1.5,
+                      lineHeight: 1.55,
                     }}
                   >
                     Visit the shelf →
@@ -856,7 +898,7 @@ export default function FindDetailPage() {
         </motion.div>
       )}
 
-      {/* ── 7. "more from this shelf…" ──────────────────────────────────────── */}
+      {/* ── 7. "More from this shelf…" ──────────────────────────────────────── */}
       {hasVendor && (
         <ShelfSection
           vendorId={post.vendor!.id}
@@ -865,46 +907,44 @@ export default function FindDetailPage() {
         />
       )}
 
-      {/* ── 8. Owner Manage block — paper-as-surface (Decision 1a, session 16) ── */}
+      {/* ── 8. Owner Manage block — v1.1 larger type, Title Case ──────────────── */}
       {isMyPost && (
         <motion.div
           variants={sectionVariants(0.28)}
           initial="hidden"
           animate="visible"
-          style={{ padding: "8px 26px 28px" }}
+          style={{ padding: "10px 26px 30px" }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
             <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
             <div
               style={{
                 fontFamily: FONT_IM_FELL,
                 fontStyle: "italic",
-                fontSize: 10,
+                fontSize: 13,
                 color: v1.inkMuted,
-                textTransform: "uppercase",
-                letterSpacing: "0.22em",
               }}
             >
-              manage
+              Manage
             </div>
             <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
           </div>
 
           {!showDelete ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, alignItems: "center" }}>
               <button
                 onClick={() => router.push(`/post/edit/${post.id}`)}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: 7,
+                  gap: 8,
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  padding: "6px 4px",
+                  padding: "8px 4px",
                   fontFamily: FONT_IM_FELL,
                   fontStyle: "italic",
-                  fontSize: 14,
+                  fontSize: 16,
                   color: v1.inkPrimary,
                   textDecoration: "underline",
                   textDecorationStyle: "dotted",
@@ -913,7 +953,7 @@ export default function FindDetailPage() {
                   WebkitTapHighlightColor: "transparent",
                 }}
               >
-                <Pencil size={12} strokeWidth={1.6} style={{ color: v1.inkMuted }} />
+                <Pencil size={14} strokeWidth={1.6} style={{ color: v1.inkMuted }} />
                 Edit this find
               </button>
 
@@ -923,14 +963,14 @@ export default function FindDetailPage() {
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: 7,
+                  gap: 8,
                   background: "none",
                   border: "none",
                   cursor: actionBusy ? "default" : "pointer",
-                  padding: "6px 4px",
+                  padding: "8px 4px",
                   fontFamily: FONT_IM_FELL,
                   fontStyle: "italic",
-                  fontSize: 14,
+                  fontSize: 16,
                   color: v1.inkPrimary,
                   textDecoration: "underline",
                   textDecorationStyle: "dotted",
@@ -940,8 +980,8 @@ export default function FindDetailPage() {
                   WebkitTapHighlightColor: "transparent",
                 }}
               >
-                <Tag size={12} strokeWidth={1.6} style={{ color: v1.inkMuted }} />
-                {isSold ? "Mark as on display" : "Mark as found a home"}
+                <Tag size={14} strokeWidth={1.6} style={{ color: v1.inkMuted }} />
+                {isSold ? "Mark as On Display" : "Mark as Found a Home"}
               </button>
 
               <button
@@ -949,14 +989,14 @@ export default function FindDetailPage() {
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: 7,
+                  gap: 8,
                   background: "none",
                   border: "none",
                   cursor: "pointer",
-                  padding: "6px 4px",
+                  padding: "8px 4px",
                   fontFamily: FONT_IM_FELL,
                   fontStyle: "italic",
-                  fontSize: 12,
+                  fontSize: 14,
                   color: v1.inkMuted,
                   textDecoration: "underline",
                   textDecorationStyle: "dotted",
@@ -965,7 +1005,7 @@ export default function FindDetailPage() {
                   WebkitTapHighlightColor: "transparent",
                 }}
               >
-                <Trash2 size={11} strokeWidth={1.6} style={{ color: v1.inkMuted }} />
+                <Trash2 size={12} strokeWidth={1.6} style={{ color: v1.inkMuted }} />
                 Delete this find
               </button>
             </div>
@@ -975,16 +1015,16 @@ export default function FindDetailPage() {
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 style={{
-                  padding: "16px 18px",
+                  padding: "18px 18px",
                   textAlign: "center",
                 }}
               >
                 <div
                   style={{
                     fontFamily: FONT_IM_FELL,
-                    fontSize: 18,
+                    fontSize: 20,
                     color: v1.inkPrimary,
-                    marginBottom: 8,
+                    marginBottom: 10,
                   }}
                 >
                   Delete this find?
@@ -993,27 +1033,27 @@ export default function FindDetailPage() {
                   style={{
                     fontFamily: FONT_IM_FELL,
                     fontStyle: "italic",
-                    fontSize: 13,
+                    fontSize: 14,
                     color: v1.inkMuted,
-                    marginBottom: 18,
-                    lineHeight: 1.55,
+                    marginBottom: 20,
+                    lineHeight: 1.6,
                   }}
                 >
                   This can’t be undone. The photograph and listing will be permanently removed.
                 </div>
-                <div style={{ display: "flex", gap: 24, justifyContent: "center" }}>
+                <div style={{ display: "flex", gap: 28, justifyContent: "center" }}>
                   <button
                     onClick={handleDelete}
                     disabled={actionBusy}
                     style={{
                       fontFamily: FONT_IM_FELL,
                       fontStyle: "italic",
-                      fontSize: 14,
+                      fontSize: 15,
                       color: "#8b2020",
                       background: "none",
                       border: "none",
                       cursor: "pointer",
-                      padding: "6px 4px",
+                      padding: "8px 4px",
                       textDecoration: "underline",
                       textDecorationStyle: "dotted",
                       textDecorationColor: "rgba(139,32,32,0.4)",
@@ -1029,12 +1069,12 @@ export default function FindDetailPage() {
                     style={{
                       fontFamily: FONT_IM_FELL,
                       fontStyle: "italic",
-                      fontSize: 14,
+                      fontSize: 15,
                       color: v1.inkMuted,
                       background: "none",
                       border: "none",
                       cursor: "pointer",
-                      padding: "6px 4px",
+                      padding: "8px 4px",
                       textDecoration: "underline",
                       textDecorationStyle: "dotted",
                       textDecorationColor: v1.inkFaint,
