@@ -41,7 +41,7 @@ export default function TabSwitcher({ tab, availableCount, foundCount, onChange 
               fontWeight: active ? 700 : 400,
               color: active ? colors.textPrimary : colors.textMuted,
             }}>
-              {t === "available" ? "On Display" : "Found a home"}
+              {t === "available" ? "On Display" : "Found homes"}
             </span>
             <span style={{
               fontSize: 11, fontWeight: 600,

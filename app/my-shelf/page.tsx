@@ -24,7 +24,7 @@ import { colors } from "@/lib/tokens";
 import { vendorHueBg } from "@/lib/utils";
 import BottomNav from "@/components/BottomNav";
 import TabSwitcher from "@/components/TabSwitcher";
-import BoothFinderCard from "@/components/BoothFinderCard";
+import BoothLocationCTA from "@/components/BoothLocationCTA";
 import ExploreBanner from "@/components/ExploreBanner";
 import { ThreeColGrid, SkeletonGrid, AvailableTile, FoundTile, ShelfGridStyles } from "@/components/ShelfGrid";
 import type { User } from "@supabase/supabase-js";
@@ -440,14 +440,17 @@ function MyBoothInner() {
               ) : (
                 <div style={{ padding: "48px 32px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
                   <PiLeaf size={28} style={{ color: colors.textFaint }} />
-                  <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: colors.textMuted, lineHeight: 1.7, margin: 0 }}>
-                    Nothing found yet —<br />your shelf is wide open.
-                  </p>
                 </div>
               )
             )}
 
-            <BoothFinderCard boothNumber={boothNumber} displayName={displayName} mallName={mallName} mallCity={mallCity} />
+            <BoothLocationCTA
+              boothNumber={boothNumber}
+              displayName={displayName}
+              mallName={mallName}
+              mallCity={mallCity}
+              address={mall?.address ?? null}
+            />
             <ExploreBanner />
             <div style={{ height: 12 }} />
           </>

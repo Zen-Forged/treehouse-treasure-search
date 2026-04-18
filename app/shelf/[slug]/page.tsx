@@ -17,7 +17,7 @@ import { getVendorBySlug, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { colors } from "@/lib/tokens";
 import { vendorHueBg, loadBookmarkCount } from "@/lib/utils";
 import TabSwitcher from "@/components/TabSwitcher";
-import BoothFinderCard from "@/components/BoothFinderCard";
+import BoothLocationCTA from "@/components/BoothLocationCTA";
 import ExploreBanner from "@/components/ExploreBanner";
 import { ThreeColGrid, SkeletonGrid, AvailableTile, FoundTile, ShelfGridStyles } from "@/components/ShelfGrid";
 import BottomNav from "@/components/BottomNav";
@@ -229,18 +229,16 @@ export default function PublicShelfPage() {
               ) : (
                 <div style={{ padding: "48px 32px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
                   <Heart size={28} style={{ color: colors.textFaint }} />
-                  <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: colors.textMuted, lineHeight: 1.7, margin: 0 }}>
-                    Nothing found yet — this shelf is wide open.
-                  </p>
                 </div>
               )
             )}
 
-            <BoothFinderCard
+            <BoothLocationCTA
               boothNumber={vendor?.booth_number ?? null}
               displayName={vendor?.display_name ?? ""}
               mallName={mallName}
               mallCity={mallCity}
+              address={mall?.address ?? null}
             />
             <ExploreBanner />
             <div style={{ height: 12 }} />
