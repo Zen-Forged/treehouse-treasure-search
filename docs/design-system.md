@@ -1,5 +1,5 @@
 # Treehouse — Design System
-> Version: 1.0 | Last updated: 2026-04-17 session 15 | Owned by: Design agent
+> Version: 1.1 | Last updated: 2026-04-18 session 16 | Owned by: Design agent
 > This document is the canonical source of truth for the Treehouse visual and interaction system.
 > Any multi-screen UI work must scope against this document before code is written.
 
@@ -13,7 +13,7 @@ This document holds the Treehouse design language in one place so every screen s
 
 ## Status
 
-**v1.0 — direction locked.** Find Detail mockup committed. Full rewrite of primitives, typography, and material vocabulary. Booth page (shipped session 14) needs a second pass to align. Feed, Find Map, and remaining screens scope against this doc before code.
+**v1.1 — legibility + restraint pass.** v1.0 direction held up on first real-device test. Refinements in this version: (a) typography bumped 1–2px across small type to serve the 50+ demographic committed in the audience note — IM Fell retained everywhere, no face changes; (b) eyebrow labels retire uppercase+letter-spacing and move to Title Case / sentence case — the tracked-uppercase treatment read as SaaS dashboard chrome, not journal voice; (c) post-it relocated from top-left (collision risk with photo subject, legibility loss against dark backgrounds) to bottom-left (pairs with status pill as a single ground-line of placed objects, groups location signals together); (d) photographs and shelf thumbnails gain a subtle 6px corner radius to read as *tipped-in specimen* rather than raw file; (e) X glyph in the cartographic block anchors to the vendor-name baseline, not the shelf link below it. Booth page (shipped session 14) still needs a v1.1 second pass. Feed, Find Map, and remaining screens scope against this doc before code.
 
 ---
 
@@ -84,27 +84,34 @@ One skeuomorphic signature per find, used sparingly and with intent.
 
 ### The booth post-it
 
-A small cream-yellow note (`#faf3dc`) placed on the top-left edge of the find's photograph:
+A small cream-yellow note (`#faf3dc`) placed on the **bottom-left** edge of the find's photograph (updated v1.1 — v1.0 placed it top-left but that position created collision risk with the photo's subject and legibility loss against dark photo backgrounds):
 - Slight rotation (`-3deg`) so it reads as *placed*, not aligned
 - Soft drop shadow beneath (`0 4px 8px rgba(42,26,10,0.20)`)
 - Hairline border via `0 0 0 0.5px rgba(42,26,10,0.08)` to separate it from the photo
-- Contents: eyebrow label "BOOTH" in IM Fell English italic 9.5px uppercase tracked 0.25em muted ink, then the booth number in IM Fell English 27px at primary ink (`#2a1a0a`), both centered within the note
+- Overlaps the photo's bottom edge slightly so the note appears tucked against the lower frame
+- Contents: eyebrow label "Booth" in IM Fell English italic 11px Title Case tracked normally in muted ink, then the booth number in IM Fell English 28px at primary ink (`#2a1a0a`), both centered within the note
 
-The post-it is the *someone was here and placed this* gesture. It reads immediately as "this find is at this booth" without needing a pill, a badge, or a card to contain the information. It's the one skeuomorphic element on the page.
+The post-it is the *someone was here and placed this* gesture. It reads immediately as "this find is at this booth" without needing a pill, a badge, or a card to contain the information. It's the one skeuomorphic element on the page. Pairing it with the status pill on the same bottom edge of the photograph creates a single grounded line of placed objects rather than two competing focal points.
 
 ### The status pill
 
 A simple rounded pill marker for find status:
 - `1.5px solid rgba(42,26,10,0.72)` border — darker ink for real contrast
 - `border-radius: 999px`
-- `background: rgba(247,239,217,0.55)` with `backdrop-filter: blur(4px)` so the pill stays legible over any imagery
-- Label in IM Fell English italic 11px uppercase tracked 0.14em at near-primary ink (`#1c1208`)
+- `background: rgba(247,239,217,0.88)` (updated v1.1 from 0.55 — stronger opacity serves legibility against photo backgrounds without losing the blur integration)
+- Label in IM Fell English italic 13px Title Case at near-primary ink (`#1c1208`) — updated v1.1 (was 11px uppercase tracked 0.14em; Title Case fits the editorial voice and the size bump serves the 50+ audience)
 - **No rotation.** The post-it carries the *placed* feeling. The pill is a clarity marker — a straightforward label of state.
-- Position: bottom-right of the photograph by default
+- Position: bottom-right of the photograph, paired with the post-it on the opposite corner of the same edge
 
 States:
-- `on display` — default, at rest
-- `found a home` — sold state, visual treatment deferred (design decision parked session 15, likely a muted red-brown border + fainter ink; revisit when designing the sold state)
+- `On Display` — default, at rest (Title Case per v1.1 casing commitment)
+- `Found a Home` — sold state, visual treatment deferred (design decision parked session 15, likely a muted red-brown border + fainter ink; revisit when designing the sold state)
+
+### Pill as a linking primitive (v1.1)
+
+When a booth number needs to appear *outside* the post-it — specifically on the vendor line of the cartographic block — it is set in the same status-pill treatment (same border, same background, same IM Fell italic 13px Title Case). This visually ties the booth number to its "On Display" twin on the photograph even though they sit in different parts of the page. The user reads *On Display* on the photograph and *Booth 123456* on the vendor line as a matched pair.
+
+The pill treatment is reserved for these two roles only — status labels on photographs and booth-number markers in body chrome. It does not generalize into a button or tag primitive.
 
 ### Design discipline
 
@@ -133,6 +140,10 @@ The existing palette in `lib/tokens.ts` stays valid. Pages continue to `import {
 - `inkFaint` `rgba(42,26,10,0.28)` — hairline rules, dotted underlines
 - `priceInk` `#6a4a30` — softened ink for price beside titles
 
+### Photograph surface (v1.1)
+
+Photographs on Find Detail, and thumbnails in the "more from this shelf…" strip, have a **6px corner radius**. Reads as tipped-in specimen rather than raw file. The radius is small enough to preserve the photograph as the dominant object — large radii would tip it into polaroid / card chrome territory, which the paper-as-surface rule forbids. Single constant: `imageRadius: 6`.
+
 Existing status/red tokens retained. Green (`#1e4d2b`) retained as the ecosystem brand accent but used more sparingly — it shows up as the dotted green spine on Find Map and as incidental accents, not as the default button fill.
 
 ### Typography system — COMMITTED v1.0
@@ -148,21 +159,23 @@ Three faces, each with an explicit role. The v0.2 instinct to do 90% of typograp
 | Address lines, any data that must be scannable and precise (timestamps, dimensions, technical labels) | **system-ui** (`-apple-system, "Segoe UI", Roboto, sans-serif`) | The precision voice. |
 | **Mono** | — | **Retired.** Booth numbers are set in IM Fell English. Timestamps and other precise data use system-ui. No mono anywhere in the ecosystem layer. |
 
-**Committed sizes (v1.0):**
+**Committed sizes (v1.1 — legibility pass on device feedback):**
 
 | Role | Size | Face | Notes |
 |---|---|---|---|
-| Page title / find title | 30px | IM Fell English 400, -0.005em tracking, line-height 1.15 | Paired with price after em-dash in `priceInk` |
-| Quoted caption | 17px | IM Fell English italic, line-height 1.6, **centered** | Always in typographic quotation marks (“ ”) at 24px in muted ink |
-| Section head (mall name, vendor name) | 16–17px | IM Fell English 400, line-height 1.25 | |
-| Address / precise data | 13px | system-ui 400, line-height 1.5, muted ink, dotted underline when tappable | |
-| "Visit the shelf →" | 14px | IM Fell English italic, dotted underline | The primary navigation out of a find |
-| "more from this shelf…" | 10px | IM Fell English italic, uppercase, 0.22em tracking, muted ink | Trailing ellipsis always, no leading dash |
-| Status pill label | 11px | IM Fell English italic, uppercase, 0.14em tracking, near-primary ink | |
-| Post-it "BOOTH" eyebrow | 9.5px | IM Fell English italic, uppercase, 0.25em tracking, muted ink | |
-| Post-it booth number | 27px | IM Fell English 400, -0.01em tracking | |
-| Shelf thumbnail label | 11px | IM Fell English italic, mid ink | |
-| Masthead | 15px | IM Fell English 400 with italic "Finds" | Centered in header row |
+| Page title / find title | 32px | IM Fell English 400, -0.005em tracking, line-height 1.18 | Paired with price after em-dash in `priceInk`. v1.0 was 30px — bumped for legibility |
+| Quoted caption | 19px | IM Fell English italic, line-height 1.65, **centered** | Always in typographic quotation marks (“ ”) at 26px in muted ink. v1.0 was 17px |
+| Section head (mall name, vendor name) | 18px | IM Fell English 400, line-height 1.3 | v1.0 was 16–17px |
+| Address / precise data | 14px | system-ui 400, line-height 1.55, muted ink, dotted underline when tappable | v1.0 was 13px. system-ui is the precision voice — its familiar shapes make small sizes readable |
+| "Visit the shelf →" | 14px | **system-ui 500**, dotted underline, muted ink | Updated v1.1 — was IM Fell italic 14px. Pairing it with the address in system-ui ties the two navigation affordances together as *functional chrome* rather than editorial voice, and serves the 50+ demographic |
+| "More from this shelf…" | 13px | IM Fell English italic, **Title Case, no letter-spacing**, muted ink | Updated v1.1 — was 10px uppercase tracked 0.22em. Trailing ellipsis always |
+| Status pill label | 13px | IM Fell English italic, **Title Case**, near-primary ink | Updated v1.1 — was 11px uppercase tracked 0.14em |
+| Booth pill label (on vendor line) | 13px | IM Fell English italic, Title Case, near-primary ink | New v1.1 — matches status pill treatment to visually link "On Display" and "Booth 123456" |
+| Post-it "Booth" eyebrow | 11px | IM Fell English italic, **Title Case, no letter-spacing**, muted ink | Updated v1.1 — was 9.5px uppercase tracked 0.25em. Now legible and on-voice |
+| Post-it booth number | 28px | IM Fell English 400, -0.01em tracking | v1.0 was 27px — 1px bump for visual weight parity with the new larger title |
+| Shelf thumbnail label | 13px | IM Fell English italic, mid ink | v1.0 was 11px |
+| Masthead | 16px | IM Fell English 400 with italic "Finds" | v1.0 was 15px — matches address size, still clearly secondary to title |
+| Manage section eyebrow | 13px | IM Fell English italic, Title Case, no letter-spacing, muted ink | Updated v1.1 — was 10px uppercase tracked 0.22em |
 
 **Georgia retires from the ecosystem layer.** All serif type is IM Fell English. This is deliberate — IM Fell has a stronger editorial personality and consistently anchors the journal metaphor. Georgia was a general-purpose serif; IM Fell is *this product's* serif.
 
@@ -193,18 +206,18 @@ Header and chrome icons sit inside small faded circles (`rgba(42,26,10,0.06)` ba
 
 ## Screen-specific direction
 
-### Find Detail — COMMITTED v1.0 (locked session 15)
+### Find Detail — COMMITTED v1.1 (updated session 16 on-device pass)
 
 **Order top-to-bottom:**
-1. **Masthead row** — back arrow (left), "Treehouse *Finds*" wordmark (centered), save + share icons (right)
-2. **Photograph** — 4:5 aspect, full-width within 22px horizontal padding
-   - **Post-it** anchored top-left, overlapping the photo's top edge
-   - **Status pill** anchored bottom-right
-3. **Title + price** — IM Fell English 30px at primary ink, em-dash, price in `priceInk`
-4. **Quoted caption** — IM Fell English italic 17px, centered, in typographic quotes
+1. **Masthead row** — back arrow (left), "Treehouse *Finds*" wordmark (centered, 16px), save + share icons (right)
+2. **Photograph** — 4:5 aspect, full-width within 22px horizontal padding, **6px corner radius**
+   - **Post-it** anchored **bottom-left**, overlapping the photo's bottom edge (updated v1.1 from top-left)
+   - **Status pill** anchored bottom-right (Title Case, 13px)
+3. **Title + price** — IM Fell English 32px at primary ink, em-dash, price in `priceInk`
+4. **Quoted caption** — IM Fell English italic 19px, centered, in typographic quotes
 5. **Diamond divider** — hairline rules flanking a small `◆`
-6. **Cartographic block** — pin glyph + mall name + dotted-underline address line, connecting tick, X glyph + vendor name + booth number + "Visit the shelf →" link
-7. **"more from this shelf…"** section — eyebrow label, horizontal scroll of three vendor thumbnails with italic labels
+6. **Cartographic block** — pin glyph anchored to mall name baseline + mall name + dotted-underline address line in system-ui; connecting tick; X glyph **anchored to the vendor name baseline** (updated v1.1 — previously drifted to the "Visit the shelf" line below); vendor name + **booth pill (Booth 123456)** on the vendor line as a linked twin to the "On Display" pill on the photograph; "Visit the shelf →" in **system-ui 500** with dotted underline
+7. **"More from this shelf…"** section — eyebrow in Title Case (no uppercase tracking), **horizontal scroll strip inset to match the 22px page margin** — first thumbnail aligns with the photograph's left edge above it, not the screen edge. Thumbnails get **6px corner radius** to match the hero photograph.
 8. Bottom padding + bottom nav
 
 **What retires on Find Detail:**
@@ -213,15 +226,18 @@ Header and chrome icons sit inside small faded circles (`rgba(42,26,10,0.06)` ba
 - The Georgia caption style
 - The pulsing green dot status indicator
 - The inline description paragraph beneath the caption (description data retires from Find Detail entirely — the quoted caption is the description now; dimensions/condition/specs are fields on the post/edit flow but not surfaced here)
+- **Uppercase + letter-spacing on labels** (v1.1 — retired per the new Title Case commitment)
+- **Top-left post-it position** (v1.1 — retired for collision and legibility)
+- **Full-bleed-left shelf strip** (v1.1 — strip now insets to the 22px page margin like the photograph)
 
-**What's new:**
-- Booth post-it material gesture
-- Status pill as straight clarity marker
-- Price named after title in softer ink
-- Cartographic pin + X block with connecting tick
-- Diamond divider
-- "Visit the shelf →" in IM Fell English italic with dotted underline
-- "more from this shelf…" label with ellipsis continuation
+**What's new in v1.1:**
+- Post-it at bottom-left pairing with status pill on the same photo edge
+- 6px corner radius on the hero photograph and shelf thumbnails
+- Pill styling replicated on the booth-number marker on the vendor line (visual twin to the status pill)
+- X glyph anchored to the vendor name, not the shelf link
+- "Visit the shelf →" in system-ui 500 (ties to address line as a shared functional-chrome voice)
+- All labels Title Case, no uppercase tracking
+- Shelf strip insets to 22px (first thumbnail aligns with the photograph)
 
 ### Booth page — NEEDS SECOND PASS
 
@@ -278,10 +294,11 @@ Patterns removed from the system in v1.0 that shipped in v0.2:
 | Captions always in typographic quotation marks (“ ”) | They're reflections, not specs. Whether AI-generated or human-edited, they represent someone's voice writing about how an object feels. |
 | Captions read as *how it feels*, never *what it's made of* | Material, age, dimensions, condition go in structured fields (not shown on Find Detail). The caption is emotional, not technical. |
 | Prices named honestly — "$35" after the title, not hidden | *Treasure the Find* means naming the object's price in the open. Setting it in slightly softer ink keeps the title the subject while the price is a quiet fact alongside. |
-| No "might pair with," "related items," "you may also like" | Marketplace language. Treehouse does not run a recommendation engine. "more from this shelf…" is the only adjacency, and it names the vendor — not the category. |
+| No "might pair with," "related items," "you may also like" | Marketplace language. Treehouse does not run a recommendation engine. "More from this shelf…" is the only adjacency, and it names the vendor — not the category. |
 | No urgency copy ("Only 1 left," "Sold quickly," countdown timers, flash-sale language) | Presence over pressure. |
-| Continuations use ellipsis ("more from this shelf…"), not dashes | Invites the next thing rather than announcing the current thing. Story-shaped. |
+| Continuations use ellipsis ("More from this shelf…"), not dashes | Invites the next thing rather than announcing the current thing. Story-shaped. |
 | Never narrate the metaphor | The design does the work. "Turn back to the booth" was rejected as overwriting because it told the user what the journal was. "Visit the shelf →" is the right voice — rooted, quiet, functional. |
+| **Title Case, not uppercase, for all label copy** (v1.1) | Uppercase + letter-spacing on labels read as SaaS dashboard chrome on real screens — the tracking pulled them away from the editorial voice and toward status-badge territory. "On Display", "Booth", "Manage", "More from this shelf…" all set in Title Case (or sentence case where a trailing ellipsis is present) in IM Fell English italic. No `text-transform: uppercase`, no `letter-spacing` greater than `normal`. The only exception is the masthead wordmark, which is set as written and needs no tracking. |
 
 ---
 
@@ -359,4 +376,4 @@ Patterns removed from the system in v1.0 that shipped in v0.2:
 ---
 > This document is the canonical source of truth for the Treehouse design system.
 > It is maintained by the Design agent and reviewed by David at each design-adjacent session.
-> Last updated: 2026-04-17 (session 15 — v1.0 direction lock; journal vocabulary committed; Find Detail spec locked; Booth page flagged for second pass)
+> Last updated: 2026-04-18 (session 16 — v1.1 legibility + restraint pass based on on-device feedback from first v1.0 Find Detail build; size bump, Title Case commitment, post-it relocation, image corner radius, pill-as-linking-primitive, shelf strip alignment fix)
