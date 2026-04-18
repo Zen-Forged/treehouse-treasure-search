@@ -251,7 +251,7 @@ function ShelfSection({
       animate="visible"
       style={{ marginBottom: 32 }}
     >
-      {/* v1.1 — eyebrow Title Case, no uppercase/letter-spacing, inset to page margin */}
+      {/* v1.1b — eyebrow bumped 13 → 15, section-announcement floor */}
       <div
         style={{
           paddingLeft: 22,
@@ -259,7 +259,7 @@ function ShelfSection({
           marginBottom: 14,
           fontFamily: FONT_IM_FELL,
           fontStyle: "italic",
-          fontSize: 13,
+          fontSize: 15,
           color: v1.inkMuted,
         }}
       >
@@ -586,35 +586,34 @@ export default function FindDetailPage() {
             </div>
           )}
 
-          {/* v1.1 — post-it moved BOTTOM-LEFT, overlapping bottom edge */}
+          {/* v1.1b — post-it dimensions upsized, numeral anchors the note */}
           {boothNumber && (
             <div
               style={{
                 position: "absolute",
-                bottom: -12,
-                left: -10,
-                width: 78,
-                minHeight: 72,
+                bottom: -14,
+                left: -12,
+                width: 92,
+                minHeight: 84,
                 background: v1.postit,
                 transform: "rotate(-3deg)",
                 transformOrigin: "bottom left",
                 boxShadow: `0 4px 8px rgba(42,26,10,0.20), 0 0 0 0.5px rgba(42,26,10,0.08)`,
-                padding: "10px 6px 8px",
+                padding: "12px 8px 10px",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              {/* v1.1 — Title Case, no uppercase/tracking, bumped size */}
               <div
                 style={{
                   fontFamily: FONT_IM_FELL,
                   fontStyle: "italic",
-                  fontSize: 11,
+                  fontSize: 12,
                   color: v1.inkMuted,
                   lineHeight: 1,
-                  marginBottom: 5,
+                  marginBottom: 6,
                 }}
               >
                 Booth
@@ -622,7 +621,7 @@ export default function FindDetailPage() {
               <div
                 style={{
                   fontFamily: FONT_IM_FELL,
-                  fontSize: 28,
+                  fontSize: 36,
                   color: v1.inkPrimary,
                   letterSpacing: "-0.01em",
                   lineHeight: 1,
@@ -879,7 +878,7 @@ export default function FindDetailPage() {
                     href={`/shelf/${vendorSlug}`}
                     style={{
                       fontFamily: FONT_SYS,
-                      fontWeight: 500,
+                      fontWeight: 400,
                       fontSize: 14,
                       color: v1.inkMuted,
                       textDecoration: "underline",
@@ -921,7 +920,7 @@ export default function FindDetailPage() {
               style={{
                 fontFamily: FONT_IM_FELL,
                 fontStyle: "italic",
-                fontSize: 13,
+                fontSize: 15,
                 color: v1.inkMuted,
               }}
             >
