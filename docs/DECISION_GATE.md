@@ -269,6 +269,8 @@ These don't stop work but must be called out explicitly before the session conti
 | **Design direction drifted toward generic across sessions 12–14** | 🟡 **Medium** | ✅ Resolved session 15 — `docs/design-system.md` rewritten v0.2 → v1.0 with journal vocabulary committed. Doc has continued to evolve v1.1 → v1.1g across sessions 16–17 as Find Detail + Find Map shipped against it. | Design agent |
 | **Booth page `LocationStatement` / `BoothLocationCTA` components deprecated** | 🟢 Low | Open — code still in repo and functional on `/my-shelf` and `/shelf/[slug]`, but v1.1g spec retires them. Dedicated Booth v1.1g Design sprint will replace them with the cartographic pin+X block. Not blocking; existing Booth page is functional. Scoped as session 18 candidate A. | Design + Dev agents |
 | **lib/tokens.ts token additions for v1.1g** (post-it, ink scale, price ink, paperCream, Find tile primitive) | 🟢 Low | ✅ Resolved session 19A — `lib/tokens.ts` extended with canonical `v1` + `fonts` exports. Find Detail, Find Map, and BoothPage all import from it. v0.2 `colors`/`radius`/`spacing` coexist untouched during migration. | Dev agent |
+| **Feed, Find Map, Find Detail sold state contradict `/shelf/[slug]` policy for MVP surfacing** | 🟡 Low | ✅ Resolved session 20 — `docs/design-system.md` v1.1i commits the sold-retirement policy: feed filters sold at data layer (already does via `getFeedPosts.eq("status","available")`), Find Map keeps bookmark + tile + uses Find Detail 3B sold landing state as the reveal, public Booth pages retain sold posts. Three-part contract (bookmark / tile / 3B) explicitly documented so no future Dev agent adds a status filter to `getPostsByIds` and breaks the reveal path. | Design + Dev agents |
+| **v1.1i code sprint pending** (Feed + MallSheet + 3B) | 🟡 Low | Open — spec locked in `docs/design-system.md` v1.1i; session 21A scoped in `CLAUDE.md` with 8-step task graph. Highest-leverage remaining design move before beta. No design iteration needed; mockups + doc are sufficient. | Dev agent |
 | **Find Map v0.2 (page called "My Finds") pre-beta chrome mismatch** | 🟡 Medium | ✅ Resolved session 17 — `/flagged` full redesign to v1.1g shipped (journal itinerary, pin+mall anchor, X-glyph spine, Booth pill rows, find tiles with prices + unsave heart, intro voice + chapter-break closer). All v0.2 localStorage / pruning / grouping / focus-rehydration / unsave wiring preserved. | Design + Dev agents |
 | **Glyph hierarchy not documented as a cross-cutting rule** (risk: future screens pick the wrong glyph and dilute the language) | 🟢 Low | ✅ Resolved session 17 — pin = mall, X = booth locked in `docs/design-system.md` v1.1g Cartographic Vocabulary section. Propagates to Booth redesign (18A), Feed redesign (18B), and any future location-naming surface. | Design agent |
 | **App-wide background color inconsistent across routes** (Find Detail used paperCream; `/flagged` and chrome elsewhere still used legacy `#f0ede6`) | 🟢 Low | ✅ Resolved session 17 — `app/layout.tsx` body inline + `app/globals.css` `@layer base body` both committed to `#e8ddc7` paperCream. Global bg commitment documented in design-system doc "Paper as surface" section. | Design + Dev agents |
@@ -315,7 +317,7 @@ These don't stop work but must be called out explicitly before the session conti
 Every session standup includes a one-line Agent Roster block confirming who is active for the session. This prevents silently dropping an activated agent from the loop.
 
 **Standard standup preamble:**
-> **Active agents:** Dev · Product · Docs · Design — *(current as of 2026-04-18 session 19)*
+> **Active agents:** Dev · Product · Docs · Design — *(current as of 2026-04-18 session 20)*
 
 When an agent is activated or deactivated:
 1. Update the Agent Roster table above
@@ -359,8 +361,8 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 | Sprint 2 | UI polish — animations, detail page, scroll restore | ✅ Complete |
 | Sprint 3 | Vendor bio, Find Map overhaul, error monitoring, rate limiting | 🔄 Carryovers folded into Sprint 4 |
 | Sprint 4 | Beta-readiness — custom domain, OTP auth, `/admin` polish, vendor onboarding | 🔄 In progress. Shipped: T1/T2/T3/T4a, KI-001/002/003/004, `/setup` 401 polish, T4c partial. Remaining: T4c copy polish (orphans C+D), T4b (admin surface consolidation), T4d (pre-beta QA pass). |
-| Sprint 5 | Guest-user UX + onboarding polish — "Curator Sign In" rename, `/welcome` landing, PWA install prompts, vendor onboarding Loom | 🔲 Planned |
-| **Design sprints (parallel to Sprint 4 tail)** | **v1.1h execution against `docs/design-system.md`** | 🔄 Session 15: direction lock v0.2 → v1.0. Session 16: Find Detail v1.0 → v1.1d code build. Session 17: Find Detail polish v1.1e → v1.1f; Find Map v1.1g full redesign; glyph hierarchy locked; paperCream globalized. Session 18: Booth page v1.1h full redesign; post-it becomes cross-page primitive; Window View + Shelf View; four v0.2 components deleted. Session 19A: token consolidation — `lib/tokens.ts` canonical for v1.1h `v1` palette + fonts. **Next: session 20A Feed + `<MallSheet>`.** |
+| Sprint 5 | Guest-user UX + onboarding polish — "Curator Sign In" rename, `/welcome` landing, PWA install prompts, vendor onboarding Loom, `<MallSheet>` migration to `/post` + `/vendor-request` | 🔲 Planned |
+| **Design sprints (parallel to Sprint 4 tail)** | **v1.1i execution against `docs/design-system.md`** | 🔄 Session 15: direction lock v0.2 → v1.0. Session 16: Find Detail v1.0 → v1.1d code build. Session 17: Find Detail polish v1.1e → v1.1f; Find Map v1.1g full redesign; glyph hierarchy locked; paperCream globalized. Session 18: Booth page v1.1h full redesign; post-it cross-page primitive; Window View + Shelf View; four v0.2 components deleted. Session 19A: token consolidation — `lib/tokens.ts` canonical for v1.1h `v1` palette + fonts. Session 20: v1.1i spec committed — Feed + `<MallSheet>` + Find Detail 3B sold landing state all locked in doc + two mockups on disk; code sprint deferred to 21A. **Next: session 21A Feed + MallSheet + 3B code.** |
 | Sprint 6+ | "Claim this booth" flow, QR-code approval, Universal Links, native app eval, feed pagination, ToS/privacy, admin-cleanup tool | 🔲 Parked |
 
 ---
@@ -394,4 +396,4 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 ---
 > This document is the operating constitution for the Treehouse system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-18 (session 19 — 19A token consolidation shipped; `lib/tokens.ts` canonical for v1.1h palette + fonts; three inline duplicates retired; Risk Register updated)
+> Last updated: 2026-04-18 (session 20 — v1.1i design spec committed to `docs/design-system.md`; Feed + `<MallSheet>` + Find Detail 3B sold landing state scoped; code sprint deferred to session 21A; Risk Register updated)

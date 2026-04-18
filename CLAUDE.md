@@ -50,7 +50,96 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-18 (session 19 — 19A token consolidation shipped; `lib/tokens.ts` now canonical source for v1.1h `v1` palette + fonts; three inline duplicates retired)
+> Last updated: 2026-04-18 (session 20 — v1.1i design spec committed to `docs/design-system.md`; Feed + `<MallSheet>` + Find Detail 3B sold landing state fully scoped; code sprint deferred to session 21)
+
+**Status:** 📘 **Session 20 was a pure design-direction session.** Two doc/mockup commits ship; zero production code changed. `docs/design-system.md` advanced v1.1h → v1.1i with three linked commitments: Feed redesign (paper masonry + feed hero on paper), `<MallSheet>` bottom-sheet primitive, and sold retires from shopper discovery surfaces (feed filters sold at data layer; Find Map keeps bookmark + tile + uses new Find Detail 3B sold landing state as the reveal; Booth pages retain sold for vendor story credibility). Two mockups committed: `docs/mockups/feed-v1-1h.html` (v1: 3 grids × 2 headers exploration) and `docs/mockups/feed-v1-1h-v2.html` (v2: C2 refined + MallSheet refined + 3A/3B/3C Find Detail sold-state variants). David picked **C2** for the feed (paper masonry + feed hero on paper, no titles, no prices — branching composition deepens the treehouse metaphor; price reveal becomes part of the narrative arc on Find Detail) and **3B** for the sold landing state (full-page closer, same masthead as normal Find Detail, "This find / found a home." headline + italic muted explanation + diamond divider + two italic dotted-underline links). 3A tracked as post-MVP design direction pending real on-device sold-find behavior data.
+
+### What shipped this session (2 commits' worth of doc/mockup work)
+
+**`docs/design-system.md` — v1.1h → v1.1i:**
+- Version bumped in header and footer
+- New v1.1i Status block paragraph documenting all three commitments
+- New `### Feed — COMMITTED v1.1i (session 20)` section with full spec (Mode B masthead, feed hero on paper with state-dependent copy, paper masonry with ResizeObserver 50% right-column offset preserved, 6px radius + inkHairline border, frosted hearts always visible top-right, All-malls default state with "Finds from across / Kentucky" copy, sold items filtered at data layer)
+- New `### MallSheet — COMMITTED v1.1i (session 20)` section with full primitive spec + props contract (paper surface, 20px top corner radius, drag handle, IM Fell header + italic subhead + diamond divider + rows, pin glyph per mall row, no-glyph italic "All malls" row, hairline underline on active label matching Booth ViewToggle active treatment, sort: All first then alphabetical)
+- New `### Find Detail sold landing state — COMMITTED v1.1i (session 20)` section (full page replaces normal Find Detail when `post.status === "sold"`, masthead stays continuous, headline "This find / found a home." with hard line break, explanation "The piece you saved has been claimed by someone else. That's the way of good things.", diamond divider, two IM Fell italic dotted-underline links to vendor shelf + Treehouse Finds, BottomNav retained)
+- Three-part contract explicitly documented so a future Dev agent doesn't break it: **bookmark kept + tile visible + 3B reveal** — removing any one breaks the other two. Do NOT add a status filter to `getPostsByIds`
+- Old "Feed header + mall bottom sheet — scope against v1.0 before code" section marked SUPERSEDED with breadcrumb
+- Find Map `### Find tile primitive` updated with v1.1i `**Sold state — UPDATED v1.1i**` note retiring the grayscale + "Found a home" caption treatment
+- Three new entries in Pattern retirement log: `<MallHeroCard>` + `<GenericMallHero>` gradient cards, inline `ChevronDown` mall dropdown, sold-state grayscale + opacity + "Found a home" caption on feed and Find Map tiles
+- Terminology table gains `**Sold-label surface policy (v1.1i)**` paragraph: "Found a home" retained as committed terminology but surfaces only on Find Detail 3B headline + Booth page sold-history surfaces (post-beta); retired from shopper discovery paths for MVP
+- PENDING table refreshed: removed completed "Feed + `<MallSheet>` v1.1 pass" and "Token additions to `lib/tokens.ts`" (both done); added "`<MallSheet>` migration to `/post` and `/vendor-request`" (Sprint 5), "3A Find Detail sold landing state (photograph-still-visible treatment)" (post-MVP), "Find Map saved-but-sold tile signal" (post-MVP); tokens cleanup pass note updated to reflect Feed joining `v1` tokens
+
+**`docs/mockups/feed-v1-1h.html` — NEW (v1 exploration):**
+- 3 grid treatments (A: Find tile with price, B: Find tile titles only, C: paper masonry) × 2 header treatments (1: Mode B + mall subheader à la Find Map, 2: feed-specific hero on paper)
+- 6 phone frames total at real 430px width; tradeoff strips above each section; legend block at top; pick-me combinator block at bottom
+- 7th phone showing `<MallSheet>` open state in the first iteration (with diamond-glyph All row, later corrected)
+
+**`docs/mockups/feed-v1-1h-v2.html` — NEW (v2, C2 refined + sold-state variants):**
+- **Section 1** — two phones showing C2 refined: all-malls default state (hero "Finds from across / Kentucky" with geo subtitle) and specific-mall state (hero shows mall + address line)
+- **Section 2** — MallSheet refined with no-glyph italic All-malls row as active, find-count reading "1 mall live · more soon" for beta honesty
+- **Section 3** — three Find Detail sold-state variants side-by-side (3A dim + toast, 3B dedicated page, 3C render-as-normal) each with pros/cons annotation blocks; 3C explicitly flagged not-recommended
+- Decisions pane at top locks C2 + All-malls default + "Finds from across Kentucky" + MallSheet no-glyph All row + frosted hearts on tiles; remaining pick at bottom is 3A/3B/3C
+
+### Five questions settled this session (all now in doc)
+
+1. **All-malls hero copy:** "Finds from across Kentucky" (eyebrow stacks "Finds from across" + 26px "Kentucky")
+2. **Sold items on masonry grid:** retired entirely across MVP shopper discovery (bigger than feed-only styling — extended to a full product-scope commitment)
+3. **MallSheet All row glyph:** no glyph; italic label alone
+4. **Feed first-load with no saved mall:** defaults to All malls
+5. **Save gesture on masonry tiles:** frosted heart always visible top-right (identical primitive to Find Map's Find tile heart, state-independent bubble, green-glyph active state)
+
+### Follow-on questions settled
+
+6. **Find Detail sold landing state:** 3B (dedicated "found a home" full page). 3A noted as longer-term target post-MVP pending real on-device data
+7. **Public Booth page sold policy:** NOT extended — `/shelf/[slug]` continues to show sold posts because vendor story/credibility benefits
+8. **Find Map behavior when a saved find sells:** keep the bookmark key so the 3B page resolves via the saved tile tap. Three-part contract (bookmark + tile + 3B) locked
+
+### Files touched this session
+- `docs/design-system.md` — v1.1h → v1.1i (seven targeted edits; no full rewrite)
+- `docs/mockups/feed-v1-1h.html` — NEW, v1 exploration (3×2 = 6 variants + MallSheet)
+- `docs/mockups/feed-v1-1h-v2.html` — NEW, v2 refined (C2 locked + sold-state 3-way)
+- `CLAUDE.md` (this file) — session 20 close
+
+### Session 21 scope (deferred by David's call at session close)
+
+**21A — Feed + MallSheet + Find Detail 3B code sprint.** ~2–2.5 hours including build + on-device QA. Spec is locked in `docs/design-system.md` v1.1i. Task graph:
+
+1. 🟢 AUTO — Create `components/MallSheet.tsx` matching the props contract in the spec
+2. 🟢 AUTO — Full rewrite `app/page.tsx` against the Feed spec: Mode B masthead, feed hero on paper with All-malls + specific-mall states, paper masonry retiled (6px + inkHairline border, `ResizeObserver` preserved), frosted hearts on every tile, `<MallSheet>` wiring, `safeStorage` mall persistence, migrate from `colors` → `v1` tokens
+3. 🟢 AUTO — Add 3B branch to `app/find/[id]/page.tsx` at top of render: if `post.status === "sold"` render sold-landing layout in place of normal Find Detail content
+4. 🟢 AUTO — Retire `isSold` grayscale + "Found a home" caption branch in `app/flagged/page.tsx` FindTile (dead code per v1.1i Sold-state update)
+5. 🟢 AUTO — `components/MallHeroCard.tsx` retention audit: grep for remaining callers (`/mall/[slug]` specifically). If none beyond feed, delete the file. If found, retention comment
+6. 🟢 AUTO — `npm run build 2>&1 | tail -30`
+7. 🖐️ HITL — commit + push
+8. 🖐️ HITL — QA on device walking: (a) feed loads with All-malls hero copy, (b) MallSheet opens and selects America's Antique Mall, (c) mall persists across refresh, (d) heart on a feed tile saves + reflects on Find Map, (e) heart on a feed tile unsaves cleanly, (f) a sold find deep-link shows 3B (test by manually flipping a post status in Supabase)
+
+**Out of scope for 21A:** BottomNav full chrome rework (held); Nav Shelf decision (held); `<MallSheet>` migration to `/post` + `/vendor-request` (Sprint 5); 3A sold landing treatment (post-MVP); Sprint 4 tail (T4b/T4c/T4d).
+
+**Other session-21 candidates (not 21A):**
+- **21B — Nav Shelf decision + BottomNav full chrome rework** (~1 hour once David picks from 4 existing mockups in `docs/mockups/nav-shelf-exploration.html`)
+- **21C — Sprint 4 tail batch** (T4c copy polish + T4b admin surface consolidation + T4d pre-beta QA walk, ~5.5 hours)
+
+### 🔆 Session 20 close HITL
+
+```bash
+cd ~/Projects/treehouse-treasure-search && npm run build 2>&1 | tail -30
+```
+
+(Build check required per the session-14 tech rule even on doc-only sessions — the committed state of the repo must build green.)
+
+If green:
+
+```bash
+git add -A && git commit -m "design(v1.1i): feed paper masonry + MallSheet primitive + Find Detail 3B sold landing state" && git push
+```
+
+Then `thc` for the standard docs-update commit (this CLAUDE.md edit).
+
+If the build fails, it's not from this session's work (no code changed). Surface the error and diagnose before committing.
+
+---
+
+## ARCHIVE — What was done earlier (2026-04-18, session 19)
 
 **Status:** ✅ **Session 19 opened with 19A — token consolidation cleanup — as the post-session-18 palate-cleanser.** `lib/tokens.ts` extended with canonical `v1` + `fonts` exports alongside the untouched v0.2 `colors` export. The three inline `v1` objects previously duplicated across `app/find/[id]/page.tsx`, `app/flagged/page.tsx`, and `components/BoothPage.tsx` were retired; all three now import from `@/lib/tokens`. `BoothPage.tsx` re-exports `v1`/`FONT_IM_FELL`/`FONT_SYS` so `/my-shelf` and `/shelf/[slug]` imports resolve unchanged. 19B (Feed + `<MallSheet>` redesign against v1.1h) deliberately deferred to its own session given the mockup-first protocol and ~3hr scope. **Build check + commit is HITL at session close — see below.**
 
@@ -114,9 +203,9 @@ Session 19 opened with 19A → 19B bundled as the intended scope. Mid-session th
 - `app/flagged/page.tsx` — inline `v1` + font consts retired; imports from `@/lib/tokens`
 - `CLAUDE.md` (this file) — session 19 close
 
-### 🔆 Session close HITL
+### Session close HITL (session 19 — superseded, kept for reference)
 
-Session close includes a required build verification per the session-14 tech rule. **You must run these before declaring the session truly closed:**
+Session close included a required build verification per the session-14 tech rule. The session-19 close commands were:
 
 ```bash
 cd ~/Projects/treehouse-treasure-search && npm run build 2>&1 | tail -30
@@ -557,7 +646,7 @@ KI-001, KI-002, KI-003 logged to `docs/known-issues.md`.
 
 **Onboarding canonical spec:** See `docs/onboarding-journey.md` for the three committed flows (Pre-Seeded, Demo, Vendor-Initiated).
 
-**Design canonical spec:** See `docs/design-system.md` v1.1h for the visual + interaction system. All multi-screen UI work scopes against it before code. v1.1h (session 18) makes the booth post-it a cross-page primitive shared between Find Detail and Booth, formalizes Window View + Shelf View as the Booth page's inventory-view vocabulary, and retires `<LocationStatement>`, `<BoothLocationCTA>`, `<ExploreBanner>`, `<TabSwitcher>`.
+**Design canonical spec:** See `docs/design-system.md` v1.1i for the visual + interaction system. All multi-screen UI work scopes against it before code. v1.1i (session 20) commits the Feed redesign (paper masonry + feed hero on paper), the `<MallSheet>` bottom-sheet primitive, and retires sold from shopper discovery surfaces (Find Detail 3B sold landing state replaces the normal layout when a shopper lands on a sold find; feed filters sold at data layer; Find Map keeps bookmark + tile + uses 3B as the reveal; public Booth pages keep sold posts for vendor story credibility).
 
 **Admin runbook:** See `docs/admin-runbook.md` for in-mall SQL triage recipes.
 
@@ -660,8 +749,9 @@ Key records (via Shopify DNS): A `@` → `23.227.38.65`, CNAME `app` → Vercel,
 - KI-001, KI-002, KI-003, KI-004 all resolved
 - Flow 2 onboarding end-to-end verified working on iPhone
 - `/setup` 401 race absorbed with retry+backoff
-- Design agent activated, `docs/design-system.md` at **v1.1h** (sessions 15–18)
+- Design agent activated, `docs/design-system.md` at **v1.1i** (sessions 15–20)
 - Admin diagnostic UI, `docs/admin-runbook.md` with 9 SQL recipes
+- **Design v1.1i spec committed (session 20, pre-code)** — Feed redesign + `<MallSheet>` primitive + Find Detail 3B sold landing state all locked in `docs/design-system.md`. Two mockups on disk (`docs/mockups/feed-v1-1h.html` v1 exploration + `docs/mockups/feed-v1-1h-v2.html` v2 with C2 refined and sold-state variants). Code sprint deferred to session 21A.
 - **Design v1.1h token consolidation (session 19A)** — `lib/tokens.ts` is now the canonical source of truth for the v1.1h `v1` palette + fonts (`FONT_IM_FELL`, `FONT_SYS`). Find Detail, Find Map, and BoothPage all import from it. Inline duplicates retired. `BoothPage.tsx` re-exports `v1`/`FONT_IM_FELL`/`FONT_SYS` so `/my-shelf` and `/shelf/[slug]` imports resolve unchanged. v0.2 `colors`/`radius`/`spacing` exports coexist in the same file for unmigrated surfaces (feed + vendor profile + mall page + post flow + admin + BottomNav local `C`).
 - Booth page redesign shipped against **v1.1h** spec (session 18) — both `/my-shelf` and `/shelf/[slug]`: banner as pure photograph with booth post-it pinned to it (cross-page primitive shared with Find Detail), vendor display name as IM Fell 32px page title, small pin-prefixed mall+address block as secondary location statement, Window View (3-col 4:5 portrait grid) + Shelf View (horizontal scroll with 52vw/210px tiles, 22px left padding on first tile) replacing availability tabs, AddFindTile in top-left cell of Window View (owner only), banner edit button top-left + frosted share bubble top-right, diamond-divider quiet closer. Sold items retired from the page entirely. Four v0.2 components deleted: `<LocationStatement>`, `<BoothLocationCTA>`, `<ExploreBanner>`, `<TabSwitcher>`. Georgia cleared from the last major surface.
 - **Find Detail shipped against v1.1f spec (sessions 16–17)** — masthead Title Case single style 18px, photograph with 1px hairline border, post-it bottom-right with push pin + stacked "Booth Location" eyebrow + `+6deg` rotation + 4px inset, title + price em-dash, quoted caption, diamond divider, cartographic pin+X block, X-aligned vendor row with "Explore booth →" label + numeric-only shelf-link pill, frosted on-image save+share top-right (state-independent bg), shelf strip with defensive alignment, owner manage block. IM Fell English + Caveat loaded via Google Fonts in root layout.
@@ -681,10 +771,10 @@ _None as of session 15 close._
 - 🟡 T4d — pre-beta QA pass walking all three flows end-to-end.
 - 🟢 Session 13 test data cleanup — 5+ "David Butler" variants in DB. ~5 min SQL via admin-runbook Recipe 4.
 
-### 🟡 Design v1.1h execution (sessions 20+)
-- **Session 20 candidate A** — Feed header + `<MallSheet>` bottom sheet pattern against v1.1h. Find tile primitive reused from Find Map. Mockup-first protocol — 1–2 iterations in `docs/mockups/feed-v1-1h.html` before code. ~3 hours. **Top-of-queue design sprint.**
-- **Session 20 candidate B** — Nav Shelf decision + BottomNav full chrome rework. David picks from 4 mockups in `docs/mockups/nav-shelf-exploration.html` (A Suggestion / B Grain / C Full Shelf / D Line Alone), ship chosen treatment plus the BottomNav chrome pass that's been deferred since v1.1d's minimal patch. ~1 hour.
-- **Session 21 candidate** — Onboarding screens (`/vendor-request`, `/setup`, `/login`) v1.1h pass, bundled with "Curator Sign In" rename (Sprint 5 scope).
+### 🟡 Design v1.1i execution (sessions 21+)
+- **Session 21 candidate A (21A)** — Feed + `<MallSheet>` + Find Detail 3B code sprint against the spec now locked in `docs/design-system.md` v1.1i. New `components/MallSheet.tsx`, full rewrite of `app/page.tsx`, 3B branch on `app/find/[id]/page.tsx`, retirement of `isSold` treatment on `app/flagged/page.tsx` FindTile, `components/MallHeroCard.tsx` retention audit (delete if no remaining callers). ~2–2.5 hours. **Top-of-queue — spec is locked, no more design iteration needed before code.**
+- **Session 21 candidate B (21B)** — Nav Shelf decision + BottomNav full chrome rework. David picks from 4 mockups in `docs/mockups/nav-shelf-exploration.html` (A Suggestion / B Grain / C Full Shelf / D Line Alone), ship chosen treatment plus the BottomNav chrome pass that's been deferred since v1.1d's minimal patch. ~1 hour.
+- **Session 22 candidate** — Onboarding screens (`/vendor-request`, `/setup`, `/login`) v1.1i pass, bundled with "Curator Sign In" rename (Sprint 5 scope). `<MallSheet>` primitive from 21A gets its second consumer here.
 
 ### 🟡 Sprint 3 leftovers still pending beta invites
 - Error monitoring (Sentry or structured logs)
