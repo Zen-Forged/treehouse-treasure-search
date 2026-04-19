@@ -1,17 +1,29 @@
 // app/login/page.tsx
-// Curator sign-in with two modes:
-//   1. Email → 6-digit OTP code entry (primary, PWA-friendly)
-//      Magic link in the same email still works as a fallback (Supabase sends both).
-//   2. Admin PIN — for David, no email required, instant session
+// Curator sign-in — email → 6-digit OTP code entry.
+// Rewritten session 23 against docs/design-system.md v1.1k.
+//
+// Changes from v0.2:
+//  - Admin PIN tab retired → moved to dedicated /admin/login route (v1.1k (f))
+//  - Rounded-pill tab switcher retired → /login is now curator-only, no tabs
+//  - v1 palette throughout (paperCream bg, v1 ink scale, inkHairline borders)
+//  - IM Fell English for title + subhead + fallback copy; FONT_SYS for fields/code
+//  - Form input primitive (white translucent bg, 14px radius, inkHairline border)
+//  - Filled green CTA only on "Email me a code" (commit action)
+//  - Code input retires monospace → FONT_SYS at 28px, 0.4em letter-spacing
+//  - "pin-signing-in" state retired (no longer this route's concern)
+//  - "confirming" state retires v0.2 greenLight check bubble → paper-wash primitive
+//  - Email echo retires v0.2 surface-card → hairline-bordered row primitive
+//  - Resend row + paste-link retoned to IM Fell italic dotted-underline vocabulary
+//  - Labels retire uppercase+tracked treatment → IM Fell italic 13px muted
 //
 // BroadcastChannel syncs auth across tabs (magic link opens in new tab on mobile).
 // useSearchParams wrapped in Suspense per Next.js 14 App Router requirement.
 //
-// Redirect flow:
-//   /login?redirect=/setup  → passed to sendMagicLink as `next` param (for magic link round trip)
-//                            → also read directly on verifyOtp success (for OTP code entry)
+// Redirect flow (unchanged from v0.2):
+//   /login?redirect=/setup  → passed to sendMagicLink as `next` param
+//                            → also read directly on verifyOtp success
 //   OTP path: user enters code → verifyOtp → router.replace(safeRedirect(redirect))
-//   Link path: email round trip lands on /login?confirmed=1&next=/setup → post-auth polling
+//   Link path: email round trip lands on /login?confirmed=1&next=/setup → polling
 
 "use client";
 
@@ -21,43 +33,18 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, ArrowLeft, Check, Loader, Shield, Clipboard } from "lucide-react";
+import { Mail, ArrowLeft, Loader, Clipboard } from "lucide-react";
 import { sendMagicLink, getSession, onAuthChange } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
+import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 
-const C = {
-  bg:          "#f5f2eb",
-  surface:     "#edeae1",
-  border:      "rgba(26,24,16,0.09)",
-  textPrimary: "#1c1a14",
-  textMid:     "#4a4840",
-  textMuted:   "#8a8476",
-  textFaint:   "#b4ae9e",
-  green:       "#1e4d2b",
-  greenLight:  "rgba(30,77,43,0.08)",
-  greenBorder: "rgba(30,77,43,0.20)",
-  input:       "rgba(255,255,255,0.80)",
-  inputBorder: "rgba(26,24,16,0.14)",
-  red:         "#8b2020",
-  redBg:       "rgba(139,32,32,0.07)",
-  redBorder:   "rgba(139,32,32,0.18)",
-};
-
-type Screen  = "enter-email" | "enter-code" | "confirming" | "pin-signing-in";
-type TabMode = "email" | "pin";
+type Screen = "enter-email" | "enter-code" | "confirming";
 
 const AUTH_CHANNEL = "treehouse_auth";
 const RESEND_COOLDOWN_SEC = 30;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/**
- * Only follow same-origin relative paths. Rejects:
- *   - Missing / empty values
- *   - Absolute URLs (https://evil.com)
- *   - Protocol-relative URLs (//evil.com)
- *   - Anything not starting with `/`
- */
 function safeRedirect(next: string | null, fallback = "/my-shelf"): string {
   if (!next) return fallback;
   if (!next.startsWith("/")) return fallback;
@@ -65,13 +52,63 @@ function safeRedirect(next: string | null, fallback = "/my-shelf"): string {
   return next;
 }
 
+// ─── v1.1k primitives (inlined) ──────────────────────────────────────────────
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  boxSizing: "border-box",
+  padding: "14px 14px",
+  borderRadius: 14,
+  background: "rgba(255,253,248,0.70)",
+  border: `1px solid ${v1.inkHairline}`,
+  color: v1.inkPrimary,
+  fontSize: 16,
+  outline: "none",
+  fontFamily: FONT_SYS,
+  appearance: "none",
+  WebkitAppearance: "none",
+};
+
+const inputErrorStyle: React.CSSProperties = {
+  ...inputStyle,
+  border: `1.5px solid ${v1.redBorder}`,
+  padding: "13.5px 13.5px",
+};
+
+const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontFamily: FONT_IM_FELL,
+  fontStyle: "italic",
+  fontSize: 13,
+  color: v1.inkMuted,
+  lineHeight: 1.3,
+  marginBottom: 7,
+};
+
+const ctaStyle = (disabled: boolean): React.CSSProperties => ({
+  width: "100%",
+  padding: "15px",
+  borderRadius: 14,
+  fontFamily: FONT_SYS,
+  fontSize: 15,
+  fontWeight: 500,
+  color: "#fff",
+  background: disabled ? "rgba(30,77,43,0.40)" : v1.green,
+  border: "none",
+  cursor: disabled ? "default" : "pointer",
+  boxShadow: disabled ? "none" : "0 2px 14px rgba(30,77,43,0.22)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+});
+
 // ─── Inner component ──────────────────────────────────────────────────────────
 
 function LoginInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
 
-  const [tab,    setTab]    = useState<TabMode>("email");
   const [screen, setScreen] = useState<Screen>("enter-email");
   const [email,  setEmail]  = useState("");
   const [busy,   setBusy]   = useState(false);
@@ -87,25 +124,14 @@ function LoginInner() {
   const [canPaste,      setCanPaste]      = useState(false);
   const codeInputRef                     = useRef<HTMLInputElement>(null);
 
-  // PIN state
-  const [pin,      setPin]      = useState("");
-  const [pinBusy,  setPinBusy]  = useState(false);
-  const [pinError, setPinError] = useState<string | null>(null);
-
   // ── Confirmed redirect from magic link (fallback path) ──
   //
   // Redirect param naming note: two parallel paths in the codebase converge here.
   //   • `next`     — used by lib/auth.ts sendMagicLink's emailRedirectTo
-  //                    (the Supabase-sent magic link round trip lands on
-  //                     /login?confirmed=1&next=/setup)
+  //                    (/login?confirmed=1&next=/setup)
   //   • `redirect` — used by lib/email.ts approval email CTA
-  //                    (/login?redirect=/setup — tapped BEFORE session exists,
-  //                     then OTP entered on /login)
-  // Both must be honored here; prefer `redirect` (more explicit) then fall back
-  // to `next`. Fix for KI-003 (session 9) — mount effect was previously only
-  // reading `next`, so users arriving via the approval email with a valid
-  // session (e.g. PWA with persisted Supabase session) would be redirected to
-  // /my-shelf instead of /setup, skipping the vendor-link step entirely.
+  //                    (/login?redirect=/setup — tapped BEFORE session exists)
+  // Both honored here; `redirect` preferred. KI-003 fix — session 9.
   useEffect(() => {
     const confirmed = searchParams.get("confirmed");
     const postAuthDest = safeRedirect(
@@ -160,38 +186,33 @@ function LoginInner() {
     };
   }, []);
 
-  // ── Resend cooldown timer ──
+  // Resend cooldown timer
   useEffect(() => {
     if (resendIn <= 0) return;
     const t = setTimeout(() => setResendIn(n => n - 1), 1000);
     return () => clearTimeout(t);
   }, [resendIn]);
 
-  // ── Focus the code input whenever we enter the code screen ──
+  // Focus code input on screen enter
   useEffect(() => {
     if (screen === "enter-code") {
-      // tiny delay so the animation finishes and iOS doesn't swallow the focus
       const t = setTimeout(() => codeInputRef.current?.focus(), 80);
       return () => clearTimeout(t);
     }
   }, [screen]);
 
-  // ── Detect clipboard API availability (for paste button visibility) ──
+  // Clipboard API availability
   useEffect(() => {
     if (typeof navigator === "undefined") return;
-    // Clipboard read requires: secure context (HTTPS), readText API support, user gesture
-    // We can only probe feature support here; permission is requested on tap.
     const supported = !!(navigator.clipboard && typeof navigator.clipboard.readText === "function");
     setCanPaste(supported);
   }, []);
 
-  // ── Paste from clipboard ──
+  // Paste from clipboard
   async function handlePasteCode() {
     if (!navigator.clipboard?.readText) return;
     try {
       const text = await navigator.clipboard.readText();
-      // Extract first run of 6 consecutive digits from clipboard text.
-      // Handles emails that may include extra whitespace, punctuation, or prose.
       const match = text.match(/\d{6}/);
       if (!match) {
         setCodeError("No 6-digit code found on your clipboard.");
@@ -205,19 +226,16 @@ function LoginInner() {
         handleVerify(digits);
       }
     } catch {
-      // User denied clipboard permission or browser blocked it
       setCodeError("Couldn't read clipboard. Paste or type the code instead.");
     }
   }
 
-  // ── Magic link + OTP code send ──
+  // Magic link + OTP code send
   async function handleSend() {
     const trimmed = email.trim().toLowerCase();
     if (!trimmed.includes("@")) { setError("Please enter a valid email address."); return; }
     setBusy(true); setError(null);
 
-    // Forward the incoming ?redirect= param through the magic-link round trip.
-    // The same sendMagicLink call also triggers Supabase to email a 6-digit code.
     const redirect = searchParams.get("redirect") ?? undefined;
     const { error: err } = await sendMagicLink(trimmed, redirect);
 
@@ -231,7 +249,7 @@ function LoginInner() {
     setScreen("enter-code");
   }
 
-  // ── OTP verify ──
+  // OTP verify
   async function handleVerify(submittedCode: string) {
     const token = submittedCode.trim();
     if (token.length !== 6 || !/^\d{6}$/.test(token)) {
@@ -261,7 +279,6 @@ function LoginInner() {
       return;
     }
 
-    // Signed in — preserve the ?redirect= that brought us here.
     const postAuthDest = safeRedirect(searchParams.get("redirect"));
     try {
       const bc = new BroadcastChannel(AUTH_CHANNEL);
@@ -271,7 +288,7 @@ function LoginInner() {
     router.replace(postAuthDest);
   }
 
-  // ── Resend code ──
+  // Resend code
   async function handleResend() {
     if (resendIn > 0 || !sentTo) return;
     setCodeError(null);
@@ -287,90 +304,35 @@ function LoginInner() {
     codeInputRef.current?.focus();
   }
 
-  // ── Admin PIN sign-in ──
-  async function handlePin() {
-    if (!pin.trim()) return;
-    setPinBusy(true); setPinError(null);
-    try {
-      const res  = await fetch("/api/auth/admin-pin", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ pin: pin.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setPinError(data.error ?? "Sign-in failed.");
-        setPinBusy(false);
-        return;
-      }
-
-      setScreen("pin-signing-in");
-      const { error: verifyErr } = await supabase.auth.verifyOtp({
-        email: data.email,
-        token: data.otp,
-        type:  "email",
-      });
-      if (verifyErr) {
-        setScreen("enter-email");
-        setTab("pin");
-        setPinError("Sign-in failed: " + verifyErr.message);
-        setPinBusy(false);
-        return;
-      }
-
-      // Admin PIN sign-in lands on /admin (KI-001 — session 9).
-      // Public email OTP still honors ?redirect= via safeRedirect above.
-      router.replace("/admin");
-    } catch {
-      setPinError("Network error. Try again.");
-      setPinBusy(false);
-      setScreen("enter-email");
-      setTab("pin");
-    }
-  }
-
-  // ── Signing-in overlay (PIN flow) ──
-  if (screen === "pin-signing-in") {
-    return (
-      <FullScreenCentered>
-        <div style={{ width: 56, height: 56, borderRadius: "50%", background: C.greenLight, border: `1px solid ${C.greenBorder}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Shield size={24} style={{ color: C.green }} />
-        </div>
-        <h1 style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, margin: 0 }}>
-          Signing you in…
-        </h1>
-        <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: C.textMuted, margin: 0 }}>
-          Just a moment.
-        </p>
-      </FullScreenCentered>
-    );
-  }
-
-  // ── Confirming (returned from magic link fallback path) ──
+  // ── Confirming bridge (from magic-link fallback round trip) ─────────────
   if (screen === "confirming") {
     return (
-      <FullScreenCentered>
-        <div style={{ width: 56, height: 56, borderRadius: "50%", background: C.greenLight, border: `1px solid ${C.greenBorder}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Check size={24} style={{ color: C.green }} />
-        </div>
-        <h1 style={{ fontFamily: "Georgia, serif", fontSize: 22, fontWeight: 700, color: C.textPrimary, margin: 0 }}>
-          Signing you in&hellip;
-        </h1>
-        <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: C.textMuted, margin: 0 }}>
-          Just a moment.
-        </p>
-      </FullScreenCentered>
+      <ModeCCentered>
+        <PaperWashBubble>
+          <Loader size={22} style={{ color: v1.inkPrimary, animation: "spin 0.9s linear infinite" }} strokeWidth={1.8} />
+        </PaperWashBubble>
+        <h1 style={heroTitleStyle}>Signing you in&hellip;</h1>
+        <p style={heroSubheadStyle}>Just a moment.</p>
+      </ModeCCentered>
     );
   }
 
   return (
-    <div style={{ minHeight: "100dvh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
-
-      {/* Nav */}
+    <div
+      style={{
+        minHeight: "100dvh",
+        background: v1.paperCream,
+        maxWidth: 430,
+        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* Mode C header — back arrow only */}
       <header style={{ padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px" }}>
-        <button onClick={() => {
+        <button
+          onClick={() => {
             if (screen === "enter-code") {
-              // Back from code screen → back to email entry (not out of /login)
               setScreen("enter-email");
               setCode("");
               setCodeError(null);
@@ -378,98 +340,179 @@ function LoginInner() {
               router.push("/");
             }
           }}
-          style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer" }}>
-          <ArrowLeft size={15} style={{ color: C.textMid }} />
+          aria-label="Back"
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: v1.iconBubble,
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          <ArrowLeft size={15} style={{ color: v1.inkPrimary }} />
         </button>
       </header>
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px 80px" }}>
-
-        {/* Logo + title */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 28 }}>
-          <div style={{ width: 56, height: 56, borderRadius: "50%", background: C.greenLight, border: `1px solid ${C.greenBorder}`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>
-            <Image src="/logo.png" alt="Treehouse" width={28} height={28} />
-          </div>
-          <h1 style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 700, color: C.textPrimary, textAlign: "center", lineHeight: 1.2, margin: "0 0 6px" }}>
-            Curator Sign in
-          </h1>
-          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 13, color: C.textMuted, textAlign: "center", lineHeight: 1.6, margin: 0, maxWidth: 260 }}>
-            {tab === "pin"
-              ? "Admin access — enter your PIN."
-              : screen === "enter-code"
-                ? "We sent a 6-digit code to your email."
-                : "We'll email you a 6-digit code. No password needed."}
-          </p>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          padding: screen === "enter-code" ? "40px 28px 80px" : "64px 28px 80px",
+        }}
+      >
+        {/* Logo mark (paper-wash bubble + leaf logo) */}
+        <div
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: "50%",
+            background: "rgba(42,26,10,0.04)",
+            border: `0.5px solid ${v1.inkHairline}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 22,
+          }}
+        >
+          <Image src="/logo.png" alt="Treehouse" width={22} height={22} />
         </div>
 
-        {/* Tab switcher — hidden once user is on the code entry screen */}
-        {screen !== "enter-code" && (
-          <div style={{ display: "flex", background: C.surface, borderRadius: 22, padding: 3, gap: 2, marginBottom: 24, width: "100%", maxWidth: 320 }}>
-            {(["email", "pin"] as TabMode[]).map(t => {
-              const active = tab === t;
-              return (
-                <button key={t} onClick={() => { setTab(t); setError(null); setPinError(null); }}
-                  style={{ flex: 1, padding: "8px 12px", borderRadius: 19, border: "none", cursor: "pointer", background: active ? "#fff" : "transparent", boxShadow: active ? "0 1px 4px rgba(0,0,0,0.10)" : "none", transition: "background 0.18s", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-                  {t === "email"
-                    ? <Mail size={12} style={{ color: active ? C.green : C.textMuted }} />
-                    : <Shield size={12} style={{ color: active ? C.green : C.textMuted }} />
-                  }
-                  <span style={{ fontFamily: "Georgia, serif", fontSize: 13, fontWeight: active ? 700 : 400, color: active ? C.textPrimary : C.textMuted }}>
-                    {t === "email" ? "Email code" : "Admin PIN"}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
+        <h1
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontSize: 28,
+            color: v1.inkPrimary,
+            textAlign: "center",
+            lineHeight: 1.2,
+            letterSpacing: "-0.005em",
+            margin: "0 0 8px",
+          }}
+        >
+          Curator Sign in
+        </h1>
+        <p
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontStyle: "italic",
+            fontSize: 15,
+            color: v1.inkMuted,
+            textAlign: "center",
+            lineHeight: 1.55,
+            margin: "0 auto 28px",
+            maxWidth: 300,
+          }}
+        >
+          {screen === "enter-code"
+            ? "We sent a 6-digit code to your email."
+            : "We'll email you a 6-digit code. No password needed."}
+        </p>
 
-        <div style={{ width: "100%", maxWidth: 320 }}>
+        <div style={{ width: "100%", maxWidth: 340 }}>
           <AnimatePresence mode="wait">
 
-            {/* ── Email tab — enter email ── */}
-            {tab === "email" && screen === "enter-email" && (
-              <motion.div key="email-enter"
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+            {/* Enter email */}
+            {screen === "enter-email" && (
+              <motion.div
+                key="email-enter"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.22 }}
-                style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                style={{ display: "flex", flexDirection: "column", gap: 14 }}
+              >
                 <div>
-                  <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "1.8px", marginBottom: 7 }}>Email address</div>
-                  <input type="email" value={email}
+                  <label style={labelStyle}>Email address</label>
+                  <input
+                    type="email"
+                    value={email}
                     onChange={e => { setEmail(e.target.value); setError(null); }}
                     onKeyDown={e => e.key === "Enter" && !busy && handleSend()}
-                    placeholder="you@example.com" autoFocus autoCapitalize="none" autoCorrect="off"
-                    style={{ width: "100%", padding: "12px 14px", borderRadius: 11, background: C.input, border: `1px solid ${error ? C.redBorder : C.inputBorder}`, color: C.textPrimary, fontSize: 15, outline: "none", boxSizing: "border-box" }}
+                    placeholder="you@example.com"
+                    autoFocus
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    autoComplete="email"
+                    style={error ? inputErrorStyle : inputStyle}
                   />
                 </div>
+
                 {error && <ErrorBanner message={error} />}
-                <button onClick={handleSend} disabled={busy || !email.trim()}
-                  style={{ width: "100%", padding: "13px", borderRadius: 12, fontSize: 14, fontWeight: 600, fontFamily: "Georgia, serif", color: "#fff", background: busy || !email.trim() ? "rgba(30,77,43,0.40)" : C.green, border: "none", cursor: busy || !email.trim() ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  {busy ? <><Loader size={14} style={{ animation: "spin 0.9s linear infinite" }} /> Sending…</> : <><Mail size={14} /> Email me a code</>}
+
+                <button
+                  onClick={handleSend}
+                  disabled={busy || !email.trim()}
+                  style={ctaStyle(busy || !email.trim())}
+                >
+                  {busy ? (
+                    <><Loader size={14} style={{ animation: "spin 0.9s linear infinite" }} /> Sending…</>
+                  ) : (
+                    <><Mail size={14} strokeWidth={1.8} /> Email me a code</>
+                  )}
                 </button>
-                <p style={{ fontSize: 11, color: C.textFaint, textAlign: "center", lineHeight: 1.6, margin: "4px 0 0" }}>
+
+                <p
+                  style={{
+                    fontFamily: FONT_SYS,
+                    fontSize: 12,
+                    color: v1.inkFaint,
+                    textAlign: "center",
+                    lineHeight: 1.6,
+                    margin: "4px 0 0",
+                  }}
+                >
                   First time? An account is created automatically.
                 </p>
               </motion.div>
             )}
 
-            {/* ── Email tab — enter 6-digit code ── */}
-            {tab === "email" && screen === "enter-code" && (
-              <motion.div key="email-code"
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+            {/* Enter 6-digit code */}
+            {screen === "enter-code" && (
+              <motion.div
+                key="email-code"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.22 }}
-                style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-
-                {/* Email echo */}
-                <div style={{ padding: "10px 14px", borderRadius: 11, background: C.surface, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
-                  <Mail size={13} style={{ color: C.textMuted, flexShrink: 0 }} />
-                  <p style={{ margin: 0, fontSize: 12, color: C.textMid, wordBreak: "break-all", lineHeight: 1.5 }}>
-                    <span style={{ color: C.textMuted }}>Sent to </span>
-                    <span style={{ fontWeight: 600, color: C.textPrimary }}>{sentTo}</span>
-                  </p>
+                style={{ display: "flex", flexDirection: "column", gap: 14 }}
+              >
+                {/* Email echo line primitive */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "12px 0",
+                    borderTop: `0.5px solid ${v1.inkHairline}`,
+                    borderBottom: `0.5px solid ${v1.inkHairline}`,
+                    marginBottom: 4,
+                  }}
+                >
+                  <Mail size={14} style={{ color: v1.inkMuted, flexShrink: 0 }} strokeWidth={1.6} />
+                  <span style={{ fontFamily: FONT_SYS, fontSize: 14, color: v1.inkMuted, flexShrink: 0 }}>
+                    Sent to&nbsp;
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: FONT_SYS,
+                      fontSize: 14,
+                      color: v1.inkPrimary,
+                      fontWeight: 500,
+                      wordBreak: "break-all",
+                      minWidth: 0,
+                    }}
+                  >
+                    {sentTo}
+                  </span>
                 </div>
 
                 <div>
-                  <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "1.8px", marginBottom: 7 }}>6-digit code</div>
+                  <label style={labelStyle}>6-digit code</label>
                   <input
                     ref={codeInputRef}
                     type="text"
@@ -479,12 +522,10 @@ function LoginInner() {
                     maxLength={6}
                     value={code}
                     onChange={e => {
-                      // strip anything that's not a digit, cap at 6
                       const digits = e.target.value.replace(/\D/g, "").slice(0, 6);
                       setCode(digits);
                       setCodeError(null);
                       setResendNotice(null);
-                      // auto-submit on 6th digit
                       if (digits.length === 6 && !codeBusy) {
                         handleVerify(digits);
                       }
@@ -494,95 +535,138 @@ function LoginInner() {
                         handleVerify(code);
                       }
                     }}
-                    placeholder="••••••"
                     autoFocus
                     disabled={codeBusy}
-                    style={{ width: "100%", padding: "14px 14px", borderRadius: 11, background: C.input, border: `1px solid ${codeError ? C.redBorder : C.inputBorder}`, color: C.textPrimary, fontSize: 24, outline: "none", boxSizing: "border-box", letterSpacing: "0.5em", textAlign: "center", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace", opacity: codeBusy ? 0.6 : 1 }}
+                    style={{
+                      ...(codeError ? inputErrorStyle : inputStyle),
+                      fontSize: 28,
+                      padding: "18px 14px",
+                      textAlign: "center",
+                      letterSpacing: "0.4em",
+                      fontFamily: FONT_SYS,
+                      opacity: codeBusy ? 0.6 : 1,
+                    }}
                   />
                 </div>
 
-                {/* Paste from clipboard — hidden if Clipboard API unavailable */}
+                {/* Paste-from-clipboard — retoned text link */}
                 {canPaste && (
                   <button
                     onClick={handlePasteCode}
                     disabled={codeBusy}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, width: "100%", padding: "10px", borderRadius: 10, background: C.surface, border: `1px solid ${C.border}`, color: C.textMid, fontSize: 13, fontFamily: "Georgia, serif", fontWeight: 600, cursor: codeBusy ? "default" : "pointer", opacity: codeBusy ? 0.5 : 1 }}>
-                    <Clipboard size={13} style={{ color: C.green }} />
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: codeBusy ? "default" : "pointer",
+                      fontFamily: FONT_IM_FELL,
+                      fontStyle: "italic",
+                      fontSize: 14,
+                      color: v1.inkMuted,
+                      textDecoration: "underline",
+                      textDecorationStyle: "dotted",
+                      textDecorationColor: v1.inkFaint,
+                      textUnderlineOffset: 3,
+                      textAlign: "center",
+                      opacity: codeBusy ? 0.5 : 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      marginTop: 2,
+                    }}
+                  >
+                    <Clipboard size={13} style={{ color: v1.green }} strokeWidth={1.8} />
                     Paste code from clipboard
                   </button>
                 )}
 
                 {codeError && <ErrorBanner message={codeError} />}
+
                 {resendNotice && !codeError && (
-                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                    style={{ padding: "9px 12px", borderRadius: 9, background: C.greenLight, border: `1px solid ${C.greenBorder}`, fontSize: 12, color: C.green }}>
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{
+                      padding: "9px 12px",
+                      borderRadius: 9,
+                      background: "rgba(42,26,10,0.03)",
+                      border: `0.5px solid ${v1.inkHairline}`,
+                      fontFamily: FONT_SYS,
+                      fontSize: 12,
+                      color: v1.inkMid,
+                      textAlign: "center",
+                    }}
+                  >
                     {resendNotice}
                   </motion.div>
                 )}
 
                 {codeBusy && (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontSize: 12, color: C.textMuted, fontFamily: "Georgia, serif", fontStyle: "italic" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 7,
+                      fontFamily: FONT_IM_FELL,
+                      fontStyle: "italic",
+                      fontSize: 13,
+                      color: v1.inkMuted,
+                    }}
+                  >
                     <Loader size={12} style={{ animation: "spin 0.9s linear infinite" }} />
                     Verifying…
                   </div>
                 )}
 
-                {/* Fallback line — Option B */}
-                <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 11, color: C.textFaint, textAlign: "center", lineHeight: 1.65, margin: "4px 0 0" }}>
-                  Or tap the link we emailed you — either works.
+                {/* Fallback line */}
+                <p
+                  style={{
+                    fontFamily: FONT_IM_FELL,
+                    fontStyle: "italic",
+                    fontSize: 13,
+                    color: v1.inkFaint,
+                    textAlign: "center",
+                    lineHeight: 1.65,
+                    margin: "10px 0 0",
+                  }}
+                >
+                  Or tap the link we emailed you &mdash; either works.
                 </p>
 
                 {/* Resend row */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 2 }}>
-                  <span style={{ fontSize: 11, color: C.textMuted }}>Didn&apos;t get it?</span>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    marginTop: 12,
+                    fontFamily: FONT_SYS,
+                    fontSize: 13,
+                  }}
+                >
+                  <span style={{ color: v1.inkMuted }}>Didn&apos;t get it?</span>
                   <button
                     onClick={handleResend}
                     disabled={resendIn > 0 || codeBusy}
-                    style={{ fontSize: 11, color: resendIn > 0 ? C.textFaint : C.green, background: "none", border: "none", cursor: resendIn > 0 || codeBusy ? "default" : "pointer", textDecoration: resendIn > 0 ? "none" : "underline", fontWeight: 600, padding: 0 }}>
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: resendIn > 0 || codeBusy ? "default" : "pointer",
+                      fontSize: 13,
+                      color: resendIn > 0 ? v1.inkFaint : v1.inkPrimary,
+                      textDecoration: resendIn > 0 ? "none" : "underline",
+                      textDecorationStyle: "dotted",
+                      textDecorationColor: v1.inkFaint,
+                      textUnderlineOffset: 3,
+                    }}
+                  >
                     {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend code"}
                   </button>
                 </div>
-              </motion.div>
-            )}
-
-            {/* ── Admin PIN tab ── */}
-            {tab === "pin" && (
-              <motion.div key="pin"
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.22 }}
-                style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-
-                <div style={{ padding: "12px 14px", borderRadius: 11, background: C.greenLight, border: `1px solid ${C.greenBorder}`, display: "flex", alignItems: "center", gap: 8 }}>
-                  <Shield size={13} style={{ color: C.green, flexShrink: 0 }} />
-                  <p style={{ margin: 0, fontSize: 11, color: C.green, lineHeight: 1.5 }}>
-                    Admin-only access. Enter your PIN to sign in instantly.
-                  </p>
-                </div>
-
-                <div>
-                  <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "1.8px", marginBottom: 7 }}>Admin PIN</div>
-                  <input
-                    type="password"
-                    inputMode="numeric"
-                    value={pin}
-                    onChange={e => { setPin(e.target.value); setPinError(null); }}
-                    onKeyDown={e => e.key === "Enter" && !pinBusy && handlePin()}
-                    placeholder="••••••"
-                    autoFocus
-                    autoComplete="current-password"
-                    style={{ width: "100%", padding: "12px 14px", borderRadius: 11, background: C.input, border: `1px solid ${pinError ? C.redBorder : C.inputBorder}`, color: C.textPrimary, fontSize: 20, outline: "none", boxSizing: "border-box", letterSpacing: "0.4em", textAlign: "center" }}
-                  />
-                </div>
-
-                {pinError && <ErrorBanner message={pinError} />}
-
-                <button onClick={handlePin} disabled={pinBusy || !pin.trim()}
-                  style={{ width: "100%", padding: "13px", borderRadius: 12, fontSize: 14, fontWeight: 600, fontFamily: "Georgia, serif", color: "#fff", background: pinBusy || !pin.trim() ? "rgba(30,77,43,0.40)" : C.green, border: "none", cursor: pinBusy || !pin.trim() ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  {pinBusy
-                    ? <><Loader size={14} style={{ animation: "spin 0.9s linear infinite" }} /> Signing in…</>
-                    : <><Shield size={14} /> Sign in as Admin</>
-                  }
-                </button>
               </motion.div>
             )}
 
@@ -597,20 +681,90 @@ function LoginInner() {
   );
 }
 
-// ─── UI helpers ───────────────────────────────────────────────────────────────
+// ─── Shared primitives (Mode C + error banner + hero center) ─────────────────
 
 function ErrorBanner({ message }: { message: string }) {
   return (
-    <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-      style={{ padding: "9px 12px", borderRadius: 9, background: C.redBg, border: `1px solid ${C.redBorder}`, fontSize: 12, color: C.red }}>
+    <motion.div
+      initial={{ opacity: 0, y: -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      style={{
+        padding: "11px 14px",
+        borderRadius: 10,
+        background: v1.redBg,
+        border: `1px solid ${v1.redBorder}`,
+        fontFamily: FONT_SYS,
+        fontSize: 13,
+        color: v1.red,
+        lineHeight: 1.5,
+      }}
+    >
       {message}
     </motion.div>
   );
 }
 
-function FullScreenCentered({ children }: { children: React.ReactNode }) {
+function PaperWashBubble({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ minHeight: "100dvh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, textAlign: "center" }}>
+    <div
+      style={{
+        width: 60,
+        height: 60,
+        borderRadius: "50%",
+        background: "rgba(42,26,10,0.04)",
+        border: `0.5px solid ${v1.inkHairline}`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 22,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+const heroTitleStyle: React.CSSProperties = {
+  fontFamily: FONT_IM_FELL,
+  fontSize: 28,
+  color: v1.inkPrimary,
+  textAlign: "center",
+  lineHeight: 1.2,
+  letterSpacing: "-0.005em",
+  margin: "0 0 8px",
+};
+
+const heroSubheadStyle: React.CSSProperties = {
+  fontFamily: FONT_IM_FELL,
+  fontStyle: "italic",
+  fontSize: 15,
+  color: v1.inkMuted,
+  textAlign: "center",
+  lineHeight: 1.55,
+  margin: "0 auto",
+  maxWidth: 300,
+};
+
+function ModeCCentered({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        minHeight: "100dvh",
+        background: v1.paperCream,
+        maxWidth: 430,
+        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 0,
+        textAlign: "center",
+        padding: "0 28px",
+      }}
+    >
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
       {children}
     </div>
   );
