@@ -32,13 +32,14 @@ import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Send, Pencil, Check, Loader, ImagePlus } from "lucide-react";
-import { vendorHueBg, mapsUrl } from "@/lib/utils";
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { vendorHueBg, mapsUrl, boothNumeralSize } from "@/lib/utils";
+import { v1, FONT_IM_FELL, FONT_SYS, FONT_POSTIT_NUMERAL } from "@/lib/tokens";
 import type { Post } from "@/types/treehouse";
 
 // Re-export canonical v1.1h tokens so consumers of BoothPage primitives
 // (app/my-shelf, app/shelf/[slug]) keep their existing imports working.
-export { v1, FONT_IM_FELL, FONT_SYS };
+// FONT_POSTIT_NUMERAL added v1.1l (narrow post-it font exception).
+export { v1, FONT_IM_FELL, FONT_SYS, FONT_POSTIT_NUMERAL };
 
 const EASE = [0.25, 0.1, 0.25, 1] as const;
 
@@ -267,8 +268,8 @@ export function BoothHero({
             </div>
             <div
               style={{
-                fontFamily: FONT_SYS,
-                fontSize: 36,
+                fontFamily: FONT_POSTIT_NUMERAL,
+                fontSize: boothNumeralSize(boothNumber),
                 fontWeight: 500,
                 color: v1.inkPrimary,
                 letterSpacing: "-0.01em",

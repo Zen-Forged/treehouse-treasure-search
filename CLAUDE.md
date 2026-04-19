@@ -50,11 +50,103 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-18 (session 22A — v1.1j QA polish pass shipped from David's on-device walk of v1.1i + v1.1i-polish; build green; committed + pushed to prod)
+> Last updated: 2026-04-18 (session 23 — v1.1k activation flow pass shipped: `/vendor-request`, `/login`, `/setup`, new `/admin/login`; build green; committed + pushed to prod)
 
-**Status:** ✅✅ **Session 22A shipped the v1.1j QA polish pass.** Six doc-level changes landed in one commit: diamond ornament retired from every divider product-wide, booth numbers swap `FONT_IM_FELL` → `FONT_SYS` globally (the "1 vs I" disambiguation rule), `/my-shelf` Window View renders 9-cell placeholder composition for owner, `<AddFindTile>` joins Shelf View for owner parity, Find Map closer closes the loop with a terminal spine circle and booth-label-font copy, Home masthead logo enlarges 24/0.72 → 34/0.92. Build green; commit pushed to main; deploy confirmed by David. `docs/design-system.md` advanced v1.1i → v1.1j with the six-point Status paragraph documenting every change. **Next session (23) opens with David's on-device QA walk of the deployed v1.1j state.**
+**Status:** ✅✅ **Session 23 shipped the v1.1k activation flow pass.** The last four v0.2 surfaces in the ecosystem — `/vendor-request` (form + success), `/login` (email + OTP + confirming), `/setup` (linking + success + error), and the PIN entry surface that previously lived as a tab inside `/login` — all moved forward to v1.1j vocabulary in a single commit. New dedicated `/admin/login` route lands with the sprint, resolving the session-8 onboarding-journey commitment to retire the Admin PIN tab. `docs/design-system.md` advanced v1.1j → v1.1k with an eight-point Status paragraph. `docs/mockups/activation-v1-1k.html` built (11 phone frames across 5 sections), David approved first pass ("looks great, ship it"). Build green; commit pushed to main. **Next session (24) opens with David's on-device QA walk of the deployed v1.1k state.**
 
 ### What shipped this session (one commit)
+
+**`docs/design-system.md` — v1.1j → v1.1k:**
+Version bumped in header (v1.1j → v1.1k; session 23). New Status paragraph at top with eight lettered commitments:
+(a) **Mode C resolved for task-first surfaces.** v1.0 header-pattern system committed Mode C for `/post`, `/post/preview`, `/vendor-request`, `/setup`, `/login` but didn't specify interior grammar. v1.1k commits: back-arrow paper bubble (`v1.iconBubble` 38px) top-left, no masthead wordmark, no diamond dividers, no post-it, no cartographic glyphs. Editorial voice (`FONT_IM_FELL`) carries titles/subheads/end-of-path; precise voice (`FONT_SYS`) carries form fields/inputs/email echoes/timers/errors.
+(b) **Paper-wash 60px success bubble primitive.** `rgba(42,26,10,0.04)` bg, 0.5px `v1.inkHairline` edge, glyph in `v1.inkPrimary`. Generalizes the v1.1f paper-variant icon bubble to hero scale. Retires SaaS success-toast green chrome across activation flow. *The ink carries the state; the shape carries the gesture.*
+(c) **Filled green CTA — commit actions only.** `v1.green` bg + white `FONT_SYS` 15px 500 weight, 14px radius. Reserved for commit actions: Request access, Email me a code, Sign in as Admin, Go to my shelf. End-of-path actions become IM Fell italic dotted-underline text links. Cross-cutting rule for every Mode C surface.
+(d) **Form input primitive.** White translucent `rgba(255,253,248,0.70)` bg, 1px `v1.inkHairline` border (focus 1.5px `v1.inkPrimary`; error 1.5px `v1.redBorder`), 14px radius, 14×14px padding, `FONT_SYS` 16px. Labels above in IM Fell italic 13px `v1.inkMuted` with natural sentence casing — retires every uppercase-tracked form label across v0.2 forms.
+(e) **Email echo line primitive.** Horizontal row (not a card): 14px mail glyph `v1.inkMuted` + "Sent to " (`FONT_SYS` 14px `v1.inkMuted`) + email (`FONT_SYS` 14px `v1.inkPrimary` 500 weight), 12px vertical padding, 0.5px `v1.inkHairline` rules above/below. Reads as a shipping-label line. Retires v0.2 surface-card treatment.
+(f) **Mode C tab switcher retires.** Rounded-pill `Email code / Admin PIN` tab switcher on `/login` retires entirely. Admin PIN moves to new dedicated `/admin/login` route. `/login` becomes curator-only. Resolves session-8 `docs/onboarding-journey.md` commitment.
+(g) **`/admin/login` scope committed.** New route, dedicated PIN entry surface. Three states: PIN entry, signing-in bridge (identical treatment to `/login` confirming state), inline error. Composition: Mode C chrome + logo mark with shield glyph + "Admin Sign in" title + PIN input + filled green CTA + signing-in paper-wash bubble. `/admin` page itself deliberately out of scope per STOP rule on auth-flow changes — its unauth-gate redirect was surgically updated (`/login` → `/admin/login`) in one line with zero visual change.
+(h) **`<MallSheet>` migration to `/vendor-request` deliberately deferred.** Native HTML `<select>` used in v1.1k with v1.1k form-input styling. MallSheet migration lands in dedicated Sprint 5 sub-sprint alongside `/post` + `/post/preview` consumers.
+
+Pattern retirement log entries: v0.2 `greenLight`/`greenBorder` success check-bubble chrome; rounded-pill tab switcher on `/login`; uppercase + tracked-letter-spacing form labels; green info boxes (`Admin-only access…`, `✓ Approved · ready to sign in`) in favor of typography-carries-the-state.
+
+PENDING table refreshed: "Onboarding screens v1.0 pass" removed (shipped as v1.1k); "`<MallSheet>` migration to `/post` and `/vendor-request`" updated to point to the deferral note.
+
+**Code files touched (5):**
+
+- `app/vendor-request/page.tsx` — full rewrite. Mode C chrome, v1 palette throughout, IM Fell for intro + success, `FONT_SYS` for form fields, v1.1k form input primitive, filled green CTA only on "Request access", success screen uses paper-wash bubble + email echo line + two IM Fell italic dotted-underline text links (no filled CTA). `Join Treehouse / REQUEST BOOTH ACCESS` eyebrow pair retired. Native `<select>` preserved with TODO comment pointing at v1.1k (h) for MallSheet migration. Preserved: form submission logic, validation rules, POST body shape, mall prefill from URL params.
+- `app/login/page.tsx` — full rewrite. PIN tab + `handlePin` + `pin-signing-in` state + `TabMode` type + rounded-pill tab switcher all retired. `/login` is now curator-only. `Screen` type reduced to `"enter-email" | "enter-code" | "confirming"`. v1.1k primitives throughout: paper-wash logo bubble with `/logo.png` at 22px, form input, code input retires monospace → `FONT_SYS` 28px with 0.4em tracking, email echo line (second use of the primitive), paste-link retoned to IM Fell italic dotted-underline, resend row in `FONT_SYS`, confirming bridge uses paper-wash bubble + spinner + IM Fell title. Preserved: BroadcastChannel auth sync, `?redirect=` + `?next=` param handling (KI-003 fix intact), `safeRedirect` logic, 20-attempt 500ms polling on magic-link fallback. File loses ~35% of its LOC from v0.2.
+- `app/setup/page.tsx` — full rewrite. Amber state chrome retired entirely. Card-wrapped layout retired — hero-centered on paper surface throughout. Four states (loading, linking, success, error) all use Mode C grammar. Success: paper-wash bubble + "Welcome to your shelf." in IM Fell 30px (name not used — `vendor.display_name` is booth name not person name; mall in subhead carries personalization instead) + booth detail in `FONT_SYS` + 3s auto-redirect countdown + filled green "Go to my shelf" CTA. Error: same bubble primitive retoned red-tint with alert glyph + IM Fell italic error copy + two text links (Try again / Back to sign-in) — no filled CTA on error paths per v1.1k (c). Preserved: 401 retry-with-backoff, `safeStorage` writes, `LocalVendorProfile` shape.
+- `app/admin/login/page.tsx` — NEW file. PIN entry + signing-in bridge. Mode C chrome with back-arrow paper bubble top-left, paper-wash logo bubble with `lucide-react Shield` glyph (differentiates from curator's leaf logo), "Admin Sign in" title, IM Fell italic "Enter your PIN to continue." subhead, password input styled as 22px centered with 0.4em tracking, filled green CTA with inline Shield glyph. Signing-in bridge identical treatment to `/login` confirming state (paper-wash bubble + spinner + "Signing you in…" + "Just a moment."). Error surfaces inline on entry screen via red banner primitive. Uses existing `/api/auth/admin-pin` + `supabase.auth.verifyOtp` flow — no backend changes. Success → `router.replace("/admin")`.
+- `app/admin/page.tsx` — one-line surgical edit. Unauth gate's "Sign in" button redirect `/login` → `/admin/login`. Zero visual change; admin UI untouched per STOP rule. T4b later decides full disposition.
+
+### Scope calls honored during this sprint
+
+- **`/admin` unauth gate expansion NOT bundled.** Early in scope discussion, Option A (bundling PIN entry into `/admin`'s unauth branch) was considered. DECISION_GATE STOP rule on auth-flow changes was invoked — bundling admin auth-gate expansion with an activation-flow design session would cross the multi-system coupling threshold. Option B (new dedicated route) chosen. Full `/admin` IA consolidation remains T4b's job.
+- **MallSheet migration to `/vendor-request` deferred.** The v1.1i primitive is committed and ready, but wiring `/vendor-request` as its first non-Feed consumer widens the blast radius of what was already a 4-route sprint. Explicit TODO comment in code references v1.1k (h) in design-system doc. Sprint 5 sub-sprint bundles this with `/post` + `/post/preview` migration.
+- **`/setup` success headline uses no first name.** Initial mockup showed "Welcome to your shelf, David." but the name isn't available at setup time — `vendor.display_name` is the booth name, `vendor_requests.name` isn't joined in. Honest correction before code: retoned to "Welcome to your shelf." (no comma, no name); mall name in subhead carries the personalization weight.
+- **Logo glyph differentiation.** Curator's `/login` gets `/logo.png` (existing Treehouse leaf brand mark). `/admin/login` gets `lucide-react Shield` at 20px with `v1.green` stroke + 15% fill to signal the different audience. This is a post-mockup design call — mockup showed inline SVG leaf but the real brand mark is the PNG.
+
+### Tool-environment notes this session
+
+- **Bracket-path `str_replace` fails — use `filesystem:edit_file`.** First tried `str_replace` on `docs/design-system.md` (no brackets in path), got `File not found` despite the file existing and being readable via `filesystem:read_text_file`. Root cause: there are two separate `str_replace`-style tools in this environment — the container's shell `str_replace` and the filesystem MCP's `edit_file`. The container's version doesn't see the Mac filesystem. Always use `filesystem:edit_file` for Mac filesystem operations — it has different parameter shape (`edits` array of `oldText`/`newText` objects) and actually works. Already flagged in session 16 Tech Rules; worth re-surfacing.
+- **New route dirs need `mkdir -p` first.** Hit this on `app/admin/login/` — `filesystem:write_file` refuses to write if parent dir doesn't exist, no `create_directory` tool available in this filesystem MCP namespace. Tech Rule already documents this for API routes; same applies to page routes. Workaround: one HITL terminal command before the write. David ran `mkdir -p /Users/davidbutler/Projects/treehouse-treasure-search/app/admin/login` and the write succeeded.
+- **Cleaner rewrites this session.** `filesystem:write_file` for all four full rewrites + one `filesystem:edit_file` for the `/admin` surgical edit. Zero box-drawing-anchor bugs this session (unlike the four-fires-across-the-sprint pattern in 22A) because none of the rewritten files had box-drawing comment rules to anchor on.
+
+### 🔆 Session 24 HITL — starts here
+
+Pre-flight on iPhone:
+1. Hard-refresh https://app.kentuckytreehouse.com after deploy completes
+2. If stale state persists: Settings → Safari → Advanced → Website Data → remove `kentuckytreehouse`, then refresh
+3. **Sign out first** — v1.1k changes are invisible if you're already signed in and not hitting `/vendor-request` or `/login` afresh
+
+**QA walk checklist for v1.1k (on-device):**
+
+- **`/vendor-request` form** — back-arrow paper bubble top-left (no "Join Treehouse / REQUEST BOOTH ACCESS" eyebrow pair); title "Bring your booth to Treehouse." in IM Fell 28px; form labels IM Fell italic 13px muted (no uppercase tracking); email input focus turns border 1.5px `inkPrimary`; mall dropdown styled to match (still native `<select>` — MallSheet deferred); "Request access" filled green CTA; invalid email submit → red 1.5px border + red banner in `FONT_SYS`
+- **`/vendor-request` success** — paper-wash check bubble (60px, `inkPrimary` check, NOT green); "You're on the list." headline IM Fell 30px; email echo line with hairlines above/below (NOT a card); "Explore the feed →" as IM Fell italic dotted-underline text link; "Go back" returns to the form (NOT to previous page)
+- **`/login` email entry** — NO tab switcher (this is the big visible change); paper-wash logo bubble 44px with `/logo.png`; "Curator Sign in" IM Fell 28px; only ONE input + ONE CTA
+- **`/login` OTP entry** — email echo line with hairlines above/below; code input 28px `FONT_SYS` (not monospace), 0.4em tracking, centered, NO `••••••` placeholder; paste-link retoned IM Fell italic dotted-underline with tiny green clipboard glyph; fallback "Or tap the link we emailed you — either works."; resend row in `FONT_SYS` with countdown; auto-verifies on 6th digit (no submit button)
+- **`/login` confirming bridge** — visible if you tap the magic link instead of typing the code — paper-wash bubble + spinner + "Signing you in…" / "Just a moment."
+- **`/admin/login`** — direct URL https://app.kentuckytreehouse.com/admin/login — paper-wash bubble with Shield glyph (green-filled at 15% opacity); "Admin Sign in" title; password input 22px centered with 0.4em tracking; filled green "Sign in as Admin" CTA with Shield glyph inline; PIN verify → signing-in bridge identical to `/login` confirming → lands on `/admin`
+- **`/admin` unauth gate** — sign out, visit `/admin` directly; "Admin access only" gate appears; tap "Sign in" → routes to `/admin/login` (NOT `/login` as before)
+- **`/setup`** — hardest to test organically; easiest path is full Flow 2 via `dbutler80020+10@gmail.com` test email: admin adds vendor request → approve → open approval email → sign in → land on `/setup`. Success: paper-wash check bubble + "Welcome to your shelf." + mall name in `inkPrimary` woven into italic subhead + booth detail in `FONT_SYS` + 3s auto-redirect + filled green "Go to my shelf" CTA. Error: red-tinted same bubble + alert glyph + "Something didn't line up." + try-again/back-to-sign-in text links
+
+**Things to watch for** (flagged by Claude during session 23 close):
+
+- On `/vendor-request` success, the back-arrow calls `setDone(false)` (back to the form), NOT `router.back()` (out of page). Intentional to match v0.2 "Go back" button logic, but the icon semantics might read wrong. If it feels confusing on device, flag for iteration.
+- On `/login` OTP screen, back-arrow goes to email entry, NOT out of `/login`. Preserved v0.2 behavior, probably correct, but worth a look.
+- Error bubble tint on `/setup` error is red-retoned (`redBg`/`redBorder` + alert glyph in `red`). Alternative was keeping it paper-wash with only the alert glyph carrying the warning. If the red feels too loud, the quieter version is a one-line iteration.
+- Long email addresses in the email-echo line wrap to a second line via `word-break: break-all`. On `dbutler80020+10@gmail.com` the `+10` wraps. Acceptable, or should we truncate with ellipsis?
+
+### Session 24 candidate queue
+
+- **24A — QA feedback from on-device walk of v1.1k** (David's likely next-session opener per the established pattern — 17, 18, 20, 22, 23 all closed with "start next session with on-device feedback").
+- **24B — KI-003 diagnosis** (vendors posting under stale identity after approval; pre-beta blocker; still parked since session 18). Now the *only* 🟡 tech item remaining before beta; design-debt inventory is essentially empty after v1.1k.
+- **24C — Sprint 4 tail batch** (T4c copy polish remainder + T4b admin surface consolidation + T4d pre-beta QA walk). `/admin/login` being its own route now makes T4b a cleaner sprint — the decision of whether to fold `/admin/login` into `/admin`'s unauth gate lives there.
+- **24D — `<MallSheet>` migration sub-sprint** (`/post`, `/post/preview`, `/vendor-request`). Mechanical work against a committed primitive; ~2 hours.
+- **24E — Nav Shelf decision + BottomNav full chrome rework** (held since sessions 16–20; David picks from 4 mockups in `docs/mockups/nav-shelf-exploration.html`).
+- **24F (Docs agent housekeeping)** — Promote the bracket-path `str_replace` vs `filesystem:edit_file` disambiguation into `docs/DECISION_GATE.md` Tech Rules. The box-drawing anchor lesson from session 22A close also still needs promotion (session 21A close proposed it, session 22A close re-proposed it, session 23 didn't hit it because no box-drawing rewrites were needed — but it'll come back).
+
+### Files touched this session
+- `docs/design-system.md` — v1.1j → v1.1k (eight-point Status paragraph; four pattern-retirement entries; PENDING table refresh; footer updated)
+- `docs/mockups/activation-v1-1k.html` — NEW, 11 phone frames, decisions pane + primitive annotations throughout; approved first-pass
+- `app/vendor-request/page.tsx` — full rewrite
+- `app/login/page.tsx` — full rewrite (PIN tab retired, file ~35% shorter)
+- `app/setup/page.tsx` — full rewrite
+- `app/admin/login/page.tsx` — NEW file
+- `app/admin/page.tsx` — one-line surgical edit (unauth gate redirect)
+- `CLAUDE.md` (this file) — session 23 close
+
+### Session 23 close HITL — already complete
+
+All HITL steps ran this session:
+1. ✅ `mkdir -p /Users/davidbutler/Projects/treehouse-treasure-search/app/admin/login` (one-time fix; new page route dirs always need this before first `write_file`)
+2. ✅ `npm run build` — green (confirmed by David)
+3. ✅ `git add -A && git commit -m "feat(v1.1k): activation flow pass — /vendor-request, /login, /setup, new /admin/login" && git push` (pushed to main)
+4. ✅ Vercel deploy triggered by push (David confirmed the push; deploy status verified on prod next session open)
+
+---
+
+## ARCHIVE — What was done earlier (2026-04-18, session 22A — v1.1j QA polish pass)
 
 **`docs/design-system.md` — v1.1i → v1.1j:**
 Version bumped in header (v1.1i → v1.1j; date 2026-04-18 session 22A). New Status paragraph added directly above the v1.1i Status paragraph (chronological-newest-first order). Six numbered commitments:

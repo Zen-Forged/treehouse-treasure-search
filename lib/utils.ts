@@ -51,3 +51,17 @@ export function vendorHueBg(name: string): string {
 export function mapsUrl(query: string): string {
   return `https://maps.apple.com/?q=${encodeURIComponent(query)}`;
 }
+
+// ── Booth numeral sizing ──────────────────────────────────────────────────────
+// v1.1l — auto-scale the 36px post-it numeral by digit count so long booth
+// numbers don't overflow the 92×92px post-it. Ceiling at 6 digits (22px); any
+// longer would need the post-it itself to grow, which ripples into the banner
+// composition on Find Detail and Booth. Used on the post-it numeral only;
+// inline pills on vendor rows use their own committed size (16px) regardless.
+export function boothNumeralSize(boothNumber: string | null | undefined): number {
+  if (!boothNumber) return 36;
+  const len = boothNumber.length;
+  if (len <= 4) return 36;
+  if (len === 5) return 28;
+  return 22; // 6+ digits
+}

@@ -16,7 +16,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -24,6 +24,7 @@ import { ArrowLeft, Heart } from "lucide-react";
 import { getVendorBySlug, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { loadBookmarkCount } from "@/lib/utils";
 import BottomNav from "@/components/BottomNav";
+import StickyMasthead from "@/components/StickyMasthead";
 import {
   BoothHero,
   BoothTitleBlock,
@@ -43,23 +44,25 @@ import type { Post, Vendor, Mall } from "@/types/treehouse";
 const BASE_URL = "https://treehouse-treasure-search.vercel.app";
 
 // ─── Masthead (Mode A, public variant — back arrow left, empty right slot) ────
+// v1.1l — migrated to <StickyMasthead>. scrollTarget is the page's overflow-auto
+// scroll container (same pattern as /my-shelf).
 
-function Masthead({ onBack }: { onBack: () => void }) {
+function Masthead({
+  onBack,
+  scrollTarget,
+}: {
+  onBack: () => void;
+  scrollTarget: React.RefObject<HTMLDivElement | null>;
+}) {
   return (
-    <div
+    <StickyMasthead
+      scrollTarget={scrollTarget}
       style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 40,
         padding: "max(14px, env(safe-area-inset-top, 14px)) 22px 12px",
         display: "grid",
         gridTemplateColumns: "38px 1fr 38px",
         alignItems: "center",
         gap: 12,
-        background: "rgba(232,221,199,0.96)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
-        borderBottom: `1px solid ${v1.inkHairline}`,
       }}
     >
       <button
@@ -93,7 +96,7 @@ function Masthead({ onBack }: { onBack: () => void }) {
         Treehouse Finds
       </div>
       <div />
-    </div>
+    </StickyMasthead>
   );
 }
 
@@ -203,6 +206,8 @@ export default function PublicShelfPage() {
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const [copied,        setCopied]        = useState(false);
 
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => { setBookmarkCount(loadBookmarkCount()); }, []);
 
   useEffect(() => {
@@ -243,7 +248,7 @@ export default function PublicShelfPage() {
           flexDirection: "column",
         }}
       >
-        <Masthead onBack={() => router.back()} />
+        <Masthead onBack={() => router.back()} scrollTarget={scrollContainerRef} />
         <NotFound />
         <BottomNav active="shelves" flaggedCount={bookmarkCount} />
         <BoothPageStyles />
@@ -270,13 +275,14 @@ export default function PublicShelfPage() {
       }}
     >
       <div
+        ref={scrollContainerRef}
         style={{
           flex: 1,
           overflowY: "auto",
           paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
         }}
       >
-        <Masthead onBack={() => router.back()} />
+        <Masthead onBack={() => router.back()} scrollTarget={scrollContainerRef} />
         {loading ? (
           <Skeleton />
         ) : (

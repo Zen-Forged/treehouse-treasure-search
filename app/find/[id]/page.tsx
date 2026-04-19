@@ -50,9 +50,10 @@ import { getPost, getVendorPosts, updatePostStatus, deletePost } from "@/lib/pos
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
 import { getCachedUserId, getSession, isAdmin } from "@/lib/auth";
-import { flagKey, mapsUrl } from "@/lib/utils";
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_IM_FELL, FONT_SYS, FONT_POSTIT_NUMERAL } from "@/lib/tokens";
+import { flagKey, mapsUrl, boothNumeralSize } from "@/lib/utils";
 import BottomNav from "@/components/BottomNav";
+import StickyMasthead from "@/components/StickyMasthead";
 import type { Post } from "@/types/treehouse";
 
 // ── v1.1 tokens ─────────────────────────────────────────────────────────────
@@ -105,10 +106,13 @@ function PinGlyph({ size = 18 }: { size?: number }) {
 }
 
 function XGlyph({ size = 16 }: { size?: number }) {
+  // v1.1l — strokeWidth 1.4 → 2.2 to match Find Map's X and the terminal
+  // circle weight on the Find Map closer. Keeps the cartographic X consistent
+  // across surfaces so readers parse it as the same glyph.
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <line x1="3" y1="3"  x2="13" y2="13" stroke={v1.inkPrimary} strokeWidth="1.4" strokeLinecap="round" />
-      <line x1="13" y1="3" x2="3"  y2="13" stroke={v1.inkPrimary} strokeWidth="1.4" strokeLinecap="round" />
+      <line x1="3" y1="3"  x2="13" y2="13" stroke={v1.inkPrimary} strokeWidth="2.2" strokeLinecap="round" />
+      <line x1="13" y1="3" x2="3"  y2="13" stroke={v1.inkPrimary} strokeWidth="2.2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -377,23 +381,13 @@ function SoldLanding({
       }}
     >
       {/* 1. Masthead — same chrome as normal Find Detail, sticky to top */}
-      <motion.div
-        variants={pageVariants}
-        initial="hidden"
-        animate="visible"
+      <StickyMasthead
         style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 40,
           display: "grid",
           gridTemplateColumns: "1fr auto 1fr",
           alignItems: "center",
           padding: "max(14px, env(safe-area-inset-top, 14px)) 18px 14px",
           gap: 12,
-          background: "rgba(232,221,199,0.96)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          borderBottom: `1px solid ${v1.inkHairline}`,
         }}
       >
         <div style={{ justifySelf: "start" }}>
@@ -413,7 +407,7 @@ function SoldLanding({
           Treehouse Finds
         </div>
         <div style={{ justifySelf: "end" }} aria-hidden="true" />
-      </motion.div>
+      </StickyMasthead>
 
       {/* 2. Headline — "This find / found a home." with hard line break */}
       <motion.div
@@ -719,23 +713,14 @@ export default function FindDetailPage() {
       }}
     >
       {/* ── 1. Masthead row — v1.1e: back + wordmark only; save/share move to photograph ── */}
-      <motion.div
-        variants={pageVariants}
-        initial="hidden"
-        animate="visible"
+      {/* 1. StickyMasthead (Mode A) — v1.1l */}
+      <StickyMasthead
         style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 40,
           display: "grid",
           gridTemplateColumns: "1fr auto 1fr",
           alignItems: "center",
           padding: "max(14px, env(safe-area-inset-top, 14px)) 18px 14px",
           gap: 12,
-          background: "rgba(232,221,199,0.96)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          borderBottom: `1px solid ${v1.inkHairline}`,
         }}
       >
         <div style={{ justifySelf: "start" }}>
@@ -759,7 +744,7 @@ export default function FindDetailPage() {
 
         {/* Right slot intentionally empty — save + share now live on the photograph */}
         <div style={{ justifySelf: "end" }} aria-hidden="true" />
-      </motion.div>
+      </StickyMasthead>
 
       {/* ── 2. Photograph with post-it (bottom-right) + save/share (top-right, v1.1e) ── */}
       <motion.div
@@ -895,8 +880,8 @@ export default function FindDetailPage() {
               </div>
               <div
                 style={{
-                  fontFamily: FONT_SYS,
-                  fontSize: 36,
+                  fontFamily: FONT_POSTIT_NUMERAL,
+                  fontSize: boothNumeralSize(boothNumber),
                   fontWeight: 500,
                   color: v1.inkPrimary,
                   letterSpacing: "-0.01em",

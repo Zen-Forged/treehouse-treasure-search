@@ -35,10 +35,12 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, UserCheck, Users, Store, X, Stethoscope } from "lucide-react";
+import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, UserCheck, Users, Store, X, Stethoscope, Image as ImageIcon, Upload, Loader as LoaderIcon } from "lucide-react";
 import { getSession, isAdmin, signOut } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { colors } from "@/lib/tokens";
+import { compressImage } from "@/lib/imageUpload";
+import { getSiteSettingUrl, type SiteSettingKey } from "@/lib/siteSettings";
 import type { User } from "@supabase/supabase-js";
 
 interface AdminPost {
@@ -128,7 +130,7 @@ export default function AdminPage() {
   const [result,     setResult]     = useState<string | null>(null);
   const [toast,      setToast]      = useState<Toast | null>(null);
   const [confirmAll, setConfirmAll] = useState(false);
-  const [activeTab, setActiveTab] = useState<"posts" | "requests">("requests");
+  const [activeTab, setActiveTab] = useState<"posts" | "requests" | "banners">("requests");
 
   // Diagnosis panel — per-request loading + result state
   const [diagnosisBusy,    setDiagnosisBusy]    = useState<Set<string>>(new Set());
@@ -361,19 +363,19 @@ export default function AdminPage() {
         <div style={{ fontSize: 12, color: colors.textPrimary }}>{user.email}</div>
       </div>
 
-      {/* Tab switcher */}
+      {/* Tab switcher — v1.1l: Vendor Requests / Posts / Banners */}
       <div style={{ margin: "20px 20px 0", display: "flex", gap: 8 }}>
         <button
           onClick={() => setActiveTab("requests")}
           style={{
-            flex: 1, padding: "10px", borderRadius: 10, fontSize: 13, fontWeight: 500,
+            flex: 1, padding: "10px", borderRadius: 10, fontSize: 12, fontWeight: 500,
             background: activeTab === "requests" ? colors.green : "none",
             color: activeTab === "requests" ? "#fff" : colors.textMid,
             border: `1px solid ${activeTab === "requests" ? colors.green : colors.border}`,
-            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5
           }}>
-          <Users size={13} />
-          Vendor Requests {pendingRequests.length > 0 && (
+          <Users size={12} />
+          Requests {pendingRequests.length > 0 && (
             <span style={{
               background: activeTab === "requests" ? "rgba(255,255,255,0.2)" : colors.green,
               color: activeTab === "requests" ? "#fff" : "#fff",
@@ -386,13 +388,24 @@ export default function AdminPage() {
         <button
           onClick={() => setActiveTab("posts")}
           style={{
-            flex: 1, padding: "10px", borderRadius: 10, fontSize: 13, fontWeight: 500,
+            flex: 1, padding: "10px", borderRadius: 10, fontSize: 12, fontWeight: 500,
             background: activeTab === "posts" ? colors.green : "none",
             color: activeTab === "posts" ? "#fff" : colors.textMid,
             border: `1px solid ${activeTab === "posts" ? colors.green : colors.border}`,
-            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5
           }}>
-          <Store size={13} /> Posts ({posts.length})
+          <Store size={12} /> Posts ({posts.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("banners")}
+          style={{
+            flex: 1, padding: "10px", borderRadius: 10, fontSize: 12, fontWeight: 500,
+            background: activeTab === "banners" ? colors.green : "none",
+            color: activeTab === "banners" ? "#fff" : colors.textMid,
+            border: `1px solid ${activeTab === "banners" ? colors.green : colors.border}`,
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5
+          }}>
+          <ImageIcon size={12} /> Banners
         </button>
       </div>
 
@@ -559,6 +572,35 @@ export default function AdminPage() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Banners Tab — v1.1l: admin-editable featured banner images */}
+      {activeTab === "banners" && (
+        <div style={{ margin: "24px 20px 0" }}>
+          <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2px", marginBottom: 10 }}>
+            Featured banner images
+          </div>
+          <p style={{
+            fontSize: 12, color: colors.textMid, lineHeight: 1.55, marginBottom: 20,
+            fontFamily: "Georgia, serif", fontStyle: "italic",
+          }}>
+            Upload the hero images shown on the Home feed and the Find Map. Each image replaces the previous one. Leave blank to hide the banner entirely.
+          </p>
+
+          <FeaturedBannerEditor
+            settingKey="featured_find_image_url"
+            label="Home — Featured Find"
+            helper="Shown between the masthead and the feed on the Home page. Recommended: wide landscape photo, 1600×900 or larger."
+          />
+
+          <div style={{ height: 18 }} />
+
+          <FeaturedBannerEditor
+            settingKey="find_map_banner_image_url"
+            label="Find Map — Hero banner"
+            helper="Shown at the top of the Find Map. The title “Find Map” overlays the image. Recommended: 1600×720 or larger; darker/quieter photos read better under white overlay text."
+          />
         </div>
       )}
 
@@ -855,6 +897,226 @@ function DiagnosisSection({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ── FeaturedBannerEditor — v1.1l ───────────────────────────────────────
+//
+// Self-contained upload widget for one site_settings key. Flow:
+//   1. On mount, fetch current URL via getSiteSettingUrl(settingKey).
+//   2. Render a preview (current image or dashed placeholder) + file input.
+//   3. On file select: FileReader → compressImage → POST to
+//      /api/admin/featured-image with { base64DataUrl, settingKey }.
+//   4. On success, refetch the URL so the preview updates with the canonical
+//      public URL from Supabase Storage.
+//
+// Errors are surfaced inline below the helper copy. Not a blocker state —
+// admin can retry immediately. No persistent error toasts (they'd collide
+// with the approval toast system).
+
+function FeaturedBannerEditor({
+  settingKey,
+  label,
+  helper,
+}: {
+  settingKey: SiteSettingKey;
+  label:      string;
+  helper:     string;
+}) {
+  const [currentUrl, setCurrentUrl] = useState<string | null>(null);
+  const [loading,    setLoading]    = useState(true);
+  const [uploading,  setUploading]  = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
+  const [success,    setSuccess]    = useState(false);
+
+  async function loadCurrent() {
+    setLoading(true);
+    const url = await getSiteSettingUrl(settingKey);
+    setCurrentUrl(url);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    loadCurrent();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingKey]);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // reset so the same file can be re-selected
+    if (!file) return;
+    if (file.size > 12_000_000) {
+      setError("Image too large. Please choose a photo smaller than 12MB.");
+      return;
+    }
+
+    setUploading(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("Could not read file"));
+        reader.readAsDataURL(file);
+      });
+      const compressed = await compressImage(dataUrl);
+
+      const res = await authFetch("/api/admin/featured-image", {
+        method: "POST",
+        body:   JSON.stringify({ base64DataUrl: compressed, settingKey }),
+      });
+      const json = await res.json();
+
+      if (!res.ok || !json.url) {
+        setError(json.error ?? `Upload failed (HTTP ${res.status})`);
+      } else {
+        setCurrentUrl(json.url);
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 2500);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unexpected error");
+    }
+
+    setUploading(false);
+  }
+
+  const inputId = `featured-banner-input-${settingKey}`;
+
+  return (
+    <div style={{
+      padding: "14px 14px 16px",
+      borderRadius: 12,
+      border: `1px solid ${colors.border}`,
+      background: colors.surface,
+    }}>
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        marginBottom: 8,
+      }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: colors.textPrimary }}>
+          {label}
+        </div>
+        {currentUrl && (
+          <div style={{
+            fontSize: 9, color: colors.green, textTransform: "uppercase",
+            letterSpacing: "1.5px", fontWeight: 600,
+          }}>
+            Live
+          </div>
+        )}
+      </div>
+
+      <div style={{
+        fontSize: 11, color: colors.textMuted, lineHeight: 1.55, marginBottom: 12,
+      }}>
+        {helper}
+      </div>
+
+      {/* Preview */}
+      <div style={{
+        position: "relative",
+        width: "100%",
+        aspectRatio: "16/9",
+        borderRadius: 10,
+        overflow: "hidden",
+        border: `1px ${currentUrl ? "solid" : "dashed"} ${currentUrl ? colors.border : colors.textFaint}`,
+        background: colors.bg,
+        marginBottom: 12,
+      }}>
+        {loading ? (
+          <div style={{
+            position: "absolute", inset: 0, display: "flex",
+            alignItems: "center", justifyContent: "center",
+            fontSize: 11, color: colors.textFaint,
+          }}>
+            Loading…
+          </div>
+        ) : currentUrl ? (
+          <img
+            src={currentUrl}
+            alt={`${label} preview`}
+            style={{
+              width: "100%", height: "100%", objectFit: "cover", display: "block",
+            }}
+          />
+        ) : (
+          <div style={{
+            position: "absolute", inset: 0, display: "flex",
+            alignItems: "center", justifyContent: "center", gap: 6,
+            fontSize: 11, color: colors.textFaint, fontStyle: "italic",
+            fontFamily: "Georgia, serif",
+          }}>
+            <ImageIcon size={14} />
+            No image set yet
+          </div>
+        )}
+        {uploading && (
+          <div style={{
+            position: "absolute", inset: 0, display: "flex",
+            alignItems: "center", justifyContent: "center", gap: 8,
+            background: "rgba(255,255,255,0.82)",
+            fontSize: 12, fontWeight: 500, color: colors.textMid,
+          }}>
+            <LoaderIcon size={14} style={{ animation: "spin 0.9s linear infinite" }} />
+            Uploading…
+          </div>
+        )}
+      </div>
+
+      {/* Upload button */}
+      <label
+        htmlFor={inputId}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          padding: "10px 14px",
+          borderRadius: 10,
+          background: uploading ? colors.surface : colors.green,
+          color: uploading ? colors.textMuted : "#fff",
+          fontSize: 12, fontWeight: 600,
+          border: `1px solid ${uploading ? colors.border : colors.green}`,
+          cursor: uploading ? "default" : "pointer",
+          opacity: uploading ? 0.6 : 1,
+        }}
+      >
+        <Upload size={12} />
+        {currentUrl ? "Replace image" : "Upload image"}
+      </label>
+      <input
+        id={inputId}
+        type="file"
+        accept="image/*"
+        disabled={uploading}
+        onChange={handleFileChange}
+        style={{ display: "none" }}
+      />
+
+      {/* Feedback */}
+      {error && (
+        <div style={{
+          marginTop: 10, padding: "8px 10px", borderRadius: 8,
+          background: colors.redBg, border: `1px solid ${colors.redBorder}`,
+          fontSize: 11, color: colors.red, lineHeight: 1.5,
+        }}>
+          ⚠️ {error}
+        </div>
+      )}
+      {success && (
+        <div style={{
+          marginTop: 10, padding: "8px 10px", borderRadius: 8,
+          background: colors.greenLight, border: `1px solid ${colors.greenBorder}`,
+          fontSize: 11, color: colors.green, lineHeight: 1.5, fontWeight: 500,
+        }}>
+          ✓ Uploaded — live now.
+        </div>
+      )}
+
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }

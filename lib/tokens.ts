@@ -132,9 +132,18 @@ export const v1 = {
 export const fonts = {
   imFell: 'var(--font-im-fell), "IM Fell English", Georgia, serif',
   sys:    '-apple-system, "Segoe UI", Roboto, system-ui, sans-serif',
+  // v1.1l — post-it 36px booth numeral exception. Narrow reversal of v1.1j's
+  // FONT_SYS swap: at hero post-it scale, system-ui reads as system chrome on
+  // a material gesture. Times New Roman is broadly available, ships with a
+  // clearly disambiguated `1` (solving v1.1j's original 1-vs-I concern), and
+  // doesn't require an extra Google Fonts load. ONLY applies to the 36px
+  // numeral on the booth post-it (Find Detail + Booth banner). Inline pills
+  // on vendor rows stay on FONT_SYS.
+  postitNumeral: '"Times New Roman", Times, serif',
 } as const;
 
 // Convenience named exports (matches what Find Detail / Find Map / Booth
 // previously declared as local `FONT_IM_FELL` / `FONT_SYS` constants).
-export const FONT_IM_FELL = fonts.imFell;
-export const FONT_SYS     = fonts.sys;
+export const FONT_IM_FELL        = fonts.imFell;
+export const FONT_SYS            = fonts.sys;
+export const FONT_POSTIT_NUMERAL = fonts.postitNumeral;

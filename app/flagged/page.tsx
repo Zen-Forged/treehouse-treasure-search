@@ -1,40 +1,45 @@
 // app/flagged/page.tsx
-// Find Map — v1.1f (docs/design-system.md §Find Map, session 17)
+// Find Map — v1.1l (docs/design-system.md §Find Map, sessions 17 + 22A + 24)
 //
-// Layout top-to-bottom:
-//   1. Masthead row (Mode A): back · "Treehouse Finds" wordmark · empty right slot
-//   2. "Find Map" subheader (IM Fell 30px primary)
-//   3. Intro voice (IM Fell italic 15px muted, one paragraph) — orients the page
+// Layout top-to-bottom (v1.1l):
+//   1. StickyMasthead (Mode A): back · "Treehouse Finds" wordmark · empty right slot
+//   2. FeaturedBanner (overlay variant) — admin-editable hero with "Find Map"
+//      title overlaid in IM Fell 30px white. REPLACES the v1.1g "Find Map"
+//      30px subheader; the banner now carries the page-title surface.
+//      Banner only renders if an image is set in site_settings; otherwise
+//      the page collapses past it.
+//   3. Intro voice (IM Fell italic 16px muted, one paragraph) — orients the page
 //   4. Mall anchor — pin glyph + mall name (IM Fell 22px) + dotted-underline address
-//   5. Diamond divider ◆
-//   6. Itinerary spine — X glyph at each stop, hairline tick between stops
-//      Per stop: [Booth [NNN pill]] → vendor italic → "N saved finds" → finds grid/scroll
-//      Finds: 2-up grid when count ≤ 2; horizontal scroll when count ≥ 3
-//      Each find: 4:5 photo (6px radius + inkHairline border) with frosted heart top-right,
-//                 italic title, price in system-ui priceInk (or "Found a home" for sold)
-//   7. Closer — diamond rule + "End of the map. Not the end of the search." (IM Fell 16px mid)
+//   5. Hairline divider (v1.1j — diamond retired)
+//   6. Itinerary spine — X glyph at each stop (strokeWidth 2.2, v1.1l), hairline
+//      tick between stops AND beneath the last stop (v1.1l — continuous spine
+//      to the closer), `Booth [NNN pill]` → vendor name (non-italic, v1.1l) →
+//      "N saved finds" → finds grid/scroll. Finds: 2-up grid (≤2) or horizontal
+//      scroll (≥3). Each find: 4:5 photo, frosted heart, title, price.
+//   7. Closer — v1.1l restructured: circle + tagline copy share one grid row,
+//      vertically centered. Copy is the product tagline anchor.
 //
-// v1.1f glyph hierarchy commitment:
+// v1.1l changes (from session 24 David on-device walk):
+//   - StickyMasthead replaces inline sticky chrome (scroll-linked hairline)
+//   - FeaturedBanner overlay variant replaces the "Find Map" subheader
+//   - Spine connects the last stop to the closer (no more empty-space drop)
+//   - Closer: circle + copy share one row (vertically centered)
+//   - Closer copy: "Embrace the Search. Treasure the Find." (tagline surfacing)
+//   - X strokeWidth 1.5 → 2.2 (match terminal circle weight)
+//   - Vendor name italic retires (parity with non-italic mall name)
+//
+// v1.1f glyph hierarchy commitment (unchanged):
 //   pin = mall (appears once at top of page)
 //   X   = booth (appears once per stop on the spine)
 //
 // Preserved from v0.2 /flagged (do not retire):
 //   - localStorage bookmark scanning (BOOKMARK_PREFIX)
-//   - Stale bookmark pruning (posts deleted in Supabase get removed from localStorage)
+//   - Stale bookmark pruning
 //   - Grouping by vendor, sorted by booth number
-//   - Focus event refresh (visiting a find and returning rehydrates state)
-//   - Unsave gesture (tap heart → remove bookmark → remove post from local state)
+//   - Focus event refresh
+//   - Unsave gesture
 //   - BottomNav flaggedCount passthrough
 //   - Skeleton loader
-//
-// Retired from v0.2 (no longer needed):
-//   - "First stop / Next stop / Last stop" ordinal labels (visual order IS the order)
-//   - EndOfPath component (closer replaces it)
-//   - "Found a home" sort priority (sold items still render with grayscale at natural position)
-//   - Dark-gradient booth pills, mono booth numbers, uppercase "BOOTH" labels
-//   - Card chrome on find rows (paper-as-surface now)
-//   - Green "View Booth" CTA (booth-row pill+label now handles that)
-//   - Georgia serif (IM Fell committed as serif voice)
 
 "use client";
 
@@ -47,12 +52,11 @@ import { ArrowLeft, Heart } from "lucide-react";
 import { getPostsByIds } from "@/lib/posts";
 import { BOOKMARK_PREFIX, loadBookmarkCount, mapsUrl } from "@/lib/utils";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { getSiteSettingUrl } from "@/lib/siteSettings";
 import BottomNav from "@/components/BottomNav";
+import StickyMasthead from "@/components/StickyMasthead";
+import FeaturedBanner from "@/components/FeaturedBanner";
 import type { Post } from "@/types/treehouse";
-
-// ── v1.1f tokens ─────────────────────────────────────────────────────────────
-// Imported from lib/tokens.ts (canonical since session 19A). v1 palette +
-// fonts match docs/design-system.md v1.1h.
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
 
@@ -85,7 +89,7 @@ function pruneStaleBookmarks(savedIds: string[], returnedIds: string[]) {
 // ── Grouping ───────────────────────────────────────────────────────────────────
 
 type BoothGroup = {
-  boothNumber: string | null; // null for orphaned posts with no booth
+  boothNumber: string | null;
   vendorName: string;
   vendorSlug?: string;
   posts: Post[];
@@ -103,7 +107,6 @@ function groupByBooth(posts: Post[]): BoothGroup[] {
     map.get(key)!.posts.push(post);
   }
 
-  // Sort within each group: available first, sold last
   const groups = Array.from(map.values()).map((g) => ({
     ...g,
     posts: [
@@ -112,7 +115,6 @@ function groupByBooth(posts: Post[]): BoothGroup[] {
     ],
   }));
 
-  // Sort stops: by booth number (numeric-aware), no-booth stops last
   return groups.sort((a, b) => {
     if (!a.boothNumber && b.boothNumber) return 1;
     if (a.boothNumber && !b.boothNumber) return -1;
@@ -124,7 +126,6 @@ function groupByBooth(posts: Post[]): BoothGroup[] {
 
 // ── Glyph primitives ───────────────────────────────────────────────────────────
 function PinGlyph({ size = 22 }: { size?: number }) {
-  // Mall glyph. Matches Find Detail's pin; larger here because it's the page anchor.
   return (
     <svg width={size} height={size * (22 / 18)} viewBox="0 0 18 22" fill="none" aria-hidden="true">
       <path
@@ -139,20 +140,19 @@ function PinGlyph({ size = 22 }: { size?: number }) {
 }
 
 function XGlyph({ size = 18 }: { size?: number }) {
-  // Booth glyph. Same shape as Find Detail's vendor-row X.
+  // v1.1l — strokeWidth 1.5 → 2.2 to match the weight of the terminal 16px
+  // filled circle at the closer; the two anchor points now read as a matched
+  // pair along the spine. Same bump applied to Find Detail's vendor-row X.
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <line x1="3" y1="3"  x2="13" y2="13" stroke={v1.inkPrimary} strokeWidth="1.5" strokeLinecap="round" />
-      <line x1="13" y1="3" x2="3"  y2="13" stroke={v1.inkPrimary} strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="3" y1="3"  x2="13" y2="13" stroke={v1.inkPrimary} strokeWidth="2.2" strokeLinecap="round" />
+      <line x1="13" y1="3" x2="3"  y2="13" stroke={v1.inkPrimary} strokeWidth="2.2" strokeLinecap="round" />
     </svg>
   );
 }
 
-// ── Booth pill (numeric badge, matches Find Detail vendor row v1.1f) ──────────
+// ── Booth pill (numeric badge) ────────────────────────────────────────────────
 function BoothPill({ children }: { children: React.ReactNode }) {
-  // v1.1j — numeral font swapped IM Fell → system-ui ("1 vs I" disambiguation).
-  // Matches the Find Detail <Pill> primitive byte-for-byte so the two pills
-  // continue to read as a linked pair across screens.
   return (
     <span
       style={{
@@ -178,7 +178,7 @@ function BoothPill({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ── Find tile (photo + heart + title + price) ─────────────────────────────────
+// ── Find tile ─────────────────────────────────────────────────────────────────
 function FindTile({
   post,
   onUnsave,
@@ -186,15 +186,10 @@ function FindTile({
 }: {
   post: Post;
   onUnsave: (id: string) => void;
-  widthMode: "grid" | "scroll"; // grid = takes full grid column; scroll = fixed width for horizontal scroll
+  widthMode: "grid" | "scroll";
 }) {
   const [imgErr, setImgErr] = useState(false);
   const hasImg = !!post.image_url && !imgErr;
-  // v1.1i: sold saves render identical to available saves on this page. The
-  // reveal happens on tap-through via Find Detail's 3B sold landing state.
-  // Three-part contract: bookmark key preserved + tile visible here + 3B is
-  // the reveal. Do NOT add a status filter to getPostsByIds — sold rows must
-  // still hydrate so the tile stays tappable.
 
   function handleUnsave(e: React.MouseEvent) {
     e.preventDefault();
@@ -231,12 +226,7 @@ function FindTile({
             alt={post.title}
             loading="lazy"
             onError={() => setImgErr(true)}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-            }}
+            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
         ) : (
           <div
@@ -256,7 +246,6 @@ function FindTile({
           </div>
         )}
 
-        {/* Frosted heart — top-right. Always filled green (this page is the saved list) */}
         <button
           onClick={handleUnsave}
           aria-label="Remove from saved"
@@ -284,7 +273,6 @@ function FindTile({
         </button>
       </div>
 
-      {/* Title (IM Fell italic) */}
       <div
         style={{
           marginTop: 6,
@@ -303,9 +291,6 @@ function FindTile({
         {post.title}
       </div>
 
-      {/* Price (system-ui, priceInk). Sold-state "Found a home" caption
-          retired v1.1i — sold saves render identical to available saves;
-          3B sold landing is the reveal on tap-through. */}
       {typeof post.price_asking === "number" && post.price_asking > 0 && (
         <div
           style={{
@@ -350,25 +335,23 @@ function Stop({
         paddingBottom: isLast ? 0 : 30,
       }}
     >
-      {/* Spine column: X glyph + hairline tick down */}
+      {/* Spine column: X + hairline tick.
+          v1.1l — the tick ALSO renders beneath the last stop so the spine
+          connects visually to the closer circle instead of trailing off. */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 6 }}>
         <XGlyph size={18} />
-        {!isLast && (
-          <div
-            style={{
-              width: 1,
-              flex: 1,
-              minHeight: 60,
-              background: v1.inkHairline,
-              marginTop: 8,
-            }}
-          />
-        )}
+        <div
+          style={{
+            width: 1,
+            flex: 1,
+            minHeight: isLast ? 28 : 60,
+            background: v1.inkHairline,
+            marginTop: 8,
+          }}
+        />
       </div>
 
-      {/* Content column */}
       <div style={{ minWidth: 0 }}>
-        {/* Booth row: label + numeric pill, wrapped in Link to /shelf/[slug] */}
         {group.boothNumber ? (
           group.vendorSlug ? (
             <Link
@@ -417,21 +400,22 @@ function Stop({
           </div>
         )}
 
-        {/* Vendor name */}
+        {/* Vendor name — v1.1l italic retired; IM Fell non-italic brings the
+            vendor name into parity with the mall name above (both are places
+            in the cartographic reading, not voices). */}
         <div
           style={{
             fontFamily: FONT_IM_FELL,
-            fontStyle: "italic",
             fontSize: 18,
             color: v1.inkMid,
             lineHeight: 1.3,
             marginBottom: 4,
+            letterSpacing: "-0.005em",
           }}
         >
           {group.vendorName}
         </div>
 
-        {/* Saved count */}
         <div
           style={{
             fontFamily: FONT_SYS,
@@ -443,7 +427,6 @@ function Stop({
           {savedLabel}
         </div>
 
-        {/* Finds — grid or horizontal scroll */}
         {useScroll ? (
           <div
             className="hide-scrollbar"
@@ -522,11 +505,12 @@ function EmptyState() {
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ──────────────────────────────────────────────────────────────────────────────
 export default function FindMapPage() {
-  const [posts,         setPosts]         = useState<Post[]>([]);
-  const [loading,       setLoading]       = useState(true);
-  const [bookmarkCount, setBookmarkCount] = useState(0);
+  const [posts,          setPosts]          = useState<Post[]>([]);
+  const [loading,        setLoading]        = useState(true);
+  const [bookmarkCount,  setBookmarkCount]  = useState(0);
+  const [bannerImageUrl, setBannerImageUrl] = useState<string | null>(null);
 
   function syncCount() { setBookmarkCount(loadBookmarkCount()); }
 
@@ -541,6 +525,11 @@ export default function FindMapPage() {
     setPosts(data);
     setLoading(false);
   }
+
+  // Load banner URL on mount — fire-and-forget, banner renders null when absent.
+  useEffect(() => {
+    getSiteSettingUrl("find_map_banner_image_url").then(setBannerImageUrl);
+  }, []);
 
   useEffect(() => { syncCount(); loadPosts(); }, []);
 
@@ -557,9 +546,6 @@ export default function FindMapPage() {
 
   const groups = groupByBooth(posts);
 
-  // Mall anchor — derive from the first post with a mall. In production today every
-  // saved find will be at America's Antique Mall, but we derive rather than hard-code
-  // so the page stays correct when multi-mall ships.
   const mall = posts.find((p) => p.mall)?.mall ?? null;
   const mallLink = mall?.address
     ? mapsUrl(mall.address)
@@ -579,24 +565,14 @@ export default function FindMapPage() {
         flexDirection: "column",
       }}
     >
-      {/* ── 1. Masthead (Mode A) ──────────────────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.34, ease: EASE }}
+      {/* 1. StickyMasthead (Mode A) */}
+      <StickyMasthead
         style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 40,
           display: "grid",
           gridTemplateColumns: "1fr auto 1fr",
           alignItems: "center",
           padding: "max(14px, env(safe-area-inset-top, 14px)) 18px 14px",
           gap: 12,
-          background: "rgba(232,221,199,0.96)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          borderBottom: `1px solid ${v1.inkHairline}`,
         }}
       >
         <div style={{ justifySelf: "start" }}>
@@ -632,29 +608,48 @@ export default function FindMapPage() {
           Treehouse Finds
         </div>
         <div style={{ justifySelf: "end" }} aria-hidden="true" />
-      </motion.div>
+      </StickyMasthead>
 
-      {/* ── 2. "Find Map" subheader ──────────────────────────────────────── */}
+      {/* 2. FeaturedBanner (overlay variant) — v1.1l replaces the "Find Map" subheader.
+          Only renders when an image URL exists; otherwise collapses quietly. */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.34, delay: 0.04, ease: EASE }}
-        style={{ padding: "10px 22px 4px" }}
       >
-        <div
-          style={{
-            fontFamily: FONT_IM_FELL,
-            fontSize: 30,
-            color: v1.inkPrimary,
-            lineHeight: 1.15,
-            letterSpacing: "-0.005em",
-          }}
-        >
-          Find Map
-        </div>
+        <FeaturedBanner
+          variant="overlay"
+          title="Find Map"
+          imageUrl={bannerImageUrl}
+          minHeight={180}
+          marginBottom={6}
+        />
       </motion.div>
 
-      {/* ── 3. Intro voice ───────────────────────────────────────────────── */}
+      {/* Fallback page title when no banner image is set — so the page still
+          has an identity. Hidden when the banner renders. */}
+      {!bannerImageUrl && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.34, delay: 0.04, ease: EASE }}
+          style={{ padding: "10px 22px 4px" }}
+        >
+          <div
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontSize: 30,
+              color: v1.inkPrimary,
+              lineHeight: 1.15,
+              letterSpacing: "-0.005em",
+            }}
+          >
+            Find Map
+          </div>
+        </motion.div>
+      )}
+
+      {/* 3. Intro voice */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -674,7 +669,7 @@ export default function FindMapPage() {
         </div>
       </motion.div>
 
-      {/* ── 4. Mall anchor (pin + name + address) ────────────────────────── */}
+      {/* 4. Mall anchor (pin + name + address) */}
       {!loading && mall && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -742,21 +737,19 @@ export default function FindMapPage() {
         </motion.div>
       )}
 
-      {/* ── 5. Divider — v1.1j plain hairline (diamond retired) ────────── */}
+      {/* 5. Hairline divider (v1.1j — diamond retired) */}
       {!loading && groups.length > 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.34, delay: 0.16, ease: EASE }}
-          style={{
-            padding: "14px 44px 18px",
-          }}
+          style={{ padding: "14px 44px 18px" }}
         >
           <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
         </motion.div>
       )}
 
-      {/* ── 6. Itinerary / loading / empty ───────────────────────────────── */}
+      {/* 6. Itinerary / loading / empty */}
       <main
         style={{
           padding: "0 22px",
@@ -785,11 +778,10 @@ export default function FindMapPage() {
               ))}
             </AnimatePresence>
 
-            {/* ── 7. Closer ─────────────────────────────────────────────── */}
-            {/* v1.1j — Closer loop: hairline drop from last X → terminal
-                circle in the same spine column; copy below centered in
-                FONT_SYS to match the "Booth" label. The diamond-flanked
-                divider retires (hairline-only per v1.1j). */}
+            {/* 7. Closer — v1.1l:
+                - Circle + copy share ONE grid row (vertically centered)
+                - Spine line from the last stop now flows into the circle
+                - Copy: tagline anchor ("Embrace the Search. Treasure the Find.") */}
             <motion.div
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
@@ -798,53 +790,31 @@ export default function FindMapPage() {
                 display: "grid",
                 gridTemplateColumns: "26px 1fr",
                 columnGap: 14,
+                alignItems: "center",
                 paddingTop: 0,
+                paddingBottom: 12,
               }}
             >
-              {/* Spine column — hairline tail + terminal circle */}
+              {/* Spine column — 16px filled circle (terminal anchor) */}
               <div
                 style={{
                   display: "flex",
-                  flexDirection: "column",
+                  justifyContent: "center",
                   alignItems: "center",
-                  paddingTop: 0,
                 }}
               >
-                <div
-                  style={{
-                    width: 1,
-                    height: 48,
-                    background: v1.inkHairline,
-                    marginTop: 8,
-                  }}
-                  aria-hidden="true"
-                />
                 <div
                   style={{
                     width: 16,
                     height: 16,
                     borderRadius: "50%",
                     background: v1.inkPrimary,
-                    marginTop: 2,
                   }}
                   aria-hidden="true"
                 />
               </div>
-              {/* Right column deliberately empty — the spine anchors on its own */}
-              <div />
-            </motion.div>
 
-            {/* Closer copy — centered, booth-label font (FONT_SYS) */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.34, delay: 0.28, ease: EASE }}
-              style={{
-                paddingTop: 18,
-                paddingBottom: 12,
-                textAlign: "center",
-              }}
-            >
+              {/* Copy column — tagline fragment, vertically aligned with circle */}
               <div
                 style={{
                   fontFamily: FONT_SYS,
@@ -853,10 +823,9 @@ export default function FindMapPage() {
                   color: v1.inkMid,
                   lineHeight: 1.5,
                   letterSpacing: "-0.005em",
-                  padding: "0 28px",
                 }}
               >
-                End of the map. Not the end of the search.
+                Embrace the Search. Treasure the Find.
               </div>
             </motion.div>
           </>

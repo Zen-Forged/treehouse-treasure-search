@@ -48,8 +48,11 @@ import { getSession, signOut, onAuthChange } from "@/lib/auth";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import { flagKey, loadFollowedIds } from "@/lib/utils";
 import { safeStorage } from "@/lib/safeStorage";
+import { getSiteSettingUrl } from "@/lib/siteSettings";
 import BottomNav from "@/components/BottomNav";
 import MallSheet from "@/components/MallSheet";
+import StickyMasthead from "@/components/StickyMasthead";
+import FeaturedBanner from "@/components/FeaturedBanner";
 import type { Post, Mall } from "@/types/treehouse";
 
 const SCROLL_KEY      = "treehouse_feed_scroll";
@@ -582,16 +585,17 @@ function FeedHero({
 
 // ══════════════════════════════════════════════════════════════════════════════
 export default function DiscoveryFeedPage() {
-  const [posts,         setPosts]         = useState<Post[]>([]);
-  const [malls,         setMalls]         = useState<Mall[]>([]);
-  const [loading,       setLoading]       = useState(true);
-  const [error,         setError]         = useState(false);
-  const [mallId,        setMallId]        = useState<string | null>(null);
-  const [mallSheetOpen, setMallSheetOpen] = useState(false);
-  const [followedIds,   setFollowedIds]   = useState<Set<string>>(new Set());
-  const [bookmarkCount, setBookmarkCount] = useState(0);
-  const [isAuthed,      setIsAuthed]      = useState<boolean | null>(null);
-  const [lastViewedId,  setLastViewedId]  = useState<string | null>(null);
+  const [posts,             setPosts]             = useState<Post[]>([]);
+  const [malls,             setMalls]             = useState<Mall[]>([]);
+  const [loading,           setLoading]           = useState(true);
+  const [error,             setError]             = useState(false);
+  const [mallId,            setMallId]            = useState<string | null>(null);
+  const [mallSheetOpen,     setMallSheetOpen]     = useState(false);
+  const [followedIds,       setFollowedIds]       = useState<Set<string>>(new Set());
+  const [bookmarkCount,     setBookmarkCount]     = useState(0);
+  const [isAuthed,          setIsAuthed]          = useState<boolean | null>(null);
+  const [lastViewedId,      setLastViewedId]      = useState<string | null>(null);
+  const [featuredImageUrl,  setFeaturedImageUrl]  = useState<string | null>(null);
   const wasHidden        = useRef(false);
   const pendingScrollY   = useRef<number | null>(null);
   const scrollRestored   = useRef(false);
@@ -627,6 +631,12 @@ export default function DiscoveryFeedPage() {
   }
 
   useEffect(() => { loadFeed(); }, []);
+
+  // Load featured-find banner URL on mount — fire-and-forget; banner renders
+  // null when no image is set (v1.1l graceful collapse).
+  useEffect(() => {
+    getSiteSettingUrl("featured_find_image_url").then(setFeaturedImageUrl);
+  }, []);
 
   // ── Scroll + last-viewed restore ────────────────────────────────────────────
   useEffect(() => {
@@ -753,26 +763,17 @@ export default function DiscoveryFeedPage() {
       }}
     >
       {/* ── 1. Masthead (Mode B) ────────────────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.34, ease: EASE }}
+      {/* 1. StickyMasthead (Mode B) — v1.1l primitive */}
+      <StickyMasthead
         style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 40,
           display: "grid",
           gridTemplateColumns: "1fr auto 1fr",
           alignItems: "center",
           padding: "max(14px, env(safe-area-inset-top, 14px)) 18px 12px",
           gap: 12,
-          background: "rgba(232,221,199,0.96)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          borderBottom: `1px solid ${v1.inkHairline}`,
         }}
       >
-        {/* Left slot — logo as brand mark (v1.1j — enlarged from 24/0.72 to 34/0.92). */}
+        {/* Left slot — logo as brand mark */}
         <div style={{ justifySelf: "start" }} aria-hidden="true">
           <Image
             src="/logo.png"
@@ -783,7 +784,7 @@ export default function DiscoveryFeedPage() {
           />
         </div>
 
-        {/* Centered wordmark (Mode A/B shared) */}
+        {/* Centered wordmark */}
         <div
           style={{
             fontFamily: FONT_IM_FELL,
@@ -796,7 +797,7 @@ export default function DiscoveryFeedPage() {
           Treehouse Finds
         </div>
 
-        {/* Right slot — sign-in / sign-out text link preserved from v0.2 */}
+        {/* Right slot — sign-in / sign-out text link */}
         <div style={{ justifySelf: "end" }}>
           {isAuthed === false && (
             <Link
@@ -841,6 +842,22 @@ export default function DiscoveryFeedPage() {
           )}
           {isAuthed === null && <span aria-hidden="true">&nbsp;</span>}
         </div>
+      </StickyMasthead>
+
+      {/* 1.5 FeaturedBanner (eyebrow variant, v1.1l) — admin-editable.
+          Only renders when an image URL is set; otherwise collapses quietly. */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.34, delay: 0.04, ease: EASE }}
+      >
+        <FeaturedBanner
+          variant="eyebrow"
+          title="Featured Find"
+          imageUrl={featuredImageUrl}
+          minHeight={200}
+          marginBottom={6}
+        />
       </motion.div>
 
       {/* ── 2. Feed hero on paper ──────────────────────────────────────── */}

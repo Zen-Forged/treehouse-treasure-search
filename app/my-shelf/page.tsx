@@ -26,6 +26,7 @@ import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Post, type Vendor, type Mall } from "@/types/treehouse";
 import BottomNav from "@/components/BottomNav";
+import StickyMasthead from "@/components/StickyMasthead";
 import {
   BoothHero,
   BoothTitleBlock,
@@ -63,23 +64,20 @@ function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promis
 }
 
 // ─── Masthead (Mode A, owner variant — no back arrow, no right slot) ──────────
+// v1.1l — migrated to <StickyMasthead>. The scroll-target ref is the page's
+// overflow-auto scroll container (not window) because this page's scroll
+// context lives inside that div. Passed from the parent.
 
-function Masthead() {
+function Masthead({ scrollTarget }: { scrollTarget: React.RefObject<HTMLDivElement | null> }) {
   return (
-    <div
+    <StickyMasthead
+      scrollTarget={scrollTarget}
       style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 40,
         padding: "max(14px, env(safe-area-inset-top, 14px)) 22px 12px",
         display: "grid",
         gridTemplateColumns: "38px 1fr 38px",
         alignItems: "center",
         gap: 12,
-        background: "rgba(232,221,199,0.96)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
-        borderBottom: `1px solid ${v1.inkHairline}`,
       }}
     >
       <div />
@@ -95,7 +93,7 @@ function Masthead() {
         Treehouse Finds
       </div>
       <div />
-    </div>
+    </StickyMasthead>
   );
 }
 
@@ -208,6 +206,7 @@ function MyBoothInner() {
   const [heroError,     setHeroError]     = useState<string | null>(null);
 
   const heroLockedRef = useRef(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     getSession().then(s => {
@@ -368,13 +367,14 @@ function MyBoothInner() {
       }}
     >
       <div
+        ref={scrollContainerRef}
         style={{
           flex: 1,
           overflowY: "auto",
           paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
         }}
       >
-        <Masthead />
+        <Masthead scrollTarget={scrollContainerRef} />
         {loading ? (
           <Skeleton />
         ) : !activeVendor ? (

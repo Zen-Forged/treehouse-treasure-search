@@ -167,6 +167,30 @@ Session close build check          A session is not closed until `npm run build`
                                    `lib/imageUpload.ts` orphan was discovered — CLAUDE.md had
                                    documented a file as shipped that was never committed.
                                    Docs agent responsibility at `thc`.
+str_replace vs filesystem:edit_file Two separate `str_replace`-shaped tools exist in this
+                                   environment: (1) the container shell `str_replace` which
+                                   cannot see the Mac filesystem, (2) the filesystem MCP's
+                                   `edit_file` which is the ONLY way to modify files at
+                                   /Users/davidbutler/Projects/... from inside a Claude session.
+                                   Parameter shape differs: `edit_file` takes an `edits` array
+                                   of `{oldText, newText}` objects, not the shell's two-arg
+                                   form. If `str_replace` returns "File not found" on a path
+                                   you know exists and can read via `filesystem:read_text_file`,
+                                   switch to `filesystem:edit_file`. Added session 23.
+Box-drawing anchor bug             `filesystem:edit_file` fails intermittently on `oldText`
+                                   anchors containing box-drawing characters (───, ═══, etc.)
+                                   inside comment rules like `// ─── Section title ───`.
+                                   Symptom: "Could not find exact match" despite the string
+                                   visibly matching in the file. Workaround: drop the rule
+                                   line from the anchor entirely. Anchor instead on unique
+                                   code content (function signatures, unique inline-style
+                                   prop combos, `}\n\nexport default`). Also: `edit_file`
+                                   batches are atomic — if one `oldText` in a multi-edit
+                                   batch doesn't match, EVERY edit rolls back, even the ones
+                                   whose anchors did match. Good discipline: split risky
+                                   anchors into separate `edit_file` calls. Fired across
+                                   sessions 16, 19A, 21A, 22A before promotion. Added
+                                   session 23.
 ```
 
 ---
@@ -227,7 +251,7 @@ These don't stop work but must be called out explicitly before the session conti
 
 ## Current Risk Register
 
-> Updated: 2026-04-18 (session 19 — 19A token consolidation shipped; `lib/tokens.ts` canonical for v1.1h palette + fonts; three inline duplicates retired)
+> Updated: 2026-04-18 (session 23 — v1.1k activation flow pass shipped; onboarding v0.2 surfaces retired; `/admin/login` NEW route committed; MallSheet migration deferred to Sprint 5 sub-sprint)
 
 | Risk | Severity | Status | Owner |
 |---|---|---|---|
@@ -267,10 +291,13 @@ These don't stop work but must be called out explicitly before the session conti
 | `/shelves` `AddBoothSheet` will be orphaned after T4b | 🟢 Low | Open — remove in T4b | Dev agent |
 | `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` obsolete | 🟢 Low | Open — doc cleanup | Docs agent |
 | **Design direction drifted toward generic across sessions 12–14** | 🟡 **Medium** | ✅ Resolved session 15 — `docs/design-system.md` rewritten v0.2 → v1.0 with journal vocabulary committed. Doc has continued to evolve v1.1 → v1.1g across sessions 16–17 as Find Detail + Find Map shipped against it. | Design agent |
-| **Booth page `LocationStatement` / `BoothLocationCTA` components deprecated** | 🟢 Low | Open — code still in repo and functional on `/my-shelf` and `/shelf/[slug]`, but v1.1g spec retires them. Dedicated Booth v1.1g Design sprint will replace them with the cartographic pin+X block. Not blocking; existing Booth page is functional. Scoped as session 18 candidate A. | Design + Dev agents |
+| **Booth page `LocationStatement` / `BoothLocationCTA` components deprecated** | ✅ | ✅ Resolved session 18 — both components deleted with the v1.1h Booth page redesign. Cartographic pin+X block and banner post-it replace their roles. File deletions committed alongside `components/BoothPage.tsx` rewrite. | Design + Dev agents |
 | **lib/tokens.ts token additions for v1.1g** (post-it, ink scale, price ink, paperCream, Find tile primitive) | 🟢 Low | ✅ Resolved session 19A — `lib/tokens.ts` extended with canonical `v1` + `fonts` exports. Find Detail, Find Map, and BoothPage all import from it. v0.2 `colors`/`radius`/`spacing` coexist untouched during migration. | Dev agent |
 | **Feed, Find Map, Find Detail sold state contradict `/shelf/[slug]` policy for MVP surfacing** | 🟡 Low | ✅ Resolved session 20 — `docs/design-system.md` v1.1i commits the sold-retirement policy: feed filters sold at data layer (already does via `getFeedPosts.eq("status","available")`), Find Map keeps bookmark + tile + uses Find Detail 3B sold landing state as the reveal, public Booth pages retain sold posts. Three-part contract (bookmark / tile / 3B) explicitly documented so no future Dev agent adds a status filter to `getPostsByIds` and breaks the reveal path. | Design + Dev agents |
-| **v1.1i code sprint pending** (Feed + MallSheet + 3B) | 🟡 Low | Open — spec locked in `docs/design-system.md` v1.1i; session 21A scoped in `CLAUDE.md` with 8-step task graph. Highest-leverage remaining design move before beta. No design iteration needed; mockups + doc are sufficient. | Dev agent |
+| **v1.1i code sprint pending** (Feed + MallSheet + 3B) | ✅ | ✅ Resolved session 21A — Feed paper-masonry + `<MallSheet>` component + Find Detail 3B sold landing state all shipped; `<MallHeroCard>` + `<GenericMallHero>` + inline `ChevronDown` dropdown all retired. | Dev agent |
+| **Onboarding screens (`/vendor-request`, `/setup`, `/login`) on v0.2 chrome** | 🟡 Medium | ✅ Resolved session 23 — v1.1k activation flow pass shipped. Four files rewritten + one new file (`/admin/login`) + one surgical edit (`/admin/page.tsx` unauth-gate redirect). Eight v1.1k commitments locked in `docs/design-system.md`: Mode C interior grammar, paper-wash success bubble, filled-green-CTA-commit-actions-only rule, form input primitive, email echo line primitive, tab switcher retirement, `/admin/login` scope, MallSheet deferral. | Design + Dev agents |
+| **`/admin/login` route disposition** (keep dedicated / fold into `/admin` unauth gate / remove `/login` fallback) | 🟢 Low | Open — T4b decides. v1.1k committed the new route as dedicated per STOP rule on auth-flow changes; `/admin` unauth gate now redirects to `/admin/login` via one-line surgical edit (zero visual change to admin UI). Full `/admin` surface consolidation including login disposition lives in T4b. | Product + Dev agents |
+| **`<MallSheet>` migration to `/post`, `/post/preview`, `/vendor-request`** | 🟢 Low | Open — Sprint 5 sub-sprint. Primitive committed session 20; Feed is its first consumer (shipped 21A). The three remaining consumers wire mechanically against the committed interface; `/vendor-request` was explicitly deferred in v1.1k (h) rather than bundled. | Dev agent |
 | **Find Map v0.2 (page called "My Finds") pre-beta chrome mismatch** | 🟡 Medium | ✅ Resolved session 17 — `/flagged` full redesign to v1.1g shipped (journal itinerary, pin+mall anchor, X-glyph spine, Booth pill rows, find tiles with prices + unsave heart, intro voice + chapter-break closer). All v0.2 localStorage / pruning / grouping / focus-rehydration / unsave wiring preserved. | Design + Dev agents |
 | **Glyph hierarchy not documented as a cross-cutting rule** (risk: future screens pick the wrong glyph and dilute the language) | 🟢 Low | ✅ Resolved session 17 — pin = mall, X = booth locked in `docs/design-system.md` v1.1g Cartographic Vocabulary section. Propagates to Booth redesign (18A), Feed redesign (18B), and any future location-naming surface. | Design agent |
 | **App-wide background color inconsistent across routes** (Find Detail used paperCream; `/flagged` and chrome elsewhere still used legacy `#f0ede6`) | 🟢 Low | ✅ Resolved session 17 — `app/layout.tsx` body inline + `app/globals.css` `@layer base body` both committed to `#e8ddc7` paperCream. Global bg commitment documented in design-system doc "Paper as surface" section. | Design + Dev agents |
@@ -317,7 +344,7 @@ These don't stop work but must be called out explicitly before the session conti
 Every session standup includes a one-line Agent Roster block confirming who is active for the session. This prevents silently dropping an activated agent from the loop.
 
 **Standard standup preamble:**
-> **Active agents:** Dev · Product · Docs · Design — *(current as of 2026-04-18 session 20)*
+> **Active agents:** Dev · Product · Docs · Design — *(current as of 2026-04-18 session 23)*
 
 When an agent is activated or deactivated:
 1. Update the Agent Roster table above
@@ -388,7 +415,7 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 | `.claude/MASTER_PROMPT.md` | Operator rulebook — session structure, phase gating, approval boundaries |
 | `SPRINT_PLAN.md` | Sprint-level feature roadmap |
 | `docs/onboarding-journey.md` | **Canonical vendor onboarding spec — three flows, email matrix, re-scoped T4.** All onboarding-adjacent work scopes against this first. *(created session 8)* |
-| `docs/design-system.md` | **Canonical visual + interaction system — v1.1g.** Journal vocabulary, cartographic pin+X (glyph hierarchy locked session 17), IM Fell English typography, post-it material gesture at +6deg with stacked "Booth Location" eyebrow, paper-as-surface globally committed at `#e8ddc7`, Find Detail v1.1f spec, Find Map v1.1g spec, Find tile primitive. All multi-screen UI work scopes against this first. Owned by Design agent. *(rewritten session 15, evolved through v1.1g in sessions 16–17)* |
+| `docs/design-system.md` | **Canonical visual + interaction system — v1.1k.** Journal vocabulary, cartographic pin+X (glyph hierarchy locked session 17), IM Fell English typography, post-it material gesture at +6deg with stacked "Booth Location" eyebrow, paper-as-surface globally committed at `#e8ddc7`, Feed paper-masonry + `<MallSheet>` primitive (v1.1i), diamond ornaments retired + `FONT_SYS` for booth numerals (v1.1j), Mode C interior grammar + paper-wash success bubble + form input primitive + email echo line + filled-green-CTA-commit-actions-only rule (v1.1k). All multi-screen UI work scopes against this first. Owned by Design agent. *(rewritten session 15, evolved through v1.1k in sessions 16–23)* |
 | `docs/known-issues.md` | Active bugs, gaps, deferred items |
 | `docs/admin-runbook.md` | 9-recipe SQL triage guide for in-mall use *(created session 13)* |
 | `docs/decision-log.md` | Architectural decisions and their rationale *(create when first decision is logged)* |
@@ -396,4 +423,4 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 ---
 > This document is the operating constitution for the Treehouse system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-18 (session 20 — v1.1i design spec committed to `docs/design-system.md`; Feed + `<MallSheet>` + Find Detail 3B sold landing state scoped; code sprint deferred to session 21A; Risk Register updated)
+> Last updated: 2026-04-18 (session 23 — v1.1k activation flow pass shipped; `/vendor-request` + `/login` + `/setup` + new `/admin/login` all on v1.1k vocabulary; three Tech Rules added (`str_replace` vs `filesystem:edit_file`, box-drawing anchor bug); onboarding-screens-on-v0.2 Risk Register row resolved; two new follow-on rows added for `/admin/login` disposition + MallSheet migration sub-sprint)
