@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Activation Flow v1.1k</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Caveat:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --ink-wash:     rgba(42, 26, 10, 0.04);
+    --ink-bubble:   rgba(42, 26, 10, 0.06);
+    --price-ink:    #6a4a30;
+    --green:        #1e4d2b;
+    --red:          #8b2020;
+    --red-bg:       rgba(139, 32, 32, 0.07);
+    --red-border:   rgba(139, 32, 32, 0.18);
+    --input-bg:     rgba(255, 253, 248, 0.70);
+
+    --im-fell: "IM Fell English", Georgia, serif;
+    --caveat:  "Caveat", "IM Fell English", cursive;
+    --sys:     -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+
+  .page-wrap { max-width: 1400px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  h1.exploration-title {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 32px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .exploration-subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 760px;
+  }
+  .decisions-pane {
+    max-width: 920px;
+    margin: 0 auto 48px;
+    padding: 20px 28px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.75;
+    font-family: var(--sys);
+  }
+  .decisions-pane h3 {
+    font-family: var(--im-fell);
+    font-size: 19px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 10px;
+    letter-spacing: -0.005em;
+  }
+  .decisions-pane ul { margin: 0; padding: 0 0 0 20px; }
+  .decisions-pane li { margin-bottom: 5px; }
+  .decisions-pane strong { color: #fff9e8; font-weight: 500; }
+  .decisions-pane code {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: #fff9e8;
+  }
+
+  .section-label {
+    max-width: 1280px;
+    margin: 72px auto 22px;
+    padding: 0 8px;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+  .section-number {
+    font-family: var(--im-fell);
+    font-size: 50px;
+    font-weight: 400;
+    color: #e8ddc7;
+    line-height: 1;
+  }
+  .section-title {
+    font-family: var(--im-fell);
+    font-size: 23px;
+    color: #e8ddc7;
+    letter-spacing: -0.005em;
+  }
+  .section-note {
+    font-family: var(--sys);
+    font-size: 13px;
+    color: rgba(232, 221, 199, 0.68);
+    line-height: 1.55;
+    margin-left: auto;
+    max-width: 520px;
+    text-align: right;
+    font-style: italic;
+  }
+
+  .pair-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .triple-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .single-row {
+    display: flex;
+    justify-content: center;
+    margin: 0 auto;
+  }
+  @media (max-width: 1200px) {
+    .triple-row { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 900px) {
+    .triple-row, .pair-row { grid-template-columns: 1fr; }
+  }
+
+  /* ═════════════════════════════════════════════════════════════════════
+     PHONE FRAME
+     ═════════════════════════════════════════════════════════════════════ */
+  .phone {
+    width: 430px;
+    margin: 0 auto;
+    background: var(--paper);
+    border-radius: 42px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+    position: relative;
+    border: 8px solid #121015;
+    min-height: 812px;
+  }
+  .phone-label {
+    text-align: center;
+    font-family: var(--sys);
+    font-size: 12px;
+    color: rgba(232, 221, 199, 0.75);
+    margin: 10px 0 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .phone-variant-rationale {
+    text-align: center;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 14px;
+    color: rgba(232, 221, 199, 0.55);
+    margin: 0 auto 24px;
+    max-width: 380px;
+    line-height: 1.55;
+  }
+  .primitive-note {
+    max-width: 380px;
+    margin: 4px auto 0;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border-left: 2px solid rgba(232, 221, 199, 0.3);
+    font-family: var(--sys);
+    font-size: 11.5px;
+    color: rgba(232, 221, 199, 0.75);
+    line-height: 1.65;
+  }
+  .primitive-note .label {
+    color: #fff9e8;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    font-size: 10.5px;
+    text-transform: uppercase;
+  }
+
+  /* ═════════════════════════════════════════════════════════════════════
+     Mode C chrome — shared primitives
+     ═════════════════════════════════════════════════════════════════════ */
+  .mode-c-header {
+    padding: max(18px, env(safe-area-inset-top, 18px)) 16px 14px;
+  }
+  .icon-bubble {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--ink-bubble);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: none;
+    padding: 0;
+  }
+  .icon-bubble svg { color: var(--ink-primary); }
+
+  .mode-c-main {
+    padding: 8px 28px 40px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Hero mark — paper-wash bubble (v1.1k primitive) */
+  .success-bubble {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--ink-wash);
+    border: 0.5px solid var(--ink-hairline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 22px;
+  }
+  .success-bubble svg { color: var(--ink-primary); }
+
+  /* Small logo mark for /login and /admin/login */
+  .logo-mark {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--ink-wash);
+    border: 0.5px solid var(--ink-hairline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 22px;
+    position: relative;
+  }
+  .logo-mark .leaf {
+    width: 22px;
+    height: 22px;
+    background: var(--green);
+    clip-path: path("M11 2C6 4 2 8 2 13c3-1 6-2 9-4 3-2 6-5 6-9-2 0-4 1-6 2z");
+    border-radius: 50%;
+    opacity: 0.82;
+  }
+
+  /* Page title / headline treatments */
+  .page-title {
+    font-family: var(--im-fell);
+    font-size: 28px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+    text-align: center;
+    margin: 0 0 8px;
+  }
+  .page-title.large {
+    font-size: 30px;
+  }
+  .page-title.hero-page {
+    font-size: 30px;
+    margin: 0 0 14px;
+  }
+  .page-subhead {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink-muted);
+    line-height: 1.55;
+    text-align: center;
+    margin: 0 auto 28px;
+    max-width: 300px;
+  }
+  .page-subhead.reflect {
+    font-size: 16px;
+    color: var(--ink-mid);
+    max-width: 320px;
+    line-height: 1.65;
+    margin-bottom: 24px;
+  }
+
+  /* Intro block for /vendor-request form */
+  .intro-block {
+    margin: 16px 0 28px;
+  }
+  .intro-block h1 {
+    font-family: var(--im-fell);
+    font-size: 28px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+    margin: 0 0 12px;
+  }
+  .intro-block p {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--ink-muted);
+    line-height: 1.65;
+    margin: 0;
+  }
+
+  /* ═════════════════════════════════════════════════════════════════════
+     Form input primitive (v1.1k)
+     ═════════════════════════════════════════════════════════════════════ */
+  .form-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .form-label {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.3;
+  }
+  .form-label .optional {
+    font-style: italic;
+    color: var(--ink-faint);
+    margin-left: 3px;
+  }
+  .form-input, .form-select {
+    width: 100%;
+    padding: 14px 14px;
+    border-radius: 14px;
+    background: var(--input-bg);
+    border: 1px solid var(--ink-hairline);
+    font-family: var(--sys);
+    font-size: 16px;
+    color: var(--ink-primary);
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .form-input::placeholder {
+    color: var(--ink-faint);
+  }
+  .form-input.focus {
+    border-color: var(--ink-primary);
+    border-width: 1.5px;
+    padding: 13.5px 13.5px;
+  }
+  .form-input.error {
+    border-color: var(--red-border);
+    border-width: 1.5px;
+    padding: 13.5px 13.5px;
+  }
+  .form-select {
+    padding-right: 40px;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b5538' stroke-width='2' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 12px 12px;
+  }
+  .form-select.placeholder {
+    color: var(--ink-faint);
+  }
+
+  /* Code input — centered, spaced digits */
+  .code-input {
+    font-size: 28px;
+    text-align: center;
+    letter-spacing: 0.4em;
+    padding: 18px 14px;
+    font-family: var(--sys);
+    color: var(--ink-primary);
+  }
+  .code-input.busy { opacity: 0.6; }
+
+  /* ═════════════════════════════════════════════════════════════════════
+     CTA primitives
+     ═════════════════════════════════════════════════════════════════════ */
+  .cta-primary {
+    width: 100%;
+    padding: 15px;
+    border-radius: 14px;
+    background: var(--green);
+    color: #fff;
+    font-family: var(--sys);
+    font-size: 15px;
+    font-weight: 500;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 14px rgba(30, 77, 43, 0.22);
+  }
+  .cta-primary.disabled {
+    background: rgba(30, 77, 43, 0.40);
+    box-shadow: none;
+    cursor: default;
+  }
+  .cta-primary svg { color: #fff; }
+
+  .link-quiet {
+    display: inline-block;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--ink-primary);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--ink-faint);
+    text-underline-offset: 4px;
+    cursor: pointer;
+  }
+  .link-quiet.center {
+    text-align: center;
+    display: block;
+  }
+  .link-quiet.secondary {
+    color: var(--ink-muted);
+    font-size: 15px;
+  }
+  .link-quiet.small {
+    font-size: 14px;
+  }
+
+  .links-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+    margin-top: 32px;
+  }
+
+  /* Footer meta line */
+  .footer-note {
+    font-family: var(--sys);
+    font-size: 12px;
+    color: var(--ink-faint);
+    text-align: center;
+    line-height: 1.6;
+    margin-top: 14px;
+  }
+
+  /* ═════════════════════════════════════════════════════════════════════
+     Email echo line primitive (v1.1k)
+     ═════════════════════════════════════════════════════════════════════ */
+  .email-echo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 0;
+    border-top: 0.5px solid var(--ink-hairline);
+    border-bottom: 0.5px solid var(--ink-hairline);
+    margin-bottom: 22px;
+  }
+  .email-echo svg { color: var(--ink-muted); flex-shrink: 0; }
+  .email-echo-label {
+    font-family: var(--sys);
+    font-size: 14px;
+    color: var(--ink-muted);
+  }
+  .email-echo-addr {
+    font-family: var(--sys);
+    font-size: 14px;
+    color: var(--ink-primary);
+    font-weight: 500;
+    word-break: break-all;
+  }
+
+  /* Error banner primitive (retained from v0.2, retoned) */
+  .error-banner {
+    padding: 11px 14px;
+    border-radius: 10px;
+    background: var(--red-bg);
+    border: 1px solid var(--red-border);
+    font-family: var(--sys);
+    font-size: 13px;
+    color: var(--red);
+    line-height: 1.5;
+  }
+
+  /* Resend row (OTP screen) */
+  .resend-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 2px;
+    font-family: var(--sys);
+    font-size: 13px;
+  }
+  .resend-row .prefix { color: var(--ink-muted); }
+  .resend-row .link {
+    color: var(--ink-primary);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--ink-faint);
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+  .resend-row .link.disabled {
+    color: var(--ink-faint);
+    text-decoration: none;
+    cursor: default;
+  }
+
+  /* Paste-from-clipboard (retoned text link) */
+  .paste-link {
+    text-align: center;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-muted);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--ink-faint);
+    text-underline-offset: 3px;
+    margin-top: 6px;
+    cursor: pointer;
+  }
+  .paste-link svg {
+    width: 13px;
+    height: 13px;
+    color: var(--green);
+    vertical-align: -2px;
+    margin-right: 5px;
+  }
+
+  /* Fallback / supplementary lines */
+  .fallback-line {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-faint);
+    text-align: center;
+    line-height: 1.65;
+    margin: 10px 0 0;
+  }
+
+  /* Verifying inline indicator */
+  .verifying {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+  }
+  .spinner {
+    width: 13px;
+    height: 13px;
+    border: 1.5px solid var(--ink-faint);
+    border-top-color: var(--ink-primary);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Centered hero column for end-of-path screens */
+  .hero-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 28px;
+    min-height: 620px;
+    text-align: center;
+  }
+  .hero-center .page-title {
+    margin-top: 0;
+  }
+
+  /* Password-style input (for PIN) */
+  .pin-input {
+    font-size: 22px;
+    text-align: center;
+    letter-spacing: 0.4em;
+    padding: 16px 14px;
+    font-family: var(--sys);
+  }
+
+  /* Full-width padding used across mode C body */
+  .mode-c-body {
+    padding: 0 28px;
+    flex: 1;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <h1 class="exploration-title">Activation Flow  —  v1.1k</h1>
+  <p class="exploration-subtitle">
+    The four Mode C task-first surfaces move from v0.2 Georgia + legacy chrome to v1.1j paper vocabulary.
+    Mockup covers: <code style="background:rgba(255,255,255,0.08);padding:1px 6px;border-radius:3px;font-size:12px;color:#fff9e8;">/vendor-request</code>,
+    <code style="background:rgba(255,255,255,0.08);padding:1px 6px;border-radius:3px;font-size:12px;color:#fff9e8;">/login</code>,
+    <code style="background:rgba(255,255,255,0.08);padding:1px 6px;border-radius:3px;font-size:12px;color:#fff9e8;">/admin/login</code> (new),
+    <code style="background:rgba(255,255,255,0.08);padding:1px 6px;border-radius:3px;font-size:12px;color:#fff9e8;">/setup</code>.
+  </p>
+
+  <div class="decisions-pane">
+    <h3>Locked in v1.1k (from design-system.md Status)</h3>
+    <ul>
+      <li><strong>Mode C grammar</strong> — back-arrow paper bubble top-left; no masthead wordmark; no diamonds, no post-it, no cartographic glyphs. Editorial voice for moments; precise voice for data.</li>
+      <li><strong>Paper-wash 60px success bubble</strong> — <code>rgba(42,26,10,0.04)</code> bg, 0.5px <code>inkHairline</code> edge, glyph in <code>inkPrimary</code>. Retires the v0.2 greenLight/greenBorder chrome.</li>
+      <li><strong>Filled green CTA</strong> — commit actions only: Request access, Email me a code, Sign in as Admin, Go to my shelf. End-of-path → IM Fell italic dotted-underline text links.</li>
+      <li><strong>Form input primitive</strong> — white translucent bg, 1px <code>inkHairline</code> border (focus 1.5px <code>inkPrimary</code>, error 1.5px <code>redBorder</code>), 14px radius, <code>FONT_SYS</code> 16px.</li>
+      <li><strong>Email echo line</strong> — horizontal row with mail glyph + "Sent to [email]", hairline rules above/below. <em>Not</em> a surface card.</li>
+      <li><strong>Admin PIN retires from <code>/login</code></strong> — new dedicated <code>/admin/login</code> route. <code>/login</code> becomes curator-only (no tabs).</li>
+      <li><strong>Native &lt;select&gt; on vendor-request mall field</strong> — MallSheet migration deliberately deferred to Sprint 5.</li>
+    </ul>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SECTION 1 — /vendor-request (form + success)
+       Flow 3 entry. First impression for remote vendors.
+       ══════════════════════════════════════════════════════════════════ -->
+  <div class="section-label">
+    <div class="section-number">1</div>
+    <div class="section-title">/vendor-request &nbsp;— form &amp; success</div>
+    <div class="section-note">Flow 3 front door. First impression for every remote vendor.</div>
+  </div>
+
+  <div class="pair-row">
+
+    <!-- 1A — Form -->
+    <div>
+      <div class="phone">
+        <div class="mode-c-header">
+          <button class="icon-bubble" aria-label="Back">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+        </div>
+        <div class="mode-c-main">
+          <div class="intro-block">
+            <h1>Bring your booth to Treehouse.</h1>
+            <p>Let buyers discover your finds before they make the trip. Fill in your details and we'll be in touch.</p>
+          </div>
+
+          <div class="form-stack">
+            <div class="form-field">
+              <label class="form-label">Your name</label>
+              <input type="text" class="form-input" placeholder="First and last name">
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Email address</label>
+              <input type="email" class="form-input focus" value="dbutler80020+10@gmail.com">
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Your mall <span class="optional">(optional)</span></label>
+              <select class="form-select">
+                <option>America's Antique Mall — Louisville, KY</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Booth number <span class="optional">(optional)</span></label>
+              <input type="text" class="form-input" placeholder="e.g. 369" value="369">
+            </div>
+
+            <button class="cta-primary">Request access</button>
+
+            <p class="footer-note">We'll only use your email to follow up on this request.</p>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">1A &nbsp;—&nbsp; /vendor-request (form)</div>
+      <div class="primitive-note">
+        <span class="label">Primitives on this screen</span><br>
+        Mode C chrome · Form input primitive (one field shown in focus state) · Native &lt;select&gt; (MallSheet deferred) · Filled green CTA (commit action) · Footer meta line
+      </div>
+    </div>
+
+    <!-- 1B — Success -->
+    <div>
+      <div class="phone">
+        <div class="mode-c-header">
+          <button class="icon-bubble" aria-label="Back">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+        </div>
+        <div class="hero-center">
+          <div class="success-bubble">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <h1 class="page-title hero-page">You're on the list.</h1>
+          <p class="page-subhead reflect">We'll review your request and be in touch soon with next steps to get your booth on Treehouse.</p>
+
+          <div class="email-echo" style="max-width: 320px; width: 100%;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+            <span class="email-echo-label">Sent to&nbsp;</span>
+            <span class="email-echo-addr">dbutler80020+10@gmail.com</span>
+          </div>
+
+          <div class="links-stack">
+            <a class="link-quiet">Explore the feed &rarr;</a>
+            <a class="link-quiet secondary">Go back</a>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">1B &nbsp;—&nbsp; /vendor-request (success)</div>
+      <div class="primitive-note">
+        <span class="label">Primitives on this screen</span><br>
+        Paper-wash success bubble (60px, <code>inkPrimary</code> check — NOT green) · Email echo line primitive (first appearance) · Two IM Fell italic dotted-underline text links — <em>no</em> filled green CTA (end-of-path)
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SECTION 2 — /login (email entry + OTP + confirming)
+       Curator-only after PIN retirement. No tabs.
+       ══════════════════════════════════════════════════════════════════ -->
+  <div class="section-label">
+    <div class="section-number">2</div>
+    <div class="section-title">/login &nbsp;— curator sign-in</div>
+    <div class="section-note">No tabs. Admin PIN retired — moved to <code style="color:rgba(232,221,199,0.88);">/admin/login</code>.</div>
+  </div>
+
+  <div class="triple-row">
+
+    <!-- 2A — Email entry -->
+    <div>
+      <div class="phone">
+        <div class="mode-c-header">
+          <button class="icon-bubble" aria-label="Back">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+        </div>
+        <div class="mode-c-body" style="padding-top: 80px;">
+          <div class="logo-mark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e4d2b" stroke-width="1.6"><path d="M12 3C8 5 5 8 5 12c4 0 7-2 9-5 2-3 3-6 3-9-2 0-3 1-5 2z" fill="#1e4d2b" fill-opacity="0.82"/></svg>
+          </div>
+          <h1 class="page-title">Curator Sign in</h1>
+          <p class="page-subhead">We'll email you a 6-digit code. No password needed.</p>
+
+          <div class="form-stack" style="max-width: 340px; margin: 0 auto;">
+            <div class="form-field">
+              <label class="form-label">Email address</label>
+              <input type="email" class="form-input" placeholder="you@example.com">
+            </div>
+
+            <button class="cta-primary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+              Email me a code
+            </button>
+
+            <p class="footer-note">First time? An account is created automatically.</p>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">2A &nbsp;—&nbsp; /login (email entry)</div>
+      <div class="primitive-note">
+        <span class="label">Primitives on this screen</span><br>
+        Mode C chrome · Logo mark (paper-wash 44px, leaf glyph in green) · Form input · Filled green CTA with inline Mail glyph (commit action)
+      </div>
+    </div>
+
+    <!-- 2B — OTP code entry -->
+    <div>
+      <div class="phone">
+        <div class="mode-c-header">
+          <button class="icon-bubble" aria-label="Back">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+        </div>
+        <div class="mode-c-body" style="padding-top: 60px;">
+          <div class="logo-mark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e4d2b" stroke-width="1.6"><path d="M12 3C8 5 5 8 5 12c4 0 7-2 9-5 2-3 3-6 3-9-2 0-3 1-5 2z" fill="#1e4d2b" fill-opacity="0.82"/></svg>
+          </div>
+          <h1 class="page-title">Curator Sign in</h1>
+          <p class="page-subhead">We sent a 6-digit code to your email.</p>
+
+          <div style="max-width: 340px; margin: 0 auto;">
+            <div class="email-echo">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+              <span class="email-echo-label">Sent to&nbsp;</span>
+              <span class="email-echo-addr">dbutler80020+10@gmail.com</span>
+            </div>
+
+            <div class="form-field" style="margin-bottom: 14px;">
+              <label class="form-label">6-digit code</label>
+              <input type="text" class="form-input code-input" value="428" maxlength="6">
+            </div>
+
+            <a class="paste-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+              Paste code from clipboard
+            </a>
+
+            <p class="fallback-line">Or tap the link we emailed you &mdash; either works.</p>
+
+            <div class="resend-row" style="margin-top: 22px;">
+              <span class="prefix">Didn't get it?</span>
+              <span class="link disabled">Resend in 20s</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">2B &nbsp;—&nbsp; /login (OTP entry)</div>
+      <div class="primitive-note">
+        <span class="label">Primitives on this screen</span><br>
+        Email echo line (second use) · Code input (centered, 0.4em tracking, <code>FONT_SYS</code>) · Paste-link (retoned from v0.2 surface-card) · Fallback italic line · Resend row — no filled CTA (auto-verifies on 6th digit)
+      </div>
+    </div>
+
+    <!-- 2C — Confirming (magic-link fallback bridge) -->
+    <div>
+      <div class="phone">
+        <div class="hero-center">
+          <div class="success-bubble">
+            <div class="spinner" style="width: 22px; height: 22px; border-width: 2px;"></div>
+          </div>
+          <h1 class="page-title">Signing you in&hellip;</h1>
+          <p class="page-subhead">Just a moment.</p>
+        </div>
+      </div>
+      <div class="phone-label">2C &nbsp;—&nbsp; /login (confirming bridge)</div>
+      <div class="primitive-note">
+        <span class="label">Primitives on this screen</span><br>
+        Paper-wash success bubble with inline spinner glyph (generalizes the bubble primitive beyond just checkmarks) · Typography carries the state — no green info box, no chrome beyond the mark
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SECTION 3 — /admin/login (NEW route)
+       Dedicated PIN entry. Decoupled from /login.
+       ══════════════════════════════════════════════════════════════════ -->
+  <div class="section-label">
+    <div class="section-number">3</div>
+    <div class="section-title">/admin/login &nbsp;— dedicated PIN entry (NEW route)</div>
+    <div class="section-note">Decoupled from curator sign-in per v1.1k (f). Replaces the v0.2 tab switcher.</div>
+  </div>
+
+  <div class="pair-row">
+
+    <!-- 3A — PIN entry -->
+    <div>
+      <div class="phone">
+        <div class="mode-c-header">
+          <button class="icon-bubble" aria-label="Back">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+        </div>
+        <div class="mode-c-body" style="padding-top: 80px;">
+          <div class="logo-mark">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e4d2b" stroke-width="1.6"><path d="M12 2L4 6v6c0 5 4 8 8 10 4-2 8-5 8-10V6l-8-4z" fill="#1e4d2b" fill-opacity="0.82"/></svg>
+          </div>
+          <h1 class="page-title">Admin Sign in</h1>
+          <p class="page-subhead">Enter your PIN to continue.</p>
+
+          <div class="form-stack" style="max-width: 340px; margin: 0 auto;">
+            <div class="form-field">
+              <label class="form-label">Admin PIN</label>
+              <input type="password" class="form-input pin-input" placeholder="••••••">
+            </div>
+
+            <button class="cta-primary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L4 6v6c0 5 4 8 8 10 4-2 8-5 8-10V6l-8-4z"/></svg>
+              Sign in as Admin
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">3A &nbsp;—&nbsp; /admin/login (PIN entry)</div>
+      <div class="primitive-note">
+        <span class="label">Primitives on this screen</span><br>
+        Mode C chrome · Logo mark with shield glyph (different from curator's leaf — signals the different audience) · Form input in password mode with centered 0.4em-tracked dots · Filled green CTA with inline Shield glyph (commit action, destructive-ish) · <strong>No green info box</strong> — the page title + subhead already say "Admin"
+      </div>
+    </div>
+
+    <!-- 3B — Signing in -->
+    <div>
+      <div class="phone">
+        <div class="hero-center">
+          <div class="success-bubble">
+            <div class="spinner" style="width: 22px; height: 22px; border-width: 2px;"></div>
+          </div>
+          <h1 class="page-title">Signing you in&hellip;</h1>
+          <p class="page-subhead">Just a moment.</p>
+        </div>
+      </div>
+      <div class="phone-label">3B &nbsp;—&nbsp; /admin/login (signing in)</div>
+      <div class="primitive-note">
+        <span class="label">Primitives on this screen</span><br>
+        Identical treatment to 2C confirming bridge — paper-wash bubble + spinner. The fact that these two states look the same is deliberate: a signing-in moment should feel the same regardless of whether it followed OTP or PIN
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SECTION 4 — /setup (linking, success, error)
+       Terminal point of Flow 2 / Flow 3. Where the vendor arrives.
+       ══════════════════════════════════════════════════════════════════ -->
+  <div class="section-label">
+    <div class="section-number">4</div>
+    <div class="section-title">/setup &nbsp;— link vendor account</div>
+    <div class="section-note">Post-OTP. Three states: linking, success (Flow 2/3 terminal), error.</div>
+  </div>
+
+  <div class="triple-row">
+
+    <!-- 4A — Linking -->
+    <div>
+      <div class="phone">
+        <div class="hero-center">
+          <div class="success-bubble">
+            <div class="spinner" style="width: 22px; height: 22px; border-width: 2px;"></div>
+          </div>
+          <h1 class="page-title">Setting things up&hellip;</h1>
+          <p class="page-subhead">Linking your booth to your account.</p>
+        </div>
+      </div>
+      <div class="phone-label">4A &nbsp;—&nbsp; /setup (linking)</div>
+      <div class="primitive-note">
+        <span class="label">Primitives on this screen</span><br>
+        Paper-wash bubble + spinner (third use of the bubble primitive — it IS the loading+success+confirming vocabulary now) · IM Fell title + italic subhead carry the state
+      </div>
+    </div>
+
+    <!-- 4B — Success -->
+    <div>
+      <div class="phone">
+        <div class="hero-center">
+          <div class="success-bubble">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <h1 class="page-title hero-page">Welcome to your shelf,<br>David.</h1>
+          <p class="page-subhead reflect">Your booth at <strong style="color: var(--ink-primary); font-weight: 400; font-style: normal;">America's Antique Mall</strong> is ready. The shelf is waiting to be filled.</p>
+
+          <div style="margin-top: 20px; width: 100%; max-width: 320px;">
+            <button class="cta-primary" style="width: 100%;">
+              Go to my shelf
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">4B &nbsp;—&nbsp; /setup (success)</div>
+      <div class="primitive-note">
+        <span class="label">Primitives on this screen</span><br>
+        Success bubble with checkmark (fourth use — the moment the vendor arrives) · Headline names them by first name (pulled from <code>vendor_requests.name</code>) · Mall woven into subhead in <code>inkPrimary</code> to make it sing · <strong>Filled green CTA</strong> because this IS a commit action (vendor is moving forward into their working surface)
+      </div>
+    </div>
+
+    <!-- 4C — Error -->
+    <div>
+      <div class="phone">
+        <div class="mode-c-header">
+          <button class="icon-bubble" aria-label="Back">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+        </div>
+        <div class="hero-center" style="min-height: 560px;">
+          <div class="success-bubble" style="background: var(--red-bg); border-color: var(--red-border);">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#8b2020" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <h1 class="page-title">Something didn't line up.</h1>
+          <p class="page-subhead reflect">We don't see an approved request for this email. Double-check with David.</p>
+
+          <div class="links-stack">
+            <a class="link-quiet">Try again</a>
+            <a class="link-quiet secondary">Back to sign-in</a>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">4C &nbsp;—&nbsp; /setup (error)</div>
+      <div class="primitive-note">
+        <span class="label">Primitives on this screen</span><br>
+        Bubble recoloured to red tint (<code>redBg</code>/<code>redBorder</code>) + alert glyph in <code>red</code> — the <em>same</em> bubble primitive, just retoned · Quiet IM Fell italic error copy (revised from v0.2 per onboarding-journey T4c copy polish) · Two text links — <em>no</em> filled CTA (error paths are always dotted-underline)
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SECTION 5 — Form error state sample (for reference)
+       ══════════════════════════════════════════════════════════════════ -->
+  <div class="section-label">
+    <div class="section-number">5</div>
+    <div class="section-title">Form error &amp; form focus states (reference)</div>
+    <div class="section-note">How <code style="color:rgba(232,221,199,0.88);">form-input.error</code> + <code style="color:rgba(232,221,199,0.88);">error-banner</code> render on 1A.</div>
+  </div>
+
+  <div class="single-row">
+    <div>
+      <div class="phone">
+        <div class="mode-c-header">
+          <button class="icon-bubble" aria-label="Back">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+        </div>
+        <div class="mode-c-main">
+          <div class="intro-block">
+            <h1>Bring your booth to Treehouse.</h1>
+            <p>Let buyers discover your finds before they make the trip. Fill in your details and we'll be in touch.</p>
+          </div>
+
+          <div class="form-stack">
+            <div class="form-field">
+              <label class="form-label">Your name</label>
+              <input type="text" class="form-input" value="David Butler">
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Email address</label>
+              <input type="email" class="form-input error" value="dbutler80020">
+            </div>
+
+            <div class="error-banner">Please enter a valid email address.</div>
+
+            <div class="form-field">
+              <label class="form-label">Your mall <span class="optional">(optional)</span></label>
+              <select class="form-select placeholder">
+                <option>Select a mall&hellip;</option>
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label class="form-label">Booth number <span class="optional">(optional)</span></label>
+              <input type="text" class="form-input" placeholder="e.g. 369">
+            </div>
+
+            <button class="cta-primary">Request access</button>
+
+            <p class="footer-note">We'll only use your email to follow up on this request.</p>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label">5 &nbsp;—&nbsp; /vendor-request (error state reference)</div>
+      <div class="primitive-note">
+        <span class="label">Primitives on this screen</span><br>
+        Error input state (1.5px <code>redBorder</code>) · Error banner primitive (<code>redBg</code>/<code>redBorder</code>, <code>FONT_SYS</code> 13px <code>red</code>) · Select in placeholder state (<code>inkFaint</code> color) · Validation copy in natural sentence case
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       Closing discussion
+       ══════════════════════════════════════════════════════════════════ -->
+  <div class="decisions-pane" style="margin-top: 72px;">
+    <h3>Open questions for review</h3>
+    <ul>
+      <li><strong>Logo glyph on /login vs /admin/login</strong> — curator gets a green leaf (matches the Treehouse brand mark used on the Home masthead v1.1j), admin gets a shield. Alternative: both use the leaf and admin just uses the Shield inside the CTA button. Pick one.</li>
+      <li><strong>/setup success CTA copy</strong> — "Go to my shelf" vs "Open my booth" vs "Start filling the shelf". Currently "Go to my shelf" because it matches the BottomNav label the vendor is about to see.</li>
+      <li><strong>/setup success headline</strong> — "Welcome to your shelf, David." vs "Your shelf is ready, David." vs "Welcome to Treehouse, David." The current choice grounds the moment in <em>their</em> specific shelf rather than the product name, which felt more personal.</li>
+      <li><strong>Email echo address break behavior</strong> — long emails wrap to a second line via <code>word-break: break-all</code>. On the success screen in 1B the test email wraps the "+10" onto a second line. Acceptable, or should we truncate with ellipsis?</li>
+      <li><strong>Paste-from-clipboard treatment</strong> — current: italic IM Fell text link with a small green clipboard glyph inline. Alternative: hide the glyph entirely, just the italic link. Pick one.</li>
+      <li><strong>Error bubble color on 4C</strong> — currently retoned to red. Alternative: keep it paper-wash (<code>inkPrimary</code> alert glyph on a plain bubble) and let only the alert glyph carry the warning. Pick one.</li>
+    </ul>
+  </div>
+
+  <div class="decisions-pane" style="margin-top: 18px;">
+    <h3>What's deliberately NOT shown</h3>
+    <ul>
+      <li><strong>MallSheet on /vendor-request</strong> — deferred to Sprint 5 per v1.1k (h). Field uses native <code>&lt;select&gt;</code> in 1A and 5.</li>
+      <li><strong>/admin</strong> full page — out of scope per v1.1k (g). Only the surgical edit to its unauth-gate Sign-in button (pointing at /admin/login) lands with this sprint.</li>
+      <li><strong>PWA "add to home screen" prompt</strong> — Sprint 5, unchanged.</li>
+      <li><strong>Curator rename (/login → /curators, "Curator Sign in")</strong> — the tag-line voice is already in place ("Curator Sign in"). The <em>route rename</em> is Sprint 5.</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

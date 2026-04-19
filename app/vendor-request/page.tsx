@@ -1,52 +1,89 @@
 // app/vendor-request/page.tsx
-// Vendor access request flow.
-// Entry points: feed footer CTA + mall profile pages.
-// Flow: form → submit → success screen.
-// Collects: name, email, booth number (optional), mall (dropdown).
+// Vendor access request flow (Flow 3 front door).
+// Rewritten session 23 against docs/design-system.md v1.1k.
+//
+// Changes from v0.2:
+//  - Mode C chrome (back arrow paper bubble; no masthead wordmark, no eyebrow pair)
+//  - v1 palette throughout (paperCream bg, v1 ink scale, inkHairline borders)
+//  - IM Fell English for intro + success editorial voice; FONT_SYS for form fields
+//  - Form input primitive (white translucent bg, 14px radius, inkHairline border)
+//  - Filled green CTA only on "Request access" (commit action)
+//  - Success screen retires v0.2 greenLight check bubble → paper-wash primitive
+//  - Success actions retire filled green button → IM Fell italic dotted-underline links
+//  - Email echo line primitive (hairlines above/below, no surface card)
+//  - Labels retire uppercase+tracked treatment → IM Fell italic 13px muted sentence case
+//
+// MallSheet migration to the "Your mall" field deferred to Sprint 5 per v1.1k (h).
+// Native <select> is used here with v1.1k form-input styling.
+//
+// Preserved from v0.2: form submission logic, validation rules, POST body shape,
+// mall prefill from URL params, routing on success.
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, Mail } from "lucide-react";
 import { getAllMalls } from "@/lib/posts";
-import { colors } from "@/lib/tokens";
+import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import type { Mall } from "@/types/treehouse";
-import { Suspense } from "react";
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
+
+// ─── Primitives (v1.1k) ───────────────────────────────────────────────────────
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
   boxSizing: "border-box",
-  padding: "13px 14px",
-  borderRadius: 11,
-  background: "rgba(255,255,255,0.65)",
-  border: `1px solid rgba(26,24,16,0.14)`,
-  color: colors.textPrimary,
-  fontSize: 15,
+  padding: "14px 14px",
+  borderRadius: 14,
+  background: "rgba(255,253,248,0.70)",
+  border: `1px solid ${v1.inkHairline}`,
+  color: v1.inkPrimary,
+  fontSize: 16,
   outline: "none",
-  fontFamily: "system-ui, sans-serif",
+  fontFamily: FONT_SYS,
   appearance: "none",
   WebkitAppearance: "none",
 };
 
+const inputErrorStyle: React.CSSProperties = {
+  ...inputStyle,
+  border: `1.5px solid ${v1.redBorder}`,
+  padding: "13.5px 13.5px",
+};
+
+const selectStyle: React.CSSProperties = {
+  ...inputStyle,
+  paddingRight: 40,
+  backgroundImage:
+    "url(\"data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b5538' stroke-width='2' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")",
+  backgroundRepeat: "no-repeat",
+  backgroundPosition: "right 14px center",
+  backgroundSize: "12px 12px",
+};
+
 const labelStyle: React.CSSProperties = {
   display: "block",
-  fontSize: 10,
-  fontWeight: 600,
-  color: colors.textMuted,
-  textTransform: "uppercase",
-  letterSpacing: "1.6px",
+  fontFamily: FONT_IM_FELL,
+  fontStyle: "italic",
+  fontSize: 13,
+  color: v1.inkMuted,
+  lineHeight: 1.3,
   marginBottom: 7,
+};
+
+const optionalStyle: React.CSSProperties = {
+  fontStyle: "italic",
+  color: v1.inkFaint,
+  marginLeft: 3,
 };
 
 function VendorRequestInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
 
-  // Pre-fill mall if navigated from a mall page
   const prefilledMallId   = searchParams.get("mall_id")   ?? "";
   const prefilledMallName = searchParams.get("mall_name") ?? "";
 
@@ -105,96 +142,277 @@ function VendorRequestInner() {
   // ── Success screen ─────────────────────────────────────────────────────────
   if (done) {
     return (
-      <div style={{ minHeight: "100dvh", background: colors.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 28px", gap: 28 }}>
-        <motion.div
-          initial={{ scale: 0.7, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 260, damping: 20 }}
-          style={{ width: 68, height: 68, borderRadius: "50%", background: colors.greenLight, border: `1.5px solid ${colors.greenBorder}`, display: "flex", alignItems: "center", justifyContent: "center" }}
+      <div
+        style={{
+          minHeight: "100dvh",
+          background: v1.paperCream,
+          maxWidth: 430,
+          margin: "0 auto",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {/* Mode C header */}
+        <header
+          style={{
+            padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px",
+          }}
         >
-          <Check size={30} style={{ color: colors.green }} />
-        </motion.div>
+          <button
+            onClick={() => { setDone(false); }}
+            aria-label="Back"
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: v1.iconBubble,
+              border: "none",
+              cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <ArrowLeft size={15} style={{ color: v1.inkPrimary }} />
+          </button>
+        </header>
 
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.32, ease: EASE }}
-          style={{ textAlign: "center" }}
+        {/* Centered hero column */}
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "0 28px 80px",
+            textAlign: "center",
+          }}
         >
-          <h1 style={{ fontFamily: "Georgia, serif", fontSize: 26, fontWeight: 700, color: colors.textPrimary, lineHeight: 1.2, margin: "0 0 14px", letterSpacing: "-0.4px" }}>
+          {/* Paper-wash success bubble */}
+          <motion.div
+            initial={{ scale: 0.7, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 260, damping: 22 }}
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: "50%",
+              background: "rgba(42,26,10,0.04)",
+              border: `0.5px solid ${v1.inkHairline}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 22,
+            }}
+          >
+            <Check size={26} style={{ color: v1.inkPrimary }} strokeWidth={1.6} />
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.18, duration: 0.32, ease: EASE }}
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontSize: 30,
+              color: v1.inkPrimary,
+              lineHeight: 1.2,
+              letterSpacing: "-0.005em",
+              margin: "0 0 14px",
+            }}
+          >
             You&apos;re on the list.
-          </h1>
-          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 15, color: colors.textMid, lineHeight: 1.8, margin: "0 0 10px" }}>
-            We&apos;ll review your request and be in touch soon with next steps to get your booth on Treehouse.
-          </p>
-          <p style={{ fontSize: 13, color: colors.textMuted, lineHeight: 1.7, margin: 0 }}>
-            Keep an eye on <strong style={{ color: colors.textMid }}>{email}</strong> — that&apos;s where we&apos;ll reach you.
-          </p>
-        </motion.div>
+          </motion.h1>
 
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.38, duration: 0.28, ease: EASE }}
-          style={{ width: "100%", display: "flex", flexDirection: "column", gap: 10 }}
-        >
-          <button
-            onClick={() => router.push("/")}
-            style={{ width: "100%", padding: "14px", borderRadius: 13, fontSize: 14, fontWeight: 600, color: "#fff", background: colors.green, border: "none", cursor: "pointer", boxShadow: "0 2px 12px rgba(30,77,43,0.22)" }}
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.28, duration: 0.32, ease: EASE }}
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontStyle: "italic",
+              fontSize: 16,
+              color: v1.inkMid,
+              lineHeight: 1.65,
+              maxWidth: 320,
+              margin: "0 auto 24px",
+            }}
           >
-            Explore the feed
-          </button>
-          <button
-            onClick={() => router.back()}
-            style={{ width: "100%", padding: "13px", borderRadius: 13, fontSize: 13, color: colors.textMuted, background: "transparent", border: `1px solid ${colors.border}`, cursor: "pointer" }}
+            We&apos;ll review your request and be in touch soon with next steps to get your booth on Treehouse.
+          </motion.p>
+
+          {/* Email echo line primitive */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.38, duration: 0.32 }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "12px 0",
+              borderTop: `0.5px solid ${v1.inkHairline}`,
+              borderBottom: `0.5px solid ${v1.inkHairline}`,
+              width: "100%",
+              maxWidth: 320,
+              marginBottom: 0,
+            }}
           >
-            Go back
-          </button>
-        </motion.div>
+            <Mail size={14} style={{ color: v1.inkMuted, flexShrink: 0 }} strokeWidth={1.6} />
+            <span style={{ fontFamily: FONT_SYS, fontSize: 14, color: v1.inkMuted, flexShrink: 0 }}>
+              Sent to&nbsp;
+            </span>
+            <span
+              style={{
+                fontFamily: FONT_SYS,
+                fontSize: 14,
+                color: v1.inkPrimary,
+                fontWeight: 500,
+                wordBreak: "break-all",
+                minWidth: 0,
+              }}
+            >
+              {email}
+            </span>
+          </motion.div>
+
+          {/* End-of-path text links (no filled CTA) */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.48, duration: 0.32, ease: EASE }}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 20,
+              alignItems: "center",
+              marginTop: 32,
+            }}
+          >
+            <a
+              onClick={() => router.push("/")}
+              style={{
+                fontFamily: FONT_IM_FELL,
+                fontStyle: "italic",
+                fontSize: 16,
+                color: v1.inkPrimary,
+                textDecoration: "underline",
+                textDecorationStyle: "dotted",
+                textDecorationColor: v1.inkFaint,
+                textUnderlineOffset: 4,
+                cursor: "pointer",
+              }}
+            >
+              Explore the feed →
+            </a>
+            <a
+              onClick={() => setDone(false)}
+              style={{
+                fontFamily: FONT_IM_FELL,
+                fontStyle: "italic",
+                fontSize: 15,
+                color: v1.inkMuted,
+                textDecoration: "underline",
+                textDecorationStyle: "dotted",
+                textDecorationColor: v1.inkFaint,
+                textUnderlineOffset: 4,
+                cursor: "pointer",
+              }}
+            >
+              Go back
+            </a>
+          </motion.div>
+        </div>
       </div>
     );
   }
 
   // ── Form ───────────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: "100dvh", background: colors.bg, maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column" }}>
-
-      {/* Header */}
-      <header style={{ display: "flex", alignItems: "center", gap: 12, padding: "max(14px, env(safe-area-inset-top, 14px)) 16px 12px", background: `rgba(245,242,235,0.96)`, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: `1px solid ${colors.border}`, position: "sticky", top: 0, zIndex: 40 }}>
-        <button onClick={() => router.back()} style={{ width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: colors.surface, border: `1px solid ${colors.border}`, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
-          <ArrowLeft size={14} style={{ color: colors.textMid }} />
+    <div
+      style={{
+        minHeight: "100dvh",
+        background: v1.paperCream,
+        maxWidth: 430,
+        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* Mode C header — back arrow only */}
+      <header style={{ padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px" }}>
+        <button
+          onClick={() => router.back()}
+          aria-label="Back"
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: v1.iconBubble,
+            border: "none",
+            cursor: "pointer",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <ArrowLeft size={15} style={{ color: v1.inkPrimary }} />
         </button>
-        <div>
-          <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 600, color: colors.textPrimary, lineHeight: 1 }}>Join Treehouse</div>
-          <div style={{ fontSize: 9, color: colors.textMuted, textTransform: "uppercase", letterSpacing: "1.8px", marginTop: 3 }}>Request booth access</div>
-        </div>
       </header>
 
-      <main style={{ flex: 1, padding: "28px 20px", paddingBottom: "max(40px, env(safe-area-inset-bottom, 40px))", display: "flex", flexDirection: "column", gap: 0 }}>
-
+      <main
+        style={{
+          flex: 1,
+          padding: "8px 28px 40px",
+          paddingBottom: "max(40px, env(safe-area-inset-bottom, 40px))",
+          display: "flex",
+          flexDirection: "column",
+          gap: 0,
+        }}
+      >
         {/* Intro */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.32, ease: EASE }}
-          style={{ marginBottom: 28 }}
+          style={{ margin: "16px 0 28px" }}
         >
-          <h1 style={{ fontFamily: "Georgia, serif", fontSize: 24, fontWeight: 700, color: colors.textPrimary, lineHeight: 1.25, margin: "0 0 10px", letterSpacing: "-0.3px" }}>
+          <h1
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontSize: 28,
+              color: v1.inkPrimary,
+              lineHeight: 1.2,
+              letterSpacing: "-0.005em",
+              margin: "0 0 12px",
+            }}
+          >
             Bring your booth to Treehouse.
           </h1>
-          <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: colors.textMid, lineHeight: 1.78, margin: 0 }}>
+          <p
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontStyle: "italic",
+              fontSize: 16,
+              color: v1.inkMuted,
+              lineHeight: 1.65,
+              margin: 0,
+            }}
+          >
             Let buyers discover your finds before they make the trip. Fill in your details and we&apos;ll be in touch.
           </p>
         </motion.div>
 
-        {/* Form fields */}
+        {/* Form */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.30, delay: 0.08, ease: EASE }}
           style={{ display: "flex", flexDirection: "column", gap: 18 }}
         >
-          {/* Name */}
           <div>
             <label style={labelStyle}>Your name</label>
             <input
@@ -207,7 +425,6 @@ function VendorRequestInner() {
             />
           </div>
 
-          {/* Email */}
           <div>
             <label style={labelStyle}>Email address</label>
             <input
@@ -216,18 +433,23 @@ function VendorRequestInner() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com"
-              style={inputStyle}
+              style={error && !email.trim() ? inputErrorStyle : inputStyle}
               autoComplete="email"
             />
           </div>
 
-          {/* Mall */}
           <div>
-            <label style={labelStyle}>Your mall <span style={{ color: colors.textFaint, textTransform: "none", letterSpacing: 0, fontWeight: 400 }}>(optional)</span></label>
+            <label style={labelStyle}>
+              Your mall <span style={optionalStyle}>(optional)</span>
+            </label>
+            {/* MallSheet migration deferred to Sprint 5 per docs/design-system.md v1.1k (h) */}
             <select
               value={mallId}
               onChange={e => handleMallChange(e.target.value)}
-              style={{ ...inputStyle, color: mallId ? colors.textPrimary : colors.textFaint }}
+              style={{
+                ...selectStyle,
+                color: mallId ? v1.inkPrimary : v1.inkFaint,
+              }}
             >
               <option value="">Select a mall…</option>
               {malls.map(m => (
@@ -236,9 +458,10 @@ function VendorRequestInner() {
             </select>
           </div>
 
-          {/* Booth number */}
           <div>
-            <label style={labelStyle}>Booth number <span style={{ color: colors.textFaint, textTransform: "none", letterSpacing: 0, fontWeight: 400 }}>(optional)</span></label>
+            <label style={labelStyle}>
+              Booth number <span style={optionalStyle}>(optional)</span>
+            </label>
             <input
               type="text"
               value={booth}
@@ -248,27 +471,45 @@ function VendorRequestInner() {
             />
           </div>
 
-          {/* Error */}
+          {/* Error banner */}
           <AnimatePresence>
             {error && (
               <motion.div
-                initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                style={{ padding: "11px 14px", borderRadius: 10, background: colors.redBg, border: `1px solid ${colors.redBorder}`, fontSize: 13, color: colors.red, lineHeight: 1.5 }}
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                style={{
+                  padding: "11px 14px",
+                  borderRadius: 10,
+                  background: v1.redBg,
+                  border: `1px solid ${v1.redBorder}`,
+                  fontFamily: FONT_SYS,
+                  fontSize: 13,
+                  color: v1.red,
+                  lineHeight: 1.5,
+                }}
               >
                 {error}
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* Submit */}
+          {/* Filled green CTA — commit action */}
           <button
             onClick={handleSubmit}
             disabled={busy}
             style={{
-              width: "100%", padding: "15px", borderRadius: 13, fontSize: 15, fontWeight: 600,
-              color: "#fff", background: busy ? colors.greenBorder : colors.green,
-              border: "none", cursor: busy ? "default" : "pointer",
-              boxShadow: busy ? "none" : "0 2px 14px rgba(30,77,43,0.24)",
+              width: "100%",
+              padding: "15px",
+              borderRadius: 14,
+              fontFamily: FONT_SYS,
+              fontSize: 15,
+              fontWeight: 500,
+              color: "#fff",
+              background: busy ? "rgba(30,77,43,0.40)" : v1.green,
+              border: "none",
+              cursor: busy ? "default" : "pointer",
+              boxShadow: busy ? "none" : "0 2px 14px rgba(30,77,43,0.22)",
               transition: "background 0.18s, box-shadow 0.18s",
               marginTop: 4,
             }}
@@ -276,7 +517,16 @@ function VendorRequestInner() {
             {busy ? "Sending…" : "Request access"}
           </button>
 
-          <p style={{ fontSize: 11, color: colors.textFaint, textAlign: "center", lineHeight: 1.6, margin: 0 }}>
+          <p
+            style={{
+              fontFamily: FONT_SYS,
+              fontSize: 12,
+              color: v1.inkFaint,
+              textAlign: "center",
+              lineHeight: 1.6,
+              margin: 0,
+            }}
+          >
             We&apos;ll only use your email to follow up on this request.
           </p>
         </motion.div>

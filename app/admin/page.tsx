@@ -321,7 +321,7 @@ export default function AdminPage() {
         <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: colors.textMuted, lineHeight: 1.65, margin: 0 }}>
           {user ? "Your account doesn't have admin access." : "Sign in with your admin account to continue."}
         </p>
-        <button onClick={() => router.push(user ? "/" : "/login")}
+        <button onClick={() => router.push(user ? "/" : "/admin/login")}
           style={{ padding: "11px 24px", borderRadius: 24, background: colors.green, color: "#fff", fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "Georgia, serif" }}>
           {user ? "Back to feed" : "Sign in"}
         </button>
