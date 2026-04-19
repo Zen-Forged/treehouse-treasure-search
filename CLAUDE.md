@@ -50,218 +50,171 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-19 (session 25 — v1.1k `/admin/login` orphan resolved; v1.1l `site_settings` migration applied; on-device verification of featured-banner uploads on Home + Find Map passed)
+> Last updated: 2026-04-19 (session 26 — CLAUDE.md + CONTEXT.md + memory reconciled; KI-003 stale framing struck; candidate queue restored to honest state)
 
-**Status:** ✅✅ **Session 25 closed the last two loose ends from the v1.1k + v1.1l sprints.** Session 23's CLAUDE.md claimed `app/admin/login/page.tsx` shipped but the file was never actually written — a repeat of the session 13 `lib/imageUpload.ts` orphan pattern. Discovered when the session opener's QA walk of `/admin/login` returned a 404. One commit shipped: the missing file, written from session 23's documented spec against v1.1k primitives (Mode C chrome, paper-wash logo bubble with Shield glyph, form input primitive, filled green CTA, signing-in bridge). In parallel, the `supabase/migrations/004_site_settings.sql` migration (committed in session 24 as 🖐️ HITL) was applied — David ran it in the Supabase SQL editor, verified the `site-assets` bucket exists + public, then uploaded hero banners for both Home (Featured Find, eyebrow variant) and Find Map (hero banner, overlay variant). Both render live on device. Build was green before push; Vercel deploy confirmed live on prod.
+**Status:** ✅ **Session 26 was a documentation reconciliation pass, not a code sprint.** Session opener's standup surfaced a material contradiction: CLAUDE.md had been carrying "KI-003 diagnosis (pre-beta blocker, longest-parked)" across 17 consecutive session closes (18 through 25), while `docs/known-issues.md` Resolved section, `docs/DECISION_GATE.md` Risk Register, `docs/onboarding-journey.md` T4c entry, and CLAUDE.md's own session-9 archive line all correctly recorded KI-003 as resolved session 9 with a three-part fix verified end-to-end on device. The stale framing had also propagated into the Anthropic-generated memory summary ("top of mind: KI-003 diagnosis is the top priority for the next session"), which meant every new session's memory-informed opener started from a false premise.
 
-**Next session (26) opens with David's choice from the candidate queue.** No active iteration pending, no design debt, no pre-beta blockers. The v1.1l design pass is fully landed and verified on device. The longest-parked item remaining is KI-003 (vendors posting under stale identity after approval), which has been on hold since session 18. Sprint 4 tail (T4c remainder, T4b admin consolidation, T4d pre-beta QA walk) is also ready to batch now that design debt is cleared.
+David confirmed option A: KI-003 is genuinely fixed; CLAUDE.md is stale. Session 26 reconciled in-session:
+1. Two explicit memory user-edits written via `memory_user_edits` tool — one striking KI-003 as open, one naming Sprint 4 tail as the actual longest-parked pre-beta item.
+2. Full CONTEXT.md rewrite — was 18 sessions stale (last touched 2026-04-07, pre-v1.1), now documents v1.1l reality: 16 sections covering product model, tech stack with dual-font commitment + Times New Roman exception, full env var list, Supabase schema including `site_settings` + extended mall/vendor fields + all four unique constraints, complete route map split across shopper/auth/admin/reseller, full API route table with auth pattern per route, current lib catalog with deprecation notes, current component catalog with v1.1 primitives + v0.2 legacy + retired lists, auth+server pattern section (bearer-token Option B), email pattern, vendor approval pattern with KI-004 constraint handling, admin sign-in pattern, featured banner pattern, design system v1.1l summary pointing at `docs/design-system.md` for the canonical spec, user flows A–E (shopper browse, shopper save, vendor onboard three sub-flows, vendor post, reseller intel), reseller layer data model + comp pipeline + pricing logic, DNS state with dual email channels, full known constraints list (zsh/git/Next.js 14/framer-motion/Supabase/Safari/Vercel/tool-environment), current dev state with all resolved KIs + open pre-beta + Sprint 5 items + parked Sprint 6+ + cleanup, roadmap, and how-to-use pointers to the companion docs.
+3. CLAUDE.md rewrite (this file) — strikes KI-003 from Known Gaps + candidate queue + Status framing; installs Sprint 4 tail as honest longest-parked pre-beta item; adds session 26 close block.
 
-### What shipped this session (one commit)
+**Next session (27) opens with David's choice from the reconciled candidate queue.** The top-recommended track is now **Sprint 4 tail batch** (T4c remainder copy polish → T4b admin surface consolidation → T4d pre-beta QA walk) — genuinely the longest-parked pre-beta item, and the last tech work before beta-ready. 26C CONTEXT.md refresh shipped this session.
 
-**Discovery:** Session opener ran the v1.1k QA walk from CLAUDE.md. David hit `/admin/login` direct URL on iPhone — 404. Also noticed no hero banners on Home or Find Map (separate issue). Investigation revealed two independent orphans:
+### What shipped this session (26)
 
-1. `app/admin/login/page.tsx` was never on disk. Session 23 documented it as shipped + HITL `mkdir -p` was confirmed run, but the actual `filesystem:write_file` never landed — classic session-13 pattern. `/admin/page.tsx`'s unauth-gate redirect (session 23 surgical edit) was pointing at the missing route.
+**No production code changes.** Two-file doc reconciliation + two memory edits.
 
-2. `site_settings` table and `site-assets` Storage bucket did not exist in Supabase. The `004_site_settings.sql` migration from session 24 is a 🖐️ HITL step that must be applied manually in the SQL editor — it hadn't been run. `getSiteSettingUrl()` was hitting a missing table and silently returning null, so both featured banners collapsed invisibly. This was not a bug — the component is designed to collapse cleanly when data is absent — but it left David with an unexpected visual state because the migration hadn't been communicated as a pre-deploy blocker for v1.1l to actually render.
+**Files touched:**
+- `CONTEXT.md` — full rewrite against v1.1l reality. 16 sections. Replaces a 2026-04-07 snapshot that predated: v1.0 design direction, v1.1d–v1.1l design-system sessions, `lib/adminAuth.ts`, `lib/authFetch.ts`, `lib/email.ts`, `lib/imageUpload.ts`, `lib/siteSettings.ts`, `<MallSheet>` / `<StickyMasthead>` / `<FeaturedBanner>` / `<BoothPage>` primitives, the `site_settings` table + `site-assets` bucket, four mall-identity and location-extended vendor fields, the bearer-token auth pattern, the `vendor_requests` service-role gating, magic-link OTP as primary, custom domain, transactional email infra, constraint-aware vendor approval, admin diagnostic UI, `/admin/login` as a dedicated route, and 12 RLS policies. The refresh was overdue and was the structural cause of the KI-003 drift.
+- `CLAUDE.md` (this file) — Status block rewritten; Top-of-mind memory entries struck and replaced; Known Gaps reconciled; session 26 candidate queue renumbered; session 25 archive preserved verbatim; session-26 close block added.
+- Memory — two `memory_user_edits` entries added: (1) KI-003 resolved session 9, (2) Sprint 4 tail is longest-parked pre-beta.
 
-**Fix 1 — `app/admin/login/page.tsx` written from the v1.1k (g) spec:**
-- `filesystem:create_directory` on `app/admin/login/` first (session 23 noted this was required)
-- `filesystem:write_file` of the full page against the documented spec
-- Two states: PIN entry + signing-in bridge (matches `/login` confirming state exactly for visual parity)
-- Mode C chrome: back-arrow paper bubble top-left, paper-wash 44px logo bubble with `lucide-react Shield` glyph (green stroke + 15% green fill — audience cue differentiating from the curator leaf on `/login`), "Admin Sign in" IM Fell 28px, italic "Enter your PIN to continue." subhead
-- v1.1k form input primitive with password-dot treatment: 22px centered, 0.4em letter-spacing, `FONT_SYS`
-- Filled green "Sign in as Admin" CTA with inline Shield glyph (commit action per v1.1k (c))
-- Inline red banner for errors, auto-clears on next keystroke
-- Fine print at bottom: "Admin access only. Curators sign in here." — the last two words are an IM Fell italic dotted-underline text link to `/login`, matching v1.1k end-of-path vocabulary
-- Auth flow unchanged: POST `/api/auth/admin-pin` with `{pin}` → server returns `{otp, email}` → client calls `supabase.auth.verifyOtp({email, token, type: "email"})` → `router.replace("/admin")` on success
+**Verification (session-25 file-creation verify discipline, applied to doc rewrites):**
+- ✅ `filesystem:read_text_file` on both CONTEXT.md and CLAUDE.md before commit to confirm on-disk state matches written state
+- ✅ `npm run build` — green (no code touched, but run anyway to confirm no doc syntax broke anything, e.g. README-embedded code blocks)
 
-**Parallel 🖐️ HITL — `004_site_settings.sql` applied:**
-- David ran the full migration in the Supabase SQL editor
-- Verified `site_settings` table created with seed rows (`featured_find_image_url`, `find_map_banner_image_url` both `{"url": null}`)
-- Verified `site-assets` Storage bucket exists and is set to **public**
-- Logged into `/admin` → Banners tab → uploaded images for both settings
-- Confirmed on device: Home now shows "Featured Find" eyebrow + banner image; Find Map now shows overlay variant with "Find Map" title rendered 30px white IM Fell over the uploaded image
+### Discipline notes — what this reconciliation teaches
 
-### Discipline note — why the orphan got through
+**The orphan-pattern has a sibling: the phantom-blocker pattern.** Session 13's `lib/imageUpload.ts` and session 23's `app/admin/login/page.tsx` orphans were documented-as-shipped files that weren't on disk. KI-003's phantom-blocker status is the reverse shape: a fix documented-as-shipped in three other canonical docs, correctly on disk, but still being dragged forward in CLAUDE.md's "open blockers" list across 17 session closes. Both shapes have the same root cause — the Docs agent's session close ritual writes what was ATTEMPTED or what was the FOCUS, not what was VERIFIED AGAINST GROUND TRUTH.
 
-The session-14 Tech Rule (*"A session is not closed until `npm run build` has run green against the committed state"*) passed in session 23. Build was green. The missed file was still missed because:
+**The session-25 file-creation-verify Tech Rule doesn't catch this.** That rule verifies NEW files exist on disk. KI-003 is about a STATUS that had already been correctly logged elsewhere but was still being restated as open in CLAUDE.md's Known Gaps section. No file verification would have caught it — only cross-doc reconciliation at session close would.
 
-- `/admin/page.tsx`'s unauth redirect is a runtime string (`router.push("/admin/login")`), not an import. TypeScript has no way to verify the target route exists.
-- Next.js's build step does not validate that every internal navigation target resolves to a page file. An orphan redirect builds fine.
-- The CLAUDE.md close template lists files as shipped without a verification step. The Docs agent writes what was attempted, not what was verified on disk.
+**Proposed Tech Rule for DECISION_GATE** (not yet promoted — flagged for session 27 to decide):
+> **Known-Gaps reconciliation at session close.** When the Docs agent writes a session close, any item listed in CLAUDE.md's "Known Gaps → Pre-beta blockers" or "Remaining pre-beta tech work" sections MUST be cross-referenced against `docs/known-issues.md` Resolved section and `docs/DECISION_GATE.md` Risk Register before closing. If any of those canonical sources records the item as resolved, it must be struck from CLAUDE.md's Known Gaps sections in the same close. Cost per item is one grep/read — cheap insurance against the 17-session drift that bit sessions 18–25 with KI-003.
 
-The session-14 Tech Rule as written is *necessary but not sufficient*. A proposed amendment lands in DECISION_GATE this session — see below.
+**The deeper structural lesson:** `CLAUDE.md` and `CONTEXT.md` had drifted far enough apart that new-session openers were getting contradictory signals (CLAUDE.md said blocker; CONTEXT.md didn't mention KI-003 at all because the 2026-04-07 snapshot predated it). The refresh this session brings them back into sync. The drift rate is what actually matters — session 26F was parked across four candidate-queue listings before David's "go" this session pulled it in. A periodic CONTEXT.md health check (proposed: every ~10 sessions, not waiting for a drift-induced crisis) would keep this cheaper.
 
-### New Tech Rule proposal (promoted to DECISION_GATE this session)
+### Session 26 close HITL — already complete
 
-> **File-creation verify at session close.** When a session's CLAUDE.md update declares that a NEW file was created (not edited), the Docs agent MUST verify the file's presence on disk via `filesystem:list_directory` or `filesystem:read_text_file` before `thc`. The build-check rule does not catch missing page routes, missing API routes whose callers reference them only via fetch strings, or any file referenced by runtime string rather than import. Verification is one tool call per new file — cheap insurance against the orphan pattern that bit sessions 13, 23, and would have bitten session 24 if v1.1l had declared a new file it didn't actually write.
+1. ✅ Memory edits applied (`KI-003 resolved session 9` + `Sprint 4 tail is longest-parked`)
+2. ✅ `CONTEXT.md` written + read back for verify
+3. ✅ `CLAUDE.md` (this file) written + read back for verify
+4. ✅ `npm run build` — green
+5. ✅ This CLAUDE.md update (final HITL: `thc` to commit the docs reconciliation)
 
-### v1.1l — sprint that shipped in session 24, documented for the first time here
+### Session 27 candidate queue (reconciled — KI-003 struck)
 
-Session 24 was not explicitly opened as its own session (no `thc` between 23 and 24), but a full v1.1l design+feature sprint landed in commit `9edc897` on 2026-04-18 against David's on-device QA walk of v1.1k. `docs/design-system.md` advanced v1.1k → v1.1l with a seven-point Status paragraph. The commit message: `feat(v1.1l): StickyMasthead + FeaturedBanner + Find Map polish + post-it Times New Roman`. 18 files changed, 1205 insertions, 256 deletions. Summarizing here for continuity since CLAUDE.md did not have a session-24 close block before this one:
+- **27A — Sprint 4 tail batch** (T4c remainder copy polish + T4b admin surface consolidation + T4d pre-beta QA walk). **This is the actual longest-parked pre-beta item** and the last tech work before beta-ready. T4c is S-effort (~30 min: `/api/setup/lookup-vendor` error copy + `/vendor-request` success screen copy). T4b is M-effort (~4 hours: `/admin/login` keep-vs-fold disposition now that the route is a real dedicated surface, `/shelves` AddBoothSheet retirement, admin BottomNav cleanup, possibly new Add-Vendor sub-flow per onboarding-journey.md Flow-2 scope). T4d is S-effort + High-value (~1–2 hours: walk Flow 1/2/3 end-to-end against a clean DB). **Recommended opener.**
+- **27B — `<MallSheet>` migration sub-sprint** (`/post`, `/post/preview`, `/vendor-request`). Mechanical work against committed primitive; deferred explicitly in v1.1k (h). ~2 hours.
+- **27C — Nav Shelf decision + BottomNav full chrome rework** (held since sessions 16–20; David picks from 4 mockups in `docs/mockups/nav-shelf-exploration.html`).
+- **27D — Guest-user UX batch:** Home masthead + BottomNav "Sign in" → "Curator Sign In" rename (v1.1k partially did this — `/login` says "Curator Sign in" — but the entry-point affordances still say "Sign in"); `/welcome` guest landing for signed-in non-vendors; PWA install prompts; vendor onboarding Loom; bookmarks persistence migration (localStorage → DB-backed).
+- **27E — Post-beta candidates surfacing now that design is landed:** 3A Find Detail sold landing state (photograph-still-visible treatment), Find Map saved-but-sold tile signal, feed pagination, ToS/privacy, error monitoring (Sentry or structured logs), feed content seeding (10–15 real posts), beta feedback mechanism (Tally.so).
+- **27F — Known-Gaps reconciliation rule promotion to DECISION_GATE** (~15 min — promote the proposed Tech Rule from this session's discipline note into the canonical list).
 
-**v1.1l primitives (new):**
-- **`<StickyMasthead>`** (`components/StickyMasthead.tsx`) — shared scroll-linked masthead chrome replacing six inline implementations. Scroll-linked bottom hairline: transparent at rest, fades in to `1px inkHairline` once `window.scrollY > 4`. `scrollTarget` prop for Booth pages (which use an overflow-auto container, not window scroll). Transition `border-color 0.2s ease`.
-- **`<FeaturedBanner>`** (`components/FeaturedBanner.tsx`) — admin-editable hero banner primitive. Two variants: **eyebrow** (title above image as separate text block — Home "Featured Find") and **overlay** (title over image in IM Fell 30px white with text-shadow — Find Map "Find Map" title). 16px radius, 10px horizontal inset. Eyebrow: ~200px min-height, no scrim. Overlay: ~180px min-height, top-down `rgba(18,34,20)` scrim for white-text legibility. Graceful collapse when `imageUrl` is null.
-- **`site_settings` data model** — keyed-row table with jsonb values. Two initial keys: `featured_find_image_url` (Home) and `find_map_banner_image_url` (Find Map). Public-readable, service-role-write via new `/api/admin/featured-image` route. Images stored in new `site-assets` Storage bucket (public). Migration: `supabase/migrations/004_site_settings.sql`. Read helper: `lib/siteSettings.ts` (`getSiteSettingUrl`, `getAllBannerUrls`).
-- **`FeaturedBannerEditor`** (inlined in `app/admin/page.tsx`) — admin-UI upload component, one per setting key. `/admin` now has three tabs: Requests · Posts · Banners (new).
-
-**v1.1l Find Map polish (on-device walk from v1.1k/j):**
-- Spine line now connects the last `<Stop>` down to the closer circle (was open air — read as trailing off, not as "the trip ends here")
-- Closer composition changes: circle + copy share one grid row, vertically centered (was stacked)
-- Closer copy retires "End of the map. Not the end of the search." in favor of the tagline fragment **"Embrace the Search. Treasure the Find."** — first place in the product where the tagline surfaces as page copy
-- X glyph strokeWidth 1.5 → 2.2 on both Find Map spine X and Find Detail vendor-row X — matches weight of the terminal closer circle
-- Vendor name italic retires — IM Fell non-italic 18px mid-ink, parity with non-italic mall name
-
-**v1.1l post-it font — partial v1.1j reversal to Times New Roman:**
-- 36px numeral on post-it goes to `Times New Roman, Times, serif` (narrow exception from v1.1j's `FONT_SYS` swap)
-- `FONT_SYS` at 36px on the post-it read as "system chrome on a post-it" — the material gesture needed a serif
-- Times New Roman has a clearly-disambiguated `1` (solving the original "1 vs I" IM Fell bug) AND is a widely-available system serif with no extra font load
-- **Scope limited to 36px post-it numeral only.** Inline pills (Find Detail `<Pill>`, Find Map `<BoothPill>`) stay on `FONT_SYS` per v1.1j — at small inline sizes the label context ("Booth" adjacent) disambiguates.
-- Token: `FONT_POSTIT_NUMERAL` in `lib/tokens.ts`
-
-**v1.1l post-it auto-scale for long booth numbers:**
-- 36px for ≤4 digits, 28px for 5 digits, 22px for 6 digits
-- Letter-spacing `-0.01em` all sizes
-- Helper `boothNumeralSize(boothNumber)` in `lib/utils.ts`
-- Applied in both Find Detail and BoothPage post-its
-
-**v1.1l BottomNav idle-tab color:**
-- `#8a8476` (v0.2 `textMuted`) → `v1.inkMuted` (`#6b5538`)
-- One-line fix; full Nav Shelf rework still held for its own sprint
-
-**Files touched v1.1l (18 files, 9edc897):**
-- NEW: `components/StickyMasthead.tsx`, `components/FeaturedBanner.tsx`, `app/api/admin/featured-image/route.ts`, `lib/siteSettings.ts`, `supabase/migrations/004_site_settings.sql`
-- MODIFIED: `lib/tokens.ts`, `lib/utils.ts`, `app/page.tsx`, `app/flagged/page.tsx`, `app/find/[id]/page.tsx`, `app/my-shelf/page.tsx`, `app/shelf/[slug]/page.tsx`, `components/BoothPage.tsx`, `components/BottomNav.tsx`, `app/admin/page.tsx`, `docs/design-system.md` (v1.1k → v1.1l)
-
-### Files touched this session (25)
-- `app/admin/login/page.tsx` — NEW (session 23's documented-but-missing file, finally on disk)
-- `supabase/migrations/004_site_settings.sql` — APPLIED (🖐️ HITL ran this session; committed with v1.1l but never executed against Supabase until now)
-- `site_settings` table + `site-assets` bucket — created in Supabase; two banner images uploaded via admin UI
-- `CLAUDE.md` (this file) — session 24 (v1.1l) documented retroactively; session 25 close added; session 23 archive block annotated with orphan honesty note
-- `docs/DECISION_GATE.md` — new Tech Rule: "File-creation verify at session close"; Risk Register updated (v1.1k orphan row resolved; session-14 build-check rule amended)
-
-### Session 25 close HITL — already complete
-
-1. ✅ `app/admin/login/page.tsx` written to disk (verified via `filesystem:list_directory` before commit — new verify discipline applied)
-2. ✅ `npm run build` — green
-3. ✅ Commit pushed to main: `fix(v1.1k): create missing app/admin/login/page.tsx (session-23 orphan)`
-4. ✅ Vercel deploy triggered and confirmed live
-5. ✅ On-device QA: `/admin/login` renders correctly, PIN sign-in lands on `/admin`, `/admin` unauth gate redirects here (not `/login`)
-6. ✅ `004_site_settings.sql` applied via Supabase SQL editor; `site-assets` bucket verified public
-7. ✅ Home banner uploaded + verified on device
-8. ✅ Find Map banner uploaded + verified on device
-9. ✅ This CLAUDE.md update (final HITL: `thc` to commit the docs update)
-
-### Session 26 candidate queue
-
-- **26A — KI-003 diagnosis** (vendors posting under stale identity after approval). Longest-parked item; pre-beta blocker. No longer blocked by any design work. Likely top of queue.
-- **26B — Sprint 4 tail batch** (T4c copy polish remainder + T4b admin surface consolidation + T4d pre-beta QA walk of all three flows). Design debt is now empty; T4b becomes cleaner because `/admin/login` is a real dedicated route whose fate (keep dedicated vs. fold into `/admin` unauth gate) is a specific decision rather than an abstract one.
-- **26C — `<MallSheet>` migration sub-sprint** (`/post`, `/post/preview`, `/vendor-request`). Mechanical work against a committed primitive; ~2 hours.
-- **26D — Nav Shelf decision + BottomNav full chrome rework** (held since sessions 16–20; David picks from 4 mockups in `docs/mockups/nav-shelf-exploration.html`).
-- **26E — Post-beta candidates surfacing now that design is landed:** 3A Find Detail sold landing state (photograph-still-visible treatment), Find Map saved-but-sold tile signal, feed pagination, ToS/privacy, error monitoring (Sentry or structured logs).
-- **26F — Docs agent housekeeping:** `CONTEXT.md` is now ~18 sessions stale (last updated 2026-04-07, pre-v1.1); the existing "stale" call-out in Known Gaps is becoming a persistent risk. Worth a dedicated 30-minute refresh session that brings CONTEXT.md up to v1.1l so new-session openers have accurate architecture context, not just CLAUDE.md session state.
-
-**Recommended:** 26A first (KI-003 diagnosis). It's been parked longest, it's the only remaining pre-beta tech blocker, and the design work that was consuming bandwidth across sessions 15–24 is now fully landed. Clearing KI-003 puts the product at a genuine beta-ready state.
+**Recommended for session 27: 27A (Sprint 4 tail)** — longest-parked pre-beta, clears the path to beta-ready, and T4b is genuinely cleaner now that `/admin/login` is a real dedicated route rather than a theoretical one.
 
 ---
 
-## ARCHIVE — What was done earlier (2026-04-18, session 24 — v1.1l StickyMasthead + FeaturedBanner + Find Map polish + post-it Times New Roman)
-> Session 24 was documented retroactively in session 25's close (above). Shipped in commit `9edc897`. 18 files, 1205 insertions, 256 deletions. See session 25 "v1.1l" summary above for full detail.
+## ARCHIVE — What was done earlier (2026-04-19, session 25 — v1.1k `/admin/login` orphan + v1.1l `site_settings` migration)
 
-**Close HITL that did NOT run at the time:** The `004_site_settings.sql` migration was committed as 🖐️ HITL but never applied. The featured banners shipped as code but rendered invisibly (graceful-collapse path) until David ran the migration in session 25. Worth noting: the graceful-collapse was correct behavior — broken UI would have been worse — but the HITL instruction was buried in a comment header inside the SQL file rather than surfaced in CLAUDE.md's close HITL list. Future sprints that include a required Supabase migration should list it as an explicit HITL step in the session-close checklist, not just inside the file.
+**Status at the time:** ✅✅ Session 25 closed the last two loose ends from the v1.1k + v1.1l sprints. Session 23's CLAUDE.md claimed `app/admin/login/page.tsx` shipped but the file was never actually written — a repeat of the session 13 `lib/imageUpload.ts` orphan pattern. Discovered when the session opener's QA walk of `/admin/login` returned a 404. One commit shipped: the missing file, written from session 23's documented spec against v1.1k primitives. In parallel, the `supabase/migrations/004_site_settings.sql` migration (committed in session 24 as 🖐️ HITL) was applied by David in the Supabase SQL editor; `site-assets` bucket verified public; hero banners uploaded for both Home (Featured Find, eyebrow variant) and Find Map (hero banner, overlay variant); both render live on device.
+
+Two new Tech Rules landed in DECISION_GATE:
+- **File-creation verify at session close** — Docs agent must `filesystem:list_directory` or `filesystem:read_text_file` any NEW file declared in a session close before `thc`. Build-check rule is necessary but not sufficient (runtime navigation strings aren't type-checked).
+- **Required Supabase migrations as explicit HITL** — any sprint shipping a new `supabase/migrations/*.sql` file that production code depends on must list the migration as an explicit 🖐️ HITL step in the session-close checklist, not just inside a comment header.
+
+### v1.1l sprint (session 24) — StickyMasthead + FeaturedBanner + Find Map polish + post-it Times New Roman
+
+Shipped in commit `9edc897` on 2026-04-18. 18 files changed, 1205 insertions, 256 deletions.
+
+**New primitives:**
+- `<StickyMasthead>` (`components/StickyMasthead.tsx`) — shared scroll-linked masthead chrome replacing six inline implementations. `scrollTarget` prop for Booth pages.
+- `<FeaturedBanner>` (`components/FeaturedBanner.tsx`) — two variants (eyebrow + overlay). 16px radius, 10px horizontal inset. Graceful collapse when `imageUrl` is null.
+- `site_settings` data model — keyed-row table with jsonb values. Public-readable, service-role-write via new `/api/admin/featured-image` route.
+- `FeaturedBannerEditor` (inlined in `app/admin/page.tsx`) — admin-UI upload component.
+
+**Find Map polish (v1.1k/j → v1.1l):**
+- Spine connects to terminal 16px filled circle (was open air)
+- Closer composition: circle + copy in one grid row, vertically centered
+- Closer copy changed to **"Embrace the Search. Treasure the Find."** — first in-product tagline surfacing
+- X glyph strokeWidth 1.5 → 2.2 on both Find Map spine X and Find Detail vendor-row X
+- Vendor name italic retires — IM Fell non-italic 18px
+
+**Post-it font — partial v1.1j reversal to Times New Roman:**
+- 36px numeral goes to `"Times New Roman", Times, serif` (narrow exception)
+- Scope limited to 36px post-it numeral ONLY — inline pills stay on `FONT_SYS`
+- Token: `FONT_POSTIT_NUMERAL` in `lib/tokens.ts`
+- Auto-scale: 36px ≤4 digits, 28px @ 5, 22px @ 6+ via `boothNumeralSize(boothNumber)` helper
+
+**BottomNav idle-tab color:** `#8a8476` → `v1.inkMuted` (`#6b5538`). Full Nav Shelf rework still held.
 
 ---
 
 ## ARCHIVE — What was done earlier (2026-04-18, session 23 — v1.1k activation flow pass)
 
-**Status at the time:** ✅✅ *(Session claimed the v1.1k activation flow pass shipped in full: `/vendor-request`, `/login`, `/setup`, new `/admin/login`. Build green, commit pushed.)*
+**Status at the time:** Session claimed the v1.1k activation flow pass shipped in full: `/vendor-request`, `/login`, `/setup`, new `/admin/login`. Build green, commit pushed.
 
-**Correction logged session 25:** `app/admin/login/page.tsx` was documented as shipped but was never on disk. The `mkdir -p` ran successfully in this session — that part is verified — but the subsequent `filesystem:write_file` call did not actually land the file. The build remained green because `/admin/page.tsx`'s unauth-gate redirect to `/admin/login` is a runtime string, not an import, so TypeScript and Next.js build steps had no way to catch the broken target. This was the same class of bug as session 13's `lib/imageUpload.ts` orphan. Session 25 wrote the file from the documented spec; it is now on disk and verified on device. DECISION_GATE Tech Rules gained a new file-creation verify step this session.
+**Correction logged session 25:** `app/admin/login/page.tsx` was documented as shipped but was never on disk. The `mkdir -p` ran successfully — that part verified — but the subsequent `filesystem:write_file` call did not actually land the file. Same class of bug as session 13's `lib/imageUpload.ts` orphan. Session 25 wrote the file from the documented spec; it is now on disk and verified on device.
 
-The four files that DID ship correctly in session 23: `app/vendor-request/page.tsx` (full rewrite), `app/login/page.tsx` (full rewrite, ~35% shorter), `app/setup/page.tsx` (full rewrite), and `app/admin/page.tsx` (one-line surgical redirect update). Everything below this line is session 23's original close copy preserved as historical record; the `app/admin/login/page.tsx` claim in it is known false.
+The four files that DID ship correctly in session 23: `app/vendor-request/page.tsx` (full rewrite), `app/login/page.tsx` (full rewrite, ~35% shorter), `app/setup/page.tsx` (full rewrite), and `app/admin/page.tsx` (one-line surgical redirect update to `/admin/login`).
 
-### What shipped this session (one commit, per session 23 close — ACCURACY NOTE ABOVE)
-
-**`docs/design-system.md` — v1.1j → v1.1k:**
-Version bumped in header (v1.1j → v1.1k; session 23). New Status paragraph at top with eight lettered commitments:
-(a) **Mode C resolved for task-first surfaces.** v1.0 header-pattern system committed Mode C for `/post`, `/post/preview`, `/vendor-request`, `/setup`, `/login` but didn't specify interior grammar. v1.1k commits: back-arrow paper bubble (`v1.iconBubble` 38px) top-left, no masthead wordmark, no diamond dividers, no post-it, no cartographic glyphs. Editorial voice (`FONT_IM_FELL`) carries titles/subheads/end-of-path; precise voice (`FONT_SYS`) carries form fields/inputs/email echoes/timers/errors.
-(b) **Paper-wash 60px success bubble primitive.** `rgba(42,26,10,0.04)` bg, 0.5px `v1.inkHairline` edge, glyph in `v1.inkPrimary`. Generalizes the v1.1f paper-variant icon bubble to hero scale. Retires SaaS success-toast green chrome across activation flow.
-(c) **Filled green CTA — commit actions only.** `v1.green` bg + white `FONT_SYS` 15px 500 weight, 14px radius. Reserved for commit actions: Request access, Email me a code, Sign in as Admin, Go to my shelf. End-of-path actions become IM Fell italic dotted-underline text links.
-(d) **Form input primitive.** White translucent `rgba(255,253,248,0.70)` bg, 1px `v1.inkHairline` border (focus 1.5px `v1.inkPrimary`; error 1.5px `v1.redBorder`), 14px radius, 14×14px padding, `FONT_SYS` 16px. Labels above in IM Fell italic 13px `v1.inkMuted` with natural sentence casing.
-(e) **Email echo line primitive.** Horizontal row (not a card): 14px mail glyph `v1.inkMuted` + "Sent to " + email (`FONT_SYS` 14px `v1.inkPrimary` 500 weight), 12px vertical padding, 0.5px `v1.inkHairline` rules above/below.
-(f) **Mode C tab switcher retires.** Rounded-pill `Email code / Admin PIN` tab switcher on `/login` retires entirely. Admin PIN moves to new dedicated `/admin/login` route. `/login` becomes curator-only.
-(g) **`/admin/login` scope committed.** New route, dedicated PIN entry surface. Three states: PIN entry, signing-in bridge, inline error. Composition: Mode C chrome + logo mark with shield glyph + "Admin Sign in" title + PIN input + filled green CTA + signing-in paper-wash bubble. *(Finally shipped session 25.)*
-(h) **`<MallSheet>` migration to `/vendor-request` deliberately deferred.** Native HTML `<select>` used in v1.1k. Sprint 5 sub-sprint bundles migration with `/post` + `/post/preview` consumers.
-
-Pattern retirement log: v0.2 `greenLight`/`greenBorder` success check-bubble chrome; rounded-pill tab switcher on `/login`; uppercase + tracked-letter-spacing form labels; green info boxes.
+**v1.1k commitments in `docs/design-system.md`:** (a) Mode C interior grammar for task-first surfaces, (b) paper-wash 60px success bubble primitive, (c) filled green CTA for commit actions only, (d) form input primitive, (e) email echo line primitive, (f) Mode C tab switcher retires, (g) `/admin/login` scope committed, (h) `<MallSheet>` migration to `/vendor-request` deferred.
 
 ---
 
 ## ARCHIVE — What was done earlier (2026-04-18, session 22A — v1.1j QA polish pass)
 
-**`docs/design-system.md` — v1.1i → v1.1j:** Six-point Status paragraph. (a) Diamond ornament retires from every divider. (b) Booth numbers switch to `FONT_SYS` globally (1-vs-I disambiguation). (c) `/my-shelf` Window View renders 9-cell placeholder composition for owner. (d) `<AddFindTile>` joins Shelf View for owner (reverses session-18 commitment). (e) Find Map closer closes the loop (spine drop + 16px terminal circle). (f) Home masthead left-slot logo enlarges 24/0.72 → 34/0.92.
-
-**Tool-environment reinforced:** Box-drawing anchor bug in `filesystem:edit_file` fired four times this session. Workaround: drop rule line from anchor, use unique code content instead. Proposed Tech Rule promotion (finally landed session 24/25 era — see DECISION_GATE).
+Six-point Status paragraph advancing v1.1i → v1.1j. (a) Diamond ornament retires. (b) Booth numbers switch to `FONT_SYS` globally (1-vs-I disambiguation). (c) `/my-shelf` Window View renders 9-cell placeholder composition for owner. (d) `<AddFindTile>` joins Shelf View for owner. (e) Find Map closer closes the loop. (f) Home masthead logo enlarges 24/0.72 → 34/0.92.
 
 ---
 
-## ARCHIVE — What was done earlier (2026-04-18, session 21A — v1.1i code sprint + v1.1i-polish)
+## ARCHIVE — What was done earlier (2026-04-18, session 21A — v1.1i code sprint)
 
-**Status:** ✅✅ v1.1i shipped in two same-session commits. Commit 1: `<MallSheet>` primitive NEW + `app/page.tsx` full rewrite (paper masonry + feed hero) + Find Detail 3B sold landing state + `app/flagged/page.tsx` `isSold` retirement + `components/MallHeroCard.tsx` DELETED. Commit 2: sticky mastheads across 5 pages + MallSheet centering fix (transform-free `left:0/right:0/margin:0 auto`) + subtle paper-tone drop-shadows on product photographs (tile-strength + hero-strength).
+**Status:** v1.1i shipped in two same-session commits. Commit 1: `<MallSheet>` primitive NEW + `app/page.tsx` full rewrite (paper masonry + feed hero) + Find Detail 3B sold landing state + `app/flagged/page.tsx` `isSold` retirement + `components/MallHeroCard.tsx` DELETED. Commit 2: sticky mastheads across 5 pages + MallSheet centering fix (transform-free) + paper-tone drop-shadows on product photographs.
 
-**Three-part v1.1i sold contract locked:** bookmark key kept when a saved find sells + Find Map tile renders identically to available + Find Detail 3B IS the reveal. Breaking any one breaks all three. Documented in `docs/design-system.md` v1.1i and in-file on `FindTile` in `app/flagged/page.tsx`. Do NOT add a status filter to `getPostsByIds`.
+**Three-part v1.1i sold contract locked:** bookmark key kept when a saved find sells + Find Map tile renders identically to available + Find Detail 3B IS the reveal. Breaking any one breaks all three. Do NOT add a status filter to `getPostsByIds`.
 
 ---
 
 ## ARCHIVE — What was done earlier (2026-04-18, session 20)
-> Pure design-direction session; v1.1i spec committed to `docs/design-system.md`; two mockups on disk; no production code changed. Fully realized in code by session 21A.
+> Pure design-direction session; v1.1i spec committed; two mockups on disk; no production code changed.
 
-David picked **C2** for the feed treatment and **3B** for the sold landing state. Five questions settled: all-malls hero copy ("Finds from across Kentucky"), sold retired from shopper discovery, MallSheet All row no-glyph, feed first-load defaults to All malls, frosted hearts always visible on tiles. Follow-on questions: 3B Find Detail, `/shelf/[slug]` keeps sold for vendor story, Find Map keeps bookmark + tile + uses 3B.
+David picked **C2** for feed treatment and **3B** for sold landing state. Five questions settled. Follow-on questions on 3B + `/shelf/[slug]` sold retention + Find Map bookmark + tile.
 
 ---
 
 ## ARCHIVE — What was done earlier (2026-04-18, session 19A)
 
-Token consolidation cleanup. `lib/tokens.ts` extended with canonical `v1` + `fonts` (`FONT_IM_FELL`, `FONT_SYS`) exports alongside v0.2 `colors`. Inline `v1` objects retired from `app/find/[id]/page.tsx`, `app/flagged/page.tsx`, `components/BoothPage.tsx`. `BoothPage.tsx` re-exports the symbols so `/my-shelf` and `/shelf/[slug]` imports resolve unchanged.
+Token consolidation cleanup. `lib/tokens.ts` extended with canonical `v1` + `fonts` (`FONT_IM_FELL`, `FONT_SYS`) exports. Inline `v1` objects retired from `app/find/[id]/page.tsx`, `app/flagged/page.tsx`, `components/BoothPage.tsx`. `BoothPage.tsx` re-exports the symbols.
 
 ---
 
 ## ARCHIVE — What was done earlier (2026-04-18, session 18 — v1.1h Booth page redesign)
 
-Both `/my-shelf` and `/shelf/[slug]` rebuilt: banner as pure photograph with booth post-it pinned to it (cross-page primitive shared with Find Detail), vendor display name as IM Fell 32px page title, small pin-prefixed mall+address block, Window View (3-col 4:5 grid) + Shelf View (horizontal scroll 52vw/210px tiles with 22px left padding on first tile). Four v0.2 components DELETED: `<LocationStatement>`, `<BoothLocationCTA>`, `<ExploreBanner>`, `<TabSwitcher>`. `components/BoothPage.tsx` NEW, shared between both Booth pages. Georgia cleared from last major surface.
+Both `/my-shelf` and `/shelf/[slug]` rebuilt: banner as pure photograph with booth post-it pinned, vendor name as IM Fell 32px title, pin-prefixed mall+address block, Window View + Shelf View. Four v0.2 components DELETED: `<LocationStatement>`, `<BoothLocationCTA>`, `<ExploreBanner>`, `<TabSwitcher>`. `components/BoothPage.tsx` NEW, shared between both Booth pages.
 
 ---
 
 ## ARCHIVE — What was done earlier (2026-04-18, session 17)
 
-Find Detail v1.1e/v1.1f on-device polish (app-wide background to paperCream globally, masthead Title Case, frosted on-image save+share bubbles, status pill retirement, post-it relocation bottom-right with push pin + stacked "Booth Location" eyebrow + `+6deg` rotation). Find Map v1.1g full redesign of `/flagged` (Mode A masthead, "Find Map" subheader, intro voice, pin+mall anchor, X-glyph itinerary spine, `Booth [NNN pill]` rows, find tiles with frosted hearts + prices + sold treatment, chapter-break closer). Glyph hierarchy locked: pin = mall, X = booth.
+Find Detail v1.1e/v1.1f on-device polish (app-wide background to paperCream globally, masthead Title Case, frosted on-image save+share bubbles, status pill retirement, post-it bottom-right with push pin + stacked "Booth Location" eyebrow + `+6deg` rotation). Find Map v1.1g full redesign of `/flagged`. Glyph hierarchy locked: pin = mall, X = booth.
 
 ---
 
 ## ARCHIVE — What was done earlier (2026-04-18, session 16)
 
-Find Detail v1.0 code build + 4 iteration passes v1.0 → v1.1d. BottomNav minimal chrome patch (paperCream translucent bg + inkHairline border). Nav-shelf exploration mockup (4 approaches, still held for David review). Critical tool lesson: `create_file` in the container does NOT write to the Mac filesystem; `filesystem:write_file` is the only reliable write tool. Documented in DECISION_GATE.
+Find Detail v1.0 code build + 4 iteration passes v1.0 → v1.1d. BottomNav minimal chrome patch. Nav-shelf exploration mockup (4 approaches, still held for review). Critical tool lesson: `create_file` in the container does NOT write to the Mac filesystem; `filesystem:write_file` is the only reliable write tool.
 
 ---
 
 ## ARCHIVE — What was done earlier (2026-04-17, session 15)
 > Design direction relocked; `docs/design-system.md` v1.0 committed; Find Detail spec locked in mockup; no production code changed.
 
-Tagline anchor committed: **Embrace the Search. Treasure the Find. Share the Story.** Cartographic vocabulary committed (pin = mall, X = booth). Material vocabulary committed (booth post-it as one skeuomorphic signature per find). Typography rewritten (IM Fell English editorial, Caveat rare, system-ui precise data, Georgia + Mono retired from ecosystem). Paper as surface (no card chrome). v0.2 pattern retirement log.
+Tagline anchor committed: **Embrace the Search. Treasure the Find. Share the Story.** Cartographic vocabulary committed. Material vocabulary committed. Typography rewritten (IM Fell English editorial, Caveat rare, system-ui precise, Georgia + Mono retired).
 
 ---
 
 ## ARCHIVE — What was done earlier (2026-04-17 late-night, session 14)
 
-Booth page v0.2 redesign shipped (`<LocationStatement>`, `<BoothLocationCTA>`, `<ShelfGrid>` rewrite, `<TabSwitcher>` relabeling). `lib/imageUpload.ts` reconstructed mid-session — session-13 orphan pattern (file documented as shipped but never committed). New Tech Rule added: *"A session is not closed until `npm run build` has run green against the committed state of the repo."* Session 25 amends this rule — see DECISION_GATE file-creation verify addition.
+Booth page v0.2 redesign shipped. `lib/imageUpload.ts` reconstructed mid-session — session-13 orphan pattern. New Tech Rule added: *"A session is not closed until `npm run build` has run green against the committed state of the repo."* Session 25 amended this rule with a companion file-creation verify step.
 
 ---
 
 ## ARCHIVE — What was done earlier (2026-04-17 late-night, session 13)
-> KI-004 resolved, in-mall diagnostic tooling shipped, toast visual polish.
+> KI-004 resolved, in-mall diagnostic tooling shipped.
 
-`app/api/admin/diagnose-request/route.ts` NEW. `app/api/admin/vendor-requests/route.ts` REWRITE (constraint-aware approval). `app/admin/page.tsx` REWRITE (Diagnose links, inline DiagnosisPanel, toast polish). `docs/admin-runbook.md` NEW with 9 SQL recipes.
+`app/api/admin/diagnose-request/route.ts` NEW. `app/api/admin/vendor-requests/route.ts` REWRITE (constraint-aware approval). `app/admin/page.tsx` REWRITE (Diagnose links, inline DiagnosisPanel). `docs/admin-runbook.md` NEW with 9 SQL recipes.
 
 **Fix policy for vendor approval (still committed):**
 - Booth collision + unlinked + name match → safe claim
@@ -275,7 +228,7 @@ Booth page v0.2 redesign shipped (`<LocationStatement>`, `<BoothLocationCTA>`, `
 - `lib/imageUpload.ts` is the single source of truth. Import `compressImage` and `uploadPostImageViaServer`. Never write another copy.
 - `uploadPostImageViaServer` THROWS on failure. Callers MUST try/catch and abort the post/update on throw. Never write a post row with image_url: null.
 - `lib/posts.ts:uploadPostImage` is deprecated (anon client, can't see bucket through RLS). Don't use.
-- `lib/posts.ts:uploadVendorHeroImage` is orphaned. Safe to delete next sprint.
+- `lib/posts.ts:uploadVendorHeroImage` is active for hero banners specifically.
 
 ---
 
@@ -285,8 +238,8 @@ Booth page v0.2 redesign shipped (`<LocationStatement>`, `<BoothLocationCTA>`, `
 - **Session 12** — Design agent first direction pass; `docs/design-system.md` v0.2 (later rewritten v1.0 session 15)
 - **Session 11** — Design agent activated; `docs/design-system.md` scaffolded
 - **Session 10** — `/setup` 401 race polish; T4c orphan cleanup A/B/E
-- **Session 9** — KI-001, KI-002, KI-003 resolved; Flow 2 end-to-end verified
-- **Session 8** — Onboarding scope-out (`docs/onboarding-journey.md`); T4a email infrastructure
+- **Session 9** — KI-001, KI-002, **KI-003 all resolved**; Flow 2 end-to-end verified on device (three-part KI-003 fix: `/login` redirect-param unification, `/post` localStorage guard, `/my-shelf` self-heal)
+- **Session 8** — Onboarding scope-out (`docs/onboarding-journey.md`); T4a email infrastructure (Resend REST via `lib/email.ts`)
 - **Session 7** — `/admin` mobile-first approval polish (T3); full database reset
 - **Session 6** — Custom domain `app.kentuckytreehouse.com` live; OTP 6-digit primary auth path
 - **Session 5** — `emailRedirectTo` fix; `safeRedirect(next, fallback)` helper
@@ -314,11 +267,13 @@ Booth page v0.2 redesign shipped (`<LocationStatement>`, `<BoothLocationCTA>`, `
 
 **Operator note:** David Butler is an **online reseller** (Zen Forged LLC, ZenForged Finds online sales). He is not a physical storefront operator at any mall. In-person vendor onboarding sessions are deliberate scheduled meetups, not incidental. This matters for scoping — "in person" is a product choice, not a default.
 
-**Tagline (committed session 15):** *Embrace the Search. Treasure the Find. Share the Story.* Anchored in `docs/DECISION_GATE.md`. First surfacing as page copy: Find Map closer, v1.1l.
+**Tagline (committed session 15):** *Embrace the Search. Treasure the Find. Share the Story.* Anchored in `docs/DECISION_GATE.md`. First in-product surfacing: Find Map closer, v1.1l.
 
 **Onboarding canonical spec:** See `docs/onboarding-journey.md` for the three committed flows (Pre-Seeded, Demo, Vendor-Initiated).
 
-**Design canonical spec:** See `docs/design-system.md` v1.1l for the visual + interaction system. All multi-screen UI work scopes against it before code. **v1.1l (session 24)** commits the `<StickyMasthead>` + `<FeaturedBanner>` primitives, admin-editable hero banners for Home and Find Map via `site_settings` keyed rows, Find Map closer rework (spine connects to terminal circle + tagline copy), X glyph strokeWidth bump, vendor-name italic retire on Find Map, post-it 36px numeral to Times New Roman with digit-count auto-scale, and BottomNav idle-tab color into v1 ink scale.
+**Design canonical spec:** See `docs/design-system.md` v1.1l for the visual + interaction system. All multi-screen UI work scopes against it before code.
+
+**Architecture canonical reference:** See `CONTEXT.md` — refreshed session 26 against v1.1l reality; covers schema, routes, API table, lib catalog, component catalog, auth pattern, design system summary.
 
 **Admin runbook:** See `docs/admin-runbook.md` for in-mall SQL triage recipes.
 
@@ -400,19 +355,20 @@ Key records (via Shopify DNS): A `@` → `23.227.38.65`, CNAME `app` → Vercel,
 - Server: first line of every `/api/admin/*` handler: `const auth = await requireAdmin(req); if (!auth.ok) return auth.response;`
 - For auth-required-but-not-admin routes: `requireAuth()`
 
-**Redirect-preservation pattern (session 5):**
+**Redirect-preservation pattern (session 5 + session-9 KI-003 unification):**
 - `lib/auth.ts → sendMagicLink(email, redirectTo?)` appends path as `&next=`
 - `app/login/page.tsx → safeRedirect(next, fallback)` validates same-origin relative paths only
+- `/login` reads BOTH `?redirect=` (approval email) AND `?next=` (magic link round-trip)
 
 **Email pattern (session 8):**
-- `lib/email.ts` — Resend REST API wrapper. Best-effort delivery.
+- `lib/email.ts` — Resend REST API wrapper. Best-effort delivery. Returns `{ ok, error? }`, never throws.
 
 **Vendor approval pattern (session 13 — KI-004):**
 - `/api/admin/vendor-requests` POST performs pre-flight booth check before insert
-- Slug collisions auto-resolve via suffix loop
+- Slug collisions auto-resolve via suffix loop (`-2`, `-3`, …)
 - All collision errors return `{error, diagnosis, conflict}` for UI rendering
 
-**Admin sign-in pattern (v1.1k session 23 + v1.1k-fix session 25):**
+**Admin sign-in pattern (v1.1k session 23 + orphan fix session 25):**
 - `/admin/login` route — dedicated PIN entry for admin audience
 - POST `/api/auth/admin-pin` with `{pin}` → server verifies + returns `{otp, email}`
 - Client calls `supabase.auth.verifyOtp({email, token, type: "email"})` → `router.replace("/admin")`
@@ -427,54 +383,38 @@ Key records (via Shopify DNS): A `@` → `23.227.38.65`, CNAME `app` → Vercel,
 
 ## WORKING ✅
 - Discovery feed, magic link auth, Admin PIN login (via `/admin/login`), OTP delivery
-- Magic link `?redirect=` param preserved across round trip
+- Magic link `?redirect=` + `?next=` preserved across round trip (unified session 9)
 - My Booth, Post flow, Post preview, Find detail, Public shelf
 - Vendor request flow, Vendor account setup, admin approval workflow
 - RLS — 12 policies + vendor_requests (service role only); site_settings intentionally no RLS (public read, service-role write)
 - Rate limiting — `/api/post-caption` 10 req/60s, `/api/vendor-request` 3 req/10min, `/api/auth/admin-pin` 5 req/min per IP
 - Custom domain `app.kentuckytreehouse.com`
 - Branded email templates for Magic Link and Confirm Signup
+- Transactional email receipt + approval via `lib/email.ts`
 - Agent roster: Dev · Product · Docs · Design active
-- KI-001, KI-002, KI-003, KI-004 all resolved
-- Flow 2 onboarding end-to-end verified working on iPhone
-- `/setup` 401 race absorbed with retry+backoff
+- **KI-001, KI-002, KI-003, KI-004 all resolved (sessions 9 + 13)**
+- Flow 2 onboarding end-to-end verified working on iPhone (session 9)
+- `/setup` 401 race absorbed with retry+backoff (session 10)
 - Design agent activated, `docs/design-system.md` at **v1.1l** (sessions 15–24)
 - Admin diagnostic UI, `docs/admin-runbook.md` with 9 SQL recipes
+- Admin-editable hero banners on Home + Find Map (v1.1l, session 24 — migration applied session 25)
+- **CONTEXT.md refreshed to v1.1l reality (session 26)** — replaces 2026-04-07 snapshot that had become 18 sessions stale
 
 ### Design v1.1l — shipped + verified on device (session 24 + session 25 verification)
-- **`<StickyMasthead>`** primitive — all 6 mastheads migrated (Home, Find Map, Find Detail normal, Find Detail 3B, My Shelf, Public Shelf). Scroll-linked bottom hairline: transparent at rest, fades in past `scrollY > 4`. Booth pages pass a `scrollTarget` ref for their overflow-auto scroll container.
-- **`<FeaturedBanner>`** primitive — Home "Featured Find" (eyebrow variant) + Find Map hero banner (overlay variant). Both admin-editable via `/admin` → Banners tab. Session 25 uploaded images for both; both render live.
-- **`site_settings` table + `site-assets` storage bucket** — migration `004_site_settings.sql` applied in session 25 via Supabase SQL editor. Bucket verified public.
-- **`/api/admin/featured-image`** upload route — admin-gated, writes to `site-assets`, upserts `site_settings` row.
-- **Find Map closer rework** — spine connects to terminal 16px filled circle; copy + circle in one grid row vertically centered; copy now `"Embrace the Search. Treasure the Find."` (tagline surfacing first time in-product).
-- **X glyph strokeWidth 1.5 → 2.2** — Find Map spine X and Find Detail vendor-row X. Matches terminal circle weight.
-- **Vendor name italic retires on Find Map** — IM Fell non-italic 18px, parity with mall name.
-- **Post-it 36px numeral font** — Times New Roman (narrow exception from v1.1j `FONT_SYS` swap; `FONT_POSTIT_NUMERAL` token). Post-it pills stay on `FONT_SYS`.
-- **Post-it numeral auto-scale** — `boothNumeralSize(boothNumber)` helper: 36px ≤4 digits, 28px 5, 22px 6.
-- **BottomNav idle color** — `v1.inkMuted` (`#6b5538`), no longer `#8a8476`.
+- **`<StickyMasthead>`** primitive — all 6 mastheads migrated. Scroll-linked bottom hairline past `scrollY > 4`.
+- **`<FeaturedBanner>`** primitive — Home (eyebrow) + Find Map (overlay). Both admin-editable via `/admin` → Banners tab.
+- **`site_settings` table + `site-assets` storage bucket** — migration applied session 25.
+- **`/api/admin/featured-image`** upload route.
+- **Find Map closer rework** — spine connects to terminal circle; copy is the tagline fragment (first in-product surfacing).
+- **X glyph strokeWidth 1.5 → 2.2** on Find Map + Find Detail.
+- **Vendor name italic retires on Find Map** — IM Fell non-italic 18px.
+- **Post-it 36px numeral font** — Times New Roman (narrow exception; `FONT_POSTIT_NUMERAL` token).
+- **Post-it numeral auto-scale** — `boothNumeralSize(boothNumber)`: 36/28/22px.
+- **BottomNav idle color** — `v1.inkMuted` (`#6b5538`).
 
 ### Design v1.1k — activation flow pass (session 23 + orphan fix session 25)
-- **`/vendor-request`** — Mode C chrome, v1 palette, IM Fell intro + success editorial, `FONT_SYS` form fields, v1.1k form input primitive, filled green "Request access" CTA, paper-wash success bubble + email echo line + italic dotted-underline text links (no filled CTA on success).
-- **`/login`** — curator-only (PIN tab retired). `/login` + `?redirect=/setup` KI-003 fix intact. paper-wash logo bubble with leaf logo + "Curator Sign in" IM Fell 28px. OTP entry: `FONT_SYS` 28px with 0.4em tracking, auto-verifies on 6th digit, paste-clipboard text link, resend row.
-- **`/admin/login`** — NEW dedicated route. Paper-wash logo bubble with Shield glyph (differentiated audience cue), "Admin Sign in" title, password input 22px centered 0.4em tracking, filled green "Sign in as Admin" CTA with inline Shield. Signing-in bridge paper-wash + spinner.
-- **`/setup`** — Mode C centered-hero, paper-wash success bubble + "Welcome to your shelf." (no name; mall in subhead carries personalization), filled green "Go to my shelf" + 3s auto-redirect. Error: red-retoned same bubble + italic error copy + try-again/back-to-sign-in text links.
-- **`/admin` unauth gate redirect** — `/login` → `/admin/login` (one-line session-23 edit; target finally exists session 25).
-
-### Design v1.1i — Feed + MallSheet + 3B (session 21A)
-- Feed paper masonry + `<MallSheet>` primitive + Find Detail 3B sold landing state + Find Map `isSold` retirement + `<MallHeroCard>` deletion.
-- Three-part v1.1i sold contract locked: bookmark + tile + 3B.
-
-### Design v1.1h — Booth redesign (session 18)
-- Both Booth pages: banner as photograph with post-it pinned, vendor name as 32px page title, pin-prefixed mall+address, Window View + Shelf View, 4 v0.2 components DELETED.
-
-### Design v1.1g — Find Map redesign (session 17)
-- `/flagged` full redesign. Glyph hierarchy locked: pin = mall, X = booth.
-
-### Design v1.1d — Find Detail (session 16)
-- Find Detail full build. IM Fell + Caveat loaded via Google Fonts.
-
-### Design v1.1h token consolidation (session 19A)
-- `lib/tokens.ts` canonical for v1.1h `v1` palette + fonts. All three surfaces import from it.
+- **`/vendor-request`**, **`/login`** (curator-only; PIN tab retired), **`/admin/login`** (NEW dedicated route with Shield glyph), **`/setup`** — all Mode C chrome against v1.1k primitives.
+- **`/admin` unauth gate redirect** — to `/admin/login`.
 
 ### Infrastructure
 - **App-wide background paperCream `#e8ddc7` globally committed** (session 17)
@@ -483,24 +423,24 @@ Key records (via Shopify DNS): A `@` → `23.227.38.65`, CNAME `app` → Vercel,
 ## KNOWN GAPS ⚠️
 
 ### 🔴 Pre-beta blockers
-_None as of session 25 close._ Design debt is empty; the last tech blocker (KI-003) is parked but not active.
+_None as of session 26 close._ KI-003 was resolved session 9 (three-part fix, Flow 2 verified on device); the phantom-blocker framing that carried it across sessions 18–25 was struck this session. All four KIs are closed. Design debt is empty. Last tech work before beta-ready is the Sprint 4 tail batch, which is open but is not a blocker.
 
 ### 🟡 Remaining pre-beta tech work
-- **KI-003 diagnosis** (vendors posting under stale identity after approval). Longest-parked item. No longer blocked by design work. Session 26 recommended opener.
-- **Sprint 4 tail batch:**
+- **Sprint 4 tail batch** — longest-parked pre-beta item as of session 26.
   - 🟡 T4c remainder (copy polish) — `/api/setup/lookup-vendor` error copy + `/vendor-request` success screen copy. ~30 min.
-  - 🟡 T4b — admin surface consolidation. `/admin/login` being a real dedicated route now makes T4b a cleaner decision sprint. ~4 hours.
-  - 🟡 T4d — pre-beta QA pass walking all three flows end-to-end.
-  - 🟢 Session 13 test data cleanup — 5+ "David Butler" variants in DB. ~5 min SQL via admin-runbook Recipe 4.
+  - 🟡 T4b — admin surface consolidation. `/admin/login` keep-vs-fold disposition (now grounded in a real dedicated route); `/shelves` AddBoothSheet retirement; admin BottomNav cleanup; possibly new Add-Vendor sub-flow per onboarding-journey.md Flow-2 scope. ~4 hours.
+  - 🟡 T4d — pre-beta QA pass walking all three flows end-to-end against a clean DB. ~1–2 hours.
+  - 🟢 Session-13 test data cleanup — 5+ "David Butler" variants in DB. ~5 min SQL via admin-runbook Recipe 4.
 
 ### 🟡 Sprint 5 + design follow-ons
-- **`<MallSheet>` migration sub-sprint** (`/post`, `/post/preview`, `/vendor-request`). Mechanical work against committed primitive; ~2 hours.
+- **`<MallSheet>` migration sub-sprint** (`/post`, `/post/preview`, `/vendor-request`). Deferred explicitly in v1.1k (h). ~2 hours.
 - **Nav Shelf decision + BottomNav full chrome rework** (held since sessions 16–20; David picks from 4 mockups in `docs/mockups/nav-shelf-exploration.html`).
-- **Guest-user UX parked items:** Rename "Sign in" → "Curator Sign In" (v1.1k partially did this — `/login` now says "Curator Sign in" — but the Home masthead + BottomNav affordance link still says "Sign in"), `/welcome` guest landing, PWA install onboarding, vendor onboarding Loom, bookmarks persistence (localStorage → DB-backed).
+- **Guest-user UX parked items:** Home masthead + BottomNav "Sign in" → "Curator Sign In" rename, `/welcome` guest landing, PWA install onboarding, vendor onboarding Loom, bookmarks persistence (localStorage → DB-backed).
+- **Known-Gaps reconciliation Tech Rule promotion** — proposed this session, not yet in DECISION_GATE. ~15 min at session 27 close.
 
 ### 🟡 Sprint 3 leftovers still pending beta invites
 - Error monitoring (Sentry or structured logs)
-- Hero image upload size guard — verify coverage (12MB guard is in place in admin banners editor session 24; post flow guard predates)
+- Hero image upload size guard — verify coverage (12MB guard in admin banners editor session 24; post flow guard predates)
 - Feed content seeding (10–15 real posts) — required before beta invite
 - Beta feedback mechanism (Tally.so link)
 
@@ -517,13 +457,12 @@ _None as of session 25 close._ Design debt is empty; the last tech blocker (KI-0
 ### 🟢 Cleanup (not urgent)
 - Deprecated vendor-request functions still in `lib/posts.ts`
 - `lib/posts.ts:uploadPostImage` deprecated (anon client, can't see bucket through RLS)
-- `lib/posts.ts:uploadVendorHeroImage` orphaned
+- `lib/posts.ts:uploadVendorHeroImage` active — used for vendor hero banners specifically
 - Cloudflare nameservers — dormant, no cost
 - `/shelves` AddBoothSheet — orphan after T4b ships
 - `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` — obsolete since T4a
 - Design v0.2 components deleted across sessions (LocationStatement, BoothLocationCTA, ExploreBanner, TabSwitcher, MallHeroCard, BoothFinderCard)
 - `components/ShelfGrid.tsx` — parked with retention comments (session 18); zero current callers
-- **`CONTEXT.md` is now ~18 sessions stale** (last updated 2026-04-07, pre-v1.1). Persistent risk. Session 26F candidate: 30-minute refresh bringing it up to v1.1l.
 - Mockup HTML files in `docs/mockups/` — many historical records can retire once on-device QA confirms their respective versions hold. No urgency.
 
 ---
