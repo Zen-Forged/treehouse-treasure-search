@@ -123,7 +123,10 @@ export async function POST(req: NextRequest) {
       });
       
       const mock = MOCK_RESPONSES[Math.floor(Math.random() * MOCK_RESPONSES.length)];
-      return NextResponse.json(mock, {
+      // source="mock" + reason="no-key" lets the client distinguish this
+      // intentional-mock path from the fallback-on-error path below, and
+      // skip populating the form when it fires.
+      return NextResponse.json({ ...mock, source: "mock", reason: "no-key" }, {
         headers: { "X-RateLimit-Remaining": String(remaining) },
       });
     }
@@ -150,7 +153,14 @@ Example: {"title":"Vintage brass candlestick","caption":"Carries its age quietly
 
     const client   = new Anthropic({ apiKey });
     const response = await client.messages.create({
-      model:      "claude-opus-4-5",
+      // Session 27: was "claude-opus-4-5" which was retired on the
+      // Anthropic API — the SDK throws, we fall into the catch below,
+      // and every vendor post got a random MOCK_RESPONSES string
+      // regardless of what was photographed. Sonnet 4.6 is the right
+      // tier for a 200-token vision-to-JSON caption task — faster and
+      // cheaper than Opus, still excellent on vision. Pinned (not
+      // aliased) per DECISION_GATE preference for version stability.
+      model:      "claude-sonnet-4-6",
       max_tokens: 200,
       system,
       messages:   [{ role: "user", content }],
@@ -167,7 +177,7 @@ Example: {"title":"Vintage brass candlestick","caption":"Carries its age quietly
     try {
       const parsed = JSON.parse(raw) as { title: string; caption: string };
       return NextResponse.json(
-        { title: parsed.title ?? "", caption: parsed.caption ?? "" },
+        { title: parsed.title ?? "", caption: parsed.caption ?? "", source: "claude" as const },
         { headers: { "X-RateLimit-Remaining": String(remaining) } }
       );
     } catch (parseError) {
@@ -187,6 +197,10 @@ Example: {"title":"Vintage brass candlestick","caption":"Carries its age quietly
     });
     
     const mock = MOCK_RESPONSES[Math.floor(Math.random() * MOCK_RESPONSES.length)];
-    return NextResponse.json(mock);
+    // source="mock" + reason="error" tells the client this is an
+    // emergency fallback — NOT a real description of the image — so
+    // the client should treat it as a failure and leave the form empty
+    // with the amber "Couldn't read this image" notice surfaced.
+    return NextResponse.json({ ...mock, source: "mock", reason: "error" });
   }
 }

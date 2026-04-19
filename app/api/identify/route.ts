@@ -96,7 +96,15 @@ async function claudeIdentify(imageDataUrl: string): Promise<IdentifyResult> {
   const client = new Anthropic();
 
   const response = await client.messages.create({
-    model:       "claude-opus-4-5",
+    // Session 27: was "claude-opus-4-5" which was retired on the
+    // Anthropic API — the SDK threw, the catch block fell back to
+    // mockIdentify(), and /scan → /discover → /decide has been running
+    // on deterministic mock results (seeded by imageDataUrl.length % 8)
+    // regardless of the actual photo. Opus 4.7 is the current top-tier
+    // and has meaningfully better low-level vision perception than 4.5
+    // — worth the spend for identify because comp-search quality drives
+    // the buy/pass decision. Pinned (not aliased) per DECISION_GATE.
+    model:       "claude-opus-4-7",
     max_tokens:  900,
     temperature: 0,
     messages: [{

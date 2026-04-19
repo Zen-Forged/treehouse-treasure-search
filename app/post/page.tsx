@@ -59,9 +59,18 @@ async function generateCaption(imageDataUrl: string): Promise<{ title: string; c
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    // Session 27: the API now returns source: "claude" | "mock" so we
+    // can distinguish a real Claude response from a mock fallback (either
+    // missing-key or on-error). Mock responses are NOT descriptions of
+    // this image — they're generic strings — so we must NOT populate the
+    // form with them. Return empty fields + aiSucceeded=false so the
+    // amber "Couldn't read this image" notice fires.
+    if (data.source !== "claude") {
+      console.warn("[post] caption API returned mock fallback:", data.reason ?? "unknown");
+      return { title: "", caption: "", aiSucceeded: false };
+    }
     const title   = data.title   ?? "";
     const caption = data.caption ?? "";
-    // Treat as failed if both fields came back empty
     const aiSucceeded = !!(title || caption);
     return { title, caption, aiSucceeded };
   } catch (err) {

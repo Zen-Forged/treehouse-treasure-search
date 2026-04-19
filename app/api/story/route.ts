@@ -93,7 +93,13 @@ Respond ONLY with valid raw JSON. No markdown. No explanation.
 }`;
 
   const response = await client.messages.create({
-    model:      "claude-opus-4-5",
+    // Session 27: was "claude-opus-4-5" which was retired on the
+    // Anthropic API. Same regression shape as /api/post-caption and
+    // /api/identify: the SDK threw, the catch block silently fell
+    // back to mockStory(). Sonnet 4.6 is right for this narrow
+    // text-in → small-JSON-out task (no vision). Pinned per
+    // DECISION_GATE preference for version stability.
+    model:      "claude-sonnet-4-6",
     max_tokens: 600,
     messages: [{ role: "user", content: prompt }],
   });

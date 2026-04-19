@@ -52,6 +52,16 @@ async function generateTitleAndCaption(imageDataUrl: string): Promise<{ title: s
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    // Session 27: the API returns source: "claude" | "mock". Mock
+    // responses are generic hardcoded strings, NOT descriptions of
+    // the photographed item — returning them here would populate the
+    // form with misleading text. Return empty fields on any non-
+    // Claude source so the vendor lands on blank inputs and fills
+    // them in manually rather than seeing a wrong AI suggestion.
+    if (data.source !== "claude") {
+      console.warn("[preview] caption API returned mock fallback:", data.reason ?? "unknown");
+      return { title: "", caption: "" };
+    }
     return { title: data.title ?? "", caption: data.caption ?? "" };
   } catch (err) {
     console.error("[preview] generateTitleAndCaption failed:", err);
