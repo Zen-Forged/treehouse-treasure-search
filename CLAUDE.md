@@ -50,9 +50,85 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-18 (session 21A — v1.1i code sprint shipped + v1.1i-polish shipped; pending David's on-device QA walk on next sprint)
+> Last updated: 2026-04-18 (session 22A — v1.1j QA polish pass shipped from David's on-device walk of v1.1i + v1.1i-polish; build green; committed + pushed to prod)
 
-**Status:** ✅✅ **Session 21A shipped the v1.1i code sprint AND a same-session v1.1i-polish pass from on-device QA feedback.** Two commits landed on main: `53a382d` (v1.1i core: Feed paper masonry + `<MallSheet>` + Find Detail 3B sold landing + Find Map `isSold` retire + MallHeroCard deletion) and a v1.1i-polish commit following David's iPhone QA screenshot. Build green both times. Polish pass addressed three on-device issues: (1) MallSheet was off-center on iPhone because Framer Motion's `y` animation was wiping the static `translateX(-50%)` mid-animation — fixed by switching to transform-free `left: 0, right: 0, margin: 0 auto` centering, (2) mastheads across Home / Find Map / Find Detail (normal + 3B) / My Shelf / Public Shelf now `position: sticky` with paperCream translucent bg + backdrop-blur + inkHairline bottom border (mirrors BottomNav chrome at the opposite edge), (3) subtle two-layer paper-tone drop-shadows added to product photographs on Home masonry tiles, Find Map FindTile photos, Find Detail hero photo (slightly stronger — it's the largest photo on any page), Find Detail ShelfCard thumbnails, Booth Window View + Shelf View tiles. Booth banner (`BoothHero`) left untouched per David's explicit instruction (hero image, different visual role). **Next session (22) opens with David's on-device QA walk of the deployed polish commit.**
+**Status:** ✅✅ **Session 22A shipped the v1.1j QA polish pass.** Six doc-level changes landed in one commit: diamond ornament retired from every divider product-wide, booth numbers swap `FONT_IM_FELL` → `FONT_SYS` globally (the "1 vs I" disambiguation rule), `/my-shelf` Window View renders 9-cell placeholder composition for owner, `<AddFindTile>` joins Shelf View for owner parity, Find Map closer closes the loop with a terminal spine circle and booth-label-font copy, Home masthead logo enlarges 24/0.72 → 34/0.92. Build green; commit pushed to main; deploy confirmed by David. `docs/design-system.md` advanced v1.1i → v1.1j with the six-point Status paragraph documenting every change. **Next session (23) opens with David's on-device QA walk of the deployed v1.1j state.**
+
+### What shipped this session (one commit)
+
+**`docs/design-system.md` — v1.1i → v1.1j:**
+Version bumped in header (v1.1i → v1.1j; date 2026-04-18 session 22A). New Status paragraph added directly above the v1.1i Status paragraph (chronological-newest-first order). Six numbered commitments:
+(a) **Diamond ornament retires from every divider.** The v1.0-era commitment (*section divisions via whitespace, hairline rules, and the diamond ornament*) held up in docs but read as noise on device. All dividers become plain full-width hairlines with no center ornament. Surfaces affected: Feed (×3), Find Map (×2, including the new closer), Find Detail (×2 — cartographic divider + SoldLanding 3B), MallSheet (×1), Booth pages (×2 including BoothCloser). `<DiamondDivider>` primitive keeps its name for export stability but renders a plain hairline.
+(b) **Booth numbers switch to `FONT_SYS` globally.** IM Fell English's single-serif `1` reads as capital-I on small inline pills; `FONT_SYS` (system-ui) at the same size resolves it. Scope: `<BoothPill>` on Find Map, `<Pill>` on Find Detail's vendor row, 36px post-it numeral on both Find Detail and the Booth banner. Per the *precise data* typography rule — booth numbers are data, not editorial. Post-it eyebrow stays IM Fell italic (editorial voice); only the numeral moves. Pill weight 500 with `letterSpacing: -0.005em`; 36px numeral weight 500 with `letterSpacing: -0.01em`.
+(c) **`/my-shelf` Window View renders 9-cell placeholder composition for owner.** Grid always renders exactly 9 cells: `[AddFindTile]` + real posts + dashed `<PlaceholderTile>`s to fill the remainder. Makes the window-pane metaphor self-evident and reads an empty booth as *panels to fill* rather than *a punishing gap*. Owner-only; public `/shelf/[slug]` does NOT render placeholders. `<WindowView>` gains `showPlaceholders?: boolean` prop.
+(d) **`<AddFindTile>` joins Shelf View for owner.** Reverses the session-18 commitment (*AddFindTile is never in Shelf View*). Rationale for reversal: Window View's 9-cell treatment now says *this page is about filling spots*; if Shelf View hides the add affordance, the two views disagree about the page's purpose for the owner. AddFindTile becomes the first tile in Shelf View with `marginLeft: 22` defensive alignment, same 52vw/210px max. `<ShelfView>` gains `showAddTile?: boolean` prop.
+(e) **Find Map closer closes the loop.** The v1.1g spine ended in open air — on device this read as *trailing off*, not as *the trip ends here*. v1.1j adds a 48px hairline dropping from the last X down to a 16px filled circle (`v1.inkPrimary`) in the same spine column. Copy ("End of the map. Not the end of the search.") moves directly below, centered, in `FONT_SYS` 15px `v1.inkMid` weight 400 (matches the "Booth" label voice above). Diamond-flanked divider above the closer retires. Intro voice bumps 15px → 16px for the 50+ legibility floor.
+(f) **Home masthead left-slot logo enlarges.** 24px/0.72 opacity → 34px/0.92 opacity, no bubble (it's a brand mark, not an action). Sits in a 38px slot so it occupies the same visual weight as the back-button bubble on pages that have one.
+
+Pattern retirement log entries: diamond ornament as divider punctuation, IM Fell for booth numerals on inline/pill contexts.
+
+**Code files touched (6):**
+
+- `components/BoothPage.tsx` — `<DiamondDivider>` primitive now renders a plain hairline (name kept for export stability); post-it 36px numeral switches `FONT_IM_FELL` → `FONT_SYS` with weight 500; new `<PlaceholderTile>` primitive exported; `<WindowView>` gains `showPlaceholders` prop (defaults `false`); new internal `<ShelfAddFindTile>` primitive sized to match `<ShelfTile>`; `<ShelfView>` gains `showAddTile?` + `vendorId?` props; `<ShelfTile>` signature updated to take `isFirst: boolean` (replaces implicit `index === 0`); `<BoothCloser>` retires the diamond divider in favor of a plain hairline. Header comment block updated to document v1.1j changes.
+- `app/my-shelf/page.tsx` — passes `showPlaceholders={true}` to WindowView; passes `vendorId` + `showAddTile={true}` to ShelfView; empty-inventory branch now renders `<ShelfView posts={[]} showAddTile={true}>` instead of a dead-end message, giving the owner the same add affordance across both views.
+- `app/page.tsx` — Home left-slot logo bumped 24/0.72 → 34/0.92; hero divider (between FeedHero and masonry) retires diamond → plain hairline; vendor CTA divider at bottom of feed retires diamond → plain hairline.
+- `app/find/[id]/page.tsx` — `<Pill>` numeral `FONT_IM_FELL` → `FONT_SYS` weight 500 `letterSpacing: -0.005em`; post-it 36px numeral `FONT_IM_FELL` → `FONT_SYS` weight 500 `letterSpacing: -0.01em`; SoldLanding 3B diamond divider retires → plain hairline; main cartographic diamond divider (between caption and cartographic block) retires → plain hairline. Manage section "Manage" labeled-divider untouched (it's a labeled section break, not a pure diamond ornament).
+- `app/flagged/page.tsx` — `<BoothPill>` numeral `FONT_IM_FELL` → `FONT_SYS` weight 500 `letterSpacing: -0.005em`; intro voice 15px → 16px; mall-to-itinerary diamond divider retires → plain hairline; **closer rebuilt** — was `<motion.div>` with diamond-flanked divider + IM Fell italic 16px copy, now two stacked `<motion.div>`s: (1) a 26px-1fr grid whose spine column renders a 48px hairline + 16px `v1.inkPrimary` filled circle (aligned to where X glyphs were), (2) centered text block below in `FONT_SYS` 15px `v1.inkMid` weight 400. `<Stop>` component unchanged.
+- `components/MallSheet.tsx` — position-6 diamond divider (between subhead and scrollable mall rows) retires → plain hairline. (Stale `{/* ── 6. Diamond divider ── */}` outer comment left in place; inner comment names it as retired per v1.1j. Can tune the outer comment during a future cleanup.)
+
+### Tool-environment lessons reinforced this session
+
+- **Box-drawing comment-rule anchor bug fired four times.** Every file with `// ─── Section title ───` comment rules in its `oldText` anchor bounced on `filesystem:edit_file` (`components/BoothPage.tsx`, `app/find/[id]/page.tsx`, `app/flagged/page.tsx`, `components/MallSheet.tsx`). Workaround that worked reliably: drop the rule line from the anchor entirely; anchor on function signatures or unique inline style-prop combinations instead. **This lesson has now surfaced in sessions 16, 19A, 21A, and 22A.** The next session's Docs agent should finally promote it to `docs/DECISION_GATE.md` Tech Rules as proposed in session 21A close. Proposed wording: *"When `filesystem:edit_file` fails with 'Could not find exact match' and the failing anchor contains box-drawing characters (───, ═══), drop the rule line from the anchor entirely. Anchor on unique code content (function signatures, unique inline-style prop combinations, `}\n\nexport default`, etc.) instead. Do a separate surgical edit to handle the orphaned rule if needed."*
+- **`filesystem:edit_file` batches are atomic.** When one `oldText` in a multi-edit batch doesn't match, *every* edit in the batch rolls back — even the ones whose anchors did match. Bit this session on the first `app/page.tsx` attempt (three edits submitted, all three rolled back when the middle one failed on a box-drawing anchor). Good discipline: split edits whose anchors are risky into their own `filesystem:edit_file` calls.
+
+### 🔆 Session 23 HITL — starts here
+
+Pre-flight on iPhone (unchanged from 22A):
+1. Hard-refresh https://app.kentuckytreehouse.com after deploy completes
+2. If stale state persists: Settings → Safari → Advanced → Website Data → remove `kentuckytreehouse`, then refresh
+
+QA walk checklist for v1.1j (on-device):
+- **Global** — no diamond ornaments anywhere in the product. Every divider is a plain full-width hairline.
+- **Home** — left-slot logo is clearly visible (34px, 0.92 opacity), feels like a brand mark rather than a placeholder. Divider between feed hero and masonry is plain hairline. Vendor CTA divider at bottom of feed is plain hairline.
+- **Find Map** — intro voice reads one size larger (16px). Divider between mall anchor and itinerary is plain hairline. Scroll to the last stop: below the last X, a hairline drops to a small filled circle (same column as the X glyphs); below that, "End of the map. Not the end of the search." renders centered in sans-serif (no more IM Fell italic). No diamond divider above the closer.
+- **Find Detail** — post-it numeral reads as sans-serif (booth 1s look like 1s, not Is). Vendor-row booth pill numeral also sans-serif. Divider between caption and cartographic block is plain hairline.
+- **Find Detail 3B sold landing** — divider between explanation and links is plain hairline.
+- **My Shelf / Public Shelf** — post-it numeral on banner reads as sans-serif. BoothCloser divider is plain hairline.
+- **My Shelf — new** — Window View renders exactly 9 cells regardless of post count: `[AddFindTile]` + posts + dashed placeholder tiles to fill. Switch to Shelf View: the first (leftmost) tile is now an `AddFindTile` matching the surrounding tile dimensions. Empty booth in Shelf View: still shows the AddFindTile (no more dead-end message).
+- **Public Shelf** — Window View does NOT show placeholders (visitor view shows only real inventory); Shelf View does NOT show an AddFindTile (public visitors can't add).
+- **MallSheet** — open from Home feed; divider between subhead and mall rows is plain hairline.
+
+### Session 23 candidate queue
+
+- **23A — QA feedback from on-device walk of v1.1j** (David's likely next-session opener). Iteration on shadow, typography, MallSheet, 3B composition, or anything else that surfaces.
+- **23B — KI-003 diagnosis** (vendors posting under stale identity after approval; pre-beta blocker; still parked since session 18).
+- **23C — Sprint 5: onboarding v1.0 pass + `<MallSheet>` migration** to `/post` and `/vendor-request` (second + third consumers of the primitive).
+- **23D — Nav Shelf decision + BottomNav full chrome rework** (held since sessions 16–20; David picks from 4 mockups in `docs/mockups/nav-shelf-exploration.html`).
+- **23E — Sprint 4 tail batch** (T4c copy polish + T4b admin surface consolidation + T4d pre-beta QA walk).
+- **23F (Docs agent housekeeping)** — Promote the box-drawing anchor lesson into `docs/DECISION_GATE.md` Tech Rules, stop it from repeating every design session. Tune the stale `{/* 6. Diamond divider */}` outer comment in `components/MallSheet.tsx`. Optional: bump the `/flagged` file header comment from `v1.1f` to `v1.1j` (the code is already v1.1j-correct but the header hasn't been bumped across sessions 20–22A).
+
+### Files touched this session
+- `docs/design-system.md` — v1.1i → v1.1j (six-point Status paragraph added)
+- `components/BoothPage.tsx` — DiamondDivider + BoothCloser + post-it numeral + WindowView + ShelfView + new PlaceholderTile + new ShelfAddFindTile
+- `app/my-shelf/page.tsx` — WindowView + ShelfView prop passthroughs; empty-inventory branch
+- `app/page.tsx` — logo enlarge + two diamond divider retirements
+- `app/find/[id]/page.tsx` — Pill + post-it numeral font swap; two diamond divider retirements
+- `app/flagged/page.tsx` — BoothPill font swap; intro voice 15→16; mall divider + closer rebuild
+- `components/MallSheet.tsx` — position-6 diamond divider retirement
+- `CLAUDE.md` (this file) — session 22A close
+
+### Session 22A close HITL — already complete
+
+All HITL steps ran this session:
+1. ✅ `npm run build` — green (confirmed by David)
+2. ✅ Commit pushed to main with message `polish(v1.1j): retire diamonds, booth-number font swap, /my-shelf 9-cell grid, Find Map closer loop, Home logo`
+3. ✅ Vercel deploy confirmed live (David ran the push, verified prod)
+
+---
+
+## ARCHIVE — What was done earlier (2026-04-18, session 21A — v1.1i code sprint + v1.1i-polish)
+
+**Status:** ✅✅ **Session 21A shipped the v1.1i code sprint AND a same-session v1.1i-polish pass from on-device QA feedback.**
 
 ### What shipped this session (two commits)
 
