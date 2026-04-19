@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Review page refresh v1.2</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --ink-wash:     rgba(42, 26, 10, 0.04);
+    --ink-bubble:   rgba(42, 26, 10, 0.06);
+    --price-ink:    #6a4a30;
+    --green:        #1e4d2b;
+    --input-bg:     rgba(255, 253, 248, 0.70);
+
+    --im-fell:      "IM Fell English", Georgia, serif;
+    --sys:          -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+    --postit-num:   "Times New Roman", Times, serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+
+  .page-wrap { max-width: 1400px; margin: 0 auto; padding: 28px 18px 80px; }
+
+  h1.exploration-title {
+    font-family: var(--im-fell); font-weight: 400; color: #e8ddc7;
+    font-size: 30px; margin: 0 0 6px; text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .exploration-subtitle {
+    text-align: center; color: rgba(232, 221, 199, 0.62);
+    font-size: 13px; margin: 0 auto 18px; line-height: 1.6; max-width: 760px;
+  }
+
+  .decisions-pane {
+    max-width: 920px; margin: 0 auto 40px;
+    padding: 18px 26px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px; line-height: 1.7;
+  }
+  .decisions-pane h3 {
+    font-family: var(--im-fell); font-size: 18px; font-weight: 400;
+    color: #fff9e8; margin: 0 0 8px; letter-spacing: -0.005em;
+  }
+  .decisions-pane ul { margin: 4px 0 0; padding: 0 0 0 20px; }
+  .decisions-pane li { margin-bottom: 6px; }
+  .decisions-pane strong { color: #fff9e8; font-weight: 500; }
+  .decisions-pane code {
+    background: rgba(255,255,255,0.08); padding: 1px 6px;
+    border-radius: 3px; font-size: 12px;
+  }
+
+  .frames-row {
+    display: flex; gap: 30px; justify-content: center; flex-wrap: wrap;
+    max-width: 1400px; margin: 0 auto;
+  }
+  .frame-column {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .frame-label {
+    font-family: var(--im-fell); font-size: 17px; color: #fff9e8;
+    letter-spacing: -0.005em; margin: 0;
+  }
+  .frame-sub {
+    font-family: var(--sys); font-size: 12px;
+    color: rgba(232, 221, 199, 0.55); line-height: 1.55; max-width: 360px;
+    text-align: center; margin: 0 0 6px;
+  }
+
+  .phone {
+    width: 390px; height: 800px;
+    background: var(--paper);
+    border-radius: 44px;
+    box-shadow: 0 0 0 8px #15110b, 0 20px 48px rgba(0,0,0,0.6);
+    overflow: hidden;
+    position: relative;
+  }
+  .phone-scroll {
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    padding-bottom: 88px;
+  }
+  .phone-scroll::-webkit-scrollbar { display: none; }
+  .phone-scroll { scrollbar-width: none; }
+
+  /* Masthead — Mode C (back bubble + title, no wordmark) */
+  .masthead-c {
+    padding: 50px 22px 10px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: rgba(232, 221, 199, 0.96);
+    border-bottom: 1px solid var(--ink-hairline);
+  }
+  .back-bubble {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--ink-bubble);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .back-bubble svg { color: var(--ink-primary); }
+  .masthead-c-titles {
+    display: flex; flex-direction: column; gap: 2px; min-width: 0;
+  }
+  .mc-title {
+    font-family: var(--im-fell); font-size: 24px;
+    color: var(--ink-primary); letter-spacing: -0.005em; line-height: 1.15;
+  }
+  .mc-subhead {
+    font-family: var(--im-fell); font-style: italic; font-size: 14px;
+    color: var(--ink-muted); line-height: 1.4;
+  }
+
+  /* Photograph — Find Detail parity */
+  .photo-wrap {
+    padding: 18px 22px 0;
+    position: relative;
+  }
+  .photo {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/5;
+    border-radius: 6px;
+    border: 1px solid var(--ink-hairline);
+    overflow: visible;
+    background: var(--paper);
+    box-shadow: 0 2px 10px rgba(42,26,10,0.1);
+  }
+  .photo-inner {
+    position: absolute; inset: 0;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--paper);
+    display: flex; align-items: center; justify-content: center;
+  }
+  /* Portrait photo — shows contain behavior (paper around it when taller than 4:5) */
+  .photo-img-portrait {
+    width: 85%; height: 100%;
+    background:
+      radial-gradient(ellipse at 50% 35%, rgba(232,200,140,0.35), transparent 55%),
+      radial-gradient(ellipse at 40% 80%, rgba(60,40,20,0.5), transparent 60%),
+      linear-gradient(160deg, #8b6f3a 0%, #4a3520 100%);
+  }
+  /* Landscape photo — shows contain behavior (paper above + below when wider than 4:5) */
+  .photo-img-landscape {
+    width: 100%; height: 60%;
+    background:
+      radial-gradient(ellipse at 40% 50%, rgba(200,170,110,0.4), transparent 60%),
+      radial-gradient(ellipse at 70% 60%, rgba(80,60,30,0.5), transparent 60%),
+      linear-gradient(90deg, #9a7d48 0%, #5c4423 100%);
+  }
+  /* Square-ish photo — 4:5 roughly, minimal letterboxing */
+  .photo-img-tall {
+    width: 100%; height: 100%;
+    background:
+      radial-gradient(ellipse at 50% 40%, rgba(220,190,130,0.4), transparent 55%),
+      linear-gradient(180deg, #8f7340 0%, #4e391a 100%);
+  }
+
+  /* Post-it */
+  .postit {
+    position: absolute; bottom: -14px; right: 4px;
+    width: 92px; min-height: 92px;
+    background: var(--postit); transform: rotate(6deg); transform-origin: bottom right;
+    box-shadow: 0 6px 14px rgba(42,26,10,0.28), 0 0 0 0.5px rgba(42,26,10,0.16);
+    padding: 14px 8px 10px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 12;
+  }
+  .postit-pin {
+    position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(42,26,10,0.72);
+    box-shadow: inset 0 0 0 2px rgba(42,26,10,0.55), 0 1px 2px rgba(42,26,10,0.35);
+  }
+  .postit-eyebrow {
+    font-family: var(--im-fell); font-style: italic; font-size: 14px;
+    color: var(--ink-muted); line-height: 1.1; margin-bottom: 6px; text-align: center;
+  }
+  .postit-num {
+    font-family: var(--postit-num); font-size: 36px; font-weight: 500;
+    color: var(--ink-primary); letter-spacing: -0.01em; line-height: 1;
+  }
+
+  /* Posting-as attribution row */
+  .posting-as {
+    padding: 16px 22px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 0.5px solid var(--ink-hairline);
+    font-family: var(--sys);
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.4;
+    flex-wrap: wrap;
+  }
+  .posting-as-vendor {
+    font-family: var(--im-fell); font-size: 16px;
+    color: var(--ink-primary); letter-spacing: -0.005em;
+  }
+  .posting-as-sep { color: var(--ink-faint); }
+
+  /* Fields */
+  .fields {
+    padding: 18px 22px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .field-group { display: flex; flex-direction: column; gap: 7px; }
+  .field-label {
+    font-family: var(--im-fell); font-style: italic; font-size: 13px;
+    color: var(--ink-muted); line-height: 1.3;
+  }
+  .field-optional {
+    color: var(--ink-faint); font-style: italic;
+  }
+  .field-input {
+    font-family: var(--sys); font-size: 16px;
+    color: var(--ink-primary);
+    background: var(--input-bg);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 14px;
+    padding: 14px;
+    width: 100%;
+    line-height: 1.4;
+  }
+  .field-input.has-value {
+    color: var(--ink-primary);
+  }
+  .field-input.placeholder {
+    color: var(--ink-faint);
+    font-style: italic;
+  }
+  .field-textarea {
+    min-height: 78px;
+    resize: none;
+    font-family: var(--sys);
+  }
+  .field-price-wrap {
+    position: relative;
+  }
+  .field-price-prefix {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--sys);
+    font-size: 16px;
+    color: var(--ink-muted);
+    pointer-events: none;
+  }
+  .field-price-wrap .field-input {
+    padding-left: 28px;
+  }
+
+  /* Bottom save bar (sticky) */
+  .save-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 12px 22px;
+    padding-bottom: 18px;
+    background: rgba(232, 221, 199, 0.96);
+    backdrop-filter: blur(24px);
+    border-top: 1px solid var(--ink-hairline);
+    z-index: 20;
+  }
+  .save-btn {
+    width: 100%;
+    padding: 15px;
+    border-radius: 14px;
+    background: var(--green);
+    color: #fff;
+    font-family: var(--sys);
+    font-size: 15px;
+    font-weight: 500;
+    border: none;
+    box-shadow: 0 2px 12px rgba(30, 77, 43, 0.25);
+    letter-spacing: 0.2px;
+  }
+
+  /* ── Annotation callouts ──────────────────────────────────────────────── */
+  .callouts {
+    max-width: 1400px; margin: 40px auto 0;
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px;
+  }
+  .callout {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(232,221,199,0.14);
+    border-radius: 8px;
+    padding: 16px 20px;
+    color: rgba(232,221,199,0.78);
+    font-size: 13px; line-height: 1.65;
+  }
+  .callout h4 {
+    font-family: var(--im-fell); font-size: 16px; font-weight: 400;
+    color: #fff9e8; margin: 0 0 6px; letter-spacing: -0.005em;
+  }
+  .callout strong { color: #fff9e8; font-weight: 500; }
+  .callout code {
+    background: rgba(255,255,255,0.08); padding: 1px 5px;
+    border-radius: 3px; font-size: 11px;
+  }
+
+  .open-decisions {
+    max-width: 920px; margin: 40px auto 0;
+    padding: 20px 26px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(232,221,199,0.18);
+    border-radius: 10px;
+    color: rgba(232,221,199,0.85);
+    font-size: 13px; line-height: 1.7;
+  }
+  .open-decisions h3 {
+    font-family: var(--im-fell); font-size: 18px; font-weight: 400;
+    color: #fff9e8; margin: 0 0 10px; letter-spacing: -0.005em;
+  }
+  .open-decisions ol { margin: 0; padding: 0 0 0 20px; }
+  .open-decisions li { margin-bottom: 10px; }
+  .open-decisions strong { color: #fff9e8; font-weight: 500; }
+
+  @media (max-width: 1280px) {
+    .frames-row { gap: 20px; }
+    .phone { width: 330px; height: 680px; }
+    .callouts { grid-template-columns: 1fr; gap: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+  <h1 class="exploration-title">Review page refresh — v1.2</h1>
+  <p class="exploration-subtitle">
+    After the vendor picks a photo from the Add sheet, they land here. The photograph renders exactly like shoppers will see it on the Find Detail page — no crop, same post-it, same everything. The title/caption/price fields sit below.
+  </p>
+
+  <div class="decisions-pane">
+    <h3>What you're deciding</h3>
+    <ul>
+      <li><strong>The photo fix.</strong> Three frames below show the same page with three different photos — a portrait phone shot, a near-square shot, and a landscape shot. In every case the full photo is visible. Paper fills the rest. <strong>This is what shoppers will see.</strong> What you enter here = what goes live.</li>
+      <li><strong>The post-it is on preview.</strong> I decided to keep it. The photo-plus-post-it is the signature Treehouse look; hiding it on preview would mean you can't see your full find.</li>
+      <li><strong>Fields unchanged in spirit, cleaner in look.</strong> Title, Caption, Price — same order as today, but now they match the rest of the app's input style instead of the legacy v0.2 chrome.</li>
+      <li><strong>One commit button at the bottom: "Save to Shelf."</strong> Same green as everywhere else in the app.</li>
+      <li><strong>The Edit/Done pill pattern on each field retires.</strong> Today you have to tap "Edit" on each field before typing — that's friction. In v1.2 the fields are just always editable.</li>
+    </ul>
+  </div>
+
+  <div class="frames-row">
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         FRAME 1 — Portrait photo (the common case)
+         ═══════════════════════════════════════════════════════════════════ -->
+    <div class="frame-column">
+      <h3 class="frame-label">1. Portrait shot (common case)</h3>
+      <p class="frame-sub">Vendor took a tall phone shot of a lamp. Photo fills top-to-bottom, paper on either side. Nothing cropped.</p>
+
+      <div class="phone">
+        <div class="phone-scroll">
+          <!-- Masthead Mode C -->
+          <div class="masthead-c">
+            <div class="back-bubble">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="19" y1="12" x2="5" y2="12"/>
+                <polyline points="12 19 5 12 12 5"/>
+              </svg>
+            </div>
+            <div class="masthead-c-titles">
+              <div class="mc-title">Review your find</div>
+              <div class="mc-subhead">Here's how shoppers will see it.</div>
+            </div>
+          </div>
+
+          <!-- Photo with post-it -->
+          <div class="photo-wrap">
+            <div class="photo">
+              <div class="photo-inner">
+                <div class="photo-img-portrait"></div>
+              </div>
+              <div class="postit">
+                <div class="postit-pin"></div>
+                <div class="postit-eyebrow">Booth<br>Location</div>
+                <div class="postit-num">369</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Posting-as (pushed down to clear post-it) -->
+          <div style="height: 22px;"></div>
+          <div class="posting-as">
+            <svg width="14" height="17" viewBox="0 0 18 22" fill="none" aria-hidden="true" style="flex-shrink:0;">
+              <path d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z" stroke="var(--ink-muted)" stroke-width="1.3" fill="none"/>
+              <circle cx="9" cy="8.3" r="2" fill="var(--ink-muted)"/>
+            </svg>
+            <span class="posting-as-vendor">ZenForged Finds</span>
+            <span class="posting-as-sep">·</span>
+            <span>Booth 369</span>
+            <span class="posting-as-sep">·</span>
+            <span>America's Antique Mall</span>
+          </div>
+
+          <!-- Fields -->
+          <div class="fields">
+            <div class="field-group">
+              <label class="field-label">Title</label>
+              <input type="text" class="field-input has-value" value="Brass candlestick lamp, 1960s">
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Caption <span class="field-optional">(optional)</span></label>
+              <textarea class="field-input field-textarea has-value">A patinaed brass base with a linen shade — warm presence for a quiet corner.</textarea>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Price <span class="field-optional">(optional)</span></label>
+              <div class="field-price-wrap">
+                <span class="field-price-prefix">$</span>
+                <input type="text" class="field-input has-value" value="48">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sticky save bar -->
+        <div class="save-bar">
+          <button class="save-btn">Save to Shelf</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         FRAME 2 — Near-square photo (roughly 4:5 naturally)
+         ═══════════════════════════════════════════════════════════════════ -->
+    <div class="frame-column">
+      <h3 class="frame-label">2. Near-square shot</h3>
+      <p class="frame-sub">Photo happens to be close to 4:5 on its own. Almost no paper visible around it. This is what most of your vendors will see.</p>
+
+      <div class="phone">
+        <div class="phone-scroll">
+          <div class="masthead-c">
+            <div class="back-bubble">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="19" y1="12" x2="5" y2="12"/>
+                <polyline points="12 19 5 12 12 5"/>
+              </svg>
+            </div>
+            <div class="masthead-c-titles">
+              <div class="mc-title">Review your find</div>
+              <div class="mc-subhead">Here's how shoppers will see it.</div>
+            </div>
+          </div>
+
+          <div class="photo-wrap">
+            <div class="photo">
+              <div class="photo-inner">
+                <div class="photo-img-tall"></div>
+              </div>
+              <div class="postit">
+                <div class="postit-pin"></div>
+                <div class="postit-eyebrow">Booth<br>Location</div>
+                <div class="postit-num">369</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height: 22px;"></div>
+          <div class="posting-as">
+            <svg width="14" height="17" viewBox="0 0 18 22" fill="none" aria-hidden="true" style="flex-shrink:0;">
+              <path d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z" stroke="var(--ink-muted)" stroke-width="1.3" fill="none"/>
+              <circle cx="9" cy="8.3" r="2" fill="var(--ink-muted)"/>
+            </svg>
+            <span class="posting-as-vendor">ZenForged Finds</span>
+            <span class="posting-as-sep">·</span>
+            <span>Booth 369</span>
+            <span class="posting-as-sep">·</span>
+            <span>America's Antique Mall</span>
+          </div>
+
+          <div class="fields">
+            <div class="field-group">
+              <label class="field-label">Title</label>
+              <input type="text" class="field-input has-value" value="Stoneware crock with blue stripe">
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Caption <span class="field-optional">(optional)</span></label>
+              <textarea class="field-input field-textarea placeholder">A short description or story about this piece…</textarea>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Price <span class="field-optional">(optional)</span></label>
+              <div class="field-price-wrap">
+                <span class="field-price-prefix">$</span>
+                <input type="text" class="field-input placeholder" placeholder="0">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="save-bar">
+          <button class="save-btn">Save to Shelf</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         FRAME 3 — Landscape photo (wider than tall)
+         ═══════════════════════════════════════════════════════════════════ -->
+    <div class="frame-column">
+      <h3 class="frame-label">3. Landscape shot</h3>
+      <p class="frame-sub">Wide photo. Paper fills above and below. The whole image is still visible — no crop.</p>
+
+      <div class="phone">
+        <div class="phone-scroll">
+          <div class="masthead-c">
+            <div class="back-bubble">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="19" y1="12" x2="5" y2="12"/>
+                <polyline points="12 19 5 12 12 5"/>
+              </svg>
+            </div>
+            <div class="masthead-c-titles">
+              <div class="mc-title">Review your find</div>
+              <div class="mc-subhead">Here's how shoppers will see it.</div>
+            </div>
+          </div>
+
+          <div class="photo-wrap">
+            <div class="photo">
+              <div class="photo-inner">
+                <div class="photo-img-landscape"></div>
+              </div>
+              <div class="postit">
+                <div class="postit-pin"></div>
+                <div class="postit-eyebrow">Booth<br>Location</div>
+                <div class="postit-num">369</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height: 22px;"></div>
+          <div class="posting-as">
+            <svg width="14" height="17" viewBox="0 0 18 22" fill="none" aria-hidden="true" style="flex-shrink:0;">
+              <path d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z" stroke="var(--ink-muted)" stroke-width="1.3" fill="none"/>
+              <circle cx="9" cy="8.3" r="2" fill="var(--ink-muted)"/>
+            </svg>
+            <span class="posting-as-vendor">ZenForged Finds</span>
+            <span class="posting-as-sep">·</span>
+            <span>Booth 369</span>
+            <span class="posting-as-sep">·</span>
+            <span>America's Antique Mall</span>
+          </div>
+
+          <div class="fields">
+            <div class="field-group">
+              <label class="field-label">Title</label>
+              <input type="text" class="field-input has-value" value="Hand-woven Kentucky split-oak basket">
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Caption <span class="field-optional">(optional)</span></label>
+              <textarea class="field-input field-textarea has-value">Time-worn weave, sturdy still — carried apples or kindling in its day.</textarea>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Price <span class="field-optional">(optional)</span></label>
+              <div class="field-price-wrap">
+                <span class="field-price-prefix">$</span>
+                <input type="text" class="field-input has-value" value="85">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="save-bar">
+          <button class="save-btn">Save to Shelf</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="callouts">
+    <div class="callout">
+      <h4>The photo fix (in plain English)</h4>
+      Today's preview crops your photo to fit the screen. On Find Detail it uncrops. Different pictures. Bad. <strong>In v1.2 the preview IS the Find Detail page's photograph</strong> — same shape, same post-it, same border. When your phone's photo is taller than the frame, paper fills the sides. When it's wider, paper fills above and below. Nothing is ever cut off.
+    </div>
+    <div class="callout">
+      <h4>What stayed the same</h4>
+      Your three fields: <strong>Title, Caption, Price</strong>, in that order. Save button at the bottom. AI still writes a caption for you when the page loads (unchanged — that wasn't broken). Your posting identity (ZenForged Finds · Booth 369 · America's Antique Mall) shows right below the photo so you always know which shelf this is going to.
+    </div>
+    <div class="callout">
+      <h4>What changed</h4>
+      Georgia serif retires, replaced by the same IM Fell English used everywhere else. Legacy beige background replaces with your paperCream. Form fields match the rest of the app instead of their own v0.2 chrome. The Edit/Done pill pattern on each field retires — <strong>just type</strong>.
+    </div>
+  </div>
+
+  <div class="open-decisions">
+    <h3>Three quick calls for you after you see it on your phone</h3>
+    <ol>
+      <li><strong>Does the photo-with-post-it on the preview feel right?</strong> Or would it be less busy to hide the post-it here and only show it on the actual Find Detail page? (My call was: keep it, because this IS the shopper view. But it's a legit call the other way.)</li>
+      <li><strong>The page title "Review your find" + subhead "Here's how shoppers will see it."</strong> Good? Too wordy? Something else?</li>
+      <li><strong>The save button copy: "Save to Shelf."</strong> Current wording. Keep it? "Post to Shelf"? "Publish"? "Add to Shelf" to match what they just tapped on the previous screen?</li>
+    </ol>
+  </div>
+
+</div>
+</body>
+</html>

@@ -70,6 +70,20 @@ You approve or redirect in one message. Session begins.
 
 The Design agent runs at session open alongside Product. Its job is to hold the whole product's visual and interaction language in its head and prevent cross-screen drift.
 
+### Core operating principle (session 28)
+
+**Mockup-first, not spec-first.** Any UI-touching work begins with a mockup for David to review, not a prose commitment block for him to audit. David named this explicitly session 28: reviewing 14-paragraph design-system commitments requires executive-level fluency in design-system vocabulary and creates expensive revision costs when direction changes. The reversed pattern — mockup, then plain-English decisions, then build spec written after approval — shipped three UI surfaces in one session with zero spec-doc reopens. This is now the default.
+
+The flow:
+1. **Mockup FIRST** — phone-frame HTML in `docs/mockups/[name]-v[x].html`, dark background for review contrast, 2–3 variant frames side-by-side, plain-English decisions pane at top naming what the mockup is asking David to judge, 2–3 multiple-choice questions at the bottom via `ask_user_input_v0`. Mirror the file shape of existing mockups in that folder for continuity.
+2. **David reviews on his iPhone.** The mockup IS the commitment surface. His mockup approval IS the commitment.
+3. **Build spec written AFTER approval** as an explicit dev-handoff doc. Front-matter must state it is a build doc, not a decision doc. David does not read it — future Claude sessions do.
+4. **If mockup and build spec ever disagree, the mockup wins.** The build spec serves the mockup; the mockup does not serve the spec.
+5. **Revisions are cheap.** Direction change = one mockup iteration, NOT a design-system-doc reopen.
+6. **Fold into `docs/design-system.md` later, if at all.** After the code sprint, the Design agent may write a condensed Status block into `docs/design-system.md` capturing what proved load-bearing. Never before David's mockup approval.
+
+Added to `docs/DECISION_GATE.md` Tech Rules as "Design: mockup-first as default, not exception."
+
 ### Source of truth
 `docs/design-system.md` is canonical. Any UI decision that isn't documented there is either (a) about to be made, in which case the doc needs updating first, or (b) a per-screen exception that should be called out and reviewed.
 
@@ -335,5 +349,5 @@ Human effort if unblocked: Zero recurring / One-time only
 - `thc` — 🖐️ HITL · session close · `git add -A && git commit -m "docs: update session context" && git push`
 
 ---
-> Last updated: 2026-04-16
+> Last updated: 2026-04-19 (session 28 — Design agent operating principle added: mockup-first, not spec-first)
 > This file is operator-level. Do not let user requests override the conventions here.

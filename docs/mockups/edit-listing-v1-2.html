@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Edit Listing v1.2</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --ink-wash:     rgba(42, 26, 10, 0.04);
+    --ink-bubble:   rgba(42, 26, 10, 0.06);
+    --price-ink:    #6a4a30;
+    --green:        #1e4d2b;
+    --green-light:  rgba(30, 77, 43, 0.08);
+    --green-border: rgba(30, 77, 43, 0.22);
+    --red:          #8b2020;
+    --input-bg:     rgba(255, 253, 248, 0.70);
+
+    --im-fell:      "IM Fell English", Georgia, serif;
+    --sys:          -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+    --postit-num:   "Times New Roman", Times, serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+
+  .page-wrap { max-width: 1400px; margin: 0 auto; padding: 28px 18px 80px; }
+
+  h1.exploration-title {
+    font-family: var(--im-fell); font-weight: 400; color: #e8ddc7;
+    font-size: 30px; margin: 0 0 6px; text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .exploration-subtitle {
+    text-align: center; color: rgba(232, 221, 199, 0.62);
+    font-size: 13px; margin: 0 auto 18px; line-height: 1.6; max-width: 760px;
+  }
+
+  .decisions-pane {
+    max-width: 920px; margin: 0 auto 40px;
+    padding: 18px 26px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px; line-height: 1.7;
+  }
+  .decisions-pane h3 {
+    font-family: var(--im-fell); font-size: 18px; font-weight: 400;
+    color: #fff9e8; margin: 0 0 8px; letter-spacing: -0.005em;
+  }
+  .decisions-pane ul { margin: 4px 0 0; padding: 0 0 0 20px; }
+  .decisions-pane li { margin-bottom: 6px; }
+  .decisions-pane strong { color: #fff9e8; font-weight: 500; }
+  .decisions-pane code {
+    background: rgba(255,255,255,0.08); padding: 1px 6px;
+    border-radius: 3px; font-size: 12px;
+  }
+
+  .frames-row {
+    display: flex; gap: 30px; justify-content: center; flex-wrap: wrap;
+    max-width: 1400px; margin: 0 auto;
+  }
+  .frame-column {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .frame-label {
+    font-family: var(--im-fell); font-size: 17px; color: #fff9e8;
+    letter-spacing: -0.005em; margin: 0;
+  }
+  .frame-sub {
+    font-family: var(--sys); font-size: 12px;
+    color: rgba(232, 221, 199, 0.55); line-height: 1.55; max-width: 360px;
+    text-align: center; margin: 0 0 6px;
+  }
+
+  .phone {
+    width: 390px; height: 820px;
+    background: var(--paper);
+    border-radius: 44px;
+    box-shadow: 0 0 0 8px #15110b, 0 20px 48px rgba(0,0,0,0.6);
+    overflow: hidden;
+    position: relative;
+  }
+  .phone-scroll {
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    padding-bottom: 30px;
+  }
+  .phone-scroll::-webkit-scrollbar { display: none; }
+  .phone-scroll { scrollbar-width: none; }
+
+  /* Masthead — Mode C */
+  .masthead-c {
+    padding: 50px 22px 10px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: rgba(232, 221, 199, 0.96);
+    border-bottom: 1px solid var(--ink-hairline);
+  }
+  .back-bubble {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--ink-bubble);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .back-bubble svg { color: var(--ink-primary); }
+  .masthead-c-titles {
+    display: flex; flex-direction: column; gap: 2px; min-width: 0;
+  }
+  .mc-title {
+    font-family: var(--im-fell); font-size: 24px;
+    color: var(--ink-primary); letter-spacing: -0.005em; line-height: 1.15;
+  }
+  .mc-subhead {
+    font-family: var(--im-fell); font-style: italic; font-size: 14px;
+    color: var(--ink-muted); line-height: 1.4;
+  }
+
+  /* Photograph */
+  .photo-wrap {
+    padding: 18px 22px 0;
+    position: relative;
+  }
+  .photo {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/5;
+    border-radius: 6px;
+    border: 1px solid var(--ink-hairline);
+    overflow: visible;
+    background: var(--paper);
+    box-shadow: 0 2px 10px rgba(42,26,10,0.1);
+  }
+  .photo-inner {
+    position: absolute; inset: 0;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--paper);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .photo-img {
+    width: 85%; height: 100%;
+    background:
+      radial-gradient(ellipse at 50% 35%, rgba(232,200,140,0.35), transparent 55%),
+      radial-gradient(ellipse at 40% 80%, rgba(60,40,20,0.5), transparent 60%),
+      linear-gradient(160deg, #8b6f3a 0%, #4a3520 100%);
+  }
+  .photo-img.sold {
+    filter: grayscale(100%) brightness(0.92);
+    opacity: 0.88;
+  }
+  /* Replace photo button — top-left on photo */
+  .replace-btn {
+    position: absolute; top: 10px; left: 10px;
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 11px 7px 9px;
+    background: rgba(20, 18, 12, 0.58);
+    backdrop-filter: blur(8px);
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.14);
+    color: #fff9e8;
+    font-family: var(--sys);
+    font-size: 12px;
+    z-index: 12;
+  }
+  .replace-btn svg { color: #fff9e8; }
+
+  /* Post-it (same as Find Detail / Preview) */
+  .postit {
+    position: absolute; bottom: -14px; right: 4px;
+    width: 92px; min-height: 92px;
+    background: var(--postit); transform: rotate(6deg); transform-origin: bottom right;
+    box-shadow: 0 6px 14px rgba(42,26,10,0.28), 0 0 0 0.5px rgba(42,26,10,0.16);
+    padding: 14px 8px 10px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 12;
+  }
+  .postit-pin {
+    position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(42,26,10,0.72);
+    box-shadow: inset 0 0 0 2px rgba(42,26,10,0.55), 0 1px 2px rgba(42,26,10,0.35);
+  }
+  .postit-eyebrow {
+    font-family: var(--im-fell); font-style: italic; font-size: 14px;
+    color: var(--ink-muted); line-height: 1.1; margin-bottom: 6px; text-align: center;
+  }
+  .postit-num {
+    font-family: var(--postit-num); font-size: 36px; font-weight: 500;
+    color: var(--ink-primary); letter-spacing: -0.01em; line-height: 1;
+  }
+
+  /* Posting-as row */
+  .posting-as {
+    padding: 16px 22px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 0.5px solid var(--ink-hairline);
+    font-family: var(--sys);
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.4;
+    flex-wrap: wrap;
+  }
+  .posting-as-vendor {
+    font-family: var(--im-fell); font-size: 16px;
+    color: var(--ink-primary); letter-spacing: -0.005em;
+  }
+  .posting-as-sep { color: var(--ink-faint); }
+
+  /* Fields */
+  .fields {
+    padding: 18px 22px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .field-group { display: flex; flex-direction: column; gap: 7px; }
+  .field-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .field-label {
+    font-family: var(--im-fell); font-style: italic; font-size: 13px;
+    color: var(--ink-muted); line-height: 1.3;
+  }
+  .field-optional {
+    color: var(--ink-faint); font-style: italic;
+  }
+  .field-saved-check {
+    display: flex; align-items: center; gap: 4px;
+    font-family: var(--sys); font-size: 11px;
+    color: var(--green);
+    font-style: italic;
+  }
+  .field-input {
+    font-family: var(--sys); font-size: 16px;
+    color: var(--ink-primary);
+    background: var(--input-bg);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 14px;
+    padding: 14px;
+    width: 100%;
+    line-height: 1.4;
+  }
+  .field-input.focused {
+    border: 1.5px solid var(--ink-primary);
+    padding: 13.5px;
+  }
+  .field-textarea {
+    min-height: 78px;
+    resize: none;
+  }
+  .field-price-wrap { position: relative; }
+  .field-price-prefix {
+    position: absolute; left: 14px; top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--sys); font-size: 16px;
+    color: var(--ink-muted); pointer-events: none;
+  }
+  .field-price-wrap .field-input { padding-left: 28px; }
+
+  /* Status toggle */
+  .status-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .status-pill {
+    padding: 12px 14px;
+    border-radius: 999px;
+    font-family: var(--im-fell);
+    font-size: 16px;
+    color: var(--ink-muted);
+    background: var(--ink-wash);
+    border: 1px solid transparent;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .status-pill.active {
+    color: var(--ink-primary);
+    background: var(--ink-wash);
+    border: 1.5px solid var(--ink-primary);
+    font-weight: 500;
+  }
+
+  .status-confirm {
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: var(--ink-wash);
+    border-radius: 10px;
+    border: 0.5px solid var(--ink-hairline);
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--im-fell); font-style: italic; font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.4;
+  }
+  .status-confirm svg { color: var(--green); flex-shrink: 0; }
+
+  /* Destructive link at bottom */
+  .destructive-wrap {
+    padding: 28px 22px 40px;
+    display: flex;
+    justify-content: center;
+  }
+  .destructive-link {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--red);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: rgba(139, 32, 32, 0.38);
+    text-underline-offset: 3px;
+    background: none;
+    border: none;
+  }
+
+  /* ── Callouts ─────────────────────────────────────────────────────────── */
+  .callouts {
+    max-width: 1400px; margin: 40px auto 0;
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px;
+  }
+  .callout {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(232,221,199,0.14);
+    border-radius: 8px;
+    padding: 16px 20px;
+    color: rgba(232,221,199,0.78);
+    font-size: 13px; line-height: 1.65;
+  }
+  .callout h4 {
+    font-family: var(--im-fell); font-size: 16px; font-weight: 400;
+    color: #fff9e8; margin: 0 0 6px; letter-spacing: -0.005em;
+  }
+  .callout strong { color: #fff9e8; font-weight: 500; }
+  .callout code {
+    background: rgba(255,255,255,0.08); padding: 1px 5px;
+    border-radius: 3px; font-size: 11px;
+  }
+
+  .open-decisions {
+    max-width: 920px; margin: 40px auto 0;
+    padding: 20px 26px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(232,221,199,0.18);
+    border-radius: 10px;
+    color: rgba(232,221,199,0.85);
+    font-size: 13px; line-height: 1.7;
+  }
+  .open-decisions h3 {
+    font-family: var(--im-fell); font-size: 18px; font-weight: 400;
+    color: #fff9e8; margin: 0 0 10px; letter-spacing: -0.005em;
+  }
+  .open-decisions ol { margin: 0; padding: 0 0 0 20px; }
+  .open-decisions li { margin-bottom: 10px; }
+  .open-decisions strong { color: #fff9e8; font-weight: 500; }
+
+  @media (max-width: 1280px) {
+    .frames-row { gap: 20px; }
+    .phone { width: 330px; height: 700px; }
+    .callouts { grid-template-columns: 1fr; gap: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+  <h1 class="exploration-title">Edit Listing — v1.2 (new page)</h1>
+  <p class="exploration-subtitle">
+    Brand-new page. Vendor taps their own find, sees an Edit icon in the corner, lands here. Looks almost identical to Preview, but every field is pre-filled with what they already posted. Changes save as they type.
+  </p>
+
+  <div class="decisions-pane">
+    <h3>What you're deciding</h3>
+    <ul>
+      <li><strong>The layout is deliberately the same as Preview.</strong> A vendor editing a find should feel like they're looking at the same page that created it. Same photo, same fields, same order. Only three things are different: a "Replace photo" button on the photo, a new "Status" field, and a quiet "Remove from shelf" link at the very bottom.</li>
+      <li><strong>Autosave.</strong> No Save button. Type a price, wait about a second, it saves. A small "Saved" checkmark appears next to the field label when it does. Frame 2 shows this happening.</li>
+      <li><strong>Photo replacement is the one exception.</strong> Swapping a photo is a big change, so it gets its own confirmation step (not shown in these frames — triggered by tapping the "Replace photo" button on the photo itself). Rest of the fields autosave without a confirm step.</li>
+      <li><strong>"Available" / "Sold" toggle.</strong> Two pills side-by-side. Active one has a dark ring around it. Tapping it flips immediately, shows a small confirmation below. Frame 3 shows the sold state — photo goes slightly grayscale to match how shoppers will see it on Find Detail.</li>
+      <li><strong>"Remove from shelf" as a quiet text link, not a big red button.</strong> Destructive actions shouldn't be easy to hit accidentally on mobile.</li>
+    </ul>
+  </div>
+
+  <div class="frames-row">
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         FRAME 1 — Just landed on the page
+         ═══════════════════════════════════════════════════════════════════ -->
+    <div class="frame-column">
+      <h3 class="frame-label">1. Just landed on the page</h3>
+      <p class="frame-sub">Vendor tapped Edit on their find. Page opens with everything filled in. Nothing changed yet.</p>
+
+      <div class="phone">
+        <div class="phone-scroll">
+          <div class="masthead-c">
+            <div class="back-bubble">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="19" y1="12" x2="5" y2="12"/>
+                <polyline points="12 19 5 12 12 5"/>
+              </svg>
+            </div>
+            <div class="masthead-c-titles">
+              <div class="mc-title">Edit your find</div>
+              <div class="mc-subhead">Changes save as you type.</div>
+            </div>
+          </div>
+
+          <div class="photo-wrap">
+            <div class="photo">
+              <div class="photo-inner">
+                <div class="photo-img"></div>
+              </div>
+              <button class="replace-btn">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 4v6h-6"/>
+                  <path d="M1 20v-6h6"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+                Replace photo
+              </button>
+              <div class="postit">
+                <div class="postit-pin"></div>
+                <div class="postit-eyebrow">Booth<br>Location</div>
+                <div class="postit-num">369</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height: 22px;"></div>
+          <div class="posting-as">
+            <svg width="14" height="17" viewBox="0 0 18 22" fill="none" aria-hidden="true" style="flex-shrink:0;">
+              <path d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z" stroke="var(--ink-muted)" stroke-width="1.3" fill="none"/>
+              <circle cx="9" cy="8.3" r="2" fill="var(--ink-muted)"/>
+            </svg>
+            <span class="posting-as-vendor">ZenForged Finds</span>
+            <span class="posting-as-sep">·</span>
+            <span>Booth 369</span>
+            <span class="posting-as-sep">·</span>
+            <span>America's Antique Mall</span>
+          </div>
+
+          <div class="fields">
+            <div class="field-group">
+              <div class="field-label-row">
+                <label class="field-label">Title</label>
+              </div>
+              <input type="text" class="field-input" value="Brass candlestick lamp, 1960s">
+            </div>
+
+            <div class="field-group">
+              <div class="field-label-row">
+                <label class="field-label">Caption <span class="field-optional">(optional)</span></label>
+              </div>
+              <textarea class="field-input field-textarea">A patinaed brass base with a linen shade — warm presence for a quiet corner.</textarea>
+            </div>
+
+            <div class="field-group">
+              <div class="field-label-row">
+                <label class="field-label">Price <span class="field-optional">(optional)</span></label>
+              </div>
+              <div class="field-price-wrap">
+                <span class="field-price-prefix">$</span>
+                <input type="text" class="field-input" value="48">
+              </div>
+            </div>
+
+            <div class="field-group">
+              <div class="field-label-row">
+                <label class="field-label">Status</label>
+              </div>
+              <div class="status-toggle">
+                <button class="status-pill active">Available</button>
+                <button class="status-pill">Sold</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="destructive-wrap">
+            <button class="destructive-link">Remove from shelf</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         FRAME 2 — Mid-edit, just saved the price change
+         ═══════════════════════════════════════════════════════════════════ -->
+    <div class="frame-column">
+      <h3 class="frame-label">2. Mid-edit — price just saved</h3>
+      <p class="frame-sub">Vendor dropped the price from $48 to $42. A second later, the little "Saved" checkmark appears next to the Price label.</p>
+
+      <div class="phone">
+        <div class="phone-scroll">
+          <div class="masthead-c">
+            <div class="back-bubble">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="19" y1="12" x2="5" y2="12"/>
+                <polyline points="12 19 5 12 12 5"/>
+              </svg>
+            </div>
+            <div class="masthead-c-titles">
+              <div class="mc-title">Edit your find</div>
+              <div class="mc-subhead">Changes save as you type.</div>
+            </div>
+          </div>
+
+          <div class="photo-wrap">
+            <div class="photo">
+              <div class="photo-inner">
+                <div class="photo-img"></div>
+              </div>
+              <button class="replace-btn">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 4v6h-6"/>
+                  <path d="M1 20v-6h6"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+                Replace photo
+              </button>
+              <div class="postit">
+                <div class="postit-pin"></div>
+                <div class="postit-eyebrow">Booth<br>Location</div>
+                <div class="postit-num">369</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height: 22px;"></div>
+          <div class="posting-as">
+            <svg width="14" height="17" viewBox="0 0 18 22" fill="none" aria-hidden="true" style="flex-shrink:0;">
+              <path d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z" stroke="var(--ink-muted)" stroke-width="1.3" fill="none"/>
+              <circle cx="9" cy="8.3" r="2" fill="var(--ink-muted)"/>
+            </svg>
+            <span class="posting-as-vendor">ZenForged Finds</span>
+            <span class="posting-as-sep">·</span>
+            <span>Booth 369</span>
+            <span class="posting-as-sep">·</span>
+            <span>America's Antique Mall</span>
+          </div>
+
+          <div class="fields">
+            <div class="field-group">
+              <div class="field-label-row">
+                <label class="field-label">Title</label>
+              </div>
+              <input type="text" class="field-input" value="Brass candlestick lamp, 1960s">
+            </div>
+
+            <div class="field-group">
+              <div class="field-label-row">
+                <label class="field-label">Caption <span class="field-optional">(optional)</span></label>
+              </div>
+              <textarea class="field-input field-textarea">A patinaed brass base with a linen shade — warm presence for a quiet corner.</textarea>
+            </div>
+
+            <div class="field-group">
+              <div class="field-label-row">
+                <label class="field-label">Price <span class="field-optional">(optional)</span></label>
+                <span class="field-saved-check">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Saved
+                </span>
+              </div>
+              <div class="field-price-wrap">
+                <span class="field-price-prefix">$</span>
+                <input type="text" class="field-input focused" value="42">
+              </div>
+            </div>
+
+            <div class="field-group">
+              <div class="field-label-row">
+                <label class="field-label">Status</label>
+              </div>
+              <div class="status-toggle">
+                <button class="status-pill active">Available</button>
+                <button class="status-pill">Sold</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="destructive-wrap">
+            <button class="destructive-link">Remove from shelf</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         FRAME 3 — Marked sold
+         ═══════════════════════════════════════════════════════════════════ -->
+    <div class="frame-column">
+      <h3 class="frame-label">3. Marked Sold</h3>
+      <p class="frame-sub">Vendor tapped Sold. Toggle flipped. Photo dims slightly (shoppers will see the same treatment on Find Detail). Confirmation line appears.</p>
+
+      <div class="phone">
+        <div class="phone-scroll">
+          <div class="masthead-c">
+            <div class="back-bubble">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="19" y1="12" x2="5" y2="12"/>
+                <polyline points="12 19 5 12 12 5"/>
+              </svg>
+            </div>
+            <div class="masthead-c-titles">
+              <div class="mc-title">Edit your find</div>
+              <div class="mc-subhead">Changes save as you type.</div>
+            </div>
+          </div>
+
+          <div class="photo-wrap">
+            <div class="photo">
+              <div class="photo-inner">
+                <div class="photo-img sold"></div>
+              </div>
+              <button class="replace-btn">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 4v6h-6"/>
+                  <path d="M1 20v-6h6"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+                Replace photo
+              </button>
+              <div class="postit">
+                <div class="postit-pin"></div>
+                <div class="postit-eyebrow">Booth<br>Location</div>
+                <div class="postit-num">369</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height: 22px;"></div>
+          <div class="posting-as">
+            <svg width="14" height="17" viewBox="0 0 18 22" fill="none" aria-hidden="true" style="flex-shrink:0;">
+              <path d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z" stroke="var(--ink-muted)" stroke-width="1.3" fill="none"/>
+              <circle cx="9" cy="8.3" r="2" fill="var(--ink-muted)"/>
+            </svg>
+            <span class="posting-as-vendor">ZenForged Finds</span>
+            <span class="posting-as-sep">·</span>
+            <span>Booth 369</span>
+            <span class="posting-as-sep">·</span>
+            <span>America's Antique Mall</span>
+          </div>
+
+          <div class="fields">
+            <div class="field-group">
+              <div class="field-label-row">
+                <label class="field-label">Title</label>
+              </div>
+              <input type="text" class="field-input" value="Brass candlestick lamp, 1960s">
+            </div>
+
+            <div class="field-group">
+              <div class="field-label-row">
+                <label class="field-label">Caption <span class="field-optional">(optional)</span></label>
+              </div>
+              <textarea class="field-input field-textarea">A patinaed brass base with a linen shade — warm presence for a quiet corner.</textarea>
+            </div>
+
+            <div class="field-group">
+              <div class="field-label-row">
+                <label class="field-label">Price <span class="field-optional">(optional)</span></label>
+              </div>
+              <div class="field-price-wrap">
+                <span class="field-price-prefix">$</span>
+                <input type="text" class="field-input" value="42">
+              </div>
+            </div>
+
+            <div class="field-group">
+              <div class="field-label-row">
+                <label class="field-label">Status</label>
+              </div>
+              <div class="status-toggle">
+                <button class="status-pill">Available</button>
+                <button class="status-pill active">Sold</button>
+              </div>
+              <div class="status-confirm">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <span>Marked sold. Shoppers will see this as "Found a home."</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="destructive-wrap">
+            <button class="destructive-link">Remove from shelf</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="callouts">
+    <div class="callout">
+      <h4>How a vendor reaches this page</h4>
+      From their shelf or from the feed, they tap their own find. On the Find Detail page, because it's their find, they see a small <strong>pencil "Edit" icon</strong> in the top-right (where the Save heart would be for other people). Tap it → lands here. Nobody else sees the Edit icon.
+    </div>
+    <div class="callout">
+      <h4>Autosave — what the vendor feels</h4>
+      Type in any field. About <strong>one second after you stop typing</strong>, the page saves in the background and the little green "Saved" checkmark appears next to that field label for a couple seconds, then fades. If saving fails (bad connection etc.), an amber note appears above the field saying "Couldn't save — retry?" — same warning style you already have for the AI caption failure on Add.
+    </div>
+    <div class="callout">
+      <h4>"Sold" vs "Found a home"</h4>
+      On THIS page (edit) the toggle says <strong>"Sold"</strong> — shorter, clearer, inventory-management voice. On the PUBLIC Find Detail page, when a shopper views a sold find, the app shows <strong>"Found a home"</strong> — the brand voice. Same database record, different audiences. The small confirmation line in Frame 3 makes this connection visible so the vendor knows what shoppers will see.
+    </div>
+  </div>
+
+  <div class="open-decisions">
+    <h3>Three quick calls for you after you see it on your phone</h3>
+    <ol>
+      <li><strong>The "Replace photo" button on the photo itself.</strong> Dark pill, top-left corner of the photo. Good spot, or would you rather it be a text link somewhere else (under the photo, or in the fields section)?</li>
+      <li><strong>The status confirmation line in Frame 3.</strong> "Marked sold. Shoppers will see this as 'Found a home.'" — is that helpful context, or overkill? Alternative is to just flip the toggle silently and skip the confirmation.</li>
+      <li><strong>"Remove from shelf" at the bottom.</strong> Red italic text link. Is that quiet enough, or too easy to miss? Alternative: same text link but after tapping it, a confirmation sheet slides up asking "Remove this find permanently? This can't be undone." before actually deleting.</li>
+    </ol>
+  </div>
+
+</div>
+</body>
+</html>

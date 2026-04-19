@@ -50,129 +50,95 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-19 (session 27 — vendor-reported AI caption regression resolved + Anthropic model deprecation audit + silent-billing failure mode surfaced and mitigated)
+> Last updated: 2026-04-19 (session 28 — v1.2 post-flow trilogy mockup-first design session; three mockups approved; build spec on disk; no code shipped)
 
-**Status:** ✅✅ **Session 27 shipped a hotfix for a vendor-reported regression: the AI caption auto-populate returned random generic strings regardless of what was photographed.** Diagnosed to a double failure: (1) `claude-opus-4-5` model identifier was retired on the Anthropic API ~1 month ago but was still hardcoded in three routes (`/api/post-caption`, `/api/identify`, `/api/story`), so the SDK threw `NotFoundError` on every call; (2) the route handlers had `catch` blocks that silently returned a random `MOCK_RESPONSES` entry with no distinguishable shape, so the client populated the form with whichever hardcoded string the dice picked. Swapped to current models (post-caption → `claude-sonnet-4-6`, identify → `claude-opus-4-7`, story → `claude-sonnet-4-6`) and added a `source: "claude" | "mock"` observability field so the client can tell a real Claude response from a mock fallback.
+**Status:** ✅✅ **Session 28 was a design session that produced three approved mockups and one build spec, all on disk, no production code changed.** The session opened as the Sprint 4 tail batch warm-up David was considering but pivoted early to the v1.2 post-flow trilogy work (`/post`, `/post/preview`, and a not-yet-built `/find/[id]/edit`). The session also surfaced and resolved a meta-problem about how the Design agent had been operating.
 
-On-device QA after deploy surfaced a SECOND silent failure mode the model swap didn't fix: the Anthropic account was out of credits, returning HTTP 400 `invalid_request_error` ("credit balance too low"). Same graceful-collapse-to-mock shape as the model-not-found path. David added credits; live QA then showed correct per-photo captions (copper whistling tea kettle test shot identified accurately with matching caption). **The new `source` field was the diagnostic win** — without it, the billing issue would have looked identical to the original regression (wrong captions, no error visible).
+**What David named as the real problem mid-session:** the Design agent's output pattern — write a 14-paragraph commitment block into `docs/design-system.md`, hand David dense design-system prose to audit, lock commitments, then pull the whole block back up for dissection when direction changes — was creating expensive revision cycles and required executive-level design-system fluency just to review work. This was naming the exact anti-pattern that had been slowing every Design sprint since session 15.
 
-**Deep lesson from session 27:** This is the third sibling of the orphan-pattern (session 13 `imageUpload.ts`, session 23 `/admin/login`) and the phantom-blocker pattern (KI-003, sessions 18–25). All three share one shape: **a graceful-collapse path hiding a real failure behind a working-looking UI.** Prevention beats diagnosis — graceful-collapse paths deserve observability. The `source` field is the shape of that fix for AI integrations; the file-creation-verify Tech Rule was the shape for orphans; the proposed Known-Gaps reconciliation rule (still not promoted, see 28F) is the shape for phantom blockers.
+**The reversed pattern, tested live session 28 and now locked as default:** mockup FIRST (phone-frame HTML in `docs/mockups/`, dark-background review doc, 2–3 variant frames, plain-English decisions pane, multi-choice questions via `ask_user_input_v0`), David approves visually, build spec written AFTER as an explicit dev-handoff doc David doesn't read. The mockup IS the commitment. The build spec serves the mockup, not the other way around. Shipped three UI surfaces approved in one session with zero spec-doc reopens — vs. the v1.1k/v1.1l pattern which typically took 1–2 full sessions just to lock a spec before code even started.
 
-**Next session (28) opens with David's choice from the updated candidate queue.** Top-recommended track remains **Sprint 4 tail batch** (T4c copy polish → T4b admin consolidation → T4d pre-beta QA walk) — unchanged from session 26's framing; session 27 was an unplanned hotfix sprint that doesn't shift the queue.
+**Next session (29) is the v1.2 code sprint** against `docs/design-system-v1.2-build-spec.md`. Estimated 3–4 hours. No mockup review required — David already approved.
 
-### What shipped this session (27)
+### What shipped this session (28)
 
-**5 files touched, one commit, one deploy, one ops change (Anthropic credits added manually by David).**
+**No production code changes.** Five files touched on disk, one retired, four doc/rule updates.
 
-**Code changes:**
-- `app/api/post-caption/route.ts` — model swap `claude-opus-4-5` → `claude-sonnet-4-6`; added `source: "claude" | "mock"` field to all three response paths (real Claude, no-key mock, on-error mock); `reason` field distinguishes no-key from error
-- `app/api/identify/route.ts` — model swap `claude-opus-4-5` → `claude-opus-4-7` (Opus tier retained for reseller comp-quality stakes; Opus 4.7 has meaningfully better low-level vision perception)
-- `app/api/story/route.ts` — model swap `claude-opus-4-5` → `claude-sonnet-4-6` (text-only, narrow task)
-- `app/post/page.tsx` — `generateCaption` helper now checks `data.source !== "claude"` and returns empty fields so the amber "Couldn't read this image automatically" notice fires on any non-Claude response
-- `app/post/preview/page.tsx` — same guard on `generateTitleAndCaption`
+**New mockups (approved by David via `ask_user_input_v0` plain-English questions):**
+- `docs/mockups/add-find-sheet-v1-2.html` — Add Find bottom sheet on `/my-shelf`. Frame 3 (stripped variant — no row subtitles, no sheet subhead) approved. Two rows: Take a photo / Choose from library.
+- `docs/mockups/review-page-v1-2.html` — Review Your Find page (formerly `/post/preview`). Three photo-shape variants (portrait / near-square / landscape) all rendering at 4:5 aspect with `objectFit: contain` and paperCream letterbox. Post-it pinned on preview. Title / Caption / Price field order. "Publish" CTA (changed from "Save to Shelf" per David).
+- `docs/mockups/edit-listing-v1-2.html` — new `/find/[id]/edit` page. Three states: just-landed / mid-edit with inline save checkmark / marked-sold with photo grayscale + confirmation line. Status toggle labels "Available" / "Sold" per David. Replace-photo dark pill top-left approved. Confirmation line "Marked sold. Shoppers will see this as 'Found a home.'" approved. Remove-from-shelf quiet red italic link approved.
 
-**NOT touched this session:**
-- `app/api/suggest/route.ts` uses `claude-opus-4-6` (still live, not a regression). Flagged as 28-queue follow-on for next model audit pass.
+**Build spec (David doesn't read; future Claude sessions do):**
+- `docs/design-system-v1.2-build-spec.md` — 10 build tasks, component contracts, API route spec, build-order recommendation, pre-deploy checklist. Explicit front-matter states mockups are source of truth; if mockup and build spec ever disagree, mockup wins.
 
-**Ops changes:**
-- David added credits to the Anthropic account via the console. Account was at zero — had drained through accumulated vision calls over prior weeks of testing. Pre-beta operational risk, see new DECISION_GATE entry below.
+**Retired:**
+- `docs/design-system-v1.2-draft.md` — gutted to a tombstone pointer doc. This was the spec-first draft authored earlier this session; superseded when David's insight pivoted the approach.
 
-**Verification:**
-- ✅ `npm run build` green
-- ✅ Commit pushed, Vercel deployed clean
-- ✅ On-device QA (iPhone 26, Chrome, `app.kentuckytreehouse.com/post`) showed the amber notice correctly firing pre-credit-add, and correct per-photo caption post-credit-add ("Vintage copper whistling tea kettle" + matching caption on the test photo)
-- ✅ Vercel function logs confirmed the real error path was the HTTP 400 billing response, not the model string — which retroactively validated the model swap was correct
+**Tech Rule + Risk Register updates (`docs/DECISION_GATE.md`):**
+- New Tech Rule: "Design: mockup-first as default, not exception." Captures the session-28 pattern as the committed operating default for all future UI work.
+- Two Risk Register rows added: (1) post-flow trilogy v0.2 chrome + missing Edit Listing → spec approved, code sprint pending session 29; (2) Design agent process was spec-first by default → resolved session 28 via mockup-first promotion.
 
-### Discipline notes — what session 27 teaches
+**MASTER_PROMPT.md updates:**
+- Design agent section gains a "Core operating principle (session 28)" block naming the mockup-first flow as the default. Six-step flow committed: mockup first → David reviews → build spec after approval → mockup-wins-on-disagreement → cheap revisions → optional later fold into design-system.md.
 
-**1. The graceful-collapse sibling pattern.** Orphan files, phantom blockers, and silent mock fallbacks all present the same way from outside the code: build is green, app doesn't crash, docs look self-consistent, but the actual behavior is wrong. Each one was caught only when a human looked at the actual output. Each fix moves the detection earlier:
-- File-creation verify (session 25) catches orphans at session close.
-- Known-Gaps reconciliation (proposed session 26, still not promoted) would catch phantom blockers at session close.
-- The `source: "claude" | "mock"` field (session 27) catches silent mock fallbacks at runtime.
+### What was NOT done this session (and why)
 
-**2. The AI dependency surface has TWO silent failure modes, not one.** Model deprecation (code-visible, grep-catchable) and billing (ops-visible, grep-invisible). A code audit would miss the billing one; a billing check would miss the deprecation one. Both need their own mitigation.
+- **No code was written.** This was deliberate per David's "Spec only — no code this session, design lock next session" answer at session open. Session 28 is entirely design-approval work; session 29 is the code sprint.
+- **`docs/design-system.md` was NOT updated** to a v1.2 Status block. Per the new mockup-first rule step 6, folding into the canonical design-system doc happens during or after the code sprint, not at spec-approval time. Design agent will decide during session 29 how much of v1.2 needs to live in `docs/design-system.md` versus staying in the build spec.
+- **Sprint 4 tail (T4b/T4c/T4d) did NOT run this session.** Still the longest-parked pre-beta tech work. Queued for session 30 or whenever David routes there after session 29 ships v1.2.
+- **Anthropic model audit (28G) + billing safeguards (28H) did NOT run.** Low-effort, low-risk, can fold into session 29 close or session 30 open.
 
-**3. The test photo (copper kettle) was a good demonstrator.** Non-branded vintage object with distinctive material, clear lighting, identifiable form. Worth using again as a canonical QA test shot for vision-dependent features.
+### Discipline notes — what session 28 teaches
 
-### Session 27 close HITL — done
+**1. The Design agent was optimizing for the wrong audience.** Every prior version of `docs/design-system.md` was written at senior-product-designer reading level. That audience doesn't exist in this project. David is the reader, and he is the executive, not a design peer. The fix wasn't to dumb down the writing — it was to change what gets written, when, and by whom for whom. Mockups for David; specs for future Claude. Different artifacts, different audiences, no overlap.
 
-1. ✅ Model swap code changes committed
-2. ✅ Client-side `source` guard committed
-3. ✅ Deploy to Vercel green
-4. ✅ Anthropic credits topped up
-5. ✅ On-device QA passed
-6. ✅ CLAUDE.md updated with session 27 close block (this file)
-7. 🔴 **TODO at next commit:** `docs/DECISION_GATE.md` Risk Register updated (below) — NEEDS ONE MORE `git push` AFTER THIS RECONCILIATION EDIT LANDS
+**2. Revision cost was the hidden killer.** A 14-paragraph commitment block is cheap to write and expensive to change, because every paragraph cross-references every other paragraph. A mockup is medium-cost to write and trivially cheap to iterate — one image, one review, one yes/no. The cost profile inversion matters more than the absolute cost. Over 10 design sessions, the mockup-first approach is likely 5–10x cheaper on revisions alone.
 
-### Session 28 candidate queue (updated)
+**3. `ask_user_input_v0` was load-bearing.** Every decision David made this session landed as a structured multi-choice question (scope / edit fields / image truth / sheet commit / admin-posting / tips / save-vs-autosave / sold-label / etc.). No "what do you think?" open questions. The tool's shape forced Claude to name specific alternatives up front, which is exactly what David told us he needed: commitments stated in plain English with options he could pick between, not prose essays for him to distill. Future design sessions should lean on this tool heavily.
 
-- **28A — Sprint 4 tail batch** (T4c copy polish + T4b admin surface consolidation + T4d pre-beta QA walk). **Unchanged from session 26’s recommendation — genuinely the longest-parked pre-beta item.** Recommended opener. T4c ~30 min, T4b ~4 hr, T4d ~1–2 hr.
-- **28B — `<MallSheet>` migration sub-sprint** (`/post`, `/post/preview`, `/vendor-request`). Mechanical work against committed primitive. ~2 hours.
-- **28C — Nav Shelf decision + BottomNav full chrome rework** (held since sessions 16–20; David picks from 4 mockups).
-- **28D — Guest-user UX batch:** Home masthead + BottomNav "Sign in" → "Curator Sign In" rename; `/welcome` guest landing; PWA install prompts; vendor onboarding Loom; bookmarks persistence migration.
-- **28E — Post-beta candidates** (3A Find Detail sold landing, feed pagination, ToS/privacy, Sentry, feed content seeding, Tally.so feedback).
-- **28F — Known-Gaps reconciliation rule promotion to DECISION_GATE** (~15 min — proposed session 26, still not promoted; pairs with session-27 lessons).
-- **28G — NEW: Anthropic model audit pass** (~15 min — `/api/suggest` → Opus 4.7; verify no other stale model strings. Per new DECISION_GATE rule proposed session 27.) Pairs well as a lead-in to 28A if David wants a warm-up task.
-- **28H — NEW: Anthropic billing safeguards** (~15 min ops — enable auto-reload in Anthropic console; add pre-beta ops checklist item for min credit balance before vendor demos). Per new DECISION_GATE rule proposed session 27.
+**4. The "let you decide" option mattered.** On several questions David picked "Let you decide — you're the design agent." This is the executive-delegation pattern working correctly: David trusts the agent's judgment on style-level calls, holds the line on scope-level ones. The agent earning that trust depends on being transparent about WHICH calls it's making and WHY when David delegates — not just silently committing.
 
-**Recommended for session 28: 28A (Sprint 4 tail)** — unchanged. But if David wants ~30 min of lower-stakes warm-up, 28G + 28H clear out the session-27 follow-ons cleanly before diving into T4.
+### Session 28 close HITL — done
+
+1. ✅ Three mockups authored + approved via `ask_user_input_v0` structured decisions
+2. ✅ `docs/design-system-v1.2-build-spec.md` authored as dev-handoff doc
+3. ✅ `docs/design-system-v1.2-draft.md` retired to tombstone pointer
+4. ✅ `docs/DECISION_GATE.md` updated — new Tech Rule + 2 Risk Register rows + footer timestamp
+5. ✅ `MASTER_PROMPT.md` updated — Design agent core operating principle + footer timestamp
+6. ✅ All four new files verified on disk via `filesystem:read_text_file` head-read (file-creation verify Tech Rule, session 25)
+7. 🟢 **TODO at commit:** this CLAUDE.md update (final HITL: `thc` to commit session 28)
+
+### Session 29 candidate queue
+
+- **29A — v1.2 code sprint** against `docs/design-system-v1.2-build-spec.md`. **Strongly recommended opener.** Three surfaces, ~3–4 hours. Build order in spec: `<AmberNotice>` → `<PostingAsBlock>` → `<PhotographPreview>` → `/post/preview` rewrite → `<AddFindSheet>` → `/my-shelf` wiring → `/post` redirect shim → `BoothPage.tsx` AddFindTile props change → `PATCH /api/my-posts/[id]` → `/find/[id]/edit` page → `/find/[id]` owner-edit bubble. On-device QA on iPhone at end.
+- **29B (lightweight warm-up before 29A)** — Anthropic model audit pass (28G, ~15 min) + billing safeguards (28H, ~15 min ops). Clears session-27 follow-ons cleanly before diving into v1.2.
+- **29C — Sprint 4 tail batch** (T4c remainder copy polish + T4b admin surface consolidation + T4d pre-beta QA walk). Longest-parked pre-beta item. Defer unless David explicitly routes here — v1.2 code sprint is higher leverage because it clears three surfaces at once and delivers the first vendor-visible feature since session 24.
+- **29D — Nav Shelf decision + BottomNav full chrome rework** (held since sessions 16–20; mockups in `docs/mockups/nav-shelf-exploration.html`). Should follow the new mockup-first rule when David routes here — four existing mockups already exist, he picks one.
+- **29E — Guest-user UX batch, post-beta candidates, other deferred items.** All parked pending 29A completion.
+- **29F — Known-Gaps reconciliation rule promotion to DECISION_GATE** (proposed session 26, still not promoted; ~15 min). Lower priority now that session 28's Tech Rule additions covered the adjacent process-discipline space.
+
+**Recommended for session 29:** 29B warm-up (~30 min) → 29A (3–4 hours). If David wants to hit v1.2 cold, skip 29B and open directly into 29A.
+
+---
+
+## ARCHIVE — What was done earlier (2026-04-19, session 27 — AI caption regression hotfix)
+
+**Status at the time:** ✅✅ Session 27 shipped a hotfix for a vendor-reported regression: AI caption auto-populate returned random generic strings regardless of what was photographed. Root cause was a double failure — (1) `claude-opus-4-5` model identifier was retired on Anthropic API ~1 month ago but still hardcoded in three routes (`/api/post-caption`, `/api/identify`, `/api/story`), so the SDK threw `NotFoundError` on every call; (2) route handlers had `catch` blocks that silently returned random `MOCK_RESPONSES` entries with no distinguishable shape, so the client populated the form with whichever hardcoded string the dice picked.
+
+Swapped to current models (post-caption → `claude-sonnet-4-6`, identify → `claude-opus-4-7`, story → `claude-sonnet-4-6`) and added `source: "claude" | "mock"` observability field. On-device QA post-deploy surfaced a SECOND silent failure: Anthropic account was out of credits (HTTP 400 `invalid_request_error`). David topped up credits; live QA confirmed correct per-photo captions. The `source` field was the diagnostic win — without it, billing issue was invisible.
+
+**Deep lesson:** graceful-collapse paths need observability. Third sibling of orphan-pattern (sessions 13, 23) and phantom-blocker (KI-003, sessions 18–25). All three shared one shape: a graceful-collapse path hiding a real failure behind a working-looking UI.
+
+5 files touched: `/api/post-caption`, `/api/identify`, `/api/story` model swaps + `source` field; `/post` and `/post/preview` client guards on `data.source !== "claude"`; `/api/suggest` flagged as stale `claude-opus-4-6` (not a regression, queued as 28G follow-on). Two Tech Rules added to DECISION_GATE: Anthropic model audit + billing as silent dependency.
 
 ---
 
 ## ARCHIVE — What was done earlier (2026-04-19, session 26 — documentation reconciliation)
-> Last updated: 2026-04-19 (session 26 — CLAUDE.md + CONTEXT.md + memory reconciled; KI-003 stale framing struck; candidate queue restored to honest state)
 
-**Status:** ✅ **Session 26 was a documentation reconciliation pass, not a code sprint.** Session opener's standup surfaced a material contradiction: CLAUDE.md had been carrying "KI-003 diagnosis (pre-beta blocker, longest-parked)" across 17 consecutive session closes (18 through 25), while `docs/known-issues.md` Resolved section, `docs/DECISION_GATE.md` Risk Register, `docs/onboarding-journey.md` T4c entry, and CLAUDE.md's own session-9 archive line all correctly recorded KI-003 as resolved session 9 with a three-part fix verified end-to-end on device. The stale framing had also propagated into the Anthropic-generated memory summary ("top of mind: KI-003 diagnosis is the top priority for the next session"), which meant every new session's memory-informed opener started from a false premise.
+**Status at the time:** ✅ Session 26 was a documentation reconciliation pass, not a code sprint. Session opener surfaced a material contradiction: CLAUDE.md had been carrying "KI-003 diagnosis (pre-beta blocker, longest-parked)" across 17 consecutive session closes (18 through 25), while `docs/known-issues.md`, `docs/DECISION_GATE.md` Risk Register, `docs/onboarding-journey.md`, and CLAUDE.md's own session-9 archive line all correctly recorded KI-003 as resolved session 9.
 
-David confirmed option A: KI-003 is genuinely fixed; CLAUDE.md is stale. Session 26 reconciled in-session:
-1. Two explicit memory user-edits written via `memory_user_edits` tool — one striking KI-003 as open, one naming Sprint 4 tail as the actual longest-parked pre-beta item.
-2. Full CONTEXT.md rewrite — was 18 sessions stale (last touched 2026-04-07, pre-v1.1), now documents v1.1l reality: 16 sections covering product model, tech stack with dual-font commitment + Times New Roman exception, full env var list, Supabase schema including `site_settings` + extended mall/vendor fields + all four unique constraints, complete route map split across shopper/auth/admin/reseller, full API route table with auth pattern per route, current lib catalog with deprecation notes, current component catalog with v1.1 primitives + v0.2 legacy + retired lists, auth+server pattern section (bearer-token Option B), email pattern, vendor approval pattern with KI-004 constraint handling, admin sign-in pattern, featured banner pattern, design system v1.1l summary pointing at `docs/design-system.md` for the canonical spec, user flows A–E (shopper browse, shopper save, vendor onboard three sub-flows, vendor post, reseller intel), reseller layer data model + comp pipeline + pricing logic, DNS state with dual email channels, full known constraints list (zsh/git/Next.js 14/framer-motion/Supabase/Safari/Vercel/tool-environment), current dev state with all resolved KIs + open pre-beta + Sprint 5 items + parked Sprint 6+ + cleanup, roadmap, and how-to-use pointers to the companion docs.
-3. CLAUDE.md rewrite (this file) — strikes KI-003 from Known Gaps + candidate queue + Status framing; installs Sprint 4 tail as honest longest-parked pre-beta item; adds session 26 close block.
-
-**Next session (27) opens with David's choice from the reconciled candidate queue.** The top-recommended track is now **Sprint 4 tail batch** (T4c remainder copy polish → T4b admin surface consolidation → T4d pre-beta QA walk) — genuinely the longest-parked pre-beta item, and the last tech work before beta-ready. 26C CONTEXT.md refresh shipped this session.
-
-### What shipped this session (26)
-
-**No production code changes.** Two-file doc reconciliation + two memory edits.
-
-**Files touched:**
-- `CONTEXT.md` — full rewrite against v1.1l reality. 16 sections. Replaces a 2026-04-07 snapshot that predated: v1.0 design direction, v1.1d–v1.1l design-system sessions, `lib/adminAuth.ts`, `lib/authFetch.ts`, `lib/email.ts`, `lib/imageUpload.ts`, `lib/siteSettings.ts`, `<MallSheet>` / `<StickyMasthead>` / `<FeaturedBanner>` / `<BoothPage>` primitives, the `site_settings` table + `site-assets` bucket, four mall-identity and location-extended vendor fields, the bearer-token auth pattern, the `vendor_requests` service-role gating, magic-link OTP as primary, custom domain, transactional email infra, constraint-aware vendor approval, admin diagnostic UI, `/admin/login` as a dedicated route, and 12 RLS policies. The refresh was overdue and was the structural cause of the KI-003 drift.
-- `CLAUDE.md` (this file) — Status block rewritten; Top-of-mind memory entries struck and replaced; Known Gaps reconciled; session 26 candidate queue renumbered; session 25 archive preserved verbatim; session-26 close block added.
-- Memory — two `memory_user_edits` entries added: (1) KI-003 resolved session 9, (2) Sprint 4 tail is longest-parked pre-beta.
-
-**Verification (session-25 file-creation verify discipline, applied to doc rewrites):**
-- ✅ `filesystem:read_text_file` on both CONTEXT.md and CLAUDE.md before commit to confirm on-disk state matches written state
-- ✅ `npm run build` — green (no code touched, but run anyway to confirm no doc syntax broke anything, e.g. README-embedded code blocks)
-
-### Discipline notes — what this reconciliation teaches
-
-**The orphan-pattern has a sibling: the phantom-blocker pattern.** Session 13's `lib/imageUpload.ts` and session 23's `app/admin/login/page.tsx` orphans were documented-as-shipped files that weren't on disk. KI-003's phantom-blocker status is the reverse shape: a fix documented-as-shipped in three other canonical docs, correctly on disk, but still being dragged forward in CLAUDE.md's "open blockers" list across 17 session closes. Both shapes have the same root cause — the Docs agent's session close ritual writes what was ATTEMPTED or what was the FOCUS, not what was VERIFIED AGAINST GROUND TRUTH.
-
-**The session-25 file-creation-verify Tech Rule doesn't catch this.** That rule verifies NEW files exist on disk. KI-003 is about a STATUS that had already been correctly logged elsewhere but was still being restated as open in CLAUDE.md's Known Gaps section. No file verification would have caught it — only cross-doc reconciliation at session close would.
-
-**Proposed Tech Rule for DECISION_GATE** (not yet promoted — flagged for session 27 to decide):
-> **Known-Gaps reconciliation at session close.** When the Docs agent writes a session close, any item listed in CLAUDE.md's "Known Gaps → Pre-beta blockers" or "Remaining pre-beta tech work" sections MUST be cross-referenced against `docs/known-issues.md` Resolved section and `docs/DECISION_GATE.md` Risk Register before closing. If any of those canonical sources records the item as resolved, it must be struck from CLAUDE.md's Known Gaps sections in the same close. Cost per item is one grep/read — cheap insurance against the 17-session drift that bit sessions 18–25 with KI-003.
-
-**The deeper structural lesson:** `CLAUDE.md` and `CONTEXT.md` had drifted far enough apart that new-session openers were getting contradictory signals (CLAUDE.md said blocker; CONTEXT.md didn't mention KI-003 at all because the 2026-04-07 snapshot predated it). The refresh this session brings them back into sync. The drift rate is what actually matters — session 26F was parked across four candidate-queue listings before David's "go" this session pulled it in. A periodic CONTEXT.md health check (proposed: every ~10 sessions, not waiting for a drift-induced crisis) would keep this cheaper.
-
-### Session 26 close HITL — already complete
-
-1. ✅ Memory edits applied (`KI-003 resolved session 9` + `Sprint 4 tail is longest-parked`)
-2. ✅ `CONTEXT.md` written + read back for verify
-3. ✅ `CLAUDE.md` (this file) written + read back for verify
-4. ✅ `npm run build` — green
-5. ✅ This CLAUDE.md update (final HITL: `thc` to commit the docs reconciliation)
-
-### Session 27 candidate queue (reconciled — KI-003 struck)
-
-- **27A — Sprint 4 tail batch** (T4c remainder copy polish + T4b admin surface consolidation + T4d pre-beta QA walk). **This is the actual longest-parked pre-beta item** and the last tech work before beta-ready. T4c is S-effort (~30 min: `/api/setup/lookup-vendor` error copy + `/vendor-request` success screen copy). T4b is M-effort (~4 hours: `/admin/login` keep-vs-fold disposition now that the route is a real dedicated surface, `/shelves` AddBoothSheet retirement, admin BottomNav cleanup, possibly new Add-Vendor sub-flow per onboarding-journey.md Flow-2 scope). T4d is S-effort + High-value (~1–2 hours: walk Flow 1/2/3 end-to-end against a clean DB). **Recommended opener.**
-- **27B — `<MallSheet>` migration sub-sprint** (`/post`, `/post/preview`, `/vendor-request`). Mechanical work against committed primitive; deferred explicitly in v1.1k (h). ~2 hours.
-- **27C — Nav Shelf decision + BottomNav full chrome rework** (held since sessions 16–20; David picks from 4 mockups in `docs/mockups/nav-shelf-exploration.html`).
-- **27D — Guest-user UX batch:** Home masthead + BottomNav "Sign in" → "Curator Sign In" rename (v1.1k partially did this — `/login` says "Curator Sign in" — but the entry-point affordances still say "Sign in"); `/welcome` guest landing for signed-in non-vendors; PWA install prompts; vendor onboarding Loom; bookmarks persistence migration (localStorage → DB-backed).
-- **27E — Post-beta candidates surfacing now that design is landed:** 3A Find Detail sold landing state (photograph-still-visible treatment), Find Map saved-but-sold tile signal, feed pagination, ToS/privacy, error monitoring (Sentry or structured logs), feed content seeding (10–15 real posts), beta feedback mechanism (Tally.so).
-- **27F — Known-Gaps reconciliation rule promotion to DECISION_GATE** (~15 min — promote the proposed Tech Rule from this session's discipline note into the canonical list).
-
-**Recommended for session 27: 27A (Sprint 4 tail)** — longest-parked pre-beta, clears the path to beta-ready, and T4b is genuinely cleaner now that `/admin/login` is a real dedicated route rather than a theoretical one.
+Two memory user-edits written, full CONTEXT.md rewrite (16 sections covering v1.1l reality — was 18 sessions stale), CLAUDE.md Status block rewritten. The "phantom-blocker" pattern named: the orphan-file pattern has a sibling where a resolved status keeps being restated as open across close blocks. Proposed Known-Gaps reconciliation Tech Rule (not yet promoted to DECISION_GATE as of session 28).
 
 ---
 
@@ -341,7 +307,9 @@ Booth page v0.2 redesign shipped. `lib/imageUpload.ts` reconstructed mid-session
 
 **Onboarding canonical spec:** See `docs/onboarding-journey.md` for the three committed flows (Pre-Seeded, Demo, Vendor-Initiated).
 
-**Design canonical spec:** See `docs/design-system.md` v1.1l for the visual + interaction system. All multi-screen UI work scopes against it before code.
+**Design canonical spec:** See `docs/design-system.md` v1.1l for the visual + interaction system. v1.2 post-flow trilogy spec approved session 28 lives in `docs/design-system-v1.2-build-spec.md` (build doc, not decision doc) + three mockups in `docs/mockups/`.
+
+**Design process:** Mockup-first, not spec-first. Any UI-touching work gets a mockup FIRST (phone-frame HTML in `docs/mockups/`), plain-English decisions via `ask_user_input_v0`, build spec written AFTER approval as dev-handoff. Locked session 28. See `docs/DECISION_GATE.md` Tech Rules + `MASTER_PROMPT.md` Design agent section.
 
 **Architecture canonical reference:** See `CONTEXT.md` — refreshed session 26 against v1.1l reality; covers schema, routes, API table, lib catalog, component catalog, auth pattern, design system summary.
 
@@ -377,7 +345,7 @@ NEXT_PUBLIC_DEV_VENDOR_EMAIL     vendor@test.com (optional)
 ANTHROPIC_API_KEY                Claude Vision + caption generation
 SERPAPI_KEY                      eBay sold comps
 ADMIN_PIN                        Server-only PIN for admin login
-SUPABASE_SERVICE_ROLE_KEY        Server-only service role key (REQUIRED for /api/admin/* + /api/setup/* + /api/vendor-request + /api/admin/featured-image)
+SUPABASE_SERVICE_ROLE_KEY        Server-only service role key (REQUIRED for /api/admin/* + /api/setup/* + /api/vendor-request + /api/admin/featured-image + /api/my-posts/[id] — v1.2)
 RESEND_API_KEY                   Server-only Resend API key for lib/email.ts transactional emails (session 8)
 EBAY_CLIENT_ID                   eBay direct API (not yet wired)
 EBAY_CLIENT_SECRET               eBay direct API (not yet wired)
@@ -449,6 +417,11 @@ Key records (via Shopify DNS): A `@` → `23.227.38.65`, CNAME `app` → Vercel,
 - `/api/admin/featured-image` POST `{base64DataUrl, settingKey}` — admin-only upload + site_settings upsert
 - `<FeaturedBanner>` renders null when URL is absent (graceful collapse)
 
+**Vendor post-edit pattern (v1.2 session 28 — spec approved, code sprint session 29):**
+- `PATCH /api/my-posts/[id]` — partial update of vendor's own post via `requireAuth` + server-side ownership check. Body whitelist: `{title?, caption?, price_asking?, status?, image_url?}`. Rate-limited 20/60s per user.
+- Autosave pattern: client debounces field edits 800ms, PATCHes changed field only, inline success/error feedback.
+- Status toggle + photo replace are immediate writes (explicit user gestures, different UX contract).
+
 ---
 
 ## WORKING ✅
@@ -468,7 +441,8 @@ Key records (via Shopify DNS): A `@` → `23.227.38.65`, CNAME `app` → Vercel,
 - Design agent activated, `docs/design-system.md` at **v1.1l** (sessions 15–24)
 - Admin diagnostic UI, `docs/admin-runbook.md` with 9 SQL recipes
 - Admin-editable hero banners on Home + Find Map (v1.1l, session 24 — migration applied session 25)
-- **CONTEXT.md refreshed to v1.1l reality (session 26)** — replaces 2026-04-07 snapshot that had become 18 sessions stale
+- AI caption regression resolved session 27 — model swap + `source` observability
+- **v1.2 post-flow trilogy design approved session 28** — three mockups + build spec on disk, code sprint queued session 29
 
 ### Design v1.1l — shipped + verified on device (session 24 + session 25 verification)
 - **`<StickyMasthead>`** primitive — all 6 mastheads migrated. Scroll-linked bottom hairline past `scrollY > 4`.
@@ -486,6 +460,14 @@ Key records (via Shopify DNS): A `@` → `23.227.38.65`, CNAME `app` → Vercel,
 - **`/vendor-request`**, **`/login`** (curator-only; PIN tab retired), **`/admin/login`** (NEW dedicated route with Shield glyph), **`/setup`** — all Mode C chrome against v1.1k primitives.
 - **`/admin` unauth gate redirect** — to `/admin/login`.
 
+### Design v1.2 — approved session 28, code sprint pending session 29
+- **Three approved mockups in `docs/mockups/`:** `add-find-sheet-v1-2.html`, `review-page-v1-2.html`, `edit-listing-v1-2.html`.
+- **Build spec:** `docs/design-system-v1.2-build-spec.md` (dev-handoff doc; David doesn't need to read).
+- **Scope:** retire `/post` to redirect shim; rewrite `/post/preview` as "Review your find" with full-photo-no-crop treatment; new `/find/[id]/edit` with autosave + Available/Sold toggle + Replace-photo + Remove-from-shelf link.
+- **New primitives:** `<AddFindSheet>`, `<PhotographPreview>`, `<PostingAsBlock>`, `<AmberNotice>`.
+- **New API route:** `PATCH /api/my-posts/[id]`.
+- **Code sprint estimate:** 3–4 hours session 29.
+
 ### Infrastructure
 - **App-wide background paperCream `#e8ddc7` globally committed** (session 17)
 - **BottomNav minimal chrome patch + v1.1l idle color** — full Nav Shelf rework still deferred
@@ -493,20 +475,22 @@ Key records (via Shopify DNS): A `@` → `23.227.38.65`, CNAME `app` → Vercel,
 ## KNOWN GAPS ⚠️
 
 ### 🔴 Pre-beta blockers
-_None as of session 26 close._ KI-003 was resolved session 9 (three-part fix, Flow 2 verified on device); the phantom-blocker framing that carried it across sessions 18–25 was struck this session. All four KIs are closed. Design debt is empty. Last tech work before beta-ready is the Sprint 4 tail batch, which is open but is not a blocker.
+_None._ All KIs closed. Design debt empty. Last tech work before beta-ready is Sprint 4 tail (open, not a blocker) + v1.2 code sprint (spec approved session 28, code sprint queued session 29).
 
 ### 🟡 Remaining pre-beta tech work
-- **Sprint 4 tail batch** — longest-parked pre-beta item as of session 26.
+- **v1.2 post-flow trilogy code sprint** — spec approved session 28; code queued for session 29. ~3–4 hours. See `docs/design-system-v1.2-build-spec.md` + three mockups in `docs/mockups/`. Delivers: retire `/post` → sheet from `/my-shelf`; refreshed Review page with truth-rule photo treatment; new Edit Listing page with Available/Sold toggle. First vendor-visible feature since session 24.
+- **Sprint 4 tail batch** — longest-parked pre-beta item.
   - 🟡 T4c remainder (copy polish) — `/api/setup/lookup-vendor` error copy + `/vendor-request` success screen copy. ~30 min.
   - 🟡 T4b — admin surface consolidation. `/admin/login` keep-vs-fold disposition (now grounded in a real dedicated route); `/shelves` AddBoothSheet retirement; admin BottomNav cleanup; possibly new Add-Vendor sub-flow per onboarding-journey.md Flow-2 scope. ~4 hours.
   - 🟡 T4d — pre-beta QA pass walking all three flows end-to-end against a clean DB. ~1–2 hours.
   - 🟢 Session-13 test data cleanup — 5+ "David Butler" variants in DB. ~5 min SQL via admin-runbook Recipe 4.
+- **Anthropic model audit + billing safeguards** (session 28G/28H follow-ons). ~30 min combined. Swap `/api/suggest` to Opus 4.7; enable Anthropic auto-reload; add pre-beta credit floor checklist item.
 
 ### 🟡 Sprint 5 + design follow-ons
-- **`<MallSheet>` migration sub-sprint** (`/post`, `/post/preview`, `/vendor-request`). Deferred explicitly in v1.1k (h). ~2 hours.
+- **`<MallSheet>` migration to `/vendor-request`** — v1.2 wires it to `/my-shelf`/Add sheet; `/vendor-request` still deferred per v1.1k (h). Pick up whenever next activation-flow design pass runs.
 - **Nav Shelf decision + BottomNav full chrome rework** (held since sessions 16–20; David picks from 4 mockups in `docs/mockups/nav-shelf-exploration.html`).
 - **Guest-user UX parked items:** Home masthead + BottomNav "Sign in" → "Curator Sign In" rename, `/welcome` guest landing, PWA install onboarding, vendor onboarding Loom, bookmarks persistence (localStorage → DB-backed).
-- **Known-Gaps reconciliation Tech Rule promotion** — proposed this session, not yet in DECISION_GATE. ~15 min at session 27 close.
+- **Known-Gaps reconciliation Tech Rule promotion** — proposed session 26, still not promoted. ~15 min at any session close.
 
 ### 🟡 Sprint 3 leftovers still pending beta invites
 - Error monitoring (Sentry or structured logs)
@@ -522,7 +506,7 @@ _None as of session 26 close._ KI-003 was resolved session 9 (three-part fix, Fl
 - `admin-cleanup` tool (collapse the 3-table SQL reset to one click)
 - Feed pagination, search, ToS/privacy
 - Mall page vendor CTA, vendor directory
-- Post-MVP: 3A Find Detail sold landing state (photograph-still-visible treatment), Find Map saved-but-sold tile signal
+- Post-MVP: 3A Find Detail sold landing state (photograph-still-visible treatment), Find Map saved-but-sold tile signal, Find Map crop visibility on post-publish surfaces
 
 ### 🟢 Cleanup (not urgent)
 - Deprecated vendor-request functions still in `lib/posts.ts`
@@ -531,6 +515,7 @@ _None as of session 26 close._ KI-003 was resolved session 9 (three-part fix, Fl
 - Cloudflare nameservers — dormant, no cost
 - `/shelves` AddBoothSheet — orphan after T4b ships
 - `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` — obsolete since T4a
+- `docs/design-system-v1.2-draft.md` — tombstone pointer; retire after session 29 code sprint completes
 - Design v0.2 components deleted across sessions (LocationStatement, BoothLocationCTA, ExploreBanner, TabSwitcher, MallHeroCard, BoothFinderCard)
 - `components/ShelfGrid.tsx` — parked with retention comments (session 18); zero current callers
 - Mockup HTML files in `docs/mockups/` — many historical records can retire once on-device QA confirms their respective versions hold. No urgency.

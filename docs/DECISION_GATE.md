@@ -261,6 +261,32 @@ dependency                          every AI-powered route. HTTP 400 `invalid_re
                                    not a code bug. Fired session 27 (discovered during the
                                    on-device QA that followed the model-swap fix). Added
                                    session 27.
+Design: mockup-first as         Design work for David is mockup-first, not spec-first. The
+default, not exception          prior pattern — Design agent writes a 14-paragraph commitment
+                                   block into `docs/design-system.md`, David reviews dense
+                                   design-system prose, signs off — creates two costs David
+                                   named explicitly session 28: (1) reviewing the commitment
+                                   requires executive-level fluency in design-system vocabulary,
+                                   and (2) changing direction after commit pulls the whole
+                                   14-paragraph block back up for dissection. The v1.2 session
+                                   reversed this: three approved mockups + structured plain-
+                                   English decisions via ask_user_input_v0 → short build spec
+                                   written AFTER approval as a dev-handoff doc. David does not
+                                   read the build spec; future Claude sessions do. The mockups
+                                   are the source of truth. Rules going forward: (a) any UI-
+                                   touching work gets a mockup FIRST (phone-frame HTML, dark-
+                                   background review doc, 2-3 variant frames, plain-English
+                                   decisions pane at top, 2-3 multiple-choice questions at
+                                   bottom via ask_user_input_v0); (b) David's mockup approval
+                                   IS the commitment — the build spec is written after and is
+                                   explicitly a dev-handoff doc, not a decision doc, and its
+                                   front-matter must state so; (c) if the mockup and the build
+                                   spec ever disagree, the mockup wins; (d) revisions are cheap
+                                   — one mockup iteration per direction change, NOT a design-
+                                   system-doc reopen; (e) the build spec can still fold into
+                                   `docs/design-system.md` as a condensed Status block during
+                                   the code sprint, at Design agent's discretion, but never
+                                   before David's mockup approval. Added session 28.
 ```
 
 ---
@@ -321,7 +347,7 @@ These don't stop work but must be called out explicitly before the session conti
 
 ## Current Risk Register
 
-> Updated: 2026-04-19 (session 27 — vendor-reported AI caption regression resolved; stale `claude-opus-4-5` model identifier swapped across 3 API routes; observability `source: "claude" | "mock"` field added to distinguish real Claude responses from mock fallbacks; Anthropic billing silent-failure mode surfaced; two new Tech Rules proposed — Anthropic model audit + Anthropic billing safeguards)
+> Updated: 2026-04-19 (session 28 — v1.2 post-flow trilogy mockup-first design session; three mockups approved by David via plain-English select questions; build spec authored as dev-handoff doc; mockup-first-as-default Tech Rule promoted; risk of v0.2 chrome on `/post` + `/post/preview` and absent Edit Listing page all converted from "open" to "spec approved, code sprint pending")
 
 | Risk | Severity | Status | Owner |
 |---|---|---|---|
@@ -377,6 +403,8 @@ These don't stop work but must be called out explicitly before the session conti
 | **Stale `claude-opus-4-5` model identifier across 3 API routes** (`/api/post-caption`, `/api/identify`, `/api/story`) — model was retired on Anthropic API ~1 month ago but routes still referenced it; SDK threw `NotFoundError` on every call; `catch` blocks silently returned random `MOCK_RESPONSES` entries with no distinguishable shape, so clients populated forms with hardcoded generic strings regardless of photo. Vendor-reported as "auto-populate does not match photo." | 🟡 Medium | ✅ Resolved session 27 — swapped to `claude-sonnet-4-6` (post-caption, story), `claude-opus-4-7` (identify). Added `source: "claude" \| "mock"` field + `reason` to `/api/post-caption` response; clients on `/post` and `/post/preview` now treat non-claude source as failure and fire the amber "Couldn't read this image" notice rather than silently populating with mock strings. On-device QA confirmed correct per-photo captions after credit top-up. | Dev agent |
 | **Anthropic API credit balance can silently take the AI pipeline offline** — HTTP 400 `invalid_request_error` returns the same shape as model-not-found, graceful-collapses to mock, user sees "wrong captions" with no error signal. Discovered session 27 on-device QA post-model-swap: model fix was correct, but Anthropic account was at zero credits; symptom identical to the original regression. | 🟡 Medium | Partially resolved session 27 — David topped up credits, live QA passed. Open operational follow-on (28H): enable Anthropic console auto-reload + add pre-beta ops checklist item for minimum credit floor before vendor demos. The session-27 `source` observability field is what made this diagnosable — without it, the billing issue was invisible. | David (ops) + Dev agent |
 | **`/api/suggest/route.ts` uses `claude-opus-4-6`** (still live on Anthropic API but Opus 4.7 is now GA; not a regression, flagged for next model audit pass) | 🟢 Low | Open — session 28G follow-on (~15 min). | Dev agent |
+| **Post-flow trilogy on v0.2 chrome + missing Edit Listing page** (`/post` on legacy Georgia + `#f0ede6`; `/post/preview` same; no `/find/[id]/edit` route exists; vendors cannot edit a published find). | 🟡 Medium | ✅ Spec approved session 28 — three mockups signed off by David (`docs/mockups/add-find-sheet-v1-2.html`, `review-page-v1-2.html`, `edit-listing-v1-2.html`). Build spec in `docs/design-system-v1.2-build-spec.md`. Code sprint deferred to session 29. `/post` retires in favor of `<AddFindSheet>` from `/my-shelf`; `/post/preview` fully rewrites with `<PhotographPreview>` truth rule (no crop, paper fills letterbox); new `/find/[id]/edit` with autosave + status toggle + Replace-photo + Remove-from-shelf link + `PATCH /api/my-posts/[id]` route. Primitives introduced: `<AddFindSheet>`, `<PhotographPreview>`, `<PostingAsBlock>`, `<AmberNotice>`. | Design + Dev agents |
+| **Design agent process was spec-first by default — created expensive revision cycles** | 🟡 Medium | ✅ Resolved session 28 — new Tech Rule "Design: mockup-first as default, not exception" added. David named the problem explicitly: reviewing 14-paragraph `docs/design-system.md` commitment blocks required executive-level fluency in design-system vocabulary, and changing direction after commit pulled the whole block back up for dissection. v1.2 session successfully tested the reversed pattern — mockup-first review via phone-frame HTML + structured plain-English questions + build spec written AFTER approval as dev-handoff doc. Three UI surfaces approved in one session with zero spec-doc reopens. Pattern now the committed default for all future UI work. | Design agent |
 
 ---
 
@@ -499,4 +527,4 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 ---
 > This document is the operating constitution for the Treehouse system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-19 (session 27 — vendor-reported AI caption regression resolved; stale `claude-opus-4-5` swapped across 3 API routes; `source` observability field added to `/api/post-caption`; Anthropic billing silent-failure surfaced; three Risk Register rows added — stale model identifier resolved, billing partial resolution, `/api/suggest` Opus 4.6 flagged)
+> Last updated: 2026-04-19 (session 28 — v1.2 post-flow trilogy mockup-first design session; three approved mockups + build spec on disk; mockup-first-as-default Tech Rule promoted; two Risk Register rows added — post-flow trilogy spec-approved, design-process-was-spec-first resolved)
