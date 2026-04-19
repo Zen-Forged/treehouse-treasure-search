@@ -216,6 +216,51 @@ Required Supabase migrations       Any sprint that ships a new `supabase/migrati
                                    as code but the migration wasn't applied until session 25,
                                    so featured banners rendered invisibly via graceful-collapse
                                    for a full session). Added session 25.
+Anthropic model audit              At sprint boundaries (or when Anthropic announces a new
+                                   Opus/Sonnet), grep `model: "claude-*"` across the codebase
+                                   and cross-reference against Anthropic's current model
+                                   deprecation page (https://docs.claude.com/en/docs/about-claude
+                                   /model-deprecations). Retired models silently fail the SDK
+                                   call; if the route has any mock fallback path (which is
+                                   common for AI-dependent features by design), the failure
+                                   goes undetected by build checks AND by most forms of
+                                   monitoring. Cheap: one `grep -r "claude-" app lib` every
+                                   ~4–6 weeks or at Opus/Sonnet release. Fired session 27
+                                   when vendor reported generic auto-captions on every post;
+                                   3 routes (`/api/post-caption`, `/api/identify`, `/api/story`)
+                                   had been running against retired `claude-opus-4-5` for
+                                   ~1 month. Added session 27.
+Graceful-collapse observability    Any route or feature that silently falls back to a mock,
+                                   default, or cached response on failure MUST expose a
+                                   distinguishable response shape (e.g. a `source: "real" |
+                                   "mock"` field, or a distinct HTTP header) so the client
+                                   can tell real responses from fallbacks. The graceful-collapse
+                                   pattern is correct UX (keep the app working) but becomes
+                                   a silent-failure-concealer without observability. The
+                                   session-27 `/api/post-caption` fix is the canonical shape:
+                                   `{title, caption, source: "claude" | "mock", reason?}`,
+                                   where `source !== "claude"` triggers a visible "couldn't
+                                   read this" amber notice on the client rather than silently
+                                   populating the form. Pairs with the file-creation-verify
+                                   rule (orphan pattern) and the proposed Known-Gaps
+                                   reconciliation rule (phantom-blocker pattern) as a family
+                                   of discipline moves that each catch a different flavor of
+                                   "working-looking UI over a real failure." Added session 27.
+Anthropic billing as silent         Anthropic API credit balance is a silent dependency of
+dependency                          every AI-powered route. HTTP 400 `invalid_request_error`
+                                   on low balance returns a generic error shape indistinguishable
+                                   from model-not-found or malformed-request errors, and
+                                   graceful-collapses to mock in the exact same way. Mitigations:
+                                   (1) Enable auto-reload in the Anthropic console so balance
+                                   never hits zero. (2) Before any vendor demo, beta QA pass,
+                                   or session where AI features will be exercised, verify the
+                                   balance at https://console.anthropic.com/settings/billing is
+                                   above a comfortable floor (rule of thumb: $20+ covers many
+                                   weeks at current call volume). (3) Treat "captions look
+                                   wrong + logs show HTTP 400 credit error" as an ops issue,
+                                   not a code bug. Fired session 27 (discovered during the
+                                   on-device QA that followed the model-swap fix). Added
+                                   session 27.
 ```
 
 ---
@@ -276,7 +321,7 @@ These don't stop work but must be called out explicitly before the session conti
 
 ## Current Risk Register
 
-> Updated: 2026-04-19 (session 25 — v1.1k `/admin/login` orphan resolved; `004_site_settings.sql` migration applied via Supabase SQL editor; featured banners verified live on device; two new Tech Rules added — file-creation verify at close + required Supabase migrations as explicit HITL)
+> Updated: 2026-04-19 (session 27 — vendor-reported AI caption regression resolved; stale `claude-opus-4-5` model identifier swapped across 3 API routes; observability `source: "claude" | "mock"` field added to distinguish real Claude responses from mock fallbacks; Anthropic billing silent-failure mode surfaced; two new Tech Rules proposed — Anthropic model audit + Anthropic billing safeguards)
 
 | Risk | Severity | Status | Owner |
 |---|---|---|---|
@@ -329,6 +374,9 @@ These don't stop work but must be called out explicitly before the session conti
 | **Find Map v0.2 (page called "My Finds") pre-beta chrome mismatch** | 🟡 Medium | ✅ Resolved session 17 — `/flagged` full redesign to v1.1g shipped (journal itinerary, pin+mall anchor, X-glyph spine, Booth pill rows, find tiles with prices + unsave heart, intro voice + chapter-break closer). All v0.2 localStorage / pruning / grouping / focus-rehydration / unsave wiring preserved. | Design + Dev agents |
 | **Glyph hierarchy not documented as a cross-cutting rule** (risk: future screens pick the wrong glyph and dilute the language) | 🟢 Low | ✅ Resolved session 17 — pin = mall, X = booth locked in `docs/design-system.md` v1.1g Cartographic Vocabulary section. Propagates to Booth redesign (18A), Feed redesign (18B), and any future location-naming surface. | Design agent |
 | **App-wide background color inconsistent across routes** (Find Detail used paperCream; `/flagged` and chrome elsewhere still used legacy `#f0ede6`) | 🟢 Low | ✅ Resolved session 17 — `app/layout.tsx` body inline + `app/globals.css` `@layer base body` both committed to `#e8ddc7` paperCream. Global bg commitment documented in design-system doc "Paper as surface" section. | Design + Dev agents |
+| **Stale `claude-opus-4-5` model identifier across 3 API routes** (`/api/post-caption`, `/api/identify`, `/api/story`) — model was retired on Anthropic API ~1 month ago but routes still referenced it; SDK threw `NotFoundError` on every call; `catch` blocks silently returned random `MOCK_RESPONSES` entries with no distinguishable shape, so clients populated forms with hardcoded generic strings regardless of photo. Vendor-reported as "auto-populate does not match photo." | 🟡 Medium | ✅ Resolved session 27 — swapped to `claude-sonnet-4-6` (post-caption, story), `claude-opus-4-7` (identify). Added `source: "claude" \| "mock"` field + `reason` to `/api/post-caption` response; clients on `/post` and `/post/preview` now treat non-claude source as failure and fire the amber "Couldn't read this image" notice rather than silently populating with mock strings. On-device QA confirmed correct per-photo captions after credit top-up. | Dev agent |
+| **Anthropic API credit balance can silently take the AI pipeline offline** — HTTP 400 `invalid_request_error` returns the same shape as model-not-found, graceful-collapses to mock, user sees "wrong captions" with no error signal. Discovered session 27 on-device QA post-model-swap: model fix was correct, but Anthropic account was at zero credits; symptom identical to the original regression. | 🟡 Medium | Partially resolved session 27 — David topped up credits, live QA passed. Open operational follow-on (28H): enable Anthropic console auto-reload + add pre-beta ops checklist item for minimum credit floor before vendor demos. The session-27 `source` observability field is what made this diagnosable — without it, the billing issue was invisible. | David (ops) + Dev agent |
+| **`/api/suggest/route.ts` uses `claude-opus-4-6`** (still live on Anthropic API but Opus 4.7 is now GA; not a regression, flagged for next model audit pass) | 🟢 Low | Open — session 28G follow-on (~15 min). | Dev agent |
 
 ---
 
@@ -451,4 +499,4 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 ---
 > This document is the operating constitution for the Treehouse system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-19 (session 25 — v1.1k `/admin/login` orphan resolved + `004_site_settings.sql` migration applied; two Tech Rules added (file-creation verify at close, required Supabase migrations as explicit HITL); three Risk Register rows added (v1.1k orphan, session-14 build-check amendment, site_settings migration HITL miss); `/admin/login` disposition + MallSheet migration follow-on rows annotated with session-25 context)
+> Last updated: 2026-04-19 (session 27 — vendor-reported AI caption regression resolved; stale `claude-opus-4-5` swapped across 3 API routes; `source` observability field added to `/api/post-caption`; Anthropic billing silent-failure surfaced; three Risk Register rows added — stale model identifier resolved, billing partial resolution, `/api/suggest` Opus 4.6 flagged)

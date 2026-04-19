@@ -50,6 +50,76 @@ Exception: A single chained command with `&&` stays in one block (that's one ato
 ---
 
 ## CURRENT ISSUE
+> Last updated: 2026-04-19 (session 27 — vendor-reported AI caption regression resolved + Anthropic model deprecation audit + silent-billing failure mode surfaced and mitigated)
+
+**Status:** ✅✅ **Session 27 shipped a hotfix for a vendor-reported regression: the AI caption auto-populate returned random generic strings regardless of what was photographed.** Diagnosed to a double failure: (1) `claude-opus-4-5` model identifier was retired on the Anthropic API ~1 month ago but was still hardcoded in three routes (`/api/post-caption`, `/api/identify`, `/api/story`), so the SDK threw `NotFoundError` on every call; (2) the route handlers had `catch` blocks that silently returned a random `MOCK_RESPONSES` entry with no distinguishable shape, so the client populated the form with whichever hardcoded string the dice picked. Swapped to current models (post-caption → `claude-sonnet-4-6`, identify → `claude-opus-4-7`, story → `claude-sonnet-4-6`) and added a `source: "claude" | "mock"` observability field so the client can tell a real Claude response from a mock fallback.
+
+On-device QA after deploy surfaced a SECOND silent failure mode the model swap didn't fix: the Anthropic account was out of credits, returning HTTP 400 `invalid_request_error` ("credit balance too low"). Same graceful-collapse-to-mock shape as the model-not-found path. David added credits; live QA then showed correct per-photo captions (copper whistling tea kettle test shot identified accurately with matching caption). **The new `source` field was the diagnostic win** — without it, the billing issue would have looked identical to the original regression (wrong captions, no error visible).
+
+**Deep lesson from session 27:** This is the third sibling of the orphan-pattern (session 13 `imageUpload.ts`, session 23 `/admin/login`) and the phantom-blocker pattern (KI-003, sessions 18–25). All three share one shape: **a graceful-collapse path hiding a real failure behind a working-looking UI.** Prevention beats diagnosis — graceful-collapse paths deserve observability. The `source` field is the shape of that fix for AI integrations; the file-creation-verify Tech Rule was the shape for orphans; the proposed Known-Gaps reconciliation rule (still not promoted, see 28F) is the shape for phantom blockers.
+
+**Next session (28) opens with David's choice from the updated candidate queue.** Top-recommended track remains **Sprint 4 tail batch** (T4c copy polish → T4b admin consolidation → T4d pre-beta QA walk) — unchanged from session 26's framing; session 27 was an unplanned hotfix sprint that doesn't shift the queue.
+
+### What shipped this session (27)
+
+**5 files touched, one commit, one deploy, one ops change (Anthropic credits added manually by David).**
+
+**Code changes:**
+- `app/api/post-caption/route.ts` — model swap `claude-opus-4-5` → `claude-sonnet-4-6`; added `source: "claude" | "mock"` field to all three response paths (real Claude, no-key mock, on-error mock); `reason` field distinguishes no-key from error
+- `app/api/identify/route.ts` — model swap `claude-opus-4-5` → `claude-opus-4-7` (Opus tier retained for reseller comp-quality stakes; Opus 4.7 has meaningfully better low-level vision perception)
+- `app/api/story/route.ts` — model swap `claude-opus-4-5` → `claude-sonnet-4-6` (text-only, narrow task)
+- `app/post/page.tsx` — `generateCaption` helper now checks `data.source !== "claude"` and returns empty fields so the amber "Couldn't read this image automatically" notice fires on any non-Claude response
+- `app/post/preview/page.tsx` — same guard on `generateTitleAndCaption`
+
+**NOT touched this session:**
+- `app/api/suggest/route.ts` uses `claude-opus-4-6` (still live, not a regression). Flagged as 28-queue follow-on for next model audit pass.
+
+**Ops changes:**
+- David added credits to the Anthropic account via the console. Account was at zero — had drained through accumulated vision calls over prior weeks of testing. Pre-beta operational risk, see new DECISION_GATE entry below.
+
+**Verification:**
+- ✅ `npm run build` green
+- ✅ Commit pushed, Vercel deployed clean
+- ✅ On-device QA (iPhone 26, Chrome, `app.kentuckytreehouse.com/post`) showed the amber notice correctly firing pre-credit-add, and correct per-photo caption post-credit-add ("Vintage copper whistling tea kettle" + matching caption on the test photo)
+- ✅ Vercel function logs confirmed the real error path was the HTTP 400 billing response, not the model string — which retroactively validated the model swap was correct
+
+### Discipline notes — what session 27 teaches
+
+**1. The graceful-collapse sibling pattern.** Orphan files, phantom blockers, and silent mock fallbacks all present the same way from outside the code: build is green, app doesn't crash, docs look self-consistent, but the actual behavior is wrong. Each one was caught only when a human looked at the actual output. Each fix moves the detection earlier:
+- File-creation verify (session 25) catches orphans at session close.
+- Known-Gaps reconciliation (proposed session 26, still not promoted) would catch phantom blockers at session close.
+- The `source: "claude" | "mock"` field (session 27) catches silent mock fallbacks at runtime.
+
+**2. The AI dependency surface has TWO silent failure modes, not one.** Model deprecation (code-visible, grep-catchable) and billing (ops-visible, grep-invisible). A code audit would miss the billing one; a billing check would miss the deprecation one. Both need their own mitigation.
+
+**3. The test photo (copper kettle) was a good demonstrator.** Non-branded vintage object with distinctive material, clear lighting, identifiable form. Worth using again as a canonical QA test shot for vision-dependent features.
+
+### Session 27 close HITL — done
+
+1. ✅ Model swap code changes committed
+2. ✅ Client-side `source` guard committed
+3. ✅ Deploy to Vercel green
+4. ✅ Anthropic credits topped up
+5. ✅ On-device QA passed
+6. ✅ CLAUDE.md updated with session 27 close block (this file)
+7. 🔴 **TODO at next commit:** `docs/DECISION_GATE.md` Risk Register updated (below) — NEEDS ONE MORE `git push` AFTER THIS RECONCILIATION EDIT LANDS
+
+### Session 28 candidate queue (updated)
+
+- **28A — Sprint 4 tail batch** (T4c copy polish + T4b admin surface consolidation + T4d pre-beta QA walk). **Unchanged from session 26’s recommendation — genuinely the longest-parked pre-beta item.** Recommended opener. T4c ~30 min, T4b ~4 hr, T4d ~1–2 hr.
+- **28B — `<MallSheet>` migration sub-sprint** (`/post`, `/post/preview`, `/vendor-request`). Mechanical work against committed primitive. ~2 hours.
+- **28C — Nav Shelf decision + BottomNav full chrome rework** (held since sessions 16–20; David picks from 4 mockups).
+- **28D — Guest-user UX batch:** Home masthead + BottomNav "Sign in" → "Curator Sign In" rename; `/welcome` guest landing; PWA install prompts; vendor onboarding Loom; bookmarks persistence migration.
+- **28E — Post-beta candidates** (3A Find Detail sold landing, feed pagination, ToS/privacy, Sentry, feed content seeding, Tally.so feedback).
+- **28F — Known-Gaps reconciliation rule promotion to DECISION_GATE** (~15 min — proposed session 26, still not promoted; pairs with session-27 lessons).
+- **28G — NEW: Anthropic model audit pass** (~15 min — `/api/suggest` → Opus 4.7; verify no other stale model strings. Per new DECISION_GATE rule proposed session 27.) Pairs well as a lead-in to 28A if David wants a warm-up task.
+- **28H — NEW: Anthropic billing safeguards** (~15 min ops — enable auto-reload in Anthropic console; add pre-beta ops checklist item for min credit balance before vendor demos). Per new DECISION_GATE rule proposed session 27.
+
+**Recommended for session 28: 28A (Sprint 4 tail)** — unchanged. But if David wants ~30 min of lower-stakes warm-up, 28G + 28H clear out the session-27 follow-ons cleanly before diving into T4.
+
+---
+
+## ARCHIVE — What was done earlier (2026-04-19, session 26 — documentation reconciliation)
 > Last updated: 2026-04-19 (session 26 — CLAUDE.md + CONTEXT.md + memory reconciled; KI-003 stale framing struck; candidate queue restored to honest state)
 
 **Status:** ✅ **Session 26 was a documentation reconciliation pass, not a code sprint.** Session opener's standup surfaced a material contradiction: CLAUDE.md had been carrying "KI-003 diagnosis (pre-beta blocker, longest-parked)" across 17 consecutive session closes (18 through 25), while `docs/known-issues.md` Resolved section, `docs/DECISION_GATE.md` Risk Register, `docs/onboarding-journey.md` T4c entry, and CLAUDE.md's own session-9 archive line all correctly recorded KI-003 as resolved session 9 with a three-part fix verified end-to-end on device. The stale framing had also propagated into the Anthropic-generated memory summary ("top of mind: KI-003 diagnosis is the top priority for the next session"), which meant every new session's memory-informed opener started from a false premise.
@@ -282,7 +352,7 @@ Booth page v0.2 redesign shipped. `lib/imageUpload.ts` reconstructed mid-session
 ## STACK
 ```
 Next.js 14 App Router · TypeScript · Tailwind CSS · Framer Motion
-Anthropic SDK (claude-opus-4-5) · Supabase (Postgres + Storage + Auth) · SerpAPI · Vercel
+Anthropic SDK (claude-sonnet-4-6 for caption + story, claude-opus-4-7 for identify — session 27) · Supabase (Postgres + Storage + Auth) · SerpAPI · Vercel
 lucide-react (Heart, Send, Store, Home, LayoutGrid, Stethoscope, Shield, Image, Upload, Loader icons)
 Resend (dual use: SMTP provider for Supabase Auth OTP emails,
          AND direct Resend REST API for transactional emails via lib/email.ts)
