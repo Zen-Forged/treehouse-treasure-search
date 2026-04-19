@@ -191,6 +191,31 @@ Box-drawing anchor bug             `filesystem:edit_file` fails intermittently o
                                    anchors into separate `edit_file` calls. Fired across
                                    sessions 16, 19A, 21A, 22A before promotion. Added
                                    session 23.
+File-creation verify at close      When a session's CLAUDE.md close declares that a NEW file
+                                   was created (not edited), the Docs agent MUST verify the
+                                   file's presence on disk via `filesystem:list_directory` or
+                                   `filesystem:read_text_file` before `thc`. The session-14
+                                   build-check rule is necessary but not sufficient: it does
+                                   not catch missing page routes, missing API routes whose
+                                   callers reference them only via fetch strings, or any file
+                                   referenced by runtime string rather than import. TypeScript
+                                   and Next.js build steps cannot verify that a runtime string
+                                   resolves to a page file. Verification is one tool call per
+                                   new file — cheap insurance against the orphan pattern that
+                                   bit sessions 13 (`lib/imageUpload.ts`) and 23
+                                   (`app/admin/login/page.tsx`). Added session 25.
+Required Supabase migrations       Any sprint that ships a new `supabase/migrations/*.sql`
+                                   file that production code depends on MUST list the migration
+                                   as an explicit 🖐️ HITL step in the CLAUDE.md session-close
+                                   checklist — not just inside a comment header in the SQL file.
+                                   Code that depends on a missing table should graceful-collapse
+                                   (silent null return, not a thrown error) so the app does not
+                                   break if the HITL is missed, but the HITL itself must be
+                                   surfaced visibly enough that David runs it before on-device
+                                   QA. Fired session 24 (v1.1l `004_site_settings.sql` shipped
+                                   as code but the migration wasn't applied until session 25,
+                                   so featured banners rendered invisibly via graceful-collapse
+                                   for a full session). Added session 25.
 ```
 
 ---
@@ -251,7 +276,7 @@ These don't stop work but must be called out explicitly before the session conti
 
 ## Current Risk Register
 
-> Updated: 2026-04-18 (session 23 — v1.1k activation flow pass shipped; onboarding v0.2 surfaces retired; `/admin/login` NEW route committed; MallSheet migration deferred to Sprint 5 sub-sprint)
+> Updated: 2026-04-19 (session 25 — v1.1k `/admin/login` orphan resolved; `004_site_settings.sql` migration applied via Supabase SQL editor; featured banners verified live on device; two new Tech Rules added — file-creation verify at close + required Supabase migrations as explicit HITL)
 
 | Risk | Severity | Status | Owner |
 |---|---|---|---|
@@ -296,8 +321,11 @@ These don't stop work but must be called out explicitly before the session conti
 | **Feed, Find Map, Find Detail sold state contradict `/shelf/[slug]` policy for MVP surfacing** | 🟡 Low | ✅ Resolved session 20 — `docs/design-system.md` v1.1i commits the sold-retirement policy: feed filters sold at data layer (already does via `getFeedPosts.eq("status","available")`), Find Map keeps bookmark + tile + uses Find Detail 3B sold landing state as the reveal, public Booth pages retain sold posts. Three-part contract (bookmark / tile / 3B) explicitly documented so no future Dev agent adds a status filter to `getPostsByIds` and breaks the reveal path. | Design + Dev agents |
 | **v1.1i code sprint pending** (Feed + MallSheet + 3B) | ✅ | ✅ Resolved session 21A — Feed paper-masonry + `<MallSheet>` component + Find Detail 3B sold landing state all shipped; `<MallHeroCard>` + `<GenericMallHero>` + inline `ChevronDown` dropdown all retired. | Dev agent |
 | **Onboarding screens (`/vendor-request`, `/setup`, `/login`) on v0.2 chrome** | 🟡 Medium | ✅ Resolved session 23 — v1.1k activation flow pass shipped. Four files rewritten + one new file (`/admin/login`) + one surgical edit (`/admin/page.tsx` unauth-gate redirect). Eight v1.1k commitments locked in `docs/design-system.md`: Mode C interior grammar, paper-wash success bubble, filled-green-CTA-commit-actions-only rule, form input primitive, email echo line primitive, tab switcher retirement, `/admin/login` scope, MallSheet deferral. | Design + Dev agents |
-| **`/admin/login` route disposition** (keep dedicated / fold into `/admin` unauth gate / remove `/login` fallback) | 🟢 Low | Open — T4b decides. v1.1k committed the new route as dedicated per STOP rule on auth-flow changes; `/admin` unauth gate now redirects to `/admin/login` via one-line surgical edit (zero visual change to admin UI). Full `/admin` surface consolidation including login disposition lives in T4b. | Product + Dev agents |
+| **`/admin/login` route disposition** (keep dedicated / fold into `/admin` unauth gate / remove `/login` fallback) | 🟢 Low | Open — T4b decides. v1.1k committed the new route as dedicated per STOP rule on auth-flow changes; `/admin` unauth gate now redirects to `/admin/login` via one-line surgical edit (zero visual change to admin UI). Full `/admin` surface consolidation including login disposition lives in T4b. Session 25 note: the route is now actually on disk (session 23's documented-but-missing file was finally written), so T4b's decision is grounded in a real live route rather than a theoretical one. | Product + Dev agents |
 | **`<MallSheet>` migration to `/post`, `/post/preview`, `/vendor-request`** | 🟢 Low | Open — Sprint 5 sub-sprint. Primitive committed session 20; Feed is its first consumer (shipped 21A). The three remaining consumers wire mechanically against the committed interface; `/vendor-request` was explicitly deferred in v1.1k (h) rather than bundled. | Dev agent |
+| **`app/admin/login/page.tsx` orphan from session 23** — documented as shipped in session-23 CLAUDE.md close but never written to disk. `/admin` unauth-gate redirect pointed at a missing route; `/admin/login` direct URL returned 404. Same class of bug as session-13 `lib/imageUpload.ts` orphan. Build stayed green because the redirect target is a runtime string, not an import. | 🟡 Medium | ✅ Resolved session 25 — file written from session 23's documented spec (Mode C chrome, paper-wash Shield logo bubble, v1.1k form input primitive, filled green CTA, signing-in bridge). Verified on disk via `filesystem:list_directory` before commit. Build green. Deploy confirmed. On-device QA passed. Drove the new file-creation-verify Tech Rule. | Dev + Docs agents |
+| **Session-14 build-check rule amended** — original rule (*"A session is not closed until `npm run build` has run green against the committed state"*) is necessary but not sufficient. Next.js builds do not validate that runtime navigation strings resolve to page files. | 🟢 Low | ✅ Resolved session 25 — new Tech Rule "File-creation verify at session close" added; the build-check rule now has an explicit companion that catches the orphan class of bugs. Docs agent runs `filesystem:list_directory` or `filesystem:read_text_file` on every NEW file declared in the session close before `thc`. | Docs agent |
+| **`004_site_settings.sql` migration shipped as code but never applied to Supabase** — v1.1l featured banners relied on a `site_settings` table + `site-assets` Storage bucket that did not exist in production. `getSiteSettingUrl()` hit a missing table and silently returned null, so both banners collapsed invisibly. Graceful-collapse was correct behavior, but the HITL instruction was buried in a SQL comment header rather than surfaced as a session-close checklist item. | 🟡 Medium | ✅ Resolved session 25 — David ran the migration in the Supabase SQL editor; `site_settings` table created with seed rows; `site-assets` bucket created and verified public; Home + Find Map banners uploaded via `/admin` Banners tab; both render live on device. Drove the new "Required Supabase migrations" Tech Rule: any sprint shipping a new `supabase/migrations/*.sql` file that production code depends on must list the migration as an explicit 🖐️ HITL step in the session-close checklist, not just inside a comment header. | Dev + Docs agents |
 | **Find Map v0.2 (page called "My Finds") pre-beta chrome mismatch** | 🟡 Medium | ✅ Resolved session 17 — `/flagged` full redesign to v1.1g shipped (journal itinerary, pin+mall anchor, X-glyph spine, Booth pill rows, find tiles with prices + unsave heart, intro voice + chapter-break closer). All v0.2 localStorage / pruning / grouping / focus-rehydration / unsave wiring preserved. | Design + Dev agents |
 | **Glyph hierarchy not documented as a cross-cutting rule** (risk: future screens pick the wrong glyph and dilute the language) | 🟢 Low | ✅ Resolved session 17 — pin = mall, X = booth locked in `docs/design-system.md` v1.1g Cartographic Vocabulary section. Propagates to Booth redesign (18A), Feed redesign (18B), and any future location-naming surface. | Design agent |
 | **App-wide background color inconsistent across routes** (Find Detail used paperCream; `/flagged` and chrome elsewhere still used legacy `#f0ede6`) | 🟢 Low | ✅ Resolved session 17 — `app/layout.tsx` body inline + `app/globals.css` `@layer base body` both committed to `#e8ddc7` paperCream. Global bg commitment documented in design-system doc "Paper as surface" section. | Design + Dev agents |
@@ -344,7 +372,7 @@ These don't stop work but must be called out explicitly before the session conti
 Every session standup includes a one-line Agent Roster block confirming who is active for the session. This prevents silently dropping an activated agent from the loop.
 
 **Standard standup preamble:**
-> **Active agents:** Dev · Product · Docs · Design — *(current as of 2026-04-18 session 23)*
+> **Active agents:** Dev · Product · Docs · Design — *(current as of 2026-04-19 session 25)*
 
 When an agent is activated or deactivated:
 1. Update the Agent Roster table above
@@ -423,4 +451,4 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 ---
 > This document is the operating constitution for the Treehouse system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-18 (session 23 — v1.1k activation flow pass shipped; `/vendor-request` + `/login` + `/setup` + new `/admin/login` all on v1.1k vocabulary; three Tech Rules added (`str_replace` vs `filesystem:edit_file`, box-drawing anchor bug); onboarding-screens-on-v0.2 Risk Register row resolved; two new follow-on rows added for `/admin/login` disposition + MallSheet migration sub-sprint)
+> Last updated: 2026-04-19 (session 25 — v1.1k `/admin/login` orphan resolved + `004_site_settings.sql` migration applied; two Tech Rules added (file-creation verify at close, required Supabase migrations as explicit HITL); three Risk Register rows added (v1.1k orphan, session-14 build-check amendment, site_settings migration HITL miss); `/admin/login` disposition + MallSheet migration follow-on rows annotated with session-25 context)
