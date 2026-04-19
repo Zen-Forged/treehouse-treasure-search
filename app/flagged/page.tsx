@@ -150,6 +150,9 @@ function XGlyph({ size = 18 }: { size?: number }) {
 
 // ── Booth pill (numeric badge, matches Find Detail vendor row v1.1f) ──────────
 function BoothPill({ children }: { children: React.ReactNode }) {
+  // v1.1j — numeral font swapped IM Fell → system-ui ("1 vs I" disambiguation).
+  // Matches the Find Detail <Pill> primitive byte-for-byte so the two pills
+  // continue to read as a linked pair across screens.
   return (
     <span
       style={{
@@ -161,8 +164,10 @@ function BoothPill({ children }: { children: React.ReactNode }) {
         backdropFilter: "blur(4px)",
         WebkitBackdropFilter: "blur(4px)",
         border: `1.5px solid ${v1.pillBorder}`,
-        fontFamily: FONT_IM_FELL,
+        fontFamily: FONT_SYS,
         fontSize: 16,
+        fontWeight: 500,
+        letterSpacing: "-0.005em",
         color: v1.pillInk,
         lineHeight: 1.25,
         whiteSpace: "nowrap",
@@ -660,7 +665,7 @@ export default function FindMapPage() {
           style={{
             fontFamily: FONT_IM_FELL,
             fontStyle: "italic",
-            fontSize: 15,
+            fontSize: 16,
             color: v1.inkMuted,
             lineHeight: 1.65,
           }}
@@ -737,31 +742,17 @@ export default function FindMapPage() {
         </motion.div>
       )}
 
-      {/* ── 5. Diamond divider (only when we have content below) ─────────── */}
+      {/* ── 5. Divider — v1.1j plain hairline (diamond retired) ────────── */}
       {!loading && groups.length > 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.34, delay: 0.16, ease: EASE }}
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
             padding: "14px 44px 18px",
           }}
         >
-          <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
-          <div
-            style={{
-              fontFamily: FONT_IM_FELL,
-              fontSize: 11,
-              color: "rgba(42,26,10,0.42)",
-              lineHeight: 1,
-            }}
-          >
-            ◆
-          </div>
-          <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+          <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
         </motion.div>
       )}
 
@@ -795,39 +786,72 @@ export default function FindMapPage() {
             </AnimatePresence>
 
             {/* ── 7. Closer ─────────────────────────────────────────────── */}
+            {/* v1.1j — Closer loop: hairline drop from last X → terminal
+                circle in the same spine column; copy below centered in
+                FONT_SYS to match the "Booth" label. The diamond-flanked
+                divider retires (hairline-only per v1.1j). */}
             <motion.div
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.34, delay: 0.24, ease: EASE }}
-              style={{ paddingTop: 28, textAlign: "center" }}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "26px 1fr",
+                columnGap: 14,
+                paddingTop: 0,
+              }}
             >
+              {/* Spine column — hairline tail + terminal circle */}
               <div
                 style={{
                   display: "flex",
+                  flexDirection: "column",
                   alignItems: "center",
-                  gap: 10,
-                  padding: "0 22px 22px",
+                  paddingTop: 0,
                 }}
               >
-                <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
                 <div
                   style={{
-                    fontFamily: FONT_IM_FELL,
-                    fontSize: 11,
-                    color: "rgba(42,26,10,0.42)",
-                    lineHeight: 1,
+                    width: 1,
+                    height: 48,
+                    background: v1.inkHairline,
+                    marginTop: 8,
                   }}
-                >
-                  ◆
-                </div>
-                <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+                  aria-hidden="true"
+                />
+                <div
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: "50%",
+                    background: v1.inkPrimary,
+                    marginTop: 2,
+                  }}
+                  aria-hidden="true"
+                />
               </div>
+              {/* Right column deliberately empty — the spine anchors on its own */}
+              <div />
+            </motion.div>
+
+            {/* Closer copy — centered, booth-label font (FONT_SYS) */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.34, delay: 0.28, ease: EASE }}
+              style={{
+                paddingTop: 18,
+                paddingBottom: 12,
+                textAlign: "center",
+              }}
+            >
               <div
                 style={{
-                  fontFamily: FONT_IM_FELL,
-                  fontSize: 16,
+                  fontFamily: FONT_SYS,
+                  fontSize: 15,
+                  fontWeight: 400,
                   color: v1.inkMid,
-                  lineHeight: 1.4,
+                  lineHeight: 1.5,
                   letterSpacing: "-0.005em",
                   padding: "0 28px",
                 }}

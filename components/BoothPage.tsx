@@ -1,15 +1,23 @@
 // components/BoothPage.tsx
-// Shared primitives for the Booth page (/my-shelf and /shelf/[slug]) — v1.1h
+// Shared primitives for the Booth page (/my-shelf and /shelf/[slug]) — v1.1j
 //
 // Primitives exported:
 //   - <BoothHero>            — vendor banner + booth post-it + edit/share bubbles
 //   - <BoothTitleBlock>      — "a curated shelf from" eyebrow + vendor name (32px)
 //   - <MallBlock>            — small pin + mall name + dotted-underline address
-//   - <DiamondDivider>       — ◆ flanked by hairline rules
+//   - <DiamondDivider>       — plain hairline (diamond retired v1.1j; name kept for export stability)
 //   - <ViewToggle>           — "Window View · Shelf View" text-link pair
-//   - <WindowView>           — 3-col 4:5 portrait grid with titles + prices
-//   - <ShelfView>            — horizontal scroll with larger 4:5 tiles
-//   - <BoothCloser>          — diamond divider + quiet IM Fell italic closing line
+//   - <WindowView>           — 3-col 4:5 grid; 9-cell placeholder composition when showPlaceholders=true
+//   - <PlaceholderTile>      — dashed empty 4:5 cell (owner-only, completes the 9-pane window)
+//   - <ShelfView>            — horizontal scroll; first tile is <AddFindTile> when showAddTile=true
+//   - <AddFindTile>          — dashed 4:5 CTA that links to /post
+//   - <BoothCloser>          — hairline rule + quiet IM Fell italic closing line
+//
+// v1.1j changes (docs/design-system.md §v1.1j):
+//   - Diamond ornament retired from <DiamondDivider> and <BoothCloser>; plain hairline now
+//   - Post-it 36px numeral: FONT_IM_FELL → FONT_SYS ("1 vs I" disambiguation rule)
+//   - <WindowView> gains `showPlaceholders` prop; <ShelfView> gains `showAddTile` prop (owner parity)
+//   - <PlaceholderTile> new primitive, rendered only when owner has < 9 items
 //
 // v1.1h tokens (v1, FONT_IM_FELL, FONT_SYS) are imported from lib/tokens.ts —
 // canonical since session 19A. They are re-exported here so existing imports
@@ -259,8 +267,9 @@ export function BoothHero({
             </div>
             <div
               style={{
-                fontFamily: FONT_IM_FELL,
+                fontFamily: FONT_SYS,
                 fontSize: 36,
+                fontWeight: 500,
                 color: v1.inkPrimary,
                 letterSpacing: "-0.01em",
                 lineHeight: 1,
@@ -406,27 +415,15 @@ export function DiamondDivider({
   bottomPad?: number;
   horizontalPad?: number;
 } = {}) {
+  // v1.1j — diamond ornament retired; renders as a plain full-width hairline.
+  // Name kept as `DiamondDivider` for export stability across consumers.
   return (
     <div
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
         padding: `${topPad}px ${horizontalPad}px ${bottomPad}px`,
       }}
     >
-      <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
-      <div
-        style={{
-          fontFamily: FONT_IM_FELL,
-          fontSize: 11,
-          color: "rgba(42,26,10,0.42)",
-          lineHeight: 1,
-        }}
-      >
-        ◆
-      </div>
-      <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+      <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
     </div>
   );
 }
@@ -549,6 +546,34 @@ export function AddFindTile({ vendorId, index }: { vendorId?: string; index: num
   );
 }
 
+export function PlaceholderTile({ index }: { index: number }) {
+  // v1.1j — owner-only 4:5 empty cell used to complete the 9-pane window
+  // composition when inventory is sparse. Same silhouette as <AddFindTile>
+  // without the action affordance so the grid reads as "nine panels filling
+  // from the top-left" rather than "a few tiles and a gap."
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: EASE }}
+      style={{ width: "100%", display: "flex", flexDirection: "column", minWidth: 0 }}
+      aria-hidden="true"
+    >
+      <div
+        style={{
+          width: "100%",
+          aspectRatio: "4/5",
+          borderRadius: v1.imageRadius,
+          border: `1px dashed ${v1.inkFaint}`,
+          background: "transparent",
+        }}
+      />
+      {/* Match AddFindTile's 22px title-slot placeholder so row heights align */}
+      <div style={{ height: 22 }} aria-hidden="true" />
+    </motion.div>
+  );
+}
+
 function WindowTile({ post, index }: { post: Post; index: number }) {
   const [imgErr, setImgErr] = useState(false);
   const hasPrice = typeof post.price_asking === "number" && post.price_asking > 0;
@@ -638,11 +663,21 @@ export function WindowView({
   posts,
   vendorId,
   showAddTile,
+  showPlaceholders = false,
 }: {
   posts: Post[];
   vendorId?: string;
   showAddTile: boolean;
+  showPlaceholders?: boolean;
 }) {
+  // v1.1j — owner 9-cell window composition. When showPlaceholders is true,
+  // the grid always renders exactly 9 cells: [AddFindTile if shown] + real posts
+  // + PlaceholderTiles to fill the remainder. Public shelf omits placeholders
+  // entirely (showPlaceholders stays false) so visitors see only real inventory.
+  const addTileCount     = showAddTile ? 1 : 0;
+  const usedCells        = addTileCount + posts.length;
+  const placeholderCount = showPlaceholders ? Math.max(0, 9 - usedCells) : 0;
+
   return (
     <div
       style={{
@@ -657,6 +692,9 @@ export function WindowView({
       {posts.map((post, i) => (
         <WindowTile key={post.id} post={post} index={showAddTile ? i + 1 : i} />
       ))}
+      {Array.from({ length: placeholderCount }).map((_, i) => (
+        <PlaceholderTile key={`ph-${i}`} index={usedCells + i} />
+      ))}
     </div>
   );
 }
@@ -665,7 +703,7 @@ export function WindowView({
 // Shelf View — horizontal scroll, larger 4:5 tiles
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ShelfTile({ post, index }: { post: Post; index: number }) {
+function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirst: boolean }) {
   const [imgErr, setImgErr] = useState(false);
   const hasPrice = typeof post.price_asking === "number" && post.price_asking > 0;
   return (
@@ -678,7 +716,7 @@ function ShelfTile({ post, index }: { post: Post; index: number }) {
         width: "52vw",
         maxWidth: 210,
         scrollSnapAlign: "start",
-        marginLeft: index === 0 ? 22 : 0,
+        marginLeft: isFirst ? 22 : 0,
       }}
     >
       <Link
@@ -756,7 +794,75 @@ function ShelfTile({ post, index }: { post: Post; index: number }) {
   );
 }
 
-export function ShelfView({ posts }: { posts: Post[] }) {
+// ─────────────────────────────────────────────────────────────────────────
+// Shelf variant of AddFindTile — same dimensions as ShelfTile (v1.1j)
+// ─────────────────────────────────────────────────────────────────────────
+
+function ShelfAddFindTile({ vendorId, isFirst }: { vendorId?: string; isFirst: boolean }) {
+  const href = vendorId ? `/post?vendor=${vendorId}` : "/post";
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.26, ease: EASE }}
+      style={{
+        flexShrink: 0,
+        width: "52vw",
+        maxWidth: 210,
+        scrollSnapAlign: "start",
+        marginLeft: isFirst ? 22 : 0,
+      }}
+    >
+      <Link
+        href={href}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          width: "100%",
+          aspectRatio: "4/5",
+          borderRadius: v1.imageRadius,
+          border: `1px dashed ${v1.inkFaint}`,
+          background: "transparent",
+          textDecoration: "none",
+          WebkitTapHighlightColor: "transparent",
+        }}
+      >
+        <ImagePlus size={24} strokeWidth={1.5} style={{ color: v1.inkMuted }} />
+        <span
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontStyle: "italic",
+            fontSize: 14,
+            color: v1.inkMuted,
+            lineHeight: 1,
+          }}
+        >
+          Add a find
+        </span>
+      </Link>
+      {/* Match ShelfTile's title + price vertical rhythm so the AddFindTile
+          doesn't visually orphan against neighboring items. */}
+      <div style={{ height: 42 }} aria-hidden="true" />
+    </motion.div>
+  );
+}
+
+export function ShelfView({
+  posts,
+  vendorId,
+  showAddTile = false,
+}: {
+  posts: Post[];
+  vendorId?: string;
+  showAddTile?: boolean;
+}) {
+  // v1.1j — owner parity with Window View: when showAddTile is true, the
+  // first tile in the horizontal scroll is an AddFindTile (same silhouette
+  // as the Window View AddFindTile, sized to match ShelfTile). Reverses the
+  // session-18 rule that held AddFindTile exclusive to Window View.
   return (
     <div
       className="hide-scrollbar"
@@ -771,8 +877,14 @@ export function ShelfView({ posts }: { posts: Post[] }) {
         WebkitOverflowScrolling: "touch",
       }}
     >
+      {showAddTile && <ShelfAddFindTile vendorId={vendorId} isFirst={true} />}
       {posts.map((post, i) => (
-        <ShelfTile key={post.id} post={post} index={i} />
+        <ShelfTile
+          key={post.id}
+          post={post}
+          index={i}
+          isFirst={i === 0 && !showAddTile}
+        />
       ))}
       <div style={{ flexShrink: 0, width: 8 }} aria-hidden="true" />
     </div>
@@ -784,9 +896,12 @@ export function ShelfView({ posts }: { posts: Post[] }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function BoothCloser() {
+  // v1.1j — hairline rule replaces diamond-flanked divider (diamond retired)
   return (
     <>
-      <DiamondDivider topPad={28} bottomPad={20} horizontalPad={22} />
+      <div style={{ padding: "28px 22px 20px" }}>
+        <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
+      </div>
       <div
         style={{
           fontFamily: FONT_IM_FELL,
