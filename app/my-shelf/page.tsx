@@ -417,24 +417,28 @@ function MyBoothInner() {
             <ViewToggle view={view} onChange={setView} />
 
             {view === "window" ? (
-              <WindowView posts={available} vendorId={activeVendor.id} showAddTile={true} />
+              <WindowView
+                posts={available}
+                vendorId={activeVendor.id}
+                showAddTile={true}
+                showPlaceholders={true}
+              />
             ) : (
               available.length > 0 ? (
-                <ShelfView posts={available} />
+                <ShelfView
+                  posts={available}
+                  vendorId={activeVendor.id}
+                  showAddTile={true}
+                />
               ) : (
-                <div
-                  style={{
-                    padding: "48px 28px",
-                    textAlign: "center",
-                    fontFamily: FONT_IM_FELL,
-                    fontStyle: "italic",
-                    fontSize: 15,
-                    color: v1.inkMuted,
-                    lineHeight: 1.65,
-                  }}
-                >
-                  The shelf is empty — switch to Window View to add your first find.
-                </div>
+                // v1.1j — even with zero items, Shelf View still shows the
+                // AddFindTile so the owner has parity with Window View's
+                // always-present add affordance.
+                <ShelfView
+                  posts={[]}
+                  vendorId={activeVendor.id}
+                  showAddTile={true}
+                />
               )
             )}
 

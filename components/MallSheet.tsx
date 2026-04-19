@@ -228,25 +228,12 @@ export default function MallSheet({
             {/* ── 6. Diamond divider ────────────────────────────────────── */}
             <div
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
                 padding: "4px 22px 12px",
                 flexShrink: 0,
               }}
             >
-              <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
-              <div
-                style={{
-                  fontFamily: FONT_IM_FELL,
-                  fontSize: 11,
-                  color: "rgba(42,26,10,0.42)",
-                  lineHeight: 1,
-                }}
-              >
-                ◆
-              </div>
-              <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+              {/* v1.1j — diamond ornament retired; plain hairline */}
+              <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
             </div>
 
             {/* ── Scrollable rows ───────────────────────────────────────── */}

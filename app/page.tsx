@@ -772,14 +772,14 @@ export default function DiscoveryFeedPage() {
           borderBottom: `1px solid ${v1.inkHairline}`,
         }}
       >
-        {/* Left slot — empty. Nav Shelf lands here in 21B per CLAUDE.md. */}
+        {/* Left slot — logo as brand mark (v1.1j — enlarged from 24/0.72 to 34/0.92). */}
         <div style={{ justifySelf: "start" }} aria-hidden="true">
           <Image
             src="/logo.png"
             alt=""
-            width={24}
-            height={24}
-            style={{ opacity: 0.72 }}
+            width={34}
+            height={34}
+            style={{ opacity: 0.92 }}
           />
         </div>
 
@@ -861,24 +861,11 @@ export default function DiscoveryFeedPage() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.34, delay: 0.12, ease: EASE }}
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
           padding: "16px 44px 14px",
         }}
       >
-        <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
-        <div
-          style={{
-            fontFamily: FONT_IM_FELL,
-            fontSize: 11,
-            color: "rgba(42,26,10,0.42)",
-            lineHeight: 1,
-          }}
-        >
-          ◆
-        </div>
-        <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+        {/* v1.1j — diamond ornament retired; plain hairline */}
+        <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
       </motion.div>
 
       {/* ── 4. Paper masonry ───────────────────────────────────────────── */}
@@ -921,26 +908,9 @@ export default function DiscoveryFeedPage() {
         {/* ── Vendor CTA — bottom of feed ────────────────────────────── */}
         {!loading && (
           <div style={{ padding: "40px 6px 0", textAlign: "center" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "0 16px 24px",
-              }}
-            >
-              <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
-              <div
-                style={{
-                  fontFamily: FONT_IM_FELL,
-                  fontSize: 11,
-                  color: "rgba(42,26,10,0.42)",
-                  lineHeight: 1,
-                }}
-              >
-                ◆
-              </div>
-              <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+            {/* v1.1j — diamond ornament retired; plain hairline */}
+            <div style={{ padding: "0 16px 24px" }}>
+              <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
             </div>
             <p
               style={{

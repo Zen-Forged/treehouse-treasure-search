@@ -120,6 +120,8 @@ function XGlyph({ size = 16 }: { size?: number }) {
 function Pill({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   // v1.1e — pure numeric badge role (no "Booth" word, no arrow, no gloss — just the number).
   // The label ("Explore booth →") now carries the action signal; the pill is the token.
+  // v1.1j — numeral font swapped IM Fell → system-ui. IM Fell's `1` read as a capital-I
+  // in this small inline context; system-ui resolves the ambiguity without changing size.
   return (
     <span
       style={{
@@ -131,8 +133,10 @@ function Pill({ children, style }: { children: React.ReactNode; style?: React.CS
         backdropFilter: "blur(4px)",
         WebkitBackdropFilter: "blur(4px)",
         border: `1.5px solid ${v1.pillBorder}`,
-        fontFamily: FONT_IM_FELL,
+        fontFamily: FONT_SYS,
         fontSize: 16,
+        fontWeight: 500,
+        letterSpacing: "-0.005em",
         color: v1.pillInk,
         lineHeight: 1.25,
         whiteSpace: "nowrap",
@@ -459,30 +463,16 @@ function SoldLanding({
         </div>
       </motion.div>
 
-      {/* 4. Diamond divider (closer, 60px inset) */}
+      {/* 4. Divider — v1.1j plain hairline (diamond retired) */}
       <motion.div
         variants={sectionVariants(0.18)}
         initial="hidden"
         animate="visible"
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
           padding: "20px 60px 16px",
         }}
       >
-        <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
-        <div
-          style={{
-            fontFamily: FONT_IM_FELL,
-            fontSize: 11,
-            color: "rgba(42,26,10,0.42)",
-            lineHeight: 1,
-          }}
-        >
-          ◆
-        </div>
-        <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+        <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
       </motion.div>
 
       {/* 5 + 6. Primary + secondary links */}
@@ -905,8 +895,9 @@ export default function FindDetailPage() {
               </div>
               <div
                 style={{
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_SYS,
                   fontSize: 36,
+                  fontWeight: 500,
                   color: v1.inkPrimary,
                   letterSpacing: "-0.01em",
                   lineHeight: 1,
@@ -1002,25 +993,12 @@ export default function FindDetailPage() {
           initial="hidden"
           animate="visible"
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
             padding: "0 44px",
             marginBottom: 22,
           }}
         >
-          <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
-          <div
-            style={{
-              fontFamily: FONT_IM_FELL,
-              fontSize: 11,
-              color: "rgba(42,26,10,0.42)",
-              lineHeight: 1,
-            }}
-          >
-            ◆
-          </div>
-          <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+          {/* v1.1j — diamond ornament retired; plain hairline */}
+          <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
         </motion.div>
       )}
 
