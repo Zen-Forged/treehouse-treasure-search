@@ -54,14 +54,18 @@ interface AdminPost {
 }
 
 interface VendorRequest {
-  id:           string;
-  name:         string;
-  email:        string;
-  booth_number: string | null;
-  mall_id:      string | null;
-  mall_name:    string | null;
-  status:       string;
-  created_at:   string;
+  id:              string;
+  name:            string;
+  first_name:      string | null;
+  last_name:       string | null;
+  booth_name:      string | null;
+  email:           string;
+  booth_number:    string | null;
+  mall_id:         string | null;
+  mall_name:       string | null;
+  status:          string;
+  created_at:      string;
+  proof_image_url: string | null;
 }
 
 interface DiagnosisConflict {
@@ -443,10 +447,37 @@ export default function AdminPage() {
                       opacity: isPending ? 1 : 0.6
                     }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                      {request.proof_image_url && (
+                        <a
+                          href={request.proof_image_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ flexShrink: 0, display: "block" }}
+                          aria-label="Open booth photo in new tab"
+                        >
+                          <img
+                            src={request.proof_image_url}
+                            alt="Booth proof"
+                            style={{
+                              width: 56,
+                              height: 56,
+                              borderRadius: 8,
+                              objectFit: "cover",
+                              border: `1px solid ${colors.border}`,
+                              display: "block",
+                            }}
+                          />
+                        </a>
+                      )}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: colors.textPrimary, marginBottom: 4 }}>
-                          {request.name}
+                          {request.booth_name || request.name}
                         </div>
+                        {request.booth_name && (
+                          <div style={{ fontSize: 11, color: colors.textMuted, marginBottom: 2, fontStyle: "italic" }}>
+                            {request.first_name && request.last_name ? `${request.first_name} ${request.last_name}` : request.name}
+                          </div>
+                        )}
                         <div style={{ fontSize: 12, color: colors.textMid, marginBottom: 2 }}>
                           {request.email}
                         </div>

@@ -4,35 +4,26 @@
 // GET   → list all vendor_requests (newest first, limit 50)
 // POST  → { action: "approve", requestId } → creates vendor + marks request
 //         approved + sends EMAIL #2 "Your booth is ready" to vendor via Resend
-//         (per docs/onboarding-journey.md — Sprint 4 T4a)
+//
+// Session 32 (2026-04-20) — v1.2 onboarding refresh:
+//  - Approval now honors `vendor_requests.booth_name` if set. If null/empty,
+//    falls back to `first_name + ' ' + last_name` (new split fields), then
+//    to the legacy `name` column as a final fallback for pre-v1.2 rows that
+//    predate the migration.
+//  - Email #2 now uses first_name for salutation ("Hi Sarah") and passes no
+//    link at all — the vendor opens the PWA themselves (PWA session-
+//    continuity fix, see docs/design-system.md v1.2 + lib/email.ts).
+//
+// Session 13 (2026-04-17) — KI-004 resolution:
+//  - Inspect 23505 constraint name to distinguish slug/booth/user_id collisions
+//  - Slug collision → auto-append suffix (-2, -3, ...) and retry insert
+//  - Booth collision + unlinked + name match → safe claim (reuse existing row)
+//  - Booth collision + unlinked + name differs → reject with named detail
+//  - Booth collision + already linked → reject hard with named detail
+//  - All error responses include `diagnosis` and `conflict` fields
 //
 // Gated by requireAdmin() — email must match NEXT_PUBLIC_ADMIN_EMAIL.
-// Uses SUPABASE_SERVICE_ROLE_KEY to bypass RLS on vendor_requests
-// (which has service-role-only policy).
-//
-// Email is best-effort — a failed send is surfaced via the `warning` field
-// on the response (admin UI already renders this inside the approval toast),
-// but still returns ok:true so the approval is not undone. The vendor row
-// exists, the request is marked approved, and admin can manually re-send or
-// reach out to the vendor out-of-band.
-//
-// ── Session 13 (2026-04-17) — KI-004 resolution ─────────────────────────────
-// The 23505 duplicate-key branch used to silently reuse any existing vendor
-// row at (mall_id, booth_number) regardless of whether it was stale, linked
-// to a different user, or had a different display_name. It also assumed the
-// constraint that fired was vendors_mall_booth_unique — but vendors has FOUR
-// unique constraints (booth, slug, user_id, pkey). A slug collision would
-// silently fall through and throw "Cannot coerce the result to a single
-// JSON object" from the booth lookup's .single() call.
-//
-// New policy:
-//   - Inspect the constraint name from the error to know which collision it is
-//   - Slug collision → auto-append suffix (-2, -3, ...) and retry insert
-//   - Booth collision + unlinked + name match → safe claim (reuse existing row)
-//   - Booth collision + unlinked + name differs → reject with named detail
-//   - Booth collision + already linked → reject hard with named detail
-//   - All error responses include `diagnosis` and `conflict` fields so the
-//     admin UI can render specifics without a separate diagnose call
+// Uses SUPABASE_SERVICE_ROLE_KEY to bypass RLS on vendor_requests.
 
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
@@ -128,11 +119,42 @@ export async function POST(req: Request) {
     );
   }
 
-  // 2. Create vendor with collision-aware handling
+  // 2. Resolve display_name for vendors row.
+  // Priority: booth_name (v1.2) → first_name + last_name (v1.2) → name (legacy).
+  // Legacy `name` is populated on v1.2 inserts too, so this fallback covers
+  // pre-migration rows but never fires for new requests.
+  const firstName   = (request.first_name as string | null)?.trim() ?? "";
+  const lastName    = (request.last_name  as string | null)?.trim() ?? "";
+  const boothName   = (request.booth_name as string | null)?.trim() ?? "";
+  const legacyName  = (request.name       as string | null)?.trim() ?? "";
+
+  const displayName =
+    boothName ||
+    (firstName && lastName ? `${firstName} ${lastName}` : "") ||
+    legacyName;
+
+  if (!displayName) {
+    return NextResponse.json(
+      {
+        error: "Request has no name data — cannot create vendor.",
+        diagnosis: "missing_name",
+      },
+      { status: 400 }
+    );
+  }
+
+  // Salutation for Email #2. Prefer first_name, fall back to first token of
+  // legacyName, fall back to "there".
+  const salutationFirstName =
+    firstName ||
+    legacyName.split(/\s+/)[0] ||
+    "there";
+
+  // 3. Create vendor with collision-aware handling
   const createResult = await createVendorForRequest(auth.service, {
-    name:         request.name,
-    mallId:       request.mall_id,
-    boothNumber:  request.booth_number || null,
+    displayName,
+    mallId:      request.mall_id,
+    boothNumber: request.booth_number || null,
   });
 
   if (!createResult.ok) {
@@ -143,7 +165,7 @@ export async function POST(req: Request) {
 
   const vendorRow = createResult.vendor;
 
-  // 3. Mark request as approved
+  // 4. Mark request as approved
   const { error: updateErr } = await auth.service
     .from("vendor_requests")
     .update({ status: "approved" })
@@ -159,9 +181,9 @@ export async function POST(req: Request) {
     warnings.push("Vendor created but request status update failed.");
   }
 
-  // 4. Email #2: Approval + sign-in instructions (best-effort)
+  // 5. Email #2: Approval + sign-in instructions (best-effort)
   const emailResult = await sendApprovalInstructions({
-    name:        request.name,
+    firstName:   salutationFirstName,
     email:       request.email,
     mallName:    request.mall_name,
     boothNumber: request.booth_number,
@@ -188,9 +210,9 @@ export async function POST(req: Request) {
 // ── vendor creation with collision handling ──────────────────────────────────
 
 interface CreateVendorArgs {
-  name:         string;
-  mallId:       string;
-  boothNumber:  string | null;
+  displayName: string;
+  mallId:      string;
+  boothNumber: string | null;
 }
 
 type CreateVendorResult =
@@ -201,10 +223,7 @@ async function createVendorForRequest(
   service: SupabaseClient,
   args: CreateVendorArgs
 ): Promise<CreateVendorResult> {
-  // ── Pre-flight check: is there already a vendor at this (mall, booth)? ──
-  // If yes, decide whether to safely claim, reject on name mismatch, or
-  // reject hard on an already-claimed booth. This avoids the noisy insert
-  // attempt in the common cases.
+  // Pre-flight: is there already a vendor at this (mall, booth)?
   if (args.boothNumber) {
     const { data: boothOccupant, error: boothErr } = await service
       .from("vendors")
@@ -227,7 +246,6 @@ async function createVendorForRequest(
 
     if (boothOccupant) {
       if (boothOccupant.user_id) {
-        // Hard block — booth is actively claimed by some user.
         return {
           ok: false,
           status: 409,
@@ -246,16 +264,14 @@ async function createVendorForRequest(
         };
       }
 
-      if (boothOccupant.display_name !== args.name) {
-        // Unlinked row with a different name — admin needs to decide
-        // whether to rename the request or clean up the stale row.
+      if (boothOccupant.display_name !== args.displayName) {
         return {
           ok: false,
           status: 409,
           errorPayload: {
             error:
               `Booth ${args.boothNumber} has an unlinked vendor row named "${boothOccupant.display_name}" — ` +
-              `different from this request ("${args.name}"). Rename the request, or delete the stale row.`,
+              `different from this request ("${args.displayName}"). Rename the request, or delete the stale row.`,
             diagnosis: "booth_unlinked_name_diff",
             conflict: {
               display_name: boothOccupant.display_name,
@@ -276,14 +292,14 @@ async function createVendorForRequest(
     }
   }
 
-  // ── No booth conflict. Try insert with auto-suffix on slug collision. ──
-  const baseSlug = slugify(args.name);
+  // No booth conflict. Try insert with auto-suffix on slug collision.
+  const baseSlug = slugify(args.displayName);
   if (!baseSlug) {
     return {
       ok: false,
       status: 400,
       errorPayload: {
-        error: `Vendor name "${args.name}" produced an empty slug after normalization. Rename the request.`,
+        error: `Display name "${args.displayName}" produced an empty slug after normalization. Rename the request.`,
         diagnosis: "empty_slug",
       },
     };
@@ -293,7 +309,7 @@ async function createVendorForRequest(
     const slug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`;
     const insertPayload = {
       mall_id:      args.mallId,
-      display_name: args.name,
+      display_name: args.displayName,
       booth_number: args.boothNumber,
       slug,
     };
@@ -331,22 +347,17 @@ async function createVendorForRequest(
       };
     }
 
-    // 23505 — identify which constraint fired via the error details/message.
-    // PostgREST surfaces constraint names in `details` or `message`.
     const constraintText =
       `${insertErr.details ?? ""} ${insertErr.message ?? ""}`.toLowerCase();
-    const isSlugCollision = constraintText.includes("vendors_slug_key");
-    const isBoothCollision = constraintText.includes("vendors_mall_booth_unique");
+    const isSlugCollision   = constraintText.includes("vendors_slug_key");
+    const isBoothCollision  = constraintText.includes("vendors_mall_booth_unique");
     const isUserIdCollision = constraintText.includes("vendors_user_id_key");
 
     if (isSlugCollision) {
-      // Loop again with an incremented suffix.
       continue;
     }
 
     if (isBoothCollision) {
-      // We pre-checked booth at the top of this function but a race could
-      // still produce this. Surface a clear error.
       return {
         ok: false,
         status: 409,
@@ -360,8 +371,6 @@ async function createVendorForRequest(
     }
 
     if (isUserIdCollision) {
-      // We don't insert user_id — this would mean an orphan constraint
-      // state and warrants an explicit error.
       return {
         ok: false,
         status: 500,
@@ -372,7 +381,6 @@ async function createVendorForRequest(
       };
     }
 
-    // Unknown 23505 — surface the raw detail so we can learn what happened.
     console.error(
       "[admin/vendor-requests] unknown 23505:",
       insertErr.details,
@@ -388,8 +396,6 @@ async function createVendorForRequest(
     };
   }
 
-  // Ran out of suffix attempts — extremely unlikely (would need 20 vendors
-  // named "David Butler" before this fires) but handle it cleanly.
   return {
     ok: false,
     status: 500,

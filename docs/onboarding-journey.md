@@ -4,6 +4,8 @@
 > Supersedes: partial descriptions in CLAUDE.md, MASTER_PROMPT.md, and Notion Roadmap.
 > When any of those three reference vendor onboarding, they point here.
 
+> **Session 32 (2026-04-20) — v1.2 onboarding refresh.** Flow 3 gained a required booth-proof photo (Model B commitment + verification gesture), name field split into `first_name` + `last_name`, new optional `booth_name` field honored at approval, server-side dedup pre-check with structured `status` response, and the approval email (Email #2) dropped its clickable in-app link in favor of plain instructions (PWA session-continuity fix). Flow 3 diagram + Email matrix copy below are updated accordingly. See CLAUDE.md session-32 close for the full list.
+
 ---
 
 ## Why this document exists
@@ -97,23 +99,25 @@ David walks into a mall where he has no vendor relationships, sees booths that w
 
 David is standing in front of a vendor, showing them the app, and onboarding them live. The "magic moment" of in-person onboarding.
 
-### Path
+**Session-32 note:** Flow 2's "Add Vendor" admin surface is still on the T4b backlog. Until T4b ships, Flow 2 is executed by pointing the vendor at `/vendor-request` on a shared device and walking them through Flow 3 with the admin present. All v1.2 captures (first/last, booth name, booth photo, dedup) apply in that shared path.
+
+### Path (post-T4b target — admin-side form)
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │ 1. Admin and vendor in conversation                                    │
 │    Admin opens /admin → new "Add Vendor" surface (vs. Add Booth)       │
-│    Captures:                                                           │
-│      - Vendor name (person's real name — stored on vendor_requests)    │
-│      - Email (CRITICAL — must be exact, becomes auth identity)         │
-│      - Mall, Booth number, Booth name (optional, defaults to vendor    │
-│        name if not provided)                                           │
-│      - Hero photo (optional)                                           │
+│    Captures (v1.2 shape, mirrors /vendor-request):                     │
+│      - First name + Last name                                          │
+│      - Email (CRITICAL — becomes auth identity at /setup)              │
+│      - Mall, Booth number, Booth name (optional)                       │
+│      - Booth photo (required — Model B commitment + verification)      │
+│      - Hero photo (optional, admin-only convenience)                   │
 └────────────────────────────────────────────────────────────────────────┘
                                   ↓
 ┌────────────────────────────────────────────────────────────────────────┐
 │ 2. Submit creates:                                                     │
-│    - vendor_requests row (status=pending, name, email, mall, booth)    │
+│    - vendor_requests row (status=pending, split fields populated)      │
 │    - EMAIL #1 sent: "We got your request" (receipt)                    │
 │                     — fires consistently for Flows 2 and 3             │
 └────────────────────────────────────────────────────────────────────────┘
@@ -122,29 +126,30 @@ David is standing in front of a vendor, showing them the app, and onboarding the
 │ 3. Admin taps Approve (in the same session, right there)               │
 │    POST /api/admin/vendor-requests { action: "approve", requestId }    │
 │    Server:                                                             │
-│      - Creates vendors row (user_id=NULL, display_name=booth name,     │
-│        hero_image_url if captured)                                     │
+│      - Resolves display_name: booth_name → first+last → legacy name    │
+│      - Creates vendors row (user_id=NULL, display_name resolved)       │
 │      - Flips vendor_requests.status = approved                         │
-│      - EMAIL #2 sent: "Your booth is ready" with sign-in CTA           │
-│        pointing to /login?redirect=/setup                              │
+│      - EMAIL #2 sent: "Your booth is ready" with plain-text sign-in    │
+│        instructions — NO clickable in-app link (PWA fix)               │
 └────────────────────────────────────────────────────────────────────────┘
                                   ↓
 ┌────────────────────────────────────────────────────────────────────────┐
 │ 4. Vendor opens email on their phone                                   │
-│    Taps "Sign in to your booth" → /login?redirect=/setup               │
+│    Reads the instructions: "Open Treehouse, tap Sign In, enter the     │
+│    email echoed here." No taps on URLs in the email.                   │
 └────────────────────────────────────────────────────────────────────────┘
                                   ↓
 ┌────────────────────────────────────────────────────────────────────────┐
-│ 5. Vendor enters their email (must match email on vendor_requests)     │
-│    Supabase signInWithOtp sends EMAIL #3: 6-digit code                 │
-│    Vendor enters code → verifyOtp → authenticated                      │
-│    router.replace(safeRedirect("/setup"))                              │
+│ 5. Vendor opens the installed PWA directly (home-screen icon)          │
+│    Taps Sign In → enters email → Supabase signInWithOtp sends          │
+│    EMAIL #3 (6-digit code) → vendor enters code → verifyOtp →          │
+│    authenticated → router.replace(safeRedirect("/setup"))              │
 └────────────────────────────────────────────────────────────────────────┘
                                   ↓
 ┌────────────────────────────────────────────────────────────────────────┐
 │ 6. /setup calls /api/setup/lookup-vendor                               │
 │    Server:                                                             │
-│      - Finds vendor_requests row by user.email                         │
+│      - Finds vendor_requests row by user.email (lowercase match)       │
 │      - Finds matching vendors row (display_name + mall_id, user_id     │
 │        NULL)                                                           │
 │      - Links vendor.user_id = user.id                                  │
@@ -162,17 +167,17 @@ David is standing in front of a vendor, showing them the app, and onboarding the
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Data shape delta vs. today
+### Data shape delta vs. session 8
 
-- `vendor_requests` gains implicit "has hero photo" via new admin form (optional).
-- `vendors` row seeded with `hero_image_url` at approval time if captured during Demo flow.
-- No schema changes required.
+- `vendor_requests` gains `first_name`, `last_name`, `booth_name`, `proof_image_url` (session-32 migration `005`).
+- `vendors.display_name` resolves in priority order: `booth_name` → `first_name + ' ' + last_name` → legacy `name`.
+- Legacy `name` column stays populated (`first_name + ' ' + last_name`) for backwards compat.
 
-### What's new for Flow 2
+### What's new for Flow 2 (session 32)
 
-- New admin "Add Vendor" form inside `/admin` (captures more than public `/vendor-request` form — adds optional hero photo, possibly separate booth-name field).
-- Approve endpoint fires `/api/admin/vendor-requests` must send EMAIL #2 (✅ shipped session 8 T4a).
-- Vendor-request submission must fire EMAIL #1 (✅ shipped session 8 T4a).
+- v1.2 captures mirror `/vendor-request` exactly (split name, booth name, booth photo). T4b will build the admin-side sub-flow — until it ships, shared-device Flow 3 covers the use case.
+- Approval honors `booth_name` (see admin route session-32 comment header).
+- EMAIL #2 is de-linked — no clickable in-app CTA. Vendor opens PWA themselves.
 
 ---
 
@@ -182,48 +187,77 @@ David is standing in front of a vendor, showing them the app, and onboarding the
 
 Vendor discovers Treehouse organically (feed footer CTA, word of mouth, social post), submits a request on their own. Admin reviews and approves when they get to it. Vendor gets notified.
 
-### Path
+### Path (v1.2 — session 32)
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│ 1. Vendor hits /vendor-request (existing form)                         │
-│    Captures: name, email, mall, booth number                           │
-│    NO hero photo on request form (kept email/booth only per Q answer)  │
+│ 1. Vendor hits /vendor-request                                         │
+│    Captures:                                                           │
+│      - First name + Last name (split)                                  │
+│      - Email                                                           │
+│      - Mall (optional — select from dropdown)                          │
+│      - Booth number (optional)                                         │
+│      - Booth name (optional — defaults to first+last at approval)      │
+│      - Booth photo (REQUIRED — Model B commitment + verification)      │
 └────────────────────────────────────────────────────────────────────────┘
                                   ↓
 ┌────────────────────────────────────────────────────────────────────────┐
 │ 2. POST /api/vendor-request                                            │
 │    Server:                                                             │
-│      - Creates vendor_requests row (status=pending)                    │
-│      - EMAIL #1 sent: "We got your request" receipt                    │
-│        — serves as data-integrity check (catches typo'd emails         │
-│          before admin reviews)                                         │
+│      - Dedup pre-check (lower(email) + status):                        │
+│          * pending  → return { ok: true, status: "already_pending" }   │
+│                       (NO duplicate insert, NO second email)           │
+│          * approved → return { ok: true, status: "already_approved" }  │
+│                       (NO insert, NO email)                            │
+│      - Uploads booth photo to site-assets bucket                       │
+│        (booth-proof/<timestamp>-<random>.<ext>)                        │
+│      - Inserts vendor_requests row (first_name, last_name, booth_name, │
+│        proof_image_url all populated; legacy `name` also populated)    │
+│      - Fires EMAIL #1 receipt (salutes by first_name)                  │
+│    DB safety net: partial unique index on lower(email) WHERE           │
+│    status='pending' (migration 005). 23505 race falls back to          │
+│    the already_pending response.                                       │
 └────────────────────────────────────────────────────────────────────────┘
                                   ↓
 ┌────────────────────────────────────────────────────────────────────────┐
-│ 3. Vendor sees on-screen success state                                 │
-│    Copy reinforces the email receipt ("Check your inbox — we'll be     │
-│    in touch when your booth is ready").                                │
-│    Vendor closes tab, goes about their day.                            │
+│ 3. Vendor sees one of three in-place states                            │
+│    - "You're on the list" (created)         → check glyph              │
+│    - "We already have you" (already_pending) → clock glyph             │
+│    - "You're already in" (already_approved)  → clock glyph + sign-in   │
+│    All three echo the email on the surface so the vendor can verify    │
+│    the address. Vendor closes tab, goes about their day.               │
 └────────────────────────────────────────────────────────────────────────┘
                                   ↓
 ┌────────────────────────────────────────────────────────────────────────┐
 │ 4. Admin reviews at /admin (Vendor Requests tab, pending badge)        │
-│    Taps Approve on the row                                             │
+│    Booth-proof photo renders as 56×56 thumbnail on the row — tap       │
+│    opens full image in a new tab. Admin confirms booth legitimacy,     │
+│    taps Approve.                                                       │
 │    Same server flow as Flow 2 step 3 — vendors row + EMAIL #2          │
 └────────────────────────────────────────────────────────────────────────┘
                                   ↓
 ┌────────────────────────────────────────────────────────────────────────┐
 │ 5. Vendor opens approval email                                         │
-│    Taps "Sign in to your booth" → /login?redirect=/setup               │
-│    Identical to Flow 2 steps 4–7                                       │
+│    Reads plain-text instructions: "Open Treehouse, tap Sign In,        │
+│    enter this email." Email address is echoed in a copyable pill.      │
+│    NO clickable in-app link (PWA session-continuity fix — session 32). │
+│    Flow continues identical to Flow 2 steps 5–7.                       │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-### What's new for Flow 3
+### What's new for Flow 3 (session 32)
 
-- `/api/vendor-request` POST must fire EMAIL #1 (✅ shipped session 8 T4a).
-- `/vendor-request` success screen copy updates to match async nature and reinforce that an email was sent (pending T4c).
+- Name split: `first_name` + `last_name` on the form and DB (was a single `name`).
+- `booth_name` optional field — honored at approval as `vendors.display_name` fallback priority.
+- **Booth photo required** (Model B commitment + verification gesture). Written to `site-assets/booth-proof/…`.
+- Server-side dedup pre-check — returns structured `status` so the client renders in-place warm states rather than error toasts.
+- Partial unique index on `(lower(email)) WHERE status='pending'` as DB safety net.
+- EMAIL #1 copy updated to acknowledge photo and drop visit implication.
+- EMAIL #2 de-linked — no `/login?redirect=/setup` CTA. Plain instructions + echoed email.
+
+### Deferred to Sprint 5
+
+- Post-approval booth-name edit surface on `/my-shelf` (there's currently no edit affordance for `display_name`). First solved for at request time via the new `booth_name` field; second-pass edit flow gets its own dedicated mockup in Sprint 5.
 
 ---
 
@@ -231,59 +265,109 @@ Vendor discovers Treehouse organically (feed footer CTA, word of mouth, social p
 
 | # | Name | Sent by | Fires when | Flows | Status |
 |---|---|---|---|---|---|
-| 1 | Request received (receipt) | Our server (via Resend API, `lib/email.ts`) | `POST /api/vendor-request` succeeds | 2, 3 | ✅ Shipped session 8 |
-| 2 | Approval + sign-in instructions | Our server (via Resend API, `lib/email.ts`) | `POST /api/admin/vendor-requests action=approve` succeeds | 2, 3 | ✅ Shipped session 8 |
-| 3 | OTP 6-digit code | Supabase (`signInWithOtp`) | Vendor enters email at `/login` | 2, 3 (also all auth flows) | ✅ Exists since session 6 |
+| 1 | Request received (receipt) | Our server (via Resend API, `lib/email.ts`) | `POST /api/vendor-request` succeeds with status `created` (NOT on `already_pending` or `already_approved` branches) | 2, 3 | ✅ Shipped session 8, refreshed session 32 |
+| 2 | Approval + sign-in instructions | Our server (via Resend API, `lib/email.ts`) | `POST /api/admin/vendor-requests action=approve` succeeds | 2, 3 | ✅ Shipped session 8, refreshed session 32 (no clickable link) |
+| 3 | OTP 6-digit code | Supabase (`signInWithOtp`) | Vendor enters email at `/login` | 2, 3 (also all auth flows) | ✅ Exists since session 6, template refreshed session 32 (paper surface + Georgia) |
 
-### Implementation (shipped session 8)
+### Implementation (session 32 state)
 
-- `lib/email.ts` — thin wrapper around Resend REST API (uses native `fetch`, no SDK dependency).
-- `RESEND_API_KEY` in Vercel env vars (set by David during session 8 HITL).
-- Called from `/api/vendor-request` (POST) and `/api/admin/vendor-requests` (POST approve).
+- `lib/email.ts` — thin wrapper around Resend REST API (native `fetch`, no SDK dependency). All three templates moved onto v1.1l paper surface (`#e8ddc7`). IM Fell English retired from all email templates; Georgia throughout for brand lockup, body, eyebrows, signature.
+- `RESEND_API_KEY` in Vercel env vars (set by David during session 8 HITL — unchanged).
+- Called from `/api/vendor-request` (POST, `created` branch only) and `/api/admin/vendor-requests` (POST approve). `already_pending` and `already_approved` branches do NOT re-fire EMAIL #1.
+- Supabase Auth OTP template (EMAIL #3) edited in Dashboard → Auth → Email Templates. Both Magic Link and Confirm Signup templates use the same paper-surface shell. `{{ .Token }}` rendered in a selectable pill.
 - On email failure: log but don't fail the HTTP response. A failed receipt email is bad UX but not a transaction failure.
 
-### Copy (shipped session 8 — may be refined in T4c)
+### Copy (session 32 — current shipped state)
 
 **EMAIL #1 — Request received**
 
-> Subject: We got your Treehouse request, {name}
+> Subject: We got your Treehouse request, {first_name}
 >
-> Thanks for putting your booth forward. We'll take a look and be in touch when your shelf is ready to fill.
+> Hi {first_name},
 >
-> — Treehouse
-
-**EMAIL #2 — Approval + sign-in instructions**
-
-> Subject: Your Treehouse booth is ready, {name}
+> Thanks — we got your booth photo and details.
 >
-> Your booth at {mall_name} is ready to start filling with finds. Tap the link below to sign in — we'll email you a quick 6-digit code.
->
-> [Sign in to your booth →] (https://app.kentuckytreehouse.com/login?redirect=/setup)
+> We'll take a look and be in touch when your shelf is ready to fill.
 >
 > — Treehouse
 
-Both follow Brand Rules (warm, observational, never transactional).
+**EMAIL #2 — Approval + sign-in instructions (no clickable link)**
+
+> Subject: Your Treehouse booth is ready, {first_name}
+>
+> Hi {first_name},
+>
+> Your booth at {mall_name} is ready to start filling with finds.
+>
+> *(instruction box)*
+> To sign in, open **Treehouse** on your phone, tap **Sign In**, and enter this email:
+>
+> `{email}`
+>
+> We'll send you a 6-digit code to finish signing in.
+>
+> Welcome to the search.
+>
+> — Treehouse
+
+**EMAIL #3 — Supabase OTP (refreshed template)**
+
+> Subject: Your Treehouse sign-in code
+>
+> Hi there,
+>
+> Here's your sign-in code. Enter it on the Treehouse sign-in screen to finish.
+>
+> *(OTP pill — centered, selectable)*
+> **{{ .Token }}**
+>
+> Expires in 10 minutes.
+>
+> If you didn't ask for this, you can ignore this email.
+>
+> — Treehouse
+
+All three follow Brand Rules (warm, observational, never transactional).
 
 ---
 
 ## Data shape decisions
 
-### Booth name vs. person name
+### Booth name vs. person name (session-32 resolution)
 
-Per session-8 scope-out: **today's model stands.**
+Session 8 left this as "today's model stands — revisit if vendor feedback surfaces confusion." Session 32 on-device QA surfaced the confusion (vendor's full name was showing as their booth name with no choice at request time and no post-approval edit). Resolution shipped session 32:
 
-- `vendors.display_name` is the **public-facing booth name** (e.g. "John's Jewelry" or "David Butler" if the vendor prefers their own name).
-- `vendor_requests.name` is the **person's name** (captured at request time, used for email salutations in Emails #1/#2).
-- At approval, `display_name` defaults to `vendor_requests.name` unless the admin form supplies a separate booth name during Demo flow.
-- **No schema migration required.** We revisit this if vendor feedback surfaces confusion.
+- `vendor_requests.first_name` / `last_name` — captured at request time, used for email salutations.
+- `vendor_requests.booth_name` — optional; if set, becomes `vendors.display_name` at approval.
+- `vendor_requests.name` — still populated as `first_name + ' ' + last_name` for backwards compat with any downstream reader.
+- `vendors.display_name` — resolves at approval time via priority chain: `booth_name` → `first_name + ' ' + last_name` → legacy `name`.
+- **Schema migration shipped session 32**: `supabase/migrations/005_vendor_request_onboarding_refresh.sql` adds the three new columns + `proof_image_url`. Applied via Supabase SQL Editor as an 🖐️ HITL at session close.
+- **Post-approval edit of `display_name`** is deferred to Sprint 5 with its own dedicated mockup.
 
-### Hero photo on request
+### Booth proof photo on request (session-32 addition)
 
-Per Q answer: **email/booth only on public `/vendor-request` form**. Hero photo is admin-captured during Demo flow (Flow 2) or set post-approval by vendor themselves from `/my-shelf`.
+- Required field on `/vendor-request`. Uploaded via `FileReader` → `compressImage` → `POST /api/vendor-request` with a base64 data URL field (`proof_image_data_url`).
+- Server writes to Supabase Storage `site-assets` bucket under `booth-proof/<timestamp>-<random>.<ext>` prefix. Uses service-role key so bypasses bucket RLS.
+- Public URL stored on `vendor_requests.proof_image_url`. Admin UI renders it as a 56×56 thumbnail on each request row; tap opens full image in a new tab.
+- Serves two purposes: (1) bad-actor defense (requires physical booth access), (2) Day-1 content against the empty-shelf problem David observed in the wild.
+
+### Hero photo on request (session-8 decision preserved)
+
+- Not captured on the public `/vendor-request` form. Separate concept from booth proof.
+- Hero photo is admin-captured during Flow 2 (post-T4b) or set post-approval by vendor themselves from `/my-shelf`.
 
 ### "Email must match" enforcement
 
 The `/api/setup/lookup-vendor` route is the single enforcement point. It looks up `vendor_requests` by `auth.user.email` (exact match, lowercased). If no approved/pending request exists for that email, the vendor gets a clear error: *"We don't see an approved request for this email. Double-check with David."* (Current error copy: "Your vendor account isn't ready yet. An admin needs to approve your request first." — needs revision to be clearer about the failure mode. T4c.)
+
+### Email dedup (session-32 addition)
+
+The `/vendor-request` form re-submit path is handled entirely in `POST /api/vendor-request`:
+
+- Pre-check: `SELECT id, status FROM vendor_requests WHERE email = lower(input) AND status IN ('pending','approved') ORDER BY created_at DESC LIMIT 1`.
+- If hit: return `{ ok: true, status: "already_pending" | "already_approved" }` — no insert, no email.
+- Client renders a warm in-place state for each (clock glyph, "we already have you" title, echoed email, no panic copy).
+- DB safety net: partial unique index `vendor_requests_email_pending_idx ON (lower(email)) WHERE status='pending'`. Race between pre-check and insert caught as `23505` and normalized to the `already_pending` response.
 
 ---
 
@@ -367,14 +451,14 @@ The 🔴 blocking piece (KI-003 — stale vendor identity post-approval) is reso
 - 🟡 Remove "Add a Booth" button from EmptyFeed — still open
 - 🟡 Gate "Post a find" in My Shelf NoBooth state behind `activeVendor !== null` — still open
 - 🟡 Revise `/api/setup/lookup-vendor` error copy — still open
-- 🟡 Revise `/vendor-request` success screen copy — still open
+- ✅ **Revise `/vendor-request` success screen copy** — shipped session 32 as part of v1.2 refresh (three done states: `created`, `already_pending`, `already_approved`)
 - 🟡 Retire `/api/debug-vendor-requests` (🟡 security) — still open
 - 🟡 **New session-9 polish item:** `/setup` 401 race retry-with-backoff in `setupVendorAccount()` (see docs/known-issues.md) — still open
 - **Est for remaining:** 1–1.5 hours total. Bundle into T4b or ship standalone.
 
 **T4b — Admin surface consolidation** (ran *after* T4c)
 - Add new "Add Booth" tab to `/admin` (Flow 1 home) — pure vendors row creation, no request/email
-- Add new "Add Vendor" sub-flow to `/admin` Vendor Requests tab (Flow 2 — captures full data and immediately creates vendor_requests row; admin taps Approve in the same session)
+- Add new "Add Vendor" sub-flow to `/admin` Vendor Requests tab (Flow 2 — captures full v1.2 data including booth photo; admin taps Approve in the same session)
 - Remove "Admin PIN" tab from `/login`; move behind `/admin` gate
 - Remove "Booths" tab from admin BottomNav
 - Remove admin `AddBoothSheet` from `/shelves`
@@ -383,12 +467,12 @@ The 🔴 blocking piece (KI-003 — stale vendor identity post-approval) is reso
 **T4d — Pre-beta QA pass against the mapped journey**
 - Clean DB reset (follow session 7 pattern)
 - Walk Flow 1 end-to-end (admin seeds a booth, posts a find for it, find appears in feed)
-- Walk Flow 2 end-to-end (admin + self as vendor: new email, add vendor in /admin, approve, receive Emails #1+#2, OTP, land on /my-shelf)
-- Walk Flow 3 end-to-end (fresh email → /vendor-request → receipt email → admin approves → approval email → OTP → /my-shelf)
+- Walk Flow 2 end-to-end (shared-device v1.2 `/vendor-request` with admin present; T4b admin-side form deferred)
+- Walk Flow 3 end-to-end (fresh email → /vendor-request → booth photo upload → dedup behaves on re-submit → receipt email → admin approves → approval email no-link → OTP → /my-shelf with booth_name honored)
 - Document any gaps found
 - **Est:** 1–2 hours.
 
-**Updated total remaining:** ~5–6.5 hours (T4b → T4c remainder → T4d → KI-004 scoping session). Session 9 landed the blocking critical path; what's left is polish and consolidation.
+**Updated total remaining:** T4b + T4c remainder + T4d. Session 32 landed the v1.2 onboarding refresh on the Flow 3 side, so T4d now has a clear reference implementation to measure T4b against.
 
 ### Out of scope for T4 (explicitly)
 
@@ -397,22 +481,24 @@ The 🔴 blocking piece (KI-003 — stale vendor identity post-approval) is reso
 - "Curator Sign In" rename (Sprint 5)
 - PWA install onboarding (Sprint 5)
 - Real-time approval poll / vendor-side success-screen polling — **eliminated by the decision to auto-email on approve.** Vendor doesn't need to poll because they get an email.
+- Post-approval booth-name edit surface (Sprint 5 — session 32 deferral)
+- Typography reassessment (Sprint 5 — session 32 deferral, IM Fell readability tax)
 
 ---
 
-## Sprint 5 implications surfaced during scope-out
+## Sprint 5 implications (refreshed session 32)
 
-None of these change, but calling out explicitly:
-
-- **`/welcome` landing for signed-in non-vendors.** Sprint 5 item, unchanged by this scope-out. Still the right fix for shoppers who authenticate and hit `/my-shelf`'s NoBooth state.
-- **"Curator Sign In" rename.** Sprint 5 item, unchanged.
-- **PWA install onboarding.** Sprint 5 item, unchanged. Upgraded to 🟡 Medium (from 🟢 Low) once remote onboarding goes live via Flow 3 at scale — because remote vendors no longer have David walking them through PWA install in person.
+- **`/welcome` landing for signed-in non-vendors.** Unchanged by session-32 refresh.
+- **"Curator Sign In" rename.** Unchanged.
+- **PWA install onboarding.** 🟡 Medium. Now *especially* important since session-32 removed the in-email CTA link — a vendor without the PWA installed has nothing to tap.
+- **Post-approval booth-name edit surface** (session-32 deferral). Mini-mockup first, then build on `/my-shelf` title block. Also first caller for the dangling `updateVendorBio` in `lib/posts.ts` — worth co-scoping.
+- **Typography reassessment** (session-32 deferral). IM Fell English vs. EB Garamond / Lora / Fraunces / all-Georgia side-by-side on a phone. Readability tax at 13px italic labels is real; emails already went Georgia this session as a small first step.
 
 ---
 
-## Sprint 6+ hooks surfaced during scope-out
+## Sprint 6+ hooks
 
-- **"Claim this booth" flow** for Flow 1 pre-seeded vendors. Designed as: vendor submits `/vendor-request` for a mall+booth that already has a pre-seeded `vendors` row. Admin sees the match indicator in `/admin`. Approval links the existing row instead of creating a new one. Not built, not designed in detail. Add to Notion Roadmap as a Sprint 6+ backlog item.
+- **"Claim this booth" flow** for Flow 1 pre-seeded vendors. Designed as: vendor submits `/vendor-request` for a mall+booth that already has a pre-seeded `vendors` row. Admin sees the match indicator in `/admin`. Approval links the existing row instead of creating a new one. Not built, not designed in detail. The session-32 booth-photo field gives this flow a natural verification surface — a pre-seeded vendor's claim photo can be eye-checked against the empty pre-seeded shelf.
 
 ---
 
@@ -425,4 +511,4 @@ None of these change, but calling out explicitly:
 
 ---
 
-> Last updated: 2026-04-17 (session 9 — T4c's 🔴 blocking piece resolved; KI-001/002/003 all shipped; Flow 2 end-to-end verified working on device; KI-004 logged for dedicated scoping session)
+> Last updated: 2026-04-20 (session 32 — v1.2 onboarding refresh: Flow 3 diagram updated, Email matrix copy updated, data-shape decisions revised, Sprint 5 Typography + Post-approval booth-name edit items logged)

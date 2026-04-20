@@ -1,31 +1,39 @@
 // app/vendor-request/page.tsx
 // Vendor access request flow (Flow 3 front door).
-// Rewritten session 23 against docs/design-system.md v1.1k.
+// Session 32 (2026-04-20) — v1.2 onboarding refresh.
 //
-// Changes from v0.2:
-//  - Mode C chrome (back arrow paper bubble; no masthead wordmark, no eyebrow pair)
-//  - v1 palette throughout (paperCream bg, v1 ink scale, inkHairline borders)
-//  - IM Fell English for intro + success editorial voice; FONT_SYS for form fields
-//  - Form input primitive (white translucent bg, 14px radius, inkHairline border)
-//  - Filled green CTA only on "Request access" (commit action)
-//  - Success screen retires v0.2 greenLight check bubble → paper-wash primitive
-//  - Success actions retire filled green button → IM Fell italic dotted-underline links
-//  - Email echo line primitive (hairlines above/below, no surface card)
-//  - Labels retire uppercase+tracked treatment → IM Fell italic 13px muted sentence case
+// v1.2 changes from v1.1k:
+//  - Name field split into First name + Last name (side-by-side row)
+//  - New optional "Booth name" field with helper copy ("Leave blank to use your name")
+//  - Required booth photo — Model B commitment + verification gesture. Wide
+//    shot of sign / name tag / booth-number anything. Rendered as paper-wash
+//    dropzone that swaps to a 4:3 preview on select with a Replace button.
+//  - Server responses now include { status } — "created" ships to success
+//    screen; "already_pending" and "already_approved" each show their own
+//    in-place warm state (no duplicate insert, no second email).
+//  - "Already pending" state uses a clock glyph + "We already have you"
+//    title + echo of email on file.
+//  - "Already approved" state nudges the vendor to sign in directly and
+//    echoes the email they should use.
 //
-// MallSheet migration to the "Your mall" field deferred to Sprint 5 per v1.1k (h).
-// Native <select> is used here with v1.1k form-input styling.
+// Preserved from v1.1k:
+//  - Mode C chrome (back arrow paper bubble)
+//  - v1 palette + IM Fell for editorial voice in-form (Sprint 5 typography
+//    reassessment will revisit IM Fell usage in form labels)
+//  - Filled green CTA only on the commit action
+//  - Email echo line primitive on success screen
 //
-// Preserved from v0.2: form submission logic, validation rules, POST body shape,
-// mall prefill from URL params, routing on success.
+// MallSheet migration to the "Your mall" field still deferred to Sprint 5
+// per design-system.md v1.1k (h). Native <select> retained here.
 
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Check, Mail } from "lucide-react";
+import { ArrowLeft, Check, Mail, Clock, Camera, X } from "lucide-react";
 import { getAllMalls } from "@/lib/posts";
+import { compressImage } from "@/lib/imageUpload";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import type { Mall } from "@/types/treehouse";
 
@@ -74,12 +82,38 @@ const labelStyle: React.CSSProperties = {
   marginBottom: 7,
 };
 
+const helperStyle: React.CSSProperties = {
+  fontFamily: FONT_IM_FELL,
+  fontStyle: "italic",
+  fontSize: 12,
+  color: v1.inkFaint,
+  lineHeight: 1.5,
+  marginTop: 6,
+  marginLeft: 2,
+};
+
 const optionalStyle: React.CSSProperties = {
   fontStyle: "italic",
   color: v1.inkFaint,
   marginLeft: 3,
 };
 
+// ─── Helper — read a File as a data URL via FileReader ──────────────────────
+function readFileAsDataURL(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload  = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("Could not read file"));
+    reader.readAsDataURL(file);
+  });
+}
+
+// ─── Submit response shape from /api/vendor-request ──────────────────────────
+type SubmitResult =
+  | { ok: true; status: "created" | "already_pending" | "already_approved" }
+  | { ok: false; error: string };
+
+// ─── Inner component ─────────────────────────────────────────────────────────
 function VendorRequestInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
@@ -87,15 +121,26 @@ function VendorRequestInner() {
   const prefilledMallId   = searchParams.get("mall_id")   ?? "";
   const prefilledMallName = searchParams.get("mall_name") ?? "";
 
-  const [malls,    setMalls]    = useState<Mall[]>([]);
-  const [name,     setName]     = useState("");
-  const [email,    setEmail]    = useState("");
-  const [booth,    setBooth]    = useState("");
-  const [mallId,   setMallId]   = useState(prefilledMallId);
-  const [mallName, setMallName] = useState(prefilledMallName);
-  const [busy,     setBusy]     = useState(false);
-  const [done,     setDone]     = useState(false);
-  const [error,    setError]    = useState("");
+  const [malls, setMalls] = useState<Mall[]>([]);
+
+  // Form state — v1.2 shape
+  const [firstName, setFirstName] = useState("");
+  const [lastName,  setLastName]  = useState("");
+  const [email,     setEmail]     = useState("");
+  const [booth,     setBooth]     = useState("");
+  const [boothName, setBoothName] = useState("");
+  const [mallId,    setMallId]    = useState(prefilledMallId);
+  const [mallName,  setMallName]  = useState(prefilledMallName);
+
+  // Photo state
+  const [proofDataUrl, setProofDataUrl] = useState<string | null>(null);
+  const [proofBusy,    setProofBusy]    = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // UI state
+  const [busy,  setBusy]  = useState(false);
+  const [done,  setDone]  = useState<null | "created" | "already_pending" | "already_approved">(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     getAllMalls().then(setMalls);
@@ -107,12 +152,46 @@ function VendorRequestInner() {
     setMallName(found ? `${found.name}, ${found.city}` : "");
   }
 
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";  // reset so same file can be reselected
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      return;
+    }
+    if (file.size > 12_000_000) {
+      setError("Photo is too large. Please choose one smaller than 12MB.");
+      return;
+    }
+    setProofBusy(true);
+    setError("");
+    try {
+      const raw        = await readFileAsDataURL(file);
+      const compressed = await compressImage(raw);
+      setProofDataUrl(compressed);
+    } catch {
+      setError("Couldn't read that photo. Try a different one.");
+    } finally {
+      setProofBusy(false);
+    }
+  }
+
+  function handlePhotoClear() {
+    setProofDataUrl(null);
+  }
+
   async function handleSubmit() {
     setError("");
-    if (!name.trim()) { setError("Please enter your name."); return; }
-    if (!email.trim()) { setError("Please enter your email address."); return; }
+    if (!firstName.trim()) { setError("Please enter your first name."); return; }
+    if (!lastName.trim())  { setError("Please enter your last name.");  return; }
+    if (!email.trim())     { setError("Please enter your email address."); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setError("Please enter a valid email address.");
+      return;
+    }
+    if (!proofDataUrl) {
+      setError("Please add a photo of your booth.");
       return;
     }
 
@@ -122,16 +201,28 @@ function VendorRequestInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name:         name.trim(),
-          email:        email.trim(),
-          booth_number: booth.trim() || null,
-          mall_id:      mallId || null,
-          mall_name:    mallName || null,
+          first_name:           firstName.trim(),
+          last_name:            lastName.trim(),
+          email:                email.trim(),
+          booth_number:         booth.trim() || null,
+          booth_name:           boothName.trim() || null,
+          mall_id:              mallId || null,
+          mall_name:            mallName || null,
+          proof_image_data_url: proofDataUrl,
         }),
       });
-      const json = await res.json();
-      if (!res.ok) { setError(json.error ?? "Something went wrong. Please try again."); return; }
-      setDone(true);
+      const json = (await res.json()) as SubmitResult | { error: string };
+
+      if (!res.ok || ("ok" in json && !json.ok) || ("error" in json && json.error)) {
+        const errMsg = ("error" in json && json.error) || "Something went wrong. Please try again.";
+        setError(errMsg);
+        return;
+      }
+      if ("status" in json) {
+        setDone(json.status);
+      } else {
+        setDone("created");
+      }
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -139,197 +230,20 @@ function VendorRequestInner() {
     }
   }
 
-  // ── Success screen ─────────────────────────────────────────────────────────
+  // ── Success / already-pending / already-approved screens ─────────────────
   if (done) {
     return (
-      <div
-        style={{
-          minHeight: "100dvh",
-          background: v1.paperCream,
-          maxWidth: 430,
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        {/* Mode C header */}
-        <header
-          style={{
-            padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px",
-          }}
-        >
-          <button
-            onClick={() => { setDone(false); }}
-            aria-label="Back"
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: v1.iconBubble,
-              border: "none",
-              cursor: "pointer",
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            <ArrowLeft size={15} style={{ color: v1.inkPrimary }} />
-          </button>
-        </header>
-
-        {/* Centered hero column */}
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "0 28px 80px",
-            textAlign: "center",
-          }}
-        >
-          {/* Paper-wash success bubble */}
-          <motion.div
-            initial={{ scale: 0.7, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 260, damping: 22 }}
-            style={{
-              width: 60,
-              height: 60,
-              borderRadius: "50%",
-              background: "rgba(42,26,10,0.04)",
-              border: `0.5px solid ${v1.inkHairline}`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: 22,
-            }}
-          >
-            <Check size={26} style={{ color: v1.inkPrimary }} strokeWidth={1.6} />
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.18, duration: 0.32, ease: EASE }}
-            style={{
-              fontFamily: FONT_IM_FELL,
-              fontSize: 30,
-              color: v1.inkPrimary,
-              lineHeight: 1.2,
-              letterSpacing: "-0.005em",
-              margin: "0 0 14px",
-            }}
-          >
-            You&apos;re on the list.
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.28, duration: 0.32, ease: EASE }}
-            style={{
-              fontFamily: FONT_IM_FELL,
-              fontStyle: "italic",
-              fontSize: 16,
-              color: v1.inkMid,
-              lineHeight: 1.65,
-              maxWidth: 320,
-              margin: "0 auto 24px",
-            }}
-          >
-            We&apos;ll review your request and be in touch soon with next steps to get your booth on Treehouse.
-          </motion.p>
-
-          {/* Email echo line primitive */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.38, duration: 0.32 }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "12px 0",
-              borderTop: `0.5px solid ${v1.inkHairline}`,
-              borderBottom: `0.5px solid ${v1.inkHairline}`,
-              width: "100%",
-              maxWidth: 320,
-              marginBottom: 0,
-            }}
-          >
-            <Mail size={14} style={{ color: v1.inkMuted, flexShrink: 0 }} strokeWidth={1.6} />
-            <span style={{ fontFamily: FONT_SYS, fontSize: 14, color: v1.inkMuted, flexShrink: 0 }}>
-              Sent to&nbsp;
-            </span>
-            <span
-              style={{
-                fontFamily: FONT_SYS,
-                fontSize: 14,
-                color: v1.inkPrimary,
-                fontWeight: 500,
-                wordBreak: "break-all",
-                minWidth: 0,
-              }}
-            >
-              {email}
-            </span>
-          </motion.div>
-
-          {/* End-of-path text links (no filled CTA) */}
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.48, duration: 0.32, ease: EASE }}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 20,
-              alignItems: "center",
-              marginTop: 32,
-            }}
-          >
-            <a
-              onClick={() => router.push("/")}
-              style={{
-                fontFamily: FONT_IM_FELL,
-                fontStyle: "italic",
-                fontSize: 16,
-                color: v1.inkPrimary,
-                textDecoration: "underline",
-                textDecorationStyle: "dotted",
-                textDecorationColor: v1.inkFaint,
-                textUnderlineOffset: 4,
-                cursor: "pointer",
-              }}
-            >
-              Explore the feed →
-            </a>
-            <a
-              onClick={() => setDone(false)}
-              style={{
-                fontFamily: FONT_IM_FELL,
-                fontStyle: "italic",
-                fontSize: 15,
-                color: v1.inkMuted,
-                textDecoration: "underline",
-                textDecorationStyle: "dotted",
-                textDecorationColor: v1.inkFaint,
-                textUnderlineOffset: 4,
-                cursor: "pointer",
-              }}
-            >
-              Go back
-            </a>
-          </motion.div>
-        </div>
-      </div>
+      <DoneScreen
+        state={done}
+        email={email}
+        onReset={() => setDone(null)}
+        onGoHome={() => router.push("/")}
+        onGoSignIn={() => router.push("/login")}
+      />
     );
   }
 
-  // ── Form ───────────────────────────────────────────────────────────────────
+  // ── Form ──────────────────────────────────────────────────────────────────
   return (
     <div
       style={{
@@ -390,7 +304,7 @@ function VendorRequestInner() {
               margin: "0 0 12px",
             }}
           >
-            Bring your booth to Treehouse.
+            Put your booth forward.
           </h1>
           <p
             style={{
@@ -402,7 +316,7 @@ function VendorRequestInner() {
               margin: 0,
             }}
           >
-            Let buyers discover your finds before they make the trip. Fill in your details and we&apos;ll be in touch.
+            We&rsquo;re Treehouse &mdash; a quiet place for vintage &amp; antique finds in Kentucky. Share a few details and a photo of your booth, and we&rsquo;ll be in touch when your shelf is ready.
           </p>
         </motion.div>
 
@@ -413,16 +327,30 @@ function VendorRequestInner() {
           transition={{ duration: 0.30, delay: 0.08, ease: EASE }}
           style={{ display: "flex", flexDirection: "column", gap: 18 }}
         >
-          <div>
-            <label style={labelStyle}>Your name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="First and last name"
-              style={inputStyle}
-              autoComplete="name"
-            />
+          {/* First / Last side-by-side */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <label style={labelStyle}>First name</label>
+              <input
+                type="text"
+                value={firstName}
+                onChange={e => setFirstName(e.target.value)}
+                placeholder="Sarah"
+                style={inputStyle}
+                autoComplete="given-name"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Last name</label>
+              <input
+                type="text"
+                value={lastName}
+                onChange={e => setLastName(e.target.value)}
+                placeholder="Morrison"
+                style={inputStyle}
+                autoComplete="family-name"
+              />
+            </div>
           </div>
 
           <div>
@@ -442,7 +370,6 @@ function VendorRequestInner() {
             <label style={labelStyle}>
               Your mall <span style={optionalStyle}>(optional)</span>
             </label>
-            {/* MallSheet migration deferred to Sprint 5 per docs/design-system.md v1.1k (h) */}
             <select
               value={mallId}
               onChange={e => handleMallChange(e.target.value)}
@@ -451,9 +378,9 @@ function VendorRequestInner() {
                 color: mallId ? v1.inkPrimary : v1.inkFaint,
               }}
             >
-              <option value="">Select a mall…</option>
+              <option value="">Select a mall&hellip;</option>
               {malls.map(m => (
-                <option key={m.id} value={m.id}>{m.name} — {m.city}, {m.state}</option>
+                <option key={m.id} value={m.id}>{m.name} &mdash; {m.city}, {m.state}</option>
               ))}
             </select>
           </div>
@@ -469,6 +396,144 @@ function VendorRequestInner() {
               placeholder="e.g. 369"
               style={inputStyle}
             />
+          </div>
+
+          <div>
+            <label style={labelStyle}>
+              Booth name <span style={optionalStyle}>(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={boothName}
+              onChange={e => setBoothName(e.target.value)}
+              placeholder="e.g. The Velvet Cabinet"
+              style={inputStyle}
+            />
+            <p style={helperStyle}>Leave blank to use your name.</p>
+          </div>
+
+          {/* Booth photo — Model B */}
+          <div>
+            <label style={labelStyle}>A photo of your booth</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handlePhotoChange}
+              style={{ display: "none" }}
+            />
+            {proofDataUrl ? (
+              <div
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  aspectRatio: "4/3",
+                  borderRadius: 14,
+                  overflow: "hidden",
+                  background: "#1a1a18",
+                  border: `1px solid ${v1.inkHairline}`,
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={proofDataUrl}
+                  alt="Booth preview"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
+                  }}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={proofBusy}
+                  style={{
+                    position: "absolute",
+                    top: 8,
+                    right: 8,
+                    padding: "6px 12px",
+                    background: "rgba(0,0,0,0.55)",
+                    color: "#fff9e8",
+                    border: "none",
+                    borderRadius: 16,
+                    fontFamily: FONT_SYS,
+                    fontSize: 12,
+                    cursor: proofBusy ? "default" : "pointer",
+                    opacity: proofBusy ? 0.6 : 1,
+                  }}
+                >
+                  Replace
+                </button>
+                <button
+                  onClick={handlePhotoClear}
+                  aria-label="Remove photo"
+                  style={{
+                    position: "absolute",
+                    top: 8,
+                    left: 8,
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    background: "rgba(0,0,0,0.55)",
+                    color: "#fff9e8",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={proofBusy}
+                style={{
+                  width: "100%",
+                  aspectRatio: "4/3",
+                  border: `1.5px dashed ${v1.inkHairline}`,
+                  borderRadius: 14,
+                  background: "rgba(255,253,248,0.70)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                  padding: 20,
+                  textAlign: "center",
+                  cursor: proofBusy ? "default" : "pointer",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                <Camera size={34} style={{ color: v1.inkMuted, opacity: 0.75 }} strokeWidth={1.4} />
+                <div
+                  style={{
+                    fontFamily: FONT_IM_FELL,
+                    fontSize: 17,
+                    color: v1.inkMid,
+                    letterSpacing: "-0.005em",
+                    lineHeight: 1.25,
+                  }}
+                >
+                  {proofBusy ? "Reading photo\u2026" : "Show us your booth"}
+                </div>
+                <div
+                  style={{
+                    fontFamily: FONT_IM_FELL,
+                    fontStyle: "italic",
+                    fontSize: 13,
+                    color: v1.inkFaint,
+                    lineHeight: 1.5,
+                    maxWidth: 260,
+                  }}
+                >
+                  A wide shot of your sign, name tag, or anything with your booth number visible. Helps us make sure the shelf is really yours.
+                </div>
+              </button>
+            )}
           </div>
 
           {/* Error banner */}
@@ -514,7 +579,7 @@ function VendorRequestInner() {
               marginTop: 4,
             }}
           >
-            {busy ? "Sending…" : "Request access"}
+            {busy ? "Sending\u2026" : "Request access"}
           </button>
 
           <p
@@ -527,7 +592,7 @@ function VendorRequestInner() {
               margin: 0,
             }}
           >
-            We&apos;ll only use your email to follow up on this request.
+            We&rsquo;ll only use your email to follow up on this request.
           </p>
         </motion.div>
       </main>
@@ -535,6 +600,281 @@ function VendorRequestInner() {
   );
 }
 
+// ─── Done screens — three variants ───────────────────────────────────────────
+// `created` is the happy path success screen (carried over from v1.1k).
+// `already_pending` and `already_approved` render warm in-place states
+// instead of firing a duplicate insert.
+
+function DoneScreen({
+  state,
+  email,
+  onReset,
+  onGoHome,
+  onGoSignIn,
+}: {
+  state: "created" | "already_pending" | "already_approved";
+  email: string;
+  onReset:    () => void;
+  onGoHome:   () => void;
+  onGoSignIn: () => void;
+}) {
+  return (
+    <div
+      style={{
+        minHeight: "100dvh",
+        background: v1.paperCream,
+        maxWidth: 430,
+        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <header style={{ padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px" }}>
+        <button
+          onClick={onReset}
+          aria-label="Back"
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: v1.iconBubble,
+            border: "none",
+            cursor: "pointer",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <ArrowLeft size={15} style={{ color: v1.inkPrimary }} />
+        </button>
+      </header>
+
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "0 28px 80px",
+          textAlign: "center",
+        }}
+      >
+        {/* Glyph: check for created, clock for pending/approved */}
+        <motion.div
+          initial={{ scale: 0.7, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 260, damping: 22 }}
+          style={{
+            width: 60,
+            height: 60,
+            borderRadius: "50%",
+            background: "rgba(42,26,10,0.04)",
+            border: `0.5px solid ${v1.inkHairline}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 22,
+          }}
+        >
+          {state === "created" ? (
+            <Check size={26} style={{ color: v1.inkPrimary }} strokeWidth={1.6} />
+          ) : (
+            <Clock size={26} style={{ color: v1.inkPrimary }} strokeWidth={1.6} />
+          )}
+        </motion.div>
+
+        <motion.h1
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18, duration: 0.32, ease: EASE }}
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontSize: 30,
+            color: v1.inkPrimary,
+            lineHeight: 1.2,
+            letterSpacing: "-0.005em",
+            margin: "0 0 14px",
+          }}
+        >
+          {state === "created"
+            ? "You\u2019re on the list."
+            : state === "already_pending"
+              ? "We already have you."
+              : "You\u2019re already in."}
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.28, duration: 0.32, ease: EASE }}
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontStyle: "italic",
+            fontSize: 16,
+            color: v1.inkMid,
+            lineHeight: 1.65,
+            maxWidth: 320,
+            margin: "0 auto 24px",
+          }}
+        >
+          {state === "created" && (
+            <>We&rsquo;ll review your request and be in touch soon with next steps to get your booth on Treehouse.</>
+          )}
+          {state === "already_pending" && (
+            <>Your request is in the queue. We&rsquo;ll be in touch when your shelf is ready to fill.</>
+          )}
+          {state === "already_approved" && (
+            <>Your booth is already approved. Open Treehouse and sign in with this email to start filling your shelf.</>
+          )}
+        </motion.p>
+
+        {/* Email echo line primitive */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.38, duration: 0.32 }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "12px 0",
+            borderTop: `0.5px solid ${v1.inkHairline}`,
+            borderBottom: `0.5px solid ${v1.inkHairline}`,
+            width: "100%",
+            maxWidth: 320,
+            marginBottom: 0,
+          }}
+        >
+          <Mail size={14} style={{ color: v1.inkMuted, flexShrink: 0 }} strokeWidth={1.6} />
+          <span style={{ fontFamily: FONT_SYS, fontSize: 14, color: v1.inkMuted, flexShrink: 0 }}>
+            {state === "created" ? "Sent to\u00a0" : "On file for\u00a0"}
+          </span>
+          <span
+            style={{
+              fontFamily: FONT_SYS,
+              fontSize: 14,
+              color: v1.inkPrimary,
+              fontWeight: 500,
+              wordBreak: "break-all",
+              minWidth: 0,
+            }}
+          >
+            {email}
+          </span>
+        </motion.div>
+
+        {/* End-of-path text links (no filled CTA) */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.48, duration: 0.32, ease: EASE }}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 20,
+            alignItems: "center",
+            marginTop: 32,
+          }}
+        >
+          {state === "already_approved" ? (
+            <>
+              <a
+                onClick={onGoSignIn}
+                style={{
+                  fontFamily: FONT_IM_FELL,
+                  fontStyle: "italic",
+                  fontSize: 16,
+                  color: v1.inkPrimary,
+                  textDecoration: "underline",
+                  textDecorationStyle: "dotted",
+                  textDecorationColor: v1.inkFaint,
+                  textUnderlineOffset: 4,
+                  cursor: "pointer",
+                }}
+              >
+                Sign in to your booth &rarr;
+              </a>
+              <a
+                onClick={onGoHome}
+                style={{
+                  fontFamily: FONT_IM_FELL,
+                  fontStyle: "italic",
+                  fontSize: 15,
+                  color: v1.inkMuted,
+                  textDecoration: "underline",
+                  textDecorationStyle: "dotted",
+                  textDecorationColor: v1.inkFaint,
+                  textUnderlineOffset: 4,
+                  cursor: "pointer",
+                }}
+              >
+                Explore the feed
+              </a>
+            </>
+          ) : (
+            <>
+              <a
+                onClick={onGoHome}
+                style={{
+                  fontFamily: FONT_IM_FELL,
+                  fontStyle: "italic",
+                  fontSize: 16,
+                  color: v1.inkPrimary,
+                  textDecoration: "underline",
+                  textDecorationStyle: "dotted",
+                  textDecorationColor: v1.inkFaint,
+                  textUnderlineOffset: 4,
+                  cursor: "pointer",
+                }}
+              >
+                Explore the feed &rarr;
+              </a>
+              <a
+                onClick={onReset}
+                style={{
+                  fontFamily: FONT_IM_FELL,
+                  fontStyle: "italic",
+                  fontSize: 15,
+                  color: v1.inkMuted,
+                  textDecoration: "underline",
+                  textDecorationStyle: "dotted",
+                  textDecorationColor: v1.inkFaint,
+                  textUnderlineOffset: 4,
+                  cursor: "pointer",
+                }}
+              >
+                Go back
+              </a>
+            </>
+          )}
+        </motion.div>
+
+        {state === "already_pending" && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.58, duration: 0.32 }}
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontStyle: "italic",
+              fontSize: 13,
+              color: v1.inkMuted,
+              lineHeight: 1.65,
+              maxWidth: 320,
+              margin: "28px auto 0",
+            }}
+          >
+            Sent to the wrong address, or need to update something? Reply to the receipt email we sent you and we&rsquo;ll fix it.
+          </motion.p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Exported default with Suspense boundary ─────────────────────────────────
 export default function VendorRequestPage() {
   return (
     <Suspense>

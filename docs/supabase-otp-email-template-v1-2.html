@@ -1,0 +1,95 @@
+{# Treehouse — Supabase OTP email template (v1.2)
+   Session 32 (2026-04-20) — paste this HTML into:
+     Supabase Dashboard → Authentication → Email Templates → Magic Link
+     Supabase Dashboard → Authentication → Email Templates → Confirm Signup
+   BOTH templates get this exact HTML. Save each separately.
+
+   Subject line (set in the Subject field, NOT in the template):
+     Your Treehouse sign-in code
+
+   Session 32 changes from prior version:
+     - Paper-as-surface (#e8ddc7); no inner white card
+     - IM Fell retired → all Georgia for cross-client compatibility
+     - Brand lockup at Georgia 26px semibold, centered, thin hairline below
+     - OTP code in paper-wash pill at 34px with user-select:all for long-press copy
+     - Removed the magic-link button entirely — OTP-only path per v1.1k + session 6
+
+   Uses Supabase template vars:
+     {{ .Token }}          — the 6-digit code
+     (DO NOT rely on {{ .ConfirmationURL }} here — PWA session-continuity fix)
+#}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Treehouse</title>
+</head>
+<body style="margin: 0; padding: 0; background: #e8ddc7; font-family: Georgia, 'Times New Roman', serif;">
+  <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
+    Your Treehouse sign-in code is ready.
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #e8ddc7;">
+    <tr>
+      <td align="center" style="padding: 36px 16px 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 540px;">
+          <!-- Brand lockup -->
+          <tr>
+            <td align="center" style="padding: 8px 0 22px; border-bottom: 1px solid rgba(42,26,10,0.18);">
+              <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 26px; font-weight: 600; color: #2a1a0a; letter-spacing: -0.01em; line-height: 1.1;">
+                Treehouse
+              </p>
+              <p style="margin: 6px 0 0; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 11px; color: #4a3520; letter-spacing: 0.02em; line-height: 1.5;">
+                Kentucky &amp; Southern Indiana
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding: 24px 10px 0;">
+              <p style="margin: 0 0 16px; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; line-height: 1.7; color: #2a1a0a;">
+                Hi there,
+              </p>
+              <p style="margin: 0 0 16px; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; line-height: 1.7; color: #2a1a0a;">
+                Here's your sign-in code. Enter it on the Treehouse sign-in screen to finish.
+              </p>
+
+              <!-- OTP pill -->
+              <div style="margin: 24px 0 8px; padding: 22px 18px 18px; background: rgba(255,250,234,0.55); border: 1px solid rgba(42,26,10,0.18); border-radius: 10px; text-align: center;">
+                <p style="margin: 0 0 10px; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 12px; color: #4a3520; text-transform: uppercase; letter-spacing: 0.15em;">
+                  Your code
+                </p>
+                <code style="display: inline-block; font-family: -apple-system, 'Segoe UI', Roboto, monospace; font-size: 34px; letter-spacing: 0.3em; color: #2a1a0a; font-weight: 500; user-select: all; -webkit-user-select: all; padding: 4px 0 0 0.3em;">{{ .Token }}</code>
+                <p style="margin: 10px 0 0; font-family: Georgia, 'Times New Roman', serif; font-size: 12px; color: #4a3520; font-style: italic;">
+                  Expires in 10 minutes.
+                </p>
+              </div>
+
+              <p style="margin: 22px 0 16px; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; line-height: 1.7; color: #2a1a0a;">
+                If you didn't ask for this, you can ignore this email.
+              </p>
+
+              <p style="margin: 28px 0 0; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 16px; line-height: 1.5; color: #4a3520;">
+                &mdash; Treehouse
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 28px 10px 0;">
+              <div style="border-top: 1px solid rgba(42,26,10,0.18); padding-top: 22px; text-align: center;">
+                <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 11px; color: rgba(42,26,10,0.28); line-height: 1.6;">
+                  This code was requested from Treehouse. Codes expire and can only be used once.
+                </p>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

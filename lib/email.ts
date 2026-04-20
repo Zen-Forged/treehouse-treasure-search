@@ -1,39 +1,37 @@
 // lib/email.ts
-// Resend-backed transactional emails for vendor onboarding.
+// Resend-backed transactional emails for vendor onboarding — v1.2 refresh (session 32).
 //
 // Two public functions:
 //   sendRequestReceived(payload)       — Email #1 per onboarding-journey.md
 //   sendApprovalInstructions(payload)  — Email #2 per onboarding-journey.md
 //
-// Design notes:
-//  - Best-effort delivery. Both functions catch and log errors rather than
-//    throwing. A failed email should not fail the underlying HTTP request
-//    (vendor_requests insert or approval). The caller should still succeed
-//    from the user's perspective — the email is a notification, not part of
-//    the transaction. Retry/DLQ is explicitly out of scope for beta.
-//  - No Resend dependency is added to package.json. We use fetch() against
-//    Resend's REST API directly — simpler, fewer bytes, no SDK version to
-//    maintain.
-//  - If RESEND_API_KEY is unset, functions no-op with a console warning.
-//    This keeps local dev frictionless when someone hasn't set up Resend.
-//  - Sending domain must match what's configured in Resend dashboard and
-//    Shopify DNS (see CLAUDE.md DNS STATE). We send from:
-//        Treehouse <hello@kentuckytreehouse.com>
-//    Reply-to is admin's email so vendors can hit reply.
+// Session 32 v1.2 changes:
+//  - Moved off v0.2 white-card chrome onto v1.1l paper-as-surface (#e8ddc7 bg,
+//    no inner card). Paper IS the container.
+//  - IM Fell English retired from all three email templates. Brand lockup,
+//    eyebrows, signatures now all Georgia. Safest across every mail client
+//    (Outlook/Gmail strip external font loads), zero external font request,
+//    fastest render. Sprint 5 typography reassessment will revisit IM Fell's
+//    use elsewhere in the app.
+//  - Email #1 copy updated to acknowledge the new booth photo (added v1.2)
+//    and drop the "we'll take a look at your booth at X" visit implication.
+//  - Email #2 clickable CTA link retired — it opened in a Safari tab on
+//    iPhones with the PWA installed, breaking session continuity. New copy:
+//    "Open Treehouse on your phone, tap Sign In, and enter this email:"
+//    with the address echoed in a copyable pill.
+//  - Salutations use first_name only ("Hi Sarah", not "Hi Sarah Morrison").
 //
-// Copy is deliberately warm and observational per Brand Rules in
-// docs/DECISION_GATE.md. No transactional/marketing-speak.
+// Design notes (preserved from session 8):
+//  - Best-effort delivery. Both functions catch and log errors rather than
+//    throwing. A failed email should not fail the underlying HTTP request.
+//  - No Resend SDK dependency — native fetch against Resend REST API.
+//  - RESEND_API_KEY unset → no-op with console warning (keeps local dev
+//    frictionless).
+//  - From: Treehouse <hello@kentuckytreehouse.com>. Reply-to is admin email.
 
 const RESEND_API_URL = "https://api.resend.com/emails";
+const FROM_ADDRESS   = "Treehouse <hello@kentuckytreehouse.com>";
 
-// From-address must live on a verified Resend domain. We use a dedicated
-// transactional alias on the root zone (Shopify DNS has the Resend DKIM
-// records — session 4's setup). Display name gives the email a human face.
-const FROM_ADDRESS = "Treehouse <hello@kentuckytreehouse.com>";
-
-// Where the app lives. Used to build absolute sign-in URLs in email bodies.
-// Falls back to the custom domain if the env var is missing (e.g. local dev
-// without NEXT_PUBLIC_SITE_URL set).
 function getSiteUrl(): string {
   return process.env.NEXT_PUBLIC_SITE_URL ?? "https://app.kentuckytreehouse.com";
 }
@@ -41,16 +39,22 @@ function getSiteUrl(): string {
 // ── Public types ──────────────────────────────────────────────────────────────
 
 export interface RequestReceivedPayload {
-  name:       string;
-  email:      string;
-  mallName?:  string | null;
+  /**
+   * First name used for the salutation. v1.2 prefers first_name alone
+   * ("Hi Sarah") over the legacy full-name salutation ("Hi Sarah Morrison").
+   * Callers that still only have a combined `name` can pass just that string
+   * here — the template will use it verbatim.
+   */
+  firstName: string;
+  email:     string;
+  mallName?: string | null;
 }
 
 export interface ApprovalPayload {
-  name:          string;
-  email:         string;
-  mallName?:     string | null;
-  boothNumber?:  string | null;
+  firstName:    string;
+  email:        string;
+  mallName?:    string | null;
+  boothNumber?: string | null;
 }
 
 // ── Email #1 — Request received (receipt) ────────────────────────────────────
@@ -58,41 +62,36 @@ export interface ApprovalPayload {
 /**
  * Sends the "we got your request" receipt email.
  *
- * Triggered by:
- *   - POST /api/vendor-request (after successful vendor_requests insert)
+ * Triggered by: POST /api/vendor-request (after successful insert)
  *
- * Doubles as a data-integrity check: if the vendor typo'd their email, they
- * won't receive this email and will notice immediately, before admin wastes
- * time approving a dead-letter request.
+ * v1.2: copy acknowledges the booth photo + drops the visit implication.
+ * Doubles as a data-integrity check — a typo'd email will bounce and the
+ * vendor will notice before admin wastes time approving a dead-letter
+ * request.
  */
 export async function sendRequestReceived(
   payload: RequestReceivedPayload,
 ): Promise<{ ok: boolean; error?: string }> {
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
-  const subject    = `We got your Treehouse request, ${payload.name}`;
-
-  const mallLine = payload.mallName
-    ? `We'll take a look at your booth at ${escapeHtml(payload.mallName)} and be in touch when your shelf is ready to fill.`
-    : `We'll take a look and be in touch when your shelf is ready to fill.`;
+  const firstName  = payload.firstName.trim() || "there";
+  const subject    = `We got your Treehouse request, ${firstName}`;
 
   const html = renderEmailShell({
     preheader: "Thanks for putting your booth forward — we'll be in touch.",
     bodyHtml: `
-      <p style="${pStyle}">Hi ${escapeHtml(payload.name)},</p>
-      <p style="${pStyle}">Thanks for putting your booth forward.</p>
-      <p style="${pStyle}">${mallLine}</p>
-      <p style="${pStyle}">— Treehouse</p>
+      <p style="${pStyle}">Hi ${escapeHtml(firstName)},</p>
+      <p style="${pStyle}">Thanks — we got your booth photo and details.</p>
+      <p style="${pStyle}">We'll take a look and be in touch when your shelf is ready to fill.</p>
+      <p style="${signStyle}">&mdash; Treehouse</p>
     `,
   });
 
   const text = [
-    `Hi ${payload.name},`,
+    `Hi ${firstName},`,
     ``,
-    `Thanks for putting your booth forward.`,
+    `Thanks — we got your booth photo and details.`,
     ``,
-    payload.mallName
-      ? `We'll take a look at your booth at ${payload.mallName} and be in touch when your shelf is ready to fill.`
-      : `We'll take a look and be in touch when your shelf is ready to fill.`,
+    `We'll take a look and be in touch when your shelf is ready to fill.`,
     ``,
     `— Treehouse`,
   ].join("\n");
@@ -112,55 +111,61 @@ export async function sendRequestReceived(
  * Sends the "your booth is ready — sign in" email after admin approves a
  * vendor request.
  *
- * Triggered by:
- *   - POST /api/admin/vendor-requests { action: "approve" } (after vendor
- *     row is created and request status flipped to "approved")
+ * Triggered by: POST /api/admin/vendor-requests { action: "approve" }
  *
- * The CTA URL is the sign-in entry point with ?redirect=/setup. On OTP
- * verify, /login honors the redirect param and forwards to /setup, which
- * calls /api/setup/lookup-vendor to link vendors.user_id = auth.user.id.
+ * v1.2: no clickable in-app link (PWA session-continuity fix). Vendor opens
+ * Treehouse themselves; email address is echoed in a copyable pill so the
+ * vendor can long-press-to-copy if they don't know it by heart.
  */
 export async function sendApprovalInstructions(
   payload: ApprovalPayload,
 ): Promise<{ ok: boolean; error?: string }> {
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
-  const subject    = `Your Treehouse booth is ready, ${payload.name}`;
-
-  const signInUrl = `${getSiteUrl()}/login?redirect=${encodeURIComponent("/setup")}`;
+  const firstName  = payload.firstName.trim() || "there";
+  const subject    = `Your Treehouse booth is ready, ${firstName}`;
 
   const mallLine = payload.mallName
     ? `Your booth at ${escapeHtml(payload.mallName)} is ready to start filling with finds.`
     : `Your booth is ready to start filling with finds.`;
 
   const html = renderEmailShell({
-    preheader: "Your booth is ready — tap to sign in.",
+    preheader: "Your booth is ready — open Treehouse to sign in.",
     bodyHtml: `
-      <p style="${pStyle}">Hi ${escapeHtml(payload.name)},</p>
+      <p style="${pStyle}">Hi ${escapeHtml(firstName)},</p>
       <p style="${pStyle}">${mallLine}</p>
-      <p style="${pStyle}">Tap the link below to sign in — we'll email you a quick 6-digit code.</p>
-      <p style="${pStyle} margin-top: 28px; margin-bottom: 28px;">
-        <a href="${signInUrl}" style="${ctaStyle}">
-          Sign in to your booth →
-        </a>
-      </p>
-      <p style="${pStyle} color: #8a8478; font-size: 13px;">
-        Or paste this link into your browser:<br>
-        <span style="word-break: break-all;">${signInUrl}</span>
-      </p>
-      <p style="${pStyle}">— Treehouse</p>
+
+      <!-- Instruction box (paper-wash primitive) -->
+      <div style="${boxStyle}">
+        <p style="${boxPStyle}">
+          To sign in, open <strong style="color:#2a1a0a;font-weight:600;">Treehouse</strong> on your phone, tap <strong style="color:#2a1a0a;font-weight:600;">Sign In</strong>, and enter this email:
+        </p>
+        <p style="${boxPStyle} text-align:center; margin-bottom: 10px;">
+          <span style="${echoPillStyle}">${escapeHtml(payload.email)}</span>
+        </p>
+        <p style="${boxPStyle} margin-bottom: 0;">
+          We'll send you a 6-digit code to finish signing in.
+        </p>
+      </div>
+
+      <p style="${pStyle} margin-top: 22px;">Welcome to the search.</p>
+      <p style="${signStyle}">&mdash; Treehouse</p>
     `,
   });
 
   const text = [
-    `Hi ${payload.name},`,
+    `Hi ${firstName},`,
     ``,
     payload.mallName
       ? `Your booth at ${payload.mallName} is ready to start filling with finds.`
       : `Your booth is ready to start filling with finds.`,
     ``,
-    `Tap the link below to sign in — we'll email you a quick 6-digit code.`,
+    `To sign in, open Treehouse on your phone, tap Sign In, and enter this email:`,
     ``,
-    signInUrl,
+    `  ${payload.email}`,
+    ``,
+    `We'll send you a 6-digit code to finish signing in.`,
+    ``,
+    `Welcome to the search.`,
     ``,
     `— Treehouse`,
   ].join("\n");
@@ -188,7 +193,6 @@ async function sendEmail(input: SendEmailInput): Promise<{ ok: boolean; error?: 
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {
-    // No-op in local dev when Resend isn't configured. Don't fail loudly.
     console.warn(
       "[email] RESEND_API_KEY not set — skipping send to",
       maskEmail(input.to),
@@ -236,15 +240,32 @@ async function sendEmail(input: SendEmailInput): Promise<{ ok: boolean; error?: 
   }
 }
 
-// ── Internal: HTML template shell ────────────────────────────────────────────
+// ── Internal: HTML template shell (v1.2 paper-as-surface, all Georgia) ──────
 
-const pStyle     = "margin: 0 0 16px; font-family: Georgia, serif; font-size: 16px; line-height: 1.7; color: #1a1a18;";
-const ctaStyle   = "display: inline-block; padding: 14px 28px; background: #1e4d2b; color: #ffffff; text-decoration: none; border-radius: 10px; font-family: system-ui, sans-serif; font-size: 15px; font-weight: 600;";
+// Georgia throughout for maximum mail-client compatibility. No external font
+// requests. Paper #e8ddc7 is the page background; no inner card.
+const SERIF  = "Georgia, 'Times New Roman', serif";
+const INK    = "#2a1a0a";
+const INKMID = "#4a3520";
+const PAPER  = "#e8ddc7";
+const HAIR   = "rgba(42,26,10,0.18)";
+const FAINT  = "rgba(42,26,10,0.28)";
+
+const pStyle    = `margin: 0 0 16px; font-family: ${SERIF}; font-size: 16px; line-height: 1.7; color: ${INK};`;
+const signStyle = `margin: 28px 0 0; font-family: ${SERIF}; font-style: italic; font-size: 16px; line-height: 1.5; color: ${INKMID};`;
+
+// Instruction box — paper-wash primitive matching the v1.1k success-screen
+// surface. Translucent postit wash on paperCream, inkHairline border.
+const boxStyle  = `margin: 24px 0 8px; padding: 18px 18px; background: rgba(255,250,234,0.55); border: 1px solid ${HAIR}; border-radius: 10px;`;
+const boxPStyle = `margin: 0 0 10px; font-family: ${SERIF}; font-size: 15px; line-height: 1.65; color: ${INKMID};`;
+
+// Echo pill — system-ui on paper-wash tab background, matches the v1.1k
+// email echo line primitive style where possible. Stays small and quiet.
+const echoPillStyle = `display: inline-block; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background: rgba(42,26,10,0.06); padding: 3px 10px; border-radius: 4px; font-size: 14px; color: ${INK}; font-weight: 500; letter-spacing: -0.005em;`;
 
 function renderEmailShell(opts: { preheader: string; bodyHtml: string }): string {
-  // Inline styles for maximum email-client compatibility.
-  // Preheader is the hidden preview text Gmail / Apple Mail show in the
-  // inbox list.
+  // Table-based layout for email-client compatibility. Paper as surface —
+  // no inner white card. Body content sits directly on paperCream.
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -252,38 +273,41 @@ function renderEmailShell(opts: { preheader: string; bodyHtml: string }): string
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Treehouse</title>
 </head>
-<body style="margin: 0; padding: 0; background: #f0ede6; font-family: Georgia, serif;">
+<body style="margin: 0; padding: 0; background: ${PAPER}; font-family: ${SERIF};">
   <!-- Preheader — hidden, drives inbox preview -->
   <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
     ${escapeHtml(opts.preheader)}
   </div>
 
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f0ede6;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: ${PAPER};">
     <tr>
-      <td align="center" style="padding: 40px 16px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
-               style="max-width: 520px; background: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 12px rgba(26,24,16,0.06);">
+      <td align="center" style="padding: 36px 16px 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 540px;">
+          <!-- Brand lockup — Georgia semibold 26px, centered, thin hairline below -->
           <tr>
-            <td style="padding: 32px 36px 8px;">
-              <!-- Brand lockup -->
-              <p style="margin: 0; font-family: Georgia, serif; font-size: 20px; font-weight: 700; color: #1e4d2b; letter-spacing: -0.2px;">
+            <td align="center" style="padding: 8px 0 22px; border-bottom: 1px solid ${HAIR};">
+              <p style="margin: 0; font-family: ${SERIF}; font-size: 26px; font-weight: 600; color: ${INK}; letter-spacing: -0.01em; line-height: 1.1;">
                 Treehouse
               </p>
-              <p style="margin: 2px 0 0; font-family: Georgia, serif; font-style: italic; font-size: 11px; color: #8a8478; letter-spacing: 1px; text-transform: uppercase;">
-                Local finds, before the drive
+              <p style="margin: 6px 0 0; font-family: ${SERIF}; font-style: italic; font-size: 11px; color: ${INKMID}; letter-spacing: 0.02em; line-height: 1.5;">
+                Kentucky &amp; Southern Indiana
               </p>
             </td>
           </tr>
+          <!-- Body -->
           <tr>
-            <td style="padding: 20px 36px 32px;">
+            <td style="padding: 24px 10px 0;">
               ${opts.bodyHtml}
             </td>
           </tr>
+          <!-- Footer — quiet, italic, faint -->
           <tr>
-            <td style="padding: 20px 36px 32px; border-top: 1px solid rgba(26,26,24,0.08);">
-              <p style="margin: 0; font-family: Georgia, serif; font-size: 11px; color: #b0aa9e; line-height: 1.6;">
-                You're receiving this because you submitted a booth request to Treehouse. Reply to this email if anything looks off.
-              </p>
+            <td style="padding: 28px 10px 0;">
+              <div style="border-top: 1px solid ${HAIR}; padding-top: 22px; text-align: center;">
+                <p style="margin: 0; font-family: ${SERIF}; font-size: 11px; color: ${FAINT}; line-height: 1.6;">
+                  You're receiving this because you submitted a booth request to Treehouse. Reply to this email if anything looks off.
+                </p>
+              </div>
             </td>
           </tr>
         </table>
@@ -296,10 +320,6 @@ function renderEmailShell(opts: { preheader: string; bodyHtml: string }): string
 
 // ── Internal: helpers ────────────────────────────────────────────────────────
 
-/**
- * Escape HTML-unsafe characters in user-provided strings before inlining
- * into HTML email templates.
- */
 function escapeHtml(input: string): string {
   return input
     .replace(/&/g, "&amp;")
@@ -309,10 +329,6 @@ function escapeHtml(input: string): string {
     .replace(/'/g, "&#39;");
 }
 
-/**
- * Redact the local part of an email for log lines.
- * "alice@example.com" → "a***@example.com"
- */
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
   if (!local || !domain) return "[invalid-email]";
