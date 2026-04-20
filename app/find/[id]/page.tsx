@@ -59,7 +59,7 @@ import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
 import { getCachedUserId, getSession, isAdmin } from "@/lib/auth";
 import { v1, FONT_IM_FELL, FONT_SYS, FONT_POSTIT_NUMERAL } from "@/lib/tokens";
-import { flagKey, mapsUrl, boothNumeralSize } from "@/lib/utils";
+import { flagKey, mapsUrl, boothNumeralSize, loadFollowedIds } from "@/lib/utils";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import type { Post } from "@/types/treehouse";
@@ -358,14 +358,18 @@ function IconBubble({
 // replaces the normal Find Detail when a shopper lands on a sold find. Owner
 // path stays on the normal layout. No photograph, no post-it, no price —
 // the page IS the closure.
+//
+// Session 36 Q-003 addendum: flaggedCount threaded through for BottomNav badge.
 function SoldLanding({
   vendorSlug,
   vendorName,
   onBack,
+  flaggedCount,
 }: {
   vendorSlug: string | null;
   vendorName: string | null;
   onBack: () => void;
+  flaggedCount: number;
 }) {
   return (
     <div
@@ -514,7 +518,7 @@ function SoldLanding({
       <div style={{ flex: 1, minHeight: 20 }} />
 
       <div style={{ paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }} />
-      <BottomNav active={null} />
+      <BottomNav active={null} flaggedCount={flaggedCount} />
     </div>
   );
 }
@@ -529,6 +533,29 @@ export default function FindDetailPage() {
   const [isMyPost,      setIsMyPost]      = useState(false);
   const [, setShelfHasItems]              = useState(false);
   const [isSaved,       setIsSaved]       = useState(false);
+
+  // Q-003 addendum (session 36): bookmark count for BottomNav badge on this
+  // page. Unlike Home / My Booth, Find Detail can toggle the count via the
+  // heart bubble, so we also resync inside handleToggleSave — not just on
+  // mount / focus / visibilitychange.
+  const [bookmarkCount, setBookmarkCount] = useState(0);
+
+  useEffect(() => {
+    function sync() {
+      try { setBookmarkCount(loadFollowedIds().size); } catch {}
+    }
+    sync();
+    function onFocus() { sync(); }
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") sync();
+    }
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -551,6 +578,9 @@ export default function FindDetailPage() {
       if (next) safeStorage.setItem(flagKey(id), "1");
       else      safeStorage.removeItem(flagKey(id));
     } catch {}
+    // Q-003 addendum (session 36): resync badge count after in-page toggle so
+    // the BottomNav heart badge reflects the save immediately.
+    try { setBookmarkCount(loadFollowedIds().size); } catch {}
   }
 
   async function handleShare() {
@@ -657,6 +687,7 @@ export default function FindDetailPage() {
         vendorSlug={vendorSlug}
         vendorName={vendorName}
         onBack={() => router.back()}
+        flaggedCount={bookmarkCount}
       />
     );
   }
@@ -1128,7 +1159,7 @@ export default function FindDetailPage() {
           Find Detail is the reading surface; Edit is the management surface. */}
 
       <div style={{ paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }} />
-      <BottomNav active={null} />
+      <BottomNav active={null} flaggedCount={bookmarkCount} />
     </div>
   );
 }
