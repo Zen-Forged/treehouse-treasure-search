@@ -1,10 +1,86 @@
-# 🔴 Active Security Incident — Supabase service_role key exposed in public git history
+# ✅ Resolved Security Incident — Supabase service_role key exposed in public git history
 
-> Status: **NOT RESOLVED.** Rotation deferred to next session (will be session 29 or a dedicated "session 28.5" before v1.2 code sprint).
+> Status: **RESOLVED** 2026-04-20 (session 29 morning).
 > Surfaced: session 28 (2026-04-19) during project-root cruft audit.
-> Severity: High — public repo, valid-for-10-years JWT, full RLS-bypass capability.
+> Resolved: session 29 (2026-04-20) — full rotation + history purge completed in one focused ~60 min session.
+> Severity: High at time of exposure — public repo, valid-for-10-years JWT, full RLS-bypass capability. Neutralized at all layers.
 
 ---
+
+## Resolution summary
+
+Session 29 opened with rotation as the mandatory top priority per session 28's handoff. Completed full migration to Supabase's new API key system (`sb_publishable_*` + `sb_secret_*`) instead of rotating the legacy HS256 JWT secret. The migration resolved session 28's hesitation cleanly: the new key system is exactly the path Supabase's docs recommend for exactly this scenario (*"If you are still using the JWT-based `service_role` key, replace the `service_role` key with a new secret key instead"*).
+
+Key moves, in order:
+
+1. **New secret key issued.** Confirmed Supabase had auto-created a `default` `sb_secret_*` key when the project migrated to the new key system. No creation needed — used existing.
+2. **`SUPABASE_SERVICE_ROLE_KEY` swapped on both local (`.env.local`) and Vercel.** Redeployed. Verified end-to-end via live `/admin` sign-in — Requests tab populated, confirming `requireAdmin` → `getServiceClient` → service-role query path works with the new key.
+3. **Discovered Supabase UI nuance:** the legacy-keys-disable switch is all-or-nothing (both `anon` and `service_role` disable together), not per-key. This required expanding scope to also rotate the anon key before flipping the switch.
+4. **Anon key migration.** Replaced legacy anon JWT with the named `treehouse_search_prod_client` publishable key (`sb_publishable_*`) that was already created in Supabase but unused. Swapped on local + Vercel, redeployed, verified all five public read paths (home feed, find detail, vendor shelf, find map, admin).
+5. **Legacy keys disabled.** Clicked "Disable JWT-based API keys" in Supabase. Verified the exposed service_role JWT now returns HTTP 401 via direct curl against `/rest/v1/malls` with the leaked token as `apikey`. Production simultaneously verified still healthy.
+6. **Working-tree cleanup.** Deleted `check-vendor-requests.js`. Added `check-*.js` + `scripts/debug/` patterns to `.gitignore`. Committed + pushed as `05eaeff`.
+7. **Git history purge.** Backed up repo. Ran `git filter-repo --path check-vendor-requests.js --invert-paths --force`. Filter-repo stripped the origin remote as a safety feature — re-added it and force-pushed rewritten history to GitHub. Commit `3492f8d` no longer exists; every commit from that point forward has a new hash. Verified with `git log --all --oneline -- check-vendor-requests.js` returning empty.
+8. **Stowaway branch cleanup.** Discovered `claude/nervous-raman` branch (leftover from early Claude Code session) was pushed alongside main during force-push. Verified it was an ancestor of main (pure duplicate, no unique content). Deleted worktree at `.claude/worktrees/nervous-raman`, deleted branch locally, deleted branch on GitHub.
+9. **Secrets audit.** Ran `git log --all -p | grep -iE "(eyJhbGci|sk-ant-|sk_live|sk_test|whsec_|re_[A-Za-z0-9]{20,}|apify_api_|ANTHROPIC_API_KEY|SUPABASE_SERVICE_ROLE_KEY|RESEND_API_KEY|SERPAPI_KEY)"`. Output contained only false positives (env var names in docs, this incident doc's own prose, the commit message from the rotation commit itself). Supplemental check `git log --all -p | grep -c "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"` returned `0` — zero Supabase-shaped JWTs anywhere in history.
+
+## Current state (post-resolution)
+
+- **Production server:** runs on `sb_secret_Bhtc7...` (new secret API key).
+- **Production client:** runs on `sb_publishable_tK5EpAqb...` (named `treehouse_search_prod_client`).
+- **Legacy JWT keys:** both disabled at Supabase's edge. Compromised service_role JWT returns HTTP 401 from Supabase for any caller (confirmed via direct curl).
+- **Working tree:** no hardcoded keys anywhere. `.gitignore` blocks `check-*.js` and `scripts/debug/`.
+- **Git history:** `check-vendor-requests.js` scrubbed from all 340 commits, all branches. Public repo clean.
+- **GitHub:** main branch force-pushed with rewritten history. `claude/*` stowaway branch deleted.
+
+## Timeline
+
+- **~20 min read docs** — Fetched `/docs/guides/api/api-keys` and related Supabase docs end-to-end to resolve session 28's uncertainty about whether the SDK handles `sb_secret_*` transparently for `SUPABASE_SERVICE_ROLE_KEY`-shaped usage. Answer was unambiguous in official docs: *"You can initialize any version of the Supabase Client libraries with the new values without any additional changes, and we don't expect any backward compatibility issues."* Zero code changes needed.
+- **~10 min** — Service role key swap + Vercel env update + redeploy + verify.
+- **~10 min** — Scope expansion when the both-at-once disable UI surfaced. Anon key migration + Vercel env update + redeploy + verify public read paths.
+- **~3 min** — Legacy key disable + verify the exposed key returns 401.
+- **~10 min** — Working tree cleanup + commit + push.
+- **~10 min** — History purge + stowaway branch cleanup.
+- **~3 min** — Secrets audit.
+- **~60 min total** — within the estimate range (45–90 min) in session 28's handoff.
+
+## Postmortem — what worked, what to keep
+
+**What worked:**
+
+- **Session 28's decision to defer was correct.** At 8:30 PM on session 28 the plan hedged between two paths and the Supabase UI was unfamiliar. Morning session 29 had clarity on both. One night of additional exposure against a 28-session-old leak was the right trade.
+- **Docs-first approach.** Opened session 29 by fetching and reading the three Supabase docs (signing keys, rotation troubleshooting, new API keys) end-to-end before touching anything. This resolved session 28's specific uncertainty (does the SDK handle `sb_secret_*` for service role) in the first 15 minutes and made every subsequent click confident.
+- **Stepwise verification.** Five-step verification sweep after the anon key swap caught nothing (everything passed), but the discipline of naming what to check protected against the obvious failure mode of breaking the shopper-facing feed while in rotation mode.
+- **Backup before destructive ops.** Full repo backup before `git filter-repo` was 10 seconds of insurance against the most irreversible operation of the session. Not needed, but the habit should stay.
+- **Verification via the actual exposure vector.** Curl test using the *exposed JWT from git history* (not the new key) as the confirmation that disable worked. This is the correct check — tests the attacker's exact capability.
+
+**What the plan adjusted mid-session:**
+
+- Session 28's Path A sketch assumed service-role could rotate independently. Reality: Supabase's Legacy-keys-disable UI is both-or-neither. Scope expanded to full migration (anon + service). Took ~10 extra minutes but ended in cleaner state (no lingering legacy keys at all).
+- Session 28's plan treated the secrets audit as the final step. Reality: history rewrite surfaced a stowaway `claude/*` branch that needed separate handling first. Added the branch/worktree cleanup step.
+
+**Small friction points worth naming (not problems, just observations for next time):**
+
+- First edit to `.env.local` left an orphan JWT line above the new `SUPABASE_SERVICE_ROLE_KEY=` assignment — the old value wasn't fully replaced. Caught on the re-read verify step. If we'd committed before reading, the orphaned dead-JWT line would've been fine functionally but would've diluted the cleanup.
+- On the publishable key prefix request, full value was pasted instead of prefix. Publishable keys are public-by-design so it was safe, but naming it reinforced muscle memory for the secret-key case.
+- Force-pushing all branches (`--all`) pushed the dormant `claude/nervous-raman` branch to GitHub. Not a problem, just surfaced the stowaway one step earlier. Next time filter-repo is run, either explicitly limit the force-push to `main` only, or run branch cleanup *before* the filter-repo so there's only one branch in play.
+
+## Follow-ons added to backlog
+
+- **Tech rule:** Secrets scan before every commit / at sprint boundaries. Canonical grep pattern:
+  ```bash
+  git log --all -p | grep -iE "(eyJhbGci|sk-ant-|sk_live|sk_test|whsec_|re_[A-Za-z0-9]{20,}|apify_api_|ANTHROPIC_API_KEY|SUPABASE_SERVICE_ROLE_KEY|RESEND_API_KEY|SERPAPI_KEY)"
+  ```
+  Add to `docs/DECISION_GATE.md` Tech Rules. Run at each sprint boundary (cheap). Verify `0` matches for `"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"` as a targeted JWT-header check.
+- **Pattern to avoid:** any file at project root that ends in `.js` and is not a Next.js config. New files matching this shape get human review before commit.
+- **Mental model to carry:** Supabase's `sb_publishable_*` + `sb_secret_*` keys are now the default posture. Future sessions working with Supabase should not reflexively reach for the legacy JWT keys. If `lib/supabase.ts` or `lib/adminAuth.ts` ever see an `eyJhbGci...` value appear in an env var during dev, that's a regression signal, not a normal state.
+
+## Archive of the original handoff text (session 28 → 29)
+
+Original incident write-up below, preserved as a time capsule. Session 28's planning was ~80% right; the main correction was that Supabase's new API key system is the officially-recommended path (not merely "one option"), and the SDK handles the new key format transparently (resolving session 28's load-bearing uncertainty).
+
+---
+
+## [ORIGINAL SESSION-28 HANDOFF BELOW — preserved for reference]
 
 ## What happened
 

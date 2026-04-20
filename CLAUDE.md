@@ -61,92 +61,76 @@ Exception: a single chained command with `&&` stays in one block — that's one 
 
 ---
 
-## 🔴 TOP PRIORITY NEXT SESSION — SECURITY INCIDENT
-> See `docs/SECURITY-INCIDENT-2026-04-19.md` for full context and execution plan.
+## ✅ Session 29 (2026-04-20) — Security rotation complete
 
-**Supabase `service_role` key is exposed in PUBLIC git history.** File `check-vendor-requests.js` at project root contains a hardcoded plaintext service_role JWT (valid through 2036, full RLS-bypass capability). Committed in `3492f8d`. Repo is public. Key is identical to the current production `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` and Vercel. Rotation was attempted session 28 and deferred — Supabase's dashboard UI is in a transitional state and the rotation path wasn't clean enough to execute safely while tired.
+The session-28 🔴 SECURITY INCIDENT is fully resolved. Session 29 morning executed the full rotation plan: migrated to Supabase's new `sb_publishable_*` / `sb_secret_*` API key system, disabled both legacy JWT keys, purged `check-vendor-requests.js` from git history via `git filter-repo`, force-pushed rewritten history to GitHub, cleaned up a stowaway `claude/*` branch + worktree, ran a secrets audit (0 real matches), and closed 29-CRUFT (deleted 16 project-root agent-system cruft files). See `docs/SECURITY-INCIDENT-2026-04-19.md` — now marked RESOLVED with full postmortem.
 
-**Next session opens with rotation as the top priority, before any other work including the v1.2 code sprint.** Estimated 45–90 min. Full plan in `docs/SECURITY-INCIDENT-2026-04-19.md`.
-
-**Do NOT between now and next session:** commit-and-push work that would re-surface the file in diffs (the file itself is unchanged, so standard commits are fine); run `node check-vendor-requests.js`; share screen with Supabase API Keys page visible.
+No production code changes. Auth + data access paths are unchanged — `lib/adminAuth.ts:getServiceClient()` and the browser client both continue to work transparently with the new key format per Supabase SDK backward-compatibility guarantees.
 
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-19 (session 28 — v1.2 design approval + structural cleanup; three mockups approved, build spec on disk, CLAUDE.md split out of its historical bloat, agent-system cruft audited; security incident surfaced and deferred to next session; no production code)
+> Last updated: 2026-04-20 (session 29 — security rotation + 29-CRUFT cleanup; full Supabase API key migration + git history purge + project-root cruft removal; no production code changes)
 
-**Status:** ✅✅ Session 28 did two things on the work side, then surfaced a third issue that stopped the session early. On the work side: first, it produced three approved mockups for the v1.2 post-flow trilogy (Add Find sheet on `/my-shelf`, refreshed Review page, new Edit Listing page) and a build spec as the dev-handoff doc for session 29's code sprint. Second, it surfaced and fixed two meta-problems with how the system has been operating:
+**Status:** ✅✅✅ Session 29 was a focused 60-minute security session. Three wins, in order:
 
-**Meta-fix 1 — mockup-first becomes default.** The Design agent had been producing dense 14-paragraph commitment blocks in `docs/design-system.md` and asking David to audit them. David named the problem mid-session: that format requires executive-level design-system fluency to review, and revisions are expensive because every paragraph cross-references every other. The reversed pattern — mockup FIRST, plain-English decisions via `ask_user_input_v0`, build spec written AFTER approval as dev-handoff — landed three UI surfaces in one session with zero spec-doc reopens. Tech Rule promoted.
+**Win 1 — Supabase API key rotation (29-SEC).** Full migration from legacy HS256 JWT keys to Supabase's new `sb_publishable_*` + `sb_secret_*` API keys. Zero production code changes required — the Supabase SDK handles the new key format transparently per official docs. Server now runs on `sb_secret_Bhtc7...`; client now runs on `sb_publishable_tK5EpAqb...` (the named `treehouse_search_prod_client` key). Both legacy JWT keys disabled at Supabase's edge; the exposed service_role JWT from `check-vendor-requests.js` now returns HTTP 401 to any caller (confirmed via direct curl).
 
-**Meta-fix 2 — structural cleanup.** At ~599 lines CLAUDE.md had become three documents mashed together (live whiteboard + session archive + reference material duplicating CONTEXT.md). Historical archives moved to `docs/session-archive.md`; reference material deleted because it already existed in CONTEXT.md; this file now holds only the current whiteboard. Known-Gaps reconciliation rule (proposed session 26) promoted to DECISION_GATE. Project-root agent-system cruft from a prior experiment (15 files + one botched brace-expansion directory) audited and staged for removal (not yet deleted).
+**Win 2 — Git history purge.** `git filter-repo` scrubbed `check-vendor-requests.js` from all 340 commits on all branches. Force-pushed rewritten history to GitHub. Verified clean via `git log --all --oneline -- check-vendor-requests.js` returning empty, and supplementally via `grep -c "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"` returning `0`. Zero Supabase-shaped JWTs anywhere in history. Also cleaned up a dormant `claude/nervous-raman` branch + worktree (leftover from early Claude Code session, confirmed ancestor of main, zero content loss from deletion).
 
-**The third thing — a 🔴 security incident — surfaced during the cruft audit and ended the session early.** `check-vendor-requests.js` at project root contains a plaintext Supabase service_role key and was confirmed committed in git history (commit `3492f8d`). Repo is public. The exposed key is identical to the current production key. David and Claude started the rotation in Supabase and stopped partway through when the dashboard UI turned out to be in an awkward transitional state and Claude had given three different rotation plans inside of an hour — both signals that pushing through at 8:30 PM was higher-risk than waiting for morning. The incident is documented in `docs/SECURITY-INCIDENT-2026-04-19.md` with a full rotation plan for next session. **Production is still running on the same compromised key it was running on all session — no active rotation state, nothing mid-change.** The exposure is 28 sessions old; one more night is an acceptable delta against the risk of breaking production with a rushed fix.
+**Win 3 — Project-root cruft cleanup (29-CRUFT).** Deleted 15 agent-system experiment files + the `{app` botched-brace-expansion directory + `.session_state.json` + `tsconfig.tsbuildinfo` + empty `ai-text-demo/` scaffold. 16 files committed (`e2510ba`), ~4,856 lines removed. Working tree and `ls` output are now tidy; future sessions don't waste tokens wondering about `AGENT_SYSTEM_COORDINATOR.py`.
 
-**Next session (29) opens with the rotation, NOT the v1.2 code sprint.** Rotation is the top priority. Once resolved, v1.2 code sprint proceeds against `docs/design-system-v1.2-build-spec.md`. Est. rotation 45–90 min + v1.2 sprint 3–4 hours.
+The incident doc at `docs/SECURITY-INCIDENT-2026-04-19.md` is fully converted from 🔴 NOT RESOLVED to ✅ RESOLVED with complete postmortem (what worked, what adjusted mid-session, friction points worth naming, and three backlog follow-ons including a proposed "secrets scan" Tech Rule).
 
-### What shipped this session (28)
+**Next session (30) opens with v1.2 code sprint** against `docs/design-system-v1.2-build-spec.md`. That's the main deferred work from session 28 — three approved mockups, build spec ready. Est. 3–4 hours. No other blockers.
 
-**No production code changes.** Design work + structural doc work.
+### What shipped this session (29)
 
-**New mockups (all approved):**
-- `docs/mockups/add-find-sheet-v1-2.html` — Frame 3 (stripped) variant
-- `docs/mockups/review-page-v1-2.html` — "Publish" CTA, Title/Caption/Price order, full-photo-no-crop truth rule
-- `docs/mockups/edit-listing-v1-2.html` — Available/Sold toggle, Replace-photo pill, Remove-from-shelf quiet link
+**No production code changes.** Security + infrastructure work only.
 
-**New build spec (dev-handoff — David doesn't read):**
-- `docs/design-system-v1.2-build-spec.md` — 10 build tasks, component contracts, `PATCH /api/my-posts/[id]` route, build-order recommendation
+**Commits on `main` (in order):**
+- `05eaeff` — `security: rotate Supabase keys, delete compromised debug script` (pre-history-purge)
+- `b5aa1c6` — post-filter-repo HEAD after history rewrite (same content, new hashes throughout)
+- `e2510ba` — `chore: remove project-root cruft from prior agent-system experiment`
 
-**Retired:**
-- `docs/design-system-v1.2-draft.md` — gutted to tombstone pointer (superseded mid-session by mockup-first pivot)
+**Files modified:**
+- `.gitignore` — added `check-*.js` and `scripts/debug/` patterns to block future debug-script leaks
+- `check-vendor-requests.js` — DELETED from working tree AND from git history (all 340 commits)
+- 16 agent-system cruft files — deleted (see `e2510ba` commit message for full list)
+- `docs/SECURITY-INCIDENT-2026-04-19.md` — rewritten from 🔴 active-incident handoff to ✅ resolved postmortem; original text preserved as archive block
+- `CLAUDE.md` (this file) — session 29 close
 
-**Structural cleanup:**
-- `docs/session-archive.md` — NEW; sessions 1–27 moved here
-- CLAUDE.md (this file) — shrunk from ~599 lines to ~200 by removing duplicative reference material and historical archives
-- `docs/DECISION_GATE.md` — added "Design: mockup-first as default" Tech Rule + "Known-Gaps reconciliation" Tech Rule (promoted from session-26 proposal) + 2 Risk Register rows
-- `MASTER_PROMPT.md` — Design agent "Core operating principle (session 28)" block committing the mockup-first flow
+**Infrastructure changes (no files):**
+- Supabase: legacy JWT keys disabled at edge
+- `.env.local`: both `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` swapped to new key format; orphan `treehouse_search_prod_client=` line removed
+- Vercel: both env vars updated across Production + Preview + Development; redeployed twice (once for service key, once for anon key)
+- GitHub: `main` force-pushed with rewritten history; stowaway `claude/nervous-raman` branch deleted
 
-**Audit findings (staged for removal, not yet removed):**
-- 15 project-root files from a prior Python-based "agent system" experiment (see Session 28 — separate HITL below)
-- `{app/{scan,decide,saved,item},components,lib,hooks,types}` — empty directory tree from a botched brace-expansion
-- `tsconfig.tsbuildinfo` — build output that should be gitignored
+### Session 29 close HITL
 
-### Session 28 close HITL
+1. ✅ Supabase new secret key verified live in production (admin Requests tab populated via `requireAdmin` → `getServiceClient` → service-role query path)
+2. ✅ Supabase new publishable key verified across all five public read paths (home feed, find detail, vendor shelf, find map, admin)
+3. ✅ Exposed legacy JWT confirmed dead via direct curl returning HTTP 401
+4. ✅ `check-vendor-requests.js` removed from working tree + git history + all branches
+5. ✅ `.gitignore` patterns added (`check-*.js`, `scripts/debug/`)
+6. ✅ `claude/nervous-raman` branch + worktree cleaned up
+7. ✅ Secrets audit returned 0 real matches
+8. ✅ Project-root cruft (16 files) deleted and committed
+9. ✅ `docs/SECURITY-INCIDENT-2026-04-19.md` marked RESOLVED with postmortem
+10. ✅ Pre-filter-repo backup at `/Users/davidbutler/Projects/treehouse-treasure-search-backup-pre-filter-repo` — can be removed with `rm -rf`; no longer needed
+11. 🟢 **TODO at commit:** `thc` (session 29 close)
+12. 🟢 **Deferred to session 30:** promote the "secrets scan before commit / at sprint boundaries" Tech Rule into `docs/DECISION_GATE.md` (documented in the SECURITY-INCIDENT postmortem; not yet in DECISION_GATE)
 
-1. ✅ Three mockups authored + approved via `ask_user_input_v0`
-2. ✅ `docs/design-system-v1.2-build-spec.md` authored
-3. ✅ `docs/design-system-v1.2-draft.md` retired to pointer
-4. ✅ `docs/DECISION_GATE.md` updated — mockup-first Tech Rule + Known-Gaps reconciliation Tech Rule + Risk Register rows
-5. ✅ `MASTER_PROMPT.md` updated — Design agent core operating principle
-6. ✅ `docs/session-archive.md` created with sessions 1–27
-7. ✅ CLAUDE.md shrunk to whiteboard-only
-8. ✅ `docs/SECURITY-INCIDENT-2026-04-19.md` created with full rotation handoff
-9. ✅ All new files verified on disk via `filesystem:read_text_file`
-10. 🟢 **TODO at commit:** `thc` (session 28 close)
-11. 🔴 **TOP OF NEXT SESSION:** run the rotation plan in `docs/SECURITY-INCIDENT-2026-04-19.md` before any other work
-12. 🟢 **Whenever convenient (post-rotation):** project-root cruft cleanup — see command below
+### Session 30 candidate queue
 
-### Project-root cruft cleanup (defer until after rotation)
+- **30A — v1.2 code sprint** against `docs/design-system-v1.2-build-spec.md`. **MAIN WORK.** ~3–4 hours. Build order in spec. Delivers: `/post` retires to redirect shim; `/post/preview` rewrites as "Review your find" with photo truth rule; new `/find/[id]/edit` with autosave + Available/Sold toggle + Replace-photo + Remove-from-shelf. New primitives `<AddFindSheet>`, `<PhotographPreview>`, `<PostingAsBlock>`, `<AmberNotice>`. New API route `PATCH /api/my-posts/[id]`.
+- **30B — Anthropic model audit + billing safeguards** (session-28G/28H follow-ons). ~30 min. Swap `/api/suggest` to Opus 4.7; enable Anthropic console auto-reload; add pre-beta credit floor checklist item. Good opener for session 30 if David wants a light warm-up before 30A.
+- **30C — Promote "secrets scan" Tech Rule** into `docs/DECISION_GATE.md` per the SECURITY-INCIDENT postmortem. ~5 min. Canonical grep pattern already documented in the incident doc's follow-ons section.
+- **30D — Sprint 4 tail batch** (T4c copy polish + T4b admin consolidation + T4d pre-beta QA). Longest-parked pre-beta item; defer unless David explicitly routes here.
+- **30E — Nav Shelf decision + BottomNav rework.** Follow mockup-first rule; four existing mockups in `docs/mockups/nav-shelf-exploration.html`.
+- **30F — Guest-user UX batch** + **post-beta candidates.** All parked pending 30A.
 
-15 files + empty directory tree + one build-output artifact from a prior Python-based agent-system experiment. Session 28 did not delete them to avoid widening the commit. Single-command cleanup David can run whenever convenient (AFTER the security rotation is complete):
-
-```bash
-rm -rf '{app' AGENT_ACTIVATION_GUIDE.md AGENT_QUICK_REFERENCE.md AGENT_SYSTEM_COORDINATOR.py AGENT_SYSTEM_UPDATES.md HOW_TO_USE_AGENT_SYSTEM.md NOTION_AGENT_SYSTEM_UPDATE.md PRODUCTION_DEPLOYMENT_AGENT.py SMART_AGENT_ORCHESTRATION.py STATE_PERSISTENCE_AGENT.py TERMINAL_GUIDE.txt WORKFLOW_INTEGRATION.md agent_dashboard.html agent_workflow.py quick_test.py test_agent_system.py
-```
-
-Then add `*.tsbuildinfo` to `.gitignore` and `rm tsconfig.tsbuildinfo`. If any of those files are ever referenced in a future session search and come up missing, git log remembers them.
-
-### Session 29 candidate queue
-
-- **29-SEC — 🔴 Supabase service_role rotation** per `docs/SECURITY-INCIDENT-2026-04-19.md`. **MANDATORY opener.** 45–90 min. All other work defers until this is resolved.
-- **29A — v1.2 code sprint** against `docs/design-system-v1.2-build-spec.md`. **Main work after rotation.** ~3–4 hours. Build order in spec.
-- **29B — Anthropic model audit + billing safeguards** (session-28G/28H follow-ons). ~30 min. Could fold into the rotation session if David has energy, or defer.
-- **29C — Sprint 4 tail batch** (T4c copy polish + T4b admin consolidation + T4d pre-beta QA). Longest-parked pre-beta item; defer unless David explicitly routes here.
-- **29D — Nav Shelf decision + BottomNav rework.** Follow new mockup-first rule; four existing mockups in `docs/mockups/nav-shelf-exploration.html`.
-- **29E — Guest-user UX batch** + **post-beta candidates.** All parked pending 29A.
-- **29-CRUFT — Project-root cleanup** (see command above). ~2 min. Do whenever convenient after rotation.
-
-**Recommended for session 29:** 29-SEC (mandatory, 45–90 min) → 29A (3–4 hours) if energy remains, otherwise stop after rotation and pick up 29A session 30. If session splits at rotation completion, 29-SEC alone is a legitimate session.
+**Recommended for session 30:** 30B (30 min) as warm-up → 30A (3–4 hours) as main work. 30C is a 5-min drive-by that can fold into either. If session splits earlier, 30A alone is the priority.
 
 ---
 
@@ -165,7 +149,6 @@ _None._ All KIs closed. Design debt empty. Last tech work before beta-ready is S
   - 🟡 T4d pre-beta QA pass — walk all three flows end-to-end against clean DB. ~1–2 hrs.
   - 🟢 Session-13 test data cleanup — 5+ "David Butler" variants via admin-runbook Recipe 4. ~5 min.
 - **Anthropic model audit + billing safeguards** (session-28G/28H). ~30 min combined. Swap `/api/suggest` to Opus 4.7; enable Anthropic console auto-reload; add pre-beta credit floor checklist item.
-- **🔴 Security: `check-vendor-requests.js` service role key exposure** — see `docs/SECURITY-INCIDENT-2026-04-19.md`. TOP PRIORITY next session.
 
 ### 🟡 Sprint 5 + design follow-ons
 

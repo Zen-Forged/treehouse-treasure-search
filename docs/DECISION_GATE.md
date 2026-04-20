@@ -365,7 +365,7 @@ These don't stop work but must be called out explicitly before the session conti
 
 ## Current Risk Register
 
-> Updated: 2026-04-19 (session 28 — v1.2 post-flow trilogy mockup-first design session; three mockups approved by David via plain-English select questions; build spec authored as dev-handoff doc; mockup-first-as-default Tech Rule promoted; risk of v0.2 chrome on `/post` + `/post/preview` and absent Edit Listing page all converted from "open" to "spec approved, code sprint pending")
+> Last updated: 2026-04-20 (session 29 — security rotation + 29-CRUFT cleanup; four Risk Register rows added — resolved `check-vendor-requests.js` exposure, resolved `claude/nervous-raman` stowaway, resolved project-root cruft, added Open secrets-scan Tech Rule backlog item; two production infrastructure changes — both Supabase JWT keys disabled at edge, 340 commits of git history rewritten)
 
 | Risk | Severity | Status | Owner |
 |---|---|---|---|
@@ -423,6 +423,10 @@ These don't stop work but must be called out explicitly before the session conti
 | **`/api/suggest/route.ts` uses `claude-opus-4-6`** (still live on Anthropic API but Opus 4.7 is now GA; not a regression, flagged for next model audit pass) | 🟢 Low | Open — session 28G follow-on (~15 min). | Dev agent |
 | **Post-flow trilogy on v0.2 chrome + missing Edit Listing page** (`/post` on legacy Georgia + `#f0ede6`; `/post/preview` same; no `/find/[id]/edit` route exists; vendors cannot edit a published find). | 🟡 Medium | ✅ Spec approved session 28 — three mockups signed off by David (`docs/mockups/add-find-sheet-v1-2.html`, `review-page-v1-2.html`, `edit-listing-v1-2.html`). Build spec in `docs/design-system-v1.2-build-spec.md`. Code sprint deferred to session 29. `/post` retires in favor of `<AddFindSheet>` from `/my-shelf`; `/post/preview` fully rewrites with `<PhotographPreview>` truth rule (no crop, paper fills letterbox); new `/find/[id]/edit` with autosave + status toggle + Replace-photo + Remove-from-shelf link + `PATCH /api/my-posts/[id]` route. Primitives introduced: `<AddFindSheet>`, `<PhotographPreview>`, `<PostingAsBlock>`, `<AmberNotice>`. | Design + Dev agents |
 | **Design agent process was spec-first by default — created expensive revision cycles** | 🟡 Medium | ✅ Resolved session 28 — new Tech Rule "Design: mockup-first as default, not exception" added. David named the problem explicitly: reviewing 14-paragraph `docs/design-system.md` commitment blocks required executive-level fluency in design-system vocabulary, and changing direction after commit pulled the whole block back up for dissection. v1.2 session successfully tested the reversed pattern — mockup-first review via phone-frame HTML + structured plain-English questions + build spec written AFTER approval as dev-handoff doc. Three UI surfaces approved in one session with zero spec-doc reopens. Pattern now the committed default for all future UI work. | Design agent |
+| **`check-vendor-requests.js` plaintext service_role JWT exposed in public git history** (surfaced session 28; resolved session 29) — commit `3492f8d`, key valid through 2036, full RLS-bypass capability, identical to production `SUPABASE_SERVICE_ROLE_KEY`. | 🔴 High | ✅ Resolved session 29 (2026-04-20) — full migration to Supabase's new API key system. Server on `sb_secret_Bhtc7...`; client on `sb_publishable_tK5EpAqb...` (named `treehouse_search_prod_client`). Both legacy JWT keys disabled at Supabase's edge; exposed JWT returns HTTP 401 via direct curl. `check-vendor-requests.js` deleted from working tree AND scrubbed from git history via `git filter-repo` across all 340 commits, all branches, force-pushed to GitHub. `.gitignore` extended with `check-*.js` + `scripts/debug/`. Secrets audit grep returned 0 real matches; `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9` JWT-header grep returned `0`. Zero production code changes required — Supabase SDK handles new key format transparently. See `docs/SECURITY-INCIDENT-2026-04-19.md` for full postmortem. | Dev + David |
+| **Dormant `claude/nervous-raman` branch + worktree on GitHub** — leftover from early Claude Code session, never cleaned up, pushed alongside main during session-29 filter-repo force-push. | 🟢 Low | ✅ Resolved session 29 — confirmed ancestor of main (zero content loss), worktree removed via `git worktree remove`, branch deleted locally and on GitHub. Repo now has single `main` branch. | Dev agent |
+| **Secrets scan not yet promoted to Tech Rule** — session 29 postmortem identifies this as a backlog follow-on. Canonical grep pattern documented in `docs/SECURITY-INCIDENT-2026-04-19.md` under "Follow-ons added to backlog". | 🟢 Low | Open — session 30 candidate item 30C (~5 min). Add Tech Rule to `docs/DECISION_GATE.md`: run secrets grep at sprint boundaries; verify JWT-header grep returns `0`. | Docs agent |
+| **Project-root agent-system cruft** (15 files + `{app` directory + `.session_state.json` + `tsconfig.tsbuildinfo` + `ai-text-demo/`) from a prior Python-based agent-system experiment. | 🟢 Low | ✅ Resolved session 29 — 16 files deleted via staged `rm -rf`, committed as `e2510ba` (~4,856 lines removed). `git log --all` retains full history if anything is ever needed back. Working tree and `ls` output now tidy; future sessions don't waste tokens parsing `AGENT_SYSTEM_COORDINATOR.py`. | Dev agent |
 
 ---
 
@@ -466,7 +470,7 @@ These don't stop work but must be called out explicitly before the session conti
 Every session standup includes a one-line Agent Roster block confirming who is active for the session. This prevents silently dropping an activated agent from the loop.
 
 **Standard standup preamble:**
-> **Active agents:** Dev · Product · Docs · Design — *(current as of 2026-04-19 session 25)*
+> **Active agents:** Dev · Product · Docs · Design — *(current as of 2026-04-20 session 29)*
 
 When an agent is activated or deactivated:
 1. Update the Agent Roster table above
@@ -545,4 +549,4 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 ---
 > This document is the operating constitution for the Treehouse system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-19 (session 28 — v1.2 mockup-first design approval + structural cleanup pass; three mockups approved + build spec on disk; two Tech Rules added — mockup-first-as-default + Known-Gaps reconciliation; two Risk Register rows added; CLAUDE.md split — historical archives to `docs/session-archive.md`, reference material left in CONTEXT.md where it already lives; project-root agent-system cruft audit staged for separate cleanup)
+> Last updated: 2026-04-20 (session 29 — security rotation + history purge + 29-CRUFT cleanup; four Risk Register rows added; production infrastructure changes documented; new `docs/SECURITY-INCIDENT-2026-04-19.md` postmortem is canonical reference for the rotation playbook and the follow-on backlog items)
