@@ -12,13 +12,24 @@
 //   - Admin `?vendor=id` impersonation preserved — bypasses active-booth
 //     resolution and renders against the requested vendor directly.
 //
+// Session 35 — self-heal always runs (fix for booth-002 not linking):
+//   The original session-35 resolver short-circuited at (b) whenever
+//   getVendorsByUserId returned any rows, so a user who already owned ONE
+//   linked vendor never triggered the /api/setup/lookup-vendor self-heal
+//   when a SECOND approved unlinked vendor row was waiting on their email.
+//   Result: picker never appeared because the second row was never linked.
+//
+//   Fix: for any signed-in non-admin user, always run both the DB fetch AND
+//   the lookup-vendor call, then merge by vendor.id. Extra cost is one
+//   indexed short-circuit SELECT on `vendors.user_id` per /my-shelf load —
+//   trivial. Benefit: /my-shelf is now self-correcting for newly-approved
+//   booths on every visit, which also closes a latent Flow 2 demo-approval
+//   edge case where the vendor would previously need to sign out and back
+//   in to see their booth.
+//
 // The approved mockup (docs/mockups/my-shelf-multi-booth-v1.html) is the
 // authority for the masthead layout. If this code and the mockup diverge,
 // the mockup wins.
-//
-// Self-heal via /api/setup/lookup-vendor preserved for first-time signed-in
-// users whose /setup never completed — now reads the new { vendors: [] }
-// response shape.
 //
 // Booth page v1.1h commitments otherwise unchanged:
 //   - Banner is a pure photograph; vendor name as IM Fell 32px title below
@@ -313,11 +324,15 @@ function MyBoothInner() {
   }, []);
 
   // ── Vendor resolution ──────────────────────────────────────────────────
-  // Three paths:
+  // Session 35 resolver (post-fix):
   //   (a) Admin with ?vendor=id → render that vendor directly (adminOverride=true)
-  //   (b) Authed user → getVendorsByUserId + resolveActiveBooth
-  //   (c) Authed user with zero linked rows → try /api/setup/lookup-vendor self-heal
-  //   (d) Admin with no vendor+no param → fallback to ADMIN_DEFAULT_VENDOR_ID
+  //   (b) Non-admin: fetch getVendorsByUserId AND /api/setup/lookup-vendor
+  //       in parallel, merge by vendor.id. lookup-vendor links any
+  //       newly-approved unlinked rows and returns the full linked set;
+  //       getVendorsByUserId is the direct DB read. Both converge on the
+  //       same list once lookup-vendor finishes. Merging tolerates either
+  //       returning first in the Promise.all.
+  //   (c) Admin fallback — ADMIN_DEFAULT_VENDOR_ID when no impersonation param.
   useEffect(() => {
     if (!authReady || !user) return;
 
@@ -337,35 +352,27 @@ function MyBoothInner() {
         }
       }
 
-      // (b) Normal path — list-aware resolver
-      const vendors = await getVendorsByUserId(authedUser.id);
-      if (vendors.length > 0) {
-        setVendorList(vendors);
-        const active = resolveActiveBooth(vendors);
-        if (active) { loadVendor(active, authedUser.id); return; }
-      }
-
-      // (c) Self-heal for signed-in users with no linked rows (KI-003 pattern).
-      // New response shape is { ok, vendors: Vendor[] }.
+      // (b) Non-admin: parallel DB read + self-heal.
+      // Admins skip self-heal entirely — they don't have vendor_requests
+      // and we don't want ADMIN_DEFAULT_VENDOR_ID's user_id rewritten.
       if (!adminUser) {
-        try {
-          const res  = await authFetch("/api/setup/lookup-vendor", {
-            method: "POST",
-            body:   JSON.stringify({}),
-          });
-          const json = await res.json();
-          if (res.ok && json?.ok && Array.isArray(json.vendors) && json.vendors.length > 0) {
-            const linked = json.vendors as Vendor[];
-            setVendorList(linked);
-            const active = resolveActiveBooth(linked);
-            if (active) { loadVendor(active, authedUser.id); return; }
-          }
-        } catch (err) {
-          console.error("[my-shelf] self-heal lookup-vendor failed:", err);
+        const merged = await loadLinkedVendors(authedUser.id);
+        if (merged.length > 0) {
+          setVendorList(merged);
+          const active = resolveActiveBooth(merged);
+          if (active) { loadVendor(active, authedUser.id); return; }
+        }
+      } else {
+        // Admin without ?vendor=id: read-only DB fetch, skip self-heal.
+        const direct = await getVendorsByUserId(authedUser.id);
+        if (direct.length > 0) {
+          setVendorList(direct);
+          const active = resolveActiveBooth(direct);
+          if (active) { loadVendor(active, authedUser.id); return; }
         }
       }
 
-      // (d) Admin with no default — fallback
+      // (c) Admin with no default — fallback
       if (adminUser) {
         const defaultV = await getVendorById(ADMIN_DEFAULT_VENDOR_ID);
         if (defaultV) {
@@ -382,6 +389,59 @@ function MyBoothInner() {
     resolve();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authReady, user?.id]);
+
+  /**
+   * Session 35 fix: race DB-direct and self-heal, merge by id.
+   *
+   * Both calls hit the same Supabase instance and converge on the same
+   * linked set once lookup-vendor finishes its link UPDATE — but racing
+   * lets us render whichever comes back first and then "top up" with the
+   * other if it adds rows.
+   *
+   * lookup-vendor's short-circuit (step 1 of the route) makes this cheap
+   * for already-linked users: it returns the existing vendors array with
+   * no linking work. For users with newly-approved unlinked rows, it does
+   * the composite-key link and returns the full set including the new row.
+   *
+   * Promise.all rather than sequential because there's no ordering
+   * dependency — merging dedupes by id.
+   */
+  async function loadLinkedVendors(userId: string): Promise<Vendor[]> {
+    const [directRes, lookupRes] = await Promise.allSettled([
+      getVendorsByUserId(userId),
+      authFetch("/api/setup/lookup-vendor", {
+        method: "POST",
+        body:   JSON.stringify({}),
+      }).then(async r => {
+        if (!r.ok) return null;
+        const json = await r.json();
+        if (json?.ok && Array.isArray(json.vendors)) return json.vendors as Vendor[];
+        return null;
+      }).catch(err => {
+        console.error("[my-shelf] self-heal lookup-vendor failed:", err);
+        return null;
+      }),
+    ]);
+
+    const direct = directRes.status === "fulfilled" ? directRes.value : [];
+    const lookup = lookupRes.status === "fulfilled" && lookupRes.value ? lookupRes.value : [];
+
+    // Merge by id. Prefer the direct-DB version when there's a duplicate
+    // because it's guaranteed to have the mall join that getVendorsByUserId
+    // always requests; the lookup-vendor response also joins mall, but we
+    // stay deterministic here regardless of which side returns first.
+    const byId = new Map<string, Vendor>();
+    for (const v of lookup) byId.set(v.id, v);
+    for (const v of direct) byId.set(v.id, v); // direct overwrites
+
+    return Array.from(byId.values()).sort((a, b) => {
+      // Preserve the getVendorsByUserId created_at ASC ordering so the
+      // resolveActiveBooth fallback (vendors[0] = oldest) is stable.
+      const ta = new Date(a.created_at).getTime();
+      const tb = new Date(b.created_at).getTime();
+      return ta - tb;
+    });
+  }
 
   function loadVendor(vendor: Vendor, userId: string) {
     setActiveVendor(vendor);
