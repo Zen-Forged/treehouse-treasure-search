@@ -1,82 +1,11 @@
 # Treehouse — Known Issues
 > Active bugs, gaps, and deferred items. Referenced by `docs/DECISION_GATE.md`.
 > Created: 2026-04-17 (session 8 — logging the three QA issues surfaced during T4a post-deploy).
-> Last updated: 2026-04-20 (session 33 — KI-005 logged: pre-approval sign-in signaling gap).
+> Last updated: 2026-04-20 (session 35 close — KI-006 moved to Resolved; multi-booth rework shipped).
 
 ---
 
 ## Open issues
-
-### 🔴 KI-006 — Session-32 regression in `/api/setup/lookup-vendor` (pre-beta blocker)
-**Surfaced:** 2026-04-20 session 33 QA walk step 6 (on-device)
-**Severity:** High (🔴) — pre-beta blocker
-**Status:** Open; fix shape depends on multi-booth scoping (likely session 34)
-
-**Symptom:** Any Flow 3 vendor who fills in `booth_name` cannot complete `/setup` linkage after OTP sign-in. Auth verifies cleanly, session establishes, but `/api/setup/lookup-vendor` returns 404 and `/my-shelf` renders `<NoBooth>`. Vendor is stranded — cannot post finds, cannot reach their shelf.
-
-**Root cause:** `/api/setup/lookup-vendor` step 2 joins `vendor_requests.name` against `vendors.display_name`:
-
-```typescript
-const { data: vendor } = await auth.service
-  .from("vendors")
-  .select("id")
-  .eq("display_name", request.name)      // ← stale after session 32
-  .eq("mall_id", request.mall_id)
-  .is("user_id", null)
-  .maybeSingle();
-```
-
-Before session 32, these fields always matched (approval set `display_name = name`). Session 32 introduced the new priority `booth_name → first+last → legacy name` for `display_name`, so any request with a non-null `booth_name` produces a `vendors` row whose `display_name` no longer equals `vendor_requests.name`. The join misses; route returns 404.
-
-**Dependent-surface miss:** Session 32 changed how `display_name` was *derived* at write time (in `/api/admin/vendor-requests`) but didn't audit the routes that *read* it. `/api/setup/lookup-vendor` kept the stale equality assumption. This is the Tech Rule candidate ("dependent-surface audit when changing a field's semantic source") named at session-33 close.
-
-**Blast radius:** Every remote Flow 3 vendor who picks a booth name — which is half the v1.2 feature set and explicitly encouraged by the "Leave blank to use your name" copy. Flow 2 (in-person demo) likely still works because admin would be at the device to run manual SQL recovery. Flow 1 unaffected (no `vendor_requests` row involved).
-
-**Why not fixed session 33:** David named a bigger collision at close — the multi-booth data model. Fixing KI-006 in isolation would build on the wrong schema; the right sequence is scope-multi-booth-first, then the lookup rewrite becomes a natural sub-fix.
-
-**Fix shape if multi-booth is deferred (Path B):**
-
-Rewrite the lookup join to use `mall_id + booth_number + user_id IS NULL` as the primary composite (that's canonical — `vendors_mall_booth_unique` enforces it), with a three-way name fallback matching the session-32 approval priority if booth_number is null on the request:
-
-```typescript
-// Primary: canonical booth-in-mall composite
-let { data: vendor } = request.booth_number
-  ? await auth.service
-      .from("vendors")
-      .select("id")
-      .eq("mall_id", request.mall_id)
-      .eq("booth_number", request.booth_number)
-      .is("user_id", null)
-      .maybeSingle()
-  : { data: null };
-
-// Fallback for legacy rows / booth-less requests: name-priority match
-if (!vendor) {
-  const candidates = [
-    (request.booth_name as string)?.trim(),
-    request.first_name && request.last_name ? `${request.first_name} ${request.last_name}` : null,
-    (request.name as string)?.trim(),
-  ].filter(Boolean);
-  for (const name of candidates) {
-    const { data } = await auth.service
-      .from("vendors")
-      .select("id")
-      .eq("display_name", name)
-      .eq("mall_id", request.mall_id)
-      .is("user_id", null)
-      .maybeSingle();
-    if (data) { vendor = data; break; }
-  }
-}
-```
-
-**Fix shape if multi-booth ships first (Path A, preferred):**
-
-The route returns an array of linked vendors instead of a single row, composite key becomes `(email, mall_id, booth_number)`, `vendor_memberships` join table likely introduced, `vendors_user_id_key` constraint dropped. KI-006 becomes automatic — the new lookup is booth-explicit by construction.
-
-**Verification when fixed:** Submit a fresh `/vendor-request` with a booth_name set. Approve in `/admin`. Sign in via OTP. `/my-shelf` should load the vendor's shelf, not `<NoBooth>`. The display_name on the shelf should match the booth_name, not first+last.
-
----
 
 ### 🟡 KI-005 — Pre-approval sign-in signaling gap
 **Surfaced:** 2026-04-20 session 33 QA walk (step 1→2 gap on v1.2 onboarding refresh)
@@ -118,9 +47,51 @@ The KI-004 resolution in session 13 tightened the approve endpoint to *fail loud
 ### Cloudflare DNS zone orphaned for `kentuckytreehouse.com`
 Nameservers assigned but not authoritative. Dormant, no cost. Delete at leisure.
 
+### Picker affordance placement — captured as Q-002
+See `docs/queued-sessions.md` Q-002. Session-35 on-device walk surfaced that the "Viewing · Name ▾" block sits in the masthead center slot (per session-34 mockup), but the masthead should read as app branding and the picker affordance should be inline with the booth name under the hero banner. Non-gating revision; runnable session waiting.
+
+### BottomNav saved-items badge missing on /my-shelf, /flagged, /shelves — captured as Q-003
+See `docs/queued-sessions.md` Q-003. The `flaggedCount` prop defaults to 0 and only Home passes a real value. Two-line fix per page. Non-gating.
+
 ---
 
 ## Resolved
+
+### ✅ KI-006 — Session-32 regression in `/api/setup/lookup-vendor`
+**Resolved:** 2026-04-20 session 35
+**Surfaced:** 2026-04-20 session 33 QA walk step 6 (on-device)
+**Severity at open:** High (🔴) — pre-beta blocker
+
+**Symptom:** Any Flow 3 vendor who filled in `booth_name` could not complete `/setup` linkage after OTP sign-in. Auth verified cleanly, session established, but `/api/setup/lookup-vendor` returned 404 and `/my-shelf` rendered `<NoBooth>`. Vendor stranded — couldn't post finds, couldn't reach their shelf.
+
+**Root cause:** `/api/setup/lookup-vendor` joined `vendor_requests.name` against `vendors.display_name`. Session 32 introduced the new priority `booth_name → first+last → legacy name` for `display_name`, so any request with a non-null `booth_name` produced a `vendors` row whose `display_name` no longer equaled `vendor_requests.name`. The join missed; route returned 404.
+
+**Resolution path (Path A — multi-booth rework, session 35):** The route was fully rewritten to composite-key lookup on `(mall_id, booth_number, user_id IS NULL)` across all `vendor_requests` rows for the authenticated user's email. The new lookup is indifferent to what `display_name` resolves to at approval time — it uses the canonical natural key that `vendors_mall_booth_unique` enforces. KI-006 became a natural sub-fix of the multi-booth rework rather than a patch on an obsolete model.
+
+Additional session-35 change that completed the fix: removed a step-1 short-circuit in the rewritten route that was returning early whenever the user had any already-linked vendor row. That short-circuit was a vestige of the single-vendor-per-user mental model — it blocked newly-approved unlinked rows from ever being linked if the user had a prior linked booth. Both the session-32 regression and the half-migration short-circuit were resolved before the session-35 push closed.
+
+**Files touched (session 35):**
+- `supabase/migrations/006_multi_booth.sql` (NEW) — drops `vendors_user_id_key`
+- `supabase/migrations/007_multi_booth_vendor_request_dedup.sql` (NEW) — rekeys dedup index to composite
+- `app/api/setup/lookup-vendor/route.ts` (rewrite) — array return, composite-key lookup, no short-circuit
+- `lib/posts.ts` — `getVendorsByUserId` (array); `getVendorByUserId` kept as deprecated shim
+- `lib/activeBooth.ts` (NEW) — active-booth resolver via safeStorage
+- `app/setup/page.tsx` — handles array response
+- `app/my-shelf/page.tsx` — list-aware; picker masthead when N>1; self-heal runs every non-admin load
+- `components/BoothPickerSheet.tsx` (NEW) — bottom sheet primitive inheriting MallSheet motion
+- `app/post/preview/page.tsx` — active-booth resolver
+- `app/api/vendor-request/route.ts` — dedup composite key
+
+**Commits:**
+- `54ba898` — session 35: multi-booth rework (option A) + KI-006 fix + session 32 v1.2 onboarding backlog
+- `aa94656` — session 35 fix: self-heal runs for all signed-in non-admin users on /my-shelf
+- (final session-35 commit) — session 35 fix 2: remove lookup-vendor short-circuit so multi-booth add-on approvals link
+
+**Verified:** Session-35 on-device QA walk step 2 passed. Fresh Flow 3 request with `booth_name` set now links cleanly. Walk steps 3–6 also passed: multi-booth picker appears, switches persist, post inherits active booth, composite dedup works.
+
+**Tech Rule yield:** session 35 logged two promotion candidates driven by this resolution — (a) "dependent-surface audit when changing a field's semantic source" (the original KI-006 cause, named at session-33 close), and (b) "half-migration audit when migrating from one-result to N-result shapes" (named at session 35 close after the two short-circuit bugs surfaced in quick succession). Both pending promotion in a next-session doc batch.
+
+---
 
 ### ✅ KI-004 — Approve endpoint silent-reuse on booth collision + opaque error on slug collision
 **Resolved:** 2026-04-17 session 13
@@ -238,4 +209,4 @@ const callLookupVendor = async (): Promise<Response> => {
 
 ---
 
-> Last updated: 2026-04-17 (session 13)
+> Last updated: 2026-04-20 (session 35 — KI-006 resolved via multi-booth rework; Q-002 and Q-003 logged as non-gating deferrals)
