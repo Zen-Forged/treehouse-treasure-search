@@ -3,7 +3,9 @@
 //
 // Layout top-to-bottom:
 //   1. Masthead row (Mode A): back · "Treehouse Finds" wordmark (16px) · save + share
-//   2. Photograph (6px radius) with post-it BOTTOM-LEFT + status pill bottom-right (both Title Case)
+//   2. Photograph (6px radius) with post-it BOTTOM-LEFT + status pill bottom-right (both Title Case).
+//      For owners (isMyPost === true), the top-right Save bubble swaps for a Pencil bubble that
+//      routes to /find/[id]/edit — this is the sole owner-path entry to the management surface.
 //   3. Title + price (32px, em-dash, price in softer ink)
 //   4. Quoted caption (centered IM Fell italic, 19px, typographic quotes)
 //   5. Diamond divider ◆
@@ -11,7 +13,13 @@
 //      vendor name + booth pill (Booth 123456, matches status pill); "Visit the shelf →" in system-ui
 //   7. "More from this shelf…" strip — Title Case eyebrow, inset to 22px page margin,
 //      6px radius on thumbnails
-//   8. Owner Manage block (paper-as-surface, Title Case, larger type)
+//
+// v1.2 (session 31E polish): the Owner Manage block that previously lived as section 8 has been
+// retired. All three of its affordances — Edit this find / Mark as Found a Home / Delete this find —
+// are now duplicates of controls on /find/[id]/edit (pencil bubble → Edit page carries the full
+// management surface: autosave fields, Available/Sold pills, Remove from shelf link). Find Detail
+// is now the reading surface; Edit is the management surface. Owner affordances on this page are
+// limited to the pencil bubble that routes to Edit.
 //
 // v1.1 commitments from on-device feedback in session 16:
 // - Typography bumped +1–2px across small type for the 50+ audience
@@ -44,9 +52,9 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Send, Heart, Pencil, Tag, Trash2 } from "lucide-react";
-import { getPost, getVendorPosts, updatePostStatus, deletePost } from "@/lib/posts";
+import { motion } from "framer-motion";
+import { ArrowLeft, Send, Heart, Pencil } from "lucide-react";
+import { getPost, getVendorPosts } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
 import { getCachedUserId, getSession, isAdmin } from "@/lib/auth";
@@ -56,23 +64,17 @@ import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import type { Post } from "@/types/treehouse";
 
-// ── v1.1 tokens ─────────────────────────────────────────────────────────────
-// Imported from lib/tokens.ts (canonical since session 19A). v1 palette +
+// v1.1 tokens imported from lib/tokens.ts (canonical since session 19A). v1 palette +
 // fonts match docs/design-system.md v1.1h.
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
-
-const pageVariants = {
-  hidden:  { opacity: 0, y: 14 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.34, ease: EASE } },
-};
 
 const sectionVariants = (delay: number) => ({
   hidden:  { opacity: 0, y: 10 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.32, delay, ease: EASE } },
 });
 
-// ── Ownership detection (unchanged) ────────────────────────────────────────────
+// Ownership detection (unchanged)
 async function detectOwnershipAsync(post: Post): Promise<boolean> {
   try {
     const session = await getSession();
@@ -90,7 +92,7 @@ async function detectOwnershipAsync(post: Post): Promise<boolean> {
   return false;
 }
 
-// ── Cartographic glyphs ────────────────────────────────────────────────────────
+// Cartographic glyphs
 function PinGlyph({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size * (22 / 18)} viewBox="0 0 18 22" fill="none" aria-hidden="true">
@@ -117,13 +119,12 @@ function XGlyph({ size = 16 }: { size?: number }) {
   );
 }
 
-// ── Status-pill primitive (v1.1) ───────────────────────────────────────────────
+// Status-pill primitive (v1.1)
 // Used for on-photo status ("On Display" / "Found a Home") AND for the booth-number
 // marker on the vendor line of the cartographic block. The visual match is the point —
 // the reader sees the two pills as a linked pair even though they sit in different places.
 function Pill({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   // v1.1e — pure numeric badge role (no "Booth" word, no arrow, no gloss — just the number).
-  // The label ("Explore booth →") now carries the action signal; the pill is the token.
   // v1.1j — numeral font swapped IM Fell → system-ui. IM Fell's `1` read as a capital-I
   // in this small inline context; system-ui resolves the ambiguity without changing size.
   return (
@@ -152,7 +153,7 @@ function Pill({ children, style }: { children: React.ReactNode; style?: React.CS
   );
 }
 
-// ── Shelf card (v1.1) ──────────────────────────────────────────────────────────
+// Shelf card (v1.1)
 function ShelfCard({ post }: { post: Post }) {
   const [imgErr, setImgErr] = useState(false);
   const isSold = post.status === "sold";
@@ -170,9 +171,9 @@ function ShelfCard({ post }: { post: Post }) {
           aspectRatio: "3/4",
           overflow: "hidden",
           background: v1.postit,
-          borderRadius: v1.imageRadius, // v1.1
-          border: `1px solid ${v1.inkHairline}`, // v1.1d — match hero photo border
-          boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)", // v1.1i-polish
+          borderRadius: v1.imageRadius,
+          border: `1px solid ${v1.inkHairline}`,
+          boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
           opacity: isSold ? 0.62 : 1,
           transition: "opacity 0.2s",
         }}
@@ -214,7 +215,7 @@ function ShelfCard({ post }: { post: Post }) {
           paddingLeft: 2,
           fontFamily: FONT_IM_FELL,
           fontStyle: "italic",
-          fontSize: 13, // v1.1 bump 11 → 13
+          fontSize: 13,
           color: v1.inkMid,
           lineHeight: 1.4,
           overflow: "hidden",
@@ -260,7 +261,6 @@ function ShelfSection({
       animate="visible"
       style={{ marginBottom: 32 }}
     >
-      {/* v1.1b — eyebrow bumped 13 → 15, section-announcement floor */}
       <div
         style={{
           paddingLeft: 22,
@@ -274,7 +274,6 @@ function ShelfSection({
       >
         More from this shelf…
       </div>
-      {/* v1.1c — defensive marginLeft on first thumbnail to guarantee 22px screen-edge inset */}
       <div
         className="hide-scrollbar"
         style={{
@@ -307,8 +306,7 @@ function ShelfSection({
   );
 }
 
-// ── Icon bubble ────────────────────────────────────────────────────────────────
-// v1.1e: default size bumped 34 → 38 for on-image parity.
+// Icon bubble — v1.1e size bumped 34 → 38 for on-image parity.
 // `variant="frosted"` renders the overlay treatment used on the photograph (save + share).
 function IconBubble({
   onClick,
@@ -328,7 +326,7 @@ function IconBubble({
   // inside flips color/fill to signal the saved state. Against warm/dark photos the
   // green-tinted translucent bg was blending into the image; holding paperCream tone
   // keeps the bubble as a stable mark and lets the heart glyph carry the state.
-  const frostedBg = "rgba(232,221,199,0.78)"; // paperCream translucent — reads as frosted over any photo
+  const frostedBg = "rgba(232,221,199,0.78)";
 
   return (
     <button
@@ -356,10 +354,10 @@ function IconBubble({
   );
 }
 
-// SoldLanding ─ Find Detail 3B (v1.1i). Full-page end-of-path layout that
+// SoldLanding — Find Detail 3B (v1.1i). Full-page end-of-path layout that
 // replaces the normal Find Detail when a shopper lands on a sold find. Owner
-// path stays on the normal layout (manage affordances). No photograph, no
-// post-it, no price — the page IS the closure.
+// path stays on the normal layout. No photograph, no post-it, no price —
+// the page IS the closure.
 function SoldLanding({
   vendorSlug,
   vendorName,
@@ -380,7 +378,6 @@ function SoldLanding({
         flexDirection: "column",
       }}
     >
-      {/* 1. Masthead — same chrome as normal Find Detail, sticky to top */}
       <StickyMasthead
         style={{
           display: "grid",
@@ -409,7 +406,6 @@ function SoldLanding({
         <div style={{ justifySelf: "end" }} aria-hidden="true" />
       </StickyMasthead>
 
-      {/* 2. Headline — "This find / found a home." with hard line break */}
       <motion.div
         variants={sectionVariants(0.08)}
         initial="hidden"
@@ -431,7 +427,6 @@ function SoldLanding({
         </div>
       </motion.div>
 
-      {/* 3. Explanation */}
       <motion.div
         variants={sectionVariants(0.14)}
         initial="hidden"
@@ -457,7 +452,6 @@ function SoldLanding({
         </div>
       </motion.div>
 
-      {/* 4. Divider — v1.1j plain hairline (diamond retired) */}
       <motion.div
         variants={sectionVariants(0.18)}
         initial="hidden"
@@ -469,7 +463,6 @@ function SoldLanding({
         <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
       </motion.div>
 
-      {/* 5 + 6. Primary + secondary links */}
       <motion.div
         variants={sectionVariants(0.22)}
         initial="hidden"
@@ -518,7 +511,6 @@ function SoldLanding({
         </Link>
       </motion.div>
 
-      {/* Fill remaining height so BottomNav sits at the bottom */}
       <div style={{ flex: 1, minHeight: 20 }} />
 
       <div style={{ paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }} />
@@ -535,8 +527,6 @@ export default function FindDetailPage() {
   const [loading,       setLoading]       = useState(true);
   const [copied,        setCopied]        = useState(false);
   const [isMyPost,      setIsMyPost]      = useState(false);
-  const [actionBusy,    setActionBusy]    = useState(false);
-  const [showDelete,    setShowDelete]    = useState(false);
   const [, setShelfHasItems]              = useState(false);
   const [isSaved,       setIsSaved]       = useState(false);
 
@@ -580,23 +570,6 @@ export default function FindDetailPage() {
     }
   }
 
-  async function handleToggleSold() {
-    if (!post || actionBusy) return;
-    const next = post.status === "sold" ? "available" : "sold";
-    setActionBusy(true);
-    const ok = await updatePostStatus(post.id, next);
-    if (ok) setPost((p) => (p ? { ...p, status: next } : p));
-    setActionBusy(false);
-  }
-
-  async function handleDelete() {
-    if (!post || actionBusy) return;
-    setActionBusy(true);
-    const ok = await deletePost(post.id);
-    if (ok) router.replace("/");
-    else    setActionBusy(false);
-  }
-
   const handleShelfReady = useCallback((hasItems: boolean) => {
     setShelfHasItems(hasItems);
   }, []);
@@ -607,7 +580,6 @@ export default function FindDetailPage() {
     ? mapsUrl(`${post.mall.name} ${post.mall.city} ${post.mall.state}`)
     : null;
 
-  // ── Loading / 404 states ─────────────────────────────────────────────────────
   if (loading) {
     return (
       <div
@@ -678,12 +650,7 @@ export default function FindDetailPage() {
   const mallAddr    = post.mall?.address ?? null;
   const price       = post.price_asking;
 
-  // ── 3B sold landing state (v1.1i, docs/design-system.md §Find Detail sold
-  // landing state). When a shopper deep-links or bookmark-taps through to a
-  // find that has since sold, replace the normal Find Detail layout entirely
-  // with a quiet end-of-path page. Owner exception: owners of the sold find
-  // still see the normal layout (including manage affordances) so they can
-  // mark it available again, edit, or delete — 3B is a shopper-facing surface.
+  // 3B sold landing state (v1.1i) — shopper-only. Owner stays on normal layout.
   if (isSold && !isMyPost) {
     return (
       <SoldLanding
@@ -694,13 +661,6 @@ export default function FindDetailPage() {
     );
   }
 
-  // Note (v1.1i): the grayscale/opacity treatment applied to the hero photograph
-  // when `isSold` is now dead code for the shopper path (3B branches out above).
-  // It only ever renders for the owner viewing their own sold find. Cleanup is
-  // parked for a future pass — leaving the branch in place is a no-op on the
-  // shopper flow.
-
-  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div
       style={{
@@ -712,8 +672,6 @@ export default function FindDetailPage() {
         flexDirection: "column",
       }}
     >
-      {/* ── 1. Masthead row — v1.1e: back + wordmark only; save/share move to photograph ── */}
-      {/* 1. StickyMasthead (Mode A) — v1.1l */}
       <StickyMasthead
         style={{
           display: "grid",
@@ -729,7 +687,6 @@ export default function FindDetailPage() {
           </IconBubble>
         </div>
 
-        {/* v1.1e — masthead wordmark: Title Case single style, no italic, 18px, tighter tracking */}
         <div
           style={{
             fontFamily: FONT_IM_FELL,
@@ -742,11 +699,10 @@ export default function FindDetailPage() {
           Treehouse Finds
         </div>
 
-        {/* Right slot intentionally empty — save + share now live on the photograph */}
         <div style={{ justifySelf: "end" }} aria-hidden="true" />
       </StickyMasthead>
 
-      {/* ── 2. Photograph with post-it (bottom-right) + save/share (top-right, v1.1e) ── */}
+      {/* Photograph with post-it (bottom-right) + save/share OR edit (top-right) */}
       <motion.div
         variants={sectionVariants(0.04)}
         initial="hidden"
@@ -758,11 +714,9 @@ export default function FindDetailPage() {
             position: "relative",
             width: "100%",
             aspectRatio: "4/5",
-            overflow: "visible", // allow post-it overhang
+            overflow: "visible",
           }}
         >
-          {/* Photograph — v1.1d: 6px radius + 1px inkHairline border for warm-tone separation
-              v1.1i-polish: subtle paper-tone drop-shadow to lift the photo off the page */}
           {post.image_url ? (
             <img
               src={post.image_url}
@@ -800,11 +754,8 @@ export default function FindDetailPage() {
             </div>
           )}
 
-          {/* v1.1e — save/share bubbles on the photograph. v1.2: when viewer
-              owns this post AND we're not on the 3B sold layout, the save
-              bubble swaps for a pencil edit bubble that routes to the new
-              /find/[id]/edit page. Share bubble stays. Non-owners see
-              save + share as today. */}
+          {/* v1.2 — owner-viewer swap. Owner: pencil bubble → /find/[id]/edit.
+              Non-owner: save + share bubbles as before. */}
           <div
             style={{
               position: "absolute",
@@ -843,18 +794,17 @@ export default function FindDetailPage() {
             </IconBubble>
           </div>
 
-          {/* v1.1d — post-it moved BOTTOM-RIGHT with push pin at top-center
-              v1.1f — inset from screen edge, rotation bumped +3 → +6deg, "Booth Location" stacked */}
+          {/* Post-it: bottom-right, +6deg rotation, push-pin top-center */}
           {boothNumber && (
             <div
               style={{
                 position: "absolute",
                 bottom: -14,
-                right: 4, // v1.1f — was -12; pulled inward so post-it sits fully inside the 22px page margin
+                right: 4,
                 width: 92,
-                minHeight: 92, // v1.1f — was 84; grown to accommodate stacked "Booth Location" eyebrow without crowding the numeral
+                minHeight: 92,
                 background: v1.postit,
-                transform: "rotate(6deg)", // v1.1f — was 3deg; more casual placed-verb without becoming fallen-over
+                transform: "rotate(6deg)",
                 transformOrigin: "bottom right",
                 boxShadow: `0 6px 14px rgba(42,26,10,0.28), 0 0 0 0.5px rgba(42,26,10,0.16)`,
                 padding: "14px 8px 10px",
@@ -864,7 +814,6 @@ export default function FindDetailPage() {
                 justifyContent: "center",
               }}
             >
-              {/* Push pin — top-center, matte ink, appears to go through the note */}
               <div
                 aria-hidden="true"
                 style={{
@@ -885,7 +834,7 @@ export default function FindDetailPage() {
                   fontStyle: "italic",
                   fontSize: 14,
                   color: v1.inkMuted,
-                  lineHeight: 1.1, // v1.1f — tight so "Booth" / "Location" read as one stacked label
+                  lineHeight: 1.1,
                   marginBottom: 6,
                   textAlign: "center",
                 }}
@@ -909,7 +858,7 @@ export default function FindDetailPage() {
         </div>
       </motion.div>
 
-      {/* ── 3. Title + price — v1.1 32px ─────────────────────────────────────── */}
+      {/* Title + price (v1.1 32px) */}
       <motion.div
         variants={sectionVariants(0.10)}
         initial="hidden"
@@ -937,7 +886,7 @@ export default function FindDetailPage() {
         </h1>
       </motion.div>
 
-      {/* ── 4. Quoted caption — v1.1 19px ────────────────────────────────────── */}
+      {/* Quoted caption (v1.1 19px) */}
       {post.caption && (
         <motion.div
           variants={sectionVariants(0.14)}
@@ -985,7 +934,7 @@ export default function FindDetailPage() {
         </motion.div>
       )}
 
-      {/* ── 5. Diamond divider ──────────────────────────────────────────────── */}
+      {/* Divider (v1.1j plain hairline, diamond retired) */}
       {(mallName || boothNumber) && (
         <motion.div
           variants={sectionVariants(0.16)}
@@ -996,12 +945,11 @@ export default function FindDetailPage() {
             marginBottom: 22,
           }}
         >
-          {/* v1.1j — diamond ornament retired; plain hairline */}
           <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
         </motion.div>
       )}
 
-      {/* ── 6. Cartographic block — v1.1 pin + tick + X (anchored to vendor line) ── */}
+      {/* Cartographic block — pin + tick + X (anchored to vendor line) */}
       {(mallName || vendorName || boothNumber) && (
         <motion.div
           variants={sectionVariants(0.18)}
@@ -1015,8 +963,6 @@ export default function FindDetailPage() {
             marginBottom: 32,
           }}
         >
-          {/* Glyph column — pin at top of mall row, X at top of vendor row,
-              tick fills the gap between them */}
           <div
             style={{
               display: "flex",
@@ -1024,13 +970,11 @@ export default function FindDetailPage() {
               alignItems: "center",
             }}
           >
-            {/* Pin aligned to mall name baseline */}
             {mallName && (
               <div style={{ paddingTop: 3, marginBottom: 0 }}>
                 <PinGlyph size={18} />
               </div>
             )}
-            {/* Tick */}
             {mallName && (vendorName || boothNumber) && (
               <div
                 style={{
@@ -1042,7 +986,6 @@ export default function FindDetailPage() {
                 }}
               />
             )}
-            {/* X aligned to vendor name baseline — v1.1e paddingTop calibrated to ascender */}
             {(vendorName || boothNumber) && (
               <div style={{ paddingTop: 3, marginBottom: 0 }}>
                 <XGlyph size={15} />
@@ -1050,9 +993,7 @@ export default function FindDetailPage() {
             )}
           </div>
 
-          {/* Content column */}
           <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-            {/* Mall row */}
             {mallName && (
               <div>
                 <div
@@ -1101,7 +1042,6 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Vendor row — v1.1d: vendor name on top; "Explore" label + shelf-link pill inline below, both wrapped in the Link */}
             {(vendorName || boothNumber) && (
               <div>
                 {vendorName && (
@@ -1173,7 +1113,7 @@ export default function FindDetailPage() {
         </motion.div>
       )}
 
-      {/* ── 7. "More from this shelf…" ──────────────────────────────────────── */}
+      {/* "More from this shelf…" strip */}
       {hasVendor && (
         <ShelfSection
           vendorId={post.vendor!.id}
@@ -1182,189 +1122,10 @@ export default function FindDetailPage() {
         />
       )}
 
-      {/* ── 8. Owner Manage block — v1.1 larger type, Title Case ──────────────── */}
-      {isMyPost && (
-        <motion.div
-          variants={sectionVariants(0.28)}
-          initial="hidden"
-          animate="visible"
-          style={{ padding: "10px 26px 30px" }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-            <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
-            <div
-              style={{
-                fontFamily: FONT_IM_FELL,
-                fontStyle: "italic",
-                fontSize: 15,
-                color: v1.inkMuted,
-              }}
-            >
-              Manage
-            </div>
-            <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
-          </div>
-
-          {!showDelete ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 14, alignItems: "center" }}>
-              <button
-                onClick={() => router.push(`/find/${post.id}/edit`)}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "8px 4px",
-                  fontFamily: FONT_IM_FELL,
-                  fontStyle: "italic",
-                  fontSize: 16,
-                  color: v1.inkPrimary,
-                  textDecoration: "underline",
-                  textDecorationStyle: "dotted",
-                  textDecorationColor: v1.inkFaint,
-                  textUnderlineOffset: 3,
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                <Pencil size={14} strokeWidth={1.6} style={{ color: v1.inkMuted }} />
-                Edit this find
-              </button>
-
-              <button
-                onClick={handleToggleSold}
-                disabled={actionBusy}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  background: "none",
-                  border: "none",
-                  cursor: actionBusy ? "default" : "pointer",
-                  padding: "8px 4px",
-                  fontFamily: FONT_IM_FELL,
-                  fontStyle: "italic",
-                  fontSize: 16,
-                  color: v1.inkPrimary,
-                  textDecoration: "underline",
-                  textDecorationStyle: "dotted",
-                  textDecorationColor: v1.inkFaint,
-                  textUnderlineOffset: 3,
-                  opacity: actionBusy ? 0.5 : 1,
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                <Tag size={14} strokeWidth={1.6} style={{ color: v1.inkMuted }} />
-                {isSold ? "Mark as On Display" : "Mark as Found a Home"}
-              </button>
-
-              <button
-                onClick={() => setShowDelete(true)}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "8px 4px",
-                  fontFamily: FONT_IM_FELL,
-                  fontStyle: "italic",
-                  fontSize: 14,
-                  color: v1.inkMuted,
-                  textDecoration: "underline",
-                  textDecorationStyle: "dotted",
-                  textDecorationColor: v1.inkFaint,
-                  textUnderlineOffset: 3,
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                <Trash2 size={12} strokeWidth={1.6} style={{ color: v1.inkMuted }} />
-                Delete this find
-              </button>
-            </div>
-          ) : (
-            <AnimatePresence>
-              <motion.div
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                style={{
-                  padding: "18px 18px",
-                  textAlign: "center",
-                }}
-              >
-                <div
-                  style={{
-                    fontFamily: FONT_IM_FELL,
-                    fontSize: 20,
-                    color: v1.inkPrimary,
-                    marginBottom: 10,
-                  }}
-                >
-                  Delete this find?
-                </div>
-                <div
-                  style={{
-                    fontFamily: FONT_IM_FELL,
-                    fontStyle: "italic",
-                    fontSize: 14,
-                    color: v1.inkMuted,
-                    marginBottom: 20,
-                    lineHeight: 1.6,
-                  }}
-                >
-                  This can’t be undone. The photograph and listing will be permanently removed.
-                </div>
-                <div style={{ display: "flex", gap: 28, justifyContent: "center" }}>
-                  <button
-                    onClick={handleDelete}
-                    disabled={actionBusy}
-                    style={{
-                      fontFamily: FONT_IM_FELL,
-                      fontStyle: "italic",
-                      fontSize: 15,
-                      color: "#8b2020",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: "8px 4px",
-                      textDecoration: "underline",
-                      textDecorationStyle: "dotted",
-                      textDecorationColor: "rgba(139,32,32,0.4)",
-                      textUnderlineOffset: 3,
-                      opacity: actionBusy ? 0.6 : 1,
-                      WebkitTapHighlightColor: "transparent",
-                    }}
-                  >
-                    {actionBusy ? "Deleting…" : "Yes, delete"}
-                  </button>
-                  <button
-                    onClick={() => setShowDelete(false)}
-                    style={{
-                      fontFamily: FONT_IM_FELL,
-                      fontStyle: "italic",
-                      fontSize: 15,
-                      color: v1.inkMuted,
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: "8px 4px",
-                      textDecoration: "underline",
-                      textDecorationStyle: "dotted",
-                      textDecorationColor: v1.inkFaint,
-                      textUnderlineOffset: 3,
-                      WebkitTapHighlightColor: "transparent",
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          )}
-        </motion.div>
-      )}
+      {/* Owner Manage block retired v1.2 (session 31E polish). All three affordances moved to
+          /find/[id]/edit: the pencil bubble on the photograph (top-right) routes there, and the
+          Edit page carries autosave fields + Available/Sold status pills + Remove from shelf link.
+          Find Detail is the reading surface; Edit is the management surface. */}
 
       <div style={{ paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }} />
       <BottomNav active={null} />

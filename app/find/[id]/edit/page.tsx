@@ -2,10 +2,21 @@
 // v1.2 — "Edit your find" page. New route. See build spec §5 and the
 // approved mockup docs/mockups/edit-listing-v1-2.html.
 //
-// The layout deliberately parallels /post/preview — a vendor editing a find
-// should feel like they're looking at the same page that created it. Same
-// masthead chrome, same photograph primitive, same posting-as row, same
-// field rhythm. Only three things are different:
+// v1.2 polish pass (session 31E) applied four changes per on-device QA feedback:
+//   1. Post-it on photograph removed (redundant metadata on a management surface).
+//      We pass boothNumber={null} to <PhotographPreview> — the primitive no-ops
+//      the post-it when the prop is null.
+//   2. <PostingAsBlock> vendor attribution row retired on this surface entirely.
+//      Edit is focused on image/title/caption/price — identity is implicit.
+//      /post/preview KEEPS <PostingAsBlock> because publishing is a moment where
+//      vendor identity matters; editing an already-committed post is not.
+//   3. Caption textarea auto-grows with content. Min height 78px; grows to
+//      scrollHeight as user types. iOS-native feel. Manual resize stays off.
+//   4. No functional changes to autosave / status / replace-photo / remove flows.
+//
+// The layout deliberately parallels /post/preview in chrome (masthead, photograph
+// primitive, field rhythm) but removes the vendor-attribution row since identity
+// is committed. Three surfaces are unique to Edit:
 //   - Replace-photo pill overlaid on the photograph (top-left)
 //   - Status toggle pair beneath Price (Available · Sold)
 //   - Quiet "Remove from shelf" destructive link at the very bottom
@@ -19,8 +30,7 @@
 // Auth gate, on mount:
 //   1. getSession() — if no user, route to /login?next=/find/[id]/edit
 //   2. getPost(id) — if not found, route to /find/[id] (404 lives there)
-//   3. getVendorByUserId(user.id) — verify vendor.id === post.vendor_id
-//      unless isAdmin(user) bypasses. Admin can edit any post.
+//   3. Ownership check via post.vendor.user_id; isAdmin(user) bypasses.
 //   4. Non-admin, non-owner → silent route back to /find/[id]
 
 "use client";
@@ -37,7 +47,6 @@ import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import PhotographPreview from "@/components/PhotographPreview";
-import PostingAsBlock from "@/components/PostingAsBlock";
 import AmberNotice from "@/components/AmberNotice";
 import type { Post } from "@/types/treehouse";
 
@@ -45,16 +54,22 @@ const AUTOSAVE_DEBOUNCE_MS  = 800;
 const SAVED_FADE_MS         = 2000;
 const STATUS_CONFIRM_FADE_MS = 3000;
 
+// v1.2 polish (session 31E): caption auto-grow bounds. Floor matches prior
+// static minHeight so fresh posts with a short caption look identical to how
+// they looked before this change. Ceiling prevents wild expansion on pasted
+// essays — beyond this the textarea's own scroll takes over.
+const CAPTION_MIN_HEIGHT_PX = 78;
+const CAPTION_MAX_HEIGHT_PX = 260;
+
 // Fields we locally debounce before PATCHing. Status and image_url are
 // handled as immediate writes elsewhere.
 type TextField = "title" | "caption" | "price_asking";
 
-// ══════════════════════════════════════════════════════════════════════════
 export default function EditFindPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
-  // ── Core state ─────────────────────────────────────────────────────────
+  // Core state
   const [post,        setPost]        = useState<Post | null>(null);
   const [stage,       setStage]       = useState<"loading" | "edit" | "forbidden" | "notfound">("loading");
 
@@ -72,7 +87,7 @@ export default function EditFindPage() {
   const [statusConfirm, setStatusConfirm] = useState<"sold" | "available" | null>(null);
 
   // Replace-photo flow state
-  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null); // compressed data URL preview
+  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
   const [replaceBusy,  setReplaceBusy]  = useState(false);
   const [replaceError, setReplaceError] = useState<string | null>(null);
 
@@ -87,9 +102,13 @@ export default function EditFindPage() {
   // Hidden input refs for Replace-photo
   const cameraInputRef  = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
-  const [showPhotoPicker, setShowPhotoPicker] = useState(false);
 
-  // ── Mount: auth gate + identity resolution ────────────────────────────
+  // v1.2 polish (session 31E) — ref on the caption textarea so an effect can
+  // size it to content on initial fill + on every keystroke. See captionResize
+  // effect below.
+  const captionRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Mount: auth gate + identity resolution
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
@@ -114,9 +133,6 @@ export default function EditFindPage() {
         return;
       }
 
-      // Ownership check: admin bypasses. Otherwise match user_id → vendor →
-      // post.vendor_id. The Post join gives us vendor.user_id directly, so
-      // we don't need a second round-trip.
       const postVendorUserId = fetched.vendor?.user_id ?? null;
       const isOwner = !!postVendorUserId && postVendorUserId === user.id;
 
@@ -139,7 +155,6 @@ export default function EditFindPage() {
 
     return () => {
       cancelled = true;
-      // Clear any pending debouncers so we don't PATCH after unmount
       Object.values(debouncers.current).forEach((t) => { if (t) clearTimeout(t); });
       debouncers.current = {};
       if (savedTimer.current)  clearTimeout(savedTimer.current);
@@ -148,10 +163,24 @@ export default function EditFindPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // ── Autosave helpers ───────────────────────────────────────────────────
+  // v1.2 polish (session 31E) — caption auto-grow effect. Fires on every
+  // caption change (including the initial setCaption from the server fetch)
+  // so the textarea lands at the correct size for its content on first paint.
+  // Algorithm: reset height to auto (so scrollHeight reads the true content
+  // height, not the previous style.height), then clamp scrollHeight between
+  // CAPTION_MIN_HEIGHT_PX and CAPTION_MAX_HEIGHT_PX.
+  useEffect(() => {
+    const el = captionRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const next = Math.min(
+      CAPTION_MAX_HEIGHT_PX,
+      Math.max(CAPTION_MIN_HEIGHT_PX, el.scrollHeight),
+    );
+    el.style.height = `${next}px`;
+  }, [caption]);
 
-  // Fire a PATCH with a partial update. On success, flash "Saved" next to
-  // the named field. On failure, surface an amber notice above that field.
+  // Autosave helpers
   async function patchPost(
     updates: Record<string, string | number | null>,
     flashField: TextField | null,
@@ -170,8 +199,6 @@ export default function EditFindPage() {
         }
         return false;
       }
-      // Update local post reference with server response so subsequent
-      // edits don't stale-diff against the pre-save snapshot
       setPost(json.post as Post);
       if (flashField) {
         setFieldErrors((prev) => {
@@ -196,22 +223,16 @@ export default function EditFindPage() {
     }
   }
 
-  // Debounced per-field text save. Called from each input's onChange.
   function scheduleTextSave(field: TextField, rawValue: string) {
-    // Clear any pending timer for this field
     if (debouncers.current[field]) clearTimeout(debouncers.current[field]);
 
     debouncers.current[field] = setTimeout(() => {
       if (!post) return;
 
-      // Coerce the value to what the API wants
       let update: Record<string, string | number | null>;
       if (field === "title") {
         const t = rawValue.trim();
         if (t.length < 1) {
-          // Autosave does not permit empty titles — show inline error but
-          // don't PATCH. Clearing the title then blurring away won't save
-          // an empty string.
           setFieldErrors((prev) => ({ ...prev, title: "Title can't be empty." }));
           return;
         }
@@ -220,7 +241,6 @@ export default function EditFindPage() {
         const c = rawValue.trim();
         update = { caption: c.length > 0 ? c : null };
       } else {
-        // price_asking
         if (rawValue.trim() === "") {
           update = { price_asking: null };
         } else {
@@ -237,16 +257,14 @@ export default function EditFindPage() {
     }, AUTOSAVE_DEBOUNCE_MS);
   }
 
-  // ── Status toggle (immediate write) ────────────────────────────────────
+  // Status toggle (immediate write)
   async function handleStatusChange(next: "available" | "sold") {
     if (!post || post.status === next) return;
-    // Optimistic update
     const prev = post.status;
     setPost({ ...post, status: next });
 
     const ok = await patchPost({ status: next }, null);
     if (!ok) {
-      // Rollback on failure
       setPost({ ...post, status: prev });
       setFieldErrors((e) => ({ ...e, title: "Couldn't update status — try again." }));
       return;
@@ -257,16 +275,10 @@ export default function EditFindPage() {
     statusTimer.current = setTimeout(() => setStatusConfirm(null), STATUS_CONFIRM_FADE_MS);
   }
 
-  // ── Replace photo flow (immediate write on confirm) ────────────────────
+  // Replace photo flow (immediate write on confirm)
   function openPhotoPicker() {
     setReplaceError(null);
-    setShowPhotoPicker(true);
-    // Tap the gallery input by default; a separate gesture could open
-    // camera. On mobile Safari showing a tiny picker overlay is flaky, so
-    // we just fire the gallery input directly — the vendor can pick "Take
-    // Photo" from inside iOS's native sheet.
     galleryInputRef.current?.click();
-    setShowPhotoPicker(false);
   }
 
   async function onPhotoPicked(e: React.ChangeEvent<HTMLInputElement>) {
@@ -297,11 +309,6 @@ export default function EditFindPage() {
       const url = await uploadPostImageViaServer(pendingPhoto, post.vendor_id);
       const ok  = await patchPost({ image_url: url }, null);
       if (!ok) throw new Error("PATCH failed");
-      // Surface success via the Saved flash on a synthetic field key —
-      // simplest is to reuse title flash briefly (the spec only calls for
-      // post-level signal, not a per-field one, for photo replacement).
-      // Here we clear pendingPhoto and rely on the photo itself updating
-      // via setPost(json.post) inside patchPost.
       setPendingPhoto(null);
     } catch (err) {
       console.error("[edit] photo replace failed:", err);
@@ -318,7 +325,7 @@ export default function EditFindPage() {
     setReplaceError(null);
   }
 
-  // ── Remove from shelf (quiet destructive) ──────────────────────────────
+  // Remove from shelf (quiet destructive)
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   async function handleRemove() {
     if (!post || removing) return;
@@ -339,7 +346,7 @@ export default function EditFindPage() {
     }
   }
 
-  // ── Callbacks for onChange wiring (stable via useCallback) ─────────────
+  // Callbacks for onChange wiring
   const onTitleChange = useCallback((v: string) => {
     setTitle(v);
     scheduleTextSave("title", v);
@@ -358,7 +365,7 @@ export default function EditFindPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [post?.id]);
 
-  // ── Render: loading / forbidden / notfound ─────────────────────────────
+  // Render: loading / forbidden / notfound
   if (stage === "loading" || stage === "forbidden" || stage === "notfound") {
     return (
       <div
@@ -388,7 +395,6 @@ export default function EditFindPage() {
 
   if (!post) return null;
 
-  const boothNumber = post.vendor?.booth_number ?? null;
   const displayedPhoto = pendingPhoto ?? post.image_url ?? "";
   const sold = post.status === "sold";
 
@@ -412,7 +418,6 @@ export default function EditFindPage() {
         style={{ display: "none" }}
         aria-hidden="true"
       />
-      {/* Camera input kept available for future use; not wired in v1.2 */}
       <input
         ref={cameraInputRef}
         type="file"
@@ -430,7 +435,7 @@ export default function EditFindPage() {
           paddingBottom: "max(40px, env(safe-area-inset-bottom, 40px))",
         }}
       >
-        {/* ── Masthead (Mode C) ──────────────────────────────────────── */}
+        {/* Masthead (Mode C) */}
         <div
           style={{
             padding: "max(14px, env(safe-area-inset-top, 14px)) 22px 10px",
@@ -492,10 +497,12 @@ export default function EditFindPage() {
           </div>
         </div>
 
-        {/* ── Photograph ────────────────────────────────────────────── */}
+        {/* Photograph — v1.2 polish (session 31E): boothNumber explicitly null
+            so <PhotographPreview> skips the post-it. Redundant metadata on a
+            management surface. */}
         <PhotographPreview
           imageUrl={displayedPhoto}
-          boothNumber={boothNumber}
+          boothNumber={null}
           sold={sold}
           topLeftAction={
             <button
@@ -525,10 +532,12 @@ export default function EditFindPage() {
           }
         />
 
-        {/* Post-it overhang spacer */}
-        <div style={{ height: 22 }} aria-hidden="true" />
+        {/* v1.2 polish (session 31E): post-it overhang spacer retired along
+            with the post-it. Photograph now sits cleanly above the content.
+            The 18px bottom padding inside <PhotographPreview> already gives
+            breathing room before the replace confirmation bar / fields. */}
 
-        {/* Replace-photo confirmation bar (renders when pendingPhoto is set) */}
+        {/* Replace-photo confirmation bar */}
         <AnimatePresence>
           {pendingPhoto && (
             <motion.div
@@ -538,7 +547,7 @@ export default function EditFindPage() {
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.22 }}
               style={{
-                margin: "0 22px 14px",
+                margin: "14px 22px 4px",
                 padding: "12px 14px",
                 borderRadius: 10,
                 background: v1.inkWash,
@@ -609,10 +618,13 @@ export default function EditFindPage() {
           </div>
         )}
 
-        {/* ── Posting-as ────────────────────────────────────────────── */}
-        {post.vendor && <PostingAsBlock vendor={post.vendor} />}
+        {/* v1.2 polish (session 31E): <PostingAsBlock> retired on this surface.
+            Edit is focused on image/title/caption/price. Vendor identity is
+            implicit once the post exists — publishing was the identity moment,
+            editing is not. /post/preview keeps <PostingAsBlock> because that
+            surface IS the identity moment. */}
 
-        {/* ── Fields ────────────────────────────────────────────────── */}
+        {/* Fields */}
         <div
           style={{
             padding: "18px 22px 10px",
@@ -640,7 +652,10 @@ export default function EditFindPage() {
             />
           </EditField>
 
-          {/* Caption */}
+          {/* Caption — v1.2 polish (session 31E) auto-grow via captionRef + effect.
+              Start height matches prior static minHeight so first paint is
+              unchanged for short captions; grows with content; hard-clamped
+              so pasted essays don't explode the layout. */}
           <EditField
             field="caption"
             label="Caption"
@@ -653,10 +668,17 @@ export default function EditFindPage() {
             }}
           >
             <textarea
+              ref={captionRef}
               value={caption}
               onChange={(e) => onCaptionChange(e.target.value)}
-              rows={3}
-              style={{ ...inputStyle, minHeight: 78, resize: "none", lineHeight: 1.5 }}
+              style={{
+                ...inputStyle,
+                minHeight: CAPTION_MIN_HEIGHT_PX,
+                maxHeight: CAPTION_MAX_HEIGHT_PX,
+                resize: "none",
+                lineHeight: 1.5,
+                overflowY: "auto",
+              }}
             />
           </EditField>
 
@@ -771,7 +793,7 @@ export default function EditFindPage() {
           </div>
         </div>
 
-        {/* ── Remove from shelf (destructive quiet link) ────────────── */}
+        {/* Remove from shelf (destructive quiet link) */}
         <div
           style={{
             padding: "28px 22px 40px",
@@ -889,9 +911,7 @@ export default function EditFindPage() {
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════
 // Helpers
-// ══════════════════════════════════════════════════════════════════════════
 
 function EditField({
   field,
