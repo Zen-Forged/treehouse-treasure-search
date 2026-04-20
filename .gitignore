@@ -34,3 +34,10 @@ Thumbs.db
 *.swp
 *.swo
 .claude/worktrees/
+
+# Local debug scripts — never commit. May contain secrets.
+# Added 2026-04-20 (session 29) after a check-vendor-requests.js
+# service_role key leak. See docs/SECURITY-INCIDENT-2026-04-19.md.
+check-*.js
+scripts/debug/
+
