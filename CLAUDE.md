@@ -35,6 +35,8 @@ This file is the **live whiteboard** — only the current session's starting poi
 | Supabase OTP email templates (HITL paste target) | `docs/supabase-otp-email-templates.md` |
 | In-mall SQL triage recipes | `docs/admin-runbook.md` |
 | Active bugs + deferred items + resolved history | `docs/known-issues.md` |
+| **Multi-booth rework — dev handoff spec for session 35** | `docs/multi-booth-build-spec.md` (mockup at `docs/mockups/my-shelf-multi-booth-v1.html`) |
+| Queued sessions (scoped work sequenced behind something else) | `docs/queued-sessions.md` |
 
 ---
 
@@ -97,48 +99,9 @@ Full rework of Flow 3 (`/vendor-request`) and all three onboarding emails. Trigg
 - `docs/onboarding-journey.md` (updated — Flow 3 diagram rewritten for v1.2, Email matrix copy refreshed, data-shape decisions revised, Sprint 5 items logged)
 - `docs/mockups/email-v1-2.html` (NEW — approved mockup)
 
-### Session 32 close HITL (in order)
+**Note (added session 34):** Session-32 code is still uncommitted on disk. Session 35 will bundle the v1.2 onboarding commit with the multi-booth rework commit in a single push. No separate session-32 close required.
 
-1. 🖐️ **Run migration** — open Supabase Dashboard → SQL Editor, paste the contents of `supabase/migrations/005_vendor_request_onboarding_refresh.sql`, run. Verify with:
-
-```sql
-SELECT column_name, data_type, is_nullable
-FROM information_schema.columns
-WHERE table_name = 'vendor_requests'
-ORDER BY ordinal_position;
-```
-
-Should show `first_name`, `last_name`, `booth_name`, `proof_image_url` columns alongside the existing ones. Then verify the partial unique index:
-
-```sql
-SELECT indexname, indexdef
-FROM pg_indexes
-WHERE tablename = 'vendor_requests';
-```
-
-Should include `vendor_requests_email_pending_idx` with a definition referencing `lower(email) WHERE status = 'pending'`.
-
-2. 🖐️ **Paste Supabase OTP template** — open `docs/supabase-otp-email-templates.md` on disk. Copy the HTML block under "HTML body" into BOTH Supabase Dashboard → Auth → Email Templates → Magic Link AND Confirm Signup. Both templates are separate saves (session-6 gotcha, still holds).
-
-3. 🖐️ **Build check:**
-
-```bash
-npm run build 2>&1 | tail -30
-```
-
-4. 🖐️ **On-device QA** — walk full v1.2 Flow 3 on iPhone against clean DB:
-   - Submit fresh request with photo → receipt email arrives on all-Georgia paper surface
-   - Submit again with same email → "We already have you" state renders, no second insert, no second email (verify in Supabase admin)
-   - Admin approval from `/admin` → photo thumbnail renders in request row → approve → approval email arrives WITHOUT a clickable CTA
-   - Open PWA manually, sign in with that email → OTP email arrives on refreshed template → enter code → `/setup` → `/my-shelf` → `display_name` matches `booth_name` (or first+last if booth_name was blank)
-
-5. 🖐️ **Commit + push:**
-
-```bash
-git add -A && git commit -m "session 32: v1.2 onboarding refresh — booth photo + name split + dedup + all-Georgia emails" && git push
-```
-
-### Session 32 Tech Rule candidates
+### Session 32 Tech Rule candidates (unchanged)
 
 **Hallucinated-state pattern when files have session markers.** I opened this session certain the files were in pre-v1.2 state; when I read them they already had session-32 headers. Two possible causes: (a) prior work in a parallel session, (b) model confabulation of what I "expected" to see. Either way, the mitigation is the same: **before writing any file in a session, re-read with a small `head` or narrow `view_range` rather than trusting earlier in-session reads.** Session-25's file-creation-verify rule already covers new-file writes; this pair-rule covers edits of existing files. Log as a promotion candidate for session 33's Tech Rule batch.
 
@@ -163,30 +126,9 @@ git add -A && git commit -m "session 32: v1.2 onboarding refresh — booth photo
 
 **What David named at session close (BIGGER than KI-006):**
 
-Multi-booth vendors. Real reseller operations — same person holds Booth 369 at America's Antique Mall AND Booth 42 at Peddlers Mall AND potentially a third location. Current data model forbids this via `vendors.user_id UNIQUE`. David's proposed composite identity: **`email + mall_id + booth_number`**. This is a schema-level question that collides with multiple surfaces: `vendors_user_id_key` constraint, `/my-shelf` single-vendor resolution, `/api/setup/lookup-vendor`, `/post` identity resolution, `/admin` approval flow, `vendor_requests` (can same email have two pending requests?), and session-32's v1.2 dedup logic (which currently collapses any email match to a single pending).
+Multi-booth vendors. Real reseller operations — same person holds Booth 369 at America's Antique Mall AND Booth 42 at Peddlers Mall AND potentially a third location. Current data model forbids this via `vendors.user_id UNIQUE`. David's proposed composite identity: **`email + mall_id + booth_number`**.
 
 **Critical observation:** fixing KI-006 in isolation would paper over the wrong model. The right sequence is scope-multi-booth-first, then KI-006 becomes a natural sub-fix of that larger rework rather than a patch on an obsolete model.
-
-### Files touched this session
-
-- `docs/known-issues.md` — KI-005 logged with full context
-- `docs/DECISION_GATE.md` — Risk Register row added for KI-005
-
-**No code written.** No commits. No push needed at session close beyond doc updates.
-
-### Session 33 close HITL
-
-1. 🖐️ **Commit + push docs:**
-
-```bash
-cd /Users/davidbutler/Projects/treehouse-treasure-search && git add -A && git commit -m "session 33: log KI-005 (pre-approval sign-in signaling) + KI-006 (lookup-vendor regression) + multi-booth pivot" && git push
-```
-
-2. 🖐️ **Think on multi-booth scope** between sessions. Four questions to answer before session 34 opens:
-   - Do multiple booths share one `display_name`, or can each have its own? (Probably per-booth.)
-   - Does the vendor see all their booths at once on `/my-shelf`, or pick one as "active"?
-   - Shared bio / hero across booths, or per-booth?
-   - Can same email have two pending `vendor_requests` for different booths? (Current v1.2 dedup says no — this is the specific session-32 behavior that needs to change.)
 
 ### Session 33 Tech Rule candidate
 
@@ -196,63 +138,121 @@ Log as promotion candidate for session 34 or 35 Tech Rule batch. Sits alongside 
 
 ---
 
+## ✅ Session 34 (2026-04-20) — multi-booth scoping: mockup approved, Path A committed
+
+**Intent:** Scope the multi-booth data-model rework per the Path A recommendation from session 33. Joint Product + Design + Dev scoping session; mockup-first per the session 28 Tech Rule.
+
+**Two-path decision at session open.** David confirmed Path A (multi-booth scope first) over Path B (KI-006 surgical hotfix). Before pivoting, his Path B instinct was captured as a runnable queued session — `docs/queued-sessions.md` Q-001 — in case multi-booth scoping later exposes a blocker and we need to buy back v1.2 onboarding for single-booth vendors while the rework continues. Q-001 is currently 🟡 Ready but waiting; it auto-retires as ⏸️ Superseded when session 35 ships.
+
+**Four prior-session decisions confirmed at open:**
+- Per-booth `display_name`
+- Per-booth picker on `/my-shelf` (not stacked)
+- Per-booth bio and hero
+- Multiple pending `vendor_requests` per email OK if `(mall_id, booth_number)` differs
+
+**Three scoping-session decisions made before mockup build:**
+- Schema mockup shows **both paths side-by-side** (drop UNIQUE vs `vendor_memberships` join table), David decides at review
+- Picker style: **bottom sheet** matching `<MallSheet>` primitive (no new pattern invented)
+- Single-booth vendors (99% of current users): **picker hidden entirely** — identical to today's UX
+
+**Mockup built — `docs/mockups/my-shelf-multi-booth-v1.html`:**
+- Three phone frames: single-booth (unchanged) · multi-booth with active booth in masthead · picker sheet open
+- Decisions pane at top (the session 28 Tech Rule pattern — plain-English commitment surface)
+- Schema comparison section — Option A (drop UNIQUE, 1 SQL line, ~8 call sites, 1 sprint) vs Option B (`vendor_memberships`, ~40 lines, ~15 files + RLS, 2 sprints) with migration cost + call-site count + session estimate per option
+- Surface impact table — every file/route that changes, per-option cost
+- Five review questions at the bottom
+
+**Mockup review — David's five answers locked the design:**
+
+1. **Schema path: Option A.** Drop `vendors_user_id_key`. Co-ownership / role-based work not on the roadmap; Option B solves a problem we don't have yet. A→B migration later is known-weight, not a trap.
+2. **Masthead affordance approved as drawn** — "Viewing · [Booth Name] ▾" in the center slot, entire block is the tap target.
+3. **Sheet row hierarchy good as drawn** — booth name leads (bold), mall + booth number as subtitle. David's reframe: "This page is for the Booth owners. It should feel like their page, not the malls page." Booth identity centers the hierarchy.
+4. **"Add another booth" inside the sheet** — not a separate settings screen. Keeps the add-flow close to the list.
+5. **Pending booths hidden** from the picker until approved. Reversed from Frame 3's "Small Town Finds · Pending" row — final behavior filters unapproved requests out before they reach the sheet.
+
+**Build spec written — `docs/multi-booth-build-spec.md`:**
+
+Per the session 28 mockup-first Tech Rule, the build spec is an explicit dev-handoff document, not a decision document. Front-matter states so: *"If this spec and the mockup ever disagree, the mockup wins."* David doesn't read the build spec; session 35 Claude does.
+
+The spec covers:
+- Migration 006 (drop `vendors_user_id_key`) + Migration 007 (rekey session-32 dedup to `(lower(email), mall_id, booth_number) WHERE status='pending'`)
+- `lib/posts.ts` rename: `getVendorByUserId` → `getVendorsByUserId` (array return) with deprecated wrapper during transition
+- `lib/activeBooth.ts` (NEW) — active-booth resolver via `safeStorage` key `treehouse_active_vendor_id`
+- `/my-shelf` list-aware rewrite with conditional masthead + sheet when `vendors.length > 1`
+- `<BoothPickerSheet>` (NEW) inheriting `<MallSheet>` motion + chrome
+- `/api/setup/lookup-vendor` full rewrite to composite-key lookup with array return — **this is where KI-006 dies as a natural sub-fix**
+- `/setup` client page handles array response
+- `/post` + `/post/preview` read active booth via resolver (no in-flow picker — single-path for the 99% case)
+- `/api/vendor-request` dedup widens to `(lower(email), mall_id, booth_number, status)`
+- 15-step execution order with 🖐️ HITL markers for build check, both migrations, commit, and on-device QA walk
+- Rollback plan documented — migration 006 becomes destructive once a vendor has a second approved row
+
+### Files touched this session
+
+- `docs/queued-sessions.md` (NEW) — register for scoped-but-sequenced work. Q-001 = Path B hotfix.
+- `docs/mockups/my-shelf-multi-booth-v1.html` (NEW) — three-frame mockup, schema comparison, surface impact, review questions.
+- `docs/multi-booth-build-spec.md` (NEW) — dev handoff for session 35.
+
+**No code written.** Per Path A, this was a scoping session. Session-32 code remains on disk uncommitted; session 35 bundles it with the multi-booth commit in one push.
+
+### Session 34 close HITL
+
+1. 🖐️ **Commit + push all scoping docs:**
+
+```bash
+cd /Users/davidbutler/Projects/treehouse-treasure-search && git add -A && git commit -m "session 34: multi-booth scoping — mockup approved, path A committed, Q-001 path B captured" && git push
+```
+
+2. 🖐️ **Optional — skim the build spec** (`docs/multi-booth-build-spec.md`) once before session 35 opens. Focus on the execution order (15 steps) and out-of-scope list so you know what's landing. The per-file details are for Claude.
+
+### Session 34 Tech Rule observations (no new candidates)
+
+The session-28 mockup-first pattern continues to pay. Three UI surfaces, one schema decision, and a full build spec produced in one session with zero spec-doc reopens. David's iPhone review took minutes, not hours. Worth noting in the next Tech Rule promotion batch that this pattern has now landed cleanly across sessions 28 (`v1.2` surfaces) and 34 (multi-booth) — strong enough signal to stay the default.
+
+---
+
 ## CURRENT ISSUE
-> Last updated: 2026-04-20 (session 33 — v1.2 QA walk deferred at the multi-booth pivot)
+> Last updated: 2026-04-20 (session 34 — multi-booth scoped, Path A committed, build spec ready)
 
-**Status:** Session 34 opens with a strategic question, not a code task. David needs to scope the multi-booth data-model rework before KI-006 can be fixed correctly. v1.2 onboarding is 90% confirmed working; the last 10% (post-approval sign-in for any vendor with a `booth_name`) is blocked behind KI-006, and KI-006 is blocked behind multi-booth scoping.
+**Status:** Session 35 opens as the multi-booth code sprint. The plan is committed in `docs/multi-booth-build-spec.md` and the mockup at `docs/mockups/my-shelf-multi-booth-v1.html` is the approved source of truth for any UI disagreement.
 
-### Session 34 opener — TWO paths depending on where David's thinking has landed
+### Session 35 opener
 
-**Path A — Multi-booth scoping session (probably right):**
+```
+PROJECT: Treehouse — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
+STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Vercel
+Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
+Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-If David has thought through the four multi-booth questions and wants to scope the rework, session 34 runs as a joint Product + Design + Dev scoping session:
-- Review the four open questions
-- Draft the schema migration (likely: drop `vendors_user_id_key`, keep `vendors_mall_booth_unique`, consider adding a `vendor_memberships` join table OR allow many vendors per user_id directly)
-- Mockup `/my-shelf` booth-picker UX (per mockup-first rule) — does the user see all booths stacked? A picker chip at the top? A bottom sheet?
-- Rewrite `/api/setup/lookup-vendor` to return an array, not a single row
-- Update session-32 v1.2 dedup to key on `(email, mall_id, booth_number)` instead of `(email, status)`
-- Identify which `vendor_requests` columns/constraints need to change
-- **No code written session 34.** Output is a scoping doc + schema mockup + UX mockup for David's approval. Dev sprint comes session 35.
+CURRENT ISSUE: Run the session 35 code sprint from docs/multi-booth-build-spec.md. This is the multi-booth data-model rework (Option A — drop vendors_user_id_key). KI-006 dies as a natural sub-fix of the /api/setup/lookup-vendor rewrite. Session-32 v1.2 onboarding code is still uncommitted on disk — bundle it with the session-35 commit and push as one unit. Mockup approval surface: docs/mockups/my-shelf-multi-booth-v1.html. If the mockup and the build spec ever disagree, the mockup wins.
+```
 
-**Path B — KI-006 hotfix first, multi-booth later (backup plan):**
+### What session 35 will ship (per build spec)
 
-If multi-booth scope is too big and David wants v1.2 onboarding fully working in the meantime, session 34 can surgically fix KI-006 in `/api/setup/lookup-vendor` without touching the schema:
-- Rewrite the lookup to join on `mall_id + booth_number + user_id IS NULL` as the primary composite, with name fallback matching the session-32 approval priority
-- Still single-vendor-per-user at the data layer — multi-booth remains blocked
-- ~30 min surgical fix, on-device verify with a booth_name test request, commit, resume QA walk from step 7
+- **2 migrations** — `006_multi_booth.sql` (drop `vendors_user_id_key`) and `007_multi_booth_vendor_request_dedup.sql` (rekey session-32 dedup to composite). Both 🖐️ HITL runs in Supabase Dashboard → SQL Editor.
+- **1 new lib module** — `lib/activeBooth.ts` (resolver via `safeStorage`).
+- **1 new component** — `<BoothPickerSheet>` inheriting `<MallSheet>` motion/chrome.
+- **1 API route rewrite** — `/api/setup/lookup-vendor` full rewrite to composite-key lookup with array return. This is where KI-006 goes away.
+- **1 lib rename + shape change** — `getVendorByUserId` → `getVendorsByUserId` (array). Deprecated wrapper during transition.
+- **Surface updates** — `/my-shelf` (conditional masthead + sheet when N>1), `/post` + `/post/preview` (active-booth resolver), `/setup` (array response), `/api/vendor-request` (widen dedup).
+- **Bundled commit** — session-32 v1.2 onboarding backlog pushes alongside the session-35 multi-booth code. One push, one deploy.
 
-**Recommended:** Path A. KI-006 is a symptom; multi-booth is the cure. Shipping the hotfix without the schema rework leaves us patching on an obsolete model and likely needing to re-hotfix when multi-booth lands.
+Estimated: one full code sprint + on-device QA walk. Rollback plan in the build spec; migration 006 becomes destructive once a vendor has a second approved row, so the QA walk is mandatory before push.
 
-### Walk progress captured
+### Session 35 queue context
 
-For session 34+ reference, the session-33 walk got through:
+**Not in session 35** — explicitly out of scope per build spec:
+- Co-ownership / role-based permissions (Option B territory, deferred until roadmap names it)
+- Admin UI grouping of same-email requests (optional polish only)
+- Per-booth hero/bio edit surface (session-32 deferral; separate sprint)
 
-| Step | Status |
-|---|---|
-| Pre-walk build | 🖐️ HITL pending (David never ran it — bash tool can't reach Mac FS) |
-| 1. Flow 3 fresh submission | ✅ |
-| 2. Email #1 receipt | ✅ |
-| 3. Dedup resubmit "We already have you" | ✅ |
-| 4. Admin approval + photo thumbnail | ✅ |
-| 5. Email #2 approval (no CTA, echo pill) | ✅ |
-| 6. PWA sign-in + OTP verify | ❌ KI-006 surfaced |
-| 7. `/setup` link + `/my-shelf` display_name | ⏸️ blocked by KI-006 |
-| 8. booth_name priority (second fresh Flow 3) | ⏸️ blocked by KI-006 |
-| 9. already_approved state | ⏸️ |
-| 10. Commit + push | ⏸️ session-32 code still uncommitted on disk |
-
-**Session-32 code is still uncommitted.** Not pushed to GitHub / Vercel. The live site is running the pre-v1.2 code. On-device QA above was against local dev or against a dev-deployed branch; either way, `git push` from session-32 close HITL step 5 was never completed. This is safe — nothing's lost — but session 34 or the hotfix session needs to commit the session-32 code along with whatever fix it ships.
-
-### Session 34 candidate queue (unchanged from session 33 standup unless Path A consumes the session)
-
-**Sprint 4 tail batch** (longest-parked, still not started):
-- 🟡 T4c remainder — `/api/setup/lookup-vendor` error copy polish (note: now also collides with KI-006 fix territory, natural to batch)
+**Sprint 4 tail batch** (still longest-parked, not touched since session 26):
+- 🟡 T4c remainder — error copy polish (note: collides with session-35 `/setup` work, natural to batch if there's time)
 - 🟡 T4b admin surface consolidation (~4 hrs, dedicated session)
 - 🟡 T4d pre-beta QA pass (~1–2 hrs, after T4b)
-- 🟢 Session-13 test data cleanup
 
-**Doc housekeeping:**
-- 33A — Promote seven Tech Rule candidates (six carried from session-32 + new one from session-33 on dependent-surface-audit)
+**Doc housekeeping carried:**
+- 33A — Promote seven Tech Rule candidates
 - 33B — Anthropic model audit + billing safeguards
 
 ---
@@ -261,21 +261,21 @@ For session 34+ reference, the session-33 walk got through:
 
 ### 🔴 Pre-beta blockers
 
-- **KI-006 — `/api/setup/lookup-vendor` stale join against `vendor_requests.name`.** Blocks any Flow 3 vendor who uses `booth_name` from completing setup. Not a standalone fix; folded into multi-booth rework scoping.
-- **Multi-booth data model** — current schema forbids (`vendors.user_id UNIQUE`). Blocks any vendor with multiple booths across one or more malls. Named by David at session-33 close.
+- **Multi-booth data model** — scoped session 34 (Option A). Build spec at `docs/multi-booth-build-spec.md`, mockup at `docs/mockups/my-shelf-multi-booth-v1.html`. Code sprint = session 35.
+- **KI-006 — `/api/setup/lookup-vendor` stale join against `vendor_requests.name`.** Resolution sequenced via the multi-booth rework in session 35 — the lookup-vendor rewrite with composite-key matching and array return kills KI-006 as a natural sub-fix. Backup plan captured as Q-001 (`docs/queued-sessions.md`) if multi-booth blocks.
 
-### 🟡 Remaining pre-beta tech work (unchanged from session 32)
+### 🟡 Remaining pre-beta tech work
 
-- **Session-32 commit still pending** — code on disk, not pushed. Will be bundled with session-34 or hotfix commit.
+- **Session-32 commit still pending** — code on disk, not pushed. Will be bundled into the session-35 push per build spec.
 - **Sprint 4 tail batch** (T4c remainder, T4b admin consolidation, T4d pre-beta QA pass, test data cleanup).
 - **Anthropic model audit + billing safeguards** (33B). ~30 min.
-- **Tech Rule promotions** (33A — now seven rules). ~25 min.
+- **Tech Rule promotions** (33A — seven rules + session-34 observation on mockup-first landing as reliable default). ~25 min.
 
 ### 🟡 Sprint 5 + design follow-ons
 
 - **KI-005** — Pre-approval sign-in signaling gap. Batch with guest-user UX.
 - **Typography reassessment** (session-32 deferral — IM Fell readability).
-- **Post-approval booth-name edit surface** (session-32 deferral).
+- **Post-approval booth-name edit surface** (session-32 deferral). Multi-booth makes this richer — per-booth editing becomes possible after session 35 ships.
 - `<MallSheet>` migration to `/vendor-request` (still deferred per v1.1k (h)).
 - Nav Shelf decision + BottomNav full chrome rework (4 mockups in `docs/mockups/nav-shelf-exploration.html`).
 - Guest-user UX parked items: "Sign in" → "Curator Sign In" rename, `/welcome` guest landing, PWA install onboarding, vendor onboarding Loom, bookmarks persistence (localStorage → DB).
@@ -289,11 +289,11 @@ For session 34+ reference, the session-33 walk got through:
 
 ### 🟢 Sprint 6+ (parked)
 
-"Claim this booth," QR-code approval, Universal Links, native app eval, admin-cleanup tool, feed pagination + search, ToS/privacy, mall vendor CTA, vendor directory. Post-MVP: 3A sold landing state, Find Map saved-but-sold tile signal, Find Map crop visibility on post-publish surfaces.
+"Claim this booth," QR-code approval, Universal Links, native app eval, admin-cleanup tool, feed pagination + search, ToS/privacy, mall vendor CTA, vendor directory, **Option B `vendor_memberships` migration** (if/when co-ownership or role-based permissions become a real roadmap item). Post-MVP: 3A sold landing state, Find Map saved-but-sold tile signal, Find Map crop visibility on post-publish surfaces.
 
 ### 🟢 Cleanup (not urgent)
 
-- Deprecated functions in `lib/posts.ts` (loud `console.warn`, no callers)
+- Deprecated functions in `lib/posts.ts` (loud `console.warn`, no callers) — session 35 adds one more deprecated wrapper (`getVendorByUserId`), schedule a cleanup pass after N+1 sessions confirm no callers
 - Cloudflare nameservers dormant (no cost)
 - `/shelves` AddBoothSheet (orphan after T4b)
 - `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` (obsolete since T4a)
@@ -302,6 +302,7 @@ For session 34+ reference, the session-33 walk got through:
 - `components/ShelfGrid.tsx` (parked retention comments; zero callers)
 - Historical mockup HTML files in `docs/mockups/` (retire as versions ship)
 - `/post` redirect shim — can delete entirely post-beta once inbound references are audited
+- `docs/queued-sessions.md` Q-001 — retire as ⏸️ Superseded after session 35 ships (KI-006 fixed as sub-fix of the multi-booth rework, as predicted)
 
 ---
 
