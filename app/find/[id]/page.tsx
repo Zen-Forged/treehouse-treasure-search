@@ -800,7 +800,11 @@ export default function FindDetailPage() {
             </div>
           )}
 
-          {/* v1.1e — save + share as frosted overlay bubbles, top-right of photograph */}
+          {/* v1.1e — save/share bubbles on the photograph. v1.2: when viewer
+              owns this post AND we're not on the 3B sold layout, the save
+              bubble swaps for a pencil edit bubble that routes to the new
+              /find/[id]/edit page. Share bubble stays. Non-owners see
+              save + share as today. */}
           <div
             style={{
               position: "absolute",
@@ -812,18 +816,28 @@ export default function FindDetailPage() {
               zIndex: 2,
             }}
           >
-            <IconBubble
-              onClick={handleToggleSave}
-              ariaLabel={isSaved ? "Remove from saved" : "Save"}
-              active={isSaved}
-              variant="frosted"
-            >
-              <Heart
-                size={17}
-                strokeWidth={isSaved ? 0 : 1.6}
-                style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
-              />
-            </IconBubble>
+            {isMyPost ? (
+              <IconBubble
+                onClick={() => router.push(`/find/${post.id}/edit`)}
+                ariaLabel="Edit this find"
+                variant="frosted"
+              >
+                <Pencil size={16} strokeWidth={1.8} style={{ color: v1.inkPrimary }} />
+              </IconBubble>
+            ) : (
+              <IconBubble
+                onClick={handleToggleSave}
+                ariaLabel={isSaved ? "Remove from saved" : "Save"}
+                active={isSaved}
+                variant="frosted"
+              >
+                <Heart
+                  size={17}
+                  strokeWidth={isSaved ? 0 : 1.6}
+                  style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
+                />
+              </IconBubble>
+            )}
             <IconBubble onClick={handleShare} ariaLabel="Share" variant="frosted">
               <Send size={17} strokeWidth={1.6} style={{ color: copied ? "#1e4d2b" : v1.inkPrimary }} />
             </IconBubble>
@@ -1194,7 +1208,7 @@ export default function FindDetailPage() {
           {!showDelete ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 14, alignItems: "center" }}>
               <button
-                onClick={() => router.push(`/post/edit/${post.id}`)}
+                onClick={() => router.push(`/find/${post.id}/edit`)}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",

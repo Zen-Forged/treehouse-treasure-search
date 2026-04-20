@@ -24,9 +24,12 @@ import { PiLeaf } from "react-icons/pi";
 import { getVendorByUserId, getVendorById, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
+import { compressImage as compressForAdd } from "@/lib/imageUpload";
+import { postStore } from "@/lib/postStore";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Post, type Vendor, type Mall } from "@/types/treehouse";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
+import AddFindSheet from "@/components/AddFindSheet";
 import {
   BoothHero,
   BoothTitleBlock,
@@ -205,6 +208,13 @@ function MyBoothInner() {
   const [heroUploading, setHeroUploading] = useState(false);
   const [heroError,     setHeroError]     = useState<string | null>(null);
 
+  // v1.2 — AddFindSheet state + hidden file inputs. Sheet opens via
+  // AddFindTile onAddClick, via BottomNav (future), or via ?openAdd=1 URL
+  // param on mount (supports the /post redirect shim).
+  const [showAddSheet, setShowAddSheet] = useState(false);
+  const cameraInputRef  = useRef<HTMLInputElement | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
+
   const heroLockedRef = useRef(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -345,6 +355,73 @@ function MyBoothInner() {
     try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2200); } catch {}
   }
 
+  // ── v1.2 AddFindSheet plumbing ───────────────────────────────────────
+  // Open the sheet when an AddFindTile is tapped, when BottomNav eventually
+  // routes here, or when /post redirect-shims in with ?openAdd=1.
+  function openAddSheet() {
+    setShowAddSheet(true);
+  }
+
+  useEffect(() => {
+    // Support the /post → /my-shelf?openAdd=1 redirect shim. Wait for vendor
+    // to be ready so AddFindSheet opens over a populated shelf, not a
+    // skeleton. Clear the param from the URL after opening so back/forward
+    // navigation doesn't re-open the sheet unexpectedly.
+    if (!vendorReady || !activeVendor) return;
+    if (searchParams.get("openAdd") !== "1") return;
+    setShowAddSheet(true);
+    // Strip ?openAdd=1 from the URL while preserving any other params (like ?vendor=id).
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("openAdd");
+    const qs = params.toString();
+    router.replace(`/my-shelf${qs ? `?${qs}` : ""}`, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vendorReady, activeVendor?.id]);
+
+  // Called when user picks a file from the camera or gallery input. Reads
+  // the image, compresses it, stashes it into postStore, dismisses the
+  // sheet, and navigates to /post/preview where the v1.2 Review page takes
+  // over. Mirrors the current /post flow's file-handling pattern so preview
+  // behavior is unchanged.
+  async function handleAddFile(file: File) {
+    if (!file.type.startsWith("image/")) {
+      setShowAddSheet(false);
+      return;
+    }
+    if (!activeVendor) {
+      // Shouldn't happen — the sheet isn't reachable without a vendor — but
+      // guard anyway so a race doesn't crash the flow.
+      setShowAddSheet(false);
+      return;
+    }
+    try {
+      const reader  = new FileReader();
+      const rawData = await new Promise<string>((res, rej) => {
+        reader.onload  = e => res(e.target?.result as string);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+      const compressed = await compressForAdd(rawData);
+      postStore.set(compressed);
+      setShowAddSheet(false);
+      // Preserve ?vendor=id if admin is impersonating so /post/preview
+      // resolves the same identity /my-shelf is showing.
+      const vendorParam = searchParams.get("vendor");
+      const dest = vendorParam ? `/post/preview?vendor=${vendorParam}` : "/post/preview";
+      router.push(dest);
+    } catch (err) {
+      console.error("[my-shelf] add-find file read failed:", err);
+      setShowAddSheet(false);
+    }
+  }
+
+  function onAddInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (f) handleAddFile(f);
+    // Reset so picking the same file twice still fires change.
+    e.target.value = "";
+  }
+
   if (!authReady) return null;
 
   const available   = posts.filter(p => p.status === "available");
@@ -422,6 +499,7 @@ function MyBoothInner() {
                 vendorId={activeVendor.id}
                 showAddTile={true}
                 showPlaceholders={true}
+                onAddClick={openAddSheet}
               />
             ) : (
               available.length > 0 ? (
@@ -429,6 +507,7 @@ function MyBoothInner() {
                   posts={available}
                   vendorId={activeVendor.id}
                   showAddTile={true}
+                  onAddClick={openAddSheet}
                 />
               ) : (
                 // v1.1j — even with zero items, Shelf View still shows the
@@ -438,6 +517,7 @@ function MyBoothInner() {
                   posts={[]}
                   vendorId={activeVendor.id}
                   showAddTile={true}
+                  onAddClick={openAddSheet}
                 />
               )
             )}
@@ -448,6 +528,35 @@ function MyBoothInner() {
       </div>
 
       <BottomNav active="my-shelf" />
+
+      {/* v1.2 — Hidden file inputs owned by the page; AddFindSheet calls
+          into these via onTakePhoto / onChooseFromLibrary. Separate inputs
+          so iOS respects the `capture="environment"` camera hint on one
+          without constraining the library picker. */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={onAddInputChange}
+        style={{ display: "none" }}
+        aria-hidden="true"
+      />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        onChange={onAddInputChange}
+        style={{ display: "none" }}
+        aria-hidden="true"
+      />
+
+      <AddFindSheet
+        open={showAddSheet}
+        onClose={() => setShowAddSheet(false)}
+        onTakePhoto={() => cameraInputRef.current?.click()}
+        onChooseFromLibrary={() => galleryInputRef.current?.click()}
+      />
 
       <BoothPageStyles />
     </div>

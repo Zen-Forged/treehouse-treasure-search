@@ -502,8 +502,51 @@ export function ViewToggle({
 // Window View — 3-col 4:5 portrait grid with titles + prices
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function AddFindTile({ vendorId, index }: { vendorId?: string; index: number }) {
+export function AddFindTile({
+  vendorId,
+  index,
+  onAddClick,
+}: {
+  vendorId?: string;
+  index: number;
+  onAddClick?: () => void;
+}) {
+  // v1.2 — /my-shelf now handles adds via <AddFindSheet> and passes
+  // onAddClick. If no handler is passed (public /shelf/[slug] has no add
+  // context), we fall back to the v1.1 /post link. When /post is fully
+  // retired post-beta, that fallback can be removed.
   const href = vendorId ? `/post?vendor=${vendorId}` : "/post";
+  const tileStyle: React.CSSProperties = {
+    width: "100%",
+    aspectRatio: "4/5",
+    borderRadius: v1.imageRadius,
+    border: `1px dashed ${v1.inkFaint}`,
+    background: "transparent",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    textDecoration: "none",
+    WebkitTapHighlightColor: "transparent",
+    cursor: "pointer",
+  };
+  const inner = (
+    <>
+      <ImagePlus size={22} strokeWidth={1.5} style={{ color: v1.inkMuted }} />
+      <span
+        style={{
+          fontFamily: FONT_IM_FELL,
+          fontStyle: "italic",
+          fontSize: 13,
+          color: v1.inkMuted,
+          lineHeight: 1,
+        }}
+      >
+        Add a find
+      </span>
+    </>
+  );
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }}
@@ -511,36 +554,20 @@ export function AddFindTile({ vendorId, index }: { vendorId?: string; index: num
       transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: EASE }}
       style={{ width: "100%", display: "flex", flexDirection: "column", minWidth: 0 }}
     >
-      <Link
-        href={href}
-        style={{
-          width: "100%",
-          aspectRatio: "4/5",
-          borderRadius: v1.imageRadius,
-          border: `1px dashed ${v1.inkFaint}`,
-          background: "transparent",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 6,
-          textDecoration: "none",
-          WebkitTapHighlightColor: "transparent",
-        }}
-      >
-        <ImagePlus size={22} strokeWidth={1.5} style={{ color: v1.inkMuted }} />
-        <span
-          style={{
-            fontFamily: FONT_IM_FELL,
-            fontStyle: "italic",
-            fontSize: 13,
-            color: v1.inkMuted,
-            lineHeight: 1,
-          }}
+      {onAddClick ? (
+        <button
+          type="button"
+          onClick={onAddClick}
+          aria-label="Add a find"
+          style={{ ...tileStyle, padding: 0 }}
         >
-          Add a find
-        </span>
-      </Link>
+          {inner}
+        </button>
+      ) : (
+        <Link href={href} style={tileStyle}>
+          {inner}
+        </Link>
+      )}
       {/* Placeholder under the add tile so adjacent cells' titles+prices don't visually orphan it */}
       <div style={{ height: 22 }} aria-hidden="true" />
     </motion.div>
@@ -665,11 +692,13 @@ export function WindowView({
   vendorId,
   showAddTile,
   showPlaceholders = false,
+  onAddClick,
 }: {
   posts: Post[];
   vendorId?: string;
   showAddTile: boolean;
   showPlaceholders?: boolean;
+  onAddClick?: () => void;
 }) {
   // v1.1j — owner 9-cell window composition. When showPlaceholders is true,
   // the grid always renders exactly 9 cells: [AddFindTile if shown] + real posts
@@ -689,7 +718,7 @@ export function WindowView({
         rowGap: 18,
       }}
     >
-      {showAddTile && <AddFindTile vendorId={vendorId} index={0} />}
+      {showAddTile && <AddFindTile vendorId={vendorId} index={0} onAddClick={onAddClick} />}
       {posts.map((post, i) => (
         <WindowTile key={post.id} post={post} index={showAddTile ? i + 1 : i} />
       ))}
@@ -799,8 +828,47 @@ function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirs
 // Shelf variant of AddFindTile — same dimensions as ShelfTile (v1.1j)
 // ─────────────────────────────────────────────────────────────────────────
 
-function ShelfAddFindTile({ vendorId, isFirst }: { vendorId?: string; isFirst: boolean }) {
+function ShelfAddFindTile({
+  vendorId,
+  isFirst,
+  onAddClick,
+}: {
+  vendorId?: string;
+  isFirst: boolean;
+  onAddClick?: () => void;
+}) {
   const href = vendorId ? `/post?vendor=${vendorId}` : "/post";
+  const tileStyle: React.CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    width: "100%",
+    aspectRatio: "4/5",
+    borderRadius: v1.imageRadius,
+    border: `1px dashed ${v1.inkFaint}`,
+    background: "transparent",
+    textDecoration: "none",
+    WebkitTapHighlightColor: "transparent",
+    cursor: "pointer",
+  };
+  const inner = (
+    <>
+      <ImagePlus size={24} strokeWidth={1.5} style={{ color: v1.inkMuted }} />
+      <span
+        style={{
+          fontFamily: FONT_IM_FELL,
+          fontStyle: "italic",
+          fontSize: 14,
+          color: v1.inkMuted,
+          lineHeight: 1,
+        }}
+      >
+        Add a find
+      </span>
+    </>
+  );
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }}
@@ -814,36 +882,20 @@ function ShelfAddFindTile({ vendorId, isFirst }: { vendorId?: string; isFirst: b
         marginLeft: isFirst ? 22 : 0,
       }}
     >
-      <Link
-        href={href}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          width: "100%",
-          aspectRatio: "4/5",
-          borderRadius: v1.imageRadius,
-          border: `1px dashed ${v1.inkFaint}`,
-          background: "transparent",
-          textDecoration: "none",
-          WebkitTapHighlightColor: "transparent",
-        }}
-      >
-        <ImagePlus size={24} strokeWidth={1.5} style={{ color: v1.inkMuted }} />
-        <span
-          style={{
-            fontFamily: FONT_IM_FELL,
-            fontStyle: "italic",
-            fontSize: 14,
-            color: v1.inkMuted,
-            lineHeight: 1,
-          }}
+      {onAddClick ? (
+        <button
+          type="button"
+          onClick={onAddClick}
+          aria-label="Add a find"
+          style={{ ...tileStyle, padding: 0 }}
         >
-          Add a find
-        </span>
-      </Link>
+          {inner}
+        </button>
+      ) : (
+        <Link href={href} style={tileStyle}>
+          {inner}
+        </Link>
+      )}
       {/* Match ShelfTile's title + price vertical rhythm so the AddFindTile
           doesn't visually orphan against neighboring items. */}
       <div style={{ height: 42 }} aria-hidden="true" />
@@ -855,10 +907,12 @@ export function ShelfView({
   posts,
   vendorId,
   showAddTile = false,
+  onAddClick,
 }: {
   posts: Post[];
   vendorId?: string;
   showAddTile?: boolean;
+  onAddClick?: () => void;
 }) {
   // v1.1j — owner parity with Window View: when showAddTile is true, the
   // first tile in the horizontal scroll is an AddFindTile (same silhouette
@@ -878,7 +932,7 @@ export function ShelfView({
         WebkitOverflowScrolling: "touch",
       }}
     >
-      {showAddTile && <ShelfAddFindTile vendorId={vendorId} isFirst={true} />}
+      {showAddTile && <ShelfAddFindTile vendorId={vendorId} isFirst={true} onAddClick={onAddClick} />}
       {posts.map((post, i) => (
         <ShelfTile
           key={post.id}
