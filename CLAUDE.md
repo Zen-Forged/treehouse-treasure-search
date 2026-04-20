@@ -74,94 +74,78 @@ Full session notes archived. Superseded by session 35 ship.
 
 ## ✅ Session 35 (2026-04-20) — multi-booth rework shipped + KI-006 resolved
 
-Shipped. Everything from the session-34 build spec executed end-to-end, with two mid-session follow-up fixes for the same class of bug (half-migration return-shape cardinality). Session-32 v1.2 onboarding backlog bundled into the push. Six-step on-device QA walk passed fully.
+Shipped. Option A — drop `vendors_user_id_key` — shipped end-to-end with KI-006 resolved as a natural sub-fix of the larger rework. Session-32 v1.2 onboarding backlog bundled into the push. Six-step on-device QA walk passed all steps. Full session notes archived; superseded by session 36 for active whiteboard purposes.
+
+---
+
+## ✅ Session 36 (2026-04-20) — Q-003 resolved across four surfaces + KI-007 resolved + third Tech Rule candidate queued
+
+Shipped. Two user-visible regressions reported on open, both resolved end-to-end in the same session. One-line functional fix + three surgical prop-wiring fixes across two files.
 
 ### What shipped
 
-**Schema (2 migrations, both 🖐️ HITL applied):**
+**KI-007 — `/find/[id]/edit` redirect loop for non-admin vendors:**
 
-- `supabase/migrations/006_multi_booth.sql` — drops `vendors_user_id_key`. One auth user can now own N vendor rows. Three unique constraints remain on `vendors`: `vendors_pkey`, `vendors_slug_key`, `vendors_mall_booth_unique`.
-- `supabase/migrations/007_multi_booth_vendor_request_dedup.sql` — rekeys the session-32 dedup partial unique index from `(lower(email))` to composite `(lower(email), mall_id, booth_number)`, `WHERE status = 'pending'`.
+`lib/posts.ts` `getPost()` vendor select now includes `user_id`. Two downstream consumers — the edit-page auth gate and Find Detail's `detectOwnershipAsync` path 2 — both evaluate `post.vendor.user_id`; the field had been silently undefined because no prior `getPost()` consumer needed it. Vendors hit the "forbidden" exit on the auth gate and got bounced back to Find Detail. Admin path worked only because `isAdmin(user)` short-circuits the gate before the ownership check — which is why the bug stayed latent from session 31E through session 36 (admin is the primary testing account).
 
-**New lib + component:**
+One-line change plus an explanatory comment. Also silently hardens `detectOwnershipAsync` path 2 for multi-booth users viewing their own posts when the active booth doesn't match the post's vendor row (pre-fix, path 3's `LOCAL_VENDOR_KEY` fallback was saving the single-booth majority case).
 
-- `lib/activeBooth.ts` (NEW) — resolver module. Exports `getActiveBoothId`, `setActiveBoothId`, `clearActiveBoothId`, `resolveActiveBooth(vendors)`. Uses `safeStorage` key `treehouse_active_vendor_id`. Deterministic fallback: stored id match → else `vendors[0]` (oldest-by-created_at) with storage rewrite.
-- `components/BoothPickerSheet.tsx` (NEW) — bottom-sheet picker inheriting `<MallSheet>` motion/chrome. Booth name leads (IM Fell 17px bold), mall + booth number subtitle (FONT_SYS 13px). X-glyph per locked hierarchy. Active row paper-wash bg + green ✓. Dashed "+ Add another booth" routes to `/vendor-request?email=<encoded>`.
+**Q-003 — BottomNav `flaggedCount` badge on four surfaces:**
 
-**`lib/posts.ts`:**
+Original Q-003 capture at session-35 close named three surfaces (`/my-shelf`, `/flagged`, `/shelves`). During on-device QA for the session-36 KI-007 fix, David surfaced a fourth overlooked surface: Find Detail (`/find/[id]`), both the main render AND the SoldLanding component. Session 36 resolved across all four:
 
-- `getVendorsByUserId(userId): Promise<Vendor[]>` — array return, ordered `created_at ASC`. Authoritative auth-linked lookup for multi-booth.
-- `getVendorByUserId` kept as `@deprecated` shim returning `rows[0] ?? null` with a `console.warn`. Retirement scheduled after one full session with no warn hits during QA.
+- `app/my-shelf/page.tsx` — `loadFollowedIds` + `bookmarkCount` state + focus/visibilitychange sync, passed to BottomNav
+- `app/find/[id]/page.tsx` — same pattern for main render AND SoldLanding component. Additionally resyncs inside `handleToggleSave` so the badge reflects in-page heart toggles in real time
+- `app/flagged/page.tsx` — already correct pre-session-36
+- `app/shelves/page.tsx` — already correct on-mount pre-session-36; intentionally not touched (surgical-changes principle + T4b retirement candidate + admin-only surface)
 
-**`/api/setup/lookup-vendor` full rewrite — this is where KI-006 dies:**
+**Edit page (`/find/[id]/edit`) left without BottomNav intentionally** per session-31E focused-management-surface commitment. Adding nav chrome would reopen the design-agent question of whether edit should look more like the other pages. Flagged to David as 🖐️ REVIEW during the session; David confirmed "just Find Detail, proceed."
 
-Composite-key lookup on `(mall_id, booth_number, user_id IS NULL)` across every non-rejected `vendor_requests` row for the authenticated user's email. Links all unlinked matches in one UPDATE + returns the full linked set. Response shape: `{ ok, vendors: Vendor[], alreadyLinked? }`. Idempotent — safe to call every `/my-shelf` load. The stale `display_name == vendor_requests.name` join is gone entirely.
+### Two commits, bisectable
 
-**Surface updates:**
+- Commit A — `fix: edit gate + BottomNav badge (session 36)` — `lib/posts.ts` getPost select + `/my-shelf` Q-003 wiring in one commit since both are session-36 scope and test together on device
+- Commit B — `fix(session 36): BottomNav flaggedCount on Find Detail (Q-003 addendum)` — Find Detail main + SoldLanding after David's on-device pass surfaced the overlooked fourth surface
 
-- `app/setup/page.tsx` — handles array response, writes `treehouse_active_vendor_id` to `vendors[0].id`, preserves 401 retry+backoff (session 10), adapts copy singular↔plural ("your shelf" / "your shelves") + quiet FONT_SYS booth list.
-- `app/my-shelf/page.tsx` — list-aware via `getVendorsByUserId` + `resolveActiveBooth`. When `vendors.length > 1`: masthead renders "Viewing · [Booth Name] ▾" variant, `<BoothPickerSheet>` instantiated. Self-heal runs on **every non-admin load** — `getVendorsByUserId` + `/api/setup/lookup-vendor` raced via `Promise.allSettled` and merged by vendor id, so newly-approved unlinked booths get linked automatically on the next visit.
-- `app/post/preview/page.tsx` — identity resolves via `getVendorsByUserId + resolveActiveBooth`. No in-flow picker (single-path for the 99% case). Admin `?vendor=id` impersonation preserved. LOCAL_VENDOR_KEY unauth fallback preserved.
-- `app/api/vendor-request/route.ts` — dedup pre-check widened from `(lower(email), status)` to `(lower(email), mall_id, booth_number, status)`. Same email + different booth now proceeds correctly.
+### On-device QA — all checks passed
 
-### Session-32 v1.2 onboarding backlog (bundled into the session-35 push)
+1. ✅ Admin account — pencil on any find → `/find/[id]/edit` loads (was already working pre-fix; confirmed unbroken)
+2. ✅ Vendor account — tap into own find → pencil renders → tap → edit page loads and renders fields (the KI-007 verification)
+3. ✅ Find Map badge visible on Home, My Booth, Find Detail — counts accurate, in-page heart toggle on Find Detail updates badge in real time
 
-All of session 32's uncommitted code pushed alongside session 35: `lib/email.ts` rewrite, `/api/vendor-request` full route rewrite, `/vendor-request` page split-name + booth-name + proof-photo form, `/api/admin/vendor-requests` display_name priority, `/admin` VendorRequest interface + thumbnail, `docs/supabase-otp-email-templates.md`, `docs/onboarding-journey.md` v1.2 update, `docs/mockups/email-v1-2.html`. No split commit — one unit per the session-34 build spec's instruction.
+### Tech Rule yield — third cousin to the session-33/35 family
 
-### Three commits, bisectable
+This session's KI-007 root cause is a third distinct flavor of the same bug class that drove session 33's "dependent-surface audit when changing a field's semantic source" and session 35's "half-migration audit when changing return-shape cardinality" candidates. The session-36 flavor: **new-consumer-on-old-select audit** — when a page, route, or hook starts consuming a shared data-access function, grep the function's Supabase `.select(...)` against the new consumer's field reads on the returned object.
 
-- `54ba898` — session 35: multi-booth rework (option A) + KI-006 fix + session 32 v1.2 onboarding backlog
-- `aa94656` — session 35 fix: self-heal runs for all signed-in non-admin users on /my-shelf
-- (third SHA) — session 35 fix 2: remove lookup-vendor short-circuit so multi-booth add-on approvals link
+The most dangerous version of this bug class is when an auth gate silently passes for the testing account (admin, via `isAdmin(user)` short-circuit) while failing for the production audience (vendors). That asymmetry is exactly what kept KI-007 latent from session 31E through session 36 — David primarily tests as admin, and the admin path never touched the missing field. Companion observability note for the rule: ownership-check failures on the asymmetric path should log distinctly so the asymmetry would surface in logs even when the happy path looks clean.
 
-### On-device QA walk — all six steps passed
+All three rules are cousins in the same family — *dependency-surface audit when something about a shared contract changes* — and would benefit from being promoted together. Full text queued in `docs/DECISION_GATE.md` Tech Rule promotion queue. Proposed promotion session: "Dependency-surface audit Tech Rule batch (sessions 33 + 35 + 36)."
 
-1. ✅ Single-booth unchanged (masthead reads "Treehouse Finds", no chevron, identical to pre-session-35)
-2. ✅ KI-006 verified (fresh Flow 3 with `booth_name` set links cleanly, `/my-shelf` shows correct display_name)
-3. ✅ Multi-booth appearance (picker masthead renders when `vendorList.length > 1`, sheet shows both rows)
-4. ✅ Switch persistence (picker tap → page re-renders against new booth; navigating away and back stays on the switched booth)
-5. ✅ Post inherits active booth (add-find → `/post/preview` PostingAsBlock reflects currently-active booth)
-6. ✅ Composite dedup (same email+mall+booth → "We already have you"; same email+different booth → proceeds to "You're on the list")
+### Scope-completeness note on Q-003
 
-### Mid-session debugging — lessons
+Q-003 was captured at session-35 close with three surfaces. The fourth (Find Detail) was overlooked — session-35 scope-write didn't grep every `<BottomNav>` instantiation before declaring the scope. Minor Tech Rule candidate queued in the Q-003 Resolved entry of `docs/known-issues.md`: *scope-completeness audit when a prop-wiring gap is named across multiple surfaces*. Less urgent than the three cousins above but the same family shape.
 
-Two follow-up fixes were needed before the walk passed clean. Both were the **same class of bug**:
-
-- `/my-shelf` resolver short-circuited on `vendors.length > 0` → self-heal never fired for users with one linked + one newly-approved-unlinked booth. Fix: always run the self-heal for non-admin users; merge with direct DB read.
-- `/api/setup/lookup-vendor` short-circuited on "any already-linked vendor row" → steps 2–5 of the pipeline (which do the composite-key match + link) never executed for multi-booth add-on. Fix: remove the step-1 short-circuit; let the pipeline run idempotently (steps 3–4 naturally skip already-linked rows via `.is("user_id", null)`; step 5 returns the full set).
-
-Both bugs were vestiges of the single-vendor-per-user mental model. The array-return shape was migrated correctly; the control-flow assumptions around "any result = fully resolved" were not. Queued as Tech Rule candidate **"half-migration audit when changing return-shape cardinality"** in `docs/DECISION_GATE.md`. Natural batch-mate with the session-33 **"dependent-surface audit when changing a field's semantic source"** candidate (the original KI-006 cause). Both pending promotion in a dedicated Tech Rule batch session.
-
-### Non-gating follow-ups captured (not blocking beta)
-
-**Q-002** 🟢 — **Picker affordance placement revision.** On-device David surfaced that the masthead center slot reads as app branding ("Treehouse Finds") and the picker affordance should be inline with the booth name under the hero banner instead. This is a mockup revision per the session-28 mockup-wins rule — the session-34 mockup put the affordance in the masthead, we built to that, now it's a directional refinement with low cost. Runnable session scoped in `docs/queued-sessions.md`.
-
-**Q-003** 🟢 — **BottomNav `flaggedCount` missing on `/my-shelf`, `/flagged`, `/shelves`.** Prop defaults to 0; only Home wires it. Two-line fix per page, reference implementation is `app/page.tsx`. Natural batch-mate with Q-002 — one combined session, ~30 min.
-
-Both captured in `docs/queued-sessions.md`, logged on the Risk Register, noted in `docs/known-issues.md` Deferred. Multi-booth is a minority use case in beta, David confident both can wait.
-
-### Session 35 close HITL
+### Session 36 close HITL
 
 1. 🖐️ **Commit doc sweep:**
 
 ```bash
-cd /Users/davidbutler/Projects/treehouse-treasure-search && git add -A && git commit -m "docs: session 35 close — multi-booth rework shipped, KI-006 resolved, Q-002/Q-003 logged" && git push
+cd /Users/davidbutler/Projects/treehouse-treasure-search && git add -A && git commit -m "docs: session 36 close — Q-003 resolved across four surfaces, KI-007 resolved, third Tech Rule candidate queued" && git push
 ```
 
-This picks up CLAUDE.md, CONTEXT.md, `docs/DECISION_GATE.md`, `docs/known-issues.md`, `docs/queued-sessions.md`. The three code commits already pushed during the session.
+This picks up CLAUDE.md, `docs/DECISION_GATE.md`, `docs/known-issues.md`, `docs/queued-sessions.md`. The two code commits already pushed during the session.
 
 2. 🟢 **Post-push sanity:** Vercel dashboard shows the docs commit landed (no-op deploy is fine; docs don't affect the build).
 
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-20 (session 35 close — multi-booth shipped, KI-006 resolved)
+> Last updated: 2026-04-20 (session 36 close — Q-003 resolved across four surfaces, KI-007 resolved)
 
-**Status:** Session 35 ships. Sprint 4 tail batch is the longest-parked pre-beta item. Q-002 and Q-003 are small, scoped, and ready to run. Next session picks one or batches them.
+**Status:** Session 36 ships. Sprint 4 tail batch is the longest-parked pre-beta item, unchanged since session 26. Q-002 is the remaining non-gating polish item from the session-35 multi-booth rework. Tech Rule promotion batch is now a richer session with three cousin candidates instead of two. Next session picks a direction.
 
 ### Recommended next session — Sprint 4 tail (T4c + T4b + T4d)
 
-The longest-parked pre-beta item, untouched since session 26. Now cleaner to run than before because `/admin/login` is a dedicated real route (session 23/25) and the multi-booth rework absorbed `/setup` copy polish as part of its `/api/setup/lookup-vendor` rewrite (T4c orphan partially done).
+Still the longest-parked pre-beta item. Session 36 didn't touch it. Same scope as session 35 close described:
 
 **Remaining T4c copy polish:**
 - Minor `/api/setup/lookup-vendor` error copy review (session-35 rewrite may already have this — re-read before editing)
@@ -173,16 +157,16 @@ The longest-parked pre-beta item, untouched since session 26. Now cleaner to run
 - Decide `/admin/login` disposition (keep dedicated / fold into `/admin` unauth gate) — documented as T4b open decision
 
 **T4d pre-beta QA pass:**
-- End-to-end dry run of all three onboarding flows (Flow 1 pre-seeded, Flow 2 demo, Flow 3 vendor-initiated) against session-35 schema
+- End-to-end dry run of all three onboarding flows (Flow 1 pre-seeded, Flow 2 demo, Flow 3 vendor-initiated) against session-35 schema + session-36 fixes
 - Test data cleanup — multiple "David Butler" variants + test booths in DB from session 30+ testing
 
 ### Alternative next sessions (if Sprint 4 tail isn't the right call)
 
-- **Q-002 + Q-003 batch** — ~30 min total. Picker placement inline refinement + BottomNav badge propagation. Low-cost polish, feels satisfying to ship.
-- **Tech Rule promotion batch** — ~25 min. Two queued candidates (session-33 dependent-surface audit + session-35 half-migration audit) ready for prose treatment and block insertion in `docs/DECISION_GATE.md`. Natural moment because both landed this week.
+- **Q-002 solo** — ~20 min. Picker placement inline refinement (no longer has Q-003 batch-mate since Q-003 retired session 36). Low-cost polish.
+- **Tech Rule promotion batch** — ~35 min. Now THREE queued candidates (session-33 dependent-surface audit + session-35 half-migration audit + session-36 new-consumer-on-old-select). All three are cousins in the same dependency-surface audit family. Richer batch than session-35 close anticipated.
 - **Anthropic model audit + billing safeguards (33B)** — ~30 min. Grep for stale model strings; verify Anthropic account auto-reload is on.
 
-### Session 36 opener (pre-filled for whichever direction picks up)
+### Session 37 opener (pre-filled for whichever direction picks up)
 
 If Sprint 4 tail:
 
@@ -192,10 +176,10 @@ STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthr
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Sprint 4 tail batch — T4c remainder (copy polish on /api/setup/lookup-vendor error states + /vendor-request success screens, re-read session-35 changes first), T4b admin surface consolidation (fold /shelves AddBoothSheet, verify /admin/login disposition, retire the legacy public /login admin PIN affordance if still present), T4d pre-beta QA walk of all three onboarding flows (Flow 1 pre-seeded, Flow 2 demo, Flow 3 vendor-initiated) against the session-35 schema. Also clean up test data (multiple "David Butler" variants + test booths from session 30+ on). This is the longest-parked pre-beta item.
+CURRENT ISSUE: Sprint 4 tail batch — T4c remainder (copy polish on /api/setup/lookup-vendor error states + /vendor-request success screens, re-read session-35 changes first), T4b admin surface consolidation (fold /shelves AddBoothSheet, verify /admin/login disposition, retire the legacy public /login admin PIN affordance if still present), T4d pre-beta QA walk of all three onboarding flows (Flow 1 pre-seeded, Flow 2 demo, Flow 3 vendor-initiated) against the session-35 schema + session-36 fixes. Also clean up test data (multiple "David Butler" variants + test booths from session 30+ on). This is the longest-parked pre-beta item.
 ```
 
-If Q-002 + Q-003 batch:
+If Tech Rule promotion batch:
 
 ```
 PROJECT: Treehouse — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
@@ -203,7 +187,7 @@ STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthr
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Running queued batch — Q-002 (picker affordance placement: masthead reverts to "Treehouse Finds" single-variant, chevron moves inline next to the IM Fell 28px booth name under the hero banner on /my-shelf when vendorList.length > 1; also update docs/mockups/my-shelf-multi-booth-v1.html) + Q-003 (pass flaggedCount to BottomNav on /my-shelf, /flagged, /shelves per the app/page.tsx reference pattern). Both defined in docs/queued-sessions.md. One combined session, ~30 min. No server/schema changes.
+CURRENT ISSUE: Running the Tech Rule promotion batch. Three queued candidates in docs/DECISION_GATE.md > Tech Rule promotion queue, all cousins in the dependency-surface audit family: (1) session-33 dependent-surface audit when changing a field's semantic source, (2) session-35 half-migration audit when changing return-shape cardinality, (3) session-36 new-consumer-on-old-select audit when a page starts calling a shared data-access function. Promote all three into the main Tech Rules block with the same careful prose treatment as the existing rules. Also fold the scope-completeness companion rule from Q-003's Resolved entry in known-issues.md if there's session budget. ~35 min estimate.
 ```
 
 ---
@@ -212,19 +196,18 @@ CURRENT ISSUE: Running queued batch — Q-002 (picker affordance placement: mast
 
 ### 🔴 Pre-beta blockers
 
-*(Empty at session 35 close. Multi-booth data model and KI-006 both resolved this session.)*
+*(Empty at session 36 close. KI-007 resolved this session; multi-booth + KI-006 resolved session 35. Pre-beta blocker column is clean.)*
 
 ### 🟡 Remaining pre-beta tech work
 
 - **Sprint 4 tail batch** (longest-parked): T4c remainder (copy polish — partly absorbed by session-35 rewrites, re-verify), T4b (admin surface consolidation + `/admin/login` disposition decision), T4d (pre-beta QA walk).
 - **Test data cleanup** — multiple "David Butler" variants + test booths in production DB.
 - **Anthropic model audit + billing safeguards** (33B). ~30 min.
-- **Tech Rule promotion batch** — two queued candidates ready for prose: (a) session-33 "dependent-surface audit when changing a field's semantic source" (original KI-006 cause), (b) session-35 "half-migration audit when changing return-shape cardinality" (the two short-circuit bugs this session). ~25 min. Block location in `docs/DECISION_GATE.md` > The Tech Rules section.
+- **Tech Rule promotion batch** — now three queued candidates ready for prose, all cousins in the same dependency-surface-audit family: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit. ~35 min. Block location in `docs/DECISION_GATE.md` > The Tech Rules section.
 
-### 🟡 Session 35 non-gating follow-ups (captured in `docs/queued-sessions.md`)
+### 🟡 Session 35/36 non-gating follow-ups (captured in `docs/queued-sessions.md`)
 
-- **Q-002** 🟢 — Picker affordance placement revision (masthead → inline under hero banner). Mockup update + surgical `/my-shelf` edit. ~20 min.
-- **Q-003** 🟢 — `<BottomNav>` `flaggedCount` prop on `/my-shelf`, `/flagged`, `/shelves`. Two-line fix per page. ~15 min. Natural batch-mate with Q-002.
+- **Q-002** 🟢 — Picker affordance placement revision (masthead → inline under hero banner). Mockup update + surgical `/my-shelf` edit. ~20 min. *(Q-003 retired session 36; Q-002 stands alone now.)*
 
 ### 🟡 Sprint 5 + design follow-ons
 
@@ -248,7 +231,7 @@ CURRENT ISSUE: Running queued batch — Q-002 (picker affordance placement: mast
 
 ### 🟢 Cleanup (not urgent)
 
-- Deprecated functions in `lib/posts.ts` including session-35 `getVendorByUserId` shim (loud `console.warn`, no callers expected). Schedule cleanup pass after N+1 sessions confirm no warn hits during QA.
+- Deprecated functions in `lib/posts.ts` including session-35 `getVendorByUserId` shim (loud `console.warn`, no callers expected). Schedule cleanup pass after N+1 sessions confirm no warn hits during QA. *(Session 36 added no new warn paths.)*
 - Cloudflare nameservers dormant (no cost)
 - `/shelves` AddBoothSheet — retire decision lives in T4b
 - `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` (obsolete since T4a)
@@ -258,7 +241,6 @@ CURRENT ISSUE: Running queued batch — Q-002 (picker affordance placement: mast
 - `docs/multi-booth-build-spec.md` — archived reference; consider folding key decisions into CONTEXT.md and retiring the file post-Q-002
 - `components/ShelfGrid.tsx` (parked retention comments; zero callers)
 - `/post` redirect shim — can delete entirely post-beta once inbound references are audited
-- `docs/queued-sessions.md` Q-001 — already retired as ⏸️ Superseded (session 35 close)
 
 ---
 

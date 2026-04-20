@@ -61,79 +61,23 @@ CURRENT ISSUE: Running queued session Q-002 from docs/queued-sessions.md — pic
 
 ---
 
-## Q-003 🟢 BottomNav flaggedCount prop on non-Home pages
+## ⏸️ Q-003 — BottomNav flaggedCount prop on non-Home pages — SUPERSEDED
 
-**Status:** Ready to run. Non-blocking polish — `/my-shelf`, `/flagged`, and `/shelves` all render `<BottomNav>` without passing `flaggedCount`, so the Find Map heart icon's saved-items badge disappears on every page except Home.
+**Status:** ⏸️ Superseded 2026-04-20 (session 36 close).
 
-**Created:** 2026-04-20 (session 35 close — surfaced during on-device walk when David noticed the Find Map counter zeros out on My Booth)
+**Retirement reason:** Shipped in session 36 across four surfaces — `/my-shelf` and Find Detail (`/find/[id]` main + SoldLanding) were wired in session 36; `/flagged` was already wired pre-session-36; `/shelves` was already wired on-mount and intentionally left without focus/visibilitychange resync per surgical-changes principle (admin-only surface, T4b retirement candidate).
 
-**Severity:** 🟢 Low — doesn't gate beta; saved items still work, the badge is just invisible outside Home. Two-line fix per page.
+**What ended up shipping:** `loadFollowedIds` import + `bookmarkCount` state + focus/visibilitychange sync pattern, mirroring Home's reference implementation. Find Detail additionally resyncs inside `handleToggleSave` so the badge reflects in-page heart toggles.
 
-### The symptom
+**Scope-completeness note:** The original Q-003 entry below names three surfaces (`/my-shelf`, `/flagged`, `/shelves`). `/find/[id]` was overlooked at session-35 capture and surfaced only when David's on-device testing walked the path in session 36. Rule candidate queued in `docs/known-issues.md` Q-003 Resolved entry: grep every `<BottomNav>` instantiation before declaring scope on prop-wiring gaps.
 
-On Home: Find Map heart icon shows a small green badge with the saved-items count (e.g. "7"). On My Booth / Find Map / Booths: same heart icon, no badge — even when the user has saved items.
+**Commits:**
+- (session-36 commit A) — fix: edit gate + BottomNav badge (session 36) — covers `/my-shelf`
+- (session-36 commit B) — fix(session 36): BottomNav flaggedCount on Find Detail (Q-003 addendum) — covers Find Detail
 
-### Root cause
+### Historical scope (preserved for session-archive readers)
 
-`<BottomNav>` in `components/BottomNav.tsx` takes `flaggedCount?: number` with default `0`. The badge is rendered only when `flaggedCount > 0`:
-
-```tsx
-{showBadge && (
-  <div style={{ ... }}>
-    {badgeLabel(flaggedCount)}
-  </div>
-)}
-```
-
-Only `app/page.tsx` (Home) passes the prop (`<BottomNav active="home" flaggedCount={bookmarkCount} />`). Every other BottomNav consumer passes no count and gets the default `0` → badge hidden.
-
-### The fix (per page)
-
-Three pages need the same pattern:
-
-1. `app/my-shelf/page.tsx`
-2. `app/flagged/page.tsx` (Find Map itself)
-3. `app/shelves/page.tsx`
-
-Each page:
-1. Import `loadBookmarkCount` from `lib/utils`
-2. Add a `bookmarkCount` useState, initialized to 0
-3. On mount (and on `visibilitychange` so it stays fresh when the user saves from another tab/page), call `loadBookmarkCount()` and set state
-4. Pass `flaggedCount={bookmarkCount}` to `<BottomNav>`
-
-Home already has this wired; the other pages just need to lift the same pattern. Look at `app/page.tsx` for the reference implementation.
-
-### Files touched
-
-- `app/my-shelf/page.tsx` — add bookmark-count hook + pass to BottomNav
-- `app/flagged/page.tsx` — same
-- `app/shelves/page.tsx` — same
-
-No other files. No server/schema changes.
-
-### Execution checklist (estimated ~15 min + on-device spot-check)
-
-1. 🟢 AUTO — Read `app/page.tsx` lines that set up `bookmarkCount` and pass to BottomNav (reference pattern)
-2. 🟢 AUTO — Add the same pattern to `/my-shelf`, `/flagged`, `/shelves`
-3. 🖐️ HITL — `npm run build 2>&1 | tail -30`
-4. 🖐️ HITL — `git add -A && git commit -m "q-003: pass flaggedCount to BottomNav on my-shelf/flagged/shelves" && git push`
-5. 🖐️ HITL — On-device: save a find, navigate to My Booth, confirm Find Map heart shows the badge
-6. 🟢 AUTO — Retire Q-003 (⏸️ Superseded) after on-device confirmation
-
-### Natural batch-mate
-
-Q-002 and Q-003 are both small UI polish items on the same page. Natural to run together as a single 30-minute session if either is promoted — same build, same push, same on-device pass. Session opener would combine both CURRENT ISSUE lines.
-
-### Session opener (copy/paste if promoted)
-
-```
-PROJECT: Treehouse — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
-STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Vercel
-Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
-Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
-
-CURRENT ISSUE: Running queued session Q-003 from docs/queued-sessions.md — pass flaggedCount to BottomNav on the three pages that currently omit it (/my-shelf, /flagged, /shelves). Reference pattern is app/page.tsx (Home). Two-line fix per page, no server work.
-```
+Non-blocking polish — `/my-shelf`, `/flagged`, and `/shelves` all render `<BottomNav>` without passing `flaggedCount`, so the Find Map heart icon's saved-items badge disappears on every page except Home. Two-line fix per page, mirroring Home's reference pattern. Non-gating — badge visibility, not flow failure. Session 36 scope expanded to include Find Detail + SoldLanding when David surfaced the overlooked fourth surface.
 
 ---
 

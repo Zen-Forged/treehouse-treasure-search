@@ -1,7 +1,7 @@
 # Treehouse — Known Issues
 > Active bugs, gaps, and deferred items. Referenced by `docs/DECISION_GATE.md`.
 > Created: 2026-04-17 (session 8 — logging the three QA issues surfaced during T4a post-deploy).
-> Last updated: 2026-04-20 (session 35 close — KI-006 moved to Resolved; multi-booth rework shipped).
+> Last updated: 2026-04-20 (session 36 close — Q-003 resolved across four surfaces; KI-007 resolved; new Tech Rule candidate queued).
 
 ---
 
@@ -50,12 +50,62 @@ Nameservers assigned but not authoritative. Dormant, no cost. Delete at leisure.
 ### Picker affordance placement — captured as Q-002
 See `docs/queued-sessions.md` Q-002. Session-35 on-device walk surfaced that the "Viewing · Name ▾" block sits in the masthead center slot (per session-34 mockup), but the masthead should read as app branding and the picker affordance should be inline with the booth name under the hero banner. Non-gating revision; runnable session waiting.
 
-### BottomNav saved-items badge missing on /my-shelf, /flagged, /shelves — captured as Q-003
-See `docs/queued-sessions.md` Q-003. The `flaggedCount` prop defaults to 0 and only Home passes a real value. Two-line fix per page. Non-gating.
-
 ---
 
 ## Resolved
+
+### ✅ Q-003 — BottomNav saved-items badge missing on /my-shelf, /flagged, /shelves, /find/[id]
+**Resolved:** 2026-04-20 session 36
+**Surfaced originally:** 2026-04-20 session 35 close (three surfaces named); session 36 discovered Find Detail as a fourth overlooked surface.
+**Severity:** Low (🟢) — UX inconsistency, not flow failure. But user-visible enough that David reported it as a "regression" at session 36 open even though it was a pre-existing gap.
+
+**Symptom:** The Find Map heart icon in `BottomNav` carries a badge with the current saved-items count. Home always rendered it correctly. On any page where `<BottomNav>` was called without the `flaggedCount` prop, the prop defaulted to 0 and the badge hid entirely. To the user, this looked like the counter was "disappearing" when they navigated from Home into any other page.
+
+**Surfaces fixed:**
+- `app/my-shelf/page.tsx` — added `bookmarkCount` state + `loadFollowedIds` + focus/visibilitychange sync, passed to BottomNav.
+- `app/find/[id]/page.tsx` — same pattern on both Find Detail's main render AND the SoldLanding component. Find Detail additionally resyncs inside `handleToggleSave` so the badge reacts to the heart gesture on the page itself (Home / My Booth never toggle the count on themselves; Find Detail does).
+- `app/flagged/page.tsx` — was already correct (pre-session-36).
+- `app/shelves/page.tsx` — was already correct on mount (pre-session-36); lacks focus/visibilitychange resync, but it's an admin-only surface and that's acceptable for an admin-only surface in T4b's retirement decision anyway. Not touched per surgical-changes principle.
+
+**Edit page (`/find/[id]/edit`) intentionally left as-is.** No `BottomNav` per the session-31E focused-management-surface commitment. Adding nav chrome would reopen the design-agent question of whether edit should look more like the other pages. Documented as a deliberate non-fix in the session 36 close — not a gap.
+
+**Commits:**
+- (session-36 commit A) — fix: edit gate + BottomNav badge (session 36) — paired with KI-007 resolution
+- (session-36 commit B) — fix(session 36): BottomNav flaggedCount on Find Detail (Q-003 addendum)
+
+**Verified:** On-device. Home → My Booth → tap into a find → tap heart to save/unsave — count reflects in real time on the BottomNav heart badge at every step.
+
+**Tech Rule yield (queued candidate):** *Scope-completeness audit when a prop-wiring gap is named across multiple surfaces.* Q-003 was captured at session-35 close with three surfaces (`/my-shelf`, `/flagged`, `/shelves`). `/find/[id]` (both main + SoldLanding) was overlooked. Session 36 surfaced it only because David's on-device testing walked the path. Rule shape: when a fix targets a prop/prop-wiring gap across multiple pages, grep for every `<Component>` instantiation of the affected component before declaring scope, and include the grep result in the session close.
+
+---
+
+### ✅ KI-007 — `/find/[id]/edit` redirect loop for non-admin vendors (session-36 regression class)
+**Resolved:** 2026-04-20 session 36
+**Surfaced:** 2026-04-20 session 36 open (David's report on vendor account)
+**Severity at open:** High (🔴) — vendors could not edit their own finds. The only entry point to editing (the pencil bubble on Find Detail, per session-31E owner-swap) navigated to the edit page, which then redirected right back to Find Detail within a split second. Admin path worked; vendor path was a dead end.
+
+**Root cause:** `lib/posts.ts` `getPost()` vendor select did not include `user_id`. Two downstream consumers depend on it being present:
+
+1. `/find/[id]/edit` auth gate evaluates `fetched.vendor?.user_id ?? null` → `isOwner = false` → `!admin && !isOwner` fires exit 3 → `router.replace("/find/[id]")`.
+2. Find Detail's `detectOwnershipAsync` path 2 evaluates `sessionUid === post.vendor.user_id` → false. Falls through to path 3 (`LOCAL_VENDOR_KEY` match on `vendor_id`), which works *for single-booth users* because their active booth always matches the post's vendor, but would have silently failed for multi-booth users when the active booth != the post's vendor.
+
+Admin path worked because `isAdmin(user)` short-circuits the gate before the ownership check — never touched `post.vendor.user_id`.
+
+**Why this surfaced now:** Session 31E made the pencil bubble the sole owner-path entry to editing — retired the previous inline Owner Manage block on Find Detail. Before 31E, editing went through `getVendorsByUserId` on `/my-shelf` + a session-internal edit flow; the `getPost` select was never in the path. Session 31E's pencil routes directly to `/find/[id]/edit`, which is the first consumer of `getPost().vendor.user_id`. The field was never added to the select when the new consumer shipped. Session 35's multi-booth rework didn't touch this file, but it did add attention to owner-path flows — so the regression was latent from session 31E and surfaced in session 36.
+
+**Fix:** One-line change in `lib/posts.ts` `getPost()` vendor select — add `user_id`. Comment added explaining the two downstream consumers and the admin-vs-vendor asymmetry so future selects preserve the field.
+
+**Also hardens Find Detail's `detectOwnershipAsync` path 2** — now works for multi-booth users viewing their own post when the active booth doesn't match the post's vendor. Previously path 3 (`LOCAL_VENDOR_KEY`) was silently saving the single-booth majority case.
+
+**Files touched:** `lib/posts.ts` only.
+
+**Commit:** (session-36 commit A) — fix: edit gate + BottomNav badge (session 36)
+
+**Verified:** On-device. Vendor account → tap into own find on /my-shelf → pencil visible → tap → edit page loads and renders fields. Admin path unchanged (still works).
+
+**Tech Rule yield (cousin to existing queued candidates):** This is the same family as the session-33 "dependent-surface audit when changing a field's semantic source" and session-35 "half-migration audit when changing return-shape cardinality" queued rules — a third distinct flavor of *new-consumer-on-old-select*: when a new page/route starts consuming a shared data-access function, grep the function's select against the new consumer's field reads. KI-007 pairs naturally with those two in a Tech Rule promotion batch session.
+
+---
 
 ### ✅ KI-006 — Session-32 regression in `/api/setup/lookup-vendor`
 **Resolved:** 2026-04-20 session 35
@@ -209,4 +259,4 @@ const callLookupVendor = async (): Promise<Response> => {
 
 ---
 
-> Last updated: 2026-04-20 (session 35 — KI-006 resolved via multi-booth rework; Q-002 and Q-003 logged as non-gating deferrals)
+> Last updated: 2026-04-20 (session 36 — Q-003 resolved across four surfaces including overlooked Find Detail; KI-007 resolved (`getPost` vendor select missing `user_id`); one Tech Rule candidate queued as cousin to the session-33/35 family)
