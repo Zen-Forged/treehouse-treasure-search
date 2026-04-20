@@ -2,12 +2,16 @@
 // Authenticated vendor self-service linkage endpoint.
 //
 // Session 35 (2026-04-20) — multi-booth rework (Option A) + KI-006 fix.
+// Session 35 follow-up (same day) — removed step-1 short-circuit that
+//   prevented a newly-approved second booth from ever being linked for
+//   a user who already had one booth linked. See notes below.
 //
-// This rewrite does two things at once:
+// This route does two things at once:
 //
 //  1. Returns an ARRAY of vendor rows (the authenticated user may own
 //     multiple booths post-multi-booth). Response shape: { ok, vendors,
-//     alreadyLinked? }. /setup client updated to match.
+//     alreadyLinked? }. /setup client and /my-shelf self-heal both
+//     consume the array form.
 //
 //  2. Replaces the session-32-broken join `vendors.display_name ==
 //     vendor_requests.name` with a composite-key lookup on
@@ -16,25 +20,34 @@
 //     what display_name resolves to at approval time — so KI-006 goes away
 //     as a natural sub-fix rather than a patch.
 //
-// Flow:
+// Flow (revised — no short-circuit):
 //   1. requireAuth — bearer token validated by service-role client
-//   2. Short-circuit — if any vendors row already links to user.id, return
-//      those rows. Handles "signed in again after setup completed" cleanly
-//      and idempotently (also catches the multi-booth case where all links
-//      were made on a prior visit).
-//   3. Fetch all vendor_requests for lower(email) == lower(user.email)
-//      where status != 'rejected'. A single vendor may have multiple
-//      requests (one per mall/booth).
+//   2. Fetch the user's currently-linked vendor rows (may be empty, 1, or N)
+//   3. Fetch all non-rejected vendor_requests for lower(email) == lower(user.email)
 //   4. For each request, find an unlinked vendor row matching
 //      (mall_id, booth_number, user_id IS NULL). Collect matches.
-//   5. Link every match in a single UPDATE ... IN (ids) guarded by
+//   5. If any matches → single UPDATE ... IN (ids) guarded by
 //      user_id IS NULL to preserve race-safety.
-//   6. Re-fetch the freshly-linked rows with mall joined and return them.
+//   6. Re-fetch the user's linked rows (now including anything just linked)
+//      with mall joined and return them.
 //
-// If step 3 finds requests but step 4 matches nothing, the admin hasn't
-// approved yet — return the existing "your vendor account isn't ready yet"
-// 404. If step 3 finds nothing at all, return the existing "no vendor
-// request for this email" 404.
+// Why no short-circuit on "already has linked rows":
+//   The prior version returned early the moment the user had ANY linked
+//   vendor row. That broke multi-booth add-on approval: a user with one
+//   existing linked booth and a newly-approved unlinked second booth
+//   would get only the first one back, and the second would never link.
+//   The whole pipeline is idempotent — steps 3–4 skip already-linked
+//   rows via `.is("user_id", null)` — so running them every call is safe
+//   and cheap (two indexed selects in the no-new-work case).
+//
+// Three terminal cases:
+//   - User has linked rows, no pending unlinked requests → return existing
+//     linked set with alreadyLinked: true (step 6)
+//   - User has new unlinked matches → link them, return combined set
+//     (step 5 + step 6)
+//   - User has no linked rows AND no matchable requests → 404, correct
+//     per current /setup and /my-shelf copy ("your vendor account isn't
+//     ready yet" — the admin hasn't approved)
 //
 // The name-join is GONE. Nothing on this route reads display_name anymore.
 
@@ -55,14 +68,13 @@ export async function POST(req: Request) {
     );
   }
 
-  // ── 1. Short-circuit: user already has linked vendor row(s) ──────────────
-  // Handles re-sign-in after setup completed, AND the multi-booth case
-  // where every request was already linked on a prior visit.
+  // ── 1. Fetch already-linked vendor rows (informational, not short-circuit) ─
+  // We still need this count later to decide between "nothing to do, return
+  // what you have" vs. "genuinely 404 — no vendor yet."
   const { data: alreadyLinked, error: alreadyLinkedErr } = await auth.service
     .from("vendors")
-    .select(`*, mall:malls ( id, name, city, state, slug, address )`)
-    .eq("user_id", auth.user.id)
-    .order("created_at", { ascending: true });
+    .select("id")
+    .eq("user_id", auth.user.id);
 
   if (alreadyLinkedErr) {
     console.error(
@@ -75,13 +87,7 @@ export async function POST(req: Request) {
     );
   }
 
-  if (alreadyLinked && alreadyLinked.length > 0) {
-    return NextResponse.json({
-      ok: true,
-      vendors: alreadyLinked,
-      alreadyLinked: true,
-    });
-  }
+  const alreadyLinkedCount = alreadyLinked?.length ?? 0;
 
   // ── 2. Fetch all non-rejected vendor_requests for this email ──────────────
   const { data: requests, error: requestErr } = await auth.service
@@ -98,28 +104,14 @@ export async function POST(req: Request) {
     );
   }
 
-  if (!requests || requests.length === 0) {
-    return NextResponse.json(
-      {
-        error:
-          "No vendor request found for this email. Contact admin if you believe this is an error.",
-      },
-      { status: 404 }
-    );
-  }
-
   // ── 3. For each request, find the matching unlinked vendor row ───────────
-  // Composite key: (mall_id, booth_number, user_id IS NULL). This replaces
-  // the session-32-broken display_name join and is indifferent to the
-  // booth_name / first+last / legacy-name priority used at approval time.
-  //
-  // Sequential loop (not Promise.all) because each request's match is an
-  // independent query and we need to surface partial success — a vendor
-  // with two approved booths and one still-pending should still get their
-  // approved booths linked on this call.
+  // Composite key: (mall_id, booth_number, user_id IS NULL). Already-linked
+  // rows (including rows linked to THIS user from an earlier call) are
+  // naturally filtered out by `.is("user_id", null)`, so this loop is
+  // idempotent and safe to run every request.
   const matchIds: string[] = [];
 
-  for (const request of requests) {
+  for (const request of (requests ?? [])) {
     if (!request.mall_id) continue;
 
     // booth_number can legitimately be null for pre-v1.2 rows or demo
@@ -149,55 +141,72 @@ export async function POST(req: Request) {
     }
   }
 
-  if (matchIds.length === 0) {
-    return NextResponse.json(
-      {
-        error:
-          "Your vendor account isn't ready yet. An admin needs to approve your request first.",
-      },
-      { status: 404 }
-    );
+  // ── 4. If there are new matches, link them ────────────────────────────────
+  if (matchIds.length > 0) {
+    const { error: linkErr } = await auth.service
+      .from("vendors")
+      .update({ user_id: auth.user.id })
+      .in("id", matchIds)
+      .is("user_id", null);
+
+    if (linkErr) {
+      console.error("[setup/lookup-vendor] link error:", linkErr.message);
+      return NextResponse.json(
+        { error: "Failed to link vendor account." },
+        { status: 500 }
+      );
+    }
   }
 
-  // ── 4. Link all matches in a single race-safe UPDATE ──────────────────────
-  // user_id IS NULL guard preserves session-9's race safety: if a row was
-  // claimed by another path between our select and this update, the WHERE
-  // filters it out and we move on.
-  const { error: linkErr } = await auth.service
-    .from("vendors")
-    .update({ user_id: auth.user.id })
-    .in("id", matchIds)
-    .is("user_id", null);
-
-  if (linkErr) {
-    console.error("[setup/lookup-vendor] link error:", linkErr.message);
-    return NextResponse.json(
-      { error: "Failed to link vendor account." },
-      { status: 500 }
-    );
-  }
-
-  // ── 5. Re-fetch the just-linked rows with mall joined ─────────────────────
-  // We refetch (rather than returning the update's `.select()` directly)
-  // because any rows the race guard filtered out should surface here if
-  // they were claimed by an earlier call — the user_id filter catches both
-  // "just linked this call" and "linked by a prior call" uniformly.
+  // ── 5. Re-fetch every vendor row now linked to this user ──────────────────
+  // Catches both "just linked this call" and "linked in a prior call"
+  // uniformly. Runs even if matchIds was empty so a repeat caller with
+  // already-linked rows gets the full set back with no wasted update.
   const { data: linked, error: refetchErr } = await auth.service
     .from("vendors")
     .select(`*, mall:malls ( id, name, city, state, slug, address )`)
     .eq("user_id", auth.user.id)
     .order("created_at", { ascending: true });
 
-  if (refetchErr || !linked || linked.length === 0) {
-    console.error(
-      "[setup/lookup-vendor] refetch:",
-      refetchErr?.message ?? "zero rows post-link"
-    );
+  if (refetchErr) {
+    console.error("[setup/lookup-vendor] refetch:", refetchErr.message);
     return NextResponse.json(
       { error: "Failed to load vendor account." },
       { status: 500 }
     );
   }
 
-  return NextResponse.json({ ok: true, vendors: linked });
+  // ── 6. Three terminal branches ────────────────────────────────────────────
+
+  // 6a. Fully resolved — either we just linked some rows, or this user
+  // already had linked rows from a prior call. Return them.
+  if (linked && linked.length > 0) {
+    const noNewWork = matchIds.length === 0;
+    return NextResponse.json({
+      ok: true,
+      vendors: linked,
+      ...(noNewWork && alreadyLinkedCount > 0 ? { alreadyLinked: true } : {}),
+    });
+  }
+
+  // 6b. No linked rows AND no matchable requests → genuine 404.
+  // Either the email has no vendor_requests at all, or all requests
+  // are for booths that haven't been approved (no vendor row created yet).
+  if (!requests || requests.length === 0) {
+    return NextResponse.json(
+      {
+        error:
+          "No vendor request found for this email. Contact admin if you believe this is an error.",
+      },
+      { status: 404 }
+    );
+  }
+
+  return NextResponse.json(
+    {
+      error:
+        "Your vendor account isn't ready yet. An admin needs to approve your request first.",
+    },
+    { status: 404 }
+  );
 }
