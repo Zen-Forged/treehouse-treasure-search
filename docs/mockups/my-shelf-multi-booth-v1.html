@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — /my-shelf multi-booth v1 exploration</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Caveat:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --ink-wash:     rgba(42, 26, 10, 0.04);
+    --ink-bubble:   rgba(42, 26, 10, 0.06);
+    --price-ink:    #6a4a30;
+    --green:        #1e4d2b;
+
+    --im-fell:      "IM Fell English", Georgia, serif;
+    --sys:          -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+    --postit-num:   "Times New Roman", Times, serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+
+  .page-wrap { max-width: 1400px; margin: 0 auto; padding: 28px 18px 80px; }
+
+  h1.exploration-title {
+    font-family: var(--im-fell); font-weight: 400; color: #e8ddc7;
+    font-size: 30px; margin: 0 0 6px; text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .exploration-subtitle {
+    text-align: center; color: rgba(232, 221, 199, 0.62);
+    font-size: 13px; margin: 0 auto 22px; line-height: 1.6; max-width: 760px;
+  }
+
+  /* Decisions pane */
+  .decisions-pane {
+    max-width: 980px; margin: 0 auto 28px;
+    padding: 20px 28px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px; line-height: 1.75;
+  }
+  .decisions-pane h3 {
+    font-family: var(--im-fell); font-size: 19px; font-weight: 400;
+    color: #fff9e8; margin: 0 0 10px; letter-spacing: -0.005em;
+  }
+  .decisions-pane h4 {
+    font-family: var(--sys); font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: rgba(232,221,199,0.55);
+    margin: 14px 0 4px; font-weight: 500;
+  }
+  .decisions-pane ul { margin: 4px 0 0; padding: 0 0 0 20px; }
+  .decisions-pane li { margin-bottom: 5px; }
+  .decisions-pane strong { color: #fff9e8; font-weight: 500; }
+  .decisions-pane code {
+    background: rgba(255,255,255,0.08); padding: 1px 6px;
+    border-radius: 3px; font-size: 12px; font-family: ui-monospace, monospace;
+  }
+
+  .section-label {
+    font-family: var(--im-fell); font-size: 22px; color: #fff9e8;
+    text-align: center; letter-spacing: -0.005em; margin: 36px 0 6px;
+  }
+  .section-sub {
+    text-align: center; color: rgba(232, 221, 199, 0.55);
+    font-size: 12px; margin: 0 auto 20px; line-height: 1.55; max-width: 720px;
+  }
+
+  /* Frames row */
+  .frames-row {
+    display: flex; gap: 32px; justify-content: center; flex-wrap: wrap;
+    max-width: 1400px; margin: 0 auto;
+  }
+  .frame-column {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .frame-label {
+    font-family: var(--im-fell); font-size: 17px; color: #fff9e8;
+    letter-spacing: -0.005em; margin: 0;
+  }
+  .frame-sub {
+    font-family: var(--sys); font-size: 12px;
+    color: rgba(232, 221, 199, 0.55); line-height: 1.55; max-width: 380px;
+    text-align: center; margin: 0 0 6px;
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 390px; height: 780px;
+    background: var(--paper);
+    border-radius: 44px;
+    box-shadow: 0 0 0 8px #15110b, 0 20px 48px rgba(0,0,0,0.6);
+    overflow: hidden;
+    position: relative;
+  }
+  .phone-scroll {
+    height: 100%; overflow: hidden;
+    position: relative;
+  }
+
+  /* Masthead */
+  .masthead {
+    padding: 52px 22px 12px;
+    display: grid; grid-template-columns: 38px 1fr 38px;
+    align-items: center; gap: 12px;
+    background: rgba(232, 221, 199, 0.96);
+    border-bottom: 1px solid var(--ink-hairline);
+    position: relative; z-index: 5;
+  }
+  .masthead-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--ink-bubble);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-mid); font-size: 15px;
+  }
+  .masthead-title {
+    font-family: var(--im-fell); font-size: 18px;
+    color: var(--ink-primary); letter-spacing: -0.005em; text-align: center;
+  }
+  .masthead-active-booth {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .masthead-eyebrow {
+    font-family: var(--im-fell); font-style: italic; font-size: 11px;
+    color: var(--ink-muted); line-height: 1;
+  }
+  .masthead-booth-name {
+    font-family: var(--im-fell); font-size: 17px; color: var(--ink-primary);
+    line-height: 1.1; display: flex; align-items: center; gap: 6px;
+  }
+  .masthead-chevron {
+    color: var(--ink-muted); font-size: 11px;
+  }
+
+  /* Chip row (variant for comparison, used inside Frame A) */
+  .chip-row {
+    padding: 10px 18px 14px;
+    display: flex; gap: 8px; overflow-x: auto;
+    background: rgba(232,221,199,0.96);
+    border-bottom: 1px solid var(--ink-hairline);
+  }
+  .chip {
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--ink-hairline);
+    background: transparent;
+    font-family: var(--im-fell); font-size: 13px;
+    color: var(--ink-muted);
+    white-space: nowrap;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .chip.active {
+    background: var(--ink-primary); color: var(--paper);
+    border-color: var(--ink-primary);
+  }
+
+  /* Booth banner */
+  .booth-banner-pad { padding: 12px 10px 0; position: relative; }
+  .booth-banner {
+    position: relative; border-radius: 16px; height: 196px;
+    background: linear-gradient(135deg, #8b7a55 0%, #5a4a2e 100%);
+    overflow: visible;
+    box-shadow: 0 2px 10px rgba(42,26,10,0.12);
+  }
+  .booth-banner-inner {
+    position: absolute; inset: 0; border-radius: 16px; overflow: hidden;
+  }
+  .booth-banner-scrim {
+    position: absolute; top: 0; left: 0; right: 0; height: 40%;
+    background: linear-gradient(to bottom, rgba(18,34,20,0.32), transparent);
+  }
+  .booth-banner-img {
+    width: 100%; height: 100%; background:
+      radial-gradient(ellipse at 30% 40%, rgba(232,200,140,0.22), transparent 60%),
+      radial-gradient(ellipse at 70% 70%, rgba(60,40,20,0.4), transparent 60%),
+      linear-gradient(135deg, #8b7a55 0%, #5a4a2e 100%);
+  }
+  .booth-banner-img.blue {
+    background:
+      radial-gradient(ellipse at 40% 30%, rgba(180,200,220,0.25), transparent 60%),
+      radial-gradient(ellipse at 70% 70%, rgba(30,50,70,0.5), transparent 60%),
+      linear-gradient(135deg, #5a6d85 0%, #2e3d52 100%);
+  }
+  .booth-banner-img.green {
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(200,210,170,0.25), transparent 60%),
+      radial-gradient(ellipse at 70% 70%, rgba(30,50,30,0.5), transparent 60%),
+      linear-gradient(135deg, #6a7a55 0%, #3a4a2e 100%);
+  }
+
+  /* Post-it */
+  .postit {
+    position: absolute; bottom: -16px; right: 14px;
+    width: 86px; min-height: 86px;
+    background: var(--postit); transform: rotate(6deg); transform-origin: bottom right;
+    box-shadow: 0 6px 14px rgba(42,26,10,0.32), 0 0 0 0.5px rgba(42,26,10,0.16);
+    padding: 12px 6px 8px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 12;
+  }
+  .postit-pin {
+    position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(42,26,10,0.72);
+    box-shadow: inset 0 0 0 2px rgba(42,26,10,0.55), 0 1px 2px rgba(42,26,10,0.35);
+  }
+  .postit-eyebrow {
+    font-family: var(--im-fell); font-style: italic; font-size: 12px;
+    color: var(--ink-muted); line-height: 1.1; margin-bottom: 5px; text-align: center;
+  }
+  .postit-booth {
+    font-family: var(--im-fell); font-style: italic; font-size: 9px;
+    color: var(--ink-muted); line-height: 1; margin-bottom: 2px;
+  }
+  .postit-num {
+    font-family: var(--postit-num); font-size: 30px; color: var(--ink-primary);
+    line-height: 0.95; font-weight: 400;
+  }
+
+  /* Booth body content */
+  .booth-body { padding: 30px 22px 0; }
+  .booth-name {
+    font-family: var(--im-fell); font-size: 28px; color: var(--ink-primary);
+    line-height: 1.1; margin: 0 0 10px;
+  }
+  .booth-loc {
+    display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px;
+  }
+  .booth-pin {
+    color: var(--ink-muted); font-size: 13px; margin-top: 2px;
+  }
+  .booth-loc-text {
+    font-family: var(--sys); font-size: 13px; color: var(--ink-mid); line-height: 1.5;
+  }
+  .booth-loc-mall { color: var(--ink-primary); font-weight: 500; }
+
+  .booth-bio {
+    font-family: var(--im-fell); font-style: italic; font-size: 15px;
+    color: var(--ink-mid); line-height: 1.55; margin: 6px 0 22px;
+  }
+
+  /* Section headers inside booth */
+  .view-label-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 0 0 12px;
+  }
+  .view-label {
+    font-family: var(--im-fell); font-style: italic; font-size: 14px;
+    color: var(--ink-muted);
+  }
+  .view-count {
+    font-family: var(--sys); font-size: 11px; color: var(--ink-faint);
+  }
+
+  /* Window view grid */
+  .window-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+    margin-bottom: 26px;
+  }
+  .window-tile {
+    aspect-ratio: 4/5; border-radius: 6px; overflow: hidden;
+    background: linear-gradient(135deg, #c7b48a 0%, #8b7040 100%);
+  }
+  .window-tile.t1 { background: linear-gradient(135deg, #c7b48a 0%, #8b7040 100%); }
+  .window-tile.t2 { background: linear-gradient(135deg, #a89170 0%, #6a5538 100%); }
+  .window-tile.t3 { background: linear-gradient(135deg, #d4c094 0%, #8a7555 100%); }
+  .window-tile.t4 { background: linear-gradient(135deg, #9e8860 0%, #5a4828 100%); }
+  .window-tile.t5 { background: linear-gradient(135deg, #b8a274 0%, #7a6340 100%); }
+  .window-tile.t6 { background: linear-gradient(135deg, #c4a888 0%, #806340 100%); }
+
+  /* Bottom sheet overlay */
+  .sheet-scrim {
+    position: absolute; inset: 0;
+    background: rgba(15, 10, 5, 0.48);
+    z-index: 20; display: flex; align-items: flex-end;
+  }
+  .sheet {
+    width: 100%; background: var(--paper);
+    border-radius: 22px 22px 0 0;
+    padding: 16px 20px 26px;
+    box-shadow: 0 -8px 28px rgba(0,0,0,0.3);
+    animation: sheet-in 0.25s ease-out;
+  }
+  @keyframes sheet-in { from { transform: translateY(20px); opacity: 0.6; } to { transform: translateY(0); opacity: 1; } }
+  .sheet-handle {
+    width: 36px; height: 4px; border-radius: 2px;
+    background: var(--ink-faint); margin: 0 auto 14px;
+  }
+  .sheet-eyebrow {
+    font-family: var(--im-fell); font-style: italic; font-size: 13px;
+    color: var(--ink-muted); text-align: center; margin-bottom: 4px;
+  }
+  .sheet-title {
+    font-family: var(--im-fell); font-size: 21px; color: var(--ink-primary);
+    text-align: center; letter-spacing: -0.005em; margin: 0 0 18px;
+  }
+  .sheet-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 6px;
+    border-top: 1px solid var(--ink-hairline);
+  }
+  .sheet-row:last-of-type { border-bottom: 1px solid var(--ink-hairline); }
+  .sheet-row.active { background: var(--ink-wash); }
+  .sheet-row-x {
+    flex: 0 0 28px; text-align: center;
+    font-family: var(--im-fell); font-size: 22px; color: var(--ink-muted);
+    line-height: 1;
+  }
+  .sheet-row-body { flex: 1; min-width: 0; }
+  .sheet-row-mall {
+    font-family: var(--im-fell); font-size: 16px; color: var(--ink-primary);
+    line-height: 1.15;
+  }
+  .sheet-row-booth {
+    font-family: var(--sys); font-size: 12px; color: var(--ink-muted);
+    margin-top: 2px;
+  }
+  .sheet-row-check {
+    flex: 0 0 20px; color: var(--green); font-size: 15px;
+  }
+  .sheet-row-pending {
+    flex: 0 0 auto; font-family: var(--im-fell); font-style: italic;
+    font-size: 11px; color: var(--ink-muted);
+    padding: 2px 8px; border: 1px solid var(--ink-hairline); border-radius: 999px;
+  }
+  .sheet-add-booth {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 20px; padding: 12px;
+    border: 1px dashed var(--ink-faint); border-radius: 8px;
+    color: var(--ink-mid); font-family: var(--im-fell); font-style: italic;
+    font-size: 14px;
+  }
+
+  /* Schema comparison table */
+  .schema-compare {
+    max-width: 1200px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+  }
+  .schema-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(232,221,199,0.18);
+    border-radius: 10px;
+    padding: 22px 26px;
+    color: rgba(232,221,199,0.85);
+    font-size: 13px; line-height: 1.7;
+  }
+  .schema-card h3 {
+    font-family: var(--im-fell); font-size: 22px; font-weight: 400;
+    color: #fff9e8; margin: 0 0 4px;
+  }
+  .schema-card .tagline {
+    font-family: var(--im-fell); font-style: italic; font-size: 13px;
+    color: rgba(232,221,199,0.55); margin-bottom: 16px;
+  }
+  .schema-card h4 {
+    font-family: var(--sys); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: rgba(232,221,199,0.5);
+    margin: 16px 0 6px; font-weight: 500;
+  }
+  .schema-card pre {
+    background: rgba(0,0,0,0.28); padding: 12px 14px;
+    border-radius: 6px; font-size: 11.5px; line-height: 1.55;
+    font-family: ui-monospace, SF Mono, Menlo, monospace;
+    color: rgba(232,221,199,0.85);
+    overflow-x: auto; margin: 4px 0;
+    border: 1px solid rgba(232,221,199,0.08);
+  }
+  .schema-card ul { margin: 4px 0 0; padding-left: 18px; }
+  .schema-card li { margin-bottom: 4px; }
+  .schema-card strong { color: #fff9e8; font-weight: 500; }
+  .cost-row {
+    display: flex; gap: 16px; margin-top: 14px;
+    padding: 10px 14px;
+    background: rgba(0,0,0,0.18); border-radius: 6px;
+  }
+  .cost-cell { flex: 1; }
+  .cost-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: rgba(232,221,199,0.5); margin-bottom: 3px;
+  }
+  .cost-value {
+    font-family: var(--im-fell); font-size: 15px; color: #fff9e8;
+  }
+
+  /* Surface impact table */
+  .surfaces {
+    max-width: 1200px; margin: 32px auto 0;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(232,221,199,0.18);
+    border-radius: 10px;
+    padding: 20px 28px;
+    color: rgba(232,221,199,0.85);
+    font-size: 13px; line-height: 1.7;
+  }
+  .surfaces h3 {
+    font-family: var(--im-fell); font-size: 19px; font-weight: 400;
+    color: #fff9e8; margin: 0 0 14px;
+  }
+  .surfaces table { width: 100%; border-collapse: collapse; }
+  .surfaces th {
+    text-align: left; padding: 8px 10px;
+    font-family: var(--sys); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: rgba(232,221,199,0.5); font-weight: 500;
+    border-bottom: 1px solid rgba(232,221,199,0.15);
+  }
+  .surfaces td {
+    padding: 9px 10px;
+    border-bottom: 1px solid rgba(232,221,199,0.08);
+    vertical-align: top;
+  }
+  .surfaces code {
+    background: rgba(255,255,255,0.08); padding: 1px 5px;
+    border-radius: 3px; font-size: 11.5px;
+    font-family: ui-monospace, monospace; color: #f5e9c8;
+  }
+
+  /* Questions pane */
+  .questions-pane {
+    max-width: 980px; margin: 40px auto 0;
+    padding: 22px 28px;
+    background: rgba(30, 77, 43, 0.14);
+    border: 1px solid rgba(160, 200, 170, 0.28);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.92);
+    font-size: 13px; line-height: 1.75;
+  }
+  .questions-pane h3 {
+    font-family: var(--im-fell); font-size: 20px; font-weight: 400;
+    color: #fff9e8; margin: 0 0 10px;
+  }
+  .questions-pane ol { margin: 6px 0 0; padding-left: 22px; }
+  .questions-pane li { margin-bottom: 10px; }
+  .questions-pane strong { color: #fff9e8; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <h1 class="exploration-title">/my-shelf multi-booth — v1 exploration</h1>
+  <p class="exploration-subtitle">
+    Scoping the data-model rework for vendors who operate multiple booths.
+    Mockup shows single-booth behavior unchanged, multi-booth picker via bottom sheet (matches <code>&lt;MallSheet&gt;</code>),
+    and two schema paths side-by-side for decision at review.
+  </p>
+
+  <div class="decisions-pane">
+    <h3>What's already decided (session 33 → 34)</h3>
+    <ul>
+      <li><strong>Per-booth display_name</strong> — every booth holds its own name. A reseller with three booths has three identities.</li>
+      <li><strong>Per-booth bio and hero</strong> — each booth tells its own story. No shared vendor profile.</li>
+      <li><strong>Multiple pending vendor_requests per email</strong> OK as long as <code>(mall_id, booth_number)</code> differs. Session-32 dedup rule keys on the composite, not on email alone.</li>
+      <li><strong>Bottom sheet picker</strong> — reuses <code>&lt;MallSheet&gt;</code> primitive. No new pattern invented.</li>
+      <li><strong>Single-booth vendors see no picker</strong> — 99% of current users get today's UX unchanged. Picker only surfaces when <code>vendors.length &gt; 1</code>.</li>
+    </ul>
+
+    <h4>What this mockup is asking you to judge</h4>
+    <ul>
+      <li>Does the masthead "active booth" affordance read as tap-able, or does it look like static text?</li>
+      <li>Does the bottom-sheet row hierarchy (X-glyph → mall name → booth number) feel right, or should booth lead?</li>
+      <li>Which schema path — A (drop UNIQUE) or B (join table) — buys the right amount of flexibility for the actual near-term roadmap?</li>
+      <li>Is the "Add another booth" affordance in the sheet the right placement, or should it live on a settings screen?</li>
+    </ul>
+  </div>
+
+  <div class="section-label">UI — three frames of /my-shelf</div>
+  <p class="section-sub">Single-booth (unchanged) · Multi-booth default view (active booth in masthead) · Multi-booth picker sheet open</p>
+
+  <div class="frames-row">
+
+    <!-- FRAME 1 — Single booth (99% of users) -->
+    <div class="frame-column">
+      <p class="frame-label">Frame 1 — Single booth</p>
+      <p class="frame-sub">99% of current users. Identical to today. No picker, no active-booth chevron — masthead just says "My Shelf."</p>
+      <div class="phone">
+        <div class="phone-scroll">
+          <div class="masthead">
+            <div class="masthead-icon">⚙</div>
+            <div class="masthead-title">My Shelf</div>
+            <div class="masthead-icon">☰</div>
+          </div>
+
+          <div class="booth-banner-pad">
+            <div class="booth-banner">
+              <div class="booth-banner-inner">
+                <div class="booth-banner-img"></div>
+                <div class="booth-banner-scrim"></div>
+              </div>
+              <div class="postit">
+                <div class="postit-pin"></div>
+                <div class="postit-eyebrow">Booth</div>
+                <div class="postit-num">369</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="booth-body">
+            <h2 class="booth-name">ZenForged Finds</h2>
+            <div class="booth-loc">
+              <div class="booth-pin">⚲</div>
+              <div class="booth-loc-text">
+                <span class="booth-loc-mall">America's Antique Mall</span><br>
+                4150 Shelbyville Rd · Louisville, KY
+              </div>
+            </div>
+            <p class="booth-bio">“A curated corner for mid-century oddities, hand-cut glass, and the occasional tool nobody can name.”</p>
+
+            <div class="view-label-row">
+              <div class="view-label">Window view</div>
+              <div class="view-count">12 finds</div>
+            </div>
+            <div class="window-grid">
+              <div class="window-tile t1"></div>
+              <div class="window-tile t2"></div>
+              <div class="window-tile t3"></div>
+              <div class="window-tile t4"></div>
+              <div class="window-tile t5"></div>
+              <div class="window-tile t6"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FRAME 2 — Multi-booth default view -->
+    <div class="frame-column">
+      <p class="frame-label">Frame 2 — Multi-booth, active booth shown</p>
+      <p class="frame-sub">Vendor with 3 booths. Masthead shows "Viewing · ZenForged Finds" with a chevron. Tap anywhere in that block to open the picker.</p>
+      <div class="phone">
+        <div class="phone-scroll">
+          <div class="masthead">
+            <div class="masthead-icon">⚙</div>
+            <div class="masthead-active-booth">
+              <div class="masthead-eyebrow">Viewing</div>
+              <div class="masthead-booth-name">ZenForged Finds <span class="masthead-chevron">▾</span></div>
+            </div>
+            <div class="masthead-icon">☰</div>
+          </div>
+
+          <div class="booth-banner-pad">
+            <div class="booth-banner">
+              <div class="booth-banner-inner">
+                <div class="booth-banner-img"></div>
+                <div class="booth-banner-scrim"></div>
+              </div>
+              <div class="postit">
+                <div class="postit-pin"></div>
+                <div class="postit-eyebrow">Booth</div>
+                <div class="postit-num">369</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="booth-body">
+            <h2 class="booth-name">ZenForged Finds</h2>
+            <div class="booth-loc">
+              <div class="booth-pin">⚲</div>
+              <div class="booth-loc-text">
+                <span class="booth-loc-mall">America's Antique Mall</span><br>
+                4150 Shelbyville Rd · Louisville, KY
+              </div>
+            </div>
+            <p class="booth-bio">“A curated corner for mid-century oddities, hand-cut glass, and the occasional tool nobody can name.”</p>
+
+            <div class="view-label-row">
+              <div class="view-label">Window view</div>
+              <div class="view-count">12 finds</div>
+            </div>
+            <div class="window-grid">
+              <div class="window-tile t1"></div>
+              <div class="window-tile t2"></div>
+              <div class="window-tile t3"></div>
+              <div class="window-tile t4"></div>
+              <div class="window-tile t5"></div>
+              <div class="window-tile t6"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FRAME 3 — Picker sheet open -->
+    <div class="frame-column">
+      <p class="frame-label">Frame 3 — Booth picker sheet</p>
+      <p class="frame-sub">Tap the masthead block → bottom sheet. X-glyph = booth (per glyph hierarchy). Pending request shown as italic pill. "Add another booth" at the bottom.</p>
+      <div class="phone">
+        <div class="phone-scroll">
+          <div class="masthead">
+            <div class="masthead-icon">⚙</div>
+            <div class="masthead-active-booth">
+              <div class="masthead-eyebrow">Viewing</div>
+              <div class="masthead-booth-name">ZenForged Finds <span class="masthead-chevron">▾</span></div>
+            </div>
+            <div class="masthead-icon">☰</div>
+          </div>
+
+          <div class="booth-banner-pad">
+            <div class="booth-banner">
+              <div class="booth-banner-inner">
+                <div class="booth-banner-img"></div>
+                <div class="booth-banner-scrim"></div>
+              </div>
+              <div class="postit">
+                <div class="postit-pin"></div>
+                <div class="postit-eyebrow">Booth</div>
+                <div class="postit-num">369</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="booth-body" style="opacity: 0.4;">
+            <h2 class="booth-name">ZenForged Finds</h2>
+          </div>
+
+          <!-- Bottom sheet -->
+          <div class="sheet-scrim">
+            <div class="sheet">
+              <div class="sheet-handle"></div>
+              <div class="sheet-eyebrow">Your booths</div>
+              <h3 class="sheet-title">Switch to</h3>
+
+              <div class="sheet-row active">
+                <div class="sheet-row-x">✕</div>
+                <div class="sheet-row-body">
+                  <div class="sheet-row-mall">ZenForged Finds</div>
+                  <div class="sheet-row-booth">America's Antique Mall · Booth 369</div>
+                </div>
+                <div class="sheet-row-check">✓</div>
+              </div>
+
+              <div class="sheet-row">
+                <div class="sheet-row-x">✕</div>
+                <div class="sheet-row-body">
+                  <div class="sheet-row-mall">Treehouse Pickers</div>
+                  <div class="sheet-row-booth">Peddlers Mall Preston · Booth 42</div>
+                </div>
+              </div>
+
+              <div class="sheet-row">
+                <div class="sheet-row-x">✕</div>
+                <div class="sheet-row-body">
+                  <div class="sheet-row-mall">Small Town Finds</div>
+                  <div class="sheet-row-booth">Louisville Antique Mall · Booth 118</div>
+                </div>
+                <div class="sheet-row-pending">Pending</div>
+              </div>
+
+              <div class="sheet-add-booth">＋ Add another booth</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Schema comparison -->
+  <div class="section-label">Schema — two paths, side by side</div>
+  <p class="section-sub">Both satisfy the four decisions above. Difference is migration weight and future flexibility. You pick at review.</p>
+
+  <div class="schema-compare">
+
+    <!-- Option A -->
+    <div class="schema-card">
+      <h3>Option A — Drop the UNIQUE</h3>
+      <div class="tagline">"Lighter. Faster. Right for today."</div>
+
+      <h4>Migration</h4>
+      <pre>-- supabase/migrations/006_multi_booth.sql
+ALTER TABLE vendors
+  DROP CONSTRAINT vendors_user_id_key;
+
+-- vendors_mall_booth_unique stays
+-- vendors_slug_key stays
+-- vendors.user_id remains a plain FK,
+-- no longer unique</pre>
+
+      <h4>What it means</h4>
+      <ul>
+        <li>One <code>auth.users</code> row can own N <code>vendors</code> rows.</li>
+        <li><code>getVendorByUserId(userId)</code> becomes <code>getVendorsByUserId(userId)</code> → returns an array.</li>
+        <li>Every current call site of <code>getVendorByUserId</code> updates to pick an active booth (or handle a list).</li>
+        <li>No new table. No new join. The data model stays flat.</li>
+      </ul>
+
+      <h4>Future flexibility</h4>
+      <ul>
+        <li><strong>Cannot</strong> represent co-ownership (two vendors share one booth).</li>
+        <li><strong>Cannot</strong> represent roles (owner / collaborator / manager).</li>
+        <li>If either becomes a real roadmap item, we'd migrate to Option B then.</li>
+      </ul>
+
+      <div class="cost-row">
+        <div class="cost-cell">
+          <div class="cost-label">Migration</div>
+          <div class="cost-value">1 SQL line</div>
+        </div>
+        <div class="cost-cell">
+          <div class="cost-label">Call sites</div>
+          <div class="cost-value">~8 files</div>
+        </div>
+        <div class="cost-cell">
+          <div class="cost-label">Session estimate</div>
+          <div class="cost-value">1 sprint</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Option B -->
+    <div class="schema-card">
+      <h3>Option B — vendor_memberships join</h3>
+      <div class="tagline">"Richer. Future-proof. More surface now."</div>
+
+      <h4>Migration</h4>
+      <pre>-- supabase/migrations/006_multi_booth.sql
+ALTER TABLE vendors
+  DROP CONSTRAINT vendors_user_id_key,
+  DROP COLUMN user_id;
+
+CREATE TABLE vendor_memberships (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id),
+  vendor_id uuid NOT NULL REFERENCES vendors(id),
+  role text NOT NULL DEFAULT 'owner',
+  created_at timestamptz DEFAULT now(),
+  UNIQUE (user_id, vendor_id)
+);
+
+-- + RLS policies
+-- + backfill from existing vendors.user_id
+-- + indexes on both FKs</pre>
+
+      <h4>What it means</h4>
+      <ul>
+        <li>Membership is an explicit relationship with a role.</li>
+        <li>Co-ownership works: two users → same vendor, different roles.</li>
+        <li>Every vendor lookup gains a join. Every permission check reads <code>role</code>.</li>
+        <li>Data backfill required on migration day.</li>
+      </ul>
+
+      <h4>Future flexibility</h4>
+      <ul>
+        <li>Co-ownership: ✓ at the schema layer</li>
+        <li>Role-based permissions: ✓</li>
+        <li>Vendor-to-vendor handoffs (sell the booth): ✓</li>
+        <li>Business partners, hired help, guest access: ✓</li>
+      </ul>
+
+      <div class="cost-row">
+        <div class="cost-cell">
+          <div class="cost-label">Migration</div>
+          <div class="cost-value">~40 lines</div>
+        </div>
+        <div class="cost-cell">
+          <div class="cost-label">Call sites</div>
+          <div class="cost-value">~15 files + RLS</div>
+        </div>
+        <div class="cost-cell">
+          <div class="cost-label">Session estimate</div>
+          <div class="cost-value">2 sprints</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Surfaces impacted -->
+  <div class="surfaces">
+    <h3>Surfaces affected — both options</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Surface</th>
+          <th>Change</th>
+          <th>Option A cost</th>
+          <th>Option B cost</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>/my-shelf</code></td>
+          <td>List-aware; picker for N&gt;1; active-booth state in local storage</td>
+          <td>Medium</td>
+          <td>Medium</td>
+        </tr>
+        <tr>
+          <td><code>/api/setup/lookup-vendor</code></td>
+          <td>Returns array; links <em>all</em> matching unlinked vendor rows for the email at approval time</td>
+          <td>Rewrite</td>
+          <td>Rewrite + membership insert</td>
+        </tr>
+        <tr>
+          <td><code>/post</code> identity</td>
+          <td>Reads active booth from local state; falls back to picker if unset</td>
+          <td>Low</td>
+          <td>Low</td>
+        </tr>
+        <tr>
+          <td><code>/admin</code> approval</td>
+          <td>Row rendering stays per-request; approval creates vendor with no user_id match needed</td>
+          <td>Touch</td>
+          <td>Touch + membership row</td>
+        </tr>
+        <tr>
+          <td><code>/api/vendor-request</code> dedup</td>
+          <td>Key on <code>(lower(email), mall_id, booth_number, status='pending')</code> instead of <code>(lower(email), status='pending')</code></td>
+          <td>Index swap</td>
+          <td>Index swap</td>
+        </tr>
+        <tr>
+          <td><code>lib/posts.ts</code></td>
+          <td><code>getVendorByUserId</code> → <code>getVendorsByUserId</code> (array); callers pick</td>
+          <td>Rename + array</td>
+          <td>Rename + join</td>
+        </tr>
+        <tr>
+          <td>Session-32 email dedup</td>
+          <td>Loosen to allow same-email different-booth; keep same-email same-booth blocked</td>
+          <td>Copy + index</td>
+          <td>Copy + index</td>
+        </tr>
+        <tr>
+          <td><code>vendor_requests</code> schema</td>
+          <td>No changes needed — columns already support the composite key</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>RLS policies</td>
+          <td>Option A: no change. Option B: rewrite "own your vendor row" policies to join through <code>vendor_memberships</code>.</td>
+          <td>None</td>
+          <td>Rewrite 3 policies</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Questions pane -->
+  <div class="questions-pane">
+    <h3>Review questions</h3>
+    <ol>
+      <li><strong>Schema path</strong> — A (drop UNIQUE, lighter) or B (vendor_memberships, richer)? The roadmap currently names no near-term need for co-ownership or role-based permissions. Option A ships faster; migrating to B later is a known-weight future task.</li>
+      <li><strong>Masthead affordance</strong> — does "Viewing · ZenForged Finds ▾" read as tap-able on your phone, or does it look like static text? If static, consider: bolder chevron, underline on the name, or a subtle pill background on the whole block.</li>
+      <li><strong>Sheet row hierarchy</strong> — X-glyph → booth name (bold) → mall + booth subtitle. Does the booth name lead correctly, or should the mall lead (since that's the physical anchor)?</li>
+      <li><strong>"Add another booth" placement</strong> — inside the sheet, or on a dedicated <code>/my-shelf/settings</code> surface? Inside the sheet keeps the add-flow close to the list; settings keeps the sheet pure for switching.</li>
+      <li><strong>Pending-booth row</strong> — a Flow 3 request that's been submitted but not yet approved. Show in the sheet with an italic "Pending" pill? Or hide until approved?</li>
+    </ol>
+  </div>
+
+</div>
+
+</body>
+</html>
