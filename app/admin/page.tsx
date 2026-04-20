@@ -35,13 +35,15 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, UserCheck, Users, Store, X, Stethoscope, Image as ImageIcon, Upload, Loader as LoaderIcon } from "lucide-react";
+import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, UserCheck, Users, Store, X, Stethoscope, Image as ImageIcon, Upload, Loader as LoaderIcon, Plus, ChevronRight, Check } from "lucide-react";
 import { getSession, isAdmin, signOut } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
-import { colors } from "@/lib/tokens";
+import { colors, v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import { compressImage } from "@/lib/imageUpload";
 import { getSiteSettingUrl, type SiteSettingKey } from "@/lib/siteSettings";
+import { getAllMalls, createVendor, slugify } from "@/lib/posts";
 import type { User } from "@supabase/supabase-js";
+import type { Mall, Vendor } from "@/types/treehouse";
 
 interface AdminPost {
   id:         string;
@@ -141,6 +143,13 @@ export default function AdminPage() {
   const [diagnosisReports, setDiagnosisReports] = useState<Record<string, DiagnosisReport>>({});
   const [diagnosisErrors,  setDiagnosisErrors]  = useState<Record<string, string>>({});
 
+  // T4b (session 37) — Add Booth primitive state
+  // Mall list is loaded once alongside session resolution. The add-booth sheet
+  // on /shelves previously loaded malls every page mount; folding the capability
+  // into /admin means malls load only when an admin actually lands here.
+  const [malls,         setMalls]         = useState<Mall[]>([]);
+  const [addBoothOpen,  setAddBoothOpen]  = useState(false);
+
   useEffect(() => {
     getSession().then(s => {
       setUser(s?.user ?? null);
@@ -148,6 +157,7 @@ export default function AdminPage() {
       if (s?.user && isAdmin(s.user)) {
         fetchPosts();
         fetchVendorRequests();
+        getAllMalls().then(setMalls);
       }
     });
   }, []);
@@ -416,6 +426,31 @@ export default function AdminPage() {
       {/* Vendor Requests Tab */}
       {activeTab === "requests" && (
         <div style={{ margin: "24px 20px 0" }}>
+
+          {/* T4b (session 37) — Add Booth primitive folded in from /shelves.
+              Rendered on v1.1k chrome (paperCream + IM Fell + filled green CTA)
+              so that when /admin gets its eventual v1.2 pass this primitive
+              doesn't need re-chroming. It reads as a Treehouse-shaped insertion
+              inside the legacy v0.2 admin tab — intentional mismatch flagged
+              in CLAUDE.md session-37 close. */}
+          <AddBoothInline
+            malls={malls}
+            open={addBoothOpen}
+            onToggle={() => setAddBoothOpen(v => !v)}
+            onClose={() => setAddBoothOpen(false)}
+            onCreated={(vendor) => {
+              setAddBoothOpen(false);
+              setToast({
+                kind: "success",
+                name: vendor.display_name,
+                email: "",
+                booth: vendor.booth_number ?? null,
+                mall: malls.find(m => m.id === vendor.mall_id)?.name ?? null,
+                note: "Booth pre-seeded. Ready for vendor claim when they request access.",
+              });
+            }}
+          />
+
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2px" }}>
               Vendor requests ({requests.length})
@@ -1149,5 +1184,308 @@ function FeaturedBannerEditor({
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </div>
+  );
+}
+
+// ── AddBoothInline — T4b (session 37) ────────────────────────────────
+//
+// Folded in from /shelves AddBoothSheet. Two states:
+//   1. Collapsed — single-row entry point (paper-wash bubble + plus glyph +
+//      title + italic helper subtitle + chevron). Tap expands inline.
+//   2. Expanded — inline form (mall select + booth number + booth name +
+//      filled green CTA). On successful create, calls onCreated(vendor) and
+//      auto-collapses.
+//
+// Chrome: v1.1k primitives (paperCream, IM Fell italic labels, inkHairline
+// borders, inkWash input bg, filled green CTA). Matches /admin/login and
+// /vendor-request so that when /admin gets a v1.2 pass this primitive is
+// already aligned.
+//
+// Rendered as a non-portaled inline section, NOT a bottom sheet — the old
+// /shelves AddBoothSheet used motion.div with a backdrop because /shelves
+// is a scroll surface; /admin's Vendors tab is already dense and a sheet
+// would add extra chrome. Inline expand is the session-37 approved shape.
+
+function AddBoothInline({
+  malls,
+  open,
+  onToggle,
+  onClose,
+  onCreated,
+}: {
+  malls:     Mall[];
+  open:      boolean;
+  onToggle:  () => void;
+  onClose:   () => void;
+  onCreated: (vendor: Vendor) => void;
+}) {
+  const [mallId,      setMallId]      = useState("");
+  const [boothNumber, setBoothNumber] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [submitting,  setSubmitting]  = useState(false);
+  const [error,       setError]       = useState<string | null>(null);
+  const [done,        setDone]        = useState(false);
+
+  // Default to the first mall once loaded (production has one mall; this
+  // becomes meaningful as multi-mall support comes online).
+  useEffect(() => {
+    if (!mallId && malls.length > 0) {
+      setMallId(malls[0].id);
+    }
+  }, [malls, mallId]);
+
+  async function handleSubmit() {
+    if (!displayName.trim()) { setError("Booth name is required."); return; }
+    if (!mallId) { setError("Please select a mall location."); return; }
+    setSubmitting(true);
+    setError(null);
+    const slug = slugify(displayName.trim());
+    const { data, error: createErr } = await createVendor({
+      mall_id:      mallId,
+      display_name: displayName.trim(),
+      booth_number: boothNumber.trim() || undefined,
+      slug,
+    });
+    if (createErr || !data) {
+      setError(createErr ?? "Something went wrong. Try again.");
+      setSubmitting(false);
+      return;
+    }
+    setDone(true);
+    setTimeout(() => {
+      onCreated(data);
+      // Reset form state after parent handles success
+      setDisplayName("");
+      setBoothNumber("");
+      setDone(false);
+      setSubmitting(false);
+    }, 800);
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "11px 12px",
+    borderRadius: 10,
+    background: v1.inkWash,
+    border: `1px solid ${v1.inkHairline}`,
+    color: v1.inkPrimary,
+    fontSize: 14,
+    outline: "none",
+    fontFamily: FONT_SYS,
+    appearance: "none",
+    WebkitAppearance: "none",
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: "block",
+    fontFamily: FONT_IM_FELL,
+    fontStyle: "italic",
+    fontSize: 12,
+    color: v1.inkMuted,
+    lineHeight: 1.3,
+    marginBottom: 6,
+  };
+
+  const optionalStyle: React.CSSProperties = {
+    fontStyle: "italic",
+    color: v1.inkFaint,
+    marginLeft: 3,
+  };
+
+  // Collapsed state — single-row entry point
+  if (!open) {
+    return (
+      <button
+        onClick={onToggle}
+        style={{
+          width: "100%",
+          padding: "12px 14px",
+          marginBottom: 16,
+          background: v1.inkWash,
+          border: `0.5px solid ${v1.inkHairline}`,
+          borderRadius: 10,
+          display: "flex",
+          alignItems: "center",
+          gap: 11,
+          cursor: "pointer",
+          WebkitTapHighlightColor: "transparent",
+          textAlign: "left",
+        }}
+      >
+        <div style={{
+          width: 32, height: 32, borderRadius: "50%",
+          background: "rgba(42,26,10,0.04)",
+          border: `0.5px solid ${v1.inkHairline}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0,
+        }}>
+          <Plus size={14} style={{ color: v1.green }} strokeWidth={1.8} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontFamily: FONT_IM_FELL, fontSize: 14, color: v1.inkPrimary,
+            lineHeight: 1.25,
+          }}>
+            Add a booth
+          </div>
+          <div style={{
+            fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 11,
+            color: v1.inkMuted, lineHeight: 1.4, marginTop: 1,
+          }}>
+            Pre-seed a booth for later vendor claim
+          </div>
+        </div>
+        <ChevronRight size={13} style={{ color: v1.inkMuted, flexShrink: 0 }} strokeWidth={1.8} />
+      </button>
+    );
+  }
+
+  // Expanded state — inline form
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
+      style={{
+        marginBottom: 16,
+        padding: "16px",
+        background: v1.inkWash,
+        border: `0.5px solid ${v1.inkHairline}`,
+        borderRadius: 10,
+        overflow: "hidden",
+      }}
+    >
+      {/* Header row */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        marginBottom: 16,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: "50%",
+            background: "rgba(42,26,10,0.04)",
+            border: `0.5px solid ${v1.inkHairline}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <Plus size={13} style={{ color: v1.green }} strokeWidth={1.8} />
+          </div>
+          <div style={{
+            fontFamily: FONT_IM_FELL, fontSize: 14, color: v1.inkPrimary,
+          }}>
+            Add a booth
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          style={{
+            width: 26, height: 26, borderRadius: "50%",
+            background: "none", border: "none", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+        >
+          <X size={14} style={{ color: v1.inkMuted }} />
+        </button>
+      </div>
+
+      {/* Mall */}
+      <div style={{ marginBottom: 14 }}>
+        <label style={labelStyle}>Mall</label>
+        <select
+          value={mallId}
+          onChange={e => setMallId(e.target.value)}
+          style={{
+            ...inputStyle,
+            paddingRight: 36,
+            cursor: "pointer",
+            backgroundImage:
+              "url(\"data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b5538' stroke-width='2' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "right 12px center",
+            backgroundSize: "12px 12px",
+          }}
+        >
+          <option value="">Select a location…</option>
+          {malls.map(m => (
+            <option key={m.id} value={m.id}>{m.name}{m.city ? ` — ${m.city}` : ""}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Booth number */}
+      <div style={{ marginBottom: 14 }}>
+        <label style={labelStyle}>
+          Booth number <span style={optionalStyle}>(optional)</span>
+        </label>
+        <input
+          value={boothNumber}
+          onChange={e => setBoothNumber(e.target.value)}
+          placeholder="e.g. 369"
+          style={inputStyle}
+          inputMode="numeric"
+        />
+      </div>
+
+      {/* Booth name */}
+      <div style={{ marginBottom: 16 }}>
+        <label style={labelStyle}>Booth name</label>
+        <input
+          value={displayName}
+          onChange={e => setDisplayName(e.target.value)}
+          placeholder="e.g. ZenForged Finds"
+          style={inputStyle}
+        />
+      </div>
+
+      {error && (
+        <div style={{
+          marginBottom: 12,
+          padding: "9px 12px",
+          borderRadius: 9,
+          background: v1.redBg,
+          border: `1px solid ${v1.redBorder}`,
+          fontFamily: FONT_SYS,
+          fontSize: 12,
+          color: v1.red,
+          lineHeight: 1.5,
+        }}>
+          {error}
+        </div>
+      )}
+
+      <button
+        onClick={handleSubmit}
+        disabled={submitting || done}
+        style={{
+          width: "100%",
+          padding: "12px",
+          borderRadius: 10,
+          fontFamily: FONT_SYS,
+          fontSize: 13,
+          fontWeight: 500,
+          color: "#fff",
+          background: submitting || done ? "rgba(30,77,43,0.40)" : v1.green,
+          border: "none",
+          cursor: submitting || done ? "default" : "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          gap: 7,
+          boxShadow: submitting || done ? "none" : "0 2px 10px rgba(30,77,43,0.18)",
+        }}
+      >
+        {done ? (
+          <><Check size={14} strokeWidth={2} /> Booth added</>
+        ) : submitting ? (
+          <><LoaderIcon size={14} style={{ animation: "spin 0.9s linear infinite" }} /> Adding…</>
+        ) : (
+          "Add booth"
+        )}
+      </button>
+
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
+    </motion.div>
   );
 }

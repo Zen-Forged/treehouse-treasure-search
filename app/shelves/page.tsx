@@ -9,9 +9,9 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, ChevronRight, Pencil, Plus, X, Check, Loader, ChevronDown } from "lucide-react";
-import { getVendorsByMall, getAllMalls, createVendor, slugify } from "@/lib/posts";
+import { motion } from "framer-motion";
+import { MapPin, ChevronRight, Pencil } from "lucide-react";
+import { getVendorsByMall, getAllMalls } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
 import { colors } from "@/lib/tokens";
 import { vendorHueBg, loadBookmarkCount } from "@/lib/utils";
@@ -21,194 +21,6 @@ import type { Vendor, Mall } from "@/types/treehouse";
 import type { User } from "@supabase/supabase-js";
 
 const DEFAULT_MALL_ID = "19a8ff7e-cb45-491f-9451-878e2dde5bf4";
-
-// ─── Add Booth Sheet ───────────────────────────────────────────────────────────
-// Fix: positioning wrapper div handles left/transform centering.
-// motion.div only handles y animation — never mix centering transform with Framer.
-
-function AddBoothSheet({
-  malls, onClose, onCreated,
-}: {
-  malls: Mall[];
-  onClose: () => void;
-  onCreated: (vendor: Vendor) => void;
-}) {
-  const [mallId,      setMallId]      = useState(DEFAULT_MALL_ID);
-  const [boothNumber, setBoothNumber] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [submitting,  setSubmitting]  = useState(false);
-  const [error,       setError]       = useState<string | null>(null);
-  const [done,        setDone]        = useState(false);
-
-  async function handleSubmit() {
-    if (!displayName.trim()) { setError("Booth name is required."); return; }
-    if (!mallId) { setError("Please select a mall location."); return; }
-    setSubmitting(true);
-    setError(null);
-    const slug = slugify(displayName.trim());
-    const { data, error: createErr } = await createVendor({
-      mall_id:      mallId,
-      display_name: displayName.trim(),
-      booth_number: boothNumber.trim() || undefined,
-      slug,
-    });
-    if (createErr || !data) {
-      setError(createErr ?? "Something went wrong. Try again.");
-      setSubmitting(false);
-      return;
-    }
-    setDone(true);
-    setTimeout(() => { onCreated(data); onClose(); }, 800);
-  }
-
-  const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "12px 14px",
-    borderRadius: 12, border: `1px solid ${colors.border}`,
-    background: colors.surface, fontSize: 14,
-    fontFamily: "Georgia, serif", color: colors.textPrimary,
-    outline: "none", boxSizing: "border-box",
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: "block", fontSize: 9, fontWeight: 600,
-    textTransform: "uppercase" as const, letterSpacing: "1.8px",
-    color: colors.textMuted, marginBottom: 6,
-  };
-
-  return (
-    <>
-      {/* Backdrop */}
-      <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onClose}
-        style={{
-          position: "fixed", inset: 0, zIndex: 200,
-          background: "rgba(28,26,20,0.42)",
-          backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
-        }}
-      />
-
-      {/* Positioning wrapper — handles centering. motion.div inside handles only y slide. */}
-      <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 300,
-        display: "flex", justifyContent: "center",
-        pointerEvents: "none",
-      }}>
-        <motion.div
-          initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-          transition={{ type: "spring", damping: 28, stiffness: 280 }}
-          style={{
-            width: "100%", maxWidth: 430,
-            background: colors.bg,
-            borderRadius: "20px 20px 0 0",
-            boxShadow: "0 -8px 40px rgba(28,26,20,0.18)",
-            maxHeight: "92dvh",
-            display: "flex", flexDirection: "column",
-            pointerEvents: "auto",
-          }}
-        >
-          {/* Drag handle */}
-          <div style={{ flexShrink: 0, display: "flex", justifyContent: "center", paddingTop: 12, paddingBottom: 4 }}>
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: colors.border }} />
-          </div>
-
-          {/* Scrollable form body */}
-          <div style={{
-            flex: 1,
-            overflowY: "auto",
-            overflowX: "hidden",
-            padding: "8px 20px",
-            paddingBottom: "max(40px, calc(env(safe-area-inset-bottom, 0px) + 40px))",
-            WebkitOverflowScrolling: "touch",
-          }}>
-            {/* Header row */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: colors.textPrimary }}>
-                Add a Booth
-              </div>
-              <button
-                onClick={onClose}
-                style={{ width: 30, height: 30, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: colors.surface, border: `1px solid ${colors.border}`, cursor: "pointer" }}
-              >
-                <X size={14} style={{ color: colors.textMuted }} />
-              </button>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-
-              {/* 1. Mall Location */}
-              <div>
-                <label style={labelStyle}>Mall Location *</label>
-                <div style={{ position: "relative" }}>
-                  <select
-                    value={mallId}
-                    onChange={e => setMallId(e.target.value)}
-                    style={{ ...inputStyle, appearance: "none", WebkitAppearance: "none", paddingRight: 36, cursor: "pointer" }}
-                  >
-                    <option value="">Select a location…</option>
-                    {malls.map(m => (
-                      <option key={m.id} value={m.id}>{m.name}{m.city ? ` · ${m.city}` : ""}</option>
-                    ))}
-                  </select>
-                  <ChevronDown size={13} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: colors.textMuted, pointerEvents: "none" }} />
-                </div>
-              </div>
-
-              {/* 2. Booth Number */}
-              <div>
-                <label style={labelStyle}>Booth Number</label>
-                <input
-                  value={boothNumber}
-                  onChange={e => setBoothNumber(e.target.value)}
-                  placeholder="e.g. 369"
-                  style={inputStyle}
-                  inputMode="numeric"
-                />
-              </div>
-
-              {/* 3. Booth Name */}
-              <div>
-                <label style={labelStyle}>Booth Name *</label>
-                <input
-                  value={displayName}
-                  onChange={e => setDisplayName(e.target.value)}
-                  placeholder="e.g. ZenForged Finds"
-                  style={inputStyle}
-                />
-              </div>
-
-              {error && (
-                <div style={{ fontSize: 12, color: colors.red, background: colors.redBg, borderRadius: 10, padding: "10px 14px" }}>
-                  {error}
-                </div>
-              )}
-
-              <button
-                onClick={handleSubmit}
-                disabled={submitting || done}
-                style={{
-                  width: "100%", padding: "14px", borderRadius: 14,
-                  border: "none", background: colors.green, color: "#fff",
-                  fontSize: 14, fontWeight: 600, fontFamily: "Georgia, serif",
-                  cursor: submitting || done ? "default" : "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                  opacity: submitting ? 0.8 : 1, transition: "background 0.2s",
-                }}
-              >
-                {done
-                  ? <><Check size={16} /> Booth added</>
-                  : submitting
-                  ? <><Loader size={16} style={{ animation: "spin 0.9s linear infinite" }} /> Adding…</>
-                  : "Add Booth"
-                }
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    </>
-  );
-}
 
 // ─── Vendor card ───────────────────────────────────────────────────────────────
 
@@ -306,11 +118,9 @@ function SkeletonCard() {
 
 export default function BoothsPage() {
   const [vendors,       setVendors]       = useState<Vendor[]>([]);
-  const [malls,         setMalls]         = useState<Mall[]>([]);
   const [mall,          setMall]          = useState<Mall | null>(null);
   const [loading,       setLoading]       = useState(true);
   const [user,          setUser]          = useState<User | null>(null);
-  const [showAddSheet,  setShowAddSheet]  = useState(false);
   const [bookmarkCount, setBookmarkCount] = useState(0);
 
   useEffect(() => {
@@ -322,20 +132,10 @@ export default function BoothsPage() {
     ]).then(([session, vendorList, mallList]) => {
       setUser(session?.user ?? null);
       setVendors(vendorList);
-      setMalls(mallList);
       setMall(mallList.find(m => m.id === DEFAULT_MALL_ID) ?? null);
       setLoading(false);
     });
   }, []);
-
-  function handleBoothCreated(vendor: Vendor) {
-    setVendors(prev => [...prev, vendor].sort((a, b) => {
-      if (!a.booth_number && !b.booth_number) return 0;
-      if (!a.booth_number) return 1;
-      if (!b.booth_number) return -1;
-      return a.booth_number.localeCompare(b.booth_number, undefined, { numeric: true });
-    }));
-  }
 
   return (
     <div style={{ minHeight: "100vh", background: colors.bg, maxWidth: 430, margin: "0 auto", position: "relative" }}>
@@ -353,11 +153,6 @@ export default function BoothsPage() {
 
             <AdminOnly user={user}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <button onClick={() => setShowAddSheet(true)}
-                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 11px", borderRadius: 10, background: colors.green, border: "none", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
-                  <Plus size={13} style={{ color: "#fff" }} />
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#fff", letterSpacing: "0.2px" }}>Add Booth</span>
-                </button>
                 <Link href="/admin"
                   style={{ fontSize: 9, fontWeight: 700, color: colors.green, textTransform: "uppercase", letterSpacing: "1.6px", padding: "4px 9px", borderRadius: 8, background: colors.greenLight, border: `1px solid ${colors.greenBorder}`, textDecoration: "none" }}>
                   Admin
@@ -398,12 +193,6 @@ export default function BoothsPage() {
             <p style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: colors.textMuted, lineHeight: 1.75, maxWidth: 230, margin: 0 }}>
               Booths will appear here once vendors start posting their finds.
             </p>
-            <AdminOnly user={user}>
-              <button onClick={() => setShowAddSheet(true)}
-                style={{ marginTop: 24, padding: "12px 24px", borderRadius: 24, background: colors.green, border: "none", color: "#fff", fontSize: 13, fontWeight: 600, fontFamily: "Georgia, serif", cursor: "pointer" }}>
-                Add a Booth
-              </button>
-            </AdminOnly>
           </motion.div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -414,12 +203,10 @@ export default function BoothsPage() {
         )}
       </main>
 
-      {/* ── Add Booth Sheet ── */}
-      <AnimatePresence>
-        {showAddSheet && (
-          <AddBoothSheet malls={malls} onClose={() => setShowAddSheet(false)} onCreated={handleBoothCreated} />
-        )}
-      </AnimatePresence>
+      {/* T4b (session 37) — Add Booth capability retired from /shelves and
+          folded into /admin Vendors tab. This page is now strictly a browse
+          surface. Admins retain the pencil affordance + Admin badge for
+          navigating to their own shelf management. */}
 
       <BottomNav active="shelves" flaggedCount={bookmarkCount} />
 
