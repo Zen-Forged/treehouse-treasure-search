@@ -21,11 +21,17 @@ export async function getFeedPosts(limit = 40): Promise<Post[]> {
 }
 
 export async function getPost(id: string): Promise<Post | null> {
+  // Session 36 fix: `user_id` added to the vendor select.
+  // Consumers that depend on it — the `/find/[id]/edit` auth gate and Find Detail's
+  // `detectOwnershipAsync` path 2 — were evaluating `post.vendor.user_id` as
+  // `undefined` because the field was never selected, so non-admin vendors hit
+  // the "forbidden" redirect back to `/find/[id]`. Admins passed only because
+  // `isAdmin(user)` short-circuits the gate. See session 36 close for detail.
   const { data, error } = await supabase
     .from("posts")
     .select(`
       *,
-      vendor:vendors ( id, display_name, booth_number, slug, avatar_url, bio, facebook_url ),
+      vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url ),
       mall:malls     ( id, name, city, state, slug, address )
     `)
     .eq("id", id)

@@ -50,6 +50,7 @@ import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { compressImage as compressForAdd } from "@/lib/imageUpload";
 import { postStore } from "@/lib/postStore";
+import { loadFollowedIds } from "@/lib/utils";
 import {
   resolveActiveBooth,
   setActiveBoothId,
@@ -310,6 +311,12 @@ function MyBoothInner() {
   const cameraInputRef  = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Q-003 (session 36): Find Map saved-count badge passthrough. Mirrors the
+  // Home reference implementation in app/page.tsx. safeStorage-backed count,
+  // refreshed on focus and visibilitychange so bookmarks toggled elsewhere
+  // propagate back to the badge when the user returns to this tab.
+  const [bookmarkCount, setBookmarkCount] = useState(0);
+
   const heroLockedRef = useRef(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -321,6 +328,27 @@ function MyBoothInner() {
       setAuthReady(true);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Q-003 (session 36): bookmark count sync ───────────────────────────
+  // Mirror of app/page.tsx pattern — same sync fn, same event set. We also
+  // listen to visibilitychange because My Booth is a frequent return surface
+  // after a vendor saves/unsaves a find on another page in the same tab.
+  useEffect(() => {
+    function syncBookmarkCount() {
+      try { setBookmarkCount(loadFollowedIds().size); } catch {}
+    }
+    syncBookmarkCount();
+    function onFocus() { syncBookmarkCount(); }
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") syncBookmarkCount();
+    }
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, []);
 
   // ── Vendor resolution ──────────────────────────────────────────────────
@@ -711,7 +739,7 @@ function MyBoothInner() {
         )}
       </div>
 
-      <BottomNav active="my-shelf" />
+      <BottomNav active="my-shelf" flaggedCount={bookmarkCount} />
 
       {/* Hidden file inputs — camera + gallery */}
       <input
