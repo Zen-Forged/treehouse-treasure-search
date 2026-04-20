@@ -1,13 +1,108 @@
 # Treehouse — Known Issues
 > Active bugs, gaps, and deferred items. Referenced by `docs/DECISION_GATE.md`.
 > Created: 2026-04-17 (session 8 — logging the three QA issues surfaced during T4a post-deploy).
-> Last updated: 2026-04-17 (session 13 — KI-004 resolved, in-mall diagnostic tooling shipped).
+> Last updated: 2026-04-20 (session 33 — KI-005 logged: pre-approval sign-in signaling gap).
 
 ---
 
 ## Open issues
 
-_None currently open. See Resolved section below for session 13 work._
+### 🔴 KI-006 — Session-32 regression in `/api/setup/lookup-vendor` (pre-beta blocker)
+**Surfaced:** 2026-04-20 session 33 QA walk step 6 (on-device)
+**Severity:** High (🔴) — pre-beta blocker
+**Status:** Open; fix shape depends on multi-booth scoping (likely session 34)
+
+**Symptom:** Any Flow 3 vendor who fills in `booth_name` cannot complete `/setup` linkage after OTP sign-in. Auth verifies cleanly, session establishes, but `/api/setup/lookup-vendor` returns 404 and `/my-shelf` renders `<NoBooth>`. Vendor is stranded — cannot post finds, cannot reach their shelf.
+
+**Root cause:** `/api/setup/lookup-vendor` step 2 joins `vendor_requests.name` against `vendors.display_name`:
+
+```typescript
+const { data: vendor } = await auth.service
+  .from("vendors")
+  .select("id")
+  .eq("display_name", request.name)      // ← stale after session 32
+  .eq("mall_id", request.mall_id)
+  .is("user_id", null)
+  .maybeSingle();
+```
+
+Before session 32, these fields always matched (approval set `display_name = name`). Session 32 introduced the new priority `booth_name → first+last → legacy name` for `display_name`, so any request with a non-null `booth_name` produces a `vendors` row whose `display_name` no longer equals `vendor_requests.name`. The join misses; route returns 404.
+
+**Dependent-surface miss:** Session 32 changed how `display_name` was *derived* at write time (in `/api/admin/vendor-requests`) but didn't audit the routes that *read* it. `/api/setup/lookup-vendor` kept the stale equality assumption. This is the Tech Rule candidate ("dependent-surface audit when changing a field's semantic source") named at session-33 close.
+
+**Blast radius:** Every remote Flow 3 vendor who picks a booth name — which is half the v1.2 feature set and explicitly encouraged by the "Leave blank to use your name" copy. Flow 2 (in-person demo) likely still works because admin would be at the device to run manual SQL recovery. Flow 1 unaffected (no `vendor_requests` row involved).
+
+**Why not fixed session 33:** David named a bigger collision at close — the multi-booth data model. Fixing KI-006 in isolation would build on the wrong schema; the right sequence is scope-multi-booth-first, then the lookup rewrite becomes a natural sub-fix.
+
+**Fix shape if multi-booth is deferred (Path B):**
+
+Rewrite the lookup join to use `mall_id + booth_number + user_id IS NULL` as the primary composite (that's canonical — `vendors_mall_booth_unique` enforces it), with a three-way name fallback matching the session-32 approval priority if booth_number is null on the request:
+
+```typescript
+// Primary: canonical booth-in-mall composite
+let { data: vendor } = request.booth_number
+  ? await auth.service
+      .from("vendors")
+      .select("id")
+      .eq("mall_id", request.mall_id)
+      .eq("booth_number", request.booth_number)
+      .is("user_id", null)
+      .maybeSingle()
+  : { data: null };
+
+// Fallback for legacy rows / booth-less requests: name-priority match
+if (!vendor) {
+  const candidates = [
+    (request.booth_name as string)?.trim(),
+    request.first_name && request.last_name ? `${request.first_name} ${request.last_name}` : null,
+    (request.name as string)?.trim(),
+  ].filter(Boolean);
+  for (const name of candidates) {
+    const { data } = await auth.service
+      .from("vendors")
+      .select("id")
+      .eq("display_name", name)
+      .eq("mall_id", request.mall_id)
+      .is("user_id", null)
+      .maybeSingle();
+    if (data) { vendor = data; break; }
+  }
+}
+```
+
+**Fix shape if multi-booth ships first (Path A, preferred):**
+
+The route returns an array of linked vendors instead of a single row, composite key becomes `(email, mall_id, booth_number)`, `vendor_memberships` join table likely introduced, `vendors_user_id_key` constraint dropped. KI-006 becomes automatic — the new lookup is booth-explicit by construction.
+
+**Verification when fixed:** Submit a fresh `/vendor-request` with a booth_name set. Approve in `/admin`. Sign in via OTP. `/my-shelf` should load the vendor's shelf, not `<NoBooth>`. The display_name on the shelf should match the booth_name, not first+last.
+
+---
+
+### 🟡 KI-005 — Pre-approval sign-in signaling gap
+**Surfaced:** 2026-04-20 session 33 QA walk (step 1→2 gap on v1.2 onboarding refresh)
+**Severity:** Low (🟢) — confusion, not flow failure
+**Status:** Deferred to Sprint 5 guest-user UX batch
+
+**What a vendor experiences:** Submits `/vendor-request` successfully, sees the v1.2 "You're on the list" receipt screen + Email #1 arrives. Taps Sign In out of curiosity before admin approval. `/login` doesn't recognize the in-flight request — it just asks for an email and sends an OTP. Vendor enters the code, session establishes, lands on `/my-shelf` which renders the `<NoBooth>` state ("No booth linked to this account · If you're a vendor awaiting approval, your booth will appear here once setup is complete"). Soft recovery, not a dead-end — but the signal came at the wrong place: the vendor was already committed to an OTP round trip before finding out nothing new was about to happen.
+
+**What it is NOT:**
+- Not a session-32 regression — this behavior predates the v1.2 refresh. Session 32 didn't touch `/login`; the v1.2 walk just exercised pre-approval sign-in for the first time.
+- Not a security or data-integrity issue. No exposure; `auth.users` row creation pre-approval is benign (gets linked cleanly at `/setup` via email-match once admin approves).
+- Not a flow gap — the `<NoBooth>` state at `/my-shelf` catches the vendor in a brand-appropriate landing.
+
+**What it IS:** A signaling + copy issue at the email-entry step of `/login`, where a pending vendor would benefit from an in-place warm state ("We're still reviewing your request") rather than an OTP they don't need. Same visual vocabulary as `/vendor-request`'s `already_pending` done screen (Clock glyph, paper-wash bubble, email echo pill) — no new primitives required.
+
+**Why deferred, not fixed now:** `/login` is a 🔴 STOP-level surface in `docs/DECISION_GATE.md` (auth flow change). Even a pre-OTP gate qualifies, because it introduces a new branch in the sign-in contract. Deserves a dedicated session, not a QA-walk sidebar.
+
+**Shape of the eventual fix (for Sprint 5 scoping):**
+1. New route `POST /api/auth/precheck-email { email }` — service-role read on `vendor_requests` + `vendors`, returns `{ state: "pending_approval" | "linked" | "approved_unlinked" | "unknown" }`.
+2. `/login` calls precheck before `sendMagicLink`. On `pending_approval`, renders a warm in-place screen reusing the v1.2 Clock glyph + paper-wash bubble + email echo pill from `/vendor-request` done screens. Copy: *"We're still reviewing your request. We'll send a sign-in email the moment your shelf is ready."*
+3. All other states → normal OTP path. Admin, Flow 1 claimants, and unknown emails fall through unchanged.
+4. Rate limit the precheck route the same way `/api/auth/admin-pin` is rate-limited (5/min per IP) — new surface, deserves same hygiene.
+
+**Natural batch home:** Sprint 5 guest-user UX ("Curator Sign In" rename, `/welcome` guest landing, PWA install onboarding, bookmarks persistence). Same family: onboarding-clarity fixes on shared-audience sign-in surfaces.
+
+**Not blocking:** pre-beta testing. David can explain verbally to any in-person vendor who asks; remote vendors land on `<NoBooth>` with correct copy for the state.
 
 ---
 
