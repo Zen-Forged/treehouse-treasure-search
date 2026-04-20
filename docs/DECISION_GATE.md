@@ -261,6 +261,24 @@ dependency                          every AI-powered route. HTTP 400 `invalid_re
                                    not a code bug. Fired session 27 (discovered during the
                                    on-device QA that followed the model-swap fix). Added
                                    session 27.
+Known-Gaps reconciliation       When writing a session close, any item listed in CLAUDE.md's
+at session close                    "Known Gaps → Pre-beta blockers" or "Remaining pre-beta tech
+                                   work" sections MUST be cross-referenced against
+                                   `docs/known-issues.md` Resolved section and
+                                   `docs/DECISION_GATE.md` Risk Register before `thc`. If
+                                   any of those canonical sources records the item as
+                                   resolved, strike it from CLAUDE.md's Known Gaps in the
+                                   same close. Cost per item: one read. Proposed session 26
+                                   when the KI-003 phantom-blocker pattern was named (a fix
+                                   resolved session 9 but restated as open across 17 close
+                                   blocks). Not promoted session 26 or 27; finally promoted
+                                   session 28 as part of the structural cleanup pass.
+                                   Pairs with file-creation-verify (catches orphan pattern)
+                                   and graceful-collapse observability (catches silent-
+                                   mock-fallback pattern) as a family of close-ritual
+                                   discipline moves that each catch a different flavor of
+                                   "working-looking UI over a real failure." Added session
+                                   28.
 Design: mockup-first as         Design work for David is mockup-first, not spec-first. The
 default, not exception          prior pattern — Design agent writes a 14-paragraph commitment
                                    block into `docs/design-system.md`, David reviews dense
@@ -527,4 +545,4 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 ---
 > This document is the operating constitution for the Treehouse system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-19 (session 28 — v1.2 post-flow trilogy mockup-first design session; three approved mockups + build spec on disk; mockup-first-as-default Tech Rule promoted; two Risk Register rows added — post-flow trilogy spec-approved, design-process-was-spec-first resolved)
+> Last updated: 2026-04-19 (session 28 — v1.2 mockup-first design approval + structural cleanup pass; three mockups approved + build spec on disk; two Tech Rules added — mockup-first-as-default + Known-Gaps reconciliation; two Risk Register rows added; CLAUDE.md split — historical archives to `docs/session-archive.md`, reference material left in CONTEXT.md where it already lives; project-root agent-system cruft audit staged for separate cleanup)
