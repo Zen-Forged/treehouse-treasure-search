@@ -152,18 +152,49 @@ export async function getVendorBySlug(slug: string): Promise<Vendor | null> {
 }
 
 /**
- * Look up a vendor by the authenticated user's Supabase user_id.
- * This is the authoritative identity lookup for logged-in users.
- * Returns null if no vendor row is linked to this user yet (first-time setup).
+ * Look up ALL vendor rows linked to the authenticated user's Supabase user_id.
+ *
+ * Multi-booth (session 35) — a single auth user can now own N vendor rows
+ * (migration 006 dropped vendors_user_id_key). This is the authoritative
+ * identity lookup.
+ *
+ * Returns rows ordered by created_at ASC so the first-approved booth is
+ * always index 0. That gives deterministic fallback behavior for the
+ * resolveActiveBooth helper in lib/activeBooth.ts when the stored
+ * active-vendor-id doesn't match any current row.
+ *
+ * Returns an empty array (not null) if the user has no linked vendor rows
+ * yet — caller handles the "no booth" case uniformly.
  */
-export async function getVendorByUserId(userId: string): Promise<Vendor | null> {
+export async function getVendorsByUserId(userId: string): Promise<Vendor[]> {
   const { data, error } = await supabase
     .from("vendors")
     .select(`*, mall:malls ( id, name, city, state, slug, address )`)
     .eq("user_id", userId)
-    .maybeSingle(); // returns null (not error) if no row found
-  if (error) { console.error("[posts] getVendorByUserId:", error.message); return null; }
-  return data as Vendor | null;
+    .order("created_at", { ascending: true });
+  if (error) { console.error("[posts] getVendorsByUserId:", error.message); return []; }
+  return (data ?? []) as Vendor[];
+}
+
+/**
+ * @deprecated Use `getVendorsByUserId(userId)` and resolve the active booth
+ * via `resolveActiveBooth(vendors)` from `lib/activeBooth.ts`.
+ *
+ * Retained as a transitional wrapper during the session-35 multi-booth
+ * rollout so any caller that hasn't been migrated yet still resolves SOME
+ * vendor rather than null. Returns the first (oldest-created) vendor row
+ * linked to the user, or null if none.
+ *
+ * Schedule for removal: after one full session passes with no
+ * console.warn hits surfaced during on-device QA.
+ */
+export async function getVendorByUserId(userId: string): Promise<Vendor | null> {
+  console.warn(
+    "[posts] getVendorByUserId is deprecated — use getVendorsByUserId + resolveActiveBooth. " +
+    "Called for userId:", userId
+  );
+  const rows = await getVendorsByUserId(userId);
+  return rows[0] ?? null;
 }
 
 /**

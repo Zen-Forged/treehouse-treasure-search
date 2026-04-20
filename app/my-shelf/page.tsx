@@ -1,17 +1,30 @@
 // app/my-shelf/page.tsx
-// My Booth — vendor profile page, v1.1h. Auth-gated.
+// My Booth — vendor profile page. Session 35 (2026-04-20) — multi-booth aware.
 //
-// Booth page v1.1h commitments (see docs/design-system.md §Booth page):
-//   - Banner is a pure photograph; vendor name relocates to IM Fell 32px title below
-//   - Booth post-it pinned to banner (bottom-right, +6deg, "Booth Location" eyebrow + 36px numeral)
-//   - Small pin + mall + dotted-underline address block below the title
-//   - Window View (default): 3-col 4:5 portrait grid, AddFindTile top-left
-//   - Shelf View: horizontal scroll, 52vw/210px max tiles, 22px left padding
-//   - Found homes tab retired; sold items don't render on this page
-//   - ExploreBanner retired; diamond-divider quiet closer instead
-//   - Georgia retired from this page
+// Changes from v1.1h/v1.2:
+//   - getVendorByUserId → getVendorsByUserId (array return)
+//   - Active booth resolved via lib/activeBooth.resolveActiveBooth (safeStorage
+//     `treehouse_active_vendor_id`, falls back to vendors[0] deterministically)
+//   - When vendors.length > 1: masthead renders "Viewing · [Booth Name] ▾"
+//     block as a single tap target that opens <BoothPickerSheet>.
+//   - When vendors.length ≤ 1: masthead is unchanged from v1.1l — 99% of
+//     current users see today's UX exactly as before. No chevron, no sheet.
+//   - Admin `?vendor=id` impersonation preserved — bypasses active-booth
+//     resolution and renders against the requested vendor directly.
 //
-// All auth / self-heal / hero upload wiring preserved from session 10 Flow 2 close.
+// The approved mockup (docs/mockups/my-shelf-multi-booth-v1.html) is the
+// authority for the masthead layout. If this code and the mockup diverge,
+// the mockup wins.
+//
+// Self-heal via /api/setup/lookup-vendor preserved for first-time signed-in
+// users whose /setup never completed — now reads the new { vendors: [] }
+// response shape.
+//
+// Booth page v1.1h commitments otherwise unchanged:
+//   - Banner is a pure photograph; vendor name as IM Fell 32px title below
+//   - Booth post-it pinned to banner (bottom-right, +6deg)
+//   - Window View (default) / Shelf View toggle
+//   - AddFindSheet + ?openAdd=1 redirect shim from /post preserved
 
 "use client";
 
@@ -21,15 +34,20 @@ import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { PiLeaf } from "react-icons/pi";
-import { getVendorByUserId, getVendorById, getVendorPosts, getAllMalls } from "@/lib/posts";
+import { getVendorsByUserId, getVendorById, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { compressImage as compressForAdd } from "@/lib/imageUpload";
 import { postStore } from "@/lib/postStore";
+import {
+  resolveActiveBooth,
+  setActiveBoothId,
+} from "@/lib/activeBooth";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Post, type Vendor, type Mall } from "@/types/treehouse";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import AddFindSheet from "@/components/AddFindSheet";
+import BoothPickerSheet from "@/components/BoothPickerSheet";
 import {
   BoothHero,
   BoothTitleBlock,
@@ -66,12 +84,25 @@ function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promis
   });
 }
 
-// ─── Masthead (Mode A, owner variant — no back arrow, no right slot) ──────────
-// v1.1l — migrated to <StickyMasthead>. The scroll-target ref is the page's
-// overflow-auto scroll container (not window) because this page's scroll
-// context lives inside that div. Passed from the parent.
+// ─── Masthead ─────────────────────────────────────────────────────────────────
+// Two variants controlled by `variant`:
+//   - "single": unchanged v1.1l masthead, center label reads "Treehouse Finds"
+//   - "picker": the center slot becomes a stacked, tappable
+//              "Viewing / [Booth Name] ▾" block that opens the sheet.
+// Scroll target remains the page's overflow-auto container (passed by parent)
+// per v1.1l's internal-scroll-safe pattern.
 
-function Masthead({ scrollTarget }: { scrollTarget: React.RefObject<HTMLDivElement | null> }) {
+function Masthead({
+  scrollTarget,
+  variant,
+  activeBoothName,
+  onPickerOpen,
+}: {
+  scrollTarget:    React.RefObject<HTMLDivElement | null>;
+  variant:         "single" | "picker";
+  activeBoothName: string | null;
+  onPickerOpen:    () => void;
+}) {
   return (
     <StickyMasthead
       scrollTarget={scrollTarget}
@@ -84,17 +115,66 @@ function Masthead({ scrollTarget }: { scrollTarget: React.RefObject<HTMLDivEleme
       }}
     >
       <div />
-      <div
-        style={{
-          fontFamily: FONT_IM_FELL,
-          fontSize: 18,
-          color: v1.inkPrimary,
-          letterSpacing: "-0.005em",
-          textAlign: "center",
-        }}
-      >
-        Treehouse Finds
-      </div>
+      {variant === "single" ? (
+        <div
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontSize: 18,
+            color: v1.inkPrimary,
+            letterSpacing: "-0.005em",
+            textAlign: "center",
+          }}
+        >
+          Treehouse Finds
+        </div>
+      ) : (
+        <button
+          onClick={onPickerOpen}
+          aria-label={activeBoothName ? `Switch booth — viewing ${activeBoothName}` : "Switch booth"}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+            background: "transparent",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontStyle: "italic",
+              fontSize: 11,
+              color: v1.inkMuted,
+              lineHeight: 1,
+            }}
+          >
+            Viewing
+          </span>
+          <span
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontSize: 17,
+              color: v1.inkPrimary,
+              lineHeight: 1.1,
+              letterSpacing: "-0.005em",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              maxWidth: "100%",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {activeBoothName ?? "Booth"}
+            <span style={{ color: v1.inkMuted, fontSize: 11 }}>▾</span>
+          </span>
+        </button>
+      )}
       <div />
     </StickyMasthead>
   );
@@ -196,8 +276,14 @@ function MyBoothInner() {
 
   const [user,          setUser]          = useState<User | null>(null);
   const [authReady,     setAuthReady]     = useState(false);
+
+  // Multi-booth state (session 35)
+  const [vendorList,    setVendorList]    = useState<Vendor[]>([]);
   const [activeVendor,  setActiveVendor]  = useState<Vendor | null>(null);
+  const [adminOverride, setAdminOverride] = useState(false);   // true when ?vendor=id is used
   const [vendorReady,   setVendorReady]   = useState(false);
+  const [pickerOpen,    setPickerOpen]    = useState(false);
+
   const [posts,         setPosts]         = useState<Post[]>([]);
   const [postsLoading,  setPostsLoading]  = useState(false);
   const [mall,          setMall]          = useState<Mall | null>(null);
@@ -208,9 +294,7 @@ function MyBoothInner() {
   const [heroUploading, setHeroUploading] = useState(false);
   const [heroError,     setHeroError]     = useState<string | null>(null);
 
-  // v1.2 — AddFindSheet state + hidden file inputs. Sheet opens via
-  // AddFindTile onAddClick, via BottomNav (future), or via ?openAdd=1 URL
-  // param on mount (supports the /post redirect shim).
+  // v1.2 — AddFindSheet state + hidden file inputs.
   const [showAddSheet, setShowAddSheet] = useState(false);
   const cameraInputRef  = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
@@ -218,6 +302,7 @@ function MyBoothInner() {
   const heroLockedRef = useRef(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
+  // ── Auth gate ──────────────────────────────────────────────────────────
   useEffect(() => {
     getSession().then(s => {
       if (!s?.user) { router.replace("/login"); return; }
@@ -227,6 +312,12 @@ function MyBoothInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── Vendor resolution ──────────────────────────────────────────────────
+  // Three paths:
+  //   (a) Admin with ?vendor=id → render that vendor directly (adminOverride=true)
+  //   (b) Authed user → getVendorsByUserId + resolveActiveBooth
+  //   (c) Authed user with zero linked rows → try /api/setup/lookup-vendor self-heal
+  //   (d) Admin with no vendor+no param → fallback to ADMIN_DEFAULT_VENDOR_ID
   useEffect(() => {
     if (!authReady || !user) return;
 
@@ -235,15 +326,27 @@ function MyBoothInner() {
     const vendorParam = searchParams.get("vendor");
 
     async function resolve() {
+      // (a) Admin impersonation
       if (adminUser && vendorParam) {
         const v = await getVendorById(vendorParam);
-        if (v) { loadVendor(v, authedUser.id); return; }
+        if (v) {
+          setAdminOverride(true);
+          setVendorList([v]);             // treat impersonated as single-booth
+          loadVendor(v, authedUser.id);
+          return;
+        }
       }
-      const v = await getVendorByUserId(authedUser.id);
-      if (v) { loadVendor(v, authedUser.id); return; }
 
-      // Self-heal (KI-003 — session 9): signed-in user with no linked vendor
-      // tries /api/setup/lookup-vendor before falling through to NoBooth.
+      // (b) Normal path — list-aware resolver
+      const vendors = await getVendorsByUserId(authedUser.id);
+      if (vendors.length > 0) {
+        setVendorList(vendors);
+        const active = resolveActiveBooth(vendors);
+        if (active) { loadVendor(active, authedUser.id); return; }
+      }
+
+      // (c) Self-heal for signed-in users with no linked rows (KI-003 pattern).
+      // New response shape is { ok, vendors: Vendor[] }.
       if (!adminUser) {
         try {
           const res  = await authFetch("/api/setup/lookup-vendor", {
@@ -251,19 +354,28 @@ function MyBoothInner() {
             body:   JSON.stringify({}),
           });
           const json = await res.json();
-          if (res.ok && json?.ok && json.vendor) {
-            loadVendor(json.vendor as Vendor, authedUser.id);
-            return;
+          if (res.ok && json?.ok && Array.isArray(json.vendors) && json.vendors.length > 0) {
+            const linked = json.vendors as Vendor[];
+            setVendorList(linked);
+            const active = resolveActiveBooth(linked);
+            if (active) { loadVendor(active, authedUser.id); return; }
           }
         } catch (err) {
           console.error("[my-shelf] self-heal lookup-vendor failed:", err);
         }
       }
 
+      // (d) Admin with no default — fallback
       if (adminUser) {
         const defaultV = await getVendorById(ADMIN_DEFAULT_VENDOR_ID);
-        if (defaultV) { loadVendor(defaultV, authedUser.id); return; }
+        if (defaultV) {
+          setAdminOverride(true);
+          setVendorList([defaultV]);
+          loadVendor(defaultV, authedUser.id);
+          return;
+        }
       }
+
       setVendorReady(true);
     }
 
@@ -273,8 +385,15 @@ function MyBoothInner() {
 
   function loadVendor(vendor: Vendor, userId: string) {
     setActiveVendor(vendor);
-    if (vendor.hero_image_url && !heroLockedRef.current) {
+    // Reset hero-locked flag on vendor switch so the new booth's hero image
+    // loads instead of keeping the previous one pinned.
+    heroLockedRef.current = false;
+    if (vendor.hero_image_url) {
       setHeroImageUrl(vendor.hero_image_url as string);
+      setHeroKey(k => k + 1);
+    } else {
+      setHeroImageUrl(null);
+      setHeroKey(k => k + 1);
     }
     const cached: LocalVendorProfile = {
       display_name: vendor.display_name,
@@ -295,6 +414,7 @@ function MyBoothInner() {
     setVendorReady(true);
   }
 
+  // ── Posts hydration ────────────────────────────────────────────────────
   useEffect(() => {
     if (!activeVendor) return;
     setPostsLoading(true);
@@ -304,6 +424,16 @@ function MyBoothInner() {
     });
   }, [activeVendor?.id]);
 
+  // ── Picker selection ───────────────────────────────────────────────────
+  function handlePickerSelect(vendorId: string) {
+    if (!user) return;
+    const next = vendorList.find(v => v.id === vendorId);
+    if (!next) return;
+    setActiveBoothId(next.id);
+    loadVendor(next, user.id);
+  }
+
+  // ── Hero upload (unchanged from v1.1l) ─────────────────────────────────
   async function handleHeroImageChange(file: File) {
     if (!activeVendor?.id) return;
     if (file.size > 12_000_000) {
@@ -336,6 +466,11 @@ function MyBoothInner() {
       setHeroImageUrl(json.url);
       setHeroKey(k => k + 1);
       setActiveVendor(v => v ? { ...v, hero_image_url: json.url } : v);
+      // Also mutate the matching row in vendorList so a subsequent booth
+      // switch back returns the new hero, not the stale one.
+      setVendorList(list =>
+        list.map(v => v.id === vendorId ? { ...v, hero_image_url: json.url } : v)
+      );
     } catch (err) {
       setHeroError(`Unexpected error: ${err instanceof Error ? err.message : String(err)}`);
       setHeroImageUrl(fallbackUrl);
@@ -355,22 +490,15 @@ function MyBoothInner() {
     try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2200); } catch {}
   }
 
-  // ── v1.2 AddFindSheet plumbing ───────────────────────────────────────
-  // Open the sheet when an AddFindTile is tapped, when BottomNav eventually
-  // routes here, or when /post redirect-shims in with ?openAdd=1.
+  // ── AddFindSheet plumbing (unchanged from v1.2) ────────────────────────
   function openAddSheet() {
     setShowAddSheet(true);
   }
 
   useEffect(() => {
-    // Support the /post → /my-shelf?openAdd=1 redirect shim. Wait for vendor
-    // to be ready so AddFindSheet opens over a populated shelf, not a
-    // skeleton. Clear the param from the URL after opening so back/forward
-    // navigation doesn't re-open the sheet unexpectedly.
     if (!vendorReady || !activeVendor) return;
     if (searchParams.get("openAdd") !== "1") return;
     setShowAddSheet(true);
-    // Strip ?openAdd=1 from the URL while preserving any other params (like ?vendor=id).
     const params = new URLSearchParams(searchParams.toString());
     params.delete("openAdd");
     const qs = params.toString();
@@ -378,19 +506,12 @@ function MyBoothInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendorReady, activeVendor?.id]);
 
-  // Called when user picks a file from the camera or gallery input. Reads
-  // the image, compresses it, stashes it into postStore, dismisses the
-  // sheet, and navigates to /post/preview where the v1.2 Review page takes
-  // over. Mirrors the current /post flow's file-handling pattern so preview
-  // behavior is unchanged.
   async function handleAddFile(file: File) {
     if (!file.type.startsWith("image/")) {
       setShowAddSheet(false);
       return;
     }
     if (!activeVendor) {
-      // Shouldn't happen — the sheet isn't reachable without a vendor — but
-      // guard anyway so a race doesn't crash the flow.
       setShowAddSheet(false);
       return;
     }
@@ -404,8 +525,6 @@ function MyBoothInner() {
       const compressed = await compressForAdd(rawData);
       postStore.set(compressed);
       setShowAddSheet(false);
-      // Preserve ?vendor=id if admin is impersonating so /post/preview
-      // resolves the same identity /my-shelf is showing.
       const vendorParam = searchParams.get("vendor");
       const dest = vendorParam ? `/post/preview?vendor=${vendorParam}` : "/post/preview";
       router.push(dest);
@@ -418,7 +537,6 @@ function MyBoothInner() {
   function onAddInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (f) handleAddFile(f);
-    // Reset so picking the same file twice still fires change.
     e.target.value = "";
   }
 
@@ -431,6 +549,10 @@ function MyBoothInner() {
   const mallCity    = mall?.city ?? (activeVendor?.mall as Mall | undefined)?.city ?? "Louisville, KY";
   const address     = mall?.address ?? null;
   const loading     = !vendorReady || postsLoading;
+
+  // Multi-booth gating — admin impersonation always reads as single-booth,
+  // otherwise it follows the real list length.
+  const showPicker = !adminOverride && vendorList.length > 1;
 
   return (
     <div
@@ -451,7 +573,12 @@ function MyBoothInner() {
           paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
         }}
       >
-        <Masthead scrollTarget={scrollContainerRef} />
+        <Masthead
+          scrollTarget={scrollContainerRef}
+          variant={showPicker ? "picker" : "single"}
+          activeBoothName={activeVendor?.display_name ?? null}
+          onPickerOpen={() => setPickerOpen(true)}
+        />
         {loading ? (
           <Skeleton />
         ) : !activeVendor ? (
@@ -510,9 +637,6 @@ function MyBoothInner() {
                   onAddClick={openAddSheet}
                 />
               ) : (
-                // v1.1j — even with zero items, Shelf View still shows the
-                // AddFindTile so the owner has parity with Window View's
-                // always-present add affordance.
                 <ShelfView
                   posts={[]}
                   vendorId={activeVendor.id}
@@ -529,10 +653,7 @@ function MyBoothInner() {
 
       <BottomNav active="my-shelf" />
 
-      {/* v1.2 — Hidden file inputs owned by the page; AddFindSheet calls
-          into these via onTakePhoto / onChooseFromLibrary. Separate inputs
-          so iOS respects the `capture="environment"` camera hint on one
-          without constraining the library picker. */}
+      {/* Hidden file inputs — camera + gallery */}
       <input
         ref={cameraInputRef}
         type="file"
@@ -557,6 +678,18 @@ function MyBoothInner() {
         onTakePhoto={() => cameraInputRef.current?.click()}
         onChooseFromLibrary={() => galleryInputRef.current?.click()}
       />
+
+      {/* Booth picker — only instantiated when vendor owns >1 booth */}
+      {showPicker && activeVendor && user?.email && (
+        <BoothPickerSheet
+          open={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          vendors={vendorList}
+          activeVendorId={activeVendor.id}
+          onSelect={handlePickerSelect}
+          vendorEmail={user.email}
+        />
+      )}
 
       <BoothPageStyles />
     </div>

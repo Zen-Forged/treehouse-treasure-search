@@ -1,29 +1,24 @@
 // app/setup/page.tsx
-// Vendor account setup — links authenticated user to pre-created vendor account.
-// Rewritten session 23 against docs/design-system.md v1.1k.
+// Vendor account setup — links authenticated user to pre-created vendor account(s).
 //
-// Changes from v0.2:
-//  - Mode C centered-hero chrome throughout (no card, no surface wrapper)
-//  - v1 palette (paperCream bg, v1 ink scale, inkHairline borders)
-//  - IM Fell English for headlines + subheads; FONT_SYS for the mall name woven into subhead
-//  - Paper-wash success bubble primitive (60px, inkPrimary glyph, no green tint)
-//  - Error bubble retones the same primitive with redBg/redBorder (the alert glyph carries the warning)
-//  - Filled green CTA only on "Go to my shelf" (commit action — vendor moves forward)
-//  - Error actions retire filled green → IM Fell italic dotted-underline links
-//  - Amber state chrome retired entirely
+// Session 35 (2026-04-20) — multi-booth rework.
 //
-// Design-system doc notes that the vendor's first name from vendor_requests.name is NOT
-// available at this point — lookup-vendor returns the linked Vendor (display_name = booth
-// name, e.g. "ZenForged Finds"). Success headline is "Welcome to your shelf." without a
-// name, and the mall name woven into the subhead carries the personalization.
+// Changes from session-23 (v1.1k):
+//   - Response shape: reads `data.vendors` array, not `data.vendor`. Handles
+//     single-booth and multi-booth approval scenarios.
+//   - Sets `treehouse_active_vendor_id` (via setActiveBoothId) to vendors[0].id
+//     before the 3s redirect so /my-shelf and /post/preview land on the
+//     correct booth immediately.
+//   - Keeps LOCAL_VENDOR_KEY write for vendors[0] so legacy unauth paths on
+//     /post/preview still function. Retire once all callers audited.
+//   - Copy adapts to count: "Your booth at X is ready" for 1, "Your booths
+//     at X are ready" for N>1, with a quiet FONT_SYS list of each booth.
 //
-// FLOW (preserved):
-//   1. Land here from email link after admin approval
-//   2. Must be signed in (redirects to /login?redirect=/setup)
-//   3. POST /api/setup/lookup-vendor (with 401 retry+backoff per session 10 polish)
-//   4. Save LocalVendorProfile to safeStorage
-//   5. Success → show vendor info + "Go to my shelf" CTA + auto-redirect at 3s
-//   6. Error → gentle copy + two text links
+// Preserved from session-23:
+//   - Mode C centered-hero chrome
+//   - Paper-wash success bubble, filled green "Go to my shelf" CTA
+//   - 401 retry+backoff (session-10 polish for Supabase token replication lag)
+//   - Error bubble red-retoned primitive + dotted-underline text-link recovery
 
 "use client";
 
@@ -36,14 +31,15 @@ import { Check, Loader, ArrowRight, AlertCircle } from "lucide-react";
 import { getUser } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { safeStorage } from "@/lib/safeStorage";
+import { setActiveBoothId } from "@/lib/activeBooth";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
-import type { Vendor } from "@/types/treehouse";
+import type { Vendor, Mall } from "@/types/treehouse";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 
 type SetupState = "loading" | "linking" | "success" | "error";
 
 interface SetupResult {
-  vendor?: Vendor;
+  vendors?: Vendor[];
   errorMessage?: string;
 }
 
@@ -88,7 +84,9 @@ function SetupContent() {
       const res = await callLookupVendor();
       const json = await res.json();
 
-      if (!res.ok || !json.ok || !json.vendor) {
+      // Session 35: new response shape is { ok, vendors: Vendor[], alreadyLinked? }
+      const vendors = (json?.vendors ?? []) as Vendor[];
+      if (!res.ok || !json.ok || vendors.length === 0) {
         setResult({
           errorMessage:
             json.error ||
@@ -98,22 +96,31 @@ function SetupContent() {
         return;
       }
 
-      const vendor = json.vendor as Vendor;
+      // Session 35: set the active booth ID to the oldest-approved vendor
+      // (vendors[0] by the getVendorsByUserId created_at ASC contract) so
+      // /my-shelf and /post/preview render against that booth by default.
+      // Multi-booth vendors switch via the BoothPickerSheet.
+      setActiveBoothId(vendors[0].id);
 
+      // Keep LOCAL_VENDOR_KEY populated for the first vendor so legacy
+      // unauth fallback paths (/post/preview localStorage branch) keep
+      // working through the transition. Retire once every caller is
+      // migrated to the active-booth resolver.
+      const primary = vendors[0];
       const profile: LocalVendorProfile = {
-        display_name: vendor.display_name,
-        booth_number: vendor.booth_number || "",
-        mall_id: vendor.mall_id,
-        mall_name: vendor.mall?.name || "",
-        mall_city: vendor.mall?.city || "",
-        vendor_id: vendor.id,
-        slug: vendor.slug,
-        facebook_url: vendor.facebook_url || undefined,
-        user_id: user.id,
+        display_name: primary.display_name,
+        booth_number: primary.booth_number || "",
+        mall_id:      primary.mall_id,
+        mall_name:    (primary.mall as Mall | undefined)?.name ?? "",
+        mall_city:    (primary.mall as Mall | undefined)?.city ?? "",
+        vendor_id:    primary.id,
+        slug:         primary.slug,
+        facebook_url: primary.facebook_url || undefined,
+        user_id:      user.id,
       };
       safeStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(profile));
 
-      setResult({ vendor });
+      setResult({ vendors });
       setState("success");
 
       // Auto-redirect to /my-shelf after 3 seconds (preserved from v0.2)
@@ -133,6 +140,32 @@ function SetupContent() {
   const handleRetry = () => setupVendorAccount();
   const handleGoToMyBooth = () => router.push("/my-shelf");
   const handleGoToLogin = () => router.push("/login");
+
+  // Success-state copy helpers — compose name/count-aware phrasing for the
+  // subhead without branching the JSX in two places.
+  const renderSuccessSubhead = (vendors: Vendor[]) => {
+    if (vendors.length === 1) {
+      const v = vendors[0];
+      const mallName = v.mall?.name ?? "your mall";
+      return (
+        <>
+          Your booth at{" "}
+          <span style={{ color: v1.inkPrimary, fontStyle: "normal" }}>
+            {mallName}
+          </span>{" "}
+          is ready. The shelf is waiting to be filled.
+        </>
+      );
+    }
+    return (
+      <>
+        We linked <span style={{ color: v1.inkPrimary, fontStyle: "normal" }}>
+          {vendors.length} booths
+        </span>{" "}
+        to your account. Switch between them on your shelf.
+      </>
+    );
+  };
 
   return (
     <div
@@ -219,7 +252,7 @@ function SetupContent() {
           )}
 
           {/* Success state */}
-          {state === "success" && result.vendor && (
+          {state === "success" && result.vendors && result.vendors.length > 0 && (
             <motion.div
               key="success"
               initial={{ opacity: 0 }}
@@ -250,7 +283,7 @@ function SetupContent() {
                   margin: "0 0 14px",
                 }}
               >
-                Welcome to your shelf.
+                {result.vendors.length === 1 ? "Welcome to your shelf." : "Welcome to your shelves."}
               </motion.h1>
 
               <motion.p
@@ -267,34 +300,33 @@ function SetupContent() {
                   margin: "0 auto 8px",
                 }}
               >
-                Your booth at{" "}
-                <span
-                  style={{
-                    color: v1.inkPrimary,
-                    fontStyle: "normal",
-                  }}
-                >
-                  {result.vendor.mall?.name ?? "your mall"}
-                </span>{" "}
-                is ready. The shelf is waiting to be filled.
+                {renderSuccessSubhead(result.vendors)}
               </motion.p>
 
-              {/* Booth detail line — quiet, FONT_SYS */}
-              {result.vendor.booth_number && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.38, duration: 0.32 }}
-                  style={{
-                    fontFamily: FONT_SYS,
-                    fontSize: 13,
-                    color: v1.inkMuted,
-                    margin: "0 0 24px",
-                  }}
-                >
-                  {result.vendor.display_name} &nbsp;·&nbsp; Booth {result.vendor.booth_number}
-                </motion.p>
-              )}
+              {/* Booth detail line — quiet, FONT_SYS.
+                  Single-booth: "Display Name · Booth N"
+                  Multi-booth: "Display1 · N1 · Display2 · N2" joined with middots */}
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.38, duration: 0.32 }}
+                style={{
+                  fontFamily: FONT_SYS,
+                  fontSize: 13,
+                  color: v1.inkMuted,
+                  margin: "0 0 24px",
+                  maxWidth: 320,
+                  lineHeight: 1.55,
+                }}
+              >
+                {result.vendors.map((v, i) => (
+                  <span key={v.id}>
+                    {i > 0 && " · "}
+                    {v.display_name}
+                    {v.booth_number ? ` — Booth ${v.booth_number}` : ""}
+                  </span>
+                ))}
+              </motion.p>
 
               {/* Auto-redirect notice */}
               <motion.p

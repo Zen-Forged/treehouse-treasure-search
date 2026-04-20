@@ -3,6 +3,17 @@
 // See docs/design-system-v1.2-build-spec.md §4 and the approved mockup
 // docs/mockups/review-page-v1-2.html.
 //
+// Session 35 (2026-04-20) — multi-booth identity resolution:
+//   - Replaced getVendorByUserId(user.id) with getVendorsByUserId +
+//     resolveActiveBooth(vendors). Vendors with multiple booths post to
+//     whichever booth is currently active on /my-shelf. The post flow
+//     itself has NO booth picker — single-path for the 99% case per the
+//     session-34 build spec. The 1% of users who want to post to a
+//     different booth switch on /my-shelf first.
+//   - Admin `?vendor=id` impersonation path unchanged.
+//   - Unauth/localStorage fallback unchanged (KI-003 guard preserved —
+//     signed-in users never fall through to stale localStorage identity).
+//
 // The vendor lands here from /my-shelf's <AddFindSheet> after picking a
 // photo. The photograph is shown exactly as shoppers will see it on Find
 // Detail (via <PhotographPreview>'s photo truth rule — no crop, paper fills
@@ -27,8 +38,6 @@
 //   - Session-27 `source: "claude" | "mock"` check — non-claude responses
 //     leave fields blank and surface an AmberNotice instead of populating
 //     with generic mock strings
-//   - identity resolution via getVendorByUserId(user.id) FIRST, fallback to
-//     LOCAL_VENDOR_KEY ONLY for unauth users (KI-003 guard, session 9)
 //   - uploadPostImageViaServer throws on any upload failure, surfacing as
 //     error screen rather than orphan post with image_url: null
 //
@@ -46,10 +55,11 @@ import { ArrowLeft, Check, Camera } from "lucide-react";
 import {
   createPost,
   createVendor,
-  getVendorByUserId,
+  getVendorsByUserId,
   getVendorById,
   slugify,
 } from "@/lib/posts";
+import { resolveActiveBooth } from "@/lib/activeBooth";
 import { compressImage, uploadPostImageViaServer } from "@/lib/imageUpload";
 import { postStore } from "@/lib/postStore";
 import { safeStorage } from "@/lib/safeStorage";
@@ -158,9 +168,13 @@ function PostPreviewInner() {
       }
       setImage(draft.imageDataUrl);
 
-      // Identity: mirror /post's resolution order. Admin `?vendor=id` beats
-      // self-lookup; self-lookup beats localStorage; localStorage ONLY if
-      // unauth (KI-003 guard).
+      // Session 35 identity resolution order:
+      //   1. Admin with ?vendor=id → impersonate that vendor directly
+      //   2. Authed user → getVendorsByUserId + resolveActiveBooth
+      //      (multi-booth safe; single-booth users get vendors[0] trivially)
+      //   3. Authed user with zero vendors → route back to /my-shelf so its
+      //      self-heal lookup-vendor path can run
+      //   4. Unauth → legacy LOCAL_VENDOR_KEY path
       const session   = await getSession();
       const user      = session?.user ?? null;
       const admin     = user ? isAdmin(user) : false;
@@ -176,13 +190,14 @@ function PostPreviewInner() {
       }
 
       if (user) {
-        const v = await getVendorByUserId(user.id);
-        if (v) {
-          setVendor(v);
+        const vendors = await getVendorsByUserId(user.id);
+        const active  = resolveActiveBooth(vendors);
+        if (active) {
+          setVendor(active);
           startCaption(draft.imageDataUrl);
           return;
         }
-        // Signed-in user with no linked vendor — route them back to /my-shelf
+        // Signed-in user with no linked vendor — route back to /my-shelf
         // which runs the self-heal lookup-vendor path.
         router.replace("/my-shelf");
         return;
