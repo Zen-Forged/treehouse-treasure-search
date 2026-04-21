@@ -1,7 +1,7 @@
 # Treehouse — Known Issues
 > Active bugs, gaps, and deferred items. Referenced by `docs/DECISION_GATE.md`.
 > Created: 2026-04-17 (session 8 — logging the three QA issues surfaced during T4a post-deploy).
-> Last updated: 2026-04-20 (session 36 close — Q-003 resolved across four surfaces; KI-007 resolved; new Tech Rule candidate queued).
+> Last updated: 2026-04-20 (session 37 close — Sprint 4 tail shipped; no new issues, no resolved issues; `/shelves` AddBoothSheet folded into `/admin` Vendors tab removes the Q-003 `/shelves` caveat from that entry's surface map, but entry content left as-is since `/shelves` retained `loadBookmarkCount` on mount).
 
 ---
 

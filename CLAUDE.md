@@ -80,95 +80,112 @@ Shipped. Option A — drop `vendors_user_id_key` — shipped end-to-end with KI-
 
 ## ✅ Session 36 (2026-04-20) — Q-003 resolved across four surfaces + KI-007 resolved + third Tech Rule candidate queued
 
-Shipped. Two user-visible regressions reported on open, both resolved end-to-end in the same session. One-line functional fix + three surgical prop-wiring fixes across two files.
+Shipped. Two user-visible regressions reported on open, both resolved end-to-end in the same session. One-line functional fix + three surgical prop-wiring fixes across two files. Full session notes archived; superseded by session 37 for active whiteboard purposes.
+
+---
+
+## ✅ Session 37 (2026-04-20) — Sprint 4 tail shipped (T4b fold-in + T4c confirmed done + T4d runbook)
+
+Shipped. The longest-parked pre-beta item — Sprint 4 tail — closed in a single session. T4c verified done-via-read (session 35 absorbed the rewrite work); T4b `/shelves` AddBoothSheet folded into `/admin` Vendors tab; T4b `/admin/login` disposition locked as Keep Dedicated; T4d pre-beta QA walk runbook written to disk for David to run on device.
 
 ### What shipped
 
-**KI-007 — `/find/[id]/edit` redirect loop for non-admin vendors:**
+**T4b — Fold `/shelves` AddBoothSheet into `/admin` Vendors tab:**
 
-`lib/posts.ts` `getPost()` vendor select now includes `user_id`. Two downstream consumers — the edit-page auth gate and Find Detail's `detectOwnershipAsync` path 2 — both evaluate `post.vendor.user_id`; the field had been silently undefined because no prior `getPost()` consumer needed it. Vendors hit the "forbidden" exit on the auth gate and got bounced back to Find Detail. Admin path worked only because `isAdmin(user)` short-circuits the gate before the ownership check — which is why the bug stayed latent from session 31E through session 36 (admin is the primary testing account).
+New `<AddBoothInline>` primitive rendered above the Requests header in `/admin` Vendors tab. Two states: collapsed (single-row entry point with paper-wash bubble + plus glyph + IM Fell title + italic helper + chevron) and expanded (inline form — mall select, booth number, booth name, filled green CTA). Success triggers the existing admin toast with a "Booth pre-seeded. Ready for vendor claim when they request access." note.
 
-One-line change plus an explanatory comment. Also silently hardens `detectOwnershipAsync` path 2 for multi-booth users viewing their own posts when the active booth doesn't match the post's vendor row (pre-fix, path 3's `LOCAL_VENDOR_KEY` fallback was saving the single-booth majority case).
+Chrome: v1.1k primitives (`v1.paperCream`, `v1.inkWash`, `v1.inkHairline`, IM Fell italic labels, filled green CTA) so that when `/admin` eventually gets its v1.2 pass, this primitive doesn't need re-chroming. Reads as a Treehouse-shaped insertion inside the legacy v0.2 admin tab — intentional mismatch flagged at session close. The rest of `/admin` (Posts tab, Banners tab, tab switcher, chrome) remains on v0.2 Georgia serif + `colors.*` palette; that full redesign is Sprint 5+ scope.
 
-**Q-003 — BottomNav `flaggedCount` badge on four surfaces:**
+`/shelves` retirements:
+- `AddBoothSheet` component deleted entirely
+- Add Booth header button + empty-state CTA removed
+- `showAddSheet` + `malls` + `handleBoothCreated` state/handlers removed
+- `AnimatePresence` import dropped (no longer needed)
+- Admin badge link to `/admin` preserved (still the admin-facing affordance)
 
-Original Q-003 capture at session-35 close named three surfaces (`/my-shelf`, `/flagged`, `/shelves`). During on-device QA for the session-36 KI-007 fix, David surfaced a fourth overlooked surface: Find Detail (`/find/[id]`), both the main render AND the SoldLanding component. Session 36 resolved across all four:
+`/shelves` is now strictly a browse-only surface. Admin pencil affordance on vendor cards preserved; public shoppers unaffected.
 
-- `app/my-shelf/page.tsx` — `loadFollowedIds` + `bookmarkCount` state + focus/visibilitychange sync, passed to BottomNav
-- `app/find/[id]/page.tsx` — same pattern for main render AND SoldLanding component. Additionally resyncs inside `handleToggleSave` so the badge reflects in-page heart toggles in real time
-- `app/flagged/page.tsx` — already correct pre-session-36
-- `app/shelves/page.tsx` — already correct on-mount pre-session-36; intentionally not touched (surgical-changes principle + T4b retirement candidate + admin-only surface)
+**T4b — `/admin/login` disposition:**
 
-**Edit page (`/find/[id]/edit`) left without BottomNav intentionally** per session-31E focused-management-surface commitment. Adding nav chrome would reopen the design-agent question of whether edit should look more like the other pages. Flagged to David as 🖐️ REVIEW during the session; David confirmed "just Find Detail, proceed."
+David's call: Keep dedicated (zero change). File was already v1.1k-clean from session 25. Risk Register row closed.
 
-### Two commits, bisectable
+**T4c — Copy polish re-verification:**
 
-- Commit A — `fix: edit gate + BottomNav badge (session 36)` — `lib/posts.ts` getPost select + `/my-shelf` Q-003 wiring in one commit since both are session-36 scope and test together on device
-- Commit B — `fix(session 36): BottomNav flaggedCount on Find Detail (Q-003 addendum)` — Find Detail main + SoldLanding after David's on-device pass surfaced the overlooked fourth surface
+David's call: trust the read. Both T4c surfaces read clean on inspection:
+- `/api/setup/lookup-vendor` error strings — warm and on-voice ("Your vendor account isn't ready yet. An admin needs to approve your request first." / "No vendor request found for this email. Contact admin if you believe this is an error."). Session 35's full route rewrite absorbed the copy refresh.
+- `/vendor-request` v1.2 success screens (three states: `created`, `already_pending`, `already_approved`) — Clock glyph + paper-wash bubble + email echo line primitive + on-voice copy across all three.
 
-### On-device QA — all checks passed
+No code change. Marked done in Risk Register.
 
-1. ✅ Admin account — pencil on any find → `/find/[id]/edit` loads (was already working pre-fix; confirmed unbroken)
-2. ✅ Vendor account — tap into own find → pencil renders → tap → edit page loads and renders fields (the KI-007 verification)
-3. ✅ Find Map badge visible on Home, My Booth, Find Detail — counts accurate, in-page heart toggle on Find Detail updates badge in real time
+**T4d — Pre-beta QA walk runbook:**
 
-### Tech Rule yield — third cousin to the session-33/35 family
+New file: `docs/pre-beta-qa-walk.md`. Step-by-step on-device checklist covering:
+- Flow 1 — new `/admin` Add-Booth path (session-37 T4b primitive verification)
+- Flow 2 — Vendor-present demo end-to-end (`/vendor-request` v1.2 → `/admin` approve → OTP → `/setup` → `/my-shelf` → first post)
+- Flow 3 — Vendor-initiated async with `booth_name` set (KI-006 verification trigger)
+- Multi-booth sanity — one user with two booths, picker switches, post inherits active booth
+- Post-walk test-data cleanup SQL (walk artifacts + pre-existing "David Butler" variants)
 
-This session's KI-007 root cause is a third distinct flavor of the same bug class that drove session 33's "dependent-surface audit when changing a field's semantic source" and session 35's "half-migration audit when changing return-shape cardinality" candidates. The session-36 flavor: **new-consumer-on-old-select audit** — when a page, route, or hook starts consuming a shared data-access function, grep the function's Supabase `.select(...)` against the new consumer's field reads on the returned object.
+Walk itself is 🖐️ HITL — David runs on device post-commit. Any red flags come back as session-38+ scope.
 
-The most dangerous version of this bug class is when an auth gate silently passes for the testing account (admin, via `isAdmin(user)` short-circuit) while failing for the production audience (vendors). That asymmetry is exactly what kept KI-007 latent from session 31E through session 36 — David primarily tests as admin, and the admin path never touched the missing field. Companion observability note for the rule: ownership-check failures on the asymmetric path should log distinctly so the asymmetry would surface in logs even when the happy path looks clean.
+### One commit
 
-All three rules are cousins in the same family — *dependency-surface audit when something about a shared contract changes* — and would benefit from being promoted together. Full text queued in `docs/DECISION_GATE.md` Tech Rule promotion queue. Proposed promotion session: "Dependency-surface audit Tech Rule batch (sessions 33 + 35 + 36)."
+- `t4b: fold /shelves AddBoothSheet into /admin Vendors tab + T4d walk runbook` — covers both files plus the new runbook. Three discrete changes that test together on device.
 
-### Scope-completeness note on Q-003
+### Chrome mismatch flag (explicit)
 
-Q-003 was captured at session-35 close with three surfaces. The fourth (Find Detail) was overlooked — session-35 scope-write didn't grep every `<BottomNav>` instantiation before declaring the scope. Minor Tech Rule candidate queued in the Q-003 Resolved entry of `docs/known-issues.md`: *scope-completeness audit when a prop-wiring gap is named across multiple surfaces*. Less urgent than the three cousins above but the same family shape.
+The `/admin` Vendors tab now mixes v1.1k chrome (new Add-Booth primitive) with v0.2 legacy chrome (existing Requests cards, tab switcher, Posts/Banners tabs). This is deliberate per session 37 scope — T4b was tight consolidation, not an `/admin` redesign. Full v0.2 → v1.2 pass on `/admin` is Sprint 5+ scope, now explicitly named in KNOWN GAPS below so it doesn't disappear.
 
-### Session 36 close HITL
+### Pre-beta blocker column
 
-1. 🖐️ **Commit doc sweep:**
+Clean. T4d walk is the last gating step between now and beta invites — not a blocker per se, but the gating verification. Sprint 4 substantively complete.
+
+### Session 37 close HITL
+
+1. 🖐️ **Build check:**
 
 ```bash
-cd /Users/davidbutler/Projects/treehouse-treasure-search && git add -A && git commit -m "docs: session 36 close — Q-003 resolved across four surfaces, KI-007 resolved, third Tech Rule candidate queued" && git push
+cd /Users/davidbutler/Projects/treehouse-treasure-search && npm run build 2>&1 | tail -40
 ```
 
-This picks up CLAUDE.md, `docs/DECISION_GATE.md`, `docs/known-issues.md`, `docs/queued-sessions.md`. The two code commits already pushed during the session.
+2. 🖐️ **Commit + push:**
 
-2. 🟢 **Post-push sanity:** Vercel dashboard shows the docs commit landed (no-op deploy is fine; docs don't affect the build).
+```bash
+cd /Users/davidbutler/Projects/treehouse-treasure-search && git add -A && git commit -m "t4b: fold /shelves AddBoothSheet into /admin Vendors tab + T4d walk runbook" && git push
+```
+
+3. 🖐️ **Doc sweep commit** (this close):
+
+```bash
+cd /Users/davidbutler/Projects/treehouse-treasure-search && git add -A && git commit -m "docs: session 37 close — Sprint 4 tail shipped (T4b fold-in, T4c confirmed, T4d runbook)" && git push
+```
+
+4. 🖐️ **Vercel deploy confirmation** — verify `app.kentuckytreehouse.com` picks up commit #2 (docs commit from #3 is no-op for deploy).
+
+5. 🖐️ **T4d walk on device** — follow `docs/pre-beta-qa-walk.md`. If red flags surface, paste back in a fresh session.
 
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-20 (session 36 close — Q-003 resolved across four surfaces, KI-007 resolved)
+> Last updated: 2026-04-20 (session 37 close — Sprint 4 tail shipped; T4d walk is next HITL)
 
-**Status:** Session 36 ships. Sprint 4 tail batch is the longest-parked pre-beta item, unchanged since session 26. Q-002 is the remaining non-gating polish item from the session-35 multi-booth rework. Tech Rule promotion batch is now a richer session with three cousin candidates instead of two. Next session picks a direction.
+**Status:** Sprint 4 tail closed. Pre-beta blocker column is clean. Next session's choice depends on T4d walk outcome:
+- **Walk passes clean** → Tech Rule promotion batch (three queued cousins) is the natural next move; OR promote Q-002 picker polish; OR Anthropic model audit (33B).
+- **Walk surfaces red flags** → session-38 triage covers whatever broke.
 
-### Recommended next session — Sprint 4 tail (T4c + T4b + T4d)
+### Recommended next session (after T4d walk) — Tech Rule promotion batch
 
-Still the longest-parked pre-beta item. Session 36 didn't touch it. Same scope as session 35 close described:
+Three queued candidates ready for promotion, all cousins in the *dependency-surface audit* family: (a) session-33 dependent-surface audit (changing a field's semantic source), (b) session-35 half-migration audit (changing return-shape cardinality), (c) session-36 new-consumer-on-old-select audit (new page starts calling a shared data-access function). Promote all three into the main Tech Rules block with the same careful prose treatment as existing rules. Also fold the Q-003 scope-completeness companion rule from `docs/known-issues.md` if session budget allows. ~35 min.
 
-**Remaining T4c copy polish:**
-- Minor `/api/setup/lookup-vendor` error copy review (session-35 rewrite may already have this — re-read before editing)
-- `/vendor-request` v1.2 success-screen copy review (sessions 32 + 35 changed the surrounding behavior; verify the copy still fits)
+Block location in `docs/DECISION_GATE.md` > The Tech Rules section > Tech Rule promotion queue.
 
-**T4b admin surface consolidation:**
-- Fold `/shelves` `AddBoothSheet` into `/admin` Vendors tab (or retire — remaining decision)
-- Retire the public `/login` page admin PIN affordance leftover (already done in v1.1k session 23?) — verify
-- Decide `/admin/login` disposition (keep dedicated / fold into `/admin` unauth gate) — documented as T4b open decision
+### Alternative next sessions
 
-**T4d pre-beta QA pass:**
-- End-to-end dry run of all three onboarding flows (Flow 1 pre-seeded, Flow 2 demo, Flow 3 vendor-initiated) against session-35 schema + session-36 fixes
-- Test data cleanup — multiple "David Butler" variants + test booths in DB from session 30+ testing
+- **Q-002 solo** (~20 min) — picker affordance placement revision. Masthead reverts to single-variant "Treehouse Finds"; chevron moves inline with IM Fell 28px booth name under hero banner. Runbook ready in `docs/queued-sessions.md` Q-002.
+- **Anthropic model audit + billing safeguards (33B)** (~30 min) — grep stale model strings; verify Anthropic console auto-reload is on. Cheap hygiene.
+- **`/admin` v0.2 → v1.2 redesign pass** (Sprint 5+, size L) — fold the rest of `/admin` (Posts tab, Banners tab, tab switcher, header, toast) onto v1.1k/v1.2 primitives so the T4b insertion stops reading as a mismatch. Needs design scope first.
 
-### Alternative next sessions (if Sprint 4 tail isn't the right call)
-
-- **Q-002 solo** — ~20 min. Picker placement inline refinement (no longer has Q-003 batch-mate since Q-003 retired session 36). Low-cost polish.
-- **Tech Rule promotion batch** — ~35 min. Now THREE queued candidates (session-33 dependent-surface audit + session-35 half-migration audit + session-36 new-consumer-on-old-select). All three are cousins in the same dependency-surface audit family. Richer batch than session-35 close anticipated.
-- **Anthropic model audit + billing safeguards (33B)** — ~30 min. Grep for stale model strings; verify Anthropic account auto-reload is on.
-
-### Session 37 opener (pre-filled for whichever direction picks up)
-
-If Sprint 4 tail:
+### Session 38 opener (pre-filled for Tech Rule batch)
 
 ```
 PROJECT: Treehouse — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
@@ -176,18 +193,7 @@ STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthr
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Sprint 4 tail batch — T4c remainder (copy polish on /api/setup/lookup-vendor error states + /vendor-request success screens, re-read session-35 changes first), T4b admin surface consolidation (fold /shelves AddBoothSheet, verify /admin/login disposition, retire the legacy public /login admin PIN affordance if still present), T4d pre-beta QA walk of all three onboarding flows (Flow 1 pre-seeded, Flow 2 demo, Flow 3 vendor-initiated) against the session-35 schema + session-36 fixes. Also clean up test data (multiple "David Butler" variants + test booths from session 30+ on). This is the longest-parked pre-beta item.
-```
-
-If Tech Rule promotion batch:
-
-```
-PROJECT: Treehouse — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
-STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Vercel
-Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
-Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
-
-CURRENT ISSUE: Running the Tech Rule promotion batch. Three queued candidates in docs/DECISION_GATE.md > Tech Rule promotion queue, all cousins in the dependency-surface audit family: (1) session-33 dependent-surface audit when changing a field's semantic source, (2) session-35 half-migration audit when changing return-shape cardinality, (3) session-36 new-consumer-on-old-select audit when a page starts calling a shared data-access function. Promote all three into the main Tech Rules block with the same careful prose treatment as the existing rules. Also fold the scope-completeness companion rule from Q-003's Resolved entry in known-issues.md if there's session budget. ~35 min estimate.
+CURRENT ISSUE: Running the Tech Rule promotion batch. Three queued candidates in docs/DECISION_GATE.md > Tech Rule promotion queue, all cousins in the dependency-surface audit family: (1) session-33 dependent-surface audit when changing a field's semantic source, (2) session-35 half-migration audit when changing return-shape cardinality, (3) session-36 new-consumer-on-old-select audit when a page starts calling a shared data-access function. Promote all three into the main Tech Rules block with the same careful prose treatment as the existing rules. Also fold the Q-003 scope-completeness companion rule from known-issues.md if there's session budget. ~35 min estimate.
 ```
 
 ---
@@ -196,21 +202,22 @@ CURRENT ISSUE: Running the Tech Rule promotion batch. Three queued candidates in
 
 ### 🔴 Pre-beta blockers
 
-*(Empty at session 36 close. KI-007 resolved this session; multi-booth + KI-006 resolved session 35. Pre-beta blocker column is clean.)*
+*(Empty at session 37 close. Sprint 4 tail shipped this session; T4d QA walk is the next HITL but not a blocker itself — it's the gating verification. If the walk surfaces issues, they'll be captured as session-38+ items.)*
 
 ### 🟡 Remaining pre-beta tech work
 
-- **Sprint 4 tail batch** (longest-parked): T4c remainder (copy polish — partly absorbed by session-35 rewrites, re-verify), T4b (admin surface consolidation + `/admin/login` disposition decision), T4d (pre-beta QA walk).
-- **Test data cleanup** — multiple "David Butler" variants + test booths in production DB.
+- **T4d pre-beta QA walk** 🖐️ HITL — follow `docs/pre-beta-qa-walk.md` on device. All three onboarding flows + multi-booth sanity + test-data cleanup. Not code; execution.
+- **Test data cleanup** — multiple "David Butler" variants + test booths in production DB. Built into the T4d runbook's "Post-walk cleanup" section.
 - **Anthropic model audit + billing safeguards** (33B). ~30 min.
-- **Tech Rule promotion batch** — now three queued candidates ready for prose, all cousins in the same dependency-surface-audit family: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit. ~35 min. Block location in `docs/DECISION_GATE.md` > The Tech Rules section.
+- **Tech Rule promotion batch** — three queued candidates ready for prose, all cousins in the same dependency-surface-audit family: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit. ~35 min. Block location in `docs/DECISION_GATE.md` > The Tech Rules section.
 
-### 🟡 Session 35/36 non-gating follow-ups (captured in `docs/queued-sessions.md`)
+### 🟡 Session 35 non-gating follow-up (captured in `docs/queued-sessions.md`)
 
-- **Q-002** 🟢 — Picker affordance placement revision (masthead → inline under hero banner). Mockup update + surgical `/my-shelf` edit. ~20 min. *(Q-003 retired session 36; Q-002 stands alone now.)*
+- **Q-002** 🟢 — Picker affordance placement revision (masthead → inline under hero banner). Mockup update + surgical `/my-shelf` edit. ~20 min.
 
 ### 🟡 Sprint 5 + design follow-ons
 
+- **`/admin` v0.2 → v1.2 redesign pass** (new, session 37) — Posts tab, Banners tab, tab switcher, header, approval toast, diagnosis panel, and all downstream primitives on `/admin` still render on v0.2 chrome (Georgia serif + `colors.*` palette). Session 37's T4b Add-Booth insertion reads as a Treehouse-shaped patch inside a legacy surface. Full v1.1k/v1.2 pass would harmonize the tab. Size L. Needs design scoping first (mockup-first per session-28 rule). Estimated ~2–3 sessions.
 - **KI-005** — Pre-approval sign-in signaling gap. Batch with guest-user UX.
 - **Typography reassessment** (session-32 deferral — IM Fell readability).
 - **Post-approval booth-name edit surface** (session-32 deferral). Multi-booth makes this richer — per-booth editing possible now.
@@ -231,9 +238,9 @@ CURRENT ISSUE: Running the Tech Rule promotion batch. Three queued candidates in
 
 ### 🟢 Cleanup (not urgent)
 
-- Deprecated functions in `lib/posts.ts` including session-35 `getVendorByUserId` shim (loud `console.warn`, no callers expected). Schedule cleanup pass after N+1 sessions confirm no warn hits during QA. *(Session 36 added no new warn paths.)*
+- Deprecated functions in `lib/posts.ts` including session-35 `getVendorByUserId` shim (loud `console.warn`, no callers expected). Schedule cleanup pass after N+1 sessions confirm no warn hits during QA. *(Session 37 added no new warn paths. Session 37 did add a fresh `createVendor` caller on `/admin`, which hits the non-deprecated path.)*
 - Cloudflare nameservers dormant (no cost)
-- `/shelves` AddBoothSheet — retire decision lives in T4b
+- ~~`/shelves` AddBoothSheet — retire decision lives in T4b~~ ✅ Resolved session 37 (folded into `/admin`)
 - `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` (obsolete since T4a)
 - `docs/design-system-v1.2-draft.md` (tombstone; retire now that v1.2 shipped)
 - `docs/mockups/add-find-sheet-v1-2.html`, `review-page-v1-2.html`, `edit-listing-v1-2.html`, `email-v1-2.html` — can retire now that v1.2 polish + onboarding are in ✅
