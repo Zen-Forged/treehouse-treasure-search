@@ -6,6 +6,36 @@
 
 ---
 
+## Session 38 — Window Sprint scoping + mockup shipped (2026-04-21)
+
+**Status at the time:** Direction B (share-your-booth via formatted email) scoped from brainstorm to dev-handoff in one session. No code shipped — Design agent session following the session-28 mockup-first rule. Full product narrative, typography audit, and cross-surface consistency review; three scoped sessions queued to implement.
+
+### What shipped
+
+**`docs/mockups/share-booth-email-v1.html` (new, approved)** — four-frame phone-frame mockup: `/my-shelf` share entry → compose sheet → sent confirmation → recipient’s iOS Mail inbox rendering. Revised twice in-session based on David’s design direction.
+
+Key design locks:
+- **The Window concept** — always 6 auto-picked tiles, never the full booth. "A window into a curated booth, and an invitation to explore it in person." Narrative alignment with the app’s existing Window View.
+- **Vendor hero dominates the body** — Georgia 34px/600 vendor name below the committed Treehouse Finds shell lockup. Banner + post-it primitive mirrors `/my-shelf` `BoothHero` exactly; no invented chrome.
+- **Mode-neutral surfaces** — all copy reads true whether sender is vendor or curious shopper. Subject line `"A Window into {vendorName}"`; "Share this Window" sheet title; body italic line carries sender attribution.
+- **Typography deferred correctly** — Georgia throughout email (respects session-32 IM Fell retirement in email surfaces); IM Fell stays in the in-app sheet. Caught mid-session that the initial pitch to re-voice the email in IM Fell would have silently overturned a committed session-32 decision — dependency-surface-audit rule in action.
+
+**`docs/share-booth-build-spec.md` (new)** — full dev-handoff doc. Database (none), new route (`POST /api/share-booth`), new lib fn (`sendBoothWindow` extending `renderEmailShell`), new posts helper (`getVendorWindowPosts` — new function, NOT a mutation of `getVendorPosts` per session-33 dependent-surface audit rule), client component (`<ShareBoothSheet>` mirroring `<BoothPickerSheet>`), rate-limit pattern, 4-scenario QA walk, three unresolved decisions flagged for build (pronoun handling, sender-name source, caption truncation). ~2,000 words.
+
+**Three scoped sessions queued** — full entries in `docs/queued-sessions.md`:
+- **Q-007 Window Sprint** (3 sessions) — implementation of the approved mockup.
+- **Q-004 "Treehouse" → "Treehouse Finds" rename sweep** (~60 min) — David confirmed product name. Bleeding across mockups; should run before or alongside Q-007.
+- **Q-005 Email tagline sweep** (~10 min) — `"Kentucky & Southern Indiana"` → `"Embrace the Search. Treasure the Find."` in transactional emails. Pairs with Q-004, same session.
+- **Q-006 Deep-link CTA** (parked on Sprint 6+ Universal Links) — Window CTA currently browser fallback; PWA deep-link later.
+
+### Process failure worth surfacing
+
+Caught a process failure in-session that became a Tech Rule promotion candidate: initially used `create_file` (from the computer tool environment) to write the mockup to the project dir. It returned a success payload but wrote nothing — `create_file` is sandboxed to a different working directory than where the project lives. The MCP filesystem tool `filesystem:write_file` is the only reliable write path, which `MASTER_PROMPT.md` > WORKING CONVENTIONS explicitly states. Knew the rule and violated it by reaching for the closer-looking tool. Landed correctly after David caught it and flagged "file did not land on disk."
+
+**Rule candidate:** *Verify the landing surface before declaring scope closed, especially for operations where the return value and the side effect can diverge.* Sits in the same family as session-35 half-migration and session-36 new-consumer-on-old-select. Captured in `docs/known-issues.md` as a candidate.
+
+---
+
 ## Session 27 — AI caption regression hotfix (2026-04-19)
 
 **Status at the time:** ✅✅ Session 27 shipped a hotfix for a vendor-reported regression: AI caption auto-populate returned random generic strings regardless of what was photographed. Root cause was a double failure — (1) `claude-opus-4-5` model identifier was retired on Anthropic API ~1 month ago but still hardcoded in three routes (`/api/post-caption`, `/api/identify`, `/api/story`), so the SDK threw `NotFoundError` on every call; (2) route handlers had `catch` blocks that silently returned random `MOCK_RESPONSES` entries with no distinguishable shape, so the client populated the form with whichever hardcoded string the dice picked.

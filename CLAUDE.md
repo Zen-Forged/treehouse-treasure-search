@@ -92,98 +92,82 @@ Full session notes archived. Superseded by session 38 for active whiteboard purp
 
 ---
 
-## ✅ Session 38 (2026-04-21) — Window Sprint scoping + mockup shipped
+## ✅ Session 38 (2026-04-21) — Window Sprint scoping + mockup approved
 
-Direction B (share-your-booth via formatted email) scoped from brainstorm to dev-handoff in one session. No code shipped — this was a Design agent session following the session-28 mockup-first rule. Full product narrative, typography audit, and cross-surface consistency review; three scoped sessions queued to implement.
+Design agent session per session-28 mockup-first rule. Four-frame share-booth mockup + full dev-handoff build spec + three queued implementation sessions. No code. Full session notes archived; superseded by session 39 for active whiteboard purposes.
+
+---
+
+## ✅ Session 39 (2026-04-21) — Q-004 rename + Q-005 tagline + Q-007 Window Sprint backend shipped
+
+Shipped. Three queued sessions collapsed into one. Rename sweep (Q-004) and tagline shortening (Q-005) landed across 9 files; Window Sprint backend (Q-007 session 39 deliverables: `lib/posts.ts:getVendorWindowPosts`, `lib/email.ts:sendBoothWindow` + 5 internal helpers + `ShareBoothWindowPayload` type + `renderEmailShell` footer override, `app/api/share-booth/route.ts` with auth + rate limit + dedup + ownership + empty-window guard) all shipped in the same session. One build-gate error caught (`for...of` over a `Map` at pre-ES2015 tsconfig target) and fixed with a one-line `Map.forEach` swap; that fix promoted immediately as a new Tech Rule in `docs/DECISION_GATE.md`. Build green; deployed; committed and pushed. Supabase OTP email templates (Magic Link + Confirm Signup) pasted by David via dashboard.
 
 ### What shipped
 
-**`docs/mockups/share-booth-email-v1.html` (new, approved)** — four-frame phone-frame mockup: `/my-shelf` share entry → compose sheet → sent confirmation → recipient’s iOS Mail inbox rendering. Revised twice in-session based on David’s design direction.
+**Q-004 rename** across 9 files — `lib/email.ts` (FROM_ADDRESS, 3 subject lines, 3 `— Treehouse Finds` signatures in HTML + plaintext, shell `<title>`, brand lockup block, footer, CTA strong-text, file-header comment), `app/layout.tsx` (metadata + appleWebApp + apple-mobile-web-app-title meta), `app/vendor-request/page.tsx` (intro copy + DoneScreen `created` + DoneScreen `already_approved`), `app/login/page.tsx` (logo alt text), `docs/mockups/email-v1-2.html` (title, 3 subjects, 3 brand lockups, B2 instruct-box, B3 OTP body, B1 body + footer, decisions-pane PWA bullet, 2 decisions-pane "After" code blocks, 2 pwa-intro-body paragraphs, 3 iOS Mail mail-from labels, stray `</li>` typo fixed), `docs/supabase-otp-email-templates.md` (subject, HTML title, preheader, brand lockup, sign-in prose, signature, footer), `CONTEXT.md` (title banner, §1 product-overview, §1 "is NOT" heading, footer trailer, last-updated), `MASTER_PROMPT.md` (title only), `CLAUDE.md` (session opener template project name). `public/manifest.json` verified: `name` already correct; `short_name` intentionally stays as `Treehouse` (iOS home-screen 12-char truncation would render `Treehouse Fin…`).
 
-Key design locks (full list in build spec):
-- **The Window concept** — always 6 auto-picked tiles, never the full booth. "A window into a curated booth, and an invitation to explore it in person." Narrative alignment with the app’s existing Window View.
-- **Vendor hero dominates the body** — Georgia 34px/600 vendor name below the committed Treehouse Finds shell lockup. Banner + post-it primitive mirrors `/my-shelf` `BoothHero` exactly; no invented chrome.
-- **Mode-neutral surfaces** — all copy reads true whether sender is vendor or curious shopper. Subject line `"A Window into {vendorName}"`; "Share this Window" sheet title; body italic line carries sender attribution.
-- **Typography deferred correctly** — Georgia throughout email (respects session-32 IM Fell retirement in email surfaces); IM Fell stays in the in-app sheet. Caught mid-session that my initial pitch to re-voice the email in IM Fell would have silently overturned a committed session-32 decision — dependency-surface-audit rule in action.
+**Q-005 tagline** — `Kentucky & Southern Indiana` → `Embrace the Search. Treasure the Find.` across `lib/email.ts` shell, 3 mockup email frames, `docs/supabase-otp-email-templates.md`. Three-clause product-level tagline intact in `CONTEXT.md` §1 as the anchor.
 
-**`docs/share-booth-build-spec.md` (new)** — full dev-handoff doc. Database (none), new route (`POST /api/share-booth`), new lib fn (`sendBoothWindow` extending `renderEmailShell`), new posts helper (`getVendorWindowPosts` — new function, NOT a mutation of `getVendorPosts` per session-33 dependent-surface audit rule), client component (`<ShareBoothSheet>` mirroring `<BoothPickerSheet>`), rate-limit pattern, 4-scenario QA walk, three unresolved decisions flagged for build (pronoun handling, sender-name source, caption truncation). ~2,000 words.
+**Q-007 session 39 deliverables:**
+- `lib/posts.ts:getVendorWindowPosts(vendorId): Promise<Post[]>` — new export. 6-post hard limit, `status='available'` filter, `created_at DESC` order. Docstring explains the session-33 dependent-surface-audit reason it's a NEW function, not a mutation of `getVendorPosts` (which has no status filter because `/my-shelf` + `/vendor/[slug]` need sold posts visible for the three-part sold contract).
+- `lib/email.ts:sendBoothWindow(payload)` — new public export. Five internal helpers: `renderWindowBody`, `renderBanner` (hero + pinned post-it), `renderPostItSvg` (inline SVG with `transform="rotate(4, 43, 43)"` — Outlook strips CSS rotation, SVG internal `transform` is respected; auto-scaling numeral by digit count 36/28/22), `renderLocationLine` (⛲ pin glyph + mall + Google Maps link), `renderWindowGrid` (3×2 HTML table, 4:5 aspect tiles, 12px italic captions with `max-height: 2.7em + overflow: hidden`, pads to multiple of 3 with empty cells). New `ShareBoothWindowPayload` interface explicitly omits `price_asking` (brand rule: no prices in the Window). `renderEmailShell` extended with optional `footerHtml` override — defaults to the legacy onboarding footer so the two existing callers don't shift; Window overrides with "someone shared a Treehouse Finds Window with you" copy. New `escapeAttr` internal helper alongside `escapeHtml`.
+- `app/api/share-booth/route.ts` — new file. `POST { recipientEmail, activeVendorId }` → in-IP rate limit (5/10min) → `requireAuth` → email RFC + UUID validation → per-recipient 60s dedup → inline ownership check via service client (`vendors.user_id === auth.user.id`) → `getVendorWindowPosts` → empty-window guard (409 `empty_window`) → mall null-guard + array-or-object normalization (Supabase join cardinality) → `sendBoothWindow` → structured error responses (429 / 400 / 403 / 409 / 500 / 502). `logError` + `maskEmail` helpers for structured logging.
 
-**Three scoped sessions queued** — full entries in `docs/queued-sessions.md`:
-- **Q-007 Window Sprint** (3 sessions) — implementation of the approved mockup.
-- **Q-004 "Treehouse" → "Treehouse Finds" rename sweep** (~60 min) — David confirmed product name. Bleeding across mockups; should run before or alongside Q-007.
-- **Q-005 Email tagline sweep** (~10 min) — `"Kentucky & Southern Indiana"` → `"Embrace the Search. Treasure the Find."` in transactional emails. Pairs with Q-004, same session.
-- **Q-006 Deep-link CTA** (parked on Sprint 6+ Universal Links) — Window CTA currently browser fallback; PWA deep-link later.
+**Build-time decisions (build-spec §Unresolved closed):**
+1. Pronoun: dropped entirely. Voice line reads `"{sender} sent you a Window into {vendorName}."` — no his/her/their guessing, matches subject-line pattern.
+2. Sender first-name source: `vendor.display_name` for MVP. Ownership check guarantees vendor-shares-own-booth is the only reachable path.
+3. Title truncation: natural word-wrap at ~130px cell width with `max-height: 2.7em + overflow: hidden` — mockup-matching CSS, no server-side truncation.
 
-### One observation worth surfacing for session-archive
+### Tech Rule promoted mid-session
 
-Caught a process failure in-session that deserves a Tech Rule promotion candidate: I initially used `create_file` (from the computer tool environment) to write the mockup to the project dir. It returned a success payload but wrote nothing — `create_file` is sandboxed to a different working directory than where the project lives. The MCP filesystem tool `filesystem:write_file` is the only reliable write path, which `MASTER_PROMPT.md` > WORKING CONVENTIONS explicitly states. I knew the rule and violated it by reaching for the closer-looking tool.
+`for...of` over a `Map` or `Set` does not compile at this project's tsconfig target — surfaced as build error `TS2569` on the `/api/share-booth/route.ts` dedup cleanup loop. One-line fix: replace `for (const [k, ts] of recentSends)` with `recentSends.forEach((ts, k) => ...)` (note callback signature is value-first, key-second). Promoted immediately as new Tech Rule **TS downlevelIteration** in `docs/DECISION_GATE.md`. The rule explicitly forbids flipping the compiler target or enabling `downlevelIteration` to work around it — either change would ripple to every other file in the project. Tech Rule block now holds 30+ entries.
 
-Landed correctly after David caught it and flagged "file did not land on disk."
+### HITL completed this session
+- ✅ Build check run twice (initial fail on `TS2569`, green after the one-line fix)
+- ✅ Supabase Dashboard paste: Magic Link + Confirm Signup templates both updated with new subject line + brand lockup + tagline
+- ✅ Git commit + push for the Q-004/Q-005/Q-007 shipment
+- ✅ Git commit + push for the DECISION_GATE Tech Rule promotion
 
-**Rule candidate for the next Tech Rules batch:** *Verify the landing surface before declaring scope closed, especially for operations where the return value and the side effect can diverge.* Sits in the same family as session-35 half-migration and session-36 new-consumer-on-old-select. Captured in `docs/known-issues.md` as a candidate.
+### Session 39 close HITL
 
-### Pre-beta blocker column
-
-Clean. T4d walk is still the last gating step before beta invites — not a blocker per se, still the gating verification. Window Sprint is NOT a pre-beta blocker; it’s scoped explicitly as the post-Sprint-4 feature that closes the full demo cycle.
-
-### Session 38 close HITL
-
-1. 🟡 **Build check** (docs-only changes this session, but safe to verify):
+All build-gate and commit steps ran inline during the session. Only pending HITL after this close is the standard session-close commit for CLAUDE.md + session-archive updates:
 
 ```bash
-cd /Users/davidbutler/Projects/treehouse-treasure-search && npm run build 2>&1 | tail -40
+cd /Users/davidbutler/Projects/treehouse-treasure-search && git add -A && git commit -m "docs: session 39 close — CLAUDE.md + session-archive update" && git push
 ```
-
-2. 🟡 **Doc sweep commit:**
-
-```bash
-cd /Users/davidbutler/Projects/treehouse-treasure-search && git add -A && git commit -m "docs: session 38 close — Window Sprint scoped (share-booth mockup + build spec + 3 queued sessions)" && git push
-```
-
-3. 🟡 **On-device mockup review** — open `docs/mockups/share-booth-email-v1.html` on your phone or desktop if you want one more look before session 39.
-
-4. 🟡 **T4d walk** still outstanding (pre-beta gating verification). Independent of Window Sprint; run when ready.
 
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-21 (session 38 close — Window Sprint scoped; implementation ready for session 39)
+> Last updated: 2026-04-21 (session 39 close — Q-004/Q-005 rename sweep + Q-007 Window Sprint backend all shipped; TS downlevelIteration Tech Rule promoted; Supabase OTP templates updated)
 
-**Status:** Window Sprint scoped end-to-end. Mockup approved, build spec landed, three scoped sessions queued. Pre-beta blocker column still clean. Next session is the Window Sprint backend — unless David wants to run the rename sweep (Q-004 + Q-005) first.
+**Status:** Window Sprint backend fully shipped. Server can now send Window emails end-to-end — but there's no client entry point yet. Next session is the **Q-007 client** (session 40): `<ShareBoothSheet>` component, `/my-shelf` paper-airplane entry, 4 sheet states (compose / sending / sent / error). Pre-beta blocker column still clean. T4d QA walk still the gating verification before beta invites.
 
-### Recommended next session — Q-007 Window Sprint (session 39 backend)
+### Recommended next session — Q-007 client (session 40)
 
-Implement the server side of the share-your-booth feature per `docs/share-booth-build-spec.md`. Three deliverables:
+Implement the client half of the Window share feature per `docs/share-booth-build-spec.md` §3–4.
 
-1. `lib/email.ts: sendBoothWindow(payload)` — new export extending `renderEmailShell()`. Body composition with inline-SVG post-it (Outlook-safe), table-based 6-tile Window grid, Georgia throughout.
-2. `POST /api/share-booth` — `requireAuth` + ownership check + rate limit (5/10min/IP) + per-recipient dedup + Resend send + structured error responses.
-3. `lib/posts.ts: getVendorWindowPosts(vendorId)` — new function, NOT a mutation of `getVendorPosts` (session-33 dependent-surface audit rule).
+1. **`<ShareBoothSheet>` component** — mirrors `<BoothPickerSheet>` pattern. Compose state with email input + RFC-shape client validation matching the server regex. Submit via `authFetch()` to `POST /api/share-booth`.
+2. **`/my-shelf` entry point** — paper-airplane icon next to the existing share button. Hidden when `getVendorWindowPosts().length < 1` to match the server's empty-window guard. Needs a light server-side check on page render to decide whether to show the icon.
+3. **Four sheet states:** compose, sending (spinner + disabled CTA), sent (success copy + auto-dismiss or manual close), error (distinguishes 429 rate-limit / 429 dedup / 403 ownership / 409 empty-window / 502 send-failed with mode-appropriate copy per build spec).
+4. **Toast / confirmation** on success — match existing post-publish toast pattern for consistency.
 
-~90 min. No client code this session; `<ShareBoothSheet>` + `/my-shelf` entry point come in session 40.
+~90 min. Builds against the green backend shipped session 39; no server changes needed unless QA surfaces something.
 
-**Sequencing decision to make at session 39 open:** Run Q-004 + Q-005 rename sweep FIRST, OR ship the Window email with "Treehouse" (legacy) shell lockup and do the rename later as one atomic sweep across all three emails. Recommend running Q-004+Q-005 first — adds ~60 min but avoids mixed lockup copy across the three-email family.
+### Session 41 — on-device QA walk
+
+Four scenarios per build spec: (a) fresh send, (b) send to same recipient within 60s (expect 429 dedup), (c) 5 rapid sends to trigger IP rate limit, (d) empty-window guard (clear all posts, try to share — expect icon hidden; direct-POST returns 409).
 
 ### Alternative next sessions
 
-- **Q-004 + Q-005 rename batch solo** (~60 min) — "Treehouse" → "Treehouse Finds" + email subtagline shorten. Runs before or independent of Window Sprint.
-- **T4d pre-beta QA walk** 🟡 HITL — still outstanding. Required gating verification before beta invites; independent of Window Sprint.
+- **T4d pre-beta QA walk** 🟡 HITL — still outstanding. Required gating verification before beta invites; independent of Q-007.
 - **Q-002 picker polish solo** (~20 min) — masthead single-variant + chevron moves inline. Ready to run.
-- **Tech Rule promotion batch** (~35 min) — three queued dependency-surface-audit cousins + the new session-38 candidate ("verify landing surface before declaring scope closed"). All ready for prose.
+- **Tech Rule promotion batch** (~35 min) — four candidates queued: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed. All ready for prose; pairs well with session-archive drift cleanup.
+- **Session-archive drift cleanup** (~30 min) — sessions 28–37 exist as CLAUDE.md one-liners but have no archive detail. Not urgent but compounds session-by-session. Pairs naturally with Tech Rule batch.
 - **Anthropic model audit + billing safeguards** (~30 min) — cheap hygiene.
 - **`/admin` v0.2 → v1.2 redesign pass** (Sprint 5+, size L) — still queued; needs design scope first.
 
-### Session 39 opener (pre-filled for Window Sprint backend, no rename-first)
-
-```
-PROJECT: Treehouse — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
-STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Vercel
-Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
-Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
-
-CURRENT ISSUE: Running Q-007 session 39 — Window Sprint backend. Implement lib/email.ts:sendBoothWindow() + POST /api/share-booth + lib/posts.ts:getVendorWindowPosts() per docs/share-booth-build-spec.md. Extend renderEmailShell; inline-SVG post-it (Outlook-safe); 5/10min/IP rate limit matching /api/vendor-request; per-recipient 60s dedup; ownership check via getVendorsByUserId; Resend REST API via existing lib/email.ts pattern. NEW function getVendorWindowPosts — do not mutate getVendorPosts (session-33 dependent-surface-audit rule). NO client code this session; sheet + /my-shelf wiring is session 40. Before starting: decide whether to run Q-004+Q-005 rename sweep first (recommended, ~60 min) or ship Window email under legacy "Treehouse" lockup and rename everything at once later.
-```
-
-### Session 39 opener (alternate — run rename sweep first)
+### Session 40 opener (pre-filled for Q-007 client)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
@@ -191,7 +175,7 @@ STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthr
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Running Q-004 + Q-005 together (rename sweep) per docs/queued-sessions.md before kicking off the Window Sprint backend. "Treehouse" → "Treehouse Finds" + email tagline "Kentucky & Southern Indiana" → "Embrace the Search. Treasure the Find." across: lib/email.ts, email-v1-2.html mockup, CONTEXT.md §1, MASTER_PROMPT.md, Supabase email templates, PWA manifest, app/layout.tsx metadata. Code identifiers + domain stay unchanged. One atomic commit. If session has budget after the sweep, proceed into Q-007 session 39 (Window Sprint backend).
+CURRENT ISSUE: Running Q-007 session 40 — Window Sprint client. Implement <ShareBoothSheet> component + /my-shelf paper-airplane entry point + 4 sheet states (compose / sending / sent / error) per docs/share-booth-build-spec.md §3–4. Backend is green and deployed from session 39: POST /api/share-booth with auth + 5/10min rate limit + 60s per-recipient dedup + ownership check + 409 empty-window guard. Use authFetch() pattern. Mirror <BoothPickerSheet> sheet construction. Hide /my-shelf share entry when server-side check finds posts.length < 1. Error copy distinguishes 429/403/409/502 per spec. Session 41 is on-device QA walk (4 scenarios); this session ships client code only.
 ```
 
 ---
@@ -207,13 +191,14 @@ CURRENT ISSUE: Running Q-004 + Q-005 together (rename sweep) per docs/queued-ses
 - **T4d pre-beta QA walk** 🟡 HITL — follow `docs/pre-beta-qa-walk.md` on device. All three onboarding flows + multi-booth sanity + test-data cleanup. Not code; execution.
 - **Test data cleanup** — multiple "David Butler" variants + test booths in production DB. Built into the T4d runbook's "Post-walk cleanup" section.
 - **Anthropic model audit + billing safeguards** (33B). ~30 min.
-- **Tech Rule promotion batch** — now four candidates: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed. ~40 min. Block location in `docs/DECISION_GATE.md` > The Tech Rules section.
+- **Tech Rule promotion batch** — four candidates queued: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed. ~40 min. Block location in `docs/DECISION_GATE.md` > The Tech Rules section. (Session 39 promoted TS downlevelIteration directly since it surfaced + resolved mid-build; no queue impact.)
+- **Session-archive drift cleanup** — sessions 28–37 carry CLAUDE.md one-liners but have no archive detail. Not urgent; compounds. ~30 min batch whenever convenient. Pairs naturally with the Tech Rule batch above.
 
 ### 🟡 Window Sprint queued work (`docs/queued-sessions.md`)
 
-- **Q-007 Window Sprint** (3 sessions) — server (39) + client (40) + on-device QA (41). Mockup approved, build spec at `docs/share-booth-build-spec.md`.
-- **Q-004 Rename sweep** (~60 min) — run before or alongside Q-007.
-- **Q-005 Email tagline sweep** (~10 min) — bundles with Q-004.
+- **Q-007 Window Sprint** — session 39 backend ✅ shipped. Session 40 client + session 41 on-device QA walk still queued. Mockup approved; build spec at `docs/share-booth-build-spec.md`.
+- **Q-004 Rename sweep** ✅ shipped session 39.
+- **Q-005 Email tagline sweep** ✅ shipped session 39.
 - **Q-006 Deep-link CTA** (🟡 parked) — waits on Universal Links (Sprint 6+).
 
 ### 🟡 Session 35 non-gating follow-up (captured in `docs/queued-sessions.md`)
@@ -247,7 +232,9 @@ CURRENT ISSUE: Running Q-004 + Q-005 together (rename sweep) per docs/queued-ses
 - Cloudflare nameservers dormant (no cost).
 - `docs/VENDOR_SETUP_EMAIL_TEMPLATE.md` (obsolete since T4a).
 - `docs/design-system-v1.2-draft.md` (tombstone).
-- `docs/mockups/add-find-sheet-v1-2.html`, `review-page-v1-2.html`, `edit-listing-v1-2.html`, `email-v1-2.html` — partial retirement pending rename sweep; email-v1-2 will be updated by Q-004/Q-005 so keep until then.
+- `docs/mockups/add-find-sheet-v1-2.html`, `review-page-v1-2.html`, `edit-listing-v1-2.html` — partial retirement pending post-beta.
+- `docs/mockups/email-v1-2.html` — updated session 39 rename sweep; keep as reference.
+- `docs/mockups/share-booth-email-v1.html` — reference for Q-007 client session 40.
 - `docs/mockups/my-shelf-multi-booth-v1.html` — keep until Q-002 updates it.
 - `docs/multi-booth-build-spec.md` — archived reference.
 - `components/ShelfGrid.tsx` (parked; zero callers).

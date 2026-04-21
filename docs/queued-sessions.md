@@ -5,81 +5,34 @@ Status key: 🟢 Ready to run · 🟡 Ready but waiting on a dependency · ⏸�
 
 ---
 
-## Q-007 🟢 Window Sprint — Share your booth (Direction B)
+## Q-007 🟡 Window Sprint — Share your booth (Direction B) — PARTIAL
 
-**Status:** Ready to run. Mockup approved session 38 (`docs/mockups/share-booth-email-v1.html`). Full build spec at `docs/share-booth-build-spec.md`. First scoped feature sprint post-Sprint-4. 3 sessions.
+**Status:** Session 39 (backend) ✅ shipped. Session 40 (client) 🟢 ready to run. Session 41 (on-device QA) 🟡 waits on session 40.
 
 **Created:** 2026-04-21 (session 38 close — mockup approval + spec landing)
 
 **Severity:** Not a bug — new MVP feature. Closes the full demo cycle (vendor shares booth → recipient inbox → booth discovery).
 
-### Sequencing note
+### What shipped session 39
 
-Q-004 + Q-005 (rename sweep) should run EITHER immediately before this sprint OR the Window email's brand lockup ships as "Treehouse" until the rename batch lands. Three emails in the family; mixing lockup copy across them is the worst option. David's call at session 39 open.
+- `lib/posts.ts:getVendorWindowPosts(vendorId)` — NEW export, 6-post limit, `status='available'` filter, `created_at DESC`. Intentionally separate from `getVendorPosts` per session-33 dependent-surface-audit rule.
+- `lib/email.ts:sendBoothWindow(payload)` + `ShareBoothWindowPayload` type + 5 internal helpers (`renderWindowBody`, `renderBanner`, `renderPostItSvg`, `renderLocationLine`, `renderWindowGrid`) + `escapeAttr` helper. Inline-SVG post-it for Outlook compat. `renderEmailShell` extended with optional `footerHtml` override (preserves the onboarding footer for the two existing callers).
+- `app/api/share-booth/route.ts` — NEW file. Auth (`requireAuth`) + IP rate limit (5/10min) + email/UUID validation + per-recipient 60s dedup + ownership check + empty-window guard (409) + structured error responses. Ships inline-ownership pattern matching `/api/setup/lookup-vendor`.
+- Three build-time decisions from spec §Unresolved closed: pronoun dropped entirely, sender-name source = `vendor.display_name`, title truncation via CSS `max-height: 2.7em + overflow: hidden`.
 
-### Session plan
+### Session 40 remaining work (🟢 ready to run)
 
-| Session | Work | Est. |
-|---|---|---|
-| 39 | `lib/email.ts: sendBoothWindow()` + `POST /api/share-booth` + rate limit + ownership check + `getVendorWindowPosts` | ~90 min |
-| 40 | `<ShareBoothSheet>` component + `/my-shelf` entry point + all 4 states | ~90 min |
-| 41 | On-device QA walk + fixes + commit | ~60–90 min |
+| Work | Est. |
+|---|---|
+| `<ShareBoothSheet>` component + `/my-shelf` paper-airplane entry point + 4 sheet states (compose / sending / sent / error) | ~90 min |
 
-### Session opener (copy/paste when promoted)
+### Session 41 remaining work (🟡 waits on 40)
 
-```
-PROJECT: Treehouse — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
-STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Vercel
-Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
-Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
+| Work | Est. |
+|---|---|
+| On-device QA walk (4 scenarios: fresh send, 60s dedup, IP rate-limit, empty-window guard) + fixes + commit | ~60–90 min |
 
-CURRENT ISSUE: Running Q-007 session 39 (Window Sprint — backend). Implement the server side of the share-your-booth feature per docs/share-booth-build-spec.md. New endpoint POST /api/share-booth with requireAuth + ownership check + rate limit. New fn lib/email.ts:sendBoothWindow() extending renderEmailShell. New lib/posts.ts:getVendorWindowPosts helper (do NOT mutate getVendorPosts). Before starting: decide Q-004/Q-005 rename-sweep sequencing — either run the sweep first OR hold the Window lockup at "Treehouse" for now. No client code this session; sheet + /my-shelf wiring comes in session 40.
-```
-
----
-
-## Q-004 🟢 Rename sweep — "Treehouse" → "Treehouse Finds"
-
-**Status:** Ready to run. Surfaced during session 38 Window mockup revision. David confirmed "Treehouse Finds" is the official product name. Currently inconsistent across surfaces.
-
-**Created:** 2026-04-21 (session 38 close)
-
-**Severity:** 🟡 Medium — not a functional issue but a brand-consistency issue. Already bleeding into new mockups (Window email uses "Treehouse Finds" but Email #1/#2 shell uses "Treehouse"). Should ship as part of the rename batch alongside Q-005 so all three emails move together.
-
-### Scope
-
-Files to sweep:
-- `lib/email.ts` — `renderEmailShell()` brand lockup (Email #1 + Email #2)
-- `docs/mockups/email-v1-2.html` — update mockup to match (source of truth for future sessions)
-- `CONTEXT.md` §1 Product Overview — product name references
-- `MASTER_PROMPT.md` — project name references in session-opening standup template
-- Supabase Dashboard → Auth → Email Templates (Magic Link + Confirm Signup) — brand name in subject lines + body
-- `docs/supabase-otp-email-templates.md` — source-of-truth doc for paste target above
-- PWA manifest (`app/manifest.ts` or `public/manifest.webmanifest`) — `name` + `short_name`
-- Notion roadmap references — top-level page title + any "Treehouse" brand usage
-- `app/layout.tsx` — `<title>` metadata, og:title, og:site_name
-- README + package.json if "treehouse" appears as a display name (keep as repo name/code identifier unchanged)
-
-Files NOT to sweep (code identifiers stay):
-- Package/repo names
-- Variable names, function names, TypeScript types (`treehouse_mode`, `TreehouseFind`, etc.)
-- Domain name `kentuckytreehouse.com` — stays
-- CSS class names
-
-### Execution checklist
-
-1. 🟢 AUTO — grep every surface above for "Treehouse" as display string
-2. 🟢 AUTO — update all user-facing display strings to "Treehouse Finds"
-3. 🟡 HITL — David updates Supabase Dashboard email templates (not reachable from code)
-4. 🟢 AUTO — `npm run build` — verify no regressions
-5. 🟡 HITL — on-device QA: open current PWA, confirm title bars / metadata correct
-6. 🟡 HITL — `git add -A && git commit -m "rename: Treehouse → Treehouse Finds across user-facing surfaces" && git push`
-
-**Estimate:** 1 session (~60 min including HITL Supabase paste).
-
-**Bundling:** Run alongside Q-005 in the same session — they touch the same files and should ship as one atomic rename.
-
-### Session opener
+### Session 40 opener (copy/paste when promoted)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
@@ -87,36 +40,38 @@ STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthr
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Running Q-004 + Q-005 together (rename sweep). "Treehouse" → "Treehouse Finds" + email tagline "Kentucky & Southern Indiana" → "Embrace the Search. Treasure the Find." across: lib/email.ts, email-v1-2.html mockup, CONTEXT.md §1, MASTER_PROMPT.md, Supabase email templates, PWA manifest, Notion roadmap. See docs/queued-sessions.md for full file list. Code identifiers + domain stay unchanged. One atomic commit.
+CURRENT ISSUE: Running Q-007 session 40 — Window Sprint client. Implement <ShareBoothSheet> component + /my-shelf paper-airplane entry point + 4 sheet states (compose / sending / sent / error) per docs/share-booth-build-spec.md §3–4. Backend is green and deployed from session 39: POST /api/share-booth with auth + 5/10min rate limit + 60s per-recipient dedup + ownership check + 409 empty-window guard. Use authFetch() pattern. Mirror <BoothPickerSheet> sheet construction. Hide /my-shelf share entry when server-side check finds posts.length < 1. Error copy distinguishes 429/403/409/502 per spec. Session 41 is on-device QA walk (4 scenarios); this session ships client code only.
 ```
 
 ---
 
-## Q-005 🟢 Email tagline sweep — shorten to two clauses
+## ⏸️ Q-004 — Rename sweep "Treehouse" → "Treehouse Finds" — SUPERSEDED
 
-**Status:** Ready to run. Pairs with Q-004 — same files, same session.
+**Status:** ⏸️ Superseded 2026-04-21 (session 39 close).
 
-**Created:** 2026-04-21 (session 38 close)
+**Retirement reason:** Shipped in session 39 as part of the bundled rename-sweep-plus-Window-backend session. David chose "rename first, then backend" at session open — both landed in one commit.
 
-**Severity:** 🟡 Medium — brand-consistency in email surfaces.
+**What shipped:** 9 files touched — `lib/email.ts`, `app/layout.tsx`, `app/vendor-request/page.tsx` (intro + both DoneScreen states), `app/login/page.tsx` (logo alt text), `docs/mockups/email-v1-2.html` (15 anchor points including the stray `</li>` typo fix), `docs/supabase-otp-email-templates.md`, `CONTEXT.md` §1 + title banner + footer, `MASTER_PROMPT.md` title only, `CLAUDE.md` session opener template. `public/manifest.json` verified — `name` already correct; `short_name` intentionally stays as `Treehouse` (iOS 12-char truncation would otherwise render `Treehouse Fin…`).
 
-### Scope
+**HITL completed:** Supabase Dashboard paste (Magic Link + Confirm Signup templates both updated); build green; commit + push.
 
-The email shell subtagline changes from `"Kentucky & Southern Indiana"` to `"Embrace the Search. Treasure the Find."` across all transactional emails. Two-clause trim is deliberate — "Share the Story" is an internal pillar but one that doesn’t need to be said on every email.
+### Historical scope (preserved for session-archive readers)
 
-**Important distinction:** The full three-clause tagline `"Embrace the Search. Treasure the Find. Share the Story."` stays as the product-level anchor in `CONTEXT.md` §1. Only the *email-surface* subtagline shortens.
+Product name confirmed as "Treehouse Finds" at session 38. Rename was bleeding across mockups (Window email used new name; shell lockup still used old). Sweep across user-facing display strings; code identifiers (package names, variables, types, domain, CSS classes) explicitly excluded. See commit `[rename: Treehouse → Treehouse Finds + shorten email tagline (Q-004 + Q-005)]` for full diff.
 
-Files:
-- `lib/email.ts` — `renderEmailShell()` subtagline literal
-- `docs/mockups/email-v1-2.html` — match
-- Supabase Dashboard Auth email templates — match (subject + body tagline)
-- `docs/supabase-otp-email-templates.md` — update paste target doc
+---
 
-### Execution checklist
+## ⏸️ Q-005 — Email tagline sweep — SUPERSEDED
 
-Bundle into Q-004 session. Same HITL Supabase paste step covers both. Same commit.
+**Status:** ⏸️ Superseded 2026-04-21 (session 39 close).
 
-**Estimate:** Adds ~10 min to Q-004's session budget.
+**Retirement reason:** Shipped in session 39 bundled with Q-004 as planned (same files, one commit).
+
+**What shipped:** `lib/email.ts` shell subtagline, 3 email frames in `docs/mockups/email-v1-2.html`, `docs/supabase-otp-email-templates.md`. Three-clause product-level tagline (`Embrace the Search. Treasure the Find. Share the Story.`) kept intact in `CONTEXT.md` §1 as the anchor — only the email-surface subtagline shortened to two clauses.
+
+### Historical scope (preserved for session-archive readers)
+
+Shortened email shell subtagline from `"Kentucky & Southern Indiana"` to `"Embrace the Search. Treasure the Find."`. The two-clause trim was deliberate — "Share the Story" stays as an internal pillar but doesn't need to appear on every email. Paired naturally with Q-004 (same files, same session). Shipped as part of the session-39 rename-sweep commit.
 
 ---
 
