@@ -5,56 +5,32 @@ Status key: 🟢 Ready to run · 🟡 Ready but waiting on a dependency · ⏸�
 
 ---
 
-## Q-007 🟡 Window Sprint — Share your booth (Direction B) — PARTIAL
+## ⏸️ Q-007 — Window Sprint (Direction B) — SUPERSEDED
 
-**Status:** Session 39 (backend) ✅ shipped. Session 40 (client) ✅ shipped. Session 41 (on-device QA) 🟡 in flight as of 2026-04-21.
+**Status:** ⏸️ Superseded 2026-04-21 (sessions 40+41 close — QA walk PASSED).
 
-**Created:** 2026-04-21 (session 38 close — mockup approval + spec landing)
+**Retirement reason:** All three sub-sessions shipped. Session 39 (backend) + session 40 (client) + session 41 (on-device QA walk, 4 scenarios) all passed clean. Feature is live in production at app.kentuckytreehouse.com.
 
-**Severity:** Not a bug — new MVP feature. Closes the full demo cycle (vendor shares booth → recipient inbox → booth discovery).
+**What ended up shipping:**
 
-### What shipped session 39
-
-- `lib/posts.ts:getVendorWindowPosts(vendorId)` — NEW export, 6-post limit, `status='available'` filter, `created_at DESC`. Intentionally separate from `getVendorPosts` per session-33 dependent-surface-audit rule.
+Session 39 (backend):
+- `lib/posts.ts:getVendorWindowPosts(vendorId)` — new export, 6-post limit, `status='available'` filter, `created_at DESC`. Intentionally separate from `getVendorPosts` per session-33 dependent-surface-audit rule.
 - `lib/email.ts:sendBoothWindow(payload)` + `ShareBoothWindowPayload` type + 5 internal helpers (`renderWindowBody`, `renderBanner`, `renderPostItSvg`, `renderLocationLine`, `renderWindowGrid`) + `escapeAttr` helper. Inline-SVG post-it for Outlook compat. `renderEmailShell` extended with optional `footerHtml` override (preserves the onboarding footer for the two existing callers).
-- `app/api/share-booth/route.ts` — NEW file. Auth (`requireAuth`) + IP rate limit (5/10min) + email/UUID validation + per-recipient 60s dedup + ownership check + empty-window guard (409) + structured error responses. Ships inline-ownership pattern matching `/api/setup/lookup-vendor`.
-- Three build-time decisions from spec §Unresolved closed: pronoun dropped entirely, sender-name source = `vendor.display_name`, title truncation via CSS `max-height: 2.7em + overflow: hidden`.
+- `app/api/share-booth/route.ts` — new file. Auth (`requireAuth`) + IP rate limit (5/10min) + email/UUID validation + per-recipient 60s dedup + ownership check + empty-window guard (409) + structured error responses. Inline-ownership pattern matching `/api/setup/lookup-vendor`.
 
-### What shipped session 40
+Session 40 (client):
+- `components/ShareBoothSheet.tsx` — new, ~520 lines. 4-state bottom sheet (compose / sending / sent / error) mirroring `<BoothPickerSheet>` chrome. Inline `EMAIL_REGEX` matching both server routes. Null-guarded `PreviewTile` for `Post.image_url: string | null`. Plain `<style>` keyframes. Status-specific error copy (403 / 409 / 429 / 400 / 502 / 500) with the 429 dual-case (IP rate limit vs. per-recipient dedup) distinguished via server error string preference.
+- `app/my-shelf/page.tsx` — surgical masthead delta: paper-airplane bubble right slot (`v1.iconBubble` bg, inline SVG in `v1.green`) gated on `available.length >= 1` — matches server 409 empty-window guard. Two share affordances coexist by design.
+- Build-gate fix: `ComposeBody`'s `inputRef` prop typed `React.Ref<HTMLInputElement>` (not `RefObject<HTMLInputElement | null>`) to satisfy React 19's `LegacyRef` shape when forwarding `useRef<T | null>(null)`.
 
-- `components/ShareBoothSheet.tsx` — NEW file, ~520 lines. 4-state bottom sheet (compose / sending / sent / error) mirroring `<BoothPickerSheet>` chrome. Inline `EMAIL_REGEX` matching both server routes. Null-guarded `PreviewTile`. Plain `<style>` keyframes for spinner. Status-specific error copy (403 / 409 / 429 / 400 / 502 / 500) with the 429 dual-case (IP rate limit vs. per-recipient dedup) distinguished via server error string preference.
-- `app/my-shelf/page.tsx` — masthead right slot gets paper-airplane bubble (`v1.iconBubble` bg, inline SVG in `v1.green`) gated on `available.length >= 1` — matches server 409 empty-window guard. Two share affordances now coexist by design: masthead airplane = typed-email Window send, BoothHero airplane = OG link copy.
-- Build-gate fix: `ComposeBody`'s `inputRef` prop typed `React.Ref<HTMLInputElement>` (not `RefObject<HTMLInputElement | null>`) to satisfy React 19's `LegacyRef` shape when forwarding `useRef<T | null>(null)` into an HTML element's `ref` slot. Candidate Tech Rule queued (see below).
+Session 41 (QA walk, all 4 scenarios PASSED):
+- Scenario 1 (fresh send happy path) — clean, delivery verified in recipient inbox
+- Scenario 2 (60s per-recipient dedup) — correct copy
+- Scenario 3 (IP rate limit + copy disambiguation) — correct copy, dedup-vs-rate-limit distinction verified
+- Scenario 4.1 (empty-window client gate) — airplane correctly hidden when available=0
+- Scenario 4.2 direct-POST verification skipped — 4.1 gave sufficient confidence
 
-### Session 41 QA walk — in progress
-
-Runbook at `docs/share-booth-qa-walk.md`. Scenario 1 (fresh send happy path) passed on-device 2026-04-21. Scenarios 2–4 + T4d still pending. Four scoping items surfaced during Scenario 1 (all non-blocking):
-
-1. **Q-008** (below) — airplane hidden for unauthenticated users; product decision says shoppers SHOULD be able to share
-2. **Q-009** (below) — admin can't share their own test booth (403); ownership check needs to also accept `isAdmin(auth.user)`
-3. **Q-011** (below) — email banner post-it missing or wrong; banner shows booth number below hero instead of pinned on top per spec §Decisions decision 5
-4. **Q-010** (below) — email CTA routes to `/vendor/{slug}` but committed public booth URL is `/shelf/{slug}`; one-line fix
-
-### Session 41 remaining work
-
-| Work | Est. |
-|---|---|
-| Complete QA walk Scenarios 2 (dedup), 3 (rate limit), 4 (empty-window) | ~30–45 min |
-| On-device QA walk fixes (if any surface) | variable |
-| Commit + roadmap close-out | ~10 min |
-
-### ~~Session 40 opener~~ — used
-
-### Session 41 opener (if re-running)
-
-```
-PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
-STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Vercel
-Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
-Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
-
-CURRENT ISSUE: Resuming Q-007 session 41 — Window Sprint QA walk per docs/share-booth-qa-walk.md. Scenario 1 (fresh send happy path) passed on-device. Scenarios 2 (60s per-recipient dedup), 3 (IP rate limit 5/10min), 4 (empty-window guard 409) remaining. Four scoping items surfaced during Scenario 1 — Q-008 (shopper share), Q-009 (admin share), Q-010 (vendor→shelf URL fix), Q-011 (email banner post-it) — captured in docs/queued-sessions.md. Continue walk; fix Q-010 inline if it's one-line; log others for session 42+.
-```
+**Scoping items surfaced during QA walk** (all captured as new queued sessions below): Q-008 (shopper share), Q-009 (admin share), Q-010 (email URL fix — shipped inline during Scenario 2), Q-011 (email banner post-it rendering).
 
 ---
 
@@ -162,43 +138,21 @@ CURRENT ISSUE: Running queued session Q-009 — admin can share any booth via Wi
 
 ---
 
-## Q-010 🟢 Fix Window email CTA URL: /vendor/{slug} → /shelf/{slug}
+## ⏸️ Q-010 — Window email CTA URL: /vendor/{slug} → /shelf/{slug} — SUPERSEDED
 
-**Status:** Ready to run. Captures David's session-41 QA-walk observation: "Open Treehouse finds app takes me to /vendor/kentuck-chicken. This should direct to /shelf/kentucky-chicken."
+**Status:** ⏸️ Superseded 2026-04-21 (session 41 inline fix during QA walk Scenario 2).
 
-**Created:** 2026-04-21 (session 41 Scenario 1 QA walk)
+**Retirement reason:** Shipped inline during the Q-007 QA walk (~3 min tool time) to unblock continued walk progress + give Scenario 2 a natural Q-010-verify cycle. Deploy verified live when the Scenario-2 dedup-blocked retry resent the email with the corrected CTA URL.
 
-**Severity:** 🟡 Medium — bug. Recipients click the main email CTA and land on the deprecated `/vendor/{slug}` URL instead of the committed public shelf URL `/shelf/{slug}`. Build-spec §3 said `/vendor/{slug}` — the spec was wrong against the rest of the app.
+**What ended up shipping:** `lib/email.ts:sendBoothWindow` — one line changed from `${siteUrl}/vendor/${payload.vendor.slug}` → `${siteUrl}/shelf/${payload.vendor.slug}`. Local variable renamed `vendorPageUrl` → `shelfPageUrl` for semantic clarity (a reader shouldn't have to trace "why does a variable named vendor lead to /shelf"). Plain-text fallback updated to match. File header comment block documented the Q-010 change with session-41 attribution.
 
-### The fix
+Commit: `fix(Q-010): Window email CTA routes to /shelf/{slug} not /vendor/{slug}`.
 
-One-line change in `lib/email.ts:sendBoothWindow` (or wherever `renderWindowBody` composes the CTA href) — change the URL template from `/vendor/` to `/shelf/`. Grep the file for `/vendor/` to confirm it's the only hit; adjacent CTAs in the same email should all use `/shelf/`.
+Spec + mockup files (`docs/share-booth-build-spec.md` §3, `docs/mockups/share-booth-email-v1.html`) not updated in this pass — stubs carry the old URL. Low-priority Docs-agent follow-on: fold into any Q-008/Q-009/Q-011 session as an incidental fix, OR into the "spec cleanup once Q-007 feature cluster settles" pass.
 
-`/my-shelf` `handleShare` already uses `${BASE_URL}/shelf/${slug}` — that's the canonical URL for public booth pages. `/vendor/{slug}` routes exist for legacy compat but shouldn't be the target for new outgoing links.
+### Historical scope (preserved for session-archive readers)
 
-### Files touched
-
-- `lib/email.ts` — single-line CTA href change in the Window template
-- `docs/share-booth-build-spec.md` §3 — update spec to say `/shelf/{slug}`, not `/vendor/{slug}`
-- `docs/mockups/share-booth-email-v1.html` — update mockup CTA href if it's referenced anywhere (verify and update)
-
-### Not needed
-
-- No client change
-- No API change
-- No schema change
-
-### Estimate
-
-~10 min including grep + spec + mockup + build check.
-
-### Session opener (copy/paste when promoted)
-
-Small enough to fold into any adjacent session (Q-008, Q-009, Q-011, or any Dev maintenance session). No standalone session needed unless you want the clean commit log.
-
-```
-CURRENT ISSUE: Running queued session Q-010 — fix Window email CTA URL. Change /vendor/{slug} → /shelf/{slug} in lib/email.ts (sendBoothWindow / renderWindowBody). Grep lib/email.ts for /vendor/ to verify single hit. Update docs/share-booth-build-spec.md §3 and mockup file.
-```
+Build-spec §3 said `/vendor/{slug}` — spec was wrong against the rest of the app. `/my-shelf` `handleShare` already uses `${BASE_URL}/shelf/${slug}` (canonical public booth URL); `/vendor/{slug}` routes exist for legacy compat but shouldn't be the target for new outgoing links. One-line fix, no client change, no API change, no schema change.
 
 ---
 
@@ -257,10 +211,10 @@ CURRENT ISSUE: Running queued session Q-011 — Window email post-it pinned-on-t
 
 ### What it is
 
-The Window email's "Open in Treehouse Finds" CTA currently links directly to `/vendor/{slug}` — a browser URL. When the recipient has the PWA installed, the ideal behavior is:
+The Window email's "Open in Treehouse Finds" CTA currently links directly to `/shelf/{slug}` (post-Q-010 correction) — a browser URL. When the recipient has the PWA installed, the ideal behavior is:
 
 1. If PWA installed on iOS/Android → deep-link to the installed app at the booth's shelf
-2. If PWA not installed → open in browser, landing on `/vendor/{slug}`, which itself offers an install prompt
+2. If PWA not installed → open in browser, landing on `/shelf/{slug}`, which itself offers an install prompt
 
 ### Why parked
 
@@ -274,8 +228,6 @@ When Universal Links / apple-app-site-association ship. At that point:
 3. Test on iOS + Android before declaring resolved
 
 **Estimate:** ~20 min post-Universal-Links. Not independently scopable.
-
-**Pairs with:** Q-010 (same CTA href; fix the URL first, then Universal-Link-wrap it).
 
 ---
 
@@ -296,6 +248,8 @@ The session-34 mockup (`docs/mockups/my-shelf-multi-booth-v1.html`) put "Viewing
 
 The booth identity lives under the hero banner as a 28px IM Fell title ("Kentucky Treehouse") with a "a curated shelf from" eyebrow. That's where the picker affordance belongs — next to the booth name, inline, as one tap target.
 
+**Note (sessions 40+41):** The session-40 `/my-shelf` masthead now also carries a right-slot share airplane (Q-007). When Q-002 promotes, the masthead revert to single-variant must preserve the share airplane right slot — revert the center-column picker affordance only, not the whole masthead.
+
 ### The revision
 
 **Option 1 — David's approved direction (session 35 close):** inline chevron next to the IM Fell 28px booth name. "Kentucky Treehouse ▾" as one tap target, chevron hanging off the right edge. Preserves brand lockup; the thing you tap to switch is the thing you're currently viewing.
@@ -306,31 +260,31 @@ The chevron only appears when `vendorList.length > 1`. Single-booth users see th
 
 - `docs/mockups/my-shelf-multi-booth-v1.html` — update Frame 2 and Frame 3 to show the affordance under the banner instead of in the masthead. Keep the mockup file as the source of truth for the revised placement per the session-28 mockup-wins rule.
 - `app/my-shelf/page.tsx` — two surgical changes:
-  1. Revert `Masthead` component to a single variant (remove the `variant`, `activeBoothName`, `onPickerOpen` props; always render "Treehouse Finds")
+  1. Revert `Masthead` component's CENTER column to a single variant (remove the `variant`, `activeBoothName`, `onPickerOpen` props; always render "Treehouse Finds"). PRESERVE the session-40 `canShare` + `onShareOpen` right-slot share airplane.
   2. In `<BoothTitleBlock>` consumer or in `/my-shelf` directly, wrap the IM Fell 28px booth name in a `<button>` when `vendorList.length > 1`, with an inline chevron glyph on the right
 - `components/BoothPage.tsx` — possibly add an optional `chevronAction` prop to `<BoothTitleBlock>` so the picker action can be bolted on without duplicating the title rendering. Keep the Public Shelf consumer passing null.
 - No server/schema changes. No migration. Purely client-side UI revision.
 
 ### Execution checklist (estimated ~20 min + on-device QA)
 
-1. 🟢 AUTO — Read `app/my-shelf/page.tsx` and `components/BoothPage.tsx` current state
-2. 🟢 AUTO — Revert `Masthead` to single variant; drop the three picker props
+1. 🟢 AUTO — Read `app/my-shelf/page.tsx` and `components/BoothPage.tsx` current state (post-session-40 with the share airplane)
+2. 🟢 AUTO — Revert `Masthead`'s center column to single variant; drop the three picker props. KEEP `canShare` + `onShareOpen` right-slot.
 3. 🟢 AUTO — Update `<BoothTitleBlock>` (or inline in `/my-shelf`) to conditionally wrap the booth name in a tap target with an inline chevron glyph when a new `onPickerOpen` prop is passed. Non-multi-booth pages don't pass it; affordance is invisible.
 4. 🟢 AUTO — Update the mockup HTML so future sessions see the corrected placement
 5. 🖐️ HITL — `npm run build 2>&1 | tail -30`
 6. 🖐️ HITL — `git add -A && git commit -m "q-002: picker affordance moves from masthead to inline with booth name" && git push`
-7. 🖐️ HITL — On-device: confirm single-booth shows no chevron, multi-booth shows `Kentucky Treehouse ▾` under the banner, tap opens the sheet as before
+7. 🖐️ HITL — On-device: confirm single-booth shows no chevron, multi-booth shows `Kentucky Treehouse ▾` under the banner, tap opens the sheet as before, share airplane still visible in masthead right slot
 8. 🟢 AUTO — Retire Q-002 (⏸️ Superseded) after on-device confirmation
 
 ### Session opener (copy/paste if promoted)
 
 ```
-PROJECT: Treehouse — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
+PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
 STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Vercel
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Running queued session Q-002 from docs/queued-sessions.md — picker affordance placement revision. Masthead reverts to single-variant "Treehouse Finds"; chevron moves inline next to the IM Fell 28px booth name under the hero banner. Update the mockup file too (docs/mockups/my-shelf-multi-booth-v1.html). No server/schema changes. On-device QA after push: single-booth unchanged, multi-booth shows chevron under banner, sheet still works.
+CURRENT ISSUE: Running queued session Q-002 from docs/queued-sessions.md — picker affordance placement revision. Masthead CENTER column reverts to single-variant "Treehouse Finds"; PRESERVE the session-40 right-slot share airplane. Chevron moves inline next to the IM Fell 28px booth name under the hero banner. Update the mockup file too (docs/mockups/my-shelf-multi-booth-v1.html). No server/schema changes. On-device QA after push: single-booth unchanged, multi-booth shows chevron under banner, sheet still works, share airplane still visible in masthead.
 ```
 
 ---
