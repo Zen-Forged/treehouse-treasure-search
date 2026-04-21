@@ -95,43 +95,68 @@ Full session notes archived. Superseded by session 38 for active whiteboard purp
 
 ## ✅ Session 42 (2026-04-21) — DB test-data wipe + admin identity confirmed
 
-Operational cleanup session. No code. Full nuke of test data against production Supabase; admin identity clarified (was already `david@zenforged.com` at the env var, not drifted as CLAUDE.md had implied).
+Operational cleanup session. No code. Full nuke of test data against production Supabase; admin identity clarified (was already `david@zenforged.com` at the env var, not drifted as CLAUDE.md had implied). 12 test posts + 18 vendor rows + 26 vendor_requests + 19 `auth.users` deleted. One row survives in `auth.users`: `david@zenforged.com`. `NEXT_PUBLIC_ADMIN_EMAIL` confirmed correct (never drifted). iPhone PWA reinstalled from `app.kentuckytreehouse.com` for clean-client state. Verify-remaining-count pattern captured as Tech Rule candidate (two firings in one session against same type of work; watch for firing outside a cleanup context before promoting).
 
-**What was deleted**
-- 12 test posts
-- 18 test vendor rows (13 visible on first pass + 5 orphan `user_id: null` vendors surfaced by verification query — these were approved-but-never-linked residues from earlier `/setup` tests; my initial filter only caught user-linked vendors, the verify-remaining-count pattern caught the rest)
-- 26 test vendor_requests (24 visible on first pass + 2 stragglers: `dbutler80020t@gmail.com` typo variant + a duplicate `dbutlerproductions@yahoo.com` I'd missed in the initial scope)
-- 19 `auth.users` rows via Supabase Dashboard (all 15 `dbutler80020+suffix` + `dbutler80020@gmail.com` + `dbutlerproductions@yahoo.com` + `dbutlerproducrions@yahoo.com` typo + `dburke@gmail.com` unknown-origin orphan)
+Full session notes archived. Superseded by session 43 for active whiteboard purposes.
 
-**What survives**
-- `auth.users`: one row — `david@zenforged.com` (id `00be0152-...`, created 2026-04-11). This is the admin.
-- `posts`, `vendors`, `vendor_requests`: all 0 rows.
-- `malls`, `site_settings`, `site-assets` storage: unchanged.
+---
 
-**Admin identity correction**
-- `NEXT_PUBLIC_ADMIN_EMAIL` in Vercel was already `david@zenforged.com` — not drifted. CLAUDE.md's earlier notes implying admin was `dbutler80020@gmail.com` were wrong; I inferred that from recency of my own context, not from actual env state. The recent QA-walk admin-impersonation steps (sessions 37–41) were all signed in as `david@zenforged.com` — which aligns with the `david@zenforged.com` auth row showing `last_sign_in_at: 2026-04-21 19:41` (right at end of session 41 T4d walk).
-- Result: no env var change needed. Phase 3 collapsed to a single verification step (sign in at `app.kentuckytreehouse.com/login`, confirm `/admin` renders empty). PASSED.
+## ✅ Session 43 (2026-04-21) — Anthropic model audit + billing safeguards (docs-only, session-27 rule fired cleanly)
 
-**What this also resolved silently**
-- `dbutler80020@gmail.com` is no longer the personal/testing-vendor-account pattern. Going forward, test vendor identities will be `david+anything@zenforged.com` (Google Workspace plus-addressing confirmed supported on the business domain). The Gmail personal address is fully retired from the project's auth surface.
-- `dbutlerproductions@yahoo.com` stranded rows (both `auth.users` and `vendor_requests`) cleaned as a side effect — ancient debris from sessions 2–3 magic-link delivery testing.
-- One unknown-origin `dburke@gmail.com` orphan (created 2026-04-17 18:27, never signed in) cleaned. Likely someone typing into the live app during in-mall testing; no user data lost since it never verified.
+Session-27 `Anthropic model audit` Tech Rule fired for the first time since promotion, triggered by Anthropic's April 16, 2026 `claude-opus-4-7` announcement (one week before this session). Ran the exact procedure the rule documents: blind grep of `app/` + `lib/` surfaced four Anthropic call sites — `/api/post-caption` + `/api/story` on `claude-sonnet-4-6`, `/api/identify` on `claude-opus-4-7`, `/api/suggest` on `claude-opus-4-6`. All three model strings confirmed **Active** on the Anthropic deprecations page with 10+ month retirement runways (nearest retirement: `claude-opus-4-6` not sooner than Feb 5, 2027). No code swap required. Session-27 remediation is holding cleanly.
 
-**Method note — verify-remaining-count pattern worth keeping**
-After each batch DELETE, ran `SELECT COUNT(*) FROM {table}` to confirm the table was empty. Twice this surfaced rows my filters had missed (5 orphan vendors after first vendors DELETE, 2 orphan vendor_requests after first vendor_requests DELETE). If I'd relied on only the pre-DELETE query to scope the delete list, both batches would have left debris. Cheap pattern (one SQL SELECT per table), caught two real misses. Worth considering for Tech Rule promotion if the pattern fires again in a future cleanup session.
+Console auto-reload enabled at `console.anthropic.com/settings/billing`: **threshold $10, reload amount $20**. Structurally closes the silent-failure surface the session-27 `Anthropic billing as silent dependency` Tech Rule was written to mitigate. Current balance $5.88 at session close is operationally safe given the effective $10 floor — a typical vendor post costs $0.02–$0.05 combined (identify + post-caption), so a 100-post burst lands inside the current balance and auto-reload triggers before dry-up.
 
-**On-device last step**
-PWA deleted from iPhone home screen and reinstalled from `app.kentuckytreehouse.com` — nuclear localStorage + service worker cache wipe. Ensures the first real beta-vendor sign-in hits a clean client, not a client with stale `treehouse_active_vendor_id` pointing at a now-deleted row.
+One observation flagged for a future session, not promoted: `/api/suggest` is the only AI route still using raw `fetch` against `api.anthropic.com/v1/messages` rather than the Anthropic SDK. Marginally wider silent-failure surface than the other three routes, no functional impact, and `/api/suggest` is a reseller-intel route that beta vendors won't exercise. Optional future migration to SDK for shape-consistency.
 
-**What this unlocks**
-A genuinely empty production DB ready for beta-vendor onboarding. No test-data noise to confuse future diagnostics. The first real vendor who onboards will be the first row in `vendors` — which will simplify any debug session that starts with "is this row test data or real?"
+Full session notes in `docs/session-archive.md`. Superseded by session 44 for active whiteboard purposes.
 
-### Session 42 close HITL
-
-Standard close commit (docs-only, no code this session):
+### Session 43 close HITL
 
 ```bash
-cd /Users/davidbutler/Projects/treehouse-treasure-search && git add -A && git commit -m "docs: session 42 close — DB test-data wipe, admin identity confirmed" && git push
+cd /Users/davidbutler/Projects/treehouse-treasure-search && git add -A && git commit -m "docs: session 43 close — Anthropic model audit + billing safeguards" && git push
+```
+
+---
+
+## CURRENT ISSUE
+> Last updated: 2026-04-21 (session 43 close — Anthropic model audit + billing safeguards complete)
+
+**Status:** All four AI-dependent routes on Active model strings with 10+ month retirement runways. Anthropic console auto-reload on at threshold $10 / reload $20. Production DB clean (session 42). iPhone PWA reinstalled with clean localStorage (session 42). Sprint 4 tail fully closed (sessions 40–41). **All remaining pre-beta items are operational/content polish, not code or silent-failure risks.**
+
+### Recommended next session — Feed content seeding (~30–60 min)
+
+Highest-leverage remaining pre-beta item. Reasons it's the best next move: (a) the DB is clean-slate safe for the first time since session 42, so seeding won't mix with test data; (b) it directly improves the first beta shopper's experience — an empty feed is a bad first impression; (c) it's a natural pairing with beta invite prep; (d) it will exercise the AI pipeline under realistic call volume, which will also serve as a soft-verification that the session-43 billing safeguards are working (this will likely be the session that first trips auto-reload, which is exactly what auto-reload exists for — not a problem, just worth knowing the first $20 charge is coming).
+
+Scope:
+- Create 2–3 real (non-test) vendors via `/vendor-request` → `/admin` approve flow
+- Seed 10–15 finds across those vendors, mixing status states (mostly available, 1–2 "found a home")
+- Photos should be real items, ideally spanning a few material categories (glass, ceramic, brass, wood) to make the feed feel varied on first scroll
+- Verify the feed, Find Map, and mall pages all render well with the new population
+- Light QA: ensure the session-27 `source: "claude" \| "mock"` field returns `"claude"` for all 10–15 auto-caption calls (catches any subtle AI-pipeline regression that QA at volume would surface)
+
+### Alternative next sessions
+
+- **Q-008** 🟢 (~90–120 min) — Open Window share to unauthenticated shoppers. Product scope expansion from session 41 Q-007 walk Scenario 1.
+- **Q-009** 🟢 (~15 min standalone / ~5 min inside Q-008) — Admin can share any booth. Extend ownership check with `isAdmin` bypass.
+- **Q-011** 🟢 (~60–90 min) — Window email banner post-it missing/misplaced. Diagnostic + fix across iOS Mail / Gmail / Outlook clients.
+- **Q-002** 🟢 (~20 min) — Picker affordance placement revision (masthead → inline under hero banner).
+- **Tech Rule promotion batch** (~40 min) — four candidates queued: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed. NEW session-40 React 19 ref-forwarding candidate (one firing only; watch for second firing before promoting). NEW session-42 verify-remaining-count candidate (two firings this session across two tables; meets the two-firings-before-promote bar if it recurs in any other cleanup-shaped work).
+- **Session-archive drift cleanup** (~30 min) — sessions 28–38 carry one-liner summaries but no archive detail. Pairs well with Tech Rule batch.
+- **Error monitoring** (Sentry or structured logs) — Sprint 3 carryover.
+- **Beta feedback mechanism** (Tally.so link).
+- **Hero image upload size guard** — verify coverage across upload surfaces.
+- **`/admin` v0.2 → v1.2 redesign pass** (Sprint 5+, size L) — still queued; needs design scope first (mockup-first per session-28 rule).
+
+### Session 44 opener (pre-filled for feed content seeding)
+
+```
+PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
+STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Vercel
+Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
+Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
+
+CURRENT ISSUE: Running feed content seeding session per CLAUDE.md recommendation. Scope: (1) create 2–3 real (non-test) vendors via /vendor-request → /admin approve flow; (2) seed 10–15 finds across those vendors, mostly available status with 1–2 "found a home"; (3) verify feed, Find Map, mall pages render well with new population; (4) light QA that session-27 `source: "claude"` field returns clean on all auto-caption calls. This session is likely to first trip session-43 auto-reload (threshold $10 / reload $20); expected and non-blocking. ~30–60 min. DB is clean-slate (session 42); PWA is clean-client (session 42); auto-reload is live (session 43).
 ```
 
 ---
@@ -208,49 +233,6 @@ Runbook at `docs/pre-beta-qa-walk.md`. Kicked off after Q-007 walk completed cle
 
 ---
 
-## CURRENT ISSUE
-> Last updated: 2026-04-21 (session 42 close — DB test-data wipe + admin identity confirmed)
-
-**Status:** Production DB is empty of test data. `auth.users` holds exactly one row (`david@zenforged.com`, admin). `posts` / `vendors` / `vendor_requests` all zero. Vercel `NEXT_PUBLIC_ADMIN_EMAIL` confirmed = `david@zenforged.com` (no change needed). iPhone PWA reinstalled, localStorage clean. **Ready for first real beta-vendor onboarding.**
-
-### Recommended next session — Anthropic model audit + billing safeguards (~30 min)
-
-Now that the DB is clean, this is the highest-leverage remaining pre-beta item. Two reasons: (1) it's the only operational-polish item with a direct silent-failure risk (per the session-27 billing-as-silent-dependency Tech Rule — if credits hit zero mid-onboarding, auto-captions graceful-collapse to mock and the first real vendor's first find gets a generic caption), (2) it's small and time-bounded (~30 min) so it doesn't gate anything else.
-
-Scope:
-- Grep `model: "claude-*"` across `app/` and `lib/` to verify current model strings
-- Cross-reference against Anthropic's current deprecation page
-- Confirm `claude-sonnet-4-6` (post-caption, story) + `claude-opus-4-7` (identify) + `claude-opus-4-6` (/api/suggest) are all still live
-- Enable Anthropic console auto-reload so balance never hits zero
-- Confirm current balance above a comfortable floor (rule of thumb: $20+)
-
-### Alternative next sessions
-
-- **Feed content seeding** (~30–60 min) — now clean-slate safe to seed. Need 10–15 posts across 2–3 vendors to make the feed feel populated for the first beta shopper who visits. Requires creating a few non-test vendor rows via `/vendor-request` → `/admin` approve flow, then posting finds. Natural pairing with beta invite prep.
-- **Q-008** 🟢 (~90–120 min) — Open Window share to unauthenticated shoppers. Product scope expansion from Q-007 walk Scenario 1.
-- **Q-009** 🟢 (~15 min standalone / ~5 min inside Q-008) — Admin can share any booth. Extend ownership check with `isAdmin` bypass.
-- **Q-011** 🟢 (~60–90 min) — Window email banner post-it missing/misplaced. Diagnostic + fix across iOS Mail / Gmail / Outlook clients.
-- **Q-002** 🟢 (~20 min) — Picker affordance placement revision (masthead → inline under hero banner).
-- **Tech Rule promotion batch** (~40 min) — four candidates queued: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed. NEW session-40 React 19 ref-forwarding candidate (one firing only; watch for second firing before promoting). NEW session-42 verify-remaining-count candidate (two firings this session across two tables; meets the two-firings-before-promote bar if it recurs in any other cleanup-shaped work).
-- **Session-archive drift cleanup** (~30 min) — sessions 28–38 carry one-liner summaries but no archive detail. Pairs well with Tech Rule batch.
-- **Error monitoring** (Sentry or structured logs) — Sprint 3 carryover.
-- **Beta feedback mechanism** (Tally.so link).
-- **Hero image upload size guard** — verify coverage across upload surfaces.
-- **`/admin` v0.2 → v1.2 redesign pass** (Sprint 5+, size L) — still queued; needs design scope first (mockup-first per session-28 rule).
-
-### Session 43 opener (pre-filled for Anthropic model audit + billing safeguards)
-
-```
-PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
-STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Vercel
-Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
-Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
-
-CURRENT ISSUE: Running Anthropic model audit + billing safeguards session (item 33B per CLAUDE.md). Scope: (1) grep `model: "claude-*"` across app/ and lib/; (2) cross-reference against Anthropic's current deprecation page; (3) verify current model strings are all live (claude-sonnet-4-6 post-caption+story, claude-opus-4-7 identify, claude-opus-4-6 /api/suggest); (4) enable Anthropic console auto-reload; (5) confirm current balance $20+. Rule-source: session-27 billing-as-silent-dependency Tech Rule in docs/DECISION_GATE.md. ~30 min.
-```
-
----
-
 ## KNOWN GAPS ⚠️ (active only)
 
 ### 🔴 Pre-beta blockers
@@ -259,13 +241,13 @@ CURRENT ISSUE: Running Anthropic model audit + billing safeguards session (item 
 
 ### 🟡 Remaining pre-beta polish (operational, not code-gating)
 
-- **Anthropic model audit + billing safeguards** (33B). ~30 min. Includes enabling Anthropic console auto-reload so credits never hit zero (session-27 billing-as-silent-dependency Tech Rule). *Recommended as session 43.*
-- **Feed content seeding** — 10–15 real posts across 2–3 vendors. DB is now empty and clean-slate safe for seeding. Natural pairing with beta invite prep.
+- **Feed content seeding** — 10–15 real posts across 2–3 vendors. DB is now empty and clean-slate safe for seeding. Natural pairing with beta invite prep. *Recommended as session 44.*
 - **Error monitoring** (Sentry or structured logs). Sprint 3 carryover.
 - **Beta feedback mechanism** (Tally.so link).
 - **Hero image upload size guard** — verify coverage across upload surfaces.
 - **Tech Rule promotion batch** — four candidates queued: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed. Plus session-40 React 19 ref-forwarding candidate (one firing only; watch for second firing before promoting). Plus session-42 verify-remaining-count candidate (two firings this session, but both in the same session against the same type of work — watch for it to fire outside a cleanup context before promoting). ~40 min.
 - **Session-archive drift cleanup** — sessions 28–38 carry one-liners but no archive detail. ~30 min batch.
+- **`/api/suggest` SDK migration or delta note** — session 43 confirmed this route is the only AI route still on raw `fetch` rather than the Anthropic SDK. Not beta-gating; reseller-intel only. Optional future cleanup.
 
 ### 🟡 Q-007 Window Sprint expansion (post-MVP)
 
@@ -319,4 +301,4 @@ All captured in `docs/queued-sessions.md`:
 - Trigger: say "generate investor update" at session close
 - Process doc: Notion → Agent System Operating Manual → 📋 Investor Update — Process & Cadence
 
-> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data for clean-slate beta start. Investor-update trigger point is still valid** — consider running `generate investor update` before opening session 43.
+> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data for clean-slate beta start; session 43 audited AI model surface + locked in billing safeguards. Investor-update trigger point is still valid** — consider running `generate investor update` before opening session 44.

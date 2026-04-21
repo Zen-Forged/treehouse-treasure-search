@@ -6,6 +6,78 @@
 
 ---
 
+## Session 43 — Anthropic model audit + billing safeguards (2026-04-21)
+
+**Status at the time:** ✅ Docs-only session. No code. Ops config change only. Session-27 `Anthropic model audit` Tech Rule fired for the first time since promotion and paid for itself cheaply.
+
+### Why this session ran
+
+Session-27 Tech Rule language: *"At sprint boundaries (or when Anthropic announces a new Opus/Sonnet), grep `model: "claude-*"` across the codebase and cross-reference against Anthropic's current model deprecation page."* Anthropic announced `claude-opus-4-7` around April 16, 2026 (one week before this session). That's the exact trigger the rule was written for, and it fired correctly: the rule ran, confirmed the codebase was clean, and set up the billing mitigation that the rule's paired `Anthropic billing as silent dependency` sibling rule calls for. First time the rule has fired since promotion (it was added to `docs/DECISION_GATE.md` during session 27).
+
+### Step 1 — blind grep across `app/` + `lib/`
+
+Per the session-27 rule's own language, the grep was intentionally blind (not scoped to the four known AI routes) to catch any AI-dependent route that might have been added since session 27 without being logged. Walked `app/api/*` (17 route directories) and `lib/*` (24 files + `lib/search/` + `lib/scoring/`). Four Anthropic SDK call sites found, matching exactly what CLAUDE.md predicted:
+
+| Route | Model string | Tier | Call shape |
+|---|---|---|---|
+| `/api/post-caption` | `claude-sonnet-4-6` | Vision → JSON caption (200 tok) | SDK; session-27 `source: "claude" \| "mock"` + `reason` observability field intact |
+| `/api/identify` | `claude-opus-4-7` | Vision → structured classification (900 tok) | SDK; deterministic mock fallback |
+| `/api/story` | `claude-sonnet-4-6` | Text → JSON story (600 tok) | SDK |
+| `/api/suggest` | `claude-opus-4-6` | Vision → JSON extract (200 tok) | Raw `fetch` to `api.anthropic.com/v1/messages` — not SDK |
+
+Zero other routes or lib files import `@anthropic-ai/sdk` or call `api.anthropic.com`. All reseller-intel scoring infrastructure (`lib/scoring/*`, `lib/search/*`) is SerpAPI/Apify-driven and runs on the `attributes` object that `/api/identify` populates upstream — no Anthropic calls inside the scoring layer.
+
+### Step 2 — cross-reference against the deprecations page
+
+Fetched `https://platform.claude.com/docs/en/about-claude/model-deprecations` directly. The page's Model Status table is the authoritative answer for each of the three strings in use:
+
+| Our string | Used in | Status | Tentative retirement |
+|---|---|---|---|
+| `claude-opus-4-7` | `/api/identify` | **Active** | Not sooner than April 16, 2027 |
+| `claude-opus-4-6` | `/api/suggest` | **Active** | Not sooner than February 5, 2027 |
+| `claude-sonnet-4-6` | `/api/post-caption` + `/api/story` | **Active** | Not sooner than February 17, 2027 |
+
+No retirement date inside the next 10 months. No code swap required. The session-27 remediation (which originally put us on `claude-opus-4-7` for identify and `claude-sonnet-4-6` for the two Sonnet routes) is holding cleanly.
+
+Noted in passing from the same page: the currently-deprecated strings on the Anthropic API are `claude-opus-4-20250514` and `claude-sonnet-4-20250514` (the original "Claude 4" releases, retiring June 15, 2026) — neither appears anywhere in our codebase, so we have no migration debt to address.
+
+### Step 3 — low-priority observation worth a future session
+
+`/api/suggest` still uses raw `fetch` against `api.anthropic.com/v1/messages` while the other three AI routes use the Anthropic SDK. Both resolve to the same endpoint, but the raw-fetch path doesn't get the SDK's built-in error type narrowing, so its silent-failure surface is *marginally* wider than the other three. Not a bug, not in scope for this session. Flagged as a future consideration: either (a) migrate `/api/suggest` to the SDK for shape-consistency with the rest of the codebase, or (b) leave it as-is and explicitly note the shape delta in CONTEXT.md. Note that `/api/suggest` is a reseller-intel route (not ecosystem), so beta vendors won't exercise it — the delta has zero beta-readiness impact.
+
+### Step 4 — Anthropic console auto-reload enabled (🖐️ HITL complete)
+
+David configured auto-reload at `https://console.anthropic.com/settings/billing`:
+- **Threshold:** $10 (above the $5 UI default, to give a bigger buffer given the session-27 observation that captions silently mock-collapse at exactly the moment credits hit zero)
+- **Reload amount:** $20 per trigger
+
+This structurally closes the silent-failure surface that the session-27 `Anthropic billing as silent dependency` Tech Rule was written to mitigate. The balance now has a floor of $10 rather than $0; under any realistic call-volume scenario, auto-reload will fire well before the pipeline can graceful-collapse to mock. First-ever $20 charge will appear on David's billing when balance first crosses under $10 — no action required when that happens, it's the rule working as designed.
+
+### Step 5 — current balance (🖐️ HITL complete)
+
+$5.88 as of session close. Below the session-27 rule's "comfortable floor" guidance of $20+, but that guidance was written assuming no auto-reload. With auto-reload now on at threshold $10, the *effective* floor is $10, not the current balance. Quick math on whether $5.88 is operationally sufficient: a well-formed vendor post exercises `/api/identify` (900 tokens Opus 4.7) + `/api/post-caption` (200 tokens Sonnet 4.6), which at current Anthropic pricing lands in the $0.02–$0.05 range per post including vision input cost. Even an unrealistic 100-post burst would cost $2–$5, which sits well inside $5.88. Auto-reload will fire before the pipeline can dry up.
+
+One small surface worth flagging for whatever session comes next: if the next session is feed content seeding (which would exercise `/api/identify` + `/api/post-caption` 10–15 times across 2–3 vendors), it might be the session that first trips auto-reload. That's not a problem — it's exactly what auto-reload exists for — but worth knowing so the first-ever $20 charge doesn't arrive as a surprise.
+
+### Close commit
+
+Docs-only session. No code changes. No `npm run build` required (the session-14 build-check rule only applies when files in `app/` or `lib/` change). Session-41 close confirmed green; nothing since has touched buildable surfaces.
+
+Files modified this close:
+- `docs/session-archive.md` (new session-43 entry, this document)
+- `docs/DECISION_GATE.md` (Risk Register flip: two rows updated, "Last updated" line)
+- `CLAUDE.md` (CURRENT ISSUE rewrite, session list, KNOWN GAPS strike)
+
+### Tech Rule validation
+
+The session-27 `Anthropic model audit` Tech Rule paid for itself this session by giving us a cheap confirmation rather than a silent-failure discovery mid-beta. Total time: ~30 minutes (predicted by CLAUDE.md). The rule triggered correctly on the first new-model-announcement event since promotion, ran the exact procedure it documented, and found the codebase already clean — which is itself a valuable signal (the session-27 remediation is still holding). This is the profile of a successful Tech Rule firing: cheap to run, authoritative confirmation regardless of outcome, structural risk mitigation in place before the next beta-facing session.
+
+### What this unlocks
+
+The last remaining pre-beta operational-polish item with a silent-failure risk is now closed. Remaining pre-beta items are all either (a) observability (Sentry), (b) feedback capture (Tally), or (c) content/seeding work — none of which gate beta invites. The *technical* readiness surface is fully clean.
+
+---
+
 ## Sessions 40–41 — Q-007 client shipped + QA walk marathon (2026-04-21)
 
 **Status at the time:** ✅✅✅ Two sessions in one working sitting. Session 40 shipped the Q-007 Window Sprint client (`<ShareBoothSheet>` + `/my-shelf` paper-airplane entry point). Session 41 ran two on-device QA walks back-to-back: the Q-007 Window Sprint walk (4 scenarios) AND the T4d pre-beta QA walk (three onboarding flows + multi-booth sanity). **All nine scenarios across both walks passed.** Sprint 4 tail is fully done; beta invites are technically unblocked from a code-readiness standpoint.
