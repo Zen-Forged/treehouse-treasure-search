@@ -83,6 +83,36 @@ export async function getVendorPosts(vendorId: string, limit = 40): Promise<Post
   return (data ?? []) as Post[];
 }
 
+/**
+ * Window email helper — returns the most-recent 6 AVAILABLE posts for a vendor,
+ * formatted for the Window share feature (Q-007, session 39).
+ *
+ * Intentionally separate from `getVendorPosts` (session-33 dependent-surface
+ * audit rule): `getVendorPosts` has NO status filter because /my-shelf and
+ * /vendor/[slug] need sold posts visible for the three-part sold contract.
+ * The Window email is different — it's an outbound marketing surface that
+ * should ONLY show actionable inventory. Mutating `getVendorPosts` semantics
+ * here would silently break the sold contract.
+ *
+ * The 6-post limit matches the mockup: the Window is always 6 tiles, never
+ * fewer-with-padding (empty shelf hides the share entry entirely) and never
+ * more (brand rule: the Window is a curated glimpse, not a full listing).
+ *
+ * Caller responsibility: if this returns [], the caller must short-circuit
+ * before sending the Window email (see /api/share-booth empty-window guard).
+ */
+export async function getVendorWindowPosts(vendorId: string): Promise<Post[]> {
+  const { data, error } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("vendor_id", vendorId)
+    .eq("status", "available")
+    .order("created_at", { ascending: false })
+    .limit(6);
+  if (error) { console.error("[posts] getVendorWindowPosts:", error.message); return []; }
+  return (data ?? []) as Post[];
+}
+
 export interface CreatePostInput {
   vendor_id:       string;
   mall_id:         string;

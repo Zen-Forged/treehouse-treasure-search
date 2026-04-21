@@ -18,7 +18,7 @@
 ## Subject line (both templates)
 
 ```
-Your Treehouse sign-in code
+Your Treehouse Finds sign-in code
 ```
 
 ---
@@ -31,11 +31,11 @@ Your Treehouse sign-in code
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Treehouse</title>
+  <title>Treehouse Finds</title>
 </head>
 <body style="margin: 0; padding: 0; background: #e8ddc7; font-family: Georgia, 'Times New Roman', serif;">
   <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
-    Your Treehouse sign-in code.
+    Your Treehouse Finds sign-in code.
   </div>
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #e8ddc7;">
@@ -47,10 +47,10 @@ Your Treehouse sign-in code
           <tr>
             <td align="center" style="padding: 8px 0 22px; border-bottom: 1px solid rgba(42,26,10,0.18);">
               <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 26px; font-weight: 600; color: #2a1a0a; letter-spacing: -0.01em; line-height: 1.1;">
-                Treehouse
+                Treehouse Finds
               </p>
               <p style="margin: 6px 0 0; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 11px; color: #4a3520; letter-spacing: 0.02em; line-height: 1.5;">
-                Kentucky &amp; Southern Indiana
+                Embrace the Search. Treasure the Find.
               </p>
             </td>
           </tr>
@@ -59,7 +59,7 @@ Your Treehouse sign-in code
           <tr>
             <td style="padding: 24px 10px 0;">
               <p style="margin: 0 0 16px; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; line-height: 1.7; color: #2a1a0a;">
-                Here's your sign-in code. Enter it on the Treehouse sign-in screen to finish.
+                Here's your sign-in code. Enter it on the Treehouse Finds sign-in screen to finish.
               </p>
 
               <!-- OTP code pill -->
@@ -80,7 +80,7 @@ Your Treehouse sign-in code
               </p>
 
               <p style="margin: 28px 0 0; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 16px; line-height: 1.5; color: #4a3520;">
-                &mdash; Treehouse
+                &mdash; Treehouse Finds
               </p>
             </td>
           </tr>
@@ -90,7 +90,7 @@ Your Treehouse sign-in code
             <td style="padding: 28px 10px 0;">
               <div style="border-top: 1px solid rgba(42,26,10,0.18); padding-top: 22px; text-align: center;">
                 <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 11px; color: rgba(42,26,10,0.28); line-height: 1.6;">
-                  This code was requested from Treehouse. Codes expire and can only be used once.
+                  This code was requested from Treehouse Finds. Codes expire and can only be used once.
                 </p>
               </div>
             </td>

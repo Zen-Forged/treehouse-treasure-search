@@ -1,5 +1,5 @@
-# Treehouse — Master Context Document
-> Last updated: 2026-04-20 (session 35 — multi-booth rework shipped + KI-006 resolved)
+# Treehouse Finds — Master Context Document
+> Last updated: 2026-04-21 (session 39 — Q-004 rename sweep + Q-005 email tagline shortening)
 > Repo: Zen-Forged/treehouse-treasure-search
 > Live: `app.kentuckytreehouse.com` (custom domain) + `treehouse-treasure-search.vercel.app` (Vercel default)
 
@@ -9,7 +9,7 @@ This document is the architecture reference. It is intentionally separate from `
 
 ## 1. Product Overview
 
-Treehouse is a **calm, story-driven local discovery experience** for vintage, antique, and thrift finds in Kentucky and Southern Indiana.
+Treehouse Finds is a **calm, story-driven local discovery experience** for vintage, antique, and thrift finds in Kentucky and Southern Indiana.
 
 - **Shoppers** browse a real-time feed before making the trip to a mall or booth.
 - **Vendors** post finds for visibility without running a full e-commerce stack.
@@ -21,7 +21,7 @@ The front door is the **Discovery Feed** (`/`). Shoppers browse without an accou
 **Tagline (committed session 15, first surfacing in-product session 24 — Find Map closer):**
 **Embrace the Search. Treasure the Find. Share the Story.**
 
-### What Treehouse is NOT
+### What Treehouse Finds is NOT
 
 - Not a marketplace (no on-platform buying/selling)
 - Not a filter-heavy listings site
@@ -787,6 +787,6 @@ git add -A && git commit -m "..." && git push
 ```
 
 ---
-> This document is the architecture reference for the Treehouse system.
+> This document is the architecture reference for the Treehouse Finds system.
 > It is maintained by the Docs agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-20 (session 35 — multi-booth rework shipped + KI-006 resolved).
+> Last updated: 2026-04-21 (session 39 — Q-004 rename sweep + Q-005 email tagline shortening).

@@ -1,4 +1,4 @@
-# Treehouse — Master Prompt & Working Protocol
+# Treehouse Finds — Master Prompt & Working Protocol
 > This file defines how Claude bootstraps each session, runs the standup, and dispatches work.
 > Referenced in CLAUDE.md session opener. Never delete or rename this file.
 

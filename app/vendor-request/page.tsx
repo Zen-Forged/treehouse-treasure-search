@@ -316,7 +316,7 @@ function VendorRequestInner() {
               margin: 0,
             }}
           >
-            We&rsquo;re Treehouse &mdash; a quiet place for vintage &amp; antique finds in Kentucky. Share a few details and a photo of your booth, and we&rsquo;ll be in touch when your shelf is ready.
+            We&rsquo;re Treehouse Finds &mdash; a quiet place for vintage &amp; antique finds in Kentucky. Share a few details and a photo of your booth, and we&rsquo;ll be in touch when your shelf is ready.
           </p>
         </motion.div>
 
@@ -720,13 +720,13 @@ function DoneScreen({
           }}
         >
           {state === "created" && (
-            <>We&rsquo;ll review your request and be in touch soon with next steps to get your booth on Treehouse.</>
+            <>We&rsquo;ll review your request and be in touch soon with next steps to get your booth on Treehouse Finds.</>
           )}
           {state === "already_pending" && (
             <>Your request is in the queue. We&rsquo;ll be in touch when your shelf is ready to fill.</>
           )}
           {state === "already_approved" && (
-            <>Your booth is already approved. Open Treehouse and sign in with this email to start filling your shelf.</>
+            <>Your booth is already approved. Open Treehouse Finds and sign in with this email to start filling your shelf.</>
           )}
         </motion.p>
 

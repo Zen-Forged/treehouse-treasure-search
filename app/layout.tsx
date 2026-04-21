@@ -28,12 +28,12 @@ const caveat = Caveat({
 });
 
 export const metadata: Metadata = {
-  title: "Treehouse",
+  title: "Treehouse Finds",
   description: "Embrace the search. Treasure the find.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Treehouse",
+    title: "Treehouse Finds",
   },
 };
 
@@ -58,7 +58,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Treehouse" />
+        <meta name="apple-mobile-web-app-title" content="Treehouse Finds" />
       </head>
       <body style={{ margin: 0, padding: 0, minHeight: "100vh", background: "#e8ddc7" }}>
         <FindSessionProvider>

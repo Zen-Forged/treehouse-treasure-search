@@ -380,7 +380,7 @@ function LoginInner() {
             marginBottom: 22,
           }}
         >
-          <Image src="/logo.png" alt="Treehouse" width={22} height={22} />
+          <Image src="/logo.png" alt="Treehouse Finds" width={22} height={22} />
         </div>
 
         <h1
