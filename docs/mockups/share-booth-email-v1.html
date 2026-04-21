@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Share your booth (Window email) v1 exploration</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --ink-wash:     rgba(42, 26, 10, 0.04);
+    --ink-bubble:   rgba(42, 26, 10, 0.06);
+    --price-ink:    #6a4a30;
+    --green:        #1e4d2b;
+    --input-bg:     rgba(255, 253, 248, 0.70);
+
+    /* Emails inherit the v1.2 committed stance:
+       Georgia throughout the email body. IM Fell stays in REVIEW-DOC chrome
+       only (decision pane, frame labels, section headers) so reviewers can
+       visually distinguish "this is review UI" from "this is shipping
+       email content." Same pattern email-v1-2.html established. */
+    --email-serif: Georgia, "Times New Roman", serif;
+    --sys:         -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+    --im-fell:     "IM Fell English", Georgia, serif;
+    --postit-num:  "Times New Roman", Times, serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+
+  .page-wrap { max-width: 1600px; margin: 0 auto; padding: 28px 18px 80px; }
+
+  h1.exploration-title {
+    font-family: var(--im-fell); font-weight: 400; color: #e8ddc7;
+    font-size: 30px; margin: 0 0 6px; text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .exploration-subtitle {
+    text-align: center; color: rgba(232, 221, 199, 0.62);
+    font-size: 13px; margin: 0 auto 18px; line-height: 1.6; max-width: 820px;
+  }
+
+  .decisions-pane {
+    max-width: 1040px; margin: 0 auto 40px;
+    padding: 20px 28px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px; line-height: 1.75;
+  }
+  .decisions-pane h3 {
+    font-family: var(--im-fell); font-size: 19px; font-weight: 400;
+    color: #fff9e8; margin: 0 0 10px; letter-spacing: -0.005em;
+  }
+  .decisions-pane h3.mt { margin-top: 22px; }
+  .decisions-pane h4 {
+    font-family: var(--sys); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: rgba(232,221,199,0.55);
+    margin: 14px 0 4px; font-weight: 500;
+  }
+  .decisions-pane ul { margin: 4px 0 0; padding: 0 0 0 20px; }
+  .decisions-pane li { margin-bottom: 6px; }
+  .decisions-pane strong { color: #fff9e8; font-weight: 500; }
+  .decisions-pane code {
+    background: rgba(255,255,255,0.08); padding: 1px 6px;
+    border-radius: 3px; font-size: 12px; font-family: ui-monospace, monospace;
+  }
+  .decisions-pane .flag {
+    display: inline-block; padding: 1px 7px; border-radius: 3px;
+    background: rgba(30, 77, 43, 0.35); color: #d6ebd8;
+    font-size: 11px; font-weight: 500; margin-right: 6px;
+  }
+  .decisions-pane .flag.brand { background: rgba(139, 100, 32, 0.35); color: #f0e0c8; }
+  .decisions-pane .flag.sys   { background: rgba(32, 90, 139, 0.35); color: #c8dcf0; }
+  .decisions-pane .flag.defer { background: rgba(100, 60, 100, 0.35); color: #e8cce8; }
+
+  .section-header {
+    text-align: center;
+    font-family: var(--im-fell); font-style: italic;
+    font-size: 22px; color: rgba(232, 221, 199, 0.88);
+    margin: 40px 0 8px;
+    letter-spacing: -0.005em;
+  }
+  .section-header:first-of-type { margin-top: 10px; }
+  .section-sub {
+    text-align: center; color: rgba(232, 221, 199, 0.5);
+    font-size: 12px; margin: 0 auto 24px; line-height: 1.6; max-width: 720px;
+  }
+
+  .frames-row {
+    display: flex; gap: 30px; justify-content: center; flex-wrap: wrap;
+    max-width: 1600px; margin: 0 auto 20px;
+  }
+  .frame-column {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .frame-label {
+    font-family: var(--im-fell); font-size: 17px; color: #fff9e8;
+    letter-spacing: -0.005em; margin: 0;
+  }
+  .frame-sub {
+    font-family: var(--sys); font-size: 12px;
+    color: rgba(232, 221, 199, 0.55); line-height: 1.55; max-width: 360px;
+    text-align: center; margin: 0 0 6px;
+  }
+  .frame-sub code {
+    background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 3px;
+    color: rgba(232, 221, 199, 0.75); font-size: 11px;
+  }
+
+  /* Phone shell */
+  .phone {
+    width: 390px; height: 800px;
+    border-radius: 44px;
+    box-shadow: 0 0 0 8px #15110b, 0 20px 48px rgba(0,0,0,0.6);
+    overflow: hidden;
+    position: relative;
+  }
+  .phone.pwa  { background: var(--paper); }
+  .phone.mail { background: #f5f5f5; }
+
+  .phone-scroll {
+    height: 100%; overflow: hidden;
+    position: relative;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     SECTION A — /my-shelf with share entry point (chrome mirrors
+     my-shelf-multi-booth-v1.html so this reads as an extension, not an
+     invention)
+     ══════════════════════════════════════════════════════════════════════ */
+
+  .masthead {
+    padding: 52px 22px 12px;
+    display: grid; grid-template-columns: 38px 1fr 38px;
+    align-items: center; gap: 12px;
+    background: rgba(232, 221, 199, 0.96);
+    border-bottom: 1px solid var(--ink-hairline);
+    position: relative; z-index: 5;
+  }
+  .masthead-icon-bubble {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--ink-bubble);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-mid);
+  }
+  .masthead-icon-bubble svg { width: 18px; height: 18px; }
+  .masthead-title {
+    font-family: var(--im-fell); font-size: 18px;
+    color: var(--ink-primary); letter-spacing: -0.005em; text-align: center;
+  }
+
+  /* Booth banner + post-it — chrome mirrors multi-booth mockup exactly */
+  .booth-banner-pad { padding: 12px 10px 0; position: relative; }
+  .booth-banner {
+    position: relative; border-radius: 16px; height: 196px;
+    overflow: visible;
+    box-shadow: 0 2px 10px rgba(42,26,10,0.12);
+  }
+  .booth-banner-inner {
+    position: absolute; inset: 0; border-radius: 16px; overflow: hidden;
+  }
+  .booth-banner-img {
+    width: 100%; height: 100%; background:
+      radial-gradient(ellipse at 30% 40%, rgba(232,200,140,0.22), transparent 60%),
+      radial-gradient(ellipse at 70% 70%, rgba(60,40,20,0.4), transparent 60%),
+      linear-gradient(135deg, #8b7a55 0%, #5a4a2e 100%);
+  }
+  .booth-banner-scrim {
+    position: absolute; top: 0; left: 0; right: 0; height: 40%;
+    background: linear-gradient(to bottom, rgba(18,34,20,0.32), transparent);
+  }
+  .postit {
+    position: absolute; bottom: -16px; right: 14px;
+    width: 86px; min-height: 86px;
+    background: var(--postit); transform: rotate(6deg); transform-origin: bottom right;
+    box-shadow: 0 6px 14px rgba(42,26,10,0.32), 0 0 0 0.5px rgba(42,26,10,0.16);
+    padding: 12px 6px 8px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 12;
+  }
+  .postit-pin {
+    position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(42,26,10,0.72);
+    box-shadow: inset 0 0 0 2px rgba(42,26,10,0.55), 0 1px 2px rgba(42,26,10,0.35);
+  }
+  .postit-eyebrow {
+    font-family: var(--im-fell); font-style: italic; font-size: 12px;
+    color: var(--ink-muted); line-height: 1.1; margin-bottom: 5px; text-align: center;
+  }
+  .postit-num {
+    font-family: var(--postit-num); font-size: 30px; color: var(--ink-primary);
+    line-height: 0.95; font-weight: 400;
+  }
+
+  .booth-body { padding: 30px 22px 0; }
+  .booth-name {
+    font-family: var(--im-fell); font-size: 28px; color: var(--ink-primary);
+    line-height: 1.1; margin: 0 0 10px;
+  }
+  .booth-loc {
+    display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px;
+  }
+  .booth-pin {
+    color: var(--ink-muted); font-size: 13px; margin-top: 2px;
+  }
+  .booth-loc-text {
+    font-family: var(--sys); font-size: 13px; color: var(--ink-mid); line-height: 1.5;
+  }
+  .booth-loc-mall { color: var(--ink-primary); font-weight: 500; }
+
+  .view-label-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 18px 0 12px;
+  }
+  .view-label {
+    font-family: var(--im-fell); font-style: italic; font-size: 14px;
+    color: var(--ink-muted);
+  }
+  .view-count {
+    font-family: var(--sys); font-size: 11px; color: var(--ink-faint);
+  }
+
+  .window-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+    margin-bottom: 22px;
+  }
+  .window-tile {
+    aspect-ratio: 4/5; border-radius: 6px; overflow: hidden;
+  }
+  .window-tile.t1 { background: linear-gradient(135deg, #c7b48a 0%, #8b7040 100%); }
+  .window-tile.t2 { background: linear-gradient(135deg, #a89170 0%, #6a5538 100%); }
+  .window-tile.t3 { background: linear-gradient(135deg, #d4c094 0%, #8a7555 100%); }
+  .window-tile.t4 { background: linear-gradient(135deg, #9e8860 0%, #5a4828 100%); }
+  .window-tile.t5 { background: linear-gradient(135deg, #b8a274 0%, #7a6340 100%); }
+  .window-tile.t6 { background: linear-gradient(135deg, #c4a888 0%, #806340 100%); }
+
+  /* Share-entry callout tick for Frame 1 */
+  .ring-pulse {
+    position: absolute;
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    border: 2px solid rgba(30, 77, 43, 0.55);
+    animation: pulse 1.6s ease-out infinite;
+    pointer-events: none;
+  }
+  @keyframes pulse {
+    0%   { transform: scale(0.8); opacity: 0.9; }
+    100% { transform: scale(1.4); opacity: 0; }
+  }
+
+  /* Bottom sheet shell — mirrors MallSheet/BoothPickerSheet primitive */
+  .sheet-scrim {
+    position: absolute; inset: 0;
+    background: rgba(15, 10, 5, 0.48);
+    z-index: 20; display: flex; align-items: flex-end;
+  }
+  .sheet {
+    width: 100%; background: var(--paper);
+    border-radius: 22px 22px 0 0;
+    padding: 16px 22px 26px;
+    box-shadow: 0 -8px 28px rgba(0,0,0,0.3);
+    max-height: 92%;
+    overflow-y: auto;
+  }
+  .sheet-handle {
+    width: 36px; height: 4px; border-radius: 2px;
+    background: var(--ink-faint); margin: 0 auto 14px;
+  }
+  .sheet-eyebrow {
+    font-family: var(--im-fell); font-style: italic; font-size: 13px;
+    color: var(--ink-muted); text-align: center; margin-bottom: 4px;
+  }
+  .sheet-eyebrow-glyph {
+    display: flex; justify-content: center; align-items: center;
+    color: var(--green); margin-bottom: 8px;
+  }
+  .sheet-eyebrow-glyph svg { width: 22px; height: 22px; }
+  .sheet-title {
+    font-family: var(--im-fell); font-size: 21px; color: var(--ink-primary);
+    text-align: center; letter-spacing: -0.005em; margin: 0 0 6px;
+  }
+  .sheet-description {
+    font-family: var(--im-fell); font-style: italic;
+    font-size: 13px; line-height: 1.55;
+    color: var(--ink-muted); text-align: center;
+    max-width: 280px; margin: 0 auto 18px;
+  }
+
+  /* Preview — miniature Window inside the sheet so vendor sees what lands */
+  .sheet-preview-frame {
+    padding: 14px 14px 16px;
+    background: rgba(255, 250, 234, 0.45);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 12px;
+    margin-bottom: 20px;
+  }
+  .sheet-preview-eyebrow {
+    font-family: var(--im-fell); font-style: italic;
+    font-size: 11px; color: var(--ink-muted);
+    text-transform: uppercase; letter-spacing: 0.16em;
+    text-align: center; margin: 0 0 6px;
+  }
+  .sheet-preview-booth {
+    font-family: var(--im-fell); font-size: 17px; color: var(--ink-primary);
+    text-align: center; margin: 0 0 10px; letter-spacing: -0.005em;
+  }
+  .sheet-preview-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+  }
+  .sheet-preview-tile {
+    aspect-ratio: 4/5; border-radius: 4px;
+  }
+  .sheet-preview-tile.t1 { background: linear-gradient(135deg, #c7b48a 0%, #8b7040 100%); }
+  .sheet-preview-tile.t2 { background: linear-gradient(135deg, #a89170 0%, #6a5538 100%); }
+  .sheet-preview-tile.t3 { background: linear-gradient(135deg, #d4c094 0%, #8a7555 100%); }
+  .sheet-preview-tile.t4 { background: linear-gradient(135deg, #9e8860 0%, #5a4828 100%); }
+  .sheet-preview-tile.t5 { background: linear-gradient(135deg, #b8a274 0%, #7a6340 100%); }
+  .sheet-preview-tile.t6 { background: linear-gradient(135deg, #c4a888 0%, #806340 100%); }
+  .sheet-preview-footer {
+    font-family: var(--im-fell); font-style: italic;
+    font-size: 12px; color: var(--ink-muted);
+    text-align: center; margin: 8px 0 0; line-height: 1.5;
+  }
+
+  /* Compose form */
+  .v1-label {
+    display: block;
+    font-family: var(--im-fell); font-style: italic;
+    font-size: 13px; color: var(--ink-muted);
+    line-height: 1.3;
+    margin: 2px 2px 7px;
+  }
+  .v1-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px 14px;
+    border-radius: 14px;
+    background: var(--input-bg);
+    border: 1px solid var(--ink-hairline);
+    color: var(--ink-primary);
+    font-size: 16px;
+    font-family: var(--sys);
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .v1-input.placeholder { color: var(--ink-faint); }
+
+  .v1-cta {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    margin-top: 18px;
+    background: var(--green);
+    color: #fff9e8;
+    border: none;
+    border-radius: 14px;
+    font-family: var(--im-fell);
+    font-size: 17px;
+    letter-spacing: 0.005em;
+    text-align: center;
+  }
+  .v1-cta.disabled {
+    background: rgba(30, 77, 43, 0.35);
+    color: rgba(255, 249, 232, 0.6);
+  }
+
+  /* Confirmation (Frame C) — reuses paper-wash-bubble pattern from
+     onboarding "already-pending" state */
+  .paper-wash-bubble {
+    width: 76px; height: 76px;
+    border-radius: 50%;
+    background: rgba(42, 26, 10, 0.06);
+    display: flex; align-items: center; justify-content: center;
+    margin: 36px auto 22px;
+  }
+  .paper-wash-bubble svg {
+    width: 30px; height: 30px;
+    color: var(--green);
+  }
+  .confirm-title {
+    font-family: var(--im-fell);
+    font-size: 26px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+    text-align: center;
+    margin: 0 0 12px;
+  }
+  .confirm-body {
+    font-family: var(--im-fell); font-style: italic;
+    font-size: 15px; line-height: 1.7;
+    color: var(--ink-mid);
+    text-align: center;
+    max-width: 300px;
+    margin: 0 auto 20px;
+  }
+  .confirm-echo {
+    text-align: center;
+    padding: 14px 0;
+    border-top: 1px solid var(--ink-hairline);
+    border-bottom: 1px solid var(--ink-hairline);
+    margin: 0 auto 22px;
+    max-width: 300px;
+  }
+  .confirm-echo .label {
+    font-family: var(--im-fell); font-style: italic;
+    font-size: 11px; color: var(--ink-muted);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .confirm-echo .email {
+    font-family: var(--sys);
+    font-size: 15px;
+    color: var(--ink-primary);
+  }
+  .confirm-secondary {
+    display: block;
+    text-align: center;
+    font-family: var(--im-fell);
+    font-size: 15px;
+    color: var(--green);
+    margin-top: 6px;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════
+     SECTION B — The email itself, inside iOS Mail chrome
+     Mirrors email-v1-2.html frame scaffolding exactly.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  .mail-chrome {
+    background: #f9f9f9;
+    padding: 50px 18px 10px;
+    border-bottom: 0.5px solid #d8d8d8;
+    position: sticky; top: 0; z-index: 2;
+  }
+  .mail-back {
+    font-family: var(--sys); font-size: 15px; color: #007aff;
+    display: flex; align-items: center; gap: 3px;
+  }
+  .mail-back svg { width: 12px; height: 20px; }
+
+  .mail-header {
+    padding: 14px 20px 10px;
+    background: #fff;
+    border-bottom: 0.5px solid #e8e8e8;
+  }
+  .mail-from-row { display: flex; align-items: center; gap: 10px; }
+  .mail-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--green); color: #fff9e8;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--email-serif); font-size: 17px; font-weight: 600;
+    flex-shrink: 0;
+  }
+  .mail-meta { flex: 1; min-width: 0; }
+  .mail-from {
+    font-family: var(--sys); font-size: 15px; color: #000;
+    font-weight: 600; line-height: 1.25;
+  }
+  .mail-to {
+    font-family: var(--sys); font-size: 13px; color: #8a8a8e;
+    line-height: 1.3; margin-top: 1px;
+  }
+  .mail-date {
+    font-family: var(--sys); font-size: 13px; color: #8a8a8e;
+    flex-shrink: 0;
+  }
+  .mail-subject {
+    font-family: var(--sys); font-size: 17px; color: #000;
+    font-weight: 600; margin-top: 10px; line-height: 1.3;
+  }
+
+  /* Email body — all Georgia. Paper IS the surface. */
+  .email-body-wrap {
+    background: var(--paper);
+    padding: 28px 16px;
+    min-height: 600px;
+  }
+  .email-card {
+    max-width: 540px; margin: 0 auto;
+    background: transparent;
+  }
+
+  /* Shell header mirrors lib/email.ts renderEmailShell() exactly:
+     Treehouse 26px/600 + italic 11px tagline + hairline below. */
+  .email-brand {
+    text-align: center;
+    padding: 8px 0 22px;
+    border-bottom: 1px solid var(--ink-hairline);
+    margin-bottom: 22px;
+  }
+  .email-brand-name {
+    font-family: var(--email-serif);
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--ink-primary);
+    letter-spacing: -0.01em;
+    margin: 0;
+    line-height: 1.1;
+  }
+  .email-brand-tagline {
+    font-family: var(--email-serif); font-style: italic;
+    font-size: 11px; color: var(--ink-muted);
+    margin: 6px 0 0; line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+
+  /* Sender voice — "Sarah sent you a window into her booth." This is the
+     pivot from 'Treehouse as brand' to 'vendor as content'. Italic Georgia,
+     muted, feels like a subtitle. Keeps the brand lockup above dominant. */
+  .email-sender-voice {
+    font-family: var(--email-serif); font-style: italic;
+    font-size: 14px; color: var(--ink-muted);
+    text-align: center; line-height: 1.55;
+    margin: 0 8px 18px;
+  }
+  .email-sender-voice strong {
+    color: var(--ink-mid); font-weight: 600; font-style: normal;
+  }
+
+  /* Vendor hero — THIS is the hero moment per Option 3. Georgia 34px/semi
+     centered; the vendor name is the largest type in the body. */
+  .email-vendor-name {
+    font-family: var(--email-serif);
+    font-size: 34px;
+    font-weight: 600;
+    color: var(--ink-primary);
+    letter-spacing: -0.015em;
+    line-height: 1.08;
+    text-align: center;
+    margin: 0 10px 14px;
+  }
+
+  /* Email booth banner — mirrors /my-shelf BoothHero primitive. Hero image
+     with post-it pinned to the bottom-right. Brings the app's banner
+     chrome into the email for vendor-branding consistency. */
+  .email-booth-banner-wrap {
+    padding: 0 10px;
+    margin: 0 0 28px;
+  }
+  .email-booth-banner {
+    position: relative;
+    border-radius: 14px;
+    height: 196px;
+    overflow: visible;
+    box-shadow: 0 2px 10px rgba(42,26,10,0.12);
+  }
+  .email-booth-banner-inner {
+    position: absolute; inset: 0;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .email-booth-banner-img {
+    width: 100%; height: 100%;
+    background:
+      radial-gradient(ellipse at 30% 40%, rgba(232,200,140,0.22), transparent 60%),
+      radial-gradient(ellipse at 70% 70%, rgba(60,40,20,0.4), transparent 60%),
+      linear-gradient(135deg, #8b7a55 0%, #5a4a2e 100%);
+  }
+  .email-booth-banner-scrim {
+    position: absolute; top: 0; left: 0; right: 0; height: 40%;
+    background: linear-gradient(to bottom, rgba(18,34,20,0.32), transparent);
+    border-radius: 14px 14px 0 0;
+  }
+  .email-booth-banner .postit-in-banner {
+    position: absolute; bottom: -14px; right: 14px;
+    width: 86px; min-height: 86px;
+    background: var(--postit);
+    transform: rotate(6deg); transform-origin: bottom right;
+    box-shadow: 0 6px 14px rgba(42,26,10,0.32), 0 0 0 0.5px rgba(42,26,10,0.16);
+    padding: 12px 6px 8px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .email-booth-banner .postit-pin-in-banner {
+    position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(42,26,10,0.72);
+    box-shadow: inset 0 0 0 2px rgba(42,26,10,0.55), 0 1px 2px rgba(42,26,10,0.35);
+  }
+  .email-booth-banner .postit-eyebrow-in-banner {
+    font-family: var(--email-serif); font-style: italic;
+    font-size: 12px; color: var(--ink-muted);
+    line-height: 1.1; margin-bottom: 5px; text-align: center;
+  }
+  .email-booth-banner .postit-num-in-banner {
+    font-family: var(--postit-num); font-size: 30px; color: var(--ink-primary);
+    line-height: 0.95; font-weight: 400;
+  }
+
+  /* Post-it embedded in the email — RETIRED in revision 2. The centered
+     post-it was replaced by the booth-banner + pinned-post-it treatment
+     (see .email-booth-banner-* above) for consistency with /my-shelf
+     BoothHero. Leaving the class declarations intentionally removed to
+     keep the mockup’s rendered DOM minimal. If a future session wants
+     to A/B the two styles, restore from git history. */
+
+  /* Location row — uses the committed pin glyph + Georgia mall line +
+     system-ui address. Mirrors /find/[id] and BoothPage pattern. */
+  .email-location {
+    display: flex; align-items: flex-start; gap: 10px;
+    max-width: 360px; margin: 0 auto 26px;
+    padding: 0 12px;
+  }
+  .email-location-pin {
+    font-family: var(--email-serif); font-size: 14px;
+    color: var(--ink-muted); margin-top: 2px; flex-shrink: 0;
+  }
+  .email-location-body {
+    text-align: left; flex: 1;
+  }
+  .email-location-mall {
+    font-family: var(--email-serif); font-size: 15px;
+    color: var(--ink-primary); font-weight: 600;
+    line-height: 1.35;
+  }
+  .email-location-addr {
+    font-family: var(--sys); font-size: 13px;
+    color: var(--ink-mid); line-height: 1.5; margin-top: 2px;
+    text-decoration: underline; text-decoration-color: var(--ink-faint);
+  }
+
+  /* Window — 3x2 grid of finds. 4:5 aspect per committed window convention
+     (BoothPage + multi-booth mockup both use 4:5). Captions under tiles
+     stay Georgia 13px italic to match email body voice. Prices are
+     optional and muted — no urgency per brand rules. */
+  .email-window {
+    margin: 0 auto 10px;
+    max-width: 440px;
+    padding: 0 10px;
+  }
+  .email-window-eyebrow {
+    font-family: var(--email-serif); font-style: italic;
+    font-size: 12px; color: var(--ink-muted);
+    text-transform: uppercase; letter-spacing: 0.14em;
+    text-align: center; margin: 0 0 10px;
+  }
+  .email-window-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .email-window-cell { text-align: left; }
+  .email-window-tile {
+    aspect-ratio: 4/5; border-radius: 6px; overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .email-window-tile.t1 { background: linear-gradient(135deg, #c7b48a 0%, #8b7040 100%); }
+  .email-window-tile.t2 { background: linear-gradient(135deg, #a89170 0%, #6a5538 100%); }
+  .email-window-tile.t3 { background: linear-gradient(135deg, #d4c094 0%, #8a7555 100%); }
+  .email-window-tile.t4 { background: linear-gradient(135deg, #9e8860 0%, #5a4828 100%); }
+  .email-window-tile.t5 { background: linear-gradient(135deg, #b8a274 0%, #7a6340 100%); }
+  .email-window-tile.t6 { background: linear-gradient(135deg, #c4a888 0%, #806340 100%); }
+  .email-window-caption {
+    font-family: var(--email-serif);
+    font-style: italic;
+    font-size: 12px; line-height: 1.35;
+    color: var(--ink-mid);
+    margin: 0 2px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Closer — "See more finds in the booth" + CTA. */
+  .email-closer {
+    text-align: center;
+    padding: 22px 10px 0;
+    margin-top: 18px;
+    border-top: 1px solid var(--ink-hairline);
+  }
+  .email-closer-eyebrow {
+    font-family: var(--email-serif); font-style: italic;
+    font-size: 19px; color: var(--ink-mid);
+    line-height: 1.35;
+    margin: 0 0 4px;
+  }
+  .email-closer-sub {
+    font-family: var(--email-serif);
+    font-size: 13px; color: var(--ink-muted);
+    margin: 0 0 16px;
+  }
+  .email-closer-cta {
+    display: inline-block;
+    padding: 13px 28px;
+    background: var(--green);
+    color: #fff9e8;
+    font-family: var(--email-serif);
+    font-size: 15px; font-weight: 600;
+    border-radius: 999px;
+    text-decoration: none;
+    letter-spacing: 0.005em;
+  }
+
+  /* App download closer — RETIRED in revision 2. Moved to the main CTA
+     (Open in Treehouse Finds) as the install hook; the separate block was
+     redundant and ate vertical space. Classes left out of the stylesheet. */
+
+  /* Footer — identical to committed renderEmailShell footer copy. */
+  .email-footer {
+    font-family: var(--email-serif);
+    font-size: 11px; color: var(--ink-faint);
+    line-height: 1.6;
+    padding: 22px 10px 0;
+    margin-top: 24px;
+    border-top: 1px solid var(--ink-hairline);
+    text-align: center;
+  }
+
+  /* Spec table at the bottom */
+  .spec-box {
+    max-width: 1040px; margin: 40px auto 0;
+    padding: 22px 28px;
+    background: rgba(30, 77, 43, 0.14);
+    border: 1px solid rgba(160, 200, 170, 0.28);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.92);
+    font-size: 13px; line-height: 1.75;
+  }
+  .spec-box h3 {
+    font-family: var(--im-fell); font-size: 20px; font-weight: 400;
+    color: #fff9e8; margin: 0 0 10px;
+  }
+  .spec-box h4 {
+    font-family: var(--sys); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: rgba(232,221,199,0.55);
+    margin: 16px 0 6px; font-weight: 500;
+  }
+  .spec-box ol { margin: 6px 0 0; padding-left: 22px; }
+  .spec-box ol li { margin-bottom: 8px; }
+  .spec-box strong { color: #fff9e8; font-weight: 500; }
+  .spec-box code {
+    background: rgba(255,255,255,0.08); padding: 1px 6px;
+    border-radius: 3px; font-size: 12px; font-family: ui-monospace, monospace;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <h1 class="exploration-title">Share your booth — the Window email · v1</h1>
+  <p class="exploration-subtitle">
+    MVP vendor-share feature. Vendor taps the share icon on <code>/my-shelf</code> → bottom-sheet compose with a live preview of the 6 most-recent available finds → types one recipient email → Treehouse sends a Window email. Recipient sees a single vendor's hero name, booth post-it, mall + address, a 6-tile Window grid, and a quiet Treehouse invitation at the bottom.
+  </p>
+
+  <div class="decisions-pane">
+    <h3>What's locked (revised — second pass)</h3>
+    <ul>
+      <li><span class="flag">Q2</span> <strong>The Window is always 6 auto-picked tiles.</strong> 6 most-recent <code>status='available'</code> posts for the active booth. No manual picker in MVP.</li>
+      <li><span class="flag">Q3</span> <strong>One recipient at a time.</strong> Walk-up demo surface: vendor or curious shopper types one email, sends one Window. Both vendor-originated and shopper-originated shares work the same way.</li>
+      <li><span class="flag brand">Typography</span> <strong>Georgia throughout the email body.</strong> Respects the committed session-32 stance in <code>email-v1-2.html</code> + <code>lib/email.ts</code>. Share email extends <code>renderEmailShell()</code> rather than inventing a new voice.</li>
+      <li><span class="flag brand">Hero weight</span> <strong>Treehouse Finds lockup small top · vendor name is the body hero</strong> (Option 3 from the standup). Shell header at Georgia 26px/600; vendor name drops below the hairline at Georgia 34px/600.</li>
+      <li><span class="flag">Chrome</span> <strong>Banner + post-it mirrors the <code>/my-shelf</code> <code>BoothHero</code> primitive.</strong> Hero image behind, post-it pinned bottom-right at 6° rotation. Same 196px height, same 86px post-it, same pin. Treehouse artifact recipient would recognize in-app.</li>
+      <li><span class="flag sys">Systems</span> <strong>Extends <code>lib/email.ts</code>.</strong> New public fn <code>sendBoothWindow(payload)</code> + new <code>POST /api/share-booth</code> route. Uses <code>renderEmailShell()</code> for Treehouse chrome; body HTML new but composed from committed style primitives.</li>
+    </ul>
+
+    <h3 class="mt">Revisions from round 1 (this pass)</h3>
+    <ul>
+      <li><span class="flag">Frame 2</span> Eyebrow “Share your booth” → paper-airplane glyph. Title “Send a Window” → “Share this Window” (neutral to who is sharing). Description → “A window into a curated booth — and an invitation to explore it in person.” CTA → “Share the Window.”</li>
+      <li><span class="flag">Frame 3</span> Copy calibrated for humility: “Your snapshot is on its way — it should land shortly.” Keeps the “on its way” framing without overpromising delivery.</li>
+      <li><span class="flag brand">Frame 4 — brand</span> Brand lockup “Treehouse” → “Treehouse Finds.” Tagline “Kentucky &amp; Southern Indiana” → “Embrace the Search. Treasure the Find.” Intentional trim — “Share the Story” is done by the Window itself, doesn’t need to be said. <strong>See flags below for cross-comms sweep.</strong></li>
+      <li><span class="flag">Frame 4 — hero</span> Centered post-it retired. Booth banner with hero image + post-it pinned bottom-right now mirrors <code>/my-shelf</code> <code>BoothHero</code> exactly. Vendor branding and app consistency earn this change; the post-it no longer floats.</li>
+      <li><span class="flag">Frame 4 — closer</span> “See the rest of the booth” → “Explore the rest of the booth.” Sub “A Window is just six — the booth holds more” → “More treasures waiting to be discovered.” CTA “Open ZenForged Finds” → “Open in Treehouse Finds” (deep-link to booth if app installed; browser fallback otherwise).</li>
+      <li><span class="flag">Frame 4 — app closer</span> Entire “Sent from / Treehouse / tagline / URL” block deleted. Redundant after the main CTA becomes the install hook. Shell footer remains.</li>
+      <li><span class="flag">Frame 4 — subject</span> “Sarah sent you a Window into ZenForged Finds” → “A Window into ZenForged Finds.” Mode-neutral: works whether vendor or shopper originated the share. Sender voice inside the body carries the “Sarah” attribution.</li>
+    </ul>
+
+    <h3 class="mt">🚩 Flags for separate scoped sessions (do NOT ship with Window MVP)</h3>
+    <ul>
+      <li><span class="flag defer">Rename sweep</span> <strong>“Treehouse” → “Treehouse Finds” across the product.</strong> Confirmed the official product name. Affects: <code>lib/email.ts renderEmailShell()</code> brand lockup (Email #1 + #2), <code>email-v1-2.html</code> mockup, <code>CONTEXT.md</code> §1, <code>MASTER_PROMPT.md</code>, PWA manifest, Notion roadmap references, Supabase OTP email templates, session-opener text. This Window mockup previews the new lockup but does NOT authorize the sweep. Queue as its own session (estimate ~1–2 sessions of sweep + on-device QA).</li>
+      <li><span class="flag defer">Tagline sweep</span> <strong>“Kentucky &amp; Southern Indiana” → “Embrace the Search. Treasure the Find.”</strong> as the email-shell tagline. Deliberate two-clause trim — “Share the Story” is an internal pillar but not one that needs to be said. Affects all three onboarding emails + any future transactional emails. Cross-check: <code>CONTEXT.md</code> §1 still documents the full three-clause tagline “Embrace the Search. Treasure the Find. Share the Story.” as the product-level anchor — that stays. Only the <em>email-surface</em> subtagline shortens. Queue alongside the rename sweep.</li>
+      <li><span class="flag defer">CTA deep-link</span> <strong>“Open in Treehouse Finds” CTA target.</strong> Ideal behavior: deep-link to <code>/my-shelf/?booth=&lt;slug&gt;</code> (or <code>/vendor/[slug]</code> if not the signed-in user’s booth) if PWA installed; fall back to <code>/vendor/[slug]</code> in browser. Full install-then-deep-link flow needs Universal Links (already parked on Sprint 6+ per CONTEXT.md §15). MVP honest target is the browser fallback URL. Flag for when Universal Links sprint lands.</li>
+    </ul>
+
+    <h3 class="mt">What this mockup is asking you to judge</h3>
+    <ul>
+      <li><strong>Frame 1 — Share entry point.</strong> Share icon in the masthead right slot. Is the right slot the right location, or should the share entry live inline next to the booth name (after Q-002 moves the picker chevron there)?</li>
+      <li><strong>Frame 2 — the mini-Window preview.</strong> Does it earn its space, or is it redundant?</li>
+      <li><strong>Frame 4 — does the new banner treatment land?</strong> Hero image + pinned post-it matches <code>/my-shelf</code>. Worth the added email weight (SVG-rendered banner vs. single post-it), or does the previous centered-post-it feel cleaner?</li>
+      <li><strong>Captions under tiles — do they stay?</strong> Three-word limit, no prices. Or strip to photos-only to match email-v1-2’s no-captions precedent?</li>
+      <li><strong>Subject line.</strong> Mode-neutral “A Window into ZenForged Finds” is clear but may read cold vs. the warmer “Sarah sent you…” Is the tradeoff worth the mode-neutrality?</li>
+    </ul>
+
+    <h3 class="mt">What is explicitly out of scope</h3>
+    <ul>
+      <li><span class="flag defer">Later</span> <strong>Multiple recipients per send.</strong> One at a time in MVP.</li>
+      <li><span class="flag defer">Later</span> <strong>Link share + PNG share</strong> (Directions A + C from scoping). Email is MVP-first.</li>
+      <li><span class="flag defer">Later</span> <strong>Manual find selection.</strong> Auto-pick is the MVP answer.</li>
+      <li><span class="flag defer">Later</span> <strong>Reply handling.</strong> <code>reply_to</code> points to admin, not to the vendor.</li>
+      <li><span class="flag defer">Later</span> <strong>Delivery proof.</strong> MVP is best-effort per <code>lib/email.ts</code> convention.</li>
+      <li><span class="flag defer">Later</span> <strong>Admin moderation.</strong> No queue, no review. Rate limit is the abuse lever.</li>
+    </ul>
+  </div>
+
+  <!-- SECTION A — /my-shelf with share entry point -->
+
+  <h2 class="section-header">The flow — from shelf to send</h2>
+  <p class="section-sub">Three phone screens on the vendor side (entry · compose · confirm), then the recipient's inbox.</p>
+
+  <div class="frames-row">
+
+    <!-- Frame 1 — share entry on /my-shelf -->
+    <div class="frame-column">
+      <p class="frame-label">Frame 1 — Share entry on <code>/my-shelf</code></p>
+      <p class="frame-sub">Masthead right slot becomes the share icon. Paper-airplane glyph echoes the existing Find Detail share-bubble language. Pulse ring is mockup-only — on-device the icon renders static.</p>
+      <div class="phone pwa">
+        <div class="phone-scroll">
+          <div class="masthead">
+            <div class="masthead-icon-bubble">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>
+              </svg>
+            </div>
+            <div class="masthead-title">Treehouse Finds</div>
+            <div class="masthead-icon-bubble" style="position: relative; background: rgba(30, 77, 43, 0.10); color: var(--green);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 2 11 13"/>
+                <path d="M22 2l-7 20-4-9-9-4 20-7Z"/>
+              </svg>
+              <div class="ring-pulse" style="top: -8px; left: -8px;"></div>
+            </div>
+          </div>
+
+          <div class="booth-banner-pad">
+            <div class="booth-banner">
+              <div class="booth-banner-inner">
+                <div class="booth-banner-img"></div>
+                <div class="booth-banner-scrim"></div>
+              </div>
+              <div class="postit">
+                <div class="postit-pin"></div>
+                <div class="postit-eyebrow">Booth</div>
+                <div class="postit-num">369</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="booth-body">
+            <h2 class="booth-name">ZenForged Finds</h2>
+            <div class="booth-loc">
+              <div class="booth-pin">⚲</div>
+              <div class="booth-loc-text">
+                <span class="booth-loc-mall">America's Antique Mall</span><br>
+                4150 Shelbyville Rd · Louisville, KY
+              </div>
+            </div>
+
+            <div class="view-label-row">
+              <div class="view-label">Window view</div>
+              <div class="view-count">12 finds</div>
+            </div>
+            <div class="window-grid">
+              <div class="window-tile t1"></div>
+              <div class="window-tile t2"></div>
+              <div class="window-tile t3"></div>
+              <div class="window-tile t4"></div>
+              <div class="window-tile t5"></div>
+              <div class="window-tile t6"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Frame 2 — compose sheet open -->
+    <div class="frame-column">
+      <p class="frame-label">Frame 2 — Compose sheet open</p>
+      <p class="frame-sub">Tap share → bottom-sheet opens over <code>/my-shelf</code>. Eyebrow + title + one-line description name the purpose. Mini-Window preview shows the 6 tiles that will land in the recipient's inbox. One email input. Green CTA.</p>
+      <div class="phone pwa">
+        <div class="phone-scroll">
+          <div class="masthead">
+            <div class="masthead-icon-bubble">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>
+              </svg>
+            </div>
+            <div class="masthead-title">Treehouse Finds</div>
+            <div class="masthead-icon-bubble" style="background: rgba(30, 77, 43, 0.10); color: var(--green);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 2 11 13"/>
+                <path d="M22 2l-7 20-4-9-9-4 20-7Z"/>
+              </svg>
+            </div>
+          </div>
+
+          <div class="booth-banner-pad" style="opacity: 0.35;">
+            <div class="booth-banner">
+              <div class="booth-banner-inner">
+                <div class="booth-banner-img"></div>
+                <div class="booth-banner-scrim"></div>
+              </div>
+              <div class="postit">
+                <div class="postit-pin"></div>
+                <div class="postit-eyebrow">Booth</div>
+                <div class="postit-num">369</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sheet-scrim">
+            <div class="sheet">
+              <div class="sheet-handle"></div>
+              <div class="sheet-eyebrow-glyph">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 2 11 13"/>
+                  <path d="M22 2l-7 20-4-9-9-4 20-7Z"/>
+                </svg>
+              </div>
+              <h3 class="sheet-title">Share this Window</h3>
+              <p class="sheet-description">A window into a curated booth &mdash; and an invitation to explore it in person.</p>
+
+              <div class="sheet-preview-frame">
+                <p class="sheet-preview-eyebrow">A Window into</p>
+                <p class="sheet-preview-booth">ZenForged Finds</p>
+                <div class="sheet-preview-grid">
+                  <div class="sheet-preview-tile t1"></div>
+                  <div class="sheet-preview-tile t2"></div>
+                  <div class="sheet-preview-tile t3"></div>
+                  <div class="sheet-preview-tile t4"></div>
+                  <div class="sheet-preview-tile t5"></div>
+                  <div class="sheet-preview-tile t6"></div>
+                </div>
+                <p class="sheet-preview-footer">Refreshed every time you post a new find.</p>
+              </div>
+
+              <label class="v1-label">Send to</label>
+              <input class="v1-input" value="marta@example.com" readonly>
+
+              <button class="v1-cta">Share the Window</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Frame 3 — confirmation -->
+    <div class="frame-column">
+      <p class="frame-label">Frame 3 — Sent</p>
+      <p class="frame-sub">Post-send state. Paper-wash bubble + green check. Echoed recipient email as proof. "Share with someone else" loops back to the compose sheet with the input cleared. Taps outside return to <code>/my-shelf</code>.</p>
+      <div class="phone pwa">
+        <div class="phone-scroll">
+          <div class="masthead">
+            <div class="masthead-icon-bubble">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>
+              </svg>
+            </div>
+            <div class="masthead-title">Treehouse Finds</div>
+            <div class="masthead-icon-bubble" style="background: rgba(30, 77, 43, 0.10); color: var(--green);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 2 11 13"/>
+                <path d="M22 2l-7 20-4-9-9-4 20-7Z"/>
+              </svg>
+            </div>
+          </div>
+
+          <div class="booth-banner-pad" style="opacity: 0.3;">
+            <div class="booth-banner">
+              <div class="booth-banner-inner">
+                <div class="booth-banner-img"></div>
+                <div class="booth-banner-scrim"></div>
+              </div>
+              <div class="postit">
+                <div class="postit-pin"></div>
+                <div class="postit-eyebrow">Booth</div>
+                <div class="postit-num">369</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sheet-scrim">
+            <div class="sheet" style="padding-bottom: 36px;">
+              <div class="sheet-handle"></div>
+
+              <div class="paper-wash-bubble">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 6 9 17l-5-5"/>
+                </svg>
+              </div>
+
+              <h1 class="confirm-title">Window sent</h1>
+              <p class="confirm-body">
+                Your snapshot is on its way &mdash; it should land shortly.
+              </p>
+
+              <div class="confirm-echo">
+                <div class="label">Sent to</div>
+                <div class="email">marta@example.com</div>
+              </div>
+
+              <a class="confirm-secondary" href="#">Share with someone else</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SECTION B — The email itself -->
+
+  <h2 class="section-header">The Window in the recipient's inbox</h2>
+  <p class="section-sub">Rendered inside iOS Mail for inbox context. Treehouse shell unchanged from Email #1 / Email #2. Vendor name becomes the body hero beneath the lockup hairline.</p>
+
+  <div class="frames-row">
+
+    <div class="frame-column">
+      <p class="frame-label">Frame 4 — The Window email</p>
+      <p class="frame-sub">Subject line on arrival. Body opens with the Treehouse lockup (shell), then drops the sender voice + vendor name hero + post-it + location + 6-tile Window + "See more" CTA + quiet app closer.</p>
+
+      <div class="phone mail">
+        <div class="phone-scroll" style="overflow-y: auto;">
+          <div class="mail-chrome">
+            <div class="mail-back">
+              <svg viewBox="0 0 12 20" fill="currentColor"><path d="M10.5 1L1.5 10l9 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Inbox
+            </div>
+          </div>
+
+          <div class="mail-header">
+            <div class="mail-from-row">
+              <div class="mail-avatar">T</div>
+              <div class="mail-meta">
+                <div class="mail-from">Treehouse</div>
+                <div class="mail-to">to me</div>
+              </div>
+              <div class="mail-date">11:02 AM</div>
+            </div>
+            <div class="mail-subject">A Window into ZenForged Finds</div>
+          </div>
+
+          <div class="email-body-wrap">
+            <div class="email-card">
+
+              <div class="email-brand">
+                <p class="email-brand-name">Treehouse Finds</p>
+                <p class="email-brand-tagline">Embrace the Search. Treasure the Find.</p>
+              </div>
+
+              <p class="email-sender-voice">
+                <strong>Sarah</strong> sent you a Window into her booth.
+              </p>
+
+              <h2 class="email-vendor-name">ZenForged Finds</h2>
+
+              <div class="email-booth-banner-wrap">
+                <div class="email-booth-banner">
+                  <div class="email-booth-banner-inner">
+                    <div class="email-booth-banner-img"></div>
+                    <div class="email-booth-banner-scrim"></div>
+                  </div>
+                  <div class="postit-in-banner">
+                    <div class="postit-pin-in-banner"></div>
+                    <div class="postit-eyebrow-in-banner">Booth</div>
+                    <div class="postit-num-in-banner">369</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="email-location">
+                <div class="email-location-pin">⚲</div>
+                <div class="email-location-body">
+                  <div class="email-location-mall">America's Antique Mall</div>
+                  <div class="email-location-addr">4150 Shelbyville Rd, Louisville, KY</div>
+                </div>
+              </div>
+
+              <div class="email-window">
+                <p class="email-window-eyebrow">The Window</p>
+                <div class="email-window-grid">
+                  <div class="email-window-cell">
+                    <div class="email-window-tile t1"></div>
+                    <div class="email-window-caption">Brass camel figurine</div>
+                  </div>
+                  <div class="email-window-cell">
+                    <div class="email-window-tile t2"></div>
+                    <div class="email-window-caption">Victorian vanity mirror</div>
+                  </div>
+                  <div class="email-window-cell">
+                    <div class="email-window-tile t3"></div>
+                    <div class="email-window-caption">Stained-glass lamp</div>
+                  </div>
+                  <div class="email-window-cell">
+                    <div class="email-window-tile t4"></div>
+                    <div class="email-window-caption">Maritime oil painting</div>
+                  </div>
+                  <div class="email-window-cell">
+                    <div class="email-window-tile t5"></div>
+                    <div class="email-window-caption">Ceramic greyhound</div>
+                  </div>
+                  <div class="email-window-cell">
+                    <div class="email-window-tile t6"></div>
+                    <div class="email-window-caption">Brass eagle on perch</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="email-closer">
+                <p class="email-closer-eyebrow">Explore the rest of the booth</p>
+                <p class="email-closer-sub">More treasures waiting to be discovered.</p>
+                <a href="#" class="email-closer-cta">Open in Treehouse Finds</a>
+              </div>
+
+              <div class="email-footer">
+                You're receiving this because someone shared a Treehouse Finds Window with you. Reply to this email if anything looks off.
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Build spec sketch -->
+  <div class="spec-box">
+    <h3>Build scope (pre-approval sketch)</h3>
+
+    <h4>Database</h4>
+    <p>None. No schema changes for MVP. Share events logged to <code>console.log</code> for now; a <code>share_events</code> table is Sprint 6+ if analytics become a real roadmap item.</p>
+
+    <h4>New routes and libs</h4>
+    <ol>
+      <li><strong><code>POST /api/share-booth</code></strong> — <code>requireAuth</code>. Reads recipient email + active vendor id from request body. Resolves the 6 most-recent available posts for that vendor via <code>getVendorPosts(vendorId, 6)</code>. Fires <code>sendBoothWindow()</code>. Rate-limit 5 sends / 10 min per IP matches the <code>/api/vendor-request</code> pattern.</li>
+      <li><strong><code>lib/email.ts: sendBoothWindow(payload)</code></strong> — new export. Signature: <code>{ recipientEmail, vendor: Vendor, mall: Mall, posts: Post[] }</code>. Extends <code>renderEmailShell()</code>; body HTML is new but composed from the shared <code>pStyle</code> + <code>HAIR</code> + <code>PAPER</code> primitives already declared. Preheader: <code>"{firstName} sent you a Window into {vendorName}"</code>. Salutation-free body (no "Hi [recipient]") — recipient's name isn't known.</li>
+      <li><strong><code>lib/posts.ts</code></strong> — verify <code>getVendorPosts(vendorId, limit)</code> filters to <code>status='available'</code> and orders by <code>created_at DESC</code>. If it doesn't, add a new <code>getVendorWindowPosts</code> dedicated helper rather than mutating the existing contract. (Session-33 dependent-surface audit lesson: don't mutate a shared data function's semantics when a new caller wants different semantics — add a new function.)</li>
+    </ol>
+
+    <h4>Client surfaces</h4>
+    <ol>
+      <li><strong><code>app/my-shelf/page.tsx</code></strong> — share-icon button in masthead right slot. Opens a new <code>&lt;ShareBoothSheet&gt;</code> component. Entry point only shows if <code>vendorList.length &gt;= 1</code> AND the active vendor has <code>&gt;= 1</code> available post (empty-window vendors get the icon hidden — no point sharing a blank Window).</li>
+      <li><strong>New component: <code>&lt;ShareBoothSheet&gt;</code></strong> — mirrors <code>&lt;BoothPickerSheet&gt;</code> chrome + animation. States: <code>compose</code> → <code>sending</code> → <code>sent</code> → <code>error</code>. Single email input with basic RFC validation (regex, no email existence check). CTA disabled until valid email shape. POSTs via <code>authFetch</code>.</li>
+      <li><strong>No BottomNav changes.</strong> Share is a vendor action, not a shopper action — no public surface affected.</li>
+      <li><strong>Q-002 coexistence.</strong> This mockup assumes Q-002 has shipped (masthead single-variant "Treehouse Finds"). If Q-002 ships after this feature, the share icon placement stays — it lives in the right slot either way.</li>
+    </ol>
+
+    <h4>Email rendering</h4>
+    <ol>
+      <li><strong>The post-it rotation</strong> — CSS <code>transform</code> is stripped by Outlook + some Gmail clients. Render the post-it as an inline SVG in the HTML email (SVG rotation is declared inside the <code>&lt;svg&gt;</code> with <code>transform="rotate(4)"</code> which IS respected by all modern mail clients). Mockup shows CSS rotation for review fidelity; production uses SVG.</li>
+      <li><strong>The 6 tiles</strong> — use the same Supabase public URL as the feed tiles (<code>post-images</code> bucket). No image resizing — modern mail clients handle the grid correctly at the source resolution. If Outlook misrenders the grid (known risk), fallback is a vertical stack of 6 images, one per row.</li>
+      <li><strong>Deep links to <code>/vendor/[slug]</code></strong> — CTA button href uses the vendor's canonical public shelf URL. Already a live route; no new landing surface needed for MVP.</li>
+    </ol>
+
+    <h4>Rate limiting + abuse</h4>
+    <ol>
+      <li><strong>5 sends / 10 min per IP.</strong> Matches <code>/api/vendor-request</code>'s budget — tight enough to prevent walk-in scripting, loose enough for a vendor running a mall demo.</li>
+      <li><strong>Per-recipient dedup</strong> in-memory for 60 seconds — prevents accidental double-tap double-send if the CTA doesn't disable cleanly during <code>sending</code>.</li>
+      <li><strong>Abuse surface</strong> — vendor-authenticated only. Only vendors with <code>&gt;= 1</code> approved vendor row can send. Shoppers + anonymous users never see the entry point.</li>
+    </ol>
+
+    <h4>What QA covers at ship</h4>
+    <ol>
+      <li>Vendor with empty shelf — share icon hidden ✓</li>
+      <li>Vendor with 1–5 available posts — Window pads missing tiles with a graceful placeholder ("More finds coming soon" tile)? OR truncates to actual count without placeholders? <em>Decision deferred to build-spec; mockup assumes 6 real tiles.</em></li>
+      <li>Vendor with 6+ available posts — Window shows the 6 most-recent by <code>created_at DESC</code> ✓</li>
+      <li>Recipient email malformed — CTA stays disabled with inline copy ✓</li>
+      <li>Send succeeds — confirmation state ✓</li>
+      <li>Send fails (Resend non-2xx) — error state with retry option ✓</li>
+      <li>Multi-booth vendor — Window sent from the ACTIVE booth only, never a collapse of multiple booths into one ✓</li>
+      <li>Vendor-uploaded image fails to load in the recipient email — alt text + rendering-degradation behavior ✓</li>
+    </ol>
+
+    <h4>Session estimate</h4>
+    <ol>
+      <li><strong>Session 1:</strong> mockup approval + build spec written to <code>docs/share-booth-build-spec.md</code> (~30 min).</li>
+      <li><strong>Session 2:</strong> <code>lib/email.ts</code> + <code>POST /api/share-booth</code> + rate limit (~90 min).</li>
+      <li><strong>Session 3:</strong> <code>&lt;ShareBoothSheet&gt;</code> component + <code>/my-shelf</code> entry point wiring + states (~90 min).</li>
+      <li><strong>Session 4:</strong> on-device QA walk across all 8 QA paths; cleanup (~60 min including fixes).</li>
+    </ol>
+  </div>
+
+</div>
+
+</body>
+</html>

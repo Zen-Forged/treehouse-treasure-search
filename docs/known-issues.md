@@ -77,6 +77,8 @@ See `docs/queued-sessions.md` Q-002. Session-35 on-device walk surfaced that the
 
 **Tech Rule yield (queued candidate):** *Scope-completeness audit when a prop-wiring gap is named across multiple surfaces.* Q-003 was captured at session-35 close with three surfaces (`/my-shelf`, `/flagged`, `/shelves`). `/find/[id]` (both main + SoldLanding) was overlooked. Session 36 surfaced it only because David's on-device testing walked the path. Rule shape: when a fix targets a prop/prop-wiring gap across multiple pages, grep for every `<Component>` instantiation of the affected component before declaring scope, and include the grep result in the session close.
 
+**Tech Rule yield (session 38 addition to this family):** *Verify the landing surface before declaring scope closed, especially for operations where the return value and the side effect can diverge.* Surfaced during session 38 when I used the computer-environment `create_file` tool to write the Window email mockup to `/Users/davidbutler/Projects/treehouse-treasure-search/docs/mockups/`. The tool returned a success payload but wrote nothing on disk — `create_file` is sandboxed to a different working directory than where the project lives. `MASTER_PROMPT.md` > WORKING CONVENTIONS explicitly states `filesystem:write_file` (MCP) is the only reliable write path for this project, which I knew and still reached past by picking the closer-looking tool. David caught it with "file did not land on disk" before false completion was declared. Rule shape: when a tool call's success signal (return payload, exit code, confirmation message) can be decoupled from the actual on-disk/on-server side effect — particularly across tool boundaries like computer-env vs MCP, API vs DB write, or local cache vs remote persist — verify the landing surface itself (read back the file, query the DB, re-fetch the page) before claiming the work is done. Cousin to the session-33/35/36 family: same diagnostic muscle (don't trust a partial observation), different surface (return-value-vs-side-effect, rather than dependent-surface or half-migration).
+
 ---
 
 ### ✅ KI-007 — `/find/[id]/edit` redirect loop for non-admin vendors (session-36 regression class)
@@ -259,4 +261,4 @@ const callLookupVendor = async (): Promise<Response> => {
 
 ---
 
-> Last updated: 2026-04-20 (session 36 — Q-003 resolved across four surfaces including overlooked Find Detail; KI-007 resolved (`getPost` vendor select missing `user_id`); one Tech Rule candidate queued as cousin to the session-33/35 family)
+> Last updated: 2026-04-21 (session 38 — Window Sprint scoping session; no bugs surfaced or resolved; one Tech Rule candidate added to Q-003's family: "verify the landing surface before declaring scope closed" — captured from the create_file-vs-filesystem:write_file process failure mid-session)
