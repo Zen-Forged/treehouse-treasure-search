@@ -305,6 +305,30 @@ default, not exception          prior pattern — Design agent writes a 14-parag
                                    `docs/design-system.md` as a condensed Status block during
                                    the code sprint, at Design agent's discretion, but never
                                    before David's mockup approval. Added session 28.
+TS downlevelIteration            This project's tsconfig `target` is pre-ES2015 (or
+                                   `downlevelIteration: false`). `for...of` over a `Map`,
+                                   `Set`, or any non-array iterable does not compile —
+                                   `error TS2569: can only be iterated through when using
+                                   the '--downlevelIteration' flag or with a '--target' of
+                                   'es2015' or higher`. When writing new server code that
+                                   needs to iterate over a `Map` or `Set`, prefer the
+                                   collection's built-in method (`Map.prototype.forEach`,
+                                   `Set.prototype.forEach`), or materialize via `Array.from`
+                                   first (`Array.from(map.entries()).forEach(...)`,
+                                   `Array.from(set).forEach(...)`). Arrays are fine either
+                                   way. `Map.forEach` callback signature is `(value, key,
+                                   map)` — value first, key second (opposite of
+                                   destructured `for...of`). Deletion during `forEach` is
+                                   safe per ECMAScript spec (only affects entries not yet
+                                   visited). Do NOT change the compiler target to ES2015+ or
+                                   flip `downlevelIteration` just to make a `for...of` work
+                                   — either change would ripple to every other file in the
+                                   project and is a scope much larger than the code that
+                                   surfaced the issue. Fired session 39 during Q-007 Window
+                                   Sprint build verification (Map-based dedup cleanup loop
+                                   in `/api/share-booth/route.ts`). One-line fix: replace
+                                   `for (const [k, ts] of recentSends)` with
+                                   `recentSends.forEach((ts, k) => ...)`. Added session 39.
 ```
 
 ### Tech Rule promotion queue (pending a dedicated Tech Rule batch session)
@@ -379,7 +403,7 @@ These don't stop work but must be called out explicitly before the session conti
 
 ## Current Risk Register
 
-> Last updated: 2026-04-20 (session 37 close — Sprint 4 tail shipped: T4b `/shelves` AddBoothSheet folded into `/admin` Vendors tab; T4b `/admin/login` disposition locked as Keep Dedicated; T4c confirmed done-via-read; T4d pre-beta QA walk runbook written. New Risk Register row: `/admin` v0.2/v1.1k chrome mix post-T4b, sized for Sprint 5+.)
+> Last updated: 2026-04-21 (session 39 — Q-004 Treehouse → Treehouse Finds rename + Q-005 email tagline shortened + Q-007 Window Sprint backend shipped. One new Tech Rule promoted: TS downlevelIteration rule — `for...of` over Map/Set does not compile at this project's tsconfig target; use `.forEach` or `Array.from` instead. Surfaced during Q-007 build verification on `/api/share-booth/route.ts` dedup cleanup loop.)
 
 | Risk | Severity | Status | Owner |
 |---|---|---|---|
@@ -571,6 +595,6 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 | `docs/queued-sessions.md` | Scoped-but-sequenced work awaiting promotion. Active: Q-002 (picker placement), Q-003 (BottomNav badge). Superseded: Q-001 (KI-006 Path B, retired by session 35). |
 
 ---
-> This document is the operating constitution for the Treehouse system.
+> This document is the operating constitution for the Treehouse Finds system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-20 (session 37 — Sprint 4 tail shipped: T4b `/shelves` AddBoothSheet folded into `/admin` Vendors tab, T4b `/admin/login` disposition locked as Keep Dedicated, T4c confirmed done-via-read, T4d QA walk runbook written)
+> Last updated: 2026-04-21 (session 39 — Q-004 rename sweep + Q-005 tagline shortening + Q-007 Window Sprint backend shipped; TS downlevelIteration Tech Rule promoted)
