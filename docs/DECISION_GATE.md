@@ -403,7 +403,7 @@ These don't stop work but must be called out explicitly before the session conti
 
 ## Current Risk Register
 
-> Last updated: 2026-04-21 (session 39 — Q-004 Treehouse → Treehouse Finds rename + Q-005 email tagline shortened + Q-007 Window Sprint backend shipped. One new Tech Rule promoted: TS downlevelIteration rule — `for...of` over Map/Set does not compile at this project's tsconfig target; use `.forEach` or `Array.from` instead. Surfaced during Q-007 build verification on `/api/share-booth/route.ts` dedup cleanup loop.)
+> Last updated: 2026-04-21 (session 42 — DB test-data wipe against production Supabase. 12 posts + 18 vendors + 26 vendor_requests + 19 auth.users deleted; `david@zenforged.com` confirmed as sole surviving admin. No new risks introduced, no code changed. CLAUDE.md admin-identity note corrected: `NEXT_PUBLIC_ADMIN_EMAIL` was always `david@zenforged.com`, never drifted. Session-42 verify-remaining-count pattern captured as new Tech Rule candidate — two firings in one session but against the same type of work, watch for a firing outside a cleanup context before promoting.)
 
 | Risk | Severity | Status | Owner |
 |---|---|---|---|
@@ -597,4 +597,4 @@ Ask: *"If I started a new session tomorrow with only the repo files, would I be 
 ---
 > This document is the operating constitution for the Treehouse Finds system.
 > It is maintained by the Dev agent and reviewed by David at each sprint boundary.
-> Last updated: 2026-04-21 (session 39 — Q-004 rename sweep + Q-005 tagline shortening + Q-007 Window Sprint backend shipped; TS downlevelIteration Tech Rule promoted)
+> Last updated: 2026-04-21 (session 42 — DB test-data wipe; operational cleanup session, no code, no new rules promoted)

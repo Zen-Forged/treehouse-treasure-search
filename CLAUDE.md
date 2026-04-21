@@ -93,6 +93,49 @@ Full session notes archived. Superseded by session 38 for active whiteboard purp
 
 ---
 
+## ✅ Session 42 (2026-04-21) — DB test-data wipe + admin identity confirmed
+
+Operational cleanup session. No code. Full nuke of test data against production Supabase; admin identity clarified (was already `david@zenforged.com` at the env var, not drifted as CLAUDE.md had implied).
+
+**What was deleted**
+- 12 test posts
+- 18 test vendor rows (13 visible on first pass + 5 orphan `user_id: null` vendors surfaced by verification query — these were approved-but-never-linked residues from earlier `/setup` tests; my initial filter only caught user-linked vendors, the verify-remaining-count pattern caught the rest)
+- 26 test vendor_requests (24 visible on first pass + 2 stragglers: `dbutler80020t@gmail.com` typo variant + a duplicate `dbutlerproductions@yahoo.com` I'd missed in the initial scope)
+- 19 `auth.users` rows via Supabase Dashboard (all 15 `dbutler80020+suffix` + `dbutler80020@gmail.com` + `dbutlerproductions@yahoo.com` + `dbutlerproducrions@yahoo.com` typo + `dburke@gmail.com` unknown-origin orphan)
+
+**What survives**
+- `auth.users`: one row — `david@zenforged.com` (id `00be0152-...`, created 2026-04-11). This is the admin.
+- `posts`, `vendors`, `vendor_requests`: all 0 rows.
+- `malls`, `site_settings`, `site-assets` storage: unchanged.
+
+**Admin identity correction**
+- `NEXT_PUBLIC_ADMIN_EMAIL` in Vercel was already `david@zenforged.com` — not drifted. CLAUDE.md's earlier notes implying admin was `dbutler80020@gmail.com` were wrong; I inferred that from recency of my own context, not from actual env state. The recent QA-walk admin-impersonation steps (sessions 37–41) were all signed in as `david@zenforged.com` — which aligns with the `david@zenforged.com` auth row showing `last_sign_in_at: 2026-04-21 19:41` (right at end of session 41 T4d walk).
+- Result: no env var change needed. Phase 3 collapsed to a single verification step (sign in at `app.kentuckytreehouse.com/login`, confirm `/admin` renders empty). PASSED.
+
+**What this also resolved silently**
+- `dbutler80020@gmail.com` is no longer the personal/testing-vendor-account pattern. Going forward, test vendor identities will be `david+anything@zenforged.com` (Google Workspace plus-addressing confirmed supported on the business domain). The Gmail personal address is fully retired from the project's auth surface.
+- `dbutlerproductions@yahoo.com` stranded rows (both `auth.users` and `vendor_requests`) cleaned as a side effect — ancient debris from sessions 2–3 magic-link delivery testing.
+- One unknown-origin `dburke@gmail.com` orphan (created 2026-04-17 18:27, never signed in) cleaned. Likely someone typing into the live app during in-mall testing; no user data lost since it never verified.
+
+**Method note — verify-remaining-count pattern worth keeping**
+After each batch DELETE, ran `SELECT COUNT(*) FROM {table}` to confirm the table was empty. Twice this surfaced rows my filters had missed (5 orphan vendors after first vendors DELETE, 2 orphan vendor_requests after first vendor_requests DELETE). If I'd relied on only the pre-DELETE query to scope the delete list, both batches would have left debris. Cheap pattern (one SQL SELECT per table), caught two real misses. Worth considering for Tech Rule promotion if the pattern fires again in a future cleanup session.
+
+**On-device last step**
+PWA deleted from iPhone home screen and reinstalled from `app.kentuckytreehouse.com` — nuclear localStorage + service worker cache wipe. Ensures the first real beta-vendor sign-in hits a clean client, not a client with stale `treehouse_active_vendor_id` pointing at a now-deleted row.
+
+**What this unlocks**
+A genuinely empty production DB ready for beta-vendor onboarding. No test-data noise to confuse future diagnostics. The first real vendor who onboards will be the first row in `vendors` — which will simplify any debug session that starts with "is this row test data or real?"
+
+### Session 42 close HITL
+
+Standard close commit (docs-only, no code this session):
+
+```bash
+cd /Users/davidbutler/Projects/treehouse-treasure-search && git add -A && git commit -m "docs: session 42 close — DB test-data wipe, admin identity confirmed" && git push
+```
+
+---
+
 ## ✅ Session 38 (2026-04-21) — Window Sprint scoping + mockup approved
 
 Design agent session per session-28 mockup-first rule. Four-frame share-booth mockup + full dev-handoff build spec + three queued implementation sessions. No code. Full session notes archived; superseded by session 39 for active whiteboard purposes.
@@ -161,44 +204,41 @@ Runbook at `docs/pre-beta-qa-walk.md`. Kicked off after Q-007 walk completed cle
 
 **Sprint 4 tail is fully DONE.** T4d was the last gating pre-beta HITL; all five exit criteria passed. The pre-beta blocker column stays clean. Every regression risk that's been tracked across sessions 32–39 has been verified on-device against production. **Beta invites are technically unblocked** — remaining pre-beta work is operational polish (Sentry, Anthropic billing auto-reload, feed seeding, Tally feedback), not code.
 
-### Session 42 close HITL
-
-Standard close commit:
-
-```bash
-cd /Users/davidbutler/Projects/treehouse-treasure-search && git add -A && git commit -m "docs: sessions 40+41 close — Q-007 shipped, QA walks passed, T4d done" && git push
-```
+### Session 42 close HITL — superseded by actual session 42 close block above
 
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-21 (sessions 40+41 close — Q-007 Window Sprint fully shipped (client + QA walk), T4d pre-beta QA walk PASSED, Sprint 4 tail fully done, pre-beta blocker column clean)
+> Last updated: 2026-04-21 (session 42 close — DB test-data wipe + admin identity confirmed)
 
-**Status:** Sprint 4 fully closed. Both Q-007 (Window Sprint) and T4d (pre-beta onboarding QA) shipped and verified on-device. Q-010 (Window email CTA URL) fixed inline during Scenario 2 of the Q-007 walk. **Beta invites are technically unblocked** — every tracked code regression risk verified clean against production. Outstanding work is operational polish + Q-007 feature expansion (shopper + admin share paths), not gating work.
+**Status:** Production DB is empty of test data. `auth.users` holds exactly one row (`david@zenforged.com`, admin). `posts` / `vendors` / `vendor_requests` all zero. Vercel `NEXT_PUBLIC_ADMIN_EMAIL` confirmed = `david@zenforged.com` (no change needed). iPhone PWA reinstalled, localStorage clean. **Ready for first real beta-vendor onboarding.**
 
-### Recommended next session — Walk debris cleanup + longer-term test-data hygiene
+### Recommended next session — Anthropic model audit + billing safeguards (~30 min)
 
-David flagged post-session 41 that he wants a full DB cleanup session:
-1. **Walk debris** (small): 4 vendors (999, 888, 777, 778), 2 posts, 3 vendor_requests, 2 auth.users — all from today's T4d walk
-2. **Accumulated test accounts** (bigger): ~14 `dbutler80020+*@gmail.com` auth.users from sessions 17–40, plus any associated vendor rows and posts
+Now that the DB is clean, this is the highest-leverage remaining pre-beta item. Two reasons: (1) it's the only operational-polish item with a direct silent-failure risk (per the session-27 billing-as-silent-dependency Tech Rule — if credits hit zero mid-onboarding, auto-captions graceful-collapse to mock and the first real vendor's first find gets a generic caption), (2) it's small and time-bounded (~30 min) so it doesn't gate anything else.
 
-Critical constraint: **preserve `ZenForged Finds · booth 369` and `dbutler80020@gmail.com` as canonical operator personas** — those are real, not test. Everything else matching the test-account pattern should be reviewed row-by-row and deleted in cleanup-order (posts → vendors → vendor_requests → auth.users via Supabase dashboard).
-
-~30–45 min. Best run as its own focused session (irreversible DELETE against production).
+Scope:
+- Grep `model: "claude-*"` across `app/` and `lib/` to verify current model strings
+- Cross-reference against Anthropic's current deprecation page
+- Confirm `claude-sonnet-4-6` (post-caption, story) + `claude-opus-4-7` (identify) + `claude-opus-4-6` (/api/suggest) are all still live
+- Enable Anthropic console auto-reload so balance never hits zero
+- Confirm current balance above a comfortable floor (rule of thumb: $20+)
 
 ### Alternative next sessions
 
-- **Q-008** 🟢 (~90–120 min) — Open Window share to unauthenticated shoppers. Product scope expansion surfaced during Q-007 walk Scenario 1. Requires auth-branching, shopper entry point on `/shelf/[slug]`, sender-attribution rewrite.
+- **Feed content seeding** (~30–60 min) — now clean-slate safe to seed. Need 10–15 posts across 2–3 vendors to make the feed feel populated for the first beta shopper who visits. Requires creating a few non-test vendor rows via `/vendor-request` → `/admin` approve flow, then posting finds. Natural pairing with beta invite prep.
+- **Q-008** 🟢 (~90–120 min) — Open Window share to unauthenticated shoppers. Product scope expansion from Q-007 walk Scenario 1.
 - **Q-009** 🟢 (~15 min standalone / ~5 min inside Q-008) — Admin can share any booth. Extend ownership check with `isAdmin` bypass.
 - **Q-011** 🟢 (~60–90 min) — Window email banner post-it missing/misplaced. Diagnostic + fix across iOS Mail / Gmail / Outlook clients.
 - **Q-002** 🟢 (~20 min) — Picker affordance placement revision (masthead → inline under hero banner).
-- **Tech Rule promotion batch** (~40 min) — four candidates queued: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed. NEW session-40 React 19 ref-forwarding candidate (one firing only; watch for second firing before promoting).
+- **Tech Rule promotion batch** (~40 min) — four candidates queued: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed. NEW session-40 React 19 ref-forwarding candidate (one firing only; watch for second firing before promoting). NEW session-42 verify-remaining-count candidate (two firings this session across two tables; meets the two-firings-before-promote bar if it recurs in any other cleanup-shaped work).
 - **Session-archive drift cleanup** (~30 min) — sessions 28–38 carry one-liner summaries but no archive detail. Pairs well with Tech Rule batch.
-- **Anthropic model audit + billing safeguards** (~30 min) — operational hygiene.
-- **Sprint 3 leftovers pending beta** — error monitoring (Sentry), feed content seeding, Tally feedback link, hero image upload size-guard audit.
+- **Error monitoring** (Sentry or structured logs) — Sprint 3 carryover.
+- **Beta feedback mechanism** (Tally.so link).
+- **Hero image upload size guard** — verify coverage across upload surfaces.
 - **`/admin` v0.2 → v1.2 redesign pass** (Sprint 5+, size L) — still queued; needs design scope first (mockup-first per session-28 rule).
 
-### Session 42 opener (pre-filled for DB cleanup)
+### Session 43 opener (pre-filled for Anthropic model audit + billing safeguards)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
@@ -206,7 +246,7 @@ STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthr
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Running post-walk DB cleanup session. Two scopes: (1) T4d walk debris — 4 vendors (booths 999/888/777/778), 2 posts (c3323dd5 on 888, 757e4518 on 778), 3 vendor_requests matching, 2 auth.users (dbutler80020+888@gmail.com, dbutler80020+777@gmail.com); (2) accumulated test accounts — ~14 prior dbutler80020+*@gmail.com auth.users from sessions 17–40 with any associated vendor rows + posts. Critical constraint: PRESERVE ZenForged Finds booth 369 and dbutler80020@gmail.com as canonical operator personas. Walk each row individually with me before deleting; cleanup order posts → vendors → vendor_requests → auth.users; auth.users deletion via Supabase dashboard (not SQL) to cascade cleanly.
+CURRENT ISSUE: Running Anthropic model audit + billing safeguards session (item 33B per CLAUDE.md). Scope: (1) grep `model: "claude-*"` across app/ and lib/; (2) cross-reference against Anthropic's current deprecation page; (3) verify current model strings are all live (claude-sonnet-4-6 post-caption+story, claude-opus-4-7 identify, claude-opus-4-6 /api/suggest); (4) enable Anthropic console auto-reload; (5) confirm current balance $20+. Rule-source: session-27 billing-as-silent-dependency Tech Rule in docs/DECISION_GATE.md. ~30 min.
 ```
 
 ---
@@ -219,13 +259,12 @@ CURRENT ISSUE: Running post-walk DB cleanup session. Two scopes: (1) T4d walk de
 
 ### 🟡 Remaining pre-beta polish (operational, not code-gating)
 
-- **DB test-data cleanup** — walk debris + ~14 accumulated test accounts. Ready to run as session 42. Preserve ZenForged + booth 369.
-- **Anthropic model audit + billing safeguards** (33B). ~30 min. Includes enabling Anthropic console auto-reload so credits never hit zero (session-27 billing-as-silent-dependency Tech Rule).
+- **Anthropic model audit + billing safeguards** (33B). ~30 min. Includes enabling Anthropic console auto-reload so credits never hit zero (session-27 billing-as-silent-dependency Tech Rule). *Recommended as session 43.*
+- **Feed content seeding** — 10–15 real posts across 2–3 vendors. DB is now empty and clean-slate safe for seeding. Natural pairing with beta invite prep.
 - **Error monitoring** (Sentry or structured logs). Sprint 3 carryover.
-- **Feed content seeding** (10–15 real posts across multiple vendors).
 - **Beta feedback mechanism** (Tally.so link).
 - **Hero image upload size guard** — verify coverage across upload surfaces.
-- **Tech Rule promotion batch** — four candidates queued: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed. Plus session-40 React 19 ref-forwarding candidate (one firing only; watch for second firing before promoting). ~40 min.
+- **Tech Rule promotion batch** — four candidates queued: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed. Plus session-40 React 19 ref-forwarding candidate (one firing only; watch for second firing before promoting). Plus session-42 verify-remaining-count candidate (two firings this session, but both in the same session against the same type of work — watch for it to fire outside a cleanup context before promoting). ~40 min.
 - **Session-archive drift cleanup** — sessions 28–38 carry one-liners but no archive detail. ~30 min batch.
 
 ### 🟡 Q-007 Window Sprint expansion (post-MVP)
@@ -280,4 +319,4 @@ All captured in `docs/queued-sessions.md`:
 - Trigger: say "generate investor update" at session close
 - Process doc: Notion → Agent System Operating Manual → 📋 Investor Update — Process & Cadence
 
-> **Sprint 4 fully closed sessions 40–41. Natural investor-update trigger point** — consider running `generate investor update` before opening session 42.
+> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data for clean-slate beta start. Investor-update trigger point is still valid** — consider running `generate investor update` before opening session 43.
