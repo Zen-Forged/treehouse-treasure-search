@@ -1,5 +1,6 @@
 // app/my-shelf/page.tsx
 // My Booth — vendor profile page. Session 35 (2026-04-20) — multi-booth aware.
+// Session 40 (2026-04-21) — Q-007 Window Sprint client wiring added.
 //
 // Changes from v1.1h/v1.2:
 //   - getVendorByUserId → getVendorsByUserId (array return)
@@ -26,6 +27,19 @@
 //   booths on every visit, which also closes a latent Flow 2 demo-approval
 //   edge case where the vendor would previously need to sign out and back
 //   in to see their booth.
+//
+// Session 40 — Window share wiring:
+//   - Masthead right slot gets a paper-airplane icon that opens
+//     <ShareBoothSheet>. Icon is HIDDEN when `available.length < 1` to
+//     match the server's 409 empty-window guard — vendors with nothing to
+//     share never see the entry point. No server-side check needed;
+//     `available` is already computed client-side for the WindowView.
+//   - Pre-session-40 right slot was `<div />` (empty placeholder), so this
+//     does not displace any existing affordance.
+//   - The existing `handleShare` (link-share via navigator.share/clipboard)
+//     inside BoothHero is a separate gesture and is preserved untouched.
+//     Two share affordances coexist by design: masthead airplane = Window
+//     email, BoothHero airplane = OG link copy.
 //
 // The approved mockup (docs/mockups/my-shelf-multi-booth-v1.html) is the
 // authority for the masthead layout. If this code and the mockup diverge,
@@ -60,6 +74,7 @@ import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import AddFindSheet from "@/components/AddFindSheet";
 import BoothPickerSheet from "@/components/BoothPickerSheet";
+import ShareBoothSheet from "@/components/ShareBoothSheet";
 import {
   BoothHero,
   BoothTitleBlock,
@@ -103,17 +118,27 @@ function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promis
 //              "Viewing / [Booth Name] ▾" block that opens the sheet.
 // Scroll target remains the page's overflow-auto container (passed by parent)
 // per v1.1l's internal-scroll-safe pattern.
+//
+// Session 40: right slot is now a share affordance (paper-airplane icon)
+// when `canShare` is true. When false the slot renders as a 38px spacer so
+// the "38px 1fr 38px" grid stays centered. This matches the masthead layout
+// assumption the picker variant relies on — the center slot needs balanced
+// siders to stay visually centered.
 
 function Masthead({
   scrollTarget,
   variant,
   activeBoothName,
   onPickerOpen,
+  canShare,
+  onShareOpen,
 }: {
   scrollTarget:    React.RefObject<HTMLDivElement | null>;
   variant:         "single" | "picker";
   activeBoothName: string | null;
   onPickerOpen:    () => void;
+  canShare:        boolean;
+  onShareOpen:     () => void;
 }) {
   return (
     <StickyMasthead
@@ -187,8 +212,53 @@ function Masthead({
           </span>
         </button>
       )}
-      <div />
+      {canShare ? (
+        <button
+          onClick={onShareOpen}
+          aria-label="Share this booth by email"
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: "50%",
+            background: v1.iconBubble,
+            border: "none",
+            padding: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <MastheadPaperAirplane />
+        </button>
+      ) : (
+        <div />
+      )}
     </StickyMasthead>
+  );
+}
+
+// Inline paper-airplane glyph for the masthead right-slot share button.
+// Drawn slightly off-axis to echo the +6° tilt used elsewhere in v1.1h/v1.2
+// (booth post-it, BoothHero share button). Uses v1.green to read as an
+// active / commit-shaped affordance at the page-header level.
+function MastheadPaperAirplane() {
+  return (
+    <svg
+      width={18}
+      height={18}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={v1.green}
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M21 3 10.5 13.5" />
+      <path d="M21 3 14.5 21l-4-7.5L3 9.5 21 3Z" />
+    </svg>
   );
 }
 
@@ -295,6 +365,9 @@ function MyBoothInner() {
   const [adminOverride, setAdminOverride] = useState(false);   // true when ?vendor=id is used
   const [vendorReady,   setVendorReady]   = useState(false);
   const [pickerOpen,    setPickerOpen]    = useState(false);
+
+  // Session 40 — Window share sheet state.
+  const [shareOpen,     setShareOpen]     = useState(false);
 
   const [posts,         setPosts]         = useState<Post[]>([]);
   const [postsLoading,  setPostsLoading]  = useState(false);
@@ -642,6 +715,11 @@ function MyBoothInner() {
   // otherwise it follows the real list length.
   const showPicker = !adminOverride && vendorList.length > 1;
 
+  // Session 40 — share icon visibility. Build-spec §4: hidden when the
+  // vendor has no available posts. Client-side check mirrors the server's
+  // 409 empty_window guard. `available` is already filtered above.
+  const canShare = !!activeVendor && available.length >= 1;
+
   return (
     <div
       style={{
@@ -666,6 +744,8 @@ function MyBoothInner() {
           variant={showPicker ? "picker" : "single"}
           activeBoothName={activeVendor?.display_name ?? null}
           onPickerOpen={() => setPickerOpen(true)}
+          canShare={canShare}
+          onShareOpen={() => setShareOpen(true)}
         />
         {loading ? (
           <Skeleton />
@@ -776,6 +856,20 @@ function MyBoothInner() {
           activeVendorId={activeVendor.id}
           onSelect={handlePickerSelect}
           vendorEmail={user.email}
+        />
+      )}
+
+      {/* Session 40 — Window share sheet. Mounted whenever we have an active
+          vendor so the sheet's open/close can be fully controlled by state.
+          Visibility of the entry point (masthead icon) is gated separately
+          above via `canShare`. */}
+      {activeVendor && (
+        <ShareBoothSheet
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          vendor={activeVendor}
+          mall={mall}
+          previewPosts={available}
         />
       )}
 
