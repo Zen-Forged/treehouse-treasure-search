@@ -7,7 +7,7 @@ Status key: 🟢 Ready to run · 🟡 Ready but waiting on a dependency · ⏸�
 
 ## Q-007 🟡 Window Sprint — Share your booth (Direction B) — PARTIAL
 
-**Status:** Session 39 (backend) ✅ shipped. Session 40 (client) 🟢 ready to run. Session 41 (on-device QA) 🟡 waits on session 40.
+**Status:** Session 39 (backend) ✅ shipped. Session 40 (client) ✅ shipped. Session 41 (on-device QA) 🟡 in flight as of 2026-04-21.
 
 **Created:** 2026-04-21 (session 38 close — mockup approval + spec landing)
 
@@ -20,19 +20,32 @@ Status key: 🟢 Ready to run · 🟡 Ready but waiting on a dependency · ⏸�
 - `app/api/share-booth/route.ts` — NEW file. Auth (`requireAuth`) + IP rate limit (5/10min) + email/UUID validation + per-recipient 60s dedup + ownership check + empty-window guard (409) + structured error responses. Ships inline-ownership pattern matching `/api/setup/lookup-vendor`.
 - Three build-time decisions from spec §Unresolved closed: pronoun dropped entirely, sender-name source = `vendor.display_name`, title truncation via CSS `max-height: 2.7em + overflow: hidden`.
 
-### Session 40 remaining work (🟢 ready to run)
+### What shipped session 40
+
+- `components/ShareBoothSheet.tsx` — NEW file, ~520 lines. 4-state bottom sheet (compose / sending / sent / error) mirroring `<BoothPickerSheet>` chrome. Inline `EMAIL_REGEX` matching both server routes. Null-guarded `PreviewTile`. Plain `<style>` keyframes for spinner. Status-specific error copy (403 / 409 / 429 / 400 / 502 / 500) with the 429 dual-case (IP rate limit vs. per-recipient dedup) distinguished via server error string preference.
+- `app/my-shelf/page.tsx` — masthead right slot gets paper-airplane bubble (`v1.iconBubble` bg, inline SVG in `v1.green`) gated on `available.length >= 1` — matches server 409 empty-window guard. Two share affordances now coexist by design: masthead airplane = typed-email Window send, BoothHero airplane = OG link copy.
+- Build-gate fix: `ComposeBody`'s `inputRef` prop typed `React.Ref<HTMLInputElement>` (not `RefObject<HTMLInputElement | null>`) to satisfy React 19's `LegacyRef` shape when forwarding `useRef<T | null>(null)` into an HTML element's `ref` slot. Candidate Tech Rule queued (see below).
+
+### Session 41 QA walk — in progress
+
+Runbook at `docs/share-booth-qa-walk.md`. Scenario 1 (fresh send happy path) passed on-device 2026-04-21. Scenarios 2–4 + T4d still pending. Four scoping items surfaced during Scenario 1 (all non-blocking):
+
+1. **Q-008** (below) — airplane hidden for unauthenticated users; product decision says shoppers SHOULD be able to share
+2. **Q-009** (below) — admin can't share their own test booth (403); ownership check needs to also accept `isAdmin(auth.user)`
+3. **Q-011** (below) — email banner post-it missing or wrong; banner shows booth number below hero instead of pinned on top per spec §Decisions decision 5
+4. **Q-010** (below) — email CTA routes to `/vendor/{slug}` but committed public booth URL is `/shelf/{slug}`; one-line fix
+
+### Session 41 remaining work
 
 | Work | Est. |
 |---|---|
-| `<ShareBoothSheet>` component + `/my-shelf` paper-airplane entry point + 4 sheet states (compose / sending / sent / error) | ~90 min |
+| Complete QA walk Scenarios 2 (dedup), 3 (rate limit), 4 (empty-window) | ~30–45 min |
+| On-device QA walk fixes (if any surface) | variable |
+| Commit + roadmap close-out | ~10 min |
 
-### Session 41 remaining work (🟡 waits on 40)
+### ~~Session 40 opener~~ — used
 
-| Work | Est. |
-|---|---|
-| On-device QA walk (4 scenarios: fresh send, 60s dedup, IP rate-limit, empty-window guard) + fixes + commit | ~60–90 min |
-
-### Session 40 opener (copy/paste when promoted)
+### Session 41 opener (if re-running)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
@@ -40,38 +53,197 @@ STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthr
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Running Q-007 session 40 — Window Sprint client. Implement <ShareBoothSheet> component + /my-shelf paper-airplane entry point + 4 sheet states (compose / sending / sent / error) per docs/share-booth-build-spec.md §3–4. Backend is green and deployed from session 39: POST /api/share-booth with auth + 5/10min rate limit + 60s per-recipient dedup + ownership check + 409 empty-window guard. Use authFetch() pattern. Mirror <BoothPickerSheet> sheet construction. Hide /my-shelf share entry when server-side check finds posts.length < 1. Error copy distinguishes 429/403/409/502 per spec. Session 41 is on-device QA walk (4 scenarios); this session ships client code only.
+CURRENT ISSUE: Resuming Q-007 session 41 — Window Sprint QA walk per docs/share-booth-qa-walk.md. Scenario 1 (fresh send happy path) passed on-device. Scenarios 2 (60s per-recipient dedup), 3 (IP rate limit 5/10min), 4 (empty-window guard 409) remaining. Four scoping items surfaced during Scenario 1 — Q-008 (shopper share), Q-009 (admin share), Q-010 (vendor→shelf URL fix), Q-011 (email banner post-it) — captured in docs/queued-sessions.md. Continue walk; fix Q-010 inline if it's one-line; log others for session 42+.
 ```
 
 ---
 
-## ⏸️ Q-004 — Rename sweep "Treehouse" → "Treehouse Finds" — SUPERSEDED
+## Q-008 🟢 Open Window share to unauthenticated users (shoppers)
 
-**Status:** ⏸️ Superseded 2026-04-21 (session 39 close).
+**Status:** Ready to run. Captures David's session-41 QA-walk observation: "This functionality should be available to all users" — shoppers (not just vendors) should be able to share booths they discover.
 
-**Retirement reason:** Shipped in session 39 as part of the bundled rename-sweep-plus-Window-backend session. David chose "rename first, then backend" at session open — both landed in one commit.
+**Created:** 2026-04-21 (session 41 Scenario 1 QA walk)
 
-**What shipped:** 9 files touched — `lib/email.ts`, `app/layout.tsx`, `app/vendor-request/page.tsx` (intro + both DoneScreen states), `app/login/page.tsx` (logo alt text), `docs/mockups/email-v1-2.html` (15 anchor points including the stray `</li>` typo fix), `docs/supabase-otp-email-templates.md`, `CONTEXT.md` §1 + title banner + footer, `MASTER_PROMPT.md` title only, `CLAUDE.md` session opener template. `public/manifest.json` verified — `name` already correct; `short_name` intentionally stays as `Treehouse` (iOS 12-char truncation would otherwise render `Treehouse Fin…`).
+**Severity:** 🟡 Medium — product scope expansion, not a bug. Closes a gap in the share gesture story: a curious shopper encounters a great booth on the feed, wants to share it with a friend, currently has no entry point.
 
-**HITL completed:** Supabase Dashboard paste (Magic Link + Confirm Signup templates both updated); build green; commit + push.
+### The observation
 
-### Historical scope (preserved for session-archive readers)
+Session 40 wired the paper-airplane entry point ONLY on `/my-shelf` — a vendor-only surface. Shoppers viewing `/shelf/{slug}` (public booth pages), `/vendor/{slug}`, or any individual find have no share affordance. Session-38 build-spec §Rate limiting explicitly scoped this as "Shoppers cannot share vendor booths in MVP" — that scope is now reversed.
 
-Product name confirmed as "Treehouse Finds" at session 38. Rename was bleeding across mockups (Window email used new name; shell lockup still used old). Sweep across user-facing display strings; code identifiers (package names, variables, types, domain, CSS classes) explicitly excluded. See commit `[rename: Treehouse → Treehouse Finds + shorten email tagline (Q-004 + Q-005)]` for full diff.
+### Scope
+
+Three design decisions block this from being trivial:
+
+1. **Where does the entry point live for shoppers?** `/shelf/{slug}` masthead is the logical mirror of `/my-shelf` masthead. `/vendor/{slug}` is the same page under an older URL. Individual find pages (`/find/{id}`) would introduce a third entry point — decide if in or out of scope.
+2. **Auth gate on `/api/share-booth` needs to relax.** Currently `requireAuth` enforces a signed-in user. Shoppers are usually not signed in. Options:
+   - (a) Remove auth entirely — rate limiter becomes the only abuse lever
+   - (b) Require anonymous Supabase session (cheap for signed-out users, gives you a stable uid for dedup)
+   - (c) Keep `requireAuth` for the vendor path AND add a second code path for anonymous shares with tighter rate-limit (e.g. 2/10min vs. 5/10min)
+3. **Sender attribution rewrite.** Current body text: `"{vendor.display_name} sent you a Window into..."`. For shopper shares this is dishonest — the shopper shared it, not the vendor. Options:
+   - (a) Drop the sender line entirely for shopper shares
+   - (b) Add an optional `senderName` input to the sheet (typed by the shopper)
+   - (c) Use "Someone" / "A friend" as a generic sender
+
+Recommend 1(c) — anonymous code path with tighter rate limit, AND (2)(c) to keep the vendor UX unchanged while opening the shopper path with abuse protection, AND (3)(a) to drop the sender line for shopper shares (cleanest, no form UX).
+
+### Files touched (rough)
+
+- `app/api/share-booth/route.ts` — branch: authenticated → ownership-check path, unauthenticated → rate-limit-only path with tighter cap
+- `components/ShareBoothSheet.tsx` — already compose-mode-aware; needs a `mode: "vendor" | "shopper"` prop to skip the ownership error path and adjust copy
+- `app/shelf/[slug]/page.tsx` (or equivalent public shelf page) — add masthead airplane entry point
+- `lib/email.ts:sendBoothWindow` — accept optional `senderMode: "vendor" | "anonymous"`; omit or genericize sender line when anonymous
+- `docs/share-booth-build-spec.md` — update §Rate-limit, §Sender voice, §Auth gate
+
+### Out of scope
+
+- Shopper shares of individual finds (not booths) — separate sprint
+- Email reply-to the shopper — MVP shopper share has no reply path
+- Captcha on the anonymous path — rate limit is the abuse lever; revisit if abuse surfaces
+
+### Estimate
+
+~90–120 min. Splits cleanly across one session if design decisions above are pre-made, two if they aren't.
+
+### Session opener (copy/paste when promoted)
+
+```
+PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
+STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Vercel
+Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
+Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
+
+CURRENT ISSUE: Running queued session Q-008 — open Window share to unauthenticated shoppers. Per docs/queued-sessions.md, add a masthead airplane entry point on /shelf/[slug] (public shelf page), branch /api/share-booth on auth state (authenticated = ownership-check path unchanged; unauthenticated = rate-limit-only path with tighter 2/10min cap), drop or genericize the sender voice line for anonymous shares. Keep vendor UX on /my-shelf identical. Update docs/share-booth-build-spec.md §Rate-limit + §Auth gate.
+```
 
 ---
 
-## ⏸️ Q-005 — Email tagline sweep — SUPERSEDED
+## Q-009 🟢 Admin can share any booth (bypass ownership check)
 
-**Status:** ⏸️ Superseded 2026-04-21 (session 39 close).
+**Status:** Ready to run. Captures David's session-41 QA-walk observation: "This explains the message I received when trying to send from an Admin account 'You can only share booths you own'. Will need to ensure that Admins can also share."
 
-**Retirement reason:** Shipped in session 39 bundled with Q-004 as planned (same files, one commit).
+**Created:** 2026-04-21 (session 41 Scenario 1 QA walk)
 
-**What shipped:** `lib/email.ts` shell subtagline, 3 email frames in `docs/mockups/email-v1-2.html`, `docs/supabase-otp-email-templates.md`. Three-clause product-level tagline (`Embrace the Search. Treasure the Find. Share the Story.`) kept intact in `CONTEXT.md` §1 as the anchor — only the email-surface subtagline shortened to two clauses.
+**Severity:** 🟢 Low — admin-only UX hole. Admin impersonation already works on `/my-shelf` via `?vendor=id`, so admin CAN view any booth's shelf; just can't share it. Internal workflow friction, not user-facing.
 
-### Historical scope (preserved for session-archive readers)
+### The observation
 
-Shortened email shell subtagline from `"Kentucky & Southern Indiana"` to `"Embrace the Search. Treasure the Find."`. The two-clause trim was deliberate — "Share the Story" stays as an internal pillar but doesn't need to appear on every email. Paired naturally with Q-004 (same files, same session). Shipped as part of the session-39 rename-sweep commit.
+`/api/share-booth`'s ownership check is strict: `.eq("id", activeVendorId).eq("user_id", auth.user.id)`. Admin's auth user-id doesn't match the vendor's user_id, so the route returns 403 "You don't own this booth." The rest of the `/my-shelf` page is admin-impersonation-aware (see `app/my-shelf/page.tsx` `adminOverride` branch) but the share endpoint doesn't know about the admin persona.
+
+### Fix
+
+One surgical change in `app/api/share-booth/route.ts` ownership check — accept the request if `auth.user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL` OR the ownership query returns a row. Use `isAdmin(auth.user)` from `lib/auth` if accessible on the server (verify import path — `isAdmin` is client-side today; may need a server-safe variant).
+
+Sender-attribution consideration: when admin shares booth X, the email still says "{X's display_name} sent you a Window" because the vendor row is what's loaded. That reads cleanly and doesn't misattribute (X's booth IS being shared, just via admin). No email-template change needed.
+
+### Files touched
+
+- `app/api/share-booth/route.ts` — extend ownership check with admin bypass
+- `lib/adminAuth.ts` (possibly) — add `isAdminUser(user)` server helper if one doesn't exist. Grep for existing admin-check patterns before adding.
+- `docs/share-booth-build-spec.md` — update §Auth gate to note admin can share any booth
+
+### Pairs with
+
+Q-008. Both relax the ownership check, but differently (Q-008 removes auth entirely for shoppers; Q-009 keeps auth but allows admin to bypass ownership). If Q-008 lands first with the auth-branch pattern, Q-009 becomes a single-line addition to the vendor branch. Recommend sequencing Q-009 INSIDE Q-008's session.
+
+### Estimate
+
+~15 min standalone, or ~5 min additional inside Q-008's session.
+
+### Session opener (copy/paste when promoted standalone)
+
+```
+PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
+STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Vercel
+Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
+Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
+
+CURRENT ISSUE: Running queued session Q-009 — admin can share any booth via Window share. Per docs/queued-sessions.md, extend ownership check in app/api/share-booth/route.ts so admin (NEXT_PUBLIC_ADMIN_EMAIL match or isAdmin-equivalent) bypasses the vendor-ownership match. Sender attribution stays "{vendor.display_name} sent you a Window" — no template change. Update docs/share-booth-build-spec.md §Auth gate.
+```
+
+---
+
+## Q-010 🟢 Fix Window email CTA URL: /vendor/{slug} → /shelf/{slug}
+
+**Status:** Ready to run. Captures David's session-41 QA-walk observation: "Open Treehouse finds app takes me to /vendor/kentuck-chicken. This should direct to /shelf/kentucky-chicken."
+
+**Created:** 2026-04-21 (session 41 Scenario 1 QA walk)
+
+**Severity:** 🟡 Medium — bug. Recipients click the main email CTA and land on the deprecated `/vendor/{slug}` URL instead of the committed public shelf URL `/shelf/{slug}`. Build-spec §3 said `/vendor/{slug}` — the spec was wrong against the rest of the app.
+
+### The fix
+
+One-line change in `lib/email.ts:sendBoothWindow` (or wherever `renderWindowBody` composes the CTA href) — change the URL template from `/vendor/` to `/shelf/`. Grep the file for `/vendor/` to confirm it's the only hit; adjacent CTAs in the same email should all use `/shelf/`.
+
+`/my-shelf` `handleShare` already uses `${BASE_URL}/shelf/${slug}` — that's the canonical URL for public booth pages. `/vendor/{slug}` routes exist for legacy compat but shouldn't be the target for new outgoing links.
+
+### Files touched
+
+- `lib/email.ts` — single-line CTA href change in the Window template
+- `docs/share-booth-build-spec.md` §3 — update spec to say `/shelf/{slug}`, not `/vendor/{slug}`
+- `docs/mockups/share-booth-email-v1.html` — update mockup CTA href if it's referenced anywhere (verify and update)
+
+### Not needed
+
+- No client change
+- No API change
+- No schema change
+
+### Estimate
+
+~10 min including grep + spec + mockup + build check.
+
+### Session opener (copy/paste when promoted)
+
+Small enough to fold into any adjacent session (Q-008, Q-009, Q-011, or any Dev maintenance session). No standalone session needed unless you want the clean commit log.
+
+```
+CURRENT ISSUE: Running queued session Q-010 — fix Window email CTA URL. Change /vendor/{slug} → /shelf/{slug} in lib/email.ts (sendBoothWindow / renderWindowBody). Grep lib/email.ts for /vendor/ to verify single hit. Update docs/share-booth-build-spec.md §3 and mockup file.
+```
+
+---
+
+## Q-011 🟢 Fix Window email banner post-it placement
+
+**Status:** Ready to run. Captures David's session-41 QA-walk observation: "The booth number was displayed below the booth hero image. The plan was to have the booth on top of the image, formatted with the post-it note, as displayed in the my-shelf section."
+
+**Created:** 2026-04-21 (session 41 Scenario 1 QA walk)
+
+**Severity:** 🟡 Medium — email-rendering bug. Build-spec §Decisions decision 5 locked: "Booth banner + pinned post-it mirrors `/my-shelf` BoothHero. Hero image behind, post-it pinned bottom-right at 6° rotation. NOT the centered post-it treatment from the first mockup draft." If the post-it isn't pinned on top of the hero in the delivered email, the session-39 `renderBanner` / `renderPostItSvg` didn't land correctly.
+
+### What to diagnose first
+
+Before writing code, figure out WHY the post-it didn't render on top:
+
+1. **Did the SVG render at all?** Check received email HTML source — if `<svg>` is present, the problem is positioning. If it's stripped, email client stripped the inline SVG (Outlook sometimes does).
+2. **Positioning approach** — session 39 used absolute positioning of the SVG over the banner table cell. Some email clients (Yahoo Mail web, older Outlook) strip `position: absolute`. The mockup may have used positioning that didn't survive.
+3. **Fallback strategy** — if SVG/absolute-position is the issue across clients, consider rendering the post-it inline next to the banner (stacked, not overlaid) as a degraded-but-present variant. Mockup-wins rule still favors the pinned-on-top look on iOS Mail / Gmail web where it works.
+
+### Files touched
+
+- `lib/email.ts` — `renderBanner`, `renderPostItSvg` (both session-39 additions). Likely a CSS / table-layout fix.
+- Potentially the mockup itself if it used CSS tricks the production render didn't replicate
+- Test across iOS Mail, Gmail web, Gmail iOS, Yahoo web, Outlook web BEFORE declaring shipped
+
+### Questions to answer in the fix session
+
+- Does the received email HTML contain `<svg>`?
+- Does the banner image render at all?
+- If both render but stacked (not overlaid), is it a `position` vs. `float` vs. `transform` issue?
+
+### Estimate
+
+~60–90 min. Email-rendering fixes are notoriously finicky across clients. Budget for one iteration per affected client.
+
+### Session opener (copy/paste when promoted)
+
+```
+PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
+STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Vercel
+Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
+Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
+
+CURRENT ISSUE: Running queued session Q-011 — Window email post-it pinned-on-top regression. Session 41 QA walk showed the booth number rendering BELOW the hero image in the delivered email instead of pinned on top via post-it (per build-spec §Decisions decision 5). Diagnose: does <svg> survive in received HTML? Is it a positioning (absolute/float/transform) issue? Test across iOS Mail, Gmail web, Gmail iOS, Yahoo web, Outlook web. Mockup at docs/mockups/share-booth-email-v1.html is the source of truth — mockup wins per session-28 rule. Update lib/email.ts renderBanner / renderPostItSvg.
+```
 
 ---
 
@@ -102,6 +274,8 @@ When Universal Links / apple-app-site-association ship. At that point:
 3. Test on iOS + Android before declaring resolved
 
 **Estimate:** ~20 min post-Universal-Links. Not independently scopable.
+
+**Pairs with:** Q-010 (same CTA href; fix the URL first, then Universal-Link-wrap it).
 
 ---
 
@@ -158,6 +332,36 @@ Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session open
 
 CURRENT ISSUE: Running queued session Q-002 from docs/queued-sessions.md — picker affordance placement revision. Masthead reverts to single-variant "Treehouse Finds"; chevron moves inline next to the IM Fell 28px booth name under the hero banner. Update the mockup file too (docs/mockups/my-shelf-multi-booth-v1.html). No server/schema changes. On-device QA after push: single-booth unchanged, multi-booth shows chevron under banner, sheet still works.
 ```
+
+---
+
+## ⏸️ Q-004 — Rename sweep "Treehouse" → "Treehouse Finds" — SUPERSEDED
+
+**Status:** ⏸️ Superseded 2026-04-21 (session 39 close).
+
+**Retirement reason:** Shipped in session 39 as part of the bundled rename-sweep-plus-Window-backend session. David chose "rename first, then backend" at session open — both landed in one commit.
+
+**What shipped:** 9 files touched — `lib/email.ts`, `app/layout.tsx`, `app/vendor-request/page.tsx` (intro + both DoneScreen states), `app/login/page.tsx` (logo alt text), `docs/mockups/email-v1-2.html` (15 anchor points including the stray `</li>` typo fix), `docs/supabase-otp-email-templates.md`, `CONTEXT.md` §1 + title banner + footer, `MASTER_PROMPT.md` title only, `CLAUDE.md` session opener template. `public/manifest.json` verified — `name` already correct; `short_name` intentionally stays as `Treehouse` (iOS 12-char truncation would otherwise render `Treehouse Fin…`).
+
+**HITL completed:** Supabase Dashboard paste (Magic Link + Confirm Signup templates both updated); build green; commit + push.
+
+### Historical scope (preserved for session-archive readers)
+
+Product name confirmed as "Treehouse Finds" at session 38. Rename was bleeding across mockups (Window email used new name; shell lockup still used old). Sweep across user-facing display strings; code identifiers (package names, variables, types, domain, CSS classes) explicitly excluded. See commit `[rename: Treehouse → Treehouse Finds + shorten email tagline (Q-004 + Q-005)]` for full diff.
+
+---
+
+## ⏸️ Q-005 — Email tagline sweep — SUPERSEDED
+
+**Status:** ⏸️ Superseded 2026-04-21 (session 39 close).
+
+**Retirement reason:** Shipped in session 39 bundled with Q-004 as planned (same files, one commit).
+
+**What shipped:** `lib/email.ts` shell subtagline, 3 email frames in `docs/mockups/email-v1-2.html`, `docs/supabase-otp-email-templates.md`. Three-clause product-level tagline (`Embrace the Search. Treasure the Find. Share the Story.`) kept intact in `CONTEXT.md` §1 as the anchor — only the email-surface subtagline shortened to two clauses.
+
+### Historical scope (preserved for session-archive readers)
+
+Shortened email shell subtagline from `"Kentucky & Southern Indiana"` to `"Embrace the Search. Treasure the Find."`. The two-clause trim was deliberate — "Share the Story" stays as an internal pillar but doesn't need to appear on every email. Paired naturally with Q-004 (same files, same session). Shipped as part of the session-39 rename-sweep commit.
 
 ---
 

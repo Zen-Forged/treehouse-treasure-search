@@ -6,6 +6,19 @@
 //   sendApprovalInstructions(payload)  — Email #2 per onboarding-journey.md
 //   sendBoothWindow(payload)           — Window share email (Q-007, session 39)
 //
+// Session 41 Q-010 (2026-04-21):
+//  - Window email CTA URL fixed from /vendor/{slug} → /shelf/{slug}. The
+//    canonical public shelf route is /shelf/{slug}; /vendor/{slug} is a
+//    legacy alias kept for URL-compat but not the target for new outgoing
+//    links. `handleShare` in /my-shelf uses /shelf/{slug} — this aligns
+//    Window emails with that committed URL.
+//  - Local variable renamed vendorPageUrl → shelfPageUrl so future readers
+//    don't have to trace "why does a variable named vendor lead to /shelf".
+//  - Caught by David's session-41 QA walk Scenario 1.5 — email CTA on
+//    delivered Window email routed to /vendor/kentucky-chicken instead of
+//    /shelf/kentucky-chicken. Build-spec §3 incorrectly specified /vendor/;
+//    spec updated separately.
+//
 // Session 39 (Q-007 Window Sprint):
 //  - Added sendBoothWindow() extending renderEmailShell() with a new
 //    footerHtml override (default preserves the onboarding footer copy
@@ -256,9 +269,12 @@ export async function sendBoothWindow(
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
   const siteUrl    = getSiteUrl();
 
-  const vendorName     = payload.vendor.displayName.trim() || "a booth";
-  const senderFirst    = payload.senderFirstName.trim() || "Someone";
-  const vendorPageUrl  = `${siteUrl}/vendor/${payload.vendor.slug}`;
+  const vendorName    = payload.vendor.displayName.trim() || "a booth";
+  const senderFirst   = payload.senderFirstName.trim() || "Someone";
+  // Session 41 Q-010: canonical public booth URL is /shelf/{slug}, not
+  // /vendor/{slug}. The Window CTA and the plain-text fallback both land
+  // recipients here.
+  const shelfPageUrl  = `${siteUrl}/shelf/${payload.vendor.slug}`;
 
   const subject    = `A Window into ${vendorName}`;
   const preheader  = `${senderFirst} sent you a Window into ${vendorName}.`;
@@ -272,7 +288,7 @@ export async function sendBoothWindow(
     mallAddress:    payload.mall.address,
     googleMapsUrl:  payload.mall.googleMapsUrl,
     posts:          payload.posts,
-    vendorPageUrl,
+    shelfPageUrl,
   });
 
   const footerHtml = `You're receiving this because someone shared a Treehouse Finds Window with you. Reply to this email if anything looks off.`;
@@ -292,7 +308,7 @@ export async function sendBoothWindow(
     ...payload.posts.map(p => `  • ${p.title}`),
     ``,
     `Explore the rest of the booth:`,
-    vendorPageUrl,
+    shelfPageUrl,
     ``,
     `— Treehouse Finds`,
   ].filter(Boolean).join("\n");
@@ -317,13 +333,15 @@ interface WindowBodyOpts {
   mallAddress:   string | null;
   googleMapsUrl: string | null;
   posts:         Array<{ id: string; title: string; imageUrl: string | null }>;
-  vendorPageUrl: string;
+  // Renamed from vendorPageUrl → shelfPageUrl in session 41 Q-010 to reflect
+  // the canonical public shelf URL (/shelf/{slug}, not /vendor/{slug}).
+  shelfPageUrl:  string;
 }
 
 function renderWindowBody(opts: WindowBodyOpts): string {
   const {
     senderFirst, vendorName, boothNumber, heroImageUrl,
-    mallName, mallAddress, googleMapsUrl, posts, vendorPageUrl,
+    mallName, mallAddress, googleMapsUrl, posts, shelfPageUrl,
   } = opts;
 
   const voiceLine = `${escapeHtml(senderFirst)} sent you a Window into ${escapeHtml(vendorName)}.`;
@@ -356,7 +374,7 @@ function renderWindowBody(opts: WindowBodyOpts): string {
         <p style="margin: 0 0 20px; font-family: ${SERIF}; font-size: 13px; line-height: 1.55; color: ${INKMID};">
           More treasures waiting to be discovered.
         </p>
-        <a href="${escapeAttr(vendorPageUrl)}" style="display: inline-block; padding: 12px 22px; background: #1e4d2b; color: #fff9e8; font-family: ${SERIF}; font-size: 15px; font-weight: 600; text-decoration: none; border-radius: 999px; letter-spacing: 0.005em;">
+        <a href="${escapeAttr(shelfPageUrl)}" style="display: inline-block; padding: 12px 22px; background: #1e4d2b; color: #fff9e8; font-family: ${SERIF}; font-size: 15px; font-weight: 600; text-decoration: none; border-radius: 999px; letter-spacing: 0.005em;">
           Open in Treehouse Finds
         </a>
       </div>
