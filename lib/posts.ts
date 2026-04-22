@@ -334,6 +334,37 @@ export async function getVendorsByMall(mallId: string): Promise<Vendor[]> {
   return (data ?? []) as Vendor[];
 }
 
+/**
+ * Fetch ALL vendors across ALL malls, with mall joined.
+ *
+ * Session 45 (2026-04-22) — NEW. Added for the /shelves cross-mall directory
+ * fix. Prior to this, /shelves hardcoded DEFAULT_MALL_ID = AAM, so any booth
+ * seeded via the session-44 <AddBoothInline> at a non-AAM mall disappeared
+ * on refetch. /shelves is a public booth directory (CONTEXT.md §5), which is
+ * cross-mall by definition.
+ *
+ * Ordering: mall_id ASC, then booth_number ASC (nulls last) so booths at
+ * the same mall stay grouped. Booths without a booth_number sink to the
+ * bottom of their mall group.
+ *
+ * Uses `*` in the select to match the sibling getter pattern (getVendorsByUserId,
+ * getVendorBySlug, etc.) — an explicit column list tightens the Supabase
+ * client's type inference on nested selects such that `mall:malls(...)` gets
+ * typed as an array rather than a single object, which collides with
+ * Vendor.mall?: Mall. Matching the `*` pattern keeps the `as Vendor[]` cast
+ * legal. Fields consumed downstream on /shelves (session 45): user_id,
+ * mall_id, display_name, booth_number, slug, bio, hero_image_url, mall.name.
+ */
+export async function getAllVendors(): Promise<Vendor[]> {
+  const { data, error } = await supabase
+    .from("vendors")
+    .select(`*, mall:malls ( id, name, city, state, slug )`)
+    .order("mall_id", { ascending: true })
+    .order("booth_number", { ascending: true, nullsFirst: false });
+  if (error) { console.error("[posts] getAllVendors:", error.message); return []; }
+  return (data ?? []) as Vendor[];
+}
+
 export interface CreateVendorInput {
   mall_id:       string;
   display_name:  string;
