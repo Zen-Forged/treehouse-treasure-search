@@ -16,6 +16,7 @@ import { getSession, isAdmin } from "@/lib/auth";
 import { colors } from "@/lib/tokens";
 import { vendorHueBg, loadBookmarkCount } from "@/lib/utils";
 import AdminOnly from "@/components/AdminOnly";
+import AddBoothInline from "@/components/AddBoothInline";
 import BottomNav from "@/components/BottomNav";
 import type { Vendor, Mall } from "@/types/treehouse";
 import type { User } from "@supabase/supabase-js";
@@ -119,9 +120,11 @@ function SkeletonCard() {
 export default function BoothsPage() {
   const [vendors,       setVendors]       = useState<Vendor[]>([]);
   const [mall,          setMall]          = useState<Mall | null>(null);
+  const [malls,         setMalls]         = useState<Mall[]>([]);
   const [loading,       setLoading]       = useState(true);
   const [user,          setUser]          = useState<User | null>(null);
   const [bookmarkCount, setBookmarkCount] = useState(0);
+  const [addBoothOpen,  setAddBoothOpen]  = useState(false);
 
   useEffect(() => {
     setBookmarkCount(loadBookmarkCount());
@@ -132,6 +135,7 @@ export default function BoothsPage() {
     ]).then(([session, vendorList, mallList]) => {
       setUser(session?.user ?? null);
       setVendors(vendorList);
+      setMalls(mallList);
       setMall(mallList.find(m => m.id === DEFAULT_MALL_ID) ?? null);
       setLoading(false);
     });
@@ -180,6 +184,32 @@ export default function BoothsPage() {
 
       {/* ── Vendor list ── */}
       <main style={{ padding: "16px 15px 0", paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }}>
+
+        {/* Session 44 — Add Booth primitive, admin-only.
+            Partial reversal of session-37 T4b. The mall-walk workflow wants
+            the Add-Booth entry point where the booth directory is, not buried
+            in /admin Vendors tab. Same <AddBoothInline> primitive renders on
+            both surfaces so there's no pattern duplication.
+
+            Chrome mismatch flagged: <AddBoothInline> is v1.1k paperCream +
+            IM Fell; /shelves is still v0.2 Georgia + legacy colors. Will
+            fold into /shelves v1.2 redesign pass (Sprint 5+). */}
+        <AdminOnly user={user}>
+          <AddBoothInline
+            malls={malls}
+            open={addBoothOpen}
+            onToggle={() => setAddBoothOpen(v => !v)}
+            onClose={() => setAddBoothOpen(false)}
+            onCreated={(vendor) => {
+              // Prepend the new vendor so it shows up immediately at top.
+              // Full refetch would catch concurrent admin activity but is
+              // unnecessary for the solo-admin mall-walk workflow.
+              setVendors(prev => [vendor, ...prev]);
+              setAddBoothOpen(false);
+            }}
+          />
+        </AdminOnly>
+
         {loading ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {[0, 1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}
@@ -203,10 +233,11 @@ export default function BoothsPage() {
         )}
       </main>
 
-      {/* T4b (session 37) — Add Booth capability retired from /shelves and
-          folded into /admin Vendors tab. This page is now strictly a browse
-          surface. Admins retain the pencil affordance + Admin badge for
-          navigating to their own shelf management. */}
+      {/* Session 44 (2026-04-22) — Partial reversal of T4b. <AddBoothInline>
+          lives in components/AddBoothInline.tsx and renders here above the
+          vendor list (admin-only) AND in /admin Vendors tab. The primitive
+          is the single source of truth; /shelves is no longer strictly a
+          browse surface for admins. Shoppers still see a pure browse view. */}
 
       <BottomNav active="shelves" flaggedCount={bookmarkCount} />
 
