@@ -19,6 +19,18 @@
 //   - <WindowView> gains `showPlaceholders` prop; <ShelfView> gains `showAddTile` prop (owner parity)
 //   - <PlaceholderTile> new primitive, rendered only when owner has < 9 items
 //
+// Session 46 (2026-04-22) — small-type legibility sweep:
+//   WindowTile caption: FONT_IM_FELL italic 13px → FONT_SYS 14px (400 wt).
+//   ShelfTile caption:  FONT_IM_FELL italic 14px → FONT_SYS 14px (400 wt,
+//                        same size, font swap only).
+//   Rationale lives on app/find/[id]/page.tsx's header (the Find Detail
+//   ShelfCard got the same treatment in this commit). In short: italic
+//   serif at small sizes loses stroke contrast on paperCream and failed
+//   the 40–65 demographic. FONT_SYS already carries the cartographic /
+//   wayfinding voice on these pages (address, prices). Decorative serif
+//   voice preserved on 32px vendor name, mall name, BoothTitleBlock
+//   eyebrow, ViewToggle, and BoothCloser. Only the tile captions move.
+//
 // Session 45 (2026-04-22) — BoothHero URL link-share retired:
 //   The top-right frosted airplane bubble (navigator.share / clipboard URL
 //   fallback) was removed to resolve confusion with the masthead paper-
@@ -629,11 +641,12 @@ function WindowTile({ post, index }: { post: Post; index: number }) {
         </div>
         <div
           style={{
-            fontFamily: FONT_IM_FELL,
-            fontStyle: "italic",
-            fontSize: 13,
+            fontFamily: FONT_SYS,
+            fontSize: 14,
+            fontWeight: 400,
             color: v1.inkMid,
             lineHeight: 1.35,
+            letterSpacing: "-0.005em",
             marginTop: 6,
             overflow: "hidden",
             display: "-webkit-box",
@@ -766,11 +779,12 @@ function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirs
         </div>
         <div
           style={{
-            fontFamily: FONT_IM_FELL,
-            fontStyle: "italic",
+            fontFamily: FONT_SYS,
             fontSize: 14,
+            fontWeight: 400,
             color: v1.inkMid,
             lineHeight: 1.35,
+            letterSpacing: "-0.005em",
             marginTop: 6,
             overflow: "hidden",
             display: "-webkit-box",

@@ -21,6 +21,19 @@
 // is now the reading surface; Edit is the management surface. Owner affordances on this page are
 // limited to the pencil bubble that routes to Edit.
 //
+// v1.2 (session 46, 2026-04-22) — small-type legibility sweep:
+//   - ShelfCard caption: FONT_IM_FELL italic 13px → FONT_SYS 14px (400 wt)
+//     IM Fell italic at 13px was failing the 40–65 demographic on paperCream;
+//     italic serif loses stroke contrast fastest as size drops. FONT_SYS matches
+//     the voice already used on this page for address + "Explore booth →" + booth
+//     pill numeral (cartographic/wayfinding register). The editorial serif voice
+//     stays on masthead / 32px title / 19px caption quote / mall + vendor names.
+//   - "More from this shelf…" eyebrow: 15px → 16px (stays IM Fell italic, still
+//     v1.inkMuted). Decorative section header, stays in the editorial register,
+//     just 1px larger for easier at-a-glance noticing.
+// See also: components/BoothPage.tsx WindowTile + ShelfTile got the same caption
+// treatment in the same commit for ecosystem-wide consistency.
+//
 // v1.1 commitments from on-device feedback in session 16:
 // - Typography bumped +1–2px across small type for the 50+ audience
 // - Title Case, no uppercase/letter-spacing on labels (was SaaS dashboard chrome)
@@ -213,11 +226,12 @@ function ShelfCard({ post }: { post: Post }) {
         style={{
           marginTop: 8,
           paddingLeft: 2,
-          fontFamily: FONT_IM_FELL,
-          fontStyle: "italic",
-          fontSize: 13,
+          fontFamily: FONT_SYS,
+          fontSize: 14,
+          fontWeight: 400,
           color: v1.inkMid,
           lineHeight: 1.4,
+          letterSpacing: "-0.005em",
           overflow: "hidden",
           textOverflow: "ellipsis",
           display: "-webkit-box",
@@ -268,7 +282,7 @@ function ShelfSection({
           marginBottom: 14,
           fontFamily: FONT_IM_FELL,
           fontStyle: "italic",
-          fontSize: 15,
+          fontSize: 16,
           color: v1.inkMuted,
         }}
       >
