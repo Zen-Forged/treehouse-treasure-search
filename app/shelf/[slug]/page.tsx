@@ -6,8 +6,25 @@
 //     Find Detail deep link; giving them a back gesture matches their path)
 //   - No banner edit button (read-only)
 //   - No AddFindTile in Window View
-//   - Share button is always visible (anyone can share a booth)
+//   - BoothHero link-share button is always visible (anyone can share a URL)
 //   - No self-heal or auth gating
+//
+// Session 45 (2026-04-22) — Q-009 admin Window share bypass:
+//   - When the signed-in user is admin, the masthead right slot gets a
+//     paper-airplane icon that opens <ShareBoothSheet>, exactly like /my-shelf.
+//   - Shoppers (unauth and non-admin signed-in) continue to see an empty
+//     right slot. No behavior change for them.
+//   - Q-008 (open Window share to all shoppers) is a separate queued session.
+//   - The server-side admin bypass lives in /api/share-booth (session 45):
+//     ownership check now accepts admin email via NEXT_PUBLIC_ADMIN_EMAIL.
+//
+// Two airplane affordances coexist on this page for admin (as on /my-shelf):
+//   - BoothHero airplane (<Send> glyph in bottom-right of hero banner) = URL
+//     link-share via navigator.share / clipboard. All viewers.
+//   - Masthead airplane (paper-airplane SVG in top-right) = Window email via
+//     /api/share-booth. Admin-only on this surface.
+// Session 40 committed this coexistence; reconciling the two is a Sprint 5+
+// Design agent question, not session 45's scope.
 //
 // Preserves: getVendorBySlug → getVendorPosts → mall resolution, Not-Found state,
 // bookmark-count passthrough to BottomNav.
@@ -22,9 +39,11 @@ import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, Heart } from "lucide-react";
 import { getVendorBySlug, getVendorPosts, getAllMalls } from "@/lib/posts";
+import { getSession, isAdmin } from "@/lib/auth";
 import { loadBookmarkCount } from "@/lib/utils";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
+import ShareBoothSheet from "@/components/ShareBoothSheet";
 import {
   BoothHero,
   BoothTitleBlock,
@@ -40,19 +59,49 @@ import {
   type BoothView,
 } from "@/components/BoothPage";
 import type { Post, Vendor, Mall } from "@/types/treehouse";
+import type { User } from "@supabase/supabase-js";
 
 const BASE_URL = "https://treehouse-treasure-search.vercel.app";
 
 // ─── Masthead (Mode A, public variant — back arrow left, empty right slot) ────
 // v1.1l — migrated to <StickyMasthead>. scrollTarget is the page's overflow-auto
 // scroll container (same pattern as /my-shelf).
+//
+// Session 45 — right slot gains an admin-only airplane share button. When
+// `canShare` is true, the 38px circle bubble matches /my-shelf's MastheadPaper
+// Airplane exactly (v1.green stroke, v1.iconBubble bg, same SVG). When false
+// (shopper/guest), the right slot is a 38px spacer so the grid center stays
+// balanced.
+
+function MastheadPaperAirplane() {
+  return (
+    <svg
+      width={18}
+      height={18}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={v1.green}
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M21 3 10.5 13.5" />
+      <path d="M21 3 14.5 21l-4-7.5L3 9.5 21 3Z" />
+    </svg>
+  );
+}
 
 function Masthead({
   onBack,
   scrollTarget,
+  canShare,
+  onShareOpen,
 }: {
   onBack: () => void;
   scrollTarget: React.RefObject<HTMLDivElement | null>;
+  canShare: boolean;
+  onShareOpen: () => void;
 }) {
   return (
     <StickyMasthead
@@ -95,7 +144,29 @@ function Masthead({
       >
         Treehouse Finds
       </div>
-      <div />
+      {canShare ? (
+        <button
+          onClick={onShareOpen}
+          aria-label="Share this booth by email"
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: "50%",
+            background: v1.iconBubble,
+            border: "none",
+            padding: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <MastheadPaperAirplane />
+        </button>
+      ) : (
+        <div />
+      )}
     </StickyMasthead>
   );
 }
@@ -206,9 +277,20 @@ export default function PublicShelfPage() {
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const [copied,        setCopied]        = useState(false);
 
+  // Session 45 — admin Window share state.
+  const [user,          setUser]          = useState<User | null>(null);
+  const [shareOpen,     setShareOpen]     = useState(false);
+
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => { setBookmarkCount(loadBookmarkCount()); }, []);
+
+  // Session 45 — read session for admin gate. Non-blocking: the page
+  // renders for all viewers; only the masthead airplane is gated on
+  // isAdmin(user). No redirect, no auth wall.
+  useEffect(() => {
+    getSession().then(s => setUser(s?.user ?? null));
+  }, []);
 
   useEffect(() => {
     if (!slug) return;
@@ -248,7 +330,12 @@ export default function PublicShelfPage() {
           flexDirection: "column",
         }}
       >
-        <Masthead onBack={() => router.back()} scrollTarget={scrollContainerRef} />
+        <Masthead
+          onBack={() => router.back()}
+          scrollTarget={scrollContainerRef}
+          canShare={false}
+          onShareOpen={() => {}}
+        />
         <NotFound />
         <BottomNav active="shelves" flaggedCount={bookmarkCount} />
         <BoothPageStyles />
@@ -262,6 +349,12 @@ export default function PublicShelfPage() {
   const mallName    = mall?.name ?? (vendor?.mall as Mall | undefined)?.name ?? "America's Antique Mall";
   const mallCity    = mall?.city ?? (vendor?.mall as Mall | undefined)?.city ?? "Louisville, KY";
   const address     = mall?.address ?? null;
+
+  // Session 45 — admin share affordance visibility. Mirrors /my-shelf's
+  // gating rule: hide when the vendor has no available posts (matches the
+  // server's empty-window 409 guard). Also requires admin user AND a
+  // resolved vendor so we don't flash the icon during load.
+  const canShare = isAdmin(user) && !!vendor && available.length >= 1;
 
   return (
     <div
@@ -282,7 +375,12 @@ export default function PublicShelfPage() {
           paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
         }}
       >
-        <Masthead onBack={() => router.back()} scrollTarget={scrollContainerRef} />
+        <Masthead
+          onBack={() => router.back()}
+          scrollTarget={scrollContainerRef}
+          canShare={canShare}
+          onShareOpen={() => setShareOpen(true)}
+        />
         {loading ? (
           <Skeleton />
         ) : (
@@ -346,6 +444,19 @@ export default function PublicShelfPage() {
       </div>
 
       <BottomNav active="shelves" flaggedCount={bookmarkCount} />
+
+      {/* Session 45 — Window share sheet (admin-only on this surface).
+          Mounted whenever we have a vendor so state-driven open/close is
+          reliable; entry visibility gated by `canShare` on the masthead. */}
+      {vendor && (
+        <ShareBoothSheet
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          vendor={vendor}
+          mall={mall}
+          previewPosts={available}
+        />
+      )}
 
       <BoothPageStyles />
     </div>

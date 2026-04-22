@@ -7,6 +7,11 @@
 //   → rate-limit by IP (5 sends per 10 min, in-memory Map — mirrors /api/vendor-request)
 //   → per-recipient dedup (60s in-memory guard keyed on activeVendorId + recipientEmail)
 //   → ownership check: signed-in user must own activeVendorId (via vendors.user_id)
+//     — OR admin bypass (session 45, Q-009): email matches NEXT_PUBLIC_ADMIN_EMAIL,
+//       in which case we load the vendor by id alone. Admin-sent Windows still
+//       attribute to vendor.display_name as the sender per David's session-45 call
+//       ("ZenForged Finds sent you a Window into ZenForged Finds" — reads as
+//       "from the booth" rather than "from the admin personally").
 //   → load vendor (with mall) + 6 most-recent available posts
 //   → empty-window guard: 409 Conflict if posts.length === 0
 //   → sendBoothWindow(...) via Resend
@@ -30,7 +35,8 @@
 //   2. Sender first name source \u2014 vendor.display_name for MVP. Ownership
 //      check guarantees the signed-in user owns the booth being shared, so
 //      "vendor shares their own booth" is the only path that reaches here.
-//      If shoppers ever share, revisit.
+//      Session 45 Q-009: admin can now also reach here; admin sends still
+//      attribute to vendor.display_name (David's explicit call at session-45).
 //   3. Title truncation \u2014 handled downstream in renderWindowGrid via
 //      max-height + overflow on the caption paragraph. No truncation here.
 
@@ -126,6 +132,15 @@ export async function POST(req: Request) {
   const auth = await requireAuth(req);
   if (!auth.ok) return auth.response;
 
+  // Session 45 (Q-009) \u2014 admin bypass. Match pattern from requireAdmin in
+  // lib/adminAuth.ts: compare lowercased user email to NEXT_PUBLIC_ADMIN_EMAIL.
+  // When true, the ownership filter below uses vendor id alone instead of
+  // (id, user_id). Admin can share ANY booth \u2014 Flow 1 pre-seeded, any
+  // vendor's shelf they're viewing via /shelf/[slug], etc.
+  const isAdminCaller = !!adminEmail
+    && !!auth.user.email
+    && auth.user.email.toLowerCase() === adminEmail.toLowerCase();
+
   // \u2500\u2500 Parse + validate body \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   let body: { recipientEmail?: unknown; activeVendorId?: unknown };
   try {
@@ -170,18 +185,20 @@ export async function POST(req: Request) {
   }
 
   // \u2500\u2500 Ownership check: signed-in user must own the vendor \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-  // Inline pattern per /api/setup/lookup-vendor (there's no getVendorsByUserId
-  // helper \u2014 the spec referenced one that doesn't exist; inline select is the
-  // established convention).
-  const { data: ownedVendor, error: ownershipErr } = await auth.service
+  // Session 45 (Q-009) \u2014 admin branch bypasses the user_id filter. Vendors
+  // still see their booths only, admins see any. Shape of the select is
+  // identical so nothing downstream cares which branch produced ownedVendor.
+  const ownershipQuery = auth.service
     .from("vendors")
     .select(`
       id, display_name, booth_number, slug, hero_image_url, mall_id,
       mall:malls ( id, name, address, google_maps_url )
     `)
-    .eq("id", activeVendorId)
-    .eq("user_id", auth.user.id)
-    .maybeSingle();
+    .eq("id", activeVendorId);
+
+  const { data: ownedVendor, error: ownershipErr } = await (
+    isAdminCaller ? ownershipQuery : ownershipQuery.eq("user_id", auth.user.id)
+  ).maybeSingle();
 
   if (ownershipErr) {
     logError("Ownership lookup failed", { ip, error: ownershipErr });
@@ -193,13 +210,20 @@ export async function POST(req: Request) {
 
   if (!ownedVendor) {
     // Don't leak whether the vendor exists at all \u2014 403 for any non-owned id.
+    // Admin hitting 404 here is also 403 to keep the response shape identical
+    // from the client's point of view; admin shouldn't be querying invalid
+    // vendor ids in practice.
     logError("Ownership check rejected", {
       ip,
-      details: { userId: auth.user.id, attemptedVendorId: activeVendorId },
+      details: {
+        userId: auth.user.id,
+        attemptedVendorId: activeVendorId,
+        isAdminCaller,
+      },
     });
     return NextResponse.json(
-      { ok: false, error: "You don't own this booth." },
-      { status: 403 },
+      { ok: false, error: isAdminCaller ? "Booth not found." : "You don't own this booth." },
+      { status: isAdminCaller ? 404 : 403 },
     );
   }
 
@@ -243,7 +267,7 @@ export async function POST(req: Request) {
 
   const emailResult = await sendBoothWindow({
     recipientEmail,
-    senderFirstName: vendorRow.display_name, // MVP: sender = vendor (ownership enforced)
+    senderFirstName: vendorRow.display_name, // MVP: sender = vendor (ownership enforced, admin bypass preserves voice)
     vendor: {
       displayName:  vendorRow.display_name,
       boothNumber:  vendorRow.booth_number,
@@ -278,11 +302,13 @@ export async function POST(req: Request) {
     );
   }
 
-  // Success log: admin email for context, vendor slug, truncated recipient.
+  // Success log: admin email for context, vendor slug, truncated recipient,
+  // admin-bypass flag so logs distinguish admin sends from vendor sends.
   console.log(
     `[share-booth] ${new Date().toISOString()} - Window sent \u2014 ` +
     `from=${vendorRow.slug} to=${maskEmail(recipientEmail)} ` +
-    `user=${auth.user.email ?? auth.user.id} posts=${posts.length}`,
+    `user=${auth.user.email ?? auth.user.id}${isAdminCaller ? " (admin-bypass)" : ""} ` +
+    `posts=${posts.length}`,
   );
 
   return NextResponse.json({ ok: true });
