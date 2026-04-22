@@ -6,7 +6,6 @@
 //     Find Detail deep link; giving them a back gesture matches their path)
 //   - No banner edit button (read-only)
 //   - No AddFindTile in Window View
-//   - BoothHero link-share button is always visible (anyone can share a URL)
 //   - No self-heal or auth gating
 //
 // Session 45 (2026-04-22) — Q-009 admin Window share bypass:
@@ -18,13 +17,13 @@
 //   - The server-side admin bypass lives in /api/share-booth (session 45):
 //     ownership check now accepts admin email via NEXT_PUBLIC_ADMIN_EMAIL.
 //
-// Two airplane affordances coexist on this page for admin (as on /my-shelf):
-//   - BoothHero airplane (<Send> glyph in bottom-right of hero banner) = URL
-//     link-share via navigator.share / clipboard. All viewers.
-//   - Masthead airplane (paper-airplane SVG in top-right) = Window email via
-//     /api/share-booth. Admin-only on this surface.
-// Session 40 committed this coexistence; reconciling the two is a Sprint 5+
-// Design agent question, not session 45's scope.
+// Session 45 — BoothHero URL link-share retired:
+//   The top-right frosted airplane bubble inside <BoothHero> was removed
+//   from the shared primitive to resolve two-airplane confusion on Booth
+//   pages. The masthead airplane (admin-only here) is now the sole share
+//   affordance. `BASE_URL`, the `copied` state, and `handleShare` were
+//   all removed at the same commit — none of them had any other caller
+//   on this page. See components/BoothPage.tsx header for rationale.
 //
 // Preserves: getVendorBySlug → getVendorPosts → mall resolution, Not-Found state,
 // bookmark-count passthrough to BottomNav.
@@ -60,8 +59,6 @@ import {
 } from "@/components/BoothPage";
 import type { Post, Vendor, Mall } from "@/types/treehouse";
 import type { User } from "@supabase/supabase-js";
-
-const BASE_URL = "https://treehouse-treasure-search.vercel.app";
 
 // ─── Masthead (Mode A, public variant — back arrow left, empty right slot) ────
 // v1.1l — migrated to <StickyMasthead>. scrollTarget is the page's overflow-auto
@@ -275,7 +272,6 @@ export default function PublicShelfPage() {
   const [notFound,      setNotFound]      = useState(false);
   const [view,          setView]          = useState<BoothView>("window");
   const [bookmarkCount, setBookmarkCount] = useState(0);
-  const [copied,        setCopied]        = useState(false);
 
   // Session 45 — admin Window share state.
   const [user,          setUser]          = useState<User | null>(null);
@@ -307,16 +303,6 @@ export default function PublicShelfPage() {
       setLoading(false);
     });
   }, [slug]);
-
-  async function handleShare() {
-    if (!vendor?.slug) return;
-    const url  = `${BASE_URL}/shelf/${vendor.slug}`;
-    const name = vendor.display_name;
-    if (navigator.share) {
-      try { await navigator.share({ title: `${name} on Treehouse`, text: `Check out finds from ${name}.`, url }); return; } catch {}
-    }
-    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2200); } catch {}
-  }
 
   if (notFound) {
     return (
@@ -390,8 +376,6 @@ export default function PublicShelfPage() {
               boothNumber={boothNumber}
               heroImageUrl={(vendor?.hero_image_url as string | null | undefined) ?? null}
               heroKey={0}
-              onShare={handleShare}
-              hasCopied={copied}
               canEdit={false}
             />
 

@@ -36,10 +36,15 @@
 //     `available` is already computed client-side for the WindowView.
 //   - Pre-session-40 right slot was `<div />` (empty placeholder), so this
 //     does not displace any existing affordance.
-//   - The existing `handleShare` (link-share via navigator.share/clipboard)
-//     inside BoothHero is a separate gesture and is preserved untouched.
-//     Two share affordances coexist by design: masthead airplane = Window
-//     email, BoothHero airplane = OG link copy.
+//
+// Session 45 (2026-04-22) — BoothHero URL link-share retired:
+//   The old top-right frosted airplane bubble inside BoothHero (link-share
+//   via navigator.share / clipboard) was removed from the shared primitive.
+//   The masthead airplane (Window email) is now the sole share affordance
+//   on this page. The local `copied` state, the `handleShare` function,
+//   and the `BASE_URL` constant (only used by that function) were all
+//   deleted here at the same commit. See components/BoothPage.tsx header
+//   for the shared-primitive rationale.
 //
 // The approved mockup (docs/mockups/my-shelf-multi-booth-v1.html) is the
 // authority for the masthead layout. If this code and the mockup diverge,
@@ -93,7 +98,6 @@ import {
 import type { User } from "@supabase/supabase-js";
 
 const ADMIN_DEFAULT_VENDOR_ID = "5619b4bf-3d05-4843-8ee1-e8b747fc2d81";
-const BASE_URL                = "https://treehouse-treasure-search.vercel.app";
 
 function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promise<string> {
   return new Promise(resolve => {
@@ -241,8 +245,8 @@ function Masthead({
 
 // Inline paper-airplane glyph for the masthead right-slot share button.
 // Drawn slightly off-axis to echo the +6° tilt used elsewhere in v1.1h/v1.2
-// (booth post-it, BoothHero share button). Uses v1.green to read as an
-// active / commit-shaped affordance at the page-header level.
+// (booth post-it). Uses v1.green to read as an active / commit-shaped
+// affordance at the page-header level.
 function MastheadPaperAirplane() {
   return (
     <svg
@@ -372,7 +376,6 @@ function MyBoothInner() {
   const [posts,         setPosts]         = useState<Post[]>([]);
   const [postsLoading,  setPostsLoading]  = useState(false);
   const [mall,          setMall]          = useState<Mall | null>(null);
-  const [copied,        setCopied]        = useState(false);
   const [view,          setView]          = useState<BoothView>("window");
   const [heroImageUrl,  setHeroImageUrl]  = useState<string | null>(null);
   const [heroKey,       setHeroKey]       = useState(0);
@@ -642,15 +645,6 @@ function MyBoothInner() {
     }
   }
 
-  async function handleShare() {
-    const slug = activeVendor?.slug;
-    if (!slug) return;
-    const url  = `${BASE_URL}/shelf/${slug}`;
-    const name = activeVendor.display_name;
-    if (navigator.share) { try { await navigator.share({ title: `${name} on Treehouse`, text: `Check out finds from ${name}.`, url }); return; } catch {} }
-    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2200); } catch {}
-  }
-
   // ── AddFindSheet plumbing (unchanged from v1.2) ────────────────────────
   function openAddSheet() {
     setShowAddSheet(true);
@@ -758,8 +752,6 @@ function MyBoothInner() {
               boothNumber={boothNumber}
               heroImageUrl={heroImageUrl}
               heroKey={heroKey}
-              onShare={handleShare}
-              hasCopied={copied}
               canEdit={true}
               heroUploading={heroUploading}
               onHeroImageChange={handleHeroImageChange}

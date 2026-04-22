@@ -2,7 +2,7 @@
 // Shared primitives for the Booth page (/my-shelf and /shelf/[slug]) — v1.1j
 //
 // Primitives exported:
-//   - <BoothHero>            — vendor banner + booth post-it + edit/share bubbles
+//   - <BoothHero>            — vendor banner + booth post-it + edit bubble
 //   - <BoothTitleBlock>      — "a curated shelf from" eyebrow + vendor name (32px)
 //   - <MallBlock>            — small pin + mall name + dotted-underline address
 //   - <DiamondDivider>       — plain hairline (diamond retired v1.1j; name kept for export stability)
@@ -19,6 +19,29 @@
 //   - <WindowView> gains `showPlaceholders` prop; <ShelfView> gains `showAddTile` prop (owner parity)
 //   - <PlaceholderTile> new primitive, rendered only when owner has < 9 items
 //
+// Session 45 (2026-04-22) — BoothHero URL link-share retired:
+//   The top-right frosted airplane bubble (navigator.share / clipboard URL
+//   fallback) was removed to resolve confusion with the masthead paper-
+//   airplane (Window email via /api/share-booth). Two airplanes on one
+//   page, both labeled "Share this ___," both rendering similar glyphs,
+//   was a recurring "which one does what?" friction point for admin + QA.
+//
+//   The masthead airplane is now the sole share affordance on Booth pages.
+//   It opens <ShareBoothSheet> which sends a curated 6-find Window email
+//   via Resend — a richer outcome than the URL copy the hero bubble used
+//   to produce. Users who want to share the plain URL can still use the
+//   browser's native share menu or address bar copy.
+//
+//   Consumers that used to pass `onShare` and `hasCopied` no longer need
+//   to — the props were removed from <BoothHero>'s interface. The local
+//   `copied` state and `handleShare` functions in /my-shelf and
+//   /shelf/[slug] were also removed at the same commit. The `Send` and
+//   `Check` imports (only used by the bubble) were removed from this file.
+//
+//   The top scrim gradient over the hero photo is preserved — the edit
+//   bubble (top-left, owner-only) still needs contrast against bright
+//   photography in that region.
+//
 // v1.1h tokens (v1, FONT_IM_FELL, FONT_SYS) are imported from lib/tokens.ts —
 // canonical since session 19A. They are re-exported here so existing imports
 // from "@/components/BoothPage" in app/my-shelf and app/shelf/[slug] continue
@@ -31,7 +54,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Send, Pencil, Check, Loader, ImagePlus } from "lucide-react";
+import { Pencil, Loader, ImagePlus } from "lucide-react";
 import { vendorHueBg, mapsUrl, boothNumeralSize } from "@/lib/utils";
 import { v1, FONT_IM_FELL, FONT_SYS, FONT_POSTIT_NUMERAL } from "@/lib/tokens";
 import type { Post } from "@/types/treehouse";
@@ -44,7 +67,9 @@ export { v1, FONT_IM_FELL, FONT_SYS, FONT_POSTIT_NUMERAL };
 const EASE = [0.25, 0.1, 0.25, 1] as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Booth hero — banner + booth post-it + edit/share bubbles
+// Booth hero — banner + booth post-it + edit bubble
+// Session 45 (2026-04-22) — top-right frosted share bubble removed; see
+// file-header note. Masthead airplane is now the sole share affordance.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function BoothHero({
@@ -52,8 +77,6 @@ export function BoothHero({
   boothNumber,
   heroImageUrl,
   heroKey,
-  onShare,
-  hasCopied,
   canEdit,
   heroUploading,
   onHeroImageChange,
@@ -62,8 +85,6 @@ export function BoothHero({
   boothNumber: string | null;
   heroImageUrl: string | null | undefined;
   heroKey: number;
-  onShare: () => void;
-  hasCopied: boolean;
   canEdit: boolean;
   heroUploading?: boolean;
   onHeroImageChange?: (file: File) => void;
@@ -119,7 +140,8 @@ export function BoothHero({
               }}
             />
           )}
-          {/* Subtle top scrim so edit/share bubbles read against light or dark photos */}
+          {/* Subtle top scrim so the edit bubble reads against light or dark photos.
+              (Session 45: share bubble removed; scrim preserved for the edit bubble.) */}
           <div
             style={{
               position: "absolute",
@@ -167,55 +189,8 @@ export function BoothHero({
           </button>
         )}
 
-        {/* Share bubble — top-right, frosted paperCream (matches Find Detail save+share) */}
-        <div style={{ position: "absolute", top: 12, right: 12, zIndex: 10 }}>
-          {hasCopied ? (
-            <motion.div
-              key="copied"
-              initial={{ opacity: 0, scale: 0.88 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.88 }}
-              transition={{ duration: 0.14 }}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-                padding: "6px 11px",
-                borderRadius: 18,
-                background: "rgba(30,77,43,0.85)",
-                border: "1px solid rgba(255,255,255,0.18)",
-              }}
-            >
-              <Check size={11} style={{ color: "#fff" }} />
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#fff" }}>Copied!</span>
-            </motion.div>
-          ) : (
-            <motion.button
-              onClick={onShare}
-              aria-label="Share this shelf"
-              initial={{ opacity: 0, scale: 0.88 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.14 }}
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: "50%",
-                background: "rgba(232,221,199,0.78)",
-                backdropFilter: "blur(8px)",
-                WebkitBackdropFilter: "blur(8px)",
-                border: "0.5px solid rgba(42,26,10,0.12)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                WebkitTapHighlightColor: "transparent",
-                padding: 0,
-              }}
-            >
-              <Send size={17} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
-            </motion.button>
-          )}
-        </div>
+        {/* Session 45 — share bubble retired here. Share affordance lives on
+            the page masthead (top-right airplane → <ShareBoothSheet>). */}
 
         {/* Booth post-it — bottom-right, pinned; same primitive as Find Detail */}
         {boothNumber && (
