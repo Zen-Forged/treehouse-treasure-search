@@ -6,6 +6,10 @@
 > Cadence: before any beta invite, and whenever a session touches
 > `/vendor-request`, `/api/admin/vendor-requests`, `/api/setup/lookup-vendor`,
 > `/my-shelf`, or `lib/activeBooth.ts`.
+>
+> Automation: `scripts/qa-walk.ts` (session 46) handles baseline snapshots,
+> per-booth spot checks, and post-walk cleanup with a dry-run-default
+> destructive flow. On-device tapping is the only manual part.
 
 ---
 
@@ -87,13 +91,14 @@ sheet, which was retired in the T4b fold-in.
 **Expect:**
 - Collapsed row renders with paper-wash bubble + plus glyph + "Add a booth" + italic helper "Pre-seed a booth for later vendor claim" + chevron
 - Tap expands the row inline (no bottom sheet, no backdrop)
-- Expanded form shows: Mall dropdown (defaults to America's Antique Mall), Booth number (optional), Booth name (required)
+- Expanded form shows: Mall dropdown (defaults to America's Antique Mall), Booth number (optional), Booth name (required), hero booth photo dropzone (session 44 addition)
 - Filled green "Add booth" CTA at the bottom
 
 **🚨 Red flag:**
 - Form opens as a bottom sheet instead of inline expand
 - Chrome is Georgia serif instead of IM Fell italic labels (means v1.1k primitives didn't land)
 - Mall dropdown is empty (means `getAllMalls` didn't run — check network)
+- Hero photo dropzone is missing (session-44 field didn't land)
 
 ### 1.2 — Fill and submit
 
@@ -101,7 +106,8 @@ sheet, which was retired in the T4b fold-in.
 1. Leave Mall on default (America's Antique Mall)
 2. Enter booth number: `999` (or any unused booth)
 3. Enter booth name: `QA Walk Booth` + some unique suffix
-4. Tap "Add booth"
+4. Upload a hero booth photo via the dropzone (session 44 addition) — expect 4:3 preview with Replace button after compression completes
+5. Tap "Add booth"
 
 **Expect:**
 - Button swaps to "Adding…" with spinner, then "Booth added" with check
@@ -112,6 +118,7 @@ sheet, which was retired in the T4b fold-in.
 - 23505 duplicate key error surfaced in toast (check that booth 999 doesn't already exist)
 - Toast shows empty email field as a visible line (the `email: ""` in the createdVendor toast payload should render cleanly — verify no empty email line appears)
 - Form doesn't reset on success — opening it again shows the previous values
+- Hero photo upload fails or doesn't render 4:3 preview
 
 ### 1.3 — Verify the row in Supabase
 
