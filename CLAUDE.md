@@ -65,6 +65,52 @@ Exception: a single chained command with `&&` stays in one block — that's one 
 
 ---
 
+## ✅ Session 44 (2026-04-22) — /shelves Add-a-Booth restored (partial T4b reversal)
+
+Shipped code, pending HITL build + deploy + on-device walk at close. Session-37 T4b fold-in partially reversed at David's explicit direction: `<AddBoothInline>` primitive now renders on BOTH `/admin` Vendors tab AND `/shelves` (admin-gated via `<AdminOnly>`). Component lifted from `app/admin/page.tsx` into `components/AddBoothInline.tsx` with an optional hero-photo field added; same primitive, two consumers. The mall-walk workflow — where an admin standing in front of a physical booth wants to pre-seed it — now has the entry point adjacent to the booth directory, not buried in `/admin`.
+
+**Decision Gate intercept at session open.** Session opener scoped a direct reversal of a shipped architectural decision (session-37 T4b Risk Register row explicitly read "`/shelves` is now a browse-only surface"). Flagged as a 🔴 STOP trigger per DECISION_GATE — "Architecture pattern change" + "UI change not scoped against docs/design-system.md." David explicitly approved the reversal and explicitly skipped the mockup-first step. Documented the approval in the `/shelves/page.tsx` inline comment where the old T4b comment-block used to live, and in this close. Important cultural point for future sessions: the Decision Gate fired correctly and it didn't add meaningful friction — the question took 30s to answer and the session proceeded cleanly.
+
+**What shipped:**
+- `components/AddBoothInline.tsx` — new file (16.6KB). Lifted from `/admin` inline primitive, extended with an optional hero-photo field (`FileReader` → `compressImage` → `POST /api/vendor-hero` after vendor row creation). Non-blocking hero failure: vendor row persists, hero error surfaces as a `note` in `onCreated`'s second arg. Two states — collapsed entry row and expanded inline form. v1.1k chrome (paperCream + IM Fell + filled green CTA + inkWash input bg). Defaults `mallId` to the first mall in the list; admin typically seeds multiple booths at the same mall in one sitting.
+- `app/admin/page.tsx` — refactored to import `<AddBoothInline>` from components instead of defining it inline. Existing state (`malls`, `addBoothOpen`) + existing `getAllMalls()` load preserved. `onCreated` still fires the approval-toast path for consistency with the vendor-request approval UX.
+- `app/shelves/page.tsx` — surgical delta: added `getAllMalls` to existing `Promise.all`, added `malls`/`addBoothOpen` state, rendered `<AddBoothInline>` inside `<AdminOnly user={user}>` at the top of `<main>` (above the vendor list). `onCreated` prepends the new vendor to `vendors` state (optimistic, no refetch) and closes the sheet. Removed the session-37 T4b retirement-comment block and replaced it with a session-44 commentary block capturing the reversal.
+
+**Chrome mismatch flagged in-code.** `<AddBoothInline>` is v1.1k paperCream + IM Fell; `/shelves` is still v0.2 Georgia + legacy `colors.*`. Same intentional mismatch as `/admin` post-session-37 — both reads as a Treehouse-shaped insertion inside a legacy surface. Folds naturally into the Sprint 5+ `/shelves` v1.2 redesign when that sprint runs.
+
+**Pre-existing surface flagged, not session-44's problem.** `<VendorCard>` admin-tap routes to `/my-shelf?vendor={id}`, but a freshly-seeded Flow-1 vendor has `user_id: null` and `/my-shelf` resolves active-booth via `getVendorsByUserId(user.id)`. The `?vendor={id}` query param was the pre-session-35 admin-impersonation path. I haven't re-verified that param is still honored post-session-35 multi-booth rework. If the on-device walk step 4 (tap new card → land on its shelf) doesn't land correctly, that's a pre-existing surface bug, not a session-44 regression. Triage if it fires.
+
+**Self-audit against Tech Rules before build:**
+- File-creation verify: `AddBoothInline.tsx` exists on disk, confirmed via `get_file_info` at session open. ✓
+- No Map/Set iteration introduced — TS downlevelIteration safe. ✓
+- No framer-motion two-`transition`-props pattern introduced. ✓
+- `export const dynamic = "force-dynamic"` already present on both edited pages. ✓
+- `<AddBoothInline>` motion.div uses `animate={{ opacity, height }}` with no centering transform — wrapper-div rule not triggered. ✓
+- New consumer on old select: `<AddBoothInline>.onCreated` receives a `Vendor` from `createVendor`, and both `/admin` toast and `/shelves` `<VendorCard>` read standard `vendors` columns (`display_name`, `booth_number`, `mall_id`, `slug`, `hero_image_url`, `bio`) — all guaranteed by `createVendor`'s return shape. ✓
+
+**Pending HITL at close:**
+- Build check: not yet run.
+- Commit + push: not yet run.
+- On-device walk: not yet run. Six steps per session opener: (1) open `/shelves` on iPhone PWA as admin, (2) tap "Add a booth" and seed a real booth with real mall/number/name/optional hero, (3) verify new card appears at top without refresh, (4) tap new card → verify it lands on that booth's shelf (see pre-existing surface caveat above), (5) publish a find from that shelf, (6) verify `/admin` → Posts tab shows the new post attributed to the just-seeded booth.
+
+**Risk Register update:** T4b row ("`/shelves` AddBoothSheet will be orphaned after T4b") flipped from ✅ Resolved session 37 back to 🟡 Partially reversed session 44. New row added noting the intentional chrome mismatch on `/shelves` + `/admin` Vendors tab. See DECISION_GATE.md.
+
+### Session 44 close HITL
+
+Three commands, in order. Build first — commit only if build is green.
+
+```bash
+cd /Users/davidbutler/Projects/treehouse-treasure-search && npm run build 2>&1 | tail -30
+```
+
+```bash
+cd /Users/davidbutler/Projects/treehouse-treasure-search && git add -A && git commit -m "feat(shelves): restore Add-a-Booth via <AddBoothInline> primitive (session 44, partial T4b reversal)" && git push
+```
+
+Then the on-device walk per steps 1–6 above.
+
+---
+
 ## ✅ Session 34 (2026-04-20) — multi-booth scoping: mockup approved, Path A committed
 
 Scoping session. Option A (drop `vendors_user_id_key`) chosen over Option B (`vendor_memberships` join table). Mockup approved at `docs/mockups/my-shelf-multi-booth-v1.html`. Build spec written at `docs/multi-booth-build-spec.md` as explicit dev-handoff doc. Q-001 (KI-006 Path B surgical hotfix) captured in `docs/queued-sessions.md` as the backup plan. No code; session-32 v1.2 code remained uncommitted on disk, to be bundled with session 35.
@@ -120,35 +166,37 @@ cd /Users/davidbutler/Projects/treehouse-treasure-search && git add -A && git co
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-21 (session 43 close — Anthropic model audit + billing safeguards complete)
+> Last updated: 2026-04-22 (session 44 close — /shelves Add-a-Booth restored, partial T4b reversal; pending HITL build + on-device walk)
 
-**Status:** All four AI-dependent routes on Active model strings with 10+ month retirement runways. Anthropic console auto-reload on at threshold $10 / reload $20. Production DB clean (session 42). iPhone PWA reinstalled with clean localStorage (session 42). Sprint 4 tail fully closed (sessions 40–41). **All remaining pre-beta items are operational/content polish, not code or silent-failure risks.**
+**Status:** `<AddBoothInline>` primitive now renders on both `/admin` Vendors tab and `/shelves` (admin-gated). Code is on disk. Build check, commit, and on-device walk all pending HITL at session 45 open (or now, if David runs them before closing the Terminal). All four AI-dependent routes remain on Active model strings with 10+ month retirement runways. Anthropic console auto-reload on at $10/$20. Production DB clean (session 42). iPhone PWA clean-client (session 42). Sprint 4 tail fully closed (sessions 40–41).
 
-### Recommended next session — Feed content seeding (~30–60 min)
+### Recommended next session — run the session-44 HITL, then decide
 
-Highest-leverage remaining pre-beta item. Reasons it's the best next move: (a) the DB is clean-slate safe for the first time since session 42, so seeding won't mix with test data; (b) it directly improves the first beta shopper's experience — an empty feed is a bad first impression; (c) it's a natural pairing with beta invite prep; (d) it will exercise the AI pipeline under realistic call volume, which will also serve as a soft-verification that the session-43 billing safeguards are working (this will likely be the session that first trips auto-reload, which is exactly what auto-reload exists for — not a problem, just worth knowing the first $20 charge is coming).
+If the on-device walk at session-44 close passed cleanly, the highest-leverage remaining pre-beta item is **feed content seeding (~30–60 min)** — the same recommendation session 43 made, with the session-44 Add-a-Booth primitive now available on `/shelves` to accelerate the pre-seed side of the workflow.
 
-Scope:
-- Create 2–3 real (non-test) vendors via `/vendor-request` → `/admin` approve flow
+If the on-device walk surfaced the pre-existing `<VendorCard>` admin-tap issue (new card taps to `/my-shelf?vendor={id}`, but post-session-35 `/my-shelf` resolves via `getVendorsByUserId(user.id)` and a freshly-seeded Flow-1 vendor has `user_id: null`), treat that as a distinct queued session — scope is a ~15-min surgical fix on `/my-shelf` to honor the `?vendor={id}` query param as an admin-impersonation override, and should ship before feed seeding so the mall-walk workflow is actually end-to-end usable.
+
+Seeding scope (unchanged from session 43's recommendation):
+- Create 2–3 real (non-test) vendors — now via `/shelves` Add-a-Booth as the primary path; `/vendor-request` → `/admin` approve flow remains available for Flow 3
 - Seed 10–15 finds across those vendors, mixing status states (mostly available, 1–2 "found a home")
 - Photos should be real items, ideally spanning a few material categories (glass, ceramic, brass, wood) to make the feed feel varied on first scroll
 - Verify the feed, Find Map, and mall pages all render well with the new population
-- Light QA: ensure the session-27 `source: "claude" \| "mock"` field returns `"claude"` for all 10–15 auto-caption calls (catches any subtle AI-pipeline regression that QA at volume would surface)
+- Light QA: ensure the session-27 `source: "claude" \| "mock"` field returns `"claude"` for all 10–15 auto-caption calls
 
 ### Alternative next sessions
 
-- **Q-008** 🟢 (~90–120 min) — Open Window share to unauthenticated shoppers. Product scope expansion from session 41 Q-007 walk Scenario 1.
+- **Q-008** 🟢 (~90–120 min) — Open Window share to unauthenticated shoppers.
 - **Q-009** 🟢 (~15 min standalone / ~5 min inside Q-008) — Admin can share any booth. Extend ownership check with `isAdmin` bypass.
-- **Q-011** 🟢 (~60–90 min) — Window email banner post-it missing/misplaced. Diagnostic + fix across iOS Mail / Gmail / Outlook clients.
-- **Q-002** 🟢 (~20 min) — Picker affordance placement revision (masthead → inline under hero banner).
-- **Tech Rule promotion batch** (~40 min) — four candidates queued: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed. NEW session-40 React 19 ref-forwarding candidate (one firing only; watch for second firing before promoting). NEW session-42 verify-remaining-count candidate (two firings this session across two tables; meets the two-firings-before-promote bar if it recurs in any other cleanup-shaped work).
-- **Session-archive drift cleanup** (~30 min) — sessions 28–38 carry one-liner summaries but no archive detail. Pairs well with Tech Rule batch.
+- **Q-011** 🟢 (~60–90 min) — Window email banner post-it missing/misplaced.
+- **Q-002** 🟢 (~20 min) — Picker affordance placement revision.
+- **Tech Rule promotion batch** (~40 min) — five candidates now queued: sessions 33, 35, 36, 38 dependency-surface family + session-40 React 19 ref-forwarding (one firing). Session-42 verify-remaining-count still below the two-firings-outside-same-context bar.
+- **Session-archive drift cleanup** (~30 min) — sessions 28–38 carry one-liner summaries but no archive detail.
 - **Error monitoring** (Sentry or structured logs) — Sprint 3 carryover.
 - **Beta feedback mechanism** (Tally.so link).
 - **Hero image upload size guard** — verify coverage across upload surfaces.
-- **`/admin` v0.2 → v1.2 redesign pass** (Sprint 5+, size L) — still queued; needs design scope first (mockup-first per session-28 rule).
+- **`/admin` v0.2 → v1.2 redesign pass** (Sprint 5+, size L) — still queued; needs design scope first.
 
-### Session 44 opener (pre-filled for feed content seeding)
+### Session 45 opener (pre-filled for feed content seeding, assuming session-44 HITL passed)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
@@ -156,8 +204,10 @@ STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthr
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Running feed content seeding session per CLAUDE.md recommendation. Scope: (1) create 2–3 real (non-test) vendors via /vendor-request → /admin approve flow; (2) seed 10–15 finds across those vendors, mostly available status with 1–2 "found a home"; (3) verify feed, Find Map, mall pages render well with new population; (4) light QA that session-27 `source: "claude"` field returns clean on all auto-caption calls. This session is likely to first trip session-43 auto-reload (threshold $10 / reload $20); expected and non-blocking. ~30–60 min. DB is clean-slate (session 42); PWA is clean-client (session 42); auto-reload is live (session 43).
+CURRENT ISSUE: Running feed content seeding session per CLAUDE.md recommendation. Assumes session-44 HITL (build + commit + on-device walk) passed cleanly. Scope: (1) create 2–3 real (non-test) vendors via /shelves Add-a-Booth (primary path, session 44) or /vendor-request → /admin approve flow (Flow 3 path); (2) seed 10–15 finds across those vendors, mostly available status with 1–2 "found a home"; (3) verify feed, Find Map, mall pages render well with new population; (4) light QA that session-27 `source: "claude"` field returns clean on all auto-caption calls. This session is likely to first trip session-43 auto-reload (threshold $10 / reload $20); expected and non-blocking. ~30–60 min.
 ```
+
+If the session-44 on-device walk surfaced the `?vendor={id}` admin-impersonation issue on `/my-shelf`, run that fix first — ~15 min surgical edit to honor the query param override for admin users, then feed seeding after.
 
 ---
 
@@ -241,7 +291,7 @@ Runbook at `docs/pre-beta-qa-walk.md`. Kicked off after Q-007 walk completed cle
 
 ### 🟡 Remaining pre-beta polish (operational, not code-gating)
 
-- **Feed content seeding** — 10–15 real posts across 2–3 vendors. DB is now empty and clean-slate safe for seeding. Natural pairing with beta invite prep. *Recommended as session 44.*
+- **Feed content seeding** — 10–15 real posts across 2–3 vendors. DB is empty and clean-slate safe. Natural pairing with beta invite prep. Session 44 added the `<AddBoothInline>` primitive on `/shelves` which accelerates the pre-seed side of this workflow. *Recommended as session 45 (was originally session 44's recommendation).*
 - **Error monitoring** (Sentry or structured logs). Sprint 3 carryover.
 - **Beta feedback mechanism** (Tally.so link).
 - **Hero image upload size guard** — verify coverage across upload surfaces.
@@ -301,4 +351,4 @@ All captured in `docs/queued-sessions.md`:
 - Trigger: say "generate investor update" at session close
 - Process doc: Notion → Agent System Operating Manual → 📋 Investor Update — Process & Cadence
 
-> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data for clean-slate beta start; session 43 audited AI model surface + locked in billing safeguards. Investor-update trigger point is still valid** — consider running `generate investor update` before opening session 44.
+> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data for clean-slate beta start; session 43 audited AI model surface + locked in billing safeguards; session 44 restored `/shelves` Add-a-Booth primitive (partial T4b reversal) — pending HITL build + on-device walk. Investor-update trigger point is still valid** — consider running `generate investor update` before opening session 45, ideally after the session-44 HITL passes cleanly so the update can honestly report the reversal as shipped rather than in-flight.
