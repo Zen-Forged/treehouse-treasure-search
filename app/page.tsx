@@ -943,17 +943,21 @@ export default function DiscoveryFeedPage() {
             <Link
               href="/vendor-request"
               style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "14px 24px",
+                borderRadius: 999,
+                background: v1.green,
+                color: "#f5ecd8",
                 fontFamily: FONT_IM_FELL,
-                fontStyle: "italic",
-                fontSize: 15,
-                color: v1.inkPrimary,
-                textDecoration: "underline",
-                textDecorationStyle: "dotted",
-                textDecorationColor: v1.inkFaint,
-                textUnderlineOffset: 3,
+                fontSize: 16,
+                letterSpacing: "-0.005em",
+                textDecoration: "none",
+                WebkitTapHighlightColor: "transparent",
               }}
             >
-              Request booth access →
+              Request Digital Booth
             </Link>
           </div>
         )}

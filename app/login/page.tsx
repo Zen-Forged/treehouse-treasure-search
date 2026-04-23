@@ -394,7 +394,7 @@ function LoginInner() {
             margin: "0 0 8px",
           }}
         >
-          Curator Sign in
+          Vendor Sign in
         </h1>
         <p
           style={{

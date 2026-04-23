@@ -545,7 +545,7 @@ function ComposeBody({
         ) : (
           <>
             <PaperAirplaneIcon size={16} color="#f5ecd8" />
-            <span>Send the Window</span>
+            <span>Send the invite</span>
           </>
         )}
       </button>
