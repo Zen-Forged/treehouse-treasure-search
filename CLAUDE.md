@@ -65,142 +65,143 @@ Exception: a single chained command with `&&` stays in one block — that's one 
 
 ---
 
-## ✅ Session 45 (2026-04-22) — /shelves cross-mall fix + admin booth delete + Q-009 admin share bypass + BoothHero URL share retired
+## ✅ Session 46 (2026-04-22) — T4d pre-beta QA walk PASSED end-to-end + `scripts/qa-walk.ts` QA utility shipped + docs drift patched
 
-Largest single-session scope since session 35. Four user-visible shipments, three distinct commits, all landed green with on-device walks passing. Session opened on a session-44 regression report ("booths at non-AAM malls vanish on refetch") and a queued admin-surface gap, expanded naturally into Q-009 when David reported the missing share affordance on `/shelf/[slug]` as admin, and closed with a cleanup pass on the two-airplane confusion surfaced by the Q-009 work. Explicit mid-session scope expansions all passed the Decision Gate before proceeding; no scope creep into Q-008 shopper-share or Q-011 email-post-it bug (both remain queued).
+First Claude Code (terminal) session after 45 sessions in Claude Chat (browser). The context shift changed what "efficient" looks like: the Chat-era workflow had David copy-pasting SQL queries into Supabase SQL Editor and pasting screenshots back into the conversation between every HITL step. Code's direct Bash access eliminates that — so the session's first real shipment was an automation primitive that collapsed ~15 back-and-forth SQL lookups into a single reusable helper.
 
-### Shipment 1 — /shelves cross-mall directory fix + admin delete feature
+### Shipment 1 — `scripts/qa-walk.ts` (new durable QA utility)
 
-**Bug root cause:** `/shelves/page.tsx` called `getVendorsByMall(DEFAULT_MALL_ID)` hardcoded to America's Antique Mall. Session-44's `<AddBoothInline>` optimistic prepend concealed the limitation — new booth appeared on create, vanished on refetch if seeded at a non-AAM mall. `/shelves` is the cross-mall booth directory per CONTEXT.md §5; the single-mall query was never correct. Bug only surfaced when session 44 gave admins the ability to seed outside AAM.
+**Not previously extant.** Subcommands: `baseline` (runs all four T4d-prereq SQL snapshots as a single console-table dump), `check <boothNumber>` (vendors + vendor_requests + posts at that booth), `check-email <email>` (vendor_requests + auth.users + linked vendors for an email), `cleanup <booth1> <booth2> ...` (dry-run default; flags `--confirm` to execute, `--force-claimed` to bypass the user_id safety gate for pre-confirmed test data, `--delete-auth=<email>,<email>` to also remove named auth users — refuses `NEXT_PUBLIC_ADMIN_EMAIL` by hardcoded guard).
 
-**Fix + feature bundled:**
-- `lib/posts.ts` — new `getAllVendors(): Promise<Vendor[]>` exported. `*, mall:malls(id,name,city,state,slug)` select (matches sibling getter pattern to keep TS inference legal — see Tech Rule note below). Ordered by `mall_id ASC, booth_number ASC NULLS LAST`. In-code comment documents the trap.
-- `app/api/admin/vendors/route.ts` — NEW file. DELETE handler, `requireAdmin` first line. Seven-step cascade: fetch vendor → **409 safety gate if `user_id !== null`** (claimed booths must be unlinked in Supabase first, per David's explicit session-45 call) → fetch posts + collect image paths → remove post-image blobs → remove `vendor-hero/{id}.jpg` → delete posts rows → delete vendor row. Log all outcomes. Returns `{ ok, vendorId, postsDeleted, imagesDeleted }`.
-- `app/shelves/page.tsx` — swapped to `getAllVendors`. Subtitle rewritten as data-driven helper (`subtitleFor(vendors)`): 5 graceful cases — 0 booths hides the line entirely, 1-mall variants read "N booths at {mallName}" (treats single-mall correctly since production is still AAM-only today), multi-mall reads "N booths across M locations" using "locations" to match `<MallSheet>` voice and preserve cartographic-pin semantic. Admin-only `<Trash2>` bubble added to `<VendorCard>` hero band at `right: 46` (clears the `<Pencil>` edit bubble at `right: 10`); trash only renders when `!vendor.user_id` (client-side cosmetic gate — server 409 is the actual safety). `<DeleteBoothSheet>` inline component: typed-confirm pattern — admin types the exact `display_name` to enable the red delete button. `authFetch` bearer pattern. Error path surfaces the server's 409 message verbatim so the claimed-vendor case reads cleanly.
+Env loading: reads `.env.local` from either cwd or the parent repo path at `/Users/davidbutler/Projects/treehouse-treasure-search/.env.local` (explicit fallback matters because worktrees don't carry gitignored env files). Uses `@supabase/supabase-js` with the service-role key — no new deps. Pattern matches existing `scripts/test-query-builder.ts` (npx tsx invocation).
 
-**🔴 STOP trigger at session open.** Deleting a vendor cascades posts + post-image storage + hero image + vendor row. Flagged as "Deleting or overwriting production data." Mitigations shipped: `requireAdmin` first line, 409 safety gate on claimed vendors (reduces blast radius to pre-seeded + unclaimed only), typed-name client confirmation, inline confirm sheet showing booth identity + mall + booth number. David approved the shape before execution.
+**Why this was the right shape:** David explicitly asked mid-walk, "How can I automate this more in terms of looking up what's in Supabase etc? There is a lot of back and forth I've been having to do and this is my first session in Claude Code coming from operating in Claude Chat. I know I'll need to do the pre-seeding but it's getting to be a lot." The one-shot instinct was to dump SQL into fenced blocks for manual execution; the right instinct in Claude Code is to write the helper, run it via Bash, report the output. Saved as feedback memory so future sessions default to script-first, not SQL-dump-first, when Supabase/Resend/Anthropic/Vercel SDK access is available locally.
 
-**Build error caught pre-commit:** first attempt used explicit column list in `getAllVendors` select. Supabase client's TS inference on nested joins tightens differently between `*, mall:malls(...)` and `id, ..., mall:malls(...)` — the explicit-columns shape typed `mall` as an array (general foreign-key case), colliding with `Vendor.mall?: Mall` (object). One-line fix: swap to `*` pattern matching `getVendorsByUserId` / `getVendorBySlug` / `getVendorById` / `linkVendorToUser`. Tech Rule candidate captured — see "Tech Rule candidates queued" below.
+### Shipment 2 — T4d pre-beta QA walk re-executed, all five exit criteria PASSED
 
-**On-device walk passed:** admin adds booth at non-AAM mall → appears + persists across refetch; subtitle updates correctly; trash bubble visible on unclaimed booths only; typed-confirm delete works; server 409 fires correctly on claimed vendors.
+Last passed sessions 40–41. Session 44 + 45 touched `/shelves` + `<AddBoothInline>` + `/api/admin/vendors` + `components/BoothPage.tsx` — outside the T4d re-walk trigger list technically (`/vendor-request`, `/api/admin/vendor-requests`, `/api/setup/lookup-vendor`, `/my-shelf`, `lib/activeBooth.ts`), but `<AddBoothInline>` is the Flow 1 landing surface now, so a precautionary re-walk was the right call before feed seeding.
 
-### Shipment 2 — Q-009 admin Window share bypass
+**Pre-walk state audit surfaced three surprises the original baseline CLAUDE.md framing missed:**
+1. Session 45 seeded an Ella Butler test vendor at booth 345 (non-AAM mall) with 6 substantive real-Claude-captioned posts live on the feed, unmentioned in CLAUDE.md's "DB is empty and clean-slate safe" framing. Posts were verification artifacts for the session-45 cross-mall fix. Cleaned at walk start.
+2. A claimed "Test" vendor at booth 001 linked to David's personal Gmail auth user (`dbutler80020@gmail.com`), created today at 15:03 UTC — leftover from an earlier test sign-in. Personal Gmail auth user preserved per David's explicit call; vendor row cleaned.
+3. David's UI attempt to delete Ella's auth user didn't stick — the row persisted in `auth.users`. Force-deleted via Supabase admin API. Root cause not investigated (not session-46 scope).
 
-David reported after Shipment 1's walk: "I don't see Share-the-Booth on `/shelf/[slug]` as admin." This was Q-009 in `docs/queued-sessions.md`, already scoped (~15 min). The report also surfaced the cultural question of what the two airplanes actually do, which led to Shipment 3.
+**Flow results** (all five passed):
+- **Flow 1** (admin pre-seed at `/admin`) — booth 999 / `user_id: null` / `slug: qa-walk-booth-999` / AAM mall_id `19a8ff7e-` ✓. David flagged mid-walk that the hero booth photo upload step isn't in the runbook — session-44 addition drift. Patched in Shipment 3.
+- **Flow 2** (vendor-present onboarding, `+qa@gmail.com` alias at booth 888) — request → approval → OTP → sign-in → publish in ~5 min (Sprint 4 target: under 10 min). Auth user created on OTP, vendor row linked on `/setup`, post published with caption "Brass bald eagle figurine sculpture" (real-Claude specificity, no mock fallback, no amber "Couldn't read this image" banner). Session-27 `source: "claude"` field is API-response only, not a DB column — verified indirectly via caption specificity.
+- **Flow 3** (vendor-initiated, `+qa3@gmail.com` alias at booth 777, booth_name "The Velvet Cabinet" ≠ first+last "Flow Three") — the **critical KI-006 test point**. `/api/setup/lookup-vendor` composite-key `(mall_id, booth_number, user_id IS NULL)` succeeded, no 404, session-35 rewrite held. `display_name` stayed "The Velvet Cabinet" (booth_name priority, session-32).
+- **Multi-booth M.1-M.4** (same `+qa3` email, second booth 778 "The Velvet Cabinet - Second Shelf") — dedup landed on "created" state (confirmed per-`(email, mall_id, booth_number)` composite per session-35 migration 007). Second vendor row `user_id` populated on next `/my-shelf` visit (lookup-vendor claim path). `<BoothPickerSheet>` rendered, switching booths re-rendered banner, post from second-booth context landed with `vendor_id = 8bd6f388-` (778), NOT 777 — session-36 `detectOwnershipAsync` multi-booth path held.
+- **Ambient clean signals** — zero console errors on any flow, zero RLS silent empty returns, two auto-captions both specific real-Claude output (no mock collapse).
 
-**What shipped:**
-- `app/api/share-booth/route.ts` — added `isAdminCaller` derivation post-`requireAuth` (pattern matches `requireAdmin` in `lib/adminAuth.ts`: compare `auth.user.email.toLowerCase()` to `NEXT_PUBLIC_ADMIN_EMAIL.toLowerCase()`). Ownership query refactored to build conditionally: admin branch skips `.eq("user_id", auth.user.id)`, non-admin branch keeps it. Downstream `ownedVendor` shape identical; nothing else changed. 403 returns "You don't own this booth." for non-admin, 404 "Booth not found." for admin (which shouldn't fire in practice — admin querying a non-existent id). Success log appends `(admin-bypass)` when admin path used so audit trails distinguish admin sends from vendor sends. `senderFirstName` stays as `vendorRow.display_name` per David's explicit session-45 call ("ZenForged Finds sent you a Window…" reads as "from the booth" rather than "from the admin personally").
-- `app/shelf/[slug]/page.tsx` — added `getSession` + `isAdmin` import, session state, `useEffect` session read (non-blocking: page renders for all viewers, only masthead airplane is gated). Masthead right slot now renders paper-airplane button when `canShare = isAdmin(user) && !!vendor && available.length >= 1`. SVG + button chrome duplicated from `/my-shelf` verbatim (no primitive extraction — two consumers doesn't meet the "canonical primitive impulse" bar per Design agent system prompt). `<ShareBoothSheet>` mounted whenever `vendor` resolved; open/close via `shareOpen` state.
+**Walk artifacts at exit** (all subsequently cleaned via `cleanup ... --confirm`):
+- 2 posts ("Brass bald eagle figurine sculpture", "Hand-carved wood figural sculpture")
+- 4 vendor rows (booths 999, 888, 777, 778)
+- 3 vendor_requests
+- 2 auth users (`+qa`, `+qa3` aliases)
+- Admin (`david@zenforged.com`) + personal Gmail (`dbutler80020@gmail.com`) auth users untouched throughout
 
-**On-device walk passed:** admin sees airplane top-right on `/shelf/[slug]`; sends Window to own email; email delivers; shopper + signed-out users see no airplane; booth with zero available posts shows no airplane.
+### Shipment 3 — Docs drift patches
 
-**Q-008 (shopper share) and Q-011 (email post-it bug) stayed queued** — explicit scope decision, not creep. Q-008 would require auth-branching + sender-attribution rewrite + rate-limit rescope (90–120 min); Q-011 requires email-rendering diagnostic across iOS Mail / Gmail / Outlook (60–90 min). Both are their own sessions.
+- `docs/pre-beta-qa-walk.md` §1.1-1.2 updated: hero booth photo dropzone added to the "Expected form shape" list, hero photo upload added as step 4 of the fill sequence (bumping "Tap Add booth" to step 5), two new red flags added (dropzone missing, hero photo upload fails / no 4:3 preview). Header footnote added documenting the session-46 `scripts/qa-walk.ts` automation.
+- `CLAUDE.md` this session block + session 45 tombstoned below + CURRENT ISSUE updated + KNOWN GAPS adjusted for T4d re-pass + `scripts/qa-walk.ts` reference added.
 
-### Shipment 3 — BoothHero URL link-share retired (two-airplane cleanup)
+### Shipment 4 — Claude Code workflow standardization
 
-Q-009 completion exposed the latent confusion: `<BoothHero>` had a top-right frosted airplane bubble (link-share via `navigator.share` / clipboard URL fallback) AND the masthead airplane (Window email). Two airplanes, both labeled "Share," on the same page — the cultural debt session 40 explicitly acknowledged ("reconciling the two airplanes is a Sprint 5+ Design agent question"). David's call: retire the hero bubble, keep masthead only.
+Late-session add triggered by David asking how to standardize the Chat→Code transition. Two new slash commands landed in `.claude/commands/`:
 
-**What shipped:**
-- `components/BoothPage.tsx` — deleted the Share bubble JSX from `<BoothHero>` (both the `hasCopied ? <Copied!> : <airplane>` conditional and the `motion.button`). Removed `onShare` and `hasCopied` from the prop interface. Removed `Send` and `Check` from `lucide-react` imports (neither has another caller in the file — verified). File header comment block updated with session-45 retirement rationale (what was removed, why, where the capability lives now, what users who want URL share should do). Primitives-list header comment updated: "edit/share bubbles" → "edit bubble". Scrim-preservation comment updated to reflect that only the edit bubble (top-left, owner-only) now needs the gradient.
-- `app/my-shelf/page.tsx` — deleted `copied` state, deleted `handleShare` function, deleted `BASE_URL` constant (only caller was `handleShare`). Stripped `onShare` and `hasCopied` props from `<BoothHero>`.
-- `app/shelf/[slug]/page.tsx` — same three deletions, same prop strip.
+- **`/session-open`** — auto-loads CLAUDE.md + MEMORY.md + MASTER_PROMPT.md, runs the session-opening standup protocol, delivers the standup report, pauses for direction approval. Replaces the Chat-era `th` → clipboard → paste → fill-CURRENT-ISSUE dance with a single command invocation.
+- **`/session-close`** — runs this entire protocol: CLAUDE.md tombstoning, docs drift patches, memory updates, git commit + push, PR creation (when on a worktree), close summary delivery, 🚧 BLOCKED flagging. Replaces the `thc` shell alias with a richer, repo-aware close protocol.
 
-**Replacement capability for URL share:** users can still use the browser's native share menu or copy from the address bar. The masthead airplane's richer output (6-find curated HTML email) replaces the URL link-copy the hero bubble used to produce.
+Both are committed to the same PR #1 as a separate commit (`15dbe0c`) to keep the git history clean. Once PR #1 merges, the commands become available from any checkout of `main` — future sessions can invoke `/session-open` on first message and `/session-close` at end.
 
-**On-device visual walk passed:** hero banner clean of airplane on all three surfaces (`/my-shelf` vendor, `/shelf/[slug]` admin, `/shelf/[slug]` signed-out); masthead airplane unchanged on its existing gates.
+### Self-audit against Tech Rules
 
-**No `<BoothHero>` third-consumer risk:** confirmed via grep before prop removal. Only `/my-shelf` and `/shelf/[slug]` import it.
-
-### Self-audit against Tech Rules (all three shipments)
-
-- **File-creation verify** — `app/api/admin/vendors/route.ts` confirmed on disk via `list_directory` mid-session. ✓
-- **New API route dir creation** — HITL `mkdir -p` ran cleanly at session open; write succeeded on second attempt. ✓
-- **Framer-motion transitions** — no two-transition-props pattern introduced. ✓
-- **Framer-motion centering transform** — `<DeleteBoothSheet>` uses non-animated wrapper div with animated child (session-9 KI-002 pattern). ✓
-- **`export const dynamic = "force-dynamic"`** — preserved on all five edited pages. ✓
-- **TS downlevelIteration** — no `for...of` over Map/Set introduced. ✓
-- **New consumer on old select (session-36 rule)** — `/shelves`'s `<VendorCard>` now reads `vendor.mall?.name` as bio fallback; `<DeleteBoothSheet>` reads `vendor.mall?.name` + `vendor.booth_number`. Verified `getAllVendors` `*` select covers all fields. ✓
-- **Service-role-only tables via /api/*** — `/api/admin/vendors` DELETE uses `auth.service` exclusively. ✓
-- **Admin API route has `requireAdmin` first line** — both DELETE and the `/api/share-booth` admin branch derive from `requireAdmin`-pattern code. ✓
-- **zsh glob** — `git add -A` used at every commit. ✓
-- **Copyright / brand rules** — N/A this session (no external content reproduced). ✓
+- **File-creation verify** — `scripts/qa-walk.ts` confirmed on disk via `ls` before edits. ✓
+- **Env loading in scripts** — explicit dual-path fallback (cwd + parent repo absolute) handles the worktree case cleanly. ✓
+- **Destructive operation safeguards** — cleanup defaults to dry-run, `--confirm` required, `--force-claimed` required to bypass safety gate, `--delete-auth=` hardcoded to refuse `NEXT_PUBLIC_ADMIN_EMAIL`. Three-layer defense against blast radius. ✓
+- **Service-role-only access** — script uses `auth: { persistSession: false, autoRefreshToken: false }` on the client builder. ✓
+- **Runbook trigger-list drift** — session 46 exposed that session-37's T4d trigger list (`/vendor-request` / `/api/admin/vendor-requests` / `/api/setup/lookup-vendor` / `/my-shelf` / `lib/activeBooth.ts`) doesn't capture `<AddBoothInline>` surface moves between `/admin` and `/shelves`. Not promoted to a Tech Rule yet — one firing, watching for a second.
 
 ### Tech Rule candidates queued by this session
 
-1. **Supabase nested-select explicit-columns type-narrowing** (named session 45). Using `select("id, col1, col2, mall:malls(...)")` tightens the client's TS inference on `mall:malls(...)` to an array type — collides with `Vendor.mall?: Mall`. Sibling pattern `select("*, mall:malls(...)")` preserves the inference that lets the outer `as Vendor[]` cast compile. One firing this session; watch for a second firing before promoting. Sits in the same family as the existing session-39 `TS downlevelIteration` rule (both are "Supabase/TS quirks that only surface at build time"). Workaround documented inline in `getAllVendors` comment.
+1. **Script-first over SQL-dump-first in Claude Code** (session-46 observation, meta-workflow). When working in Claude Code with SDK access to the data source (Supabase, Resend, Anthropic, Vercel), default to writing a small reusable helper script in `scripts/` instead of emitting SQL/commands for manual execution. Reserve SDK-dumping for true one-offs that won't recur. Saved as user-feedback memory. Promotion candidate — but this is more of a Claude Code operating principle than a project Tech Rule.
 
-2. **"Two-airplanes" pattern audit** (conceptual, session-45 observation). When a shared primitive accumulates multiple affordances with the same glyph but different semantics (session 40's committed two-airplane coexistence on `<BoothHero>` + masthead), plan the reconciliation at the SAME time as the second addition — not "Sprint 5+ Design agent question later." Session 45 paid the cleanup cost for what session 40 deferred. Not promoting as a hard Tech Rule (judgment call, not mechanical check), but worth logging as a Design-agent principle. Candidate addition to the Design agent system prompt: "When a second instance of a glyph/affordance is introduced, the reconciliation is part of the same scope — not a later cleanup."
+### Risk Register updates
 
-### Risk Register updates (DECISION_GATE.md will be updated separately as part of close)
+- T4d pre-beta QA walk staleness — ✅ Re-passed session 46 (refreshes sessions 40–41 pass)
+- KI (new) — session 45 seeded test data (Ella booth 345 + 6 posts) went undocumented in CLAUDE.md's clean-slate framing — ✅ Resolved session 46 (cleaned); noted as a rule candidate: when a session seeds content during a shipment, add a one-liner to CLAUDE.md's CURRENT ISSUE so the next session doesn't trip on it
+- `/admin` UI delete of `auth.users` rows may not persist — 🟡 Observed session 46 (Ella's delete didn't stick); worth investigating as a session-47+ spike if it happens again
+- Runbook drift (hero photo missing in §1.2) — ✅ Resolved session 46
 
-- `/shelves` hardcoded single-mall query — ✅ Resolved session 45
-- KI (new) — admin-seeded booths at non-AAM malls vanished on refetch — ✅ Resolved session 45 (same line as above)
-- Q-009 admin share bypass — ✅ Resolved session 45 (was 🟢 Ready)
-- Session-40 deferred "two-airplane reconciliation" — ✅ Resolved session 45 (BoothHero bubble retired)
-- Admin vendor delete capability — ✅ Added session 45 (was manual Supabase-only)
-- Session 44 T4b partial-reversal row — still open (no change; session-45 scope didn't touch `<AddBoothInline>`)
+### Session 46 close HITL
 
-### Session 45 close HITL
+Two commits on worktree branch `claude/jovial-mccarthy-69951d`, pushed, bundled in PR #1:
+- `6dbff1e` — `feat(qa-walk): scripts/qa-walk.ts utility + T4d walk PASSED session 46 + runbook hero-photo patch`
+- `15dbe0c` — `feat(commands): /session-open + /session-close slash commands standardize the Chat→Code workflow`
+- (`/session-close` invocation added a third commit that updates CLAUDE.md to mention Shipment 4 — merge-time record.)
 
-All code shipped already (three commits pushed mid-session). Nothing pending in code. Only the docs close commit remains.
-
-```bash
-cd /Users/davidbutler/Projects/treehouse-treasure-search && git add -A && git commit -m "docs: session 45 close — /shelves cross-mall + admin delete + Q-009 + BoothHero airplane retired" && git push
-```
+PR: https://github.com/Zen-Forged/treehouse-treasure-search/pull/1. Merge-to-main HITL is a separate step from session close — David merges when ready via GitHub UI. Not destructive.
 
 ---
 
-## CURRENT ISSUE
-> Last updated: 2026-04-22 (session 45 close — four shipments, all on-device walks passed, all commits pushed)
 
-**Status:** No pending HITL in code. Docs commit remains. Beta invites still technically unblocked (sprint 4 tail closed sessions 40–41, remains closed). Feed content seeding is still the highest-leverage remaining pre-beta item and has been carried forward from session 43's and session 44's recommendations without change. The `/shelves` Add-a-Booth primitive is now fully functional end-to-end (seed → persist cross-mall → delete with safety gate), which strengthens the session-45-feed-seeding workflow — admins can seed + iterate on booths directly from `/shelves` without touching Supabase.
+## CURRENT ISSUE
+> Last updated: 2026-04-22 (session 46 close — T4d walk PASSED end-to-end, `scripts/qa-walk.ts` shipped, docs drift patched)
+
+**Status:** Single session-46 commit pending on worktree branch `claude/jovial-mccarthy-69951d` (see commit command in session-46 close block above). After push, merge-to-main HITL is a separate step. Beta invites remain technically unblocked — session 46's T4d re-walk refreshes the sessions 40–41 pass and confirms session 44–45's `/shelves` + admin-API churn didn't regress anything. DB is clean-slate after post-walk cleanup; no test debris remaining. Feed content seeding carries forward from sessions 43–45 as the highest-leverage remaining pre-beta item.
+
+**Claude Code context note (durable):** David transitioned to Claude Code (terminal) this session after 45 sessions in Claude Chat. `scripts/qa-walk.ts` is the persistence of the automation preference that surfaced mid-session — future Supabase/Resend/Anthropic/Vercel lookups should prefer script-based automation over SQL-dump-for-manual-execution. Saved as user + feedback memory for session 47+ opening-standup awareness.
 
 ### Recommended next session — feed content seeding (~30–60 min)
 
-Unchanged from session 44's recommendation. Session 45 did not dislodge it.
+Unchanged from sessions 44–45. Session 46 did not dislodge it; it strengthened the seeding workflow by re-validating the full end-to-end onboarding path.
 
 Seeding scope:
-- Create 2–3 real (non-test) vendors via `/shelves` Add-a-Booth (primary path, session 44 + 45). `/vendor-request` → `/admin` approve flow remains available for Flow 3 if desired.
+- Create 2–3 real (non-test) vendors via `/shelves` Add-a-Booth (primary path, sessions 44–45). `/vendor-request` → `/admin` approve flow remains available for Flow 3 if desired.
 - Seed 10–15 finds across those vendors, mostly available status with 1–2 "found a home."
 - Photos should be real items, ideally spanning a few material categories (glass, ceramic, brass, wood) to make the feed feel varied on first scroll.
 - Verify the feed, Find Map, and mall pages all render well with the new population.
-- Light QA: ensure the session-27 `source: "claude" \| "mock"` field returns `"claude"` for all auto-caption calls.
+- Light QA: ensure the session-27 `source: "claude" \| "mock"` field returns `"claude"` for all auto-caption calls. (Session 46 verified this via caption specificity — "Brass bald eagle figurine sculpture" and "Hand-carved wood figural sculpture" were both real Claude output. Seeded real finds should look similar.)
 
-This session is likely to first trip session-43 Anthropic auto-reload (threshold $10 / reload $20). Expected and non-blocking. Balance at session-45 close is whatever session 43 reported minus any API spend this session (none — no AI routes touched session 45).
+This session is likely to first trip session-43 Anthropic auto-reload (threshold $10 / reload $20). Expected and non-blocking. Session 46 made 2 caption API calls (Flow 2.4 + M.4 posts), each ~1¢ — basically noise against the balance.
+
+**When a session seeds content during a shipment, add a one-liner to CLAUDE.md's CURRENT ISSUE so the next session doesn't trip on it** — session-46 audit rule candidate (the Ella Butler / booth 345 surprise). Not promoted as a Tech Rule yet, but the next seeding session should honor this.
 
 ### Alternative next sessions
 
-- **Q-008** 🟢 (~90–120 min) — Open Window share to unauthenticated shoppers. Scope-expansion sibling to the Q-009 that shipped this session.
+- **Q-008** 🟢 (~90–120 min) — Open Window share to unauthenticated shoppers. Scope-expansion sibling to Q-009 (shipped session 45).
 - **Q-011** 🟢 (~60–90 min) — Window email banner post-it missing/misplaced (email-rendering diagnostic).
 - **Q-002** 🟢 (~20 min) — Picker affordance placement revision.
-- **Tech Rule promotion batch** (~40 min) — now six candidates queued:
+- **Tech Rule promotion batch** (~40 min) — now **seven** candidates queued:
   - sessions 33, 35, 36, 38 dependency-surface family
   - session-40 React 19 ref-forwarding (one firing)
-  - **session-45 Supabase nested-select explicit-columns** (one firing, NEW)
+  - session-45 Supabase nested-select explicit-columns (one firing)
+  - **session-46 script-first over SQL-dump-first in Claude Code** (one firing, NEW — but this is a meta-workflow rule, may belong in `MASTER_PROMPT.md` rather than `DECISION_GATE.md`)
   - session-42 verify-remaining-count (still below two-firings-outside-same-context bar)
-- **Session-archive drift cleanup** (~30 min) — sessions 28–38 carry one-liner summaries but no archive detail. Session 45 adds itself to the list of sessions needing archive detail eventually, but the session-45 block in this whiteboard is comprehensive enough that the eventual archive entry is a paste-over rather than a rewrite.
-- **Design agent principle addition** (~10 min, docs only) — "When a second instance of a glyph/affordance is introduced, the reconciliation is part of the same scope, not a later cleanup." Session-45 retrospective. Would go in MASTER_PROMPT.md's Design Agent section.
+- **Session-archive drift cleanup** (~30 min) — sessions 28–38 carry one-liner summaries but no archive detail. Session 45's block was folded into its tombstone at session-46 close; the block-as-paste-over option is no longer available for 45 specifically, so its archive entry needs to be written from the tombstone + git log. Session 46's detail is in this whiteboard block above and is paste-over-ready.
+- **Design agent principle addition** (~10 min, docs only) — "When a second instance of a glyph/affordance is introduced, the reconciliation is part of the same scope, not a later cleanup." Session-45 retrospective. Would go in `MASTER_PROMPT.md`'s Design Agent section.
+- **`/admin` UI `auth.users` delete reliability spike** (~20–30 min) — session 46 observed that David's UI-driven delete of an `auth.users` row didn't stick. Not blocking, but worth investigating if it recurs.
 - **Error monitoring** (Sentry or structured logs) — Sprint 3 carryover.
 - **Beta feedback mechanism** (Tally.so link).
 - **Hero image upload size guard** — verify coverage across upload surfaces.
 - **`/admin` v0.2 → v1.2 redesign pass** (Sprint 5+, size L) — still queued; needs design scope first.
 
-### Session 46 opener (pre-filled for feed content seeding)
+### Session 47 opener (pre-filled for feed content seeding)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
 STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Vercel
-Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
+Working directory: /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Feed content seeding per CLAUDE.md recommendation. Scope: (1) create 2–3 real (non-test) vendors via /shelves Add-a-Booth (session 44+45 primary path) or /vendor-request → /admin approve flow (Flow 3); (2) seed 10–15 finds across those vendors, mostly available status with 1–2 "found a home"; (3) verify feed, Find Map, mall pages render well with new population; (4) light QA that session-27 `source: "claude"` field returns clean on all auto-caption calls. This session will likely first trip session-43 auto-reload (threshold $10 / reload $20); expected and non-blocking. ~30–60 min.
+CURRENT ISSUE: Feed content seeding per CLAUDE.md recommendation. Scope: (1) create 2–3 real (non-test) vendors via /shelves Add-a-Booth (session 44+45 primary path) or /vendor-request → /admin approve flow (Flow 3); (2) seed 10–15 finds across those vendors, mostly available status with 1–2 "found a home"; (3) verify feed, Find Map, mall pages render well with new population; (4) light QA that session-27 `source: "claude"` field returns clean on all auto-caption calls (session-46 precedent: "Brass bald eagle figurine sculpture" quality bar). This session will likely first trip session-43 auto-reload (threshold $10 / reload $20); expected and non-blocking. ~30–60 min. Session 46 shipped scripts/qa-walk.ts — use `npx tsx scripts/qa-walk.ts baseline` at open if any pre-existing test debris suspected.
 ```
 
 ---
 
 ## Archived session summaries
 
-> Sessions 34–44 kept as one-liner tombstones. Full detail in `docs/session-archive.md` (or in session-blocks that are queued for eventual archive-drift cleanup).
+> Sessions 34–45 kept as one-liner tombstones. Full detail in `docs/session-archive.md` (or in session-blocks that are queued for eventual archive-drift cleanup).
 
 - **Session 34** (2026-04-20) — Multi-booth scoping. Option A chosen, mockup approved, Q-001 Path B backup captured. Superseded by session 35.
 - **Session 35** (2026-04-20) — Multi-booth rework shipped end-to-end + KI-006 resolved. Six-step QA walk passed.
@@ -212,6 +213,7 @@ CURRENT ISSUE: Feed content seeding per CLAUDE.md recommendation. Scope: (1) cre
 - **Session 42** (2026-04-21) — DB test-data wipe. Admin identity confirmed never drifted.
 - **Session 43** (2026-04-21) — Anthropic model audit + billing auto-reload at $10/$20. Session-27 rule fired cleanly for the first time since promotion.
 - **Session 44** (2026-04-22) — `/shelves` Add-a-Booth restored via `<AddBoothInline>` primitive (partial T4b reversal). Hero-photo field added. Chrome mismatch flagged.
+- **Session 45** (2026-04-22) — `/shelves` cross-mall fix + admin booth delete primitive + Q-009 admin Window share bypass + BoothHero URL-share airplane retired (two-airplane cleanup). Four shipments, three commits, all on-device walks passed. Session-45 Supabase nested-select explicit-columns Tech Rule candidate queued (one firing).
 
 ---
 
@@ -219,18 +221,19 @@ CURRENT ISSUE: Feed content seeding per CLAUDE.md recommendation. Scope: (1) cre
 
 ### 🔴 Pre-beta blockers
 
-*(Empty. As of sessions 40–41, both Q-007 Window Sprint and T4d pre-beta QA walk have passed. No code-level regressions. Beta invites remain technically unblocked after session 45.)*
+*(Empty. T4d pre-beta QA walk re-passed session 46 end-to-end — all five exit criteria clean. Q-007 Window Sprint also remains passed per sessions 40–41. No code-level regressions. Beta invites remain technically unblocked after session 46.)*
 
 ### 🟡 Remaining pre-beta polish (operational, not code-gating)
 
-- **Feed content seeding** — 10–15 real posts across 2–3 vendors. DB is empty and clean-slate safe. Natural pairing with beta invite prep. Session 44's `<AddBoothInline>` primitive + session 45's cross-mall fix + delete feature + claimed-vendor safety gate mean admin can now seed + iterate on booths directly from `/shelves` without touching Supabase. *Recommended as session 46.*
+- **Feed content seeding** — 10–15 real posts across 2–3 vendors. DB is clean-slate after session-46 post-walk cleanup. Natural pairing with beta invite prep. Session 44's `<AddBoothInline>` primitive + session 45's cross-mall fix + delete feature + claimed-vendor safety gate mean admin can now seed + iterate on booths directly from `/shelves` without touching Supabase. Session 46 re-confirmed the onboarding path end-to-end. *Recommended as session 47.*
 - **Error monitoring** (Sentry or structured logs). Sprint 3 carryover.
 - **Beta feedback mechanism** (Tally.so link).
 - **Hero image upload size guard** — verify coverage across upload surfaces.
-- **Tech Rule promotion batch** — six candidates queued: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed, (e) session-40 React 19 ref-forwarding (one firing), (f) **session-45 Supabase nested-select explicit-columns** (one firing, NEW). Session-42 verify-remaining-count still below the two-firings-outside-same-context bar. ~40 min.
+- **Tech Rule promotion batch** — seven candidates queued: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed, (e) session-40 React 19 ref-forwarding (one firing), (f) session-45 Supabase nested-select explicit-columns (one firing), (g) **session-46 script-first over SQL-dump-first in Claude Code** (one firing, NEW — meta-workflow, may belong in `MASTER_PROMPT.md`). Session-42 verify-remaining-count still below the two-firings-outside-same-context bar. ~40 min.
 - **Design agent principle addition** — "When a second instance of a glyph/affordance is introduced, the reconciliation is part of the same scope, not a later cleanup." Session-45 retrospective. ~10 min docs only. Goes in `MASTER_PROMPT.md` Design Agent section.
-- **Session-archive drift cleanup** — sessions 28–38 carry one-liners but no archive detail. Session 45's own block in this file is comprehensive enough that its eventual archive entry is a paste-over. Sessions 34–44 now all have the tombstone treatment. ~30 min batch to backfill archive detail for 28–38 + 44–45.
+- **Session-archive drift cleanup** — sessions 28–38 carry one-liners but no archive detail; sessions 44–45 now also tombstone-only in this file. Session-46's block was paste-over-ready at close but is still in this whiteboard pending eventual archive migration. ~30 min batch to backfill archive detail for 28–38 + 44–45 from tombstones + git log; 46 stays ready-to-paste until the session-47 close replaces it here.
 - **`/api/suggest` SDK migration or delta note** — session 43 confirmed this route is the only AI route still on raw `fetch` rather than the Anthropic SDK. Not beta-gating; reseller-intel only. Optional future cleanup.
+- **`/admin` UI `auth.users` delete reliability** — session 46 observed that David's UI-driven delete of Ella's auth user didn't stick (row persisted until force-deleted via admin API). Not blocking; worth investigating if it recurs. ~20–30 min spike.
 
 ### 🟡 Q-007 Window Sprint expansion (post-MVP)
 
@@ -286,4 +289,4 @@ All captured in `docs/queued-sessions.md`:
 - Trigger: say "generate investor update" at session close
 - Process doc: Notion → Agent System Operating Manual → 📋 Investor Update — Process & Cadence
 
-> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data; session 43 audited AI model surface + locked in billing safeguards; session 44 restored `/shelves` Add-a-Booth primitive; session 45 shipped the cross-mall fix + admin delete + Q-009 admin share bypass + retired the BoothHero URL share to resolve the two-airplane confusion. Next natural investor-update trigger point is after feed content seeding (session 46)** — the update would then honestly report the full pre-beta polish arc (sessions 42–46) as complete rather than partial.
+> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data; session 43 audited AI model surface + locked in billing safeguards; session 44 restored `/shelves` Add-a-Booth primitive; session 45 shipped the cross-mall fix + admin delete + Q-009 admin share bypass + retired the BoothHero URL share to resolve the two-airplane confusion; session 46 shipped `scripts/qa-walk.ts` + re-passed T4d pre-beta QA walk end-to-end. Next natural investor-update trigger point is after feed content seeding (session 47)** — the update would then honestly report the full pre-beta polish arc (sessions 42–47) as complete rather than partial.
