@@ -65,41 +65,46 @@ Exception: a single chained command with `&&` stays in one block — that's one 
 
 ---
 
-## ✅ Session 47 (2026-04-23) — Vendor onboarding hero image gap fixed
+## ✅ Session 48 (2026-04-23) — Featured banner RLS fix (Home + Find Map + /admin preview)
 
-One surgical fix. When a vendor submits via `/vendor-request`, they upload a booth-proof photo stored in `site-assets/booth-proof/` as `vendor_requests.proof_image_url`. Previously that URL was never transferred to `vendors.hero_image_url` at approval time — so the vendor's My Shelf banner was blank after sign-in.
+David reported: Home Featured Find banner not rendering; Find Map hero banner not rendering; `/admin` Banners tab preview blanks after a tab switch (uploads appeared successful in admin UI but didn't persist on remount).
 
-**Root cause:** `createVendorForRequest` in `app/api/admin/vendor-requests/route.ts` built `insertPayload` with only `mall_id`, `display_name`, `booth_number`, `slug`. The `proof_image_url` was fetched on the request row but never passed downstream.
+**Root cause:** RLS got re-enabled on `public.site_settings` post-migration-004 (most likely a Supabase dashboard toggle — no later migration touches the table) with no anon-SELECT policy. [`004_site_settings.sql:39`](supabase/migrations/004_site_settings.sql:39) explicitly declared the table RLS-off, so this drift broke all three downstream consumers that use the anon `supabase` client via `getSiteSettingUrl()`:
 
-**Fix — three edits to [`app/api/admin/vendor-requests/route.ts`](app/api/admin/vendor-requests/route.ts):**
-1. `CreateVendorArgs` interface: added `proofImageUrl: string | null`
-2. Call site (step 3 of POST handler): passes `proofImageUrl: request.proof_image_url || null`
-3. Fresh-insert path: `insertPayload` now includes `hero_image_url: args.proofImageUrl`
-4. Safe-claim path (pre-seeded row reused at approval): service-role `UPDATE` backfills `hero_image_url` on the existing row when `args.proofImageUrl` is set and the row's `hero_image_url` is null
+- [`app/admin/page.tsx:1002`](app/admin/page.tsx:1002) — `loadCurrent()` in `FeaturedBannerEditor` returned null on remount → blank preview after tab switch
+- [`app/page.tsx:638`](app/page.tsx:638) — Home Featured Find returned null → banner didn't load
+- [`app/flagged/page.tsx:531`](app/flagged/page.tsx:531) — Find Map hero returned null → banner didn't load
 
-Build clean. Commit `a60e892` pushed to main. No migration needed (`hero_image_url` is already a nullable text column on `vendors`).
+Upload chain itself was healthy: files in `site-assets` bucket, rows in `site_settings` with valid public URLs, last write timestamps current. Failure was purely on the read side.
 
-**Pre-existing vendors:** No real (non-test) vendors exist (DB is clean-slate after session-46 cleanup), so no backfill needed before beta. Fix is forward-only from `a60e892`.
+**Diagnostic:** new repo utility [`scripts/inspect-banners.ts`](scripts/inspect-banners.ts) — service-role vs. anon differential read on `site_settings`, plus bucket + per-key listing. Differential proof was definitive: svc returned 2 rows, anon returned `data: []`. Kept as a durable diagnostic alongside `scripts/qa-walk.ts`.
 
-**Deployment sidebar:** Vercel CLI not globally installed; npm global install hit EACCES on `/usr/local/lib/node_modules`. One-time fix: `sudo chown -R $(whoami) /usr/local/lib/node_modules` then `npm i -g vercel`. Workaround: `npx vercel@latest --prod`.
+**Fix:** migration [`008_site_settings_rls_fix.sql`](supabase/migrations/008_site_settings_rls_fix.sql) — re-disables RLS to match 004's "intentionally OFF" intent AND adds a safety-net `anon, authenticated SELECT` policy so any future RLS re-toggle won't silently break the public banners again. Writes already go through service-role and bypass RLS, so unaffected.
+
+🖐️ HITL: David pasted the migration SQL into the Supabase SQL editor. Re-run of `inspect-banners.ts` confirmed anon now returns both rows. On-device walk: Home + Find Map + `/admin` Banners tab all rendering cleanly with no tab-switch blanking.
+
+Commit `17d2937` pushed to main. The actual prod fix was the dashboard SQL run — the commit records the migration file (so 008 runs automatically on any fresh Supabase rebuild) plus the diagnostic script.
+
+**NEW Tech Rule candidate (one firing):** "When a migration declares `DISABLE ROW LEVEL SECURITY` on a table, also create a permissive `anon, authenticated SELECT` policy as a safety net. Supabase dashboard toggles can re-enable RLS without warning, and a no-op-while-disabled policy survives that toggle." Now the 8th candidate queued for promotion. Risk-surface check: `grep -rn "DISABLE ROW LEVEL SECURITY" supabase/migrations` shows `site_settings` is the only table declared RLS-off, so 008 closes this drift class entirely — no other tables need the same retrofit.
 
 ### Self-audit against Tech Rules
 
 - `requireAdmin` first line — no new API routes added. ✓
-- Service-role client used in safe-claim UPDATE (same client already in scope from requireAdmin). ✓
-- No new ecosystem pages, no new framer-motion patterns, no schema changes. ✓
+- Service-role client used only in read-only diagnostic script. ✓
+- No new ecosystem pages, no new framer-motion patterns, no schema changes (RLS toggle + policy only). ✓
+- **Script-first over SQL-dump-first (session-46 candidate) — followed:** built `scripts/inspect-banners.ts` before pasting any SQL, used the differential proof to drive the diagnosis. **Second firing of this rule — promotion threshold reached.**
 
 ---
 
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-23 (session 47 close — vendor onboarding hero image gap fixed)
+> Last updated: 2026-04-23 (session 48 close — featured banner RLS fix)
 
-**Status:** `a60e892` on main. DB clean-slate (no test debris). Beta invites technically unblocked. Vercel CLI not yet globally installed on David's machine — one-time fix is `sudo chown -R $(whoami) /usr/local/lib/node_modules && npm i -g vercel`; workaround is `npx vercel@latest --prod`.
+**Status:** `17d2937` on main. Featured banner rendering restored across Home, Find Map, and `/admin` Banners preview. Migration 008 captures the RLS fix as a durable migration. DB clean-slate persists; beta invites remain technically unblocked. Vercel CLI still not globally installed on David's machine — one-time fix is `sudo chown -R $(whoami) /usr/local/lib/node_modules && npm i -g vercel`; workaround is `npx vercel@latest --prod`.
 
 ### Recommended next session — feed content seeding (~30–60 min)
 
-Unchanged from sessions 44–45. Session 46 did not dislodge it; it strengthened the seeding workflow by re-validating the full end-to-end onboarding path.
+Unchanged from sessions 44–47. Session 48 was a fast surgical bug-fix that didn't dislodge it; it actually strengthened the prereqs because seeding wants the Home Featured Find banner rendering correctly when David reviews the populated feed.
 
 Seeding scope:
 - Create 2–3 real (non-test) vendors via `/shelves` Add-a-Booth (primary path, sessions 44–45). `/vendor-request` → `/admin` approve flow remains available for Flow 3 if desired — and now correctly populates the vendor's hero image from the proof photo (session-47 fix).
@@ -117,11 +122,12 @@ This session is likely to first trip session-43 Anthropic auto-reload (threshold
 - **Q-008** 🟢 (~90–120 min) — Open Window share to unauthenticated shoppers. Scope-expansion sibling to Q-009 (shipped session 45).
 - **Q-011** 🟢 (~60–90 min) — Window email banner post-it missing/misplaced (email-rendering diagnostic).
 - **Q-002** 🟢 (~20 min) — Picker affordance placement revision.
-- **Tech Rule promotion batch** (~40 min) — now **seven** candidates queued:
+- **Tech Rule promotion batch** (~40 min) — now **eight** candidates queued (one ready for promotion):
   - sessions 33, 35, 36, 38 dependency-surface family
   - session-40 React 19 ref-forwarding (one firing)
   - session-45 Supabase nested-select explicit-columns (one firing)
-  - **session-46 script-first over SQL-dump-first in Claude Code** (one firing, NEW — but this is a meta-workflow rule, may belong in `MASTER_PROMPT.md` rather than `DECISION_GATE.md`)
+  - session-46 script-first over SQL-dump-first in Claude Code — **second firing in session 48 (promotion-threshold reached)**, meta-workflow rule, may belong in `MASTER_PROMPT.md` rather than `DECISION_GATE.md`
+  - **session-48 RLS-safety-net policy alongside any `DISABLE ROW LEVEL SECURITY`** (one firing, NEW — pure tech rule, belongs in `DECISION_GATE.md`)
   - session-42 verify-remaining-count (still below two-firings-outside-same-context bar)
 - **Session-archive drift cleanup** (~30 min) — sessions 28–38 carry one-liner summaries but no archive detail. Session 45's block was folded into its tombstone at session-46 close; the block-as-paste-over option is no longer available for 45 specifically, so its archive entry needs to be written from the tombstone + git log. Session 46's detail is in this whiteboard block above and is paste-over-ready.
 - **Design agent principle addition** (~10 min, docs only) — "When a second instance of a glyph/affordance is introduced, the reconciliation is part of the same scope, not a later cleanup." Session-45 retrospective. Would go in `MASTER_PROMPT.md`'s Design Agent section.
@@ -131,7 +137,7 @@ This session is likely to first trip session-43 Anthropic auto-reload (threshold
 - **Hero image upload size guard** — verify coverage across upload surfaces.
 - **`/admin` v0.2 → v1.2 redesign pass** (Sprint 5+, size L) — still queued; needs design scope first.
 
-### Session 48 opener (pre-filled for feed content seeding)
+### Session 49 opener (pre-filled for feed content seeding)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
@@ -139,7 +145,7 @@ STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthr
 Working directory: /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Feed content seeding per CLAUDE.md recommendation. Scope: (1) create 2–3 real (non-test) vendors via /shelves Add-a-Booth (session 44+45 primary path) or /vendor-request → /admin approve flow (Flow 3 — now also populates hero_image_url from the proof photo, session 47 fix); (2) seed 10–15 finds across those vendors, mostly available status with 1–2 "found a home"; (3) verify feed, Find Map, mall pages render well with new population; (4) light QA that session-27 `source: "claude"` field returns clean on all auto-caption calls (session-46 precedent: "Brass bald eagle figurine sculpture" quality bar). This session will likely first trip session-43 auto-reload (threshold $10 / reload $20); expected and non-blocking. ~30–60 min. Use `npx tsx scripts/qa-walk.ts baseline` at open if any pre-existing test debris suspected.
+CURRENT ISSUE: Feed content seeding per CLAUDE.md recommendation. Scope: (1) create 2–3 real (non-test) vendors via /shelves Add-a-Booth (session 44+45 primary path) or /vendor-request → /admin approve flow (Flow 3 — now also populates hero_image_url from the proof photo, session 47 fix); (2) seed 10–15 finds across those vendors, mostly available status with 1–2 "found a home"; (3) verify feed, Find Map, mall pages render well with new population — Home Featured Find + Find Map hero banner reads now work post-session-48 RLS fix; (4) light QA that session-27 `source: "claude"` field returns clean on all auto-caption calls (session-46 precedent: "Brass bald eagle figurine sculpture" quality bar). This session will likely first trip session-43 auto-reload (threshold $10 / reload $20); expected and non-blocking. ~30–60 min. Use `npx tsx scripts/qa-walk.ts baseline` at open if any pre-existing test debris suspected; `npx tsx scripts/inspect-banners.ts` if banner rendering is in question.
 ```
 
 ---
@@ -160,6 +166,7 @@ CURRENT ISSUE: Feed content seeding per CLAUDE.md recommendation. Scope: (1) cre
 - **Session 44** (2026-04-22) — `/shelves` Add-a-Booth restored via `<AddBoothInline>` primitive (partial T4b reversal). Hero-photo field added. Chrome mismatch flagged.
 - **Session 45** (2026-04-22) — `/shelves` cross-mall fix + admin booth delete primitive + Q-009 admin Window share bypass + BoothHero URL-share airplane retired (two-airplane cleanup). Four shipments, three commits, all on-device walks passed. Session-45 Supabase nested-select explicit-columns Tech Rule candidate queued (one firing).
 - **Session 46** (2026-04-22) — T4d pre-beta QA walk re-passed end-to-end (all five exit criteria clean) + `scripts/qa-walk.ts` QA utility shipped + `docs/pre-beta-qa-walk.md` hero-photo step drift patched + `/session-open` + `/session-close` slash commands added to standardize the Chat→Code workflow. First Claude Code session after 45 in Claude Chat.
+- **Session 47** (2026-04-23) — Vendor onboarding hero image gap fixed: `proof_image_url` now transfers to `vendors.hero_image_url` on approval (3 edits + safe-claim path backfill in `app/api/admin/vendor-requests/route.ts`). My Shelf banner no longer blank after sign-in. Forward-only fix; no migration.
 
 ---
 
@@ -167,17 +174,17 @@ CURRENT ISSUE: Feed content seeding per CLAUDE.md recommendation. Scope: (1) cre
 
 ### 🔴 Pre-beta blockers
 
-*(Empty. T4d pre-beta QA walk re-passed session 46 end-to-end — all five exit criteria clean. Q-007 Window Sprint also remains passed per sessions 40–41. No code-level regressions. Beta invites remain technically unblocked after session 46.)*
+*(Empty. T4d pre-beta QA walk re-passed session 46 end-to-end — all five exit criteria clean. Q-007 Window Sprint also remains passed per sessions 40–41. Featured banner reads restored session 48. No code-level regressions. Beta invites remain technically unblocked after session 48.)*
 
 ### 🟡 Remaining pre-beta polish (operational, not code-gating)
 
-- **Feed content seeding** — 10–15 real posts across 2–3 vendors. DB is clean-slate after session-46 post-walk cleanup. Natural pairing with beta invite prep. Session 44's `<AddBoothInline>` primitive + session 45's cross-mall fix + delete feature + claimed-vendor safety gate mean admin can now seed + iterate on booths directly from `/shelves` without touching Supabase. Session 46 re-confirmed the onboarding path end-to-end. *Recommended as session 47.*
+- **Feed content seeding** — 10–15 real posts across 2–3 vendors. DB is clean-slate after session-46 post-walk cleanup. Natural pairing with beta invite prep. Session 44's `<AddBoothInline>` primitive + session 45's cross-mall fix + delete feature + claimed-vendor safety gate mean admin can now seed + iterate on booths directly from `/shelves` without touching Supabase. Session 46 re-confirmed the onboarding path end-to-end. Session 48 restored Home Featured Find + Find Map hero banner reads, so a populated feed will render with full chrome. *Recommended as session 49.*
 - **Error monitoring** (Sentry or structured logs). Sprint 3 carryover.
 - **Beta feedback mechanism** (Tally.so link).
 - **Hero image upload size guard** — verify coverage across upload surfaces.
-- **Tech Rule promotion batch** — seven candidates queued: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed, (e) session-40 React 19 ref-forwarding (one firing), (f) session-45 Supabase nested-select explicit-columns (one firing), (g) **session-46 script-first over SQL-dump-first in Claude Code** (one firing, NEW — meta-workflow, may belong in `MASTER_PROMPT.md`). Session-42 verify-remaining-count still below the two-firings-outside-same-context bar. ~40 min.
+- **Tech Rule promotion batch** — eight candidates queued, one promotion-ready: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed, (e) session-40 React 19 ref-forwarding (one firing), (f) session-45 Supabase nested-select explicit-columns (one firing), (g) **session-46 script-first over SQL-dump-first in Claude Code — second firing in session 48 (promotion-threshold reached)**, meta-workflow rule, may belong in `MASTER_PROMPT.md`, (h) **session-48 RLS-safety-net policy alongside any `DISABLE ROW LEVEL SECURITY`** (one firing, NEW — pure tech rule, belongs in `DECISION_GATE.md`). Session-42 verify-remaining-count still below the two-firings-outside-same-context bar. ~40 min.
 - **Design agent principle addition** — "When a second instance of a glyph/affordance is introduced, the reconciliation is part of the same scope, not a later cleanup." Session-45 retrospective. ~10 min docs only. Goes in `MASTER_PROMPT.md` Design Agent section.
-- **Session-archive drift cleanup** — sessions 28–38 carry one-liners but no archive detail; sessions 44–45 now also tombstone-only in this file. Session-46's block was paste-over-ready at close but is still in this whiteboard pending eventual archive migration. ~30 min batch to backfill archive detail for 28–38 + 44–45 from tombstones + git log; 46 stays ready-to-paste until the session-47 close replaces it here.
+- **Session-archive drift cleanup** — sessions 28–38 carry one-liners but no archive detail; sessions 44–47 now also tombstone-only in this file. Session-48's block above is paste-over-ready until the session-49 close replaces it here. ~30 min batch to backfill archive detail for 28–38 + 44–47 from tombstones + git log.
 - **`/api/suggest` SDK migration or delta note** — session 43 confirmed this route is the only AI route still on raw `fetch` rather than the Anthropic SDK. Not beta-gating; reseller-intel only. Optional future cleanup.
 - **`/admin` UI `auth.users` delete reliability** — session 46 observed that David's UI-driven delete of Ella's auth user didn't stick (row persisted until force-deleted via admin API). Not blocking; worth investigating if it recurs. ~20–30 min spike.
 
@@ -235,4 +242,4 @@ All captured in `docs/queued-sessions.md`:
 - Trigger: say "generate investor update" at session close
 - Process doc: Notion → Agent System Operating Manual → 📋 Investor Update — Process & Cadence
 
-> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data; session 43 audited AI model surface + locked in billing safeguards; session 44 restored `/shelves` Add-a-Booth primitive; session 45 shipped the cross-mall fix + admin delete + Q-009 admin share bypass + retired the BoothHero URL share; session 46 shipped `scripts/qa-walk.ts` + re-passed T4d QA walk + standardized the Claude Code workflow; session 47 fixed the vendor onboarding hero image gap. Next natural investor-update trigger point is after feed content seeding (session 48)** — the update would then honestly report the full pre-beta polish arc (sessions 42–48) as complete rather than partial.
+> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data; session 43 audited AI model surface + locked in billing safeguards; session 44 restored `/shelves` Add-a-Booth primitive; session 45 shipped the cross-mall fix + admin delete + Q-009 admin share bypass + retired the BoothHero URL share; session 46 shipped `scripts/qa-walk.ts` + re-passed T4d QA walk + standardized the Claude Code workflow; session 47 fixed the vendor onboarding hero image gap; session 48 fixed the featured-banner RLS drift across Home + Find Map + /admin Banners preview. Next natural investor-update trigger point is after feed content seeding (session 49)** — the update would then honestly report the full pre-beta polish arc (sessions 42–49) as complete rather than partial.
