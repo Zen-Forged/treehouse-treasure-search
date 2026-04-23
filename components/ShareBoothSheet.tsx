@@ -389,7 +389,8 @@ function ComposeBody({
         <div style={{ padding: 12, background: v1.postit, borderRadius: 10, border: `1px solid ${v1.inkHairline}`, position: "relative", display: "inline-block" }}>
           <QRCode
             value={boothUrl}
-            size={148}
+            size={160}
+            level="H"
             fgColor="#000000"
             bgColor="#ffffff"
           />
