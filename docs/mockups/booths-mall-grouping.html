@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Booths Mall Grouping Options</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42,26,10,0.28);
+    --ink-hairline: rgba(42,26,10,0.18);
+    --ink-wash:     rgba(255,253,248,0.70);
+    --green:        #1e4d2b;
+
+    --im-fell: "IM Fell English", Georgia, serif;
+    --sys:     -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #1e1a14; font-family: var(--sys); color: var(--ink-primary); }
+
+  .decisions {
+    max-width: 960px; margin: 0 auto; padding: 36px 24px 28px; color: rgba(232,221,199,0.9);
+  }
+  .decisions h1 {
+    font-family: var(--im-fell); font-weight: 400; font-size: 28px; color: #e8ddc7;
+    margin: 0 0 6px; text-align: center; letter-spacing: -0.01em;
+  }
+  .decisions .subtitle {
+    text-align: center; color: rgba(232,221,199,0.6); font-size: 13px;
+    margin: 0 auto 24px; line-height: 1.65; max-width: 560px;
+  }
+  .pick-box {
+    background: rgba(232,221,199,0.07); border: 1px solid rgba(232,221,199,0.15);
+    border-radius: 12px; padding: 18px 22px; margin-bottom: 10px;
+  }
+  .pick-box p { margin: 0 0 10px; font-size: 13px; line-height: 1.65; color: rgba(232,221,199,0.8); }
+  .pick-box p:last-child { margin-bottom: 0; }
+  .pick-box strong { color: #e8ddc7; }
+  .q { font-family: var(--im-fell); font-style: italic; font-size: 15px; color: rgba(232,221,199,0.72); margin: 0 0 5px; }
+
+  .frames-row {
+    max-width: 1280px; margin: 0 auto; padding: 0 20px 80px;
+    display: flex; gap: 28px; justify-content: center; align-items: flex-start; flex-wrap: wrap;
+  }
+  .frame-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; flex: 0 0 auto; }
+  .frame-label { font-family: var(--im-fell); font-style: italic; font-size: 16px; color: rgba(232,221,199,0.7); text-align: center; }
+  .frame-label strong { display: block; font-style: normal; font-size: 18px; color: #e8ddc7; margin-bottom: 2px; }
+
+  .phone {
+    width: 375px; height: 760px; background: var(--paper); border-radius: 40px;
+    box-shadow: 0 12px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06);
+    overflow: hidden; position: relative; display: flex; flex-direction: column;
+  }
+
+  /* Masthead */
+  .masthead {
+    background: rgba(232,221,199,0.96); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid var(--ink-hairline);
+    padding: 46px 18px 14px; flex-shrink: 0;
+  }
+  .masthead-row { display: flex; align-items: center; justify-content: space-between; }
+  .masthead-title { font-family: var(--im-fell); font-size: 22px; color: var(--ink-primary); letter-spacing: -0.02em; line-height: 1; }
+  .masthead-sub { font-family: var(--im-fell); font-style: italic; font-size: 12px; color: var(--ink-muted); margin-top: 4px; display: flex; align-items: center; gap: 5px; }
+
+  /* Scroll */
+  .scroll-area { overflow-y: auto; flex: 1; scrollbar-width: none; -ms-overflow-style: none; }
+  .scroll-area::-webkit-scrollbar { display: none; }
+
+  /* Bottom nav */
+  .bottom-nav {
+    flex-shrink: 0; height: 72px; background: rgba(232,221,199,0.97);
+    border-top: 1px solid var(--ink-hairline);
+    display: flex; align-items: center; justify-content: space-around; padding: 0 16px 4px;
+  }
+  .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; opacity: 0.42; }
+  .nav-item.active { opacity: 1; }
+  .nav-icon { font-size: 18px; line-height: 1; }
+  .nav-label { font-family: var(--sys); font-size: 9px; font-weight: 500; letter-spacing: 0.3px; color: var(--ink-primary); }
+  .nav-item.active .nav-label { color: var(--green); font-weight: 700; }
+
+  /* Grid */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* Card */
+  .card {
+    border-radius: 12px; overflow: hidden; background: var(--ink-wash);
+    border: 1px solid var(--ink-hairline); box-shadow: 0 1px 6px rgba(42,26,10,0.06);
+  }
+  .card-hero { aspect-ratio: 1/1; position: relative; overflow: hidden; }
+  .card-hero-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card-grad { position: absolute; inset: 0; background: linear-gradient(to top, rgba(20,14,6,0.52) 0%, transparent 55%); }
+  .chip {
+    position: absolute; bottom: 7px; left: 8px; padding: 2px 7px; border-radius: 10px;
+    background: rgba(20,14,6,0.55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.15);
+    font-family: monospace; font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.95); letter-spacing: 0.3px;
+  }
+  .card-info { padding: 9px 10px 11px; }
+  .card-name { font-family: var(--im-fell); font-size: 14px; color: var(--ink-primary); line-height: 1.2; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-sub { font-family: var(--im-fell); font-style: italic; font-size: 10px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Hues */
+  .hue-amber  { background: linear-gradient(135deg, #7a5c1e 0%, #b08240 100%); }
+  .hue-forest { background: linear-gradient(135deg, #1e4d2b 0%, #2d7044 100%); }
+  .hue-clay   { background: linear-gradient(135deg, #8b3a1a 0%, #c4612e 100%); }
+  .hue-slate  { background: linear-gradient(135deg, #2a3a4a 0%, #3d5464 100%); }
+  .hue-rose   { background: linear-gradient(135deg, #7a2a3a 0%, #b04060 100%); }
+  .hue-sage   { background: linear-gradient(135deg, #3a5a3a 0%, #5a8040 100%); }
+
+  /* ── Option A: Section header rows ── */
+  .section-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px 0 10px;
+  }
+  .section-header:first-child { padding-top: 0; }
+  .section-title {
+    font-family: var(--im-fell); font-size: 16px; color: var(--ink-primary);
+    letter-spacing: -0.01em; white-space: nowrap;
+  }
+  .section-rule {
+    flex: 1; height: 1px; background: var(--ink-hairline);
+  }
+  .section-count {
+    font-family: var(--im-fell); font-style: italic; font-size: 11px; color: var(--ink-muted);
+    white-space: nowrap;
+  }
+
+  /* ── Option B: Full-width location pill ── */
+  .location-pill-wrap {
+    padding: 14px 0 10px;
+  }
+  .location-pill-wrap:first-child { padding-top: 0; }
+  .location-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px 5px 9px;
+    border-radius: 20px;
+    background: rgba(42,26,10,0.06);
+    border: 1px solid var(--ink-hairline);
+  }
+  .location-pill-icon { font-size: 11px; }
+  .location-pill-text {
+    font-family: var(--im-fell); font-size: 13px; color: var(--ink-mid);
+    letter-spacing: -0.01em;
+  }
+  .location-pill-count {
+    font-family: var(--im-fell); font-style: italic; font-size: 11px; color: var(--ink-muted);
+    margin-left: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div class="decisions">
+  <h1>Booths — Mall Grouping Options</h1>
+  <p class="subtitle">Both options keep the 2-column grid. The question is how the mall separator reads between groups.</p>
+
+  <div class="pick-box">
+    <p class="q">What are we deciding?</p>
+    <p><strong>A — Section headers:</strong> Each mall gets an IM Fell title with a hairline rule extending to the right and a faint booth count on the far end. The rule visually bridges across both columns. Clean, editorial, matches the journal voice of the rest of the app.</p>
+    <p><strong>B — Location pills:</strong> Each mall gets a small frosted pill (📍 + name + count) sitting above its grid group. Lower visual weight than the rule — the pill is contained rather than spanning the full width. Feels more like a tag or filter chip than a section title.</p>
+  </div>
+</div>
+
+<div class="frames-row">
+
+  <!-- Option A -->
+  <div class="frame-wrap">
+    <div class="frame-label"><strong>A — Section Headers</strong>IM Fell title + hairline rule</div>
+    <div class="phone">
+      <div class="masthead">
+        <div class="masthead-row">
+          <span class="masthead-title">Booths</span>
+        </div>
+        <div class="masthead-sub"><span>📍</span> 6 booths across 2 locations</div>
+      </div>
+
+      <div class="scroll-area">
+        <div style="padding: 14px 14px 0; padding-bottom: 90px;">
+
+          <!-- Mall 1 -->
+          <div class="section-header">
+            <span class="section-title">America's Antique Mall</span>
+            <div class="section-rule"></div>
+            <span class="section-count">4 booths</span>
+          </div>
+          <div class="grid">
+            <div class="card">
+              <div class="card-hero hue-amber"><div class="card-grad"></div><div class="chip">Booth 101</div></div>
+              <div class="card-info"><div class="card-name">The Amber Room</div><div class="card-sub">Mid-century ceramics</div></div>
+            </div>
+            <div class="card">
+              <div class="card-hero hue-forest"><div class="card-grad"></div><div class="chip">Booth 204</div></div>
+              <div class="card-info"><div class="card-name">Fern &amp; Foxglove</div><div class="card-sub">Botanical prints &amp; flora</div></div>
+            </div>
+            <div class="card">
+              <div class="card-hero hue-clay"><div class="card-grad"></div><div class="chip">Booth 312</div></div>
+              <div class="card-info"><div class="card-name">Clay &amp; Company</div><div class="card-sub">Studio pottery</div></div>
+            </div>
+            <div class="card">
+              <div class="card-hero hue-slate"><div class="card-grad"></div><div class="chip">Booth 418</div></div>
+              <div class="card-info"><div class="card-name">Bluestone Goods</div><div class="card-sub">Industrial salvage</div></div>
+            </div>
+          </div>
+
+          <!-- Mall 2 -->
+          <div class="section-header">
+            <span class="section-title">Woodstock Antique Row</span>
+            <div class="section-rule"></div>
+            <span class="section-count">2 booths</span>
+          </div>
+          <div class="grid">
+            <div class="card">
+              <div class="card-hero hue-rose"><div class="card-grad"></div><div class="chip">Booth 12</div></div>
+              <div class="card-info"><div class="card-name">Rose &amp; Ruin</div><div class="card-sub">Victorian ephemera</div></div>
+            </div>
+            <div class="card">
+              <div class="card-hero hue-sage"><div class="card-grad"></div><div class="chip">Booth 27</div></div>
+              <div class="card-info"><div class="card-name">Sage Collective</div><div class="card-sub">Pressed botanicals</div></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <div class="nav-item"><div class="nav-icon">🏠</div><div class="nav-label">Home</div></div>
+        <div class="nav-item active"><div class="nav-icon">🏪</div><div class="nav-label">Booths</div></div>
+        <div class="nav-item"><div class="nav-icon">🗺️</div><div class="nav-label">Find Map</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="frame-wrap">
+    <div class="frame-label"><strong>B — Location Pills</strong>Frosted pill above each group</div>
+    <div class="phone">
+      <div class="masthead">
+        <div class="masthead-row">
+          <span class="masthead-title">Booths</span>
+        </div>
+        <div class="masthead-sub"><span>📍</span> 6 booths across 2 locations</div>
+      </div>
+
+      <div class="scroll-area">
+        <div style="padding: 14px 14px 0; padding-bottom: 90px;">
+
+          <!-- Mall 1 -->
+          <div class="location-pill-wrap">
+            <div class="location-pill">
+              <span class="location-pill-icon">📍</span>
+              <span class="location-pill-text">America's Antique Mall</span>
+              <span class="location-pill-count">4</span>
+            </div>
+          </div>
+          <div class="grid" style="margin-bottom: 4px;">
+            <div class="card">
+              <div class="card-hero hue-amber"><div class="card-grad"></div><div class="chip">Booth 101</div></div>
+              <div class="card-info"><div class="card-name">The Amber Room</div><div class="card-sub">Mid-century ceramics</div></div>
+            </div>
+            <div class="card">
+              <div class="card-hero hue-forest"><div class="card-grad"></div><div class="chip">Booth 204</div></div>
+              <div class="card-info"><div class="card-name">Fern &amp; Foxglove</div><div class="card-sub">Botanical prints &amp; flora</div></div>
+            </div>
+            <div class="card">
+              <div class="card-hero hue-clay"><div class="card-grad"></div><div class="chip">Booth 312</div></div>
+              <div class="card-info"><div class="card-name">Clay &amp; Company</div><div class="card-sub">Studio pottery</div></div>
+            </div>
+            <div class="card">
+              <div class="card-hero hue-slate"><div class="card-grad"></div><div class="chip">Booth 418</div></div>
+              <div class="card-info"><div class="card-name">Bluestone Goods</div><div class="card-sub">Industrial salvage</div></div>
+            </div>
+          </div>
+
+          <!-- Mall 2 -->
+          <div class="location-pill-wrap">
+            <div class="location-pill">
+              <span class="location-pill-icon">📍</span>
+              <span class="location-pill-text">Woodstock Antique Row</span>
+              <span class="location-pill-count">2</span>
+            </div>
+          </div>
+          <div class="grid">
+            <div class="card">
+              <div class="card-hero hue-rose"><div class="card-grad"></div><div class="chip">Booth 12</div></div>
+              <div class="card-info"><div class="card-name">Rose &amp; Ruin</div><div class="card-sub">Victorian ephemera</div></div>
+            </div>
+            <div class="card">
+              <div class="card-hero hue-sage"><div class="card-grad"></div><div class="chip">Booth 27</div></div>
+              <div class="card-info"><div class="card-name">Sage Collective</div><div class="card-sub">Pressed botanicals</div></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <div class="nav-item"><div class="nav-icon">🏠</div><div class="nav-label">Home</div></div>
+        <div class="nav-item active"><div class="nav-icon">🏪</div><div class="nav-label">Booths</div></div>
+        <div class="nav-item"><div class="nav-icon">🗺️</div><div class="nav-label">Find Map</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

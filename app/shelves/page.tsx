@@ -14,7 +14,6 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
@@ -269,6 +268,21 @@ function SkeletonCard() {
   );
 }
 
+// ─── Mall grouping helper ──────────────────────────────────────────────────────
+// Groups vendors by mall, preserving the order of first appearance. Vendors
+// without a mall fall into a final "Other" bucket.
+
+function groupByMall(vendors: Vendor[]): { mallName: string; vendors: Vendor[] }[] {
+  const map = new Map<string, { mallName: string; vendors: Vendor[] }>();
+  for (const vendor of vendors) {
+    const key  = vendor.mall_id ?? "__none__";
+    const name = vendor.mall?.name ?? "Other";
+    if (!map.has(key)) map.set(key, { mallName: name, vendors: [] });
+    map.get(key)!.vendors.push(vendor);
+  }
+  return Array.from(map.values());
+}
+
 // ─── Subtitle helper ───────────────────────────────────────────────────────────
 
 function subtitleFor(vendors: Vendor[]): { text: string; mallName: string | null } | null {
@@ -314,12 +328,9 @@ export default function BoothsPage() {
       <StickyMasthead>
         <div style={{ padding: "max(16px, env(safe-area-inset-top, 16px)) 18px 14px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-              <Image src="/logo.png" alt="Treehouse" width={22} height={22} />
-              <span style={{ fontFamily: FONT_IM_FELL, fontSize: 22, color: v1.inkPrimary, letterSpacing: "-0.02em", lineHeight: 1 }}>
-                Booths
-              </span>
-            </div>
+            <span style={{ fontFamily: FONT_IM_FELL, fontSize: 22, color: v1.inkPrimary, letterSpacing: "-0.02em", lineHeight: 1 }}>
+              Booths
+            </span>
             <AdminOnly user={user}>
               <Link href="/admin"
                 style={{ fontSize: 9, fontWeight: 700, color: v1.green, textTransform: "uppercase", letterSpacing: "1.6px", padding: "4px 9px", borderRadius: 8, background: "rgba(30,77,43,0.08)", border: "1px solid rgba(30,77,43,0.22)", textDecoration: "none" }}>
@@ -371,17 +382,33 @@ export default function BoothsPage() {
             </p>
           </motion.div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            {vendors.map((vendor, i) => (
-              <VendorCard
-                key={vendor.id}
-                vendor={vendor}
-                index={i}
-                user={user}
-                onRequestDelete={setDeleteTarget}
-              />
+          <>
+            {groupByMall(vendors).map((group, groupIdx) => (
+              <div key={group.mallName}>
+                {/* Section header — IM Fell name + hairline rule + booth count */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: groupIdx === 0 ? 0 : 20, paddingBottom: 10 }}>
+                  <span style={{ fontFamily: FONT_IM_FELL, fontSize: 15, color: v1.inkPrimary, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>
+                    {group.mallName}
+                  </span>
+                  <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+                  <span style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 11, color: v1.inkMuted, whiteSpace: "nowrap" }}>
+                    {group.vendors.length} {group.vendors.length === 1 ? "booth" : "booths"}
+                  </span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  {group.vendors.map((vendor, i) => (
+                    <VendorCard
+                      key={vendor.id}
+                      vendor={vendor}
+                      index={i}
+                      user={user}
+                      onRequestDelete={setDeleteTarget}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
-          </div>
+          </>
         )}
       </main>
 
