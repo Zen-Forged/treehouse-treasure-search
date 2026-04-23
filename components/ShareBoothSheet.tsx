@@ -46,6 +46,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import QRCode from "react-qr-code";
 import { authFetch } from "@/lib/authFetch";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import type { Mall, Post, Vendor } from "@/types/treehouse";
@@ -160,6 +161,12 @@ export default function ShareBoothSheet({
   const boothNo   = vendor.booth_number;
   const subtitle  = [mallName, boothNo ? `Booth ${boothNo}` : null].filter(Boolean).join(" · ");
 
+  // Public booth URL for QR code — uses window.location.origin so it works
+  // in dev (localhost) and production (app.kentuckytreehouse.com) without
+  // hardcoding. Safe here because this is a "use client" component and the
+  // sheet only mounts after hydration.
+  const boothUrl = (typeof window !== "undefined" ? window.location.origin : "") + `/shelf/${vendor.slug}`;
+
   // Preview: first 3 available posts (build-spec doesn't require a specific
   // count, but 3 fits the sheet aesthetic and gives the recipient-email
   // compose surface a light "here's what will go out" cue).
@@ -255,6 +262,7 @@ export default function ShareBoothSheet({
                 <ComposeBody
                   boothName={boothName}
                   subtitle={subtitle}
+                  boothUrl={boothUrl}
                   previewPosts={previewSlice}
                   email={email}
                   onEmailChange={setEmail}
@@ -300,6 +308,7 @@ export default function ShareBoothSheet({
 function ComposeBody({
   boothName,
   subtitle,
+  boothUrl,
   previewPosts,
   email,
   onEmailChange,
@@ -313,6 +322,7 @@ function ComposeBody({
 }: {
   boothName:     string;
   subtitle:      string;
+  boothUrl:      string;
   previewPosts:  Post[];
   email:         string;
   onEmailChange: (v: string) => void;
@@ -368,6 +378,26 @@ function ComposeBody({
 
       {/* Hairline divider */}
       <div style={{ padding: "14px 0 16px", flexShrink: 0 }}>
+        <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
+      </div>
+
+      {/* QR code — encodes the public booth URL for in-person scanning */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 18 }}>
+        <div style={{ padding: 12, background: v1.postit, borderRadius: 10, border: `1px solid ${v1.inkHairline}` }}>
+          <QRCode
+            value={boothUrl}
+            size={148}
+            fgColor={v1.inkPrimary}
+            bgColor={v1.postit}
+          />
+        </div>
+        <div style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 12, color: v1.inkMuted, marginTop: 8, textAlign: "center" }}>
+          Scan to visit this booth
+        </div>
+      </div>
+
+      {/* Hairline divider before email section */}
+      <div style={{ marginBottom: 16 }}>
         <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
       </div>
 
