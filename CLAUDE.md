@@ -65,42 +65,76 @@ Exception: a single chained command with `&&` stays in one block — that's one 
 
 ---
 
-## ✅ Session 49 (2026-04-23) — Booths v1.2 redesign + QR code share + copy polish
+## ✅ Session 50 (2026-04-23) — Q-008 shopper Window share + guest edit-pencil fix
 
-Eight commits across UI redesign, a new feature, and copy updates. No HITL steps (no Supabase SQL runs, no device-required steps beyond QR scanning verification).
+One commit (`0d30fa0`). Seven files touched across two logical changes. Build clean. No Supabase migration. On-device QA walk deferred at David's request — runbook preserved below for session 51.
 
-**Booths page (`/shelves`) — full v1.2 migration** (`d84b897`, `86e703f`, `182bf7e`):
-- Removed "Featured Find" eyebrow text and "Find Map" overlay text from both banners — `FeaturedBanner.title` made optional
-- Replaced v0.2 Georgia + `colors.*` layout with v1.2 tokens: `StickyMasthead`, `FONT_IM_FELL`, `v1.*`, 2-column grid cards (Option B from mockup)
-- Added `groupByMall()` helper — section headers (IM Fell name + hairline rule + booth count) between mall groups
-- Masthead updated to match Home page: 3-column grid, centered "Treehouse Finds" wordmark, Admin pill right, no logo
-- `/shelves` chrome mismatch (session-44 flag) is **resolved**
+**Task 1 — Bug: guest users could see the edit pencil on Find Detail**
 
-**QR code in share sheet** (`4887df8`, `7a1194a`, `1597417`, `a8f3a36`):
-- Added `react-qr-code` dependency; QR renders inline in `ComposeBody` between header divider and preview strip
-- Encodes `window.location.origin + /shelf/${vendor.slug}` — works in dev and production
-- Option B (Treehouse logo overlay): logo centered on postit-wash cutout with 4px halo
-- Scanning fixes: contrast → pure `#000000`/`#ffffff`; error correction `L` → `H` (30% recovery); size 148 → 160px. QR confirmed scanning on device after `a8f3a36`.
+Root cause: `detectOwnershipAsync` in `app/find/[id]/page.tsx` had three ownership paths, and path 3 (`localStorage.LOCAL_VENDOR_KEY` match) did not require a valid Supabase session. `signOut()` also cleared only `SESSION_USER_KEY`, leaving the vendor profile behind. Compounding this, `isMyPost` was set once at mount with no auth-change listener — so signing out elsewhere left a stale pencil until navigation.
 
-**Copy + UI polish** (`7a1194a`, `fc2e9a1`):
-- Share sheet header: "Share the booth" → "Invite someone in to" / "Send a Window into {name}" → booth name only / body copy removed / CTA → "Send the invite"
-- Sheet `maxHeight` 82vh → 92vh (CTA now visible without scrolling)
-- Home feed: "Request booth access →" dotted link → green pill CTA "Request Digital Booth" matching share sheet style
-- Login page: "Curator Sign in" → "Vendor Sign in"
+Three fixes, all in one commit:
+- `lib/auth.ts:signOut()` now also clears `LOCAL_VENDOR_KEY` so no stale vendor profile survives sign-out.
+- `detectOwnershipAsync` in `app/find/[id]/page.tsx` early-returns `false` when `session?.user` is absent — no session, no ownership regardless of cache.
+- Find Detail subscribes to `onAuthChange` and re-runs ownership detection on every auth flip — pencil disappears on sign-out without a reload.
 
-Commits `d84b897`–`fc2e9a1` pushed to main. All builds clean.
+Non-regressing: `/my-shelf` is redirect-gated for unauthed viewers; `/shelf/[slug]` hard-codes `canEdit={false}` on the BoothHero; `/find/[id]/edit` has its own server-side auth gate on mount. Find Detail was the only surface with a stale-path-3 exposure.
+
+**Task 2 — Q-008: Window share opened to unauthenticated shoppers**
+
+Shipped all three recommended decisions from `docs/queued-sessions.md` (1c / 2c / 3a):
+
+- `app/api/share-booth/route.ts` rewritten to branch on `Authorization` header presence. Auth branch keeps 5/10min rate limit + `requireAuth` + ownership check + admin bypass (Q-009) unchanged. Anon branch: separate **2/10min** bucket, no ownership check, `getServiceClient()` used directly. Malformed/expired token on the auth branch still 401s — no silent fallthrough. Per-recipient dedup map (60s) is shared across branches.
+- `components/ShareBoothSheet.tsx` — added `mode?: "vendor" | "shopper"` prop (default `"vendor"` for back-compat). Shopper mode swaps `authFetch` for plain `fetch` so a signed-in non-owner on someone else's `/shelf/[slug]` lands on the anon server branch instead of 403.
+- `lib/email.ts:sendBoothWindow` — `senderMode: "vendor" | "anonymous"` on `ShareBoothWindowPayload`. Anonymous drops the italic `"{X} sent you a Window…"` voice line from body HTML, preheader, AND plain-text fallback. Vendor-name hero still leads.
+- `app/shelf/[slug]/page.tsx` — `canShare` gate dropped `isAdmin(user)`; now `!!vendor && available.length >= 1` for everyone. `shareMode` derived per viewer: admin OR (`user.id === vendor.user_id`) → `"vendor"`; everyone else → `"shopper"`.
+- `docs/share-booth-build-spec.md` §Rate limiting rewritten to document both branches across all five levers.
+- `docs/queued-sessions.md` Q-008 retired as ⏸️ Superseded with a full retirement block.
 
 ---
 
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-23 (session 49 close — booths v1.2 redesign + QR share + copy polish)
+> Last updated: 2026-04-23 (session 50 close — Q-008 shopper Window share + guest edit-pencil fix)
 
-**Status:** `fc2e9a1` on main. Eight clean commits shipped. `/shelves` is now fully v1.2 (grid, StickyMasthead, mall grouping). Share sheet has a working QR code (confirmed scanning on device). DB clean-slate persists; beta invites remain technically unblocked. Vercel CLI still not globally installed on David's machine — one-time fix is `sudo chown -R $(whoami) /usr/local/lib/node_modules && npm i -g vercel`; workaround is `npx vercel@latest --prod`.
+**Status:** `0d30fa0` on main. One clean commit shipped. Q-008 done in code — on-device QA walk deferred. Guest edit-pencil hole closed. Build clean, no migration, no schema change. DB clean-slate persists; beta invites remain technically unblocked. Vercel CLI still not globally installed on David's machine — one-time fix is `sudo chown -R $(whoami) /usr/local/lib/node_modules && npm i -g vercel`; workaround is `npx vercel@latest --prod`.
 
-### Recommended next session — feed content seeding (~30–60 min)
+### 🚧 In-flight before the next scope — Q-008 + edit-pencil QA walk (~10 min)
 
-Carried forward from sessions 44–49. The redesigned `/shelves` page + working QR share sheet + "Request Digital Booth" CTA on the home feed make this the right moment to seed real content and see the app as a first-time shopper would.
+Session 50 shipped the code but David chose to hold the QA walk. The 5-scenario walk should be the first thing session 51 runs before adopting new scope, because all five scenarios hit real user flows that need verification on device. Running the walk cold from `0d30fa0` is safe — no deploy dependency David hasn't already handled, no test-data prep needed.
+
+**Scenarios (preserved from session 50):**
+
+1. **Guest edit pencil disappears on sign-out** (~2 min)
+   - Sign in as admin → open any find detail → pencil bubble visible (top-right of photo).
+   - Second tab → `/admin` → "Sign out".
+   - Return to the first tab (DON'T refresh). Expected: pencil flips to save-heart within ~1s.
+   - Also verify: reload the find page while signed out → still no pencil.
+
+2. **Shopper share — anon happy path** (~3 min)
+   - Private/incognito → `/shelf/{slug-with-finds}`. Masthead airplane visible (right slot).
+   - Tap airplane → sheet opens (email input + QR code + preview tiles).
+   - Enter your email → "Send the invite" → sent confirmation in sheet.
+   - Inbox: subject still `A Window into {vendor}`, but body has NO italic "{X} sent you a Window…" line — vendor-name hero leads. Plain-text preview reads `A Window into {vendor}.` (not `{X} sent you…`).
+
+3. **Vendor share regression** (~2 min)
+   - Sign in as vendor (or admin) → `/my-shelf` → airplane → send to yourself.
+   - Inbox verify: italic voice line `"{display_name} sent you a Window into {vendor}."` IS present (unchanged).
+
+4. **Admin share on someone else's booth** (~2 min)
+   - Admin signed in → `/shelf/{other-vendor-slug}` → airplane → send to yourself.
+   - Inbox verify: voice line present, attributed to that vendor's `display_name`.
+
+5. **Anon rate-limit cap** (~2 min)
+   - Incognito → `/shelf/{slug}` → send once (`you+1@…`), twice (`you+2@…`) — both succeed.
+   - Third send (`you+3@…`) → expected: 429 "Too many sends — try again in a few minutes."
+   - Note: signed-in vendor sending in parallel should still succeed (separate bucket).
+
+If any scenario fails, patch inline and re-walk that scenario. Retire Q-008 QA hold in CLAUDE.md after all five pass.
+
+### Recommended next session — feed content seeding (~30–60 min, after the walk)
+
+Carried forward from sessions 44–49. The redesigned `/shelves` page + working QR share sheet + "Request Digital Booth" CTA on the home feed + session-50 anon share path make this the right moment to seed real content and see the app as a first-time shopper would — AND to exercise the anon share end-to-end with a real booth.
 
 Seeding scope:
 - Create 2–3 real (non-test) vendors via `/shelves` Add-a-Booth (primary path). `/vendor-request` → `/admin` approve flow (Flow 3) also available — populates hero_image_url from proof photo (session-47 fix).
@@ -108,23 +142,22 @@ Seeding scope:
 - Photos should be real items spanning a few material categories (glass, ceramic, brass, wood) to make the feed feel varied on first scroll.
 - Verify feed, Find Map, mall pages, and the new `/shelves` mall-grouped grid all render well.
 - Light QA: `source: "claude"` returns on all auto-caption calls (session-46 bar: "Brass bald eagle figurine sculpture" quality).
-- Test the QR code share flow end-to-end on a real booth.
+- Walk the Q-008 anon share from a private window on a real seeded booth.
 
 **When a session seeds content, add a one-liner to CLAUDE.md's CURRENT ISSUE so the next session doesn't trip on it** (session-46 rule candidate, still un-promoted).
 
 ### Alternative next sessions
 
-- **Q-008** 🟢 (~90–120 min) — Open Window share to unauthenticated shoppers.
 - **Q-011** 🟢 (~60–90 min) — Window email banner post-it placement (email-rendering bug).
 - **Q-002** 🟢 (~20 min) — Picker affordance placement revision.
 - **Tech Rule promotion batch** (~40 min) — eight candidates queued, one promotion-ready (session-46 script-first rule hit threshold in session 48).
-- **Session-archive drift cleanup** (~30 min) — sessions 28–38 + 44–48 one-liner only; session-49 block is paste-over-ready.
+- **Session-archive drift cleanup** (~30 min) — sessions 28–38 + 44–49 one-liner only; session-50 block is paste-over-ready.
 - **Design agent principle addition** (~10 min, docs only) — "reconciliation of a second glyph/affordance is part of the same scope." `MASTER_PROMPT.md` Design Agent section.
 - **`/admin` UI `auth.users` delete reliability spike** (~20–30 min).
 - **Error monitoring** (Sentry or structured logs). Sprint 3 carryover.
 - **Beta feedback mechanism** (Tally.so link).
 
-### Session 50 opener (pre-filled for feed content seeding)
+### Session 51 opener (pre-filled — run the QA walk first, then seed content)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
@@ -132,7 +165,7 @@ STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthr
 Working directory: /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Feed content seeding per CLAUDE.md recommendation. Scope: (1) create 2–3 real vendors via /shelves Add-a-Booth or /vendor-request → /admin Flow 3; (2) seed 10–15 finds, mostly available with 1–2 "found a home"; (3) verify feed, Find Map, mall pages, and the new /shelves mall-grouped grid all render well; (4) test QR code share flow end-to-end on a real booth (confirmed scanning in session 49); (5) light QA that source: "claude" returns on all auto-caption calls. ~30–60 min. Use `npx tsx scripts/qa-walk.ts baseline` at open if test debris suspected.
+CURRENT ISSUE: Two-part session. (A) Run the 5-scenario Q-008 + edit-pencil QA walk from CLAUDE.md §In-flight — no code changes expected unless a scenario fails; report pass/fail per scenario. (B) If walk passes: proceed with feed content seeding — create 2–3 real vendors via /shelves Add-a-Booth (or /vendor-request → /admin Flow 3); seed 10–15 finds mostly available with 1–2 "found a home"; verify feed + Find Map + mall pages + /shelves grid; light QA that source: "claude" returns on all auto-caption calls; walk the Q-008 anon share from a private window on a real seeded booth.
 ```
 
 ---
@@ -156,6 +189,7 @@ CURRENT ISSUE: Feed content seeding per CLAUDE.md recommendation. Scope: (1) cre
 - **Session 47** (2026-04-23) — Vendor onboarding hero image gap fixed: `proof_image_url` now transfers to `vendors.hero_image_url` on approval (3 edits + safe-claim path backfill in `app/api/admin/vendor-requests/route.ts`). My Shelf banner no longer blank after sign-in. Forward-only fix; no migration.
 - **Session 48** (2026-04-23) — Featured banner RLS drift fixed across Home + Find Map + `/admin` Banners preview. Migration 008 + `scripts/inspect-banners.ts` diagnostic. HITL: David pasted SQL into Supabase editor; anon reads confirmed restored.
 - **Session 49** (2026-04-23) — Booths page full v1.2 redesign (2-column grid, StickyMasthead, mall grouping). QR code added to share sheet with logo overlay; confirmed scanning on device. Copy polish: "Invite someone in to" header, "Send the invite" CTA, "Request Digital Booth" green pill on home, "Vendor Sign in" on login.
+- **Session 50** (2026-04-23) — Q-008 shopper Window share shipped (`/api/share-booth` branches on Authorization header; anon = 2/10min + no ownership + no sender voice; auth path + Q-009 admin bypass unchanged). `/shelf/[slug]` airplane now visible to everyone with available.length≥1, `shareMode` derived per viewer. Guest edit-pencil hole closed: `signOut()` clears `LOCAL_VENDOR_KEY`, `detectOwnershipAsync` requires a session, Find Detail subscribes to `onAuthChange`. One commit `0d30fa0`. QA walk deferred to session 51.
 
 ---
 
@@ -163,7 +197,7 @@ CURRENT ISSUE: Feed content seeding per CLAUDE.md recommendation. Scope: (1) cre
 
 ### 🔴 Pre-beta blockers
 
-*(Empty. T4d pre-beta QA walk re-passed session 46 end-to-end — all five exit criteria clean. Q-007 Window Sprint also remains passed per sessions 40–41. Featured banner reads restored session 48. No code-level regressions. Beta invites remain technically unblocked after session 48.)*
+*(Empty. T4d pre-beta QA walk re-passed session 46 end-to-end — all five exit criteria clean. Q-007 Window Sprint also remains passed per sessions 40–41. Featured banner reads restored session 48. Q-008 shopper share shipped session 50 (QA walk deferred to session 51, but non-gating — code is landed and the walk is verification not revision). No code-level regressions. Beta invites remain technically unblocked after session 50.)*
 
 ### 🟡 Remaining pre-beta polish (operational, not code-gating)
 
@@ -180,7 +214,7 @@ CURRENT ISSUE: Feed content seeding per CLAUDE.md recommendation. Scope: (1) cre
 ### 🟡 Q-007 Window Sprint expansion (post-MVP)
 
 All captured in `docs/queued-sessions.md`:
-- **Q-008** 🟢 — Open share to unauthenticated shoppers (scope expansion). ~90–120 min.
+- **Q-008** ✅ — Open share to unauthenticated shoppers. **Shipped session 50** (QA walk deferred to session 51).
 - **Q-009** ✅ — Admin can share any booth (ownership bypass). **Shipped session 45.**
 - **Q-010** ✅ — Window email CTA URL fix (`/vendor/` → `/shelf/`). Shipped session 41.
 - **Q-011** 🟢 — Window email banner post-it placement (email-rendering bug). ~60–90 min.
@@ -231,4 +265,4 @@ All captured in `docs/queued-sessions.md`:
 - Trigger: say "generate investor update" at session close
 - Process doc: Notion → Agent System Operating Manual → 📋 Investor Update — Process & Cadence
 
-> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data; session 43 audited AI model surface + locked in billing safeguards; session 44 restored `/shelves` Add-a-Booth primitive; session 45 shipped the cross-mall fix + admin delete + Q-009 admin share bypass; session 46 re-passed T4d QA walk + qa-walk.ts script; session 47 fixed vendor onboarding hero image gap; session 48 fixed featured-banner RLS drift; session 49 shipped /shelves v1.2 redesign + QR code share + copy polish. Next natural investor-update trigger point is after feed content seeding (session 50)** — the update would then honestly report the full pre-beta polish arc (sessions 42–50) as complete rather than partial.
+> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data; session 43 audited AI model surface + locked in billing safeguards; session 44 restored `/shelves` Add-a-Booth primitive; session 45 shipped the cross-mall fix + admin delete + Q-009 admin share bypass; session 46 re-passed T4d QA walk + qa-walk.ts script; session 47 fixed vendor onboarding hero image gap; session 48 fixed featured-banner RLS drift; session 49 shipped /shelves v1.2 redesign + QR code share + copy polish; session 50 shipped Q-008 shopper Window share + guest edit-pencil fix (QA walk deferred to session 51). Next natural investor-update trigger point is after feed content seeding (session 51 or later)** — the update would then honestly report the full pre-beta polish arc (sessions 42–51) as complete rather than partial.

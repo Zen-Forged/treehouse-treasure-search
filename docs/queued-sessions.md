@@ -34,53 +34,34 @@ Session 41 (QA walk, all 4 scenarios PASSED):
 
 ---
 
-## Q-008 🟢 Open Window share to unauthenticated users (shoppers)
+## ⏸️ Q-008 — Open Window share to unauthenticated shoppers — SUPERSEDED
 
-**Status:** Ready to run. Captures David's session-41 QA-walk observation: "This functionality should be available to all users" — shoppers (not just vendors) should be able to share booths they discover.
+**Status:** ⏸️ Superseded 2026-04-23 (session 50 close — shipped, awaiting on-device QA walk).
 
-**Created:** 2026-04-21 (session 41 Scenario 1 QA walk)
+**Retirement reason:** Shipped in session 50 against the three recommended decisions (1c / 2c / 3a). Commit `0d30fa0`. On-device QA walk (5 scenarios) deferred at David's request; walk runbook preserved in CLAUDE.md CURRENT ISSUE for session 51.
 
-**Severity:** 🟡 Medium — product scope expansion, not a bug. Closes a gap in the share gesture story: a curious shopper encounters a great booth on the feed, wants to share it with a friend, currently has no entry point.
+**What shipped:**
 
-### The observation
+- `app/api/share-booth/route.ts` — rewritten to branch on `Authorization` header presence. Auth branch keeps the existing 5/10min rate limit + `requireAuth` + ownership check + admin bypass (Q-009) unchanged. Anon branch: separate 2/10min rate-limit bucket, no ownership check, uses `getServiceClient()` directly. A malformed/expired token on the auth branch still 401s — no silent fallthrough. Per-recipient dedup map is shared across branches.
+- `components/ShareBoothSheet.tsx` — added `mode?: "vendor" | "shopper"` prop (default `"vendor"` for back-compat). Shopper mode swaps `authFetch` for plain `fetch` so a signed-in non-owner viewing someone else's booth lands on the anon server branch instead of 403.
+- `lib/email.ts:sendBoothWindow` — added `senderMode: "vendor" | "anonymous"` on `ShareBoothWindowPayload`. Anonymous drops the italic `"{X} sent you a Window…"` voice line from body HTML, preheader, AND the plain-text fallback. Vendor-name hero still leads. `senderFirstName` is ignored when anonymous.
+- `app/shelf/[slug]/page.tsx` — `canShare` gate dropped `isAdmin(user)` check; now `!!vendor && available.length >= 1` for everyone. `shareMode` derived per viewer: admin OR (user.id === vendor.user_id) → `"vendor"`; everyone else → `"shopper"`. Header comment block extended with a session-50 note documenting the mode-derivation rule.
+- `docs/share-booth-build-spec.md` §Rate limiting + abuse — table rewritten to document both branches (auth vs. anon) across all five levers.
 
-Session 40 wired the paper-airplane entry point ONLY on `/my-shelf` — a vendor-only surface. Shoppers viewing `/shelf/{slug}` (public booth pages), `/vendor/{slug}`, or any individual find have no share affordance. Session-38 build-spec §Rate limiting explicitly scoped this as "Shoppers cannot share vendor booths in MVP" — that scope is now reversed.
+**Decisions locked (matched queued recommendations):**
+- **(1c)** Keep `requireAuth` for the vendor path AND add a second code path for anonymous shares with tighter rate-limit (2/10min vs. 5/10min).
+- **(2c)** Same as 1c — separate code paths, separate rate-limit buckets keyed by IP.
+- **(3a)** Drop the sender line entirely for shopper shares. Preheader and plain-text fallback also drop it.
 
-### Scope
+**Still out of scope:** shopper shares of individual finds, email reply-to the shopper, captcha on the anon path.
 
-Three design decisions block this from being trivial:
+### Historical scope (preserved for session-archive readers)
 
-1. **Where does the entry point live for shoppers?** `/shelf/{slug}` masthead is the logical mirror of `/my-shelf` masthead. `/vendor/{slug}` is the same page under an older URL. Individual find pages (`/find/{id}`) would introduce a third entry point — decide if in or out of scope.
-2. **Auth gate on `/api/share-booth` needs to relax.** Currently `requireAuth` enforces a signed-in user. Shoppers are usually not signed in. Options:
-   - (a) Remove auth entirely — rate limiter becomes the only abuse lever
-   - (b) Require anonymous Supabase session (cheap for signed-out users, gives you a stable uid for dedup)
-   - (c) Keep `requireAuth` for the vendor path AND add a second code path for anonymous shares with tighter rate-limit (e.g. 2/10min vs. 5/10min)
-3. **Sender attribution rewrite.** Current body text: `"{vendor.display_name} sent you a Window into..."`. For shopper shares this is dishonest — the shopper shared it, not the vendor. Options:
-   - (a) Drop the sender line entirely for shopper shares
-   - (b) Add an optional `senderName` input to the sheet (typed by the shopper)
-   - (c) Use "Someone" / "A friend" as a generic sender
+Captured David's session-41 QA-walk observation: "This functionality should be available to all users." Shoppers viewing `/shelf/{slug}` (public booth pages) had no share affordance. Session-38 build-spec §Rate limiting explicitly scoped this as "Shoppers cannot share vendor booths in MVP" — that scope was reversed in session 50.
 
-Recommend 1(c) — anonymous code path with tighter rate limit, AND (2)(c) to keep the vendor UX unchanged while opening the shopper path with abuse protection, AND (3)(a) to drop the sender line for shopper shares (cleanest, no form UX).
+Three design decisions blocked this from being trivial at capture: (1) where the entry point lives for shoppers, (2) how the auth gate relaxes, (3) how the sender voice reconciles when the shopper — not the vendor — is the sender. Recommendation was 1(c) + 2(c) + 3(a); all three shipped verbatim.
 
-### Files touched (rough)
-
-- `app/api/share-booth/route.ts` — branch: authenticated → ownership-check path, unauthenticated → rate-limit-only path with tighter cap
-- `components/ShareBoothSheet.tsx` — already compose-mode-aware; needs a `mode: "vendor" | "shopper"` prop to skip the ownership error path and adjust copy
-- `app/shelf/[slug]/page.tsx` (or equivalent public shelf page) — add masthead airplane entry point
-- `lib/email.ts:sendBoothWindow` — accept optional `senderMode: "vendor" | "anonymous"`; omit or genericize sender line when anonymous
-- `docs/share-booth-build-spec.md` — update §Rate-limit, §Sender voice, §Auth gate
-
-### Out of scope
-
-- Shopper shares of individual finds (not booths) — separate sprint
-- Email reply-to the shopper — MVP shopper share has no reply path
-- Captcha on the anonymous path — rate limit is the abuse lever; revisit if abuse surfaces
-
-### Estimate
-
-~90–120 min. Splits cleanly across one session if design decisions above are pre-made, two if they aren't.
-
-### Session opener (copy/paste when promoted)
+### Session opener (historical, for archive readers)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
