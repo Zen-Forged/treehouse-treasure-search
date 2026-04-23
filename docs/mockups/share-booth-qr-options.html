@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Share Sheet QR Code Design Options</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42,26,10,0.28);
+    --ink-hairline: rgba(42,26,10,0.18);
+    --ink-wash:     rgba(255,253,248,0.70);
+    --green:        #1e4d2b;
+    --green-light:  rgba(30,77,43,0.10);
+    --green-border: rgba(30,77,43,0.22);
+
+    --im-fell: "IM Fell English", Georgia, serif;
+    --sys:     -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #1e1a14; font-family: var(--sys); color: var(--ink-primary); }
+
+  .decisions {
+    max-width: 960px; margin: 0 auto; padding: 36px 24px 28px; color: rgba(232,221,199,0.9);
+  }
+  .decisions h1 {
+    font-family: var(--im-fell); font-weight: 400; font-size: 28px; color: #e8ddc7;
+    margin: 0 0 6px; text-align: center; letter-spacing: -0.01em;
+  }
+  .decisions .subtitle {
+    text-align: center; color: rgba(232,221,199,0.6); font-size: 13px;
+    margin: 0 auto 24px; line-height: 1.65; max-width: 560px;
+  }
+  .pick-box {
+    background: rgba(232,221,199,0.07); border: 1px solid rgba(232,221,199,0.15);
+    border-radius: 12px; padding: 18px 22px; margin-bottom: 10px;
+  }
+  .pick-box p { margin: 0 0 10px; font-size: 13px; line-height: 1.65; color: rgba(232,221,199,0.8); }
+  .pick-box p:last-child { margin-bottom: 0; }
+  .pick-box strong { color: #e8ddc7; }
+  .q { font-family: var(--im-fell); font-style: italic; font-size: 15px; color: rgba(232,221,199,0.72); margin: 0 0 8px; display: block; }
+
+  .frames-row {
+    max-width: 1280px; margin: 0 auto; padding: 0 20px 80px;
+    display: flex; gap: 28px; justify-content: center; align-items: flex-start; flex-wrap: wrap;
+  }
+  .frame-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; flex: 0 0 auto; }
+  .frame-label { font-family: var(--im-fell); font-style: italic; font-size: 16px; color: rgba(232,221,199,0.7); text-align: center; max-width: 300px; }
+  .frame-label strong { display: block; font-style: normal; font-size: 18px; color: #e8ddc7; margin-bottom: 2px; }
+
+  /* Phone shell showing just the sheet portion */
+  .phone {
+    width: 375px;
+    background: var(--paper);
+    border-radius: 28px;
+    box-shadow: 0 12px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06);
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Sheet top */
+  .sheet-top {
+    display: flex; justify-content: center; padding: 12px 0 4px;
+  }
+  .handle { width: 44px; height: 4px; border-radius: 999px; background: var(--ink-faint); }
+
+  /* Sheet body */
+  .sheet-body { padding: 10px 22px 24px; }
+
+  /* Shared header */
+  .sheet-eyebrow {
+    font-family: var(--im-fell); font-style: italic; font-size: 13px;
+    color: var(--ink-muted); text-align: center; margin-bottom: 2px;
+  }
+  .sheet-title {
+    font-family: var(--im-fell); font-size: 21px; color: var(--ink-primary);
+    letter-spacing: -0.005em; line-height: 1.2; text-align: center;
+  }
+  .sheet-subtitle {
+    font-family: var(--sys); font-size: 12px; color: var(--ink-muted);
+    text-align: center; margin-top: 4px;
+  }
+  .hairline { width: 100%; height: 1px; background: var(--ink-hairline); margin: 14px 0 16px; }
+  .hairline-thin { width: 100%; height: 1px; background: var(--ink-hairline); margin: 16px 0; }
+
+  /* Preview strip */
+  .preview-strip { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
+  .preview-tile { aspect-ratio: 4/5; border-radius: 6px; overflow: hidden; background: rgba(42,26,10,0.08); }
+  .preview-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* Email label + input */
+  .email-label {
+    display: block; font-family: var(--sys); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--ink-muted); margin-bottom: 6px;
+  }
+  .email-input {
+    display: block; width: 100%; padding: 12px 14px;
+    font-family: var(--sys); font-size: 16px; color: var(--ink-primary);
+    background: var(--ink-wash); border: 1px solid var(--ink-hairline);
+    border-radius: 8px; margin-bottom: 12px;
+  }
+
+  /* CTA */
+  .cta-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 14px 16px; border: none; border-radius: 999px;
+    background: var(--green); color: #f5ecd8;
+    font-family: var(--im-fell); font-size: 16px; letter-spacing: -0.005em;
+    margin-bottom: 10px;
+  }
+  .cancel-btn {
+    display: block; width: 100%; padding: 10px 12px; background: transparent; border: none;
+    font-family: var(--im-fell); font-style: italic; font-size: 13px;
+    color: var(--ink-muted); text-align: center;
+  }
+
+  /* ── Option A: Vintage shipping-label style ── */
+  .qr-label-card {
+    border: 1px solid var(--ink-hairline);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .qr-label-header {
+    background: var(--ink-primary);
+    padding: 7px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .qr-label-brand {
+    font-family: var(--im-fell); font-size: 11px; letter-spacing: 0.04em; color: rgba(232,221,199,0.85);
+    text-transform: uppercase;
+  }
+  .qr-label-arrow { color: rgba(232,221,199,0.5); font-size: 12px; }
+  .qr-label-body {
+    background: var(--postit);
+    padding: 14px 16px 12px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .qr-label-text { flex: 1; min-width: 0; }
+  .qr-label-booth-name {
+    font-family: var(--im-fell); font-size: 17px; color: var(--ink-primary);
+    letter-spacing: -0.01em; line-height: 1.2; margin-bottom: 3px;
+  }
+  .qr-label-mall {
+    font-family: var(--im-fell); font-style: italic; font-size: 11px; color: var(--ink-muted);
+    line-height: 1.4;
+  }
+  .qr-label-scan {
+    font-family: var(--im-fell); font-style: italic; font-size: 9px; color: var(--ink-faint);
+    margin-top: 6px; letter-spacing: 0.01em;
+  }
+  .qr-label-footer {
+    background: rgba(42,26,10,0.03); border-top: 1px solid var(--ink-hairline);
+    padding: 5px 14px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .qr-label-footer-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--green); }
+  .qr-label-url {
+    font-family: var(--sys); font-size: 9px; color: var(--ink-muted);
+    letter-spacing: 0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* ── Option B: Centered card with logo overlay ── */
+  .qr-center-wrap {
+    display: flex; flex-direction: column; align-items: center; margin-bottom: 18px;
+  }
+  .qr-center-card {
+    position: relative;
+    padding: 16px;
+    background: var(--postit);
+    border-radius: 12px;
+    border: 1px solid var(--ink-hairline);
+  }
+  .qr-logo-overlay {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px; height: 32px;
+    background: var(--postit);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 4px var(--postit);
+  }
+  .qr-logo-overlay img { width: 22px; height: 22px; object-fit: contain; }
+  .qr-center-label {
+    font-family: var(--im-fell); font-style: italic; font-size: 12px;
+    color: var(--ink-muted); margin-top: 8px; text-align: center;
+  }
+  .qr-center-booth {
+    font-family: var(--im-fell); font-size: 13px; color: var(--ink-primary);
+    text-align: center; margin-top: 1px;
+  }
+
+  /* ── Option C: Green-toned, brand-forward ── */
+  .qr-green-card {
+    background: var(--green-light);
+    border: 1px solid var(--green-border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 18px;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .qr-green-eyebrow {
+    font-family: var(--im-fell); font-style: italic; font-size: 11px;
+    color: var(--green); margin-bottom: 10px; text-align: center; letter-spacing: 0.01em;
+  }
+  .qr-green-inner {
+    padding: 10px;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid var(--green-border);
+  }
+  .qr-green-label {
+    font-family: var(--im-fell); font-size: 12px; color: var(--green);
+    text-align: center; margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="decisions">
+  <h1>Share Sheet — QR Code Design</h1>
+  <p class="subtitle">All three options use the same QR data. The question is how the container feels — how branded, how much presence, how much it reads as "Treehouse."</p>
+  <div class="pick-box">
+    <span class="q">What are we deciding?</span>
+    <p><strong>A — Vintage label card:</strong> Dark header bar with "Treehouse Finds" + arrow, postit body with booth name + mall name alongside the QR, URL footer strip. Feels like a physical hang-tag or shipping label from the shop — very on-brand with the antique market aesthetic.</p>
+    <p><strong>B — Logo overlay:</strong> QR code with the Treehouse logo centered over it (the logo sits on a postit background cutout so it doesn't break scanning). Clean, minimal, modern. The logo makes it immediately recognizable as a Treehouse thing without extra decoration.</p>
+    <p><strong>C — Green brand wash:</strong> QR code on a green-tinted background matching the app's active/brand color. More visually assertive — the green "claims" the QR as clearly belonging to Treehouse. Works if you want the QR to have strong presence in the sheet.</p>
+  </div>
+</div>
+
+<div class="frames-row">
+
+  <!-- Option A: Vintage label -->
+  <div class="frame-wrap">
+    <div class="frame-label"><strong>A — Vintage label</strong>Hang-tag / shipping-label aesthetic</div>
+    <div class="phone">
+      <div class="sheet-top"><div class="handle"></div></div>
+      <div class="sheet-body">
+        <div class="sheet-eyebrow">Invite someone in to</div>
+        <div class="sheet-title">The Amber Room</div>
+        <div class="sheet-subtitle">America's Antique Mall · Booth 101</div>
+        <div class="hairline"></div>
+
+        <!-- QR: vintage label -->
+        <div class="qr-label-card">
+          <div class="qr-label-header">
+            <span class="qr-label-brand">Treehouse Finds</span>
+            <span class="qr-label-arrow">→</span>
+          </div>
+          <div class="qr-label-body">
+            <div class="qr-label-text">
+              <div class="qr-label-booth-name">The Amber Room</div>
+              <div class="qr-label-mall">America's Antique Mall<br>Booth 101</div>
+              <div class="qr-label-scan">Scan to visit</div>
+            </div>
+            <!-- QR placeholder -->
+            <div style="width:80px;height:80px;background:var(--ink-primary);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+              <div style="width:64px;height:64px;background:var(--postit);border-radius:2px;display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(7,1fr);gap:1px;padding:4px;">
+                <!-- simplified QR pattern visual -->
+                <div style="grid-column:1/4;grid-row:1/4;background:var(--ink-primary);border-radius:1px;"></div>
+                <div style="grid-column:2/3;grid-row:2/3;background:var(--postit);border-radius:1px;"></div>
+                <div style="grid-column:5/8;grid-row:1/4;background:var(--ink-primary);border-radius:1px;"></div>
+                <div style="grid-column:6/7;grid-row:2/3;background:var(--postit);border-radius:1px;"></div>
+                <div style="grid-column:1/4;grid-row:5/8;background:var(--ink-primary);border-radius:1px;"></div>
+                <div style="grid-column:2/3;grid-row:6/7;background:var(--postit);border-radius:1px;"></div>
+                <div style="grid-column:5/6;grid-row:5/6;background:var(--ink-primary);border-radius:1px;"></div>
+                <div style="grid-column:7/8;grid-row:5/6;background:var(--ink-primary);border-radius:1px;"></div>
+                <div style="grid-column:5/6;grid-row:7/8;background:var(--ink-primary);border-radius:1px;"></div>
+                <div style="grid-column:6/8;grid-row:6/8;background:var(--ink-primary);border-radius:1px;"></div>
+                <div style="grid-column:4/5;grid-row:3/5;background:var(--ink-primary);border-radius:1px;"></div>
+                <div style="grid-column:5/7;grid-row:4/5;background:var(--ink-primary);border-radius:1px;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="qr-label-footer">
+            <div class="qr-label-footer-dot"></div>
+            <span class="qr-label-url">app.kentuckytreehouse.com/shelf/the-amber-room</span>
+          </div>
+        </div>
+
+        <div class="hairline-thin"></div>
+
+        <!-- Preview strip -->
+        <div class="preview-strip">
+          <div class="preview-tile" style="background:linear-gradient(135deg,#7a5c1e,#b08240);"></div>
+          <div class="preview-tile" style="background:linear-gradient(135deg,#1e4d2b,#2d7044);"></div>
+          <div class="preview-tile" style="background:linear-gradient(135deg,#8b3a1a,#c4612e);"></div>
+        </div>
+
+        <span class="email-label">Recipient email</span>
+        <div class="email-input" style="color:var(--ink-faint);font-size:15px;">friend@example.com</div>
+        <div class="cta-btn">✈ Send the Window</div>
+        <div class="cancel-btn">Not now</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B: Logo overlay -->
+  <div class="frame-wrap">
+    <div class="frame-label"><strong>B — Logo overlay</strong>Treehouse logo centered in the QR</div>
+    <div class="phone">
+      <div class="sheet-top"><div class="handle"></div></div>
+      <div class="sheet-body">
+        <div class="sheet-eyebrow">Invite someone in to</div>
+        <div class="sheet-title">The Amber Room</div>
+        <div class="sheet-subtitle">America's Antique Mall · Booth 101</div>
+        <div class="hairline"></div>
+
+        <!-- QR: logo overlay -->
+        <div class="qr-center-wrap">
+          <div class="qr-center-card">
+            <!-- QR placeholder 148×148 -->
+            <div style="width:148px;height:148px;background:var(--ink-primary);border-radius:6px;display:grid;grid-template-columns:repeat(14,1fr);grid-template-rows:repeat(14,1fr);gap:1.5px;padding:8px;position:relative;">
+              <!-- finder patterns -->
+              <div style="grid-column:1/6;grid-row:1/6;background:var(--postit);border-radius:2px;"></div>
+              <div style="grid-column:2/5;grid-row:2/5;background:var(--ink-primary);border-radius:1px;"></div>
+              <div style="grid-column:3/4;grid-row:3/4;background:var(--postit);border-radius:1px;"></div>
+              <div style="grid-column:10/15;grid-row:1/6;background:var(--postit);border-radius:2px;"></div>
+              <div style="grid-column:11/14;grid-row:2/5;background:var(--ink-primary);border-radius:1px;"></div>
+              <div style="grid-column:12/13;grid-row:3/4;background:var(--postit);border-radius:1px;"></div>
+              <div style="grid-column:1/6;grid-row:10/15;background:var(--postit);border-radius:2px;"></div>
+              <div style="grid-column:2/5;grid-row:11/14;background:var(--ink-primary);border-radius:1px;"></div>
+              <div style="grid-column:3/4;grid-row:12/13;background:var(--postit);border-radius:1px;"></div>
+              <!-- data dots -->
+              <div style="grid-column:7/8;grid-row:1/2;background:var(--postit);border-radius:1px;"></div>
+              <div style="grid-column:8/9;grid-row:2/3;background:var(--postit);border-radius:1px;"></div>
+              <div style="grid-column:7/8;grid-row:3/4;background:var(--postit);border-radius:1px;"></div>
+              <div style="grid-column:9/10;grid-row:4/5;background:var(--postit);border-radius:1px;"></div>
+              <div style="grid-column:7/9;grid-row:7/9;background:var(--postit);border-radius:1px;"></div>
+              <div style="grid-column:8/10;grid-row:10/11;background:var(--postit);border-radius:1px;"></div>
+              <div style="grid-column:7/8;grid-row:12/14;background:var(--postit);border-radius:1px;"></div>
+              <div style="grid-column:9/11;grid-row:12/13;background:var(--postit);border-radius:1px;"></div>
+              <div style="grid-column:11/13;grid-row:8/10;background:var(--postit);border-radius:1px;"></div>
+              <div style="grid-column:10/11;grid-row:7/8;background:var(--postit);border-radius:1px;"></div>
+              <div style="grid-column:13/14;grid-row:11/13;background:var(--postit);border-radius:1px;"></div>
+            </div>
+            <!-- Logo overlay -->
+            <div class="qr-logo-overlay">
+              <img src="/logo.png" alt="" onerror="this.style.display='none';this.parentElement.innerHTML='🌳';" style="width:22px;height:22px;">
+            </div>
+          </div>
+          <div class="qr-center-label">Scan to visit this booth</div>
+          <div class="qr-center-booth">The Amber Room</div>
+        </div>
+
+        <div class="hairline-thin"></div>
+
+        <!-- Preview strip -->
+        <div class="preview-strip">
+          <div class="preview-tile" style="background:linear-gradient(135deg,#7a5c1e,#b08240);"></div>
+          <div class="preview-tile" style="background:linear-gradient(135deg,#1e4d2b,#2d7044);"></div>
+          <div class="preview-tile" style="background:linear-gradient(135deg,#8b3a1a,#c4612e);"></div>
+        </div>
+
+        <span class="email-label">Recipient email</span>
+        <div class="email-input" style="color:var(--ink-faint);font-size:15px;">friend@example.com</div>
+        <div class="cta-btn">✈ Send the Window</div>
+        <div class="cancel-btn">Not now</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C: Green brand wash -->
+  <div class="frame-wrap">
+    <div class="frame-label"><strong>C — Green brand wash</strong>App accent color frames the QR</div>
+    <div class="phone">
+      <div class="sheet-top"><div class="handle"></div></div>
+      <div class="sheet-body">
+        <div class="sheet-eyebrow">Invite someone in to</div>
+        <div class="sheet-title">The Amber Room</div>
+        <div class="sheet-subtitle">America's Antique Mall · Booth 101</div>
+        <div class="hairline"></div>
+
+        <!-- QR: green card -->
+        <div class="qr-green-card">
+          <div class="qr-green-eyebrow">Scan to visit this booth</div>
+          <div class="qr-green-inner">
+            <!-- QR placeholder 148×148 -->
+            <div style="width:148px;height:148px;background:var(--ink-primary);border-radius:4px;display:grid;grid-template-columns:repeat(14,1fr);grid-template-rows:repeat(14,1fr);gap:1.5px;padding:8px;">
+              <div style="grid-column:1/6;grid-row:1/6;background:#fff;border-radius:2px;"></div>
+              <div style="grid-column:2/5;grid-row:2/5;background:var(--ink-primary);border-radius:1px;"></div>
+              <div style="grid-column:3/4;grid-row:3/4;background:#fff;border-radius:1px;"></div>
+              <div style="grid-column:10/15;grid-row:1/6;background:#fff;border-radius:2px;"></div>
+              <div style="grid-column:11/14;grid-row:2/5;background:var(--ink-primary);border-radius:1px;"></div>
+              <div style="grid-column:12/13;grid-row:3/4;background:#fff;border-radius:1px;"></div>
+              <div style="grid-column:1/6;grid-row:10/15;background:#fff;border-radius:2px;"></div>
+              <div style="grid-column:2/5;grid-row:11/14;background:var(--ink-primary);border-radius:1px;"></div>
+              <div style="grid-column:3/4;grid-row:12/13;background:#fff;border-radius:1px;"></div>
+              <div style="grid-column:7/8;grid-row:1/2;background:#fff;border-radius:1px;"></div>
+              <div style="grid-column:8/9;grid-row:2/3;background:#fff;border-radius:1px;"></div>
+              <div style="grid-column:7/8;grid-row:3/4;background:#fff;border-radius:1px;"></div>
+              <div style="grid-column:9/10;grid-row:4/5;background:#fff;border-radius:1px;"></div>
+              <div style="grid-column:7/9;grid-row:7/9;background:#fff;border-radius:1px;"></div>
+              <div style="grid-column:8/10;grid-row:10/11;background:#fff;border-radius:1px;"></div>
+              <div style="grid-column:7/8;grid-row:12/14;background:#fff;border-radius:1px;"></div>
+              <div style="grid-column:9/11;grid-row:12/13;background:#fff;border-radius:1px;"></div>
+              <div style="grid-column:11/13;grid-row:8/10;background:#fff;border-radius:1px;"></div>
+              <div style="grid-column:10/11;grid-row:7/8;background:#fff;border-radius:1px;"></div>
+              <div style="grid-column:13/14;grid-row:11/13;background:#fff;border-radius:1px;"></div>
+            </div>
+          </div>
+          <div class="qr-green-label">The Amber Room</div>
+        </div>
+
+        <div class="hairline-thin"></div>
+
+        <!-- Preview strip -->
+        <div class="preview-strip">
+          <div class="preview-tile" style="background:linear-gradient(135deg,#7a5c1e,#b08240);"></div>
+          <div class="preview-tile" style="background:linear-gradient(135deg,#1e4d2b,#2d7044);"></div>
+          <div class="preview-tile" style="background:linear-gradient(135deg,#8b3a1a,#c4612e);"></div>
+        </div>
+
+        <span class="email-label">Recipient email</span>
+        <div class="email-input" style="color:var(--ink-faint);font-size:15px;">friend@example.com</div>
+        <div class="cta-btn">✈ Send the Window</div>
+        <div class="cancel-btn">Not now</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

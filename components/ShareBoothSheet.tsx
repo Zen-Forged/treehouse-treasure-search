@@ -209,7 +209,7 @@ export default function ShareBoothSheet({
               margin: "0 auto",
               width: "100%",
               maxWidth: 430,
-              maxHeight: "82vh",
+              maxHeight: "92vh",
               background: v1.paperCream,
               borderRadius: "20px 20px 0 0",
               boxShadow: "0 -8px 30px rgba(30,20,10,0.28)",
@@ -348,7 +348,7 @@ function ComposeBody({
             marginBottom: 2,
           }}
         >
-          Share the booth
+          Invite someone in to
         </div>
         <div
           style={{
@@ -359,7 +359,7 @@ function ComposeBody({
             lineHeight: 1.2,
           }}
         >
-          Send a Window into {boothName}
+          {boothName}
         </div>
         {subtitle && (
           <div
@@ -381,15 +381,36 @@ function ComposeBody({
         <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
       </div>
 
-      {/* QR code — encodes the public booth URL for in-person scanning */}
+      {/* QR code — Treehouse logo centered over the code (Option B). The logo
+          sits on a postit-wash cutout; QR error-correction (level M, default)
+          tolerates up to ~15% module loss so a ~22px logo at 148px total is
+          well within the recoverable range. */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 18 }}>
-        <div style={{ padding: 12, background: v1.postit, borderRadius: 10, border: `1px solid ${v1.inkHairline}` }}>
+        <div style={{ padding: 12, background: v1.postit, borderRadius: 10, border: `1px solid ${v1.inkHairline}`, position: "relative", display: "inline-block" }}>
           <QRCode
             value={boothUrl}
             size={148}
             fgColor={v1.inkPrimary}
             bgColor={v1.postit}
           />
+          {/* Logo overlay — postit background + halo clears surrounding modules */}
+          <div style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 32,
+            height: 32,
+            background: v1.postit,
+            borderRadius: 6,
+            boxShadow: `0 0 0 4px ${v1.postit}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="" width={22} height={22} style={{ display: "block" }} />
+          </div>
         </div>
         <div style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 12, color: v1.inkMuted, marginTop: 8, textAlign: "center" }}>
           Scan to visit this booth
@@ -418,21 +439,6 @@ function ComposeBody({
           ))}
         </div>
       )}
-
-      {/* Body copy — plain-English description of what ships */}
-      <p
-        style={{
-          fontFamily: FONT_IM_FELL,
-          fontStyle: "italic",
-          fontSize: 14,
-          color: v1.inkMid,
-          lineHeight: 1.55,
-          margin: "0 0 16px",
-          textAlign: "center",
-        }}
-      >
-        We&rsquo;ll send a small preview of the latest finds &mdash; with a link back to the booth.
-      </p>
 
       {/* Email input — v1.2 form input primitive (inkWash bg on paperCream,
           ink-primary text, system-ui). Matches /vendor-request + /setup. */}
