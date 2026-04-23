@@ -390,8 +390,8 @@ function ComposeBody({
           <QRCode
             value={boothUrl}
             size={148}
-            fgColor={v1.inkPrimary}
-            bgColor={v1.postit}
+            fgColor="#000000"
+            bgColor="#ffffff"
           />
           {/* Logo overlay — postit background + halo clears surrounding modules */}
           <div style={{
@@ -401,9 +401,9 @@ function ComposeBody({
             transform: "translate(-50%, -50%)",
             width: 32,
             height: 32,
-            background: v1.postit,
+            background: "#ffffff",
             borderRadius: 6,
-            boxShadow: `0 0 0 4px ${v1.postit}`,
+            boxShadow: "0 0 0 4px #ffffff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
