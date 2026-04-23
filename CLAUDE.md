@@ -105,6 +105,15 @@ Last passed sessions 40–41. Session 44 + 45 touched `/shelves` + `<AddBoothInl
 - `docs/pre-beta-qa-walk.md` §1.1-1.2 updated: hero booth photo dropzone added to the "Expected form shape" list, hero photo upload added as step 4 of the fill sequence (bumping "Tap Add booth" to step 5), two new red flags added (dropzone missing, hero photo upload fails / no 4:3 preview). Header footnote added documenting the session-46 `scripts/qa-walk.ts` automation.
 - `CLAUDE.md` this session block + session 45 tombstoned below + CURRENT ISSUE updated + KNOWN GAPS adjusted for T4d re-pass + `scripts/qa-walk.ts` reference added.
 
+### Shipment 4 — Claude Code workflow standardization
+
+Late-session add triggered by David asking how to standardize the Chat→Code transition. Two new slash commands landed in `.claude/commands/`:
+
+- **`/session-open`** — auto-loads CLAUDE.md + MEMORY.md + MASTER_PROMPT.md, runs the session-opening standup protocol, delivers the standup report, pauses for direction approval. Replaces the Chat-era `th` → clipboard → paste → fill-CURRENT-ISSUE dance with a single command invocation.
+- **`/session-close`** — runs this entire protocol: CLAUDE.md tombstoning, docs drift patches, memory updates, git commit + push, PR creation (when on a worktree), close summary delivery, 🚧 BLOCKED flagging. Replaces the `thc` shell alias with a richer, repo-aware close protocol.
+
+Both are committed to the same PR #1 as a separate commit (`15dbe0c`) to keep the git history clean. Once PR #1 merges, the commands become available from any checkout of `main` — future sessions can invoke `/session-open` on first message and `/session-close` at end.
+
 ### Self-audit against Tech Rules
 
 - **File-creation verify** — `scripts/qa-walk.ts` confirmed on disk via `ls` before edits. ✓
@@ -126,13 +135,12 @@ Last passed sessions 40–41. Session 44 + 45 touched `/shelves` + `<AddBoothInl
 
 ### Session 46 close HITL
 
-Single commit covers all three shipments. Worktree branch: `claude/jovial-mccarthy-69951d`. Push to origin, then decide whether to merge to `main`.
+Two commits on worktree branch `claude/jovial-mccarthy-69951d`, pushed, bundled in PR #1:
+- `6dbff1e` — `feat(qa-walk): scripts/qa-walk.ts utility + T4d walk PASSED session 46 + runbook hero-photo patch`
+- `15dbe0c` — `feat(commands): /session-open + /session-close slash commands standardize the Chat→Code workflow`
+- (`/session-close` invocation added a third commit that updates CLAUDE.md to mention Shipment 4 — merge-time record.)
 
-```bash
-cd /Users/davidbutler/Projects/treehouse-treasure-search/.claude/worktrees/jovial-mccarthy-69951d && git add -A && git commit -m "feat(qa-walk): scripts/qa-walk.ts utility + T4d walk PASSED session 46 + runbook hero-photo patch" && git push
-```
-
-After push, merge-to-main HITL is a separate step (worktree branch → main). Not destructive — standard PR merge.
+PR: https://github.com/Zen-Forged/treehouse-treasure-search/pull/1. Merge-to-main HITL is a separate step from session close — David merges when ready via GitHub UI. Not destructive.
 
 ---
 
