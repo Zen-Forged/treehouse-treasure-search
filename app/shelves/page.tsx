@@ -325,29 +325,43 @@ export default function BoothsPage() {
   return (
     <div style={{ minHeight: "100vh", background: v1.paperCream, maxWidth: 430, margin: "0 auto", position: "relative" }}>
 
-      <StickyMasthead>
-        <div style={{ padding: "max(16px, env(safe-area-inset-top, 16px)) 18px 14px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontFamily: FONT_IM_FELL, fontSize: 22, color: v1.inkPrimary, letterSpacing: "-0.02em", lineHeight: 1 }}>
-              Booths
-            </span>
-            <AdminOnly user={user}>
-              <Link href="/admin"
-                style={{ fontSize: 9, fontWeight: 700, color: v1.green, textTransform: "uppercase", letterSpacing: "1.6px", padding: "4px 9px", borderRadius: 8, background: "rgba(30,77,43,0.08)", border: "1px solid rgba(30,77,43,0.22)", textDecoration: "none" }}>
-                Admin
-              </Link>
-            </AdminOnly>
-          </div>
-          {!loading && subtitle && (
-            <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 5 }}>
-              <MapPin size={10} style={{ color: v1.inkMuted }} />
-              <span style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 12, color: v1.inkMuted }}>
-                {subtitle.text}
-              </span>
-            </div>
-          )}
+      <StickyMasthead
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr auto 1fr",
+          alignItems: "center",
+          padding: "max(14px, env(safe-area-inset-top, 14px)) 18px 12px",
+          gap: 12,
+        }}
+      >
+        {/* Left slot — empty spacer for symmetry */}
+        <div style={{ justifySelf: "start" }} aria-hidden="true" />
+
+        {/* Centered wordmark */}
+        <div style={{ fontFamily: FONT_IM_FELL, fontSize: 18, color: v1.inkPrimary, letterSpacing: "-0.005em", whiteSpace: "nowrap" }}>
+          Treehouse Finds
+        </div>
+
+        {/* Right slot — Admin pill */}
+        <div style={{ justifySelf: "end" }}>
+          <AdminOnly user={user}>
+            <Link href="/admin"
+              style={{ fontSize: 9, fontWeight: 700, color: v1.green, textTransform: "uppercase", letterSpacing: "1.6px", padding: "4px 9px", borderRadius: 8, background: "rgba(30,77,43,0.08)", border: "1px solid rgba(30,77,43,0.22)", textDecoration: "none" }}>
+              Admin
+            </Link>
+          </AdminOnly>
         </div>
       </StickyMasthead>
+
+      {/* Subtitle — booth count / location, outside masthead so it doesn't affect centering */}
+      {!loading && subtitle && (
+        <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "8px 18px 0" }}>
+          <MapPin size={10} style={{ color: v1.inkMuted }} />
+          <span style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 12, color: v1.inkMuted }}>
+            {subtitle.text}
+          </span>
+        </div>
+      )}
 
       <main style={{ padding: "14px 14px 0", paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }}>
 
