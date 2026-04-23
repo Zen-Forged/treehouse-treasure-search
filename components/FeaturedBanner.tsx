@@ -34,7 +34,7 @@ export type FeaturedBannerVariant = "eyebrow" | "overlay";
 
 interface FeaturedBannerProps {
   variant:   FeaturedBannerVariant;
-  title:     string;
+  title?:    string;
   imageUrl:  string | null | undefined;
   minHeight?: number;
   /** Additional margin below the banner in px (defaults: 18 eyebrow, 0 overlay). */
@@ -65,19 +65,21 @@ export default function FeaturedBanner({
     return (
       <div style={{ padding: "14px 10px 0", marginBottom }}>
         {/* Eyebrow title — IM Fell italic 14px muted, sentence case */}
-        <div
-          style={{
-            paddingLeft: 12,
-            marginBottom: 8,
-            fontFamily: FONT_IM_FELL,
-            fontStyle: "italic",
-            fontSize: 14,
-            color: v1.inkMuted,
-            letterSpacing: "-0.005em",
-          }}
-        >
-          {title}
-        </div>
+        {title && (
+          <div
+            style={{
+              paddingLeft: 12,
+              marginBottom: 8,
+              fontFamily: FONT_IM_FELL,
+              fontStyle: "italic",
+              fontSize: 14,
+              color: v1.inkMuted,
+              letterSpacing: "-0.005em",
+            }}
+          >
+            {title}
+          </div>
+        )}
         <BannerImage imageUrl={imageUrl} minHeight={minHeight} scrim={false} />
       </div>
     );
@@ -88,24 +90,26 @@ export default function FeaturedBanner({
     <div style={{ padding: "10px 10px 0", marginBottom, position: "relative" }}>
       <BannerImage imageUrl={imageUrl} minHeight={minHeight} scrim={true} />
       {/* Overlay title — IM Fell 30px white with text-shadow for legibility */}
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 22,
-          padding: "0 32px",
-          pointerEvents: "none",
-          fontFamily: FONT_IM_FELL,
-          fontSize: 30,
-          color: "#ffffff",
-          textShadow: "0 2px 8px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.25)",
-          letterSpacing: "-0.005em",
-          lineHeight: 1.15,
-        }}
-      >
-        {title}
-      </div>
+      {title && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 22,
+            padding: "0 32px",
+            pointerEvents: "none",
+            fontFamily: FONT_IM_FELL,
+            fontSize: 30,
+            color: "#ffffff",
+            textShadow: "0 2px 8px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.25)",
+            letterSpacing: "-0.005em",
+            lineHeight: 1.15,
+          }}
+        >
+          {title}
+        </div>
+      )}
     </div>
   );
 }

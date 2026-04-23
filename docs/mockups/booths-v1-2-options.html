@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Booths Page Layout Options</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42,26,10,0.28);
+    --ink-hairline: rgba(42,26,10,0.18);
+    --green:        #1e4d2b;
+    --green-light:  rgba(30,77,43,0.08);
+    --green-border: rgba(30,77,43,0.22);
+    --surface:      rgba(42,26,10,0.05);
+    --border:       rgba(42,26,10,0.09);
+
+    --im-fell: "IM Fell English", Georgia, serif;
+    --sys:     -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #1e1a14; font-family: var(--sys); color: var(--ink-primary); }
+
+  /* ── Decisions pane ── */
+  .decisions {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 36px 24px 28px;
+    color: rgba(232,221,199,0.9);
+  }
+  .decisions h1 {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    font-size: 28px;
+    color: #e8ddc7;
+    margin: 0 0 6px;
+    text-align: center;
+    letter-spacing: -0.01em;
+  }
+  .decisions .subtitle {
+    text-align: center;
+    color: rgba(232,221,199,0.6);
+    font-size: 13px;
+    margin: 0 auto 24px;
+    line-height: 1.65;
+    max-width: 560px;
+  }
+  .decisions .pick-box {
+    background: rgba(232,221,199,0.07);
+    border: 1px solid rgba(232,221,199,0.15);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin-bottom: 10px;
+  }
+  .decisions .pick-box p {
+    margin: 0 0 10px;
+    font-size: 13px;
+    line-height: 1.65;
+    color: rgba(232,221,199,0.8);
+  }
+  .decisions .pick-box p:last-child { margin-bottom: 0; }
+  .decisions .pick-box strong { color: #e8ddc7; }
+  .decisions .q {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 15px;
+    color: rgba(232,221,199,0.72);
+    margin: 0 0 5px;
+  }
+
+  /* ── Three-up frame layout ── */
+  .frames-row {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 20px 80px;
+    display: flex;
+    gap: 28px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .frame-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    flex: 0 0 auto;
+  }
+  .frame-label {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 16px;
+    color: rgba(232,221,199,0.7);
+    text-align: center;
+  }
+  .frame-label strong {
+    display: block;
+    font-style: normal;
+    font-size: 18px;
+    color: #e8ddc7;
+    margin-bottom: 2px;
+  }
+
+  /* Phone shell */
+  .phone {
+    width: 375px;
+    height: 760px;
+    background: var(--paper);
+    border-radius: 40px;
+    box-shadow: 0 12px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Masthead (shared across all options) ── */
+  .masthead {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(232,221,199,0.96);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid var(--border);
+    padding: 46px 18px 14px;
+    flex-shrink: 0;
+  }
+  .masthead-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .masthead-title {
+    font-family: var(--im-fell);
+    font-size: 22px;
+    color: var(--ink-primary);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .masthead-subtitle {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .pin-icon { font-size: 10px; opacity: 0.7; }
+
+  .add-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(42,26,10,0.07);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    color: var(--ink-muted);
+    font-weight: 300;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  /* ── Scrollable content ── */
+  .scroll-area {
+    overflow-y: auto;
+    flex: 1;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scroll-area::-webkit-scrollbar { display: none; }
+
+  /* ── Bottom nav (shared) ── */
+  .bottom-nav {
+    flex-shrink: 0;
+    height: 72px;
+    background: rgba(232,221,199,0.97);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 16px 4px;
+  }
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    opacity: 0.42;
+  }
+  .nav-item.active { opacity: 1; }
+  .nav-icon { font-size: 18px; line-height: 1; }
+  .nav-label {
+    font-family: var(--sys);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    color: var(--ink-primary);
+  }
+  .nav-item.active .nav-label { color: var(--green); font-weight: 700; }
+  .nav-item.active .nav-icon { filter: brightness(0) saturate(100%) invert(18%) sepia(55%) saturate(600%) hue-rotate(105deg); }
+
+  /* ── OPTION A: Updated list (v1.2 chrome, same single-column cards) ── */
+  .list-content {
+    padding: 14px 14px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .list-card {
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(255,253,248,0.70);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 6px rgba(42,26,10,0.06);
+    cursor: pointer;
+  }
+  .list-hero {
+    height: 92px;
+    position: relative;
+    overflow: hidden;
+  }
+  .list-hero img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .hero-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(20,14,6,0.52) 0%, transparent 60%);
+  }
+  .booth-chip {
+    position: absolute;
+    bottom: 9px;
+    left: 11px;
+    padding: 3px 9px;
+    border-radius: 14px;
+    background: rgba(20,14,6,0.52);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.16);
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.95);
+    letter-spacing: 0.3px;
+  }
+  .list-info {
+    padding: 10px 13px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10;
+  }
+  .list-name {
+    font-family: var(--im-fell);
+    font-size: 16px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+    margin-bottom: 1px;
+  }
+  .list-bio {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink-muted);
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 230px;
+  }
+  .chevron {
+    font-size: 13px;
+    color: var(--ink-faint);
+    flex-shrink: 0;
+  }
+
+  /* Hue placeholder backgrounds */
+  .hue-amber  { background: linear-gradient(135deg, #7a5c1e 0%, #b08240 100%); }
+  .hue-forest { background: linear-gradient(135deg, #1e4d2b 0%, #2d7044 100%); }
+  .hue-clay   { background: linear-gradient(135deg, #8b3a1a 0%, #c4612e 100%); }
+  .hue-slate  { background: linear-gradient(135deg, #2a3a4a 0%, #3d5464 100%); }
+  .hue-rose   { background: linear-gradient(135deg, #7a2a3a 0%, #b04060 100%); }
+
+  /* ── OPTION B: 2-column grid ── */
+  .grid-content {
+    padding: 14px 14px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .grid-card {
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(255,253,248,0.70);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 6px rgba(42,26,10,0.06);
+    cursor: pointer;
+  }
+  .grid-hero {
+    aspect-ratio: 1 / 1;
+    position: relative;
+    overflow: hidden;
+  }
+  .grid-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .grid-chip {
+    position: absolute;
+    bottom: 7px;
+    left: 8px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: rgba(20,14,6,0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.15);
+    font-family: monospace;
+    font-size: 9px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.95);
+    letter-spacing: 0.3px;
+  }
+  .grid-info {
+    padding: 9px 10px 11px;
+  }
+  .grid-name {
+    font-family: var(--im-fell);
+    font-size: 14px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .grid-sub {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 10px;
+    color: var(--ink-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── OPTION C: Editorial cards ── */
+  .editorial-content {
+    padding: 14px 14px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .editorial-card {
+    border-radius: 16px;
+    overflow: hidden;
+    background: rgba(255,253,248,0.70);
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 10px rgba(42,26,10,0.08);
+    cursor: pointer;
+  }
+  .editorial-hero {
+    height: 140px;
+    position: relative;
+    overflow: hidden;
+  }
+  .editorial-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .editorial-info {
+    padding: 13px 15px 15px;
+  }
+  .editorial-name {
+    font-family: var(--im-fell);
+    font-size: 19px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+  .editorial-bio {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.55;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .editorial-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 9px;
+    padding-top: 9px;
+    border-top: 1px solid var(--border);
+  }
+  .editorial-mall {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink-muted);
+  }
+  .editorial-booth {
+    padding: 3px 9px;
+    border-radius: 12px;
+    background: rgba(42,26,10,0.06);
+    border: 1px solid var(--border);
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink-mid);
+    letter-spacing: 0.3px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Decisions pane ── -->
+<div class="decisions">
+  <h1>Booths Page — Layout Options</h1>
+  <p class="subtitle">All three options use v1.2 chrome (IM Fell, paperCream, v1 tokens). Choosing one replaces the current v0.2 Georgia + legacy colors layout.</p>
+
+  <div class="pick-box">
+    <p class="q">What are we deciding?</p>
+    <p><strong>A — Updated List:</strong> Same single-column card structure as today, but migrated to v1.2 tokens and IM Fell. Most conservative. Fastest to ship. Booth name gets bigger (16px IM Fell vs current 15px Georgia). Zero structural change — just a chrome swap.</p>
+    <p><strong>B — 2-Column Grid:</strong> Two booth cards per row. More density — you can see 6 booths in one screen instead of 3. Works well when there are 10+ booths. Each card shows the hero square, booth number chip, name, and mall. Trade-off: less room for bio text.</p>
+    <p><strong>C — Editorial Cards:</strong> Taller hero (140px vs 92px), larger name (19px IM Fell), full 2-line bio below. Fewer booths per scroll, but each feels premium — more like a shop page than a directory. Best if the vendor photo quality is high.</p>
+  </div>
+</div>
+
+<!-- ── Frames ── -->
+<div class="frames-row">
+
+  <!-- Option A -->
+  <div class="frame-wrap">
+    <div class="frame-label"><strong>A — Updated List</strong>v1.2 chrome, same structure</div>
+    <div class="phone">
+      <div class="masthead">
+        <div class="masthead-inner">
+          <div>
+            <div class="masthead-title">Booths</div>
+            <div class="masthead-subtitle"><span class="pin-icon">📍</span> 4 booths at America's Antique Mall</div>
+          </div>
+          <div class="add-btn">+</div>
+        </div>
+      </div>
+
+      <div class="scroll-area">
+        <div class="list-content">
+
+          <div class="list-card">
+            <div class="list-hero hue-amber">
+              <div class="hero-gradient"></div>
+              <div class="booth-chip">Booth 101</div>
+            </div>
+            <div class="list-info">
+              <div style="flex:1;min-width:0;">
+                <div class="list-name">The Amber Room</div>
+                <div class="list-bio">Mid-century ceramics &amp; studio glass from the Midwest</div>
+              </div>
+              <div class="chevron">›</div>
+            </div>
+          </div>
+
+          <div class="list-card">
+            <div class="list-hero hue-forest">
+              <div class="hero-gradient"></div>
+              <div class="booth-chip">Booth 204</div>
+            </div>
+            <div class="list-info">
+              <div style="flex:1;min-width:0;">
+                <div class="list-name">Fern &amp; Foxglove</div>
+                <div class="list-bio">Botanical prints, pressed flora, wooden curiosities</div>
+              </div>
+              <div class="chevron">›</div>
+            </div>
+          </div>
+
+          <div class="list-card">
+            <div class="list-hero hue-clay">
+              <div class="hero-gradient"></div>
+              <div class="booth-chip">Booth 312</div>
+            </div>
+            <div class="list-info">
+              <div style="flex:1;min-width:0;">
+                <div class="list-name">Clay &amp; Company</div>
+                <div class="list-bio">Handmade stoneware, studio pottery</div>
+              </div>
+              <div class="chevron">›</div>
+            </div>
+          </div>
+
+          <div class="list-card">
+            <div class="list-hero hue-slate">
+              <div class="hero-gradient"></div>
+              <div class="booth-chip">Booth 418</div>
+            </div>
+            <div class="list-info">
+              <div style="flex:1;min-width:0;">
+                <div class="list-name">Bluestone Goods</div>
+                <div class="list-bio">Industrial salvage, vintage hardware &amp; brass</div>
+              </div>
+              <div class="chevron">›</div>
+            </div>
+          </div>
+
+          <div class="list-card">
+            <div class="list-hero hue-rose">
+              <div class="hero-gradient"></div>
+              <div class="booth-chip">Booth 509</div>
+            </div>
+            <div class="list-info">
+              <div style="flex:1;min-width:0;">
+                <div class="list-name">Rose &amp; Ruin</div>
+                <div class="list-bio">Victorian ephemera, floral china, silver plate</div>
+              </div>
+              <div class="chevron">›</div>
+            </div>
+          </div>
+
+          <div style="height:20px;"></div>
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <div class="nav-item"><div class="nav-icon">🏠</div><div class="nav-label">Home</div></div>
+        <div class="nav-item active"><div class="nav-icon">🏪</div><div class="nav-label">Booths</div></div>
+        <div class="nav-item"><div class="nav-icon">🗺️</div><div class="nav-label">Find Map</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B -->
+  <div class="frame-wrap">
+    <div class="frame-label"><strong>B — 2-Column Grid</strong>More density, catalog feel</div>
+    <div class="phone">
+      <div class="masthead">
+        <div class="masthead-inner">
+          <div>
+            <div class="masthead-title">Booths</div>
+            <div class="masthead-subtitle"><span class="pin-icon">📍</span> 4 booths at America's Antique Mall</div>
+          </div>
+          <div class="add-btn">+</div>
+        </div>
+      </div>
+
+      <div class="scroll-area">
+        <div class="grid-content">
+
+          <div class="grid-card">
+            <div class="grid-hero hue-amber">
+              <div class="hero-gradient"></div>
+              <div class="grid-chip">Booth 101</div>
+            </div>
+            <div class="grid-info">
+              <div class="grid-name">The Amber Room</div>
+              <div class="grid-sub">America's Antique Mall</div>
+            </div>
+          </div>
+
+          <div class="grid-card">
+            <div class="grid-hero hue-forest">
+              <div class="hero-gradient"></div>
+              <div class="grid-chip">Booth 204</div>
+            </div>
+            <div class="grid-info">
+              <div class="grid-name">Fern &amp; Foxglove</div>
+              <div class="grid-sub">America's Antique Mall</div>
+            </div>
+          </div>
+
+          <div class="grid-card">
+            <div class="grid-hero hue-clay">
+              <div class="hero-gradient"></div>
+              <div class="grid-chip">Booth 312</div>
+            </div>
+            <div class="grid-info">
+              <div class="grid-name">Clay &amp; Company</div>
+              <div class="grid-sub">America's Antique Mall</div>
+            </div>
+          </div>
+
+          <div class="grid-card">
+            <div class="grid-hero hue-slate">
+              <div class="hero-gradient"></div>
+              <div class="grid-chip">Booth 418</div>
+            </div>
+            <div class="grid-info">
+              <div class="grid-name">Bluestone Goods</div>
+              <div class="grid-sub">America's Antique Mall</div>
+            </div>
+          </div>
+
+          <div class="grid-card">
+            <div class="grid-hero hue-rose">
+              <div class="hero-gradient"></div>
+              <div class="grid-chip">Booth 509</div>
+            </div>
+            <div class="grid-info">
+              <div class="grid-name">Rose &amp; Ruin</div>
+              <div class="grid-sub">America's Antique Mall</div>
+            </div>
+          </div>
+
+          <div class="grid-card" style="opacity:0.35;">
+            <div class="grid-hero" style="background: rgba(42,26,10,0.04); aspect-ratio:1/1; display:flex;align-items:center;justify-content:center;">
+              <span style="font-family:var(--im-fell);font-style:italic;font-size:12px;color:var(--ink-faint);">coming soon</span>
+            </div>
+            <div class="grid-info">
+              <div class="grid-name" style="color:var(--ink-faint);">—</div>
+            </div>
+          </div>
+
+          <div style="height:20px;grid-column:1/-1;"></div>
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <div class="nav-item"><div class="nav-icon">🏠</div><div class="nav-label">Home</div></div>
+        <div class="nav-item active"><div class="nav-icon">🏪</div><div class="nav-label">Booths</div></div>
+        <div class="nav-item"><div class="nav-icon">🗺️</div><div class="nav-label">Find Map</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option C -->
+  <div class="frame-wrap">
+    <div class="frame-label"><strong>C — Editorial Cards</strong>Taller hero, premium feel</div>
+    <div class="phone">
+      <div class="masthead">
+        <div class="masthead-inner">
+          <div>
+            <div class="masthead-title">Booths</div>
+            <div class="masthead-subtitle"><span class="pin-icon">📍</span> 4 booths at America's Antique Mall</div>
+          </div>
+          <div class="add-btn">+</div>
+        </div>
+      </div>
+
+      <div class="scroll-area">
+        <div class="editorial-content">
+
+          <div class="editorial-card">
+            <div class="editorial-hero hue-amber">
+              <div class="hero-gradient"></div>
+              <div class="booth-chip">Booth 101</div>
+            </div>
+            <div class="editorial-info">
+              <div class="editorial-name">The Amber Room</div>
+              <div class="editorial-bio">Mid-century ceramics &amp; studio glass sourced from estate sales across the Midwest.</div>
+              <div class="editorial-footer">
+                <div class="editorial-mall"><span>📍</span> America's Antique Mall</div>
+                <div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="editorial-card">
+            <div class="editorial-hero hue-forest">
+              <div class="hero-gradient"></div>
+              <div class="booth-chip">Booth 204</div>
+            </div>
+            <div class="editorial-info">
+              <div class="editorial-name">Fern &amp; Foxglove</div>
+              <div class="editorial-bio">Botanical prints, pressed flora, and wooden curiosities from the Victorian and Edwardian eras.</div>
+              <div class="editorial-footer">
+                <div class="editorial-mall"><span>📍</span> America's Antique Mall</div>
+                <div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="editorial-card">
+            <div class="editorial-hero hue-clay">
+              <div class="hero-gradient"></div>
+              <div class="booth-chip">Booth 312</div>
+            </div>
+            <div class="editorial-info">
+              <div class="editorial-name">Clay &amp; Company</div>
+              <div class="editorial-bio">Handmade stoneware and studio pottery, mostly unsigned American makers from the 60s–80s.</div>
+              <div class="editorial-footer">
+                <div class="editorial-mall"><span>📍</span> America's Antique Mall</div>
+                <div></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:20px;"></div>
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <div class="nav-item"><div class="nav-icon">🏠</div><div class="nav-label">Home</div></div>
+        <div class="nav-item active"><div class="nav-icon">🏪</div><div class="nav-label">Booths</div></div>
+        <div class="nav-item"><div class="nav-icon">🗺️</div><div class="nav-label">Find Map</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

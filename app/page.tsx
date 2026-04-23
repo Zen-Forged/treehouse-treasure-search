@@ -853,7 +853,6 @@ export default function DiscoveryFeedPage() {
       >
         <FeaturedBanner
           variant="eyebrow"
-          title="Featured Find"
           imageUrl={featuredImageUrl}
           minHeight={200}
           marginBottom={6}

@@ -619,7 +619,6 @@ export default function FindMapPage() {
       >
         <FeaturedBanner
           variant="overlay"
-          title="Find Map"
           imageUrl={bannerImageUrl}
           minHeight={180}
           marginBottom={6}
