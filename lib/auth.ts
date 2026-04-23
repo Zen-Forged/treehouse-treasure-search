@@ -15,6 +15,7 @@
 //   onAuthChange(cb)          — subscribe to auth state changes
 
 import { supabase } from "./supabase";
+import { LOCAL_VENDOR_KEY } from "@/types/treehouse";
 import type { Session, User } from "@supabase/supabase-js";
 
 const SESSION_USER_KEY = "treehouse_auth_uid";
@@ -77,6 +78,11 @@ export async function signOut(): Promise<void> {
   try {
     await supabase.auth.signOut();
     localStorage.removeItem(SESSION_USER_KEY);
+    // Session 50: also clear the vendor-profile cache. It was previously
+    // left behind on sign-out, which let a stale `vendor_id` match in
+    // Find Detail's `detectOwnershipAsync` path 3 grant the edit pencil
+    // to a guest user viewing their own prior post.
+    localStorage.removeItem(LOCAL_VENDOR_KEY);
   } catch {}
 }
 

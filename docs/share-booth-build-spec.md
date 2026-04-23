@@ -258,13 +258,20 @@ Single-purpose. Explicit semantics. Future callers know exactly what shape to ex
 
 ## Rate limiting + abuse
 
-| Lever | Value | Rationale |
-|---|---|---|
-| Per-IP rate limit | 5 sends / 10 min | Matches `/api/vendor-request`. Tight enough to prevent scripting, loose enough for a vendor at a mall demoing back-to-back. |
-| Per-recipient dedup (in-memory) | 60 seconds | Prevents accidental double-tap double-sends if CTA disable timing glitches. |
-| Auth gate | `requireAuth` + vendor ownership | Only signed-in users who own the booth can share it. Shoppers cannot share vendor booths in MVP. |
-| Empty-window guard | 409 Conflict if `posts.length === 0` | Defense in depth; UI hides the entry but server should not send blank Windows. |
-| Admin moderation | NONE in MVP | Rate limit is the abuse lever. Add a `share_events` audit table in Sprint 6+ if abuse surfaces. |
+Session 50 (Q-008) opened the share endpoint to unauthenticated shoppers. The server now branches on the `Authorization` header:
+
+| Lever | Auth branch (vendor / admin) | Anon branch (shopper) | Rationale |
+|---|---|---|---|
+| Per-IP rate limit | 5 sends / 10 min | **2 sends / 10 min** | Two independent buckets by IP so vendor + shopper quotas don't compound. Anon cap is tighter because the anon path has less abuse friction; a shopper typically sends to one friend, not five. |
+| Per-recipient dedup (in-memory) | 60 seconds | 60 seconds (shared) | Same dedup map. Prevents accidental double-tap double-sends either way. |
+| Auth gate | `requireAuth` + vendor ownership (admin bypass via `NEXT_PUBLIC_ADMIN_EMAIL`) | **No auth. No ownership check.** | Header-presence selects the branch. A malformed/expired token on the auth branch still 401s — we don't silently fall through to the anon path. |
+| Sender voice (email body) | `"{vendor.display_name} sent you a Window into {vendor}."` | **Voice line omitted.** Vendor-name hero still leads. | Shoppers aren't the vendor — forging vendor attribution would be dishonest. `senderMode: "anonymous"` on `sendBoothWindow()` drops the line. Preheader + plain-text fallback drop it too. |
+| Empty-window guard | 409 Conflict if `posts.length === 0` | 409 Conflict (same) | Defense in depth on both branches. |
+| Admin moderation | NONE in MVP | NONE in MVP | Rate limit is the abuse lever. Audit table (`share_events`) is Sprint 6+. |
+
+**Where the shopper entry point lives:** `/shelf/[slug]` masthead airplane. Visible whenever `available.length >= 1` (mirrors the 409 guard). `app/shelf/[slug]/page.tsx` computes `shareMode` per viewer — admin OR booth owner → `"vendor"`; everyone else → `"shopper"`. `<ShareBoothSheet mode="shopper">` uses plain `fetch` (no bearer) so a signed-in non-owner viewing someone else's booth still lands on the anon server branch instead of 403.
+
+**Out of scope (Q-008):** individual `/find/[id]` share-to-friend — separate sprint. Captcha on anon path — rate limit is the abuse lever; revisit if abuse surfaces.
 
 ---
 

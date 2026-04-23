@@ -10,12 +10,20 @@
 //
 // Session 45 (2026-04-22) — Q-009 admin Window share bypass:
 //   - When the signed-in user is admin, the masthead right slot gets a
-//     paper-airplane icon that opens <ShareBoothSheet>, exactly like /my-shelf.
-//   - Shoppers (unauth and non-admin signed-in) continue to see an empty
-//     right slot. No behavior change for them.
-//   - Q-008 (open Window share to all shoppers) is a separate queued session.
+//     paper-airplane icon that opens <ShareBoothSheet>.
 //   - The server-side admin bypass lives in /api/share-booth (session 45):
 //     ownership check now accepts admin email via NEXT_PUBLIC_ADMIN_EMAIL.
+//
+// Session 50 (2026-04-23) — Q-008 Window share opened to all viewers:
+//   - The masthead airplane is now visible to everyone (admin + vendor +
+//     shopper + unauthenticated), gated only on available.length >= 1.
+//   - Mode is derived per viewer:
+//       • admin OR the booth's owner → "vendor" mode (authFetch, ownership
+//         check on the server — admin bypasses ownership, owner matches it)
+//       • everyone else → "shopper" mode (plain fetch, anonymous server path
+//         with tighter rate limit, no sender attribution in the email)
+//   - <ShareBoothSheet>'s `mode` prop drives which transport authFetch vs
+//     fetch runs inside the sheet.
 //
 // Session 45 — BoothHero URL link-share retired:
 //   The top-right frosted airplane bubble inside <BoothHero> was removed
@@ -336,11 +344,16 @@ export default function PublicShelfPage() {
   const mallCity    = mall?.city ?? (vendor?.mall as Mall | undefined)?.city ?? "Louisville, KY";
   const address     = mall?.address ?? null;
 
-  // Session 45 — admin share affordance visibility. Mirrors /my-shelf's
-  // gating rule: hide when the vendor has no available posts (matches the
-  // server's empty-window 409 guard). Also requires admin user AND a
-  // resolved vendor so we don't flash the icon during load.
-  const canShare = isAdmin(user) && !!vendor && available.length >= 1;
+  // Session 50 (Q-008) — airplane is visible to everyone once the booth
+  // has at least one available post (mirrors the server's empty-window
+  // 409 guard). Gate on !!vendor so the icon doesn't flash during the
+  // initial vendor load. Mode derivation decides which transport the sheet
+  // uses: owners + admin get authenticated sends with the sender voice;
+  // anyone else gets the anonymous path with no sender attribution.
+  const isOwner      = !!user && !!vendor && !!vendor.user_id && user.id === vendor.user_id;
+  const isAdminUser  = isAdmin(user);
+  const shareMode: "vendor" | "shopper" = (isAdminUser || isOwner) ? "vendor" : "shopper";
+  const canShare     = !!vendor && available.length >= 1;
 
   return (
     <div
@@ -429,9 +442,10 @@ export default function PublicShelfPage() {
 
       <BottomNav active="shelves" flaggedCount={bookmarkCount} />
 
-      {/* Session 45 — Window share sheet (admin-only on this surface).
-          Mounted whenever we have a vendor so state-driven open/close is
-          reliable; entry visibility gated by `canShare` on the masthead. */}
+      {/* Session 50 (Q-008) — Window share sheet, open to all viewers with
+          at least one available post. `mode` picks transport: owners + admin
+          send authenticated (sender voice preserved); shoppers + anon send
+          anonymously (no sender attribution). */}
       {vendor && (
         <ShareBoothSheet
           open={shareOpen}
@@ -439,6 +453,7 @@ export default function PublicShelfPage() {
           vendor={vendor}
           mall={mall}
           previewPosts={available}
+          mode={shareMode}
         />
       )}
 

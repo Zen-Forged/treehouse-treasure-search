@@ -225,8 +225,21 @@ export async function sendApprovalInstructions(
  */
 export interface ShareBoothWindowPayload {
   recipientEmail: string;
-  /** Signed-in user's display name — for MVP equals vendor.displayName. */
+  /**
+   * Signed-in user's display name — for MVP equals vendor.displayName.
+   * Ignored when `senderMode === "anonymous"`: the voice line is omitted
+   * entirely so there's no sender to attribute.
+   */
   senderFirstName: string;
+  /**
+   * Session 50 (Q-008) — controls whether the voice line ("{X} sent you a
+   * Window into {vendor}.") appears. "vendor" keeps the existing MVP voice;
+   * "anonymous" drops the sender entirely, because when a shopper shares a
+   * booth we don't know who they are and forging vendor attribution would
+   * be dishonest. Defaults to "vendor" for back-compat with any caller that
+   * hasn't migrated (/api/share-booth passes it explicitly).
+   */
+  senderMode?:    "vendor" | "anonymous";
   vendor: {
     displayName:   string;
     boothNumber:   string | null;
@@ -271,16 +284,23 @@ export async function sendBoothWindow(
 
   const vendorName    = payload.vendor.displayName.trim() || "a booth";
   const senderFirst   = payload.senderFirstName.trim() || "Someone";
+  const senderMode    = payload.senderMode ?? "vendor";
   // Session 41 Q-010: canonical public booth URL is /shelf/{slug}, not
   // /vendor/{slug}. The Window CTA and the plain-text fallback both land
   // recipients here.
   const shelfPageUrl  = `${siteUrl}/shelf/${payload.vendor.slug}`;
 
   const subject    = `A Window into ${vendorName}`;
-  const preheader  = `${senderFirst} sent you a Window into ${vendorName}.`;
+  // Preheader mirrors the voice-line decision: anonymous shares don't
+  // claim a sender, so the preheader is scene-setting rather than
+  // attribution. Vendor shares keep the existing voice.
+  const preheader  = senderMode === "anonymous"
+    ? `A Window into ${vendorName}.`
+    : `${senderFirst} sent you a Window into ${vendorName}.`;
 
   const bodyHtml = renderWindowBody({
     senderFirst,
+    senderMode,
     vendorName,
     boothNumber:    payload.vendor.boothNumber,
     heroImageUrl:   payload.vendor.heroImageUrl,
@@ -297,8 +317,14 @@ export async function sendBoothWindow(
 
   // Plain-text fallback. Email clients that can't render HTML (or the
   // user's preview pane) fall back to this. Keep it readable as prose.
+  // Session 50 (Q-008) — anonymous shares drop the sender attribution
+  // line here too; the recipient sees the booth + Window contents without
+  // a forged "{X} sent you" header.
+  const leadLine = senderMode === "anonymous"
+    ? `A Window into ${vendorName}.`
+    : `${senderFirst} sent you a Window into ${vendorName}.`;
   const text = [
-    `${senderFirst} sent you a Window into ${vendorName}.`,
+    leadLine,
     ``,
     vendorName,
     payload.vendor.boothNumber ? `Booth ${payload.vendor.boothNumber}` : ``,
@@ -326,6 +352,9 @@ export async function sendBoothWindow(
 
 interface WindowBodyOpts {
   senderFirst:   string;
+  // Session 50 (Q-008): when "anonymous", the italic voice line at the top
+  // of the email is omitted entirely. The vendor-name hero still leads.
+  senderMode:    "vendor" | "anonymous";
   vendorName:    string;
   boothNumber:   string | null;
   heroImageUrl:  string | null;
@@ -340,17 +369,21 @@ interface WindowBodyOpts {
 
 function renderWindowBody(opts: WindowBodyOpts): string {
   const {
-    senderFirst, vendorName, boothNumber, heroImageUrl,
+    senderFirst, senderMode, vendorName, boothNumber, heroImageUrl,
     mallName, mallAddress, googleMapsUrl, posts, shelfPageUrl,
   } = opts;
 
-  const voiceLine = `${escapeHtml(senderFirst)} sent you a Window into ${escapeHtml(vendorName)}.`;
-
-  return `
+  const voiceLineHtml = senderMode === "vendor"
+    ? `
       <!-- Sender voice line — italic, quiet -->
       <p style="margin: 0 0 24px; font-family: ${SERIF}; font-style: italic; font-size: 14px; line-height: 1.6; color: ${INKMID}; text-align: center;">
-        ${voiceLine}
+        ${escapeHtml(senderFirst)} sent you a Window into ${escapeHtml(vendorName)}.
       </p>
+    `
+    : ``;
+
+  return `
+      ${voiceLineHtml}
 
       <!-- Vendor name hero — Georgia 34px centered -->
       <h2 style="margin: 0 0 20px; padding: 0; font-family: ${SERIF}; font-size: 34px; font-weight: 600; color: ${INK}; line-height: 1.15; letter-spacing: -0.01em; text-align: center;">

@@ -71,6 +71,18 @@ export interface ShareBoothSheetProps {
   /** Pre-loaded from /my-shelf parent to avoid a double-fetch. Used for the
    *  preview strip inside the sheet (first 3 thumbnails). */
   previewPosts:  Post[];
+  /**
+   * Session 50 (Q-008) — call-site declares whether this is a vendor/admin
+   * share (authenticated POST, bearer token attached) or a shopper share
+   * (anonymous POST, no bearer). Vendor mode keeps the existing behavior
+   * exactly; shopper mode sends through the anon branch of /api/share-booth
+   * which has a tighter rate limit and no ownership check.
+   *
+   * Default "vendor" preserves behavior for any caller that hasn't opted in
+   * (Q-009 admin surface, /my-shelf). Parents that expose the sheet to
+   * unauthenticated or non-owner viewers must pass "shopper" explicitly.
+   */
+  mode?:         "vendor" | "shopper";
 }
 
 export default function ShareBoothSheet({
@@ -79,6 +91,7 @@ export default function ShareBoothSheet({
   vendor,
   mall,
   previewPosts,
+  mode = "vendor",
 }: ShareBoothSheetProps) {
   const [email, setEmail]   = useState("");
   const [status, setStatus] = useState<SheetState>({ kind: "compose" });
@@ -112,7 +125,19 @@ export default function ShareBoothSheet({
     setStatus({ kind: "sending" });
 
     try {
-      const res = await authFetch("/api/share-booth", {
+      // Session 50 (Q-008) — shopper mode uses plain fetch so the server
+      // lands on the anonymous branch even if the viewer happens to be
+      // signed in as a non-owner. authFetch would attach their bearer
+      // token, and the server would 403 with "You don't own this booth."
+      // on the auth branch. Vendor/admin mode keeps authFetch so the
+      // bearer token drives ownership + admin-bypass logic.
+      const doFetch = mode === "shopper"
+        ? (url: string, init: RequestInit) => fetch(url, {
+            ...init,
+            headers: { "Content-Type": "application/json", ...(init.headers ?? {}) },
+          })
+        : authFetch;
+      const res = await doFetch("/api/share-booth", {
         method: "POST",
         body:   JSON.stringify({
           recipientEmail,

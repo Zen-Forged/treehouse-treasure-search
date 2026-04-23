@@ -70,7 +70,7 @@ import { ArrowLeft, Send, Heart, Pencil } from "lucide-react";
 import { getPost, getVendorPosts } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
-import { getCachedUserId, getSession, isAdmin } from "@/lib/auth";
+import { getCachedUserId, getSession, isAdmin, onAuthChange } from "@/lib/auth";
 import { v1, FONT_IM_FELL, FONT_SYS, FONT_POSTIT_NUMERAL } from "@/lib/tokens";
 import { flagKey, mapsUrl, boothNumeralSize, loadFollowedIds } from "@/lib/utils";
 import BottomNav from "@/components/BottomNav";
@@ -87,12 +87,20 @@ const sectionVariants = (delay: number) => ({
   visible: { opacity: 1, y: 0, transition: { duration: 0.32, delay, ease: EASE } },
 });
 
-// Ownership detection (unchanged)
+// Ownership detection
+//
+// Session 50 fix: path 3 (LOCAL_VENDOR_KEY match) now requires a valid
+// Supabase session. Previously a stale vendor-profile survived sign-out
+// in localStorage and granted the edit pencil to a guest user viewing
+// their own prior post. `signOut()` in lib/auth.ts now also clears
+// LOCAL_VENDOR_KEY, but gating the path on an actual session here is the
+// correctness fix — no session, no ownership, regardless of what's cached.
 async function detectOwnershipAsync(post: Post): Promise<boolean> {
   try {
     const session = await getSession();
-    if (session?.user && isAdmin(session.user)) return true;
-    const sessionUid = getCachedUserId() ?? session?.user?.id;
+    if (!session?.user) return false;
+    if (isAdmin(session.user)) return true;
+    const sessionUid = getCachedUserId() ?? session.user.id;
     if (sessionUid && post.vendor?.user_id && sessionUid === post.vendor.user_id) return true;
     const raw = localStorage.getItem(LOCAL_VENDOR_KEY);
     if (raw) {
@@ -583,6 +591,18 @@ export default function FindDetailPage() {
       }
     });
   }, [id]);
+
+  // Session 50: re-run ownership detection whenever auth state flips so the
+  // edit pencil disappears on sign-out (and appears on sign-in) without a
+  // navigation. Mirrors the Home page's auth subscriber pattern.
+  useEffect(() => {
+    const unsub = onAuthChange(async () => {
+      if (!post) return;
+      const isOwner = await detectOwnershipAsync(post);
+      setIsMyPost(isOwner);
+    });
+    return unsub;
+  }, [post]);
 
   function handleToggleSave() {
     if (!id) return;
