@@ -153,8 +153,9 @@ export async function POST(req: Request) {
   // 3. Create vendor with collision-aware handling
   const createResult = await createVendorForRequest(auth.service, {
     displayName,
-    mallId:      request.mall_id,
-    boothNumber: request.booth_number || null,
+    mallId:        request.mall_id,
+    boothNumber:   request.booth_number || null,
+    proofImageUrl: (request.proof_image_url as string | null) || null,
   });
 
   if (!createResult.ok) {
@@ -210,9 +211,10 @@ export async function POST(req: Request) {
 // ── vendor creation with collision handling ──────────────────────────────────
 
 interface CreateVendorArgs {
-  displayName: string;
-  mallId:      string;
-  boothNumber: string | null;
+  displayName:   string;
+  mallId:        string;
+  boothNumber:   string | null;
+  proofImageUrl: string | null;
 }
 
 type CreateVendorResult =
@@ -284,9 +286,20 @@ async function createVendorForRequest(
       }
 
       // Safe claim path — unlinked row, matching name. Reuse it.
+      // Backfill hero_image_url from the proof photo if the row doesn't have one.
+      let claimedVendor = boothOccupant;
+      if (args.proofImageUrl && !boothOccupant.hero_image_url) {
+        const { data: updated } = await service
+          .from("vendors")
+          .update({ hero_image_url: args.proofImageUrl })
+          .eq("id", boothOccupant.id)
+          .select()
+          .single();
+        if (updated) claimedVendor = updated;
+      }
       return {
         ok: true,
-        vendor: boothOccupant,
+        vendor: claimedVendor,
         note: `Claimed existing unlinked vendor row at booth ${args.boothNumber}.`,
       };
     }
@@ -308,10 +321,11 @@ async function createVendorForRequest(
   for (let attempt = 0; attempt < MAX_SLUG_SUFFIX_ATTEMPTS; attempt++) {
     const slug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`;
     const insertPayload = {
-      mall_id:      args.mallId,
-      display_name: args.displayName,
-      booth_number: args.boothNumber,
+      mall_id:        args.mallId,
+      display_name:   args.displayName,
+      booth_number:   args.boothNumber,
       slug,
+      hero_image_url: args.proofImageUrl,
     };
 
     const { data: inserted, error: insertErr } = await service
