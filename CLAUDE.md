@@ -16,7 +16,7 @@ CURRENT ISSUE:
 
 ## HOW TO END A SESSION
 
-Tell Claude: "close out the session" then run `thc`.
+Run `/session-close` — replaces the old `thc` alias with the full close protocol (tombstoning, memory updates, commit + push, PR creation).
 
 ---
 
@@ -65,99 +65,44 @@ Exception: a single chained command with `&&` stays in one block — that's one 
 
 ---
 
-## ✅ Session 46 (2026-04-22) — T4d pre-beta QA walk PASSED end-to-end + `scripts/qa-walk.ts` QA utility shipped + docs drift patched
+## ✅ Session 47 (2026-04-23) — Vendor onboarding hero image gap fixed
 
-First Claude Code (terminal) session after 45 sessions in Claude Chat (browser). The context shift changed what "efficient" looks like: the Chat-era workflow had David copy-pasting SQL queries into Supabase SQL Editor and pasting screenshots back into the conversation between every HITL step. Code's direct Bash access eliminates that — so the session's first real shipment was an automation primitive that collapsed ~15 back-and-forth SQL lookups into a single reusable helper.
+One surgical fix. When a vendor submits via `/vendor-request`, they upload a booth-proof photo stored in `site-assets/booth-proof/` as `vendor_requests.proof_image_url`. Previously that URL was never transferred to `vendors.hero_image_url` at approval time — so the vendor's My Shelf banner was blank after sign-in.
 
-### Shipment 1 — `scripts/qa-walk.ts` (new durable QA utility)
+**Root cause:** `createVendorForRequest` in `app/api/admin/vendor-requests/route.ts` built `insertPayload` with only `mall_id`, `display_name`, `booth_number`, `slug`. The `proof_image_url` was fetched on the request row but never passed downstream.
 
-**Not previously extant.** Subcommands: `baseline` (runs all four T4d-prereq SQL snapshots as a single console-table dump), `check <boothNumber>` (vendors + vendor_requests + posts at that booth), `check-email <email>` (vendor_requests + auth.users + linked vendors for an email), `cleanup <booth1> <booth2> ...` (dry-run default; flags `--confirm` to execute, `--force-claimed` to bypass the user_id safety gate for pre-confirmed test data, `--delete-auth=<email>,<email>` to also remove named auth users — refuses `NEXT_PUBLIC_ADMIN_EMAIL` by hardcoded guard).
+**Fix — three edits to [`app/api/admin/vendor-requests/route.ts`](app/api/admin/vendor-requests/route.ts):**
+1. `CreateVendorArgs` interface: added `proofImageUrl: string | null`
+2. Call site (step 3 of POST handler): passes `proofImageUrl: request.proof_image_url || null`
+3. Fresh-insert path: `insertPayload` now includes `hero_image_url: args.proofImageUrl`
+4. Safe-claim path (pre-seeded row reused at approval): service-role `UPDATE` backfills `hero_image_url` on the existing row when `args.proofImageUrl` is set and the row's `hero_image_url` is null
 
-Env loading: reads `.env.local` from either cwd or the parent repo path at `/Users/davidbutler/Projects/treehouse-treasure-search/.env.local` (explicit fallback matters because worktrees don't carry gitignored env files). Uses `@supabase/supabase-js` with the service-role key — no new deps. Pattern matches existing `scripts/test-query-builder.ts` (npx tsx invocation).
+Build clean. Commit `a60e892` pushed to main. No migration needed (`hero_image_url` is already a nullable text column on `vendors`).
 
-**Why this was the right shape:** David explicitly asked mid-walk, "How can I automate this more in terms of looking up what's in Supabase etc? There is a lot of back and forth I've been having to do and this is my first session in Claude Code coming from operating in Claude Chat. I know I'll need to do the pre-seeding but it's getting to be a lot." The one-shot instinct was to dump SQL into fenced blocks for manual execution; the right instinct in Claude Code is to write the helper, run it via Bash, report the output. Saved as feedback memory so future sessions default to script-first, not SQL-dump-first, when Supabase/Resend/Anthropic/Vercel SDK access is available locally.
+**Pre-existing vendors:** No real (non-test) vendors exist (DB is clean-slate after session-46 cleanup), so no backfill needed before beta. Fix is forward-only from `a60e892`.
 
-### Shipment 2 — T4d pre-beta QA walk re-executed, all five exit criteria PASSED
-
-Last passed sessions 40–41. Session 44 + 45 touched `/shelves` + `<AddBoothInline>` + `/api/admin/vendors` + `components/BoothPage.tsx` — outside the T4d re-walk trigger list technically (`/vendor-request`, `/api/admin/vendor-requests`, `/api/setup/lookup-vendor`, `/my-shelf`, `lib/activeBooth.ts`), but `<AddBoothInline>` is the Flow 1 landing surface now, so a precautionary re-walk was the right call before feed seeding.
-
-**Pre-walk state audit surfaced three surprises the original baseline CLAUDE.md framing missed:**
-1. Session 45 seeded an Ella Butler test vendor at booth 345 (non-AAM mall) with 6 substantive real-Claude-captioned posts live on the feed, unmentioned in CLAUDE.md's "DB is empty and clean-slate safe" framing. Posts were verification artifacts for the session-45 cross-mall fix. Cleaned at walk start.
-2. A claimed "Test" vendor at booth 001 linked to David's personal Gmail auth user (`dbutler80020@gmail.com`), created today at 15:03 UTC — leftover from an earlier test sign-in. Personal Gmail auth user preserved per David's explicit call; vendor row cleaned.
-3. David's UI attempt to delete Ella's auth user didn't stick — the row persisted in `auth.users`. Force-deleted via Supabase admin API. Root cause not investigated (not session-46 scope).
-
-**Flow results** (all five passed):
-- **Flow 1** (admin pre-seed at `/admin`) — booth 999 / `user_id: null` / `slug: qa-walk-booth-999` / AAM mall_id `19a8ff7e-` ✓. David flagged mid-walk that the hero booth photo upload step isn't in the runbook — session-44 addition drift. Patched in Shipment 3.
-- **Flow 2** (vendor-present onboarding, `+qa@gmail.com` alias at booth 888) — request → approval → OTP → sign-in → publish in ~5 min (Sprint 4 target: under 10 min). Auth user created on OTP, vendor row linked on `/setup`, post published with caption "Brass bald eagle figurine sculpture" (real-Claude specificity, no mock fallback, no amber "Couldn't read this image" banner). Session-27 `source: "claude"` field is API-response only, not a DB column — verified indirectly via caption specificity.
-- **Flow 3** (vendor-initiated, `+qa3@gmail.com` alias at booth 777, booth_name "The Velvet Cabinet" ≠ first+last "Flow Three") — the **critical KI-006 test point**. `/api/setup/lookup-vendor` composite-key `(mall_id, booth_number, user_id IS NULL)` succeeded, no 404, session-35 rewrite held. `display_name` stayed "The Velvet Cabinet" (booth_name priority, session-32).
-- **Multi-booth M.1-M.4** (same `+qa3` email, second booth 778 "The Velvet Cabinet - Second Shelf") — dedup landed on "created" state (confirmed per-`(email, mall_id, booth_number)` composite per session-35 migration 007). Second vendor row `user_id` populated on next `/my-shelf` visit (lookup-vendor claim path). `<BoothPickerSheet>` rendered, switching booths re-rendered banner, post from second-booth context landed with `vendor_id = 8bd6f388-` (778), NOT 777 — session-36 `detectOwnershipAsync` multi-booth path held.
-- **Ambient clean signals** — zero console errors on any flow, zero RLS silent empty returns, two auto-captions both specific real-Claude output (no mock collapse).
-
-**Walk artifacts at exit** (all subsequently cleaned via `cleanup ... --confirm`):
-- 2 posts ("Brass bald eagle figurine sculpture", "Hand-carved wood figural sculpture")
-- 4 vendor rows (booths 999, 888, 777, 778)
-- 3 vendor_requests
-- 2 auth users (`+qa`, `+qa3` aliases)
-- Admin (`david@zenforged.com`) + personal Gmail (`dbutler80020@gmail.com`) auth users untouched throughout
-
-### Shipment 3 — Docs drift patches
-
-- `docs/pre-beta-qa-walk.md` §1.1-1.2 updated: hero booth photo dropzone added to the "Expected form shape" list, hero photo upload added as step 4 of the fill sequence (bumping "Tap Add booth" to step 5), two new red flags added (dropzone missing, hero photo upload fails / no 4:3 preview). Header footnote added documenting the session-46 `scripts/qa-walk.ts` automation.
-- `CLAUDE.md` this session block + session 45 tombstoned below + CURRENT ISSUE updated + KNOWN GAPS adjusted for T4d re-pass + `scripts/qa-walk.ts` reference added.
-
-### Shipment 4 — Claude Code workflow standardization
-
-Late-session add triggered by David asking how to standardize the Chat→Code transition. Two new slash commands landed in `.claude/commands/`:
-
-- **`/session-open`** — auto-loads CLAUDE.md + MEMORY.md + MASTER_PROMPT.md, runs the session-opening standup protocol, delivers the standup report, pauses for direction approval. Replaces the Chat-era `th` → clipboard → paste → fill-CURRENT-ISSUE dance with a single command invocation.
-- **`/session-close`** — runs this entire protocol: CLAUDE.md tombstoning, docs drift patches, memory updates, git commit + push, PR creation (when on a worktree), close summary delivery, 🚧 BLOCKED flagging. Replaces the `thc` shell alias with a richer, repo-aware close protocol.
-
-Both are committed to the same PR #1 as a separate commit (`15dbe0c`) to keep the git history clean. Once PR #1 merges, the commands become available from any checkout of `main` — future sessions can invoke `/session-open` on first message and `/session-close` at end.
+**Deployment sidebar:** Vercel CLI not globally installed; npm global install hit EACCES on `/usr/local/lib/node_modules`. One-time fix: `sudo chown -R $(whoami) /usr/local/lib/node_modules` then `npm i -g vercel`. Workaround: `npx vercel@latest --prod`.
 
 ### Self-audit against Tech Rules
 
-- **File-creation verify** — `scripts/qa-walk.ts` confirmed on disk via `ls` before edits. ✓
-- **Env loading in scripts** — explicit dual-path fallback (cwd + parent repo absolute) handles the worktree case cleanly. ✓
-- **Destructive operation safeguards** — cleanup defaults to dry-run, `--confirm` required, `--force-claimed` required to bypass safety gate, `--delete-auth=` hardcoded to refuse `NEXT_PUBLIC_ADMIN_EMAIL`. Three-layer defense against blast radius. ✓
-- **Service-role-only access** — script uses `auth: { persistSession: false, autoRefreshToken: false }` on the client builder. ✓
-- **Runbook trigger-list drift** — session 46 exposed that session-37's T4d trigger list (`/vendor-request` / `/api/admin/vendor-requests` / `/api/setup/lookup-vendor` / `/my-shelf` / `lib/activeBooth.ts`) doesn't capture `<AddBoothInline>` surface moves between `/admin` and `/shelves`. Not promoted to a Tech Rule yet — one firing, watching for a second.
-
-### Tech Rule candidates queued by this session
-
-1. **Script-first over SQL-dump-first in Claude Code** (session-46 observation, meta-workflow). When working in Claude Code with SDK access to the data source (Supabase, Resend, Anthropic, Vercel), default to writing a small reusable helper script in `scripts/` instead of emitting SQL/commands for manual execution. Reserve SDK-dumping for true one-offs that won't recur. Saved as user-feedback memory. Promotion candidate — but this is more of a Claude Code operating principle than a project Tech Rule.
-
-### Risk Register updates
-
-- T4d pre-beta QA walk staleness — ✅ Re-passed session 46 (refreshes sessions 40–41 pass)
-- KI (new) — session 45 seeded test data (Ella booth 345 + 6 posts) went undocumented in CLAUDE.md's clean-slate framing — ✅ Resolved session 46 (cleaned); noted as a rule candidate: when a session seeds content during a shipment, add a one-liner to CLAUDE.md's CURRENT ISSUE so the next session doesn't trip on it
-- `/admin` UI delete of `auth.users` rows may not persist — 🟡 Observed session 46 (Ella's delete didn't stick); worth investigating as a session-47+ spike if it happens again
-- Runbook drift (hero photo missing in §1.2) — ✅ Resolved session 46
-
-### Session 46 close HITL
-
-Two commits on worktree branch `claude/jovial-mccarthy-69951d`, pushed, bundled in PR #1:
-- `6dbff1e` — `feat(qa-walk): scripts/qa-walk.ts utility + T4d walk PASSED session 46 + runbook hero-photo patch`
-- `15dbe0c` — `feat(commands): /session-open + /session-close slash commands standardize the Chat→Code workflow`
-- (`/session-close` invocation added a third commit that updates CLAUDE.md to mention Shipment 4 — merge-time record.)
-
-PR: https://github.com/Zen-Forged/treehouse-treasure-search/pull/1. Merge-to-main HITL is a separate step from session close — David merges when ready via GitHub UI. Not destructive.
+- `requireAdmin` first line — no new API routes added. ✓
+- Service-role client used in safe-claim UPDATE (same client already in scope from requireAdmin). ✓
+- No new ecosystem pages, no new framer-motion patterns, no schema changes. ✓
 
 ---
 
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-22 (session 46 close — T4d walk PASSED end-to-end, `scripts/qa-walk.ts` shipped, docs drift patched)
+> Last updated: 2026-04-23 (session 47 close — vendor onboarding hero image gap fixed)
 
-**Status:** Single session-46 commit pending on worktree branch `claude/jovial-mccarthy-69951d` (see commit command in session-46 close block above). After push, merge-to-main HITL is a separate step. Beta invites remain technically unblocked — session 46's T4d re-walk refreshes the sessions 40–41 pass and confirms session 44–45's `/shelves` + admin-API churn didn't regress anything. DB is clean-slate after post-walk cleanup; no test debris remaining. Feed content seeding carries forward from sessions 43–45 as the highest-leverage remaining pre-beta item.
-
-**Claude Code context note (durable):** David transitioned to Claude Code (terminal) this session after 45 sessions in Claude Chat. `scripts/qa-walk.ts` is the persistence of the automation preference that surfaced mid-session — future Supabase/Resend/Anthropic/Vercel lookups should prefer script-based automation over SQL-dump-for-manual-execution. Saved as user + feedback memory for session 47+ opening-standup awareness.
+**Status:** `a60e892` on main. DB clean-slate (no test debris). Beta invites technically unblocked. Vercel CLI not yet globally installed on David's machine — one-time fix is `sudo chown -R $(whoami) /usr/local/lib/node_modules && npm i -g vercel`; workaround is `npx vercel@latest --prod`.
 
 ### Recommended next session — feed content seeding (~30–60 min)
 
 Unchanged from sessions 44–45. Session 46 did not dislodge it; it strengthened the seeding workflow by re-validating the full end-to-end onboarding path.
 
 Seeding scope:
-- Create 2–3 real (non-test) vendors via `/shelves` Add-a-Booth (primary path, sessions 44–45). `/vendor-request` → `/admin` approve flow remains available for Flow 3 if desired.
+- Create 2–3 real (non-test) vendors via `/shelves` Add-a-Booth (primary path, sessions 44–45). `/vendor-request` → `/admin` approve flow remains available for Flow 3 if desired — and now correctly populates the vendor's hero image from the proof photo (session-47 fix).
 - Seed 10–15 finds across those vendors, mostly available status with 1–2 "found a home."
 - Photos should be real items, ideally spanning a few material categories (glass, ceramic, brass, wood) to make the feed feel varied on first scroll.
 - Verify the feed, Find Map, and mall pages all render well with the new population.
@@ -186,7 +131,7 @@ This session is likely to first trip session-43 Anthropic auto-reload (threshold
 - **Hero image upload size guard** — verify coverage across upload surfaces.
 - **`/admin` v0.2 → v1.2 redesign pass** (Sprint 5+, size L) — still queued; needs design scope first.
 
-### Session 47 opener (pre-filled for feed content seeding)
+### Session 48 opener (pre-filled for feed content seeding)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
@@ -194,7 +139,7 @@ STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthr
 Working directory: /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Feed content seeding per CLAUDE.md recommendation. Scope: (1) create 2–3 real (non-test) vendors via /shelves Add-a-Booth (session 44+45 primary path) or /vendor-request → /admin approve flow (Flow 3); (2) seed 10–15 finds across those vendors, mostly available status with 1–2 "found a home"; (3) verify feed, Find Map, mall pages render well with new population; (4) light QA that session-27 `source: "claude"` field returns clean on all auto-caption calls (session-46 precedent: "Brass bald eagle figurine sculpture" quality bar). This session will likely first trip session-43 auto-reload (threshold $10 / reload $20); expected and non-blocking. ~30–60 min. Session 46 shipped scripts/qa-walk.ts — use `npx tsx scripts/qa-walk.ts baseline` at open if any pre-existing test debris suspected.
+CURRENT ISSUE: Feed content seeding per CLAUDE.md recommendation. Scope: (1) create 2–3 real (non-test) vendors via /shelves Add-a-Booth (session 44+45 primary path) or /vendor-request → /admin approve flow (Flow 3 — now also populates hero_image_url from the proof photo, session 47 fix); (2) seed 10–15 finds across those vendors, mostly available status with 1–2 "found a home"; (3) verify feed, Find Map, mall pages render well with new population; (4) light QA that session-27 `source: "claude"` field returns clean on all auto-caption calls (session-46 precedent: "Brass bald eagle figurine sculpture" quality bar). This session will likely first trip session-43 auto-reload (threshold $10 / reload $20); expected and non-blocking. ~30–60 min. Use `npx tsx scripts/qa-walk.ts baseline` at open if any pre-existing test debris suspected.
 ```
 
 ---
@@ -214,6 +159,7 @@ CURRENT ISSUE: Feed content seeding per CLAUDE.md recommendation. Scope: (1) cre
 - **Session 43** (2026-04-21) — Anthropic model audit + billing auto-reload at $10/$20. Session-27 rule fired cleanly for the first time since promotion.
 - **Session 44** (2026-04-22) — `/shelves` Add-a-Booth restored via `<AddBoothInline>` primitive (partial T4b reversal). Hero-photo field added. Chrome mismatch flagged.
 - **Session 45** (2026-04-22) — `/shelves` cross-mall fix + admin booth delete primitive + Q-009 admin Window share bypass + BoothHero URL-share airplane retired (two-airplane cleanup). Four shipments, three commits, all on-device walks passed. Session-45 Supabase nested-select explicit-columns Tech Rule candidate queued (one firing).
+- **Session 46** (2026-04-22) — T4d pre-beta QA walk re-passed end-to-end (all five exit criteria clean) + `scripts/qa-walk.ts` QA utility shipped + `docs/pre-beta-qa-walk.md` hero-photo step drift patched + `/session-open` + `/session-close` slash commands added to standardize the Chat→Code workflow. First Claude Code session after 45 in Claude Chat.
 
 ---
 
@@ -289,4 +235,4 @@ All captured in `docs/queued-sessions.md`:
 - Trigger: say "generate investor update" at session close
 - Process doc: Notion → Agent System Operating Manual → 📋 Investor Update — Process & Cadence
 
-> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data; session 43 audited AI model surface + locked in billing safeguards; session 44 restored `/shelves` Add-a-Booth primitive; session 45 shipped the cross-mall fix + admin delete + Q-009 admin share bypass + retired the BoothHero URL share to resolve the two-airplane confusion; session 46 shipped `scripts/qa-walk.ts` + re-passed T4d pre-beta QA walk end-to-end. Next natural investor-update trigger point is after feed content seeding (session 47)** — the update would then honestly report the full pre-beta polish arc (sessions 42–47) as complete rather than partial.
+> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data; session 43 audited AI model surface + locked in billing safeguards; session 44 restored `/shelves` Add-a-Booth primitive; session 45 shipped the cross-mall fix + admin delete + Q-009 admin share bypass + retired the BoothHero URL share; session 46 shipped `scripts/qa-walk.ts` + re-passed T4d QA walk + standardized the Claude Code workflow; session 47 fixed the vendor onboarding hero image gap. Next natural investor-update trigger point is after feed content seeding (session 48)** — the update would then honestly report the full pre-beta polish arc (sessions 42–48) as complete rather than partial.
