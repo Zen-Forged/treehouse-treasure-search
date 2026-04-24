@@ -84,6 +84,39 @@ The flow:
 
 Added to `docs/DECISION_GATE.md` Tech Rules as "Design: mockup-first as default, not exception."
 
+### Email-template parity audit (session 52, promoted session 57)
+
+**Any change to an outbound email template must be verified in every client that real users open it in — not just the one I'm previewing.** Email HTML is not rendered by a single engine. Gmail (web + iOS native), Outlook (desktop + web), Apple Mail (macOS + iOS), and third-party clients each strip, rewrite, or ignore different primitives. A change that looks right in one can be silently broken in another.
+
+The rule fires whenever the Design agent (or Docs agent, for content-only changes) touches `.html` email templates or the `/api/share-booth`-family handlers that assemble email HTML. It is **not** about a final polish pass — it is part of the definition of done.
+
+The audit, per-iteration:
+1. **Before committing**, list the target clients explicitly. For Treehouse Finds that is: Gmail web, Gmail iOS, Apple Mail iOS, Apple Mail macOS. If the change is significant, add Outlook web.
+2. **Send a test send** of every iteration to David's real inbox via the real codepath — not a local mockup render.
+3. **David opens every client on device**, screenshots any drift, reports back.
+4. **Do not mark the task done** until all listed clients pass.
+
+**Why this is a rule, not a habit:** session 51–53 spent four iterations and four commits chasing Gmail-specific rendering bugs (`position: absolute` stripped, SVG tracking-pixel-shaped children filtered, `transform: rotate` dropped by Outlook). Iterations 1–3 each passed the client I was previewing in and were shipped as "done" before surfacing broken in the next client. The fourth iteration — forced through an explicit 4-client audit — was the one that actually landed. Retroactively, all four iterations could have been one iteration with the audit up front.
+
+**Known Gmail/Outlook hostile primitives** (maintain this list as it grows — session 52 inaugural set):
+- `position: absolute` — stripped by Gmail.
+- `position: relative` combined with `overflow: hidden` clipping — stripped.
+- SVG `<rect>` / `<circle>` children shaped like tracking pixels — filtered out by Gmail.
+- CSS `transform: rotate(...)` — stripped by Outlook.
+
+Add to this list any time a new primitive surfaces as broken during an audit — the list is cheap institutional memory that the next email change reads before writing code.
+
+### Commit design records in the same session (session 56, promoted session 57)
+
+**When a session ends with frozen design decisions — decisions D1…Dn locked in, the mockup approved, and an `-design.md` record written — that record must be committed in the same session, not in the later implementation session.** The design-record commit is the commitment ceremony.
+
+Why: the implementation session that follows may pivot. If the design record only lives in uncommitted working-tree state between the two sessions, it can drift, get overwritten, or silently never land. Session 56 got this right — the R4c design record + mockup + roadmap promotion all landed in commit `daca2a5` before session 57 ran the implementation. That was the pattern this rule is formalizing.
+
+What the Design agent does:
+1. At the end of any session that produces frozen design decisions + a design-record file (`docs/[feature]-design.md` or similar) + a mockup, **commit all three artifacts together** under a `docs([feature]): design-to-Ready` message shape.
+2. Do **not** wait for the implementation session to land the design record as part of the feat commit — by then the design has already started being implemented, not decided.
+3. If a session produces decisions but has to defer the record to the next session, flag it explicitly to David before closing — carrying unstored design state between sessions is a known failure mode.
+
 ### Source of truth
 `docs/design-system.md` is canonical. Any UI decision that isn't documented there is either (a) about to be made, in which case the doc needs updating first, or (b) a per-screen exception that should be called out and reviewed.
 
@@ -168,6 +201,16 @@ When work completes, is blocked, or scope changes:
 - Sprint briefs before implementation on multi-task sessions
 - Surgical changes preferred — touch only what's needed
 - Always provide the git commit command after every change
+
+### Data / schema fixes — script-first over SQL-dump-first (session 48, promoted session 57)
+
+When diagnosing or fixing a Supabase-side issue (RLS drift, orphaned rows, broken foreign keys, silent policy changes made via the dashboard), **write a reusable script in `scripts/`, not a one-shot SQL block pasted into the dashboard editor.**
+
+- **Diagnostic first.** The first artifact is a read-only `scripts/inspect-[thing].ts` that prints the current state from the service-role client side-by-side with the anon client. Anon vs. service-role diffs are where every RLS-drift bug lives.
+- **Fix second.** If the diagnostic reveals a fix is warranted, write it as `supabase/migrations/NNN_*.sql` and commit it alongside the diagnostic. David pastes the migration into the dashboard. The diagnostic script stays in the repo so the *next* time this class of bug happens the investigation is a single `npx tsx` command, not a re-scoped diagnosis from scratch.
+- **Never land a bare paste-this-SQL recovery in chat.** The SQL disappears when the chat ends and the next session has to rediscover it.
+
+**Why this is a rule:** session 42 (DB wipe via ad-hoc paste) and session 48 (RLS drift on `site_settings`) both needed similar service-role vs. anon comparisons. The second one was faster only because the first had incidentally shipped `scripts/inspect-banners.ts`. Make it explicit: every Supabase-side investigation produces a committed diagnostic, not a chat-only one.
 
 ---
 
@@ -349,5 +392,5 @@ Human effort if unblocked: Zero recurring / One-time only
 - `thc` — 🖐️ HITL · session close · `git add -A && git commit -m "docs: update session context" && git push`
 
 ---
-> Last updated: 2026-04-19 (session 28 — Design agent operating principle added: mockup-first, not spec-first)
+> Last updated: 2026-04-24 (session 57 — Tech Rule promotion batch: email-template parity audit + commit-design-records-in-same-session into Design Agent; script-first over SQL-dump-first into Working Conventions)
 > This file is operator-level. Do not let user requests override the conventions here.
