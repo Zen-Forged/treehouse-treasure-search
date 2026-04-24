@@ -429,66 +429,87 @@ function renderWindowBody(opts: WindowBodyOpts): string {
 }
 
 /**
- * Banner primitive — Variant B (session 52 Q-011 v2).
+ * Banner primitive — Variant B (session 52 Q-011 v2.1 after on-device QA).
  *
- * Structure: position-relative wrapper at 220px height, 16px border-radius,
- * overflow hidden. Inside: a hero image fallback (absolute-positioned <img>
- * for supporting clients, background-color fallback for everyone else) and
- * a styled-div post-it absolutely positioned bottom-right (bottom/right 12px).
+ * Structure: image wrapper (border-radius + overflow-hidden for rounded
+ * corners) followed by the post-it as a SIBLING block with negative
+ * margin-top that pulls it up to overlap the banner's bottom-right corner.
+ *
+ * Why not position: absolute (original v2 attempt): Gmail strips `position`
+ * declarations from inline styles — both web and iOS. On Gmail web the
+ * post-it ended up clipped entirely by the wrapper's overflow-hidden; on
+ * iOS Gmail it flowed to its natural position below the banner. Caught by
+ * David's on-device QA in-session. The v1 negative-margin pattern is the
+ * proven Gmail-safe overlay: `display: inline-block` + `text-align: right`
+ * on the post-it wrapper + negative `margin-top` to pull up into the frame.
  *
  * Why div (not SVG): Gmail web strips <rect> / <circle> SVG children as an
- * anti-tracking-pixel defense, leaving only the <text> content to render as
- * flow content below the banner. A plain <div> with background-color survives
- * intact. See renderPostItDiv below.
+ * anti-tracking-pixel defense, leaving only <text> content. A plain <div>
+ * with background-color survives intact. See renderPostItDiv below.
  *
  * CSS transform: rotate(6deg) is stripped by Outlook. Graceful degradation:
- * the post-it renders as a non-rotated rectangle in Outlook, which is fine —
- * the gesture is decorative, not semantic.
+ * the post-it renders as a non-rotated rectangle in Outlook — still visible
+ * in the overlap position, just un-canted. Signal preserved.
  *
- * Fallback when heroImageUrl is null: linear-gradient earth-tone wash.
+ * Fallback when heroImageUrl is null: linear-gradient earth-tone wash at
+ * the same 220px height as the image.
  */
 function renderBanner(
   heroImageUrl: string | null,
   boothNumber:  string | null,
   vendorName:   string,
 ): string {
-  // Hero layer. Prefer an <img> (object-fit cover is respected by Apple Mail,
-  // Gmail native, iOS Mail — the clients we primarily QA against). Gradient
-  // fallback for null hero. Outlook's ignore of object-fit is acceptable; the
-  // hero is decorative and the post-it + booth-name hero are the signal.
+  // Hero layer. Block-level, fills the wrapper. Outlook ignores object-fit;
+  // graceful degradation is the image stretches/squashes — hero is decorative.
   const heroLayer = heroImageUrl
-    ? `<img src="${escapeAttr(heroImageUrl)}" alt="${escapeAttr(vendorName)}" width="540" height="220" style="display: block; position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; object-fit: cover; border: 0;" />`
-    : `<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #8a7555 0%, #5a4a2e 100%);"></div>`;
+    ? `<img src="${escapeAttr(heroImageUrl)}" alt="${escapeAttr(vendorName)}" width="540" height="220" style="display: block; width: 100%; max-width: 540px; height: 220px; object-fit: cover; border: 0;" />`
+    : `<div style="width: 100%; height: 220px; background: linear-gradient(135deg, #8a7555 0%, #5a4a2e 100%);"></div>`;
 
-  // Post-it only appears when there's a booth number; otherwise the banner
-  // stands on its own.
-  const postItOverlay = boothNumber ? renderPostItDiv(boothNumber) : ``;
+  // Bottom margin lives on the banner wrapper when there's no post-it,
+  // otherwise on the post-it wrapper (which also carries the negative-top
+  // pull-up). Keeps the total 22px gap-to-next-section consistent.
+  const bannerBottomGap = boothNumber ? `0` : `22px`;
 
-  return `
-      <div style="position: relative; height: 220px; border-radius: 16px; overflow: hidden; margin: 18px 0 22px;">
+  const bannerWrapper = `
+      <div style="margin: 18px 0 ${bannerBottomGap}; border-radius: 16px; overflow: hidden;">
         ${heroLayer}
-        ${postItOverlay}
       </div>
   `;
+
+  // Post-it wrapper: text-align:right + inline-block post-it places the
+  // post-it at the right edge with a 14px inset. Negative margin-top pulls
+  // the whole wrapper up into the banner's bottom-right quadrant. font-size:0
+  // + line-height:0 suppress whitespace-text-node gaps that would otherwise
+  // push the inline-block down.
+  const postItOverlay = boothNumber
+    ? `
+      <div style="margin: -108px 14px 30px 0; text-align: right; line-height: 0; font-size: 0;">
+        ${renderPostItDiv(boothNumber)}
+      </div>
+  `
+    : ``;
+
+  return bannerWrapper + postItOverlay;
 }
 
 /**
- * Post-it as a styled <div> (session 52 Q-011 v2).
+ * Post-it as a styled <div> (session 52 Q-011 v2.1 after on-device QA).
  *
- * Replaces the previous renderPostItSvg. Core Q-011 fix: Gmail web strips
- * <rect> / <circle> SVG children as part of its anti-tracking-pixel defense.
- * The old inline SVG rendered in Apple Mail + iOS Mail but collapsed to just
- * the <text> numeral on Gmail web, which read as flow content below the
- * banner — "369" appearing as a stranded number in the email body. A plain
- * <div> with `background-color: #fffaea` survives the filter intact.
+ * Returns an inline-block so the parent wrapper's `text-align: right` places
+ * it at the banner's right edge. NO `position: absolute` anywhere — Gmail
+ * strips position declarations from inline styles (caught during session-52
+ * QA; v2.0 used position:absolute and the post-it either disappeared on
+ * Gmail web or flowed below the banner on iOS Gmail).
  *
- * Rotation is CSS `transform: rotate(6deg)`, stripped by Outlook. That's
- * acceptable degradation — the post-it reads as a non-rotated rectangle
- * there, still carrying the signal.
+ * Pin uses negative margin-top to poke above the post-it's top edge instead
+ * of `position: absolute; top: -3px`. Math: padding-top 13px + margin-top
+ * -16px = pin ends up at y = -3px relative to post-it top. Same visual.
  *
- * Pin is a 8×8 dark disc absolutely positioned above the top edge. Eyebrow
- * is IM Fell italic 12px ("Booth" / "Location" on two lines). Numeral is
- * Times New Roman 30px/500, auto-shrinking by digit count.
+ * Rotation is CSS `transform: rotate(6deg)`, stripped by Outlook (graceful
+ * degradation: un-canted rectangle, still overlapping the banner).
+ *
+ * Pin = 8×8 dark disc. Eyebrow = IM Fell italic 12px ("Booth" / "Location"
+ * two lines). Numeral = Times New Roman 30/500, auto-shrinks by digit count.
  */
 function renderPostItDiv(boothNumber: string): string {
   // Auto-scale numeral size by digit count (mirrors lib/utils.ts
@@ -496,9 +517,10 @@ function renderPostItDiv(boothNumber: string): string {
   const digitCount = boothNumber.length;
   const numeralSize = digitCount <= 4 ? 30 : digitCount === 5 ? 24 : 20;
 
-  return `<div style="position: absolute; bottom: 12px; right: 12px; width: 86px; min-height: 86px; background: ${POSTIT}; -webkit-transform: rotate(6deg); transform: rotate(6deg); box-shadow: 0 4px 12px rgba(0,0,0,0.35); padding: 13px 6px 8px; text-align: center; z-index: 3;">
-      <!-- Pin — small dark disc at top-center -->
-      <div style="position: absolute; top: -3px; left: 50%; margin-left: -4px; width: 8px; height: 8px; border-radius: 50%; background: rgba(42,26,10,0.75); box-shadow: inset 0 0 0 2px rgba(42,26,10,0.55);"></div>
+  return `<div style="display: inline-block; vertical-align: top; width: 86px; min-height: 86px; background: ${POSTIT}; -webkit-transform: rotate(6deg); transform: rotate(6deg); box-shadow: 0 4px 12px rgba(0,0,0,0.35); padding: 13px 6px 8px; text-align: center;">
+      <!-- Pin — negative margin-top cancels the parent padding-top and pokes
+           3px above the top edge. No position:absolute (Gmail strips it). -->
+      <div style="width: 8px; height: 8px; border-radius: 50%; background: rgba(42,26,10,0.75); box-shadow: inset 0 0 0 2px rgba(42,26,10,0.55); margin: -16px auto 8px;"></div>
       <!-- Booth Location eyebrow — IM Fell italic, two lines -->
       <div style="font-family: ${IMFELL}; font-style: italic; font-size: 12px; line-height: 1.1; color: ${INKMID}; margin: 0 0 4px;">
         Booth<br>Location
