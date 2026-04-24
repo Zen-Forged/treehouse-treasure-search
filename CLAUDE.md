@@ -65,97 +65,95 @@ Exception: a single chained command with `&&` stays in one block — that's one 
 
 ---
 
-## ✅ Session 53 (2026-04-24) — Q-011 v4 QA walk PASSED + Ladder B first half shipped
+## ✅ Session 54 (2026-04-24) — Ladder B second half shipped + staging live end-to-end
 
-Two loops closed. Q-011 moved from "shipped but unverified" to "verified on device across every client that mattered"; Ladder B moved from "design discussion stuck in session-51 chat" to "decision record + CI + package scripts + beta plan committed to main." One commit `44b4c79` landed — the Q-011 walk was verification and produced no code. First Claude Code session to exercise the session-open + session-close slash commands end-to-end.
-
-**Q-011 v4 on-device QA walk — CLOSED (4/4 clients PASS):**
-
-- Gmail web (proven v2.0 / v2.1 failure client) — PASS
-- iOS Gmail (proven v2.0 / v2.1 failure client) — PASS
-- iOS Mail (baseline) — PASS
-- Apple Mail (macOS desktop, baseline) — PASS
-
-v4 design verified faithful in the wild: no shell masthead, invite line + IM Fell 34px vendor name flow as one phrase, banner + 2-cell info bar render as one unified rounded frame, "Explore the booth" full-width green button directly under info bar, tile grid naked (no "THE WINDOW" eyebrow), no orphan closer, subject + preheader + opener all share the phrase "A personal invite to explore {vendor}". The Q-011 arc that started session 41 Scenario 1 QA walk (original post-it diagnosis) and re-expanded session 51 Design review (4-axis brand drift) is now fully closed after four code iterations + four-client on-device verification. Q-011 moves to ⏸️ Superseded; `docs/mockups/share-booth-email-v4.html` transitions from "current mockup" to "design-history reference."
+One commit `d8a10f9` on main + staging. Five artifacts, 1,026 insertions, zero runtime code changes. Staging stack is provisioned, schema-captured, fixture-seeded, Vercel-wired; on-device sign-in confirmed; Booths-view verification deferred behind Supabase's 1-per-hour email rate limit (non-gating). Ladder B second half is complete — code and infra are live; the remaining on-device check is operational, not a code gate. Gate to V1 beta invite opens once David re-signs-in with `david@zenforged.com` on staging and confirms the Booths view renders.
 
 **Commit landed:**
 
-1. `44b4c79` **chore(ladder-b): session 53 — CI workflow + package scripts + beta plan + design record** — four additive artifacts, zero code or runtime changes. Build + typecheck both clean pre-commit.
-   - **`.github/workflows/ci.yml`** — typecheck + lint + build on every PR + push to `main`/`staging`. Complements the path-gated `comp-eval.yml` (reseller pipeline only). No secrets needed — `lib/supabase.ts` has placeholder fallbacks and `adminAuth.getServiceClient` reads env at function scope, so build-time static generation succeeds with an empty env. Live side-effect: the workflow triggers on this very commit, giving it a free first live-test against main before session 54 opens.
-   - **`package.json` scripts** — adds `typecheck`, `qa-walk`, `inspect-banners`, `test:filters`, `test:query-builder`, `test:comps`. Surfaces existing utilities without adding a `tsx` devDependency (keeps the `npx tsx` convention from the existing comp-eval workflow).
-   - **`docs/beta-plan.md`** (thin, per D4-a) — V0→V1→V2→V3 rollout cadence, severity-tiered rollback criteria (🔴 halt + revert / 🟡 halt invites + investigate / 🟢 log + fix forward), direct-to-David feedback loop at N=1–5 with a Tally upgrade trigger at N≥3.
-   - **`docs/ladder-b-design.md`** — decision record for D1(a) + D2(b) + D3(a) + D4(a), session 53 shipped task table, session 54 queued task table (Tasks 5–10, ~60 min HITL-heavy), non-goals table. Prevents re-deriving Ladder B if session 54 opens cold.
+1. `d8a10f9` **chore(ladder-b): session 54 — staging schema + seed script + env template** — five artifacts, 1,026 insertions, zero runtime code:
+   - **`supabase/migrations/001_initial_schema.sql`** (520 lines) — captured from prod via `pg_dump --schema-only --schema=public --no-owner --no-privileges`. Full current-state snapshot: 5 tables (`malls`, `posts`, `site_settings`, `vendor_requests`, `vendors`), custom `post_status` ENUM, `is_treehouse_admin()` + `set_updated_at()` functions, all indexes, all constraints (PK/UNIQUE/FK/CHECK), all triggers, all RLS policies. Migrations 002–008 remain in `supabase/migrations/` as historical evolution record, but fresh-env bootstrap only needs 001. D2(b) "migrations-from-scratch" path now genuinely exercisable. Applied clean to staging via `psql` with zero errors.
+   - **`scripts/seed-staging.ts`** (466 lines) — `status` / `seed` / `wipe` subcommands mirroring `scripts/qa-walk.ts` shape. Idempotent fixtures via natural-key upserts. Safety rail: refuses to run against any env file without `staging` in path unless `--i-know-this-is-not-staging`. Creates admin auth user, 2 test vendors at booths 901/902, 6 posts (mix of available + sold), 2 `site_settings` rows. Surfaced as `npm run seed-staging`.
+   - **`.env.staging.example`** (38 lines) — committable template for `.env.staging.local`. Mirrors `.env.example` with staging-specific commentary.
+   - **`.gitignore`** (+1 line) — added `.env.*.local` pattern covering all future env-branch variants (`staging`, `prod-dump`, any future env).
+   - **`package.json`** (+1 line) — `npm run seed-staging` script entry.
 
-**Ladder B design decisions locked (`docs/ladder-b-design.md`):**
+**Live side-effects of the commit:**
 
-- **D1(a)** — classic promotion ladder. Feature → PR to `staging` → merge → staging URL; staging → PR to `main` → merge → production. Matches David's mental model + gives a stable staging URL for beta-vendor dry-runs.
-- **D2(b)** — fresh staging Supabase project; replay migrations forward; seed via script. Exercises the migrations-from-scratch path as a beta-readiness check. True isolation from day one. Trade-off accepted: no real-data edge cases until V1.
-- **D3(a)** — minimum CI: typecheck + lint + build on every PR/push. E2E deferred until a regression motivates it. Existing path-gated `comp-eval.yml` still runs; two typechecks on comp-pipeline PRs is cheap insurance.
-- **D4(a)** — thin beta plan. One page, three sections. Upgrade trigger: first time the thin plan is insufficient in a specific, not drifty, moment.
+- GitHub Actions `ci.yml` fired on the `main` + `staging` pushes (live first-exercise of the session-53 CI workflow, free validation that the workflow runs against real branches).
+- Vercel auto-deployed the `staging` branch on first push, producing the staging URL `https://treehouse-treasure-search-git-staging-david-6613s-projects.vercel.app` (branch alias, stable across commits).
 
-**Session 54 queued (Ladder B second half, HITL-heavy, ~60 min):**
+**Ladder B second-half task status (Tasks 5–10 from [docs/ladder-b-design.md](docs/ladder-b-design.md)):**
 
-- Task 5 🖐️ HITL — create staging Supabase project in dashboard (name: `treehouse-treasure-search-staging`)
-- Task 6 🖐️ HITL — wire staging env to `staging` branch in Vercel dashboard (URL + anon + service role + site URL scoped to Preview + branch filter)
-- Task 7 🟢 AUTO — replay migrations against staging
-- Task 8 🟢 AUTO — write `scripts/seed-staging.ts` (mirrors `qa-walk.ts` shape)
-- Task 9 🟢 AUTO — write `.env.staging.example`
-- Task 10 🖐️ HITL — smoke-test the staging deploy
+| # | Status | Notes |
+|---|--------|-------|
+| 5 | ✅ DONE | Staging Supabase project `treehouse-treasure-search-staging` provisioned, project ID `thaauohvxfrryejmyisv`, `ON / ON / OFF` security settings (Data API on, auto-expose on, auto-RLS off) for prod parity. New-style publishable + secret keys named `treehouse_search_staging_client` / `treehouse_search_staging_server`. |
+| 6 | ✅ DONE | Six env vars scoped to Preview + branch=`staging`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_ADMIN_EMAIL`. Existing prod entries narrowed from "All Environments" to Production-only so scopes don't overlap. `NEXT_PUBLIC_ADMIN_EMAIL=david@zenforged.com` on staging (matches the `is_treehouse_admin()` RLS hardcode; David chose business-email consistency over prod-env-pattern matching). |
+| 7 | ✅ DONE | `001_initial_schema.sql` + `supabase/seeds/001_mall_locations.sql` + `npm run seed-staging seed` against staging — clean apply, 29 malls + 2 vendors + 6 posts + site_settings rows visible via `npm run seed-staging status`. |
+| 8 | ✅ DONE | `scripts/seed-staging.ts` committed, typecheck clean, smoke-executed against staging successfully. |
+| 9 | ✅ DONE | `.env.staging.example` committed; `.env.staging.local` created locally (gitignored) + later flipped `NEXT_PUBLIC_ADMIN_EMAIL=david@zenforged.com` for consistency with Vercel. `.gitignore` pattern expanded to `.env.*.local`. |
+| 10 | ⏳ PARTIAL | Staging URL loads on iPhone, feed renders with 5 posts (sold-status McCoy planter correctly filtered), post detail opens, sign-in email arrives and magic-link redirect works after staging Supabase Auth URL Configuration was set. **Deferred:** Booths view admin-access verification — rate-limited by Supabase's 1-per-hour email cap while waiting to re-sign-in with `david@zenforged.com`. Non-gating: the infra is live; only the final admin-auth check is outstanding. |
 
-**Key working-pattern observation (not promoted this session):**
+**Live discoveries this session (all first firing — Tech Rule candidates):**
 
-The session-51 chat Ladder B discussion was never committed — it lived only in Claude Chat conversation history, which is why session 53's sprint brief opened with "I don't have that context" as an open question. `docs/ladder-b-design.md` corrects that: when a sprint-sized infra decision is made in a review pass, the decision record gets committed in the SAME session that executes the first task. Otherwise a future Claude (or David in 3 months) opens cold with "what was decided?" and has to reconstruct. Not promoted as a Tech Rule this session (needs a second firing), but worth remembering: infra design that lives only in chat is a liability.
+1. **Repo must carry an `001_initial_schema.sql` before claiming any "migration-from-scratch" capability.** Prod's base tables (`malls`, `vendors`, `posts`, `vendor_requests`) were created by hand in the Supabase dashboard on day one and never captured to git. Migrations 002–008 all assumed those tables existed — which worked on prod but silently broke any fresh-env bootstrap. Session 54 captured the base schema via `pg_dump`; 001 is now the canonical bootstrap. D2(b)'s purpose was to surface exactly this kind of beta-readiness gap; it worked.
+2. **Branch-scoped staging env-var checklist must enumerate every `NEXT_PUBLIC_*` the app reads, not just DB + email keys.** My Task 6 spec listed four vars (Supabase + Resend) but missed `NEXT_PUBLIC_ADMIN_EMAIL` + `NEXT_PUBLIC_SITE_URL`. Client code fell back to the hardcoded `david@zenforged.com` default in [components/DevAuthPanel.tsx:19](components/DevAuthPanel.tsx:19), and the Booths view admin gate triggered unexpectedly. Cost: one redeploy. Avoidable with a complete var-list audit before branching env work.
+3. **New Supabase project HITL checklist must include Authentication → URL Configuration (Site URL + Redirect URLs) before the first magic-link test.** Fresh Supabase projects default Site URL to `http://localhost:3000`; the first magic-link email thus fails with "site can't be reached" unless Site URL is pointed at the actual deploy URL. Missing from my Task 5 spec.
 
-**Tech Rule promotion state unchanged this session:** email template parity audit still promotion-ready (second firing session 52, no new firing this session since Q-011 closed clean); script-first rule still promotion-ready; Gmail-hostile primitives list still at first firing. Batch is the same ~40 min exercise it was at session 52 close.
+**Operational follow-ups surfaced (non-gating, captured in KNOWN GAPS):**
 
-**No memory updates this session.** David's Claude Code + automation-preference memories remained load-bearing; no new user / feedback / project facts surfaced that weren't already captured in `docs/ladder-b-design.md` or `docs/beta-plan.md`.
+- **Staging Supabase OTP email templates missing** — Supabase sent the default generic confirmation email instead of the branded OTP template from [docs/supabase-otp-email-templates.md](docs/supabase-otp-email-templates.md). Template paste into staging Supabase → Authentication → Email Templates needed for full prod parity. HITL-only.
+- **`.env.prod-dump.local` is on disk, one-shot artifact** — used for `pg_dump` pipeline; safe to delete after session closes (gitignored via `.env.*.local` pattern, never committed). Contains both prod + staging DB URIs with passwords.
+- **Orphaned `dbutler80020@gmail.com` staging auth user** — created by the first seed-staging run before David chose `david@zenforged.com` as staging admin email. Non-admin session; leave or clean up manually.
+- **Seed script produces posts with no images** (`image_url: null` on all 6 fixtures). Feed renders with empty image panes. Cosmetic. One-line patch to add placeholder URLs would improve visual fidelity.
+
+**Memory updates this session:** none warranted. Admin-email consistency is documented in env files + `is_treehouse_admin()` in 001; Claude Code + automation-preference memories from session 46 continue to be load-bearing and unchanged.
+
+**Layman framing delivered this session:** Before Ladder B, every push to main was live for real users; the only "staging" was `npm run dev` on laptop. After today, a second URL backed by a second Supabase project exists — features can land, be reviewed on device, even shared with beta vendors, before merging to prod. Disaster recovery went from "call Supabase support and pray" to "point psql at 001_initial_schema.sql." See [docs/ladder-b-design.md](docs/ladder-b-design.md) for the decision record.
 
 ---
 
-## Archived: Session 52 tombstone
+## Archived: Session 53 tombstone
 
-- **Session 52** (2026-04-24) — Q-011 Window email redesign shipped in 4 iterations / 4 commits (`5c21b90` v2 banner redesign per mockup v2.2 → `efbf222` fix Gmail `position:absolute` strip → `1abcba2` v3 info bar pivot retiring the post-it → `d9279e9` v4 simplified button-forward with masthead retired and full-width green CTA). Four mockup artifacts produced; scope pivoted twice (medium-change + content-change); every iteration was mockup-mediated before code touched disk (session-28 rule confirmed 4×). Two Gmail-hostility discoveries: `position: absolute` stripping (stronger than session-51's SVG-rect filtering). Tech Rule candidates queued: email template parity audit (2nd firing, promotion-ready), Gmail-hostile primitives list (1st firing). Word "Window" retired from user-facing copy (internal identifiers only). Zero on-device QA that session — that's what session 53 closed.
+- **Session 53** (2026-04-24) — Q-011 v4 QA walk PASSED 4/4 clients on device (Gmail web, iOS Gmail, iOS Mail, Apple Mail); Q-011 loop fully closed after four iterations + four-client verification. Ladder B first half shipped in one commit `44b4c79`: `.github/workflows/ci.yml` + `package.json` scripts + `docs/beta-plan.md` + `docs/ladder-b-design.md`. Four additive artifacts, zero runtime code. D1(a) / D2(b) / D3(a) / D4(a) decisions locked in the design record. First Claude Code session to exercise `/session-open` + `/session-close` slash commands end-to-end. No memory updates.
 
 ---
 
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-24 (session 53 close — Q-011 v4 QA PASSED 4/4 + Ladder B first half shipped)
+> Last updated: 2026-04-24 (session 54 close — Ladder B second half shipped, staging live end-to-end)
 
-**Status:** `44b4c79` on main. Session 53 landed two things: (1) Q-011 v4 on-device QA walk PASSED 4/4 clients (Gmail web, iOS Gmail, iOS Mail, Apple Mail) — Q-011 loop fully closed after four iterations + four-client verification. (2) Ladder B first half shipped — one commit, four additive artifacts (`ci.yml` + `package.json` scripts + `docs/beta-plan.md` + `docs/ladder-b-design.md`). DB clean-slate persists; beta invites remain technically unblocked. Vercel CLI still not globally installed; workaround `npx vercel@latest --prod` still standing.
+**Status:** `d8a10f9` on main + staging. Session 54 landed five artifacts in one commit with zero runtime code changes. Staging stack is provisioned, schema-captured, fixture-seeded, Vercel-wired; on-device sign-in confirmed; Booths-view admin-access verification deferred behind Supabase's 1-per-hour email rate limit (non-gating). Staging URL: `https://treehouse-treasure-search-git-staging-david-6613s-projects.vercel.app`. Beta invites remain technically unblocked. Gate to V1 invite per `docs/beta-plan.md` opens once Booths verification lands + one quiet week elapses.
 
-### 🚧 Queued for session 54 — Ladder B second half (HITL-heavy, ~60 min)
+### 🚧 Queued for session 55 — Feed content seeding (~30–60 min)
 
-Execute Tasks 5–10 from `docs/ladder-b-design.md` §Session 54 task list:
+10–15 real posts across 2–3 vendors. Prod DB is clean-slate (wiped session 42, re-confirmed session 46 QA walk). Staging now exists as a safety net — content can be drafted on staging first, walked through on device, then promoted to prod. This is the natural V0 → V1 content arc.
 
-**Task 5 🖐️ HITL — Create staging Supabase project.** David in Supabase dashboard. Name: `treehouse-treasure-search-staging`. Region: match prod. Copy URL + anon key + service role key into a scratchpad for Task 6.
+Shape of the session:
 
-**Task 6 🖐️ HITL — Wire staging env to `staging` branch in Vercel.** David in Vercel dashboard → Project → Settings → Environment Variables. Scope `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL` (staging URL), and `RESEND_API_KEY` (reuse prod — Resend sends work the same) to `Preview` env with branch filter `staging`. Admin + other vars unchanged across envs.
+- 🟢 AUTO — write `scripts/seed-content.ts` helper (mirrors `seed-staging.ts` shape; idempotent upserts; accepts `--env-file` flag to point at staging vs prod)
+- 🖐️ HITL — David supplies photos + copy for ~10–15 fixture posts
+- 🟢 AUTO — draft against staging first, review on device
+- 🟢 AUTO — after approval, seed prod via the same script pointed at `.env.local`
+- 🖐️ HITL — on-device review of the populated feed on prod
 
-**Task 7 🟢 AUTO — Replay migrations against staging.** Run migrations in `migrations/` in order against staging via SQL editor or a helper script. Flag any drift.
+**Gate to V1:** after content lands + Booths view verification closes + one quiet week, the V1 beta invite per `docs/beta-plan.md` can go out.
 
-**Task 8 🟢 AUTO — Write `scripts/seed-staging.ts`.** Reusable fixture seed. Creates 1–2 test vendors, 1 admin user, 5–10 posts, 1 featured banner. Mirrors `scripts/qa-walk.ts` shape (service role client + console tables). Idempotent.
+### Alternative next sessions (if David wants to redirect from session 55)
 
-**Task 9 🟢 AUTO — Write `.env.staging.example`.** Mirrors `.env.example` with staging-specific commentary. `.env.staging.local` gitignored.
-
-**Task 10 🖐️ HITL — Smoke-test staging deploy.** Push to `staging` branch, confirm Vercel auto-deploys, open on device, run `npm run qa-walk -- baseline` against staging env.
-
-**Gate to close Ladder B:** after session 54 passes, V0 → V1 gate in `docs/beta-plan.md` opens (one week of quiet before V1 invite).
-
-### Alternative next sessions (if David wants to redirect from Ladder B session 54)
-
-- **Feed content seeding** (~30–60 min) — carried forward sessions 44–53. DB clean-slate persists. Best AFTER Ladder B second half lands (so seeding exercises the staging environment, not prod).
-- **Q-002** 🟢 (~20 min) — Picker affordance placement revision.
-- **Tech Rule promotion batch** (~40 min) — **eleven candidates queued** (session-53 adds "commit-design-records-in-same-session" — NEW, first firing). Two promotion-ready: email-template-parity-audit (2nd firing session 52) + script-first-over-SQL-dump (2nd firing session 48). Plus session-52 Gmail-hostile primitives list (1st firing).
-- **Session-archive drift cleanup** (~30 min) — sessions 28–38 + 44–52 one-liner only; session-53 block is paste-over-ready after the session-54 close replaces it here.
+- **Tech Rule promotion batch** (~40 min) — **fourteen candidates queued** (session-54 adds three first-firing candidates — see KNOWN GAPS). Two promotion-ready: email-template-parity-audit (2nd firing session 52) + script-first-over-SQL-dump (2nd firing session 48). Plus session-52 Gmail-hostile primitives list (1st firing) and session-54's three new candidates (all 1st firing).
+- **Staging Supabase OTP email template paste** (~15 min HITL) — paste prod's branded OTP template into staging Supabase → Authentication → Email Templates for full parity (see `docs/supabase-otp-email-templates.md`). Closes the visible generic-email gap David flagged session 54.
+- **Booths view on-device verification** (~5 min HITL) — the one deferred check from session 54. Sign in at staging URL with `david@zenforged.com`, confirm the Booths view unhides. Technically closes Task 10 even if folded into session 55's workflow.
+- **Q-002** 🟢 (~20 min) — Picker affordance placement revision (masthead → inline under hero banner).
+- **Session-archive drift cleanup** (~30 min) — sessions 28–38 + 44–53 tombstones only; session-54 block paste-over-ready.
 - **Design agent principle addition** (~10 min, docs only) — "reconciliation of a second glyph/affordance is part of the same scope." `MASTER_PROMPT.md` Design Agent section (session-45 retrospective).
-- **MASTER_PROMPT.md KNOWN PLATFORM GOTCHAS update** (~10 min, docs only) — add the session-52 hard-won "Gmail strips `position: absolute` from inline styles (web + iOS); any overlap primitive will die on Gmail" fact alongside existing Safari/ITP, Supabase RLS, Vercel, Next.js 14 gotchas.
-- **`docs/share-booth-build-spec.md` consolidation** (~15 min, docs only) — the v2 + v3 + v4 addendums are easier to read merged than stacked now that Q-011 QA is closed.
+- **MASTER_PROMPT.md KNOWN PLATFORM GOTCHAS update** (~10 min, docs only) — add session-52 Gmail `position: absolute` stripping + session-54 "new Supabase project requires Authentication → URL Configuration before first magic-link test."
+- **`docs/share-booth-build-spec.md` consolidation** (~15 min, docs only) — merge v2 + v3 + v4 addendums.
 - **`/admin` UI `auth.users` delete reliability spike** (~20–30 min).
 - **Error monitoring** (Sentry or structured logs). Sprint 3 carryover.
 - **Beta feedback mechanism** (Tally.so link).
 
-### Session 54 opener (pre-filled — Ladder B second half)
+### Session 55 opener (pre-filled — Feed content seeding)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
@@ -163,7 +161,7 @@ STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthr
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Ladder B second half per docs/ladder-b-design.md §Session 54 task list (Tasks 5–10). Session 53's first half shipped in 44b4c79 (ci.yml + package scripts + beta-plan.md + ladder-b-design.md). HITL-heavy: David creates staging Supabase project in dashboard (Task 5), wires Preview env vars scoped to `staging` branch in Vercel dashboard (Task 6). Claude handles migration replay (Task 7), writes scripts/seed-staging.ts (Task 8), writes .env.staging.example (Task 9). Close with on-device smoke test: push to staging branch, confirm Vercel auto-deploys, run `npm run qa-walk -- baseline` against staging env (Task 10). Estimated ~60 min if dashboards cooperate. Gate to V1 beta invite opens after this lands cleanly.
+CURRENT ISSUE: Feed content seeding — populate 10–15 real posts across 2–3 vendors, drafted on staging first, then promoted to prod. Session 54 stood up a staging environment end-to-end (`d8a10f9`); staging is the safety net for this content pass. Shape: build `scripts/seed-content.ts` helper (mirrors `seed-staging.ts` shape, accepts `--env-file` to target staging or prod), David supplies photos + copy for fixtures, review on staging device-first, then promote to prod. This is the final V0 → V1 prep piece before the first beta vendor invite. Estimated 30–60 min depending on David's photo/copy prep velocity. Fold in the deferred Booths-view verification from session 54 if the email rate-limit has cleared.
 ```
 
 ---
@@ -189,6 +187,7 @@ CURRENT ISSUE: Ladder B second half per docs/ladder-b-design.md §Session 54 tas
 - **Session 49** (2026-04-23) — Booths page full v1.2 redesign (2-column grid, StickyMasthead, mall grouping). QR code added to share sheet with logo overlay; confirmed scanning on device. Copy polish: "Invite someone in to" header, "Send the invite" CTA, "Request Digital Booth" green pill on home, "Vendor Sign in" on login.
 - **Session 50** (2026-04-23) — Q-008 shopper Window share shipped (`/api/share-booth` branches on Authorization header; anon = 2/10min + no ownership + no sender voice; auth path + Q-009 admin bypass unchanged). Guest edit-pencil hole closed: `signOut()` clears `LOCAL_VENDOR_KEY`, `detectOwnershipAsync` requires a session, Find Detail subscribes to `onAuthChange`. One commit `0d30fa0`; QA walk deferred; verified clean session 51 — 5/5 scenarios PASSED.
 - **Session 51** (2026-04-24) — Q-008 shopper-share QA walk PASSED 5/5 scenarios on device (Q-008 QA hold retired). Q-011 scoped as a Design session rather than a patch; first-pass code attempt reverted after David called mockup-first and v2 mockup review surfaced 4-axis brand drift beyond original SVG-stripping diagnosis. v2.2 mockup locked at `docs/mockups/share-booth-email-v2.html`. Zero commits. Email template parity audit Tech Rule candidate queued (first firing).
+- **Session 52** (2026-04-24) — Q-011 Window email redesign shipped in 4 iterations / 4 commits (`5c21b90` → `efbf222` → `1abcba2` → `d9279e9`). Four mockup artifacts produced; scope pivoted twice; every iteration mockup-mediated. Two Gmail-hostility discoveries (`position: absolute` stripping + SVG-rect filtering). Tech Rule candidates queued: email-template-parity-audit (2nd firing, promotion-ready) + Gmail-hostile-primitives-list (1st firing). Word "Window" retired from user-facing copy. Zero on-device QA (session 53 closed that).
 
 ---
 
@@ -200,15 +199,17 @@ CURRENT ISSUE: Ladder B second half per docs/ladder-b-design.md §Session 54 tas
 
 ### 🟡 Remaining pre-beta polish (operational, not code-gating)
 
-- **Feed content seeding** — 10–15 real posts across 2–3 vendors. DB is clean-slate after session-46 post-walk cleanup. Natural pairing with beta invite prep. Session 44's `<AddBoothInline>` primitive + session 45's cross-mall fix + delete feature + claimed-vendor safety gate mean admin can now seed + iterate on booths directly from `/shelves` without touching Supabase. Session 46 re-confirmed the onboarding path end-to-end. Session 48 restored Home Featured Find + Find Map hero banner reads, so a populated feed will render with full chrome. *Recommended as session 49.*
+- **Feed content seeding** — *explicit next session (55)*. 10–15 real posts across 2–3 vendors. DB still clean-slate. Staging now stood up (session 54) so content can be drafted there first, reviewed on device, then promoted to prod via the same script. See CURRENT ISSUE above for session-55 shape.
+- **Staging Supabase OTP email template paste** — session 54 discovered staging is sending Supabase's default generic confirmation emails, not the branded template from `docs/supabase-otp-email-templates.md`. HITL paste into staging Supabase → Authentication → Email Templates for parity. ~15 min. Non-gating; magic-link delivery works either way.
 - **Error monitoring** (Sentry or structured logs). Sprint 3 carryover.
 - **Beta feedback mechanism** (Tally.so link).
 - **Hero image upload size guard** — verify coverage across upload surfaces.
-- **Tech Rule promotion batch** — eleven candidates queued, two promotion-ready: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed, (e) session-40 React 19 ref-forwarding (one firing), (f) session-45 Supabase nested-select explicit-columns (one firing), (g) **session-46 script-first over SQL-dump-first in Claude Code — second firing session 48 (promotion-ready)**, meta-workflow rule, may belong in `MASTER_PROMPT.md`, (h) **session-48 RLS-safety-net policy alongside any `DISABLE ROW LEVEL SECURITY`** (one firing), (i) **session-51 email template parity audit — second firing session 52 (promotion-ready)**, belongs in `MASTER_PROMPT.md` under Design Agent or a new Docs Agent section, (j) **session-52 Gmail-hostile primitives list** (one firing) — running list: `position: absolute`, `position: relative` with `overflow: hidden` clipping, SVG `<rect>`/`<circle>` tracking-pixel-shaped children, CSS `transform: rotate` (stripped by Outlook); belongs in `MASTER_PROMPT.md` KNOWN PLATFORM GOTCHAS, (k) **NEW session-53 commit-design-records-in-same-session** (one firing) — when a sprint-sized infra/architecture decision is made in a review pass, commit the decision record in the session that executes the first task, not later. Session 51 chat Ladder B design was never committed; session 53 corrected by writing `docs/ladder-b-design.md` alongside the session-53 code artifacts. Meta-workflow rule, may belong in `MASTER_PROMPT.md`. Session-42 verify-remaining-count still below the two-firings-outside-same-context bar. ~40 min.
+- **Tech Rule promotion batch** — fourteen candidates queued, two promotion-ready: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed, (e) session-40 React 19 ref-forwarding (one firing), (f) session-45 Supabase nested-select explicit-columns (one firing), (g) **session-46 script-first over SQL-dump-first in Claude Code — second firing session 48 (promotion-ready)**, meta-workflow rule, may belong in `MASTER_PROMPT.md`, (h) **session-48 RLS-safety-net policy alongside any `DISABLE ROW LEVEL SECURITY`** (one firing), (i) **session-51 email template parity audit — second firing session 52 (promotion-ready)**, belongs in `MASTER_PROMPT.md` under Design Agent or a new Docs Agent section, (j) **session-52 Gmail-hostile primitives list** (one firing) — running list: `position: absolute`, `position: relative` with `overflow: hidden` clipping, SVG `<rect>`/`<circle>` tracking-pixel-shaped children, CSS `transform: rotate` (stripped by Outlook); belongs in `MASTER_PROMPT.md` KNOWN PLATFORM GOTCHAS, (k) **session-53 commit-design-records-in-same-session** (one firing) — when a sprint-sized infra/architecture decision is made in a review pass, commit the decision record in the session that executes the first task, not later. Meta-workflow rule. (l) **NEW session-54 capture-initial-schema-as-001-before-claiming-migrations-from-scratch** (one firing) — D2(b) was designed to surface exactly this and did; prod's base tables were hand-created in Supabase dashboard on day one and never committed. Going forward: any "fresh env bootstrap" claim requires a verified-replayable schema file in `supabase/migrations/001_*.sql`. (m) **NEW session-54 env-var-checklist-must-enumerate-every-NEXT_PUBLIC** (one firing) — branch-scoped staging env-var specs must list every `NEXT_PUBLIC_*` the app reads, not just DB + email keys. I missed `NEXT_PUBLIC_ADMIN_EMAIL` + `NEXT_PUBLIC_SITE_URL` in session 54's Task 6 spec; fallback-to-hardcoded-default caused the Booths view admin gate to trip unexpectedly. (n) **NEW session-54 new-Supabase-project-must-set-Auth-URL-Configuration-before-first-magic-link** (one firing) — fresh Supabase projects default Site URL to `http://localhost:3000`; first magic-link test fails with "site can't be reached" unless Site URL + Redirect URLs are configured first. Belongs in any future "new Supabase project HITL checklist" + `MASTER_PROMPT.md` KNOWN PLATFORM GOTCHAS. Session-42 verify-remaining-count still below the two-firings-outside-same-context bar. ~40 min.
 - **Design agent principle addition** — "When a second instance of a glyph/affordance is introduced, the reconciliation is part of the same scope, not a later cleanup." Session-45 retrospective. ~10 min docs only. Goes in `MASTER_PROMPT.md` Design Agent section.
-- **Session-archive drift cleanup** — sessions 28–38 carry one-liners but no archive detail; sessions 44–52 now also tombstone-only in this file. Session-52 tombstone added this session; session-53 block is paste-over-ready until the session-54 close replaces it here. ~30 min batch to backfill archive detail for 28–38 + 44–52 from tombstones + git log.
+- **Session-archive drift cleanup** — sessions 28–38 carry one-liners but no archive detail; sessions 44–53 now also tombstone-only in this file. Session-53 tombstone added this session; session-54 block is paste-over-ready until the session-55 close replaces it here. ~30 min batch to backfill archive detail from tombstones + git log.
 - **`/api/suggest` SDK migration or delta note** — session 43 confirmed this route is the only AI route still on raw `fetch` rather than the Anthropic SDK. Not beta-gating; reseller-intel only. Optional future cleanup.
 - **`/admin` UI `auth.users` delete reliability** — session 46 observed that David's UI-driven delete of Ella's auth user didn't stick (row persisted until force-deleted via admin API). Not blocking; worth investigating if it recurs. ~20–30 min spike.
+- **Booths view admin-access verification on staging** — deferred from session 54 Task 10 behind Supabase's 1-per-hour email cap. When David signs in at staging with `david@zenforged.com` and confirms Booths view unhides, Ladder B second half is fully closed. ~5 min HITL.
 
 ### 🟡 Q-007 Window Sprint expansion (post-MVP)
 
@@ -257,6 +258,8 @@ All captured in `docs/queued-sessions.md`:
 - `docs/share-booth-build-spec.md` — now carries v2 + v3 + v4 addendums stacked. Post-QA (passed session 53), candidate for consolidation (the three addendums are easier to read merged than stacked). ~15 min docs-only pass.
 - `components/ShelfGrid.tsx` (parked; zero callers).
 - `/post` redirect shim — can delete post-beta.
+- `.env.prod-dump.local` (session-54 one-shot `pg_dump` pipeline artifact, gitignored, safe to delete anytime; contains prod + staging DB URIs with passwords).
+- Orphaned `dbutler80020@gmail.com` staging auth user (created by the first seed-staging run before David chose `david@zenforged.com` as staging admin; non-admin, non-blocking; leave or clean up manually via Supabase dashboard).
 
 ---
 
@@ -267,4 +270,4 @@ All captured in `docs/queued-sessions.md`:
 - Trigger: say "generate investor update" at session close
 - Process doc: Notion → Agent System Operating Manual → 📋 Investor Update — Process & Cadence
 
-> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data; session 43 audited AI model surface + locked in billing safeguards; session 44 restored `/shelves` Add-a-Booth primitive; session 45 shipped the cross-mall fix + admin delete + Q-009 admin share bypass; session 46 re-passed T4d QA walk + qa-walk.ts script; session 47 fixed vendor onboarding hero image gap; session 48 fixed featured-banner RLS drift; session 49 shipped /shelves v1.2 redesign + QR code share + copy polish; session 50 shipped Q-008 shopper Window share + guest edit-pencil fix; session 51 PASSED Q-008 QA walk 5/5 + scoped Q-011 as Design session; session 52 shipped Q-011 in 4 iterations — four commits, four mockups, scope pivoted twice (info bar + button-forward simplification); session 53 closed Q-011 loop (4/4 clients PASSED on device) + Ladder B first half shipped (CI + scripts + beta plan + design record in one commit `44b4c79`). Next natural investor-update trigger point is after Ladder B second half lands (session 54: staging Supabase + Vercel env wiring) + feed content seeding (session 55)** — the update would then honestly report the full pre-beta polish arc (sessions 42–55) as complete rather than partial.
+> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data; session 43 audited AI model surface + locked in billing safeguards; session 44 restored `/shelves` Add-a-Booth primitive; session 45 shipped the cross-mall fix + admin delete + Q-009 admin share bypass; session 46 re-passed T4d QA walk + qa-walk.ts script; session 47 fixed vendor onboarding hero image gap; session 48 fixed featured-banner RLS drift; session 49 shipped /shelves v1.2 redesign + QR code share + copy polish; session 50 shipped Q-008 shopper Window share + guest edit-pencil fix; session 51 PASSED Q-008 QA walk 5/5 + scoped Q-011 as Design session; session 52 shipped Q-011 in 4 iterations; session 53 closed Q-011 loop (4/4 clients PASSED on device) + Ladder B first half shipped (CI + scripts + beta plan + design record in commit `44b4c79`); session 54 shipped Ladder B second half — staging Supabase provisioned, schema captured as `001_initial_schema.sql`, seed script + env template + gitignore shipped in commit `d8a10f9`, staging URL live, on-device sign-in confirmed. Next natural investor-update trigger point is after feed content seeding (session 55)** — the update would then honestly report the full pre-beta polish arc (sessions 42–55) as complete, with staging infra in place and content populated for a first V1 beta invite.

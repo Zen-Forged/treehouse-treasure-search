@@ -4,7 +4,7 @@
 >
 > **What this is not:** a build spec. Code artifacts are in `.github/workflows/ci.yml`, `package.json`, [docs/beta-plan.md](beta-plan.md), and (session 54) `scripts/seed-staging.ts` + `.env.staging.example`.
 
-**Status:** session 53 shipped Tasks 1–4. Session 54 opens with Task 5.
+**Status:** session 53 shipped Tasks 1–4. Session 54 shipped Tasks 5–9 + Task 10 partial (Booths-view admin-access verification deferred behind Supabase's 1-per-hour email cap).
 
 ---
 
@@ -105,18 +105,30 @@ All four landed in one session-53 commit. No dashboards touched.
 
 ---
 
-## Session 54 task list — QUEUED
+## Session 54 task list — SHIPPED
 
-| # | Label | Task | Notes |
-|---|-------|------|-------|
-| 5 | 🖐️ HITL | Create staging Supabase project | David in Supabase dashboard. Name: `treehouse-treasure-search-staging`. Region: match prod (us-east-1 or whichever). Copy URL + anon key + service role key into a running scratchpad for Task 6. |
-| 6 | 🖐️ HITL | Wire staging env to `staging` branch in Vercel | David in Vercel dashboard → Project → Settings → Environment Variables. Scope `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL` (to the staging URL), and `RESEND_API_KEY` (can reuse prod — Resend sends work the same) to the `Preview` environment with branch filter `staging`. Admin + other vars remain unchanged across envs. |
-| 7 | 🟢 AUTO | Replay migrations against staging | Run the migrations in `migrations/` in order against the staging Supabase project via the SQL editor or via a `scripts/run-migrations.ts` helper. Flag any drift. |
-| 8 | 🟢 AUTO | Write `scripts/seed-staging.ts` | Reusable fixture seed. Creates 1–2 test vendors, 1 admin user (matches `NEXT_PUBLIC_ADMIN_EMAIL`), 5–10 posts, 1 featured banner. Mirrors `scripts/qa-walk.ts` shape — Supabase service role client + console-table output. Safe to re-run (idempotent via upsert or cleanup-first). |
-| 9 | 🟢 AUTO | Write `.env.staging.example` | Mirrors `.env.example` with staging-specific commentary. Not committed to `.env.staging` (gitignored). |
-| 10 | 🖐️ HITL | Smoke-test the staging deploy | David: push an inconsequential commit to the `staging` branch, confirm Vercel deploys it to the staging URL, open it on device, confirm the Home feed renders (should be empty-state), run `npm run qa-walk -- baseline` pointed at staging (requires updating qa-walk.ts to accept an env flag OR copying `.env.staging.local` to `.env.local` temporarily). |
+| # | Label | Status | Notes |
+|---|-------|--------|-------|
+| 5 | 🖐️ HITL | ✅ DONE | Staging Supabase project `treehouse-treasure-search-staging` provisioned, project ID `thaauohvxfrryejmyisv`. Security settings `ON / ON / OFF` (Data API on, auto-expose on, auto-RLS off) for prod parity. New-style keys named `treehouse_search_staging_client` (publishable) + `treehouse_search_staging_server` (secret). |
+| 6 | 🖐️ HITL | ✅ DONE | Six env vars scoped to Preview + branch=`staging`: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_ADMIN_EMAIL`. Existing prod entries narrowed from "All Environments" to Production-only so scopes don't overlap. `NEXT_PUBLIC_ADMIN_EMAIL=david@zenforged.com` (matches `is_treehouse_admin()` RLS hardcode; business-email consistency choice). |
+| 7 | 🟢 AUTO | ✅ DONE | Migrations live at `supabase/migrations/` (NOT `migrations/` — design record was slightly off). Discovery: no `001_initial_schema.sql` existed; prod base tables were created by hand in Supabase dashboard on day one and never captured. Captured via `pg_dump --schema-only --schema=public --no-owner --no-privileges` against prod → sanitized + committed as `supabase/migrations/001_initial_schema.sql`. Applied clean to staging via `psql` with zero errors. Migrations 002–008 remain as historical evolution record; fresh-env bootstrap needs only 001. Malls also seeded via `supabase/seeds/001_mall_locations.sql` (29 malls). |
+| 8 | 🟢 AUTO | ✅ DONE | `scripts/seed-staging.ts` (466 lines) — `status` / `seed` / `wipe` subcommands, idempotent natural-key upserts, safety-rail refuses any env file without `staging` in path. Creates admin auth user, 2 test vendors at booths 901/902, 6 posts (available + sold mix), 2 `site_settings` rows. Surfaced as `npm run seed-staging`. |
+| 9 | 🟢 AUTO | ✅ DONE | `.env.staging.example` committed; `.env.staging.local` created locally (gitignored via new `.env.*.local` pattern). Admin email flipped to `david@zenforged.com` mid-session for consistency with Vercel. |
+| 10 | 🖐️ HITL | ⏳ PARTIAL | Staging URL loads on iPhone, feed renders with 5 posts (sold-status planter correctly filtered), post detail opens, magic-link sign-in round-trips cleanly after Supabase Auth URL Configuration was set. **Deferred:** Booths-view admin-access verification — rate-limited by Supabase's 1-per-hour email cap. Non-gating: infra is live; only the final admin-auth check remains. |
 
-**Estimated session 54 duration:** ~60 min if dashboards cooperate. Supabase project creation is 3 min. Vercel env wiring is 15–20 min. Migration replay is the most variable — depends on how many migrations exist and whether any have env-specific assumptions.
+**Actual session 54 duration:** ~3 hours wall-clock. Longer than the estimated 60 min primarily due to the 001_initial_schema gap discovery + Vercel env-var narrowing flow (the `NEXT_PUBLIC_SUPABASE_URL`-already-All-Environments overlap required edit-existing-then-add pattern for every key). Actual code/infra work was closer to the estimate.
+
+---
+
+## Session 54 retrospective — operational learnings worth carrying forward
+
+Three operational gaps surfaced this session that the original Ladder B design didn't anticipate. Each is now a first-firing Tech Rule candidate in `CLAUDE.md` KNOWN GAPS:
+
+1. **Repo must carry an `001_initial_schema.sql` before claiming any migration-from-scratch capability.** D2(b) was designed to surface this and did — prod's base schema existed only in the Supabase dashboard, never in git. If prod had ever needed disaster-recovery before session 54, "call Supabase support and pray" would have been the actual plan. Now `001_initial_schema.sql` is the canonical bootstrap.
+2. **Branch-scoped env-var checklists must enumerate every `NEXT_PUBLIC_*` the app reads.** Task 6's original spec missed `NEXT_PUBLIC_ADMIN_EMAIL` + `NEXT_PUBLIC_SITE_URL`. Symptom: client code fell back to hardcoded defaults (`david@zenforged.com` in `DevAuthPanel.tsx`, no site URL in email links), and the Booths view admin gate triggered unexpectedly. Cost: one redeploy.
+3. **New Supabase project HITL checklist must include Authentication → URL Configuration before first magic-link test.** Fresh Supabase projects default Site URL to `http://localhost:3000`; first magic-link email thus 404s with "site can't be reached." Task 5's spec should have included this step explicitly.
+
+**If these three patterns fire again in a future session**, they promote from Tech Rule candidates to durable rules in `MASTER_PROMPT.md`.
 
 ---
 
