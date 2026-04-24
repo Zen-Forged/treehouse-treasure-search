@@ -137,37 +137,53 @@ Build-spec §3 said `/vendor/{slug}` — spec was wrong against the rest of the 
 
 ---
 
-## Q-011 🟢 Fix Window email banner post-it placement
+## Q-011 🟢 Window email banner redesign — v2 design session scoped
 
-**Status:** Ready to run. Captures David's session-41 QA-walk observation: "The booth number was displayed below the booth hero image. The plan was to have the booth on top of the image, formatted with the post-it note, as displayed in the my-shelf section."
+**Status:** Ready to run. Scoped as a Design session 51; mockup locked at `docs/mockups/share-booth-email-v2.html` (v2.2 final state). Build queued for session 52.
 
 **Created:** 2026-04-21 (session 41 Scenario 1 QA walk)
+**Re-scoped:** 2026-04-24 (session 51 Design review — surfaced 4-axis brand drift beyond the original SVG-stripping diagnosis; David called mockup-first per session-28 rule; first-pass code attempt reverted cleanly)
 
-**Severity:** 🟡 Medium — email-rendering bug. Build-spec §Decisions decision 5 locked: "Booth banner + pinned post-it mirrors `/my-shelf` BoothHero. Hero image behind, post-it pinned bottom-right at 6° rotation. NOT the centered post-it treatment from the first mockup draft." If the post-it isn't pinned on top of the hero in the delivered email, the session-39 `renderBanner` / `renderPostItSvg` didn't land correctly.
+**Severity:** 🟡 Medium — email-rendering bug + brand-voice drift. Every Window share between now and session-52 ship looks amateur (clipped post-it on Gmail web, duplicated vendor name in opener line due to sender-name bug, Unicode `⦲` glyph inconsistent with the rest of the app).
 
-### What to diagnose first
+### The 4-axis brand drift surfaced at session 51
 
-Before writing code, figure out WHY the post-it didn't render on top:
+The original Q-011 was framed as an email-rendering bug (Gmail web strips SVG `<rect>`/`<circle>` as tracking-pixel defense, leaving `<text>` rendering as flow content below the banner, clipped at the bottom-right edge). The session-51 mockup review surfaced that the email had been drifting from the canonical design on FOUR axes:
 
-1. **Did the SVG render at all?** Check received email HTML source — if `<svg>` is present, the problem is positioning. If it's stripped, email client stripped the inline SVG (Outlook sometimes does).
-2. **Positioning approach** — session 39 used absolute positioning of the SVG over the banner table cell. Some email clients (Yahoo Mail web, older Outlook) strip `position: absolute`. The mockup may have used positioning that didn't survive.
-3. **Fallback strategy** — if SVG/absolute-position is the issue across clients, consider rendering the post-it inline next to the banner (stacked, not overlaid) as a degraded-but-present variant. Mockup-wins rule still favors the pinned-on-top look on iOS Mail / Gmail web where it works.
+1. **Post-it SVG stripping** — original diagnosis. Gmail web strips `<rect>`/`<circle>`.
+2. **Post-it proportions drifted** — session-39 spec used 86×86 + 4° + "BOOTH" single-line eyebrow. Real `/shelf` BoothHero is 96×96 + 6° + "Booth Location" two-line + 36px numeral. Email was a diminished copy.
+3. **Wrong pin glyph** — Unicode `⦲` vs teardrop-SVG `PinGlyph` from `components/BoothPage.tsx`. Direct violation of the session-17 glyph hierarchy lock.
+4. **Vendor name font drift** — Georgia 34px 600-weight in email vs IM Fell 32px 400-weight in `/shelf`. Rules collide at this one spot — v2.2 resolves via IM Fell Google Fonts `<link>` (graceful fallback to Georgia in Outlook).
 
-### Files touched
+### Bonus bug surfaced during mockup review
 
-- `lib/email.ts` — `renderBanner`, `renderPostItSvg` (both session-39 additions). Likely a CSS / table-layout fix.
-- Potentially the mockup itself if it used CSS tricks the production render didn't replicate
-- Test across iOS Mail, Gmail web, Gmail iOS, Yahoo web, Outlook web BEFORE declaring shipped
+**Sender-name bug** — `/api/share-booth` passes `vendor.display_name` as `senderFirstName` (never the authed user's first name). David's self-sends during QA read "Kentucky Treehouse sent you a Window into Kentucky Treehouse." The v2.2 copy has no sender name to resolve (opener line is `You've received a personal invite.`), so the bug surface is eliminated rather than patched. `senderMode` / `senderFirstName` on `ShareBoothWindowPayload` stay in the server-side route for rate-limit bucket selection but retire from the email template entirely.
 
-### Questions to answer in the fix session
+### Mockup decisions locked (session 51)
 
-- Does the received email HTML contain `<svg>`?
-- Does the banner image render at all?
-- If both render but stacked (not overlaid), is it a `position` vs. `float` vs. `transform` issue?
+- **Variant B banner** — post-it embedded inside banner at bottom-right (86×86, rotated 6°), no overhang. Safer across all clients than Variant A's overhang approach; more on-brand than Variant C's typography-only approach.
+- **SMALL masthead** — 13px uppercase `TREEHOUSE FINDS` Georgia 600 letterspaced. Tagline `Embrace the Search. Treasure the Find.` kept at 10px italic. Quiet brand anchor; booth leads.
+- **New opener copy** — italic Georgia 15px `You've received a personal invite.` followed by IM Fell 14px italic eyebrow `Step inside a curated booth from` + IM Fell 32px vendor name hero. Echoes `/shelf` BoothTitleBlock voice (`a curated shelf from`).
+- **Real PinGlyph SVG** — teardrop outline + filled circle, `strokeWidth=1.3`, `v1.inkPrimary` fill. Inlined directly in the email body.
+- **IM Fell via Google Fonts `<link>`** — added to email shell `<head>`. ~70% of clients (iOS Mail, Gmail web, Apple Mail) respect it; Outlook + some Android clients fall back to Georgia as graceful degradation.
+- **Preheader simplifies** to `A personal invite to a curated booth.` — one line, always true, no sender-mode branching.
+- **Plain-text fallback adopts new opener** — `You've received a personal invite.\n\nA curated booth from {vendorName}.\n...`
+
+### Files touched (session 52 execution)
+
+1. **`docs/share-booth-build-spec.md`** (v2 addendum) — documents all of the above as dev-handoff doc, not decision doc, per session-28 rule
+2. **`lib/email.ts`** — multiple rewrites:
+   - `renderEmailShell` — SMALL masthead (13px uppercase + 10px italic tagline), add IM Fell Google Fonts `<link>` to shell `<head>`
+   - `renderWindowBody` — replace sender voice line with new opener block (invite line + eyebrow + IM Fell vendor name), retire `senderMode` branching
+   - `renderBanner` — Variant B (embedded post-it, no overhang, `height: 220px`)
+   - New internal `renderPostItDiv` helper — styled div (not SVG, Gmail-safe), 86×86, rotate(6deg), pin + eyebrow + numeral
+   - `renderLocationLine` — real PinGlyph SVG instead of `⦲` char
+   - Update plain-text fallback + preheader copy
+3. **`ShareBoothWindowPayload` type** — mark `senderFirstName` + `senderMode` optional / display-unused, add deprecation comment
 
 ### Estimate
 
-~60–90 min. Email-rendering fixes are notoriously finicky across clients. Budget for one iteration per affected client.
+~90–120 min of careful work. `lib/email.ts` is a 🔴 STOP-adjacent file (every Window share goes through it) — work needs to be clean, not rushed. Build check + on-device verification (Gmail web first, then iOS Mail) required before retirement.
 
 ### Session opener (copy/paste when promoted)
 
@@ -177,8 +193,26 @@ STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthr
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Running queued session Q-011 — Window email post-it pinned-on-top regression. Session 41 QA walk showed the booth number rendering BELOW the hero image in the delivered email instead of pinned on top via post-it (per build-spec §Decisions decision 5). Diagnose: does <svg> survive in received HTML? Is it a positioning (absolute/float/transform) issue? Test across iOS Mail, Gmail web, Gmail iOS, Yahoo web, Outlook web. Mockup at docs/mockups/share-booth-email-v1.html is the source of truth — mockup wins per session-28 rule. Update lib/email.ts renderBanner / renderPostItSvg.
+CURRENT ISSUE: Execute Q-011 per session-51 approved mockup at docs/mockups/share-booth-email-v2.html (Variant B + SMALL masthead + tagline kept + new invite copy + senderMode retirement from template). Write build spec addendum to docs/share-booth-build-spec.md first, then lib/email.ts rewrites (renderEmailShell SMALL masthead, renderWindowBody opener with invite line + eyebrow + IM Fell vendor name, renderBanner Variant B, new renderPostItDiv helper styled-div not SVG, renderLocationLine real PinGlyph SVG, IM Fell Google Fonts link in shell head). Mockup is source of truth — if spec disagrees, mockup wins.
 ```
+
+---
+
+## Historical Q-011 scope (preserved for session-archive readers)
+
+Original session-41 capture framed Q-011 as an email-rendering bug (booth number displayed below hero image instead of post-it pinned on top). Session-51 Design review expanded scope to the full banner block redesign captured above. The historical one-axis framing is preserved below for future readers.
+
+### Original scope at capture (session 41)
+
+David's session-41 QA-walk observation: "The booth number was displayed below the booth hero image. The plan was to have the booth on top of the image, formatted with the post-it note, as displayed in the my-shelf section."
+
+Build-spec §Decisions decision 5 locked: "Booth banner + pinned post-it mirrors `/my-shelf` BoothHero. Hero image behind, post-it pinned bottom-right at 6° rotation. NOT the centered post-it treatment from the first mockup draft." If the post-it isn't pinned on top of the hero in the delivered email, the session-39 `renderBanner` / `renderPostItSvg` didn't land correctly.
+
+The diagnosis path the session-51 review walked:
+
+1. **Did the SVG render at all?** On Gmail web: partially. Gmail strips `<rect>` + `<circle>` as tracking-pixel defense, keeps `<text>`. Result: italicized "BOOTH 000" text rendering as flow content below the banner, clipped at the bottom-right rounded edge. On iOS Mail / Apple Mail: SVG rendered but the negative-margin-div positioning (`margin-top: -96px` on a `position: relative` div) was fragile across viewport widths.
+2. **Positioning approach** — session 39 used absolute positioning of the SVG over the banner table cell via MSO conditional comment. Some email clients (Yahoo Mail web, older Outlook) strip `position: absolute`. The mockup used positioning that didn't survive.
+3. **Fallback strategy** — the session-51 mockup adopts a styled div with CSS `transform: rotate(6deg)` instead of SVG. Gmail web + Apple Mail + iOS Mail respect the CSS transform; Outlook desktop strips the rotation but the div still renders as a square post-it with pin + eyebrow + numeral (readable graceful fallback). Variant B places the post-it inside the banner (no overhang), which removes the negative-margin-div fragility entirely.
 
 ---
 

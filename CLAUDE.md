@@ -65,114 +65,99 @@ Exception: a single chained command with `&&` stays in one block — that's one 
 
 ---
 
-## ✅ Session 50 (2026-04-23) — Q-008 shopper Window share + guest edit-pencil fix
+## ✅ Session 51 (2026-04-24) — Q-008 QA walk PASSED + Q-011 design session
 
-One commit (`0d30fa0`). Seven files touched across two logical changes. Build clean. No Supabase migration. On-device QA walk deferred at David's request — runbook preserved below for session 51.
+Pure design + verification session. Zero commits. One mockup file added (`docs/mockups/share-booth-email-v2.html`). QA walk on session-50 Q-008 shipment PASSED 5/5 scenarios. Q-011 pivoted from "email rendering bug" to "banner block redesign" after a first-pass code attempt surfaced 4-axis brand drift beyond the original SVG-stripping diagnosis; David correctly called mockup-first (session-28 rule) and the code was reverted cleanly.
 
-**Task 1 — Bug: guest users could see the edit pencil on Find Detail**
+**Shipped this session (verification + design):**
 
-Root cause: `detectOwnershipAsync` in `app/find/[id]/page.tsx` had three ownership paths, and path 3 (`localStorage.LOCAL_VENDOR_KEY` match) did not require a valid Supabase session. `signOut()` also cleared only `SESSION_USER_KEY`, leaving the vendor profile behind. Compounding this, `isMyPost` was set once at mount with no auth-change listener — so signing out elsewhere left a stale pencil until navigation.
+- **Q-008 + edit-pencil QA walk PASSED 5/5** — Scenario 1 (pencil flips on sign-out, no reload needed, `onAuthChange` subscriber fires correctly), 2 (shopper anon happy path + subject `A Window into {vendor}` + no voice line + plain-text fallback correct), 3 (vendor self-send retains voice line, unchanged from pre-Q-008), 4 (admin share on other vendor's booth, voice line attributed to that vendor), 5 (anon rate-limit 2/10min cap trips correctly on third send, separate bucket from auth'd sends verified in parallel). Q-008 QA hold retired.
+- **Q-011 scoped as design session** — v2 mockup at `docs/mockups/share-booth-email-v2.html`. Three banner variants presented (A literal BoothHero mirror, B embedded post-it, C typography-only). David chose **Variant B** with four refinements captured in v2.2 iteration: (1) masthead shrunk to 13px uppercase wordmark (`TREEHOUSE FINDS` 600-weight letterspaced) + tagline kept (`Embrace the Search. Treasure the Find.`), (2) sender-voice line replaced with universal opener `You've received a personal invite.`, (3) eyebrow `Step inside a curated booth from` echoing `/shelf` BoothTitleBlock voice, (4) `senderMode` branching retires from email template (stays server-side for rate-limit buckets).
+- **Sender-name bug surfaced + fix folded into Q-011** — `/api/share-booth` passes `vendor.display_name` as `senderFirstName`, never the authed user's first name. Self-sends during QA read "Kentucky Treehouse sent you a Window into Kentucky Treehouse." The v2.2 copy has no sender name to resolve, eliminating the bug surface entirely. Caught by David during v2 mockup review.
+- **First-pass Q-011 code attempt reverted** — initial fix (nested-table + styled-div post-it, ~45 min work) solved the clipping but left composition and glyph issues unaddressed. David called mockup-first; code reverted via `filesystem:edit_file`. `lib/email.ts` is back to session-50's `0d30fa0`. Clean state on disk.
 
-Three fixes, all in one commit:
-- `lib/auth.ts:signOut()` now also clears `LOCAL_VENDOR_KEY` so no stale vendor profile survives sign-out.
-- `detectOwnershipAsync` in `app/find/[id]/page.tsx` early-returns `false` when `session?.user` is absent — no session, no ownership regardless of cache.
-- Find Detail subscribes to `onAuthChange` and re-runs ownership detection on every auth flip — pencil disappears on sign-out without a reload.
+**4-axis brand drift surfaced by the mockup review (all will be fixed in session-52 build):**
 
-Non-regressing: `/my-shelf` is redirect-gated for unauthed viewers; `/shelf/[slug]` hard-codes `canEdit={false}` on the BoothHero; `/find/[id]/edit` has its own server-side auth gate on mount. Find Detail was the only surface with a stale-path-3 exposure.
+1. Post-it SVG stripping on Gmail web (original Q-011 diagnosis — Gmail strips `<rect>`/`<circle>` as tracking-pixel defense, leaving `<text>` rendering as flow content below the banner)
+2. Post-it proportions drifted — session-39 spec was 86×86 + 4° + "BOOTH" single-line; real `/shelf` BoothHero is 96×96 + 6° + "Booth Location" two-line + 36px numeral. Email is a diminished copy, not a mirror.
+3. Wrong pin glyph — session-39 used Unicode `⦲` for the mall location line; app uses the teardrop-SVG `PinGlyph` from `components/BoothPage.tsx` everywhere else. Direct violation of the session-17 glyph hierarchy lock.
+4. Vendor name font drift — session-39 rendered Georgia 34px 600-weight; `/shelf` renders IM Fell 32px 400-weight (`BoothTitleBlock`). Georgia-in-email was a committed session-32 rule for maximum client compat, but "IM Fell for editorial voice" is a committed brand rule. Rules collide at this one spot — v2.2 resolves by loading IM Fell via Google Fonts `<link>` (graceful fallback to Georgia in Outlook).
 
-**Task 2 — Q-008: Window share opened to unauthenticated shoppers**
+**Tech Rule candidate queued (naming only, not promoted this session):**
+- **Email template parity audit** — when the app's visual primitives (post-it, pin, vendor-name typography) evolve in the in-app code, the email templates MUST be audited in the same session, not batched. `lib/email.ts` drifted through sessions 17 (paperCream + glyph hierarchy), 19A (v1 token canonical), 32 (v1.2 post-flow with IM Fell as editorial voice) without updates. The drift accumulated silently because email QA wasn't running; session-51 surfaced it all at once.
 
-Shipped all three recommended decisions from `docs/queued-sessions.md` (1c / 2c / 3a):
+---
 
-- `app/api/share-booth/route.ts` rewritten to branch on `Authorization` header presence. Auth branch keeps 5/10min rate limit + `requireAuth` + ownership check + admin bypass (Q-009) unchanged. Anon branch: separate **2/10min** bucket, no ownership check, `getServiceClient()` used directly. Malformed/expired token on the auth branch still 401s — no silent fallthrough. Per-recipient dedup map (60s) is shared across branches.
-- `components/ShareBoothSheet.tsx` — added `mode?: "vendor" | "shopper"` prop (default `"vendor"` for back-compat). Shopper mode swaps `authFetch` for plain `fetch` so a signed-in non-owner on someone else's `/shelf/[slug]` lands on the anon server branch instead of 403.
-- `lib/email.ts:sendBoothWindow` — `senderMode: "vendor" | "anonymous"` on `ShareBoothWindowPayload`. Anonymous drops the italic `"{X} sent you a Window…"` voice line from body HTML, preheader, AND plain-text fallback. Vendor-name hero still leads.
-- `app/shelf/[slug]/page.tsx` — `canShare` gate dropped `isAdmin(user)`; now `!!vendor && available.length >= 1` for everyone. `shareMode` derived per viewer: admin OR (`user.id === vendor.user_id`) → `"vendor"`; everyone else → `"shopper"`.
-- `docs/share-booth-build-spec.md` §Rate limiting rewritten to document both branches across all five levers.
-- `docs/queued-sessions.md` Q-008 retired as ⏸️ Superseded with a full retirement block.
+## Archived: Session 50 tombstone
+
+- **Session 50** (2026-04-23) — Q-008 shopper Window share shipped (`/api/share-booth` branches on Authorization header; anon = 2/10min + no ownership + no sender voice; auth path + Q-009 admin bypass unchanged). `/shelf/[slug]` airplane now visible to everyone with available.length≥1, `shareMode` derived per viewer. Guest edit-pencil hole closed: `signOut()` clears `LOCAL_VENDOR_KEY`, `detectOwnershipAsync` requires a session, Find Detail subscribes to `onAuthChange`. One commit `0d30fa0`. QA walk deferred; **verified clean session 51 — 5/5 scenarios PASSED**.
 
 ---
 
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-23 (session 50 close — Q-008 shopper Window share + guest edit-pencil fix)
+> Last updated: 2026-04-24 (session 51 close — Q-008 QA PASSED + Q-011 design session)
 
-**Status:** `0d30fa0` on main. One clean commit shipped. Q-008 done in code — on-device QA walk deferred. Guest edit-pencil hole closed. Build clean, no migration, no schema change. DB clean-slate persists; beta invites remain technically unblocked. Vercel CLI still not globally installed on David's machine — one-time fix is `sudo chown -R $(whoami) /usr/local/lib/node_modules && npm i -g vercel`; workaround is `npx vercel@latest --prod`.
+**Status:** `0d30fa0` still on main. No commits session 51 — pure design + verification work. Q-008 shipment verified clean on device (5/5 QA scenarios PASSED). Q-011 scoped as a Design session rather than a patch; mockup at `docs/mockups/share-booth-email-v2.html` (v2.2 final state) is the source of truth for session-52 build execution. DB clean-slate persists; beta invites remain technically unblocked. Vercel CLI still not globally installed on David's machine — one-time fix is `sudo chown -R $(whoami) /usr/local/lib/node_modules && npm i -g vercel`; workaround is `npx vercel@latest --prod`.
 
-### 🚧 In-flight before the next scope — Q-008 + edit-pencil QA walk (~10 min)
+### 🚧 Queued for session 52 — Q-011 build execution (~90–120 min)
 
-Session 50 shipped the code but David chose to hold the QA walk. The 5-scenario walk should be the first thing session 51 runs before adopting new scope, because all five scenarios hit real user flows that need verification on device. Running the walk cold from `0d30fa0` is safe — no deploy dependency David hasn't already handled, no test-data prep needed.
+Mockup v2.2 locked with David's approvals:
+- **Variant B banner** (post-it embedded in banner, no overhang, 86×86 rotated 6°)
+- **SMALL masthead** — 13px uppercase `TREEHOUSE FINDS` Georgia 600 letterspaced + `Embrace the Search. Treasure the Find.` tagline kept at 10px italic
+- **New opener copy** — italic Georgia 15px `You've received a personal invite.` followed by IM Fell 14px italic eyebrow `Step inside a curated booth from` + IM Fell 32px vendor name hero
+- **`senderMode` / `senderFirstName` retire from email template** — server-side still tracks for rate-limit buckets (5/10min auth vs 2/10min anon) but template stops caring who sent it. Types marked optional / display-unused; safe-delete in follow-up cleanup.
+- **Real PinGlyph SVG** inlined (teardrop outline + filled circle, `strokeWidth=1.3`, `v1.inkPrimary`) replacing Unicode `⦲` on the mall location line
+- **IM Fell via Google Fonts `<link>`** added to email shell `<head>`; Outlook + some Android clients fall back to Georgia as graceful degradation
+- **Preheader simplifies** to `A personal invite to a curated booth.` — one line, always true
+- **Plain-text fallback adopts new opener** — `You've received a personal invite.\n\nA curated booth from {vendorName}.\n...`
 
-**Scenarios (preserved from session 50):**
+**Build plan (session 52):**
 
-1. **Guest edit pencil disappears on sign-out** (~2 min)
-   - Sign in as admin → open any find detail → pencil bubble visible (top-right of photo).
-   - Second tab → `/admin` → "Sign out".
-   - Return to the first tab (DON'T refresh). Expected: pencil flips to save-heart within ~1s.
-   - Also verify: reload the find page while signed out → still no pencil.
+1. Write build spec to `docs/share-booth-build-spec.md` (v2 addendum) documenting all of the above — dev-handoff doc per session-28 rule, David doesn't read it, future Claude sessions do
+2. `lib/email.ts` rewrites:
+   - `renderEmailShell` — SMALL masthead (13px uppercase + 10px italic tagline)
+   - Add IM Fell Google Fonts `<link>` to shell `<head>`
+   - `renderWindowBody` — new opener block (invite line + eyebrow + IM Fell vendor name), retire `senderMode` branching
+   - `renderBanner` — Variant B (embedded post-it, no overhang, `height: 220px`)
+   - New internal `renderPostItDiv` helper — styled div (not SVG, Gmail-safe per session-51 diagnosis), 86×86, rotate(6deg), pin + eyebrow + numeral
+   - `renderLocationLine` — real PinGlyph SVG instead of `⦲` char
+   - Update plain-text fallback + preheader
+3. Type cleanup on `ShareBoothWindowPayload` — mark `senderFirstName` + `senderMode` optional / display-unused, add deprecation comment
+4. Build check (`npm run build 2>&1 | tail -30`)
+5. Commit + push
+6. On-device verification — Gmail web first (original failure client David caught), then iOS Mail. Expected: post-it renders rotated inside banner, no clipping, no duplicate vendor name in opener, pin glyph matches rest of app, masthead feels subtle, booth leads.
 
-2. **Shopper share — anon happy path** (~3 min)
-   - Private/incognito → `/shelf/{slug-with-finds}`. Masthead airplane visible (right slot).
-   - Tap airplane → sheet opens (email input + QR code + preview tiles).
-   - Enter your email → "Send the invite" → sent confirmation in sheet.
-   - Inbox: subject still `A Window into {vendor}`, but body has NO italic "{X} sent you a Window…" line — vendor-name hero leads. Plain-text preview reads `A Window into {vendor}.` (not `{X} sent you…`).
+**If Q-011 build PASSes on device session 52**, the natural session-53 opener is Ladder B (staging branch + CI workflow + package scripts + staging Supabase project + `docs/beta-plan.md`) followed by Supabase MCP wiring. Both deferred from session 51.
 
-3. **Vendor share regression** (~2 min)
-   - Sign in as vendor (or admin) → `/my-shelf` → airplane → send to yourself.
-   - Inbox verify: italic voice line `"{display_name} sent you a Window into {vendor}."` IS present (unchanged).
+### Alternative next sessions (if David wants to redirect from Q-011)
 
-4. **Admin share on someone else's booth** (~2 min)
-   - Admin signed in → `/shelf/{other-vendor-slug}` → airplane → send to yourself.
-   - Inbox verify: voice line present, attributed to that vendor's `display_name`.
-
-5. **Anon rate-limit cap** (~2 min)
-   - Incognito → `/shelf/{slug}` → send once (`you+1@…`), twice (`you+2@…`) — both succeed.
-   - Third send (`you+3@…`) → expected: 429 "Too many sends — try again in a few minutes."
-   - Note: signed-in vendor sending in parallel should still succeed (separate bucket).
-
-If any scenario fails, patch inline and re-walk that scenario. Retire Q-008 QA hold in CLAUDE.md after all five pass.
-
-### Recommended next session — feed content seeding (~30–60 min, after the walk)
-
-Carried forward from sessions 44–49. The redesigned `/shelves` page + working QR share sheet + "Request Digital Booth" CTA on the home feed + session-50 anon share path make this the right moment to seed real content and see the app as a first-time shopper would — AND to exercise the anon share end-to-end with a real booth.
-
-Seeding scope:
-- Create 2–3 real (non-test) vendors via `/shelves` Add-a-Booth (primary path). `/vendor-request` → `/admin` approve flow (Flow 3) also available — populates hero_image_url from proof photo (session-47 fix).
-- Seed 10–15 finds across those vendors, mostly available status with 1–2 "found a home."
-- Photos should be real items spanning a few material categories (glass, ceramic, brass, wood) to make the feed feel varied on first scroll.
-- Verify feed, Find Map, mall pages, and the new `/shelves` mall-grouped grid all render well.
-- Light QA: `source: "claude"` returns on all auto-caption calls (session-46 bar: "Brass bald eagle figurine sculpture" quality).
-- Walk the Q-008 anon share from a private window on a real seeded booth.
-
-**When a session seeds content, add a one-liner to CLAUDE.md's CURRENT ISSUE so the next session doesn't trip on it** (session-46 rule candidate, still un-promoted).
-
-### Alternative next sessions
-
-- **Q-011** 🟢 (~60–90 min) — Window email banner post-it placement (email-rendering bug).
+- **Ladder B — ops/infra sprint** (~2–3 hours, session 51 design) — branch-based staging, CI workflow, staging Supabase project, `docs/beta-plan.md`. Recommended BEFORE beta invites go out; cost compounds with each vendor added. Design discussion captured in session-51 chat but not committed to docs.
+- **Feed content seeding** (~30–60 min) — carried forward from sessions 44–49. DB clean-slate persists. Good once Q-011 closes and Ladder B staging exists.
 - **Q-002** 🟢 (~20 min) — Picker affordance placement revision.
-- **Tech Rule promotion batch** (~40 min) — eight candidates queued, one promotion-ready (session-46 script-first rule hit threshold in session 48).
-- **Session-archive drift cleanup** (~30 min) — sessions 28–38 + 44–49 one-liner only; session-50 block is paste-over-ready.
+- **Tech Rule promotion batch** (~40 min) — **nine candidates now queued** (session-51 adds "email template parity audit" — naming only, not promoted). Promotion-ready: session-46 script-first rule hit threshold in session 48.
+- **Session-archive drift cleanup** (~30 min) — sessions 28–38 + 44–50 one-liner only; session-51 block is paste-over-ready.
 - **Design agent principle addition** (~10 min, docs only) — "reconciliation of a second glyph/affordance is part of the same scope." `MASTER_PROMPT.md` Design Agent section.
 - **`/admin` UI `auth.users` delete reliability spike** (~20–30 min).
 - **Error monitoring** (Sentry or structured logs). Sprint 3 carryover.
 - **Beta feedback mechanism** (Tally.so link).
 
-### Session 51 opener (pre-filled — run the QA walk first, then seed content)
+### Session 52 opener (pre-filled — Q-011 build execution)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
 STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Vercel
-Working directory: /Users/davidbutler/Projects/treehouse-treasure-search
+Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Two-part session. (A) Run the 5-scenario Q-008 + edit-pencil QA walk from CLAUDE.md §In-flight — no code changes expected unless a scenario fails; report pass/fail per scenario. (B) If walk passes: proceed with feed content seeding — create 2–3 real vendors via /shelves Add-a-Booth (or /vendor-request → /admin Flow 3); seed 10–15 finds mostly available with 1–2 "found a home"; verify feed + Find Map + mall pages + /shelves grid; light QA that source: "claude" returns on all auto-caption calls; walk the Q-008 anon share from a private window on a real seeded booth.
+CURRENT ISSUE: Execute Q-011 per session-51 approved mockup at docs/mockups/share-booth-email-v2.html (Variant B + SMALL masthead + tagline kept + new invite copy + senderMode retirement from template). Write build spec addendum to docs/share-booth-build-spec.md first, then lib/email.ts rewrites (renderEmailShell SMALL masthead, renderWindowBody opener with invite line + eyebrow + IM Fell vendor name, renderBanner Variant B, new renderPostItDiv helper styled-div not SVG, renderLocationLine real PinGlyph SVG, IM Fell Google Fonts link in shell head). Mockup is source of truth — if spec disagrees, mockup wins. Also queued for session 53: Ladder B (staging + CI + scripts + beta plan + Supabase MCP wiring).
 ```
 
 ---
 
 ## Archived session summaries
 
-> Sessions 34–45 kept as one-liner tombstones. Full detail in `docs/session-archive.md` (or in session-blocks that are queued for eventual archive-drift cleanup).
+> Sessions 34–46 kept as one-liner tombstones. Full detail in `docs/session-archive.md` (or in session-blocks that are queued for eventual archive-drift cleanup).
 
 - **Session 34** (2026-04-20) — Multi-booth scoping. Option A chosen, mockup approved, Q-001 Path B backup captured. Superseded by session 35.
 - **Session 35** (2026-04-20) — Multi-booth rework shipped end-to-end + KI-006 resolved. Six-step QA walk passed.
@@ -189,7 +174,6 @@ CURRENT ISSUE: Two-part session. (A) Run the 5-scenario Q-008 + edit-pencil QA w
 - **Session 47** (2026-04-23) — Vendor onboarding hero image gap fixed: `proof_image_url` now transfers to `vendors.hero_image_url` on approval (3 edits + safe-claim path backfill in `app/api/admin/vendor-requests/route.ts`). My Shelf banner no longer blank after sign-in. Forward-only fix; no migration.
 - **Session 48** (2026-04-23) — Featured banner RLS drift fixed across Home + Find Map + `/admin` Banners preview. Migration 008 + `scripts/inspect-banners.ts` diagnostic. HITL: David pasted SQL into Supabase editor; anon reads confirmed restored.
 - **Session 49** (2026-04-23) — Booths page full v1.2 redesign (2-column grid, StickyMasthead, mall grouping). QR code added to share sheet with logo overlay; confirmed scanning on device. Copy polish: "Invite someone in to" header, "Send the invite" CTA, "Request Digital Booth" green pill on home, "Vendor Sign in" on login.
-- **Session 50** (2026-04-23) — Q-008 shopper Window share shipped (`/api/share-booth` branches on Authorization header; anon = 2/10min + no ownership + no sender voice; auth path + Q-009 admin bypass unchanged). `/shelf/[slug]` airplane now visible to everyone with available.length≥1, `shareMode` derived per viewer. Guest edit-pencil hole closed: `signOut()` clears `LOCAL_VENDOR_KEY`, `detectOwnershipAsync` requires a session, Find Detail subscribes to `onAuthChange`. One commit `0d30fa0`. QA walk deferred to session 51.
 
 ---
 
@@ -214,10 +198,10 @@ CURRENT ISSUE: Two-part session. (A) Run the 5-scenario Q-008 + edit-pencil QA w
 ### 🟡 Q-007 Window Sprint expansion (post-MVP)
 
 All captured in `docs/queued-sessions.md`:
-- **Q-008** ✅ — Open share to unauthenticated shoppers. **Shipped session 50** (QA walk deferred to session 51).
+- **Q-008** ✅ — Open share to unauthenticated shoppers. **Shipped session 50; QA walk PASSED session 51.**
 - **Q-009** ✅ — Admin can share any booth (ownership bypass). **Shipped session 45.**
 - **Q-010** ✅ — Window email CTA URL fix (`/vendor/` → `/shelf/`). Shipped session 41.
-- **Q-011** 🟢 — Window email banner post-it placement (email-rendering bug). ~60–90 min.
+- **Q-011** 🟢 — Window email banner redesign. **Scoped as Design session 51; mockup at `docs/mockups/share-booth-email-v2.html` locked. Build queued for session 52 (~90–120 min).** Scope expanded from "SVG-stripping bug" to full banner block redesign (masthead shrink + new opener copy + Variant B embedded post-it + real PinGlyph + IM Fell Google Fonts + senderMode retire from template).
 - **Q-006** 🟡 — Deep-link CTA. Parked on Sprint 6+ Universal Links.
 
 ### 🟡 Session 35 non-gating follow-up
@@ -265,4 +249,4 @@ All captured in `docs/queued-sessions.md`:
 - Trigger: say "generate investor update" at session close
 - Process doc: Notion → Agent System Operating Manual → 📋 Investor Update — Process & Cadence
 
-> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data; session 43 audited AI model surface + locked in billing safeguards; session 44 restored `/shelves` Add-a-Booth primitive; session 45 shipped the cross-mall fix + admin delete + Q-009 admin share bypass; session 46 re-passed T4d QA walk + qa-walk.ts script; session 47 fixed vendor onboarding hero image gap; session 48 fixed featured-banner RLS drift; session 49 shipped /shelves v1.2 redesign + QR code share + copy polish; session 50 shipped Q-008 shopper Window share + guest edit-pencil fix (QA walk deferred to session 51). Next natural investor-update trigger point is after feed content seeding (session 51 or later)** — the update would then honestly report the full pre-beta polish arc (sessions 42–51) as complete rather than partial.
+> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data; session 43 audited AI model surface + locked in billing safeguards; session 44 restored `/shelves` Add-a-Booth primitive; session 45 shipped the cross-mall fix + admin delete + Q-009 admin share bypass; session 46 re-passed T4d QA walk + qa-walk.ts script; session 47 fixed vendor onboarding hero image gap; session 48 fixed featured-banner RLS drift; session 49 shipped /shelves v1.2 redesign + QR code share + copy polish; session 50 shipped Q-008 shopper Window share + guest edit-pencil fix; session 51 PASSED Q-008 QA walk 5/5 + scoped Q-011 as Design session with mockup locked. Next natural investor-update trigger point is after Q-011 ships + feed content seeding + Ladder B staging lands (sessions 52–54)** — the update would then honestly report the full pre-beta polish arc (sessions 42–54) as complete rather than partial.

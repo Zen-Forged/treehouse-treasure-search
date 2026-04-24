@@ -6,26 +6,6 @@
 //   sendApprovalInstructions(payload)  — Email #2 per onboarding-journey.md
 //   sendBoothWindow(payload)           — Window share email (Q-007, session 39)
 //
-// Session 51 Q-011 (2026-04-24):
-//  - Window email banner post-it placement regression fixed. Session-39's
-//    implementation rendered the post-it as inline SVG inside a negative-
-//    margin div with position:relative. On Gmail web this surfaced two
-//    problems: (1) Gmail stripped the SVG <rect> and <circle> elements
-//    (paranoia about tracking-pixel patterns), leaving only <text> nodes
-//    rendering as flow content in italic Georgia, and (2) the negative-
-//    margin-div landed BELOW the banner rather than overlapping it —
-//    visibly clipped at the banner's bottom-right edge. David caught
-//    this session 51 QA.
-//  - Fix: post-it now rendered as nested-table-with-styled-div using CSS
-//    transform:rotate() (Gmail web + Apple Mail + iOS Mail all respect
-//    this; Outlook MSO conditional comment drops the rotation and shows
-//    a square post-it as graceful fallback). No SVG = no stripping risk.
-//    renderPostItSvg kept in-file as reference for any future session
-//    that wants to revisit; renderPostItDiv is the new primary path.
-//  - Mirrors /my-shelf BoothHero: 86×86 post-it, +6° rotation, pinned
-//    bottom-right, 'BOOTH' italic eyebrow, Times New Roman numeral that
-//    auto-scales with digit count (matches lib/utils.ts boothNumeralSize).
-//
 // Session 41 Q-010 (2026-04-21):
 //  - Window email CTA URL fixed from /vendor/{slug} → /shelf/{slug}. The
 //    canonical public shelf route is /shelf/{slug}; /vendor/{slug} is a
@@ -437,14 +417,11 @@ function renderWindowBody(opts: WindowBodyOpts): string {
 /**
  * Banner primitive — hero image with post-it pinned bottom-right.
  *
- * Session 51 Q-011 rewrite: the banner is now a single-table structure.
- * Row 1 holds the hero image full-width. Row 2 holds the post-it aligned
- * right, wrapped in a fixed-width container with margin-top: -60px so the
- * post-it overlaps the banner by ~40% while 60% stays below the bottom
- * edge (matches the /my-shelf BoothHero proportion). The explicit width
- * and height on the inner wrapper confines the rotated paper within an
- * 86×86 bounding box so the rotation can't push content outside the cell
- * and clip against the banner's rounded corners.
+ * Rendering strategy: nested <table> with background-image on a wrapper cell
+ * (via `background` attribute + VML fallback for Outlook). Post-it overlays
+ * using absolute positioning inside a conditional-compat wrapper. CSS
+ * transforms are stripped by Outlook; the post-it rotation is baked into
+ * an inline SVG instead (see renderPostItSvg).
  *
  * Graceful fallback when heroImageUrl is null: solid earth-tone fill with
  * a subtle linear-gradient overlay to simulate the scrim.
@@ -455,75 +432,45 @@ function renderBanner(
   vendorName:   string,
 ): string {
   const bannerBg = heroImageUrl
-    ? ``
+    ? `background: #1a1a18 url('${escapeAttr(heroImageUrl)}') center/cover no-repeat;`
     : `background: linear-gradient(135deg, #6a4e30 0%, #8a6b45 50%, #5a3e20 100%);`;
 
-  // Mail-client note: the <img> element ensures every client shows the hero.
-  // Object-fit is NOT respected in most email clients; we rely on fixed
-  // width/height + the source image being sized reasonably.
-  const heroImg = heroImageUrl
+  // Mail-client note: the <img> fallback ensures Outlook desktop (which often
+  // ignores background-image on td) still shows the hero. Object-fit is NOT
+  // respected in most email clients; we rely on width/height + max-height.
+  const heroFallbackImg = heroImageUrl
     ? `<img src="${escapeAttr(heroImageUrl)}" alt="${escapeAttr(vendorName)}" width="540" height="196" style="display: block; width: 100%; max-width: 540px; height: 196px; object-fit: cover; border-radius: 12px;" />`
     : `<div style="width: 100%; height: 196px; border-radius: 12px; ${bannerBg}"></div>`;
 
   // Post-it only appears when there's a booth number; otherwise the banner
   // stands on its own.
-  const postItRow = boothNumber
+  const postItOverlay = boothNumber
     ? `
-        <tr>
-          <td align="right" style="padding: 0 14px 10px 0; line-height: 0;">
-            <div style="display: inline-block; margin-top: -60px; width: 86px; height: 86px; vertical-align: top;">
-              ${renderPostItDiv(boothNumber)}
-            </div>
-          </td>
-        </tr>`
+        <!--[if !mso]><!-- -->
+        <div style="position: relative; margin-top: -96px; margin-right: 14px; margin-bottom: 10px; text-align: right; line-height: 0;">
+          ${renderPostItSvg(boothNumber)}
+        </div>
+        <!--<![endif]-->`
     : ``;
 
   return `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 18px;">
-        <tr>
-          <td style="padding: 0; line-height: 0;">
-            ${heroImg}
-          </td>
-        </tr>
-        ${postItRow}
-      </table>
+      <div style="margin: 0 0 18px; border-radius: 12px; overflow: hidden;">
+        ${heroFallbackImg}
+        ${postItOverlay}
+      </div>
   `;
 }
 
 /**
- * Post-it as styled div (Q-011 replacement for renderPostItSvg).
+ * Post-it as inline SVG (Outlook-compat rotation).
  *
- * Why div not SVG: Gmail web aggressively strips SVG <rect> and <circle>
- * elements as a tracking-pixel defense, leaving only <text> to render as
- * flow content — which surfaces as the clipped 'BOOTH 000' text David
- * caught session 51. A styled div with inline background, border, and
- * text elements is Gmail's native lingua franca and survives cleanly.
+ * Why SVG: CSS `transform: rotate(6deg)` is stripped by Outlook, and some
+ * Gmail native clients. SVG internal `transform="rotate(...)"` is respected
+ * by every modern mail client. 86×86 viewBox matches the /my-shelf BoothHero
+ * post-it sizing.
  *
- * Rotation: CSS transform:rotate(6deg) is respected by Gmail web, Apple
- * Mail, iOS Mail, Yahoo web, AOL. Outlook desktop strips transform; for
- * those clients the post-it renders square (no rotation) which is a
- * readable graceful fallback — the pin, eyebrow, and numeral still land
- * in a recognizable post-it shape.
- *
- * 86×86 to match the /my-shelf BoothHero primitive. Numeral auto-scales
- * by digit count (mirrors lib/utils.ts boothNumeralSize).
- */
-function renderPostItDiv(boothNumber: string): string {
-  const digitCount = boothNumber.length;
-  const fontSize   = digitCount <= 4 ? 32 : digitCount === 5 ? 26 : 20;
-
-  return `<div style="width: 86px; height: 86px; background: #fffaea; border: 0.5px solid rgba(42,26,10,0.18); box-shadow: 0 4px 10px rgba(42,26,10,0.25); transform: rotate(6deg); -ms-transform: rotate(6deg); -webkit-transform: rotate(6deg); position: relative; text-align: center; box-sizing: border-box; padding: 14px 4px 8px;">
-    <div style="position: absolute; top: -4px; left: 50%; margin-left: -4px; width: 8px; height: 8px; background: rgba(42,26,10,0.75); border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(42,26,10,0.55);"></div>
-    <div style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 10px; color: #6b5538; line-height: 1.1; letter-spacing: 0.5px; margin-top: 2px;">Booth</div>
-    <div style="font-family: 'Times New Roman', Georgia, serif; font-size: ${fontSize}px; font-weight: 400; color: #2a1a0a; line-height: 1; margin-top: 6px;">${escapeHtml(boothNumber)}</div>
-  </div>`;
-}
-
-/**
- * Post-it as inline SVG — RETIRED session 51 Q-011 in favor of
- * renderPostItDiv (see above for rationale). Kept in file as reference
- * for any future session that wants to revisit SVG rendering; not called
- * from any active code path.
+ * Paper fill #fffaea, hairline border via stroke, subtle shadow via filter.
+ * Numeral in Georgia via <text> element; auto-shrinks when digit count grows.
  */
 function renderPostItSvg(boothNumber: string): string {
   // Auto-scale numeral size by digit count (mirrors lib/utils.ts
