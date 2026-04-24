@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>R4c — Admin Malls tab (v1 mockup)</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* /admin uses v0.2 chrome — warm cream background, Georgia serif, green accents */
+    --bg:             #f6f1e6;
+    --surface:        #ffffff;
+    --header:         rgba(246,241,230,0.94);
+
+    --text-primary:   #2a1a0a;
+    --text-mid:       #4a3520;
+    --text-muted:     #6b5538;
+    --text-faint:     rgba(42,26,10,0.45);
+
+    --border:         rgba(42,26,10,0.14);
+
+    --green:          #1e4d2b;
+    --green-light:    #e7efe4;
+    --green-border:   rgba(30,77,43,0.28);
+
+    --amber:          #8a5a14;
+    --amber-light:    #f4ead4;
+    --amber-border:   rgba(138,90,20,0.28);
+
+    --draft:          #8a7b68;
+    --draft-bg:       rgba(42,26,10,0.05);
+    --draft-border:   rgba(42,26,10,0.18);
+
+    --im-fell:        "IM Fell English", Georgia, serif;
+    --serif:          Georgia, serif;
+    --sys:            -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #1e1a14; font-family: var(--sys); color: var(--text-primary); }
+
+  /* ── Decisions header ─────────────────────────────────────────── */
+  .decisions {
+    max-width: 960px; margin: 0 auto; padding: 36px 24px 28px; color: rgba(232,221,199,0.9);
+  }
+  .decisions h1 {
+    font-family: var(--im-fell); font-weight: 400; font-size: 30px; color: #e8ddc7;
+    margin: 0 0 6px; text-align: center; letter-spacing: -0.01em;
+  }
+  .decisions .subtitle {
+    text-align: center; color: rgba(232,221,199,0.6); font-size: 13px;
+    margin: 0 auto 24px; line-height: 1.65; max-width: 640px;
+  }
+  .decisions .meta {
+    text-align: center; color: rgba(232,221,199,0.38); font-size: 11px;
+    margin: 0 auto 32px; font-family: var(--serif); font-style: italic;
+  }
+  .pick-box {
+    background: rgba(232,221,199,0.07); border: 1px solid rgba(232,221,199,0.15);
+    border-radius: 12px; padding: 18px 22px; margin-bottom: 10px;
+  }
+  .pick-box p { margin: 0 0 10px; font-size: 13px; line-height: 1.65; color: rgba(232,221,199,0.8); }
+  .pick-box p:last-child { margin-bottom: 0; }
+  .pick-box strong { color: #e8ddc7; }
+  .pick-box .q { font-family: var(--im-fell); font-style: italic; font-size: 15px; color: rgba(232,221,199,0.72); margin: 0 0 5px; }
+  .pick-box .rec { color: rgba(200,220,200,0.85); }
+
+  .frames-row {
+    max-width: 1280px; margin: 0 auto; padding: 0 20px 80px;
+    display: flex; gap: 28px; justify-content: center; align-items: flex-start; flex-wrap: wrap;
+  }
+  .frame-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; flex: 0 0 auto; }
+  .frame-label { font-family: var(--im-fell); font-style: italic; font-size: 16px; color: rgba(232,221,199,0.7); text-align: center; max-width: 375px; }
+  .frame-label strong { display: block; font-style: normal; font-size: 18px; color: #e8ddc7; margin-bottom: 2px; }
+
+  .phone {
+    width: 375px; height: 812px; background: var(--bg); border-radius: 40px;
+    box-shadow: 0 12px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06);
+    overflow: hidden; position: relative; display: flex; flex-direction: column;
+  }
+
+  /* ── /admin chrome ─────────────────────────────────────────────── */
+  .admin-header {
+    background: var(--bg); border-bottom: 1px solid var(--border);
+    padding: 40px 20px 16px; flex-shrink: 0;
+    display: flex; align-items: flex-start; justify-content: space-between;
+  }
+  .admin-header .title-block .eyebrow {
+    font-size: 9px; color: var(--text-faint); text-transform: uppercase;
+    letter-spacing: 2px; margin-bottom: 3px;
+  }
+  .admin-header .title-block .title {
+    font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--text-primary);
+  }
+  .admin-header .actions { display: flex; gap: 10px; align-items: center; }
+  .admin-header .back-link { font-size: 12px; color: var(--green); }
+  .admin-header .signout-pill {
+    display: flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 8px;
+    border: 1px solid var(--border); font-size: 11px; color: var(--text-faint);
+  }
+
+  .admin-id {
+    margin: 16px 20px 0; padding: 10px 14px; border-radius: 10px;
+    background: var(--green-light); border: 1px solid var(--green-border);
+  }
+  .admin-id .eyebrow {
+    font-size: 9px; color: var(--green); text-transform: uppercase;
+    letter-spacing: 1.8px; margin-bottom: 2px; font-weight: 600;
+  }
+  .admin-id .email { font-size: 12px; color: var(--text-primary); }
+
+  /* ── Tab switcher (4 tabs now) ─────────────────────────────────── */
+  .tabs { margin: 20px 20px 0; display: flex; gap: 6px; }
+  .tab {
+    flex: 1; padding: 10px 4px; border-radius: 10px; font-size: 11px; font-weight: 500;
+    background: transparent; color: var(--text-mid);
+    border: 1px solid var(--border); display: flex; align-items: center;
+    justify-content: center; gap: 4px; white-space: nowrap;
+  }
+  .tab.active { background: var(--green); color: #fff; border-color: var(--green); }
+  .tab .tab-count {
+    background: var(--green); color: #fff; padding: 1px 5px; border-radius: 8px;
+    font-size: 10px; font-weight: 700;
+  }
+  .tab.active .tab-count { background: rgba(255,255,255,0.25); }
+
+  /* ── Malls list ────────────────────────────────────────────────── */
+  .malls-container { margin: 24px 20px 0; padding-bottom: 40px; overflow-y: auto; flex: 1; }
+  .malls-container::-webkit-scrollbar { display: none; }
+  .malls-header-row {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+  }
+  .malls-eyebrow {
+    font-size: 9px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 2px;
+  }
+  .refresh-link {
+    display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted);
+  }
+
+  /* Section group headers */
+  .group-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 12px 0 8px;
+  }
+  .group-head .label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1.8px; font-weight: 600;
+  }
+  .group-head .label.active { color: var(--green); }
+  .group-head .label.soon   { color: var(--amber); }
+  .group-head .label.draft  { color: var(--draft); }
+  .group-head .caret { font-size: 10px; color: var(--text-faint); }
+
+  /* Mall row */
+  .mall-row {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .mall-row.active-mall { background: var(--green-light); border-color: var(--green-border); }
+  .mall-row.soon-mall   { background: var(--surface); border-color: var(--amber-border); }
+  .mall-row.draft-mall  {
+    background: var(--draft-bg); border: 1px dashed var(--draft-border);
+    opacity: 0.86;
+  }
+
+  .mall-body { flex: 1; min-width: 0; }
+  .mall-name {
+    font-family: var(--serif); font-size: 14px; font-weight: 600; color: var(--text-primary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mall-sub {
+    font-size: 11px; color: var(--text-muted); margin-top: 2px;
+  }
+  .mall-tert {
+    font-size: 10px; color: var(--text-faint); font-family: "SF Mono", Consolas, monospace;
+    margin-top: 3px;
+  }
+
+  .pill {
+    font-size: 10px; font-weight: 600; padding: 4px 9px; border-radius: 999px;
+    text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap;
+  }
+  .pill.active { background: var(--green); color: #fff; }
+  .pill.soon   { background: var(--amber-light); color: var(--amber); border: 1px solid var(--amber-border); }
+  .pill.draft  { background: var(--draft-bg); color: var(--draft); border: 1px solid var(--draft-border); }
+
+  /* Expanded row with segmented control */
+  .mall-row.expanded {
+    flex-direction: column; align-items: stretch;
+    background: var(--surface); border: 1px solid var(--green-border);
+    box-shadow: 0 4px 18px rgba(30,77,43,0.08);
+  }
+  .mall-row.expanded .row-top { display: flex; align-items: center; gap: 12px; }
+  .mall-row.expanded .row-divider {
+    height: 1px; background: var(--border); margin: 12px 0 12px;
+  }
+  .segmented {
+    display: flex; gap: 6px; padding: 3px;
+    background: var(--draft-bg); border-radius: 10px;
+  }
+  .seg {
+    flex: 1; padding: 9px 6px; border-radius: 8px; font-size: 11px; font-weight: 600;
+    text-align: center; color: var(--text-mid); background: transparent;
+    border: 1px solid transparent;
+  }
+  .seg.selected { background: #fff; color: var(--text-primary); border-color: var(--border); box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .seg.selected.active-seg { background: var(--green); color: #fff; border-color: var(--green); }
+
+  .seg-hint {
+    margin-top: 10px; font-size: 11px; color: var(--text-muted); font-style: italic; line-height: 1.5;
+  }
+
+  /* ── Bottom nav (decorative, not real) ─────────────────────────── */
+  .bottom-nav {
+    flex-shrink: 0; height: 72px; background: rgba(246,241,230,0.97);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-around; padding: 0 16px 4px;
+  }
+  .bn-item { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; color: var(--text-faint); }
+  .bn-dot { width: 22px; height: 22px; border-radius: 50%; border: 1px solid currentColor; }
+
+  /* Toast ghost */
+  .toast {
+    position: absolute; left: 12px; right: 12px; bottom: 88px;
+    background: #f0ede6; border: 1px solid var(--green-border); border-radius: 14px;
+    padding: 12px 14px; box-shadow: 0 10px 32px rgba(26,26,24,0.16);
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .toast .eyebrow {
+    font-size: 9px; color: var(--green); text-transform: uppercase; letter-spacing: 1.8px;
+    font-weight: 600;
+  }
+  .toast .main {
+    font-family: var(--serif); font-size: 14px; font-weight: 600; color: var(--text-primary);
+  }
+  .toast .note {
+    font-size: 11px; color: var(--text-mid); font-style: italic; margin-top: 2px;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="decisions">
+  <h1>R4c — Admin Malls tab</h1>
+  <div class="subtitle">
+    Three-state lifecycle for malls: <strong>Draft</strong> / <strong>Coming soon</strong> / <strong>Active</strong>.
+    New 4th tab on <code>/admin</code> carries the toggle. Shopper pickers filter to <em>active</em> only;
+    admin surfaces show all with status pills; vendor-owned pages still render their own mall regardless.
+  </div>
+  <div class="meta">
+    Session 56 · 2026-04-24 · design record: <code>docs/r4c-mall-active-design.md</code>
+  </div>
+
+  <div class="pick-box">
+    <p class="q">Three questions still tentative — flagged in the design doc for your review before implementation</p>
+    <p><strong>D4 — Migration default.</strong> <span class="rec">Recommendation: all existing malls default to <code>draft</code>; you flip the 1–2 you care about in the new admin tab post-deploy (≤30 sec).</span> This <em>reveals</em> the pollution problem R4c solves rather than papering over it.</p>
+    <p><strong>D5 — Where the toggle lives.</strong> <span class="rec">Recommendation: new <code>Malls</code> tab on <code>/admin</code>, 4th position after Requests / Posts / Banners.</span> Keeps schema-editing admin colocated. <code>/shelves</code> stays a browser, not an editor.</p>
+    <p><strong>D6 — Can vendors request booths at <code>coming_soon</code> malls?</strong> <span class="rec">Recommendation: no — vendor-request dropdown filters to <code>active</code> only.</span> Accepting requests before the mall is operational creates a queue you can't act on.</p>
+  </div>
+
+  <div class="pick-box">
+    <p class="q">Decisions already frozen by your session-56 answers</p>
+    <p><strong>D1.</strong> Three states (not just <code>is_active</code> bool). ✅</p>
+    <p><strong>D2.</strong> Vendors attached to inactive malls: hidden from shopper picker + feed filter. Still visible to the vendor themselves and to admin. ✅</p>
+    <p><strong>D3.</strong> Add <code>malls.activated_at</code> timestamp now. R3 will layer <code>mall_activated</code> events on top when it ships. ✅</p>
+  </div>
+</div>
+
+<div class="frames-row">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       Frame 1 — Malls tab, list view (collapsed draft section)
+  ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="frame-wrap">
+    <div class="frame-label"><strong>Frame 1 — List view</strong>3 groups · drafts collapsed · green section pulled to top</div>
+    <div class="phone">
+      <div class="admin-header">
+        <div class="title-block">
+          <div class="eyebrow">Treehouse</div>
+          <div class="title">Admin</div>
+        </div>
+        <div class="actions">
+          <span class="back-link">← Feed</span>
+          <span class="signout-pill">⇥ Sign out</span>
+        </div>
+      </div>
+
+      <div class="admin-id">
+        <div class="eyebrow">Signed in as admin</div>
+        <div class="email">david@zenforged.com</div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab">👤 Requests <span class="tab-count" style="background:var(--green);color:#fff;">3</span></div>
+        <div class="tab">🏬 Posts (12)</div>
+        <div class="tab">🖼 Banners</div>
+        <div class="tab active">📍 Malls</div>
+      </div>
+
+      <div class="malls-container">
+        <div class="malls-header-row">
+          <div class="malls-eyebrow">Malls (28)</div>
+          <div class="refresh-link">↻ Refresh</div>
+        </div>
+
+        <!-- Active section -->
+        <div class="group-head">
+          <div class="label active">● Active · 2</div>
+        </div>
+        <div class="mall-row active-mall">
+          <div class="mall-body">
+            <div class="mall-name">Awesome Flea Market</div>
+            <div class="mall-sub">Shepherdsville, KY</div>
+            <div class="mall-tert">Activated Apr 14 · 6 booths · 23 finds</div>
+          </div>
+          <span class="pill active">Active</span>
+        </div>
+        <div class="mall-row active-mall">
+          <div class="mall-body">
+            <div class="mall-name">Winchester Peddlers Mall</div>
+            <div class="mall-sub">Winchester, KY</div>
+            <div class="mall-tert">Activated Apr 21 · 1 booth · 4 finds</div>
+          </div>
+          <span class="pill active">Active</span>
+        </div>
+
+        <!-- Coming soon section -->
+        <div class="group-head" style="margin-top: 20px;">
+          <div class="label soon">◐ Coming soon · 1</div>
+        </div>
+        <div class="mall-row soon-mall">
+          <div class="mall-body">
+            <div class="mall-name">Mellwood Antiques &amp; Interiors</div>
+            <div class="mall-sub">Louisville, KY</div>
+          </div>
+          <span class="pill soon">Coming soon</span>
+        </div>
+
+        <!-- Draft section (collapsed) -->
+        <div class="group-head" style="margin-top: 20px;">
+          <div class="label draft">○ Draft · 25</div>
+          <div class="caret">Show ▾</div>
+        </div>
+        <div style="font-size: 11px; color: var(--text-faint); font-style: italic; font-family: var(--serif); padding: 6px 2px 0;">
+          Tap to expand. Drafts are hidden from shopper pickers and from the vendor-request mall dropdown.
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <div class="bn-item"><span class="bn-dot"></span>Home</div>
+        <div class="bn-item"><span class="bn-dot"></span>My Shelf</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       Frame 2 — Row expanded with segmented control + activation toast
+  ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="frame-wrap">
+    <div class="frame-label"><strong>Frame 2 — Row tapped</strong>segmented control appears inline · optimistic status update · activation toast</div>
+    <div class="phone">
+      <div class="admin-header">
+        <div class="title-block">
+          <div class="eyebrow">Treehouse</div>
+          <div class="title">Admin</div>
+        </div>
+        <div class="actions">
+          <span class="back-link">← Feed</span>
+          <span class="signout-pill">⇥ Sign out</span>
+        </div>
+      </div>
+
+      <div class="admin-id">
+        <div class="eyebrow">Signed in as admin</div>
+        <div class="email">david@zenforged.com</div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab">👤 Requests <span class="tab-count" style="background:var(--green);color:#fff;">3</span></div>
+        <div class="tab">🏬 Posts (12)</div>
+        <div class="tab">🖼 Banners</div>
+        <div class="tab active">📍 Malls</div>
+      </div>
+
+      <div class="malls-container">
+        <div class="malls-header-row">
+          <div class="malls-eyebrow">Malls (28)</div>
+          <div class="refresh-link">↻ Refresh</div>
+        </div>
+
+        <!-- Active section -->
+        <div class="group-head">
+          <div class="label active">● Active · 3</div>
+        </div>
+        <div class="mall-row active-mall">
+          <div class="mall-body">
+            <div class="mall-name">Awesome Flea Market</div>
+            <div class="mall-sub">Shepherdsville, KY</div>
+            <div class="mall-tert">Activated Apr 14 · 6 booths · 23 finds</div>
+          </div>
+          <span class="pill active">Active</span>
+        </div>
+
+        <!-- Expanded row — Mellwood just flipped from Coming soon → Active -->
+        <div class="mall-row expanded">
+          <div class="row-top">
+            <div class="mall-body">
+              <div class="mall-name">Mellwood Antiques &amp; Interiors</div>
+              <div class="mall-sub">Louisville, KY</div>
+              <div class="mall-tert">Activated just now · 0 booths · 0 finds</div>
+            </div>
+            <span class="pill active">Active</span>
+          </div>
+          <div class="row-divider"></div>
+          <div class="segmented">
+            <div class="seg">Draft</div>
+            <div class="seg">Coming soon</div>
+            <div class="seg selected active-seg">Active</div>
+          </div>
+          <div class="seg-hint">
+            Now visible in the shopper feed picker + vendor-request dropdown.
+            <code>activated_at</code> set to today.
+          </div>
+        </div>
+
+        <div class="mall-row active-mall">
+          <div class="mall-body">
+            <div class="mall-name">Winchester Peddlers Mall</div>
+            <div class="mall-sub">Winchester, KY</div>
+            <div class="mall-tert">Activated Apr 21 · 1 booth · 4 finds</div>
+          </div>
+          <span class="pill active">Active</span>
+        </div>
+
+        <!-- Coming soon section now empty -->
+        <div class="group-head" style="margin-top: 20px;">
+          <div class="label soon">◐ Coming soon · 0</div>
+        </div>
+        <div style="font-size: 11px; color: var(--text-faint); font-style: italic; font-family: var(--serif); padding: 2px 2px 12px;">
+          Empty.
+        </div>
+
+        <!-- Draft section collapsed -->
+        <div class="group-head" style="margin-top: 8px;">
+          <div class="label draft">○ Draft · 25</div>
+          <div class="caret">Show ▾</div>
+        </div>
+      </div>
+
+      <!-- Activation toast ghost -->
+      <div class="toast">
+        <div class="eyebrow">✓ Activated · now live to shoppers</div>
+        <div class="main">Mellwood Antiques &amp; Interiors</div>
+        <div class="note">activated_at set to today · this mall is now selectable in the shopper feed picker and vendor-request dropdown.</div>
+      </div>
+
+      <div class="bottom-nav">
+        <div class="bn-item"><span class="bn-dot"></span>Home</div>
+        <div class="bn-item"><span class="bn-dot"></span>My Shelf</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

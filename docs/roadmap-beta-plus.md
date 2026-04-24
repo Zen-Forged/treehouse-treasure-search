@@ -23,7 +23,7 @@ Each entry carries:
   - ✅ **Shipped** — absorbed by a merged PR (cross-ref the session).
 - **What / Why / Open questions** — the scoping substance.
 
-All 15 items (R1–R15) are 🟡 Captured. None are Ready yet.
+14 of 15 items (R1–R15) are 🟡 Captured. **R4c is 🟢 Ready as of session 56** — see the R4c entry below for its design record + mockup cross-refs.
 
 ---
 
@@ -49,7 +49,7 @@ David reviews and can override any of these.
 | R3 | Analytics event capture | Data | M | — | 🟡 Captured | Foundational. Tunes R5a, R5b, future feed ranking. Instrument early for compounding data. |
 | R4a | Admin: delete booth | Admin tooling | S | — | 🟡 Captured | Primitive exists on `/shelves` (session 45). Port to `/admin`. |
 | R4b | Admin: delete/replace hero image | Admin tooling | S | — | 🟡 Captured | Currently upload-only; no remove. |
-| R4c | Mall active/inactive toggle | Admin tooling + Feed UX | M | — | 🟡 Captured | **High-leverage unlock.** 29 unactivated malls pollute pickers. Prerequisite for R10. |
+| R4c | Mall active/inactive toggle | Admin tooling + Feed UX | M | — | 🟢 Ready | **High-leverage unlock.** 29 unactivated malls pollute pickers. Prerequisite for R10. Design record: [`docs/r4c-mall-active-design.md`](r4c-mall-active-design.md). Mockup: [`docs/mockups/r4c-admin-v1.html`](mockups/r4c-admin-v1.html). |
 | R5a | 30-day feed window | Feed quality | S | — | 🟡 Captured | Single query filter. Forces vendor freshness. |
 | R5b | Per-vendor active-find cap | Feed quality + Monetization | M | R3 (for tuning) | 🟡 Captured | Couples with R2 tiers. Beta = no cap; decide tier shape before first paid cohort. |
 | R6 | ToS / privacy / legal | Compliance | M | — | 🟡 Captured | Content-drafting is the long pole. **Gating for R2 and broad public launch.** |
@@ -207,20 +207,31 @@ Waves 1 + 2 + 3 together are realistically ~9–14 sessions (mix of S + M). That
 
 ---
 
-### R4c — Mall active/inactive toggle 🟡
+### R4c — Mall active/inactive toggle 🟢
 
-**What:** Schema field `malls.is_active` (bool, default false). Admin UI to toggle. Every user-facing surface that lists malls (filter picker, map, vendor-request mall dropdown) shows only active malls. Admin surfaces show all.
+> **Promoted 🟡 → 🟢 in session 56 (2026-04-24).** Full design record: [`docs/r4c-mall-active-design.md`](r4c-mall-active-design.md). Admin mockup: [`docs/mockups/r4c-admin-v1.html`](mockups/r4c-admin-v1.html). All six decisions D1–D6 frozen session 56 — implementation session runs as a straight sprint against the spec.
+
+**What:** Three-state enum `malls.status` (`'draft' | 'coming_soon' | 'active'`) + `malls.activated_at` timestamp. Admin UI to toggle via new `/admin` `Malls` tab. Shopper-facing surfaces (feed picker, future map, vendor-request dropdown) filter to `active` only. Admin surfaces show all with status pills. Vendor-owned surfaces (my-shelf, shelf detail) still render their own mall regardless.
 
 **Why:** Strategic UX lever. Today the 29 unactivated malls in Supabase pollute every picker. Activating as David visits each mall in person ("get them on the map") also doubles as a lightweight growth ritual — each activation is an event worth celebrating and potentially worth shopper-notifying once R9 lands.
 
-**Open questions:**
-- What does "inactive" mean for a vendor who is already attached to an inactive mall? (Probably: hidden in shopper picker, still visible to the vendor, admin can still see.)
-- Should there be a third state — "coming soon" — for malls David has talked to but not onboarded? (Probably yes, so those malls show up teasingly on the map but don't produce empty booth lists.)
-- Activation audit trail — worth capturing via R3.
+**All six decisions frozen session 56** (see design record for full detail):
+- D1 — three-state enum, not bool ✅
+- D2 — vendors attached to inactive malls: hidden from shopper picker + feed, visible to self + admin ✅
+- D3 — `activated_at` timestamp now; R3 event layer later ✅
+- D4 — existing malls default to `draft` on migration; David activates post-deploy ✅
+- D5 — admin toggle lives on new `/admin` `Malls` tab (4th position) ✅
+- D6 — vendor-request dropdown filters to `active` only ✅
 
-**Design prereq:** Moderate. Admin UI + user-facing empty-states when a previously-visible mall goes inactive.
+**Remaining open questions (deferred to implementation / downstream):**
+- Exact amber-tint token for the "Coming soon" pill (implementation-session choice from existing tokens).
+- Draft-section collapse threshold (~5).
+- R10 map treatment of `coming_soon` pins (R10 scoping).
+- Post-R1 "waitlist me" shopper signal on `coming_soon` malls (post-R9; not R4c's problem).
 
-**Unlocks:** R10 (map).
+**Design prereq:** ✅ Complete. Mockup + scoping doc landed session 56.
+
+**Unlocks:** R10 (map), R13 (mall-operator accounts).
 
 ---
 
@@ -564,4 +575,6 @@ Everything else can be decided at the moment of scoping for each item.
 
 ---
 
+> Last updated: 2026-04-24 (session 56 — R4c promoted 🟡 Captured → 🟢 Ready; design record at `docs/r4c-mall-active-design.md`, admin mockup at `docs/mockups/r4c-admin-v1.html`. All six decisions D1–D6 frozen. First roadmap item to move to Ready.)
+>
 > Last updated: 2026-04-24 (session 55 — initial capture of 11 items from David's 2026-04-24 standup + 3 elevated during capture review: R12 error monitoring, R13 mall-operator accounts, R14 vendor profile enrichment + 1 elevated during cluster/priority review: R15 app store launch. Clusters + shipping horizons section added.)
