@@ -361,3 +361,145 @@ Error paths:
 > Mockup approved: 2026-04-21 (session 38).
 > Spec authored: 2026-04-21 (session 38 close).
 > Ready for implementation: YES, pending Q-004/Q-005 sequencing call.
+
+---
+
+# v2 addendum — Window email banner redesign (Q-011, session 52)
+
+> Mockup (source of truth): `docs/mockups/share-booth-email-v2.html` (v2.2 final state).
+> Mockup approved: 2026-04-24 (session 51).
+> Spec addendum: 2026-04-24 (session 52, this session).
+> **If v2 mockup and this addendum disagree, the mockup wins.**
+
+## Why this addendum exists
+
+Session 50 shipped Q-008 (shopper share branch). Session 51 QA walk on Q-008 PASSED 5/5. An initial attempt at Q-011 (session 51, first pass) treated it as an SVG-stripping bug on Gmail web and fixed only the post-it rendering. David called mockup-first during review — a v2 mockup surfaced **four-axis brand drift** in the email template, only one axis of which was the original diagnosis:
+
+1. **Post-it SVG stripped by Gmail web** (original diagnosis) — Gmail's anti-tracking defense strips `<rect>` / `<circle>`, leaving the numeric `<text>` rendering as flow content below the banner.
+2. **Post-it proportions drifted** — 86×86 + 4° + single-line "BOOTH" vs. the in-app BoothHero's 96×96 + 6° + two-line "Booth Location" + 36px numeral.
+3. **Wrong pin glyph** — `⦲` Unicode character violates the session-17 glyph hierarchy lock; the app uses the teardrop SVG from `components/BoothPage.tsx` everywhere else.
+4. **Vendor name typography drift** — Georgia 34px/600 in the email vs. IM Fell 32px/400 in the in-app `/shelf` BoothTitleBlock. Georgia-in-email was a session-32 rule for max client compat, but "IM Fell for editorial voice" is also committed. v2.2 resolves by loading IM Fell via Google Fonts `<link>` with Georgia as graceful fallback.
+
+Session-51 design pass also introduced three copy + layout decisions the session-38 spec did not anticipate:
+
+5. **Masthead shrunk** to 13px uppercase wordmark — the 26px/600 lockup was competing with the booth-name hero, not anchoring it.
+6. **Opener rewritten** to a universal `"You've received a personal invite."` — retires the broken `"{senderFirstName} sent you a Window into {vendor}."` line (senderFirstName was always vendor.display_name, producing "Kentucky Treehouse sent you a Window into Kentucky Treehouse").
+7. **Eyebrow added** — `"Step inside a curated booth from"` echoes `/shelf` BoothTitleBlock voice so recipients hear the same narrator across email and landing.
+
+## v2 decisions locked (supersede v1 where they conflict)
+
+All previous v1 decisions hold unless listed here.
+
+### Masthead (supersedes v1 decision 4 "Hero weight")
+
+- **SMALL masthead.** 13px Georgia 600 **uppercase** "TREEHOUSE FINDS" with `letter-spacing: 0.04em`.
+- **Tagline kept.** 10px Georgia italic `"Embrace the Search. Treasure the Find."` — same subtagline Q-005 canonicalized.
+- **Thin hairline below** unchanged.
+- Rationale: quiet wordmark, booth leads. MEDIUM (17px) and OLD (26px) variants in the mockup are review chrome only — not options.
+
+### Opener copy block (NEW — replaces v1 sender voice line)
+
+Three stacked elements, centered, in order:
+
+1. **Invite line** — Georgia italic 15px, `color: INKMID` (#4a3520), letter-spacing `0.01em`:
+   > *You've received a personal invite.*
+   Always renders. Does NOT vary by `senderMode`. No sender name.
+
+2. **Vendor eyebrow** — IM Fell English 400 italic 14px, `color: INKMID`:
+   > *Step inside a curated booth from*
+
+3. **Vendor name hero** — IM Fell English 400 (non-italic) 32px, `color: INK` (#2a1a0a), `letter-spacing: -0.005em`:
+   > {vendorName}
+
+v1 decision: vendor name was Georgia 34px/600. v2 is IM Fell 32px/400 via Google Fonts. Graceful Georgia fallback for Outlook. The `renderWindowBody()` h2 block changes font-family + weight + size accordingly.
+
+### Banner — Variant B (supersedes v1 decision 5)
+
+- **Height 220px** (was 196px). The taller frame seats the embedded post-it without it overhanging.
+- **Border-radius 16px** (was 12px).
+- **Post-it embedded, no overhang.** Absolutely positioned at `bottom: 12px; right: 12px` inside the banner wrapper. Rotated 6° via CSS `transform` applied to a **styled div**, not SVG.
+- **Post-it as styled div (NOT SVG).** This is the core Q-011 fix. Gmail web strips `<rect>` and `<circle>` SVG children (anti-tracking defense). A styled div with a plain background color survives.
+  - Dimensions: `width: 86px; min-height: 86px`.
+  - Background `var(--postit)` → hex `#fffaea`.
+  - Shadow `0 4px 12px rgba(0,0,0,0.35)`.
+  - Padding `13px 6px 8px`.
+  - Flex column, items + content centered.
+  - CSS `transform: rotate(6deg)` — stripped by Outlook but the post-it still reads fine as a non-rotated rectangle in that client (graceful degradation).
+- **Pin** — small 8×8 dark disc, absolutely positioned top-center (`top: -3px`), produced with a styled div + `border-radius: 50%`. Same degradation story — Outlook shows it un-positioned; it still reads as a small dot.
+- **Eyebrow** — IM Fell italic 12px, two lines: `"Booth"` / `"Location"`. `color: INKMID`. 4px bottom margin.
+- **Numeral** — Times New Roman 30px weight 500, `color: INK`. Auto-shrinks by digit count: 30px ≤ 4 digits, 24px = 5 digits, 20px ≥ 6.
+- **Banner image** — fallback gradient preserved (`linear-gradient(135deg, #8a7555 0%, #5a4a2e 100%)`) when `heroImageUrl` is null. When present, `background-image` on the wrapper div + an `<img>` fallback for Outlook.
+- v1 "post-it only when boothNumber" still holds — if `boothNumber` is null, the post-it is omitted and the banner stands alone.
+
+### Pin glyph on mall location line (supersedes v1 decision 7 / §Email rendering note)
+
+- Retires the `⦲` Unicode character.
+- Inlines the same teardrop SVG used by `components/BoothPage.tsx:PinGlyph`:
+  ```html
+  <svg width="18" height="22" viewBox="0 0 18 22" fill="none" aria-hidden="true">
+    <path d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z" stroke="#2a1a0a" stroke-width="1.3" fill="none"/>
+    <circle cx="9" cy="8.3" r="2" fill="#2a1a0a"/>
+  </svg>
+  ```
+- Path + circle survive Gmail's SVG filter (they're not tracking-pixel-shaped primitives at 1×1 dimensions; this is an 18×22 SVG with named viewBox). Confirmed in v2 mockup render on Gmail web during session 51 review.
+- Stroke color uses the literal `#2a1a0a` (not `v1.inkPrimary` — `lib/email.ts` has no access to the v1 token module).
+
+### IM Fell via Google Fonts `<link>`
+
+Added to `renderEmailShell()`'s `<head>`:
+```html
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+```
+
+- Outlook + some Android clients ignore external font loads — the `font-family` declaration includes `Georgia` as the graceful fallback.
+- Retires the session-32 "zero external font loads in email body" rule **for the Window email only**. Request-received + approval-instructions emails keep Georgia-only (they never use IM Fell — no change there).
+
+### senderMode retires from email template
+
+- `ShareBoothWindowPayload.senderFirstName` and `ShareBoothWindowPayload.senderMode` stay in the type (non-breaking change) but are marked `@deprecated — display-unused as of session 52 / Q-011 v2`. Safe-delete in a follow-up cleanup session.
+- **Server-side still reads `senderMode`** in `app/api/share-booth/route.ts` for rate-limit bucket selection (5/10min auth vs 2/10min anon). That logic is load-bearing and does NOT change.
+- `renderWindowBody()` drops the `voiceLineHtml` branch entirely. No more "if vendor mode, show italic line; if anon, hide."
+- Preheader simplifies to: `"A personal invite to a curated booth."` — one line, always true, independent of senderMode.
+- Plain-text fallback opener simplifies to: `"You've received a personal invite."` followed by `"A curated booth from {vendorName}."`
+
+### Subject line
+
+Unchanged from v1 decision 8: `"A Window into {vendorName}"`.
+
+## Rendering strategy notes (v2-specific)
+
+- **Post-it via styled div, not SVG.** Core Q-011 fix. Supersedes v1 §Email rendering note #2 and the previous `renderPostItSvg()` helper. Gmail web strips `<rect>`/`<circle>` SVG children as part of its anti-tracking-pixel defense — a styled div with `background: #fffaea` survives. CSS `transform: rotate(6deg)` is stripped by Outlook; that's fine — the post-it still reads as a non-rotated rectangle. Graceful degradation.
+- **IM Fell graceful fallback.** Outlook + some Android clients ignore external font loads. Every IM Fell declaration includes Georgia as the fallback so the eyebrow + vendor name still render in a serif voice even when IM Fell doesn't load.
+- **Pin SVG renders in Gmail web.** Confirmed via the v2 mockup preview during session 51. Path + named viewBox + stroke width 1.3 is not treated as a tracking shape.
+- **Preheader + subject line + plain-text fallback** all adopt the simplified v2 copy. A recipient reading only the preview pane (preheader + opener) sees `"A personal invite to a curated booth." → "You've received a personal invite."` with no broken sender attribution.
+
+## File changes (session 52)
+
+| File | Change |
+|---|---|
+| `lib/email.ts` | `renderEmailShell`: add IM Fell `<link>`, shrink masthead to 13px uppercase + 10px italic tagline. Body wrap increases top padding to account for smaller masthead. `renderWindowBody`: new opener block (invite line + eyebrow + IM Fell vendor name), drop senderMode branching. `renderBanner`: Variant B (220px height, 16px radius, embedded post-it). New `renderPostItDiv` replaces `renderPostItSvg`. `renderLocationLine`: real `<svg>` PinGlyph instead of `⦲`. Preheader + plain-text opener update. Type: mark `senderFirstName`, `senderMode` @deprecated. |
+| `app/api/share-booth/route.ts` | No change. `senderMode` still flows through for rate-limit bucket selection. |
+| `docs/share-booth-build-spec.md` | This addendum (✅ written first per session-28 rule). |
+| `CLAUDE.md` | Session-52 close tombstone. |
+
+## On-device QA walk (session 52)
+
+**Gmail web first** — this is the original failure client David caught pre-session-51.
+- [ ] Post-it renders rotated inside banner (not clipped, not collapsed below)
+- [ ] Pin glyph on mall line renders as teardrop SVG (not absent, not fallback char)
+- [ ] Vendor name reads in IM Fell
+- [ ] Masthead is small + subtle; booth dominates
+- [ ] No sender attribution line (no "Kentucky Treehouse sent you...")
+
+**iOS Mail** (session-51 scenario-2 re-check surface):
+- [ ] Same four checks pass
+- [ ] Preheader reads `"A personal invite to a curated booth."` in inbox preview
+
+**Outlook web** (graceful degradation check):
+- [ ] Post-it reads as un-rotated rectangle (CSS transform stripped — expected)
+- [ ] IM Fell falls back to Georgia (external font stripped — expected)
+- [ ] Overall layout still reads editorially despite both degradations
+
+> v2.2 mockup approved: 2026-04-24 (session 51).
+> v2 addendum authored: 2026-04-24 (session 52, this session).
+> Ready for implementation: YES.

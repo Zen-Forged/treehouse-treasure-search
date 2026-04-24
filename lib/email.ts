@@ -6,6 +6,37 @@
 //   sendApprovalInstructions(payload)  — Email #2 per onboarding-journey.md
 //   sendBoothWindow(payload)           — Window share email (Q-007, session 39)
 //
+// Session 52 Q-011 v2 (2026-04-24):
+//  - Window email banner redesign per docs/mockups/share-booth-email-v2.html
+//    (v2.2 final state, locked session 51). Four-axis brand-drift fix:
+//    (1) post-it rendered as a STYLED DIV, not inline SVG — Gmail web strips
+//        <rect> / <circle> SVG children as anti-tracking defense, leaving
+//        only the numeral as flow content. Plain <div> with background-color
+//        survives. See renderPostItDiv below.
+//    (2) Banner is Variant B — post-it embedded bottom-right inside the
+//        banner frame (position: absolute), no negative-margin overhang.
+//        Banner height bumps to 220px + border-radius 16px.
+//    (3) Mall location line replaces the Unicode ⦲ with the teardrop
+//        PinGlyph SVG from components/BoothPage.tsx. Restores session-17
+//        glyph hierarchy (pin = mall, post-it = booth).
+//    (4) Vendor name is IM Fell 32px/400 (non-italic), loaded via Google
+//        Fonts <link> in the shell <head>. Georgia is the graceful fallback
+//        for Outlook + some Android clients. Eyebrow "Step inside a curated
+//        booth from" echoes /shelf BoothTitleBlock voice.
+//  - Masthead shrunk to SMALL — 13px uppercase "TREEHOUSE FINDS" Georgia 600
+//    letterspaced + 10px italic tagline preserved. Quiet brand anchor; the
+//    booth leads. Supersedes session-38 decision 4.
+//  - Opener rewritten: Georgia italic 15px "You've received a personal invite."
+//    Always renders. Retires the senderMode branching — senderFirstName was
+//    always vendor.display_name, producing "Kentucky Treehouse sent you a
+//    Window into Kentucky Treehouse." in QA. No sender name to resolve means
+//    no bug surface. Preheader simplifies to "A personal invite to a curated
+//    booth."; plain-text opener adopts the same universal line.
+//  - senderFirstName + senderMode now @deprecated on ShareBoothWindowPayload.
+//    Server route still passes them (for rate-limit bucket selection — auth
+//    branch vs anon branch is unchanged) but the email template ignores both.
+//    Safe-delete from the payload in a follow-up cleanup session.
+//
 // Session 41 Q-010 (2026-04-21):
 //  - Window email CTA URL fixed from /vendor/{slug} → /shelf/{slug}. The
 //    canonical public shelf route is /shelf/{slug}; /vendor/{slug} is a
@@ -211,33 +242,29 @@ export async function sendApprovalInstructions(
 /**
  * The Window share email payload.
  *
- * Design note on `senderFirstName`: this feeds the in-body italic voice line.
- * For MVP (session 39), `/api/share-booth` passes `vendor.display_name` here
- * — the ownership check in the route guarantees the signed-in user owns the
- * active vendor, so "vendor shares their own booth" is the only path. If
- * non-vendor shoppers ever share a booth (Direction A territory, Sprint 5+),
- * the sender-name source will need its own resolution step upstream.
- *
- * Design note on pronoun: build-spec §Unresolved flagged three options. We
- * lean on option (c) — drop pronoun entirely, rephrase with vendor name:
- * "Sarah sent you a Window into ZenForged Finds." Cleanest, no schema change,
- * no guessing. Matches the subject-line pattern ("A Window into {vendor}").
+ * Session 52 Q-011 v2: the email template no longer consults `senderFirstName`
+ * or `senderMode` — the opener is a universal `"You've received a personal
+ * invite."` line that runs for vendor, admin, and anonymous shopper sends.
+ * The server route still reads `senderMode` to pick the right rate-limit
+ * bucket (5/10min auth vs 2/10min anon), but that's server-side only. Both
+ * fields are kept on the type as optional + @deprecated so callers that still
+ * pass them (currently just /api/share-booth) don't have to change — and so
+ * a follow-up cleanup session can delete them cleanly.
  */
 export interface ShareBoothWindowPayload {
   recipientEmail: string;
   /**
-   * Signed-in user's display name — for MVP equals vendor.displayName.
-   * Ignored when `senderMode === "anonymous"`: the voice line is omitted
-   * entirely so there's no sender to attribute.
+   * @deprecated Session 52 / Q-011 v2 — display-unused in the email template.
+   * Retained on the type for back-compat with /api/share-booth, which still
+   * passes `vendor.display_name` here. Safe to remove in a follow-up cleanup.
    */
-  senderFirstName: string;
+  senderFirstName?: string;
   /**
-   * Session 50 (Q-008) — controls whether the voice line ("{X} sent you a
-   * Window into {vendor}.") appears. "vendor" keeps the existing MVP voice;
-   * "anonymous" drops the sender entirely, because when a shopper shares a
-   * booth we don't know who they are and forging vendor attribution would
-   * be dishonest. Defaults to "vendor" for back-compat with any caller that
-   * hasn't migrated (/api/share-booth passes it explicitly).
+   * @deprecated Session 52 / Q-011 v2 — no longer consulted by the email
+   * template (which renders the same universal opener regardless of sender).
+   * Server route in /api/share-booth still uses this for rate-limit bucket
+   * selection (5/10min auth vs 2/10min anon); that logic is unchanged and
+   * lives on the route side, not the email side.
    */
   senderMode?:    "vendor" | "anonymous";
   vendor: {
@@ -283,24 +310,17 @@ export async function sendBoothWindow(
   const siteUrl    = getSiteUrl();
 
   const vendorName    = payload.vendor.displayName.trim() || "a booth";
-  const senderFirst   = payload.senderFirstName.trim() || "Someone";
-  const senderMode    = payload.senderMode ?? "vendor";
   // Session 41 Q-010: canonical public booth URL is /shelf/{slug}, not
   // /vendor/{slug}. The Window CTA and the plain-text fallback both land
   // recipients here.
   const shelfPageUrl  = `${siteUrl}/shelf/${payload.vendor.slug}`;
 
   const subject    = `A Window into ${vendorName}`;
-  // Preheader mirrors the voice-line decision: anonymous shares don't
-  // claim a sender, so the preheader is scene-setting rather than
-  // attribution. Vendor shares keep the existing voice.
-  const preheader  = senderMode === "anonymous"
-    ? `A Window into ${vendorName}.`
-    : `${senderFirst} sent you a Window into ${vendorName}.`;
+  // Session 52 Q-011 v2: preheader is universal — no sender attribution, no
+  // mode branching. Matches the opener line the recipient sees on-open.
+  const preheader  = `A personal invite to a curated booth.`;
 
   const bodyHtml = renderWindowBody({
-    senderFirst,
-    senderMode,
     vendorName,
     boothNumber:    payload.vendor.boothNumber,
     heroImageUrl:   payload.vendor.heroImageUrl,
@@ -317,16 +337,13 @@ export async function sendBoothWindow(
 
   // Plain-text fallback. Email clients that can't render HTML (or the
   // user's preview pane) fall back to this. Keep it readable as prose.
-  // Session 50 (Q-008) — anonymous shares drop the sender attribution
-  // line here too; the recipient sees the booth + Window contents without
-  // a forged "{X} sent you" header.
-  const leadLine = senderMode === "anonymous"
-    ? `A Window into ${vendorName}.`
-    : `${senderFirst} sent you a Window into ${vendorName}.`;
+  // Session 52 Q-011 v2: opener adopts the same universal copy as the HTML
+  // body — no sender attribution. Eyebrow + vendor name appear as two
+  // separate lines for readability in plain-text clients.
   const text = [
-    leadLine,
+    `You've received a personal invite.`,
     ``,
-    vendorName,
+    `A curated booth from ${vendorName}.`,
     payload.vendor.boothNumber ? `Booth ${payload.vendor.boothNumber}` : ``,
     `${payload.mall.name}${payload.mall.address ? " — " + payload.mall.address : ""}`,
     ``,
@@ -351,10 +368,6 @@ export async function sendBoothWindow(
 // ── Window body composition (internal helpers) ───────────────────────────
 
 interface WindowBodyOpts {
-  senderFirst:   string;
-  // Session 50 (Q-008): when "anonymous", the italic voice line at the top
-  // of the email is omitted entirely. The vendor-name hero still leads.
-  senderMode:    "vendor" | "anonymous";
   vendorName:    string;
   boothNumber:   string | null;
   heroImageUrl:  string | null;
@@ -369,31 +382,32 @@ interface WindowBodyOpts {
 
 function renderWindowBody(opts: WindowBodyOpts): string {
   const {
-    senderFirst, senderMode, vendorName, boothNumber, heroImageUrl,
+    vendorName, boothNumber, heroImageUrl,
     mallName, mallAddress, googleMapsUrl, posts, shelfPageUrl,
   } = opts;
 
-  const voiceLineHtml = senderMode === "vendor"
-    ? `
-      <!-- Sender voice line — italic, quiet -->
-      <p style="margin: 0 0 24px; font-family: ${SERIF}; font-style: italic; font-size: 14px; line-height: 1.6; color: ${INKMID}; text-align: center;">
-        ${escapeHtml(senderFirst)} sent you a Window into ${escapeHtml(vendorName)}.
-      </p>
-    `
-    : ``;
-
+  // Session 52 Q-011 v2: opener block = universal invite line + eyebrow +
+  // IM Fell vendor name hero. No senderMode branching.
   return `
-      ${voiceLineHtml}
+      <!-- Invite line — universal, no sender attribution -->
+      <p style="margin: 0 8px 20px; padding: 0; font-family: ${SERIF}; font-style: italic; font-size: 15px; line-height: 1.5; color: ${INKMID}; text-align: center; letter-spacing: 0.01em;">
+        You've received a personal invite.
+      </p>
 
-      <!-- Vendor name hero — Georgia 34px centered -->
-      <h2 style="margin: 0 0 20px; padding: 0; font-family: ${SERIF}; font-size: 34px; font-weight: 600; color: ${INK}; line-height: 1.15; letter-spacing: -0.01em; text-align: center;">
-        ${escapeHtml(vendorName)}
-      </h2>
+      <!-- Vendor block — eyebrow + IM Fell name hero -->
+      <div style="margin: 0 10px 18px; text-align: center;">
+        <p style="margin: 0 0 6px; padding: 0; font-family: ${IMFELL}; font-style: italic; font-size: 14px; line-height: 1.3; color: ${INKMID};">
+          Step inside a curated booth from
+        </p>
+        <h2 style="margin: 0; padding: 0; font-family: ${IMFELL}; font-size: 32px; font-weight: 400; color: ${INK}; line-height: 1.1; letter-spacing: -0.005em;">
+          ${escapeHtml(vendorName)}
+        </h2>
+      </div>
 
-      <!-- Banner: hero photograph + pinned post-it. Table-based for Outlook. -->
+      <!-- Banner Variant B — hero photograph + embedded post-it (styled div) -->
       ${renderBanner(heroImageUrl, boothNumber, vendorName)}
 
-      <!-- Location line — pin glyph + mall + address -->
+      <!-- Location line — PinGlyph SVG + mall + address -->
       ${renderLocationLine(mallName, mallAddress, googleMapsUrl)}
 
       <!-- The Window — 6-tile grid, 3 cols × 2 rows, HTML table -->
@@ -415,117 +429,128 @@ function renderWindowBody(opts: WindowBodyOpts): string {
 }
 
 /**
- * Banner primitive — hero image with post-it pinned bottom-right.
+ * Banner primitive — Variant B (session 52 Q-011 v2).
  *
- * Rendering strategy: nested <table> with background-image on a wrapper cell
- * (via `background` attribute + VML fallback for Outlook). Post-it overlays
- * using absolute positioning inside a conditional-compat wrapper. CSS
- * transforms are stripped by Outlook; the post-it rotation is baked into
- * an inline SVG instead (see renderPostItSvg).
+ * Structure: position-relative wrapper at 220px height, 16px border-radius,
+ * overflow hidden. Inside: a hero image fallback (absolute-positioned <img>
+ * for supporting clients, background-color fallback for everyone else) and
+ * a styled-div post-it absolutely positioned bottom-right (bottom/right 12px).
  *
- * Graceful fallback when heroImageUrl is null: solid earth-tone fill with
- * a subtle linear-gradient overlay to simulate the scrim.
+ * Why div (not SVG): Gmail web strips <rect> / <circle> SVG children as an
+ * anti-tracking-pixel defense, leaving only the <text> content to render as
+ * flow content below the banner. A plain <div> with background-color survives
+ * intact. See renderPostItDiv below.
+ *
+ * CSS transform: rotate(6deg) is stripped by Outlook. Graceful degradation:
+ * the post-it renders as a non-rotated rectangle in Outlook, which is fine —
+ * the gesture is decorative, not semantic.
+ *
+ * Fallback when heroImageUrl is null: linear-gradient earth-tone wash.
  */
 function renderBanner(
   heroImageUrl: string | null,
   boothNumber:  string | null,
   vendorName:   string,
 ): string {
-  const bannerBg = heroImageUrl
-    ? `background: #1a1a18 url('${escapeAttr(heroImageUrl)}') center/cover no-repeat;`
-    : `background: linear-gradient(135deg, #6a4e30 0%, #8a6b45 50%, #5a3e20 100%);`;
-
-  // Mail-client note: the <img> fallback ensures Outlook desktop (which often
-  // ignores background-image on td) still shows the hero. Object-fit is NOT
-  // respected in most email clients; we rely on width/height + max-height.
-  const heroFallbackImg = heroImageUrl
-    ? `<img src="${escapeAttr(heroImageUrl)}" alt="${escapeAttr(vendorName)}" width="540" height="196" style="display: block; width: 100%; max-width: 540px; height: 196px; object-fit: cover; border-radius: 12px;" />`
-    : `<div style="width: 100%; height: 196px; border-radius: 12px; ${bannerBg}"></div>`;
+  // Hero layer. Prefer an <img> (object-fit cover is respected by Apple Mail,
+  // Gmail native, iOS Mail — the clients we primarily QA against). Gradient
+  // fallback for null hero. Outlook's ignore of object-fit is acceptable; the
+  // hero is decorative and the post-it + booth-name hero are the signal.
+  const heroLayer = heroImageUrl
+    ? `<img src="${escapeAttr(heroImageUrl)}" alt="${escapeAttr(vendorName)}" width="540" height="220" style="display: block; position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; object-fit: cover; border: 0;" />`
+    : `<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #8a7555 0%, #5a4a2e 100%);"></div>`;
 
   // Post-it only appears when there's a booth number; otherwise the banner
   // stands on its own.
-  const postItOverlay = boothNumber
-    ? `
-        <!--[if !mso]><!-- -->
-        <div style="position: relative; margin-top: -96px; margin-right: 14px; margin-bottom: 10px; text-align: right; line-height: 0;">
-          ${renderPostItSvg(boothNumber)}
-        </div>
-        <!--<![endif]-->`
-    : ``;
+  const postItOverlay = boothNumber ? renderPostItDiv(boothNumber) : ``;
 
   return `
-      <div style="margin: 0 0 18px; border-radius: 12px; overflow: hidden;">
-        ${heroFallbackImg}
+      <div style="position: relative; height: 220px; border-radius: 16px; overflow: hidden; margin: 18px 0 22px;">
+        ${heroLayer}
         ${postItOverlay}
       </div>
   `;
 }
 
 /**
- * Post-it as inline SVG (Outlook-compat rotation).
+ * Post-it as a styled <div> (session 52 Q-011 v2).
  *
- * Why SVG: CSS `transform: rotate(6deg)` is stripped by Outlook, and some
- * Gmail native clients. SVG internal `transform="rotate(...)"` is respected
- * by every modern mail client. 86×86 viewBox matches the /my-shelf BoothHero
- * post-it sizing.
+ * Replaces the previous renderPostItSvg. Core Q-011 fix: Gmail web strips
+ * <rect> / <circle> SVG children as part of its anti-tracking-pixel defense.
+ * The old inline SVG rendered in Apple Mail + iOS Mail but collapsed to just
+ * the <text> numeral on Gmail web, which read as flow content below the
+ * banner — "369" appearing as a stranded number in the email body. A plain
+ * <div> with `background-color: #fffaea` survives the filter intact.
  *
- * Paper fill #fffaea, hairline border via stroke, subtle shadow via filter.
- * Numeral in Georgia via <text> element; auto-shrinks when digit count grows.
+ * Rotation is CSS `transform: rotate(6deg)`, stripped by Outlook. That's
+ * acceptable degradation — the post-it reads as a non-rotated rectangle
+ * there, still carrying the signal.
+ *
+ * Pin is a 8×8 dark disc absolutely positioned above the top edge. Eyebrow
+ * is IM Fell italic 12px ("Booth" / "Location" on two lines). Numeral is
+ * Times New Roman 30px/500, auto-shrinking by digit count.
  */
-function renderPostItSvg(boothNumber: string): string {
+function renderPostItDiv(boothNumber: string): string {
   // Auto-scale numeral size by digit count (mirrors lib/utils.ts
-  // boothNumeralSize). 36px ≤4 digits, 28px @ 5, 22px @ 6+.
+  // boothNumeralSize pattern). 30px ≤4 digits, 24px @ 5, 20px @ 6+.
   const digitCount = boothNumber.length;
-  const fontSize = digitCount <= 4 ? 36 : digitCount === 5 ? 28 : 22;
+  const numeralSize = digitCount <= 4 ? 30 : digitCount === 5 ? 24 : 20;
 
-  // Rotate 4° (spec calls for 6° in the /my-shelf BoothHero; 4° reads
-  // slightly more legible at small email scale without losing the gesture).
-  return `<svg width="86" height="86" viewBox="0 0 86 86" xmlns="http://www.w3.org/2000/svg" style="display: inline-block;">
-    <g transform="rotate(4, 43, 43)">
-      <!-- Post-it body -->
-      <rect x="8" y="8" width="70" height="70" fill="#fffaea" stroke="rgba(42,26,10,0.18)" stroke-width="0.5" />
-      <!-- Push pin (small dark disc at top-center) -->
-      <circle cx="43" cy="14" r="3" fill="#2a1a0a" opacity="0.85" />
-      <!-- "Booth Location" eyebrow -->
-      <text x="43" y="30" font-family="Georgia, 'Times New Roman', serif" font-size="7" font-style="italic" fill="#6b5538" text-anchor="middle" letter-spacing="0.5">
-        BOOTH
-      </text>
-      <!-- Numeral -->
-      <text x="43" y="60" font-family="'Times New Roman', Georgia, serif" font-size="${fontSize}" font-weight="400" fill="#2a1a0a" text-anchor="middle">
+  return `<div style="position: absolute; bottom: 12px; right: 12px; width: 86px; min-height: 86px; background: ${POSTIT}; -webkit-transform: rotate(6deg); transform: rotate(6deg); box-shadow: 0 4px 12px rgba(0,0,0,0.35); padding: 13px 6px 8px; text-align: center; z-index: 3;">
+      <!-- Pin — small dark disc at top-center -->
+      <div style="position: absolute; top: -3px; left: 50%; margin-left: -4px; width: 8px; height: 8px; border-radius: 50%; background: rgba(42,26,10,0.75); box-shadow: inset 0 0 0 2px rgba(42,26,10,0.55);"></div>
+      <!-- Booth Location eyebrow — IM Fell italic, two lines -->
+      <div style="font-family: ${IMFELL}; font-style: italic; font-size: 12px; line-height: 1.1; color: ${INKMID}; margin: 0 0 4px;">
+        Booth<br>Location
+      </div>
+      <!-- Numeral — Times New Roman, auto-sized by digit count -->
+      <div style="font-family: 'Times New Roman', Times, serif; font-size: ${numeralSize}px; font-weight: 500; line-height: 1; color: ${INK};">
         ${escapeHtml(boothNumber)}
-      </text>
-    </g>
-  </svg>`;
+      </div>
+    </div>`;
 }
 
 /**
- * Location line — pin glyph + mall name + address (as Google Maps link if available).
+ * Location line — teardrop PinGlyph SVG + mall name + address.
  *
- * Uses the ⚲ glyph to match the app's cartographic pin primitive (glyph
- * hierarchy locked session 17: pin = mall, X = booth — see design-system.md).
+ * Session 52 Q-011 v2: retires the `⦲` Unicode character, which violated
+ * the session-17 glyph hierarchy lock (pin = mall, post-it = booth). The
+ * inline SVG mirrors components/BoothPage.tsx:PinGlyph exactly — teardrop
+ * outline + filled center dot, strokeWidth 1.3, ink-primary color. Gmail
+ * web renders this SVG intact (path + circle at 18×22 with a named viewBox
+ * is not flagged as a tracking shape).
+ *
+ * Mall name adopts IM Fell 18px per v2.2 mockup; mall address is system-ui
+ * 14px with a dotted underline when the Google Maps URL is present.
  */
 function renderLocationLine(
   mallName:      string,
   mallAddress:   string | null,
   googleMapsUrl: string | null,
 ): string {
+  const addressStyleBase = `font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 14px; color: ${INKMID}; line-height: 1.55;`;
+  const addressStyleLink = `${addressStyleBase} text-decoration: underline; text-decoration-style: dotted; text-decoration-color: ${FAINT}; text-underline-offset: 3px;`;
+
   const addressContent = mallAddress
     ? (googleMapsUrl
-        ? `<a href="${escapeAttr(googleMapsUrl)}" style="color: ${INKMID}; text-decoration: underline;">${escapeHtml(mallAddress)}</a>`
-        : escapeHtml(mallAddress))
+        ? `<a href="${escapeAttr(googleMapsUrl)}" style="color: ${INKMID}; ${addressStyleLink}">${escapeHtml(mallAddress)}</a>`
+        : `<span style="${addressStyleBase}">${escapeHtml(mallAddress)}</span>`)
     : ``;
 
   return `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 26px;">
         <tr>
-          <td style="vertical-align: top; width: 24px; padding-top: 2px; font-family: ${SERIF}; font-size: 18px; color: ${INK}; line-height: 1;">
-            ⦲
+          <td style="vertical-align: top; width: 30px; padding-top: 3px; line-height: 1;">
+            <svg width="18" height="22" viewBox="0 0 18 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display: block;">
+              <path d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z" stroke="${INK}" stroke-width="1.3" fill="none"/>
+              <circle cx="9" cy="8.3" r="2" fill="${INK}"/>
+            </svg>
           </td>
-          <td style="vertical-align: top; padding-left: 8px;">
-            <div style="font-family: ${SERIF}; font-size: 15px; font-weight: 600; color: ${INK}; line-height: 1.35;">
+          <td style="vertical-align: top; padding-left: 4px;">
+            <div style="font-family: ${IMFELL}; font-size: 18px; color: ${INK}; line-height: 1.3; letter-spacing: -0.005em; margin: 0 0 3px;">
               ${escapeHtml(mallName)}
             </div>
-            ${addressContent ? `<div style="font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 13px; color: ${INKMID}; line-height: 1.5; margin-top: 3px;">${addressContent}</div>` : ``}
+            ${addressContent ? `<div style="margin: 0;">${addressContent}</div>` : ``}
           </td>
         </tr>
       </table>
@@ -652,12 +677,16 @@ async function sendEmail(input: SendEmailInput): Promise<{ ok: boolean; error?: 
 
 // ── Internal: HTML template shell (v1.2 paper-as-surface, all Georgia) ──────
 
-// Georgia throughout for maximum mail-client compatibility. No external font
-// requests. Paper #e8ddc7 is the page background; no inner card.
+// Georgia for body copy + masthead + signatures; IM Fell English for editorial
+// voice (Window email vendor name + eyebrow + mall name + post-it eyebrow) —
+// loaded via Google Fonts <link> in the shell <head>, Georgia falls back in
+// Outlook + some Android clients.
 const SERIF  = "Georgia, 'Times New Roman', serif";
+const IMFELL = "'IM Fell English', Georgia, 'Times New Roman', serif";
 const INK    = "#2a1a0a";
 const INKMID = "#4a3520";
 const PAPER  = "#e8ddc7";
+const POSTIT = "#fffaea";
 const HAIR   = "rgba(42,26,10,0.18)";
 const FAINT  = "rgba(42,26,10,0.28)";
 
@@ -689,6 +718,9 @@ function renderEmailShell(opts: { preheader: string; bodyHtml: string; footerHtm
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Treehouse Finds</title>
+  <!-- IM Fell English — editorial voice for Window email (session 52 Q-011 v2).
+       Georgia falls back in Outlook + some Android clients. -->
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
 </head>
 <body style="margin: 0; padding: 0; background: ${PAPER}; font-family: ${SERIF};">
   <!-- Preheader — hidden, drives inbox preview -->
@@ -700,13 +732,15 @@ function renderEmailShell(opts: { preheader: string; bodyHtml: string; footerHtm
     <tr>
       <td align="center" style="padding: 36px 16px 32px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 540px;">
-          <!-- Brand lockup — Georgia semibold 26px, centered, thin hairline below -->
+          <!-- Brand lockup — SMALL masthead (session 52 Q-011 v2).
+               13px uppercase Georgia 600 letterspaced wordmark + 10px italic
+               tagline. Quiet brand anchor; the booth leads. -->
           <tr>
-            <td align="center" style="padding: 8px 0 22px; border-bottom: 1px solid ${HAIR};">
-              <p style="margin: 0; font-family: ${SERIF}; font-size: 26px; font-weight: 600; color: ${INK}; letter-spacing: -0.01em; line-height: 1.1;">
+            <td align="center" style="padding: 0 0 14px; border-bottom: 1px solid ${HAIR};">
+              <p style="margin: 0; font-family: ${SERIF}; font-size: 13px; font-weight: 600; color: ${INKMID}; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.2;">
                 Treehouse Finds
               </p>
-              <p style="margin: 6px 0 0; font-family: ${SERIF}; font-style: italic; font-size: 11px; color: ${INKMID}; letter-spacing: 0.02em; line-height: 1.5;">
+              <p style="margin: 3px 0 0; font-family: ${SERIF}; font-style: italic; font-size: 10px; color: ${FAINT}; letter-spacing: 0.02em; line-height: 1.5;">
                 Embrace the Search. Treasure the Find.
               </p>
             </td>
