@@ -4,7 +4,7 @@
 >
 > This is a **living document**. Each item below gets promoted into `docs/queued-sessions.md` (or directly into a Sprint) once it is ready to run — i.e., once it has a design decision recorded (for UI work) or a spec (for infra work). Until then, it lives here as a placeholder with dependencies, effort, and notes.
 >
-> **Source capture session:** 2026-04-24 standup with David — 11 items named + 3 elevated during review (R12–R14) + 3 absorbed from CLAUDE.md parked list.
+> **Source capture session:** 2026-04-24 standup with David — 11 items named + 3 elevated during initial review (R12–R14) + 1 elevated during cluster/priority review (R15 app store launch) + 3 absorbed from CLAUDE.md parked list.
 
 ---
 
@@ -23,7 +23,7 @@ Each entry carries:
   - ✅ **Shipped** — absorbed by a merged PR (cross-ref the session).
 - **What / Why / Open questions** — the scoping substance.
 
-All 14 items (R1–R14) are 🟡 Captured. None are Ready yet.
+All 15 items (R1–R15) are 🟡 Captured. None are Ready yet.
 
 ---
 
@@ -61,6 +61,7 @@ David reviews and can override any of these.
 | R12 | Error monitoring (Sentry / structured logs) | Data / Reliability | S–M | — | 🟡 Captured | Elevated from pre-beta polish list 2026-04-24. Compounds with R3. |
 | R13 | Mall-operator accounts | User/Auth | L | R4c + shares infra with R1 | 🟡 Captured | Third persona (shopper / vendor / mall-operator / admin). Enables mall-level self-serve. |
 | R14 | Vendor profile enrichment + vendor social graph | User/Auth + Feed quality | M | — (compounds with R1, R3) | 🟡 Captured | Vendor-side counterpart to R1. Richer vendor profiles, vendor-to-vendor follow, future social surfaces. |
+| R15 | App store launch (iOS + Google Play) | Engagement + Reach | L+ | R6 (hard gate); compounds heavily with R9, R1, R12; absorbs Q-006 Universal Links | 🟡 Captured | Three possible technical paths (Capacitor wrapper / Expo rebuild / native). **Path decision is the load-bearing scoping moment.** |
 
 ---
 
@@ -77,6 +78,7 @@ The hard dependencies (continued):
 
 - **R13 requires R4c.** Mall-operator accounts need malls that are meaningfully "theirs" to manage. The active/inactive mechanic is also their primary lever.
 - **R13 shares auth infrastructure with R1.** Not a hard ordering dependency, but both should be designed against the same role/permissions model — doing R1 first gives R13 a pattern to extend rather than a pattern to reconcile with.
+- **R15 requires R6.** Both Apple App Store and Google Play require a live privacy policy URL as a submission field. R6 is a hard gate regardless of technical path.
 
 The soft dependencies (compounds, but doesn't block):
 
@@ -85,6 +87,7 @@ The soft dependencies (compounds, but doesn't block):
 - **R11 compounds R4c.** A hero image for an inactive mall is wasted upload effort.
 - **R12 compounds R3.** Errors and analytics are adjacent concerns; a well-instrumented app is both harder to break silently and easier to debug when it does.
 - **R14 compounds R1 + R3.** Vendor profile enrichment has value alone, but vendor-to-vendor follow + vendor-to-shopper social features need R1 (shoppers to follow) and R3 (engagement worth surfacing).
+- **R15 compounds R9 + R1 + R12.** R9 native push is the single biggest technical reason to ship native; launching a store app without push is a visible gap. R1 accounts make the app meaningful beyond a feed reader. R12 error monitoring needs a native extension (Sentry React Native or equivalent). Also absorbs parked Q-006 Universal Links work during native deep-link setup.
 
 ---
 
@@ -424,6 +427,44 @@ Waves 1 + 2 + 3 together are realistically ~9–14 sessions (mix of S + M). That
 
 ---
 
+### R15 — App store launch (iOS + Google Play) 🟡
+
+**What:** Native-shell Treehouse Finds submitted to the Apple App Store and Google Play. One item (not two) because the technical path chosen almost always covers both platforms together.
+
+**Three possible technical paths — decision pending:**
+
+| Path | Timeline | Trade-off |
+|------|----------|-----------|
+| **(a) Capacitor / PWA wrapper** | ~6 weeks | Reuses existing Next.js codebase. Ships store presence fast. Limited native feature access. Harder path to first-class iOS push. |
+| **(b) Expo / React Native rebuild** | ~4–6 months | Real native, first-class push, full system integration. OTA updates via EAS Update partially preserve the "fix without re-review" model. Rebuild of UI layer required. |
+| **(c) Native Swift + Kotlin** | ~8–12 months | Highest quality ceiling. By far the biggest ongoing maintenance cost. Rarely justified for a solo-operator product. |
+
+**Why:** Three overlapping motivations. (a) Store presence is a trust signal — "is this a real app?" answered by showing up in search results. (b) Push notifications (R9) on iOS essentially require native. (c) The core retention loops — follow-a-booth + new-find alerts — are dramatically richer with native push and system-level integration.
+
+**Open questions (mostly path-dependent):**
+- Path (a/b/c) — the single load-bearing decision. Changes timeline by an order of magnitude and changes everything about what gets built vs. reused.
+- Target first-native-feature: is the goal store presence parity with web, or store presence + push + account-first experience? Different answers suggest different paths.
+- OTA update story — Expo EAS Update bypasses app review for JS changes; Capgo does similar for Capacitor. Changes iteration velocity significantly and should factor into the path decision.
+- App-review cadence tolerance — first submissions can take 1–3 weeks; patch releases usually 24–48 hours. Adjust release rhythm accordingly.
+- Brand asset bundle — icon (1024px square), screenshots (5–10 per platform, often per device size), store listing copy, possibly a promo video. This is a mini-design-sprint on its own.
+- Developer accounts — Apple ($99/yr), Google ($25 one-time). Who holds the legal entity — Zen-Forged or an individual? Tax implications for future Stripe integration (R2).
+- Privacy labels / data collection disclosures — iOS App Store "nutrition labels" require auditing every external service the app touches (Supabase, Resend, Sentry once R12 ships, any analytics once R3 ships). This audit is part of the submission.
+- Deep linking — Universal Links (iOS) + App Links (Android) absorbs the parked Q-006 deep-link CTA work.
+- Native permissions flow — camera/photos for post uploads becomes a native system dialog rather than a browser prompt.
+- CI/CD — EAS (Expo) vs. Fastlane (native) vs. Capacitor CLI. Pipeline choice compounds with path choice.
+
+**Design prereq:** High. Store listing assets alone are a design sprint. UX impact depends on path — wrapper has low impact, rebuild has full re-skin implications.
+
+**Dependencies:**
+- **Hard gate: R6 (ToS/privacy).** Both stores require a live privacy policy URL. R15 cannot submit without R6.
+- **Strongly recommended before launch: R9 (push), R1 (accounts).** Launching to stores without these is possible but misses the primary reason users install vs. bookmark.
+- **Needs native extension: R12 (error monitoring).** Sentry supports React Native / Capacitor / native; configuration is path-specific.
+- **Absorbs: Q-006 Universal Links (parked in Sprint 6+).** Natural byproduct of native deep-link setup.
+
+**Elevated from:** Session 55 grouping/priority review — David flagged app store launch as a major-item capture gap missed in the 11-item + 3-elevated initial pass.
+
+---
+
 ## Items absorbed from CLAUDE.md parked lists
 
 These were already tracked somewhere in CLAUDE.md but are semantically related to the captured items above. Cross-referencing here so they are not double-planned later.
@@ -442,6 +483,7 @@ These were already tracked somewhere in CLAUDE.md but are semantically related t
 | `Error monitoring` (Sentry, pre-beta polish) | R12 | Elevated during session 55 capture review. See R12. |
 | `Beta feedback mechanism` (Tally.so, pre-beta polish) | R7 | Folded in as sub-task of contact us. See R7 open questions. |
 | `Mall-operator accounts` (implied by R11 + R4c + "mall vendor CTA") | R13 | Elevated during session 55 capture review. See R13. |
+| `Universal Links` (Sprint 6+, gating Q-006 deep-link CTA) | R15 | Absorbed during session 55 cluster review. Natural byproduct of native deep-link setup regardless of technical path. |
 
 ---
 
@@ -457,6 +499,58 @@ Items flagged during capture but left parked pending future review:
 - ~~Beta feedback mechanism (Tally.so)~~ → **folded into R7**.
 - ~~Mall-operator accounts~~ → **elevated as R13**.
 - ~~Vendor profile enrichment~~ → **elevated as R14** (surfaced during review as the vendor-side counterpart to R1, which was originally captured as shopper-only).
+- ~~App store launch~~ → **elevated as R15** (surfaced during cluster/priority review as a major-item gap missed in the initial 11 + 3 pass).
+
+---
+
+## Clusters & Shipping horizons
+
+> Added session 55 after initial capture. Complements — does not replace — the Wave 1–4 unlock order above. **Waves** are session-granular ("what ships next"); **Horizons** are narrative-granular ("what phase is the product in"). They agree on sequence but differ in grain; pick the lens that fits the planning moment.
+
+### Eight clusters
+
+Items grouped by shared infrastructure, shared design surface, or shared decision moment — not by shipping order.
+
+| Cluster | Items | Shared concern |
+|---------|-------|----------------|
+| **A — Identity & Accounts** | R1, R13, R14 | Auth schema, role model, profile surfaces. Design the role model once; three items share it. |
+| **B — Monetization & Quality Gates** | R2, R5a, R5b | Tier definition drives Stripe and caps simultaneously. Feed-window is the adjacent quality lever. |
+| **C — Admin Sweep** | R4a, R4b | Two small admin fixes. Realistically batchable in one session. |
+| **D — Discovery & Location** | R4c (anchor), R10, R11 | Mall-surface story. R4c unlocks the other two. |
+| **E — Legal & Support** | R6, R7 | Public information pages. Batchable. R6 is a hard gate for R15. |
+| **F — First-Run UX** | R8 | Mostly standalone; adjacent to R1's signup flow. |
+| **G — Instrumentation** | R3, R12 | Same mindset — structured events + structured errors. Ship together. |
+| **H — Engagement + Reach** | R9, R15 | Native / push story. Compounds heavily with A + G. Biggest investment on the board, highest-leverage at scale. |
+
+### Three shipping horizons
+
+Each horizon represents a coherent "state of the product." All timing estimates are working assumptions subject to David's pacing.
+
+**Horizon 1 — V1 beta foundation (~2–3 months)**
+1. **Cluster G** (R3 + R12) — Instrumentation. Start capturing data before decisions depend on it.
+2. **Cluster D anchor** (R4c) — Mall active/inactive. Biggest UX pollution fix today. Unlocks D-rest.
+3. **Cluster C** (R4a + R4b) — Admin clean-ups. One session, fast visible wins.
+4. **R5a** — 30-day feed window. Single query filter.
+5. **Cluster E** (R6 + R7) — Legal + Contact. Boilerplate but R6 gates Horizon 3.
+6. **Cluster D rest** (R10 + R11) — Map + mall heros. Ships if Horizon 1 pace allows.
+
+**Horizon 2 — Identity & polish (~3–6 months)**
+7. **Cluster A** (R1 → R14 → R13) — Account system. Design the role model once for all three. Sequence: shopper accounts first, vendor enrichment second, mall-operator accounts last.
+8. **R8** — Onboarding. Ships after R1 because it depends on having an account flow to onboard into.
+
+**Horizon 3 — Monetization & reach (~6–12 months)**
+9. **Cluster B rest** (R5b + R2) — Tier definition + Stripe. Scope together.
+10. **Cluster H** (R9 + R15) — Push + App Store. **R15 path decision (a/b/c) is the load-bearing scoping moment.** If path (a) Capacitor wrapper: R9 can ship parallel or before. If path (b) Expo rebuild: R9 is absorbed into R15's technical scope. If path (c) native rebuild: same as (b) but longer.
+
+### Decision-urgency callouts
+
+Items that need to be *decided* well before they *ship*. Enter these design conversations in Horizon 2, even though their shipping sits in Horizon 3:
+
+- **R15 technical path (a / b / c)** — determines Horizon 3's entire timeline. Changes by an order of magnitude based on the answer. Biggest open decision on the whole board.
+- **R5b tier shape** — "what does the free tier actually allow" is a product-identity decision, not just an engineering one. Scope before R2 freezes.
+- **R1 role model** — the schema decision here dictates R13 and R14 migrations. Worth a deliberate design session before R1's first migration lands.
+
+Everything else can be decided at the moment of scoping for each item.
 
 ---
 
@@ -470,4 +564,4 @@ Items flagged during capture but left parked pending future review:
 
 ---
 
-> Last updated: 2026-04-24 (session 55 — initial capture of 11 items from David's 2026-04-24 standup + 3 elevated during same-session review: R12 error monitoring, R13 mall-operator accounts, R14 vendor profile enrichment)
+> Last updated: 2026-04-24 (session 55 — initial capture of 11 items from David's 2026-04-24 standup + 3 elevated during capture review: R12 error monitoring, R13 mall-operator accounts, R14 vendor profile enrichment + 1 elevated during cluster/priority review: R15 app store launch. Clusters + shipping horizons section added.)
