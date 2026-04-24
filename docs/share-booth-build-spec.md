@@ -609,3 +609,111 @@ Tighter than the v2 post-it numeral (30/24/20) because the info bar cell is narr
 > v3 mockup approved: 2026-04-24 (session 52).
 > v3 addendum authored: 2026-04-24 (session 52, this addendum).
 > Ready for implementation: YES.
+
+---
+
+# v4 addendum — Simplified, button-forward (session 52 close)
+
+> Mockup (source of truth): `docs/mockups/share-booth-email-v4.html` (v4 Full-width variant).
+> Mockup approved: 2026-04-24 (session 52, this addendum).
+> **If v4 mockup and this addendum disagree, the mockup wins.**
+> **v4 supersedes v3's shell masthead + opener block + closer block + Window grid eyebrow + button copy + subject + preheader.** Everything else from v3 (banner + info bar, Window tile grid, footer, IM Fell Google Fonts link, `senderMode` retirement) carries forward unchanged.
+
+## Why this exists
+
+With v3's info bar pivot solving the Gmail compat problem, the email worked — but David flagged it was still text-heavy and the primary CTA (the green pill button) was buried at the bottom of the email, after the full Window grid. The goal shifted from "make the banner render correctly" to "make the email work as a conversion surface — a well-designed email that gets people to open the link to see more finds."
+
+v4 executes that goal through four simplification moves:
+
+1. **Retire the brand masthead entirely.** The sender envelope ("Treehouse Finds" in the From row) already identifies the brand. Re-identifying in the body with a 13px wordmark + 10px tagline added ~45px of vertical weight for zero new information. Deleted.
+2. **Collapse the two-line opener into one.** Was: italic "You've received a personal invite." + IM Fell eyebrow "Step inside a curated booth from" + vendor name. Now: one italic line "You've received a personal invite to explore" that flows grammatically into the vendor name as its object. Two text blocks become one phrase.
+3. **Move the CTA up.** Green pill button was in the closer block at the very end of the email (after masthead → opener → banner → info bar → Window grid + eyebrow → italic closer eyebrow → sub-copy → button). In v4 it sits directly under the banner + info bar, so the reader sees it WHILE they're still looking at what they were sent. The tile grid below becomes supporting preview — "here's more of what you'd find inside."
+4. **Delete all closer + eyebrow copy.** No more "THE WINDOW" eyebrow above tiles. No more "Explore the rest of the booth" italic + "More treasures waiting to be discovered." sub-copy. No more hairline separator above the old closer block. Tiles flow directly from the button with the footer hairline below.
+
+## v4 decisions locked
+
+**Button shape:** **Full-width** (Variant B in the v4 mockup).
+- `display: block`, full column width with 4px side padding on its wrapper.
+- `padding: 15px 20px`, `border-radius: 10px`.
+- Green `#1e4d2b` background, `#fff9e8` cream text.
+- Georgia 16px weight 600, `letter-spacing: 0.005em`.
+- Slightly larger type (16 vs 15) and weightier block shape than the old auto-width pill — modern-app CTA feel, maximum tap area on mobile.
+
+**Button copy:** **"Explore the booth"** (was: "Open in Treehouse Finds").
+
+**Subject line:** **`A personal invite to explore {vendorName}`** (was: `A Window into {vendorName}`).
+
+**Preheader:** **`A personal invite to explore {vendorName}.`** (was: `A personal invite to a curated booth.`).
+
+Subject + preheader + opener now all share the same phrase. Someone scanning their inbox gets three matched impressions — subject, preview pane, first line of body — which creates narrative unity. The word "Window" is retired from user-facing copy entirely (still lives in internal identifiers: `sendBoothWindow`, `ShareBoothWindowPayload`, `/docs/share-booth-qa-walk.md` — those are developer-facing and don't change).
+
+**Opener block:** one italic line + vendor name hero.
+- Invite line: Georgia italic 15px, `color: INKMID`, `text-align: center`, `letter-spacing: 0.01em`, `margin: 0 16px 10px`.
+- Vendor name: IM Fell **34px** (up from 32px in v3) weight 400, `color: INK`, `letter-spacing: -0.005em`, `line-height: 1.1`, `margin: 0 10px 20px`, `text-align: center`. Bumps one step because it's now the undisputed top visual — no masthead or eyebrow competing.
+
+**Shell masthead row:** **deleted entirely.** The `<tr>` containing the 13px uppercase wordmark + 10px italic tagline + `border-bottom` hairline is removed from `renderEmailShell`. The body `<td>`'s top padding bumps from 24px to 32px to compensate for the lost masthead spacing; outer shell padding (36/16/32) is unchanged.
+
+**Closer block:** **deleted entirely.** No italic "Explore the rest of the booth" eyebrow. No sub-copy. No border-top hairline separator.
+
+**Window grid eyebrow:** **deleted.** The italic-uppercase "THE WINDOW" label above the 3×2 tile grid is removed. Tiles stand alone below the button.
+
+**What stays unchanged from v3:**
+- Banner + attached 2-cell info bar (rounded outer frame, BOOTH numeral 32% cell + mall 68% cell, hairline divider above, softer hairline between cells). `renderBanner` signature + internals unchanged.
+- 6-tile 3×2 Window grid with system-ui captions. `renderWindowGrid` internals unchanged except the eyebrow `<p>` is removed.
+- IM Fell Google Fonts `<link>` in shell `<head>`.
+- Footer: hairline + tiny "You're receiving this because..." text.
+- `senderFirstName` + `senderMode` remain `@deprecated` on payload; server still passes them for rate-limit bucket selection.
+
+## Plain-text fallback (v4)
+
+```
+You've received a personal invite to explore {vendorName}.
+
+Booth {boothNumber}
+{mallName} — {mallAddress}
+
+Explore the booth:
+{shelfPageUrl}
+
+Finds in the booth:
+  • {post 1 title}
+  • {post 2 title}
+  ...
+
+— Treehouse Finds
+```
+
+Notable changes vs v3 plain-text:
+- Drops redundant "A curated booth from {vendor}." line (the opener now names the vendor).
+- Drops "The Window:" label — replaced with "Finds in the booth:" to match the retired-eyebrow + retired-Window-vocabulary direction.
+- Moves the URL up, immediately below the mall info, to mirror HTML button placement.
+
+## File changes (v4 delta)
+
+| File | Change |
+|---|---|
+| `lib/email.ts` | `renderEmailShell`: delete the masthead `<tr>`, bump body `<td>` top padding 24→32px. `sendBoothWindow`: new subject + new preheader + new plain-text fallback. `renderWindowBody`: replace two-line opener with one-line invite + IM Fell 34px vendor name; move button render to directly after the banner call; delete the closer block entirely. `renderWindowGrid`: remove the "The Window" eyebrow `<p>`. Update file header comment block with v4 history paragraph. |
+| `docs/share-booth-build-spec.md` | This addendum (✅ written first per session-28 rule). |
+| `docs/mockups/share-booth-email-v4.html` | Variant B (full-width button) locked. |
+| `app/api/share-booth/route.ts` | No change. |
+
+## On-device QA walk (v4)
+
+**Gmail web + iOS Gmail** (proven pain clients):
+- [ ] Email opens WITHOUT a brand masthead — body starts with italic invite line
+- [ ] Invite line + vendor name read as one phrase
+- [ ] Banner + info bar render as in v3 (no regression)
+- [ ] Full-width green button appears directly below the info bar, visible without scrolling past the tile grid
+- [ ] Button copy reads "Explore the booth"
+- [ ] Tile grid renders without "THE WINDOW" eyebrow
+- [ ] No orphan closer text at the end — tiles → footer hairline → "You're receiving this..." footer
+- [ ] Inbox preview shows "A personal invite to explore {vendor}"
+- [ ] Subject line reads "A personal invite to explore {vendor}"
+
+**iOS Mail + Apple Mail:** same eight checks.
+
+**Outlook web:** graceful degradation — outer `border-radius` may not apply on the banner wrapper or the button; content still legible, button still clickable.
+
+> v4 mockup approved: 2026-04-24 (session 52).
+> v4 addendum authored: 2026-04-24 (session 52, this addendum).
+> Ready for implementation: YES.

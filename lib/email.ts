@@ -6,6 +6,41 @@
 //   sendApprovalInstructions(payload)  — Email #2 per onboarding-journey.md
 //   sendBoothWindow(payload)           — Window share email (Q-007, session 39)
 //
+// Session 52 Q-011 v4 (2026-04-24, simplified button-forward):
+//  - After v3 solved the Gmail compat problem, David flagged the email was
+//    still text-heavy and the primary CTA was buried at the bottom after
+//    the full tile grid. v4 pivots the design goal from "make it render"
+//    to "make it convert" — a well-formatted email that gets people to
+//    tap the button and go see more finds.
+//  - Shell masthead retired entirely. The sender envelope already names
+//    the brand ("Treehouse Finds" in the From row); re-identifying in the
+//    body added ~45px of vertical weight for zero new information.
+//  - Opener collapses from two blocks to one phrase: italic "You've
+//    received a personal invite to explore" flows grammatically into the
+//    vendor name as its object. IM Fell vendor name bumps 32→34px since
+//    it's now the undisputed top visual.
+//  - Button moves up to sit directly under the banner + info bar.
+//    Recipient sees the CTA while still looking at what they were sent.
+//    Button is full-width block (10px radius, 15px/20 padding, Georgia
+//    600 16px) — maximum tap area, modern-app feel.
+//  - Button copy: "Explore the booth" (was "Open in Treehouse Finds").
+//  - Subject: "A personal invite to explore {vendor}" (was "A Window
+//    into {vendor}"). Preheader: "A personal invite to explore
+//    {vendor}." Subject + preheader + opener now all share the phrase —
+//    narrative unity from inbox-scan to first line of body.
+//  - Closer block deleted entirely. No "Explore the rest of the booth"
+//    italic eyebrow. No "More treasures waiting to be discovered."
+//    sub-copy. No border-top hairline separator.
+//  - "THE WINDOW" tile-grid eyebrow deleted. Tiles stand naked under the
+//    button as supporting preview.
+//  - The word "Window" is retired from user-facing copy entirely. It
+//    lives on in internal identifiers (`sendBoothWindow`,
+//    `ShareBoothWindowPayload`, docs/share-booth-qa-walk.md) —
+//    developer-facing, no reason to churn.
+//  - See docs/share-booth-build-spec.md v4 addendum and
+//    docs/mockups/share-booth-email-v4.html (Variant B full-width) for
+//    the lock.
+//
 // Session 52 Q-011 v3 (2026-04-24, info bar pivot):
 //  - Window email banner redesigned AGAIN after v2 kept failing Gmail QA.
 //    Two rounds of overlap-style post-it (v2.0 position:absolute, v2.1
@@ -344,10 +379,12 @@ export async function sendBoothWindow(
   // recipients here.
   const shelfPageUrl  = `${siteUrl}/shelf/${payload.vendor.slug}`;
 
-  const subject    = `A Window into ${vendorName}`;
-  // Session 52 Q-011 v2: preheader is universal — no sender attribution, no
-  // mode branching. Matches the opener line the recipient sees on-open.
-  const preheader  = `A personal invite to a curated booth.`;
+  // Session 52 Q-011 v4: subject + preheader + opener all share the same
+  // phrase. "Window" retires from user-facing copy; lives on in internal
+  // identifiers only (sendBoothWindow, ShareBoothWindowPayload, the QA-walk
+  // doc — developer-facing, no reason to churn).
+  const subject    = `A personal invite to explore ${vendorName}`;
+  const preheader  = `A personal invite to explore ${vendorName}.`;
 
   const bodyHtml = renderWindowBody({
     vendorName,
@@ -365,22 +402,22 @@ export async function sendBoothWindow(
   const html = renderEmailShell({ preheader, bodyHtml, footerHtml });
 
   // Plain-text fallback. Email clients that can't render HTML (or the
-  // user's preview pane) fall back to this. Keep it readable as prose.
-  // Session 52 Q-011 v2: opener adopts the same universal copy as the HTML
-  // body — no sender attribution. Eyebrow + vendor name appear as two
-  // separate lines for readability in plain-text clients.
+  // user's preview pane) fall back to this.
+  // Session 52 Q-011 v4: opener matches the HTML body's single phrase.
+  // URL moves up directly after the mall info (mirrors the HTML's
+  // button placement below the banner + info bar). Tile list moves
+  // below the URL as supporting preview.
   const text = [
-    `You've received a personal invite.`,
+    `You've received a personal invite to explore ${vendorName}.`,
     ``,
-    `A curated booth from ${vendorName}.`,
     payload.vendor.boothNumber ? `Booth ${payload.vendor.boothNumber}` : ``,
     `${payload.mall.name}${payload.mall.address ? " — " + payload.mall.address : ""}`,
     ``,
-    `The Window:`,
-    ...payload.posts.map(p => `  • ${p.title}`),
-    ``,
-    `Explore the rest of the booth:`,
+    `Explore the booth:`,
     shelfPageUrl,
+    ``,
+    `Finds in the booth:`,
+    ...payload.posts.map(p => `  • ${p.title}`),
     ``,
     `— Treehouse Finds`,
   ].filter(Boolean).join("\n");
@@ -415,44 +452,33 @@ function renderWindowBody(opts: WindowBodyOpts): string {
     mallName, mallAddress, googleMapsUrl, posts, shelfPageUrl,
   } = opts;
 
-  // Session 52 Q-011 v2: opener block = universal invite line + eyebrow +
-  // IM Fell vendor name hero. No senderMode branching.
+  // Session 52 Q-011 v4: simplified opener (one italic line flowing into
+  // the vendor name as its object) + button moved up directly under the
+  // banner + info bar + closer block deleted. Tiles stand naked below the
+  // button as supporting preview.
   return `
-      <!-- Invite line — universal, no sender attribution -->
-      <p style="margin: 0 8px 20px; padding: 0; font-family: ${SERIF}; font-style: italic; font-size: 15px; line-height: 1.5; color: ${INKMID}; text-align: center; letter-spacing: 0.01em;">
-        You've received a personal invite.
+      <!-- Invite line — flows grammatically into the vendor name -->
+      <p style="margin: 0 16px 10px; padding: 0; font-family: ${SERIF}; font-style: italic; font-size: 15px; line-height: 1.5; color: ${INKMID}; text-align: center; letter-spacing: 0.01em;">
+        You've received a personal invite to explore
       </p>
 
-      <!-- Vendor block — eyebrow + IM Fell name hero -->
-      <div style="margin: 0 10px 18px; text-align: center;">
-        <p style="margin: 0 0 6px; padding: 0; font-family: ${IMFELL}; font-style: italic; font-size: 14px; line-height: 1.3; color: ${INKMID};">
-          Step inside a curated booth from
-        </p>
-        <h2 style="margin: 0; padding: 0; font-family: ${IMFELL}; font-size: 32px; font-weight: 400; color: ${INK}; line-height: 1.1; letter-spacing: -0.005em;">
-          ${escapeHtml(vendorName)}
-        </h2>
-      </div>
+      <!-- Vendor name hero — IM Fell 34px, undisputed top visual -->
+      <h2 style="margin: 0 10px 20px; padding: 0; font-family: ${IMFELL}; font-size: 34px; font-weight: 400; color: ${INK}; line-height: 1.1; letter-spacing: -0.005em; text-align: center;">
+        ${escapeHtml(vendorName)}
+      </h2>
 
-      <!-- Banner v3 — hero photograph + attached 2-cell info bar (booth + mall).
-           Replaces v2's overlap post-it (Gmail-hostile) and the standalone
-           pin-prefixed location line. One primitive, one thought. -->
+      <!-- Banner + attached 2-cell info bar (v3 locked, unchanged) -->
       ${renderBanner(heroImageUrl, boothNumber, vendorName, mallName, mallAddress, googleMapsUrl)}
 
-      <!-- The Window — 6-tile grid, 3 cols × 2 rows, HTML table -->
-      ${renderWindowGrid(posts)}
-
-      <!-- Closer block + CTA -->
-      <div style="margin: 30px 0 0; text-align: center;">
-        <p style="margin: 0 0 6px; font-family: ${SERIF}; font-style: italic; font-size: 19px; line-height: 1.35; color: ${INK};">
-          Explore the rest of the booth
-        </p>
-        <p style="margin: 0 0 20px; font-family: ${SERIF}; font-size: 13px; line-height: 1.55; color: ${INKMID};">
-          More treasures waiting to be discovered.
-        </p>
-        <a href="${escapeAttr(shelfPageUrl)}" style="display: inline-block; padding: 12px 22px; background: #1e4d2b; color: #fff9e8; font-family: ${SERIF}; font-size: 15px; font-weight: 600; text-decoration: none; border-radius: 999px; letter-spacing: 0.005em;">
-          Open in Treehouse Finds
+      <!-- Primary CTA — full-width green block, directly under info bar -->
+      <div style="margin: 0 0 28px; padding: 0 4px;">
+        <a href="${escapeAttr(shelfPageUrl)}" style="display: block; padding: 15px 20px; background: #1e4d2b; color: #fff9e8; font-family: ${SERIF}; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 10px; text-align: center; letter-spacing: 0.005em;">
+          Explore the booth
         </a>
       </div>
+
+      <!-- Supporting tile preview — 6-tile 3×2 grid, no eyebrow -->
+      ${renderWindowGrid(posts)}
   `;
 }
 
@@ -531,7 +557,7 @@ function renderBanner(
   const mallCellWidth = boothNumber ? `68%` : `100%`;
 
   return `
-      <div style="margin: 18px 0 22px; border: 1px solid ${HAIR_SOFT}; border-radius: 16px; overflow: hidden;">
+      <div style="margin: 0 0 20px; border: 1px solid ${HAIR_SOFT}; border-radius: 16px; overflow: hidden;">
         ${heroLayer}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: ${PAPER}; border-top: 1px solid ${HAIR};">
           <tr>
@@ -595,10 +621,10 @@ function renderWindowGrid(
     rows.push(`<tr>${rowCells}</tr>`);
   }
 
+  // Session 52 Q-011 v4: "The Window" eyebrow retired. Tiles stand naked
+  // under the button as supporting preview — no label needed, the grid
+  // is self-explanatory.
   return `
-      <p style="margin: 0 0 12px; font-family: ${SERIF}; font-style: italic; font-size: 13px; color: ${INKMID}; text-transform: uppercase; letter-spacing: 0.18em; text-align: center;">
-        The Window
-      </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 8px;">
         ${rows.join("")}
       </table>
@@ -728,22 +754,13 @@ function renderEmailShell(opts: { preheader: string; bodyHtml: string; footerHtm
     <tr>
       <td align="center" style="padding: 36px 16px 32px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 540px;">
-          <!-- Brand lockup — SMALL masthead (session 52 Q-011 v2).
-               13px uppercase Georgia 600 letterspaced wordmark + 10px italic
-               tagline. Quiet brand anchor; the booth leads. -->
+          <!-- Body — session 52 Q-011 v4: masthead row retired. Sender
+               envelope ("Treehouse Finds" in From row) already identifies
+               the brand; re-identifying in the body added vertical weight
+               for zero new information. Body td top padding bumps from
+               24→32px to compensate for the lost masthead spacing. -->
           <tr>
-            <td align="center" style="padding: 0 0 14px; border-bottom: 1px solid ${HAIR};">
-              <p style="margin: 0; font-family: ${SERIF}; font-size: 13px; font-weight: 600; color: ${INKMID}; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.2;">
-                Treehouse Finds
-              </p>
-              <p style="margin: 3px 0 0; font-family: ${SERIF}; font-style: italic; font-size: 10px; color: ${FAINT}; letter-spacing: 0.02em; line-height: 1.5;">
-                Embrace the Search. Treasure the Find.
-              </p>
-            </td>
-          </tr>
-          <!-- Body -->
-          <tr>
-            <td style="padding: 24px 10px 0;">
+            <td style="padding: 32px 10px 0;">
               ${opts.bodyHtml}
             </td>
           </tr>
