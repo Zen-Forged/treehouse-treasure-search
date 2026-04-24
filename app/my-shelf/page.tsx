@@ -116,33 +116,25 @@ function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promis
 }
 
 // ─── Masthead ─────────────────────────────────────────────────────────────────
-// Two variants controlled by `variant`:
-//   - "single": unchanged v1.1l masthead, center label reads "Treehouse Finds"
-//   - "picker": the center slot becomes a stacked, tappable
-//              "Viewing / [Booth Name] ▾" block that opens the sheet.
+// Center slot is the app brand lockup — always "Treehouse Finds" regardless
+// of single- vs. multi-booth state. Q-002 (session 57) moved the multi-booth
+// picker affordance OUT of the masthead and INLINE with the 32px booth name
+// under the hero banner (see BoothTitleBlock's onPickerOpen prop).
+//
+// Right slot: paper-airplane share affordance when `canShare` is true; 38px
+// spacer otherwise so the "38px 1fr 38px" grid stays centered.
+//
 // Scroll target remains the page's overflow-auto container (passed by parent)
 // per v1.1l's internal-scroll-safe pattern.
-//
-// Session 40: right slot is now a share affordance (paper-airplane icon)
-// when `canShare` is true. When false the slot renders as a 38px spacer so
-// the "38px 1fr 38px" grid stays centered. This matches the masthead layout
-// assumption the picker variant relies on — the center slot needs balanced
-// siders to stay visually centered.
 
 function Masthead({
   scrollTarget,
-  variant,
-  activeBoothName,
-  onPickerOpen,
   canShare,
   onShareOpen,
 }: {
-  scrollTarget:    React.RefObject<HTMLDivElement | null>;
-  variant:         "single" | "picker";
-  activeBoothName: string | null;
-  onPickerOpen:    () => void;
-  canShare:        boolean;
-  onShareOpen:     () => void;
+  scrollTarget: React.RefObject<HTMLDivElement | null>;
+  canShare:     boolean;
+  onShareOpen:  () => void;
 }) {
   return (
     <StickyMasthead
@@ -156,66 +148,17 @@ function Masthead({
       }}
     >
       <div />
-      {variant === "single" ? (
-        <div
-          style={{
-            fontFamily: FONT_IM_FELL,
-            fontSize: 18,
-            color: v1.inkPrimary,
-            letterSpacing: "-0.005em",
-            textAlign: "center",
-          }}
-        >
-          Treehouse Finds
-        </div>
-      ) : (
-        <button
-          onClick={onPickerOpen}
-          aria-label={activeBoothName ? `Switch booth — viewing ${activeBoothName}` : "Switch booth"}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 2,
-            background: "transparent",
-            border: "none",
-            padding: 0,
-            cursor: "pointer",
-            WebkitTapHighlightColor: "transparent",
-          }}
-        >
-          <span
-            style={{
-              fontFamily: FONT_IM_FELL,
-              fontStyle: "italic",
-              fontSize: 11,
-              color: v1.inkMuted,
-              lineHeight: 1,
-            }}
-          >
-            Viewing
-          </span>
-          <span
-            style={{
-              fontFamily: FONT_IM_FELL,
-              fontSize: 17,
-              color: v1.inkPrimary,
-              lineHeight: 1.1,
-              letterSpacing: "-0.005em",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              maxWidth: "100%",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {activeBoothName ?? "Booth"}
-            <span style={{ color: v1.inkMuted, fontSize: 11 }}>▾</span>
-          </span>
-        </button>
-      )}
+      <div
+        style={{
+          fontFamily: FONT_IM_FELL,
+          fontSize: 18,
+          color: v1.inkPrimary,
+          letterSpacing: "-0.005em",
+          textAlign: "center",
+        }}
+      >
+        Treehouse Finds
+      </div>
       {canShare ? (
         <button
           onClick={onShareOpen}
@@ -735,9 +678,6 @@ function MyBoothInner() {
       >
         <Masthead
           scrollTarget={scrollContainerRef}
-          variant={showPicker ? "picker" : "single"}
-          activeBoothName={activeVendor?.display_name ?? null}
-          onPickerOpen={() => setPickerOpen(true)}
           canShare={canShare}
           onShareOpen={() => setShareOpen(true)}
         />
@@ -775,7 +715,10 @@ function MyBoothInner() {
               </div>
             )}
 
-            <BoothTitleBlock displayName={displayName} />
+            <BoothTitleBlock
+              displayName={displayName}
+              onPickerOpen={showPicker ? () => setPickerOpen(true) : undefined}
+            />
             <MallBlock mallName={mallName} mallCity={mallCity} address={address} />
             <DiamondDivider topPad={22} bottomPad={12} horizontalPad={44} />
             <ViewToggle view={view} onChange={setView} />

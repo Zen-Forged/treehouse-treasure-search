@@ -134,7 +134,6 @@ Shape of the session:
 - **Tech Rule promotion batch** — **three rules shipped this session** (email-template-parity + commit-design-records-in-same-session into Design Agent; script-first-over-SQL-dump into Working Conventions; see MASTER_PROMPT.md). Next batch opens when another 2nd-firing lands. Twelve single-firing candidates still queued — see "Remaining pre-beta polish" below.
 - **Staging Supabase OTP email template paste** (~15 min HITL) — paste prod's branded OTP template into staging Supabase → Authentication → Email Templates for full parity (see [`docs/supabase-otp-email-templates.md`](docs/supabase-otp-email-templates.md)). Closes the visible generic-email gap from session 54.
 - **Booths view on-device verification on staging** (~5 min HITL) — the one deferred check from session 54 Task 10. Sign in at staging URL with `david@zenforged.com`, confirm the Booths view unhides.
-- **Q-002** 🟢 (~20 min) — Picker affordance placement revision (masthead → inline under hero banner).
 - **Session-archive drift cleanup** (~30 min) — sessions 28–38 + 44–55 tombstones only.
 - **Design agent principle addition** (~10 min, docs only) — "reconciliation of a second glyph/affordance is part of the same scope." `MASTER_PROMPT.md` Design Agent section (session-45 retrospective).
 - **MASTER_PROMPT.md KNOWN PLATFORM GOTCHAS update** (~10 min, docs only) — add session-52 Gmail `position: absolute` stripping + session-54 "new Supabase project requires Authentication → URL Configuration before first magic-link test."
@@ -211,7 +210,7 @@ All captured in `docs/queued-sessions.md`:
 
 ### 🟡 Session 35 non-gating follow-up
 
-- **Q-002** 🟢 — Picker affordance placement revision (masthead → inline under hero banner). ~20 min.
+- **Q-002** ✅ — Picker affordance placement revision. Shipped session 57 (`Masthead` center reverted to brand lockup; `<BoothTitleBlock>` gained optional `onPickerOpen` that wraps the 32px booth name in a tap target with inline `▾` when `showPicker`; mockup Frames 2 + 3 revised in same commit).
 
 ### 🟡 Sprint 5 + design follow-ons
 
@@ -246,7 +245,7 @@ QR-code approval, admin-cleanup tool (session 45 materially reduces the need —
 - `docs/mockups/share-booth-email-v2.html` — design-history reference (session 51 Variant B; superseded twice in session 52).
 - `docs/mockups/share-booth-email-v3.html` — design-history reference (session 52 info bar pivot; superseded by v4).
 - `docs/mockups/share-booth-email-v4.html` — design-history reference (session 52 v4 simplification; QA PASSED 4/4 clients session 53). Q-011 arc closed.
-- `docs/mockups/my-shelf-multi-booth-v1.html` — keep until Q-002 updates it.
+- `docs/mockups/my-shelf-multi-booth-v1.html` — Frames 2 + 3 updated session 57 (Q-002). Keep as design-history reference for multi-booth.
 - `docs/multi-booth-build-spec.md` — archived reference.
 - `docs/share-booth-build-spec.md` — now carries v2 + v3 + v4 addendums stacked. Post-QA (passed session 53), candidate for consolidation (the three addendums are easier to read merged than stacked). ~15 min docs-only pass.
 - `components/ShelfGrid.tsx` (parked; zero callers).

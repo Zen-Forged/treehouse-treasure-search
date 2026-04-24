@@ -276,7 +276,22 @@ export function BoothHero({
 // Title block — "a curated shelf from" eyebrow + vendor name (32px)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function BoothTitleBlock({ displayName }: { displayName: string }) {
+export function BoothTitleBlock({
+  displayName,
+  onPickerOpen,
+}: {
+  displayName: string;
+  /**
+   * Q-002 (session 57) — when the consumer is `/my-shelf` for a vendor with
+   * more than one claimed booth, passing this callback turns the 32px
+   * display name into a tap target with an inline chevron. Opens the booth
+   * switcher sheet. Non-multi-booth consumers (Public Shelf, single-booth
+   * /my-shelf) omit the prop; the chevron is invisible and the H1 renders
+   * unchanged.
+   */
+  onPickerOpen?: () => void;
+}) {
+  const hasPicker = !!onPickerOpen;
   return (
     <div style={{ padding: "36px 22px 6px" }}>
       <div
@@ -291,19 +306,65 @@ export function BoothTitleBlock({ displayName }: { displayName: string }) {
       >
         a curated shelf from
       </div>
-      <h1
-        style={{
-          fontFamily: FONT_IM_FELL,
-          fontSize: 32,
-          fontWeight: 400,
-          color: v1.inkPrimary,
-          lineHeight: 1.1,
-          letterSpacing: "-0.005em",
-          margin: 0,
-        }}
-      >
-        {displayName}
-      </h1>
+      {hasPicker ? (
+        <button
+          onClick={onPickerOpen}
+          aria-label={`Switch booth — viewing ${displayName}`}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 10,
+            margin: 0,
+            padding: 0,
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            textAlign: "left",
+            WebkitTapHighlightColor: "transparent",
+            maxWidth: "100%",
+          }}
+        >
+          <h1
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontSize: 32,
+              fontWeight: 400,
+              color: v1.inkPrimary,
+              lineHeight: 1.1,
+              letterSpacing: "-0.005em",
+              margin: 0,
+            }}
+          >
+            {displayName}
+          </h1>
+          <span
+            aria-hidden="true"
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontSize: 20,
+              color: v1.inkMuted,
+              lineHeight: 1,
+              marginTop: 4,
+            }}
+          >
+            ▾
+          </span>
+        </button>
+      ) : (
+        <h1
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontSize: 32,
+            fontWeight: 400,
+            color: v1.inkPrimary,
+            lineHeight: 1.1,
+            letterSpacing: "-0.005em",
+            margin: 0,
+          }}
+        >
+          {displayName}
+        </h1>
+      )}
     </div>
   );
 }

@@ -202,7 +202,13 @@ When Universal Links / apple-app-site-association ship. At that point:
 
 ---
 
-## Q-002 🟢 Picker affordance placement revision
+## ⏸️ Q-002 — Picker affordance placement revision — SHIPPED session 57
+
+**Retirement reason:** Shipped session 57 (2026-04-24) exactly per the approved direction. `Masthead` center column reverted to the "Treehouse Finds" brand lockup (session-40 right-slot share airplane preserved). `<BoothTitleBlock>` gained an optional `onPickerOpen` prop that turns the 32px IM Fell booth name into a tap target with an inline `▾` chevron when `/my-shelf` detects `vendorList.length > 1` (i.e. `showPicker`). Public Shelf + single-booth consumers omit the prop; the affordance is invisible in those contexts. Mockup `docs/mockups/my-shelf-multi-booth-v1.html` Frames 2 + 3 updated in the same commit to keep the mockup as the source of truth per the session-28 mockup-wins rule.
+
+---
+
+## ⏸️ Q-002 — Original spec (preserved as history)
 
 **Status:** Ready to run. Captures David's session-35 on-device observation: the masthead center slot reads as the app brand lockup ("Treehouse Finds"), so the "Viewing · [Booth Name] ▾" block sits in the wrong place in the session-34-approved mockup. The picker affordance should be inline with the booth name under the hero banner instead.
 

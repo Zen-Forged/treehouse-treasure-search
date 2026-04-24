@@ -140,6 +140,19 @@
   .masthead-chevron {
     color: var(--ink-muted); font-size: 11px;
   }
+  /* Q-002 (session 57) — inline chevron next to the 32px booth name in
+     the banner. Supersedes the masthead-based picker affordance used in
+     Frames 2 + 3 of the original mockup. Masthead reverts to the brand
+     lockup variant for all states. */
+  .booth-name-picker {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: none; border: none; padding: 0; margin: 0;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+  .booth-name-chevron {
+    font-family: var(--im-fell); font-size: 20px; color: var(--ink-muted);
+    line-height: 1; margin-top: 4px;
+  }
 
   /* Chip row (variant for comparison, used inside Frame A) */
   .chip-row {
@@ -531,18 +544,16 @@
       </div>
     </div>
 
-    <!-- FRAME 2 — Multi-booth default view -->
+    <!-- FRAME 2 — Multi-booth default view (Q-002, session 57: picker inline
+         with the 32px booth name; masthead reverts to brand lockup) -->
     <div class="frame-column">
       <p class="frame-label">Frame 2 — Multi-booth, active booth shown</p>
-      <p class="frame-sub">Vendor with 3 booths. Masthead shows "Viewing · ZenForged Finds" with a chevron. Tap anywhere in that block to open the picker.</p>
+      <p class="frame-sub">Vendor with 3 booths. Masthead is the brand lockup ("My Shelf"). Chevron sits inline with the 32px booth name under the banner — tap opens the picker.</p>
       <div class="phone">
         <div class="phone-scroll">
           <div class="masthead">
             <div class="masthead-icon">⚙</div>
-            <div class="masthead-active-booth">
-              <div class="masthead-eyebrow">Viewing</div>
-              <div class="masthead-booth-name">ZenForged Finds <span class="masthead-chevron">▾</span></div>
-            </div>
+            <div class="masthead-title">My Shelf</div>
             <div class="masthead-icon">☰</div>
           </div>
 
@@ -561,7 +572,10 @@
           </div>
 
           <div class="booth-body">
-            <h2 class="booth-name">ZenForged Finds</h2>
+            <button class="booth-name-picker" aria-label="Switch booth — viewing ZenForged Finds">
+              <h2 class="booth-name" style="margin: 0;">ZenForged Finds</h2>
+              <span class="booth-name-chevron" aria-hidden="true">▾</span>
+            </button>
             <div class="booth-loc">
               <div class="booth-pin">⚲</div>
               <div class="booth-loc-text">
@@ -588,18 +602,17 @@
       </div>
     </div>
 
-    <!-- FRAME 3 — Picker sheet open -->
+    <!-- FRAME 3 — Picker sheet open (Q-002, session 57: picker invoked from
+         the inline chevron next to the 32px booth name; masthead stays as
+         brand lockup) -->
     <div class="frame-column">
       <p class="frame-label">Frame 3 — Booth picker sheet</p>
-      <p class="frame-sub">Tap the masthead block → bottom sheet. X-glyph = booth (per glyph hierarchy). Pending request shown as italic pill. "Add another booth" at the bottom.</p>
+      <p class="frame-sub">Tap the chevron next to the 32px booth name → bottom sheet. X-glyph = booth (per glyph hierarchy). Pending request shown as italic pill. "Add another booth" at the bottom.</p>
       <div class="phone">
         <div class="phone-scroll">
           <div class="masthead">
             <div class="masthead-icon">⚙</div>
-            <div class="masthead-active-booth">
-              <div class="masthead-eyebrow">Viewing</div>
-              <div class="masthead-booth-name">ZenForged Finds <span class="masthead-chevron">▾</span></div>
-            </div>
+            <div class="masthead-title">My Shelf</div>
             <div class="masthead-icon">☰</div>
           </div>
 
@@ -618,7 +631,10 @@
           </div>
 
           <div class="booth-body" style="opacity: 0.4;">
-            <h2 class="booth-name">ZenForged Finds</h2>
+            <button class="booth-name-picker" aria-label="Switch booth — viewing ZenForged Finds">
+              <h2 class="booth-name" style="margin: 0;">ZenForged Finds</h2>
+              <span class="booth-name-chevron" aria-hidden="true">▾</span>
+            </button>
           </div>
 
           <!-- Bottom sheet -->
