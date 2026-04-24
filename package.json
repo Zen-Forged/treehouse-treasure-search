@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "qa-walk": "npx tsx scripts/qa-walk.ts",
+    "inspect-banners": "npx tsx scripts/inspect-banners.ts",
+    "test:filters": "npx tsx scripts/test-filters.ts",
+    "test:query-builder": "npx tsx scripts/test-query-builder.ts",
+    "test:comps": "npx tsx scripts/test-comps.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

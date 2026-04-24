@@ -1,0 +1,71 @@
+name: CI
+
+# Runs on every PR and push to main/staging. Complements comp-eval.yml
+# (which is path-gated to the reseller pipeline only). This workflow is
+# the general quality gate: typecheck + lint + build on every change.
+#
+# No secrets required — lib/supabase.ts falls back to placeholder URL
+# and adminAuth reads env at function scope, so build-time static
+# generation succeeds with an empty env.
+
+on:
+  pull_request:
+    branches: [main, staging]
+  push:
+    branches: [main, staging]
+  workflow_dispatch:
+
+jobs:
+  # ── Typecheck — catches downlevelIteration-class errors before deploy ──
+  typecheck:
+    name: TypeScript typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+  # ── Lint — next lint (eslint) ──────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+  # ── Build — next build, catches prerender + route-collection errors ────
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
