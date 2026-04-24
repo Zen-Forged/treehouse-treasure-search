@@ -503,3 +503,109 @@ Unchanged from v1 decision 8: `"A Window into {vendorName}"`.
 > v2.2 mockup approved: 2026-04-24 (session 51).
 > v2 addendum authored: 2026-04-24 (session 52, this session).
 > Ready for implementation: YES.
+
+---
+
+# v3 addendum — Info bar pivot, post-it retires from email (session 52, later same day)
+
+> Mockup (source of truth): `docs/mockups/share-booth-email-v3.html`.
+> Mockup approved: 2026-04-24 (session 52, this addendum).
+> **If v3 mockup and this addendum disagree, the mockup wins.**
+> **v3 supersedes v2's banner + post-it + mall-location-line decisions.** Everything else from v2 (masthead, opener, vendor block, Window grid, closer, CTA, footer, `senderMode` retirement from the template) carries forward unchanged.
+
+## Why this exists
+
+Session-52 v2.0 and v2.1 both failed on-device QA on Gmail (web + iOS). Two separate Gmail filters collide with any overlap-style post-it:
+
+1. **Gmail strips `position: absolute`** from inline styles — web and iOS. v2.0 used position:absolute inside a `position:relative` + `overflow:hidden` wrapper. With position stripped, the post-it fell to its flow position and was either clipped entirely (Gmail web) or rendered below the banner (iOS Gmail).
+2. **Gmail strips `<rect>` / `<circle>` SVG children** as an anti-tracking-pixel defense. This was the session-51 diagnosis that drove v2's "div not SVG" fix. v2's div survived the SVG filter but got killed by the position filter instead.
+
+v2.1 refactored to the v1 negative-margin overlay pattern (post-it as sibling of banner with `display: inline-block` + `text-align: right` + `margin-top: -108px`). Still broken on Gmail. The root truth: any overlap-style post-it needs position or inline-flow primitives Gmail is hostile to. Two rounds of workarounds, two rounds of failure on the client that matters most.
+
+**v3's pivot:** retire the post-it gesture from the email entirely. Booth number moves into a **two-cell horizontal info bar below the banner**, paired with mall name + address in a second cell. Pure HTML `<table>` — the oldest, most forgiving email primitive. Every mail client in circulation since 2005 renders it identically.
+
+Semantic improvement, not just a compat fix: "this booth is at that mall" is one thought. v2 split it across two primitives (post-it overlay + separate pin-glyph mall-location line). v3 combines them.
+
+## v3 decisions locked
+
+**Variant pick:** **A — Attached.** Banner image + info bar share one rounded outer frame with a hairline divider between them. Reads as one composed unit. Matches David's hand-sketch most literally (`IMG_2068.HEIC`, session-52).
+
+**Booth cell width:** **32%.** Mall cell takes the remaining 68%. Booth cell has `text-align: center`; mall cell is `text-align: left`.
+
+**Booth eyebrow copy:** **`BOOTH`** (uppercase, hardcoded in the template — no `text-transform`).
+- Font: Georgia italic 11px, `letter-spacing: 0.12em`, `color: INKMID`.
+- Matches the existing "THE WINDOW" eyebrow pattern in this same email (Georgia italic uppercase letterspaced). Family consistency.
+- Smaller than "THE WINDOW" (11 vs 12) because the booth eyebrow lives in a narrow cell next to a 26px numeral — it should be subordinate to the numeral, not competing.
+
+**Booth numeral:** Times New Roman 26px/500, auto-shrinks by digit count.
+- ≤4 digits: 26px
+- 5 digits: 22px
+- 6+ digits: 18px
+Tighter than the v2 post-it numeral (30/24/20) because the info bar cell is narrower than a post-it square.
+
+**Mall cell content:**
+- Mall name — IM Fell English 17px, `color: INK`, `letter-spacing: -0.005em`, `line-height: 1.25`, `margin: 0 0 2px`.
+- Address — system-ui 13px, `color: INKMID`, `line-height: 1.45`. Dotted underline when a Google Maps URL is present (`text-decoration: underline; text-decoration-style: dotted; text-decoration-color: FAINT; text-underline-offset: 2px`). Plain span with no underline when no Maps URL is available.
+
+**Banner height:** **200px** (down from v2's 220px). The info bar sits below and carries some of the vertical weight the banner used to carry alone.
+
+**Border treatment:**
+- Outer frame: 1px solid `HAIR_SOFT` (new constant = `rgba(42,26,10,0.12)`). Wraps image + info bar as one rounded unit.
+- Image-to-info-bar divider: 1px solid `HAIR` (existing = `rgba(42,26,10,0.18)`). Stronger than the outer frame — it's the internal delimiter between two visual zones.
+- Booth-cell-to-mall-cell divider: 1px solid `HAIR_SOFT`. Quieter internal split.
+- Border-radius: 16px on the outer frame; `overflow: hidden` on the wrapper so the image + info bar corners clip cleanly.
+
+**Info bar background:** `PAPER` (#e8ddc7) — same as the email body background, so the info bar reads as "paper poking up from below the image," not as a separate card.
+
+## What's gone (retired by v3)
+
+- `renderPostItDiv` helper — deleted. No callers after this refactor.
+- `renderPostItSvg` helper — already deleted in v2. Confirm gone.
+- `renderLocationLine` helper — deleted. Mall name + address now live inside the info bar's right cell; the standalone "pin glyph + mall + address" row below the banner is gone.
+- Teardrop `PinGlyph` SVG on the mall line — deleted with `renderLocationLine`. The mall name + clickable address are self-evidently a location; no glyph needed.
+- `POSTIT` constant (`#fffaea`) — deleted, no remaining references.
+- `⦲` Unicode char — already retired in v2; stays retired.
+- All CSS `transform: rotate(...)`, `position: absolute`, `position: relative`, `z-index`, `overflow: hidden` in the banner subtree except one `overflow: hidden` on the unified wrapper (for corner clipping). Zero position declarations in the info bar.
+
+## What stays (unchanged from v2)
+
+- `renderEmailShell` SMALL masthead (13px uppercase Georgia 600 wordmark + 10px italic tagline)
+- IM Fell Google Fonts `<link>` in shell `<head>`
+- Invite-line opener: "You've received a personal invite."
+- Eyebrow: "Step inside a curated booth from"
+- Vendor name hero: IM Fell 32px/400
+- Window grid (3×2, `renderWindowGrid` unchanged)
+- Closer block + green pill CTA + footer
+- `senderMode` / `senderFirstName` still `@deprecated` on the payload type; server still passes them for rate-limit bucket selection
+- Preheader: `"A personal invite to a curated booth."`
+- Plain-text fallback (already emits booth + mall on separate lines — no change needed)
+
+## File changes (v3 delta)
+
+| File | Change |
+|---|---|
+| `lib/email.ts` | Delete `renderPostItDiv`. Delete `renderLocationLine`. Delete `POSTIT` constant. Add `HAIR_SOFT` constant. Add `SYS` constant (extracted from inline mall-address styles for reuse). Rewrite `renderBanner` as a unified image + info-bar helper (takes mall + address + maps URL params). Update `renderWindowBody` to drop the standalone `renderLocationLine` call. Update file header comment block with v3 pivot history. |
+| `docs/share-booth-build-spec.md` | This addendum (✅ written first per session-28 rule). |
+| `docs/mockups/share-booth-email-v3.html` | Variant A locked (already present, no change). |
+| `app/api/share-booth/route.ts` | No change. |
+
+## On-device QA walk (v3)
+
+**Gmail web first** — the client the last two rounds died on.
+- [ ] Banner image renders full-width, 200px tall, rounded 16px top corners
+- [ ] Info bar renders as one unit directly below the image, same width, rounded bottom corners, hairline divider above
+- [ ] Left cell: italic "BOOTH" eyebrow + bold 26px numeral, centered
+- [ ] Right cell: IM Fell mall name + dotted-underline address, left-aligned
+- [ ] No stranded booth number floating anywhere
+- [ ] No broken SVG artifacts
+- [ ] No sender-attribution line
+
+**iOS Gmail:** same four checks.
+
+**iOS Mail + Apple Mail:** same four checks; address link opens Maps.
+
+**Outlook web:** graceful degradation check. The outer border-radius may not render (Outlook ignores it on `div`) — info bar still reads as a bordered two-cell block, just with square corners. Acceptable.
+
+> v3 mockup approved: 2026-04-24 (session 52).
+> v3 addendum authored: 2026-04-24 (session 52, this addendum).
+> Ready for implementation: YES.

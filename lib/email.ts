@@ -6,13 +6,42 @@
 //   sendApprovalInstructions(payload)  — Email #2 per onboarding-journey.md
 //   sendBoothWindow(payload)           — Window share email (Q-007, session 39)
 //
+// Session 52 Q-011 v3 (2026-04-24, info bar pivot):
+//  - Window email banner redesigned AGAIN after v2 kept failing Gmail QA.
+//    Two rounds of overlap-style post-it (v2.0 position:absolute, v2.1
+//    negative-margin sibling) both broke on Gmail web + iOS Gmail because
+//    Gmail strips `position` from inline styles and mangles inline-flow
+//    overlap patterns. Root truth: any post-it-over-banner overlap needs
+//    primitives Gmail is hostile to.
+//  - v3 retires the post-it gesture from emails. Booth number moves into
+//    a two-cell horizontal info bar BELOW the banner, paired with mall
+//    name + address in a second cell. Pure HTML <table> — the oldest and
+//    most forgiving email primitive; every mail client in circulation
+//    since 2005 renders it identically.
+//  - Semantic improvement: "this booth is at that mall" was split across
+//    two primitives in v1/v2 (post-it overlay + standalone pin-prefixed
+//    location row). v3 unifies them into one element. One primitive, one
+//    thought. The standalone mall-location line (renderLocationLine) and
+//    its teardrop PinGlyph SVG are retired.
+//  - Variant locked: A — Attached. Banner image + info bar share one
+//    rounded outer frame with a hairline divider between them. Matches
+//    David's session-52 hand-sketch.
+//  - Booth cell is 32% width with text-align:center. Eyebrow is
+//    "BOOTH" (uppercase, hardcoded, Georgia italic 11px letterspaced —
+//    matches the existing "THE WINDOW" eyebrow pattern). Numeral is
+//    Times New Roman 26/500, auto-shrinks by digit count (26 / 22 / 18).
+//  - Mall cell (68%) keeps IM Fell 17px mall name + system-ui 13px
+//    dotted-underline address. IM Fell → Georgia graceful fallback.
+//  - See docs/share-booth-build-spec.md v3 addendum and
+//    docs/mockups/share-booth-email-v3.html (Variant A) for the lock.
+//
 // Session 52 Q-011 v2 (2026-04-24):
 //  - Window email banner redesign per docs/mockups/share-booth-email-v2.html
 //    (v2.2 final state, locked session 51). Four-axis brand-drift fix:
 //    (1) post-it rendered as a STYLED DIV, not inline SVG — Gmail web strips
 //        <rect> / <circle> SVG children as anti-tracking defense, leaving
 //        only the numeral as flow content. Plain <div> with background-color
-//        survives. See renderPostItDiv below.
+//        survives. (Helper retired in v3.)
 //    (2) Banner is Variant B — post-it embedded bottom-right inside the
 //        banner frame (position: absolute), no negative-margin overhang.
 //        Banner height bumps to 220px + border-radius 16px.
@@ -404,11 +433,10 @@ function renderWindowBody(opts: WindowBodyOpts): string {
         </h2>
       </div>
 
-      <!-- Banner Variant B — hero photograph + embedded post-it (styled div) -->
-      ${renderBanner(heroImageUrl, boothNumber, vendorName)}
-
-      <!-- Location line — PinGlyph SVG + mall + address -->
-      ${renderLocationLine(mallName, mallAddress, googleMapsUrl)}
+      <!-- Banner v3 — hero photograph + attached 2-cell info bar (booth + mall).
+           Replaces v2's overlap post-it (Gmail-hostile) and the standalone
+           pin-prefixed location line. One primitive, one thought. -->
+      ${renderBanner(heroImageUrl, boothNumber, vendorName, mallName, mallAddress, googleMapsUrl)}
 
       <!-- The Window — 6-tile grid, 3 cols × 2 rows, HTML table -->
       ${renderWindowGrid(posts)}
@@ -429,153 +457,94 @@ function renderWindowBody(opts: WindowBodyOpts): string {
 }
 
 /**
- * Banner primitive — Variant B (session 52 Q-011 v2.1 after on-device QA).
+ * Banner primitive — v3 unified image + info bar (session 52 Q-011 v3).
  *
- * Structure: image wrapper (border-radius + overflow-hidden for rounded
- * corners) followed by the post-it as a SIBLING block with negative
- * margin-top that pulls it up to overlap the banner's bottom-right corner.
+ * Structure: one rounded outer div with `overflow: hidden` wrapping two
+ * siblings — the hero image on top, the info-bar <table> on bottom. Info
+ * bar has two cells: booth (32% width, centered "BOOTH" eyebrow + numeral)
+ * and mall (68%, IM Fell name + dotted-underline address). Hairline
+ * divider above the info bar (image-to-info-bar boundary) + a softer
+ * hairline between the two cells.
  *
- * Why not position: absolute (original v2 attempt): Gmail strips `position`
- * declarations from inline styles — both web and iOS. On Gmail web the
- * post-it ended up clipped entirely by the wrapper's overflow-hidden; on
- * iOS Gmail it flowed to its natural position below the banner. Caught by
- * David's on-device QA in-session. The v1 negative-margin pattern is the
- * proven Gmail-safe overlay: `display: inline-block` + `text-align: right`
- * on the post-it wrapper + negative `margin-top` to pull up into the frame.
+ * Why this shape: v2's overlap-style post-it (and its v2.1 sibling refactor)
+ * both failed Gmail QA because Gmail strips `position` from inline styles
+ * and mangles inline-flow overlap patterns. v3 uses only HTML <table> +
+ * block <div> with border/padding/background — the oldest, most forgiving
+ * email primitives. Renders identically in every mail client in circulation.
  *
- * Why div (not SVG): Gmail web strips <rect> / <circle> SVG children as an
- * anti-tracking-pixel defense, leaving only <text> content. A plain <div>
- * with background-color survives intact. See renderPostItDiv below.
- *
- * CSS transform: rotate(6deg) is stripped by Outlook. Graceful degradation:
- * the post-it renders as a non-rotated rectangle in Outlook — still visible
- * in the overlap position, just un-canted. Signal preserved.
+ * Semantic improvement: v2 split booth-number and mall-info across two
+ * primitives (post-it overlay + standalone pin-prefixed location row).
+ * "This booth is at that mall" is one thought — v3 unifies them.
  *
  * Fallback when heroImageUrl is null: linear-gradient earth-tone wash at
- * the same 220px height as the image.
+ * 200px height.
+ *
+ * Fallback when boothNumber is null: info bar drops the booth cell, mall
+ * cell takes full width. (Rare in practice — booth without a number.)
+ *
+ * Fallback when mallAddress is null: mall cell shows only the name.
+ * Fallback when googleMapsUrl is null: address renders as plain text, no
+ * underline.
  */
 function renderBanner(
-  heroImageUrl: string | null,
-  boothNumber:  string | null,
-  vendorName:   string,
-): string {
-  // Hero layer. Block-level, fills the wrapper. Outlook ignores object-fit;
-  // graceful degradation is the image stretches/squashes — hero is decorative.
-  const heroLayer = heroImageUrl
-    ? `<img src="${escapeAttr(heroImageUrl)}" alt="${escapeAttr(vendorName)}" width="540" height="220" style="display: block; width: 100%; max-width: 540px; height: 220px; object-fit: cover; border: 0;" />`
-    : `<div style="width: 100%; height: 220px; background: linear-gradient(135deg, #8a7555 0%, #5a4a2e 100%);"></div>`;
-
-  // Bottom margin lives on the banner wrapper when there's no post-it,
-  // otherwise on the post-it wrapper (which also carries the negative-top
-  // pull-up). Keeps the total 22px gap-to-next-section consistent.
-  const bannerBottomGap = boothNumber ? `0` : `22px`;
-
-  const bannerWrapper = `
-      <div style="margin: 18px 0 ${bannerBottomGap}; border-radius: 16px; overflow: hidden;">
-        ${heroLayer}
-      </div>
-  `;
-
-  // Post-it wrapper: text-align:right + inline-block post-it places the
-  // post-it at the right edge with a 14px inset. Negative margin-top pulls
-  // the whole wrapper up into the banner's bottom-right quadrant. font-size:0
-  // + line-height:0 suppress whitespace-text-node gaps that would otherwise
-  // push the inline-block down.
-  const postItOverlay = boothNumber
-    ? `
-      <div style="margin: -108px 14px 30px 0; text-align: right; line-height: 0; font-size: 0;">
-        ${renderPostItDiv(boothNumber)}
-      </div>
-  `
-    : ``;
-
-  return bannerWrapper + postItOverlay;
-}
-
-/**
- * Post-it as a styled <div> (session 52 Q-011 v2.1 after on-device QA).
- *
- * Returns an inline-block so the parent wrapper's `text-align: right` places
- * it at the banner's right edge. NO `position: absolute` anywhere — Gmail
- * strips position declarations from inline styles (caught during session-52
- * QA; v2.0 used position:absolute and the post-it either disappeared on
- * Gmail web or flowed below the banner on iOS Gmail).
- *
- * Pin uses negative margin-top to poke above the post-it's top edge instead
- * of `position: absolute; top: -3px`. Math: padding-top 13px + margin-top
- * -16px = pin ends up at y = -3px relative to post-it top. Same visual.
- *
- * Rotation is CSS `transform: rotate(6deg)`, stripped by Outlook (graceful
- * degradation: un-canted rectangle, still overlapping the banner).
- *
- * Pin = 8×8 dark disc. Eyebrow = IM Fell italic 12px ("Booth" / "Location"
- * two lines). Numeral = Times New Roman 30/500, auto-shrinks by digit count.
- */
-function renderPostItDiv(boothNumber: string): string {
-  // Auto-scale numeral size by digit count (mirrors lib/utils.ts
-  // boothNumeralSize pattern). 30px ≤4 digits, 24px @ 5, 20px @ 6+.
-  const digitCount = boothNumber.length;
-  const numeralSize = digitCount <= 4 ? 30 : digitCount === 5 ? 24 : 20;
-
-  return `<div style="display: inline-block; vertical-align: top; width: 86px; min-height: 86px; background: ${POSTIT}; -webkit-transform: rotate(6deg); transform: rotate(6deg); box-shadow: 0 4px 12px rgba(0,0,0,0.35); padding: 13px 6px 8px; text-align: center;">
-      <!-- Pin — negative margin-top cancels the parent padding-top and pokes
-           3px above the top edge. No position:absolute (Gmail strips it). -->
-      <div style="width: 8px; height: 8px; border-radius: 50%; background: rgba(42,26,10,0.75); box-shadow: inset 0 0 0 2px rgba(42,26,10,0.55); margin: -16px auto 8px;"></div>
-      <!-- Booth Location eyebrow — IM Fell italic, two lines -->
-      <div style="font-family: ${IMFELL}; font-style: italic; font-size: 12px; line-height: 1.1; color: ${INKMID}; margin: 0 0 4px;">
-        Booth<br>Location
-      </div>
-      <!-- Numeral — Times New Roman, auto-sized by digit count -->
-      <div style="font-family: 'Times New Roman', Times, serif; font-size: ${numeralSize}px; font-weight: 500; line-height: 1; color: ${INK};">
-        ${escapeHtml(boothNumber)}
-      </div>
-    </div>`;
-}
-
-/**
- * Location line — teardrop PinGlyph SVG + mall name + address.
- *
- * Session 52 Q-011 v2: retires the `⦲` Unicode character, which violated
- * the session-17 glyph hierarchy lock (pin = mall, post-it = booth). The
- * inline SVG mirrors components/BoothPage.tsx:PinGlyph exactly — teardrop
- * outline + filled center dot, strokeWidth 1.3, ink-primary color. Gmail
- * web renders this SVG intact (path + circle at 18×22 with a named viewBox
- * is not flagged as a tracking shape).
- *
- * Mall name adopts IM Fell 18px per v2.2 mockup; mall address is system-ui
- * 14px with a dotted underline when the Google Maps URL is present.
- */
-function renderLocationLine(
+  heroImageUrl:  string | null,
+  boothNumber:   string | null,
+  vendorName:    string,
   mallName:      string,
   mallAddress:   string | null,
   googleMapsUrl: string | null,
 ): string {
-  const addressStyleBase = `font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; font-size: 14px; color: ${INKMID}; line-height: 1.55;`;
-  const addressStyleLink = `${addressStyleBase} text-decoration: underline; text-decoration-style: dotted; text-decoration-color: ${FAINT}; text-underline-offset: 3px;`;
+  // Hero layer. Block-level, fills the wrapper. Outlook ignores object-fit;
+  // graceful degradation is the image stretches/squashes — hero is decorative.
+  const heroLayer = heroImageUrl
+    ? `<img src="${escapeAttr(heroImageUrl)}" alt="${escapeAttr(vendorName)}" width="540" height="200" style="display: block; width: 100%; max-width: 540px; height: 200px; object-fit: cover; border: 0;" />`
+    : `<div style="width: 100%; height: 200px; background: linear-gradient(135deg, #8a7555 0%, #5a4a2e 100%);"></div>`;
 
+  // Numeral auto-shrinks by digit count. Tighter than v2's post-it numeral
+  // (30/24/20) because the info-bar cell is narrower than a post-it square.
+  const digitCount = boothNumber ? boothNumber.length : 0;
+  const numeralSize = digitCount <= 4 ? 26 : digitCount === 5 ? 22 : 18;
+
+  // Address content. Dotted underline only when a Google Maps link wraps it.
+  const addressStyleBase = `font-family: ${SYS}; font-size: 13px; color: ${INKMID}; line-height: 1.45;`;
+  const addressStyleLink = `${addressStyleBase} text-decoration: underline; text-decoration-style: dotted; text-decoration-color: ${FAINT}; text-underline-offset: 2px;`;
   const addressContent = mallAddress
     ? (googleMapsUrl
-        ? `<a href="${escapeAttr(googleMapsUrl)}" style="color: ${INKMID}; ${addressStyleLink}">${escapeHtml(mallAddress)}</a>`
+        ? `<a href="${escapeAttr(googleMapsUrl)}" style="${addressStyleLink}">${escapeHtml(mallAddress)}</a>`
         : `<span style="${addressStyleBase}">${escapeHtml(mallAddress)}</span>`)
     : ``;
 
+  const boothCell = boothNumber
+    ? `
+        <td width="32%" valign="middle" style="padding: 12px 16px; border-right: 1px solid ${HAIR_SOFT}; text-align: center;">
+          <p style="margin: 0 0 3px; padding: 0; font-family: ${SERIF}; font-style: italic; font-size: 11px; letter-spacing: 0.12em; line-height: 1.1; color: ${INKMID};">
+            BOOTH
+          </p>
+          <p style="margin: 0; padding: 0; font-family: 'Times New Roman', Times, serif; font-size: ${numeralSize}px; font-weight: 500; line-height: 1; color: ${INK};">
+            ${escapeHtml(boothNumber)}
+          </p>
+        </td>`
+    : ``;
+
+  // When there's no booth number, mall cell takes full width with
+  // consistent padding. Otherwise 68%.
+  const mallCellWidth = boothNumber ? `68%` : `100%`;
+
   return `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 26px;">
-        <tr>
-          <td style="vertical-align: top; width: 30px; padding-top: 3px; line-height: 1;">
-            <svg width="18" height="22" viewBox="0 0 18 22" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display: block;">
-              <path d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z" stroke="${INK}" stroke-width="1.3" fill="none"/>
-              <circle cx="9" cy="8.3" r="2" fill="${INK}"/>
-            </svg>
-          </td>
-          <td style="vertical-align: top; padding-left: 4px;">
-            <div style="font-family: ${IMFELL}; font-size: 18px; color: ${INK}; line-height: 1.3; letter-spacing: -0.005em; margin: 0 0 3px;">
-              ${escapeHtml(mallName)}
-            </div>
-            ${addressContent ? `<div style="margin: 0;">${addressContent}</div>` : ``}
-          </td>
-        </tr>
-      </table>
+      <div style="margin: 18px 0 22px; border: 1px solid ${HAIR_SOFT}; border-radius: 16px; overflow: hidden;">
+        ${heroLayer}
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: ${PAPER}; border-top: 1px solid ${HAIR};">
+          <tr>
+            ${boothCell}
+            <td width="${mallCellWidth}" valign="middle" style="padding: 12px 16px;">
+              <div style="font-family: ${IMFELL}; font-size: 17px; color: ${INK}; line-height: 1.25; letter-spacing: -0.005em; margin: 0 0 2px;">
+                ${escapeHtml(mallName)}
+              </div>
+              ${addressContent ? `<div style="margin: 0;">${addressContent}</div>` : ``}
+            </td>
+          </tr>
+        </table>
+      </div>
   `;
 }
 
@@ -700,17 +669,22 @@ async function sendEmail(input: SendEmailInput): Promise<{ ok: boolean; error?: 
 // ── Internal: HTML template shell (v1.2 paper-as-surface, all Georgia) ──────
 
 // Georgia for body copy + masthead + signatures; IM Fell English for editorial
-// voice (Window email vendor name + eyebrow + mall name + post-it eyebrow) —
-// loaded via Google Fonts <link> in the shell <head>, Georgia falls back in
-// Outlook + some Android clients.
-const SERIF  = "Georgia, 'Times New Roman', serif";
-const IMFELL = "'IM Fell English', Georgia, 'Times New Roman', serif";
-const INK    = "#2a1a0a";
-const INKMID = "#4a3520";
-const PAPER  = "#e8ddc7";
-const POSTIT = "#fffaea";
-const HAIR   = "rgba(42,26,10,0.18)";
-const FAINT  = "rgba(42,26,10,0.28)";
+// voice (Window email vendor name + eyebrow + mall name) — loaded via Google
+// Fonts <link> in the shell <head>, Georgia falls back in Outlook + some
+// Android clients. System UI for the mall address (matches /shelf BoothPage
+// treatment).
+const SERIF     = "Georgia, 'Times New Roman', serif";
+const IMFELL    = "'IM Fell English', Georgia, 'Times New Roman', serif";
+const SYS       = "-apple-system, 'Segoe UI', Roboto, sans-serif";
+const INK       = "#2a1a0a";
+const INKMID    = "#4a3520";
+const PAPER     = "#e8ddc7";
+// Two hairline weights. HAIR (stronger) = image-to-info-bar divider and shell
+// masthead/footer rules. HAIR_SOFT (quieter) = cell-to-cell dividers inside
+// the info bar and the outer frame border.
+const HAIR      = "rgba(42,26,10,0.18)";
+const HAIR_SOFT = "rgba(42,26,10,0.12)";
+const FAINT     = "rgba(42,26,10,0.28)";
 
 const pStyle    = `margin: 0 0 16px; font-family: ${SERIF}; font-size: 16px; line-height: 1.7; color: ${INK};`;
 const signStyle = `margin: 28px 0 0; font-family: ${SERIF}; font-style: italic; font-size: 16px; line-height: 1.5; color: ${INKMID};`;
