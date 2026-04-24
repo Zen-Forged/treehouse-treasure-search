@@ -334,9 +334,18 @@ export default function AddBoothInline({
           }}
         >
           <option value="">Select a location…</option>
-          {malls.map(m => (
-            <option key={m.id} value={m.id}>{m.name}{m.city ? ` — ${m.city}` : ""}</option>
-          ))}
+          {malls.map(m => {
+            // R4c — surface mall status inline so admin has the context while
+            // pre-seeding. Native <option> can't render a pill, so the suffix
+            // echoes the enum label. "Active" malls stay unadorned (the
+            // default state).
+            const statusSuffix = m.status === "active" ? "" : ` · ${m.status === "coming_soon" ? "Coming soon" : "Draft"}`;
+            return (
+              <option key={m.id} value={m.id}>
+                {m.name}{m.city ? ` — ${m.city}` : ""}{statusSuffix}
+              </option>
+            );
+          })}
         </select>
       </div>
 

@@ -35,16 +35,16 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, UserCheck, Users, Store, X, Stethoscope, Image as ImageIcon, Upload, Loader as LoaderIcon } from "lucide-react";
+import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, UserCheck, Users, Store, X, Stethoscope, Image as ImageIcon, Upload, Loader as LoaderIcon, MapPin, ChevronDown } from "lucide-react";
 import { getSession, isAdmin, signOut } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
-import { colors } from "@/lib/tokens";
+import { colors, v1 } from "@/lib/tokens";
 import { compressImage } from "@/lib/imageUpload";
 import { getSiteSettingUrl, type SiteSettingKey } from "@/lib/siteSettings";
 import { getAllMalls } from "@/lib/posts";
 import AddBoothInline from "@/components/AddBoothInline";
 import type { User } from "@supabase/supabase-js";
-import type { Mall } from "@/types/treehouse";
+import type { Mall, MallStatus } from "@/types/treehouse";
 
 interface AdminPost {
   id:         string;
@@ -118,10 +118,17 @@ interface DiagnosisReport {
 
 type Toast =
   | { kind: "success"; name: string; email: string; booth: string | null; mall: string | null; warning?: string; note?: string }
-  | { kind: "error"; message: string; requestId?: string; diagnosis?: string; conflict?: DiagnosisConflict };
+  | { kind: "error"; message: string; requestId?: string; diagnosis?: string; conflict?: DiagnosisConflict }
+  | { kind: "mall-status"; name: string; status: MallStatus; firstActivation: boolean };
 
-const TOAST_DURATION_MS_SUCCESS = 6000;
-const TOAST_DURATION_MS_ERROR   = 12000; // errors linger longer so admin can act
+const TOAST_DURATION_MS_SUCCESS       = 6000;
+const TOAST_DURATION_MS_ERROR         = 12000; // errors linger longer so admin can act
+const TOAST_DURATION_MS_MALL_ACTIVATE = 8000;  // activation lingers longer per design spec
+const TOAST_DURATION_MS_MALL_STATUS   = 5000;  // draft / coming-soon transitions
+
+// R4c — collapse the Draft group by default when it has more than 5 rows.
+// Threshold per design record; tunable as the active-mall ratio changes.
+const DRAFT_COLLAPSE_THRESHOLD = 5;
 
 export default function AdminPage() {
   const router = useRouter();
@@ -137,7 +144,7 @@ export default function AdminPage() {
   const [result,     setResult]     = useState<string | null>(null);
   const [toast,      setToast]      = useState<Toast | null>(null);
   const [confirmAll, setConfirmAll] = useState(false);
-  const [activeTab, setActiveTab] = useState<"posts" | "requests" | "banners">("requests");
+  const [activeTab, setActiveTab] = useState<"posts" | "requests" | "banners" | "malls">("requests");
 
   // Diagnosis panel — per-request loading + result state
   const [diagnosisBusy,    setDiagnosisBusy]    = useState<Set<string>>(new Set());
@@ -149,7 +156,13 @@ export default function AdminPage() {
   // on /shelves previously loaded malls every page mount; folding the capability
   // into /admin means malls load only when an admin actually lands here.
   const [malls,         setMalls]         = useState<Mall[]>([]);
+  const [mallsLoading,  setMallsLoading]  = useState(false);
   const [addBoothOpen,  setAddBoothOpen]  = useState(false);
+
+  // R4c — Malls tab state
+  const [expandedMallId, setExpandedMallId] = useState<string | null>(null);
+  const [mallBusy,       setMallBusy]       = useState<Set<string>>(new Set());
+  const [draftsOpen,     setDraftsOpen]     = useState(false);
 
   useEffect(() => {
     getSession().then(s => {
@@ -158,18 +171,83 @@ export default function AdminPage() {
       if (s?.user && isAdmin(s.user)) {
         fetchPosts();
         fetchVendorRequests();
-        getAllMalls().then(setMalls);
+        fetchMalls();
       }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-dismiss toast (duration depends on kind)
   useEffect(() => {
     if (!toast) return;
-    const duration = toast.kind === "error" ? TOAST_DURATION_MS_ERROR : TOAST_DURATION_MS_SUCCESS;
+    const duration =
+      toast.kind === "error"
+        ? TOAST_DURATION_MS_ERROR
+        : toast.kind === "mall-status"
+          ? toast.firstActivation
+            ? TOAST_DURATION_MS_MALL_ACTIVATE
+            : TOAST_DURATION_MS_MALL_STATUS
+          : TOAST_DURATION_MS_SUCCESS;
     const t = setTimeout(() => setToast(null), duration);
     return () => clearTimeout(t);
   }, [toast]);
+
+  // R4c — load malls (idempotent; callable from tab refresh button)
+  async function fetchMalls() {
+    setMallsLoading(true);
+    const rows = await getAllMalls();
+    setMalls(rows);
+    // Auto-open drafts section if it's small enough to just show inline.
+    const draftCount = rows.filter(m => m.status === "draft").length;
+    setDraftsOpen(draftCount > 0 && draftCount <= DRAFT_COLLAPSE_THRESHOLD);
+    setMallsLoading(false);
+  }
+
+  async function updateMallStatus(mall: Mall, nextStatus: MallStatus) {
+    if (mallBusy.has(mall.id)) return;
+    if (mall.status === nextStatus) { setExpandedMallId(null); return; }
+
+    // Optimistic update
+    const wasFirstActivation = nextStatus === "active" && !mall.activated_at;
+    const optimistic: Mall = {
+      ...mall,
+      status: nextStatus,
+      activated_at: wasFirstActivation ? new Date().toISOString() : mall.activated_at,
+    };
+    setMalls(prev => prev.map(m => (m.id === mall.id ? optimistic : m)));
+    setMallBusy(prev => { const next = new Set(prev); next.add(mall.id); return next; });
+
+    try {
+      const res = await authFetch("/api/admin/malls", {
+        method: "PATCH",
+        body: JSON.stringify({ id: mall.id, status: nextStatus }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        // Revert optimistic update
+        setMalls(prev => prev.map(m => (m.id === mall.id ? mall : m)));
+        setToast({ kind: "error", message: json.error || "Failed to update mall status." });
+      } else {
+        // Replace with server-canonical row (picks up activated_at stamp)
+        setMalls(prev => prev.map(m => (m.id === mall.id ? (json.mall as Mall) : m)));
+        setToast({
+          kind: "mall-status",
+          name: mall.name,
+          status: nextStatus,
+          firstActivation: wasFirstActivation,
+        });
+        setExpandedMallId(null);
+      }
+    } catch (err) {
+      setMalls(prev => prev.map(m => (m.id === mall.id ? mall : m)));
+      setToast({
+        kind: "error",
+        message: err instanceof Error ? err.message : "Failed to update mall status.",
+      });
+    }
+
+    setMallBusy(prev => { const next = new Set(prev); next.delete(mall.id); return next; });
+  }
 
   async function fetchPosts() {
     setLoading(true);
@@ -378,18 +456,18 @@ export default function AdminPage() {
         <div style={{ fontSize: 12, color: colors.textPrimary }}>{user.email}</div>
       </div>
 
-      {/* Tab switcher — v1.1l: Vendor Requests / Posts / Banners */}
-      <div style={{ margin: "20px 20px 0", display: "flex", gap: 8 }}>
+      {/* Tab switcher — R4c: Vendor Requests / Posts / Banners / Malls */}
+      <div style={{ margin: "20px 20px 0", display: "flex", gap: 6 }}>
         <button
           onClick={() => setActiveTab("requests")}
           style={{
-            flex: 1, padding: "10px", borderRadius: 10, fontSize: 12, fontWeight: 500,
+            flex: 1, padding: "10px 6px", borderRadius: 10, fontSize: 11, fontWeight: 500,
             background: activeTab === "requests" ? colors.green : "none",
             color: activeTab === "requests" ? "#fff" : colors.textMid,
             border: `1px solid ${activeTab === "requests" ? colors.green : colors.border}`,
-            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4
           }}>
-          <Users size={12} />
+          <Users size={11} />
           Requests {pendingRequests.length > 0 && (
             <span style={{
               background: activeTab === "requests" ? "rgba(255,255,255,0.2)" : colors.green,
@@ -403,24 +481,35 @@ export default function AdminPage() {
         <button
           onClick={() => setActiveTab("posts")}
           style={{
-            flex: 1, padding: "10px", borderRadius: 10, fontSize: 12, fontWeight: 500,
+            flex: 1, padding: "10px 6px", borderRadius: 10, fontSize: 11, fontWeight: 500,
             background: activeTab === "posts" ? colors.green : "none",
             color: activeTab === "posts" ? "#fff" : colors.textMid,
             border: `1px solid ${activeTab === "posts" ? colors.green : colors.border}`,
-            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4
           }}>
-          <Store size={12} /> Posts ({posts.length})
+          <Store size={11} /> Posts
         </button>
         <button
           onClick={() => setActiveTab("banners")}
           style={{
-            flex: 1, padding: "10px", borderRadius: 10, fontSize: 12, fontWeight: 500,
+            flex: 1, padding: "10px 6px", borderRadius: 10, fontSize: 11, fontWeight: 500,
             background: activeTab === "banners" ? colors.green : "none",
             color: activeTab === "banners" ? "#fff" : colors.textMid,
             border: `1px solid ${activeTab === "banners" ? colors.green : colors.border}`,
-            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4
           }}>
-          <ImageIcon size={12} /> Banners
+          <ImageIcon size={11} /> Banners
+        </button>
+        <button
+          onClick={() => setActiveTab("malls")}
+          style={{
+            flex: 1, padding: "10px 6px", borderRadius: 10, fontSize: 11, fontWeight: 500,
+            background: activeTab === "malls" ? colors.green : "none",
+            color: activeTab === "malls" ? "#fff" : colors.textMid,
+            border: `1px solid ${activeTab === "malls" ? colors.green : colors.border}`,
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4
+          }}>
+          <MapPin size={11} /> Malls
         </button>
       </div>
 
@@ -671,6 +760,21 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* Malls Tab — R4c session 57 */}
+      {activeTab === "malls" && (
+        <MallsTab
+          malls={malls}
+          loading={mallsLoading}
+          onRefresh={fetchMalls}
+          expandedMallId={expandedMallId}
+          onToggleRow={(id) => setExpandedMallId(prev => prev === id ? null : id)}
+          mallBusy={mallBusy}
+          onUpdateStatus={updateMallStatus}
+          draftsOpen={draftsOpen}
+          onToggleDrafts={() => setDraftsOpen(v => !v)}
+        />
+      )}
+
       {/* Action bar - only show for posts tab */}
       {activeTab === "posts" && (selected.size > 0 || posts.length > 0) && (
         <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: colors.header, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", borderTop: `1px solid ${colors.border}`, padding: "12px 20px", paddingBottom: "max(16px, env(safe-area-inset-bottom, 16px))", display: "flex", gap: 10 }}>
@@ -728,8 +832,8 @@ export default function AdminPage() {
                 pointerEvents: "auto",
                 width: "100%",
                 maxWidth: 398,
-                background: toast.kind === "success" ? "#f0ede6" : "#fff",
-                border: `1px solid ${toast.kind === "success" ? colors.greenBorder : colors.redBorder}`,
+                background: toast.kind === "error" ? "#fff" : "#f0ede6",
+                border: `1px solid ${toast.kind === "error" ? colors.redBorder : colors.greenBorder}`,
                 borderRadius: 14,
                 padding: "14px 16px",
                 boxShadow: "0 10px 32px rgba(26,26,24,0.18)",
@@ -774,6 +878,31 @@ export default function AdminPage() {
                       fontStyle: "italic"
                     }}>
                       ⚠️ {toast.warning}
+                    </div>
+                  )}
+                </>
+              ) : toast.kind === "mall-status" ? (
+                <>
+                  <div style={{
+                    fontSize: 9, color: colors.green, textTransform: "uppercase",
+                    letterSpacing: "1.8px", marginBottom: 4, fontWeight: 600
+                  }}>
+                    {toast.firstActivation
+                      ? "✓ Activated · now live to shoppers"
+                      : `✓ ${toast.name} → ${STATUS_LABEL[toast.status]}`}
+                  </div>
+                  <div style={{
+                    fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600,
+                    color: colors.textPrimary, marginBottom: 2
+                  }}>
+                    {toast.name}
+                  </div>
+                  {toast.firstActivation && (
+                    <div style={{
+                      fontSize: 11, color: colors.textMid, marginTop: 2,
+                      fontStyle: "italic",
+                    }}>
+                      activated_at set to today · this mall is now selectable in the shopper feed picker and vendor-request dropdown.
                     </div>
                   )}
                 </>
@@ -827,7 +956,7 @@ export default function AdminPage() {
               style={{
                 background: "none", border: "none", cursor: "pointer",
                 padding: 4, marginTop: -2, marginRight: -4,
-                color: toast.kind === "success" ? colors.green : colors.red,
+                color: toast.kind === "error" ? colors.red : colors.green,
                 flexShrink: 0,
               }}
             >
@@ -837,6 +966,335 @@ export default function AdminPage() {
           </div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+// ── R4c — Mall status labels + pill renderer ─────────────────────────────────
+
+const STATUS_LABEL: Record<MallStatus, string> = {
+  draft:       "Draft",
+  coming_soon: "Coming soon",
+  active:      "Active",
+};
+
+function StatusPill({ status }: { status: MallStatus }) {
+  const style: React.CSSProperties = {
+    fontSize: 9, fontWeight: 700, padding: "3px 8px", borderRadius: 999,
+    textTransform: "uppercase", letterSpacing: "0.9px", whiteSpace: "nowrap",
+    border: "1px solid transparent",
+  };
+  if (status === "active") {
+    return <span style={{ ...style, background: colors.green, color: "#fff", borderColor: colors.green }}>{STATUS_LABEL.active}</span>;
+  }
+  if (status === "coming_soon") {
+    return <span style={{ ...style, background: v1.amberBg, color: v1.amber, borderColor: v1.amberBorder }}>{STATUS_LABEL.coming_soon}</span>;
+  }
+  return <span style={{ ...style, background: "rgba(42,26,10,0.05)", color: colors.textMuted, borderColor: colors.border }}>{STATUS_LABEL.draft}</span>;
+}
+
+function formatActivatedDate(iso: string | null): string | null {
+  if (!iso) return null;
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  } catch { return null; }
+}
+
+// ── R4c — Malls tab ───────────────────────────────────────────────────────────
+
+function MallsTab({
+  malls,
+  loading,
+  onRefresh,
+  expandedMallId,
+  onToggleRow,
+  mallBusy,
+  onUpdateStatus,
+  draftsOpen,
+  onToggleDrafts,
+}: {
+  malls:          Mall[];
+  loading:        boolean;
+  onRefresh:      () => void;
+  expandedMallId: string | null;
+  onToggleRow:    (id: string) => void;
+  mallBusy:       Set<string>;
+  onUpdateStatus: (mall: Mall, status: MallStatus) => void;
+  draftsOpen:     boolean;
+  onToggleDrafts: () => void;
+}) {
+  const active      = malls.filter(m => m.status === "active");
+  const comingSoon  = malls.filter(m => m.status === "coming_soon");
+  const drafts      = malls.filter(m => m.status === "draft");
+
+  return (
+    <div style={{ margin: "24px 20px 0" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2px" }}>
+          Malls ({malls.length})
+        </div>
+        <button onClick={onRefresh} disabled={loading}
+          style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: colors.textMuted }}>
+          <RefreshCw size={11} style={{ opacity: loading ? 0.4 : 1 }} /> Refresh
+        </button>
+      </div>
+
+      {loading ? (
+        <div style={{ fontSize: 13, color: colors.textFaint, padding: "20px 0", textAlign: "center" }}>
+          Loading malls…
+        </div>
+      ) : malls.length === 0 ? (
+        <div style={{ fontSize: 13, color: colors.textFaint, padding: "20px 0", textAlign: "center", fontStyle: "italic", fontFamily: "Georgia, serif" }}>
+          No malls in database.
+        </div>
+      ) : (
+        <>
+          {/* Active */}
+          <MallGroupHead label="Active" count={active.length} tone="active" />
+          {active.length === 0 ? (
+            <MallGroupEmpty>No mall is active yet. Flip a Draft or Coming soon to &ldquo;Active&rdquo; to surface it to shoppers.</MallGroupEmpty>
+          ) : (
+            active.map(mall => (
+              <MallRow
+                key={mall.id}
+                mall={mall}
+                tone="active"
+                expanded={expandedMallId === mall.id}
+                busy={mallBusy.has(mall.id)}
+                onToggle={() => onToggleRow(mall.id)}
+                onUpdateStatus={onUpdateStatus}
+              />
+            ))
+          )}
+
+          {/* Coming soon */}
+          <MallGroupHead label="Coming soon" count={comingSoon.length} tone="coming_soon" style={{ marginTop: 20 }} />
+          {comingSoon.length === 0 ? (
+            <MallGroupEmpty>Empty.</MallGroupEmpty>
+          ) : (
+            comingSoon.map(mall => (
+              <MallRow
+                key={mall.id}
+                mall={mall}
+                tone="coming_soon"
+                expanded={expandedMallId === mall.id}
+                busy={mallBusy.has(mall.id)}
+                onToggle={() => onToggleRow(mall.id)}
+                onUpdateStatus={onUpdateStatus}
+              />
+            ))
+          )}
+
+          {/* Draft (collapsible) */}
+          <MallGroupHead
+            label="Draft"
+            count={drafts.length}
+            tone="draft"
+            collapsible
+            open={draftsOpen}
+            onToggle={onToggleDrafts}
+            style={{ marginTop: 20 }}
+          />
+          {drafts.length === 0 ? (
+            <MallGroupEmpty>No drafts.</MallGroupEmpty>
+          ) : draftsOpen ? (
+            drafts.map(mall => (
+              <MallRow
+                key={mall.id}
+                mall={mall}
+                tone="draft"
+                expanded={expandedMallId === mall.id}
+                busy={mallBusy.has(mall.id)}
+                onToggle={() => onToggleRow(mall.id)}
+                onUpdateStatus={onUpdateStatus}
+              />
+            ))
+          ) : (
+            <div style={{ fontSize: 11, color: colors.textFaint, fontStyle: "italic", fontFamily: "Georgia, serif", padding: "6px 2px 0" }}>
+              Tap to expand. Drafts are hidden from shopper pickers and the vendor-request mall dropdown.
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function MallGroupHead({
+  label, count, tone, collapsible, open, onToggle, style,
+}: {
+  label:        string;
+  count:        number;
+  tone:         "active" | "coming_soon" | "draft";
+  collapsible?: boolean;
+  open?:        boolean;
+  onToggle?:    () => void;
+  style?:       React.CSSProperties;
+}) {
+  const dotColor =
+    tone === "active" ? colors.green
+    : tone === "coming_soon" ? v1.amber
+    : colors.textFaint;
+
+  const content = (
+    <>
+      <span style={{
+        fontSize: 10, fontWeight: 700, color: dotColor,
+        textTransform: "uppercase", letterSpacing: "1.8px", display: "flex",
+        alignItems: "center", gap: 6,
+      }}>
+        <span style={{ width: 7, height: 7, borderRadius: "50%", background: dotColor }} />
+        {label} · {count}
+      </span>
+      {collapsible && (
+        <span style={{ fontSize: 10, color: colors.textFaint, display: "flex", alignItems: "center", gap: 3 }}>
+          {open ? "Hide" : "Show"}
+          <ChevronDown size={11} style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.18s" }} />
+        </span>
+      )}
+    </>
+  );
+
+  const baseStyle: React.CSSProperties = {
+    display: "flex", alignItems: "center", justifyContent: "space-between",
+    padding: "6px 2px", marginBottom: 6, ...style,
+  };
+
+  if (collapsible) {
+    return (
+      <button
+        onClick={onToggle}
+        style={{ ...baseStyle, background: "none", border: "none", cursor: "pointer", width: "100%", textAlign: "left" }}
+      >
+        {content}
+      </button>
+    );
+  }
+  return <div style={baseStyle}>{content}</div>;
+}
+
+function MallGroupEmpty({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      fontSize: 11, color: colors.textFaint, fontStyle: "italic",
+      fontFamily: "Georgia, serif", padding: "2px 2px 8px",
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function MallRow({
+  mall, tone, expanded, busy, onToggle, onUpdateStatus,
+}: {
+  mall:           Mall;
+  tone:           "active" | "coming_soon" | "draft";
+  expanded:       boolean;
+  busy:           boolean;
+  onToggle:       () => void;
+  onUpdateStatus: (mall: Mall, next: MallStatus) => void;
+}) {
+  const activatedLabel = mall.activated_at
+    ? `Activated ${formatActivatedDate(mall.activated_at) ?? "—"}`
+    : null;
+
+  const toneBg =
+    tone === "active" ? colors.greenLight
+    : tone === "draft" ? "rgba(42,26,10,0.03)"
+    : colors.surface;
+
+  const toneBorder =
+    tone === "active" ? colors.greenBorder
+    : tone === "coming_soon" ? v1.amberBorder
+    : colors.border;
+
+  return (
+    <div
+      style={{
+        background: expanded ? colors.surface : toneBg,
+        border: `1px ${tone === "draft" ? "dashed" : "solid"} ${expanded ? colors.greenBorder : toneBorder}`,
+        borderRadius: 12,
+        padding: "12px 14px",
+        marginBottom: 8,
+        boxShadow: expanded ? "0 4px 18px rgba(30,77,43,0.08)" : "none",
+        transition: "background 0.15s, border-color 0.15s, box-shadow 0.15s",
+      }}
+    >
+      <button
+        onClick={onToggle}
+        disabled={busy}
+        aria-expanded={expanded}
+        style={{
+          display: "flex", alignItems: "center", gap: 12,
+          background: "none", border: "none", cursor: busy ? "default" : "pointer",
+          width: "100%", padding: 0, textAlign: "left",
+          opacity: busy ? 0.6 : 1,
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600,
+            color: colors.textPrimary, whiteSpace: "nowrap", overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}>
+            {mall.name}
+          </div>
+          <div style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>
+            {mall.city}, {mall.state}
+          </div>
+          {activatedLabel && (
+            <div style={{ fontSize: 10, color: colors.textFaint, fontFamily: "monospace", marginTop: 3 }}>
+              {activatedLabel}
+            </div>
+          )}
+        </div>
+        <StatusPill status={mall.status} />
+      </button>
+
+      {expanded && (
+        <>
+          <div style={{ height: 1, background: colors.border, margin: "12px 0" }} />
+          <div style={{
+            display: "flex", gap: 6, padding: 3,
+            background: "rgba(42,26,10,0.05)", borderRadius: 10,
+          }}>
+            {(["draft", "coming_soon", "active"] as MallStatus[]).map(s => {
+              const selected = mall.status === s;
+              return (
+                <button
+                  key={s}
+                  onClick={() => onUpdateStatus(mall, s)}
+                  disabled={busy}
+                  style={{
+                    flex: 1, padding: "9px 6px", borderRadius: 8, fontSize: 11,
+                    fontWeight: 600, textAlign: "center",
+                    color: selected
+                      ? (s === "active" ? "#fff" : colors.textPrimary)
+                      : colors.textMid,
+                    background: selected
+                      ? (s === "active" ? colors.green : "#fff")
+                      : "transparent",
+                    border: `1px solid ${selected
+                      ? (s === "active" ? colors.green : colors.border)
+                      : "transparent"}`,
+                    boxShadow: selected && s !== "active" ? "0 1px 2px rgba(0,0,0,0.04)" : "none",
+                    cursor: busy ? "default" : "pointer",
+                  }}
+                >
+                  {STATUS_LABEL[s]}
+                </button>
+              );
+            })}
+          </div>
+          {busy && (
+            <div style={{ marginTop: 8, fontSize: 10, color: colors.textMuted, fontStyle: "italic", display: "flex", alignItems: "center", gap: 5 }}>
+              <LoaderIcon size={10} style={{ animation: "spin 0.9s linear infinite" }} />
+              Updating…
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

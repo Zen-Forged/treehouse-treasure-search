@@ -43,7 +43,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, ChevronDown } from "lucide-react";
-import { getFeedPosts, getAllMalls } from "@/lib/posts";
+import { getFeedPosts, getActiveMalls } from "@/lib/posts";
 import { getSession, signOut, onAuthChange } from "@/lib/auth";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import { flagKey, loadFollowedIds } from "@/lib/utils";
@@ -671,7 +671,7 @@ export default function DiscoveryFeedPage() {
 
   // ── Malls + saved selection persistence ──────────────────────────────────────
   useEffect(() => {
-    getAllMalls().then((data) => {
+    getActiveMalls().then((data) => {
       setMalls(data);
       // On initial load, restore saved mall ID from safeStorage.
       // If the saved mall is no longer in the list (mall removed), fall back to All.

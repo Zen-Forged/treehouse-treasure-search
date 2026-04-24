@@ -32,7 +32,7 @@ import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, Mail, Clock, Camera, X } from "lucide-react";
-import { getAllMalls } from "@/lib/posts";
+import { getActiveMalls } from "@/lib/posts";
 import { compressImage } from "@/lib/imageUpload";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import type { Mall } from "@/types/treehouse";
@@ -143,7 +143,11 @@ function VendorRequestInner() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getAllMalls().then(setMalls);
+    // R4c — only malls in 'active' status are eligible for new vendor
+    // requests. Pending-request queue against not-yet-live malls creates
+    // admin backlog with nothing actionable. See D6 in
+    // docs/r4c-mall-active-design.md.
+    getActiveMalls().then(setMalls);
   }, []);
 
   function handleMallChange(id: string) {
@@ -373,9 +377,12 @@ function VendorRequestInner() {
             <select
               value={mallId}
               onChange={e => handleMallChange(e.target.value)}
+              disabled={malls.length === 0}
               style={{
                 ...selectStyle,
                 color: mallId ? v1.inkPrimary : v1.inkFaint,
+                opacity: malls.length === 0 ? 0.55 : 1,
+                cursor: malls.length === 0 ? "default" : "pointer",
               }}
             >
               <option value="">Select a mall&hellip;</option>
@@ -383,6 +390,12 @@ function VendorRequestInner() {
                 <option key={m.id} value={m.id}>{m.name} &mdash; {m.city}, {m.state}</option>
               ))}
             </select>
+            {malls.length === 0 && (
+              <p style={helperStyle}>
+                No malls are currently accepting new vendor requests. Check
+                back soon.
+              </p>
+            )}
           </div>
 
           <div>
@@ -559,10 +572,12 @@ function VendorRequestInner() {
             )}
           </AnimatePresence>
 
-          {/* Filled green CTA — commit action */}
+          {/* Filled green CTA — commit action.
+              R4c — soft-block when no active malls exist: shopper has
+              nothing selectable, so disable submit (with no error). */}
           <button
             onClick={handleSubmit}
-            disabled={busy}
+            disabled={busy || malls.length === 0}
             style={{
               width: "100%",
               padding: "15px",
@@ -571,10 +586,10 @@ function VendorRequestInner() {
               fontSize: 15,
               fontWeight: 500,
               color: "#fff",
-              background: busy ? "rgba(30,77,43,0.40)" : v1.green,
+              background: busy || malls.length === 0 ? "rgba(30,77,43,0.40)" : v1.green,
               border: "none",
-              cursor: busy ? "default" : "pointer",
-              boxShadow: busy ? "none" : "0 2px 14px rgba(30,77,43,0.22)",
+              cursor: busy || malls.length === 0 ? "default" : "pointer",
+              boxShadow: busy || malls.length === 0 ? "none" : "0 2px 14px rgba(30,77,43,0.22)",
               transition: "background 0.18s, box-shadow 0.18s",
               marginTop: 4,
             }}

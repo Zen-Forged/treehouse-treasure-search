@@ -286,6 +286,34 @@ async function seed() {
     Object.entries(mallIds).map(([slug, id]) => ({ slug, id })),
   );
 
+  // R4c (session 57) — flip fixture-mall rows to status='active' so shopper
+  // pickers (home feed, vendor-request dropdown) can see the staging fixture
+  // vendors. Migration 009 defaults all malls to 'draft'; without this step
+  // the staging feed renders empty after a fresh seed even though vendors
+  // and posts are populated. activated_at is stamped only when transitioning
+  // from non-active (the PATCH API does the same, this mirrors it).
+  header("2b. activate fixture malls");
+  const fixtureMallIds = Array.from(new Set(Object.values(mallIds)));
+  const { data: currentMalls, error: mallFetchErr } = await supabase
+    .from("malls")
+    .select("id, name, status, activated_at")
+    .in("id", fixtureMallIds);
+  if (mallFetchErr) throw mallFetchErr;
+  for (const m of currentMalls ?? []) {
+    if (m.status === "active") {
+      console.log(`  ${m.name}: already active`);
+      continue;
+    }
+    const payload: { status: "active"; activated_at?: string } = { status: "active" };
+    if (!m.activated_at) payload.activated_at = new Date().toISOString();
+    const { error } = await supabase
+      .from("malls")
+      .update(payload)
+      .eq("id", m.id);
+    if (error) throw error;
+    console.log(`  ${m.name}: activated${payload.activated_at ? " + stamped activated_at" : ""}`);
+  }
+
   header("3. upsert vendors");
   for (const fixture of VENDOR_FIXTURES) {
     const mall_id = mallIds[fixture.mall_slug];

@@ -544,6 +544,27 @@ export async function getAllMalls(): Promise<Mall[]> {
   return (data ?? []) as Mall[];
 }
 
+/**
+ * R4c (session 57) — return only malls whose status is 'active'.
+ * Used by shopper-facing pickers (home feed MallSheet, vendor-request
+ * dropdown) so draft + coming_soon malls never surface to shoppers or
+ * prospective vendors. Admin context keeps using getAllMalls() so the
+ * full list remains editable.
+ *
+ * Sibling of getAllMalls() rather than a parameterized variant so callsites
+ * document intent (filter vs. pass-through) without every caller having to
+ * know about the status enum.
+ */
+export async function getActiveMalls(): Promise<Mall[]> {
+  const { data, error } = await supabase
+    .from("malls")
+    .select("*")
+    .eq("status", "active")
+    .order("name", { ascending: true });
+  if (error) { console.error("[posts] getActiveMalls:", error.message); return []; }
+  return (data ?? []) as Mall[];
+}
+
 export async function getMallBySlug(slug: string): Promise<Mall | null> {
   const { data, error } = await supabase
     .from("malls").select("*").eq("slug", slug).single();

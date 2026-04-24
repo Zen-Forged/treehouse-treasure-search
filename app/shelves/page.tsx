@@ -27,8 +27,40 @@ import AdminOnly from "@/components/AdminOnly";
 import AddBoothInline from "@/components/AddBoothInline";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
-import type { Vendor, Mall } from "@/types/treehouse";
+import type { Vendor, Mall, MallStatus } from "@/types/treehouse";
 import type { User } from "@supabase/supabase-js";
+
+// R4c — small inline pill to surface mall status in the admin-only
+// cross-mall booth browser. Active malls stay unadorned (the default);
+// only `draft` and `coming_soon` render the pill.
+const MALL_STATUS_LABEL: Record<MallStatus, string> = {
+  active: "Active",
+  coming_soon: "Coming soon",
+  draft: "Draft",
+};
+
+function MallStatusPill({ status }: { status: MallStatus }) {
+  if (status === "active") return null;
+  const isSoon = status === "coming_soon";
+  return (
+    <span
+      style={{
+        fontSize: 9,
+        fontWeight: 700,
+        letterSpacing: "0.9px",
+        textTransform: "uppercase",
+        padding: "2px 7px",
+        borderRadius: 999,
+        background: isSoon ? v1.amberBg : "rgba(42,26,10,0.05)",
+        color: isSoon ? v1.amber : v1.inkMuted,
+        border: `1px solid ${isSoon ? v1.amberBorder : v1.inkHairline}`,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {MALL_STATUS_LABEL[status]}
+    </span>
+  );
+}
 
 // ─── Grid card ────────────────────────────────────────────────────────────────
 
@@ -272,12 +304,14 @@ function SkeletonCard() {
 // Groups vendors by mall, preserving the order of first appearance. Vendors
 // without a mall fall into a final "Other" bucket.
 
-function groupByMall(vendors: Vendor[]): { mallName: string; vendors: Vendor[] }[] {
-  const map = new Map<string, { mallName: string; vendors: Vendor[] }>();
+function groupByMall(vendors: Vendor[]): { mallId: string | null; mallName: string; vendors: Vendor[] }[] {
+  const map = new Map<string, { mallId: string | null; mallName: string; vendors: Vendor[] }>();
   for (const vendor of vendors) {
     const key  = vendor.mall_id ?? "__none__";
     const name = vendor.mall?.name ?? "Other";
-    if (!map.has(key)) map.set(key, { mallName: name, vendors: [] });
+    if (!map.has(key)) {
+      map.set(key, { mallId: vendor.mall_id ?? null, mallName: name, vendors: [] });
+    }
     map.get(key)!.vendors.push(vendor);
   }
   return Array.from(map.values());
@@ -397,13 +431,24 @@ export default function BoothsPage() {
           </motion.div>
         ) : (
           <>
-            {groupByMall(vendors).map((group, groupIdx) => (
+            {groupByMall(vendors).map((group, groupIdx) => {
+              // R4c — for admins, surface mall lifecycle status alongside the
+              // group header so the non-active mall's group reads honestly as
+              // a staging area, not a live listing. Shoppers don't see
+              // /shelves today, so gating by admin is belt-and-braces.
+              const groupMall = group.mallId ? malls.find(m => m.id === group.mallId) : undefined;
+              return (
               <div key={group.mallName}>
                 {/* Section header — IM Fell name + hairline rule + booth count */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: groupIdx === 0 ? 0 : 20, paddingBottom: 10 }}>
                   <span style={{ fontFamily: FONT_IM_FELL, fontSize: 15, color: v1.inkPrimary, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>
                     {group.mallName}
                   </span>
+                  <AdminOnly user={user}>
+                    {groupMall?.status && groupMall.status !== "active" && (
+                      <MallStatusPill status={groupMall.status} />
+                    )}
+                  </AdminOnly>
                   <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
                   <span style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 11, color: v1.inkMuted, whiteSpace: "nowrap" }}>
                     {group.vendors.length} {group.vendors.length === 1 ? "booth" : "booths"}
@@ -421,7 +466,8 @@ export default function BoothsPage() {
                   ))}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </>
         )}
       </main>

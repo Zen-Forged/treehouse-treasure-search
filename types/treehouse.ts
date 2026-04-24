@@ -2,15 +2,21 @@
 
 export type PostStatus = "available" | "sold" | "pending";
 
+export type MallStatus = "draft" | "coming_soon" | "active";
+
 export interface Mall {
-  id:         string;
-  created_at: string;
-  updated_at: string;
-  name:       string;
-  city:       string;
-  state:      string;
-  slug:       string;
-  address:    string | null;
+  id:           string;
+  created_at:   string;
+  updated_at:   string;
+  name:         string;
+  city:         string;
+  state:        string;
+  slug:         string;
+  address:      string | null;
+
+  // ── R4c lifecycle (migration 009) ──
+  status:       MallStatus;
+  activated_at: string | null;
 
   // ── Extended location data (added in 001_mall_locations seed) ──
   phone?:           string | null;
