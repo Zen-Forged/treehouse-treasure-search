@@ -65,94 +65,97 @@ Exception: a single chained command with `&&` stays in one block — that's one 
 
 ---
 
-## ✅ Session 52 (2026-04-24) — Q-011 shipped in 4 iterations: v2→v2.1→v3→v4 (simplification arc)
+## ✅ Session 53 (2026-04-24) — Q-011 v4 QA walk PASSED + Ladder B first half shipped
 
-Long iteration session. Four commits landed; four mockup artifacts produced; Q-011 scope expanded + collapsed twice. Started as "execute session-51 mockup v2.2" and ended somewhere much simpler after two Gmail-hostility discoveries and a David-driven content pivot. **Every iteration was mockup-mediated before code touched disk** — the session-28 rule worked exactly as intended, at speed, four times. Zero on-device QA yet; that's session 53.
+Two loops closed. Q-011 moved from "shipped but unverified" to "verified on device across every client that mattered"; Ladder B moved from "design discussion stuck in session-51 chat" to "decision record + CI + package scripts + beta plan committed to main." One commit `44b4c79` landed — the Q-011 walk was verification and produced no code. First Claude Code session to exercise the session-open + session-close slash commands end-to-end.
 
-**Commits landed (chronological):**
+**Q-011 v4 on-device QA walk — CLOSED (4/4 clients PASS):**
 
-1. `5c21b90` **feat(Q-011): Window email v2 banner redesign per mockup v2.2** — first-pass execution of session-51 approved mockup. SMALL masthead (13px uppercase Georgia 600 + 10px italic tagline) + universal `"You've received a personal invite."` opener + IM Fell Google Fonts `<link>` + IM Fell 32px vendor name + `/shelf`-matching PinGlyph SVG replacing `⦲` + `senderMode` retired from the email template (server still uses it for rate-limit buckets). Post-it moved from inline SVG to styled div with `position: absolute` inside a `position: relative` + `overflow: hidden` banner wrapper. Build clean, shipped.
-2. `efbf222` **fix(Q-011): Gmail strips position:absolute — refactor post-it to negative-margin overlay** — David's on-device QA caught it immediately. Gmail web = post-it invisible (position stripped, then clipped by `overflow: hidden`). iOS Gmail = post-it flowed below the banner (position stripped, natural position is below the image). Refactored to the v1 negative-margin overlay pattern: post-it sibling of banner, `display: inline-block` + `text-align: right` wrapper, `margin-top: -108px` pull-up. Pin moved from `position: absolute; top: -3px` to `margin: -16px auto 8px` (negative margin-top cancels parent padding and pokes above the edge). No `position` declarations anywhere in the subtree.
-3. `1abcba2` **feat(Q-011): v3 info bar pivot — retire post-it from email, unify banner + mall** — commit 2 also failed Gmail QA. David concluded the gesture is fighting the medium and proposed a hand-sketched pivot (`IMG_2068.HEIC`): kill the overlap, put the booth number in a **two-cell info bar below the banner**, paired with mall name + address in the second cell. v3 mockup at `docs/mockups/share-booth-email-v3.html` with three variants (A attached, B separate paper-wash card, C minimalist); David picked **A + 32% booth cell + "BOOTH" uppercase eyebrow**. Shipped. `renderPostItDiv` + `renderLocationLine` + the `POSTIT` constant all deleted — no remaining callers. Pure HTML `<table>` + block `<div>` — the most forgiving email primitives; renders identically in every mail client since 2005. Semantic improvement: "this booth is at that mall" becomes one primitive instead of two.
-4. `d9279e9` **feat(Q-011): v4 simplified button-forward — masthead retired, CTA elevated** — v3 rendered correctly but David flagged the email was still text-heavy and the primary CTA was buried at the bottom after the full tile grid. v4 goal shift: from "make it render" to "make it convert." v4 mockup at `docs/mockups/share-booth-email-v4.html` with three frames (v4 pill, v4 full-width, v3 reference); David picked **full-width button + preheader aligned with opener + subject aligned with new voice**. Four simplification moves: (a) shell masthead deleted entirely — sender envelope already identifies the brand, (b) opener collapses from two blocks to one phrase "You've received a personal invite to explore" flowing into the vendor name as its grammatical object, IM Fell 32→34px, (c) button moves up to directly under the banner + info bar, full-width green block (10px radius, Georgia 600 16px, "Explore the booth"), (d) closer block + "THE WINDOW" eyebrow deleted. Subject + preheader + opener now all share the phrase `"A personal invite to explore {vendor}"` for full narrative unity inbox-scan → preview → body. The word "Window" retires from user-facing copy (stays in internal identifiers only: `sendBoothWindow`, `ShareBoothWindowPayload`, the QA walk doc).
+- Gmail web (proven v2.0 / v2.1 failure client) — PASS
+- iOS Gmail (proven v2.0 / v2.1 failure client) — PASS
+- iOS Mail (baseline) — PASS
+- Apple Mail (macOS desktop, baseline) — PASS
 
-**Mockup artifacts produced this session:**
+v4 design verified faithful in the wild: no shell masthead, invite line + IM Fell 34px vendor name flow as one phrase, banner + 2-cell info bar render as one unified rounded frame, "Explore the booth" full-width green button directly under info bar, tile grid naked (no "THE WINDOW" eyebrow), no orphan closer, subject + preheader + opener all share the phrase "A personal invite to explore {vendor}". The Q-011 arc that started session 41 Scenario 1 QA walk (original post-it diagnosis) and re-expanded session 51 Design review (4-axis brand drift) is now fully closed after four code iterations + four-client on-device verification. Q-011 moves to ⏸️ Superseded; `docs/mockups/share-booth-email-v4.html` transitions from "current mockup" to "design-history reference."
 
-- `docs/mockups/share-booth-email-v3.html` (new) — info bar pivot, 3 variants
-- `docs/mockups/share-booth-email-v4.html` (new) — simplified button-forward, 3 frames including v3 before/after
-- `docs/mockups/share-booth-email-v2.html` (from session 51) — superseded twice but kept as design-history reference
+**Commit landed:**
 
-**Build spec addendums written (all in one commit arc via the v4 file):**
+1. `44b4c79` **chore(ladder-b): session 53 — CI workflow + package scripts + beta plan + design record** — four additive artifacts, zero code or runtime changes. Build + typecheck both clean pre-commit.
+   - **`.github/workflows/ci.yml`** — typecheck + lint + build on every PR + push to `main`/`staging`. Complements the path-gated `comp-eval.yml` (reseller pipeline only). No secrets needed — `lib/supabase.ts` has placeholder fallbacks and `adminAuth.getServiceClient` reads env at function scope, so build-time static generation succeeds with an empty env. Live side-effect: the workflow triggers on this very commit, giving it a free first live-test against main before session 54 opens.
+   - **`package.json` scripts** — adds `typecheck`, `qa-walk`, `inspect-banners`, `test:filters`, `test:query-builder`, `test:comps`. Surfaces existing utilities without adding a `tsx` devDependency (keeps the `npx tsx` convention from the existing comp-eval workflow).
+   - **`docs/beta-plan.md`** (thin, per D4-a) — V0→V1→V2→V3 rollout cadence, severity-tiered rollback criteria (🔴 halt + revert / 🟡 halt invites + investigate / 🟢 log + fix forward), direct-to-David feedback loop at N=1–5 with a Tally upgrade trigger at N≥3.
+   - **`docs/ladder-b-design.md`** — decision record for D1(a) + D2(b) + D3(a) + D4(a), session 53 shipped task table, session 54 queued task table (Tasks 5–10, ~60 min HITL-heavy), non-goals table. Prevents re-deriving Ladder B if session 54 opens cold.
 
-- `docs/share-booth-build-spec.md` now has v2 + v3 + v4 addendums stacked. v4 supersedes v3 for shell masthead + opener + closer + Window eyebrow + button copy + subject + preheader; v3 supersedes v2 for banner + post-it + location-line. Banner + info bar + tile grid internals are v3-locked and unchanged in v4.
+**Ladder B design decisions locked (`docs/ladder-b-design.md`):**
 
-**Key hard-won tech fact (discovered live in session 52, NOT in prior memory):**
+- **D1(a)** — classic promotion ladder. Feature → PR to `staging` → merge → staging URL; staging → PR to `main` → merge → production. Matches David's mental model + gives a stable staging URL for beta-vendor dry-runs.
+- **D2(b)** — fresh staging Supabase project; replay migrations forward; seed via script. Exercises the migrations-from-scratch path as a beta-readiness check. True isolation from day one. Trade-off accepted: no real-data edge cases until V1.
+- **D3(a)** — minimum CI: typecheck + lint + build on every PR/push. E2E deferred until a regression motivates it. Existing path-gated `comp-eval.yml` still runs; two typechecks on comp-pipeline PRs is cheap insurance.
+- **D4(a)** — thin beta plan. One page, three sections. Upgrade trigger: first time the thin plan is insufficient in a specific, not drifty, moment.
 
-- **Gmail strips `position: absolute` from inline styles — both web and iOS.** This is stronger than the session-51 SVG-filtering discovery (which only affected `<rect>` / `<circle>` as tracking-pixel defense). `position: absolute` stripping means ANY overlap-style primitive fights Gmail at a fundamental layout-engine level. v2.0 and v2.1 both died on this; v3's pivot to pure HTML `<table>` + block `<div>` sidestepped it entirely. Documented in `lib/email.ts` file header comments. Candidate for `MASTER_PROMPT.md` KNOWN PLATFORM GOTCHAS section — not added this session (docs pass, separate scope).
+**Session 54 queued (Ladder B second half, HITL-heavy, ~60 min):**
 
-**Tech Rule candidates queued (naming only, not promoted this session):**
+- Task 5 🖐️ HITL — create staging Supabase project in dashboard (name: `treehouse-treasure-search-staging`)
+- Task 6 🖐️ HITL — wire staging env to `staging` branch in Vercel dashboard (URL + anon + service role + site URL scoped to Preview + branch filter)
+- Task 7 🟢 AUTO — replay migrations against staging
+- Task 8 🟢 AUTO — write `scripts/seed-staging.ts` (mirrors `qa-walk.ts` shape)
+- Task 9 🟢 AUTO — write `.env.staging.example`
+- Task 10 🖐️ HITL — smoke-test the staging deploy
 
-- **Email template parity audit** (session 51 carryover + second firing here — v2→v3 pivot surfaced more drift). Same root: `lib/email.ts` drifted silently because email QA wasn't running. Promotion-threshold now reached (two firings in successive sessions).
-- **NEW: Gmail-hostile primitives list** — candidate Tech Rule for DECISION_GATE or MASTER_PROMPT. Running list: `position: absolute`, `position: relative` with `overflow: hidden` clipping, SVG `<rect>`/`<circle>` as post-it-style shapes, CSS `transform: rotate` (stripped by Outlook — graceful degradation only). Useful for any future email work.
+**Key working-pattern observation (not promoted this session):**
 
-**QA hold: Q-011 v4 deployment NOT yet verified on device.** Session 53 opener. All four clients: Gmail web + iOS Gmail (proven failure clients), then iOS Mail + Apple Mail (baseline). v3 already passed Gmail QA mid-session but v4's shell + opener + button changes need a fresh walk.
+The session-51 chat Ladder B discussion was never committed — it lived only in Claude Chat conversation history, which is why session 53's sprint brief opened with "I don't have that context" as an open question. `docs/ladder-b-design.md` corrects that: when a sprint-sized infra decision is made in a review pass, the decision record gets committed in the SAME session that executes the first task. Otherwise a future Claude (or David in 3 months) opens cold with "what was decided?" and has to reconstruct. Not promoted as a Tech Rule this session (needs a second firing), but worth remembering: infra design that lives only in chat is a liability.
+
+**Tech Rule promotion state unchanged this session:** email template parity audit still promotion-ready (second firing session 52, no new firing this session since Q-011 closed clean); script-first rule still promotion-ready; Gmail-hostile primitives list still at first firing. Batch is the same ~40 min exercise it was at session 52 close.
+
+**No memory updates this session.** David's Claude Code + automation-preference memories remained load-bearing; no new user / feedback / project facts surfaced that weren't already captured in `docs/ladder-b-design.md` or `docs/beta-plan.md`.
 
 ---
 
-## Archived: Session 51 tombstone
+## Archived: Session 52 tombstone
 
-- **Session 51** (2026-04-24) — Q-008 shopper-share QA walk PASSED 5/5 scenarios on device (Q-008 QA hold retired). Q-011 scoped as a Design session rather than a patch; first-pass code attempt reverted after David called mockup-first and v2 mockup review surfaced 4-axis brand drift beyond the original SVG-stripping diagnosis (post-it proportions, wrong pin glyph, vendor name font). v2.2 mockup locked at `docs/mockups/share-booth-email-v2.html`. Zero commits. Email template parity audit Tech Rule candidate queued (first firing).
+- **Session 52** (2026-04-24) — Q-011 Window email redesign shipped in 4 iterations / 4 commits (`5c21b90` v2 banner redesign per mockup v2.2 → `efbf222` fix Gmail `position:absolute` strip → `1abcba2` v3 info bar pivot retiring the post-it → `d9279e9` v4 simplified button-forward with masthead retired and full-width green CTA). Four mockup artifacts produced; scope pivoted twice (medium-change + content-change); every iteration was mockup-mediated before code touched disk (session-28 rule confirmed 4×). Two Gmail-hostility discoveries: `position: absolute` stripping (stronger than session-51's SVG-rect filtering). Tech Rule candidates queued: email template parity audit (2nd firing, promotion-ready), Gmail-hostile primitives list (1st firing). Word "Window" retired from user-facing copy (internal identifiers only). Zero on-device QA that session — that's what session 53 closed.
 
 ---
 
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-24 (session 52 close — Q-011 shipped in 4 iterations, v4 pending on-device QA)
+> Last updated: 2026-04-24 (session 53 close — Q-011 v4 QA PASSED 4/4 + Ladder B first half shipped)
 
-**Status:** `d9279e9` on main. Four commits landed session 52 — all Q-011 iterations culminating in v4 (`feat(Q-011): v4 simplified button-forward — masthead retired, CTA elevated`). Zero on-device QA yet; session 53 opens with that walk. DB clean-slate persists; beta invites remain technically unblocked. Vercel CLI still not globally installed on David's machine — workaround `npx vercel@latest --prod` still standing.
+**Status:** `44b4c79` on main. Session 53 landed two things: (1) Q-011 v4 on-device QA walk PASSED 4/4 clients (Gmail web, iOS Gmail, iOS Mail, Apple Mail) — Q-011 loop fully closed after four iterations + four-client verification. (2) Ladder B first half shipped — one commit, four additive artifacts (`ci.yml` + `package.json` scripts + `docs/beta-plan.md` + `docs/ladder-b-design.md`). DB clean-slate persists; beta invites remain technically unblocked. Vercel CLI still not globally installed; workaround `npx vercel@latest --prod` still standing.
 
-### 🚧 Queued for session 53 — Q-011 v4 on-device QA walk (~30–45 min)
+### 🚧 Queued for session 54 — Ladder B second half (HITL-heavy, ~60 min)
 
-Send a Window (via `/my-shelf` masthead airplane OR `/shelf/[slug]` public airplane) to each mail client and verify:
+Execute Tasks 5–10 from `docs/ladder-b-design.md` §Session 54 task list:
 
-**Primary failure clients (the ones v2.0 + v2.1 died on — re-test these first):**
-- [ ] Gmail web — banner renders as one rounded unit with image on top and 2-cell info bar below (no floating orphan booth number, no broken SVG artifacts). Full-width green button sits directly below the info bar. Tile grid below the button.
-- [ ] iOS Gmail — same.
+**Task 5 🖐️ HITL — Create staging Supabase project.** David in Supabase dashboard. Name: `treehouse-treasure-search-staging`. Region: match prod. Copy URL + anon key + service role key into a scratchpad for Task 6.
 
-**Baseline clients (were passing v1/v2 already, should still pass):**
-- [ ] iOS Mail
-- [ ] Apple Mail (macOS desktop)
+**Task 6 🖐️ HITL — Wire staging env to `staging` branch in Vercel.** David in Vercel dashboard → Project → Settings → Environment Variables. Scope `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL` (staging URL), and `RESEND_API_KEY` (reuse prod — Resend sends work the same) to `Preview` env with branch filter `staging`. Admin + other vars unchanged across envs.
 
-**v4-specific checks beyond v3:**
-- [ ] Email opens WITHOUT a brand masthead — body starts directly with italic invite line
-- [ ] Invite line + vendor name read as one phrase ("You've received a personal invite to explore" → "Kentucky Treehouse")
-- [ ] Button copy reads "Explore the booth"
-- [ ] Tile grid has NO "THE WINDOW" eyebrow — tiles stand naked under the button
-- [ ] No orphan closer text at the end — tiles → footer hairline → "You're receiving this..." footer
-- [ ] Subject line reads `A personal invite to explore {vendor}`
-- [ ] Inbox preview shows `A personal invite to explore {vendor}.`
+**Task 7 🟢 AUTO — Replay migrations against staging.** Run migrations in `migrations/` in order against staging via SQL editor or a helper script. Flag any drift.
 
-**Graceful degradation check:**
-- [ ] Outlook web — accept that `border-radius` on the banner wrapper + button may not render (Outlook ignores on `div`); content still legible, button still clickable.
+**Task 8 🟢 AUTO — Write `scripts/seed-staging.ts`.** Reusable fixture seed. Creates 1–2 test vendors, 1 admin user, 5–10 posts, 1 featured banner. Mirrors `scripts/qa-walk.ts` shape (service role client + console tables). Idempotent.
 
-**If QA PASSes:** close Q-011 loop, move to session 54 scope — Ladder B (branch-based staging + CI workflow + package scripts + staging Supabase project + `docs/beta-plan.md`) followed by Supabase MCP wiring. Both still deferred since session 51.
+**Task 9 🟢 AUTO — Write `.env.staging.example`.** Mirrors `.env.example` with staging-specific commentary. `.env.staging.local` gitignored.
 
-**If QA FAILs:** iterate with fresh mockup if the fix is > a one-line tweak (session-28 rule). All four iterations this session confirmed mockup-first works at speed — don't regress to direct-edit debugging.
+**Task 10 🖐️ HITL — Smoke-test staging deploy.** Push to `staging` branch, confirm Vercel auto-deploys, open on device, run `npm run qa-walk -- baseline` against staging env.
 
-### Alternative next sessions (if David wants to redirect from QA)
+**Gate to close Ladder B:** after session 54 passes, V0 → V1 gate in `docs/beta-plan.md` opens (one week of quiet before V1 invite).
 
-- **Ladder B — ops/infra sprint** (~2–3 hours, session 51 design) — branch-based staging, CI workflow, staging Supabase project, `docs/beta-plan.md`. Recommended BEFORE beta invites go out; cost compounds with each vendor added. Design discussion still only captured in session-51 chat, not docs.
-- **Feed content seeding** (~30–60 min) — carried forward sessions 44–52. DB clean-slate persists. Good once Q-011 QA closes and Ladder B staging exists.
+### Alternative next sessions (if David wants to redirect from Ladder B session 54)
+
+- **Feed content seeding** (~30–60 min) — carried forward sessions 44–53. DB clean-slate persists. Best AFTER Ladder B second half lands (so seeding exercises the staging environment, not prod).
 - **Q-002** 🟢 (~20 min) — Picker affordance placement revision.
-- **Tech Rule promotion batch** (~40 min) — **ten candidates now queued** (session-52 adds "Gmail-hostile primitives list" — NEW, first firing; "email template parity audit" hit its second firing this session and is promotion-ready). Plus session-46 script-first rule (also promotion-ready since session 48).
-- **Session-archive drift cleanup** (~30 min) — sessions 28–38 + 44–51 one-liner only; session-52 block is paste-over-ready after the session-53 close replaces it here.
+- **Tech Rule promotion batch** (~40 min) — **eleven candidates queued** (session-53 adds "commit-design-records-in-same-session" — NEW, first firing). Two promotion-ready: email-template-parity-audit (2nd firing session 52) + script-first-over-SQL-dump (2nd firing session 48). Plus session-52 Gmail-hostile primitives list (1st firing).
+- **Session-archive drift cleanup** (~30 min) — sessions 28–38 + 44–52 one-liner only; session-53 block is paste-over-ready after the session-54 close replaces it here.
 - **Design agent principle addition** (~10 min, docs only) — "reconciliation of a second glyph/affordance is part of the same scope." `MASTER_PROMPT.md` Design Agent section (session-45 retrospective).
 - **MASTER_PROMPT.md KNOWN PLATFORM GOTCHAS update** (~10 min, docs only) — add the session-52 hard-won "Gmail strips `position: absolute` from inline styles (web + iOS); any overlap primitive will die on Gmail" fact alongside existing Safari/ITP, Supabase RLS, Vercel, Next.js 14 gotchas.
+- **`docs/share-booth-build-spec.md` consolidation** (~15 min, docs only) — the v2 + v3 + v4 addendums are easier to read merged than stacked now that Q-011 QA is closed.
 - **`/admin` UI `auth.users` delete reliability spike** (~20–30 min).
 - **Error monitoring** (Sentry or structured logs). Sprint 3 carryover.
 - **Beta feedback mechanism** (Tally.so link).
 
-### Session 53 opener (pre-filled — Q-011 v4 QA walk)
+### Session 54 opener (pre-filled — Ladder B second half)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
@@ -160,7 +163,7 @@ STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthr
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: Q-011 v4 on-device QA walk per the CLAUDE.md checklist. `d9279e9` is on main; Vercel should be serving the v4 build. Send a Window from /my-shelf OR /shelf/[slug] to Gmail web + iOS Gmail first (the proven failure clients), then iOS Mail + Apple Mail for baseline. Check list is 10 items — masthead absence, invite line + vendor name flow, banner + info bar render (no orphan booth number, no broken SVG), full-width "Explore the booth" button under info bar, no "THE WINDOW" eyebrow, tiles naked, subject + preheader match the new voice. If PASS, close Q-011 loop and move to Ladder B (staging branch + CI + scripts + beta plan + Supabase MCP wiring — design lives in session-51 chat, still uncommitted). If FAIL and the fix is > a one-line tweak, iterate via fresh mockup first (session-28 rule confirmed 4× this session).
+CURRENT ISSUE: Ladder B second half per docs/ladder-b-design.md §Session 54 task list (Tasks 5–10). Session 53's first half shipped in 44b4c79 (ci.yml + package scripts + beta-plan.md + ladder-b-design.md). HITL-heavy: David creates staging Supabase project in dashboard (Task 5), wires Preview env vars scoped to `staging` branch in Vercel dashboard (Task 6). Claude handles migration replay (Task 7), writes scripts/seed-staging.ts (Task 8), writes .env.staging.example (Task 9). Close with on-device smoke test: push to staging branch, confirm Vercel auto-deploys, run `npm run qa-walk -- baseline` against staging env (Task 10). Estimated ~60 min if dashboards cooperate. Gate to V1 beta invite opens after this lands cleanly.
 ```
 
 ---
@@ -185,6 +188,7 @@ CURRENT ISSUE: Q-011 v4 on-device QA walk per the CLAUDE.md checklist. `d9279e9`
 - **Session 48** (2026-04-23) — Featured banner RLS drift fixed across Home + Find Map + `/admin` Banners preview. Migration 008 + `scripts/inspect-banners.ts` diagnostic. HITL: David pasted SQL into Supabase editor; anon reads confirmed restored.
 - **Session 49** (2026-04-23) — Booths page full v1.2 redesign (2-column grid, StickyMasthead, mall grouping). QR code added to share sheet with logo overlay; confirmed scanning on device. Copy polish: "Invite someone in to" header, "Send the invite" CTA, "Request Digital Booth" green pill on home, "Vendor Sign in" on login.
 - **Session 50** (2026-04-23) — Q-008 shopper Window share shipped (`/api/share-booth` branches on Authorization header; anon = 2/10min + no ownership + no sender voice; auth path + Q-009 admin bypass unchanged). Guest edit-pencil hole closed: `signOut()` clears `LOCAL_VENDOR_KEY`, `detectOwnershipAsync` requires a session, Find Detail subscribes to `onAuthChange`. One commit `0d30fa0`; QA walk deferred; verified clean session 51 — 5/5 scenarios PASSED.
+- **Session 51** (2026-04-24) — Q-008 shopper-share QA walk PASSED 5/5 scenarios on device (Q-008 QA hold retired). Q-011 scoped as a Design session rather than a patch; first-pass code attempt reverted after David called mockup-first and v2 mockup review surfaced 4-axis brand drift beyond original SVG-stripping diagnosis. v2.2 mockup locked at `docs/mockups/share-booth-email-v2.html`. Zero commits. Email template parity audit Tech Rule candidate queued (first firing).
 
 ---
 
@@ -200,9 +204,9 @@ CURRENT ISSUE: Q-011 v4 on-device QA walk per the CLAUDE.md checklist. `d9279e9`
 - **Error monitoring** (Sentry or structured logs). Sprint 3 carryover.
 - **Beta feedback mechanism** (Tally.so link).
 - **Hero image upload size guard** — verify coverage across upload surfaces.
-- **Tech Rule promotion batch** — ten candidates queued, two promotion-ready: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed, (e) session-40 React 19 ref-forwarding (one firing), (f) session-45 Supabase nested-select explicit-columns (one firing), (g) **session-46 script-first over SQL-dump-first in Claude Code — second firing session 48 (promotion-ready)**, meta-workflow rule, may belong in `MASTER_PROMPT.md`, (h) **session-48 RLS-safety-net policy alongside any `DISABLE ROW LEVEL SECURITY`** (one firing), (i) **session-51 email template parity audit — second firing session 52 (promotion-ready)**, belongs in `MASTER_PROMPT.md` under Design Agent or a new Docs Agent section, (j) **session-52 Gmail-hostile primitives list** — NEW, first firing. Running list: `position: absolute`, `position: relative` with `overflow: hidden` clipping, SVG `<rect>`/`<circle>` tracking-pixel-shaped children, CSS `transform: rotate` (stripped by Outlook). Belongs in `MASTER_PROMPT.md` KNOWN PLATFORM GOTCHAS. Session-42 verify-remaining-count still below the two-firings-outside-same-context bar. ~40 min.
+- **Tech Rule promotion batch** — eleven candidates queued, two promotion-ready: (a) session-33 dependent-surface audit, (b) session-35 half-migration audit, (c) session-36 new-consumer-on-old-select audit, (d) session-38 verify-landing-surface-before-declaring-scope-closed, (e) session-40 React 19 ref-forwarding (one firing), (f) session-45 Supabase nested-select explicit-columns (one firing), (g) **session-46 script-first over SQL-dump-first in Claude Code — second firing session 48 (promotion-ready)**, meta-workflow rule, may belong in `MASTER_PROMPT.md`, (h) **session-48 RLS-safety-net policy alongside any `DISABLE ROW LEVEL SECURITY`** (one firing), (i) **session-51 email template parity audit — second firing session 52 (promotion-ready)**, belongs in `MASTER_PROMPT.md` under Design Agent or a new Docs Agent section, (j) **session-52 Gmail-hostile primitives list** (one firing) — running list: `position: absolute`, `position: relative` with `overflow: hidden` clipping, SVG `<rect>`/`<circle>` tracking-pixel-shaped children, CSS `transform: rotate` (stripped by Outlook); belongs in `MASTER_PROMPT.md` KNOWN PLATFORM GOTCHAS, (k) **NEW session-53 commit-design-records-in-same-session** (one firing) — when a sprint-sized infra/architecture decision is made in a review pass, commit the decision record in the session that executes the first task, not later. Session 51 chat Ladder B design was never committed; session 53 corrected by writing `docs/ladder-b-design.md` alongside the session-53 code artifacts. Meta-workflow rule, may belong in `MASTER_PROMPT.md`. Session-42 verify-remaining-count still below the two-firings-outside-same-context bar. ~40 min.
 - **Design agent principle addition** — "When a second instance of a glyph/affordance is introduced, the reconciliation is part of the same scope, not a later cleanup." Session-45 retrospective. ~10 min docs only. Goes in `MASTER_PROMPT.md` Design Agent section.
-- **Session-archive drift cleanup** — sessions 28–38 carry one-liners but no archive detail; sessions 44–50 now also tombstone-only in this file. Session-51 tombstone added this session; session-52 block is paste-over-ready until the session-53 close replaces it here. ~30 min batch to backfill archive detail for 28–38 + 44–51 from tombstones + git log.
+- **Session-archive drift cleanup** — sessions 28–38 carry one-liners but no archive detail; sessions 44–52 now also tombstone-only in this file. Session-52 tombstone added this session; session-53 block is paste-over-ready until the session-54 close replaces it here. ~30 min batch to backfill archive detail for 28–38 + 44–52 from tombstones + git log.
 - **`/api/suggest` SDK migration or delta note** — session 43 confirmed this route is the only AI route still on raw `fetch` rather than the Anthropic SDK. Not beta-gating; reseller-intel only. Optional future cleanup.
 - **`/admin` UI `auth.users` delete reliability** — session 46 observed that David's UI-driven delete of Ella's auth user didn't stick (row persisted until force-deleted via admin API). Not blocking; worth investigating if it recurs. ~20–30 min spike.
 
@@ -212,7 +216,7 @@ All captured in `docs/queued-sessions.md`:
 - **Q-008** ✅ — Open share to unauthenticated shoppers. **Shipped session 50; QA walk PASSED session 51.**
 - **Q-009** ✅ — Admin can share any booth (ownership bypass). **Shipped session 45.**
 - **Q-010** ✅ — Window email CTA URL fix (`/vendor/` → `/shelf/`). Shipped session 41.
-- **Q-011** 🟡 — Window email redesign. **Shipped session 52 over four iterations (`5c21b90` → `efbf222` → `1abcba2` → `d9279e9`).** Final state (v4): shell masthead retired, one-line opener flowing into IM Fell 34px vendor name, banner + attached 2-cell info bar (BOOTH numeral + mall name/address), full-width "Explore the booth" button directly under info bar, tile grid naked without eyebrow, footer. Subject + preheader + opener all share the phrase "A personal invite to explore {vendor}". Word "Window" retired from user-facing copy (stays in internal identifiers only). **QA walk queued for session 53** — Gmail web + iOS Gmail were the proven failure clients through v2.0 / v2.1 (both died on `position: absolute` stripping); v3's pivot to pure-table primitives solved that, v4 adds simplification + button elevation on top.
+- **Q-011** ✅ — Window email redesign. Shipped session 52 over four iterations (`5c21b90` → `efbf222` → `1abcba2` → `d9279e9`); v4 on-device QA walk **PASSED 4/4 clients session 53** (Gmail web, iOS Gmail, iOS Mail, Apple Mail). Loop fully closed. Final state (v4): shell masthead retired, opener line flowing into IM Fell 34px vendor name, banner + 2-cell info bar as one unified rounded frame, full-width "Explore the booth" green button directly under info bar, naked tile grid, footer. Subject + preheader + opener share the phrase "A personal invite to explore {vendor}". Word "Window" retired from user-facing copy.
 - **Q-006** 🟡 — Deep-link CTA. Parked on Sprint 6+ Universal Links.
 
 ### 🟡 Session 35 non-gating follow-up
@@ -247,10 +251,10 @@ All captured in `docs/queued-sessions.md`:
 - `docs/mockups/share-booth-email-v1.html` — design-history reference for Q-011 arc.
 - `docs/mockups/share-booth-email-v2.html` — design-history reference (session 51 Variant B; superseded twice in session 52).
 - `docs/mockups/share-booth-email-v3.html` — design-history reference (session 52 info bar pivot; superseded by v4).
-- `docs/mockups/share-booth-email-v4.html` — current v4 mockup. Keep while Q-011 QA walk is outstanding; if on-device passes cleanly, it becomes design-history.
+- `docs/mockups/share-booth-email-v4.html` — design-history reference (session 52 v4 simplification; QA PASSED 4/4 clients session 53). Q-011 arc closed.
 - `docs/mockups/my-shelf-multi-booth-v1.html` — keep until Q-002 updates it.
 - `docs/multi-booth-build-spec.md` — archived reference.
-- `docs/share-booth-build-spec.md` — now carries v2 + v3 + v4 addendums stacked. Keep through Q-011 QA walk. Post-QA, candidate for consolidation (the three addendums are easier to read merged than stacked).
+- `docs/share-booth-build-spec.md` — now carries v2 + v3 + v4 addendums stacked. Post-QA (passed session 53), candidate for consolidation (the three addendums are easier to read merged than stacked). ~15 min docs-only pass.
 - `components/ShelfGrid.tsx` (parked; zero callers).
 - `/post` redirect shim — can delete post-beta.
 
@@ -263,4 +267,4 @@ All captured in `docs/queued-sessions.md`:
 - Trigger: say "generate investor update" at session close
 - Process doc: Notion → Agent System Operating Manual → 📋 Investor Update — Process & Cadence
 
-> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data; session 43 audited AI model surface + locked in billing safeguards; session 44 restored `/shelves` Add-a-Booth primitive; session 45 shipped the cross-mall fix + admin delete + Q-009 admin share bypass; session 46 re-passed T4d QA walk + qa-walk.ts script; session 47 fixed vendor onboarding hero image gap; session 48 fixed featured-banner RLS drift; session 49 shipped /shelves v1.2 redesign + QR code share + copy polish; session 50 shipped Q-008 shopper Window share + guest edit-pencil fix; session 51 PASSED Q-008 QA walk 5/5 + scoped Q-011 as Design session; session 52 shipped Q-011 in 4 iterations — four commits, four mockups, scope pivoted twice (info bar + button-forward simplification). Next natural investor-update trigger point is after Q-011 v4 on-device QA walk passes + feed content seeding + Ladder B staging lands (sessions 53–55)** — the update would then honestly report the full pre-beta polish arc (sessions 42–55) as complete rather than partial.
+> **Sprint 4 fully closed sessions 40–41; session 42 cleared DB test data; session 43 audited AI model surface + locked in billing safeguards; session 44 restored `/shelves` Add-a-Booth primitive; session 45 shipped the cross-mall fix + admin delete + Q-009 admin share bypass; session 46 re-passed T4d QA walk + qa-walk.ts script; session 47 fixed vendor onboarding hero image gap; session 48 fixed featured-banner RLS drift; session 49 shipped /shelves v1.2 redesign + QR code share + copy polish; session 50 shipped Q-008 shopper Window share + guest edit-pencil fix; session 51 PASSED Q-008 QA walk 5/5 + scoped Q-011 as Design session; session 52 shipped Q-011 in 4 iterations — four commits, four mockups, scope pivoted twice (info bar + button-forward simplification); session 53 closed Q-011 loop (4/4 clients PASSED on device) + Ladder B first half shipped (CI + scripts + beta plan + design record in one commit `44b4c79`). Next natural investor-update trigger point is after Ladder B second half lands (session 54: staging Supabase + Vercel env wiring) + feed content seeding (session 55)** — the update would then honestly report the full pre-beta polish arc (sessions 42–55) as complete rather than partial.

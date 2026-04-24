@@ -137,82 +137,38 @@ Build-spec §3 said `/vendor/{slug}` — spec was wrong against the rest of the 
 
 ---
 
-## Q-011 🟢 Window email banner redesign — v2 design session scoped
+## ⏸️ Q-011 — Window email banner redesign — SUPERSEDED
 
-**Status:** Ready to run. Scoped as a Design session 51; mockup locked at `docs/mockups/share-booth-email-v2.html` (v2.2 final state). Build queued for session 52.
+**Status:** ⏸️ Superseded 2026-04-24 (session 53 close — v4 on-device QA walk PASSED 4/4 clients).
 
-**Created:** 2026-04-21 (session 41 Scenario 1 QA walk)
-**Re-scoped:** 2026-04-24 (session 51 Design review — surfaced 4-axis brand drift beyond the original SVG-stripping diagnosis; David called mockup-first per session-28 rule; first-pass code attempt reverted cleanly)
+**Retirement reason:** Shipped session 52 over four iterations after the session-51 Design review surfaced 4-axis brand drift. Session 53 on-device QA walk PASSED all four mail clients. Q-011 is fully closed — from the original session-41 Scenario 1 post-it diagnosis through to four-client verification in the wild. Total arc: sessions 41 → 51 → 52 → 53.
 
-**Severity:** 🟡 Medium — email-rendering bug + brand-voice drift. Every Window share between now and session-52 ship looks amateur (clipped post-it on Gmail web, duplicated vendor name in opener line due to sender-name bug, Unicode `⦲` glyph inconsistent with the rest of the app).
+**What shipped (4 commits session 52):**
 
-### The 4-axis brand drift surfaced at session 51
+1. `5c21b90` — v2 banner redesign per session-51 mockup v2.2 (SMALL masthead + universal opener + IM Fell Google Fonts link + PinGlyph SVG + `senderMode` retired from template).
+2. `efbf222` — `fix` refactor to negative-margin overlay after Gmail web + iOS Gmail both stripped `position: absolute`.
+3. `1abcba2` — v3 info bar pivot. Post-it retired entirely; booth number + mall name + address become a two-cell HTML `<table>` info bar attached below the banner in one unified rounded frame. Variant A locked.
+4. `d9279e9` — v4 simplified button-forward. Shell masthead retired (sender envelope already identifies brand), opener collapses to one italic phrase flowing into IM Fell 34px vendor name, full-width green "Explore the booth" CTA directly under info bar, "THE WINDOW" eyebrow deleted, closer block deleted. Subject + preheader + opener all share the phrase `"A personal invite to explore {vendor}"`. Word "Window" retired from user-facing copy (internal identifiers only: `sendBoothWindow`, `ShareBoothWindowPayload`, the QA-walk doc).
 
-The original Q-011 was framed as an email-rendering bug (Gmail web strips SVG `<rect>`/`<circle>` as tracking-pixel defense, leaving `<text>` rendering as flow content below the banner, clipped at the bottom-right edge). The session-51 mockup review surfaced that the email had been drifting from the canonical design on FOUR axes:
+**Session 53 QA walk result:** 4/4 clients PASS (Gmail web, iOS Gmail, iOS Mail, Apple Mail). Outlook graceful degradation not tested (low-priority per CLAUDE.md checklist).
 
-1. **Post-it SVG stripping** — original diagnosis. Gmail web strips `<rect>`/`<circle>`.
-2. **Post-it proportions drifted** — session-39 spec used 86×86 + 4° + "BOOTH" single-line eyebrow. Real `/shelf` BoothHero is 96×96 + 6° + "Booth Location" two-line + 36px numeral. Email was a diminished copy.
-3. **Wrong pin glyph** — Unicode `⦲` vs teardrop-SVG `PinGlyph` from `components/BoothPage.tsx`. Direct violation of the session-17 glyph hierarchy lock.
-4. **Vendor name font drift** — Georgia 34px 600-weight in email vs IM Fell 32px 400-weight in `/shelf`. Rules collide at this one spot — v2.2 resolves via IM Fell Google Fonts `<link>` (graceful fallback to Georgia in Outlook).
+**Key hard-won tech fact (candidate for `MASTER_PROMPT.md` KNOWN PLATFORM GOTCHAS):** Gmail strips `position: absolute` from inline styles on BOTH web and iOS. Stronger than the session-51 SVG-filtering discovery — any overlap-style primitive will die on Gmail. v3's pivot to pure HTML `<table>` + block `<div>` was forced by this, not chosen.
 
-### Bonus bug surfaced during mockup review
+**Mockup artifacts (kept as design-history reference):**
+- `docs/mockups/share-booth-email-v1.html` — session 38 original
+- `docs/mockups/share-booth-email-v2.html` — session 51 Variant B
+- `docs/mockups/share-booth-email-v3.html` — session 52 info bar pivot
+- `docs/mockups/share-booth-email-v4.html` — session 52 simplified button-forward (now design-history after session-53 QA PASS)
 
-**Sender-name bug** — `/api/share-booth` passes `vendor.display_name` as `senderFirstName` (never the authed user's first name). David's self-sends during QA read "Kentucky Treehouse sent you a Window into Kentucky Treehouse." The v2.2 copy has no sender name to resolve (opener line is `You've received a personal invite.`), so the bug surface is eliminated rather than patched. `senderMode` / `senderFirstName` on `ShareBoothWindowPayload` stay in the server-side route for rate-limit bucket selection but retire from the email template entirely.
+**Build spec:** `docs/share-booth-build-spec.md` carries v2 + v3 + v4 addendums stacked. Candidate for ~15 min consolidation pass post-QA — the three addendums are easier to read merged than stacked.
 
-### Mockup decisions locked (session 51)
+### Historical scope (preserved for session-archive readers)
 
-- **Variant B banner** — post-it embedded inside banner at bottom-right (86×86, rotated 6°), no overhang. Safer across all clients than Variant A's overhang approach; more on-brand than Variant C's typography-only approach.
-- **SMALL masthead** — 13px uppercase `TREEHOUSE FINDS` Georgia 600 letterspaced. Tagline `Embrace the Search. Treasure the Find.` kept at 10px italic. Quiet brand anchor; booth leads.
-- **New opener copy** — italic Georgia 15px `You've received a personal invite.` followed by IM Fell 14px italic eyebrow `Step inside a curated booth from` + IM Fell 32px vendor name hero. Echoes `/shelf` BoothTitleBlock voice (`a curated shelf from`).
-- **Real PinGlyph SVG** — teardrop outline + filled circle, `strokeWidth=1.3`, `v1.inkPrimary` fill. Inlined directly in the email body.
-- **IM Fell via Google Fonts `<link>`** — added to email shell `<head>`. ~70% of clients (iOS Mail, Gmail web, Apple Mail) respect it; Outlook + some Android clients fall back to Georgia as graceful degradation.
-- **Preheader simplifies** to `A personal invite to a curated booth.` — one line, always true, no sender-mode branching.
-- **Plain-text fallback adopts new opener** — `You've received a personal invite.\n\nA curated booth from {vendorName}.\n...`
+Original Q-011 at session 41 was framed as a single-axis email-rendering bug: "The booth number was displayed below the booth hero image. The plan was to have the booth on top of the image, formatted with the post-it note, as displayed in the my-shelf section." Session 51 Design review expanded scope to 4-axis brand drift (post-it SVG stripping + post-it proportions + wrong pin glyph + vendor name font drift). Session 52 execution doubled the scope again after v2.0 + v2.1 both died on Gmail's `position: absolute` strip, forcing the v3 pivot; then expanded a third time when v3 rendered correctly but David flagged the CTA was buried — v4 simplified the whole email around the button.
 
-### Files touched (session 52 execution)
+Sender-name bug surfaced at session 51 and was eliminated rather than patched: `/api/share-booth` was passing `vendor.display_name` as `senderFirstName` (self-sends read "Kentucky Treehouse sent you a Window into Kentucky Treehouse"). v4 has no sender name to resolve — the opener is universal.
 
-1. **`docs/share-booth-build-spec.md`** (v2 addendum) — documents all of the above as dev-handoff doc, not decision doc, per session-28 rule
-2. **`lib/email.ts`** — multiple rewrites:
-   - `renderEmailShell` — SMALL masthead (13px uppercase + 10px italic tagline), add IM Fell Google Fonts `<link>` to shell `<head>`
-   - `renderWindowBody` — replace sender voice line with new opener block (invite line + eyebrow + IM Fell vendor name), retire `senderMode` branching
-   - `renderBanner` — Variant B (embedded post-it, no overhang, `height: 220px`)
-   - New internal `renderPostItDiv` helper — styled div (not SVG, Gmail-safe), 86×86, rotate(6deg), pin + eyebrow + numeral
-   - `renderLocationLine` — real PinGlyph SVG instead of `⦲` char
-   - Update plain-text fallback + preheader copy
-3. **`ShareBoothWindowPayload` type** — mark `senderFirstName` + `senderMode` optional / display-unused, add deprecation comment
-
-### Estimate
-
-~90–120 min of careful work. `lib/email.ts` is a 🔴 STOP-adjacent file (every Window share goes through it) — work needs to be clean, not rushed. Build check + on-device verification (Gmail web first, then iOS Mail) required before retirement.
-
-### Session opener (copy/paste when promoted)
-
-```
-PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
-STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Vercel
-Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
-Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
-
-CURRENT ISSUE: Execute Q-011 per session-51 approved mockup at docs/mockups/share-booth-email-v2.html (Variant B + SMALL masthead + tagline kept + new invite copy + senderMode retirement from template). Write build spec addendum to docs/share-booth-build-spec.md first, then lib/email.ts rewrites (renderEmailShell SMALL masthead, renderWindowBody opener with invite line + eyebrow + IM Fell vendor name, renderBanner Variant B, new renderPostItDiv helper styled-div not SVG, renderLocationLine real PinGlyph SVG, IM Fell Google Fonts link in shell head). Mockup is source of truth — if spec disagrees, mockup wins.
-```
-
----
-
-## Historical Q-011 scope (preserved for session-archive readers)
-
-Original session-41 capture framed Q-011 as an email-rendering bug (booth number displayed below hero image instead of post-it pinned on top). Session-51 Design review expanded scope to the full banner block redesign captured above. The historical one-axis framing is preserved below for future readers.
-
-### Original scope at capture (session 41)
-
-David's session-41 QA-walk observation: "The booth number was displayed below the booth hero image. The plan was to have the booth on top of the image, formatted with the post-it note, as displayed in the my-shelf section."
-
-Build-spec §Decisions decision 5 locked: "Booth banner + pinned post-it mirrors `/my-shelf` BoothHero. Hero image behind, post-it pinned bottom-right at 6° rotation. NOT the centered post-it treatment from the first mockup draft." If the post-it isn't pinned on top of the hero in the delivered email, the session-39 `renderBanner` / `renderPostItSvg` didn't land correctly.
-
-The diagnosis path the session-51 review walked:
-
-1. **Did the SVG render at all?** On Gmail web: partially. Gmail strips `<rect>` + `<circle>` as tracking-pixel defense, keeps `<text>`. Result: italicized "BOOTH 000" text rendering as flow content below the banner, clipped at the bottom-right rounded edge. On iOS Mail / Apple Mail: SVG rendered but the negative-margin-div positioning (`margin-top: -96px` on a `position: relative` div) was fragile across viewport widths.
-2. **Positioning approach** — session 39 used absolute positioning of the SVG over the banner table cell via MSO conditional comment. Some email clients (Yahoo Mail web, older Outlook) strip `position: absolute`. The mockup used positioning that didn't survive.
-3. **Fallback strategy** — the session-51 mockup adopts a styled div with CSS `transform: rotate(6deg)` instead of SVG. Gmail web + Apple Mail + iOS Mail respect the CSS transform; Outlook desktop strips the rotation but the div still renders as a square post-it with pin + eyebrow + numeral (readable graceful fallback). Variant B places the post-it inside the banner (no overhang), which removes the negative-margin-div fragility entirely.
+Tech Rule candidates surfaced through the arc: (a) email template parity audit (2nd firing session 52 — promotion-ready), (b) Gmail-hostile primitives list (1st firing session 52 — `position: absolute`, `position: relative` with `overflow: hidden` clipping, SVG `<rect>`/`<circle>` as post-it shapes, CSS `transform: rotate`).
 
 ---
 
