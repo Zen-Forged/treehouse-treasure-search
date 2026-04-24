@@ -23,7 +23,7 @@ Each entry carries:
   - ✅ **Shipped** — absorbed by a merged PR (cross-ref the session).
 - **What / Why / Open questions** — the scoping substance.
 
-13 of 15 items (R1–R15) are 🟡 Captured. **R4c is ✅ Shipped as of session 57** — first roadmap item to go end-to-end (design-to-Ready session 56 → implementation + on-device QA PASSED 4/4 on prod session 57). See the R4c entry below.
+12 of 15 items (R1–R15) are 🟡 Captured. **R4c is ✅ Shipped as of session 57** — first roadmap item to go end-to-end (design-to-Ready session 56 → implementation + on-device QA PASSED 4/4 on prod session 57). **R3 is 🟢 Ready as of session 58** — second roadmap item to graduate, design-to-Ready landed in commit alongside its mockup + this status promotion. See the R3 + R4c entries below.
 
 ---
 
@@ -46,7 +46,7 @@ David reviews and can override any of these.
 |----|-------|----------|--------|-----------|--------|-------|
 | R1 | Guest/shopper profiles | User/Auth | L | — (but compounds with R3, R9) | 🟡 Captured | Biggest single swing. Enables persistent likes, booth-following, shopper notifications. |
 | R2 | Stripe vendor subscriptions | Monetization | L | R5b (tier definition) | 🟡 Captured | Without tiers, Stripe is checkout-theater. Scope R2 + R5b together. |
-| R3 | Analytics event capture | Data | M | — | 🟡 Captured | Foundational. Tunes R5a, R5b, future feed ranking. Instrument early for compounding data. |
+| R3 | Analytics event capture | Data | M | — | 🟢 Ready (session 58) | Foundational. Tunes R5a, R5b, future feed ranking. Instrument early for compounding data. Design record: [`docs/r3-analytics-design.md`](r3-analytics-design.md). Mockup: [`docs/mockups/r3-admin-analytics-v1.html`](mockups/r3-admin-analytics-v1.html). All six decisions D1–D6 frozen; implementation session can run as a straight sprint. |
 | R4a | Admin: delete booth | Admin tooling | S | — | 🟡 Captured | Primitive exists on `/shelves` (session 45). Port to `/admin`. |
 | R4b | Admin: delete/replace hero image | Admin tooling | S | — | 🟡 Captured | Currently upload-only; no remove. |
 | R4c | Mall active/inactive toggle | Admin tooling + Feed UX | M | — | ✅ Shipped (session 57) | **First roadmap item shipped end-to-end.** Design-to-Ready session 56 (`daca2a5`) → implementation + on-device QA PASSED 4/4 on prod session 57 (`ff87047`). Unblocks R10 map. Design record: [`docs/r4c-mall-active-design.md`](r4c-mall-active-design.md). Mockup: [`docs/mockups/r4c-admin-v1.html`](mockups/r4c-admin-v1.html). |
@@ -163,20 +163,33 @@ Waves 1 + 2 + 3 together are realistically ~9–14 sessions (mix of S + M). That
 
 ---
 
-### R3 — Analytics event capture 🟡
+### R3 — Analytics event capture 🟢 Ready session 58
 
-**What:** Supabase-backed event store for: `post_liked`, `post_saved`, `post_unsaved`, `booth_visited`, `post_viewed`, `share_sent`, `share_opened`, `filter_applied`. Accessible via an admin view for aggregate reporting.
+> **Status:** 🟢 Ready. Design-to-Ready landed session 58. Full design record: [`docs/r3-analytics-design.md`](r3-analytics-design.md). Admin mockup: [`docs/mockups/r3-admin-analytics-v1.html`](mockups/r3-admin-analytics-v1.html). Second roadmap item to graduate after R4c.
 
-**Why:** Every product decision downstream — how aggressive the 30-day cutoff should be, what the free-tier cap is, which surfaces to double down on — improves with data. Shipping R3 early is a compounding bet.
+**What:** Supabase-backed `events` table — single wide schema with a `jsonb` payload column. Eight event types in v1: `page_viewed`, `post_saved`, `post_unsaved`, `filter_applied`, `share_sent`, `vendor_request_submitted`, `vendor_request_approved`, `mall_activated`/`mall_deactivated`. New `/admin` 5th tab `Events` shows a 24h/7d/all counter strip + filter chips + most-recent-first stream with 50/page pagination. No charts in v1 — stream-first.
 
-**Open questions:**
-- Table shape: single wide `events` table vs. typed tables per event?
-- Client-side batching vs. immediate write?
-- Retention policy (indefinite vs. rolling window)?
-- Admin surfacing — dashboard in `/admin` or external (Metabase, Supabase built-ins)?
-- PII handling — hashed shopper IDs vs. user-linked once R1 ships?
+**Why:** Every product decision downstream — how aggressive R5a's 30-day cutoff should be, what R5b's free-tier cap is, which surfaces drive engagement — improves with data. Shipping R3 early is a compounding bet that R5b, R9, and feed-ranking decisions all depend on later.
 
-**Design prereq:** Low for instrumentation. Moderate for admin dashboard.
+**All six decisions frozen session 58** (see design record for full detail):
+- D1 — single wide `events` table with `jsonb` payload, not typed tables per event ✅
+- D2 — hybrid capture: server-side inline-writes for handler-flowing events, client-side fire-and-forget for UI events ✅
+- D3 — pre-R1 PII handling: `user_id` nullable + `session_id` in sessionStorage; no IP/email/UA capture ✅
+- D4 — indefinite retention through beta; revisit at 90 days or 1M rows ✅
+- D5 — admin surfacing is stream-first (filter chips + paginated list), not dashboard-first ✅
+- D6 — narrow v1 event list (8 types); excludes `post_liked`, `share_opened`, `booth_visited` ✅
+
+**Terminology locked at session 58:** the heart icon = save = bookmark = flagged. There is exactly one engagement mechanic on a find. Canonical event name is `post_saved` / `post_unsaved`. No separate `post_liked` event in v1.
+
+**Remaining open questions (deferred to implementation / downstream):**
+- Exact rate-limit bucket window for `/api/events` (60 vs. 120/min — implementation-session call).
+- Whether to extract summary-strip / filter-chip / event-row into reusable primitives or keep inline.
+- Layout-level page-view auto-capture — explicit per-page calls in v1; layout primitive later.
+- Realtime subscription on the events table — considered, excluded for v1; revisit if "live monitoring" admin workflow ever exists.
+
+**Design prereq:** ✅ Complete. Mockup + scoping doc landed session 58.
+
+**Compounds with:** R12 (error monitoring — same instrumentation mindset), R5b (cap tuning needs R3 data), R9 (notifications need event signal).
 
 ---
 
@@ -575,6 +588,8 @@ Everything else can be decided at the moment of scoping for each item.
 
 ---
 
+> Last updated: 2026-04-24 (session 58 — R3 promoted 🟡 Captured → 🟢 Ready; design record at `docs/r3-analytics-design.md`, admin mockup at `docs/mockups/r3-admin-analytics-v1.html`. All six decisions D1–D6 frozen + terminology locked. Second roadmap item to graduate.)
+>
 > Last updated: 2026-04-24 (session 56 — R4c promoted 🟡 Captured → 🟢 Ready; design record at `docs/r4c-mall-active-design.md`, admin mockup at `docs/mockups/r4c-admin-v1.html`. All six decisions D1–D6 frozen. First roadmap item to move to Ready.)
 >
 > Last updated: 2026-04-24 (session 55 — initial capture of 11 items from David's 2026-04-24 standup + 3 elevated during capture review: R12 error monitoring, R13 mall-operator accounts, R14 vendor profile enrichment + 1 elevated during cluster/priority review: R15 app store launch. Clusters + shipping horizons section added.)

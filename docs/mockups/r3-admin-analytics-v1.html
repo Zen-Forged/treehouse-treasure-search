@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>R3 — Admin Events tab (v1 mockup)</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:             #f6f1e6;
+    --surface:        #ffffff;
+    --header:         rgba(246,241,230,0.94);
+
+    --text-primary:   #2a1a0a;
+    --text-mid:       #4a3520;
+    --text-muted:     #6b5538;
+    --text-faint:     rgba(42,26,10,0.45);
+
+    --border:         rgba(42,26,10,0.14);
+
+    --green:          #1e4d2b;
+    --green-light:    #e7efe4;
+    --green-border:   rgba(30,77,43,0.28);
+
+    --amber:          #8a5a14;
+    --amber-light:    #f4ead4;
+    --amber-border:   rgba(138,90,20,0.28);
+
+    --slate:          #3d4a52;
+    --slate-light:    #e8ebed;
+    --slate-border:   rgba(61,74,82,0.24);
+
+    --draft:          #8a7b68;
+    --draft-bg:       rgba(42,26,10,0.05);
+    --draft-border:   rgba(42,26,10,0.18);
+
+    --im-fell:        "IM Fell English", Georgia, serif;
+    --serif:          Georgia, serif;
+    --sys:            -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+    --mono:           "SF Mono", Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #1e1a14; font-family: var(--sys); color: var(--text-primary); }
+
+  /* ── Decisions header ─────────────────────────────────────────── */
+  .decisions {
+    max-width: 960px; margin: 0 auto; padding: 36px 24px 28px; color: rgba(232,221,199,0.9);
+  }
+  .decisions h1 {
+    font-family: var(--im-fell); font-weight: 400; font-size: 30px; color: #e8ddc7;
+    margin: 0 0 6px; text-align: center; letter-spacing: -0.01em;
+  }
+  .decisions .subtitle {
+    text-align: center; color: rgba(232,221,199,0.6); font-size: 13px;
+    margin: 0 auto 24px; line-height: 1.65; max-width: 700px;
+  }
+  .decisions .meta {
+    text-align: center; color: rgba(232,221,199,0.38); font-size: 11px;
+    margin: 0 auto 32px; font-family: var(--serif); font-style: italic;
+  }
+  .pick-box {
+    background: rgba(232,221,199,0.07); border: 1px solid rgba(232,221,199,0.15);
+    border-radius: 12px; padding: 18px 22px; margin-bottom: 10px;
+  }
+  .pick-box p { margin: 0 0 10px; font-size: 13px; line-height: 1.65; color: rgba(232,221,199,0.8); }
+  .pick-box p:last-child { margin-bottom: 0; }
+  .pick-box strong { color: #e8ddc7; }
+  .pick-box .q { font-family: var(--im-fell); font-style: italic; font-size: 15px; color: rgba(232,221,199,0.72); margin: 0 0 5px; }
+  .pick-box .rec { color: rgba(200,220,200,0.85); }
+  .pick-box code { font-family: var(--mono); font-size: 12px; color: rgba(232,221,199,0.9); background: rgba(232,221,199,0.08); padding: 1px 5px; border-radius: 3px; }
+
+  .frames-row {
+    max-width: 1280px; margin: 0 auto; padding: 0 20px 80px;
+    display: flex; gap: 28px; justify-content: center; align-items: flex-start; flex-wrap: wrap;
+  }
+  .frame-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; flex: 0 0 auto; }
+  .frame-label { font-family: var(--im-fell); font-style: italic; font-size: 16px; color: rgba(232,221,199,0.7); text-align: center; max-width: 375px; }
+  .frame-label strong { display: block; font-style: normal; font-size: 18px; color: #e8ddc7; margin-bottom: 2px; }
+
+  .phone {
+    width: 375px; height: 812px; background: var(--bg); border-radius: 40px;
+    box-shadow: 0 12px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06);
+    overflow: hidden; position: relative; display: flex; flex-direction: column;
+  }
+
+  /* ── /admin chrome ─────────────────────────────────────────────── */
+  .admin-header {
+    background: var(--bg); border-bottom: 1px solid var(--border);
+    padding: 40px 20px 16px; flex-shrink: 0;
+    display: flex; align-items: flex-start; justify-content: space-between;
+  }
+  .admin-header .title-block .eyebrow {
+    font-size: 9px; color: var(--text-faint); text-transform: uppercase;
+    letter-spacing: 2px; margin-bottom: 3px;
+  }
+  .admin-header .title-block .title {
+    font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--text-primary);
+  }
+  .admin-header .actions { display: flex; gap: 10px; align-items: center; }
+  .admin-header .back-link { font-size: 12px; color: var(--green); }
+  .admin-header .signout-pill {
+    display: flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 8px;
+    border: 1px solid var(--border); font-size: 11px; color: var(--text-faint);
+  }
+
+  .admin-id {
+    margin: 16px 20px 0; padding: 10px 14px; border-radius: 10px;
+    background: var(--green-light); border: 1px solid var(--green-border);
+  }
+  .admin-id .eyebrow {
+    font-size: 9px; color: var(--green); text-transform: uppercase;
+    letter-spacing: 1.8px; margin-bottom: 2px; font-weight: 600;
+  }
+  .admin-id .email { font-size: 12px; color: var(--text-primary); }
+
+  /* ── Tab switcher (5 tabs now) ─────────────────────────────────── */
+  .tabs {
+    margin: 20px 20px 0; display: flex; gap: 4px;
+  }
+  .tab {
+    flex: 1; padding: 9px 2px; border-radius: 10px; font-size: 10px; font-weight: 500;
+    background: transparent; color: var(--text-mid);
+    border: 1px solid var(--border); display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 2px; white-space: nowrap;
+  }
+  .tab .tab-glyph { font-size: 14px; line-height: 1; }
+  .tab.active { background: var(--green); color: #fff; border-color: var(--green); }
+
+  /* ── Top summary strip ──────────────────────────────────────────── */
+  .summary-strip {
+    margin: 20px 20px 0;
+    display: flex; gap: 8px;
+  }
+  .sum-card {
+    flex: 1; padding: 10px 8px; border-radius: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    text-align: center;
+  }
+  .sum-card .n {
+    font-family: var(--serif); font-size: 20px; font-weight: 700; color: var(--text-primary);
+    line-height: 1.1;
+  }
+  .sum-card .lbl {
+    font-size: 9px; color: var(--text-faint); text-transform: uppercase;
+    letter-spacing: 1.2px; margin-top: 2px;
+  }
+
+  /* ── Filter chips ──────────────────────────────────────────────── */
+  .filters {
+    margin: 16px 20px 0; display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .chip {
+    padding: 6px 11px; border-radius: 999px; font-size: 11px;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text-mid);
+    font-weight: 500;
+  }
+  .chip.selected { background: var(--green); color: #fff; border-color: var(--green); }
+  .chip.ghost { background: transparent; color: var(--text-faint); border-style: dashed; }
+
+  /* ── Events stream ─────────────────────────────────────────────── */
+  .events-container { margin: 18px 20px 0; padding-bottom: 40px; overflow-y: auto; flex: 1; }
+  .events-container::-webkit-scrollbar { display: none; }
+  .events-header-row {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+  }
+  .events-eyebrow {
+    font-size: 9px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 2px;
+  }
+  .refresh-link {
+    display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted);
+  }
+
+  /* Day separator */
+  .day-sep {
+    font-size: 9px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 1.6px;
+    font-weight: 600;
+    margin: 16px 0 8px; display: flex; align-items: center; gap: 10px;
+  }
+  .day-sep::after {
+    content: ""; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* Event row */
+  .event-row {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 12px; margin-bottom: 6px;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .event-dot {
+    width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex: 0 0 auto;
+  }
+  .event-dot.save   { background: var(--green); }
+  .event-dot.unsave { background: var(--draft); }
+  .event-dot.view   { background: var(--slate); }
+  .event-dot.share  { background: var(--amber); }
+  .event-dot.filter { background: var(--slate); opacity: 0.5; }
+  .event-dot.req    { background: var(--green); }
+  .event-dot.approve{ background: var(--green); }
+  .event-dot.mall   { background: var(--green); }
+
+  .event-body { flex: 1; min-width: 0; }
+  .event-type-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 2px;
+  }
+  .event-type {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    color: var(--text-primary); letter-spacing: 0.2px;
+  }
+  .event-time {
+    font-size: 10px; color: var(--text-faint); font-family: var(--mono); margin-left: auto;
+  }
+  .event-payload {
+    font-size: 11px; color: var(--text-muted); line-height: 1.4;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .event-payload .k { color: var(--text-faint); }
+  .event-payload .v { color: var(--text-mid); font-family: var(--mono); }
+
+  /* Expanded event */
+  .event-row.expanded {
+    flex-direction: column; align-items: stretch;
+    border-color: var(--green-border);
+    box-shadow: 0 4px 18px rgba(30,77,43,0.08);
+  }
+  .event-row.expanded .row-top { display: flex; align-items: flex-start; gap: 10px; }
+  .event-row.expanded .payload-json {
+    margin-top: 10px; padding: 10px 12px; border-radius: 8px;
+    background: #211f1b; color: #d7ccad;
+    font-family: var(--mono); font-size: 10.5px; line-height: 1.55;
+    white-space: pre; overflow-x: auto;
+  }
+  .event-row.expanded .payload-json .jk { color: #a9c8a4; }
+  .event-row.expanded .payload-json .jv { color: #e3d9b8; }
+  .event-row.expanded .payload-json .jn { color: #c9a56b; }
+
+  /* Session header for Frame 2 */
+  .filter-summary {
+    font-size: 11px; color: var(--text-muted); font-style: italic; font-family: var(--serif);
+    margin: 6px 0 10px; padding: 8px 10px;
+    background: var(--amber-light); border: 1px solid var(--amber-border); border-radius: 8px;
+    line-height: 1.5;
+  }
+  .filter-summary strong { color: var(--amber); font-style: normal; font-family: var(--sys); font-weight: 600; }
+
+  /* ── Bottom nav ─────────────────────────────────────────────── */
+  .bottom-nav {
+    flex-shrink: 0; height: 72px; background: rgba(246,241,230,0.97);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-around; padding: 0 16px 4px;
+  }
+  .bn-item { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; color: var(--text-faint); }
+  .bn-dot { width: 22px; height: 22px; border-radius: 50%; border: 1px solid currentColor; }
+
+</style>
+</head>
+<body>
+
+<div class="decisions">
+  <h1>R3 — Admin Events tab</h1>
+  <div class="subtitle">
+    Supabase-backed <code>events</code> table capturing shopper + vendor + admin actions. New <strong>5th</strong> tab on <code>/admin</code>
+    surfaces the stream with filter chips and a 24h / 7d counter strip at top. No dashboard charts yet — raw stream first,
+    charts only after R1 lands and the data gets richer.
+  </div>
+  <div class="meta">
+    Session 58 · 2026-04-24 · design record: <code>docs/r3-analytics-design.md</code>
+  </div>
+
+  <div class="pick-box">
+    <p class="q">Six decisions surfaced for your review — all six are reversible later</p>
+    <p><strong>D1 — Table shape.</strong> <span class="rec">Recommendation: single wide <code>events</code> table with a <code>jsonb payload</code> column instead of one typed table per event type.</span> Adding a new event type becomes a one-line code change, not a migration. Aggregations still work (<code>WHERE event_type = 'post_saved'</code>). Typed tables create sprawl that will be regretted by R6 when the list grows.</p>
+    <p><strong>D2 — Client vs server capture.</strong> <span class="rec">Recommendation: hybrid. Server-side inline-writes on any event that already flows through an API route (<code>share_sent</code>, <code>vendor_request_submitted</code>, <code>vendor_request_approved</code>, <code>mall_activated</code>). Client-side fire-and-forget POST to <code>/api/events</code> for pure UI events (<code>page_viewed</code>, <code>post_saved</code>, <code>filter_applied</code>).</span></p>
+    <p><strong>D3 — User identity + PII handling.</strong> <span class="rec">Recommendation: pre-R1, <code>user_id</code> is nullable — populated only for vendor-authenticated events. Shopper events carry a <code>session_id</code> stored in <strong>sessionStorage</strong> (auto-clears on tab close), never in localStorage. No IP capture, no email capture, no user-agent capture for beta. Post-R1, shopper <code>user_id</code> backfills naturally when signed in.</span></p>
+    <p><strong>D4 — Retention.</strong> <span class="rec">Recommendation: indefinite retention through beta. Revisit at 90 days of data or 1M rows, whichever comes first.</span> Beta volume makes retention cost trivially small; the compound value of historical data in the first 90 days is high.</p>
+    <p><strong>D5 — Admin surfacing.</strong> <span class="rec">Recommendation: stream-first, not dashboard-first. New <code>/admin</code> 5th tab = <code>Events</code>, showing 24h / 7d / all-time counter strip + filter chips by event type + most-recent-first list with 50-per-page pagination.</span> Charts arrive in a later session once R1 makes the data richer.</p>
+    <p><strong>D6 — v1 event list (narrow starter set).</strong> <span class="rec">Recommendation: instrument these 8 event types now — <code>page_viewed</code>, <code>post_saved</code>, <code>post_unsaved</code>, <code>filter_applied</code>, <code>share_sent</code>, <code>vendor_request_submitted</code>, <code>vendor_request_approved</code>, <code>mall_activated</code> / <code>mall_deactivated</code>.</span> Deliberately excludes <code>post_liked</code> (no like mechanism), <code>share_opened</code> (requires email redirect shim), <code>booth_visited</code> (folded into <code>page_viewed</code> via <code>page_path</code>).</p>
+  </div>
+
+  <div class="pick-box">
+    <p class="q">Implementation constraints baked into the recommendation</p>
+    <p><strong>5-tab fit on 375px width.</strong> With 5 tabs the current layout goes from "icon + label + count on one row" to "stacked icon above label" at 10px font. Shown in both frames below — tight but readable. If this crosses your bar, alternative is a separate <code>/admin/events</code> route.</p>
+    <p><strong>Write volume at beta scale.</strong> Even if every shopper fires 20 events/session and beta has 50 concurrent shoppers, that's 1000 events/session — well under Supabase row-insert limits. No batching needed for v1.</p>
+    <p><strong>Compounds with R12.</strong> Errors and analytics are the same instrumentation mindset on adjacent surfaces. R3 ships the event table; R12 (error monitoring) can reuse the same <code>/api/events</code> shape for structured logs if Sentry overkill for beta.</p>
+  </div>
+</div>
+
+<div class="frames-row">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       Frame 1 — Events stream, default view
+  ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="frame-wrap">
+    <div class="frame-label"><strong>Frame 1 — Stream view</strong>5-tab switcher · 24h/7d/all counters · filter chips · most-recent-first list grouped by day</div>
+    <div class="phone">
+      <div class="admin-header">
+        <div class="title-block">
+          <div class="eyebrow">Treehouse</div>
+          <div class="title">Admin</div>
+        </div>
+        <div class="actions">
+          <span class="back-link">← Feed</span>
+          <span class="signout-pill">⇥ Sign out</span>
+        </div>
+      </div>
+
+      <div class="admin-id">
+        <div class="eyebrow">Signed in as admin</div>
+        <div class="email">david@zenforged.com</div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab"><span class="tab-glyph">👤</span>Requests</div>
+        <div class="tab"><span class="tab-glyph">🏬</span>Posts</div>
+        <div class="tab"><span class="tab-glyph">🖼</span>Banners</div>
+        <div class="tab"><span class="tab-glyph">📍</span>Malls</div>
+        <div class="tab active"><span class="tab-glyph">📊</span>Events</div>
+      </div>
+
+      <div class="summary-strip">
+        <div class="sum-card">
+          <div class="n">127</div>
+          <div class="lbl">Last 24h</div>
+        </div>
+        <div class="sum-card">
+          <div class="n">864</div>
+          <div class="lbl">Last 7d</div>
+        </div>
+        <div class="sum-card">
+          <div class="n">2,341</div>
+          <div class="lbl">All time</div>
+        </div>
+      </div>
+
+      <div class="filters">
+        <span class="chip selected">All</span>
+        <span class="chip">Saves</span>
+        <span class="chip">Views</span>
+        <span class="chip">Shares</span>
+        <span class="chip ghost">+ more</span>
+      </div>
+
+      <div class="events-container">
+        <div class="events-header-row">
+          <div class="events-eyebrow">Stream (127)</div>
+          <div class="refresh-link">↻ Refresh</div>
+        </div>
+
+        <div class="day-sep">Today · Apr 24</div>
+
+        <div class="event-row">
+          <span class="event-dot save"></span>
+          <div class="event-body">
+            <div class="event-type-row">
+              <span class="event-type">post_saved</span>
+              <span class="event-time">14:32:18</span>
+            </div>
+            <div class="event-payload"><span class="k">post_id:</span> <span class="v">4f2e…</span> · <span class="k">session:</span> <span class="v">a1…</span></div>
+          </div>
+        </div>
+
+        <div class="event-row">
+          <span class="event-dot share"></span>
+          <div class="event-body">
+            <div class="event-type-row">
+              <span class="event-type">share_sent</span>
+              <span class="event-time">14:31:02</span>
+            </div>
+            <div class="event-payload"><span class="k">vendor:</span> <span class="v">winchester-treasures</span> · <span class="k">auth:</span> <span class="v">true</span></div>
+          </div>
+        </div>
+
+        <div class="event-row">
+          <span class="event-dot view"></span>
+          <div class="event-body">
+            <div class="event-type-row">
+              <span class="event-type">page_viewed</span>
+              <span class="event-time">14:29:47</span>
+            </div>
+            <div class="event-payload"><span class="k">path:</span> <span class="v">/shelf/winchester-treasures</span></div>
+          </div>
+        </div>
+
+        <div class="event-row">
+          <span class="event-dot filter"></span>
+          <div class="event-body">
+            <div class="event-type-row">
+              <span class="event-type">filter_applied</span>
+              <span class="event-time">14:29:44</span>
+            </div>
+            <div class="event-payload"><span class="k">type:</span> <span class="v">mall</span> · <span class="k">value:</span> <span class="v">awesome-flea</span></div>
+          </div>
+        </div>
+
+        <div class="event-row">
+          <span class="event-dot view"></span>
+          <div class="event-body">
+            <div class="event-type-row">
+              <span class="event-type">page_viewed</span>
+              <span class="event-time">14:28:12</span>
+            </div>
+            <div class="event-payload"><span class="k">path:</span> <span class="v">/</span></div>
+          </div>
+        </div>
+
+        <div class="event-row">
+          <span class="event-dot mall"></span>
+          <div class="event-body">
+            <div class="event-type-row">
+              <span class="event-type">mall_activated</span>
+              <span class="event-time">13:04:56</span>
+            </div>
+            <div class="event-payload"><span class="k">mall:</span> <span class="v">mellwood-antiques</span> · <span class="k">actor:</span> <span class="v">admin</span></div>
+          </div>
+        </div>
+
+        <div class="day-sep">Yesterday · Apr 23</div>
+
+        <div class="event-row">
+          <span class="event-dot approve"></span>
+          <div class="event-body">
+            <div class="event-type-row">
+              <span class="event-type">vendor_request_approved</span>
+              <span class="event-time">18:22:41</span>
+            </div>
+            <div class="event-payload"><span class="k">vendor:</span> <span class="v">ella-finds</span></div>
+          </div>
+        </div>
+
+        <div class="event-row">
+          <span class="event-dot save"></span>
+          <div class="event-body">
+            <div class="event-type-row">
+              <span class="event-type">post_saved</span>
+              <span class="event-time">17:15:03</span>
+            </div>
+            <div class="event-payload"><span class="k">post_id:</span> <span class="v">8b1c…</span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="bottom-nav">
+        <div class="bn-item"><span class="bn-dot"></span>Home</div>
+        <div class="bn-item"><span class="bn-dot"></span>My Shelf</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════
+       Frame 2 — Filter chip active + row expanded showing payload JSON
+  ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="frame-wrap">
+    <div class="frame-label"><strong>Frame 2 — Filtered + drilled</strong>"Shares" chip selected · one row expanded · payload JSON visible</div>
+    <div class="phone">
+      <div class="admin-header">
+        <div class="title-block">
+          <div class="eyebrow">Treehouse</div>
+          <div class="title">Admin</div>
+        </div>
+        <div class="actions">
+          <span class="back-link">← Feed</span>
+          <span class="signout-pill">⇥ Sign out</span>
+        </div>
+      </div>
+
+      <div class="admin-id">
+        <div class="eyebrow">Signed in as admin</div>
+        <div class="email">david@zenforged.com</div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab"><span class="tab-glyph">👤</span>Requests</div>
+        <div class="tab"><span class="tab-glyph">🏬</span>Posts</div>
+        <div class="tab"><span class="tab-glyph">🖼</span>Banners</div>
+        <div class="tab"><span class="tab-glyph">📍</span>Malls</div>
+        <div class="tab active"><span class="tab-glyph">📊</span>Events</div>
+      </div>
+
+      <div class="summary-strip">
+        <div class="sum-card">
+          <div class="n">127</div>
+          <div class="lbl">Last 24h</div>
+        </div>
+        <div class="sum-card">
+          <div class="n">864</div>
+          <div class="lbl">Last 7d</div>
+        </div>
+        <div class="sum-card">
+          <div class="n">2,341</div>
+          <div class="lbl">All time</div>
+        </div>
+      </div>
+
+      <div class="filters">
+        <span class="chip">All</span>
+        <span class="chip">Saves</span>
+        <span class="chip">Views</span>
+        <span class="chip selected">Shares</span>
+        <span class="chip ghost">+ more</span>
+      </div>
+
+      <div class="events-container">
+        <div class="filter-summary">
+          <strong>Filtered:</strong> share_sent · 12 events in last 7d · 4 unique vendors
+        </div>
+
+        <div class="day-sep">Today · Apr 24</div>
+
+        <!-- Expanded row -->
+        <div class="event-row expanded">
+          <div class="row-top">
+            <span class="event-dot share"></span>
+            <div class="event-body">
+              <div class="event-type-row">
+                <span class="event-type">share_sent</span>
+                <span class="event-time">14:31:02</span>
+              </div>
+              <div class="event-payload"><span class="k">vendor:</span> <span class="v">winchester-treasures</span></div>
+            </div>
+          </div>
+          <div class="payload-json">{
+  <span class="jk">"event_type"</span>: <span class="jv">"share_sent"</span>,
+  <span class="jk">"user_id"</span>: <span class="jv">"2c1f…"</span>,
+  <span class="jk">"session_id"</span>: <span class="jv">"a14e…"</span>,
+  <span class="jk">"occurred_at"</span>: <span class="jv">"2026-04-24T14:31:02Z"</span>,
+  <span class="jk">"payload"</span>: {
+    <span class="jk">"vendor_slug"</span>: <span class="jv">"winchester-treasures"</span>,
+    <span class="jk">"auth_mode"</span>: <span class="jv">"authed"</span>,
+    <span class="jk">"recipient_count"</span>: <span class="jn">1</span>
+  }
+}</div>
+        </div>
+
+        <div class="event-row">
+          <span class="event-dot share"></span>
+          <div class="event-body">
+            <div class="event-type-row">
+              <span class="event-type">share_sent</span>
+              <span class="event-time">11:08:27</span>
+            </div>
+            <div class="event-payload"><span class="k">vendor:</span> <span class="v">awesome-flea-booth-42</span> · <span class="k">auth:</span> <span class="v">false</span></div>
+          </div>
+        </div>
+
+        <div class="day-sep">Yesterday · Apr 23</div>
+
+        <div class="event-row">
+          <span class="event-dot share"></span>
+          <div class="event-body">
+            <div class="event-type-row">
+              <span class="event-type">share_sent</span>
+              <span class="event-time">19:44:12</span>
+            </div>
+            <div class="event-payload"><span class="k">vendor:</span> <span class="v">ella-finds</span></div>
+          </div>
+        </div>
+
+        <div class="event-row">
+          <span class="event-dot share"></span>
+          <div class="event-body">
+            <div class="event-type-row">
+              <span class="event-type">share_sent</span>
+              <span class="event-time">16:02:38</span>
+            </div>
+            <div class="event-payload"><span class="k">vendor:</span> <span class="v">winchester-treasures</span></div>
+          </div>
+        </div>
+
+        <div class="event-row">
+          <span class="event-dot share"></span>
+          <div class="event-body">
+            <div class="event-type-row">
+              <span class="event-type">share_sent</span>
+              <span class="event-time">12:31:05</span>
+            </div>
+            <div class="event-payload"><span class="k">vendor:</span> <span class="v">awesome-flea-booth-42</span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="bottom-nav">
+        <div class="bn-item"><span class="bn-dot"></span>Home</div>
+        <div class="bn-item"><span class="bn-dot"></span>My Shelf</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
