@@ -23,7 +23,7 @@ Each entry carries:
   - ✅ **Shipped** — absorbed by a merged PR (cross-ref the session).
 - **What / Why / Open questions** — the scoping substance.
 
-14 of 15 items (R1–R15) are 🟡 Captured. **R4c is 🟢 Ready as of session 56** — see the R4c entry below for its design record + mockup cross-refs.
+13 of 15 items (R1–R15) are 🟡 Captured. **R4c is ✅ Shipped as of session 57** — first roadmap item to go end-to-end (design-to-Ready session 56 → implementation + on-device QA PASSED 4/4 on prod session 57). See the R4c entry below.
 
 ---
 
@@ -49,7 +49,7 @@ David reviews and can override any of these.
 | R3 | Analytics event capture | Data | M | — | 🟡 Captured | Foundational. Tunes R5a, R5b, future feed ranking. Instrument early for compounding data. |
 | R4a | Admin: delete booth | Admin tooling | S | — | 🟡 Captured | Primitive exists on `/shelves` (session 45). Port to `/admin`. |
 | R4b | Admin: delete/replace hero image | Admin tooling | S | — | 🟡 Captured | Currently upload-only; no remove. |
-| R4c | Mall active/inactive toggle | Admin tooling + Feed UX | M | — | 🟢 Ready | **High-leverage unlock.** 29 unactivated malls pollute pickers. Prerequisite for R10. Design record: [`docs/r4c-mall-active-design.md`](r4c-mall-active-design.md). Mockup: [`docs/mockups/r4c-admin-v1.html`](mockups/r4c-admin-v1.html). |
+| R4c | Mall active/inactive toggle | Admin tooling + Feed UX | M | — | ✅ Shipped (session 57) | **First roadmap item shipped end-to-end.** Design-to-Ready session 56 (`daca2a5`) → implementation + on-device QA PASSED 4/4 on prod session 57 (`ff87047`). Unblocks R10 map. Design record: [`docs/r4c-mall-active-design.md`](r4c-mall-active-design.md). Mockup: [`docs/mockups/r4c-admin-v1.html`](mockups/r4c-admin-v1.html). |
 | R5a | 30-day feed window | Feed quality | S | — | 🟡 Captured | Single query filter. Forces vendor freshness. |
 | R5b | Per-vendor active-find cap | Feed quality + Monetization | M | R3 (for tuning) | 🟡 Captured | Couples with R2 tiers. Beta = no cap; decide tier shape before first paid cohort. |
 | R6 | ToS / privacy / legal | Compliance | M | — | 🟡 Captured | Content-drafting is the long pole. **Gating for R2 and broad public launch.** |
@@ -207,9 +207,9 @@ Waves 1 + 2 + 3 together are realistically ~9–14 sessions (mix of S + M). That
 
 ---
 
-### R4c — Mall active/inactive toggle 🟢
+### R4c — Mall active/inactive toggle ✅ Shipped session 57
 
-> **Promoted 🟡 → 🟢 in session 56 (2026-04-24).** Full design record: [`docs/r4c-mall-active-design.md`](r4c-mall-active-design.md). Admin mockup: [`docs/mockups/r4c-admin-v1.html`](mockups/r4c-admin-v1.html). All six decisions D1–D6 frozen session 56 — implementation session runs as a straight sprint against the spec.
+> **Status:** ✅ Shipped. Design-to-Ready session 56 (`daca2a5`) → implementation session 57 (`ff87047`), on-device QA on prod PASSED 4/4 steps. First roadmap item to ship end-to-end. Full design record: [`docs/r4c-mall-active-design.md`](r4c-mall-active-design.md). Admin mockup: [`docs/mockups/r4c-admin-v1.html`](mockups/r4c-admin-v1.html).
 
 **What:** Three-state enum `malls.status` (`'draft' | 'coming_soon' | 'active'`) + `malls.activated_at` timestamp. Admin UI to toggle via new `/admin` `Malls` tab. Shopper-facing surfaces (feed picker, future map, vendor-request dropdown) filter to `active` only. Admin surfaces show all with status pills. Vendor-owned surfaces (my-shelf, shelf detail) still render their own mall regardless.
 
