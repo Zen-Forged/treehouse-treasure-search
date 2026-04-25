@@ -33,11 +33,11 @@
 | TR-i | **Capture-initial-schema-as-001-before-claiming-migrations-from-scratch** — when standing up a new environment, the first migration must capture the existing schema, not assume a clean slate. | Session 54 | Session 54 | 1× | 🟡 |
 | TR-j | **Env-var checklist must enumerate every `NEXT_PUBLIC_*`** — a new-environment checklist that lists service-role secrets but not `NEXT_PUBLIC_*` values produces silently-broken client bundles. | Session 54 | Session 54 | 1× | 🟡 |
 | TR-k | **New Supabase project must set Auth → URL Configuration before first magic link** — default Auth URL points at localhost; first magic link from a fresh project fails silently if not pre-configured. | Session 54 | Session 54 | 1× | 🟡 |
-| TR-l | **Vercel-runtime-vs-local PostgREST quirks** — when local-vs-Vercel diverge on identical Supabase queries, suspect Vercel runtime/build cache before query syntax. Deploy a known-good fallback pattern (`.or()`) rather than the textbook-correct one (`.eq()`) if behavior diverges. | Session 58 | Session 58 | 1× | 🟡 |
+| TR-l | **Vercel-runtime-vs-local divergence on identical Supabase queries** — when local-vs-Vercel diverge with identical config (URL + key + code + query), suspect Vercel-runtime-side state before query syntax. Session-58 shape: `.eq()` returned 0 rows on Vercel, `.or()` returned correct rows; workaround was always-`.or()`. Session-60 shape: SAME `.order().limit(50)` returned a stale snapshot frozen ~25 min behind real DB state, intermittently, even after a fresh deploy. Fresh-deploy is NOT a reliable workaround (session 60 disproved session 59's theory). When this fires next: write a tiny raw-`fetch()` PostgREST endpoint to bypass `@supabase/supabase-js` and isolate where the divergence lives. | Session 58 | Session 60 | 2× | 🟢 |
 | TR-m | **Front-load visibility tooling on debug round 3** — when prod QA bugs aren't isolated by the second test cycle, build debug toasts + server logs + diagnostic scripts before continuing to guess. Already captured as `feedback_visibility_tools_first.md` memory. | Session 58 | Session 59 | 2× | 🟢 |
 | TR-n | **Always force `vercel --prod` after routing/route-handler changes during prod QA** — GitHub→Vercel webhook lag + PWA cache compound; if you're QA-walking after a route-handler change, deploy explicitly rather than hoping the push triggered. | Session 58 | Session 58 | 1× | 🟡 |
 
-**Total candidates:** 14 active · **1 promotion-ready (TR-m)** · 13 at first firing.
+**Total candidates:** 14 active · **2 promotion-ready (TR-l + TR-m)** · 12 at first firing.
 
 ---
 

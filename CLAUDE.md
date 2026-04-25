@@ -67,89 +67,75 @@ Exception: a single chained command with `&&` stays in one block — that's one 
 
 ---
 
-## 🟡 Session 59 (2026-04-25) — Doc architecture refactor + R3 finishing pass (partial); admin Events stale-state unresolved
+## 🟡 Session 60 (2026-04-25) — R3 stuck-instance theory disproved; intermittent admin-Events stale-data mystery documented and parked
 
-Two-track session. **Track 1 (doc refactor) shipped clean:** David outlined three levers to collapse CLAUDE.md churn during session close; all three implemented plus two secondary wins. CLAUDE.md cut from 41,739 → 21,652 chars (-48% per auto-load, compounds across every turn via prompt cache). **Track 2 (R3 finishing pass) did not reach resolution:** multiple diag commits + three independent reproductions (direct REST, direct supabase-js, inline route logging) confirmed DB integrity and route behavior, but David at session close still reported admin Events page not reflecting Vercel log activity. Last admin/events GET from his session was 31s before his final share landed — a stale-client-state hypothesis not yet verified on-device.
+Single-track session focused on the R3 finishing pass per session 59's recommended next move. **First branch resolved cleanly** — confirmed Refresh button fires GETs (29+ in QA window), data IS captured (15 POSTs to `/api/events` between 12:57:21–12:58:41 UTC), `/api/share-booth` was never called (David opened the share sheet but never sent), and the masthead-share-icon doesn't double-fire `find_shared`. **Second branch hit a wall**: with all that working, David's admin Events page STILL froze at `firstOccurred=12:49 UTC` for 25+ minutes despite the DB having events through 13:13:39 UTC (verified via `scripts/inspect-events.ts`). Triggered a fresh deploy (commit `d3f2d6b`) to test session 59's "stuck Fluid Compute instance" theory — **theory disproved**: the fresh deployment's first GETs immediately returned the same stale snapshot. Confirmed Vercel's `urlPrefix=https://zogxkarpwlaqmamfzceb`, `keyPrefix=sb_secret_Bh`, `keyLen=41` all match local exactly. David elected option 2 (document + close) over option 1 (raw-PostgREST-fetch probe via new endpoint).
 
-**Commits this session (2 runtime + 1 close):**
+**Commits this session (1 runtime + 1 close):**
 
 | Commit | Message |
 |---|---|
-| `74905f7` | chore(r3): log /api/admin/events hits before requireAdmin |
-| `6359a78` | chore(r3): emit deeper diag snapshot from /api/admin/events (keyPrefix/keyLen/urlPrefix/first+lastOccurred/sanity-count) |
-| (session close) | docs: session 59 close — doc refactor shipped, R3 stale-state unresolved |
+| `d3f2d6b` | chore(r3): add uptimeSec to /api/admin/events diag — test stale-instance theory |
+| (session close) | docs: session 60 close — R3 stuck-instance theory disproved, mystery documented |
 
-**Doc refactor shipped (Track 1):**
+**What's broken (carry to session 61):**
 
-- New register [`docs/tech-rules-queue.md`](docs/tech-rules-queue.md): 14 candidates in one table with firing counts + promotion status. Future firings = one-row edit, not CLAUDE.md paragraph rewrite.
-- [`docs/queued-sessions.md`](docs/queued-sessions.md) gained §Operational backlog (12 items moved out of CLAUDE.md) + §Recurring next-session alternatives (3 always-Ready items kept inline in CLAUDE.md, rest live here).
-- [`docs/session-archive.md`](docs/session-archive.md) absorbed sessions 44–52 tombstone block (and session 53 at this close).
-- CLAUDE.md: session-58 block shrunk ~63% via tightened template; two tombstone sections consolidated to "last 5"; CURRENT ISSUE no longer duplicates the session block; Tech Rule paragraph (was ~1000 chars with 14 lettered sub-entries) collapsed to one-liner pointer; DOCUMENT MAP gained the queue doc.
-- Template for future session-N blocks: outcome sentence → commits table → what's broken → memory → live discoveries → follow-ups → tech-rule candidates. Cuts 30–40% per block vs. prior verbose prose.
+- 🟡 **R3 admin Events page intermittently freezes ~25 min behind DB.** Reproducible THIS session, irreproducible across many prior sessions. Confirmed: same Supabase project, same service-role key (prefix + length), same query, fresh deploy, fresh function instance — yet the route's `.order("occurred_at", desc).limit(50)` returns the SAME 50 rows ending at 12:49 UTC across every Refresh, while local script via the same URL+key sees rows through 13:13 UTC. **Cheap diagnostics exhausted.** The next viable probe: write a tiny `/api/admin/events-raw` that uses raw `fetch()` to PostgREST, bypassing `@supabase/supabase-js`. ~10 min including deploy. Currently parked — re-engage when symptom freshly reproduces.
+- 🟡 **`/find/[id]` `navigator.share()` instrumentation gap** — carried from session 59, not addressed. Decide whether to fire `track("find_shared", {post_id})` at intent-capture time (before the iOS native share sheet opens) OR document the gap in the R3 design record. Quick decision when next picked up.
+- 🟡 **`filter_applied` count = 0** still unverified for the FEED filter chips. Session 60 confirmed admin Events tab filter chips do NOT (and should not) fire `filter_applied` — that event is for shopper-facing filter behavior at [app/page.tsx:749](app/page.tsx:749). Single-test HITL: open `/`, tap a category filter chip, watch Vercel logs for the POST.
 
-**What's broken (carry to session 60):**
-
-- 🟡 **Admin Events page stale-state unverified.** At session close David reported Shares filter still showed 4 rows (latest 21:57:48 EDT) after the new 5th share recorded at 23:18:53 EDT. BUT: last `/api/admin/events` GET from David's session was 23:18:22 EDT — 31 seconds BEFORE the new share completed. The page doesn't auto-refresh; only re-fetches on tab-switch, filter-change, or explicit Refresh-button tap. **Session 60 first step: verify on-device that tapping the Refresh button actually fires a new GET.** If Refresh triggers a 200 response containing the 23:18:53 share, the "bug" was stale client state. If Refresh doesn't fire a GET, client handler is broken. If Refresh fires but response still lacks the new row, it's a real server/cache bug.
-- 🟡 **Earlier "All filter rows=2 of 225" on prod APPEARS resolved by fresh deploys** (post-03:00 UTC GETs log `rows=50` correctly; three direct reproductions at local all returned 50 rows). Root cause never isolated — suspected stale Fluid Compute instance holding a scoped client connection, but not confirmed. May recur; if so, `scripts/test-route-query.ts` is positioned as the first-look diagnostic.
-- 🟡 **`filter_applied` count = 0 in DB.** Not investigated this session. Separate ~5-min HITL.
-
-**New instrumentation gap surfaced:** `/find/[id]` share icon on the image uses `navigator.share()` → iOS native share sheet (AirDrop/iMessage/Mail). It **never hits any server endpoint** and is **not captured as any event type.** During prod QA tonight this caused "dozens of shares I just did aren't showing up" → actually those went through iOS, not our pipeline. Fix options: (a) add `track("find_shared", {post_id})` at intent-capture time before the `navigator.share()` call, (b) accept the gap and document it in the R3 design record. Either way decide in session 60.
-
-**Memory updates:** None new. The doc refactor itself is the institutional artifact this session. Existing `feedback_visibility_tools_first.md` fired again — worth noting as its 2nd empirical validation.
+**Memory updates:** None new. Existing `feedback_visibility_tools_first.md` carried the session — debug toast + diag logs + diagnostic script let us answer "is the Refresh tap firing?" and "is the URL/key correct?" within minutes each, but ultimately could not isolate the supabase-js-vs-PostgREST behavior gap. Visibility tooling = necessary, not sufficient.
 
 **Live discoveries:**
 
-- `vercel env pull` redacts "Encrypted" secrets as empty strings in the pulled file (`SUPABASE_SERVICE_ROLE_KEY=""` appearing empty despite being set). Misleading. Confirm existence via `vercel env ls`; confirm actual value via log-emitted prefixes at runtime.
-- Vercel MCP runtime-log tool's table view shows only the FIRST console.log per request. Multi-line diag output requires substring-match queries to confirm variable presence (e.g., search for `keyPrefix` to confirm the diag line fired) rather than direct content inspection.
-- `/find/[id]` vs `/my-shelf`/`/shelf/[slug]` use two completely different share mechanisms (iOS native vs `/api/share-booth` email). Non-obvious from the UI; caused ~30 min of wrong-diagnosis during tonight's QA.
-- Vercel deployment cold-start reuses instance state in ways that can persist scoped client behavior across deploys. Three fresh `vercel --prod` deploys tonight appeared to clear whatever state was causing the earlier "rows=2 of 225" partial-read mystery. Neither root cause nor reproduction steps captured.
+- **Vercel logs MCP runtime-log substring matches the FULL log entry text, not just the message column.** Querying for `query=keyPrefix=sb_secret_Bh` returns every request whose diag line contains that exact substring — even though the table view only shows the first console.log of each request. This is the workaround for the session-59 "table view collapses multi-line diags" limitation: probe specific variable values via substring instead of trying to read the full content.
+- **The admin Events page's `useEffect` at [app/admin/page.tsx:217](app/admin/page.tsx:217) re-fires on `[user, activeTab, eventFilter]` changes** — meaning a single tab-open + 2 filter-chip taps + 2 Refresh taps produces 5 GETs, not 5. Easy to misread as "Refresh is broken / firing too many times" when it's the legitimate filter-change-effect cascade.
+- **`/my-shelf` masthead share opens `ShareBoothSheet` (email-based) — actual `/api/share-booth` POST only fires when the user enters a recipient and taps Send.** Tapping the airplane icon and dismissing the sheet records nothing. This is correct (we don't track share-intent without an actual sent email) but caused ~5 min of "where are my shares?" confusion before the logs made it obvious.
+- **Stuck Fluid Compute instance is NOT the cause of session-59's intermittent stale-data symptom.** A brand-new instance, deployed seconds before David's retest, immediately served data with `firstOccurred` 25 min behind real DB state. Whatever this is, it's NOT instance aging. Session 59's "fresh deploys appeared to clear it" was almost certainly coincidence with the symptom going dormant on its own.
 
-**Operational follow-ups:** R3 finishing pass continues — on-device Refresh-button verification is the cheapest next step. Then `filter_applied` verification. Then decide on `find_shared` instrumentation. Then cleanup: strip the verbose diag logs in `/api/admin/events/route.ts` once stable. All tracked in [`docs/queued-sessions.md`](docs/queued-sessions.md) §Operational backlog.
+**Operational follow-ups:** R3 mystery added to [`docs/queued-sessions.md`](docs/queued-sessions.md) §Operational backlog as a separate, scoped item from the original "R3 finishing pass." Verbose diag logs in `/api/admin/events/route.ts` STAY — strip-time deferred until R3 actually closes. Recommended next session is feed content seeding (~30–60 min) — the long-deferred V1-unblocking work; come back to R3 only if/when the symptom freshly reproduces.
 
-**Tech Rule candidates:** TR-m (front-load visibility tooling) fired a 2nd time this session — promoted 🟡 → 🟢 **promotion-ready** in [`docs/tech-rules-queue.md`](docs/tech-rules-queue.md). TR-l (Vercel-runtime-vs-local) not reinforced this time (same key + URL confirmed via runtime log prefixes; the local-vs-Vercel gap this session was real but intermittent, not a reproducible `.eq()`-format quirk).
+**Tech Rule candidates:** TR-l (Vercel-runtime-vs-local PostgREST quirks) fired a 2nd time this session — promoted 🟡 → 🟢 **promotion-ready** in [`docs/tech-rules-queue.md`](docs/tech-rules-queue.md). New shape isn't `.eq()`-vs-`.or()` like session 58; it's "even with identical config (URL + key + code + query), deployed routes can serve stale snapshots that local scripts don't see — suspect Vercel-runtime-side state before query syntax." Two promotion-ready candidates now: TR-l + TR-m.
 
 ---
 
 ## Recent session tombstones (last 5)
 
-> Older tombstones live in [`docs/session-archive.md`](docs/session-archive.md). Sessions 28–43 still awaiting archive-drift backfill (one-liner only); sessions 44–53 moved to archive during the session-59 doc refactor.
+> Older tombstones live in [`docs/session-archive.md`](docs/session-archive.md). Sessions 28–43 still awaiting archive-drift backfill (one-liner only); sessions 44–54 moved to archive during the session-59 doc refactor + this close.
 
+- **Session 59** (2026-04-25) — Two-track. (1) Doc architecture refactor — CLAUDE.md cut 41,739 → 21,652 chars (-48% per auto-load), new `docs/tech-rules-queue.md` register, expanded `docs/queued-sessions.md` operational backlog, tightened session-block template. (2) R3 finishing pass added deep diag instrumentation to `/api/admin/events` (commits `74905f7` + `6359a78`) but did not isolate the admin-page-doesn't-reflect-Vercel-data symptom. On-device Refresh-button verification deferred to session 60.
 - **Session 58** (2026-04-25) — R3 (Analytics event capture) design-to-Ready + implementation in one session. Events table on prod via migration 010, anon SELECT revoked via migration 011, 175+ events captured across 8 v1 event types, admin Events tab functional for most filters. Visibility tooling (debug toast + diagnostic script + verbose logs) shipped as institutional QA infrastructure. Commits `ba888b3` → `f1e1fd5` (7 commits + close). Two display-layer bugs deferred to session 59.
 - **Session 57** (2026-04-24) — R4c shipped end-to-end on prod (commit `ff87047`, on-device QA PASSED 4/4), first-ever Tech Rule promotion batch (3 rules into MASTER_PROMPT.md, commit `6f77065`), Q-002 picker revision (commit `080689a`), `.eslintrc.json` to green the long-red Lint job (commit `d73323f`). CI green across all 3 jobs for the first time. R4c graduated 🟢 → ✅ — first roadmap item shipped end-to-end.
 - **Session 56** (2026-04-24) — R4c design-to-Ready, one commit `daca2a5`. Zero runtime code. Shipped [`docs/r4c-mall-active-design.md`](docs/r4c-mall-active-design.md) (all 6 decisions D1–D6 frozen), mockup [`docs/mockups/r4c-admin-v1.html`](docs/mockups/r4c-admin-v1.html), roadmap entry rewritten; R4c graduated 🟡 → 🟢, first roadmap item to do so.
 - **Session 55** (2026-04-24) — Roadmap capture + prioritization, three commits `2b9712f` + `40206f9` + `8dca4cc`. Zero runtime code. Shipped [`docs/roadmap-beta-plus.md`](docs/roadmap-beta-plus.md) (15 items R1–R15, 8 clusters A–H, 3 shipping horizons). Absorbed 12 parked items from CLAUDE.md into roadmap cross-ref table.
-- **Session 54** (2026-04-22) — Ladder B second half + staging environment end-to-end. Commits `d8a10f9` + `b7ed869`. Staging Supabase project provisioned + staging schema migration + seed script + env template. First session to ship infra (not just code).
 
 ---
 
 
 ## CURRENT ISSUE
-> Last updated: 2026-04-25 (session 59 close — doc refactor shipped, R3 stale-state unresolved)
+> Last updated: 2026-04-25 (session 60 close — R3 stuck-instance theory disproved; intermittent stale-data mystery documented and parked)
 
 **Working tree:** clean. **Build:** green. **Beta gate:** technically unblocked since session 50; no code-level regressions. **Gate to V1:** feed content seeding + Booths-view verification on staging + one quiet week → first beta vendor invite per [`docs/beta-plan.md`](docs/beta-plan.md). R3 is NOT a V1 gate.
 
-### 🚧 Recommended next session — R3 finishing pass continuation (~30–60 min HITL-heavy)
+### 🚧 Recommended next session — Feed content seeding (~30–60 min)
 
-Session 59 ran extensive diag instrumentation but did not close out R3 because the immediate question — does tapping the Refresh button on the admin Events tab fire a fresh GET — was never confirmed on-device. That's the cheap-first step now.
+R3 finishing pass exhausted its cheap diagnostics this session — the next viable probe (raw `fetch()` to PostgREST bypassing supabase-js) is parked until the symptom freshly reproduces. Meanwhile, feed content seeding has been "next" since session 55 and is the actual V1 unblocker.
 
 **Shape:**
-- 🖐️ HITL (≤2 min) — On iPhone admin Events tab, tap Refresh button at top-right of stream. Watch a Vercel log line appear in real-time (Claude can pull it via MCP runtime logs).
-- 🟢 AUTO — Branch on outcome:
-  - **Refresh fires GET + response includes the latest events** → bug was stale client state. Document and close R3. Strip verbose diag logs.
-  - **Refresh doesn't fire any GET** → client handler broken. Investigate `app/admin/page.tsx` Refresh wiring at line 877 (`onRefresh={() => fetchEvents()}`).
-  - **Refresh fires GET but response is incomplete** → real server-side bug. Diag logs in `/api/admin/events` will show keyPrefix/urlPrefix/firstOccurred — if these point to wrong project or wrong client state, that's the answer.
-- 🟢 AUTO — Decide on `/find/[id]` `navigator.share()` instrumentation gap (session 59 surfaced): add `track("find_shared", {post_id})` at intent OR document the gap in the R3 design record.
-- 🟢 AUTO — `filter_applied` count = 0 verification (single-test HITL, ~5 min).
+- 🖐️ HITL (~30–60 min) — Source 10–15 real posts across 2–3 vendors. Photos + titles + reasonable prices. Could be from David's existing booth content or test SKUs.
+- 🟢 AUTO — Walk the Add Find sheet for each, confirm appearance in feed + on the right shelf.
+- 🟢 AUTO — Run a partial T4d walk on the seeded surfaces (feed render, find-detail, my-shelf, public shelf).
+- 🟢 AUTO — Once content lands, the V1 beta-invite gate is the "one quiet week" of monitoring rather than a code/content gap.
 
 ### Alternative next moves (top 3)
 
-1. **Feed content seeding** (~30–60 min) — 10–15 real posts across 2–3 vendors. Has been "next" since session 55. Once content lands, V1 beta invites unblocked.
-2. **R12 Error monitoring (Sentry)** (~1 session) — Horizon 1 roadmap item. Pairs naturally with R3.
+1. **R3 raw-PostgREST probe** (~10 min including deploy) — only worth doing if the stale-data symptom is freshly reproducing on David's phone. Write `/api/admin/events-raw` using bare `fetch()` against PostgREST, compare response to the supabase-js path. If the raw path is fresh → bug is in `@supabase/supabase-js`. If the raw path is also stale → bug is in the Supabase ↔ Vercel network path. Either way it's a publishable signal for support.
+2. **R12 Error monitoring (Sentry)** (~1 session) — Horizon 1 roadmap item. Would have made the R3 stale-data investigation faster (Sentry breadcrumbs vs. cobbled-together log substring searches).
 3. **R15 technical-path decision** (~30–60 min, no-code Design) — Capacitor wrapper vs. Expo rebuild vs. full native. Single load-bearing scoping decision on the whole roadmap.
 
 Full alternatives + operational backlog in [`docs/queued-sessions.md`](docs/queued-sessions.md).
 
-### Session 60 opener (pre-filled — R3 finishing pass continuation)
+### Session 61 opener (pre-filled — feed content seeding)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
@@ -157,7 +143,7 @@ STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthr
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
 Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: R3 finishing pass continuation. Session 59 added deep diag logging to /api/admin/events (commits 74905f7 + 6359a78) but did not isolate the "admin Events page doesn't reflect new events" symptom. First step is the on-device Refresh-button verification: open admin Events tab on iPhone, tap Refresh, Claude pulls Vercel logs in real-time via MCP runtime-logs tool to see whether a new GET fires and what rows count it returns. The page only re-fetches on tab-switch, filter-change, or explicit Refresh — there's no auto-refresh. If Refresh works correctly, the session-59 perceived bug was stale client state and R3 closes. If Refresh is broken or returns incomplete data, dig into either app/admin/page.tsx fetchEvents or the route's runtime state. Also: surfaced session 59 — /find/[id] share icon uses navigator.share() (iOS native), never hits our server, never recorded as share_sent. Decide instrumentation strategy. Plus: filter_applied count still = 0 (single-test verification). Once R3 closes, strip the verbose console.logs from /api/admin/events/route.ts that were added in commits 74905f7 + 6359a78.
+CURRENT ISSUE: Feed content seeding. The long-deferred V1 unblocker — 10–15 real posts across 2–3 vendors so the app has actual content for beta invites. Walk the Add Find sheet on iPhone, source photos + titles + prices, verify each lands on the right shelf and renders cleanly in the feed. Run a partial T4d walk on the seeded surfaces. Once content lands, V1 beta-invite gate becomes "one quiet week" of monitoring rather than a code/content gap. Note: R3 admin Events page intermittent stale-data mystery from session 60 is parked — root cause unknown after exhausting cheap diagnostics (same DB, key, code, query, fresh deploy all eliminated as variables). Pick R3 back up only if symptom freshly reproduces; cheapest next probe is `/api/admin/events-raw` via bare fetch() to bypass supabase-js (~10 min including deploy). Verbose diag logs in `/api/admin/events/route.ts` stay in place until R3 closes.
 ```
 
 ---
@@ -170,12 +156,12 @@ CURRENT ISSUE: R3 finishing pass continuation. Session 59 added deep diag loggin
 
 ### 🟡 Remaining pre-beta polish (operational, not code-gating)
 
-- **R3 finishing pass continuation** — admin Events page stale-state unresolved at session-59 close. On-device Refresh-button verification is the cheap first step. See "Recommended next session" above.
-- **`/find/[id]` `navigator.share()` instrumentation gap** — session 59 surface. Decide whether to fire a `find_shared` event at intent-capture time or document the gap in R3 design record.
-- **Feed content seeding** — rolled forward from sessions 55–58. 10–15 real posts across 2–3 vendors.
+- **R3 admin-Events stale-data mystery** — intermittent. Session 60 ruled out URL/key/code/query/fresh-deploy/instance-aging as causes. Next probe (only if freshly reproducing): raw `fetch()` to PostgREST via new `/api/admin/events-raw` endpoint (~10 min). Verbose diag logs stay in `/api/admin/events/route.ts` until this closes.
+- **`/find/[id]` `navigator.share()` instrumentation gap** — session 59 surface, untouched session 60. Decide whether to fire `find_shared` event at intent-capture or document the gap in R3 design record.
+- **Feed content seeding** — rolled forward from sessions 55–60. 10–15 real posts across 2–3 vendors. **Now top-of-stack** as recommended next session.
 - **Hero image upload size guard** — verify coverage across upload surfaces.
-- **Tech Rule promotion batch** — 14 candidates queued; TR-m (visibility-tools-on-round-3) at 2nd firing post-session-59 → **promotion-ready**. Full register: [`docs/tech-rules-queue.md`](docs/tech-rules-queue.md).
-- **Operational backlog** — staging migration paste, OTP template paste, debug-toast cleanup, doc-only updates (R3 design-record retro, Design agent principle, KNOWN PLATFORM GOTCHAS), `/admin` `auth.users` delete spike, `/api/suggest` SDK migration, archive-drift backfill, strip verbose diag logs from `/api/admin/events/route.ts` post-R3-close. → [`docs/queued-sessions.md`](docs/queued-sessions.md) §Operational backlog.
+- **Tech Rule promotion batch** — 14 candidates queued; **TR-l + TR-m both 🟢 promotion-ready** (TR-l promoted 🟡 → 🟢 session 60). Full register: [`docs/tech-rules-queue.md`](docs/tech-rules-queue.md).
+- **Operational backlog** — staging migration paste, OTP template paste, debug-toast cleanup, doc-only updates (R3 design-record retro, Design agent principle, KNOWN PLATFORM GOTCHAS), `/admin` `auth.users` delete spike, `/api/suggest` SDK migration, archive-drift backfill, R3 raw-PostgREST probe (parked), strip verbose diag logs from `/api/admin/events/route.ts` post-R3-close. → [`docs/queued-sessions.md`](docs/queued-sessions.md) §Operational backlog.
 - **Error monitoring** — absorbed into [`docs/roadmap-beta-plus.md`](docs/roadmap-beta-plus.md) as R12 (Horizon 1).
 - **Beta feedback mechanism** — absorbed into R7 (contact us) as a sub-task.
 
@@ -242,4 +228,4 @@ QR-code approval, admin-cleanup tool (session 45 materially reduces the need —
 - Trigger: say "generate investor update" at session close
 - Process doc: Notion → Agent System Operating Manual → 📋 Investor Update — Process & Cadence
 
-> **Sprint 4 fully closed sessions 40–41; sessions 42–53 ran the pre-beta polish arc; session 54 shipped staging environment end-to-end; session 55 captured the beta-plus roadmap (`docs/roadmap-beta-plus.md`); session 56 promoted R4c (Mall active/inactive) 🟡 → 🟢; session 57 shipped R4c end-to-end on prod (first roadmap item ✅) + first Tech Rule promotion batch + CI green; session 58 shipped R3 (Analytics event capture) design-to-Ready → implementation in one session — events table on prod, 175+ events captured, admin Events tab functional, debug toast + diagnostic script + verbose logs as institutional QA infrastructure; **session 59 ran two tracks — (1) doc architecture refactor cut CLAUDE.md from 41,739 → 21,652 chars (-48%) per auto-load, new `docs/tech-rules-queue.md` register, expanded `docs/queued-sessions.md` operational backlog, tightened session-block template; (2) R3 finishing pass added deep diag instrumentation to `/api/admin/events` (commits `74905f7` + `6359a78`) but did not isolate the admin-page-doesn't-reflect-Vercel-data symptom — on-device Refresh-button verification deferred to session 60.** Next natural investor-update trigger point is after R3 stabilizes + feed content seeding lands — the update would then report two roadmap items fully shipped (R4c + R3) plus the doc-architecture overhead reduction.
+> **Sprint 4 fully closed sessions 40–41; sessions 42–53 ran the pre-beta polish arc; session 54 shipped staging environment end-to-end; session 55 captured the beta-plus roadmap (`docs/roadmap-beta-plus.md`); session 56 promoted R4c (Mall active/inactive) 🟡 → 🟢; session 57 shipped R4c end-to-end on prod (first roadmap item ✅) + first Tech Rule promotion batch + CI green; session 58 shipped R3 (Analytics event capture) design-to-Ready → implementation in one session — events table on prod, 175+ events captured, admin Events tab functional, debug toast + diagnostic script + verbose logs as institutional QA infrastructure; session 59 ran two tracks — (1) doc architecture refactor cut CLAUDE.md from 41,739 → 21,652 chars (-48%) per auto-load, new `docs/tech-rules-queue.md` register, expanded `docs/queued-sessions.md` operational backlog, tightened session-block template; (2) R3 finishing pass added deep diag instrumentation to `/api/admin/events` (commits `74905f7` + `6359a78`) but did not isolate the admin-page-doesn't-reflect-Vercel-data symptom; **session 60 disproved the stuck-Fluid-Compute-instance hypothesis (fresh deploy `d3f2d6b` + `dpl_GaUX...` immediately served the same stale snapshot), confirmed Vercel + local use identical URL + service-role key + length, and parked the R3 mystery as well-characterized but root-cause-unknown — David elected document-and-close over deeper diagnostic. R3 functionally works (data is captured) but display-layer is intermittent.** Next natural investor-update trigger point remains after R3 stabilizes + feed content seeding lands — the update would then report two roadmap items fully shipped (R4c + R3) plus the doc-architecture overhead reduction.
