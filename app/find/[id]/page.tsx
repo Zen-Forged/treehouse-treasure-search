@@ -66,7 +66,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, Send, Pin, Pencil } from "lucide-react";
+import { ArrowLeft, Send, Pencil } from "lucide-react";
+import FlagGlyph from "@/components/FlagGlyph";
 import { getPost, getVendorPosts } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
@@ -875,9 +876,9 @@ export default function FindDetailPage() {
                 active={isSaved}
                 variant="frosted"
               >
-                <Pin
+                <FlagGlyph
                   size={17}
-                  strokeWidth={isSaved ? 0 : 1.7}
+                  strokeWidth={1.7}
                   style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
                 />
               </IconBubble>

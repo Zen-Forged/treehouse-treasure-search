@@ -48,7 +48,8 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Pin } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import FlagGlyph from "@/components/FlagGlyph";
 import { getPostsByIds } from "@/lib/posts";
 import { BOOKMARK_PREFIX, loadBookmarkCount, mapsUrl } from "@/lib/utils";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
@@ -273,7 +274,7 @@ function FindTile({
             zIndex: 2,
           }}
         >
-          <Pin size={14} strokeWidth={0} style={{ color: v1.green, fill: v1.green }} />
+          <FlagGlyph size={14} strokeWidth={1.7} style={{ color: v1.green, fill: v1.green }} />
         </button>
       </div>
 

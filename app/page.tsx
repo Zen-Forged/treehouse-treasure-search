@@ -42,7 +42,8 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Pin, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import FlagGlyph from "@/components/FlagGlyph";
 import { getFeedPosts, getActiveMalls } from "@/lib/posts";
 import { getSession, signOut, onAuthChange } from "@/lib/auth";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
@@ -309,10 +310,11 @@ function MasonryTile({
             </div>
           )}
 
-          {/* Frosted paperCream pushpin top-right — always visible, state-
-              independent bg, green glyph when saved. Session 61: heart →
-              pushpin per save-glyph-v1.html mockup. The cartographic register
-              (pin / X / post-it) now extends to the save affordance. */}
+          {/* Frosted paperCream save flag top-right — always visible, state-
+              independent bg, green-filled flag when saved. Session 61:
+              heart → flag per save-glyph-v1.html Variant B. The flag-on-pole
+              reads as a physical-place marker (booth, vendor location) rather
+              than a commerce-style favorite. */}
           <button
             onClick={handleHeartClick}
             aria-label={isFollowed ? "Remove from saved" : "Save"}
@@ -336,9 +338,9 @@ function MasonryTile({
               zIndex: 2,
             }}
           >
-            <Pin
+            <FlagGlyph
               size={17}
-              strokeWidth={isFollowed ? 0 : 1.7}
+              strokeWidth={1.7}
               style={{
                 color: isFollowed ? v1.green : v1.inkPrimary,
                 fill:  isFollowed ? v1.green : "none",
