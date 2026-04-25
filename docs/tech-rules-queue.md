@@ -37,8 +37,9 @@
 | TR-m | **Front-load visibility tooling on debug round 3** — when prod QA bugs aren't isolated by the second test cycle, build debug toasts + server logs + diagnostic scripts before continuing to guess. Already captured as `feedback_visibility_tools_first.md` memory. | Session 58 | Session 59 | 2× | 🟢 |
 | TR-n | **Always force `vercel --prod` after routing/route-handler changes during prod QA** — GitHub→Vercel webhook lag + PWA cache compound; if you're QA-walking after a route-handler change, deploy explicitly rather than hoping the push triggered. | Session 58 | Session 58 | 1× | 🟡 |
 | TR-o | **Multi-element-glyph strokeWidth=0 trap** — when swapping a single-path icon (Heart, Pin) for a multi-element glyph (e.g. FlagGlyph's `<line>` + `<path>`), drop the `strokeWidth={isSaved ? 0 : 1.7}` saved-state trick. Line elements vanish entirely at strokeWidth=0; you lose the pole. Differentiate saved/unsaved via color + fill only, keeping strokeWidth always >0. | Session 61 | Session 61 | 1× | 🟡 |
+| TR-p | **Testbed-first for AI/LLM call unknowns in multi-file integrations** — when a feature's load-bearing risk is the accuracy/reliability of an AI/LLM call (vision, structured-output, classification), ship a standalone testbed page first that exercises ONLY that call, surfaces the response visibly on screen, and lets the user validate against real inputs BEFORE any production wiring exists. Saved an unknown number of debug cycles in session 62 — handwritten-tag validation in 1 round on a ~200-line testbed instead of after a ~600-line integration. Already captured as `feedback_testbed_first_for_ai_unknowns.md` memory. | Session 62 | Session 62 | 1× | 🟡 |
 
-**Total candidates:** 15 active · **2 promotion-ready (TR-l + TR-m)** · 13 at first firing.
+**Total candidates:** 16 active · **2 promotion-ready (TR-l + TR-m)** · 14 at first firing.
 
 ---
 

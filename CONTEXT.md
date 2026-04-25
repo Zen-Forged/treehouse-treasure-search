@@ -48,7 +48,7 @@ The front door is the **Discovery Feed** (`/`). Shoppers browse without an accou
 | Styling | Tailwind CSS + inline styles |
 | Animations | framer-motion |
 | Icons | lucide-react |
-| AI | `@anthropic-ai/sdk` — `claude-sonnet-4-6` (post-caption, story), `claude-opus-4-7` (identify) |
+| AI | `@anthropic-ai/sdk` — `claude-sonnet-4-6` (post-caption, extract-tag, story), `claude-opus-4-7` (identify) |
 | Database | Supabase (Postgres) |
 | Storage | Supabase Storage — buckets: `post-images`, `site-assets` |
 | Auth | Supabase Auth (magic-link OTP, 6-digit code primary path) |
@@ -254,7 +254,8 @@ Keyed-row table with jsonb values. Holds admin-editable hero banner image URLs.
 | `/setup` | Post-approval link step. Calls `POST /api/setup/lookup-vendor` (retries once on 401 with 800ms backoff — session 10 fix). Consumes the array response shape (session 35): `{ ok, vendors: Vendor[], alreadyLinked? }`. Writes `LOCAL_VENDOR_KEY` for `vendors[0]`, writes active-booth id to `safeStorage.treehouse_active_vendor_id`, auto-redirects to `/my-shelf` after 3s. Copy adapts to singular ("your shelf") vs plural ("your shelves"). |
 | `/my-shelf` | Signed-in vendor's own shelf. Uses `<BoothPage>` primitive. List-aware via `getVendorsByUserId` + `resolveActiveBooth` (session 35). When a vendor owns > 1 booth, masthead renders the picker variant and `<BoothPickerSheet>` is instantiated. Self-heals via `/api/setup/lookup-vendor` on every non-admin load — merges its results with the direct `getVendorsByUserId` read to pick up newly-approved unlinked booths without requiring sign-out/in. |
 | `/post` | Shim route. Redirects to `/my-shelf?openAdd=1` for AddFindSheet entry. |
-| `/post/preview` | Edit title / caption / price → AI caption → publish. Identity resolves via `getVendorsByUserId` + `resolveActiveBooth` (session 35). The post flow itself has no booth picker — single-path for 99% case. Vendors who want to post to a different booth switch on `/my-shelf` first. |
+| `/post/tag` | Tag-capture step (session 62). Sits between `/my-shelf` AddFindSheet and `/post/preview`. Vendor takes a photo of the booth's inventory tag → `/api/extract-tag` (Claude vision) extracts `{ title, price }` → `/post/preview` lands prefilled with green "from tag" pills. Skip option falls back to today's flow. Per-API failure absorbed into `postStore` and surfaced on preview via `<AmberNotice>` rather than stranding the vendor here. Uses `router.replace` to preview so back-from-preview lands on `/my-shelf`, not here. |
+| `/post/preview` | Edit title / caption / price → publish. Branches on `postStore.extractionRan` (session 62): tag flow reads pre-fetched extracted fields from postStore and renders fully populated on first paint with no network call; skip flow keeps today's behavior (fire `/api/post-caption` on mount). Identity resolves via `getVendorsByUserId` + `resolveActiveBooth` (session 35). The post flow itself has no booth picker — single-path for 99% case. Vendors who want to post to a different booth switch on `/my-shelf` first. |
 | `/vendor-request` | Public vendor-initiated onboarding form. Mode C chrome (v1.1k). Email + booth info + uploaded booth-proof photo (v1.2). Composite-key dedup (session 35). |
 
 ### Ecosystem — admin
@@ -291,6 +292,7 @@ Keyed-row table with jsonb values. Holds admin-editable hero banner image URLs.
 | `POST /api/setup/lookup-vendor` | Session 35 rewrite. Composite-key lookup across all of the authenticated user's `vendor_requests`, matched against `(mall_id, booth_number, user_id IS NULL)`. Links every unlinked match in one UPDATE + returns the full linked set. Response shape: `{ ok, vendors: Vendor[], alreadyLinked? }`. Idempotent — safe to call every `/my-shelf` load. Killed KI-006. | `requireAuth` |
 | `POST /api/post-image` | Upload base64 data URL to Supabase Storage (service role — bypasses the anon-client bucket visibility issue). | Public (called from authed client) |
 | `POST /api/post-caption` | Treehouse-tone title + caption. `claude-sonnet-4-6`. Rate-limited 10/60s per IP. Returns `source: "claude" \| "mock"` observability field (session 27). | Public |
+| `POST /api/extract-tag` | Tag extraction — Claude Sonnet 4.6 vision reads a printed/handwritten retail tag and returns `{ title: string, price: number \| null, source, reason? }`. Mirrors `/api/post-caption` line-by-line — rate limit 10/60s, mock fallback structure, logError helper, base64 input. Tag-specific system prompt instructs Claude to read verbatim, normalize ALL CAPS, return null price for unreadable rather than invent. (Session 62.) | Public |
 | `GET /api/identify` | Claude Vision identification (reseller layer). `claude-opus-4-7`. | Public |
 | `GET /api/sold-comps` | SerpAPI or Apify comp fetch with 48h in-memory cache. | Public |
 | `GET /api/debug` | Env var status + live Supabase insert test. | Public — consider retiring post-beta. |
@@ -322,7 +324,7 @@ Keyed-row table with jsonb values. Holds admin-editable hero banner image URLs.
 ### Comms + storage
 
 - **`lib/email.ts`** — `sendRequestReceived(payload)`, `sendApprovalInstructions(payload)`. Resend REST API wrapper via native fetch (no SDK dependency). Best-effort — functions catch and log rather than throw. From address `Treehouse <hello@kentuckytreehouse.com>`. No-ops with a console warning when `RESEND_API_KEY` is unset.
-- **`lib/postStore.ts`** — In-memory store for `/post → /post/preview` image handoff. Avoids sessionStorage size limits. Cleared after publish.
+- **`lib/postStore.ts`** — In-memory store + sessionStorage backup for the `/my-shelf → /post/tag → /post/preview` post flow. Cleared after publish. Session-62 expanded `PostDraft` shape with optional tag-flow fields (`extractionRan`, `extractedTitle`, `extractedPrice`, `captionTitle`, `captionText`, `captionFailed`); `setImage()` is the image-only convenience used at `/my-shelf` entry, `set(PostDraft)` is the full-shape write used by `/post/tag` after the parallel extract-tag + post-caption calls settle. Read-side migration handles pre-session-62 entries (bare data: URL strings) silently.
 - **`lib/safeStorage.ts`** — localStorage wrapper with sessionStorage + in-memory fallback. Use instead of raw `localStorage` in ecosystem client components (Safari ITP-safe). Known keys: `treehouse_auth_uid`, `treehouse_mode`, `treehouse_feed_scroll`, `treehouse_bookmark_<postId>`, `treehouse_last_viewed_post`, **`treehouse_active_vendor_id`** (session 35).
 - **`lib/cache.ts` / `lib/searchCache.ts`** — 48h in-memory cache for SerpAPI comp fetches.
 
@@ -353,7 +355,8 @@ Keyed-row table with jsonb values. Holds admin-editable hero banner image URLs.
 - **`<PostingAsBlock>`** (v1.2, session 29) — vendor attribution row on `/post/preview`.
 - **`<PhotographPreview>`** (v1.2, session 29) — photo-truth renderer on `/post/preview` (no crop, paper fills letterbox).
 - **`<AddFindSheet>`** (v1.2, session 29) — bottom sheet from `/my-shelf` for capture/library photo selection.
-- **`<AmberNotice>`** (v1.2, session 29) — graceful-collapse amber inline notice for AI failures.
+- **`<AmberNotice>`** (v1.2, session 29) — graceful-collapse amber inline notice for AI failures. Session 62 added two new contexts: "Couldn't read this tag…" (tag-extraction full failure) + "Couldn't read the price on the tag…" (soft notice when only price missing).
+- **`<TagBadge>`** (session 62) — green-on-green inline pill (Lucide `Tag` glyph + italic IM Fell "from tag") used on `/post/preview` next to Title and Price field labels when those came from tag extraction. Variant α from `docs/mockups/add-find-with-tag-v1.html`. Could generalize for other "field source signal" cases (e.g. "from photo" / "from import") if future flows need them.
 - **`<BottomNav>`** (v1.1l idle-color update) — minimal chrome: paperCream translucent bg + inkHairline border. Idle-tab color is `v1.inkMuted` (`#6b5538`). Takes an optional `flaggedCount?: number` prop that renders a saved-items badge on the Find Map heart icon. **Known gap (Q-003 open):** only `app/page.tsx` (Home) currently passes a real `flaggedCount` — `/my-shelf`, `/flagged`, and `/shelves` all render BottomNav with no count, so the badge defaults to 0 and is invisible on those pages. Two-line fix per page when Q-003 runs. Full Nav Shelf rework still deferred (Sprint 5).
 
 ### v0.2 legacy (still in use on unmigrated surfaces)
@@ -523,13 +526,16 @@ Full spec: `docs/onboarding-journey.md`.
 
 **Multi-booth onboarding (session 35):** A vendor who already owns one linked booth can submit additional `/vendor-request`s for different booths (same mall or different mall). Composite-key dedup blocks same-email+same-mall+same-booth+pending; anything else proceeds. Admin approves the new request(s); the second visit to `/my-shelf` links the new vendor row automatically via the self-heal. Picker appears when the count reaches > 1.
 
-### Flow D — Vendor Posts a Find
+### Flow D — Vendor Posts a Find (session-62 shape)
 
 1. `/my-shelf` — tap "Add a find" tile → `<AddFindSheet>` opens
-2. Choose camera or library → `compressImage` → `/post/preview`
-3. `/post/preview` — identity resolves via `getVendorsByUserId + resolveActiveBooth` (posts to whichever booth was active on `/my-shelf`). Edit title/caption/price → `POST /api/post-caption` → review
-4. Publish — `uploadPostImageViaServer` (throws on failure; callers abort) → `createPost` → clear postStore → confirmation screen
-5. Confirmation — "View my shelf" / "Visit us on Facebook" / "Add another find"
+2. Choose camera or library → `compressImage` → `postStore.setImage()` → router.push `/post/tag`
+3. `/post/tag` — Frame 1 ready state shows the item photo + "Now the tag" / italic subhead "Capture the title and price in one shot." Two CTAs:
+   - **"Take photo of tag"** (green primary) → camera input → tag photo captured → Frame 2 extracting state (both photos shown, "Pulling title and price…" pulse) → `Promise.all([POST /api/extract-tag (tag photo), POST /api/post-caption (item photo)])` fires in parallel → `postStore.set({ ...full PostDraft })` → router.replace `/post/preview`
+   - **"Skip — I'll add title and price manually"** (italic underlined link) → `postStore.set({ ...draft, extractionRan: "skip" })` → router.replace `/post/preview`
+4. `/post/preview` — branches on `postStore.extractionRan`. Tag flow reads pre-fetched fields and renders fully populated on first paint with `<TagBadge>` next to Title + Price labels (when populated from tag); skip flow keeps today's behavior (`POST /api/post-caption` on mount). `<AmberNotice>` surfaces for tag-fail (full or price-only) or caption-fail (skip flow). Identity resolves via `getVendorsByUserId + resolveActiveBooth` (session 35).
+5. Publish — `uploadPostImageViaServer` (throws on failure; callers abort) → `createPost` → clear postStore → confirmation screen
+6. Confirmation — "View my shelf" / "Visit us on Facebook" / "Add another find"
 
 ### Flow E — Reseller Intel (dark layer)
 
