@@ -30,6 +30,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendRequestReceived } from "@/lib/email";
+import { recordEvent } from "@/lib/events";
 
 // ─── Error logging utility ────────────────────────────────────────────────────
 function logError(message: string, context: { ip: string; error?: any; details?: Record<string, any> }) {
@@ -286,6 +287,18 @@ export async function POST(req: NextRequest) {
         details: { userAgent, vendorEmail: trimmedEmail },
       });
     }
+
+    // R3 — analytics event. Email is NOT captured (PII per D3); the
+    // (mall_slug, booth_number) shape is what aggregates usefully later.
+    await recordEvent("vendor_request_submitted", {
+      payload: {
+        mall_id:          normalizedMallId,
+        mall_name:        trimmedMall,
+        booth_number:     trimmedBoothNumber,
+        booth_name:       trimmedBooth,
+        has_proof_image:  true,
+      },
+    });
 
     return NextResponse.json({ ok: true, status: "created" });
 

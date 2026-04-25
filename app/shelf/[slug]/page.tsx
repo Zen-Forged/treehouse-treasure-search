@@ -48,6 +48,7 @@ import { ArrowLeft, Heart } from "lucide-react";
 import { getVendorBySlug, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
 import { loadBookmarkCount } from "@/lib/utils";
+import { track } from "@/lib/clientEvents";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import ShareBoothSheet from "@/components/ShareBoothSheet";
@@ -298,6 +299,9 @@ export default function PublicShelfPage() {
 
   useEffect(() => {
     if (!slug) return;
+    // R3 — page_viewed analytics event. Vendor slug is the most useful
+    // payload property for booth-visit attribution.
+    track("page_viewed", { path: "/shelf/[slug]", vendor_slug: slug });
     getVendorBySlug(slug).then(async v => {
       if (!v) { setNotFound(true); setLoading(false); return; }
       setVendor(v);

@@ -35,7 +35,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, UserCheck, Users, Store, X, Stethoscope, Image as ImageIcon, Upload, Loader as LoaderIcon, MapPin, ChevronDown } from "lucide-react";
+import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, UserCheck, Users, Store, X, Stethoscope, Image as ImageIcon, Upload, Loader as LoaderIcon, MapPin, ChevronDown, BarChart3 } from "lucide-react";
 import { getSession, isAdmin, signOut } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { colors, v1 } from "@/lib/tokens";
@@ -130,6 +130,27 @@ const TOAST_DURATION_MS_MALL_STATUS   = 5000;  // draft / coming-soon transition
 // Threshold per design record; tunable as the active-mall ratio changes.
 const DRAFT_COLLAPSE_THRESHOLD = 5;
 
+// R3 — Events tab types + constants.
+interface EventRow {
+  id:          string;
+  event_type:  string;
+  user_id:     string | null;
+  session_id:  string | null;
+  payload:     Record<string, unknown>;
+  occurred_at: string;
+}
+type EventFilter =
+  | "all"
+  | "saves"
+  | "views"
+  | "shares"
+  | "filter_applied"
+  | "vendor_request_submitted"
+  | "vendor_request_approved"
+  | "mall_activated"
+  | "mall_deactivated";
+const EVENTS_PAGE_SIZE = 50;
+
 export default function AdminPage() {
   const router = useRouter();
   const [user,       setUser]       = useState<User | null>(null);
@@ -144,7 +165,7 @@ export default function AdminPage() {
   const [result,     setResult]     = useState<string | null>(null);
   const [toast,      setToast]      = useState<Toast | null>(null);
   const [confirmAll, setConfirmAll] = useState(false);
-  const [activeTab, setActiveTab] = useState<"posts" | "requests" | "banners" | "malls">("requests");
+  const [activeTab, setActiveTab] = useState<"posts" | "requests" | "banners" | "malls" | "events">("requests");
 
   // Diagnosis panel — per-request loading + result state
   const [diagnosisBusy,    setDiagnosisBusy]    = useState<Set<string>>(new Set());
@@ -164,6 +185,15 @@ export default function AdminPage() {
   const [mallBusy,       setMallBusy]       = useState<Set<string>>(new Set());
   const [draftsOpen,     setDraftsOpen]     = useState(false);
 
+  // R3 — Events tab state
+  const [events,           setEvents]           = useState<EventRow[]>([]);
+  const [eventCounts,      setEventCounts]      = useState<{ last24h: number; last7d: number; all: number }>({ last24h: 0, last7d: 0, all: 0 });
+  const [eventsLoading,    setEventsLoading]    = useState(false);
+  const [eventFilter,      setEventFilter]      = useState<EventFilter>("all");
+  const [expandedEventId,  setExpandedEventId]  = useState<string | null>(null);
+  const [eventsHasMore,    setEventsHasMore]    = useState(false);
+  const [showMoreFilters,  setShowMoreFilters]  = useState(false);
+
   useEffect(() => {
     getSession().then(s => {
       setUser(s?.user ?? null);
@@ -176,6 +206,17 @@ export default function AdminPage() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // R3 — refetch events whenever the filter chip changes, or when the
+  // Events tab becomes active. Initial-mount fetch is gated on admin-auth
+  // resolution (we don't want to call authFetch before the bearer token
+  // exists), so we only fire here once the user is set + admin.
+  useEffect(() => {
+    if (!user || !isAdmin(user)) return;
+    if (activeTab !== "events") return;
+    fetchEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, activeTab, eventFilter]);
 
   // Auto-dismiss toast (duration depends on kind)
   useEffect(() => {
@@ -201,6 +242,38 @@ export default function AdminPage() {
     const draftCount = rows.filter(m => m.status === "draft").length;
     setDraftsOpen(draftCount > 0 && draftCount <= DRAFT_COLLAPSE_THRESHOLD);
     setMallsLoading(false);
+  }
+
+  // R3 — load events page from /api/admin/events.
+  // append=true tacks results onto existing list (Load more); append=false
+  // replaces it (filter change / refresh). Counts are returned alongside the
+  // page payload so we don't need a separate round-trip.
+  async function fetchEvents(opts: { append?: boolean } = {}) {
+    setEventsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (eventFilter !== "all") params.set("event_type", eventFilter);
+      params.set("limit", String(EVENTS_PAGE_SIZE));
+      if (opts.append && events.length > 0) {
+        params.set("before", events[events.length - 1]!.occurred_at);
+      }
+      const res  = await authFetch(`/api/admin/events?${params.toString()}`);
+      const json = await res.json();
+      if (!res.ok) {
+        setToast({ kind: "error", message: json.error || "Failed to load events" });
+        if (!opts.append) setEvents([]);
+      } else {
+        const incoming = (json.events ?? []) as EventRow[];
+        setEvents(opts.append ? [...events, ...incoming] : incoming);
+        setEventCounts(json.counts ?? { last24h: 0, last7d: 0, all: 0 });
+        setEventsHasMore(incoming.length === EVENTS_PAGE_SIZE);
+      }
+    } catch (err) {
+      console.error("fetchEvents error:", err);
+      setToast({ kind: "error", message: "Failed to load events" });
+      if (!opts.append) setEvents([]);
+    }
+    setEventsLoading(false);
   }
 
   async function updateMallStatus(mall: Mall, nextStatus: MallStatus) {
@@ -456,60 +529,76 @@ export default function AdminPage() {
         <div style={{ fontSize: 12, color: colors.textPrimary }}>{user.email}</div>
       </div>
 
-      {/* Tab switcher — R4c: Vendor Requests / Posts / Banners / Malls */}
-      <div style={{ margin: "20px 20px 0", display: "flex", gap: 6 }}>
+      {/* Tab switcher — R3: 5 tabs (Requests / Posts / Banners / Malls / Events).
+          Layout shifted from horizontal-icon-and-label to stacked-icon-above-
+          label per design record §Admin UI to fit 5 cells in 375px. */}
+      <div style={{ margin: "20px 20px 0", display: "flex", gap: 4 }}>
         <button
           onClick={() => setActiveTab("requests")}
           style={{
-            flex: 1, padding: "10px 6px", borderRadius: 10, fontSize: 11, fontWeight: 500,
+            flex: 1, padding: "8px 2px", borderRadius: 10, fontSize: 10, fontWeight: 500,
             background: activeTab === "requests" ? colors.green : "none",
             color: activeTab === "requests" ? "#fff" : colors.textMid,
             border: `1px solid ${activeTab === "requests" ? colors.green : colors.border}`,
-            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4
+            cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3,
           }}>
-          <Users size={11} />
-          Requests {pendingRequests.length > 0 && (
-            <span style={{
-              background: activeTab === "requests" ? "rgba(255,255,255,0.2)" : colors.green,
-              color: activeTab === "requests" ? "#fff" : "#fff",
-              padding: "2px 6px", borderRadius: 10, fontSize: 10, fontWeight: 700
-            }}>
-              {pendingRequests.length}
-            </span>
-          )}
+          <Users size={13} />
+          <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+            Requests
+            {pendingRequests.length > 0 && (
+              <span style={{
+                background: activeTab === "requests" ? "rgba(255,255,255,0.25)" : colors.green,
+                color: "#fff",
+                padding: "1px 5px", borderRadius: 8, fontSize: 9, fontWeight: 700,
+              }}>
+                {pendingRequests.length}
+              </span>
+            )}
+          </span>
         </button>
         <button
           onClick={() => setActiveTab("posts")}
           style={{
-            flex: 1, padding: "10px 6px", borderRadius: 10, fontSize: 11, fontWeight: 500,
+            flex: 1, padding: "8px 2px", borderRadius: 10, fontSize: 10, fontWeight: 500,
             background: activeTab === "posts" ? colors.green : "none",
             color: activeTab === "posts" ? "#fff" : colors.textMid,
             border: `1px solid ${activeTab === "posts" ? colors.green : colors.border}`,
-            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4
+            cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3,
           }}>
-          <Store size={11} /> Posts
+          <Store size={13} /> Posts
         </button>
         <button
           onClick={() => setActiveTab("banners")}
           style={{
-            flex: 1, padding: "10px 6px", borderRadius: 10, fontSize: 11, fontWeight: 500,
+            flex: 1, padding: "8px 2px", borderRadius: 10, fontSize: 10, fontWeight: 500,
             background: activeTab === "banners" ? colors.green : "none",
             color: activeTab === "banners" ? "#fff" : colors.textMid,
             border: `1px solid ${activeTab === "banners" ? colors.green : colors.border}`,
-            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4
+            cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3,
           }}>
-          <ImageIcon size={11} /> Banners
+          <ImageIcon size={13} /> Banners
         </button>
         <button
           onClick={() => setActiveTab("malls")}
           style={{
-            flex: 1, padding: "10px 6px", borderRadius: 10, fontSize: 11, fontWeight: 500,
+            flex: 1, padding: "8px 2px", borderRadius: 10, fontSize: 10, fontWeight: 500,
             background: activeTab === "malls" ? colors.green : "none",
             color: activeTab === "malls" ? "#fff" : colors.textMid,
             border: `1px solid ${activeTab === "malls" ? colors.green : colors.border}`,
-            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4
+            cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3,
           }}>
-          <MapPin size={11} /> Malls
+          <MapPin size={13} /> Malls
+        </button>
+        <button
+          onClick={() => setActiveTab("events")}
+          style={{
+            flex: 1, padding: "8px 2px", borderRadius: 10, fontSize: 10, fontWeight: 500,
+            background: activeTab === "events" ? colors.green : "none",
+            color: activeTab === "events" ? "#fff" : colors.textMid,
+            border: `1px solid ${activeTab === "events" ? colors.green : colors.border}`,
+            cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3,
+          }}>
+          <BarChart3 size={13} /> Events
         </button>
       </div>
 
@@ -772,6 +861,24 @@ export default function AdminPage() {
           onUpdateStatus={updateMallStatus}
           draftsOpen={draftsOpen}
           onToggleDrafts={() => setDraftsOpen(v => !v)}
+        />
+      )}
+
+      {/* Events Tab — R3 session 58 */}
+      {activeTab === "events" && (
+        <EventsTab
+          events={events}
+          counts={eventCounts}
+          loading={eventsLoading}
+          filter={eventFilter}
+          onFilterChange={setEventFilter}
+          showMoreFilters={showMoreFilters}
+          onToggleMoreFilters={() => setShowMoreFilters(v => !v)}
+          onRefresh={() => fetchEvents()}
+          expandedEventId={expandedEventId}
+          onToggleRow={(id) => setExpandedEventId(prev => prev === id ? null : id)}
+          hasMore={eventsHasMore}
+          onLoadMore={() => fetchEvents({ append: true })}
         />
       )}
 
@@ -1116,6 +1223,300 @@ function MallsTab({
             </div>
           )}
         </>
+      )}
+    </div>
+  );
+}
+
+// ── R3 — Events tab ───────────────────────────────────────────────────────────
+
+const EVENT_DOT_COLOR: Record<string, string> = {
+  page_viewed:              "#3d4a52",  // slate
+  post_saved:               "#1e4d2b",  // green
+  post_unsaved:             "#8a7b68",  // draft-gray
+  filter_applied:           "#7d8f96",  // slate-faint
+  share_sent:               "#8a5a14",  // amber
+  vendor_request_submitted: "#1e4d2b",
+  vendor_request_approved:  "#1e4d2b",
+  mall_activated:           "#1e4d2b",
+  mall_deactivated:         "#8a7b68",
+};
+
+const FILTER_CHIPS_PRIMARY: { key: EventFilter; label: string }[] = [
+  { key: "all",    label: "All" },
+  { key: "saves",  label: "Saves" },
+  { key: "views",  label: "Views" },
+  { key: "shares", label: "Shares" },
+];
+
+const FILTER_CHIPS_OVERFLOW: { key: EventFilter; label: string }[] = [
+  { key: "filter_applied",           label: "Filters" },
+  { key: "vendor_request_submitted", label: "Requests submitted" },
+  { key: "vendor_request_approved",  label: "Requests approved" },
+  { key: "mall_activated",           label: "Mall activated" },
+  { key: "mall_deactivated",         label: "Mall deactivated" },
+];
+
+function formatEventClock(iso: string): string {
+  try { return new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }); }
+  catch { return iso.slice(11, 19); }
+}
+
+function dayBucketLabel(iso: string): string {
+  try {
+    const d     = new Date(iso);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const that  = new Date(d); that.setHours(0, 0, 0, 0);
+    const diff  = Math.round((today.getTime() - that.getTime()) / 86_400_000);
+    if (diff === 0) return `Today · ${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+    if (diff === 1) return `Yesterday · ${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
+    return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  } catch { return iso.slice(0, 10); }
+}
+
+function payloadSummary(payload: Record<string, unknown>): string {
+  const entries = Object.entries(payload).slice(0, 3);
+  if (entries.length === 0) return "—";
+  return entries
+    .map(([k, v]) => {
+      const vs = typeof v === "string" ? v : v === null || v === undefined ? "—" : JSON.stringify(v);
+      return `${k}: ${vs.length > 24 ? vs.slice(0, 24) + "…" : vs}`;
+    })
+    .join(" · ");
+}
+
+function EventsTab({
+  events, counts, loading, filter, onFilterChange,
+  showMoreFilters, onToggleMoreFilters, onRefresh,
+  expandedEventId, onToggleRow, hasMore, onLoadMore,
+}: {
+  events:                EventRow[];
+  counts:                { last24h: number; last7d: number; all: number };
+  loading:               boolean;
+  filter:                EventFilter;
+  onFilterChange:        (f: EventFilter) => void;
+  showMoreFilters:       boolean;
+  onToggleMoreFilters:   () => void;
+  onRefresh:             () => void;
+  expandedEventId:       string | null;
+  onToggleRow:           (id: string) => void;
+  hasMore:               boolean;
+  onLoadMore:            () => void;
+}) {
+  // Group events by day bucket (Today / Yesterday / Mon · …) for separator chrome.
+  const groups: Array<{ label: string; rows: EventRow[] }> = [];
+  let lastLabel = "";
+  for (const ev of events) {
+    const label = dayBucketLabel(ev.occurred_at);
+    if (label !== lastLabel) {
+      groups.push({ label, rows: [ev] });
+      lastLabel = label;
+    } else {
+      groups[groups.length - 1]!.rows.push(ev);
+    }
+  }
+
+  return (
+    <div style={{ margin: "20px 20px 0", paddingBottom: 80 }}>
+      {/* Summary strip — 24h / 7d / all */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        <SumCard n={counts.last24h.toLocaleString()} label="Last 24h" />
+        <SumCard n={counts.last7d.toLocaleString()}  label="Last 7d" />
+        <SumCard n={counts.all.toLocaleString()}     label="All time" />
+      </div>
+
+      {/* Filter chips */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+        {FILTER_CHIPS_PRIMARY.map(c => (
+          <FilterChip key={c.key} label={c.label} selected={filter === c.key} onClick={() => onFilterChange(c.key)} />
+        ))}
+        <FilterChip
+          label={showMoreFilters ? "− less" : "+ more"}
+          ghost
+          selected={false}
+          onClick={onToggleMoreFilters}
+        />
+        {showMoreFilters && FILTER_CHIPS_OVERFLOW.map(c => (
+          <FilterChip key={c.key} label={c.label} selected={filter === c.key} onClick={() => onFilterChange(c.key)} />
+        ))}
+      </div>
+
+      {/* Header row — eyebrow + refresh */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2px" }}>
+          Stream ({events.length}{hasMore ? "+" : ""})
+        </div>
+        <button onClick={onRefresh} disabled={loading}
+          style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: colors.textMuted }}>
+          <RefreshCw size={11} style={{ opacity: loading ? 0.4 : 1 }} /> Refresh
+        </button>
+      </div>
+
+      {loading && events.length === 0 ? (
+        <div style={{ fontSize: 13, color: colors.textFaint, padding: "20px 0", textAlign: "center" }}>
+          Loading events…
+        </div>
+      ) : events.length === 0 ? (
+        <div style={{ fontSize: 12, color: colors.textFaint, padding: "20px 4px", fontStyle: "italic", fontFamily: "Georgia, serif", lineHeight: 1.6 }}>
+          No events captured yet. Once shoppers start interacting with finds, this stream will populate.
+        </div>
+      ) : (
+        <>
+          {groups.map(group => (
+            <div key={group.label}>
+              <div style={{
+                fontSize: 9, color: colors.textFaint, textTransform: "uppercase",
+                letterSpacing: "1.6px", fontWeight: 600,
+                margin: "16px 0 8px", display: "flex", alignItems: "center", gap: 10,
+              }}>
+                <span>{group.label}</span>
+                <span style={{ flex: 1, height: 1, background: colors.border }} />
+              </div>
+              {group.rows.map(ev => (
+                <EventRowView
+                  key={ev.id}
+                  event={ev}
+                  expanded={expandedEventId === ev.id}
+                  onToggle={() => onToggleRow(ev.id)}
+                />
+              ))}
+            </div>
+          ))}
+
+          {hasMore && (
+            <button
+              onClick={onLoadMore}
+              disabled={loading}
+              style={{
+                marginTop: 14, width: "100%", padding: "10px",
+                borderRadius: 10, fontSize: 12, fontWeight: 500,
+                background: colors.surface, color: colors.textMid,
+                border: `1px solid ${colors.border}`,
+                cursor: loading ? "default" : "pointer",
+                opacity: loading ? 0.5 : 1,
+              }}
+            >
+              {loading ? "Loading…" : "Load more"}
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function SumCard({ n, label }: { n: string; label: string }) {
+  return (
+    <div style={{
+      flex: 1, padding: "10px 8px", borderRadius: 10,
+      background: colors.surface, border: `1px solid ${colors.border}`,
+      textAlign: "center",
+    }}>
+      <div style={{ fontFamily: "Georgia, serif", fontSize: 20, fontWeight: 700, color: colors.textPrimary, lineHeight: 1.1 }}>{n}</div>
+      <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "1.2px", marginTop: 2 }}>{label}</div>
+    </div>
+  );
+}
+
+function FilterChip({
+  label, selected, ghost, onClick,
+}: {
+  label:    string;
+  selected: boolean;
+  ghost?:   boolean;
+  onClick:  () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: "6px 11px", borderRadius: 999,
+        fontSize: 11, fontWeight: 500,
+        background: selected ? colors.green : (ghost ? "transparent" : colors.surface),
+        color:      selected ? "#fff"        : (ghost ? colors.textFaint : colors.textMid),
+        border: `1px ${ghost ? "dashed" : "solid"} ${selected ? colors.green : colors.border}`,
+        cursor: "pointer",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function EventRowView({
+  event, expanded, onToggle,
+}: {
+  event:    EventRow;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const dotColor = EVENT_DOT_COLOR[event.event_type] ?? colors.textMid;
+
+  return (
+    <div
+      style={{
+        background: colors.surface,
+        border: `1px solid ${expanded ? colors.greenBorder : colors.border}`,
+        borderRadius: 10,
+        padding: "10px 12px",
+        marginBottom: 6,
+        boxShadow: expanded ? "0 4px 18px rgba(30,77,43,0.08)" : "none",
+        transition: "border-color 0.15s, box-shadow 0.15s",
+      }}
+    >
+      <button
+        onClick={onToggle}
+        aria-expanded={expanded}
+        style={{
+          display: "flex", alignItems: "flex-start", gap: 10,
+          background: "none", border: "none", cursor: "pointer",
+          width: "100%", padding: 0, textAlign: "left",
+        }}
+      >
+        <span style={{
+          width: 8, height: 8, borderRadius: "50%", background: dotColor,
+          marginTop: 5, flex: "0 0 auto",
+        }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+            <span style={{
+              fontFamily: "monospace", fontSize: 11, fontWeight: 600,
+              color: colors.textPrimary, letterSpacing: "0.2px",
+            }}>
+              {event.event_type}
+            </span>
+            <span style={{
+              fontSize: 10, color: colors.textFaint, fontFamily: "monospace",
+              marginLeft: "auto",
+            }}>
+              {formatEventClock(event.occurred_at)}
+            </span>
+          </div>
+          <div style={{
+            fontSize: 11, color: colors.textMuted, lineHeight: 1.4,
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+          }}>
+            {payloadSummary(event.payload)}
+          </div>
+        </div>
+      </button>
+
+      {expanded && (
+        <pre style={{
+          marginTop: 10, padding: "10px 12px", borderRadius: 8,
+          background: "#211f1b", color: "#d7ccad",
+          fontFamily: "monospace", fontSize: 10.5, lineHeight: 1.55,
+          whiteSpace: "pre", overflowX: "auto",
+        }}>
+{JSON.stringify({
+  event_type:  event.event_type,
+  user_id:     event.user_id,
+  session_id:  event.session_id,
+  occurred_at: event.occurred_at,
+  payload:     event.payload,
+}, null, 2)}
+        </pre>
       )}
     </div>
   );

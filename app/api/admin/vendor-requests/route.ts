@@ -28,6 +28,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { sendApprovalInstructions } from "@/lib/email";
+import { recordEvent } from "@/lib/events";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
@@ -199,6 +200,19 @@ export async function POST(req: Request) {
       `Approval email failed to send — reach out to ${request.email} manually.`
     );
   }
+
+  // R3 — analytics event for the approval action. Vendor email is NOT
+  // captured (PII per D3); slug + mall identify the booth uniquely.
+  await recordEvent("vendor_request_approved", {
+    user_id: auth.user.id,
+    payload: {
+      vendor_slug:    vendorRow.slug,
+      mall_id:        request.mall_id,
+      mall_name:      request.mall_name,
+      booth_number:   request.booth_number,
+      had_warnings:   warnings.length > 0,
+    },
+  });
 
   return NextResponse.json({
     ok: true,

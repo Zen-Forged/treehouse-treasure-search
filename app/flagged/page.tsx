@@ -53,6 +53,7 @@ import { getPostsByIds } from "@/lib/posts";
 import { BOOKMARK_PREFIX, loadBookmarkCount, mapsUrl } from "@/lib/utils";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
+import { track } from "@/lib/clientEvents";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import FeaturedBanner from "@/components/FeaturedBanner";
@@ -532,6 +533,13 @@ export default function FindMapPage() {
   }, []);
 
   useEffect(() => { syncCount(); loadPosts(); }, []);
+
+  // R3 — page_viewed analytics event. saved_count is captured at view time
+  // (not later) so the payload reflects the user's saved-items state on the
+  // visit itself.
+  useEffect(() => {
+    track("page_viewed", { path: "/flagged", saved_count: loadBookmarkCount() });
+  }, []);
 
   useEffect(() => {
     function onFocus() { syncCount(); loadPosts(); }

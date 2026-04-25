@@ -70,6 +70,7 @@ import { authFetch } from "@/lib/authFetch";
 import { compressImage as compressForAdd } from "@/lib/imageUpload";
 import { postStore } from "@/lib/postStore";
 import { loadFollowedIds } from "@/lib/utils";
+import { track } from "@/lib/clientEvents";
 import {
   resolveActiveBooth,
   setActiveBoothId,
@@ -348,6 +349,9 @@ function MyBoothInner() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // R3 — page_viewed analytics event.
+  useEffect(() => { track("page_viewed", { path: "/my-shelf" }); }, []);
 
   // ── Q-003 (session 36): bookmark count sync ───────────────────────────
   // Mirror of app/page.tsx pattern — same sync fn, same event set. We also

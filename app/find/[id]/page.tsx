@@ -73,6 +73,7 @@ import { safeStorage } from "@/lib/safeStorage";
 import { getCachedUserId, getSession, isAdmin, onAuthChange } from "@/lib/auth";
 import { v1, FONT_IM_FELL, FONT_SYS, FONT_POSTIT_NUMERAL } from "@/lib/tokens";
 import { flagKey, mapsUrl, boothNumeralSize, loadFollowedIds } from "@/lib/utils";
+import { track } from "@/lib/clientEvents";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import type { Post } from "@/types/treehouse";
@@ -582,6 +583,9 @@ export default function FindDetailPage() {
   useEffect(() => {
     if (!id) return;
     try { setIsSaved(safeStorage.getItem(flagKey(id)) === "1"); } catch {}
+    // R3 — page_viewed analytics event. Fires once per `id` (re-fires on
+    // navigation between distinct finds in-app).
+    track("page_viewed", { path: "/find/[id]", post_id: id });
     getPost(id).then(async (data) => {
       setPost(data);
       setLoading(false);
@@ -615,6 +619,9 @@ export default function FindDetailPage() {
     // Q-003 addendum (session 36): resync badge count after in-page toggle so
     // the BottomNav heart badge reflects the save immediately.
     try { setBookmarkCount(loadFollowedIds().size); } catch {}
+    // R3 — emit save / unsave event. Heart icon is the only engagement
+    // mechanic on a find (terminology section in design record).
+    track(next ? "post_saved" : "post_unsaved", { post_id: id });
   }
 
   async function handleShare() {

@@ -49,6 +49,7 @@ import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import { flagKey, loadFollowedIds } from "@/lib/utils";
 import { safeStorage } from "@/lib/safeStorage";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
+import { track } from "@/lib/clientEvents";
 import BottomNav from "@/components/BottomNav";
 import MallSheet from "@/components/MallSheet";
 import StickyMasthead from "@/components/StickyMasthead";
@@ -616,6 +617,9 @@ export default function DiscoveryFeedPage() {
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
+  // R3 — page_viewed analytics event (fire-and-forget; runs once on mount).
+  useEffect(() => { track("page_viewed", { path: "/" }); }, []);
+
   // ── Feed load ────────────────────────────────────────────────────────────────
   async function loadFeed() {
     setLoading(true);
@@ -731,6 +735,14 @@ export default function DiscoveryFeedPage() {
       else            safeStorage.removeItem(SAVED_MALL_KEY);
     } catch {}
     setMallSheetOpen(false);
+    // R3 — filter_applied event. mall_id of null = "All malls".
+    const mallSlug = nextMallId
+      ? (malls.find(m => m.id === nextMallId)?.slug ?? null)
+      : null;
+    track("filter_applied", {
+      filter_type:  "mall",
+      filter_value: mallSlug ?? "all",
+    });
   }
 
   async function handleSignOut() {

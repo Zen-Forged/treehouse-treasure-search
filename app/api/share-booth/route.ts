@@ -39,6 +39,7 @@ import { NextResponse } from "next/server";
 import { requireAuth, getServiceClient } from "@/lib/adminAuth";
 import { sendBoothWindow } from "@/lib/email";
 import { getVendorWindowPosts } from "@/lib/posts";
+import { recordEvent } from "@/lib/events";
 import type { Vendor, Mall } from "@/types/treehouse";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
@@ -325,6 +326,18 @@ export async function POST(req: Request) {
     `from=${vendorRow.slug} to=${maskEmail(recipientEmail)} ` +
     `actor=${actor} posts=${posts.length}`,
   );
+
+  // R3 — analytics event. recipient email is NOT captured (PII per D3).
+  // auth_mode mirrors the existing rate-limit / sender-voice branching.
+  await recordEvent("share_sent", {
+    user_id: user?.id ?? null,
+    payload: {
+      vendor_slug:     vendorRow.slug,
+      auth_mode:       mode === "auth" ? (isAdminCaller ? "admin" : "authed") : "anon",
+      recipient_count: 1,
+      post_count:      posts.length,
+    },
+  });
 
   return NextResponse.json({ ok: true });
 }

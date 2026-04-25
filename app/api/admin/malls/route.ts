@@ -16,6 +16,7 @@
 
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
+import { recordEvent } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +85,24 @@ export async function PATCH(req: Request) {
     status,
     stampedActivatedAt: stampActivatedAt,
   });
+
+  // R3 — emit mall_activated / mall_deactivated only when status actually
+  // changed (avoid duplicate events on a no-op tap). The "activated" event
+  // covers the draft|coming_soon → active transition specifically; any other
+  // transition emits "deactivated" if leaving active, or nothing otherwise.
+  if (current.status !== status) {
+    if (status === "active") {
+      await recordEvent("mall_activated", {
+        user_id: auth.user.id,
+        payload: { mall_id: id, mall_slug: updated.slug, from_status: current.status, to_status: status },
+      });
+    } else if (current.status === "active") {
+      await recordEvent("mall_deactivated", {
+        user_id: auth.user.id,
+        payload: { mall_id: id, mall_slug: updated.slug, from_status: current.status, to_status: status },
+      });
+    }
+  }
 
   return NextResponse.json({ ok: true, mall: updated });
 }
