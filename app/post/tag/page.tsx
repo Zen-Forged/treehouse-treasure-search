@@ -1,47 +1,61 @@
 // app/post/tag/page.tsx
 //
-// 🧪 TESTBED PHASE — session 62.
+// Tag-capture step of the Add Find flow. Sits between /my-shelf
+// (AddFindSheet item-photo capture) and /post/preview (review + publish).
 //
-// This page is a standalone tag-extraction testbed. It is NOT yet wired into
-// the Add Find flow — /my-shelf still redirects to /post/preview and that
-// path is undisturbed. Navigate here directly (e.g. /post/tag) to point your
-// camera at real mall tags and validate the /api/extract-tag prompt before
-// we commit to the full integration.
+// Mockup: docs/mockups/add-find-with-tag-v1.html — Frame 1 (ready state),
+// Frame 2 (extracting). Decisions D1-D8 + M1-M5 frozen in
+// docs/add-find-tag-design.md.
 //
-// What it does:
-//   - Camera input (capture="environment") + library input
-//   - Compresses image, POSTs to /api/extract-tag
-//   - Surfaces full response on screen: title, price, source, reason, elapsed ms
-//   - Shows raw JSON in an expandable block
-//   - "Try another" resets state
+// Flow:
+//   1. Mount — read postStore.imageDataUrl (set by /my-shelf). If absent,
+//      redirect back to /my-shelf (deep-link-from-nowhere fallback).
+//   2. Vendor taps "Take photo of tag" → camera opens → tag photo captured.
+//   3. Stage flips to "extracting". Two API calls fire in parallel:
+//        - /api/extract-tag with the tag photo
+//        - /api/post-caption with the item photo (pre-fetch the caption now
+//          so /post/preview lands fully populated, no network on mount)
+//   4. Both promises settle → write full PostDraft to postStore with
+//      extractionRan + extracted{Title,Price} + caption{Title,Text} +
+//      captionFailed → router.replace("/post/preview"). Replace (not push)
+//      so back-from-preview lands on /my-shelf, not /post/tag.
+//   5. Skip path — vendor taps "Skip — I'll add title and price manually" →
+//      postStore gets extractionRan="skip" → router.replace("/post/preview").
+//      Preview's hydrate branches to today's behavior (fire post-caption on
+//      mount).
 //
-// What it does NOT do (yet):
-//   - Read or write postStore
-//   - Redirect to /post/preview
-//   - Touch the real Add Find flow in any way
-//
-// Once the prompt validates against real tags, this page evolves (not
-// replaces) into the production /post/tag step per docs/add-find-tag-design.md.
-// Strip the testbed banner, wire up postStore, fire post-caption in parallel,
-// redirect to /post/preview on success.
+// Failure handling per D5: HTTP / mock-fallback failures on either API are
+// captured into postStore (extractionRan="error" / captionFailed=true) and
+// the flow proceeds to /post/preview where the appropriate AmberNotice
+// surfaces. We do NOT strand the vendor on /post/tag with an error screen —
+// the failure UX lives in one place, on preview.
 
 "use client";
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Camera, ImagePlus, RotateCcw, Tag, ChevronDown, ChevronRight } from "lucide-react";
+import { ArrowLeft, Camera } from "lucide-react";
 import { compressImage } from "@/lib/imageUpload";
+import { postStore, type PostDraft } from "@/lib/postStore";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 
-type Stage = "ready" | "loading" | "result" | "error";
+type Stage = "ready" | "extracting";
 
-interface ExtractResult {
+interface ExtractTagResponse {
   title: string;
   price: number | null;
   source: "claude" | "mock";
-  reason?: "no-key" | "error" | "parse";
+  reason?: string;
+}
+
+interface PostCaptionResponse {
+  title: string;
+  caption: string;
+  source: "claude" | "mock";
+  reason?: string;
 }
 
 async function compressForUpload(dataUrl: string, maxWidth = 1200, quality = 0.78): Promise<string> {
@@ -50,89 +64,144 @@ async function compressForUpload(dataUrl: string, maxWidth = 1200, quality = 0.7
   return compressImage(first, Math.round(maxWidth * 0.75), 0.72);
 }
 
-export default function PostTagTestbedPage() {
-  const cameraRef  = useRef<HTMLInputElement | null>(null);
-  const libraryRef = useRef<HTMLInputElement | null>(null);
+async function callExtractTag(tagDataUrl: string): Promise<ExtractTagResponse> {
+  try {
+    const compressed = await compressForUpload(tagDataUrl, 1200, 0.78);
+    const res = await fetch("/api/extract-tag", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ imageDataUrl: compressed }),
+    });
+    if (!res.ok) {
+      console.warn("[post/tag] extract-tag HTTP", res.status);
+      return { title: "", price: null, source: "mock", reason: "http" };
+    }
+    return (await res.json()) as ExtractTagResponse;
+  } catch (err) {
+    console.error("[post/tag] extract-tag fetch failed:", err);
+    return { title: "", price: null, source: "mock", reason: "fetch" };
+  }
+}
 
-  const [stage, setStage]       = useState<Stage>("ready");
-  const [image, setImage]       = useState<string | null>(null);
-  const [result, setResult]     = useState<ExtractResult | null>(null);
-  const [elapsed, setElapsed]   = useState<number | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string>("");
-  const [showRaw, setShowRaw]   = useState<boolean>(false);
+async function callPostCaption(itemDataUrl: string): Promise<PostCaptionResponse> {
+  try {
+    const compressed = await compressForUpload(itemDataUrl, 800, 0.7);
+    const res = await fetch("/api/post-caption", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ imageDataUrl: compressed }),
+    });
+    if (!res.ok) {
+      console.warn("[post/tag] post-caption HTTP", res.status);
+      return { title: "", caption: "", source: "mock", reason: "http" };
+    }
+    return (await res.json()) as PostCaptionResponse;
+  } catch (err) {
+    console.error("[post/tag] post-caption fetch failed:", err);
+    return { title: "", caption: "", source: "mock", reason: "fetch" };
+  }
+}
 
-  function reset() {
-    setStage("ready");
-    setImage(null);
-    setResult(null);
-    setElapsed(null);
-    setErrorMsg("");
-    setShowRaw(false);
-    if (cameraRef.current)  cameraRef.current.value  = "";
-    if (libraryRef.current) libraryRef.current.value = "";
+function PostTagInner() {
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const cameraRef    = useRef<HTMLInputElement | null>(null);
+
+  const [stage,        setStage]        = useState<Stage>("ready");
+  const [itemImage,    setItemImage]    = useState<string | null>(null);
+  const [tagImage,     setTagImage]     = useState<string | null>(null);
+
+  // Preserve admin ?vendor= impersonation param across redirects to preview.
+  const vendorParam = searchParams.get("vendor");
+  const previewDest = vendorParam ? `/post/preview?vendor=${vendorParam}` : "/post/preview";
+
+  // ── Mount: pull item photo from postStore (set by /my-shelf) ─────────────
+  useEffect(() => {
+    const draft = postStore.get();
+    if (!draft?.imageDataUrl) {
+      router.replace("/my-shelf");
+      return;
+    }
+    setItemImage(draft.imageDataUrl);
+  }, [router]);
+
+  // ── Skip path ────────────────────────────────────────────────────────────
+  function handleSkip() {
+    const draft = postStore.get();
+    if (!draft?.imageDataUrl) {
+      router.replace("/my-shelf");
+      return;
+    }
+    postStore.set({
+      ...draft,
+      extractionRan: "skip",
+    });
+    router.replace(previewDest);
   }
 
-  async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  // ── Tag capture path ─────────────────────────────────────────────────────
+  async function handleTagFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = "";  // reset so re-picking the same file refires onChange
     if (!file) return;
 
-    console.log("[tag-testbed] file selected:", { name: file.name, size: file.size, type: file.type });
+    const draft = postStore.get();
+    if (!draft?.imageDataUrl) {
+      router.replace("/my-shelf");
+      return;
+    }
 
-    // Read as data URL
-    let dataUrl: string;
+    // Read the tag file as a data URL
+    let tagDataUrl: string;
     try {
-      dataUrl = await new Promise<string>((resolve, reject) => {
+      tagDataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload  = () => resolve(reader.result as string);
         reader.onerror = () => reject(new Error("FileReader failed"));
         reader.readAsDataURL(file);
       });
     } catch (err) {
-      console.error("[tag-testbed] FileReader error:", err);
-      setErrorMsg(`Couldn't read file: ${err instanceof Error ? err.message : String(err)}`);
-      setStage("error");
+      console.error("[post/tag] FileReader error:", err);
+      // Fall back to skip semantics — don't strand the vendor.
+      handleSkip();
       return;
     }
 
-    setImage(dataUrl);
-    setStage("loading");
-    setErrorMsg("");
-    setResult(null);
-    setElapsed(null);
+    setTagImage(tagDataUrl);
+    setStage("extracting");
 
-    try {
-      const compressed = await compressForUpload(dataUrl, 1200, 0.78);
-      console.log("[tag-testbed] compressed payload bytes:", compressed.length);
+    // Fire both APIs in parallel — preview lands ready on first paint.
+    const [tagResult, captionResult] = await Promise.all([
+      callExtractTag(tagDataUrl),
+      callPostCaption(draft.imageDataUrl),
+    ]);
 
-      const t0 = performance.now();
-      const res = await fetch("/api/extract-tag", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ imageDataUrl: compressed }),
-      });
-      const elapsedMs = Math.round(performance.now() - t0);
+    const tagSucceeded     = tagResult.source === "claude";
+    const captionSucceeded = captionResult.source === "claude";
 
-      console.log("[tag-testbed] HTTP", res.status, "in", elapsedMs, "ms");
+    const next: PostDraft = {
+      imageDataUrl:    draft.imageDataUrl,
+      extractionRan:   tagSucceeded ? "success" : "error",
+      extractedTitle:  tagSucceeded ? tagResult.title : "",
+      extractedPrice:  tagSucceeded ? tagResult.price : null,
+      captionTitle:    captionSucceeded ? captionResult.title : "",
+      captionText:     captionSucceeded ? captionResult.caption : "",
+      captionFailed:   !captionSucceeded,
+    };
 
-      if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        setErrorMsg(`HTTP ${res.status}: ${body || "(empty body)"}`);
-        setStage("error");
-        return;
-      }
+    console.log("[post/tag] writing draft:", {
+      tagSucceeded,
+      captionSucceeded,
+      extractedTitle: next.extractedTitle,
+      extractedPrice: next.extractedPrice,
+    });
 
-      const data = (await res.json()) as ExtractResult;
-      console.log("[tag-testbed] response:", data);
-
-      setResult(data);
-      setElapsed(elapsedMs);
-      setStage("result");
-    } catch (err) {
-      console.error("[tag-testbed] fetch error:", err);
-      setErrorMsg(err instanceof Error ? err.message : String(err));
-      setStage("error");
-    }
+    postStore.set(next);
+    router.replace(previewDest);
   }
+
+  // ── Render ───────────────────────────────────────────────────────────────
+  const isExtracting = stage === "extracting";
 
   return (
     <div
@@ -143,359 +212,292 @@ export default function PostTagTestbedPage() {
         margin: "0 auto",
         display: "flex",
         flexDirection: "column",
-        paddingBottom: "max(40px, env(safe-area-inset-bottom, 40px))",
       }}
     >
-      {/* Hidden inputs (file + camera) */}
+      {/* Hidden camera input — tag capture only */}
       <input
         ref={cameraRef}
         type="file"
         accept="image/*"
         capture="environment"
-        onChange={onFileChange}
-        style={{ display: "none" }}
-      />
-      <input
-        ref={libraryRef}
-        type="file"
-        accept="image/*"
-        onChange={onFileChange}
+        onChange={handleTagFile}
         style={{ display: "none" }}
       />
 
-      {/* ── Testbed banner ─────────────────────────────────────────── */}
+      {/* Scrollable body */}
       <div
         style={{
-          background: "rgba(122, 92, 30, 0.12)",
-          borderBottom: `1px solid ${v1.amberBorder}`,
-          padding: "10px 18px",
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          fontFamily: FONT_SYS,
-          fontSize: 11,
-          letterSpacing: "0.06em",
-          textTransform: "uppercase",
-          color: v1.amber,
-          fontWeight: 500,
+          flex: 1,
+          overflowY: "auto",
+          paddingBottom: "max(108px, calc(env(safe-area-inset-bottom, 0px) + 96px))",
         }}
       >
-        <span>🧪</span>
-        <span>Tag extraction testbed — not yet wired to Add Find</span>
-      </div>
-
-      {/* ── Header ─────────────────────────────────────────── */}
-      <div style={{ padding: "22px 22px 14px" }}>
+        {/* ── Masthead (Mode C) ─────────────────────────────────────── */}
         <div
           style={{
-            fontFamily: FONT_IM_FELL,
-            fontSize: 28,
-            color: v1.inkPrimary,
-            letterSpacing: "-0.005em",
-            lineHeight: 1.15,
-            marginBottom: 4,
+            padding: "max(14px, env(safe-area-inset-top, 14px)) 22px 10px",
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 14,
+            background: "rgba(232,221,199,0.96)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            borderBottom: `1px solid ${v1.inkHairline}`,
+            position: "sticky",
+            top: 0,
+            zIndex: 30,
           }}
         >
-          Now the tag
+          <button
+            onClick={() => router.back()}
+            aria-label="Go back"
+            disabled={isExtracting}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: "50%",
+              background: v1.iconBubble,
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: isExtracting ? "default" : "pointer",
+              opacity: isExtracting ? 0.45 : 1,
+              flexShrink: 0,
+              marginTop: 1,
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <ArrowLeft size={17} strokeWidth={2} style={{ color: v1.inkPrimary }} />
+          </button>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+            <div
+              style={{
+                fontFamily: FONT_IM_FELL,
+                fontSize: 24,
+                color: v1.inkPrimary,
+                letterSpacing: "-0.005em",
+                lineHeight: 1.15,
+              }}
+            >
+              {isExtracting ? "Reading the tag…" : "Now the tag"}
+            </div>
+            <div
+              style={{
+                fontFamily: FONT_IM_FELL,
+                fontStyle: "italic",
+                fontSize: 14,
+                color: v1.inkMuted,
+                lineHeight: 1.4,
+              }}
+            >
+              {isExtracting ? "Just a moment." : "Capture the title and price in one shot."}
+            </div>
+          </div>
         </div>
-        <div
+
+        {/* ── Body — Frame 1 (ready) or Frame 2 (extracting) ────────── */}
+        {!isExtracting && itemImage && (
+          <>
+            <div style={{ padding: "20px 22px 0" }}>
+              <div
+                style={{
+                  width: "78%",
+                  margin: "0 auto",
+                  borderRadius: v1.imageRadius,
+                  overflow: "hidden",
+                  background: "#cdb88e",
+                  boxShadow: "0 4px 20px rgba(42,26,10,0.18)",
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={itemImage}
+                  alt="item to be tagged"
+                  style={{ width: "100%", height: "auto", display: "block" }}
+                />
+              </div>
+            </div>
+
+            <div style={{ padding: "26px 22px 0", textAlign: "center" }}>
+              <div
+                style={{
+                  fontFamily: FONT_IM_FELL,
+                  fontStyle: "italic",
+                  fontSize: 14,
+                  color: v1.inkMuted,
+                  lineHeight: 1.6,
+                }}
+              >
+                We&rsquo;ll read the item name and price<br />directly from the inventory tag.
+              </div>
+            </div>
+          </>
+        )}
+
+        {isExtracting && itemImage && (
+          <>
+            <div
+              style={{
+                padding: "22px 22px 0",
+                display: "flex",
+                gap: 14,
+                alignItems: "flex-start",
+                justifyContent: "center",
+              }}
+            >
+              <PhotoPair label="Item" src={itemImage} />
+              {tagImage && <PhotoPair label="Tag" src={tagImage} />}
+            </div>
+
+            <motion.div
+              animate={{ opacity: [0.4, 1, 0.4] }}
+              transition={{ duration: 1.6, repeat: Infinity }}
+              style={{
+                fontFamily: FONT_IM_FELL,
+                fontStyle: "italic",
+                fontSize: 15,
+                color: v1.inkMuted,
+                textAlign: "center",
+                marginTop: 28,
+                lineHeight: 1.5,
+              }}
+            >
+              Pulling title and price…
+            </motion.div>
+          </>
+        )}
+      </div>
+
+      {/* ── Sticky bottom CTA stack ─────────────────────────────────── */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          maxWidth: 430,
+          margin: "0 auto",
+          padding: "12px 22px",
+          paddingBottom: "max(18px, env(safe-area-inset-bottom, 18px))",
+          background: "rgba(232,221,199,0.96)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          borderTop: `1px solid ${v1.inkHairline}`,
+          zIndex: 40,
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+        }}
+      >
+        <button
+          onClick={() => cameraRef.current?.click()}
+          disabled={isExtracting}
           style={{
+            width: "100%",
+            padding: 15,
+            borderRadius: 14,
+            fontFamily: FONT_SYS,
+            fontSize: 15,
+            fontWeight: 500,
+            letterSpacing: "0.2px",
+            color: isExtracting ? v1.inkFaint : "#fff",
+            background: isExtracting ? v1.inkWash : v1.green,
+            border: "none",
+            cursor: isExtracting ? "default" : "pointer",
+            boxShadow: isExtracting ? "none" : "0 2px 12px rgba(30,77,43,0.25)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            transition: "background 0.18s ease, color 0.18s ease",
+          }}
+        >
+          {isExtracting ? (
+            <motion.span
+              animate={{ opacity: [1, 0.5, 1] }}
+              transition={{ duration: 1.2, repeat: Infinity }}
+              style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic" }}
+            >
+              Reading…
+            </motion.span>
+          ) : (
+            <>
+              <Camera size={18} strokeWidth={1.6} />
+              Take photo of tag
+            </>
+          )}
+        </button>
+
+        <button
+          onClick={handleSkip}
+          disabled={isExtracting}
+          style={{
+            width: "100%",
+            padding: 10,
+            borderRadius: 14,
             fontFamily: FONT_IM_FELL,
             fontStyle: "italic",
             fontSize: 14,
             color: v1.inkMuted,
-            lineHeight: 1.5,
+            background: "transparent",
+            border: "none",
+            textDecoration: "underline",
+            textDecorationColor: v1.inkFaint,
+            textUnderlineOffset: 3,
+            cursor: isExtracting ? "default" : "pointer",
+            opacity: isExtracting ? 0.45 : 1,
           }}
         >
-          Photograph an inventory tag — Claude will read the title and price.
-        </div>
-      </div>
-
-      {/* ── Photo preview (when image present) ─────────────────────── */}
-      {image && (
-        <div style={{ padding: "0 22px 16px" }}>
-          <div
-            style={{
-              borderRadius: v1.imageRadius,
-              overflow: "hidden",
-              border: `1px solid ${v1.inkHairline}`,
-              background: "#cdb88e",
-              boxShadow: "0 4px 16px rgba(42,26,10,0.14)",
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={image}
-              alt="captured tag"
-              style={{
-                width: "100%",
-                height: "auto",
-                display: "block",
-                opacity: stage === "loading" ? 0.55 : 1,
-                transition: "opacity 0.18s ease",
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* ── Loading state ─────────────────────────────────────────── */}
-      {stage === "loading" && (
-        <div style={{ padding: "0 22px 24px", textAlign: "center" }}>
-          <motion.div
-            animate={{ opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 1.6, repeat: Infinity }}
-            style={{
-              fontFamily: FONT_IM_FELL,
-              fontStyle: "italic",
-              fontSize: 16,
-              color: v1.inkMuted,
-            }}
-          >
-            Reading the tag…
-          </motion.div>
-        </div>
-      )}
-
-      {/* ── Result state ─────────────────────────────────────────── */}
-      {stage === "result" && result && (
-        <div style={{ padding: "0 22px 22px", display: "flex", flexDirection: "column", gap: 14 }}>
-          {/* Status pill */}
-          <div
-            style={{
-              display: "inline-flex",
-              alignSelf: "flex-start",
-              alignItems: "center",
-              gap: 6,
-              padding: "4px 10px",
-              borderRadius: 999,
-              background: result.source === "claude" ? "rgba(30,77,43,0.10)" : v1.amberBg,
-              border: `1px solid ${result.source === "claude" ? "rgba(30,77,43,0.22)" : v1.amberBorder}`,
-              fontFamily: FONT_IM_FELL,
-              fontStyle: "italic",
-              fontSize: 12,
-              color: result.source === "claude" ? v1.green : v1.amber,
-            }}
-          >
-            <Tag size={11} />
-            {result.source === "claude"
-              ? `Read by Claude · ${elapsed}ms`
-              : `Mock fallback · reason=${result.reason ?? "unknown"}`}
-          </div>
-
-          {/* Extracted fields */}
-          <div
-            style={{
-              border: `1px solid ${v1.inkHairline}`,
-              borderRadius: 14,
-              background: v1.inkWash,
-              padding: "16px 18px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 14,
-            }}
-          >
-            <Row label="Title" value={result.title || "—"} muted={!result.title} />
-            <Row
-              label="Price"
-              value={result.price != null ? `$${result.price.toFixed(2)}` : "—"}
-              muted={result.price == null}
-            />
-          </div>
-
-          {/* Raw JSON toggle */}
-          <button
-            onClick={() => setShowRaw((v) => !v)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-              padding: "8px 0",
-              background: "transparent",
-              border: "none",
-              fontFamily: FONT_SYS,
-              fontSize: 12,
-              color: v1.inkMuted,
-              cursor: "pointer",
-              alignSelf: "flex-start",
-            }}
-          >
-            {showRaw ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            Raw response
-          </button>
-          {showRaw && (
-            <pre
-              style={{
-                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-                fontSize: 11,
-                color: v1.inkMid,
-                background: "rgba(42,26,10,0.05)",
-                padding: "12px 14px",
-                borderRadius: 8,
-                border: `1px solid ${v1.inkHairline}`,
-                lineHeight: 1.55,
-                margin: 0,
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-              }}
-            >
-              {JSON.stringify(result, null, 2)}
-            </pre>
-          )}
-        </div>
-      )}
-
-      {/* ── Error state ─────────────────────────────────────────── */}
-      {stage === "error" && (
-        <div style={{ padding: "0 22px 22px" }}>
-          <div
-            style={{
-              border: `1px solid ${v1.redBorder}`,
-              borderRadius: 14,
-              background: v1.redBg,
-              padding: "14px 18px",
-              fontFamily: FONT_SYS,
-              fontSize: 12,
-              color: v1.red,
-              lineHeight: 1.55,
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-            }}
-          >
-            <div style={{ fontFamily: FONT_IM_FELL, fontSize: 15, marginBottom: 6, fontStyle: "italic" }}>
-              Request failed
-            </div>
-            {errorMsg || "(no detail)"}
-          </div>
-        </div>
-      )}
-
-      {/* ── Action stack ─────────────────────────────────────────── */}
-      <div
-        style={{
-          marginTop: "auto",
-          padding: "16px 22px 8px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 10,
-        }}
-      >
-        {(stage === "ready" || stage === "result" || stage === "error") && (
-          <>
-            <button
-              onClick={() => cameraRef.current?.click()}
-              style={primaryButtonStyle}
-            >
-              <Camera size={18} strokeWidth={1.6} />
-              {stage === "ready" ? "Take photo of tag" : "Try another tag"}
-            </button>
-            <button
-              onClick={() => libraryRef.current?.click()}
-              style={secondaryButtonStyle}
-            >
-              <ImagePlus size={16} strokeWidth={1.6} />
-              Choose from library
-            </button>
-          </>
-        )}
-
-        {(stage === "result" || stage === "error") && (
-          <button
-            onClick={reset}
-            style={{
-              ...skipButtonStyle,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-            }}
-          >
-            <RotateCcw size={13} />
-            Reset
-          </button>
-        )}
+          Skip — I&rsquo;ll add title and price manually
+        </button>
       </div>
     </div>
   );
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────
-function Row({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
+// ── PhotoPair — small labeled thumbnail used in the extracting state ─────
+function PhotoPair({ label, src }: { label: string; src: string }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+    <div style={{ flex: "0 0 42%", display: "flex", flexDirection: "column", gap: 6, alignItems: "center" }}>
       <div
         style={{
           fontFamily: FONT_IM_FELL,
           fontStyle: "italic",
-          fontSize: 13,
+          fontSize: 11,
           color: v1.inkMuted,
-          lineHeight: 1.3,
+          letterSpacing: "0.04em",
         }}
       >
         {label}
       </div>
       <div
         style={{
-          fontFamily: FONT_SYS,
-          fontSize: 16,
-          color: muted ? v1.inkFaint : v1.inkPrimary,
-          fontStyle: muted ? "italic" : "normal",
-          lineHeight: 1.4,
-          wordBreak: "break-word",
+          width: "100%",
+          aspectRatio: "4 / 5",
+          borderRadius: v1.imageRadius,
+          overflow: "hidden",
+          background: "#cdb88e",
+          boxShadow: "0 3px 12px rgba(42,26,10,0.16)",
         }}
       >
-        {value}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={label.toLowerCase()}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
       </div>
     </div>
   );
 }
 
-// ── Button styles ──────────────────────────────────────────────────────
-const primaryButtonStyle: React.CSSProperties = {
-  width: "100%",
-  padding: 15,
-  borderRadius: 14,
-  fontFamily: FONT_SYS,
-  fontSize: 15,
-  fontWeight: 500,
-  color: "#fff",
-  background: v1.green,
-  border: "none",
-  letterSpacing: "0.2px",
-  boxShadow: "0 2px 12px rgba(30,77,43,0.25)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 10,
-  cursor: "pointer",
-};
-
-const secondaryButtonStyle: React.CSSProperties = {
-  width: "100%",
-  padding: 13,
-  borderRadius: 14,
-  fontFamily: FONT_SYS,
-  fontSize: 14,
-  fontWeight: 500,
-  color: v1.inkMid,
-  background: v1.iconBubble,
-  border: `1px solid ${v1.inkHairline}`,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 8,
-  cursor: "pointer",
-};
-
-const skipButtonStyle: React.CSSProperties = {
-  width: "100%",
-  padding: 11,
-  borderRadius: 14,
-  fontFamily: FONT_IM_FELL,
-  fontStyle: "italic",
-  fontSize: 14,
-  color: v1.inkMuted,
-  background: "transparent",
-  border: "none",
-  cursor: "pointer",
-};
+// Suspense wrapper required by useSearchParams in Next 14.
+export default function PostTagPage() {
+  return (
+    <Suspense>
+      <PostTagInner />
+    </Suspense>
+  );
+}

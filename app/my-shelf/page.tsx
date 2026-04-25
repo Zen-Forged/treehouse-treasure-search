@@ -627,8 +627,13 @@ function MyBoothInner() {
       const compressed = await compressForAdd(rawData);
       postStore.setImage(compressed);
       setShowAddSheet(false);
+      // Session 62 — Add Find now routes through /post/tag (tag-capture step)
+      // before /post/preview. /post/tag uses router.replace to land on
+      // /post/preview, so back-from-preview returns to /my-shelf as before.
+      // The ?vendor= admin-impersonation param needs to thread through both
+      // hops: /post/tag reads it from the URL too, then carries it to preview.
       const vendorParam = searchParams.get("vendor");
-      const dest = vendorParam ? `/post/preview?vendor=${vendorParam}` : "/post/preview";
+      const dest = vendorParam ? `/post/tag?vendor=${vendorParam}` : "/post/tag";
       router.push(dest);
     } catch (err) {
       console.error("[my-shelf] add-find file read failed:", err);
