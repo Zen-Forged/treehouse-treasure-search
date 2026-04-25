@@ -104,6 +104,44 @@ function truncate(obj: unknown, max = 120): string {
     }
   }
 
+  // ── Filter pattern test (sanity-check the admin Events tab logic) ─────
+  // Three ways to query for "saves" (post_saved + post_unsaved). The route
+  // uses approach (B). If (B) returns 0 rows when (A) returns >0, the
+  // .or() string is wrong.
+  console.log("\n=== filter pattern sanity test (post_saved OR post_unsaved) ===");
+  const A = await svc.from("events").select("id", { count: "exact" })
+    .or("event_type.eq.post_saved,event_type.eq.post_unsaved").limit(1);
+  console.log(`  (A) .or("event_type.eq.post_saved,event_type.eq.post_unsaved"): count=${A.count ?? "null"}  err=${A.error?.message ?? "none"}`);
+
+  const B = await svc.from("events").select("id", { count: "exact" })
+    .in("event_type", ["post_saved", "post_unsaved"]).limit(1);
+  console.log(`  (B) .in("event_type", [...])                                 : count=${B.count ?? "null"}  err=${B.error?.message ?? "none"}`);
+
+  const C1 = await svc.from("events").select("id", { count: "exact" })
+    .eq("event_type", "post_saved").limit(1);
+  const C2 = await svc.from("events").select("id", { count: "exact" })
+    .eq("event_type", "post_unsaved").limit(1);
+  console.log(`  (C) .eq("event_type", "post_saved"):                          count=${C1.count ?? "null"}`);
+  console.log(`      .eq("event_type", "post_unsaved"):                        count=${C2.count ?? "null"}`);
+
+  // ── Reproduce the admin route query EXACTLY for saves ──────────────────
+  // If this returns 19 rows, the bug is client-side (admin page state /
+  // filter-chip wiring). If this returns 0, the bug is server-side.
+  console.log("\n=== exact admin-route reproduction (saves filter) ===");
+  const SAVES_TYPES = ["post_saved", "post_unsaved"];
+  const routePage = await svc
+    .from("events")
+    .select("id, event_type, user_id, session_id, payload, occurred_at")
+    .order("occurred_at", { ascending: false })
+    .limit(50)
+    .or(SAVES_TYPES.map(t => `event_type.eq.${t}`).join(","));
+  console.log(`  rows returned: ${routePage.data?.length ?? 0}`);
+  console.log(`  error:         ${routePage.error?.message ?? "none"}`);
+  if (routePage.data && routePage.data.length > 0) {
+    console.log(`  first row event_type: ${routePage.data[0]!.event_type}`);
+    console.log(`  first row occurred_at: ${routePage.data[0]!.occurred_at}`);
+  }
+
   // ── Anon attempt ──────────────────────────────────────────────────────
   // Should return zero rows even though the events table doesn't have RLS:
   // PostgREST grants only what the `anon` role has SELECT on, and the

@@ -116,6 +116,17 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: pageErr.message }, { status: 500 });
   }
 
+  // Session 58 QA aid — visible in Vercel runtime logs. If the tab shows
+  // empty but this log says rows=N, the bug is in the client render path.
+  // If this log says rows=0 but the diagnostic script (run against the same
+  // DB) says count>0, the bug is in the route's filter logic.
+  console.log(
+    `[admin/events GET] filterRaw=${filterRaw ?? "—"} ` +
+    `typeIn=${typeIn ? `[${typeIn.join(",")}]` : "—"} ` +
+    `before=${before ?? "—"} ` +
+    `rows=${(events ?? []).length}`,
+  );
+
   // ── Counter strip (24h / 7d / all) ──────────────────────────────────────
   // Three count queries — cheap and parallelizable. Filters (typeIn) are NOT
   // applied to the counter strip — the counters always reflect the un-filtered
