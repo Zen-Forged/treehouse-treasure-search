@@ -12,7 +12,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, Store, LayoutGrid, Heart } from "lucide-react";
+import { Home, Store, LayoutGrid, Pin } from "lucide-react";
 import { getSession, isAdmin } from "@/lib/auth";
 import type { User } from "@supabase/supabase-js";
 
@@ -59,7 +59,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
   };
   const findsTab: TabDef = {
     key: "flagged", label: "Find Map", href: "/flagged",
-    icon: <Heart size={21} strokeWidth={1.7} />, badge: true,
+    icon: <Pin size={21} strokeWidth={1.7} />, badge: true,
   };
   const boothsTab: TabDef = {
     key: "shelves", label: "Booths", href: "/shelves",

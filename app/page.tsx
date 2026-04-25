@@ -42,7 +42,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, ChevronDown } from "lucide-react";
+import { Pin, ChevronDown } from "lucide-react";
 import { getFeedPosts, getActiveMalls } from "@/lib/posts";
 import { getSession, signOut, onAuthChange } from "@/lib/auth";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
@@ -309,9 +309,10 @@ function MasonryTile({
             </div>
           )}
 
-          {/* Frosted paperCream heart top-right — always visible, state-
-              independent bg, green glyph when saved (matches Find Map's tile
-              heart + Find Detail v1.1f save-state treatment). */}
+          {/* Frosted paperCream pushpin top-right — always visible, state-
+              independent bg, green glyph when saved. Session 61: heart →
+              pushpin per save-glyph-v1.html mockup. The cartographic register
+              (pin / X / post-it) now extends to the save affordance. */}
           <button
             onClick={handleHeartClick}
             aria-label={isFollowed ? "Remove from saved" : "Save"}
@@ -319,8 +320,8 @@ function MasonryTile({
               position: "absolute",
               top: 8,
               right: 8,
-              width: 30,
-              height: 30,
+              width: 36,
+              height: 36,
               borderRadius: "50%",
               background: "rgba(232,221,199,0.78)",
               backdropFilter: "blur(8px)",
@@ -335,9 +336,9 @@ function MasonryTile({
               zIndex: 2,
             }}
           >
-            <Heart
-              size={14}
-              strokeWidth={isFollowed ? 0 : 1.6}
+            <Pin
+              size={17}
+              strokeWidth={isFollowed ? 0 : 1.7}
               style={{
                 color: isFollowed ? v1.green : v1.inkPrimary,
                 fill:  isFollowed ? v1.green : "none",
@@ -360,17 +361,17 @@ function MasonryTile({
         </div>
 
         {/* Relative timestamp — Variant D from feed-timestamp-v1.html mockup.
-            Right-aligned, system-ui 10px, ink-muted. Sits inside the Link so
-            it's part of the tile's tap target. */}
+            Left-aligned with the image edge, system-ui 10px, ink-muted. Sits
+            inside the Link so it's part of the tile's tap target. */}
         <div
           style={{
-            padding: "4px 2px 0",
+            padding: "4px 0 0",
             fontFamily: FONT_SYS,
             fontSize: 10,
             color: v1.inkMuted,
             letterSpacing: "0.01em",
             lineHeight: 1.2,
-            textAlign: "right",
+            textAlign: "left",
           }}
         >
           {formatTimeAgo(post.created_at)}
