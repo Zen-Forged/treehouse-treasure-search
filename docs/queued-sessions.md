@@ -333,4 +333,42 @@ Session-32 regression in `/api/setup/lookup-vendor`. The route matched `vendor_r
 Caught session 33 walk step 6 on-device. Resolved session 35 via the multi-booth rework composite-key lookup. Full fix documented in `docs/known-issues.md` → KI-006 (Resolved) and `docs/DECISION_GATE.md` Risk Register.
 
 ---
+
+## Operational backlog (small items, not Q-tickets)
+
+> Items below are small recurring or one-off operational tasks that compete with the active arc as alternative next sessions. Sized + ordered so a session-open standup can pluck one without re-deriving the plan. **CLAUDE.md keeps 2–3 high-signal alternatives inline; everything else lives here.** Update this list when items resolve or new ones surface.
+
+### 🟡 Pre-beta polish (operational, not code-gating)
+
+| Item | Effort | Type | Why parked |
+|------|--------|------|------------|
+| **Staging migration paste + seed-staging re-run** | ~15 min HITL | Infra paste | Staging is N migrations behind prod (currently 009 + 010 + 011). Each prod migration adds drift; cheaper to batch. Run when staging needs to mirror prod for a QA walk. |
+| **Staging Supabase OTP email template paste** | ~15 min HITL | Infra paste | Staging sends generic Supabase emails (session 54 discovery). Paste from `docs/supabase-otp-email-templates.md`. Non-gating — only matters when staging needs realistic email QA. |
+| **Booths view on-device verification on staging** | ~5 min HITL | QA walk | Deferred from session 54 Task 10. Single-tap verification. |
+| **Q-002 on-device QA walk** | ~5 min HITL | QA walk | Shipped session 57 commit `080689a`; single-booth + multi-booth + share-airplane preservation pass. |
+| **`filter_applied` instrumentation verification** | ~5 min HITL | Verify | Session 58 QA didn't exercise the mall-picker change so `filter_applied` count stayed at 0. Either the test wasn't run or the `track()` in `app/page.tsx` `handleMallSelect` is broken. Single test confirms which. |
+| **Disable debug toast post-R3-stabilization** | ~10 sec | Cleanup | `localStorage.removeItem("th_track_debug")` once R3 finishing pass closes. Or leave on; harmless when disabled. |
+| **Strip verbose console.logs from R3 routes** | ~10 min | Cleanup | Optional. Logs are minimal and proved their value during QA; equally valid to keep them as institutional infrastructure. |
+| **R3 design-record retroactive update** | ~10 min | Docs only | Migration 010 deviated from `docs/r3-analytics-design.md`'s RLS-on spec (referenced an `admin_emails` table that doesn't exist). Update the design record so the spec matches what shipped. |
+| **Design agent principle addition** | ~10 min | Docs only | "When a second instance of a glyph/affordance is introduced, the reconciliation is part of the same scope, not a later cleanup." Session-45 retrospective. Add to MASTER_PROMPT.md §Design Agent. |
+| **MASTER_PROMPT.md KNOWN PLATFORM GOTCHAS update** | ~10 min | Docs only | Three new gotchas to capture: Gmail `position: absolute` (session 52), new-Supabase-project URL Configuration prereq (session 54), force-`vercel --prod`-during-prod-QA (session 58). |
+| **Session-archive drift cleanup** | ~30 min | Docs only | Sessions 28–38 + 44–58 are tombstone-only in CLAUDE.md. Backfill detail from git log into `docs/session-archive.md`. |
+| **`/admin` UI `auth.users` delete reliability spike** | ~20–30 min | Investigation | Session 46 observed UI delete didn't stick. Not blocking. |
+| **`/api/suggest` SDK migration or delta note** | ~30 min | Cleanup or docs | Session 43 confirmed this is the only AI route still on raw `fetch`. Either migrate to the Anthropic SDK for shape-consistency or document the delta in `CONTEXT.md`. Not beta-gating. |
+
+### 🟢 Recurring next-session alternatives (always available)
+
+These compete for the "Recommended next move" slot whenever the current arc closes or stalls:
+
+| Item | Effort | Why it's always Ready |
+|------|--------|----------------------|
+| **Feed content seeding** | ~30–60 min | 10–15 real posts across 2–3 vendors. Has been "next" since session 55. Once content lands, V1 beta invites can ship per `docs/beta-plan.md`. |
+| **R12 Error monitoring (Sentry)** | ~1 session | Horizon 1 roadmap item. Pairs naturally with R3 analytics — once event-capture lands, error-capture is the obvious sibling. |
+| **R15 technical-path decision** | ~30–60 min, no-code | Single load-bearing scoping decision on the whole roadmap (Capacitor wrapper vs. Expo rebuild vs. full native). Design session, not implementation. |
+
+### Closing items
+
+When an item ships or becomes irrelevant: cut its row, note resolution in the next session-close block, no further entry needed here.
+
+---
 > Maintained by Docs agent. Entries are scoped, sequenced work — not vague ideas. Anything here should be runnable by a future Claude session with no additional deliberation.
