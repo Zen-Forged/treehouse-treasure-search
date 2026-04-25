@@ -36,8 +36,9 @@
 | TR-l | **Vercel-runtime-vs-local divergence on identical Supabase queries** — when local-vs-Vercel diverge with identical config (URL + key + code + query), suspect Vercel-runtime-side state before query syntax. Session-58 shape: `.eq()` returned 0 rows on Vercel, `.or()` returned correct rows; workaround was always-`.or()`. Session-60 shape: SAME `.order().limit(50)` returned a stale snapshot frozen ~25 min behind real DB state, intermittently, even after a fresh deploy. Fresh-deploy is NOT a reliable workaround (session 60 disproved session 59's theory). When this fires next: write a tiny raw-`fetch()` PostgREST endpoint to bypass `@supabase/supabase-js` and isolate where the divergence lives. | Session 58 | Session 60 | 2× | 🟢 |
 | TR-m | **Front-load visibility tooling on debug round 3** — when prod QA bugs aren't isolated by the second test cycle, build debug toasts + server logs + diagnostic scripts before continuing to guess. Already captured as `feedback_visibility_tools_first.md` memory. | Session 58 | Session 59 | 2× | 🟢 |
 | TR-n | **Always force `vercel --prod` after routing/route-handler changes during prod QA** — GitHub→Vercel webhook lag + PWA cache compound; if you're QA-walking after a route-handler change, deploy explicitly rather than hoping the push triggered. | Session 58 | Session 58 | 1× | 🟡 |
+| TR-o | **Multi-element-glyph strokeWidth=0 trap** — when swapping a single-path icon (Heart, Pin) for a multi-element glyph (e.g. FlagGlyph's `<line>` + `<path>`), drop the `strokeWidth={isSaved ? 0 : 1.7}` saved-state trick. Line elements vanish entirely at strokeWidth=0; you lose the pole. Differentiate saved/unsaved via color + fill only, keeping strokeWidth always >0. | Session 61 | Session 61 | 1× | 🟡 |
 
-**Total candidates:** 14 active · **2 promotion-ready (TR-l + TR-m)** · 12 at first firing.
+**Total candidates:** 15 active · **2 promotion-ready (TR-l + TR-m)** · 13 at first firing.
 
 ---
 
