@@ -774,7 +774,6 @@ export default function DiscoveryFeedPage() {
   }
 
   async function handleSignOut() {
-    if (!window.confirm("Sign out?")) return;
     await signOut();
     setIsAuthed(false);
   }
@@ -843,25 +842,7 @@ export default function DiscoveryFeedPage() {
           {isAuthed === false && (
             <Link
               href="/login"
-              style={{
-                fontFamily: FONT_IM_FELL,
-                fontStyle: "italic",
-                fontSize: 14,
-                color: v1.inkMuted,
-                textDecoration: "underline",
-                textDecorationStyle: "dotted",
-                textDecorationColor: v1.inkFaint,
-                textUnderlineOffset: 3,
-                whiteSpace: "nowrap",
-              }}
-            >
-              Sign in
-            </Link>
-          )}
-          {isAuthed === true && (
-            <button
-              onClick={handleSignOut}
-              aria-label="Sign out"
+              aria-label="Sign in"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -869,15 +850,30 @@ export default function DiscoveryFeedPage() {
                 width: 44,
                 height: 44,
                 marginRight: -10,
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
                 color: v1.inkMuted,
                 WebkitTapHighlightColor: "transparent",
               }}
             >
-              <CircleUser size={28} strokeWidth={1.6} />
+              <CircleUser size={22} strokeWidth={1.4} />
+            </Link>
+          )}
+          {isAuthed === true && (
+            <button
+              onClick={handleSignOut}
+              style={{
+                fontFamily: FONT_SYS,
+                fontSize: 13,
+                fontWeight: 500,
+                color: v1.inkMuted,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                WebkitTapHighlightColor: "transparent",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Sign out
             </button>
           )}
           {isAuthed === null && <span aria-hidden="true">&nbsp;</span>}
