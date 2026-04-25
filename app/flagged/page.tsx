@@ -197,6 +197,9 @@ function FindTile({
     e.stopPropagation();
     removeBookmark(post.id);
     onUnsave(post.id);
+    // R3 — emit post_unsaved from the saved-list heart-tap. The natural place
+    // a shopper unsaves a find is here, not back on /find/[id].
+    track("post_unsaved", { post_id: post.id });
   }
 
   const tileStyle: React.CSSProperties =

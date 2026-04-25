@@ -329,6 +329,9 @@ export async function POST(req: Request) {
 
   // R3 — analytics event. recipient email is NOT captured (PII per D3).
   // auth_mode mirrors the existing rate-limit / sender-voice branching.
+  // Diagnostic log added session 58 after the first prod QA showed
+  // share_sent count stuck at 0 — log lets us verify the call is reached.
+  console.log(`[share-booth] recording share_sent event — vendor=${vendorRow.slug} mode=${mode}`);
   await recordEvent("share_sent", {
     user_id: user?.id ?? null,
     payload: {

@@ -713,19 +713,26 @@ export default function DiscoveryFeedPage() {
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   function handleToggleSave(postId: string) {
+    let nextSavedState: "saved" | "unsaved" = "saved";
     setFollowedIds((prev) => {
       const next = new Set(prev);
       if (next.has(postId)) {
         try { safeStorage.removeItem(flagKey(postId)); } catch {}
         next.delete(postId);
         setBookmarkCount((c) => Math.max(0, c - 1));
+        nextSavedState = "unsaved";
       } else {
         try { safeStorage.setItem(flagKey(postId), "1"); } catch {}
         next.add(postId);
         setBookmarkCount((c) => c + 1);
+        nextSavedState = "saved";
       }
       return next;
     });
+    // R3 — emit save / unsave event from the feed-card heart toggle. Mirror
+    // of the /find/[id] handler; the heart icon is the only engagement
+    // mechanic on a find (terminology section in design record).
+    track(nextSavedState === "saved" ? "post_saved" : "post_unsaved", { post_id: postId });
   }
 
   function handleMallSelect(nextMallId: string | null) {
