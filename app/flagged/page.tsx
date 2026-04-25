@@ -256,10 +256,10 @@ function FindTile({
           aria-label="Remove from saved"
           style={{
             position: "absolute",
-            top: 6,
-            right: 6,
-            width: 30,
-            height: 30,
+            top: 8,
+            right: 8,
+            width: 36,
+            height: 36,
             borderRadius: "50%",
             background: "rgba(232,221,199,0.78)",
             backdropFilter: "blur(8px)",
@@ -274,7 +274,7 @@ function FindTile({
             zIndex: 2,
           }}
         >
-          <FlagGlyph size={14} strokeWidth={1.7} style={{ color: v1.green, fill: v1.green }} />
+          <FlagGlyph size={17} strokeWidth={1.7} style={{ color: v1.green, fill: v1.green }} />
         </button>
       </div>
 

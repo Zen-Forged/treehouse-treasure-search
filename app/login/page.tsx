@@ -353,7 +353,7 @@ function LoginInner() {
             cursor: "pointer",
           }}
         >
-          <ArrowLeft size={15} style={{ color: v1.inkPrimary }} />
+          <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
         </button>
       </header>
 

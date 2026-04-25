@@ -307,7 +307,7 @@ function EditPostInner() {
         <header style={{ display: "flex", alignItems: "center", gap: 12, padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 14px", borderBottom: `1px solid ${C.border}`, background: C.bg, position: "sticky", top: 0, zIndex: 40 }}>
           <button onClick={() => router.back()}
             style={{ width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
-            <ArrowLeft size={15} style={{ color: C.textMid }} />
+            <ArrowLeft size={18} strokeWidth={1.6} style={{ color: C.textMid }} />
           </button>
           <div>
             <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: C.textPrimary, lineHeight: 1 }}>Edit Listing</div>

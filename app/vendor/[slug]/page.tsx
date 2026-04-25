@@ -131,8 +131,8 @@ export default function VendorPage() {
 
         {/* Header */}
         <header style={{ position: "sticky", top: 0, zIndex: 50, background: C.header, backdropFilter: "blur(22px)", borderBottom: `1px solid ${C.border}`, padding: "max(14px, env(safe-area-inset-top, 14px)) 15px 12px", display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={() => router.back()} style={{ width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer", flexShrink: 0 }}>
-            <ArrowLeft size={14} style={{ color: C.textMid }} />
+          <button onClick={() => router.back()} aria-label="Go back" style={{ width: 38, height: 38, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: C.surface, border: `1px solid ${C.border}`, cursor: "pointer", flexShrink: 0 }}>
+            <ArrowLeft size={18} strokeWidth={1.6} style={{ color: C.textMid }} />
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 600, color: C.textPrimary, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{vendor?.display_name ?? "Loading…"}</div>

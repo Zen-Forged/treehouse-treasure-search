@@ -114,8 +114,8 @@ export default function MallPage() {
       <div style={{ position: "relative", zIndex: 1 }}>
 
         <header style={{ position: "sticky", top: 0, zIndex: 50, background: "rgba(5,15,5,0.93)", backdropFilter: "blur(22px)", borderBottom: "1px solid rgba(200,180,126,0.055)", padding: "max(14px, env(safe-area-inset-top, 14px)) 15px 12px", display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={() => router.back()} style={{ width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(13,31,13,0.6)", border: "1px solid rgba(109,188,109,0.1)", cursor: "pointer", flexShrink: 0 }}>
-            <ArrowLeft size={14} style={{ color: "#7a6535" }} />
+          <button onClick={() => router.back()} aria-label="Go back" style={{ width: 38, height: 38, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(13,31,13,0.6)", border: "1px solid rgba(109,188,109,0.1)", cursor: "pointer", flexShrink: 0 }}>
+            <ArrowLeft size={18} strokeWidth={1.6} style={{ color: "#7a6535" }} />
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 600, color: "#f5f0e8", lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{mall?.name ?? "Loading…"}</div>
