@@ -55,6 +55,7 @@ import BottomNav from "@/components/BottomNav";
 import MallSheet from "@/components/MallSheet";
 import StickyMasthead from "@/components/StickyMasthead";
 import FeaturedBanner from "@/components/FeaturedBanner";
+import VendorCTACard from "@/components/VendorCTACard";
 import type { Post, Mall } from "@/types/treehouse";
 
 const SCROLL_KEY      = "treehouse_feed_scroll";
@@ -961,43 +962,15 @@ export default function DiscoveryFeedPage() {
         )}
 
         {/* ── Vendor CTA — bottom of feed ────────────────────────────── */}
+        {/* Editorial banner card per docs/mockups/vendor-cta-v2.html (γ).    */}
+        {/* Renders outside the empty/has-finds conditional, so when a mall   */}
+        {/* has no posts the card sits below <EmptyFeed /> for free.          */}
         {!loading && (
-          <div style={{ padding: "40px 6px 0", textAlign: "center" }}>
-            {/* v1.1j — diamond ornament retired; plain hairline */}
+          <div style={{ padding: "40px 6px 0" }}>
             <div style={{ padding: "0 16px 24px" }}>
               <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
             </div>
-            <p
-              style={{
-                fontFamily: FONT_IM_FELL,
-                fontStyle: "italic",
-                fontSize: 14,
-                color: v1.inkMuted,
-                lineHeight: 1.75,
-                margin: "0 0 14px",
-              }}
-            >
-              Are you a vendor? Bring your booth to Treehouse.
-            </p>
-            <Link
-              href="/vendor-request"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "14px 24px",
-                borderRadius: 999,
-                background: v1.green,
-                color: "#f5ecd8",
-                fontFamily: FONT_IM_FELL,
-                fontSize: 16,
-                letterSpacing: "-0.005em",
-                textDecoration: "none",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              Request Digital Booth
-            </Link>
+            <VendorCTACard />
           </div>
         )}
       </main>

@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Vendor CTA (feed footer) v1</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Caveat:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #f5f2eb;
+    --paper-warm:   #ede6d5;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.14);
+    --green:        #1e4d2b;
+    --green-soft:   rgba(30, 77, 43, 0.10);
+
+    --im-fell: "IM Fell English", Georgia, serif;
+    --sys:     -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1320px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  h1.title {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 740px;
+  }
+
+  .decisions {
+    max-width: 880px;
+    margin: 0 auto 36px;
+    padding: 18px 24px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--im-fell);
+    font-size: 18px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 10px;
+    letter-spacing: -0.005em;
+  }
+  .decisions ul, .decisions ol { margin: 8px 0 0; padding: 0 0 0 20px; }
+  .decisions li { margin-bottom: 6px; }
+  .decisions strong { color: #fff9e8; font-weight: 500; }
+  .decisions .q-block {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(232, 221, 199, 0.14);
+  }
+  .decisions .q-block ol li { margin-bottom: 10px; }
+
+  /* ── Phone frame grid ────────────────────────────── */
+  .frames {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 26px;
+    max-width: 1320px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1080px) { .frames { grid-template-columns: 1fr; gap: 36px; } }
+
+  .frame-col { display: flex; flex-direction: column; align-items: center; }
+  .variant-name {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 22px;
+    color: #fff9e8;
+    margin: 0 0 4px;
+    text-align: center;
+  }
+  .variant-blurb {
+    font-family: var(--sys);
+    font-size: 12px;
+    color: rgba(232, 221, 199, 0.72);
+    line-height: 1.55;
+    text-align: center;
+    margin: 0 0 16px;
+    max-width: 360px;
+  }
+
+  .phone {
+    width: 380px;
+    max-width: 100%;
+    background: var(--paper);
+    border-radius: 36px;
+    overflow: hidden;
+    box-shadow: 0 18px 38px rgba(0,0,0,0.42);
+    border: 8px solid #14110d;
+  }
+  .phone-inner {
+    padding: 18px 16px 0;
+    min-height: 540px;
+    background: var(--paper);
+    position: relative;
+  }
+  .feed-strip-label {
+    font-family: var(--sys);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-faint);
+    text-align: center;
+    margin: 0 0 10px;
+  }
+  /* Faux feed tiles for context */
+  .faux-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 0 6px; }
+  .faux-tile {
+    aspect-ratio: 4/5;
+    border-radius: 14px;
+    background: var(--postit);
+    border: 1px solid var(--ink-hairline);
+    background-image: linear-gradient(135deg, #d9c5a0 0%, #c2a87a 100%);
+    opacity: 0.55;
+  }
+  .faux-tile.t2 { background-image: linear-gradient(135deg, #c5b48f 0%, #9c8a64 100%); }
+  .faux-tile.t3 { background-image: linear-gradient(135deg, #b9a685 0%, #d3bd95 100%); }
+  .faux-tile.t4 { background-image: linear-gradient(135deg, #aa9472 0%, #8a7757 100%); }
+
+  .hairline-row { padding: 28px 16px 18px; }
+  .hairline { width: 100%; height: 1px; background: var(--ink-hairline); }
+
+  /* ── Variant α — David's sketch (row card + button below) ───── */
+  .alpha-card {
+    margin: 0 4px;
+    padding: 14px 14px 14px;
+    background: var(--paper-warm);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .alpha-card .icon-bubble {
+    width: 44px; height: 44px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    background: rgba(30, 77, 43, 0.08);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--green);
+  }
+  .alpha-card .copy-block { flex: 1; min-width: 0; }
+  .alpha-card .copy-head {
+    font-family: var(--sys);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink-primary);
+    margin: 0 0 2px;
+    letter-spacing: -0.005em;
+  }
+  .alpha-card .copy-sub {
+    font-family: var(--sys);
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin: 0;
+    line-height: 1.4;
+  }
+  .alpha-card .chevron {
+    flex-shrink: 0;
+    width: 22px;
+    color: var(--ink-faint);
+  }
+  .alpha-button-row {
+    margin: 12px 4px 0;
+    text-align: center;
+  }
+  .alpha-button-row .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 22px;
+    background: var(--green);
+    color: #f5ecd8;
+    border-radius: 999px;
+    font-family: var(--im-fell);
+    font-size: 16px;
+    text-decoration: none;
+  }
+
+  /* ── Variant β — Single-tap card (chevron only, no button) ──── */
+  .beta-card {
+    margin: 0 4px;
+    padding: 16px 14px;
+    background: var(--paper-warm);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .beta-card:hover { background: #e6dec9; }
+  .beta-card .icon-bubble {
+    width: 48px; height: 48px;
+    flex-shrink: 0;
+    border-radius: 14px;
+    background: rgba(30, 77, 43, 0.10);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--green);
+  }
+  .beta-card .copy-block { flex: 1; min-width: 0; }
+  .beta-card .copy-head {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 19px;
+    color: var(--ink-primary);
+    margin: 0 0 2px;
+    letter-spacing: -0.005em;
+    line-height: 1.15;
+  }
+  .beta-card .copy-sub {
+    font-family: var(--sys);
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin: 0;
+    line-height: 1.4;
+  }
+  .beta-card .chevron-pill {
+    flex-shrink: 0;
+    width: 32px; height: 32px;
+    border-radius: 999px;
+    background: var(--green);
+    color: #f5ecd8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .beta-card .chevron-pill svg { width: 16px; height: 16px; }
+
+  /* ── Variant γ — Editorial banner card ─────────────────────── */
+  .gamma-card {
+    margin: 0 4px;
+    padding: 22px 18px 20px;
+    background: var(--paper-warm);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .gamma-card .deco-icon {
+    position: absolute;
+    top: -10px;
+    right: -14px;
+    color: var(--green);
+    opacity: 0.12;
+    transform: rotate(-8deg);
+  }
+  .gamma-card .deco-icon svg { width: 130px; height: 130px; }
+  .gamma-card .pretitle {
+    font-family: var(--sys);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--green);
+    margin: 0 0 6px;
+    font-weight: 600;
+  }
+  .gamma-card .head {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 26px;
+    color: var(--ink-primary);
+    margin: 0 0 4px;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+  .gamma-card .sub {
+    font-family: var(--sys);
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin: 0 0 14px;
+    line-height: 1.5;
+    max-width: 240px;
+  }
+  .gamma-card .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 11px 18px;
+    background: var(--green);
+    color: #f5ecd8;
+    border-radius: 999px;
+    font-family: var(--im-fell);
+    font-size: 15px;
+    text-decoration: none;
+  }
+  .gamma-card .btn svg { width: 14px; height: 14px; }
+
+  /* Bottom nav illustration */
+  .bottom-nav-faux {
+    margin-top: 18px;
+    padding: 14px 0 16px;
+    border-top: 1px solid var(--ink-hairline);
+    display: flex;
+    justify-content: space-around;
+  }
+  .bottom-nav-faux .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--ink-faint);
+    font-family: var(--sys);
+    font-size: 10px;
+  }
+  .bottom-nav-faux .nav-item.active { color: var(--ink-primary); }
+  .bottom-nav-faux .nav-item svg { width: 22px; height: 22px; }
+
+  .annotation {
+    margin-top: 14px;
+    max-width: 380px;
+    font-family: var(--sys);
+    font-size: 11px;
+    color: rgba(232, 221, 199, 0.62);
+    line-height: 1.6;
+    text-align: left;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.025);
+    border-left: 2px solid rgba(232, 221, 199, 0.18);
+    border-radius: 4px;
+  }
+  .annotation strong { color: rgba(232, 221, 199, 0.92); }
+
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <h1 class="title">Vendor CTA — Home page footer</h1>
+  <p class="subtitle">Three card directions to replace the current centered hairline + pill button at the bottom of the feed. Each shown in feed-context so the eye lands on it the way it would on iPhone.</p>
+
+  <div class="decisions">
+    <h3>What's being decided</h3>
+    <ul>
+      <li><strong>Today:</strong> centered hairline · italic muted line · green pill button. Low-key, easy to miss. ([app/page.tsx:963-1002](app/page.tsx:963))</li>
+      <li><strong>Goal:</strong> something polished and intentional — the last thing a non-vendor visitor sees before BottomNav, and worth paying attention to.</li>
+      <li><strong>Constraint:</strong> still lives at the bottom of the feed, sits in warm parchment, uses forest green and IM Fell. Not a banner that interrupts the feed.</li>
+      <li><strong>Out of scope:</strong> moving the CTA elsewhere on the page, changing the destination route (<code>/vendor-request</code>), changing what happens after tap.</li>
+    </ul>
+
+    <div class="q-block">
+      <h3>Three variants below</h3>
+      <ul>
+        <li><strong>α — Sketch literal:</strong> exactly your reference. Icon-row card with chevron + green pill button below. Two affordances (the row tap and the button) both go to the same place.</li>
+        <li><strong>β — Single-tap card:</strong> the row IS the button. No separate green pill below. Green chevron-pill on the right is the visible affordance. Cleaner, removes redundancy.</li>
+        <li><strong>γ — Editorial banner:</strong> bigger card, IM Fell display headline, storefront icon as a decorative watermark behind the text, integrated button. Treats the CTA as a small editorial moment, not a list row.</li>
+      </ul>
+    </div>
+
+    <div class="q-block">
+      <h3>What I'd pick — and why</h3>
+      <ul>
+        <li><strong>β (single-tap card)</strong> is my pick. It honors your sketch (icon-row with copy + affordance on the right) but removes the visual stutter of having the same action twice. The IM Fell italic headline gives it brand voice the current line doesn't have. Tap target is the whole card, which is more forgiving than a 120px-wide button on iPhone.</li>
+        <li><strong>γ</strong> is the strongest "polished and intentional" read but carries the most visual weight — borderline banner-feel. Worth picking if you want this to read as a moment, not a footer.</li>
+        <li><strong>α</strong> is the safest because it matches your sketch one-to-one. Pick this if you want belt-and-suspenders affordance (chevron AND button).</li>
+      </ul>
+    </div>
+
+    <div class="q-block">
+      <h3>Pick one in your reply:</h3>
+      <ol>
+        <li><strong>Variant:</strong> α / β / γ — or "mix from these"</li>
+        <li><strong>Headline copy:</strong> "Are you a vendor?" (current) — keep, or revise? (e.g. "Have a booth?", "Vendor at a Treehouse mall?")</li>
+        <li><strong>Subhead copy:</strong> "Bring your booth to Treehouse." — keep, or revise?</li>
+        <li><strong>Button copy</strong> (only for α / γ): "Request Digital Booth" — keep, or revise?</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="frames">
+
+    <!-- ════════════════════════ VARIANT α ════════════════════════ -->
+    <div class="frame-col">
+      <p class="variant-name">α — Sketch literal</p>
+      <p class="variant-blurb">Icon-row card with chevron + green pill button below. Matches your reference one-to-one. Two affordances; both go to <code>/vendor-request</code>.</p>
+      <div class="phone">
+        <div class="phone-inner">
+          <p class="feed-strip-label">— end of feed —</p>
+
+          <div class="faux-grid">
+            <div class="faux-tile"></div>
+            <div class="faux-tile t2"></div>
+            <div class="faux-tile t3"></div>
+            <div class="faux-tile t4"></div>
+          </div>
+
+          <div class="hairline-row"><div class="hairline"></div></div>
+
+          <a class="alpha-card" href="#" style="text-decoration: none;">
+            <div class="icon-bubble">
+              <!-- Storefront -->
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l1.5-4.5h15L21 9"/>
+                <path d="M3 9v11h18V9"/>
+                <path d="M3 9c0 1.5 1 2.5 2.5 2.5S8 10.5 8 9"/>
+                <path d="M8 9c0 1.5 1 2.5 2.5 2.5S13 10.5 13 9"/>
+                <path d="M13 9c0 1.5 1 2.5 2.5 2.5S18 10.5 18 9"/>
+                <path d="M18 9c0 1.5 1 2.5 2 2.5S21 10.5 21 9"/>
+                <path d="M9 20v-6h6v6"/>
+              </svg>
+            </div>
+            <div class="copy-block">
+              <p class="copy-head">Are you a vendor?</p>
+              <p class="copy-sub">Bring your booth to Treehouse.</p>
+            </div>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 6 15 12 9 18"/>
+            </svg>
+          </a>
+
+          <div class="alpha-button-row">
+            <a class="btn" href="#">Request Digital Booth</a>
+          </div>
+
+          <div class="bottom-nav-faux">
+            <div class="nav-item active">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>
+              Home
+            </div>
+            <div class="nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18l3-2 4 2 4-2 3 2V3z"/></svg>
+              Your Finds
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>Read:</strong> straightforward, recognizable. Two affordances side-by-side does feel a little belt-and-suspenders on a small phone. Use if you want the safest interpretation of your sketch.
+      </div>
+    </div>
+
+    <!-- ════════════════════════ VARIANT β ════════════════════════ -->
+    <div class="frame-col">
+      <p class="variant-name">β — Single-tap card</p>
+      <p class="variant-blurb">The row IS the button. Green chevron-pill on the right is the visible affordance; the entire card taps to <code>/vendor-request</code>. IM Fell headline gives brand voice.</p>
+      <div class="phone">
+        <div class="phone-inner">
+          <p class="feed-strip-label">— end of feed —</p>
+
+          <div class="faux-grid">
+            <div class="faux-tile"></div>
+            <div class="faux-tile t2"></div>
+            <div class="faux-tile t3"></div>
+            <div class="faux-tile t4"></div>
+          </div>
+
+          <div class="hairline-row"><div class="hairline"></div></div>
+
+          <a class="beta-card" href="#" style="text-decoration: none;">
+            <div class="icon-bubble">
+              <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l1.5-4.5h15L21 9"/>
+                <path d="M3 9v11h18V9"/>
+                <path d="M3 9c0 1.5 1 2.5 2.5 2.5S8 10.5 8 9"/>
+                <path d="M8 9c0 1.5 1 2.5 2.5 2.5S13 10.5 13 9"/>
+                <path d="M13 9c0 1.5 1 2.5 2.5 2.5S18 10.5 18 9"/>
+                <path d="M18 9c0 1.5 1 2.5 2 2.5S21 10.5 21 9"/>
+                <path d="M9 20v-6h6v6"/>
+              </svg>
+            </div>
+            <div class="copy-block">
+              <p class="copy-head">Are you a vendor?</p>
+              <p class="copy-sub">Bring your booth to Treehouse.</p>
+            </div>
+            <div class="chevron-pill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 6 15 12 9 18"/>
+              </svg>
+            </div>
+          </a>
+
+          <div class="bottom-nav-faux">
+            <div class="nav-item active">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>
+              Home
+            </div>
+            <div class="nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18l3-2 4 2 4-2 3 2V3z"/></svg>
+              Your Finds
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>Read:</strong> cleaner. Forest-green chevron-pill anchors the action without demanding the visual weight of a full pill button. Whole card is a tap target — more forgiving on iPhone than the current 120px-wide button. <strong>My pick.</strong>
+      </div>
+    </div>
+
+    <!-- ════════════════════════ VARIANT γ ════════════════════════ -->
+    <div class="frame-col">
+      <p class="variant-name">γ — Editorial banner</p>
+      <p class="variant-blurb">Bigger card. Storefront as a decorative watermark behind the copy. IM Fell display headline. Integrated pill button. Treats the CTA as a small editorial moment.</p>
+      <div class="phone">
+        <div class="phone-inner">
+          <p class="feed-strip-label">— end of feed —</p>
+
+          <div class="faux-grid">
+            <div class="faux-tile"></div>
+            <div class="faux-tile t2"></div>
+            <div class="faux-tile t3"></div>
+            <div class="faux-tile t4"></div>
+          </div>
+
+          <div class="hairline-row"><div class="hairline"></div></div>
+
+          <div class="gamma-card">
+            <div class="deco-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l1.5-4.5h15L21 9"/>
+                <path d="M3 9v11h18V9"/>
+                <path d="M3 9c0 1.5 1 2.5 2.5 2.5S8 10.5 8 9"/>
+                <path d="M8 9c0 1.5 1 2.5 2.5 2.5S13 10.5 13 9"/>
+                <path d="M13 9c0 1.5 1 2.5 2.5 2.5S18 10.5 18 9"/>
+                <path d="M18 9c0 1.5 1 2.5 2 2.5S21 10.5 21 9"/>
+                <path d="M9 20v-6h6v6"/>
+              </svg>
+            </div>
+            <p class="pretitle">For vendors</p>
+            <p class="head">Bring your booth<br/>to Treehouse.</p>
+            <p class="sub">Photo your finds, share your shelf, reach buyers between mall visits.</p>
+            <a class="btn" href="#">
+              Request Digital Booth
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 6 15 12 9 18"/>
+              </svg>
+            </a>
+          </div>
+
+          <div class="bottom-nav-faux">
+            <div class="nav-item active">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>
+              Home
+            </div>
+            <div class="nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18l3-2 4 2 4-2 3 2V3z"/></svg>
+              Your Finds
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>Read:</strong> the most "polished and intentional." More copy real-estate (room for a real value-prop line). Storefront-as-watermark is deliberately faded so it doesn't compete with feed thumbnails above. Heaviest of the three — borderline banner.
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+</body>
+</html>

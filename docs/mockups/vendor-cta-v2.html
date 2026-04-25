@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Vendor CTA (γ button-font A/B) v2</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Caveat:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #f5f2eb;
+    --paper-warm:   #ede6d5;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.14);
+    --green:        #1e4d2b;
+
+    --im-fell: "IM Fell English", Georgia, serif;
+    --sys:     -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1200px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  h1.title {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 740px;
+  }
+
+  .decisions {
+    max-width: 880px;
+    margin: 0 auto 36px;
+    padding: 18px 24px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--im-fell);
+    font-size: 18px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 10px;
+    letter-spacing: -0.005em;
+  }
+  .decisions ul, .decisions ol { margin: 8px 0 0; padding: 0 0 0 20px; }
+  .decisions li { margin-bottom: 6px; }
+  .decisions strong { color: #fff9e8; font-weight: 500; }
+  .decisions .q-block {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(232, 221, 199, 0.14);
+  }
+  .decisions .q-block ol li { margin-bottom: 10px; }
+  .decisions .system-note {
+    margin-top: 14px;
+    padding: 10px 14px;
+    background: rgba(30, 77, 43, 0.18);
+    border: 1px solid rgba(30, 77, 43, 0.4);
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: rgba(232, 221, 199, 0.92);
+  }
+  .decisions .system-note strong { color: #fff9e8; }
+
+  .frames {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 36px;
+    max-width: 880px;
+    margin: 0 auto;
+  }
+  @media (max-width: 880px) { .frames { grid-template-columns: 1fr; } }
+
+  .frame-col { display: flex; flex-direction: column; align-items: center; }
+  .variant-name {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 22px;
+    color: #fff9e8;
+    margin: 0 0 4px;
+    text-align: center;
+  }
+  .variant-blurb {
+    font-family: var(--sys);
+    font-size: 12px;
+    color: rgba(232, 221, 199, 0.72);
+    line-height: 1.55;
+    text-align: center;
+    margin: 0 0 16px;
+    max-width: 360px;
+  }
+
+  .phone {
+    width: 380px;
+    max-width: 100%;
+    background: var(--paper);
+    border-radius: 36px;
+    overflow: hidden;
+    box-shadow: 0 18px 38px rgba(0,0,0,0.42);
+    border: 8px solid #14110d;
+  }
+  .phone-inner {
+    padding: 18px 16px 0;
+    min-height: 480px;
+    background: var(--paper);
+  }
+  .feed-strip-label {
+    font-family: var(--sys);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-faint);
+    text-align: center;
+    margin: 0 0 10px;
+  }
+  .faux-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 0 6px; }
+  .faux-tile {
+    aspect-ratio: 4/5;
+    border-radius: 14px;
+    background: var(--postit);
+    border: 1px solid var(--ink-hairline);
+    background-image: linear-gradient(135deg, #d9c5a0 0%, #c2a87a 100%);
+    opacity: 0.55;
+  }
+  .faux-tile.t2 { background-image: linear-gradient(135deg, #c5b48f 0%, #9c8a64 100%); }
+  .faux-tile.t3 { background-image: linear-gradient(135deg, #b9a685 0%, #d3bd95 100%); }
+  .faux-tile.t4 { background-image: linear-gradient(135deg, #aa9472 0%, #8a7757 100%); }
+
+  .hairline-row { padding: 28px 16px 18px; }
+  .hairline { width: 100%; height: 1px; background: var(--ink-hairline); }
+
+  /* ── Editorial banner card (γ) — shared ─────────────────────── */
+  .gamma-card {
+    margin: 0 4px;
+    padding: 22px 18px 20px;
+    background: var(--paper-warm);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .gamma-card .deco-icon {
+    position: absolute;
+    top: -10px;
+    right: -14px;
+    color: var(--green);
+    opacity: 0.12;
+    transform: rotate(-8deg);
+  }
+  .gamma-card .deco-icon svg { width: 130px; height: 130px; }
+  .gamma-card .pretitle {
+    font-family: var(--sys);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--green);
+    margin: 0 0 6px;
+    font-weight: 600;
+  }
+  .gamma-card .head {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 26px;
+    color: var(--ink-primary);
+    margin: 0 0 4px;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+  .gamma-card .sub {
+    font-family: var(--sys);
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin: 0 0 14px;
+    line-height: 1.5;
+    max-width: 240px;
+  }
+
+  /* Button — shared shell, font is per-treatment */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--green);
+    color: #f5ecd8;
+    border-radius: 999px;
+    text-decoration: none;
+  }
+  .btn svg { width: 13px; height: 13px; }
+
+  /* Treatment 1 — Sans semibold, normal case */
+  .btn.sans-semi {
+    font-family: var(--sys);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    padding: 11px 18px;
+  }
+
+  /* Treatment 2 — Sans medium, tracked uppercase */
+  .btn.sans-tracked {
+    font-family: var(--sys);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 12px 18px;
+  }
+
+  /* Bottom nav illustration */
+  .bottom-nav-faux {
+    margin-top: 18px;
+    padding: 14px 0 16px;
+    border-top: 1px solid var(--ink-hairline);
+    display: flex;
+    justify-content: space-around;
+  }
+  .bottom-nav-faux .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--ink-faint);
+    font-family: var(--sys);
+    font-size: 10px;
+  }
+  .bottom-nav-faux .nav-item.active { color: var(--ink-primary); }
+  .bottom-nav-faux .nav-item svg { width: 22px; height: 22px; }
+
+  /* Side-by-side button comparison strip */
+  .button-strip {
+    max-width: 880px;
+    margin: 36px auto 0;
+    padding: 26px 28px 30px;
+    background: var(--paper);
+    border-radius: 18px;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+  }
+  .button-strip h4 {
+    font-family: var(--im-fell);
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--ink-primary);
+    margin: 0 0 18px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .button-strip-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+  @media (max-width: 700px) { .button-strip-grid { grid-template-columns: 1fr; } }
+  .btn-cell {
+    text-align: center;
+    padding: 12px 8px;
+    background: var(--paper-warm);
+    border-radius: 12px;
+    border: 1px solid var(--ink-hairline);
+  }
+  .btn-cell-label {
+    font-family: var(--sys);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    color: var(--ink-muted);
+    margin: 0 0 12px;
+    font-weight: 600;
+  }
+  .btn-cell-spec {
+    margin-top: 12px;
+    font-family: var(--sys);
+    font-size: 10px;
+    color: var(--ink-faint);
+    line-height: 1.4;
+  }
+
+  .annotation {
+    margin-top: 14px;
+    max-width: 380px;
+    font-family: var(--sys);
+    font-size: 11px;
+    color: rgba(232, 221, 199, 0.62);
+    line-height: 1.6;
+    text-align: left;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.025);
+    border-left: 2px solid rgba(232, 221, 199, 0.18);
+    border-radius: 4px;
+  }
+  .annotation strong { color: rgba(232, 221, 199, 0.92); }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <h1 class="title">Vendor CTA — γ direction · button font A/B</h1>
+  <p class="subtitle">Editorial banner locked from v1. Updated copy → "Share your booth on Treehouse Finds." Two button-font treatments below to pick the register.</p>
+
+  <div class="decisions">
+    <h3>What's locked from v1</h3>
+    <ul>
+      <li><strong>Variant:</strong> γ — editorial banner card with storefront watermark, integrated button.</li>
+      <li><strong>Headline:</strong> "Share your booth on Treehouse Finds." (was "Bring your booth to Treehouse.")</li>
+      <li><strong>Pretitle eyebrow:</strong> "FOR VENDORS" — kept (small uppercase forest-green, sets the audience cue).</li>
+      <li><strong>Subhead:</strong> "Photo your finds, share your shelf, reach buyers between mall visits." — kept from v1, please flag if you want a different value-prop line.</li>
+      <li><strong>Storefront watermark:</strong> kept faded behind copy.</li>
+      <li><strong>Headline font (IM Fell italic):</strong> kept — only the button font is in question.</li>
+    </ul>
+
+    <div class="system-note">
+      <strong>Placement insight you flagged:</strong> γ doubles as the empty-state when a vendor selects a mall location with no items added. Good news — the design works for both. We'll wire the dual placement during implementation; this mockup is just for the home-feed footer copy.
+    </div>
+
+    <div class="q-block">
+      <h3>Two button-font treatments</h3>
+      <ul>
+        <li><strong>Treatment 1 — Sans semibold, normal case:</strong> system sans · 14px · weight 600 · "Request Digital Booth". Reads modern and action-oriented. Friendly, app-native register.</li>
+        <li><strong>Treatment 2 — Sans medium, tracked uppercase:</strong> system sans · 11px · weight 600 · letter-spacing 0.14em · "REQUEST DIGITAL BOOTH". Reads editorial and retail-store. Premium register — pairs with the IM Fell italic headline as a "luxury-shop" combo.</li>
+      </ul>
+    </div>
+
+    <div class="q-block">
+      <h3>What I'd pick — and why</h3>
+      <ul>
+        <li><strong>Treatment 1 (sans semibold)</strong> is my pick. The card already has two display-register elements pulling visual weight (the IM Fell italic headline and the FOR VENDORS eyebrow). A third tracked-uppercase element on the button starts to feel like every word wants to be read. Treatment 1 lets the button just be a button — clear action, no register competition with the headline. Editorial feel comes from the headline; the button does the work.</li>
+        <li><strong>Treatment 2</strong> is the right pick if the dual-placement (empty-state when a mall has no items) wants to feel more like a department-store window. More premium, more retail-y, but pulls slightly more attention.</li>
+      </ul>
+    </div>
+
+    <div class="q-block">
+      <h3>Pick one in your reply:</h3>
+      <ol>
+        <li><strong>Button font:</strong> Treatment 1 (sans semibold) / Treatment 2 (sans tracked) — or "use sans semibold but try X variant"</li>
+        <li><strong>Subhead copy:</strong> "Photo your finds, share your shelf, reach buyers between mall visits." — keep, or revise?</li>
+        <li><strong>Eyebrow:</strong> keep "FOR VENDORS", revise, or drop?</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ── Phone-frame side by side ────────────────────────────── -->
+  <div class="frames">
+
+    <!-- TREATMENT 1 -->
+    <div class="frame-col">
+      <p class="variant-name">Treatment 1 — Sans semibold</p>
+      <p class="variant-blurb">System sans · 14px · weight 600 · normal case. Modern, action-oriented, app-native.</p>
+      <div class="phone">
+        <div class="phone-inner">
+          <p class="feed-strip-label">— end of feed —</p>
+          <div class="faux-grid">
+            <div class="faux-tile"></div>
+            <div class="faux-tile t2"></div>
+            <div class="faux-tile t3"></div>
+            <div class="faux-tile t4"></div>
+          </div>
+          <div class="hairline-row"><div class="hairline"></div></div>
+
+          <div class="gamma-card">
+            <div class="deco-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l1.5-4.5h15L21 9"/>
+                <path d="M3 9v11h18V9"/>
+                <path d="M3 9c0 1.5 1 2.5 2.5 2.5S8 10.5 8 9"/>
+                <path d="M8 9c0 1.5 1 2.5 2.5 2.5S13 10.5 13 9"/>
+                <path d="M13 9c0 1.5 1 2.5 2.5 2.5S18 10.5 18 9"/>
+                <path d="M18 9c0 1.5 1 2.5 2 2.5S21 10.5 21 9"/>
+                <path d="M9 20v-6h6v6"/>
+              </svg>
+            </div>
+            <p class="pretitle">For vendors</p>
+            <p class="head">Share your booth<br/>on Treehouse Finds.</p>
+            <p class="sub">Photo your finds, share your shelf, reach buyers between mall visits.</p>
+            <a class="btn sans-semi" href="#">
+              Request Digital Booth
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 6 15 12 9 18"/>
+              </svg>
+            </a>
+          </div>
+
+          <div class="bottom-nav-faux">
+            <div class="nav-item active">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>
+              Home
+            </div>
+            <div class="nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18l3-2 4 2 4-2 3 2V3z"/></svg>
+              Your Finds
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>Read:</strong> the button just gets out of the way. IM Fell headline does the editorial heavy-lifting; button reads as a clear primary action. <strong>My pick.</strong>
+      </div>
+    </div>
+
+    <!-- TREATMENT 2 -->
+    <div class="frame-col">
+      <p class="variant-name">Treatment 2 — Sans tracked</p>
+      <p class="variant-blurb">System sans · 11px · weight 600 · letter-spacing 0.14em · uppercase. Editorial, retail-store, premium.</p>
+      <div class="phone">
+        <div class="phone-inner">
+          <p class="feed-strip-label">— end of feed —</p>
+          <div class="faux-grid">
+            <div class="faux-tile"></div>
+            <div class="faux-tile t2"></div>
+            <div class="faux-tile t3"></div>
+            <div class="faux-tile t4"></div>
+          </div>
+          <div class="hairline-row"><div class="hairline"></div></div>
+
+          <div class="gamma-card">
+            <div class="deco-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l1.5-4.5h15L21 9"/>
+                <path d="M3 9v11h18V9"/>
+                <path d="M3 9c0 1.5 1 2.5 2.5 2.5S8 10.5 8 9"/>
+                <path d="M8 9c0 1.5 1 2.5 2.5 2.5S13 10.5 13 9"/>
+                <path d="M13 9c0 1.5 1 2.5 2.5 2.5S18 10.5 18 9"/>
+                <path d="M18 9c0 1.5 1 2.5 2 2.5S21 10.5 21 9"/>
+                <path d="M9 20v-6h6v6"/>
+              </svg>
+            </div>
+            <p class="pretitle">For vendors</p>
+            <p class="head">Share your booth<br/>on Treehouse Finds.</p>
+            <p class="sub">Photo your finds, share your shelf, reach buyers between mall visits.</p>
+            <a class="btn sans-tracked" href="#">
+              Request Digital Booth
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 6 15 12 9 18"/>
+              </svg>
+            </a>
+          </div>
+
+          <div class="bottom-nav-faux">
+            <div class="nav-item active">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>
+              Home
+            </div>
+            <div class="nav-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18l3-2 4 2 4-2 3 2V3z"/></svg>
+              Your Finds
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="annotation">
+        <strong>Read:</strong> department-store-window register. The card now has three "look at me" elements (eyebrow, headline, button) — they all earn it, but the button competes a little harder with the headline.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Buttons-only comparison strip ────────────────────────────── -->
+  <div class="button-strip">
+    <h4>Button-only comparison · zoomed</h4>
+    <div class="button-strip-grid">
+      <div class="btn-cell">
+        <p class="btn-cell-label">Treatment 1 — sans semibold</p>
+        <a class="btn sans-semi" href="#">
+          Request Digital Booth
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 6 15 12 9 18"/>
+          </svg>
+        </a>
+        <p class="btn-cell-spec">14px · weight 600 · letter-spacing −0.005em · normal case</p>
+      </div>
+      <div class="btn-cell">
+        <p class="btn-cell-label">Treatment 2 — sans tracked uppercase</p>
+        <a class="btn sans-tracked" href="#">
+          Request Digital Booth
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 6 15 12 9 18"/>
+          </svg>
+        </a>
+        <p class="btn-cell-spec">11px · weight 600 · letter-spacing 0.14em · uppercase</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
