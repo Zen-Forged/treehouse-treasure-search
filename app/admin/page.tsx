@@ -1853,8 +1853,9 @@ function FeaturedBannerEditor({
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   const [loading,    setLoading]    = useState(true);
   const [uploading,  setUploading]  = useState(false);
+  const [removing,   setRemoving]   = useState(false);
   const [error,      setError]      = useState<string | null>(null);
-  const [success,    setSuccess]    = useState(false);
+  const [success,    setSuccess]    = useState<string | null>(null);
 
   async function loadCurrent() {
     setLoading(true);
@@ -1879,7 +1880,7 @@ function FeaturedBannerEditor({
 
     setUploading(true);
     setError(null);
-    setSuccess(false);
+    setSuccess(null);
 
     try {
       const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -1900,14 +1901,42 @@ function FeaturedBannerEditor({
         setError(json.error ?? `Upload failed (HTTP ${res.status})`);
       } else {
         setCurrentUrl(json.url);
-        setSuccess(true);
-        setTimeout(() => setSuccess(false), 2500);
+        setSuccess("Uploaded — live now.");
+        setTimeout(() => setSuccess(null), 2500);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unexpected error");
     }
 
     setUploading(false);
+  }
+
+  async function handleRemove() {
+    if (!currentUrl) return;
+    if (!window.confirm(`Remove the ${label.toLowerCase()} image? This takes it off the live site.`)) return;
+
+    setRemoving(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const res = await authFetch(`/api/admin/featured-image?settingKey=${encodeURIComponent(settingKey)}`, {
+        method: "DELETE",
+      });
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setError(json.error ?? `Remove failed (HTTP ${res.status})`);
+      } else {
+        setCurrentUrl(null);
+        setSuccess("Removed — placeholder is live.");
+        setTimeout(() => setSuccess(null), 2500);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unexpected error");
+    }
+
+    setRemoving(false);
   }
 
   const inputId = `featured-banner-input-${settingKey}`;
@@ -1980,7 +2009,7 @@ function FeaturedBannerEditor({
             No image set yet
           </div>
         )}
-        {uploading && (
+        {(uploading || removing) && (
           <div style={{
             position: "absolute", inset: 0, display: "flex",
             alignItems: "center", justifyContent: "center", gap: 8,
@@ -1988,7 +2017,7 @@ function FeaturedBannerEditor({
             fontSize: 12, fontWeight: 500, color: colors.textMid,
           }}>
             <LoaderIcon size={14} style={{ animation: "spin 0.9s linear infinite" }} />
-            Uploading…
+            {uploading ? "Uploading…" : "Removing…"}
           </div>
         )}
       </div>
@@ -2000,12 +2029,12 @@ function FeaturedBannerEditor({
           display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
           padding: "10px 14px",
           borderRadius: 10,
-          background: uploading ? colors.surface : colors.green,
-          color: uploading ? colors.textMuted : "#fff",
+          background: (uploading || removing) ? colors.surface : colors.green,
+          color: (uploading || removing) ? colors.textMuted : "#fff",
           fontSize: 12, fontWeight: 600,
-          border: `1px solid ${uploading ? colors.border : colors.green}`,
-          cursor: uploading ? "default" : "pointer",
-          opacity: uploading ? 0.6 : 1,
+          border: `1px solid ${(uploading || removing) ? colors.border : colors.green}`,
+          cursor: (uploading || removing) ? "default" : "pointer",
+          opacity: (uploading || removing) ? 0.6 : 1,
         }}
       >
         <Upload size={12} />
@@ -2015,10 +2044,34 @@ function FeaturedBannerEditor({
         id={inputId}
         type="file"
         accept="image/*"
-        disabled={uploading}
+        disabled={uploading || removing}
         onChange={handleFileChange}
         style={{ display: "none" }}
       />
+
+      {/* Remove link — visible only when an image is currently set */}
+      {currentUrl && (
+        <button
+          type="button"
+          onClick={handleRemove}
+          disabled={uploading || removing}
+          style={{
+            display: "block",
+            width: "100%",
+            marginTop: 8,
+            padding: "8px 14px",
+            borderRadius: 10,
+            background: "transparent",
+            color: (uploading || removing) ? colors.textFaint : colors.red,
+            fontSize: 11, fontWeight: 500,
+            border: `1px solid ${(uploading || removing) ? colors.border : colors.redBorder}`,
+            cursor: (uploading || removing) ? "default" : "pointer",
+            opacity: (uploading || removing) ? 0.5 : 1,
+          }}
+        >
+          Remove image
+        </button>
+      )}
 
       {/* Feedback */}
       {error && (
@@ -2036,7 +2089,7 @@ function FeaturedBannerEditor({
           background: colors.greenLight, border: `1px solid ${colors.greenBorder}`,
           fontSize: 11, color: colors.green, lineHeight: 1.5, fontWeight: 500,
         }}>
-          ✓ Uploaded — live now.
+          ✓ {success}
         </div>
       )}
 
