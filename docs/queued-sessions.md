@@ -202,6 +202,62 @@ When Universal Links / apple-app-site-association ship. At that point:
 
 ---
 
+## Q-012 🟡 Treehouse opener animation — full Design redesign
+
+**Status:** 🟡 Parked. Needs a dedicated Design session, mockup-first. **Not a continuation** of the session-64 first-pass implementation — that's reverted; revisit means starting from scratch on visual direction.
+
+**Created:** 2026-04-25 (session 64 — first pass shipped + reverted same session)
+
+**What happened:** David received a React Native / Expo intent doc for a "Treehouse opener" — a cinematic threshold animation for the home page. Session 64 ported it to a framer-motion + CSS web component (commit `c9043c8`), wired it into `/` with first-visit-only mobile-only gating, then reverted it (`1946ddd`) after on-device QA — "first pass looked pretty terrible." The wood-frame + skeleton-preview combo read flat on real iPhone. The literal "wooden window" metaphor probably doesn't survive a redesign; the brand is paper + IM Fell, not lacquered carpentry.
+
+### Why this is a full redesign, not an iteration
+
+The reverted commit was a faithful translation of the RN intent doc — same colors, same easings, same 4-phase beat. It compiled, it ran, it ticked every spec checkbox. It just didn't land aesthetically. That's a Design problem, not a Dev problem. A Dev iteration ("tweak the wood gradient," "shorten the sweep") won't fix it because the underlying visual direction is wrong. The next pass needs to re-derive what a Treehouse Finds opener should *feel* like, mockup-first, before any code lands.
+
+### What's recoverable from `c9043c8` (reference only, not direction)
+
+If the future session wants to mine the prior pass for ideas, the design intent is preserved in git history. But treat these as "what was tried" not "what should ship":
+
+- **4-phase structure:** stillness → frame appears → light sweep → reveal. Total ~3.2s. The beat structure may survive a redesign even if the visuals don't.
+- **Color tokens:** cream `#F4EFE6`, forest `#1F3D2B`, gold `#E6C27A`, wood three-tone (`#8B6F47` / `#6B502E` / `#3E2C18`). Cream + forest + gold are aligned with the Treehouse palette; wood was the experimental direction that didn't land.
+- **Easings:** `cubic-bezier(0.32, 0.72, 0.24, 1)` (organic) and `cubic-bezier(0.16, 1, 0.3, 1)` (ease-out for the frame). Nothing brand-specific; reusable in any animation.
+- **Microcopy:** "Embrace the search." Italic Georgia, lowercase, 14px tracked 0.1em. The phrase is good; the typographic treatment is generic.
+- **Skip affordance:** tap-anywhere mid-animation → fade out + onFinish. Worth keeping in any direction.
+- **Gating logic in `app/page.tsx`:** localStorage flag `treehouse_opener_seen_v1`, `matchMedia('(max-width: 768px)')` for mobile-only. Reusable wholesale once a new opener exists.
+
+The original RN intent doc itself is also in `c9043c8` git history — the file `components/TreehouseOpener.tsx` at that commit. Not the React Native original (that was overwritten in the first port), but the framer-motion port that preserved the same animation grammar.
+
+### Decisions already locked from session 64 (apply to redesign too)
+
+- **D1 — Frequency:** First-visit-only. localStorage flag `treehouse_opener_seen_v1` (the `_v1` suffix lets us reset for everyone if a v2 ships).
+- **D2 — Skip affordance:** Tap-anywhere mid-animation → fade out + onFinish.
+- **D3 — Behind the glass:** Real feed mounts behind the opener (load-state-as-art). The session-64 first pass used a static skeleton preview as a compromise; a v2 should consider transparent cutout + live `backdrop-filter` blur of the actual feed.
+- **D4 — Mobile only:** Hide on viewports >768px. Desktop never plays it.
+
+### What the Design session should produce
+
+Mockup-first per the session-28 rule. The animation IS the commitment surface — phone-frame HTML mockups don't capture motion, so the working framer-motion component itself is the mockup. But before any code, a still-frame design pass:
+
+1. **Mood-board / direction picker** — 2–3 distinct visual directions for the opener, each as a still-frame phone mockup showing the peak moment of the animation. Examples of direction (not prescriptions): paper unfolding, light coming through leaves, a vintage shop sign lighting up at dusk, IM Fell letterforms assembling. The wood-frame window is explicitly NOT one of the directions.
+2. **Beat structure decision** — 4-phase (current) vs. 3-phase vs. 2-phase. Total duration 2–3.5s.
+3. **Microcopy** — keep "Embrace the search." or revise.
+4. **The build is one session** after Design picks a direction. ~1 session for mockup + scoping, ~1 session for build + iterate in `/opener-preview` route. The route should ship in the same commit as the rebuilt component.
+
+**Estimate:** 1 Design session (~1 hr) + 1 build session (~1 hr). Not for the immediate near term — V1 unblocker (feed content seeding) takes priority.
+
+### Session opener (when picked up)
+
+```
+PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
+STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Vercel
+Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
+Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
+
+CURRENT ISSUE: Q-012 — Treehouse opener animation, full Design redesign. Session 64 shipped + reverted a first pass (commits c9043c8 + 1946ddd) — wood-frame + skeleton-preview combo didn't land aesthetically. This session is NOT a continuation of that implementation; it's a fresh Design pass. Read docs/queued-sessions.md §Q-012 for what's recoverable as design intent vs. what needs to be re-derived. Decisions D1–D4 (first-visit-only, tap-to-skip, real-feed-behind-the-glass, mobile-only) are locked from session 64. Goal of this session: produce a still-frame mood board with 2–3 distinct visual directions for the peak moment of the animation (none of them the literal wooden-window metaphor), pick one with David, then close as design-to-Ready for a follow-up build session.
+```
+
+---
+
 ## ⏸️ Q-002 — Picker affordance placement revision — SHIPPED session 57
 
 **Retirement reason:** Shipped session 57 (2026-04-24) exactly per the approved direction. `Masthead` center column reverted to the "Treehouse Finds" brand lockup (session-40 right-slot share airplane preserved). `<BoothTitleBlock>` gained an optional `onPickerOpen` prop that turns the 32px IM Fell booth name into a tap target with an inline `▾` chevron when `/my-shelf` detects `vendorList.length > 1` (i.e. `showPicker`). Public Shelf + single-booth consumers omit the prop; the affordance is invisible in those contexts. Mockup `docs/mockups/my-shelf-multi-booth-v1.html` Frames 2 + 3 updated in the same commit to keep the mockup as the source of truth per the session-28 mockup-wins rule.
