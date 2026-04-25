@@ -61,7 +61,7 @@ import {
 } from "@/lib/posts";
 import { resolveActiveBooth } from "@/lib/activeBooth";
 import { compressImage, uploadPostImageViaServer } from "@/lib/imageUpload";
-import { postStore } from "@/lib/postStore";
+import { postStore, type PostDraft } from "@/lib/postStore";
 import { safeStorage } from "@/lib/safeStorage";
 import { getSession, isAdmin } from "@/lib/auth";
 import {
@@ -73,6 +73,7 @@ import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import PhotographPreview from "@/components/PhotographPreview";
 import PostingAsBlock from "@/components/PostingAsBlock";
 import AmberNotice from "@/components/AmberNotice";
+import TagBadge from "@/components/TagBadge";
 
 const FACEBOOK_PAGE_URL = "https://www.facebook.com/KentuckyTreehouse";
 const FEED_SCROLL_KEY   = "treehouse_feed_scroll";
@@ -149,6 +150,13 @@ function PostPreviewInner() {
   const [errorDetail,   setErrorDetail]   = useState<string>("");
   const [aiFailed,      setAiFailed]      = useState(false);
 
+  // Session 62 — tag-flow display flags. All default to false; only set true
+  // when /post/tag pre-populated postStore with extraction results.
+  const [tagFailed,     setTagFailed]     = useState(false);
+  const [titleFromTag,  setTitleFromTag]  = useState(false);
+  const [priceFromTag,  setPriceFromTag]  = useState(false);
+  const [priceMissing,  setPriceMissing]  = useState(false);
+
   const [title,   setTitle]   = useState("");
   const [caption, setCaption] = useState("");
   const [price,   setPrice]   = useState("");
@@ -184,7 +192,7 @@ function PostPreviewInner() {
         const v = await getVendorById(vParam);
         if (v) {
           setVendor(v);
-          startCaption(draft.imageDataUrl);
+          hydrateFields(draft);
           return;
         }
       }
@@ -194,7 +202,7 @@ function PostPreviewInner() {
         const active  = resolveActiveBooth(vendors);
         if (active) {
           setVendor(active);
-          startCaption(draft.imageDataUrl);
+          hydrateFields(draft);
           return;
         }
         // Signed-in user with no linked vendor — route back to /my-shelf
@@ -211,7 +219,7 @@ function PostPreviewInner() {
         try {
           const p = JSON.parse(raw) as LocalVendorProfile;
           setLocalProfile(p);
-          startCaption(draft.imageDataUrl);
+          hydrateFields(draft);
           return;
         } catch {}
       }
@@ -219,8 +227,49 @@ function PostPreviewInner() {
       router.replace("/login?next=/my-shelf");
     })();
 
-    function startCaption(imageDataUrl: string) {
-      generateTitleAndCaption(imageDataUrl).then(({ title: t, caption: c, aiSucceeded }) => {
+    // Session 62 — branches between two flows:
+    //
+    //   Skip flow (extractionRan undefined or "skip"): today's behavior —
+    //     fire /api/post-caption on mount, prefill title + caption from
+    //     Claude on the item photo, leave price empty.
+    //
+    //   Tag flow (extractionRan "success" or "error"): /post/tag already
+    //     pre-fetched extract-tag + post-caption in parallel and wrote
+    //     results into postStore. Read them and prefill — no network call
+    //     here, so the page renders fully populated on first paint.
+    //
+    // Tag-success priority (D6): extractedTitle wins over captionTitle.
+    // Caption is always interpretive (Claude on item photo), never tag.
+    // When tag both-fields-empty (full failure), surface the tag-fail
+    // notice and let the vendor type both fields. Caption-fail in tag
+    // flow is silent — caption is optional, no notice needed.
+    function hydrateFields(d: PostDraft) {
+      if (d.extractionRan === "success" || d.extractionRan === "error") {
+        const extTitle    = d.extractedTitle ?? "";
+        const extPrice    = d.extractedPrice ?? null;
+        const capText     = d.captionText ?? "";
+        const ranSuccess  = d.extractionRan === "success";
+        const fullyFailed = !ranSuccess || (extTitle === "" && extPrice == null);
+
+        if (fullyFailed) {
+          setTitle("");
+          setCaption(capText);
+          setPrice("");
+          setTagFailed(true);
+        } else {
+          setTitle(extTitle);
+          setCaption(capText);
+          setPrice(extPrice != null ? String(extPrice) : "");
+          setTitleFromTag(extTitle !== "");
+          setPriceFromTag(extPrice != null);
+          setPriceMissing(extPrice == null);
+        }
+        setStage("edit");
+        return;
+      }
+
+      // Skip flow — today's behavior.
+      generateTitleAndCaption(d.imageDataUrl).then(({ title: t, caption: c, aiSucceeded }) => {
         setTitle(t);
         setCaption(c);
         setAiFailed(!aiSucceeded);
@@ -780,8 +829,20 @@ function PostPreviewInner() {
             </AmberNotice>
           )}
 
+          {tagFailed && (
+            <AmberNotice>
+              Couldn&rsquo;t read this tag — fill in the title and price below.
+            </AmberNotice>
+          )}
+
+          {priceMissing && !tagFailed && (
+            <AmberNotice>
+              Couldn&rsquo;t read the price on the tag — fill it in below.
+            </AmberNotice>
+          )}
+
           {/* Title */}
-          <FieldGroup label="Title">
+          <FieldGroup label="Title" badge={titleFromTag ? <TagBadge /> : undefined}>
             <input
               type="text"
               value={title}
@@ -808,7 +869,7 @@ function PostPreviewInner() {
           </FieldGroup>
 
           {/* Price */}
-          <FieldGroup label="Price" optional>
+          <FieldGroup label="Price" optional badge={priceFromTag ? <TagBadge /> : undefined}>
             <div style={{ position: "relative" }}>
               <span
                 style={{
@@ -897,13 +958,17 @@ function PostPreviewInner() {
 
 // ── FieldGroup helper ─────────────────────────────────────────────────────────
 // Encapsulates the label + input pair so the markup above stays scannable.
+// Session 62 — `badge` prop accepts an inline node (e.g. <TagBadge />) shown
+// alongside the label; used to signal "this field was prefilled from the tag."
 function FieldGroup({
   label,
   optional,
+  badge,
   children,
 }: {
   label: string;
   optional?: boolean;
+  badge?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -915,14 +980,21 @@ function FieldGroup({
           fontSize: 13,
           color: v1.inkMuted,
           lineHeight: 1.3,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          flexWrap: "wrap",
         }}
       >
-        {label}
-        {optional && (
-          <span style={{ color: v1.inkFaint, fontStyle: "italic", marginLeft: 4 }}>
-            (optional)
-          </span>
-        )}
+        <span>
+          {label}
+          {optional && (
+            <span style={{ color: v1.inkFaint, fontStyle: "italic", marginLeft: 4 }}>
+              (optional)
+            </span>
+          )}
+        </span>
+        {badge}
       </label>
       {children}
     </div>
