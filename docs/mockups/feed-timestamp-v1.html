@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Feed Timestamp Placement (v1)</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Caveat:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --pill-bg:      rgba(247, 239, 217, 0.88);
+    --pill-bg-frost: rgba(232, 221, 199, 0.78);
+    --green:        #1e4d2b;
+
+    --im-fell: "IM Fell English", Georgia, serif;
+    --sys:     -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+
+  .page-wrap { max-width: 1320px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  h1.title {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 680px;
+  }
+  .decisions {
+    max-width: 820px;
+    margin: 0 auto 36px;
+    padding: 18px 24px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--im-fell);
+    font-size: 18px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 10px;
+    letter-spacing: -0.005em;
+  }
+  .decisions ul { margin: 8px 0 0; padding: 0 0 0 20px; }
+  .decisions li { margin-bottom: 6px; }
+  .decisions strong { color: #fff9e8; font-weight: 500; }
+  .decisions .q-block {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(232, 221, 199, 0.14);
+  }
+  .decisions .q-block ol { margin: 8px 0 0; padding: 0 0 0 20px; }
+  .decisions .q-block ol li { margin-bottom: 8px; }
+
+  .group-label {
+    max-width: 1280px;
+    margin: 48px auto 18px;
+    padding: 0 8px;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+  .group-number {
+    font-family: var(--im-fell);
+    font-size: 38px;
+    color: #e8ddc7;
+    line-height: 1;
+  }
+  .group-title {
+    font-family: var(--im-fell);
+    font-size: 20px;
+    color: #e8ddc7;
+    letter-spacing: -0.005em;
+  }
+  .group-note {
+    font-family: var(--sys);
+    font-size: 12px;
+    color: rgba(232, 221, 199, 0.62);
+    line-height: 1.5;
+    margin-left: auto;
+    max-width: 420px;
+    text-align: right;
+    font-style: italic;
+  }
+
+  .triple-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    max-width: 1320px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1100px) { .triple-row { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 760px)  { .triple-row { grid-template-columns: 1fr; } }
+
+  .phone {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    border-radius: 30px;
+    background: var(--paper);
+    overflow: hidden;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+  }
+  .phone-label {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.78);
+    font-size: 12px;
+    margin-top: 12px;
+    line-height: 1.5;
+  }
+  .phone-label strong {
+    color: #fff9e8;
+    font-weight: 500;
+    font-size: 13px;
+    display: block;
+    margin-bottom: 2px;
+    font-family: var(--im-fell);
+    font-style: italic;
+  }
+
+  /* ── Phone interior ──────────────────────────────── */
+  .feed-head {
+    padding: 20px 18px 14px;
+    border-bottom: 1px solid var(--ink-hairline);
+  }
+  .wordmark {
+    font-family: var(--im-fell);
+    font-size: 20px;
+    color: var(--ink-primary);
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+
+  .masonry {
+    padding: 14px 12px 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .masonry .col { display: flex; flex-direction: column; gap: 10px; }
+
+  .tile {
+    position: relative;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--postit);
+    border: 1px solid var(--ink-hairline);
+    box-shadow: 0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05);
+  }
+  .tile img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Heart bubble — always present so we can see how the timestamp coexists */
+  .heart {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--pill-bg-frost);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 0.5px solid rgba(42,26,10,0.12);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2;
+  }
+  .heart svg { width: 14px; height: 14px; stroke: var(--ink-primary); fill: none; stroke-width: 1.6; }
+
+  /* ── Variant A: top-left frosted pill ───────────── */
+  .ts-frosted-tl {
+    position: absolute;
+    top: 8px; left: 8px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--pill-bg-frost);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 0.5px solid rgba(42,26,10,0.12);
+    font-family: var(--sys);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--ink-primary);
+    letter-spacing: 0.01em;
+    line-height: 1.1;
+    z-index: 2;
+  }
+
+  /* ── Variant B: bottom-left frosted pill ────────── */
+  .ts-frosted-bl {
+    position: absolute;
+    bottom: 8px; left: 8px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--pill-bg-frost);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 0.5px solid rgba(42,26,10,0.12);
+    font-family: var(--sys);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--ink-primary);
+    line-height: 1.1;
+    z-index: 2;
+  }
+
+  /* ── Variant C: bottom-left "darkroom date stamp" ── */
+  /* Inset, no chip, italic IM Fell, cream ink + drop shadow for legibility */
+  .ts-stamp-bl {
+    position: absolute;
+    bottom: 8px; left: 10px;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 14px;
+    color: rgba(255, 250, 234, 0.92);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.55), 0 0 1px rgba(0,0,0,0.7);
+    letter-spacing: 0.005em;
+    z-index: 2;
+  }
+
+  /* ── Variant D: below tile, right-aligned, system small ── */
+  .tile-with-meta-D { /* container for tile + meta */ }
+  .meta-D {
+    text-align: right;
+    padding: 4px 2px 0;
+    font-family: var(--sys);
+    font-size: 10px;
+    color: var(--ink-muted);
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+  }
+
+  /* ── Variant E: below tile, italic editorial line ── */
+  .meta-E {
+    padding: 5px 2px 0;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.25;
+    text-align: left;
+  }
+
+  /* ── Variant F: below tile, centered tiny w/ em-dashes ── */
+  .meta-F {
+    padding: 5px 2px 0;
+    font-family: var(--sys);
+    font-style: italic;
+    font-size: 10px;
+    color: var(--ink-muted);
+    text-align: center;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+  }
+
+  /* Heart positions for "with timestamp also bottom-left" — keep heart top-right always */
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <h1 class="title">Feed timestamp — placement options</h1>
+  <p class="subtitle">Six variants — three on-image, three below-image — for the relative timestamp on each masonry tile.</p>
+
+  <div class="decisions">
+    <h3>What this mockup is asking you to judge</h3>
+    <p>The feed is currently <strong>photograph-only</strong> — every tile is just the image with the heart bubble top-right. Adding a relative timestamp introduces new chrome. <strong>On-image</strong> keeps the masonry rhythm tight (no text below). <strong>Below-image</strong> reads more clearly but adds a meta line under every tile.</p>
+    <ul>
+      <li><strong>A</strong> — Top-left frosted pill (mirrors heart's chrome, visual pair)</li>
+      <li><strong>B</strong> — Bottom-left frosted pill (less competition with heart)</li>
+      <li><strong>C</strong> — Bottom-left "darkroom date stamp" — italic IM Fell on photo, no chip</li>
+      <li><strong>D</strong> — Below tile, right-aligned, small system muted</li>
+      <li><strong>E</strong> — Below tile, italic IM Fell editorial line ("Posted 2d ago")</li>
+      <li><strong>F</strong> — Below tile, centered tiny with em-dashes</li>
+    </ul>
+    <div class="q-block">
+      <strong style="color:#fff9e8">Decisions to make:</strong>
+      <ol>
+        <li><strong>Placement</strong> — on-image (A/B/C) or below-image (D/E/F)?</li>
+        <li><strong>Voice</strong> — system-ui terse ("2d ago") or editorial ("Posted 2d ago")?</li>
+        <li><strong>Visibility on photo</strong> — frosted pill (A/B) or just text on the photo (C)?</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Group 1: On-image variants -->
+  <div class="group-label">
+    <span class="group-number">1</span>
+    <span class="group-title">On the image</span>
+    <span class="group-note">Tight masonry rhythm preserved. Risk: timestamps fight with photo content.</span>
+  </div>
+
+  <div class="triple-row">
+
+    <div>
+      <div class="phone">
+        <div class="feed-head"><div class="wordmark">Treehouse Finds</div></div>
+        <div class="masonry">
+          <div class="col">
+            <div class="tile" style="aspect-ratio:3/4">
+              <img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=400" alt="">
+              <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              <div class="ts-frosted-tl">Today</div>
+            </div>
+            <div class="tile" style="aspect-ratio:4/5">
+              <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=400" alt="">
+              <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              <div class="ts-frosted-tl">2d ago</div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="tile" style="aspect-ratio:4/5">
+              <img src="https://images.unsplash.com/photo-1503602642458-232111445657?w=400" alt="">
+              <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              <div class="ts-frosted-tl">Yesterday</div>
+            </div>
+            <div class="tile" style="aspect-ratio:3/4">
+              <img src="https://images.unsplash.com/photo-1530353954-d7e3a4f4eaf6?w=400" alt="">
+              <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              <div class="ts-frosted-tl">1w ago</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label"><strong>Variant A</strong>Frosted pill · top-left · system-ui 10px<br>Mirrors the heart's chrome — visual pair top-corners.</div>
+    </div>
+
+    <div>
+      <div class="phone">
+        <div class="feed-head"><div class="wordmark">Treehouse Finds</div></div>
+        <div class="masonry">
+          <div class="col">
+            <div class="tile" style="aspect-ratio:3/4">
+              <img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=400" alt="">
+              <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              <div class="ts-frosted-bl">Today</div>
+            </div>
+            <div class="tile" style="aspect-ratio:4/5">
+              <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=400" alt="">
+              <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              <div class="ts-frosted-bl">2d ago</div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="tile" style="aspect-ratio:4/5">
+              <img src="https://images.unsplash.com/photo-1503602642458-232111445657?w=400" alt="">
+              <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              <div class="ts-frosted-bl">Yesterday</div>
+            </div>
+            <div class="tile" style="aspect-ratio:3/4">
+              <img src="https://images.unsplash.com/photo-1530353954-d7e3a4f4eaf6?w=400" alt="">
+              <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              <div class="ts-frosted-bl">1w ago</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label"><strong>Variant B</strong>Frosted pill · bottom-left · system-ui 10px<br>Heart and stamp on opposite corners — no top crowding.</div>
+    </div>
+
+    <div>
+      <div class="phone">
+        <div class="feed-head"><div class="wordmark">Treehouse Finds</div></div>
+        <div class="masonry">
+          <div class="col">
+            <div class="tile" style="aspect-ratio:3/4">
+              <img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=400" alt="">
+              <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              <div class="ts-stamp-bl">Today</div>
+            </div>
+            <div class="tile" style="aspect-ratio:4/5">
+              <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=400" alt="">
+              <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              <div class="ts-stamp-bl">2d ago</div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="tile" style="aspect-ratio:4/5">
+              <img src="https://images.unsplash.com/photo-1503602642458-232111445657?w=400" alt="">
+              <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              <div class="ts-stamp-bl">Yesterday</div>
+            </div>
+            <div class="tile" style="aspect-ratio:3/4">
+              <img src="https://images.unsplash.com/photo-1530353954-d7e3a4f4eaf6?w=400" alt="">
+              <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              <div class="ts-stamp-bl">1w ago</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label"><strong>Variant C</strong>"Darkroom" stamp · bottom-left · IM Fell italic 14px · cream + shadow<br>No chip — reads as a date marked into the photograph itself.</div>
+    </div>
+
+  </div>
+
+  <!-- Group 2: Below-image variants -->
+  <div class="group-label">
+    <span class="group-number">2</span>
+    <span class="group-title">Below the image</span>
+    <span class="group-note">Cleaner read; never fights with photo content. Risk: adds vertical chrome to every tile.</span>
+  </div>
+
+  <div class="triple-row">
+
+    <div>
+      <div class="phone">
+        <div class="feed-head"><div class="wordmark">Treehouse Finds</div></div>
+        <div class="masonry">
+          <div class="col">
+            <div>
+              <div class="tile" style="aspect-ratio:3/4">
+                <img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=400" alt="">
+                <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              </div>
+              <div class="meta-D">Today</div>
+            </div>
+            <div>
+              <div class="tile" style="aspect-ratio:4/5">
+                <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=400" alt="">
+                <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              </div>
+              <div class="meta-D">2d ago</div>
+            </div>
+          </div>
+          <div class="col">
+            <div>
+              <div class="tile" style="aspect-ratio:4/5">
+                <img src="https://images.unsplash.com/photo-1503602642458-232111445657?w=400" alt="">
+                <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              </div>
+              <div class="meta-D">Yesterday</div>
+            </div>
+            <div>
+              <div class="tile" style="aspect-ratio:3/4">
+                <img src="https://images.unsplash.com/photo-1530353954-d7e3a4f4eaf6?w=400" alt="">
+                <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              </div>
+              <div class="meta-D">1w ago</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label"><strong>Variant D</strong>Right-aligned · system-ui 10px · ink-muted<br>Quietest below-image option. Reads as a quiet wayfinder.</div>
+    </div>
+
+    <div>
+      <div class="phone">
+        <div class="feed-head"><div class="wordmark">Treehouse Finds</div></div>
+        <div class="masonry">
+          <div class="col">
+            <div>
+              <div class="tile" style="aspect-ratio:3/4">
+                <img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=400" alt="">
+                <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              </div>
+              <div class="meta-E">Posted today</div>
+            </div>
+            <div>
+              <div class="tile" style="aspect-ratio:4/5">
+                <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=400" alt="">
+                <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              </div>
+              <div class="meta-E">Posted 2d ago</div>
+            </div>
+          </div>
+          <div class="col">
+            <div>
+              <div class="tile" style="aspect-ratio:4/5">
+                <img src="https://images.unsplash.com/photo-1503602642458-232111445657?w=400" alt="">
+                <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              </div>
+              <div class="meta-E">Posted yesterday</div>
+            </div>
+            <div>
+              <div class="tile" style="aspect-ratio:3/4">
+                <img src="https://images.unsplash.com/photo-1530353954-d7e3a4f4eaf6?w=400" alt="">
+                <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              </div>
+              <div class="meta-E">Posted 1w ago</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label"><strong>Variant E</strong>Editorial · IM Fell italic 13px · ink-muted<br>Brand voice; matches Find Detail's caption register.</div>
+    </div>
+
+    <div>
+      <div class="phone">
+        <div class="feed-head"><div class="wordmark">Treehouse Finds</div></div>
+        <div class="masonry">
+          <div class="col">
+            <div>
+              <div class="tile" style="aspect-ratio:3/4">
+                <img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=400" alt="">
+                <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              </div>
+              <div class="meta-F">— today —</div>
+            </div>
+            <div>
+              <div class="tile" style="aspect-ratio:4/5">
+                <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?w=400" alt="">
+                <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              </div>
+              <div class="meta-F">— 2d ago —</div>
+            </div>
+          </div>
+          <div class="col">
+            <div>
+              <div class="tile" style="aspect-ratio:4/5">
+                <img src="https://images.unsplash.com/photo-1503602642458-232111445657?w=400" alt="">
+                <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              </div>
+              <div class="meta-F">— yesterday —</div>
+            </div>
+            <div>
+              <div class="tile" style="aspect-ratio:3/4">
+                <img src="https://images.unsplash.com/photo-1530353954-d7e3a4f4eaf6?w=400" alt="">
+                <div class="heart"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z" /></svg></div>
+              </div>
+              <div class="meta-F">— 1w ago —</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-label"><strong>Variant F</strong>Centered tiny · system-ui italic 10px · ink-muted<br>Decorative ledger style with em-dashes.</div>
+    </div>
+
+  </div>
+
+</div>
+</body>
+</html>

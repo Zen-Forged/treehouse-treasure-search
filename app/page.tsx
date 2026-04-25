@@ -46,7 +46,7 @@ import { Heart, ChevronDown } from "lucide-react";
 import { getFeedPosts, getActiveMalls } from "@/lib/posts";
 import { getSession, signOut, onAuthChange } from "@/lib/auth";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
-import { flagKey, loadFollowedIds } from "@/lib/utils";
+import { flagKey, loadFollowedIds, formatTimeAgo } from "@/lib/utils";
 import { safeStorage } from "@/lib/safeStorage";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
@@ -357,6 +357,23 @@ function MasonryTile({
               pointerEvents: "none",
             }}
           />
+        </div>
+
+        {/* Relative timestamp — Variant D from feed-timestamp-v1.html mockup.
+            Right-aligned, system-ui 10px, ink-muted. Sits inside the Link so
+            it's part of the tile's tap target. */}
+        <div
+          style={{
+            padding: "4px 2px 0",
+            fontFamily: FONT_SYS,
+            fontSize: 10,
+            color: v1.inkMuted,
+            letterSpacing: "0.01em",
+            lineHeight: 1.2,
+            textAlign: "right",
+          }}
+        >
+          {formatTimeAgo(post.created_at)}
         </div>
       </Link>
     </div>

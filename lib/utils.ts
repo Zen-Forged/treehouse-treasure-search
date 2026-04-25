@@ -52,6 +52,26 @@ export function mapsUrl(query: string): string {
   return `https://maps.apple.com/?q=${encodeURIComponent(query)}`;
 }
 
+// ── Relative time ─────────────────────────────────────────────────────────────
+// Calendar-day comparison (not 24-hour rolling) so a post made at 11:59pm is
+// "Yesterday" — not "Today" — when viewed at 12:01am. Same-day posts and any
+// future-dated input collapse to "Today" rather than throwing.
+export function formatTimeAgo(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const then = new Date(iso);
+  if (isNaN(then.getTime())) return "";
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfThen  = new Date(then.getFullYear(), then.getMonth(), then.getDate()).getTime();
+  const days = Math.round((startOfToday - startOfThen) / 86_400_000);
+  if (days <= 0)  return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7)   return `${days}d ago`;
+  if (days < 30)  return `${Math.floor(days / 7)}w ago`;
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+  return `${Math.floor(days / 365)}y ago`;
+}
+
 // ── Booth numeral sizing ──────────────────────────────────────────────────────
 // v1.1l — auto-scale the 36px post-it numeral by digit count so long booth
 // numbers don't overflow the 92×92px post-it. Ceiling at 6 digits (22px); any
