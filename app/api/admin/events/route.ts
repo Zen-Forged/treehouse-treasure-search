@@ -96,7 +96,18 @@ export async function GET(req: Request) {
     .order("occurred_at", { ascending: false })
     .limit(limit);
 
-  if (typeIn) pageQuery = pageQuery.in("event_type", typeIn);
+  // Session 58 fix — `.in("event_type", [...])` silently returned zero rows
+  // even when matching rows existed in the enum column (Supabase JS / PostgREST
+  // doesn't always cast a JS string array to the Postgres enum cleanly via the
+  // `=in.(…)` operator). `.or()` with explicit `eq.<value>` clauses sidesteps
+  // the cast issue entirely — PostgREST handles single-value enum eq cleanly.
+  if (typeIn) {
+    if (typeIn.length === 1) {
+      pageQuery = pageQuery.eq("event_type", typeIn[0]!);
+    } else {
+      pageQuery = pageQuery.or(typeIn.map(t => `event_type.eq.${t}`).join(","));
+    }
+  }
   if (before) pageQuery = pageQuery.lt("occurred_at", before);
 
   const { data: events, error: pageErr } = await pageQuery;
@@ -106,18 +117,25 @@ export async function GET(req: Request) {
   }
 
   // ── Counter strip (24h / 7d / all) ──────────────────────────────────────
-  // Three head-only count queries — cheap and parallelizable. Filters
-  // (typeIn) are NOT applied to the counter strip — the counters always
-  // reflect the un-filtered totals so the user sees both "all activity" at
-  // the top and "filtered slice" in the list below.
+  // Three count queries — cheap and parallelizable. Filters (typeIn) are NOT
+  // applied to the counter strip — the counters always reflect the un-filtered
+  // totals so the user sees both "all activity" at the top and "filtered slice"
+  // in the list below.
+  //
+  // Session 58 fix — `head: true` was returning planner estimates rather than
+  // exact counts for the unfiltered query (`pg_class.reltuples` on a freshly
+  // CREATEd table reports 0/2 until ANALYZE runs). Removing `head: true` and
+  // adding `.limit(1)` forces PostgREST to do a real COUNT(*) and just discards
+  // the single returned row. Cost: one tiny row payload per counter; benefit:
+  // exact, predictable counts.
   const now      = new Date();
   const twentyFour = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
   const sevenDay   = new Date(now.getTime() - 7  * 24 * 60 * 60 * 1000).toISOString();
 
   const [c24, c7d, cAll] = await Promise.all([
-    auth.service.from("events").select("id", { count: "exact", head: true }).gte("occurred_at", twentyFour),
-    auth.service.from("events").select("id", { count: "exact", head: true }).gte("occurred_at", sevenDay),
-    auth.service.from("events").select("id", { count: "exact", head: true }),
+    auth.service.from("events").select("id", { count: "exact" }).gte("occurred_at", twentyFour).limit(1),
+    auth.service.from("events").select("id", { count: "exact" }).gte("occurred_at", sevenDay).limit(1),
+    auth.service.from("events").select("id", { count: "exact" }).limit(1),
   ]);
 
   return NextResponse.json({
