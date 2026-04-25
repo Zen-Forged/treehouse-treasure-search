@@ -625,7 +625,7 @@ function MyBoothInner() {
         reader.readAsDataURL(file);
       });
       const compressed = await compressForAdd(rawData);
-      postStore.set(compressed);
+      postStore.setImage(compressed);
       setShowAddSheet(false);
       const vendorParam = searchParams.get("vendor");
       const dest = vendorParam ? `/post/preview?vendor=${vendorParam}` : "/post/preview";
