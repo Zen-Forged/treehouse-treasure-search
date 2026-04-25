@@ -42,7 +42,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, CircleUser } from "lucide-react";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getFeedPosts, getActiveMalls } from "@/lib/posts";
 import { getSession, signOut, onAuthChange } from "@/lib/auth";
@@ -774,6 +774,7 @@ export default function DiscoveryFeedPage() {
   }
 
   async function handleSignOut() {
+    if (!window.confirm("Sign out?")) return;
     await signOut();
     setIsAuthed(false);
   }
@@ -860,24 +861,23 @@ export default function DiscoveryFeedPage() {
           {isAuthed === true && (
             <button
               onClick={handleSignOut}
+              aria-label="Sign out"
               style={{
-                fontFamily: FONT_IM_FELL,
-                fontStyle: "italic",
-                fontSize: 14,
-                color: v1.inkMuted,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 44,
+                height: 44,
+                marginRight: -10,
                 background: "none",
                 border: "none",
                 cursor: "pointer",
                 padding: 0,
-                textDecoration: "underline",
-                textDecorationStyle: "dotted",
-                textDecorationColor: v1.inkFaint,
-                textUnderlineOffset: 3,
+                color: v1.inkMuted,
                 WebkitTapHighlightColor: "transparent",
-                whiteSpace: "nowrap",
               }}
             >
-              Sign out
+              <CircleUser size={28} strokeWidth={1.6} />
             </button>
           )}
           {isAuthed === null && <span aria-hidden="true">&nbsp;</span>}
