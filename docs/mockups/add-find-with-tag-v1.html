@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Add Find with tag capture (v1)</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Caveat:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --ink-wash:     rgba(255, 253, 248, 0.70);
+    --icon-bubble:  rgba(42, 26, 10, 0.06);
+    --green:        #1e4d2b;
+    --pill-bg:      rgba(247, 239, 217, 0.88);
+    --amber:        #7a5c1e;
+    --amber-bg:     rgba(122, 92, 30, 0.08);
+    --amber-border: rgba(122, 92, 30, 0.22);
+
+    --im-fell: "IM Fell English", Georgia, serif;
+    --sys:     -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1500px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  h1.title {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 760px;
+  }
+
+  /* ── Decisions pane ────────────────────────────── */
+  .decisions {
+    max-width: 880px;
+    margin: 0 auto 36px;
+    padding: 18px 24px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--im-fell);
+    font-size: 18px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 10px;
+    letter-spacing: -0.005em;
+  }
+  .decisions h4 {
+    font-family: var(--im-fell);
+    font-size: 15px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 16px 0 6px;
+    letter-spacing: -0.005em;
+  }
+  .decisions ul, .decisions ol { margin: 6px 0 0; padding: 0 0 0 20px; }
+  .decisions li { margin-bottom: 5px; }
+  .decisions strong { color: #fff9e8; font-weight: 500; }
+  .decisions code {
+    background: rgba(232, 221, 199, 0.14);
+    color: #fff9e8;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+  }
+  .decisions .q-block {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(232, 221, 199, 0.14);
+  }
+  .decisions .system-note {
+    margin-top: 14px;
+    padding: 10px 14px;
+    background: rgba(30, 77, 43, 0.18);
+    border: 1px solid rgba(30, 77, 43, 0.4);
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: rgba(232, 221, 199, 0.92);
+  }
+  .decisions .system-note strong { color: #fff9e8; }
+
+  /* ── Frame grid ────────────────────────────── */
+  .frames {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+    max-width: 1380px;
+    margin: 0 auto 40px;
+  }
+  @media (max-width: 1180px) { .frames { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 780px)  { .frames { grid-template-columns: 1fr; } }
+
+  .frame {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .frame-label {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 16px;
+    color: rgba(232, 221, 199, 0.92);
+    letter-spacing: -0.005em;
+    text-align: center;
+    line-height: 1.4;
+  }
+  .frame-label .step {
+    display: block;
+    font-style: normal;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(232, 221, 199, 0.5);
+    margin-bottom: 4px;
+  }
+
+  .phone {
+    width: 390px;
+    max-width: 100%;
+    height: 760px;
+    background: var(--paper);
+    border-radius: 36px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.45), 0 0 0 6px #15110a;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Masthead (matches v1.2 Mode C) ────────────── */
+  .masthead {
+    padding: 18px 22px 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: rgba(232, 221, 199, 0.96);
+    border-bottom: 1px solid var(--ink-hairline);
+    flex-shrink: 0;
+  }
+  .back-bubble {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--icon-bubble);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .back-bubble svg { width: 18px; height: 18px; color: var(--ink-primary); }
+  .masthead-titles {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .masthead-titles .title-line {
+    font-family: var(--im-fell);
+    font-size: 24px;
+    color: var(--ink-primary);
+    letter-spacing: -0.005em;
+    line-height: 1.15;
+  }
+  .masthead-titles .subhead {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-muted);
+    line-height: 1.4;
+  }
+
+  /* ── Body ────────────── */
+  .body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .body-padded {
+    padding: 18px 22px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* ── Photograph preview (matches PhotographPreview shape) ────────────── */
+  .photo {
+    width: 78%;
+    margin: 18px auto 0;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #cdb88e;
+    aspect-ratio: 4/5;
+    background-image: url("https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=600");
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 4px 20px rgba(42,26,10,0.18);
+    position: relative;
+  }
+  .photo.small {
+    width: 38%;
+    aspect-ratio: 4/5;
+    margin: 0;
+  }
+  .photo.tag-photo {
+    background-image: url("https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=600");
+  }
+  .photo .post-it {
+    position: absolute;
+    bottom: -16px;
+    right: 16px;
+    width: 64px;
+    height: 64px;
+    background: var(--postit);
+    border: 0.5px solid rgba(42,26,10,0.10);
+    box-shadow: 0 6px 14px rgba(42,26,10,0.18), 0 0 0 0.5px rgba(42,26,10,0.04);
+    transform: rotate(-3deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Times New Roman", Times, serif;
+    font-size: 32px;
+    color: var(--ink-primary);
+    line-height: 1;
+  }
+
+  /* ── Hint paragraph ────────────── */
+  .hint {
+    text-align: center;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-muted);
+    line-height: 1.5;
+    padding: 0 22px;
+  }
+
+  /* ── Bottom CTA stack ────────────── */
+  .cta-stack {
+    padding: 14px 22px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: rgba(232, 221, 199, 0.96);
+    border-top: 1px solid var(--ink-hairline);
+    flex-shrink: 0;
+  }
+  .cta-primary {
+    width: 100%;
+    padding: 15px;
+    border-radius: 14px;
+    font-family: var(--sys);
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+    background: var(--green);
+    border: none;
+    letter-spacing: 0.2px;
+    box-shadow: 0 2px 12px rgba(30,77,43,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .cta-primary svg { width: 18px; height: 18px; }
+  .cta-skip {
+    text-align: center;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-muted);
+    padding: 10px;
+    background: transparent;
+    border: none;
+    text-decoration: underline;
+    text-decoration-color: var(--ink-faint);
+    text-underline-offset: 3px;
+  }
+
+  /* ── Frame 2 — extracting state ────────────── */
+  .photo-pair {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 22px 22px 0;
+  }
+  .photo-pair .pair-col {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+    flex: 0 0 42%;
+  }
+  .photo-pair .pair-col .pair-label {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink-muted);
+    letter-spacing: 0.04em;
+  }
+  .photo-pair .photo {
+    width: 100%;
+    margin: 0;
+    aspect-ratio: 4/5;
+    box-shadow: 0 3px 12px rgba(42,26,10,0.16);
+  }
+  .extracting-msg {
+    text-align: center;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink-muted);
+    margin-top: 26px;
+    line-height: 1.6;
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+  /* ── Frame 3 — preview page with prefill + badges ────────────── */
+  .posting-as {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 22px 0;
+  }
+  .posting-as-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--icon-bubble);
+    border: 1px solid var(--ink-hairline);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--im-fell);
+    font-size: 13px;
+    color: var(--ink-muted);
+  }
+  .posting-as-text {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-muted);
+    line-height: 1.4;
+  }
+  .posting-as-text strong {
+    font-style: normal;
+    color: var(--ink-mid);
+    font-weight: 400;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .field-label {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .field-label .optional {
+    color: var(--ink-faint);
+    font-style: italic;
+  }
+  .field-input {
+    font-family: var(--sys);
+    font-size: 16px;
+    color: var(--ink-primary);
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 14px;
+    padding: 14px;
+    width: 100%;
+    line-height: 1.4;
+  }
+  .field-input.with-prefix {
+    padding-left: 28px;
+    position: relative;
+  }
+  .price-wrap {
+    position: relative;
+  }
+  .price-prefix {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--sys);
+    font-size: 16px;
+    color: var(--ink-muted);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .field-textarea {
+    min-height: 78px;
+    resize: none;
+    font-family: var(--sys);
+    font-size: 16px;
+    color: var(--ink-primary);
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 14px;
+    padding: 14px;
+    width: 100%;
+    line-height: 1.5;
+  }
+
+  /* The "from tag" badge — small inline pill next to the field label */
+  .tag-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px 2px 6px;
+    background: rgba(30, 77, 43, 0.10);
+    border: 1px solid rgba(30, 77, 43, 0.22);
+    border-radius: 999px;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 11px;
+    color: var(--green);
+    line-height: 1.3;
+    letter-spacing: 0.01em;
+  }
+  .tag-badge svg { width: 11px; height: 11px; }
+
+  /* The publish bar at the bottom of /post/preview */
+  .publish-bar {
+    padding: 12px 22px 18px;
+    background: rgba(232, 221, 199, 0.96);
+    border-top: 1px solid var(--ink-hairline);
+    flex-shrink: 0;
+  }
+  .publish-btn {
+    width: 100%;
+    padding: 15px;
+    border-radius: 14px;
+    font-family: var(--sys);
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+    background: var(--green);
+    border: none;
+    letter-spacing: 0.2px;
+    box-shadow: 0 2px 12px rgba(30,77,43,0.25);
+  }
+
+  /* ── Detail strip — badge variants ────────────── */
+  .detail-strip {
+    max-width: 880px;
+    margin: 36px auto 0;
+    padding: 22px 28px;
+    background: var(--paper);
+    border-radius: 16px;
+  }
+  .detail-strip h4 {
+    font-family: var(--im-fell);
+    font-size: 18px;
+    margin: 0 0 4px;
+    color: var(--ink-primary);
+    letter-spacing: -0.005em;
+  }
+  .detail-strip .strip-sub {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin: 0 0 18px;
+  }
+  .badge-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 720px) { .badge-row { grid-template-columns: 1fr; } }
+  .badge-card {
+    background: rgba(255,253,248,0.5);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 12px;
+    padding: 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .badge-card .bc-name {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--ink-primary);
+  }
+  .badge-card .bc-blurb {
+    font-family: var(--sys);
+    font-size: 11px;
+    color: var(--ink-muted);
+    line-height: 1.55;
+  }
+  .badge-card .bc-demo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 10px;
+  }
+  .badge-card .bc-demo .field-label {
+    margin: 0;
+  }
+
+  /* Variant β — icon-only */
+  .tag-badge-icon-only {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(30, 77, 43, 0.12);
+    color: var(--green);
+  }
+  .tag-badge-icon-only svg { width: 11px; height: 11px; }
+
+  /* Variant γ — auto chip (no tag-shaped icon, just text) */
+  .tag-badge-auto {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    background: var(--icon-bubble);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 999px;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink-muted);
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <h1 class="title">Add Find — tag capture step</h1>
+  <p class="subtitle">A new optional step between item-photo and review. Vendor photographs the inventory tag; Claude vision pulls the title + price; the review page prefills with badges showing what came from the tag versus what's still manual. Skip is a one-tap fallback to today's flow.</p>
+
+  <div class="decisions">
+    <h3>What this mockup is committing to</h3>
+    <p>D1–D8 are already locked from chat. This mockup is the design surface for the four still-open subordinate decisions:</p>
+
+    <h4>Already locked (architecture)</h4>
+    <ul>
+      <li><strong>D1 Storage:</strong> tag photo discarded after extraction (no Supabase upload, no schema change)</li>
+      <li><strong>D2 API:</strong> new <code>/api/extract-tag</code> mirrors <code>/api/post-caption</code> shape — Claude Sonnet 4.6 vision, mock fallback, rate limit, base64 input</li>
+      <li><strong>D3 Flow:</strong> new page <code>/post/tag</code> between <code>AddFindSheet</code> and <code>/post/preview</code></li>
+      <li><strong>D4 Skip:</strong> lives on the tag page itself (primary photo CTA + secondary skip link). <code>AddFindSheet</code> stays unchanged</li>
+      <li><strong>D5 Failure:</strong> mirror <code>/api/post-caption</code> — <code>source: "claude"</code> success / <code>source: "mock" + reason: "error"</code> on failure surfaces the existing <code>&lt;AmberNotice&gt;</code> on the preview page</li>
+      <li><strong>D6 Title priority:</strong> tag title overrides Claude title; Claude caption still generated from item photo</li>
+      <li><strong>D7 Price format:</strong> numeric or null; null → manual entry</li>
+      <li><strong>D8 Caption timing:</strong> skip flow generates caption on preview mount (today's behavior); tag flow runs <code>extract-tag</code> on <code>/post/tag</code> and <code>post-caption</code> in parallel so preview lands with everything ready</li>
+    </ul>
+
+    <div class="system-note">
+      <strong>Visual register:</strong> <code>/post/tag</code> reuses Mode C masthead chrome from <code>/post/preview</code> (38px back bubble, IM Fell 24 title, italic 14 subhead). The "from tag" badge introduces a new primitive — small inline pill next to the field label. Variant α below proposes green-on-green pill with Tag glyph + "from tag" italic; alternatives β (icon-only) and γ (ash-colored "auto" chip) shown below the frames.
+    </div>
+
+    <div class="q-block">
+      <strong style="color:#fff9e8">Decisions to make:</strong>
+      <ol>
+        <li><strong>Page layout</strong> (Frame 1) — approve the proposed shape: item photo medium-sized → italic-IM Fell hint → green CTA → underlined italic skip link below?</li>
+        <li><strong>CTA copy</strong> — "Take photo of tag" / "Photograph the tag" / "Snap the tag" / something else?</li>
+        <li><strong>Skip copy</strong> — "Skip — I'll add price manually" / "No tag, I'll fill it in" / "Add details manually" / something else?</li>
+        <li><strong>Page title + subhead</strong> — proposed: "Now the tag" / "Capture the title and price in one shot." Alternatives welcomed.</li>
+        <li><strong>"From tag" badge</strong> — α (pill with Tag icon + "from tag" text), β (icon-only), or γ (ash "auto" chip)?</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="frames">
+
+    <!-- ───────────────────────────────────────── Frame 1 ─── -->
+    <div class="frame">
+      <div class="frame-label">
+        <span class="step">Step 1 of 3</span>
+        <code style="font-family:var(--sys);font-style:normal;font-size:12px;color:rgba(232,221,199,0.6)">/post/tag</code><br>
+        Tag-capture page — initial state
+      </div>
+      <div class="phone">
+        <div class="masthead">
+          <div class="back-bubble">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"/>
+              <polyline points="12 19 5 12 12 5"/>
+            </svg>
+          </div>
+          <div class="masthead-titles">
+            <div class="title-line">Now the tag</div>
+            <div class="subhead">Capture the title and price in one shot.</div>
+          </div>
+        </div>
+
+        <div class="body">
+          <div class="photo"></div>
+
+          <div style="height: 18px"></div>
+
+          <div class="hint">
+            We&rsquo;ll read the item name and price<br>directly from the inventory tag.
+          </div>
+        </div>
+
+        <div class="cta-stack">
+          <button class="cta-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            Take photo of tag
+          </button>
+          <button class="cta-skip">Skip — I&rsquo;ll add title and price manually</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ───────────────────────────────────────── Frame 2 ─── -->
+    <div class="frame">
+      <div class="frame-label">
+        <span class="step">Step 2 of 3</span>
+        <code style="font-family:var(--sys);font-style:normal;font-size:12px;color:rgba(232,221,199,0.6)">/post/tag</code><br>
+        Extracting state — both photos shown
+      </div>
+      <div class="phone">
+        <div class="masthead">
+          <div class="back-bubble">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"/>
+              <polyline points="12 19 5 12 12 5"/>
+            </svg>
+          </div>
+          <div class="masthead-titles">
+            <div class="title-line">Reading the tag…</div>
+            <div class="subhead">Just a moment.</div>
+          </div>
+        </div>
+
+        <div class="body">
+          <div class="photo-pair">
+            <div class="pair-col">
+              <div class="pair-label">Item</div>
+              <div class="photo"></div>
+            </div>
+            <div class="pair-col">
+              <div class="pair-label">Tag</div>
+              <div class="photo tag-photo"></div>
+            </div>
+          </div>
+
+          <div class="extracting-msg">Pulling title and price…</div>
+        </div>
+
+        <div class="cta-stack" style="opacity: 0.5; pointer-events: none">
+          <button class="cta-primary" style="background: var(--ink-wash); color: var(--ink-faint); box-shadow: none">
+            Reading…
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ───────────────────────────────────────── Frame 3 ─── -->
+    <div class="frame">
+      <div class="frame-label">
+        <span class="step">Step 3 of 3</span>
+        <code style="font-family:var(--sys);font-style:normal;font-size:12px;color:rgba(232,221,199,0.6)">/post/preview</code><br>
+        Review with prefill + &ldquo;from tag&rdquo; badges
+      </div>
+      <div class="phone">
+        <div class="masthead">
+          <div class="back-bubble">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"/>
+              <polyline points="12 19 5 12 12 5"/>
+            </svg>
+          </div>
+          <div class="masthead-titles">
+            <div class="title-line">Review your find</div>
+            <div class="subhead">Here&rsquo;s how shoppers will see it.</div>
+          </div>
+        </div>
+
+        <div class="body">
+          <div class="photo" style="width: 70%; margin: 12px auto 0">
+            <div class="post-it">7</div>
+          </div>
+
+          <div style="height: 28px"></div>
+
+          <div class="posting-as">
+            <div class="posting-as-avatar">M</div>
+            <div class="posting-as-text">Posting as <strong>Magpie & Co</strong>, <strong>Booth 7</strong></div>
+          </div>
+
+          <div style="height: 6px"></div>
+
+          <div class="body-padded">
+            <!-- Title field — populated from tag -->
+            <div class="field-group">
+              <div class="field-label">
+                Title
+                <span class="tag-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
+                    <line x1="7" y1="7" x2="7.01" y2="7"/>
+                  </svg>
+                  from tag
+                </span>
+              </div>
+              <input type="text" class="field-input" value="Mid-century walnut side table">
+            </div>
+
+            <!-- Caption field — Claude-generated from item photo, no badge -->
+            <div class="field-group">
+              <div class="field-label">Caption <span class="optional">(optional)</span></div>
+              <textarea class="field-textarea">Carries its age quietly. The kind of piece that looks like it was always there.</textarea>
+            </div>
+
+            <!-- Price field — populated from tag -->
+            <div class="field-group">
+              <div class="field-label">
+                Price <span class="optional">(optional)</span>
+                <span class="tag-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
+                    <line x1="7" y1="7" x2="7.01" y2="7"/>
+                  </svg>
+                  from tag
+                </span>
+              </div>
+              <div class="price-wrap">
+                <span class="price-prefix">$</span>
+                <input type="text" class="field-input with-prefix" value="125">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="publish-bar">
+          <button class="publish-btn">Publish</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Detail strip — three "from tag" badge variants ────────────── -->
+  <div class="detail-strip">
+    <h4>From-tag badge — three variants</h4>
+    <p class="strip-sub">All three sit inline with the field label. Frame 3 shows variant α; β and γ for comparison.</p>
+    <div class="badge-row">
+
+      <div class="badge-card">
+        <div class="bc-name">α — Pill with icon + text</div>
+        <div class="bc-blurb">Green-on-green pill. Lucide Tag icon + italic IM Fell &ldquo;from tag&rdquo;. Most readable; takes a sliver of horizontal space.</div>
+        <div class="bc-demo">
+          <div class="field-label">
+            Title
+            <span class="tag-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
+                <line x1="7" y1="7" x2="7.01" y2="7"/>
+              </svg>
+              from tag
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="badge-card">
+        <div class="bc-name">β — Icon only</div>
+        <div class="bc-blurb">Just the Tag glyph in a small green circle. Quietest; relies on tooltip / pattern recognition; might puzzle on first encounter.</div>
+        <div class="bc-demo">
+          <div class="field-label">
+            Title
+            <span class="tag-badge-icon-only">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
+                <line x1="7" y1="7" x2="7.01" y2="7"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="badge-card">
+        <div class="bc-name">γ — Ash &ldquo;auto&rdquo; chip</div>
+        <div class="bc-blurb">Cream-bg italic chip — &ldquo;auto&rdquo;. Doesn&rsquo;t commit to the source being the tag specifically; degrades cleanly if extraction shape changes later.</div>
+        <div class="bc-demo">
+          <div class="field-label">
+            Title
+            <span class="tag-badge-auto">auto</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
