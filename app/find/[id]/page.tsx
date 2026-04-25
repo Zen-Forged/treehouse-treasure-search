@@ -76,6 +76,7 @@ import { flagKey, mapsUrl, boothNumeralSize, loadFollowedIds } from "@/lib/utils
 import { track } from "@/lib/clientEvents";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
+import PhotoLightbox from "@/components/PhotoLightbox";
 import type { Post } from "@/types/treehouse";
 
 // v1.1 tokens imported from lib/tokens.ts (canonical since session 19A). v1 palette +
@@ -562,6 +563,7 @@ export default function FindDetailPage() {
   // heart bubble, so we also resync inside handleToggleSave — not just on
   // mount / focus / visibilitychange.
   const [bookmarkCount, setBookmarkCount] = useState(0);
+  const [lightboxOpen,  setLightboxOpen]  = useState(false);
 
   useEffect(() => {
     function sync() {
@@ -790,20 +792,39 @@ export default function FindDetailPage() {
           }}
         >
           {post.image_url ? (
-            <img
-              src={post.image_url}
-              alt={post.title}
+            // Session 61: photo is now a button → opens PhotoLightbox for
+            // pinch-zoom + full-screen view. Border/shadow/radius live on the
+            // button wrapper so the visual is identical to the prior <img>.
+            <button
+              type="button"
+              onClick={() => setLightboxOpen(true)}
+              aria-label="View photo full screen"
               style={{
+                display: "block",
                 width: "100%",
                 height: "100%",
-                objectFit: "cover",
-                display: "block",
+                padding: 0,
+                margin: 0,
+                background: "transparent",
                 borderRadius: v1.imageRadius,
                 border: `1px solid ${v1.inkHairline}`,
                 boxShadow: "0 3px 12px rgba(42,26,10,0.10), 0 1px 3px rgba(42,26,10,0.06)",
-                filter: isSold ? "grayscale(0.35) brightness(0.9)" : "none",
+                overflow: "hidden",
+                cursor: "zoom-in",
               }}
-            />
+            >
+              <img
+                src={post.image_url}
+                alt={post.title}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                  filter: isSold ? "grayscale(0.35) brightness(0.9)" : "none",
+                }}
+              />
+            </button>
           ) : (
             <div
               style={{
@@ -1201,6 +1222,15 @@ export default function FindDetailPage() {
 
       <div style={{ paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }} />
       <BottomNav active={null} flaggedCount={bookmarkCount} />
+
+      {/* Photo lightbox — session 61. Tap photo above → opens full-screen
+          viewer with pinch-zoom + double-tap. */}
+      <PhotoLightbox
+        open={lightboxOpen}
+        src={post.image_url ?? null}
+        alt={post.title}
+        onClose={() => setLightboxOpen(false)}
+      />
     </div>
   );
 }
