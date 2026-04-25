@@ -56,6 +56,9 @@ import MallSheet from "@/components/MallSheet";
 import StickyMasthead from "@/components/StickyMasthead";
 import FeaturedBanner from "@/components/FeaturedBanner";
 import VendorCTACard from "@/components/VendorCTACard";
+import TreehouseOpener from "@/components/TreehouseOpener";
+
+const OPENER_SEEN_KEY = "treehouse_opener_seen_v1";
 import type { Post, Mall } from "@/types/treehouse";
 
 const SCROLL_KEY      = "treehouse_feed_scroll";
@@ -618,6 +621,7 @@ export default function DiscoveryFeedPage() {
   const [isAuthed,          setIsAuthed]          = useState<boolean | null>(null);
   const [lastViewedId,      setLastViewedId]      = useState<string | null>(null);
   const [featuredImageUrl,  setFeaturedImageUrl]  = useState<string | null>(null);
+  const [showOpener,        setShowOpener]        = useState<boolean>(false);
   const wasHidden        = useRef(false);
   const pendingScrollY   = useRef<number | null>(null);
   const scrollRestored   = useRef(false);
@@ -640,6 +644,24 @@ export default function DiscoveryFeedPage() {
 
   // R3 — page_viewed analytics event (fire-and-forget; runs once on mount).
   useEffect(() => { track("page_viewed", { path: "/" }); }, []);
+
+  // Opener — first-visit-only on mobile-width viewports. localStorage-gated;
+  // tap-anywhere-to-skip is handled inside <TreehouseOpener />. Desktop never
+  // sees it (D4 = mobile only) so the flag isn't set from desktop sessions.
+  useEffect(() => {
+    try {
+      const seen = localStorage.getItem(OPENER_SEEN_KEY) === "1";
+      const isMobile = window.matchMedia("(max-width: 768px)").matches;
+      if (!seen && isMobile) setShowOpener(true);
+    } catch {
+      // localStorage unavailable (rare iOS ITP edge case) — skip the opener.
+    }
+  }, []);
+
+  function handleOpenerFinish() {
+    try { localStorage.setItem(OPENER_SEEN_KEY, "1"); } catch {}
+    setShowOpener(false);
+  }
 
   // ── Feed load ────────────────────────────────────────────────────────────────
   async function loadFeed() {
@@ -982,6 +1004,9 @@ export default function DiscoveryFeedPage() {
         onSelect={handleMallSelect}
         findCounts={findCounts}
       />
+
+      {/* ── First-visit opener (mobile only) ──────────────────────────── */}
+      {showOpener && <TreehouseOpener onFinish={handleOpenerFinish} />}
 
       <style>{`
         @keyframes shimmer {
