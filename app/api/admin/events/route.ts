@@ -96,17 +96,20 @@ export async function GET(req: Request) {
     .order("occurred_at", { ascending: false })
     .limit(limit);
 
-  // Session 58 fix — `.in("event_type", [...])` silently returned zero rows
-  // even when matching rows existed in the enum column (Supabase JS / PostgREST
-  // doesn't always cast a JS string array to the Postgres enum cleanly via the
-  // `=in.(…)` operator). `.or()` with explicit `eq.<value>` clauses sidesteps
-  // the cast issue entirely — PostgREST handles single-value enum eq cleanly.
+  // Session 58 — `.in("event_type", [...])` silently returned zero rows for
+  // multi-value filters (Supabase JS / PostgREST doesn't always cast JS string
+  // arrays to enum cleanly via `=in.(…)`). Switched to `.or()` with explicit
+  // `eq.<value>` clauses.
+  //
+  // Session 58 (later) — discovered single-value `.eq()` returns zero rows on
+  // Vercel for `share_sent` specifically, while returning correct rows for
+  // `page_viewed`, `mall_activated`, `mall_deactivated` (and locally returning
+  // correct rows for share_sent). Cause not yet root-caused — the difference
+  // between Vercel and local is pinned to runtime, not code. Workaround:
+  // always use the `.or()` path since it's verified working for both single-
+  // and multi-value filters across all event_types we've tested.
   if (typeIn) {
-    if (typeIn.length === 1) {
-      pageQuery = pageQuery.eq("event_type", typeIn[0]!);
-    } else {
-      pageQuery = pageQuery.or(typeIn.map(t => `event_type.eq.${t}`).join(","));
-    }
+    pageQuery = pageQuery.or(typeIn.map(t => `event_type.eq.${t}`).join(","));
   }
   if (before) pageQuery = pageQuery.lt("occurred_at", before);
 
