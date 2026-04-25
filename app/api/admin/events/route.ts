@@ -46,8 +46,16 @@ const DEFAULT_LIMIT = 50;
 const MAX_LIMIT     = 200;
 
 export async function GET(req: Request) {
+  // Session 59 — log every hit BEFORE requireAdmin so we can tell the
+  // difference between "route never called" (PWA cache / wrong URL) and
+  // "route called but auth failed" (stale token / signed out).
+  console.log(`[admin/events GET] hit url=${req.url}`);
+
   const auth = await requireAdmin(req);
-  if (!auth.ok) return auth.response;
+  if (!auth.ok) {
+    console.log(`[admin/events GET] requireAdmin denied — returning early`);
+    return auth.response;
+  }
 
   const url       = new URL(req.url);
   const filterRaw = url.searchParams.get("event_type");
