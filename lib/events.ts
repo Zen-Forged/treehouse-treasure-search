@@ -56,5 +56,17 @@ export async function recordEvent(
     session_id: opts.session_id ?? null,
     payload:    opts.payload ?? {},
   });
-  if (error) console.error(`[events] recordEvent(${type}) failed:`, error.message);
+  if (error) {
+    // Verbose log — session 58 QA needed to see the exact Postgres error to
+    // diagnose why some inserts were silently failing while others succeeded.
+    // recordEvent is fire-and-forget by contract; never surface to the caller.
+    console.error(
+      `[events] recordEvent(${type}) failed: ${error.message}` +
+      (error.code    ? ` code=${error.code}`       : "") +
+      (error.details ? ` details=${error.details}` : "") +
+      (error.hint    ? ` hint=${error.hint}`       : ""),
+    );
+  } else {
+    console.log(`[events] recordEvent(${type}) ok user_id=${opts.user_id ?? "null"} session=${(opts.session_id ?? "null").slice(0, 8)}`);
+  }
 }

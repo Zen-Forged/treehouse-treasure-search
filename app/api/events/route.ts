@@ -63,8 +63,14 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
+    console.error("[api/events] invalid JSON body");
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
+  // Session 58 QA aid — visible in Vercel runtime logs.
+  console.log(
+    `[api/events] received event_type=${typeof body.event_type === "string" ? body.event_type : "?"} ` +
+    `session=${typeof body.session_id === "string" ? body.session_id.slice(0, 8) : "?"}`,
+  );
 
   // ── Validate event_type ───────────────────────────────────────────────────
   const eventType = typeof body.event_type === "string" ? body.event_type : "";

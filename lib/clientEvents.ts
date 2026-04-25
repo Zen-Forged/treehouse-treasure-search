@@ -69,20 +69,38 @@ export function track(
   const session_id = getSessionId();
 
   // Debug overlay — only when explicitly enabled via localStorage flag.
+  let debugMode = false;
   try {
-    if (localStorage.getItem("th_track_debug") === "1") {
+    debugMode = localStorage.getItem("th_track_debug") === "1";
+    if (debugMode) {
       showDebugToast(`[track] ${event_type} ${shortPayload(payload)}`);
     }
   } catch { /* private mode — skip overlay */ }
 
-  // Explicit `void` discards the promise — we don't await and don't catch
-  // anywhere it could surface to the user.
-  void fetch("/api/events", {
+  // Fire-and-forget fetch. In debug mode we DO observe the result and show
+  // it in a follow-up toast — invaluable for QA when the click-to-DB chain
+  // breaks somewhere in the middle.
+  fetch("/api/events", {
     method:    "POST",
     headers:   { "Content-Type": "application/json" },
     body:      JSON.stringify({ event_type, session_id, payload }),
     keepalive: true,
-  }).catch(() => { /* silent */ });
+  })
+    .then(async res => {
+      if (!debugMode) return;
+      if (res.ok) {
+        showDebugToast(`✓ ${event_type} → ${res.status}`, "ok");
+      } else {
+        let detail = "";
+        try { const j = await res.json(); detail = j?.error ?? ""; } catch { /* */ }
+        showDebugToast(`✗ ${event_type} → ${res.status} ${detail}`, "err");
+      }
+    })
+    .catch(err => {
+      if (debugMode) {
+        showDebugToast(`✗ ${event_type} → network error: ${String(err).slice(0, 40)}`, "err");
+      }
+    });
 }
 
 // ── Debug overlay implementation ────────────────────────────────────────
@@ -94,7 +112,7 @@ function shortPayload(p: Record<string, unknown>): string {
     .join(" ");
 }
 
-function showDebugToast(text: string): void {
+function showDebugToast(text: string, kind: "info" | "ok" | "err" = "info"): void {
   if (typeof document === "undefined") return;
   const id = "th-track-debug-stack";
   let stack = document.getElementById(id);
@@ -104,19 +122,23 @@ function showDebugToast(text: string): void {
     Object.assign(stack.style, {
       position:        "fixed",
       bottom:          "16px",
-      left:            "16px",
-      zIndex:          "999999",
-      display:         "flex",
-      flexDirection:   "column-reverse",
-      gap:             "6px",
-      pointerEvents:   "none",
-      maxWidth:        "calc(100vw - 32px)",
+      left:             "16px",
+      zIndex:           "999999",
+      display:          "flex",
+      flexDirection:    "column-reverse",
+      gap:              "6px",
+      pointerEvents:    "none",
+      maxWidth:         "calc(100vw - 32px)",
     });
     document.body.appendChild(stack);
   }
+  const bg =
+    kind === "ok"  ? "rgba(30,77,43,0.95)" :
+    kind === "err" ? "rgba(140,30,30,0.95)" :
+                     "rgba(20,20,20,0.92)";
   const toast = document.createElement("div");
   Object.assign(toast.style, {
-    background:    "rgba(30,77,43,0.95)",
+    background:    bg,
     color:         "#f6f1e6",
     padding:       "8px 12px",
     borderRadius:  "10px",
@@ -127,21 +149,20 @@ function showDebugToast(text: string): void {
     transition:    "opacity 0.4s, transform 0.4s",
     transform:     "translateY(8px)",
     opacity:       "0",
-    whiteSpace:    "nowrap",
-    overflow:      "hidden",
-    textOverflow:  "ellipsis",
+    maxWidth:      "calc(100vw - 32px)",
+    wordBreak:     "break-word",
   });
   toast.textContent = text;
   stack.appendChild(toast);
-  // Animate in
   requestAnimationFrame(() => {
     toast.style.transform = "translateY(0)";
     toast.style.opacity   = "1";
   });
-  // Auto-fade after 2.4s
+  // Errors linger longer so they're readable
+  const lifeMs = kind === "err" ? 6000 : 2800;
   setTimeout(() => {
     toast.style.opacity   = "0";
     toast.style.transform = "translateY(8px)";
     setTimeout(() => toast.remove(), 500);
-  }, 2400);
+  }, lifeMs);
 }
