@@ -138,13 +138,19 @@ export async function GET(req: Request) {
 
   // Session 59 — David reports rows=2 of 225 on prod despite identical
   // query returning 50 rows locally. Capture diagnostic snapshot here.
+  //
+  // Session 60 — added uptime so we can correlate stale-data symptoms with
+  // how long the Fluid Compute instance has been alive. Hypothesis: data
+  // freshness lags by N minutes once an instance ages past M hours.
   const eventsArr = events ?? [];
   const keyEnv    = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
   const keyPrefix = keyEnv.slice(0, 12);
   const keyLen    = keyEnv.length;
   const urlEnv    = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").slice(0, 40);
+  const uptimeSec = Math.round(process.uptime());
   console.log(
     `[admin/events GET diag] ` +
+    `uptimeSec=${uptimeSec} ` +
     `urlPrefix=${urlEnv} ` +
     `keyPrefix=${keyPrefix} ` +
     `keyLen=${keyLen} ` +
