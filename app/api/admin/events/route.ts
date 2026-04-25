@@ -121,22 +121,45 @@ export async function GET(req: Request) {
   }
   if (before) pageQuery = pageQuery.lt("occurred_at", before);
 
-  const { data: events, error: pageErr } = await pageQuery;
+  const { data: events, error: pageErr, count: pageCount } = await pageQuery;
   if (pageErr) {
     console.error("[admin/events GET] page query:", pageErr.message);
     return NextResponse.json({ error: pageErr.message }, { status: 500 });
   }
 
-  // Session 58 QA aid — visible in Vercel runtime logs. If the tab shows
-  // empty but this log says rows=N, the bug is in the client render path.
-  // If this log says rows=0 but the diagnostic script (run against the same
-  // DB) says count>0, the bug is in the route's filter logic.
+  // Session 58 QA aid — visible in Vercel runtime logs.
   console.log(
     `[admin/events GET] filterRaw=${filterRaw ?? "—"} ` +
     `typeIn=${typeIn ? `[${typeIn.join(",")}]` : "—"} ` +
     `before=${before ?? "—"} ` +
-    `rows=${(events ?? []).length}`,
+    `rows=${(events ?? []).length} ` +
+    `pageCount=${pageCount ?? "—"}`,
   );
+
+  // Session 59 — David reports rows=2 of 225 on prod despite identical
+  // query returning 50 rows locally. Capture diagnostic snapshot here.
+  const eventsArr = events ?? [];
+  const keyEnv    = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  const keyPrefix = keyEnv.slice(0, 12);
+  const keyLen    = keyEnv.length;
+  const urlEnv    = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").slice(0, 40);
+  console.log(
+    `[admin/events GET diag] ` +
+    `urlPrefix=${urlEnv} ` +
+    `keyPrefix=${keyPrefix} ` +
+    `keyLen=${keyLen} ` +
+    `firstOccurred=${eventsArr[0]?.occurred_at ?? "—"} ` +
+    `lastOccurred=${eventsArr[eventsArr.length - 1]?.occurred_at ?? "—"}`,
+  );
+
+  // Sibling reproduction — re-run the same query inline, no .order(), no
+  // .limit(), with explicit count. If THIS shows 225 but page shows 2, the
+  // bug is in .order/.limit. If this also shows 2, the client itself is
+  // scoped (different key, different project, etc.).
+  const { count: sanityAll } = await auth.service
+    .from("events")
+    .select("id", { count: "exact", head: true });
+  console.log(`[admin/events GET diag] sanity-count via head:true = ${sanityAll ?? "—"}`);
 
   // ── Counter strip (24h / 7d / all) ──────────────────────────────────────
   // Three count queries — cheap and parallelizable. Filters (typeIn) are NOT
