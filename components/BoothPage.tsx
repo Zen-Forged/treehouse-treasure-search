@@ -252,7 +252,7 @@ export function BoothHero({
                 textAlign: "center",
               }}
             >
-              Booth<br />Location
+              Booth
             </div>
             <div
               style={{
@@ -667,78 +667,83 @@ function WindowTile({ post, index }: { post: Post; index: number }) {
       >
         <div
           style={{
-            width: "100%",
-            aspectRatio: "4/5",
-            borderRadius: v1.imageRadius,
+            background: v1.inkWash,
             border: `1px solid ${v1.inkHairline}`,
+            borderRadius: v1.imageRadius,
             overflow: "hidden",
-            background: v1.postit,
             boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
           }}
         >
-          {post.image_url && !imgErr ? (
-            <img
-              src={post.image_url}
-              alt={post.title}
-              onError={() => setImgErr(true)}
-              loading="lazy"
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                display: "block",
-                filter:       TREEHOUSE_LENS_FILTER,
-                WebkitFilter: TREEHOUSE_LENS_FILTER,
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                padding: "12px 10px",
-                display: "flex",
-                alignItems: "flex-end",
-                fontFamily: FONT_IM_FELL,
-                fontSize: 12,
-                color: v1.inkFaint,
-              }}
-            >
-              no photograph
-            </div>
-          )}
-        </div>
-        <div
-          style={{
-            fontFamily: FONT_SYS,
-            fontSize: 14,
-            fontWeight: 400,
-            color: v1.inkMid,
-            lineHeight: 1.35,
-            letterSpacing: "-0.005em",
-            marginTop: 6,
-            overflow: "hidden",
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical" as const,
-          }}
-        >
-          {post.title}
-        </div>
-        {hasPrice && (
           <div
             style={{
-              fontFamily: FONT_SYS,
-              fontSize: 12,
-              color: v1.priceInk,
-              lineHeight: 1.4,
-              marginTop: 2,
-              letterSpacing: "-0.005em",
+              width: "100%",
+              aspectRatio: "4/5",
+              background: v1.postit,
             }}
           >
-            ${Math.round(post.price_asking as number)}
+            {post.image_url && !imgErr ? (
+              <img
+                src={post.image_url}
+                alt={post.title}
+                onError={() => setImgErr(true)}
+                loading="lazy"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                  filter:       TREEHOUSE_LENS_FILTER,
+                  WebkitFilter: TREEHOUSE_LENS_FILTER,
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  padding: "12px 10px",
+                  display: "flex",
+                  alignItems: "flex-end",
+                  fontFamily: FONT_IM_FELL,
+                  fontSize: 12,
+                  color: v1.inkFaint,
+                }}
+              >
+                no photograph
+              </div>
+            )}
           </div>
-        )}
+          <div style={{ padding: "9px 10px 11px" }}>
+            <div
+              style={{
+                fontFamily: FONT_IM_FELL,
+                fontSize: 14,
+                color: v1.inkPrimary,
+                lineHeight: 1.2,
+                overflow: "hidden",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical" as const,
+              }}
+            >
+              {post.title}
+            </div>
+            {hasPrice && (
+              <div
+                style={{
+                  fontFamily: FONT_SYS,
+                  fontSize: 12,
+                  color: v1.priceInk,
+                  lineHeight: 1.4,
+                  marginTop: 3,
+                  letterSpacing: "-0.005em",
+                }}
+              >
+                ${Math.round(post.price_asking as number)}
+              </div>
+            )}
+          </div>
+        </div>
       </Link>
     </motion.div>
   );
@@ -812,78 +817,83 @@ function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirs
       >
         <div
           style={{
-            width: "100%",
-            aspectRatio: "4/5",
-            borderRadius: v1.imageRadius,
+            background: v1.inkWash,
             border: `1px solid ${v1.inkHairline}`,
+            borderRadius: v1.imageRadius,
             overflow: "hidden",
-            background: v1.postit,
             boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
           }}
         >
-          {post.image_url && !imgErr ? (
-            <img
-              src={post.image_url}
-              alt={post.title}
-              onError={() => setImgErr(true)}
-              loading="lazy"
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                display: "block",
-                filter:       TREEHOUSE_LENS_FILTER,
-                WebkitFilter: TREEHOUSE_LENS_FILTER,
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                padding: "12px 10px",
-                display: "flex",
-                alignItems: "flex-end",
-                fontFamily: FONT_IM_FELL,
-                fontSize: 13,
-                color: v1.inkFaint,
-              }}
-            >
-              no photograph
-            </div>
-          )}
-        </div>
-        <div
-          style={{
-            fontFamily: FONT_SYS,
-            fontSize: 14,
-            fontWeight: 400,
-            color: v1.inkMid,
-            lineHeight: 1.35,
-            letterSpacing: "-0.005em",
-            marginTop: 6,
-            overflow: "hidden",
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical" as const,
-          }}
-        >
-          {post.title}
-        </div>
-        {hasPrice && (
           <div
             style={{
-              fontFamily: FONT_SYS,
-              fontSize: 13,
-              color: v1.priceInk,
-              lineHeight: 1.4,
-              marginTop: 2,
-              letterSpacing: "-0.005em",
+              width: "100%",
+              aspectRatio: "4/5",
+              background: v1.postit,
             }}
           >
-            ${Math.round(post.price_asking as number)}
+            {post.image_url && !imgErr ? (
+              <img
+                src={post.image_url}
+                alt={post.title}
+                onError={() => setImgErr(true)}
+                loading="lazy"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                  filter:       TREEHOUSE_LENS_FILTER,
+                  WebkitFilter: TREEHOUSE_LENS_FILTER,
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  padding: "12px 10px",
+                  display: "flex",
+                  alignItems: "flex-end",
+                  fontFamily: FONT_IM_FELL,
+                  fontSize: 13,
+                  color: v1.inkFaint,
+                }}
+              >
+                no photograph
+              </div>
+            )}
           </div>
-        )}
+          <div style={{ padding: "9px 10px 11px" }}>
+            <div
+              style={{
+                fontFamily: FONT_IM_FELL,
+                fontSize: 14,
+                color: v1.inkPrimary,
+                lineHeight: 1.2,
+                overflow: "hidden",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical" as const,
+              }}
+            >
+              {post.title}
+            </div>
+            {hasPrice && (
+              <div
+                style={{
+                  fontFamily: FONT_SYS,
+                  fontSize: 12,
+                  color: v1.priceInk,
+                  lineHeight: 1.4,
+                  marginTop: 3,
+                  letterSpacing: "-0.005em",
+                }}
+              >
+                ${Math.round(post.price_asking as number)}
+              </div>
+            )}
+          </div>
+        </div>
       </Link>
     </motion.div>
   );

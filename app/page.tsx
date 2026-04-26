@@ -367,13 +367,13 @@ function MasonryTile({
           />
         </div>
 
-        {/* Relative timestamp — Variant D from feed-timestamp-v1.html mockup.
-            Left-aligned with the image edge, system-ui 10px, ink-muted. Sits
-            inside the Link so it's part of the tile's tap target. */}
+        {/* Relative timestamp — Variant D from feed-timestamp-v1.html mockup,
+            italicized session 69 to nod toward IM Fell italic vocabulary. */}
         <div
           style={{
             padding: "4px 0 0",
             fontFamily: FONT_SYS,
+            fontStyle: "italic",
             fontSize: 10,
             color: v1.inkMuted,
             letterSpacing: "0.01em",

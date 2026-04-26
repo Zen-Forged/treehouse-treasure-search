@@ -134,13 +134,10 @@ function VendorCard({
           }
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(20,14,6,0.52) 0%, transparent 55%)" }} />
 
-          {vendor.booth_number && (
-            <div style={{ position: "absolute", bottom: 7, left: 8, zIndex: 2, padding: "2px 7px", borderRadius: 10, background: "rgba(20,14,6,0.55)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.15)" }}>
-              <span style={{ fontFamily: FONT_SYS, fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.95)", letterSpacing: "0.3px" }}>
-                Booth {vendor.booth_number}
-              </span>
-            </div>
-          )}
+          {/* Session 69 — Booth NN photo-overlay pill retired. The booth number
+              now lives as a small-caps eyebrow above the vendor name in the card
+              body (Option B), unifying the three pieces ("Booth" + number + name)
+              into one coherent label per docs/caption-and-booth-label-design.md. */}
 
           {/* Session 67 — bookmark bubble for non-admins. Admin tiles already
               carry Pencil + Trash in the top-right; bookmark hidden there to
@@ -180,6 +177,11 @@ function VendorCard({
 
         {/* Info */}
         <div style={{ padding: "9px 10px 11px" }}>
+          {vendor.booth_number && (
+            <div style={{ fontFamily: FONT_SYS, fontSize: 9.5, fontWeight: 700, color: v1.inkMuted, letterSpacing: "0.10em", textTransform: "uppercase", marginBottom: 2, lineHeight: 1 }}>
+              Booth {vendor.booth_number}
+            </div>
+          )}
           <div style={{ fontFamily: FONT_IM_FELL, fontSize: 14, color: v1.inkPrimary, lineHeight: 1.2, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {vendor.display_name}
           </div>

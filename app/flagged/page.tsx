@@ -205,108 +205,114 @@ function FindTile({
     >
       <div
         style={{
-          position: "relative",
-          width: "100%",
-          aspectRatio: "4/5",
-          borderRadius: v1.imageRadius,
+          background: v1.inkWash,
           border: `1px solid ${v1.inkHairline}`,
+          borderRadius: v1.imageRadius,
           overflow: "hidden",
-          background: v1.postit,
           boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
         }}
       >
-        {hasImg ? (
-          <img
-            src={post.image_url!}
-            alt={post.title}
-            loading="lazy"
-            onError={() => setImgErr(true)}
+        <div
+          style={{
+            position: "relative",
+            width: "100%",
+            aspectRatio: "4/5",
+            background: v1.postit,
+          }}
+        >
+          {hasImg ? (
+            <img
+              src={post.image_url!}
+              alt={post.title}
+              loading="lazy"
+              onError={() => setImgErr(true)}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+                filter:       TREEHOUSE_LENS_FILTER,
+                WebkitFilter: TREEHOUSE_LENS_FILTER,
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: FONT_IM_FELL,
+                fontStyle: "italic",
+                fontSize: 13,
+                color: v1.inkFaint,
+              }}
+            >
+              no photograph
+            </div>
+          )}
+
+          <button
+            onClick={handleUnsave}
+            aria-label="Remove flag"
             style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-              filter:       TREEHOUSE_LENS_FILTER,
-              WebkitFilter: TREEHOUSE_LENS_FILTER,
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              width: "100%",
-              height: "100%",
+              position: "absolute",
+              top: 8,
+              right: 8,
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              background: "rgba(232,221,199,0.78)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              border: `0.5px solid rgba(42,26,10,0.12)`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontFamily: FONT_IM_FELL,
-              fontStyle: "italic",
-              fontSize: 13,
-              color: v1.inkFaint,
+              padding: 0,
+              cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+              zIndex: 2,
             }}
           >
-            no photograph
-          </div>
-        )}
-
-        <button
-          onClick={handleUnsave}
-          aria-label="Remove flag"
-          style={{
-            position: "absolute",
-            top: 8,
-            right: 8,
-            width: 36,
-            height: 36,
-            borderRadius: "50%",
-            background: "rgba(232,221,199,0.78)",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
-            border: `0.5px solid rgba(42,26,10,0.12)`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 0,
-            cursor: "pointer",
-            WebkitTapHighlightColor: "transparent",
-            zIndex: 2,
-          }}
-        >
-          <FlagGlyph size={17} strokeWidth={1.7} style={{ color: v1.green, fill: v1.green }} />
-        </button>
-      </div>
-
-      <div
-        style={{
-          marginTop: 6,
-          fontFamily: FONT_IM_FELL,
-          fontStyle: "italic",
-          fontSize: 13,
-          color: v1.inkMid,
-          lineHeight: 1.4,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          display: "-webkit-box",
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical" as const,
-        }}
-      >
-        {post.title}
-      </div>
-
-      {typeof post.price_asking === "number" && post.price_asking > 0 && (
-        <div
-          style={{
-            marginTop: 2,
-            fontFamily: FONT_SYS,
-            fontSize: 13,
-            color: v1.priceInk,
-            lineHeight: 1.4,
-            letterSpacing: "-0.005em",
-          }}
-        >
-          ${Math.round(post.price_asking)}
+            <FlagGlyph size={17} strokeWidth={1.7} style={{ color: v1.green, fill: v1.green }} />
+          </button>
         </div>
-      )}
+
+        <div style={{ padding: "9px 10px 11px" }}>
+          <div
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontSize: 14,
+              color: v1.inkPrimary,
+              lineHeight: 1.2,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical" as const,
+            }}
+          >
+            {post.title}
+          </div>
+
+          {typeof post.price_asking === "number" && post.price_asking > 0 && (
+            <div
+              style={{
+                marginTop: 3,
+                fontFamily: FONT_SYS,
+                fontSize: 12,
+                color: v1.priceInk,
+                lineHeight: 1.4,
+                letterSpacing: "-0.005em",
+              }}
+            >
+              ${Math.round(post.price_asking)}
+            </div>
+          )}
+        </div>
+      </div>
     </Link>
   );
 }

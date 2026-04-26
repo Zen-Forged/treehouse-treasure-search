@@ -144,40 +144,6 @@ function XGlyph({ size = 16 }: { size?: number }) {
   );
 }
 
-// Status-pill primitive (v1.1)
-// Used for on-photo status ("On Display" / "Found a Home") AND for the booth-number
-// marker on the vendor line of the cartographic block. The visual match is the point —
-// the reader sees the two pills as a linked pair even though they sit in different places.
-function Pill({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  // v1.1e — pure numeric badge role (no "Booth" word, no arrow, no gloss — just the number).
-  // v1.1j — numeral font swapped IM Fell → system-ui. IM Fell's `1` read as a capital-I
-  // in this small inline context; system-ui resolves the ambiguity without changing size.
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        padding: "2px 9px",
-        borderRadius: 999,
-        background: v1.pillBg,
-        backdropFilter: "blur(4px)",
-        WebkitBackdropFilter: "blur(4px)",
-        border: `1.5px solid ${v1.pillBorder}`,
-        fontFamily: FONT_SYS,
-        fontSize: 16,
-        fontWeight: 500,
-        letterSpacing: "-0.005em",
-        color: v1.pillInk,
-        lineHeight: 1.25,
-        whiteSpace: "nowrap",
-        ...style,
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
 // Shelf card (v1.1)
 function ShelfCard({ post }: { post: Post }) {
   const [imgErr, setImgErr] = useState(false);
@@ -191,72 +157,76 @@ function ShelfCard({ post }: { post: Post }) {
     >
       <div
         style={{
-          position: "relative",
-          width: "100%",
-          aspectRatio: "3/4",
-          overflow: "hidden",
-          background: v1.postit,
-          borderRadius: v1.imageRadius,
+          background: v1.inkWash,
           border: `1px solid ${v1.inkHairline}`,
+          borderRadius: v1.imageRadius,
+          overflow: "hidden",
           boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
-          opacity: isSold ? 0.62 : 1,
-          transition: "opacity 0.2s",
         }}
       >
-        {hasImg ? (
-          <img
-            src={post.image_url!}
-            alt={post.title}
-            loading="lazy"
-            onError={() => setImgErr(true)}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              display: "block",
-              filter: isSold
-                ? `${TREEHOUSE_LENS_FILTER} grayscale(0.5) brightness(0.88)`
-                : TREEHOUSE_LENS_FILTER,
-              WebkitFilter: isSold
-                ? `${TREEHOUSE_LENS_FILTER} grayscale(0.5) brightness(0.88)`
-                : TREEHOUSE_LENS_FILTER,
-            }}
-          />
-        ) : (
+        <div
+          style={{
+            position: "relative",
+            width: "100%",
+            aspectRatio: "3/4",
+            background: v1.postit,
+            opacity: isSold ? 0.62 : 1,
+            transition: "opacity 0.2s",
+          }}
+        >
+          {hasImg ? (
+            <img
+              src={post.image_url!}
+              alt={post.title}
+              loading="lazy"
+              onError={() => setImgErr(true)}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+                filter: isSold
+                  ? `${TREEHOUSE_LENS_FILTER} grayscale(0.5) brightness(0.88)`
+                  : TREEHOUSE_LENS_FILTER,
+                WebkitFilter: isSold
+                  ? `${TREEHOUSE_LENS_FILTER} grayscale(0.5) brightness(0.88)`
+                  : TREEHOUSE_LENS_FILTER,
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                padding: "12px 10px",
+                display: "flex",
+                alignItems: "flex-end",
+                background: v1.postit,
+              }}
+            >
+              <div style={{ fontFamily: FONT_IM_FELL, fontSize: 13, color: v1.inkMuted, lineHeight: 1.25 }}>
+                {post.title}
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{ padding: "9px 10px 11px" }}>
           <div
             style={{
-              width: "100%",
-              height: "100%",
-              padding: "12px 10px",
-              display: "flex",
-              alignItems: "flex-end",
-              background: v1.postit,
+              fontFamily: FONT_IM_FELL,
+              fontSize: 14,
+              color: v1.inkPrimary,
+              lineHeight: 1.2,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical" as const,
             }}
           >
-            <div style={{ fontFamily: FONT_IM_FELL, fontSize: 13, color: v1.inkMuted, lineHeight: 1.25 }}>
-              {post.title}
-            </div>
+            {post.title}
           </div>
-        )}
-      </div>
-      <div
-        style={{
-          marginTop: 8,
-          paddingLeft: 2,
-          fontFamily: FONT_SYS,
-          fontSize: 14,
-          fontWeight: 400,
-          color: v1.inkMid,
-          lineHeight: 1.4,
-          letterSpacing: "-0.005em",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          display: "-webkit-box",
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical" as const,
-        }}
-      >
-        {post.title}
+        </div>
       </div>
     </Link>
   );
@@ -1147,73 +1117,84 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {(vendorName || boothNumber) && (
-              <div>
-                {vendorName && (
-                  <div
-                    style={{
-                      fontFamily: FONT_IM_FELL,
-                      fontSize: 18,
-                      color: v1.inkPrimary,
-                      lineHeight: 1.3,
-                      marginBottom: 10,
-                    }}
-                  >
-                    {vendorName}
-                  </div>
-                )}
-                {boothNumber && vendorSlug && (
-                  <Link
-                    href={`/shelf/${vendorSlug}`}
-                    style={{
-                      textDecoration: "none",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 10,
-                      WebkitTapHighlightColor: "transparent",
-                    }}
-                  >
-                    <span
+            {(vendorName || boothNumber) && (() => {
+              const cardInner = (
+                <div
+                  style={{
+                    background: v1.inkWash,
+                    border: `1px solid ${v1.inkHairline}`,
+                    borderRadius: 10,
+                    padding: "12px 14px",
+                  }}
+                >
+                  {boothNumber && (
+                    <div
                       style={{
                         fontFamily: FONT_SYS,
-                        fontWeight: 400,
-                        fontSize: 14,
+                        fontSize: 9.5,
+                        fontWeight: 700,
                         color: v1.inkMuted,
-                        textDecoration: "underline",
-                        textDecorationStyle: "dotted",
-                        textDecorationColor: v1.inkFaint,
-                        textUnderlineOffset: 3,
-                        lineHeight: 1.55,
+                        letterSpacing: "0.10em",
+                        textTransform: "uppercase",
+                        marginBottom: 3,
+                        lineHeight: 1,
                       }}
                     >
-                      Explore booth →
-                    </span>
-                    <Pill>{boothNumber}</Pill>
-                  </Link>
-                )}
-                {boothNumber && !vendorSlug && (
-                  <Pill>{boothNumber}</Pill>
-                )}
-                {!boothNumber && vendorSlug && (
-                  <Link
-                    href={`/shelf/${vendorSlug}`}
+                      Booth {boothNumber}
+                    </div>
+                  )}
+                  <div
                     style={{
-                      fontFamily: FONT_SYS,
-                      fontWeight: 400,
-                      fontSize: 14,
-                      color: v1.inkMuted,
-                      textDecoration: "underline",
-                      textDecorationStyle: "dotted",
-                      textDecorationColor: v1.inkFaint,
-                      textUnderlineOffset: 3,
-                      lineHeight: 1.55,
+                      display: "flex",
+                      alignItems: "baseline",
+                      justifyContent: "space-between",
+                      gap: 10,
                     }}
                   >
-                    Visit the shelf →
-                  </Link>
-                )}
-              </div>
-            )}
+                    {vendorName && (
+                      <span
+                        style={{
+                          fontFamily: FONT_IM_FELL,
+                          fontSize: 18,
+                          color: v1.inkPrimary,
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        {vendorName}
+                      </span>
+                    )}
+                    {vendorSlug && (
+                      <span
+                        style={{
+                          fontFamily: FONT_SYS,
+                          fontSize: 11,
+                          fontWeight: 500,
+                          color: v1.green,
+                          flexShrink: 0,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Visit the booth →
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+              return vendorSlug ? (
+                <Link
+                  href={`/shelf/${vendorSlug}`}
+                  style={{
+                    display: "block",
+                    textDecoration: "none",
+                    WebkitTapHighlightColor: "transparent",
+                  }}
+                >
+                  {cardInner}
+                </Link>
+              ) : (
+                cardInner
+              );
+            })()}
           </div>
         </motion.div>
       )}
