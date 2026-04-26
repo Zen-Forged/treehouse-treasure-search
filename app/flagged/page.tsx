@@ -647,73 +647,16 @@ export default function FindMapPage() {
         <div style={{ justifySelf: "end" }} aria-hidden="true" />
       </StickyMasthead>
 
-      {/* 2. FeaturedBanner (overlay variant) — v1.1l replaces the "Find Map" subheader.
-          Only renders when an image URL exists; otherwise collapses quietly. */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.34, delay: 0.04, ease: EASE }}
-      >
-        <FeaturedBanner
-          variant="overlay"
-          imageUrl={bannerImageUrl}
-          minHeight={180}
-          marginBottom={6}
-        />
-      </motion.div>
-
-      {/* Fallback page title when no banner image is set — so the page still
-          has an identity. Hidden when the banner renders. */}
-      {!bannerImageUrl && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.34, delay: 0.04, ease: EASE }}
-          style={{ padding: "10px 22px 4px" }}
-        >
-          <div
-            style={{
-              fontFamily: FONT_IM_FELL,
-              fontSize: 30,
-              color: v1.inkPrimary,
-              lineHeight: 1.15,
-              letterSpacing: "-0.005em",
-            }}
-          >
-            Find Map
-          </div>
-        </motion.div>
-      )}
-
-      {/* 3. Intro voice */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.34, delay: 0.08, ease: EASE }}
-        style={{ padding: "10px 22px 0" }}
-      >
-        <div
-          style={{
-            fontFamily: FONT_IM_FELL,
-            fontStyle: "italic",
-            fontSize: 16,
-            color: v1.inkMuted,
-            lineHeight: 1.65,
-          }}
-        >
-          Your saved finds are mapped below. Each one is waiting in its place, ready when you are.
-        </div>
-      </motion.div>
-
-      {/* 4. Mall scope header — replaces the prior pin + mall name + address.
-          Now the picker (and cross-tab persistence) drives mall context, not
-          save-pin extraction. Only renders once we know the user has saves;
-          a wholly empty saved-list shows the "Nothing saved yet" state instead. */}
+      {/* 2. Mall scope header — moved above the FeaturedBanner per session-68
+          QA so the persisted mall filter is the first thing the eye lands on
+          after the masthead. Only renders once we know the user has saves;
+          a wholly empty saved-list shows the "Nothing saved yet" state and
+          the EmptyState's own copy carries the page identity. */}
       {!loading && posts.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.34, delay: 0.12, ease: EASE }}
+          transition={{ duration: 0.34, delay: 0.04, ease: EASE }}
         >
           <MallScopeHeader
             eyebrowAll="Saves across"
@@ -724,6 +667,24 @@ export default function FindMapPage() {
           />
         </motion.div>
       )}
+
+      {/* 3. FeaturedBanner (overlay variant) — admin-editable.
+          Only renders when an image URL exists; otherwise collapses quietly.
+          The "Find Map" fallback heading + intro voice paragraph were retired
+          session 68 — page identity now comes from MallScopeHeader (when there
+          are saves) or from EmptyState's own copy (when there are none). */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.34, delay: 0.08, ease: EASE }}
+      >
+        <FeaturedBanner
+          variant="overlay"
+          imageUrl={bannerImageUrl}
+          minHeight={180}
+          marginBottom={6}
+        />
+      </motion.div>
 
       {/* 5. Hairline divider (v1.1j — diamond retired) */}
       {!loading && groups.length > 0 && (

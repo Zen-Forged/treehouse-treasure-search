@@ -764,30 +764,32 @@ export default function DiscoveryFeedPage() {
         </div>
       </StickyMasthead>
 
-      {/* 1.5 FeaturedBanner (eyebrow variant, v1.1l) — admin-editable.
-          Only renders when an image URL is set; otherwise collapses quietly. */}
+      {/* 1.5 Mall scope header (FeedHero wrapper) — moved above the
+          FeaturedBanner per session-68 QA so the persisted mall filter is
+          the first thing the eye lands on after the masthead. */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.34, delay: 0.04, ease: EASE }}
+      >
+        <FeedHero
+          selectedMall={selectedMall}
+          onTapMall={() => setMallSheetOpen(true)}
+        />
+      </motion.div>
+
+      {/* ── 2. FeaturedBanner (eyebrow variant) — admin-editable. Only
+             renders when an image URL is set; otherwise collapses quietly. */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.34, delay: 0.06, ease: EASE }}
       >
         <FeaturedBanner
           variant="eyebrow"
           imageUrl={featuredImageUrl}
           minHeight={200}
           marginBottom={6}
-        />
-      </motion.div>
-
-      {/* ── 2. Feed hero on paper ──────────────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.34, delay: 0.06, ease: EASE }}
-      >
-        <FeedHero
-          selectedMall={selectedMall}
-          onTapMall={() => setMallSheetOpen(true)}
         />
       </motion.div>
 
