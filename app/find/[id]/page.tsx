@@ -73,6 +73,7 @@ import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
 import { getCachedUserId, getSession, isAdmin, onAuthChange } from "@/lib/auth";
 import { v1, FONT_IM_FELL, FONT_SYS, FONT_POSTIT_NUMERAL } from "@/lib/tokens";
+import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { flagKey, mapsUrl, boothNumeralSize, loadFollowedIds } from "@/lib/utils";
 import { track } from "@/lib/clientEvents";
 import BottomNav from "@/components/BottomNav";
@@ -213,7 +214,12 @@ function ShelfCard({ post }: { post: Post }) {
               height: "100%",
               objectFit: "cover",
               display: "block",
-              filter: isSold ? "grayscale(0.5) brightness(0.88)" : "none",
+              filter: isSold
+                ? `${TREEHOUSE_LENS_FILTER} grayscale(0.5) brightness(0.88)`
+                : TREEHOUSE_LENS_FILTER,
+              WebkitFilter: isSold
+                ? `${TREEHOUSE_LENS_FILTER} grayscale(0.5) brightness(0.88)`
+                : TREEHOUSE_LENS_FILTER,
             }}
           />
         ) : (
@@ -822,7 +828,12 @@ export default function FindDetailPage() {
                   height: "100%",
                   objectFit: "cover",
                   display: "block",
-                  filter: isSold ? "grayscale(0.35) brightness(0.9)" : "none",
+                  filter: isSold
+                    ? `${TREEHOUSE_LENS_FILTER} grayscale(0.35) brightness(0.9)`
+                    : TREEHOUSE_LENS_FILTER,
+                  WebkitFilter: isSold
+                    ? `${TREEHOUSE_LENS_FILTER} grayscale(0.35) brightness(0.9)`
+                    : TREEHOUSE_LENS_FILTER,
                 }}
               />
             </button>

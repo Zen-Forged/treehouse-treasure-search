@@ -37,6 +37,7 @@
 import type { ReactNode } from "react";
 import { v1, FONT_IM_FELL, FONT_POSTIT_NUMERAL } from "@/lib/tokens";
 import { boothNumeralSize } from "@/lib/utils";
+import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 
 export interface PhotographPreviewProps {
   /** Image source — can be an object URL, data URL, or public URL. */
@@ -101,8 +102,12 @@ export default function PhotographPreview({
               height: "auto",
               objectFit: "contain",
               display: "block",
-              // Sold treatment — image only. Post-it below is unaffected.
-              filter: sold ? "grayscale(100%) brightness(0.92)" : "none",
+              // Treehouse Lens applies to every find-photo render; sold
+              // treatment composes on top so a sold listing reads grayscale +
+              // dim with the lens still as the base layer. Post-it unaffected.
+              filter: sold
+                ? `${TREEHOUSE_LENS_FILTER} grayscale(100%) brightness(0.92)`
+                : TREEHOUSE_LENS_FILTER,
               opacity: sold ? 0.88 : 1,
               transition: "filter 0.25s ease, opacity 0.25s ease",
             }}

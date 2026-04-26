@@ -69,6 +69,7 @@ import { motion } from "framer-motion";
 import { Pencil, Loader, ImagePlus } from "lucide-react";
 import { vendorHueBg, mapsUrl, boothNumeralSize } from "@/lib/utils";
 import { v1, FONT_IM_FELL, FONT_SYS, FONT_POSTIT_NUMERAL } from "@/lib/tokens";
+import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import type { Post } from "@/types/treehouse";
 
 // Re-export canonical v1.1h tokens so consumers of BoothPage primitives
@@ -681,7 +682,14 @@ function WindowTile({ post, index }: { post: Post; index: number }) {
               alt={post.title}
               onError={() => setImgErr(true)}
               loading="lazy"
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+                filter:       TREEHOUSE_LENS_FILTER,
+                WebkitFilter: TREEHOUSE_LENS_FILTER,
+              }}
             />
           ) : (
             <div
@@ -819,7 +827,14 @@ function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirs
               alt={post.title}
               onError={() => setImgErr(true)}
               loading="lazy"
-              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+                filter:       TREEHOUSE_LENS_FILTER,
+                WebkitFilter: TREEHOUSE_LENS_FILTER,
+              }}
             />
           ) : (
             <div

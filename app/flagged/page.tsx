@@ -53,6 +53,7 @@ import FlagGlyph from "@/components/FlagGlyph";
 import { getPostsByIds } from "@/lib/posts";
 import { BOOKMARK_PREFIX, loadBookmarkCount, mapsUrl } from "@/lib/utils";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
 import BottomNav from "@/components/BottomNav";
@@ -231,7 +232,14 @@ function FindTile({
             alt={post.title}
             loading="lazy"
             onError={() => setImgErr(true)}
-            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+              filter:       TREEHOUSE_LENS_FILTER,
+              WebkitFilter: TREEHOUSE_LENS_FILTER,
+            }}
           />
         ) : (
           <div

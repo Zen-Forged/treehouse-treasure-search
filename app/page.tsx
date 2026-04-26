@@ -47,6 +47,7 @@ import FlagGlyph from "@/components/FlagGlyph";
 import { getFeedPosts, getActiveMalls } from "@/lib/posts";
 import { getSession, signOut, onAuthChange } from "@/lib/auth";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { flagKey, loadFollowedIds, formatTimeAgo } from "@/lib/utils";
 import { safeStorage } from "@/lib/safeStorage";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
@@ -287,6 +288,8 @@ function MasonryTile({
                 height: "100%",
                 objectFit: "cover",
                 display: "block",
+                filter:       TREEHOUSE_LENS_FILTER,
+                WebkitFilter: TREEHOUSE_LENS_FILTER,
               }}
             />
           ) : (

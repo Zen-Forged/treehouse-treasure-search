@@ -28,6 +28,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
+import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 
 const EASE              = [0.25, 0.46, 0.45, 0.94] as const;
 const MIN_SCALE         = 1;
@@ -244,6 +245,8 @@ export default function PhotoLightbox({ open, src, alt, onClose }: Props) {
                 transition: isGesturing
                   ? "none"
                   : "transform 180ms cubic-bezier(0.25,0.46,0.45,0.94)",
+                filter:       TREEHOUSE_LENS_FILTER,
+                WebkitFilter: TREEHOUSE_LENS_FILTER,
                 userSelect:    "none",
                 WebkitUserSelect: "none",
                 pointerEvents: "none", // touches go to the stage, not the img

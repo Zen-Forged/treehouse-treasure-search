@@ -70,6 +70,7 @@ import {
   type Vendor,
 } from "@/types/treehouse";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import PhotographPreview from "@/components/PhotographPreview";
 import PostingAsBlock from "@/components/PostingAsBlock";
 import AmberNotice from "@/components/AmberNotice";
@@ -412,7 +413,17 @@ function PostPreviewInner() {
       >
         {image && (
           <div style={{ width: "78%", borderRadius: v1.imageRadius, overflow: "hidden", opacity: 0.55 }}>
-            <img src={image} alt="" style={{ width: "100%", height: "auto", objectFit: "contain" }} />
+            <img
+              src={image}
+              alt=""
+              style={{
+                width: "100%",
+                height: "auto",
+                objectFit: "contain",
+                filter:       TREEHOUSE_LENS_FILTER,
+                WebkitFilter: TREEHOUSE_LENS_FILTER,
+              }}
+            />
           </div>
         )}
         <motion.div
