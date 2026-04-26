@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Persist mall filter across Home / Booths / Find Map</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --pill-bg-frost: rgba(232, 221, 199, 0.78);
+    --green:        #1e4d2b;
+    --green-bg:     rgba(30, 77, 43, 0.08);
+    --green-border: rgba(30, 77, 43, 0.22);
+    --ink-wash:     rgba(255, 253, 248, 0.70);
+
+    --im-fell: "IM Fell English", Georgia, serif;
+    --sys:     -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1320px; margin: 0 auto; padding: 30px 20px 60px; }
+
+  h1.title {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 760px;
+  }
+
+  /* Decisions pane */
+  .decisions {
+    max-width: 920px;
+    margin: 0 auto 30px;
+    padding: 18px 24px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--im-fell);
+    font-size: 18px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 10px;
+    letter-spacing: -0.005em;
+  }
+  .decisions ul { margin: 6px 0 0; padding: 0 0 0 20px; }
+  .decisions li { margin-bottom: 4px; }
+  .decisions strong { color: #fff9e8; font-weight: 500; }
+  .decisions code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .decisions .locked-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 24px;
+    margin-top: 10px;
+  }
+  .decisions .locked-grid > div { padding: 3px 0; }
+  .decisions .open-block {
+    margin-top: 14px;
+    padding: 12px 16px;
+    background: rgba(30, 77, 43, 0.18);
+    border: 1px solid rgba(30, 77, 43, 0.42);
+    border-radius: 8px;
+    color: #fff5dc;
+  }
+
+  /* Phone-frame row */
+  .frames-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px;
+    max-width: 1280px;
+    margin: 0 auto 32px;
+    align-items: start;
+  }
+  @media (max-width: 1100px) { .frames-row { grid-template-columns: 1fr; max-width: 430px; } }
+
+  .frame-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .frame-card .frame-label {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 18px;
+    color: #fff9e8;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .frame-card .frame-blurb {
+    color: rgba(232, 221, 199, 0.62);
+    font-size: 12px;
+    line-height: 1.55;
+    text-align: center;
+    margin-bottom: 14px;
+    max-width: 380px;
+    min-height: 38px;
+  }
+
+  .phone {
+    width: 100%;
+    max-width: 392px;
+    aspect-ratio: 392 / 800;
+    background: var(--paper);
+    border-radius: 32px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+    border: 4px solid #1a1812;
+  }
+
+  /* Sticky masthead */
+  .masthead {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 14px 18px 12px;
+    gap: 12px;
+    background: rgba(232, 221, 199, 0.96);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--ink-hairline);
+    position: relative;
+    z-index: 4;
+  }
+  .masthead .wordmark {
+    font-family: var(--im-fell);
+    font-size: 18px;
+    color: var(--ink-primary);
+    letter-spacing: -0.005em;
+    white-space: nowrap;
+    text-align: center;
+  }
+  .masthead .right-slot { justify-self: end; display: flex; align-items: center; gap: 8px; }
+  .signout-text {
+    font-family: var(--sys);
+    font-size: 11px;
+    color: var(--ink-muted);
+    letter-spacing: 0.04em;
+  }
+  .circle-user { width: 22px; height: 22px; color: var(--ink-mid); }
+
+  /* ───── Mall scope header (THE NEW PRIMITIVE) ───── */
+  .mall-scope {
+    padding: 14px 18px 8px;
+    border-bottom: 1px solid var(--ink-hairline);
+    background: rgba(232, 221, 199, 0.40);
+  }
+  .mall-scope .eyebrow {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .mall-scope .scope-name-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .mall-scope .scope-name {
+    font-family: var(--im-fell);
+    font-size: 26px;
+    color: var(--ink-primary);
+    line-height: 1.1;
+    letter-spacing: -0.005em;
+  }
+  .mall-scope .chevron {
+    width: 18px;
+    height: 18px;
+    color: var(--ink-mid);
+    align-self: center;
+    margin-top: 4px;
+  }
+  .mall-scope .geo-line {
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--sys);
+    font-size: 12px;
+    color: var(--ink-mid);
+  }
+  .mall-scope .geo-line svg { color: var(--ink-muted); flex-shrink: 0; }
+  .mall-scope .geo-line .address {
+    text-decoration: underline dotted;
+    color: var(--ink-mid);
+  }
+  .mall-scope .geo-line.italic {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-muted);
+  }
+
+  /* Highlight ring around the new picker affordance for the mockup */
+  .highlight-new {
+    position: absolute;
+    border: 2px dashed rgba(30, 77, 43, 0.55);
+    border-radius: 8px;
+    pointer-events: none;
+    z-index: 6;
+  }
+  .highlight-new::after {
+    content: "NEW picker";
+    position: absolute;
+    top: -10px;
+    right: 6px;
+    background: var(--green);
+    color: #fff9e8;
+    font-family: var(--sys);
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* ───── Frame 1 (Home) — feed teaser ───── */
+  .feed-list {
+    padding: 14px 14px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .feed-tile {
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-hairline);
+    box-shadow: 0 1px 5px rgba(42,26,10,0.06);
+  }
+  .feed-tile .photo {
+    aspect-ratio: 4 / 3;
+    background-size: cover;
+    background-position: center;
+    filter: contrast(1.08) saturate(1.05) sepia(0.05);
+    position: relative;
+  }
+  .feed-tile .photo::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(20,14,6,0.40) 0%, transparent 55%);
+  }
+  .feed-tile .info { padding: 8px 11px 10px; }
+  .feed-tile .info .title {
+    font-family: var(--im-fell);
+    font-size: 15px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+  }
+  .feed-tile .info .sub {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink-muted);
+    margin-top: 1px;
+  }
+  .feed-tile .info .ts {
+    font-family: var(--sys);
+    font-size: 10px;
+    color: var(--ink-muted);
+    margin-top: 4px;
+  }
+
+  /* ───── Frame 2 (Booths) — flat grid (no section headers when filtered) ───── */
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    padding: 10px 14px 0;
+    align-items: center;
+  }
+  .chip {
+    font-family: var(--sys);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 5px 11px 5px 9px;
+    border-radius: 999px;
+    background: rgba(42, 26, 10, 0.04);
+    border: 1px solid var(--ink-hairline);
+    color: var(--ink-mid);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .chip.active {
+    background: var(--green);
+    border-color: var(--green);
+    color: #fff;
+  }
+  .chip .chip-count {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.18);
+    color: #fff;
+  }
+  .chip:not(.active) .chip-count {
+    background: rgba(42, 26, 10, 0.10);
+    color: var(--ink-mid);
+  }
+
+  .booth-section { padding: 14px 14px 0; }
+  .booth-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+  }
+  .booth-tile {
+    border-radius: 11px;
+    overflow: hidden;
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-hairline);
+    box-shadow: 0 1px 5px rgba(42,26,10,0.06);
+  }
+  .booth-tile .hero {
+    aspect-ratio: 1 / 1;
+    position: relative;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+  }
+  .booth-tile .hero::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(20,14,6,0.50) 0%, transparent 55%);
+  }
+  .hero-1 { background-image: url("https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=400"); filter: contrast(1.08) saturate(1.05) sepia(0.05); }
+  .hero-2 { background-image: url("https://images.unsplash.com/photo-1518770660439-4636190af475?w=400"); filter: contrast(1.08) saturate(1.05) sepia(0.05); }
+  .hero-3 { background-image: url("https://images.unsplash.com/photo-1503602642458-232111445657?w=400"); filter: contrast(1.08) saturate(1.05) sepia(0.05); }
+  .hero-4 { background-image: url("https://images.unsplash.com/photo-1501426026826-31c667bdf23d?w=400"); filter: contrast(1.08) saturate(1.05) sepia(0.05); }
+  .hero-5 { background-image: url("https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400"); filter: contrast(1.08) saturate(1.05) sepia(0.05); }
+  .hero-6 { background-image: url("https://images.unsplash.com/photo-1448375240586-882707db888b?w=400"); filter: contrast(1.08) saturate(1.05) sepia(0.05); }
+
+  .booth-number {
+    position: absolute; bottom: 6px; left: 7px; z-index: 2;
+    padding: 2px 6px;
+    border-radius: 9px;
+    background: rgba(20,14,6,0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.15);
+    font-family: -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+    font-size: 8.5px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.95);
+    letter-spacing: 0.3px;
+  }
+  .bookmark-bubble {
+    position: absolute;
+    top: 6px; right: 6px; z-index: 3;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--pill-bg-frost);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 0.5px solid rgba(42,26,10,0.12);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .bookmark-bubble svg { width: 14px; height: 14px; }
+
+  .booth-tile .info { padding: 8px 9px 10px; }
+  .booth-tile .info .name {
+    font-family: var(--im-fell);
+    font-size: 13px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .booth-tile .info .sub {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 9.5px;
+    color: var(--ink-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+  }
+
+  /* ───── Frame 3 (Find Map) — map + saves ───── */
+  .map-stage {
+    margin: 12px 12px 0;
+    aspect-ratio: 16 / 11;
+    border-radius: 14px;
+    background:
+      radial-gradient(ellipse at 30% 40%, rgba(42, 26, 10, 0.10), transparent 50%),
+      linear-gradient(135deg, #d8c9ad 0%, #c2b292 100%);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--ink-hairline);
+  }
+  .map-stage .road {
+    position: absolute;
+    background: rgba(255, 253, 248, 0.55);
+    height: 4px;
+  }
+  .map-stage .road.h1 { top: 30%; left: -10%; right: -10%; transform: rotate(-2deg); }
+  .map-stage .road.h2 { top: 65%; left: -10%; right: -10%; transform: rotate(1deg); }
+  .map-stage .road.v1 { top: -10%; bottom: -10%; left: 35%; width: 4px; height: auto; transform: rotate(6deg); }
+  .map-stage .pin {
+    position: absolute;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--green);
+    border: 3px solid #fff9e8;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    color: #fff9e8;
+    font-family: var(--sys);
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .map-stage .pin.lg { width: 38px; height: 38px; font-size: 13px; }
+  .map-stage .pin-1 { top: 22%; left: 28%; }
+  .map-stage .pin-2 { top: 48%; left: 50%; }
+  .map-stage .pin-3 { top: 68%; left: 36%; }
+  .map-stage .you {
+    position: absolute;
+    top: 80%; left: 60%;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: rgba(60, 110, 230, 0.95);
+    border: 3px solid rgba(255,255,255,0.85);
+    box-shadow: 0 0 0 6px rgba(60, 110, 230, 0.18);
+  }
+
+  .saves-list {
+    padding: 12px 14px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .save-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-hairline);
+  }
+  .save-row .thumb {
+    width: 44px; height: 44px;
+    border-radius: 6px;
+    background-size: cover;
+    background-position: center;
+    flex-shrink: 0;
+    filter: contrast(1.08) saturate(1.05) sepia(0.05);
+  }
+  .save-row .body { flex: 1; min-width: 0; }
+  .save-row .body .title {
+    font-family: var(--im-fell);
+    font-size: 14px;
+    color: var(--ink-primary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .save-row .body .sub {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink-muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .save-row .price {
+    font-family: var(--sys);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-mid);
+  }
+
+  /* Empty-state callout pinned over Frame 3 lower half */
+  .empty-callout {
+    position: absolute;
+    left: 14px; right: 14px;
+    bottom: 78px;
+    padding: 14px 16px;
+    background: rgba(255, 253, 248, 0.92);
+    border: 1px dashed rgba(122, 92, 30, 0.45);
+    border-radius: 10px;
+    z-index: 3;
+    text-align: center;
+  }
+  .empty-callout .em-h {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-primary);
+    line-height: 1.4;
+  }
+  .empty-callout .em-b {
+    font-family: var(--sys);
+    font-size: 11px;
+    color: var(--ink-mid);
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+  .empty-callout .em-link {
+    color: var(--green);
+    text-decoration: underline;
+    font-weight: 500;
+  }
+
+  /* Bottom nav */
+  .bottom-nav {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    display: grid;
+    background: rgba(232, 221, 199, 0.96);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid var(--ink-hairline);
+    padding: 9px 0 13px;
+    z-index: 5;
+  }
+  .bottom-nav.tabs-3 { grid-template-columns: repeat(3, 1fr); }
+  .bottom-nav.tabs-4 { grid-template-columns: repeat(4, 1fr); }
+  .nav-tab {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    color: var(--ink-faint);
+    font-family: var(--sys);
+    font-size: 9.5px;
+    letter-spacing: 0.04em;
+  }
+  .nav-tab.active { color: var(--green); }
+  .nav-tab svg { width: 18px; height: 18px; }
+
+  .ph-route {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 10px;
+    color: rgba(232, 221, 199, 0.45);
+    margin-top: 8px;
+    text-align: center;
+  }
+
+  /* ───── Detail panel: MallSheet preview ───── */
+  .detail-panel {
+    max-width: 920px;
+    margin: 6px auto 30px;
+    padding: 18px 24px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+  }
+  .detail-panel h3 {
+    font-family: var(--im-fell);
+    font-size: 16px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 10px;
+  }
+  .detail-row {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 18px;
+    align-items: center;
+    margin-top: 10px;
+  }
+  .mall-sheet-mini {
+    background: var(--paper);
+    border-radius: 14px 14px 0 0;
+    padding: 12px 14px 8px;
+    border: 1px solid var(--ink-hairline);
+  }
+  .mall-sheet-mini .handle {
+    width: 32px; height: 4px;
+    background: rgba(42,26,10,0.18);
+    border-radius: 999px;
+    margin: 0 auto 8px;
+  }
+  .mall-sheet-mini .h {
+    font-family: var(--im-fell);
+    font-size: 16px;
+    color: var(--ink-primary);
+    text-align: center;
+  }
+  .mall-sheet-mini .sub {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink-muted);
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  .mall-sheet-mini .row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 4px;
+    border-top: 1px solid var(--ink-hairline);
+    font-family: var(--im-fell);
+    font-size: 13px;
+    color: var(--ink-primary);
+  }
+  .mall-sheet-mini .row.active {
+    font-weight: 500;
+  }
+  .mall-sheet-mini .row.active .label {
+    border-bottom: 1px solid var(--ink-primary);
+    padding-bottom: 1px;
+  }
+  .mall-sheet-mini .row .count {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 9px;
+    color: var(--ink-muted);
+  }
+  .mall-sheet-mini .row.all { font-style: italic; color: var(--ink-mid); }
+
+  .detail-panel .annotation { font-size: 12px; line-height: 1.6; }
+  .detail-panel .annotation strong { color: #fff9e8; font-weight: 500; }
+  .detail-panel code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <h1 class="title">Persist mall filter across Home / Booths / Find Map</h1>
+  <p class="subtitle">Pick a mall on any of the three primary tabs and the other two honor that selection on next visit. Same <code style="background:rgba(232,221,199,0.08);padding:1px 6px;border-radius:4px;font-size:12px;">treehouse_saved_mall_id</code> localStorage key Home already uses; new picker affordance added to Booths and Find Map mirroring Home's pattern.</p>
+
+  <div class="decisions">
+    <h3>What's locked (decisions D1–D10)</h3>
+    <div class="locked-grid">
+      <div><strong>D1</strong> — Per-tab picker UI on all three; shared localStorage key</div>
+      <div><strong>D2</strong> — Picking on any tab persists; other tabs default to that mall</div>
+      <div><strong>D3</strong> — Booths picker = header pattern, not a chip</div>
+      <div><strong>D4</strong> — Drop per-mall section headers when filter is active</div>
+      <div><strong>D5</strong> — Find Map gets the same header picker</div>
+      <div><strong>D6</strong> — Find Map filter narrows visible saves; helpful empty state</div>
+      <div><strong>D7</strong> — Single clear-filter affordance via existing MallSheet "All malls" row</div>
+      <div><strong>D8</strong> — Reuse storage key <code>treehouse_saved_mall_id</code> (zero migration)</div>
+      <div><strong>D9</strong> — Mount-time read only; no <code>storage</code>-event subscription</div>
+      <div><strong>D10</strong> — Vendor's own booth hidden from filtered Booths grid; My Booth tab unaffected</div>
+    </div>
+
+    <div class="open-block">
+      <strong>All ten decisions locked — design Ready. ✓</strong>
+      <p style="margin: 8px 0 0; font-size: 12px; line-height: 1.6;">
+        Implementation will extract a small <code>&lt;MallScopeHeader&gt;</code> primitive (eyebrow + tappable name + chevron) used 3× and a <code>useSavedMallId()</code> hook around <code>safeStorage</code>. Build spec lives at <code>docs/mall-filter-persistence-design.md</code>.
+      </p>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────── Frame row ─────────────────────────── -->
+  <div class="frames-row">
+
+    <!-- ──────── Frame 1 — Home with mall picked ──────── -->
+    <div class="frame-card">
+      <div class="frame-label">1 · Home — mall picked (baseline today)</div>
+      <div class="frame-blurb">Existing FeedHero pattern. Establishes the "Eyebrow + bold name + chevron" idiom that Frames 2 + 3 will mirror on the other two tabs.</div>
+      <div class="phone">
+        <div class="masthead">
+          <div></div>
+          <div class="wordmark">Treehouse Finds</div>
+          <div class="right-slot">
+            <span class="signout-text">Sign out</span>
+          </div>
+        </div>
+
+        <!-- Mall scope header (existing pattern) -->
+        <div class="mall-scope">
+          <div class="eyebrow">Finds from</div>
+          <div class="scope-name-row">
+            <div class="scope-name">Treehouse Antique Mall</div>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="geo-line">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 7-8 13-8 13s-8-6-8-13a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span class="address">2345 Bardstown Rd, Louisville</span>
+          </div>
+        </div>
+
+        <div class="feed-list">
+          <div class="feed-tile">
+            <div class="photo" style="background-image:url('https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=400');"></div>
+            <div class="info">
+              <div class="title">Mid-century walnut credenza</div>
+              <div class="sub">Magnolia &amp; Pine · Booth 12</div>
+              <div class="ts">2 hours ago</div>
+            </div>
+          </div>
+          <div class="feed-tile">
+            <div class="photo" style="background-image:url('https://images.unsplash.com/photo-1503602642458-232111445657?w=400');"></div>
+            <div class="info">
+              <div class="title">Cast iron skillet, Wagner Ware</div>
+              <div class="sub">Cedar Crow · Booth 31</div>
+              <div class="ts">5 hours ago</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-nav tabs-4">
+          <div class="nav-tab active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            Home
+          </div>
+          <div class="nav-tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+            Booths
+          </div>
+          <div class="nav-tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="22" x2="4" y2="4"/><path d="M4 4h13l-2 4 2 4H4z"/></svg>
+            Find Map
+          </div>
+          <div class="nav-tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>
+            My Booth
+          </div>
+        </div>
+      </div>
+      <div class="ph-route">/ &nbsp;·&nbsp; saved_mall_id = treehouse-antique-mall</div>
+    </div>
+
+
+    <!-- ──────── Frame 2 — Booths with mall picked, headers dropped ──────── -->
+    <div class="frame-card">
+      <div class="frame-label">2 · Booths — mall picked, flat grid</div>
+      <div class="frame-blurb">NEW picker (eyebrow "Booths at" + tappable name + chevron). When filtered, per-mall section headers drop — flat grid, no redundant repetition. Bookmarked chip stays (orthogonal axis).</div>
+      <div class="phone">
+        <div class="masthead">
+          <div></div>
+          <div class="wordmark">Treehouse Finds</div>
+          <div class="right-slot">
+            <span class="signout-text">Sign out</span>
+          </div>
+        </div>
+
+        <!-- NEW mall scope header on Booths -->
+        <div class="mall-scope" style="position: relative;">
+          <div class="eyebrow">Booths at</div>
+          <div class="scope-name-row">
+            <div class="scope-name">Treehouse Antique Mall</div>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="geo-line italic">4 booths</div>
+          <div class="highlight-new" style="top: 8px; left: 8px; right: 8px; bottom: 8px;"></div>
+        </div>
+
+        <div class="filter-row">
+          <div class="chip active">All booths</div>
+          <div class="chip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="10" height="10"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+            Bookmarked
+            <span class="chip-count">3</span>
+          </div>
+        </div>
+
+        <!-- NO mall section header — flat grid since filtered to one mall -->
+        <div class="booth-section">
+          <div class="booth-grid">
+            <div class="booth-tile">
+              <div class="hero hero-1">
+                <div class="bookmark-bubble">
+                  <svg viewBox="0 0 24 24" fill="#1e4d2b" stroke="#1e4d2b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                </div>
+                <div class="booth-number">Booth 12</div>
+              </div>
+              <div class="info">
+                <div class="name">Magnolia &amp; Pine</div>
+                <div class="sub">vintage textiles</div>
+              </div>
+            </div>
+            <div class="booth-tile">
+              <div class="hero hero-2">
+                <div class="bookmark-bubble">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#2a1a0a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                </div>
+                <div class="booth-number">Booth 24</div>
+              </div>
+              <div class="info">
+                <div class="name">Hollow Hill Goods</div>
+                <div class="sub">primitives &amp; tools</div>
+              </div>
+            </div>
+            <div class="booth-tile">
+              <div class="hero hero-3">
+                <div class="bookmark-bubble">
+                  <svg viewBox="0 0 24 24" fill="#1e4d2b" stroke="#1e4d2b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                </div>
+                <div class="booth-number">Booth 31</div>
+              </div>
+              <div class="info">
+                <div class="name">Cedar Crow</div>
+                <div class="sub">oddities &amp; ephemera</div>
+              </div>
+            </div>
+            <div class="booth-tile">
+              <div class="hero hero-4">
+                <div class="bookmark-bubble">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#2a1a0a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                </div>
+                <div class="booth-number">Booth 47</div>
+              </div>
+              <div class="info">
+                <div class="name">River Oak Reclaim</div>
+                <div class="sub">salvaged &amp; restored</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-nav tabs-4">
+          <div class="nav-tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            Home
+          </div>
+          <div class="nav-tab active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+            Booths
+          </div>
+          <div class="nav-tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="22" x2="4" y2="4"/><path d="M4 4h13l-2 4 2 4H4z"/></svg>
+            Find Map
+          </div>
+          <div class="nav-tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>
+            My Booth
+          </div>
+        </div>
+      </div>
+      <div class="ph-route">/shelves &nbsp;·&nbsp; saved_mall_id = treehouse-antique-mall (4 booths shown, 3 hidden by filter)</div>
+    </div>
+
+
+    <!-- ──────── Frame 3 — Find Map with picker + saves filtered ──────── -->
+    <div class="frame-card">
+      <div class="frame-label">3 · Find Map — saves filtered to picked mall</div>
+      <div class="frame-blurb">NEW picker ("Saves at"). Map + saves narrow to picked mall. Empty-state callout shown when filter excludes all current saves — links to clear filter.</div>
+      <div class="phone">
+        <div class="masthead">
+          <div></div>
+          <div class="wordmark">Treehouse Finds</div>
+          <div class="right-slot">
+            <span class="signout-text">Sign out</span>
+          </div>
+        </div>
+
+        <!-- NEW mall scope header on Find Map -->
+        <div class="mall-scope" style="position: relative;">
+          <div class="eyebrow">Saves at</div>
+          <div class="scope-name-row">
+            <div class="scope-name">Treehouse Antique Mall</div>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="geo-line italic">2 saved finds at this mall</div>
+          <div class="highlight-new" style="top: 8px; left: 8px; right: 8px; bottom: 8px;"></div>
+        </div>
+
+        <div class="map-stage">
+          <div class="road h1"></div>
+          <div class="road h2"></div>
+          <div class="road v1"></div>
+          <div class="pin lg pin-2">2</div>
+          <div class="you"></div>
+        </div>
+
+        <div class="saves-list">
+          <div class="save-row">
+            <div class="thumb" style="background-image:url('https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=200');"></div>
+            <div class="body">
+              <div class="title">Mid-century walnut credenza</div>
+              <div class="sub">Magnolia &amp; Pine · Booth 12</div>
+            </div>
+            <div class="price">$245</div>
+          </div>
+          <div class="save-row">
+            <div class="thumb" style="background-image:url('https://images.unsplash.com/photo-1503602642458-232111445657?w=200');"></div>
+            <div class="body">
+              <div class="title">Cast iron skillet, Wagner Ware</div>
+              <div class="sub">Cedar Crow · Booth 31</div>
+            </div>
+            <div class="price">$32</div>
+          </div>
+        </div>
+
+        <div class="bottom-nav tabs-4">
+          <div class="nav-tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            Home
+          </div>
+          <div class="nav-tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+            Booths
+          </div>
+          <div class="nav-tab active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="22" x2="4" y2="4"/><path d="M4 4h13l-2 4 2 4H4z"/></svg>
+            Find Map
+          </div>
+          <div class="nav-tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>
+            My Booth
+          </div>
+        </div>
+      </div>
+      <div class="ph-route">/flagged &nbsp;·&nbsp; saved_mall_id = treehouse-antique-mall (saves at other malls hidden)</div>
+    </div>
+
+  </div>
+
+
+  <!-- ─────────────────────────── Detail panel: MallSheet (existing) + empty-state copy ─────────────────────────── -->
+  <div class="detail-panel">
+    <h3>Existing MallSheet (the one picker affordance — opened from any of the three headers)</h3>
+    <p style="margin: 0 0 4px; font-size: 12px; line-height: 1.6;">
+      Tapping the scope name + chevron on any tab opens the existing <code>&lt;MallSheet&gt;</code> bottom sheet (shipped session 20). "All malls" at top is the clear-filter affordance — no separate clear-glyph needed (D7).
+    </p>
+
+    <div class="detail-row">
+      <div class="mall-sheet-mini">
+        <div class="handle"></div>
+        <div class="h">Choose a mall</div>
+        <div class="sub">Kentucky &amp; Southern Indiana — tap to filter.</div>
+        <div class="row all"><span class="label">All malls</span><span class="count">42 finds</span></div>
+        <div class="row active"><span class="label">Treehouse Antique Mall</span><span class="count">28 finds</span></div>
+        <div class="row"><span class="label">North Bend Vintage</span><span class="count">11 finds</span></div>
+        <div class="row"><span class="label">Riverbend Trading Co.</span><span class="count">3 finds</span></div>
+      </div>
+      <div class="annotation">
+        <p><strong>One sheet, three callsites.</strong> The same <code>&lt;MallSheet&gt;</code> with the same <code>onSelect(mallId | null)</code> contract serves all three pages. Each page reads <code>treehouse_saved_mall_id</code> on mount, opens MallSheet on header-tap, writes the new value, calls <code>onClose()</code>, and re-filters its own data.</p>
+        <p style="margin-top: 10px;"><strong>"All malls" = clear filter</strong> (italic row at top, already exists). No second clear-affordance. No glyph badge. Active row is text-link-with-hairline (matches existing pattern).</p>
+        <p style="margin-top: 10px;"><strong>Per-tab counts</strong> shown in the right column adapt to the tab: <em>Home</em> shows post counts (existing), <em>Booths</em> shows booth counts, <em>Find Map</em> shows saved-find counts. Same MallSheet props, different <code>findCounts</code> map per consumer.</p>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ─────────────────────────── Empty state copy panel ─────────────────────────── -->
+  <div class="detail-panel">
+    <h3>Find Map empty state when filter excludes all saves</h3>
+    <p style="margin: 0 0 14px; font-size: 12px; line-height: 1.6;">
+      When the picked mall has zero saved finds, the saves list collapses and an inline callout appears with the clear-filter link inline.
+    </p>
+    <div style="display: flex; justify-content: center;">
+      <div style="position: relative; width: 360px; padding: 16px; background: var(--paper); border-radius: 12px; border: 1px solid var(--ink-hairline);">
+        <div class="empty-callout" style="position: static; left: auto; right: auto; bottom: auto;">
+          <div class="em-h">No saved finds at <span style="color: var(--green);">Treehouse Antique Mall</span>.</div>
+          <div class="em-b">Saves at other malls are hidden by the active filter. <span class="em-link">Show all malls</span> to see them.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ─────────────────────────── Implementation footer ─────────────────────────── -->
+  <div class="decisions">
+    <h3>Implementation footprint (what changes when you sign off)</h3>
+    <ul>
+      <li><strong>New primitive:</strong> <code>components/MallScopeHeader.tsx</code> — eyebrow + tappable bold name + chevron + optional geo/count line. Three callsites: Home (replaces the inline FeedHero block), Booths, Find Map. Props: <code>{ eyebrowAll, eyebrowOne, mallName, geoLine, onTap }</code> — consumer decides eyebrow strings ("Finds from", "Booths at", "Saves at") so the primitive stays content-agnostic.</li>
+      <li><strong>New hook:</strong> <code>lib/useSavedMallId.ts</code> — wraps <code>safeStorage</code> read/write of <code>treehouse_saved_mall_id</code>. Returns <code>[savedMallId, setSavedMallId]</code>. Each tab's page calls it on mount; no cross-tab event subscription (D9).</li>
+      <li><strong><code>app/page.tsx</code> (Home):</strong> swap the existing inline FeedHero scope block to the new <code>&lt;MallScopeHeader&gt;</code>. Behavior unchanged — same persistence key, same MallSheet. Refactor only.</li>
+      <li><strong><code>app/shelves/page.tsx</code> (Booths):</strong> add <code>&lt;MallScopeHeader&gt;</code> below masthead. Read <code>savedMallId</code> on mount. When set, filter the vendor query to that mall and drop the per-mall <code>&lt;mall-section&gt;</code> headers (flat grid). When <code>null</code>, current grouped-by-mall behavior is preserved. <code>effectiveFilter</code> from the Bookmarked-chip work composes — if both filter chip = "Bookmarked" AND <code>savedMallId</code> set, intersect the two.</li>
+      <li><strong><code>app/flagged/page.tsx</code> (Find Map):</strong> add <code>&lt;MallScopeHeader&gt;</code> below masthead. Filter <code>posts</code> query by <code>mall_id</code> when <code>savedMallId</code> set. Empty-state markup when <code>filteredPosts.length === 0 &amp;&amp; allPosts.length &gt; 0</code>: "No saved finds at [MallName]. <em>Show all malls</em> to see them." The "Show all malls" link calls <code>setSavedMallId(null)</code>.</li>
+      <li><strong>D10 Booths self-vendor gate:</strong> when <code>savedMallId</code> set AND viewer is a vendor whose own booth is in a different mall, that vendor's own tile is omitted from the grid (filter applies uniformly). My Booth nav tab is unaffected — it remains the personal escape hatch.</li>
+      <li><strong>No DB / RLS / API / migration changes.</strong> Same key, same MallSheet, same data model. Pure presentational + persistence-shape work.</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>
