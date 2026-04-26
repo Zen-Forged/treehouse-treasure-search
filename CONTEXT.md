@@ -1,5 +1,5 @@
 # Treehouse Finds — Master Context Document
-> Last updated: 2026-04-21 (session 39 — Q-004 rename sweep + Q-005 email tagline shortening)
+> Last updated: 2026-04-26 (session 66 — `lib/treehouseLens.ts` added to §6)
 > Repo: Zen-Forged/treehouse-treasure-search
 > Live: `app.kentuckytreehouse.com` (custom domain) + `treehouse-treasure-search.vercel.app` (Vercel default)
 
@@ -346,6 +346,10 @@ Keyed-row table with jsonb values. Holds admin-editable hero banner image URLs.
 - **`lib/queryBuilder.ts`** — P1–P9 priority hierarchy, deterministic query builder.
 - **`lib/scoring/`** — comp scoring engine.
 - **`lib/pricingLogic.ts`, `lib/opportunityScore.ts`, `lib/mockIntelligence.ts`, `lib/serpApiClient.ts`, `lib/apifyClient.ts`, `lib/ebayClient.ts`** — reseller-layer support.
+
+### Render-time photo treatment
+
+- **`lib/treehouseLens.ts`** (session 66) — Single source of truth for the Treehouse Lens, a CSS filter applied at render time to every vendor-posted find photo across the ecosystem. Exports `TREEHOUSE_LENS_FILTER` (string `"contrast(1.08) saturate(1.05) sepia(0.05)"`) + `treehouseLensStyle` (pre-built `{ filter, WebkitFilter }` object). Approximates the reseller-layer canvas op at `app/discover/page.tsx` (red +6%, blue −8%, contrast +8%) without altering stored images — original photo persists in Supabase Storage; the lens is purely a display layer. Tune in one place; every consumer (Discovery feed, Find Detail, PhotoLightbox, Find Map, BoothPage tiles, PhotographPreview) picks up the change on next deploy. Sold-state filters compose on top via template literal — e.g. `${TREEHOUSE_LENS_FILTER} grayscale(0.35) brightness(0.9)`. **Not applied to:** vendor hero banners, mall heroes, admin-uploaded Featured Find / Find Map banners, booth-proof photos, vendor avatars, reseller layer (its own canvas-based path), and `/mall/[slug]` (still on v0.2 dark theme; lens applies cleanly when that page does its v1.x migration).
 
 ### Design tokens
 
