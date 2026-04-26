@@ -55,6 +55,7 @@ The front door is the **Discovery Feed** (`/`). Shoppers browse without an accou
 | Email | Resend — dual use: (1) SMTP provider for Supabase Auth OTP emails, (2) REST API for our own transactional emails via `lib/email.ts` |
 | Comp data | SerpAPI (eBay) |
 | Deployment | Vercel |
+| Error monitoring | Sentry (`@sentry/nextjs`) — session 65, R12. Dashboard: https://zen-forged.sentry.io/issues/?project=4511286908878848 |
 
 ### Fonts (sessions 16+, v1.1l)
 
@@ -100,6 +101,18 @@ RESEND_API_KEY                   Server-only. Used by lib/email.ts for transacti
 
 # Dev
 NEXT_PUBLIC_DEV_VENDOR_EMAIL     vendor@test.com (optional, dev convenience)
+
+# Sentry — auto-managed by the Vercel Marketplace Sentry integration
+# (zen-forged Sentry org → javascript-nextjs project ↔ treehouse-treasure-search Vercel project).
+# Do NOT set these manually in Vercel — the integration syncs and rotates them.
+SENTRY_AUTH_TOKEN                Server-only. Used by Vercel build to upload source maps.
+SENTRY_ORG                       "zen-forged"
+SENTRY_PROJECT                   "javascript-nextjs"
+NEXT_PUBLIC_SENTRY_DSN           Public/write-only. Hardcoded in sentry.{client,server,edge}.config.ts
+                                 as a fallback; the env var is harmless duplication.
+SENTRY_PUBLIC_KEY                Sentry CDN key. Set by the integration; not consumed by our code.
+SENTRY_OTLP_TRACES_URL           OTLP trace ingest URL. Not consumed yet.
+SENTRY_VERCEL_LOG_DRAIN_URL      Log-drain endpoint. Not consumed yet.
 ```
 
 ---
@@ -616,6 +629,7 @@ pass        everything else
 - `export const dynamic = "force-dynamic"` required on every ecosystem page that imports `supabase` at module scope.
 - `useSearchParams()` requires a `<Suspense>` boundary.
 - Never `export const config = {}` — deprecated.
+- **New `/api/*` route handlers MUST be wrapped with `Sentry.wrapRouteHandlerWithSentry` (session 65, R12)** — the `onRequestError` hook in `instrumentation.ts` is a Next.js 15 feature. On 14.x, framework-level error handling swallows route-handler throws before Sentry's auto-capture sees them. Pattern: `export const GET = Sentry.wrapRouteHandlerWithSentry(async () => {...}, { method: "GET", parameterizedRoute: "/api/your-route" });`. Existing routes are not yet wrapped (acceptable until Next.js 15 upgrade — Q-013 candidate).
 
 ### framer-motion
 
