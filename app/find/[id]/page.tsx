@@ -117,21 +117,8 @@ async function detectOwnershipAsync(post: Post): Promise<boolean> {
   return false;
 }
 
-// Cartographic glyphs
-function PinGlyph({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size * (22 / 18)} viewBox="0 0 18 22" fill="none" aria-hidden="true">
-      <path
-        d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z"
-        stroke={v1.inkPrimary}
-        strokeWidth="1.3"
-        fill="none"
-      />
-      <circle cx="9" cy="8.3" r="2" fill={v1.inkPrimary} />
-    </svg>
-  );
-}
-
+// Cartographic glyph — single-anchor X for the collapsed cartographic card
+// (session 71). PinGlyph + hairline tick retired with the parallel mall card.
 function XGlyph({ size = 16 }: { size?: number }) {
   // v1.1l — strokeWidth 1.4 → 2.2 to match Find Map's X and the terminal
   // circle weight on the Find Map closer. Keeps the cartographic X consistent
@@ -677,8 +664,8 @@ export default function FindDetailPage() {
   const vendorName  = post.vendor?.display_name ?? null;
   const boothNumber = post.vendor?.booth_number ?? null;
   const mallName    = post.mall?.name ?? null;
-  const mallAddr    = post.mall?.address ?? null;
-  const mallSlug    = post.mall?.slug ?? null;
+  const mallCity    = post.mall?.city ?? null;
+  const mallState   = post.mall?.state ?? null;
   const price       = post.price_asking;
 
   // 3B sold landing state (v1.1i) — shopper-only. Owner stays on normal layout.
@@ -969,7 +956,7 @@ export default function FindDetailPage() {
       )}
 
       {/* Divider (v1.1j plain hairline, diamond retired) */}
-      {(mallName || boothNumber) && (
+      {(vendorName || boothNumber) && (
         <motion.div
           variants={sectionVariants(0.16)}
           initial="hidden"
@@ -983,8 +970,11 @@ export default function FindDetailPage() {
         </motion.div>
       )}
 
-      {/* Cartographic block — pin + tick + X (anchored to vendor line) */}
-      {(mallName || vendorName || boothNumber) && (
+      {/* Cartographic block (session 71 — collapsed) — single inkWash card carries
+          vendor + mall · city/state subtitle (Apple Maps link) + booth lockup; X
+          anchored to the vendor line. PinGlyph + tick retired with the parallel
+          mall card. */}
+      {(vendorName || boothNumber) && (
         <motion.div
           variants={sectionVariants(0.18)}
           initial="hidden"
@@ -1002,24 +992,9 @@ export default function FindDetailPage() {
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            {mallName && (
-              <div style={{ paddingTop: 3, marginBottom: 0 }}>
-                <PinGlyph size={18} />
-              </div>
-            )}
-            {mallName && (vendorName || boothNumber) && (
-              <div
-                style={{
-                  width: 1,
-                  flex: 1,
-                  minHeight: 48,
-                  background: v1.inkHairline,
-                  margin: "6px 0",
-                }}
-              />
-            )}
             {(vendorName || boothNumber) && (
               <div style={{ paddingTop: 3, marginBottom: 0 }}>
                 <XGlyph size={15} />
@@ -1028,96 +1003,15 @@ export default function FindDetailPage() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-            {mallName && (() => {
-              const mallCardInner = (
-                <div
-                  style={{
-                    background: v1.inkWash,
-                    border: `1px solid ${v1.inkHairline}`,
-                    borderRadius: 10,
-                    padding: "12px 14px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontFamily: FONT_SYS,
-                      fontSize: 9.5,
-                      fontWeight: 700,
-                      color: v1.inkMuted,
-                      letterSpacing: "0.10em",
-                      textTransform: "uppercase",
-                      marginBottom: 3,
-                      lineHeight: 1,
-                    }}
-                  >
-                    Mall
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: FONT_IM_FELL,
-                      fontSize: 18,
-                      color: v1.inkPrimary,
-                      lineHeight: 1.25,
-                      marginBottom: mallAddr ? 4 : 0,
-                    }}
-                  >
-                    {mallName}
-                  </div>
-                  {mallAddr && (
-                    mapLink ? (
-                      <a
-                        href={mapLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                          fontFamily: FONT_SYS,
-                          fontSize: 14,
-                          color: v1.inkMuted,
-                          textDecoration: "underline",
-                          textDecorationStyle: "dotted",
-                          textDecorationColor: v1.inkFaint,
-                          textUnderlineOffset: 3,
-                          lineHeight: 1.55,
-                        }}
-                      >
-                        {mallAddr}
-                      </a>
-                    ) : (
-                      <span
-                        style={{
-                          fontFamily: FONT_SYS,
-                          fontSize: 14,
-                          color: v1.inkMuted,
-                          lineHeight: 1.55,
-                        }}
-                      >
-                        {mallAddr}
-                      </span>
-                    )
-                  )}
-                </div>
-              );
-              return mallSlug ? (
-                <Link
-                  href={`/mall/${mallSlug}`}
-                  style={{
-                    display: "block",
-                    textDecoration: "none",
-                    WebkitTapHighlightColor: "transparent",
-                  }}
-                >
-                  {mallCardInner}
-                </Link>
-              ) : (
-                mallCardInner
-              );
-            })()}
-
             {(vendorName || boothNumber) && (() => {
-              // Session 70 round 2 — Variant B lockup + Treatment C visit-link.
-              // Vendor name on left + inline visit-link below; booth label
-              // small-caps + IM Fell numeral stacked on the right.
+              // Session 71 — cartographic collapse. Single inkWash card carries
+              // vendor name (IM Fell) + mall · city/state subtitle (sans, Apple
+              // Maps link) on the left, "Booth" small-caps + IM Fell numeral
+              // (Variant B parity) on the right. The parallel mall card and the
+              // inline "Visit the booth →" link from session 70 are retired.
+              const mallSubtitle = mallName
+                ? `${mallName}${mallCity ? ` · ${mallCity}${mallState ? `, ${mallState}` : ""}` : ""}`
+                : null;
               const cardInner = (
                 <div
                   style={{
@@ -1152,19 +1046,41 @@ export default function FindDetailPage() {
                           {vendorName}
                         </div>
                       )}
-                      {vendorSlug && (
-                        <div
-                          style={{
-                            fontFamily: FONT_SYS,
-                            fontSize: 11,
-                            fontWeight: 500,
-                            color: v1.green,
-                            marginTop: 3,
-                            lineHeight: 1,
-                          }}
-                        >
-                          Visit the booth →
-                        </div>
+                      {mallSubtitle && (
+                        mapLink ? (
+                          <a
+                            href={mapLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              display: "inline-block",
+                              fontFamily: FONT_SYS,
+                              fontSize: 11.5,
+                              color: v1.inkMuted,
+                              textDecoration: "underline",
+                              textDecorationStyle: "dotted",
+                              textDecorationColor: v1.inkFaint,
+                              textUnderlineOffset: 3,
+                              marginTop: 4,
+                              lineHeight: 1.4,
+                            }}
+                          >
+                            {mallSubtitle}
+                          </a>
+                        ) : (
+                          <div
+                            style={{
+                              fontFamily: FONT_SYS,
+                              fontSize: 11.5,
+                              color: v1.inkMuted,
+                              marginTop: 4,
+                              lineHeight: 1.4,
+                            }}
+                          >
+                            {mallSubtitle}
+                          </div>
+                        )
                       )}
                     </div>
                     {boothNumber && (
