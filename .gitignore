@@ -42,3 +42,6 @@ Thumbs.db
 check-*.js
 scripts/debug/
 
+
+# Sentry Config File
+.env.sentry-build-plugin

@@ -1,6 +1,7 @@
 // app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import { IM_Fell_English, Caveat } from "next/font/google";
+import * as Sentry from "@sentry/nextjs";
 import "./globals.css";
 import { FindSessionProvider } from "@/hooks/useSession";
 
@@ -27,15 +28,20 @@ const caveat = Caveat({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Treehouse Finds",
-  description: "Embrace the search. Treasure the find.",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
+export function generateMetadata(): Metadata {
+  return {
     title: "Treehouse Finds",
-  },
-};
+    description: "Embrace the search. Treasure the find.",
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: "Treehouse Finds",
+    },
+    other: {
+      ...Sentry.getTraceData(),
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
