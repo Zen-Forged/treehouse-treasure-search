@@ -1,11 +1,18 @@
 // app/shelves/page.tsx
 // Booths — cross-mall vendor booth directory.
 //
+// Session 67 — opened from admin-only to all users. Three changes:
+//   1. AddBoothInline removed (admins use the masthead Admin pill → /admin).
+//   2. Filter chip row above the first mall section: All booths · Bookmarked (n).
+//      Chip row hidden entirely when bookmarkedIds is empty (D9).
+//   3. Each non-admin VendorCard hero gets a <BookmarkBoothBubble> (top-right,
+//      28px frosted bubble). Admin tiles already carry Pencil + Trash bubbles
+//      in the same corner; bookmark hidden on admin tiles to keep the chrome
+//      uncluttered. Admin can still bookmark via the /shelf/[slug] masthead.
+//
 // v1.2 redesign (session 49) — migrated from v0.2 Georgia + legacy colors to
-// v1.2 tokens (v1.*, FONT_IM_FELL, StickyMasthead). Layout changed from
-// single-column list to 2-column grid (Option B from booths-v1-2-options.html
-// mockup). All existing functionality preserved: AddBoothInline, typed-confirm
-// delete sheet, admin delete/edit bubbles, cross-mall subtitle.
+// v1.2 tokens (v1.*, FONT_IM_FELL, StickyMasthead). Layout: 2-column grid
+// (Option B from booths-v1-2-options.html mockup).
 //
 // Session 45 (2026-04-22) — cross-mall fix + admin delete affordance.
 
@@ -17,14 +24,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { MapPin, Pencil, Trash2, X, Loader as LoaderIcon, AlertTriangle } from "lucide-react";
+import { MapPin, Pencil, Trash2, X, Loader as LoaderIcon, AlertTriangle, Bookmark } from "lucide-react";
 import { getAllVendors, getAllMalls } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
-import { v1, FONT_IM_FELL } from "@/lib/tokens";
-import { vendorHueBg, loadBookmarkCount } from "@/lib/utils";
+import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { vendorHueBg, loadBookmarkCount, loadBookmarkedBoothIds, boothBookmarkKey } from "@/lib/utils";
 import AdminOnly from "@/components/AdminOnly";
-import AddBoothInline from "@/components/AddBoothInline";
+import BookmarkBoothBubble from "@/components/BookmarkBoothBubble";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import type { Vendor, Mall, MallStatus } from "@/types/treehouse";
@@ -68,11 +75,15 @@ function VendorCard({
   vendor,
   index,
   user,
+  saved,
+  onToggleBookmark,
   onRequestDelete,
 }: {
   vendor: Vendor;
   index: number;
   user: User | null;
+  saved: boolean;
+  onToggleBookmark: (vendorId: string) => void;
   onRequestDelete: (vendor: Vendor) => void;
 }) {
   const router = useRouter();
@@ -125,6 +136,22 @@ function VendorCard({
               <span style={{ fontFamily: "monospace", fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.95)", letterSpacing: "0.3px" }}>
                 Booth {vendor.booth_number}
               </span>
+            </div>
+          )}
+
+          {/* Session 67 — bookmark bubble for non-admins. Admin tiles already
+              carry Pencil + Trash in the top-right; bookmark hidden there to
+              avoid 4-bubble pile-up. Admin can bookmark via /shelf/[slug]. */}
+          {!adminUser && (
+            <div style={{ position: "absolute", top: 6, right: 6, zIndex: 3 }}>
+              <BookmarkBoothBubble
+                saved={saved}
+                size="tile"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleBookmark(vendor.id);
+                }}
+              />
             </div>
           )}
 
@@ -336,16 +363,18 @@ function subtitleFor(vendors: Vendor[]): { text: string; mallName: string | null
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function BoothsPage() {
-  const [vendors,       setVendors]       = useState<Vendor[]>([]);
-  const [malls,         setMalls]         = useState<Mall[]>([]);
-  const [loading,       setLoading]       = useState(true);
-  const [user,          setUser]          = useState<User | null>(null);
-  const [bookmarkCount, setBookmarkCount] = useState(0);
-  const [addBoothOpen,  setAddBoothOpen]  = useState(false);
-  const [deleteTarget,  setDeleteTarget]  = useState<Vendor | null>(null);
+  const [vendors,        setVendors]        = useState<Vendor[]>([]);
+  const [malls,          setMalls]          = useState<Mall[]>([]);
+  const [loading,        setLoading]        = useState(true);
+  const [user,           setUser]           = useState<User | null>(null);
+  const [bookmarkCount,  setBookmarkCount]  = useState(0);
+  const [bookmarkedIds,  setBookmarkedIds]  = useState<Set<string>>(new Set());
+  const [filter,         setFilter]         = useState<"all" | "bookmarked">("all");
+  const [deleteTarget,   setDeleteTarget]   = useState<Vendor | null>(null);
 
   useEffect(() => {
     setBookmarkCount(loadBookmarkCount());
+    setBookmarkedIds(loadBookmarkedBoothIds());
     Promise.all([getSession(), getAllVendors(), getAllMalls()]).then(([session, vendorList, mallList]) => {
       setUser(session?.user ?? null);
       setVendors(vendorList);
@@ -354,7 +383,30 @@ export default function BoothsPage() {
     });
   }, []);
 
-  const subtitle = subtitleFor(vendors);
+  // Toggle a booth bookmark in localStorage and the in-memory set.
+  function handleToggleBookmark(vendorId: string) {
+    setBookmarkedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(vendorId)) {
+        next.delete(vendorId);
+        try { localStorage.removeItem(boothBookmarkKey(vendorId)); } catch {}
+      } else {
+        next.add(vendorId);
+        try { localStorage.setItem(boothBookmarkKey(vendorId), "1"); } catch {}
+      }
+      return next;
+    });
+  }
+
+  // D9 — when no bookmarks exist, the chip row hides AND any active filter
+  // collapses back to "all" so the user doesn't end up looking at an empty
+  // grid behind a hidden filter chip.
+  const effectiveFilter  = bookmarkedIds.size === 0 ? "all" : filter;
+  const visibleVendors   = effectiveFilter === "bookmarked"
+    ? vendors.filter(v => bookmarkedIds.has(v.id))
+    : vendors;
+  const subtitle         = subtitleFor(visibleVendors);
+  const showFilterChips  = bookmarkedIds.size > 0;
 
   return (
     <div style={{ minHeight: "100vh", background: v1.paperCream, maxWidth: 430, margin: "0 auto", position: "relative" }}>
@@ -397,29 +449,59 @@ export default function BoothsPage() {
         </div>
       )}
 
-      <main style={{ padding: "14px 14px 0", paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }}>
+      {/* Filter chip row — All booths · Bookmarked (n). Hidden entirely when
+          bookmarkedIds is empty (D9). Sits below the subtitle, above the main
+          grid, scrolls with content. */}
+      {showFilterChips && (
+        <div style={{ display: "flex", gap: 8, padding: "10px 14px 0" }}>
+          <button
+            type="button"
+            onClick={() => setFilter("all")}
+            style={{
+              fontFamily: FONT_SYS, fontSize: 11, fontWeight: 500,
+              padding: "5px 11px", borderRadius: 999,
+              background: effectiveFilter === "all" ? v1.green : "rgba(42,26,10,0.04)",
+              border: `1px solid ${effectiveFilter === "all" ? v1.green : v1.inkHairline}`,
+              color: effectiveFilter === "all" ? "#fff" : v1.inkMid,
+              cursor: "pointer", WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            All booths
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilter("bookmarked")}
+            style={{
+              fontFamily: FONT_SYS, fontSize: 11, fontWeight: 500,
+              padding: "5px 11px 5px 9px", borderRadius: 999,
+              background: effectiveFilter === "bookmarked" ? v1.green : "rgba(42,26,10,0.04)",
+              border: `1px solid ${effectiveFilter === "bookmarked" ? v1.green : v1.inkHairline}`,
+              color: effectiveFilter === "bookmarked" ? "#fff" : v1.inkMid,
+              cursor: "pointer", WebkitTapHighlightColor: "transparent",
+              display: "flex", alignItems: "center", gap: 5,
+            }}
+          >
+            <Bookmark size={10} strokeWidth={2} />
+            Bookmarked
+            <span style={{
+              fontFamily: "ui-monospace, SF Mono, Menlo, monospace",
+              fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 999,
+              background: effectiveFilter === "bookmarked" ? "rgba(255,255,255,0.18)" : "rgba(42,26,10,0.10)",
+              color:      effectiveFilter === "bookmarked" ? "#fff" : v1.inkMid,
+            }}>
+              {bookmarkedIds.size}
+            </span>
+          </button>
+        </div>
+      )}
 
-        <AdminOnly user={user}>
-          <div style={{ marginBottom: 12 }}>
-            <AddBoothInline
-              malls={malls}
-              open={addBoothOpen}
-              onToggle={() => setAddBoothOpen(v => !v)}
-              onClose={() => setAddBoothOpen(false)}
-              onCreated={(vendor) => {
-                const hydrated: Vendor = { ...vendor, mall: malls.find(m => m.id === vendor.mall_id) };
-                setVendors(prev => [hydrated, ...prev]);
-                setAddBoothOpen(false);
-              }}
-            />
-          </div>
-        </AdminOnly>
+      <main style={{ padding: "14px 14px 0", paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }}>
 
         {loading ? (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             {[0, 1, 2, 3, 4, 5].map(i => <SkeletonCard key={i} />)}
           </div>
-        ) : vendors.length === 0 ? (
+        ) : visibleVendors.length === 0 ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 32px 0", textAlign: "center" }}>
             <div style={{ fontFamily: FONT_IM_FELL, fontSize: 20, color: v1.inkPrimary, lineHeight: 1.3, marginBottom: 10 }}>
@@ -431,7 +513,7 @@ export default function BoothsPage() {
           </motion.div>
         ) : (
           <>
-            {groupByMall(vendors).map((group, groupIdx) => {
+            {groupByMall(visibleVendors).map((group, groupIdx) => {
               // R4c — for admins, surface mall lifecycle status alongside the
               // group header so the non-active mall's group reads honestly as
               // a staging area, not a live listing. Shoppers don't see
@@ -461,6 +543,8 @@ export default function BoothsPage() {
                       vendor={vendor}
                       index={i}
                       user={user}
+                      saved={bookmarkedIds.has(vendor.id)}
+                      onToggleBookmark={handleToggleBookmark}
                       onRequestDelete={setDeleteTarget}
                     />
                   ))}

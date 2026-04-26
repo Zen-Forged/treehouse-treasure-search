@@ -1,12 +1,14 @@
 // components/BottomNav.tsx
 // Fixed bottom navigation.
 //
-// Tab layout:
-//   Guest:        Home · Find Map                    (2 tabs)
-//   Vendor:       Home · Find Map · My Booth         (3 tabs)
-//   Admin:        Home · Find Map · Booths · My Booth (4 tabs)
+// Tab layout (session 67 — Booths opened to all users):
+//   Guest:        Home · Booths · Find Map              (3 tabs)
+//   Vendor:       Home · Booths · Find Map · My Booth   (4 tabs)
+//   Admin:        Home · Booths · Find Map · My Booth   (4 tabs — same as vendor;
+//                  admin entry is the masthead pill on /shelves, not a nav tab)
 //
-// Item 3: Booths tab is admin-only — hidden from vendors and guests.
+// Booths is browsing/discovery — sits next to Home. Find Map is personal-saves
+// territory and reads better near My Booth.
 
 "use client";
 
@@ -14,7 +16,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Home, Store, LayoutGrid } from "lucide-react";
 import FlagGlyph from "./FlagGlyph";
-import { getSession, isAdmin } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import type { User } from "@supabase/supabase-js";
 
 export type NavTab = "home" | "shelves" | "flagged" | "my-shelf" | null;
@@ -71,16 +73,13 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     icon: <Store size={21} strokeWidth={1.7} />,
   };
 
-  const adminUser = isAdmin(user);
-
-  // Guest: Home · Find Map
-  // Vendor (authed, not admin): Home · Find Map · My Booth
-  // Admin: Home · Find Map · Booths · My Booth
+  // Session 67 — Booths visible to all. Admin and vendor share the same
+  // 4-tab layout; admin entry is the masthead pill on /shelves, not a nav tab.
+  // Guest: Home · Booths · Find Map
+  // Vendor / Admin: Home · Booths · Find Map · My Booth
   const tabs: TabDef[] = !user
-    ? [homeTab, findsTab]
-    : adminUser
-      ? [homeTab, findsTab, boothsTab, myBoothTab]
-      : [homeTab, findsTab, myBoothTab];
+    ? [homeTab, boothsTab, findsTab]
+    : [homeTab, boothsTab, findsTab, myBoothTab];
 
   const navStyle: React.CSSProperties = {
     position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",

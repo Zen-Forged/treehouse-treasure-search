@@ -33,6 +33,35 @@ export function loadFollowedIds(): Set<string> {
   return followed;
 }
 
+// ── Booth bookmark helpers ────────────────────────────────────────────────────
+// Parallel to the find-save helpers above; same value shape ("1") and the same
+// raw-localStorage iteration (Safari ITP failure tolerated via try/catch).
+// Prefixes are disjoint — `treehouse_booth_bookmark_` does not begin with
+// `treehouse_bookmark_`, so cross-iteration is safe.
+
+export const BOOTH_BOOKMARK_PREFIX = "treehouse_booth_bookmark_";
+
+export function boothBookmarkKey(vendorId: string): string {
+  return `${BOOTH_BOOKMARK_PREFIX}${vendorId}`;
+}
+
+export function loadBookmarkedBoothIds(): Set<string> {
+  const ids = new Set<string>();
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(BOOTH_BOOKMARK_PREFIX) && localStorage.getItem(key) === "1") {
+        ids.add(key.slice(BOOTH_BOOKMARK_PREFIX.length));
+      }
+    }
+  } catch {}
+  return ids;
+}
+
+export function loadBookmarkedBoothCount(): number {
+  return loadBookmarkedBoothIds().size;
+}
+
 // ── Vendor color ──────────────────────────────────────────────────────────────
 
 /**
