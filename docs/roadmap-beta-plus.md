@@ -58,7 +58,7 @@ David reviews and can override any of these.
 | R9 | SMS / Push notifications | Engagement infra | L | R1 (shoppers) + R3 (events worth notifying) | 🟡 Captured | Push = strongest native-app argument. |
 | R10 | Location map nav icon | Navigation/Discovery | M | **R4c** | 🟡 Captured | Map is misleading without active/inactive gating. |
 | R11 | Mall hero images in feed header | Navigation/Discovery | S | — | 🟡 Captured | Schema field + upload + conditional render on filter. |
-| R12 | Error monitoring (Sentry / structured logs) | Data / Reliability | S–M | — | 🟡 Captured | Elevated from pre-beta polish list 2026-04-24. Compounds with R3. |
+| R12 | Error monitoring (Sentry / structured logs) | Data / Reliability | S–M | — | ✅ Shipped session 65 | Sentry exception capture (client + server) live on prod; structured logs deferred. Dashboard: zen-forged.sentry.io/issues/?project=4511286908878848. |
 | R13 | Mall-operator accounts | User/Auth | L | R4c + shares infra with R1 | 🟡 Captured | Third persona (shopper / vendor / mall-operator / admin). Enables mall-level self-serve. |
 | R14 | Vendor profile enrichment + vendor social graph | User/Auth + Feed quality | M | — (compounds with R1, R3) | 🟡 Captured | Vendor-side counterpart to R1. Richer vendor profiles, vendor-to-vendor follow, future social surfaces. |
 | R15 | App store launch (iOS + Google Play) | Engagement + Reach | L+ | R6 (hard gate); compounds heavily with R9, R1, R12; absorbs Q-006 Universal Links | 🟡 Captured | Three possible technical paths (Capacitor wrapper / Expo rebuild / native). **Path decision is the load-bearing scoping moment.** |
@@ -380,22 +380,40 @@ Waves 1 + 2 + 3 together are realistically ~9–14 sessions (mix of S + M). That
 
 ---
 
-### R12 — Error monitoring (Sentry / structured logs) 🟡
+### R12 — Error monitoring (Sentry / structured logs) ✅ Shipped session 65
 
-**What:** Production error capture. Sentry (or equivalent) for client-side + server-side exception tracking. Structured logging on API routes with a log destination (Axiom, Betterstack, Vercel's built-in — pick one).
+**What shipped:** Sentry exception capture (client + server) live on prod. Three commits (`81a52c4` wizard install + tightened config / `265430f` Next.js-14 wrap-route fix / `0ecd6b8` cleanup + CONTEXT.md breadcrumb).
 
-**Why:** Today errors that don't crash the page are invisible to David. A silently-broken `/api/share-booth` for some shopper's edge case would not surface until the shopper reports it (and they probably won't). Cost of missing this pre-beta: one bad bug invisible for weeks. Cost of adding: a few hours of setup. Compounds with R3 (analytics + error tracking are the same instrumentation mindset on adjacent surfaces).
+**Final shape:**
+- `@sentry/nextjs` SDK installed via official wizard
+- Client-side capture (browser global handlers + App Router `app/global-error.tsx` top-level boundary)
+- Server-side capture via `Sentry.wrapRouteHandlerWithSentry` (Next.js 14.2 workaround — `onRequestError` is a Next.js 15 feature)
+- Edge-runtime capture via `sentry.edge.config.ts`
+- Source-map upload from Vercel build
+- PII scrubbing: `sendDefaultPii: false` + shared `lib/sentry-scrub.ts` `beforeSend` strips emails/usernames/IPs + cookies + auth headers
+- Tunnel route `/monitoring` bypasses ad-blockers
+- 100% trace sampling (beta-appropriate)
+- Email alerts firing on every new issue → David's inbox
+- Vercel-Sentry Marketplace integration auto-syncs + auto-rotates 8 env vars
+- Sentry's "Seer Autofix" AI surfaces correlations across distributed traces automatically (bonus — would have shortened R3 investigation)
 
-**Open questions:**
-- Sentry free tier fits Treehouse's volume comfortably; confirm pricing for beta-scale.
-- Alert channel — email-only, or Slack / SMS for critical errors?
-- Sampling rate — 100% for beta is fine; reconsider at scale.
-- Source-map upload — wire into Vercel build.
-- PII scrubbing — must not capture user emails or DB contents in error payloads.
+**Dashboard:** https://zen-forged.sentry.io/issues/?project=4511286908878848
 
-**Design prereq:** None.
+**Decisions made (locked in standup before sprint brief):**
+- D1 tool → Sentry (vs Vercel-native vs both)
+- D2 alert channel → email-only (iPhone-app path retracted; iOS Mail VIP available as user-side opt-in)
+- D3 scope → exception capture only (structured logs deferred; Replay deferred)
 
-**Elevated from:** CLAUDE.md pre-beta polish list 2026-04-24.
+**Deferred to follow-up:**
+- Structured logging on `/api/*` routes (deferred per D3 scope)
+- Sentry Session Replay (deferred per D3; PII concerns + bundle weight)
+- Slack / SMS alerts (deferred per D2)
+- Sampling tuning (100% is fine for beta; reconsider at scale)
+- Sentry MCP for Claude Code (David picked "none" during wizard — one-time `.mcp.json` add follow-up)
+
+**Known gap:** existing ~25 `/api/*` routes are unwrapped — Next.js 14.2 framework swallows route-handler throws before Sentry sees them. New routes need `Sentry.wrapRouteHandlerWithSentry` per `CONTEXT.md` §13. Acceptable for now (most existing routes are Supabase passthroughs whose errors surface as generic 500s in Vercel logs anyway). Auto-fixed by Q-013 (Next.js 15 upgrade).
+
+**Elevated from:** CLAUDE.md pre-beta polish list 2026-04-24. **Shipped:** 2026-04-26.
 
 ---
 
