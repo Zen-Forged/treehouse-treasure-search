@@ -129,61 +129,40 @@ function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promis
 // per v1.1l's internal-scroll-safe pattern.
 
 function Masthead({
-  scrollTarget,
   canShare,
   onShareOpen,
 }: {
-  scrollTarget: React.RefObject<HTMLDivElement | null>;
   canShare:     boolean;
   onShareOpen:  () => void;
 }) {
+  // Session 70 — locked-grid slot API. Inner grid + safe-area padding now
+  // owned by StickyMasthead itself.
   return (
     <StickyMasthead
-      scrollTarget={scrollTarget}
-      style={{
-        padding: "max(14px, env(safe-area-inset-top, 14px)) 22px 12px",
-        display: "grid",
-        gridTemplateColumns: "38px 1fr 38px",
-        alignItems: "center",
-        gap: 12,
-      }}
-    >
-      <div />
-      <div
-        style={{
-          fontFamily: FONT_IM_FELL,
-          fontSize: 18,
-          color: v1.inkPrimary,
-          letterSpacing: "-0.005em",
-          textAlign: "center",
-        }}
-      >
-        Treehouse Finds
-      </div>
-      {canShare ? (
-        <button
-          onClick={onShareOpen}
-          aria-label="Share this booth by email"
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: "50%",
-            background: v1.iconBubble,
-            border: "none",
-            padding: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            WebkitTapHighlightColor: "transparent",
-          }}
-        >
-          <MastheadPaperAirplane />
-        </button>
-      ) : (
-        <div />
-      )}
-    </StickyMasthead>
+      right={
+        canShare ? (
+          <button
+            onClick={onShareOpen}
+            aria-label="Share this booth by email"
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: "50%",
+              background: v1.iconBubble,
+              border: "none",
+              padding: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <MastheadPaperAirplane />
+          </button>
+        ) : null
+      }
+    />
   );
 }
 
@@ -338,7 +317,6 @@ function MyBoothInner() {
   const [bookmarkCount, setBookmarkCount] = useState(0);
 
   const heroLockedRef = useRef(false);
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   // ── Auth gate ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -673,23 +651,13 @@ function MyBoothInner() {
         background: v1.paperCream,
         maxWidth: 430,
         margin: "0 auto",
-        display: "flex",
-        flexDirection: "column",
+        paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
       }}
     >
-      <div
-        ref={scrollContainerRef}
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
-        }}
-      >
-        <Masthead
-          scrollTarget={scrollContainerRef}
-          canShare={canShare}
-          onShareOpen={() => setShareOpen(true)}
-        />
+      <Masthead
+        canShare={canShare}
+        onShareOpen={() => setShareOpen(true)}
+      />
         {loading ? (
           <Skeleton />
         ) : !activeVendor ? (
@@ -761,7 +729,6 @@ function MyBoothInner() {
             <BoothCloser />
           </>
         )}
-      </div>
 
       <BottomNav active="my-shelf" flaggedCount={bookmarkCount} />
 

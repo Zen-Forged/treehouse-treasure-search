@@ -439,32 +439,15 @@ export default function BoothsPage() {
     <div style={{ minHeight: "100vh", background: v1.paperCream, maxWidth: 430, margin: "0 auto", position: "relative" }}>
 
       <StickyMasthead
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr auto 1fr",
-          alignItems: "center",
-          padding: "max(14px, env(safe-area-inset-top, 14px)) 18px 12px",
-          gap: 12,
-        }}
-      >
-        {/* Left slot — empty spacer for symmetry */}
-        <div style={{ justifySelf: "start" }} aria-hidden="true" />
-
-        {/* Centered wordmark */}
-        <div style={{ fontFamily: FONT_IM_FELL, fontSize: 18, color: v1.inkPrimary, letterSpacing: "-0.005em", whiteSpace: "nowrap" }}>
-          Treehouse Finds
-        </div>
-
-        {/* Right slot — Admin pill */}
-        <div style={{ justifySelf: "end" }}>
+        right={
           <AdminOnly user={user}>
             <Link href="/admin"
               style={{ fontSize: 9, fontWeight: 700, color: v1.green, textTransform: "uppercase", letterSpacing: "1.6px", padding: "4px 9px", borderRadius: 8, background: "rgba(30,77,43,0.08)", border: "1px solid rgba(30,77,43,0.22)", textDecoration: "none" }}>
               Admin
             </Link>
           </AdminOnly>
-        </div>
-      </StickyMasthead>
+        }
+      />
 
       {/* Mall scope header — eyebrow + tappable mall name + chevron + italic
           count line. Single source of truth for "what mall am I looking at?"

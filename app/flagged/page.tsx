@@ -569,17 +569,9 @@ export default function FindMapPage() {
         flexDirection: "column",
       }}
     >
-      {/* 1. StickyMasthead (Mode A) */}
+      {/* 1. StickyMasthead — session-70 locked-grid slot API */}
       <StickyMasthead
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr auto 1fr",
-          alignItems: "center",
-          padding: "max(14px, env(safe-area-inset-top, 14px)) 18px 14px",
-          gap: 12,
-        }}
-      >
-        <div style={{ justifySelf: "start" }}>
+        left={
           <button
             onClick={() => history.back()}
             aria-label="Go back"
@@ -599,20 +591,8 @@ export default function FindMapPage() {
           >
             <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
           </button>
-        </div>
-        <div
-          style={{
-            fontFamily: FONT_IM_FELL,
-            fontSize: 18,
-            color: v1.inkPrimary,
-            letterSpacing: "-0.005em",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Treehouse Finds
-        </div>
-        <div style={{ justifySelf: "end" }} aria-hidden="true" />
-      </StickyMasthead>
+        }
+      />
 
       {/* 2. Mall scope header — moved above the FeaturedBanner per session-68
           QA so the persisted mall filter is the first thing the eye lands on

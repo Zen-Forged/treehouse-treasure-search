@@ -75,6 +75,7 @@ import PhotographPreview from "@/components/PhotographPreview";
 import PostingAsBlock from "@/components/PostingAsBlock";
 import AmberNotice from "@/components/AmberNotice";
 import TagBadge from "@/components/TagBadge";
+import StickyMasthead from "@/components/StickyMasthead";
 
 const FACEBOOK_PAGE_URL = "https://www.facebook.com/KentuckyTreehouse";
 const FEED_SCROLL_KEY   = "treehouse_feed_scroll";
@@ -739,75 +740,65 @@ function PostPreviewInner() {
         flexDirection: "column",
       }}
     >
-      {/* Scroll container covers the masthead + fields; save bar sits
-          outside the scroll context pinned to the bottom. */}
+      {/* Session 70 — D17 + D18: scroll container flattened to document scroll;
+          custom sticky masthead retired in favor of StickyMasthead. The page
+          title + subhead now live as a content block BELOW the masthead instead
+          of being stacked inside the sticky chrome. Save bar still pinned
+          separately at the bottom (outside this content tree). */}
       <div
         style={{
-          flex: 1,
-          overflowY: "auto",
           paddingBottom: "max(108px, calc(env(safe-area-inset-bottom, 0px) + 96px))",
         }}
       >
-        {/* ── 1. Masthead (Mode C) ─────────────────────────────────────── */}
-        <div
-          style={{
-            padding: "max(14px, env(safe-area-inset-top, 14px)) 22px 10px",
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 14,
-            background: "rgba(232,221,199,0.96)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            borderBottom: `1px solid ${v1.inkHairline}`,
-            position: "sticky",
-            top: 0,
-            zIndex: 30,
-          }}
-        >
-          <button
-            onClick={() => router.back()}
-            aria-label="Go back"
+        {/* ── 1. Masthead — locked-grid slot API ────────────────────────── */}
+        <StickyMasthead
+          left={
+            <button
+              onClick={() => router.back()}
+              aria-label="Go back"
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: "50%",
+                background: v1.iconBubble,
+                border: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                padding: 0,
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <ArrowLeft size={17} strokeWidth={2} style={{ color: v1.inkPrimary }} />
+            </button>
+          }
+        />
+
+        {/* ── 1.5 Page title + subhead (content block below masthead) ──── */}
+        <div style={{ padding: "16px 22px 10px" }}>
+          <div
             style={{
-              width: 38,
-              height: 38,
-              borderRadius: "50%",
-              background: v1.iconBubble,
-              border: "none",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              flexShrink: 0,
-              marginTop: 1,
-              WebkitTapHighlightColor: "transparent",
+              fontFamily: FONT_IM_FELL,
+              fontSize: 24,
+              color: v1.inkPrimary,
+              letterSpacing: "-0.005em",
+              lineHeight: 1.15,
+              marginBottom: 2,
             }}
           >
-            <ArrowLeft size={17} strokeWidth={2} style={{ color: v1.inkPrimary }} />
-          </button>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-            <div
-              style={{
-                fontFamily: FONT_IM_FELL,
-                fontSize: 24,
-                color: v1.inkPrimary,
-                letterSpacing: "-0.005em",
-                lineHeight: 1.15,
-              }}
-            >
-              Review your find
-            </div>
-            <div
-              style={{
-                fontFamily: FONT_IM_FELL,
-                fontStyle: "italic",
-                fontSize: 14,
-                color: v1.inkMuted,
-                lineHeight: 1.4,
-              }}
-            >
-              Here&rsquo;s how shoppers will see it.
-            </div>
+            Review your find
+          </div>
+          <div
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontStyle: "italic",
+              fontSize: 14,
+              color: v1.inkMuted,
+              lineHeight: 1.4,
+            }}
+          >
+            Here&rsquo;s how shoppers will see it.
           </div>
         </div>
 

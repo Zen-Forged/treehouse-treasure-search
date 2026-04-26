@@ -686,44 +686,20 @@ export default function DiscoveryFeedPage() {
         position: "relative",
       }}
     >
-      {/* ── 1. Masthead (Mode B) ────────────────────────────────────────── */}
-      {/* 1. StickyMasthead (Mode B) — v1.1l primitive */}
+      {/* ── 1. Masthead — session-70 locked-grid slot API ───────────────── */}
       <StickyMasthead
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr auto 1fr",
-          alignItems: "center",
-          padding: "max(14px, env(safe-area-inset-top, 14px)) 18px 12px",
-          gap: 12,
-        }}
-      >
-        {/* Left slot — logo as brand mark */}
-        <div style={{ justifySelf: "start" }} aria-hidden="true">
+        left={
           <Image
             src="/logo.png"
             alt=""
             width={34}
             height={34}
             style={{ opacity: 0.92 }}
+            aria-hidden="true"
           />
-        </div>
-
-        {/* Centered wordmark */}
-        <div
-          style={{
-            fontFamily: FONT_IM_FELL,
-            fontSize: 18,
-            color: v1.inkPrimary,
-            letterSpacing: "-0.005em",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Treehouse Finds
-        </div>
-
-        {/* Right slot — sign-in / sign-out text link */}
-        <div style={{ justifySelf: "end" }}>
-          {isAuthed === false && (
+        }
+        right={
+          isAuthed === false ? (
             <Link
               href="/login"
               aria-label="Sign in"
@@ -733,15 +709,13 @@ export default function DiscoveryFeedPage() {
                 justifyContent: "center",
                 width: 44,
                 height: 44,
-                marginRight: -10,
                 color: v1.inkMuted,
                 WebkitTapHighlightColor: "transparent",
               }}
             >
               <CircleUser size={22} strokeWidth={1.4} />
             </Link>
-          )}
-          {isAuthed === true && (
+          ) : isAuthed === true ? (
             <button
               onClick={handleSignOut}
               style={{
@@ -759,10 +733,9 @@ export default function DiscoveryFeedPage() {
             >
               Sign out
             </button>
-          )}
-          {isAuthed === null && <span aria-hidden="true">&nbsp;</span>}
-        </div>
-      </StickyMasthead>
+          ) : null
+        }
+      />
 
       {/* 1.5 Mall scope header (FeedHero wrapper) — moved above the
           FeaturedBanner per session-68 QA so the persisted mall filter is

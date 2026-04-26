@@ -384,32 +384,12 @@ function SoldLanding({
       }}
     >
       <StickyMasthead
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr auto 1fr",
-          alignItems: "center",
-          padding: "max(14px, env(safe-area-inset-top, 14px)) 18px 14px",
-          gap: 12,
-        }}
-      >
-        <div style={{ justifySelf: "start" }}>
+        left={
           <IconBubble onClick={onBack} ariaLabel="Go back">
             <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
           </IconBubble>
-        </div>
-        <div
-          style={{
-            fontFamily: FONT_IM_FELL,
-            fontSize: 18,
-            color: v1.inkPrimary,
-            letterSpacing: "-0.005em",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Treehouse Finds
-        </div>
-        <div style={{ justifySelf: "end" }} aria-hidden="true" />
-      </StickyMasthead>
+        }
+      />
 
       <motion.div
         variants={sectionVariants(0.08)}
@@ -725,34 +705,12 @@ export default function FindDetailPage() {
       }}
     >
       <StickyMasthead
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr auto 1fr",
-          alignItems: "center",
-          padding: "max(14px, env(safe-area-inset-top, 14px)) 18px 14px",
-          gap: 12,
-        }}
-      >
-        <div style={{ justifySelf: "start" }}>
+        left={
           <IconBubble onClick={() => router.back()} ariaLabel="Go back">
             <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
           </IconBubble>
-        </div>
-
-        <div
-          style={{
-            fontFamily: FONT_IM_FELL,
-            fontSize: 18,
-            color: v1.inkPrimary,
-            letterSpacing: "-0.005em",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Treehouse Finds
-        </div>
-
-        <div style={{ justifySelf: "end" }} aria-hidden="true" />
-      </StickyMasthead>
+        }
+      />
 
       {/* Photograph with post-it (bottom-right) + save/share OR edit (top-right) */}
       <motion.div

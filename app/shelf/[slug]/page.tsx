@@ -40,7 +40,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -101,7 +101,6 @@ function MastheadPaperAirplane() {
 
 function Masthead({
   onBack,
-  scrollTarget,
   canShare,
   onShareOpen,
   showBookmark,
@@ -109,29 +108,18 @@ function Masthead({
   onToggleBookmark,
 }: {
   onBack: () => void;
-  scrollTarget: React.RefObject<HTMLDivElement | null>;
   canShare: boolean;
   onShareOpen: () => void;
   showBookmark: boolean;
   saved: boolean;
   onToggleBookmark: () => void;
 }) {
-  // Session 67 — grid switched from fixed `"38px 1fr 38px"` to `"1fr auto 1fr"`
-  // so the wordmark stays true-centered when the right slot grows from one
-  // bubble (airplane only) to two bubbles (bookmark + airplane). Same pattern
-  // /shelves uses for the same reason.
+  // Session 70 — locked-grid slot API. Inner grid + safe-area padding now
+  // owned by StickyMasthead itself. Page just provides slot content; the
+  // wordmark X-coordinate is locked across all callsites.
   return (
     <StickyMasthead
-      scrollTarget={scrollTarget}
-      style={{
-        padding: "max(14px, env(safe-area-inset-top, 14px)) 22px 12px",
-        display: "grid",
-        gridTemplateColumns: "1fr auto 1fr",
-        alignItems: "center",
-        gap: 12,
-      }}
-    >
-      <div style={{ justifySelf: "start" }}>
+      left={
         <button
           onClick={onBack}
           aria-label="Go back"
@@ -151,50 +139,40 @@ function Masthead({
         >
           <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
         </button>
-      </div>
-      <div
-        style={{
-          fontFamily: FONT_IM_FELL,
-          fontSize: 18,
-          color: v1.inkPrimary,
-          letterSpacing: "-0.005em",
-          textAlign: "center",
-          whiteSpace: "nowrap",
-        }}
-      >
-        Treehouse Finds
-      </div>
-      <div style={{ justifySelf: "end", display: "flex", alignItems: "center", gap: 8 }}>
-        {showBookmark && (
-          <BookmarkBoothBubble
-            saved={saved}
-            size="masthead"
-            onClick={onToggleBookmark}
-          />
-        )}
-        {canShare && (
-          <button
-            onClick={onShareOpen}
-            aria-label="Share this booth by email"
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: "50%",
-              background: v1.iconBubble,
-              border: "none",
-              padding: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            <MastheadPaperAirplane />
-          </button>
-        )}
-      </div>
-    </StickyMasthead>
+      }
+      right={
+        <>
+          {showBookmark && (
+            <BookmarkBoothBubble
+              saved={saved}
+              size="masthead"
+              onClick={onToggleBookmark}
+            />
+          )}
+          {canShare && (
+            <button
+              onClick={onShareOpen}
+              aria-label="Share this booth by email"
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: "50%",
+                background: v1.iconBubble,
+                border: "none",
+                padding: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <MastheadPaperAirplane />
+            </button>
+          )}
+        </>
+      }
+    />
   );
 }
 
@@ -308,7 +286,6 @@ export default function PublicShelfPage() {
   const [user,           setUser]           = useState<User | null>(null);
   const [shareOpen,      setShareOpen]      = useState(false);
 
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => { setBookmarkCount(loadBookmarkCount()); }, []);
 
@@ -371,7 +348,6 @@ export default function PublicShelfPage() {
       >
         <Masthead
           onBack={() => router.back()}
-          scrollTarget={scrollContainerRef}
           canShare={false}
           onShareOpen={() => {}}
           showBookmark={false}
@@ -415,27 +391,17 @@ export default function PublicShelfPage() {
         background: v1.paperCream,
         maxWidth: 430,
         margin: "0 auto",
-        display: "flex",
-        flexDirection: "column",
+        paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
       }}
     >
-      <div
-        ref={scrollContainerRef}
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
-        }}
-      >
-        <Masthead
-          onBack={() => router.back()}
-          scrollTarget={scrollContainerRef}
-          canShare={canShare}
-          onShareOpen={() => setShareOpen(true)}
-          showBookmark={showBookmark}
-          saved={boothBookmarked}
-          onToggleBookmark={handleToggleBoothBookmark}
-        />
+      <Masthead
+        onBack={() => router.back()}
+        canShare={canShare}
+        onShareOpen={() => setShareOpen(true)}
+        showBookmark={showBookmark}
+        saved={boothBookmarked}
+        onToggleBookmark={handleToggleBoothBookmark}
+      />
         {loading ? (
           <Skeleton />
         ) : (
@@ -494,7 +460,6 @@ export default function PublicShelfPage() {
             <BoothCloser />
           </>
         )}
-      </div>
 
       <BottomNav active="shelves" flaggedCount={bookmarkCount} />
 
