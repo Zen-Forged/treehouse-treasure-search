@@ -322,7 +322,7 @@ function MasonryTile({
               than a commerce-style favorite. */}
           <button
             onClick={handleHeartClick}
-            aria-label={isFollowed ? "Remove from saved" : "Save"}
+            aria-label={isFollowed ? "Remove flag" : "Flag"}
             style={{
               position: "absolute",
               top: 8,

@@ -883,7 +883,7 @@ export default function FindDetailPage() {
             ) : (
               <IconBubble
                 onClick={handleToggleSave}
-                ariaLabel={isSaved ? "Remove from saved" : "Save"}
+                ariaLabel={isSaved ? "Remove flag" : "Flag"}
                 active={isSaved}
                 variant="frosted"
               >

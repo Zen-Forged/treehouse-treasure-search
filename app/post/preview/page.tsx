@@ -493,7 +493,7 @@ function PostPreviewInner() {
               lineHeight: 1.2,
             }}
           >
-            Saved to shelf.
+            Posted to your shelf.
           </div>
           <div
             style={{

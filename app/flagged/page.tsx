@@ -250,7 +250,7 @@ function FindTile({
 
         <button
           onClick={handleUnsave}
-          aria-label="Remove from saved"
+          aria-label="Remove flag"
           style={{
             position: "absolute",
             top: 8,
@@ -489,7 +489,7 @@ function EmptyState() {
           marginBottom: 12,
         }}
       >
-        Nothing saved yet
+        No finds flagged yet
       </div>
       <div
         style={{
@@ -501,7 +501,7 @@ function EmptyState() {
           maxWidth: 280,
         }}
       >
-        Tap the heart on any find to save it here. Your trip comes together as you go.
+        Tap the flag on any find to add it to your find map.
       </div>
     </motion.div>
   );
@@ -659,8 +659,8 @@ export default function FindMapPage() {
           transition={{ duration: 0.34, delay: 0.04, ease: EASE }}
         >
           <MallScopeHeader
-            eyebrowAll="Saves across"
-            eyebrowOne="Saves at"
+            eyebrowAll="Flagged finds across"
+            eyebrowOne="Flagged finds at"
             mallName={selectedMall?.name ?? null}
             geoLine={scopeGeoLine}
             onTap={() => setMallSheetOpen(true)}
@@ -737,7 +737,7 @@ export default function FindMapPage() {
                 lineHeight: 1.4,
               }}
             >
-              No saved finds at <span style={{ color: v1.green }}>{selectedMall?.name ?? "this mall"}</span>.
+              No flagged finds at <span style={{ color: v1.green }}>{selectedMall?.name ?? "this mall"}</span>.
             </div>
             <div
               style={{
@@ -748,7 +748,7 @@ export default function FindMapPage() {
                 lineHeight: 1.5,
               }}
             >
-              Saves at other malls are hidden by the active filter.{" "}
+              Flagged finds at other malls are hidden by the active filter.{" "}
               <button
                 onClick={() => setSavedMallId(null)}
                 style={{
