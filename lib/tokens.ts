@@ -89,7 +89,6 @@ export const spacing = {
 //                 WCAG AA on paperCream)
 //   Hairline:     inkHairline — used for photo borders and dividers
 //   Price ink:    priceInk (#6a4a30) — softer than primary for em-dash prices
-//   Pill:         pill* — numeric badges on vendor rows (Find Detail + Find Map)
 //   Icon bubble:  iconBubble — low-contrast wash for masthead bubbles
 //   Green:        green (#1e4d2b) — saved-state fill + active state
 //   Red:          red* — Booth page hero-upload error + v1.2 destructive links
@@ -118,11 +117,6 @@ export const v1 = {
 
   // Price voice
   priceInk:     "#6a4a30",
-
-  // Pill (numeric badge on vendor rows)
-  pillBg:       "rgba(247,239,217,0.88)",
-  pillBorder:   "rgba(42,26,10,0.72)",
-  pillInk:      "#1c1208",
 
   // Icon bubble (paper variant — masthead back button)
   iconBubble:   "rgba(42,26,10,0.06)",
