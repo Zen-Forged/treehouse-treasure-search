@@ -1115,6 +1115,9 @@ export default function FindDetailPage() {
             })()}
 
             {(vendorName || boothNumber) && (() => {
+              // Session 70 round 2 — Variant B lockup + Treatment C visit-link.
+              // Vendor name on left + inline visit-link below; booth label
+              // small-caps + IM Fell numeral stacked on the right.
               const cardInner = (
                 <div
                   style={{
@@ -1124,55 +1127,81 @@ export default function FindDetailPage() {
                     padding: "12px 14px",
                   }}
                 >
-                  {boothNumber && (
-                    <div
-                      style={{
-                        fontFamily: FONT_SYS,
-                        fontSize: 9.5,
-                        fontWeight: 700,
-                        color: v1.inkMuted,
-                        letterSpacing: "0.10em",
-                        textTransform: "uppercase",
-                        marginBottom: 3,
-                        lineHeight: 1,
-                      }}
-                    >
-                      Booth {boothNumber}
-                    </div>
-                  )}
                   <div
                     style={{
-                      display: "flex",
-                      alignItems: "baseline",
-                      justifyContent: "space-between",
-                      gap: 10,
+                      display: "grid",
+                      gridTemplateColumns: "1fr auto",
+                      columnGap: 12,
+                      alignItems: "center",
                     }}
                   >
-                    {vendorName && (
-                      <span
+                    <div style={{ minWidth: 0 }}>
+                      {vendorName && (
+                        <div
+                          style={{
+                            fontFamily: FONT_IM_FELL,
+                            fontSize: 18,
+                            color: v1.inkPrimary,
+                            lineHeight: 1.25,
+                            letterSpacing: "-0.005em",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {vendorName}
+                        </div>
+                      )}
+                      {vendorSlug && (
+                        <div
+                          style={{
+                            fontFamily: FONT_SYS,
+                            fontSize: 11,
+                            fontWeight: 500,
+                            color: v1.green,
+                            marginTop: 3,
+                            lineHeight: 1,
+                          }}
+                        >
+                          Visit the booth →
+                        </div>
+                      )}
+                    </div>
+                    {boothNumber && (
+                      <div
                         style={{
-                          fontFamily: FONT_IM_FELL,
-                          fontSize: 18,
-                          color: v1.inkPrimary,
-                          lineHeight: 1.2,
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "flex-end",
+                          lineHeight: 1,
                         }}
                       >
-                        {vendorName}
-                      </span>
-                    )}
-                    {vendorSlug && (
-                      <span
-                        style={{
-                          fontFamily: FONT_SYS,
-                          fontSize: 11,
-                          fontWeight: 500,
-                          color: v1.green,
-                          flexShrink: 0,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        Visit the booth →
-                      </span>
+                        <div
+                          style={{
+                            fontFamily: FONT_SYS,
+                            fontSize: 9,
+                            fontWeight: 700,
+                            color: v1.inkMuted,
+                            letterSpacing: "0.12em",
+                            textTransform: "uppercase",
+                            lineHeight: 1,
+                            marginBottom: 4,
+                          }}
+                        >
+                          Booth
+                        </div>
+                        <div
+                          style={{
+                            fontFamily: FONT_IM_FELL,
+                            fontSize: 26,
+                            color: v1.inkPrimary,
+                            lineHeight: 1,
+                            letterSpacing: "-0.01em",
+                          }}
+                        >
+                          {boothNumber}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>

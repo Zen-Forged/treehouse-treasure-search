@@ -175,28 +175,39 @@ function VendorCard({
           </AdminOnly>
         </div>
 
-        {/* Info */}
+        {/* Info — Session 70 round 2 Variant B lockup: vendor name on left,
+            "Booth" small-caps + IM Fell numeral stacked on right. Tile width
+            is tighter than Find Map / Find Detail so the numeral scales to
+            20px (vs the spec's 26px on those surfaces); vendor stays at 14px
+            for tile-tile parity with bio below. Lockup structure identical. */}
         <div style={{ padding: "9px 10px 11px" }}>
-          {vendor.booth_number && (
-            <div style={{ fontFamily: FONT_SYS, fontSize: 9.5, fontWeight: 700, color: v1.inkMuted, letterSpacing: "0.10em", textTransform: "uppercase", marginBottom: 2, lineHeight: 1 }}>
-              Booth {vendor.booth_number}
+          <div style={{ display: "grid", gridTemplateColumns: vendor.booth_number ? "1fr auto" : "1fr", columnGap: 10, alignItems: "center" }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontFamily: FONT_IM_FELL, fontSize: 14, color: v1.inkPrimary, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {vendor.display_name}
+              </div>
+              {/* Session 67 — mall name removed from tile subtitle (already
+                  grouped under a mall section header on /shelves). Bio still
+                  renders when set; otherwise subtitle line is omitted. */}
+              {vendor.bio && (
+                <div style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 10, color: v1.inkMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 2 }}>
+                  {vendor.bio}
+                </div>
+              )}
             </div>
-          )}
-          <div style={{ fontFamily: FONT_IM_FELL, fontSize: 14, color: v1.inkPrimary, lineHeight: 1.2, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {vendor.display_name}
+            {vendor.booth_number && (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", lineHeight: 1 }}>
+                <div style={{ fontFamily: FONT_SYS, fontSize: 9, fontWeight: 700, color: v1.inkMuted, letterSpacing: "0.12em", textTransform: "uppercase", lineHeight: 1, marginBottom: 3 }}>
+                  Booth
+                </div>
+                <div style={{ fontFamily: FONT_IM_FELL, fontSize: 20, color: v1.inkPrimary, lineHeight: 1, letterSpacing: "-0.01em" }}>
+                  {vendor.booth_number}
+                </div>
+              </div>
+            )}
           </div>
-          {/* Session 67 — mall name removed from tile subtitle. Tiles are
-              already grouped under a mall section header on /shelves, so
-              repeating the mall name on every card is redundant. Bio (when
-              the vendor sets one) still renders; otherwise the subtitle
-              line is omitted. */}
-          {vendor.bio && (
-            <div style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 10, color: v1.inkMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {vendor.bio}
-            </div>
-          )}
           <AdminOnly user={user}>
-            <div style={{ fontSize: 9, color: v1.green, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.4px", marginTop: 3 }}>
+            <div style={{ fontSize: 9, color: v1.green, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.4px", marginTop: 5 }}>
               Manage
             </div>
           </AdminOnly>

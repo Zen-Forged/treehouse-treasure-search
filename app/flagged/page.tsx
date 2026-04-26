@@ -292,6 +292,9 @@ function BoothSection({
   const useScroll = group.posts.length >= 3;
   const savedLabel = `${group.posts.length} flagged find${group.posts.length === 1 ? "" : "s"}`;
 
+  // Session 70 round 2 — Variant B lockup. Vendor name on left, "Booth" small-
+  // caps label + IM Fell numeral stacked on right. When booth number is missing
+  // (rare orphan case), the lockup collapses to vendor name alone.
   const headerInner = (
     <div
       style={{
@@ -302,47 +305,65 @@ function BoothSection({
         marginBottom: 12,
       }}
     >
-      {group.boothNumber ? (
-        <div
-          style={{
-            fontFamily: FONT_SYS,
-            fontSize: 9.5,
-            fontWeight: 700,
-            color: v1.inkMuted,
-            letterSpacing: "0.10em",
-            textTransform: "uppercase",
-            marginBottom: 2,
-            lineHeight: 1,
-          }}
-        >
-          Booth {group.boothNumber}
-        </div>
-      ) : (
-        <div
-          style={{
-            fontFamily: FONT_SYS,
-            fontSize: 9.5,
-            fontWeight: 700,
-            color: v1.inkMuted,
-            letterSpacing: "0.10em",
-            textTransform: "uppercase",
-            marginBottom: 2,
-            lineHeight: 1,
-          }}
-        >
-          No booth listed
-        </div>
-      )}
       <div
         style={{
-          fontFamily: FONT_IM_FELL,
-          fontSize: 18,
-          color: v1.inkPrimary,
-          lineHeight: 1.25,
-          letterSpacing: "-0.005em",
+          display: "grid",
+          gridTemplateColumns: group.boothNumber ? "1fr auto" : "1fr",
+          columnGap: 12,
+          alignItems: "center",
         }}
       >
-        {group.vendorName}
+        <div
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontSize: 18,
+            color: v1.inkPrimary,
+            lineHeight: 1.25,
+            letterSpacing: "-0.005em",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            minWidth: 0,
+          }}
+        >
+          {group.vendorName}
+        </div>
+        {group.boothNumber && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
+              lineHeight: 1,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: FONT_SYS,
+                fontSize: 9,
+                fontWeight: 700,
+                color: v1.inkMuted,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                lineHeight: 1,
+                marginBottom: 4,
+              }}
+            >
+              Booth
+            </div>
+            <div
+              style={{
+                fontFamily: FONT_IM_FELL,
+                fontSize: 26,
+                color: v1.inkPrimary,
+                lineHeight: 1,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              {group.boothNumber}
+            </div>
+          </div>
+        )}
       </div>
       {scopeIsAllMalls && group.mallName && (
         <div
@@ -350,7 +371,7 @@ function BoothSection({
             fontFamily: FONT_SYS,
             fontSize: 11.5,
             color: v1.inkMuted,
-            marginTop: 3,
+            marginTop: 6,
             lineHeight: 1.4,
           }}
         >
