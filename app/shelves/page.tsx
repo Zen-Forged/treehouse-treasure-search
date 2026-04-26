@@ -35,7 +35,7 @@ import AdminOnly from "@/components/AdminOnly";
 import BookmarkBoothBubble from "@/components/BookmarkBoothBubble";
 import BottomNav from "@/components/BottomNav";
 import MallSheet from "@/components/MallSheet";
-import MallScopeHeader from "@/components/MallScopeHeader";
+import MallScopeHeader, { type MallScopeGeoLine } from "@/components/MallScopeHeader";
 import StickyMasthead from "@/components/StickyMasthead";
 import type { Vendor, Mall, MallStatus } from "@/types/treehouse";
 import type { User } from "@supabase/supabase-js";
@@ -424,11 +424,29 @@ export default function BoothsPage() {
   const mallsForPicker = malls.filter(m => m.status === "active");
   const selectedMall = malls.find(m => m.id === savedMallId) ?? null;
 
-  // Scope header geo line. Italic context only — Booths cards aren't tied to
-  // an address the way Find Detail is, so no map link.
-  const scopeGeoLine = savedMallId && selectedMall
-    ? { kind: "italic" as const, text: `${mallScopedVendors.length} ${mallScopedVendors.length === 1 ? "booth" : "booths"}` }
-    : { kind: "italic" as const, text: "Kentucky & Southern Indiana" };
+  // Session 70 round 2 — count merges into eyebrow per David's QA feedback;
+  // geoLine becomes the address (filtered) or italic Kentucky (all-malls)
+  // matching Home's pattern so the address is reachable from any primary tab.
+  const boothCount = mallScopedVendors.length;
+  const boothNoun = boothCount === 1 ? "booth" : "booths";
+  const scopeEyebrowAll = `${boothCount} ${boothNoun} across`;
+  const scopeEyebrowOne = `${boothCount} ${boothNoun} at`;
+
+  const scopeGeoLine: MallScopeGeoLine =
+    savedMallId && selectedMall
+      ? (() => {
+          const address = selectedMall.address ?? null;
+          const cityLine = selectedMall.city
+            ? `${selectedMall.city}${selectedMall.state ? `, ${selectedMall.state}` : ""}`
+            : null;
+          const text = address ?? cityLine ?? "";
+          if (!text) return null;
+          const href = `https://maps.apple.com/?q=${encodeURIComponent(
+            address ?? `${selectedMall.name} ${selectedMall.city ?? ""} ${selectedMall.state ?? ""}`
+          )}`;
+          return { kind: "address" as const, text, href };
+        })()
+      : { kind: "italic" as const, text: "Kentucky & Southern Indiana" };
 
   function handleMallSelect(nextMallId: string | null) {
     setSavedMallId(nextMallId);
@@ -454,8 +472,8 @@ export default function BoothsPage() {
           across Home / Booths / Find Map. Replaces the prior local subtitle. */}
       {!loading && (
         <MallScopeHeader
-          eyebrowAll="Booths across"
-          eyebrowOne="Booths at"
+          eyebrowAll={scopeEyebrowAll}
+          eyebrowOne={scopeEyebrowOne}
           mallName={selectedMall?.name ?? null}
           geoLine={scopeGeoLine}
           onTap={() => setMallSheetOpen(true)}

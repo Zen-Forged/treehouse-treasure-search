@@ -63,6 +63,10 @@ interface StickyMastheadProps {
   threshold?: number;
 }
 
+// IM Fell italic ascenders sit slightly above the line-box center, so a
+// span vertically aligned to grid-row-center reads as dropping ~1px below
+// the slot icons / pills around it. Lift the wordmark by 1px so the visual
+// center matches the side-slot icon centers.
 const WORDMARK_DEFAULT = (
   <span
     style={{
@@ -73,6 +77,8 @@ const WORDMARK_DEFAULT = (
       letterSpacing: "-0.005em",
       lineHeight: 1,
       whiteSpace: "nowrap",
+      display: "inline-block",
+      transform: "translateY(-1px)",
     }}
   >
     Treehouse Finds

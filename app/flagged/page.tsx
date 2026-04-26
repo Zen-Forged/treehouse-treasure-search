@@ -50,7 +50,7 @@ import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
 import BottomNav from "@/components/BottomNav";
 import MallSheet from "@/components/MallSheet";
-import MallScopeHeader from "@/components/MallScopeHeader";
+import MallScopeHeader, { type MallScopeGeoLine } from "@/components/MallScopeHeader";
 import StickyMasthead from "@/components/StickyMasthead";
 import FeaturedBanner from "@/components/FeaturedBanner";
 import type { Post, Mall } from "@/types/treehouse";
@@ -549,9 +549,29 @@ export default function FindMapPage() {
     if (p.mall_id) saveCountsByMall[p.mall_id] = (saveCountsByMall[p.mall_id] ?? 0) + 1;
   }
 
-  const scopeGeoLine = savedMallId && selectedMall
-    ? { kind: "italic" as const, text: `${filteredPosts.length} ${filteredPosts.length === 1 ? "saved find" : "saved finds"}` }
-    : { kind: "italic" as const, text: "Kentucky & Southern Indiana" };
+  // Session 70 round 2 — count merges into eyebrow per David's QA feedback;
+  // geoLine becomes the address (filtered) or italic Kentucky (all-malls)
+  // matching Home's pattern so the address is reachable from any primary tab.
+  const findCount = filteredPosts.length;
+  const findNoun = findCount === 1 ? "find" : "finds";
+  const scopeEyebrowAll = `${findCount} flagged ${findNoun} across`;
+  const scopeEyebrowOne = `${findCount} flagged ${findNoun} at`;
+
+  const scopeGeoLine: MallScopeGeoLine =
+    savedMallId && selectedMall
+      ? (() => {
+          const address = selectedMall.address ?? null;
+          const cityLine = selectedMall.city
+            ? `${selectedMall.city}${selectedMall.state ? `, ${selectedMall.state}` : ""}`
+            : null;
+          const text = address ?? cityLine ?? "";
+          if (!text) return null;
+          const href = `https://maps.apple.com/?q=${encodeURIComponent(
+            address ?? `${selectedMall.name} ${selectedMall.city ?? ""} ${selectedMall.state ?? ""}`
+          )}`;
+          return { kind: "address" as const, text, href };
+        })()
+      : { kind: "italic" as const, text: "Kentucky & Southern Indiana" };
 
   // Empty-state branch: user has saves, but the active mall filter excludes
   // all of them. Distinct from the "nothing saved yet" state below.
@@ -606,8 +626,8 @@ export default function FindMapPage() {
           transition={{ duration: 0.34, delay: 0.04, ease: EASE }}
         >
           <MallScopeHeader
-            eyebrowAll="Flagged finds across"
-            eyebrowOne="Flagged finds at"
+            eyebrowAll={scopeEyebrowAll}
+            eyebrowOne={scopeEyebrowOne}
             mallName={selectedMall?.name ?? null}
             geoLine={scopeGeoLine}
             onTap={() => setMallSheetOpen(true)}
