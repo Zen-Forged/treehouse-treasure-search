@@ -24,15 +24,18 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { MapPin, Pencil, Trash2, X, Loader as LoaderIcon, AlertTriangle, Bookmark } from "lucide-react";
+import { Pencil, Trash2, X, Loader as LoaderIcon, AlertTriangle, Bookmark } from "lucide-react";
 import { getAllVendors, getAllMalls } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import { vendorHueBg, loadBookmarkCount, loadBookmarkedBoothIds, boothBookmarkKey } from "@/lib/utils";
+import { useSavedMallId } from "@/lib/useSavedMallId";
 import AdminOnly from "@/components/AdminOnly";
 import BookmarkBoothBubble from "@/components/BookmarkBoothBubble";
 import BottomNav from "@/components/BottomNav";
+import MallSheet from "@/components/MallSheet";
+import MallScopeHeader from "@/components/MallScopeHeader";
 import StickyMasthead from "@/components/StickyMasthead";
 import type { Vendor, Mall, MallStatus } from "@/types/treehouse";
 import type { User } from "@supabase/supabase-js";
@@ -349,22 +352,6 @@ function groupByMall(vendors: Vendor[]): { mallId: string | null; mallName: stri
   return Array.from(map.values());
 }
 
-// ─── Subtitle helper ───────────────────────────────────────────────────────────
-
-function subtitleFor(vendors: Vendor[]): { text: string; mallName: string | null } | null {
-  if (vendors.length === 0) return null;
-  const mallNames = new Set<string>();
-  let singleMallName: string | null = null;
-  for (const v of vendors) {
-    const name = v.mall?.name;
-    if (name) { mallNames.add(name); singleMallName = name; }
-  }
-  const boothCount = vendors.length;
-  const boothWord  = boothCount === 1 ? "booth" : "booths";
-  if (mallNames.size <= 1 && singleMallName) return { text: `${boothCount} ${boothWord} at ${singleMallName}`, mallName: singleMallName };
-  return { text: `${boothCount} ${boothWord} across ${mallNames.size} locations`, mallName: null };
-}
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function BoothsPage() {
@@ -376,6 +363,8 @@ export default function BoothsPage() {
   const [bookmarkedIds,  setBookmarkedIds]  = useState<Set<string>>(new Set());
   const [filter,         setFilter]         = useState<"all" | "bookmarked">("all");
   const [deleteTarget,   setDeleteTarget]   = useState<Vendor | null>(null);
+  const [savedMallId,    setSavedMallId]    = useSavedMallId();
+  const [mallSheetOpen,  setMallSheetOpen]  = useState(false);
 
   useEffect(() => {
     setBookmarkCount(loadBookmarkCount());
@@ -403,15 +392,46 @@ export default function BoothsPage() {
     });
   }
 
-  // D9 — when no bookmarks exist, the chip row hides AND any active filter
-  // collapses back to "all" so the user doesn't end up looking at an empty
-  // grid behind a hidden filter chip.
-  const effectiveFilter  = bookmarkedIds.size === 0 ? "all" : filter;
-  const visibleVendors   = effectiveFilter === "bookmarked"
-    ? vendors.filter(v => bookmarkedIds.has(v.id))
+  // Mall filter (cross-tab persisted via useSavedMallId) is the outer scope.
+  // Bookmark filter (this-page-only) composes inside it via intersection.
+  const mallScopedVendors = savedMallId
+    ? vendors.filter(v => v.mall_id === savedMallId)
     : vendors;
-  const subtitle         = subtitleFor(visibleVendors);
-  const showFilterChips  = bookmarkedIds.size > 0;
+
+  // D9 — when no bookmarks exist (within the active mall scope), the chip row
+  // hides AND any active filter collapses back to "all" so the user doesn't
+  // end up looking at an empty grid behind a hidden filter chip.
+  const bookmarkedInScopeCount = mallScopedVendors.filter(v => bookmarkedIds.has(v.id)).length;
+  const effectiveFilter  = bookmarkedInScopeCount === 0 ? "all" : filter;
+  const visibleVendors   = effectiveFilter === "bookmarked"
+    ? mallScopedVendors.filter(v => bookmarkedIds.has(v.id))
+    : mallScopedVendors;
+  const showFilterChips  = bookmarkedInScopeCount > 0;
+
+  // Per-mall vendor counts for the MallSheet picker. Counts every vendor
+  // (independent of the bookmark filter), so picking a mall from the sheet
+  // shows you "how many booths" at each location.
+  const vendorCountsByMall: Record<string, number> = {};
+  for (const v of vendors) {
+    if (v.mall_id) vendorCountsByMall[v.mall_id] = (vendorCountsByMall[v.mall_id] ?? 0) + 1;
+  }
+
+  // The picker only shows active malls (matches Home). Non-active mall content
+  // is still loaded for admin section-header pills, but a non-active mall
+  // wouldn't be a useful filter target.
+  const mallsForPicker = malls.filter(m => m.status === "active");
+  const selectedMall = malls.find(m => m.id === savedMallId) ?? null;
+
+  // Scope header geo line. Italic context only — Booths cards aren't tied to
+  // an address the way Find Detail is, so no map link.
+  const scopeGeoLine = savedMallId && selectedMall
+    ? { kind: "italic" as const, text: `${mallScopedVendors.length} ${mallScopedVendors.length === 1 ? "booth" : "booths"}` }
+    : { kind: "italic" as const, text: "Kentucky & Southern Indiana" };
+
+  function handleMallSelect(nextMallId: string | null) {
+    setSavedMallId(nextMallId);
+    setMallSheetOpen(false);
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: v1.paperCream, maxWidth: 430, margin: "0 auto", position: "relative" }}>
@@ -444,14 +464,17 @@ export default function BoothsPage() {
         </div>
       </StickyMasthead>
 
-      {/* Subtitle — booth count / location, outside masthead so it doesn't affect centering */}
-      {!loading && subtitle && (
-        <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "8px 18px 0" }}>
-          <MapPin size={10} style={{ color: v1.inkMuted }} />
-          <span style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 12, color: v1.inkMuted }}>
-            {subtitle.text}
-          </span>
-        </div>
+      {/* Mall scope header — eyebrow + tappable mall name + chevron + italic
+          count line. Single source of truth for "what mall am I looking at?"
+          across Home / Booths / Find Map. Replaces the prior local subtitle. */}
+      {!loading && (
+        <MallScopeHeader
+          eyebrowAll="Booths across"
+          eyebrowOne="Booths at"
+          mallName={selectedMall?.name ?? null}
+          geoLine={scopeGeoLine}
+          onTap={() => setMallSheetOpen(true)}
+        />
       )}
 
       {/* Filter chip row — All booths · Bookmarked (n). Hidden entirely when
@@ -518,48 +541,76 @@ export default function BoothsPage() {
           </motion.div>
         ) : (
           <>
-            {groupByMall(visibleVendors).map((group, groupIdx) => {
-              // R4c — for admins, surface mall lifecycle status alongside the
-              // group header so the non-active mall's group reads honestly as
-              // a staging area, not a live listing. Shoppers don't see
-              // /shelves today, so gating by admin is belt-and-braces.
-              const groupMall = group.mallId ? malls.find(m => m.id === group.mallId) : undefined;
-              return (
-              <div key={group.mallName}>
-                {/* Section header — IM Fell name + hairline rule + booth count */}
-                <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: groupIdx === 0 ? 0 : 20, paddingBottom: 10 }}>
-                  <span style={{ fontFamily: FONT_IM_FELL, fontSize: 15, color: v1.inkPrimary, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>
-                    {group.mallName}
-                  </span>
-                  <AdminOnly user={user}>
-                    {groupMall?.status && groupMall.status !== "active" && (
-                      <MallStatusPill status={groupMall.status} />
-                    )}
-                  </AdminOnly>
-                  <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
-                  <span style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 11, color: v1.inkMuted, whiteSpace: "nowrap" }}>
-                    {group.vendors.length} {group.vendors.length === 1 ? "booth" : "booths"}
-                  </span>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  {group.vendors.map((vendor, i) => (
-                    <VendorCard
-                      key={vendor.id}
-                      vendor={vendor}
-                      index={i}
-                      user={user}
-                      saved={bookmarkedIds.has(vendor.id)}
-                      onToggleBookmark={handleToggleBookmark}
-                      onRequestDelete={setDeleteTarget}
-                    />
-                  ))}
-                </div>
+            {savedMallId ? (
+              // D4 — mall picked, render flat grid (no per-mall section headers).
+              // The MallScopeHeader above already names the mall.
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {visibleVendors.map((vendor, i) => (
+                  <VendorCard
+                    key={vendor.id}
+                    vendor={vendor}
+                    index={i}
+                    user={user}
+                    saved={bookmarkedIds.has(vendor.id)}
+                    onToggleBookmark={handleToggleBookmark}
+                    onRequestDelete={setDeleteTarget}
+                  />
+                ))}
               </div>
-              );
-            })}
+            ) : (
+              // All malls — preserve grouped-by-mall layout with section headers.
+              groupByMall(visibleVendors).map((group, groupIdx) => {
+                // R4c — for admins, surface mall lifecycle status alongside the
+                // group header so the non-active mall's group reads honestly as
+                // a staging area, not a live listing.
+                const groupMall = group.mallId ? malls.find(m => m.id === group.mallId) : undefined;
+                return (
+                <div key={group.mallName}>
+                  {/* Section header — IM Fell name + hairline rule + booth count */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: groupIdx === 0 ? 0 : 20, paddingBottom: 10 }}>
+                    <span style={{ fontFamily: FONT_IM_FELL, fontSize: 15, color: v1.inkPrimary, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>
+                      {group.mallName}
+                    </span>
+                    <AdminOnly user={user}>
+                      {groupMall?.status && groupMall.status !== "active" && (
+                        <MallStatusPill status={groupMall.status} />
+                      )}
+                    </AdminOnly>
+                    <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
+                    <span style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 11, color: v1.inkMuted, whiteSpace: "nowrap" }}>
+                      {group.vendors.length} {group.vendors.length === 1 ? "booth" : "booths"}
+                    </span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    {group.vendors.map((vendor, i) => (
+                      <VendorCard
+                        key={vendor.id}
+                        vendor={vendor}
+                        index={i}
+                        user={user}
+                        saved={bookmarkedIds.has(vendor.id)}
+                        onToggleBookmark={handleToggleBookmark}
+                        onRequestDelete={setDeleteTarget}
+                      />
+                    ))}
+                  </div>
+                </div>
+                );
+              })
+            )}
           </>
         )}
       </main>
+
+      <MallSheet
+        open={mallSheetOpen}
+        onClose={() => setMallSheetOpen(false)}
+        malls={mallsForPicker}
+        activeMallId={savedMallId}
+        onSelect={handleMallSelect}
+        findCounts={vendorCountsByMall}
+        countUnit={{ singular: "booth", plural: "booths" }}
+      />
 
       <BottomNav active="shelves" flaggedCount={bookmarkCount} />
 

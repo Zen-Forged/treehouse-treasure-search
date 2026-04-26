@@ -80,6 +80,10 @@ export interface MallSheetProps {
   activeMallId: string | null;
   onSelect:     (mallId: string | null) => void;
   findCounts?:  Record<string, number>;
+  // Per-consumer unit label for the count column. Defaults to "find" / "finds".
+  // Booths passes { singular: "booth", plural: "booths" }; Find Map passes
+  // { singular: "saved find", plural: "saved finds" }.
+  countUnit?:   { singular: string; plural: string };
 }
 
 export default function MallSheet({
@@ -89,6 +93,7 @@ export default function MallSheet({
   activeMallId,
   onSelect,
   findCounts,
+  countUnit = { singular: "find", plural: "finds" },
 }: MallSheetProps) {
   const sorted = sortMalls(malls);
 
@@ -115,7 +120,7 @@ export default function MallSheet({
   const allCountLabel = totalFindCount !== null
     ? liveMallCount <= 1
       ? `${liveMallCount} mall live · more soon`
-      : `${totalFindCount} finds · ${liveMallCount} malls`
+      : `${totalFindCount} ${countUnit.plural} · ${liveMallCount} malls`
     : null;
 
   return (
@@ -284,7 +289,7 @@ export default function MallSheet({
                 const countLabel =
                   typeof count === "number"
                     ? count > 0
-                      ? `${count} ${count === 1 ? "find" : "finds"}`
+                      ? `${count} ${count === 1 ? countUnit.singular : countUnit.plural}`
                       : "—"
                     : "—";
                 const cityState = [mall.city, mall.state]

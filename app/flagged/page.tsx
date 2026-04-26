@@ -50,16 +50,19 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import FlagGlyph from "@/components/FlagGlyph";
-import { getPostsByIds } from "@/lib/posts";
-import { BOOKMARK_PREFIX, loadBookmarkCount, mapsUrl } from "@/lib/utils";
+import { getPostsByIds, getActiveMalls } from "@/lib/posts";
+import { BOOKMARK_PREFIX, loadBookmarkCount } from "@/lib/utils";
+import { useSavedMallId } from "@/lib/useSavedMallId";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
 import BottomNav from "@/components/BottomNav";
+import MallSheet from "@/components/MallSheet";
+import MallScopeHeader from "@/components/MallScopeHeader";
 import StickyMasthead from "@/components/StickyMasthead";
 import FeaturedBanner from "@/components/FeaturedBanner";
-import type { Post } from "@/types/treehouse";
+import type { Post, Mall } from "@/types/treehouse";
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
 
@@ -128,20 +131,6 @@ function groupByBooth(posts: Post[]): BoothGroup[] {
 }
 
 // ── Glyph primitives ───────────────────────────────────────────────────────────
-function PinGlyph({ size = 22 }: { size?: number }) {
-  return (
-    <svg width={size} height={size * (22 / 18)} viewBox="0 0 18 22" fill="none" aria-hidden="true">
-      <path
-        d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z"
-        stroke={v1.inkPrimary}
-        strokeWidth="1.3"
-        fill="none"
-      />
-      <circle cx="9" cy="8.3" r="2" fill={v1.inkPrimary} />
-    </svg>
-  );
-}
-
 function XGlyph({ size = 18 }: { size?: number }) {
   // v1.1l — strokeWidth 1.5 → 2.2 to match the weight of the terminal 16px
   // filled circle at the closer; the two anchor points now read as a matched
@@ -521,9 +510,12 @@ function EmptyState() {
 // ──────────────────────────────────────────────────────────────────────────────
 export default function FindMapPage() {
   const [posts,          setPosts]          = useState<Post[]>([]);
+  const [malls,          setMalls]          = useState<Mall[]>([]);
   const [loading,        setLoading]        = useState(true);
   const [bookmarkCount,  setBookmarkCount]  = useState(0);
   const [bannerImageUrl, setBannerImageUrl] = useState<string | null>(null);
+  const [savedMallId,    setSavedMallId]    = useSavedMallId();
+  const [mallSheetOpen,  setMallSheetOpen]  = useState(false);
 
   function syncCount() { setBookmarkCount(loadBookmarkCount()); }
 
@@ -542,6 +534,11 @@ export default function FindMapPage() {
   // Load banner URL on mount — fire-and-forget, banner renders null when absent.
   useEffect(() => {
     getSiteSettingUrl("find_map_banner_image_url").then(setBannerImageUrl);
+  }, []);
+
+  // Load active malls for the picker (cross-tab persisted mall filter).
+  useEffect(() => {
+    getActiveMalls().then(setMalls);
   }, []);
 
   useEffect(() => { syncCount(); loadPosts(); }, []);
@@ -564,14 +561,34 @@ export default function FindMapPage() {
     setBookmarkCount(prev => Math.max(0, prev - 1));
   }
 
-  const groups = groupByBooth(posts);
+  function handleMallSelect(nextMallId: string | null) {
+    setSavedMallId(nextMallId);
+    setMallSheetOpen(false);
+  }
 
-  const mall = posts.find((p) => p.mall)?.mall ?? null;
-  const mallLink = mall?.address
-    ? mapsUrl(mall.address)
-    : mall
-    ? mapsUrl(`${mall.name} ${mall.city} ${mall.state}`)
-    : null;
+  // Saves filtered by the cross-tab mall scope. When savedMallId is null the
+  // user sees every save they have; otherwise the spine narrows to one mall.
+  const filteredPosts = savedMallId
+    ? posts.filter(p => p.mall_id === savedMallId)
+    : posts;
+  const groups = groupByBooth(filteredPosts);
+
+  const selectedMall = malls.find(m => m.id === savedMallId) ?? null;
+
+  // Per-mall save counts for the MallSheet picker (counted from all saves the
+  // user has, independent of the active filter).
+  const saveCountsByMall: Record<string, number> = {};
+  for (const p of posts) {
+    if (p.mall_id) saveCountsByMall[p.mall_id] = (saveCountsByMall[p.mall_id] ?? 0) + 1;
+  }
+
+  const scopeGeoLine = savedMallId && selectedMall
+    ? { kind: "italic" as const, text: `${filteredPosts.length} ${filteredPosts.length === 1 ? "saved find" : "saved finds"}` }
+    : { kind: "italic" as const, text: "Kentucky & Southern Indiana" };
+
+  // Empty-state branch: user has saves, but the active mall filter excludes
+  // all of them. Distinct from the "nothing saved yet" state below.
+  const filterHidesAllSaves = savedMallId !== null && posts.length > 0 && filteredPosts.length === 0;
 
   return (
     <div
@@ -688,71 +705,23 @@ export default function FindMapPage() {
         </div>
       </motion.div>
 
-      {/* 4. Mall anchor (pin + name + address) */}
-      {!loading && mall && (
+      {/* 4. Mall scope header — replaces the prior pin + mall name + address.
+          Now the picker (and cross-tab persistence) drives mall context, not
+          save-pin extraction. Only renders once we know the user has saves;
+          a wholly empty saved-list shows the "Nothing saved yet" state instead. */}
+      {!loading && posts.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.34, delay: 0.12, ease: EASE }}
-          style={{ paddingTop: 18, paddingBottom: 6 }}
         >
-          <div
-            style={{
-              padding: "0 22px 6px",
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-            }}
-          >
-            <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 22 }}>
-              <PinGlyph size={22} />
-            </div>
-            <div
-              style={{
-                fontFamily: FONT_IM_FELL,
-                fontSize: 22,
-                color: v1.inkPrimary,
-                lineHeight: 1.2,
-                letterSpacing: "-0.005em",
-              }}
-            >
-              {mall.name}
-            </div>
-          </div>
-          {mall.address && (
-            <div style={{ paddingLeft: 56, paddingRight: 22 }}>
-              {mallLink ? (
-                <a
-                  href={mallLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    fontFamily: FONT_SYS,
-                    fontSize: 14,
-                    color: v1.inkMuted,
-                    textDecoration: "underline",
-                    textDecorationStyle: "dotted",
-                    textDecorationColor: v1.inkFaint,
-                    textUnderlineOffset: 3,
-                    lineHeight: 1.55,
-                  }}
-                >
-                  {mall.address}
-                </a>
-              ) : (
-                <span
-                  style={{
-                    fontFamily: FONT_SYS,
-                    fontSize: 14,
-                    color: v1.inkMuted,
-                    lineHeight: 1.55,
-                  }}
-                >
-                  {mall.address}
-                </span>
-              )}
-            </div>
-          )}
+          <MallScopeHeader
+            eyebrowAll="Saves across"
+            eyebrowOne="Saves at"
+            mallName={selectedMall?.name ?? null}
+            geoLine={scopeGeoLine}
+            onTap={() => setMallSheetOpen(true)}
+          />
         </motion.div>
       )}
 
@@ -784,6 +753,61 @@ export default function FindMapPage() {
           </div>
         ) : posts.length === 0 ? (
           <EmptyState />
+        ) : filterHidesAllSaves ? (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.34, ease: EASE }}
+            style={{
+              margin: "20px 0",
+              padding: "18px 20px",
+              background: "rgba(255, 253, 248, 0.92)",
+              border: `1px dashed rgba(122, 92, 30, 0.45)`,
+              borderRadius: 10,
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: FONT_IM_FELL,
+                fontStyle: "italic",
+                fontSize: 15,
+                color: v1.inkPrimary,
+                lineHeight: 1.4,
+              }}
+            >
+              No saved finds at <span style={{ color: v1.green }}>{selectedMall?.name ?? "this mall"}</span>.
+            </div>
+            <div
+              style={{
+                marginTop: 6,
+                fontFamily: FONT_SYS,
+                fontSize: 13,
+                color: v1.inkMid,
+                lineHeight: 1.5,
+              }}
+            >
+              Saves at other malls are hidden by the active filter.{" "}
+              <button
+                onClick={() => setSavedMallId(null)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  color: v1.green,
+                  textDecoration: "underline",
+                  fontFamily: FONT_SYS,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                Show all malls
+              </button>{" "}
+              to see them.
+            </div>
+          </motion.div>
         ) : (
           <>
             <AnimatePresence initial={false}>
@@ -850,6 +874,16 @@ export default function FindMapPage() {
           </>
         )}
       </main>
+
+      <MallSheet
+        open={mallSheetOpen}
+        onClose={() => setMallSheetOpen(false)}
+        malls={malls}
+        activeMallId={savedMallId}
+        onSelect={handleMallSelect}
+        findCounts={saveCountsByMall}
+        countUnit={{ singular: "saved find", plural: "saved finds" }}
+      />
 
       <BottomNav active="flagged" flaggedCount={bookmarkCount} />
     </div>

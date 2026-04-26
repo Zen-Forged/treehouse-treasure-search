@@ -42,18 +42,20 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, CircleUser } from "lucide-react";
+import { CircleUser } from "lucide-react";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getFeedPosts, getActiveMalls } from "@/lib/posts";
 import { getSession, signOut, onAuthChange } from "@/lib/auth";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { flagKey, loadFollowedIds, formatTimeAgo } from "@/lib/utils";
+import { useSavedMallId } from "@/lib/useSavedMallId";
 import { safeStorage } from "@/lib/safeStorage";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
 import BottomNav from "@/components/BottomNav";
 import MallSheet from "@/components/MallSheet";
+import MallScopeHeader from "@/components/MallScopeHeader";
 import StickyMasthead from "@/components/StickyMasthead";
 import FeaturedBanner from "@/components/FeaturedBanner";
 import VendorCTACard from "@/components/VendorCTACard";
@@ -61,7 +63,6 @@ import type { Post, Mall } from "@/types/treehouse";
 
 const SCROLL_KEY      = "treehouse_feed_scroll";
 const LAST_VIEWED_KEY = "treehouse_last_viewed_post";
-const SAVED_MALL_KEY  = "treehouse_saved_mall_id";
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
 
@@ -457,7 +458,8 @@ function MasonryGrid({
 }
 
 // ── Feed hero — paper, no gradient, no CTA ────────────────────────────────────
-// Tappable mall name opens <MallSheet>. State-dependent eyebrow + address/geo line.
+// Thin wrapper around <MallScopeHeader>. Computes the geo line from the
+// selected mall (address link when one mall picked, italic geography when All).
 function FeedHero({
   selectedMall,
   onTapMall,
@@ -467,144 +469,29 @@ function FeedHero({
 }) {
   const isAll = selectedMall === null;
 
-  const eyebrow = isAll ? "Finds from across" : "Finds from";
-  const title   = isAll ? "Kentucky" : selectedMall!.name;
-  const cityLine = !isAll
-    ? (selectedMall!.city
-        ? `${selectedMall!.city}${selectedMall!.state ? `, ${selectedMall!.state}` : ""}`
-        : null)
-    : null;
-  const address = !isAll ? selectedMall!.address ?? null : null;
-  const mapLink = !isAll
-    ? address
-      ? `https://maps.apple.com/?q=${encodeURIComponent(address)}`
-      : `https://maps.apple.com/?q=${encodeURIComponent(
-          `${selectedMall!.name} ${selectedMall!.city ?? ""} ${selectedMall!.state ?? ""}`
-        )}`
-    : null;
+  const geoLine = isAll
+    ? { kind: "italic" as const, text: "Kentucky & Southern Indiana" }
+    : (() => {
+        const address = selectedMall!.address ?? null;
+        const cityLine = selectedMall!.city
+          ? `${selectedMall!.city}${selectedMall!.state ? `, ${selectedMall!.state}` : ""}`
+          : null;
+        const text = address ?? cityLine ?? "";
+        if (!text) return null;
+        const href = `https://maps.apple.com/?q=${encodeURIComponent(
+          address ?? `${selectedMall!.name} ${selectedMall!.city ?? ""} ${selectedMall!.state ?? ""}`
+        )}`;
+        return { kind: "address" as const, text, href };
+      })();
 
   return (
-    <div style={{ padding: "20px 22px 6px" }}>
-      {/* Eyebrow */}
-      <div
-        style={{
-          fontFamily: FONT_IM_FELL,
-          fontStyle: "italic",
-          fontSize: 15,
-          color: v1.inkMuted,
-          lineHeight: 1.4,
-          marginBottom: 4,
-        }}
-      >
-        {eyebrow}
-      </div>
-
-      {/* Mall / geography name — tappable → MallSheet */}
-      <button
-        onClick={onTapMall}
-        aria-label="Choose a mall"
-        style={{
-          display: "inline-flex",
-          alignItems: "baseline",
-          gap: 8,
-          background: "none",
-          border: "none",
-          padding: 0,
-          cursor: "pointer",
-          WebkitTapHighlightColor: "transparent",
-          textAlign: "left",
-        }}
-      >
-        <span
-          style={{
-            fontFamily: FONT_IM_FELL,
-            fontSize: 26,
-            color: v1.inkPrimary,
-            letterSpacing: "-0.005em",
-            lineHeight: 1.2,
-          }}
-        >
-          {title}
-        </span>
-        <ChevronDown
-          size={14}
-          strokeWidth={1.8}
-          style={{
-            color: v1.inkMuted,
-            transform: "translateY(-2px)",
-            flexShrink: 0,
-          }}
-          aria-hidden="true"
-        />
-      </button>
-
-      {/* Address line (specific mall) or geo subtitle (All) */}
-      {isAll ? (
-        <div
-          style={{
-            marginTop: 4,
-            fontFamily: FONT_IM_FELL,
-            fontStyle: "italic",
-            fontSize: 13.5,
-            color: v1.inkMuted,
-            lineHeight: 1.5,
-          }}
-        >
-          Kentucky & Southern Indiana
-        </div>
-      ) : (
-        <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
-          {/* Small pin glyph inline with address (pin = mall, locked v1.1g) */}
-          <svg
-            width={13}
-            height={16}
-            viewBox="0 0 18 22"
-            fill="none"
-            aria-hidden="true"
-            style={{ flexShrink: 0 }}
-          >
-            <path
-              d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z"
-              stroke={v1.inkMuted}
-              strokeWidth="1.3"
-              fill="none"
-            />
-            <circle cx="9" cy="8.3" r="2" fill={v1.inkMuted} />
-          </svg>
-          {address && mapLink ? (
-            <a
-              href={mapLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                fontFamily: FONT_SYS,
-                fontSize: 14,
-                color: v1.inkMuted,
-                textDecoration: "underline",
-                textDecorationStyle: "dotted",
-                textDecorationColor: v1.inkFaint,
-                textUnderlineOffset: 3,
-                lineHeight: 1.5,
-              }}
-            >
-              {address}
-            </a>
-          ) : cityLine ? (
-            <span
-              style={{
-                fontFamily: FONT_SYS,
-                fontSize: 14,
-                color: v1.inkMuted,
-                lineHeight: 1.5,
-              }}
-            >
-              {cityLine}
-            </span>
-          ) : null}
-        </div>
-      )}
-    </div>
+    <MallScopeHeader
+      eyebrowAll="Finds from across"
+      eyebrowOne="Finds from"
+      mallName={isAll ? null : selectedMall!.name}
+      geoLine={geoLine}
+      onTap={onTapMall}
+    />
   );
 }
 
@@ -614,7 +501,7 @@ export default function DiscoveryFeedPage() {
   const [malls,             setMalls]             = useState<Mall[]>([]);
   const [loading,           setLoading]           = useState(true);
   const [error,             setError]             = useState(false);
-  const [mallId,            setMallId]            = useState<string | null>(null);
+  const [mallId,            setMallId]            = useSavedMallId();
   const [mallSheetOpen,     setMallSheetOpen]     = useState(false);
   const [followedIds,       setFollowedIds]       = useState<Set<string>>(new Set());
   const [bookmarkCount,     setBookmarkCount]     = useState(0);
@@ -697,20 +584,18 @@ export default function DiscoveryFeedPage() {
     requestAnimationFrame(() => { window.scrollTo({ top: y, behavior: "instant" }); });
   }, [loading]);
 
-  // ── Malls + saved selection persistence ──────────────────────────────────────
+  // ── Malls load + stale-id fallback ──────────────────────────────────────────
+  // Saved mall id is restored by useSavedMallId on mount. If the persisted id
+  // points to a mall that's no longer active (mall removed/inactivated), fall
+  // back to All so the user doesn't see an empty feed behind a stale filter.
   useEffect(() => {
     getActiveMalls().then((data) => {
       setMalls(data);
-      // On initial load, restore saved mall ID from safeStorage.
-      // If the saved mall is no longer in the list (mall removed), fall back to All.
-      try {
-        const savedId = safeStorage.getItem(SAVED_MALL_KEY);
-        if (savedId && data.some((m) => m.id === savedId)) {
-          setMallId(savedId);
-        }
-        // else: default stays null (All malls) per v1.1i "feed first-load defaults to All malls"
-      } catch {}
+      if (mallId && !data.some((m) => m.id === mallId)) {
+        setMallId(null);
+      }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Auth ────────────────────────────────────────────────────────────────────
@@ -761,10 +646,6 @@ export default function DiscoveryFeedPage() {
 
   function handleMallSelect(nextMallId: string | null) {
     setMallId(nextMallId);
-    try {
-      if (nextMallId) safeStorage.setItem(SAVED_MALL_KEY, nextMallId);
-      else            safeStorage.removeItem(SAVED_MALL_KEY);
-    } catch {}
     setMallSheetOpen(false);
     // R3 — filter_applied event. mall_id of null = "All malls".
     const mallSlug = nextMallId
