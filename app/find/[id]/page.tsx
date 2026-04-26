@@ -698,6 +698,7 @@ export default function FindDetailPage() {
   const boothNumber = post.vendor?.booth_number ?? null;
   const mallName    = post.mall?.name ?? null;
   const mallAddr    = post.mall?.address ?? null;
+  const mallSlug    = post.mall?.slug ?? null;
   const price       = post.price_asking;
 
   // 3B sold landing state (v1.1i) — shopper-only. Owner stays on normal layout.
@@ -914,7 +915,7 @@ export default function FindDetailPage() {
                   textAlign: "center",
                 }}
               >
-                Booth<br />Location
+                Booth
               </div>
               <div
                 style={{
@@ -1069,53 +1070,91 @@ export default function FindDetailPage() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-            {mallName && (
-              <div>
+            {mallName && (() => {
+              const mallCardInner = (
                 <div
                   style={{
-                    fontFamily: FONT_IM_FELL,
-                    fontSize: 18,
-                    color: v1.inkPrimary,
-                    lineHeight: 1.3,
-                    marginBottom: 4,
+                    background: v1.inkWash,
+                    border: `1px solid ${v1.inkHairline}`,
+                    borderRadius: 10,
+                    padding: "12px 14px",
                   }}
                 >
-                  {mallName}
+                  <div
+                    style={{
+                      fontFamily: FONT_SYS,
+                      fontSize: 9.5,
+                      fontWeight: 700,
+                      color: v1.inkMuted,
+                      letterSpacing: "0.10em",
+                      textTransform: "uppercase",
+                      marginBottom: 3,
+                      lineHeight: 1,
+                    }}
+                  >
+                    Mall
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: FONT_IM_FELL,
+                      fontSize: 18,
+                      color: v1.inkPrimary,
+                      lineHeight: 1.25,
+                      marginBottom: mallAddr ? 4 : 0,
+                    }}
+                  >
+                    {mallName}
+                  </div>
+                  {mallAddr && (
+                    mapLink ? (
+                      <a
+                        href={mapLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          fontFamily: FONT_SYS,
+                          fontSize: 14,
+                          color: v1.inkMuted,
+                          textDecoration: "underline",
+                          textDecorationStyle: "dotted",
+                          textDecorationColor: v1.inkFaint,
+                          textUnderlineOffset: 3,
+                          lineHeight: 1.55,
+                        }}
+                      >
+                        {mallAddr}
+                      </a>
+                    ) : (
+                      <span
+                        style={{
+                          fontFamily: FONT_SYS,
+                          fontSize: 14,
+                          color: v1.inkMuted,
+                          lineHeight: 1.55,
+                        }}
+                      >
+                        {mallAddr}
+                      </span>
+                    )
+                  )}
                 </div>
-                {mallAddr && (
-                  mapLink ? (
-                    <a
-                      href={mapLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        fontFamily: FONT_SYS,
-                        fontSize: 14,
-                        color: v1.inkMuted,
-                        textDecoration: "underline",
-                        textDecorationStyle: "dotted",
-                        textDecorationColor: v1.inkFaint,
-                        textUnderlineOffset: 3,
-                        lineHeight: 1.55,
-                      }}
-                    >
-                      {mallAddr}
-                    </a>
-                  ) : (
-                    <span
-                      style={{
-                        fontFamily: FONT_SYS,
-                        fontSize: 14,
-                        color: v1.inkMuted,
-                        lineHeight: 1.55,
-                      }}
-                    >
-                      {mallAddr}
-                    </span>
-                  )
-                )}
-              </div>
-            )}
+              );
+              return mallSlug ? (
+                <Link
+                  href={`/mall/${mallSlug}`}
+                  style={{
+                    display: "block",
+                    textDecoration: "none",
+                    WebkitTapHighlightColor: "transparent",
+                  }}
+                >
+                  {mallCardInner}
+                </Link>
+              ) : (
+                mallCardInner
+              );
+            })()}
 
             {(vendorName || boothNumber) && (() => {
               const cardInner = (
