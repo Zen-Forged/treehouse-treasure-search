@@ -133,7 +133,7 @@ function VendorCard({
 
           {vendor.booth_number && (
             <div style={{ position: "absolute", bottom: 7, left: 8, zIndex: 2, padding: "2px 7px", borderRadius: 10, background: "rgba(20,14,6,0.55)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.15)" }}>
-              <span style={{ fontFamily: "monospace", fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.95)", letterSpacing: "0.3px" }}>
+              <span style={{ fontFamily: FONT_SYS, fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.95)", letterSpacing: "0.3px" }}>
                 Booth {vendor.booth_number}
               </span>
             </div>
@@ -180,9 +180,14 @@ function VendorCard({
           <div style={{ fontFamily: FONT_IM_FELL, fontSize: 14, color: v1.inkPrimary, lineHeight: 1.2, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {vendor.display_name}
           </div>
-          {(vendor.mall?.name || vendor.bio) && (
+          {/* Session 67 — mall name removed from tile subtitle. Tiles are
+              already grouped under a mall section header on /shelves, so
+              repeating the mall name on every card is redundant. Bio (when
+              the vendor sets one) still renders; otherwise the subtitle
+              line is omitted. */}
+          {vendor.bio && (
             <div style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 10, color: v1.inkMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {vendor.mall?.name ?? vendor.bio}
+              {vendor.bio}
             </div>
           )}
           <AdminOnly user={user}>
