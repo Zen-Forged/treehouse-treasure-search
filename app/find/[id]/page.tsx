@@ -117,20 +117,6 @@ async function detectOwnershipAsync(post: Post): Promise<boolean> {
   return false;
 }
 
-// Cartographic glyph — single-anchor X for the collapsed cartographic card
-// (session 71). PinGlyph + hairline tick retired with the parallel mall card.
-function XGlyph({ size = 16 }: { size?: number }) {
-  // v1.1l — strokeWidth 1.4 → 2.2 to match Find Map's X and the terminal
-  // circle weight on the Find Map closer. Keeps the cartographic X consistent
-  // across surfaces so readers parse it as the same glyph.
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <line x1="3" y1="3"  x2="13" y2="13" stroke={v1.inkPrimary} strokeWidth="2.2" strokeLinecap="round" />
-      <line x1="13" y1="3" x2="3"  y2="13" stroke={v1.inkPrimary} strokeWidth="2.2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 // Shelf card (v1.1)
 function ShelfCard({ post }: { post: Post }) {
   const [imgErr, setImgErr] = useState(false);
@@ -970,38 +956,33 @@ export default function FindDetailPage() {
         </motion.div>
       )}
 
-      {/* Cartographic block (session 71 — collapsed) — single inkWash card carries
-          vendor + mall · city/state subtitle (Apple Maps link) + booth lockup; X
-          anchored to the vendor line. PinGlyph + tick retired with the parallel
-          mall card. */}
+      {/* Cartographic block (session 71 round 2 — fully collapsed) — single
+          inkWash card with italic "Find this item at" eyebrow above. XGlyph
+          spine retired since cartographic identity no longer earns its place
+          on this page (no other page carries it either). */}
       {(vendorName || boothNumber) && (
         <motion.div
           variants={sectionVariants(0.18)}
           initial="hidden"
           animate="visible"
           style={{
-            display: "grid",
-            gridTemplateColumns: "28px 1fr",
-            columnGap: 14,
             padding: "0 28px",
             marginBottom: 32,
           }}
         >
           <div
             style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
+              fontFamily: FONT_IM_FELL,
+              fontStyle: "italic",
+              fontSize: 14,
+              color: v1.inkMid,
+              lineHeight: 1.4,
+              marginBottom: 8,
+              paddingLeft: 2,
             }}
           >
-            {(vendorName || boothNumber) && (
-              <div style={{ paddingTop: 3, marginBottom: 0 }}>
-                <XGlyph size={15} />
-              </div>
-            )}
+            Find this item at
           </div>
-
           <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
             {(vendorName || boothNumber) && (() => {
               // Session 71 — cartographic collapse. Single inkWash card carries

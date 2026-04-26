@@ -440,8 +440,8 @@ export default function BoothsPage() {
   // matching Home's pattern so the address is reachable from any primary tab.
   const boothCount = mallScopedVendors.length;
   const boothNoun = boothCount === 1 ? "booth" : "booths";
-  const scopeEyebrowAll = `${boothCount} ${boothNoun} across`;
-  const scopeEyebrowOne = `${boothCount} ${boothNoun} at`;
+  const scopeEyebrowAll = `${boothNoun} across`;
+  const scopeEyebrowOne = `${boothNoun} at`;
 
   const scopeGeoLine: MallScopeGeoLine =
     savedMallId && selectedMall
@@ -485,6 +485,7 @@ export default function BoothsPage() {
         <MallScopeHeader
           eyebrowAll={scopeEyebrowAll}
           eyebrowOne={scopeEyebrowOne}
+          count={boothCount}
           mallName={selectedMall?.name ?? null}
           geoLine={scopeGeoLine}
           onTap={() => setMallSheetOpen(true)}

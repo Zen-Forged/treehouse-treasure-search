@@ -575,8 +575,8 @@ export default function FindMapPage() {
   // matching Home's pattern so the address is reachable from any primary tab.
   const findCount = filteredPosts.length;
   const findNoun = findCount === 1 ? "find" : "finds";
-  const scopeEyebrowAll = `${findCount} flagged ${findNoun} across`;
-  const scopeEyebrowOne = `${findCount} flagged ${findNoun} at`;
+  const scopeEyebrowAll = `flagged ${findNoun} across`;
+  const scopeEyebrowOne = `flagged ${findNoun} at`;
 
   const scopeGeoLine: MallScopeGeoLine =
     savedMallId && selectedMall
@@ -649,6 +649,7 @@ export default function FindMapPage() {
           <MallScopeHeader
             eyebrowAll={scopeEyebrowAll}
             eyebrowOne={scopeEyebrowOne}
+            count={findCount}
             mallName={selectedMall?.name ?? null}
             geoLine={scopeGeoLine}
             onTap={() => setMallSheetOpen(true)}

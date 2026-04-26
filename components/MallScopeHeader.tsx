@@ -20,10 +20,13 @@ export type MallScopeGeoLine =
   | null;
 
 export interface MallScopeHeaderProps {
-  // "Finds from across" / "Booths across" / "Saves across" when null
+  // "Finds from across" / "booths across" / "flagged finds across" when null
   eyebrowAll: string;
-  // "Finds from" / "Booths at" / "Saves at" when one mall picked
+  // "Finds from" / "booths at" / "flagged finds at" when one mall picked
   eyebrowOne: string;
+  // Optional count rendered inline before the eyebrow at a larger size
+  // (session 71 — number deserves typographic emphasis vs the prose)
+  count?: number;
   // null = "All malls" — renders as "Kentucky"; else the mall name
   mallName: string | null;
   // Optional content line below the name
@@ -34,6 +37,7 @@ export interface MallScopeHeaderProps {
 export default function MallScopeHeader({
   eyebrowAll,
   eyebrowOne,
+  count,
   mallName,
   geoLine,
   onTap,
@@ -44,7 +48,7 @@ export default function MallScopeHeader({
 
   return (
     <div style={{ padding: "20px 22px 6px" }}>
-      {/* Eyebrow */}
+      {/* Eyebrow — with optional larger count prefix (session 71) */}
       <div
         style={{
           fontFamily: FONT_IM_FELL,
@@ -55,7 +59,14 @@ export default function MallScopeHeader({
           marginBottom: 4,
         }}
       >
-        {eyebrow}
+        {count !== undefined ? (
+          <>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{count}</span>{" "}
+            {eyebrow}
+          </>
+        ) : (
+          eyebrow
+        )}
       </div>
 
       {/* Tappable name + chevron */}
