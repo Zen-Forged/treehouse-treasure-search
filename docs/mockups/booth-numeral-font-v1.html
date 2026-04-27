@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Booth-numeral font system</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --paper-cream:  #f5f2eb;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --ink-wash:     rgba(255, 253, 248, 0.70);
+    --price-ink:    #6a4a30;
+    --green:        #1e4d2b;
+
+    --im-fell:  "IM Fell English", Georgia, serif;
+    --tnr:      "Times New Roman", Times, serif;
+    --playfair: "Playfair Display", Georgia, serif;
+    --sys:      -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1320px; margin: 0 auto; padding: 30px 20px 60px; }
+
+  h1.title {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 28px;
+    line-height: 1.6;
+    max-width: 760px;
+  }
+
+  /* ── Decisions table ───────────────────────────────────────────── */
+  .decisions {
+    max-width: 980px;
+    margin: 0 auto 36px;
+    padding: 22px 28px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--im-fell);
+    font-size: 19px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 12px;
+  }
+  .decisions table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  .decisions th, .decisions td { text-align: left; padding: 9px 12px; vertical-align: top; border-top: 1px solid rgba(232, 221, 199, 0.10); }
+  .decisions th { font-weight: 600; color: #fff9e8; font-size: 12px; }
+  .decisions td.q { width: 36%; }
+  .decisions td.r { color: rgba(232, 221, 199, 0.72); }
+  .decisions code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .decisions .recommend { color: #b9e8c5; font-weight: 600; }
+
+  /* ── Stress test card ──────────────────────────────────────────── */
+  .stress-card {
+    max-width: 1180px;
+    margin: 0 auto 36px;
+    padding: 28px 32px 24px;
+    background: var(--paper-cream);
+    border-radius: 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .stress-card .lede {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-muted);
+    margin: 0 0 18px;
+    text-align: center;
+  }
+  .stress-grid {
+    display: grid;
+    grid-template-columns: 110px repeat(7, minmax(0, 1fr));
+    column-gap: 10px;
+    align-items: end;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--ink-hairline);
+  }
+  .stress-grid + .stress-grid { padding-top: 14px; padding-bottom: 0; border-bottom: none; }
+
+  .stress-grid .label {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    text-align: right;
+    padding-right: 10px;
+  }
+  .stress-grid .label .sub {
+    display: block;
+    font-style: normal;
+    font-family: var(--sys);
+    font-size: 10px;
+    color: var(--ink-faint);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .stress-cell {
+    color: var(--ink-primary);
+    line-height: 1;
+    text-align: center;
+    letter-spacing: -0.01em;
+  }
+  .stress-cell.lg { font-size: 36px; }
+  .stress-cell.sm { font-size: 20px; }
+  .stress-cell.imfell  { font-family: var(--im-fell); }
+  .stress-cell.tnr     { font-family: var(--tnr); font-weight: 500; }
+  .stress-cell.playfair { font-family: var(--playfair); font-weight: 500; }
+
+  .stress-headers {
+    display: grid;
+    grid-template-columns: 110px repeat(7, minmax(0, 1fr));
+    column-gap: 10px;
+    margin-bottom: 8px;
+  }
+  .stress-headers .h {
+    text-align: center;
+    font-family: var(--sys);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding-bottom: 4px;
+  }
+  .stress-callout {
+    margin-top: 14px;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-muted);
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  /* ── Section + frames ──────────────────────────────────────────── */
+  .section {
+    margin: 38px auto 18px;
+    max-width: 1300px;
+    padding: 0 14px;
+  }
+  .section h2 {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #fff9e8;
+    font-size: 24px;
+    margin: 0 0 6px;
+    border-bottom: 1px solid rgba(232,221,199,0.2);
+    padding-bottom: 8px;
+  }
+  .section .lede {
+    color: rgba(232, 221, 199, 0.62);
+    font-size: 13px;
+    margin: 0 0 22px;
+    line-height: 1.6;
+    max-width: 760px;
+  }
+
+  .frames-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px;
+    max-width: 1200px;
+    margin: 0 auto 32px;
+    align-items: start;
+    justify-items: center;
+  }
+  @media (max-width: 1100px) {
+    .frames-row { grid-template-columns: 1fr; max-width: 380px; }
+  }
+
+  .frame-card { display: flex; flex-direction: column; align-items: center; }
+  .frame-card .frame-label {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 17px;
+    color: #fff9e8;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .frame-card .frame-label .pill {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 2px 8px;
+    background: rgba(46, 102, 64, 0.32);
+    border: 1px solid rgba(185, 232, 197, 0.45);
+    border-radius: 999px;
+    font-family: var(--sys);
+    font-style: normal;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #b9e8c5;
+    vertical-align: 2px;
+  }
+  .frame-card .frame-note {
+    font-size: 12px;
+    color: rgba(232, 221, 199, 0.55);
+    margin: 0 0 14px;
+    text-align: center;
+    line-height: 1.5;
+    max-width: 320px;
+  }
+
+  /* ── Phone frame ───────────────────────────────────────────────── */
+  .phone {
+    width: 320px;
+    background: var(--paper-cream);
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 0 6px #1a1a1a, 0 0 0 7px rgba(255,255,255,0.05);
+    position: relative;
+    height: 720px;
+  }
+
+  .masthead {
+    height: 50px;
+    border-bottom: 1px solid var(--ink-hairline);
+    background: var(--paper-cream);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--im-fell);
+    font-size: 16px;
+    color: var(--ink-primary);
+    letter-spacing: 0.4px;
+  }
+
+  /* Scope eyebrow — count prefix is a NUMERAL surface */
+  .scope-eyebrow {
+    padding: 14px 16px 4px;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-muted);
+  }
+  .scope-eyebrow .count {
+    font-style: normal;
+    font-size: 22px;
+    color: var(--ink-primary);
+    margin-right: 4px;
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+  .scope-name { padding: 0 16px 4px; font-family: var(--im-fell); font-size: 22px; color: var(--ink-primary); }
+  .scope-geo  { padding: 0 16px 10px; font-family: var(--sys); font-size: 12px; color: var(--ink-muted); border-bottom: 1px solid var(--ink-hairline); }
+
+  /* Booth grid Variant B */
+  .booth-grid {
+    padding: 14px 14px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .booth-tile {
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+  .tile-hero {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    position: relative;
+  }
+  .tile-hero.h1 { background: linear-gradient(135deg, #c4b89e 0%, #a89878 100%); }
+  .tile-hero.h2 { background: linear-gradient(135deg, #b8c4a8 0%, #8a9878 100%); }
+  .tile-hero.h3 { background: linear-gradient(135deg, #d4b48e 0%, #b89668 100%); }
+  .tile-hero.h4 { background: linear-gradient(135deg, #b4a4c4 0%, #8878a8 100%); }
+  .tile-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(20,14,6,0.42) 0%, transparent 55%);
+  }
+  .tile-body {
+    padding: 9px 10px 11px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 10px;
+    align-items: center;
+  }
+  .tile-name {
+    font-family: var(--im-fell);
+    font-size: 14px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .tile-booth-eyebrow {
+    font-family: var(--sys);
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--ink-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1;
+    margin-bottom: 3px;
+    text-align: right;
+  }
+  /* The variable bit — booth numeral font */
+  .tile-booth-num {
+    font-size: 20px;
+    color: var(--ink-primary);
+    line-height: 1;
+    letter-spacing: -0.01em;
+    text-align: right;
+  }
+
+  /* Find Detail post-it (the big 36px numeral) */
+  .find-detail-block {
+    margin: 18px 16px 0;
+    padding: 14px 14px 18px;
+    border-top: 1px solid var(--ink-hairline);
+    position: relative;
+  }
+  .find-detail-block .label {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: block;
+  }
+  .find-detail-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--postit);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 10px;
+    padding: 12px 14px 12px 14px;
+    box-shadow: 0 4px 10px rgba(42,26,10,0.10);
+  }
+  .find-detail-card .left { flex: 1; min-width: 0; }
+  .find-detail-card .vendor {
+    font-family: var(--im-fell);
+    font-size: 16px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+  }
+  .find-detail-card .mall {
+    font-family: var(--sys);
+    font-size: 11px;
+    color: var(--ink-muted);
+    margin-top: 3px;
+  }
+  .find-detail-card .right { text-align: right; }
+  .find-detail-card .right .eyebrow {
+    font-family: var(--sys);
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--ink-muted);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    line-height: 1;
+    margin-bottom: 3px;
+  }
+  /* The variable — find detail numeral */
+  .find-detail-card .right .num {
+    font-size: 26px;
+    color: var(--ink-primary);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  /* Bottom: 36px booth post-it (a control — already TNR everywhere) */
+  .post-it-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 22px;
+    padding: 0 16px;
+  }
+  .post-it {
+    width: 86px;
+    height: 86px;
+    background: var(--postit);
+    transform: rotate(6deg);
+    box-shadow: 0 6px 14px rgba(42,26,10,0.32), 0 0 0 0.5px rgba(42,26,10,0.16);
+    padding: 12px 8px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .post-it::before {
+    content: "";
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(42,26,10,0.72);
+    box-shadow: inset 0 0 0 2px rgba(42,26,10,0.55), 0 1px 2px rgba(42,26,10,0.35);
+  }
+  .post-it .booth-label {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1;
+    margin-bottom: 5px;
+  }
+  /* The variable — post-it numeral. Already TNR in production — but we
+     swap by frame to keep the comparison apples-to-apples. */
+  .post-it .num {
+    font-size: 36px;
+    color: var(--ink-primary);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  /* Per-frame numeral font swap. */
+  .frame.imfell    .tile-booth-num,
+  .frame.imfell    .find-detail-card .right .num,
+  .frame.imfell    .post-it .num,
+  .frame.imfell    .scope-eyebrow .count { font-family: var(--im-fell); font-weight: 400; }
+  .frame.tnr       .tile-booth-num,
+  .frame.tnr       .find-detail-card .right .num,
+  .frame.tnr       .post-it .num,
+  .frame.tnr       .scope-eyebrow .count { font-family: var(--tnr); font-weight: 500; }
+  .frame.playfair  .tile-booth-num,
+  .frame.playfair  .find-detail-card .right .num,
+  .frame.playfair  .post-it .num,
+  .frame.playfair  .scope-eyebrow .count { font-family: var(--playfair); font-weight: 500; }
+
+  /* Annotation overlay (soft red ring around the I/1 confusion) */
+  .ring {
+    box-shadow: 0 0 0 2px rgba(189, 64, 64, 0.65), 0 0 14px rgba(189, 64, 64, 0.35);
+    border-radius: 4px;
+  }
+
+  /* ── Implementation block ─────────────────────────────────────── */
+  .impl {
+    max-width: 1100px;
+    margin: 36px auto 0;
+    padding: 22px 28px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.86);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .impl h3 {
+    font-family: var(--im-fell);
+    font-size: 19px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 12px;
+  }
+  .impl ul { margin: 6px 0 0 18px; padding: 0; }
+  .impl li { margin-bottom: 6px; }
+  .impl code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  /* ── Ask block ────────────────────────────────────────────────── */
+  .ask {
+    max-width: 980px;
+    margin: 36px auto 0;
+    padding: 24px 28px;
+    background: rgba(46, 102, 64, 0.12);
+    border: 1px solid rgba(185, 232, 197, 0.30);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.92);
+  }
+  .ask h3 {
+    font-family: var(--im-fell);
+    font-size: 19px;
+    font-weight: 400;
+    color: #b9e8c5;
+    margin: 0 0 12px;
+  }
+  .ask ol { margin: 0; padding-left: 20px; line-height: 1.8; font-size: 14px; }
+  .ask ol li { margin-bottom: 8px; }
+  .ask code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12.5px;
+    background: rgba(232, 221, 199, 0.10);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <h1 class="title">Booth-numeral font system</h1>
+  <p class="subtitle">
+    Per session 75 redirect, item 7. The 1-vs-I confusion in IM Fell is biting at small numeral sizes — especially with mixed alphanumeric booth IDs like <em>D19</em> or <em>A1</em>. Goal: pick a numeral font that disambiguates digits from letters, settle the rule, and apply it consistently across booth numerals + counts. IM Fell stays for headers + editorial voice.
+  </p>
+
+  <!-- ── Decisions table ──────────────────────────────────────────────────── -->
+  <div class="decisions">
+    <h3>Decisions to lock</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Decision</th>
+          <th>Recommendation</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="q"><strong>C1.</strong> The rule</td>
+          <td class="r">
+            <span class="recommend">Yes — IM Fell for headers + editorial voice; numeral font for booth numerals + counts; sans for body.</span>
+            Headers = page titles, vendor names, mall names, eyebrows, ViewToggle, BoothCloser. Numerals = booth numbers (Variant B lockup, post-it 36px, find-detail post-it) + count chips (MallScopeHeader 22px, /flagged count).
+          </td>
+        </tr>
+        <tr>
+          <td class="q"><strong>C2.</strong> Font choice</td>
+          <td class="r">
+            <span class="recommend">Times New Roman.</span> Already in the codebase as <code>FONT_POSTIT_NUMERAL</code> (session v1.1l, post-it 36px exception, named in CLAUDE.md). Battle-tested at 36px. Disambiguated <code>1</code>. No webfont load — ships with iOS, macOS, Windows. Playfair Display is a clean alternative but adds a Google Fonts request and shifts the visual register slightly more modern than the editorial baseline. <em>Frames below let you compare directly.</em>
+          </td>
+        </tr>
+        <tr>
+          <td class="q"><strong>C3.</strong> Scope of the swap</td>
+          <td class="r">
+            <span class="recommend">Booth numerals AND counts.</span> Counts (MallScopeHeader "47 finds across", /flagged count) share the same legibility risk at 22px italic. Pulling them onto the numeral font keeps the rule clean: "headers IM Fell; numbers numeral font." Alternative: numerals only, leave counts on IM Fell — splits the rule.
+          </td>
+        </tr>
+        <tr>
+          <td class="q"><strong>C4.</strong> Token name</td>
+          <td class="r">
+            <span class="recommend">Rename <code>FONT_POSTIT_NUMERAL</code> → <code>FONT_NUMERAL</code>.</span> Current name implies "post-it only," which is exactly the trap that left other numerals on IM Fell. Single rename + grep sweep.
+          </td>
+        </tr>
+        <tr>
+          <td class="q"><strong>C5.</strong> Italic posture for counts</td>
+          <td class="r">
+            Current count is <em>non-italic</em> at 22px set inside an italic IM Fell eyebrow. Keep it non-italic — italic Times New Roman at 22px reads as old-fashioned. <span class="recommend">No change.</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Stress-test card ──────────────────────────────────────────────── -->
+  <div class="stress-card">
+    <p class="lede">Stress test — same characters, three fonts, two sizes. Watch the <code>1</code>, <code>I</code>, mixed <code>D19</code>, and side-by-side <code>11</code>.</p>
+
+    <div class="stress-headers">
+      <div class="h"></div>
+      <div class="h">1</div>
+      <div class="h">I</div>
+      <div class="h">11</div>
+      <div class="h">II</div>
+      <div class="h">139</div>
+      <div class="h">D19</div>
+      <div class="h">A1</div>
+    </div>
+
+    <div class="stress-grid">
+      <div class="label">IM Fell<span class="sub">current</span></div>
+      <div class="stress-cell lg imfell">1</div>
+      <div class="stress-cell lg imfell">I</div>
+      <div class="stress-cell lg imfell">11</div>
+      <div class="stress-cell lg imfell">II</div>
+      <div class="stress-cell lg imfell">139</div>
+      <div class="stress-cell lg imfell">D19</div>
+      <div class="stress-cell lg imfell">A1</div>
+    </div>
+    <div class="stress-grid">
+      <div class="label">IM Fell<span class="sub">20px</span></div>
+      <div class="stress-cell sm imfell">1</div>
+      <div class="stress-cell sm imfell">I</div>
+      <div class="stress-cell sm imfell">11</div>
+      <div class="stress-cell sm imfell">II</div>
+      <div class="stress-cell sm imfell">139</div>
+      <div class="stress-cell sm imfell">D19</div>
+      <div class="stress-cell sm imfell">A1</div>
+    </div>
+
+    <div class="stress-grid">
+      <div class="label">Times NR<span class="sub">recommend</span></div>
+      <div class="stress-cell lg tnr">1</div>
+      <div class="stress-cell lg tnr">I</div>
+      <div class="stress-cell lg tnr">11</div>
+      <div class="stress-cell lg tnr">II</div>
+      <div class="stress-cell lg tnr">139</div>
+      <div class="stress-cell lg tnr">D19</div>
+      <div class="stress-cell lg tnr">A1</div>
+    </div>
+    <div class="stress-grid">
+      <div class="label">Times NR<span class="sub">20px</span></div>
+      <div class="stress-cell sm tnr">1</div>
+      <div class="stress-cell sm tnr">I</div>
+      <div class="stress-cell sm tnr">11</div>
+      <div class="stress-cell sm tnr">II</div>
+      <div class="stress-cell sm tnr">139</div>
+      <div class="stress-cell sm tnr">D19</div>
+      <div class="stress-cell sm tnr">A1</div>
+    </div>
+
+    <div class="stress-grid">
+      <div class="label">Playfair<span class="sub">alternative</span></div>
+      <div class="stress-cell lg playfair">1</div>
+      <div class="stress-cell lg playfair">I</div>
+      <div class="stress-cell lg playfair">11</div>
+      <div class="stress-cell lg playfair">II</div>
+      <div class="stress-cell lg playfair">139</div>
+      <div class="stress-cell lg playfair">D19</div>
+      <div class="stress-cell lg playfair">A1</div>
+    </div>
+    <div class="stress-grid">
+      <div class="label">Playfair<span class="sub">20px</span></div>
+      <div class="stress-cell sm playfair">1</div>
+      <div class="stress-cell sm playfair">I</div>
+      <div class="stress-cell sm playfair">11</div>
+      <div class="stress-cell sm playfair">II</div>
+      <div class="stress-cell sm playfair">139</div>
+      <div class="stress-cell sm playfair">D19</div>
+      <div class="stress-cell sm playfair">A1</div>
+    </div>
+
+    <p class="stress-callout">IM Fell <code>1</code> at 20px reads as a serifed I — the issue David flagged. Times New Roman <code>1</code> has the canonical disambiguating top-flag and base. Playfair <code>1</code> is closer to a modern lined numeral, very legible but a slightly different visual register from the IM Fell editorial baseline.</p>
+  </div>
+
+  <!-- ── In-context comparison ─────────────────────────────────────────── -->
+  <div class="section">
+    <h2>In context — three frames, same surfaces</h2>
+    <p class="lede">Same /shelves Booths grid + /find/[id] post-it card + 36px booth post-it across all three fonts. The <strong>scope eyebrow count</strong> at the top of each frame is the MallScopeHeader numeral surface.</p>
+  </div>
+
+  <div class="frames-row">
+
+    <!-- Frame 1 — IM Fell (current) -->
+    <div class="frame-card">
+      <div class="frame-label">IM Fell <em>(current)</em></div>
+      <div class="frame-note">What's in production today. The booth numerals on Variant B tiles, find-detail card, and MallScopeHeader count are all IM Fell.</div>
+      <div class="phone frame imfell">
+        <div class="masthead">Treehouse Finds</div>
+        <div class="scope-eyebrow"><span class="count">11</span> finds across <em>Lexington malls</em></div>
+        <div class="scope-name">America's Antique Mall ▾</div>
+        <div class="scope-geo">2401 Palumbo Dr, Lexington · KY</div>
+
+        <div class="booth-grid">
+          <div class="booth-tile">
+            <div class="tile-hero h1"></div>
+            <div class="tile-body">
+              <div class="tile-name">The Velvet Cabinet</div>
+              <div>
+                <div class="tile-booth-eyebrow">Booth</div>
+                <div class="tile-booth-num">D19</div>
+              </div>
+            </div>
+          </div>
+          <div class="booth-tile">
+            <div class="tile-hero h2"></div>
+            <div class="tile-body">
+              <div class="tile-name">Hearth & Trove</div>
+              <div>
+                <div class="tile-booth-eyebrow">Booth</div>
+                <div class="tile-booth-num">139</div>
+              </div>
+            </div>
+          </div>
+          <div class="booth-tile">
+            <div class="tile-hero h3"></div>
+            <div class="tile-body">
+              <div class="tile-name">Mockingbird Mercantile</div>
+              <div>
+                <div class="tile-booth-eyebrow">Booth</div>
+                <div class="tile-booth-num">A1</div>
+              </div>
+            </div>
+          </div>
+          <div class="booth-tile">
+            <div class="tile-hero h4"></div>
+            <div class="tile-body">
+              <div class="tile-name">Wren & Linden</div>
+              <div>
+                <div class="tile-booth-eyebrow">Booth</div>
+                <div class="tile-booth-num">11</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="find-detail-block">
+          <span class="label">Find this item at</span>
+          <div class="find-detail-card">
+            <div class="left">
+              <div class="vendor">The Velvet Cabinet</div>
+              <div class="mall">America's Antique Mall · Lexington, KY</div>
+            </div>
+            <div class="right">
+              <div class="eyebrow">Booth</div>
+              <div class="num">D19</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="post-it-row">
+          <div class="post-it">
+            <div class="booth-label">Booth</div>
+            <div class="num">11</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Frame 2 — Times New Roman (RECOMMENDED) -->
+    <div class="frame-card">
+      <div class="frame-label">Times New Roman <span class="pill">Recommended</span></div>
+      <div class="frame-note">Already in the codebase as <code style="font-family:ui-monospace,monospace;font-size:11px;background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;color:rgba(232,221,199,0.85)">FONT_POSTIT_NUMERAL</code>. Disambiguated <code style="font-family:ui-monospace,monospace;font-size:11px;background:rgba(255,255,255,0.08);padding:1px 5px;border-radius:3px;color:rgba(232,221,199,0.85)">1</code>. No webfont load.</div>
+      <div class="phone frame tnr">
+        <div class="masthead">Treehouse Finds</div>
+        <div class="scope-eyebrow"><span class="count">11</span> finds across <em>Lexington malls</em></div>
+        <div class="scope-name">America's Antique Mall ▾</div>
+        <div class="scope-geo">2401 Palumbo Dr, Lexington · KY</div>
+
+        <div class="booth-grid">
+          <div class="booth-tile">
+            <div class="tile-hero h1"></div>
+            <div class="tile-body">
+              <div class="tile-name">The Velvet Cabinet</div>
+              <div>
+                <div class="tile-booth-eyebrow">Booth</div>
+                <div class="tile-booth-num">D19</div>
+              </div>
+            </div>
+          </div>
+          <div class="booth-tile">
+            <div class="tile-hero h2"></div>
+            <div class="tile-body">
+              <div class="tile-name">Hearth & Trove</div>
+              <div>
+                <div class="tile-booth-eyebrow">Booth</div>
+                <div class="tile-booth-num">139</div>
+              </div>
+            </div>
+          </div>
+          <div class="booth-tile">
+            <div class="tile-hero h3"></div>
+            <div class="tile-body">
+              <div class="tile-name">Mockingbird Mercantile</div>
+              <div>
+                <div class="tile-booth-eyebrow">Booth</div>
+                <div class="tile-booth-num">A1</div>
+              </div>
+            </div>
+          </div>
+          <div class="booth-tile">
+            <div class="tile-hero h4"></div>
+            <div class="tile-body">
+              <div class="tile-name">Wren & Linden</div>
+              <div>
+                <div class="tile-booth-eyebrow">Booth</div>
+                <div class="tile-booth-num">11</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="find-detail-block">
+          <span class="label">Find this item at</span>
+          <div class="find-detail-card">
+            <div class="left">
+              <div class="vendor">The Velvet Cabinet</div>
+              <div class="mall">America's Antique Mall · Lexington, KY</div>
+            </div>
+            <div class="right">
+              <div class="eyebrow">Booth</div>
+              <div class="num">D19</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="post-it-row">
+          <div class="post-it">
+            <div class="booth-label">Booth</div>
+            <div class="num">11</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Frame 3 — Playfair Display (alternative) -->
+    <div class="frame-card">
+      <div class="frame-label">Playfair Display <em>(alternative)</em></div>
+      <div class="frame-note">Modern editorial proportional serif. Adds one Google Fonts request. Slightly more geometric than Times New Roman.</div>
+      <div class="phone frame playfair">
+        <div class="masthead">Treehouse Finds</div>
+        <div class="scope-eyebrow"><span class="count">11</span> finds across <em>Lexington malls</em></div>
+        <div class="scope-name">America's Antique Mall ▾</div>
+        <div class="scope-geo">2401 Palumbo Dr, Lexington · KY</div>
+
+        <div class="booth-grid">
+          <div class="booth-tile">
+            <div class="tile-hero h1"></div>
+            <div class="tile-body">
+              <div class="tile-name">The Velvet Cabinet</div>
+              <div>
+                <div class="tile-booth-eyebrow">Booth</div>
+                <div class="tile-booth-num">D19</div>
+              </div>
+            </div>
+          </div>
+          <div class="booth-tile">
+            <div class="tile-hero h2"></div>
+            <div class="tile-body">
+              <div class="tile-name">Hearth & Trove</div>
+              <div>
+                <div class="tile-booth-eyebrow">Booth</div>
+                <div class="tile-booth-num">139</div>
+              </div>
+            </div>
+          </div>
+          <div class="booth-tile">
+            <div class="tile-hero h3"></div>
+            <div class="tile-body">
+              <div class="tile-name">Mockingbird Mercantile</div>
+              <div>
+                <div class="tile-booth-eyebrow">Booth</div>
+                <div class="tile-booth-num">A1</div>
+              </div>
+            </div>
+          </div>
+          <div class="booth-tile">
+            <div class="tile-hero h4"></div>
+            <div class="tile-body">
+              <div class="tile-name">Wren & Linden</div>
+              <div>
+                <div class="tile-booth-eyebrow">Booth</div>
+                <div class="tile-booth-num">11</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="find-detail-block">
+          <span class="label">Find this item at</span>
+          <div class="find-detail-card">
+            <div class="left">
+              <div class="vendor">The Velvet Cabinet</div>
+              <div class="mall">America's Antique Mall · Lexington, KY</div>
+            </div>
+            <div class="right">
+              <div class="eyebrow">Booth</div>
+              <div class="num">D19</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="post-it-row">
+          <div class="post-it">
+            <div class="booth-label">Booth</div>
+            <div class="num">11</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Implementation block ─────────────────────────────────────────── -->
+  <div class="impl">
+    <h3>Implementation (after approval)</h3>
+    <p style="margin:0 0 12px"><em>Single token rename + grep sweep. Mockup wins if anything diverges below.</em></p>
+    <ul>
+      <li><strong>Rename</strong> <code>FONT_POSTIT_NUMERAL</code> → <code>FONT_NUMERAL</code> in <code>lib/tokens.ts</code>. Re-export from <code>components/BoothPage.tsx</code> stays for back-compat.</li>
+      <li><strong>If TNR (recommended):</strong> token value unchanged: <code>'"Times New Roman", Times, serif'</code>. No webfont addition.</li>
+      <li><strong>If Playfair:</strong> token becomes <code>'"Playfair Display", Georgia, serif'</code>. Add to <code>app/layout.tsx</code> via <code>next/font/google</code> with weight 500 + subset latin. Update <code>fonts.imFell</code> sibling pattern.</li>
+      <li><strong>Apply to:</strong>
+        <ul style="margin-top:6px">
+          <li><code>components/VendorCard.tsx</code> — Booths grid Variant B numeral (currently <code>FONT_IM_FELL</code> 20px)</li>
+          <li><code>app/find/[id]/page.tsx</code> — find-detail card Variant B numeral</li>
+          <li><code>app/flagged/page.tsx</code> — Variant B numeral on inkWash card header</li>
+          <li><code>components/MallScopeHeader.tsx</code> line 54 inner <code>&lt;span&gt;</code> count (22px) — applied to numeric prefix only, eyebrow stays <code>FONT_IM_FELL</code> italic</li>
+          <li><code>components/BoothPage.tsx</code> line 259 — already on <code>FONT_POSTIT_NUMERAL</code>, no change</li>
+        </ul>
+      </li>
+      <li><strong>Update</strong> <code>docs/booth-lockup-revision-design.md</code> L3 to reference <code>FONT_NUMERAL</code> instead of "IM Fell 20px" as the baseline. Add a new L10 capturing the rule "headers IM Fell, numerals FONT_NUMERAL."</li>
+      <li><strong>Update</strong> <code>docs/design-system.md</code> with the rule.</li>
+      <li><strong>Same-session design-record commit</strong> per session 56 rule before the implementation commit.</li>
+    </ul>
+  </div>
+
+  <!-- ── Ask block ────────────────────────────────────────────────────── -->
+  <div class="ask">
+    <h3>What I need from you</h3>
+    <ol>
+      <li>
+        <strong>The rule (C1):</strong> "IM Fell for headers; <code>FONT_NUMERAL</code> for booth numerals + counts; sans for body" — <em>approve / redirect</em>?
+      </li>
+      <li>
+        <strong>The font (C2):</strong>
+        <ol type="a" style="margin-top:6px">
+          <li><strong>Times New Roman</strong> (recommended — already in codebase, no webfont)</li>
+          <li><strong>Playfair Display</strong> (modern editorial alternative — adds Google Font)</li>
+          <li><strong>Other</strong> — tell me which</li>
+        </ol>
+      </li>
+      <li>
+        <strong>The scope (C3):</strong>
+        <ol type="a" style="margin-top:6px">
+          <li><strong>Booth numerals AND count chips</strong> (recommended — clean rule)</li>
+          <li><strong>Booth numerals only</strong> — counts stay on IM Fell</li>
+        </ol>
+      </li>
+      <li>
+        <strong>Token name (C4):</strong> rename <code>FONT_POSTIT_NUMERAL</code> → <code>FONT_NUMERAL</code> — <em>approve / keep current</em>?
+      </li>
+    </ol>
+  </div>
+
+</div>
+
+</body>
+</html>
