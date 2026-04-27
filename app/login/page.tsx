@@ -34,9 +34,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, ArrowLeft, Loader, Clipboard } from "lucide-react";
-import { sendMagicLink, getSession, onAuthChange } from "@/lib/auth";
+import { sendMagicLink, getSession, onAuthChange, isAdmin } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import type { User } from "@supabase/supabase-js";
 
 type Screen = "enter-email" | "enter-code" | "confirming";
 
@@ -124,6 +125,16 @@ function LoginInner() {
   const [canPaste,      setCanPaste]      = useState(false);
   const codeInputRef                     = useRef<HTMLInputElement>(null);
 
+  // Post-auth destination — admins land on "/" by default (their /my-shelf
+  // resolves to a "no booth" empty state when no impersonation param is
+  // present, which is misleading as a first screen). Explicit `redirect`
+  // / `next` query params still win for both roles.
+  function pickDest(user: User | null): string {
+    const explicit = searchParams.get("redirect") ?? searchParams.get("next");
+    if (explicit) return safeRedirect(explicit);
+    return user && isAdmin(user) ? "/" : "/my-shelf";
+  }
+
   // ── Confirmed redirect from magic link (fallback path) ──
   //
   // Redirect param naming note: two parallel paths in the codebase converge here.
@@ -134,9 +145,6 @@ function LoginInner() {
   // Both honored here; `redirect` preferred. KI-003 fix — session 9.
   useEffect(() => {
     const confirmed = searchParams.get("confirmed");
-    const postAuthDest = safeRedirect(
-      searchParams.get("redirect") ?? searchParams.get("next")
-    );
 
     if (confirmed === "1") {
       setScreen("confirming");
@@ -151,7 +159,7 @@ function LoginInner() {
             bc.postMessage({ type: "signed_in", userId: session.user.id });
             bc.close();
           } catch {}
-          router.replace(postAuthDest);
+          router.replace(pickDest(session.user));
         } else if (attempts > 20) {
           clearInterval(interval);
           setScreen("enter-email");
@@ -161,12 +169,12 @@ function LoginInner() {
       return () => clearInterval(interval);
     }
 
-    // Already logged in — honor redirect if present, otherwise /my-shelf
-    getSession().then(s => { if (s?.user) router.replace(postAuthDest); });
+    // Already logged in — honor redirect if present; admins to /, vendors to /my-shelf
+    getSession().then(s => { if (s?.user) router.replace(pickDest(s.user)); });
 
     // Supabase auth state change (same-tab magic link flow)
     const unsub = onAuthChange(user => {
-      if (user) router.replace(postAuthDest);
+      if (user) router.replace(pickDest(user));
     });
 
     // BroadcastChannel — detect auth from another tab
@@ -175,7 +183,7 @@ function LoginInner() {
       bc = new BroadcastChannel(AUTH_CHANNEL);
       bc.onmessage = (e) => {
         if (e.data?.type === "signed_in") {
-          getSession().then(s => { if (s?.user) router.replace(postAuthDest); });
+          getSession().then(s => { if (s?.user) router.replace(pickDest(s.user)); });
         }
       };
     } catch {}
@@ -258,7 +266,7 @@ function LoginInner() {
     }
     setCodeBusy(true); setCodeError(null);
 
-    const { error: verifyErr } = await supabase.auth.verifyOtp({
+    const { data: verifyData, error: verifyErr } = await supabase.auth.verifyOtp({
       email: sentTo,
       token,
       type: "email",
@@ -279,13 +287,12 @@ function LoginInner() {
       return;
     }
 
-    const postAuthDest = safeRedirect(searchParams.get("redirect"));
     try {
       const bc = new BroadcastChannel(AUTH_CHANNEL);
       bc.postMessage({ type: "signed_in" });
       bc.close();
     } catch {}
-    router.replace(postAuthDest);
+    router.replace(pickDest(verifyData?.user ?? null));
   }
 
   // Resend code
