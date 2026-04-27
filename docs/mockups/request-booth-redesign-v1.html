@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Request a booth (redesign)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --paper-cream:  #f5f2eb;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --ink-wash:     rgba(255, 253, 248, 0.70);
+    --green:        #1e4d2b;
+    --red:          #8b2020;
+    --red-bg:       rgba(139, 32, 32, 0.07);
+    --red-border:   rgba(139, 32, 32, 0.22);
+    --amber:        #7a5c1e;
+
+    --im-fell:  "IM Fell English", Georgia, serif;
+    --tnr:      "Times New Roman", Times, serif;
+    --sys:      -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1320px; margin: 0 auto; padding: 30px 20px 60px; }
+
+  h1.title {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 28px;
+    line-height: 1.6;
+    max-width: 760px;
+  }
+
+  /* ── Decisions table ───────────────────────────────────────────── */
+  .decisions {
+    max-width: 980px;
+    margin: 0 auto 36px;
+    padding: 22px 28px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--im-fell);
+    font-size: 19px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 12px;
+  }
+  .decisions table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  .decisions th, .decisions td { text-align: left; padding: 9px 12px; vertical-align: top; border-top: 1px solid rgba(232, 221, 199, 0.10); }
+  .decisions th { font-weight: 600; color: #fff9e8; font-size: 12px; }
+  .decisions td.q { width: 32%; }
+  .decisions td.r { color: rgba(232, 221, 199, 0.74); }
+  .decisions code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .decisions .recommend { color: #b9e8c5; font-weight: 600; }
+
+  /* ── Section + frames ──────────────────────────────────────────── */
+  .section {
+    margin: 38px auto 18px;
+    max-width: 1300px;
+    padding: 0 14px;
+  }
+  .section h2 {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #fff9e8;
+    font-size: 24px;
+    margin: 0 0 6px;
+    border-bottom: 1px solid rgba(232,221,199,0.2);
+    padding-bottom: 8px;
+  }
+  .section .lede {
+    color: rgba(232, 221, 199, 0.62);
+    font-size: 13px;
+    margin: 0 0 22px;
+    line-height: 1.6;
+    max-width: 760px;
+  }
+
+  .frames-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px;
+    max-width: 1200px;
+    margin: 0 auto 32px;
+    align-items: start;
+    justify-items: center;
+  }
+  @media (max-width: 1100px) {
+    .frames-row { grid-template-columns: 1fr; max-width: 380px; }
+  }
+
+  .frame-card { display: flex; flex-direction: column; align-items: center; }
+  .frame-card .frame-label {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 17px;
+    color: #fff9e8;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .frame-card .frame-label .pill {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 2px 8px;
+    background: rgba(46, 102, 64, 0.32);
+    border: 1px solid rgba(185, 232, 197, 0.45);
+    border-radius: 999px;
+    font-family: var(--sys);
+    font-style: normal;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #b9e8c5;
+    vertical-align: 2px;
+  }
+  .frame-card .frame-label .pill.warn {
+    background: rgba(189, 64, 64, 0.20);
+    border-color: rgba(247, 175, 175, 0.45);
+    color: #f7afaf;
+  }
+  .frame-card .frame-note {
+    font-size: 12px;
+    color: rgba(232, 221, 199, 0.55);
+    margin: 0 0 14px;
+    text-align: center;
+    line-height: 1.5;
+    max-width: 320px;
+  }
+
+  /* ── Phone frame ───────────────────────────────────────────────── */
+  .phone {
+    width: 320px;
+    background: var(--paper-cream);
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 0 6px #1a1a1a, 0 0 0 7px rgba(255,255,255,0.05);
+    position: relative;
+    height: 720px;
+  }
+  .phone .scroll {
+    height: 100%;
+    overflow-y: auto;
+    padding-bottom: 24px;
+  }
+
+  /* Mode C header */
+  .mode-c-header {
+    padding: 14px 14px 6px;
+    display: flex;
+    align-items: center;
+  }
+  .back-bubble {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(42,26,10,0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .back-bubble svg { color: var(--ink-primary); }
+
+  /* Form primitives */
+  .form-pad { padding: 8px 22px 28px; }
+  .form-h1 {
+    font-family: var(--im-fell);
+    color: var(--ink-primary);
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+    margin: 0;
+  }
+  .form-h1.lg { font-size: 26px; margin: 6px 0 22px; }
+  .form-h1.sm { font-size: 22px; margin: 0 0 18px; }
+  .form-intro-p {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-muted);
+    line-height: 1.55;
+    margin: 0 0 24px;
+  }
+
+  .field { margin-bottom: 14px; }
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .label {
+    display: block;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.3;
+    margin-bottom: 6px;
+  }
+  .label .req { font-style: normal; color: var(--red); margin-left: 2px; }
+  .label .opt { font-style: italic; color: var(--ink-faint); margin-left: 4px; }
+  .input {
+    width: 100%;
+    padding: 11px 12px;
+    border-radius: 10px;
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-hairline);
+    color: var(--ink-primary);
+    font-size: 14px;
+    font-family: var(--sys);
+  }
+  .input.with-arrow {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b5538' stroke-width='2' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px 12px;
+    padding-right: 32px;
+    color: var(--ink-faint);
+  }
+  .input.filled.with-arrow { color: var(--ink-primary); }
+
+  /* Photo dropzone — current (4:3) */
+  .photo-dropzone {
+    width: 100%;
+    border: 1.5px dashed var(--ink-hairline);
+    border-radius: 12px;
+    background: var(--ink-wash);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 18px 16px;
+  }
+  .photo-dropzone.r43 { aspect-ratio: 4/3; }
+  .photo-dropzone.r32 { aspect-ratio: 3/2; }
+  .photo-dropzone.compact { aspect-ratio: auto; padding: 14px 14px; gap: 6px; flex-direction: row; justify-content: flex-start; text-align: left; }
+  .photo-dropzone svg { color: var(--ink-muted); opacity: 0.75; }
+  .photo-dropzone .pz-title.imfell-low {
+    font-family: var(--im-fell);
+    font-size: 16px;
+    color: var(--ink-mid);
+    line-height: 1.25;
+    margin-top: 8px;
+  }
+  .photo-dropzone .pz-title.sys-strong {
+    font-family: var(--sys);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink-primary);
+    line-height: 1.3;
+    margin-top: 8px;
+  }
+  .photo-dropzone .pz-help.italic-faint {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-faint);
+    line-height: 1.5;
+    max-width: 230px;
+    margin-top: 4px;
+  }
+  .photo-dropzone .pz-help.sys-mid {
+    font-family: var(--sys);
+    font-size: 12px;
+    color: var(--ink-mid);
+    line-height: 1.5;
+    max-width: 250px;
+    margin-top: 4px;
+  }
+  .photo-dropzone.compact .pz-stack {
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .photo-dropzone.compact .pz-title.sys-strong { margin-top: 0; font-size: 13px; }
+  .photo-dropzone.compact .pz-help.sys-mid { margin-top: 0; font-size: 11px; max-width: none; }
+
+  /* Photo preview state (already-selected) */
+  .photo-preview {
+    width: 100%;
+    aspect-ratio: 4/3;
+    border-radius: 12px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #c4b89e 0%, #a89878 100%);
+    position: relative;
+  }
+  .photo-preview .replace-btn {
+    position: absolute;
+    top: 6px; right: 6px;
+    padding: 4px 10px;
+    background: rgba(0,0,0,0.55);
+    color: #fff9e8;
+    border-radius: 14px;
+    font-family: var(--sys);
+    font-size: 11px;
+  }
+  .photo-preview .x-btn {
+    position: absolute;
+    top: 6px; left: 6px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.55);
+    color: #fff9e8;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
+
+  /* Checkbox row */
+  .checkbox-row {
+    display: flex;
+    gap: 9px;
+    align-items: flex-start;
+    margin: 18px 0 14px;
+    padding: 11px 12px;
+    background: rgba(255,253,248,0.55);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 10px;
+  }
+  .checkbox-row .box {
+    flex-shrink: 0;
+    width: 18px; height: 18px;
+    border: 1.5px solid var(--ink-muted);
+    border-radius: 4px;
+    background: rgba(255,253,248,0.9);
+    margin-top: 1px;
+  }
+  .checkbox-row.checked .box {
+    background: var(--green);
+    border-color: var(--green);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .checkbox-row.checked .box::after {
+    content: "✓";
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .checkbox-row .copy {
+    font-family: var(--sys);
+    font-size: 12.5px;
+    color: var(--ink-mid);
+    line-height: 1.45;
+  }
+
+  /* CTA */
+  .cta-green {
+    width: 100%;
+    padding: 13px;
+    border-radius: 12px;
+    font-family: var(--sys);
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+    background: var(--green);
+    text-align: center;
+    margin-top: 6px;
+    box-shadow: 0 2px 12px rgba(30,77,43,0.22);
+  }
+  .cta-green.disabled { background: rgba(30,77,43,0.40); box-shadow: none; }
+  .disclaimer {
+    font-family: var(--sys);
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-align: center;
+    line-height: 1.6;
+    margin: 8px 0 0;
+  }
+
+  /* Annotation overlay */
+  .annot {
+    position: relative;
+    box-shadow: 0 0 0 2px rgba(189, 64, 64, 0.65), 0 0 14px rgba(189, 64, 64, 0.35);
+    border-radius: 4px;
+  }
+  .annot-flag {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(189, 64, 64, 0.95);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+
+  /* Frame ruler */
+  .ruler {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 0;
+    border-right: 1px dashed rgba(189, 64, 64, 0.55);
+    z-index: 50;
+    pointer-events: none;
+  }
+  .ruler-label {
+    position: absolute;
+    bottom: 6px;
+    transform: translateX(-50%);
+    font-family: var(--sys);
+    font-size: 9px;
+    color: rgba(189, 64, 64, 0.85);
+    background: rgba(0,0,0,0.55);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+
+  /* ── Implementation block ─────────────────────────────────────── */
+  .impl {
+    max-width: 1100px;
+    margin: 36px auto 0;
+    padding: 22px 28px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.86);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .impl h3 {
+    font-family: var(--im-fell);
+    font-size: 19px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 12px;
+  }
+  .impl ul { margin: 6px 0 0 18px; padding: 0; }
+  .impl li { margin-bottom: 6px; }
+  .impl code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  /* ── Ask block ────────────────────────────────────────────────── */
+  .ask {
+    max-width: 980px;
+    margin: 36px auto 0;
+    padding: 24px 28px;
+    background: rgba(46, 102, 64, 0.12);
+    border: 1px solid rgba(185, 232, 197, 0.30);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.92);
+  }
+  .ask h3 {
+    font-family: var(--im-fell);
+    font-size: 19px;
+    font-weight: 400;
+    color: #b9e8c5;
+    margin: 0 0 12px;
+  }
+  .ask ol { margin: 0; padding-left: 20px; line-height: 1.8; font-size: 14px; }
+  .ask ol li { margin-bottom: 8px; }
+  .ask ol ol { margin-top: 6px; }
+  .ask code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12.5px;
+    background: rgba(232, 221, 199, 0.10);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .legend {
+    max-width: 980px;
+    margin: 0 auto 24px;
+    padding: 14px 22px;
+    background: rgba(189, 64, 64, 0.12);
+    border: 1px solid rgba(189, 64, 64, 0.40);
+    border-radius: 8px;
+    color: rgba(232, 221, 199, 0.85);
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+  .legend strong { color: #f7afaf; }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <h1 class="title">Request a booth — redesign</h1>
+  <p class="subtitle">
+    Per session 75 redirect, items 2 + 3 + 4 + 5. Tighten <code>/vendor-request</code> to one screen, swap the title to <em>"Request your digital booth"</em>, drop the intro paragraph, replace the photo-dropzone copy with David's higher-contrast wording, and add a "I'm the assigned owner" checkbox that gates submission. Required fields: First, Last, Email, Mall, Booth number, Photo. Booth name optional.
+  </p>
+
+  <!-- ── Decisions table ──────────────────────────────────────────────────── -->
+  <div class="decisions">
+    <h3>Decisions to lock</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Decision</th>
+          <th>Recommendation</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="q"><strong>B1.</strong> Required field set</td>
+          <td class="r">
+            <span class="recommend">Required: First name, Last name, Email, Mall, Booth number, Photo. Optional: Booth name.</span>
+            Server validation on POST mirrors client-side. Mall + Booth number become hard-required (currently both labeled optional in production).
+          </td>
+        </tr>
+        <tr>
+          <td class="q"><strong>B2.</strong> Checkbox copy + behavior</td>
+          <td class="r">
+            <span class="recommend">"By submitting this request you are confirming that you are the assigned owner of this booth."</span> Required to submit — CTA stays disabled until checked. Visually emphasized (1px hairline card, sans 12.5px ink-mid). Gates submit + shipped to server as <code>owner_acknowledged: true</code> (audit trail).
+          </td>
+        </tr>
+        <tr>
+          <td class="q"><strong>B3.</strong> Photo treatment</td>
+          <td class="r">
+            <span class="recommend">3:2 dropzone</span> (Frame B). Reduces from current 4:3 (~210pt tall) to 3:2 (~140pt tall) — saves ~70pt. New copy: <em>"Take a photo of your booth"</em> as the bold title, <em>"This will be the main image on your digital booth"</em> as the helper. <strong>Both lines move to FONT_SYS</strong> — italic IM Fell at 12px on a paper wash was the legibility issue David flagged. Frame C shows the more aggressive compact-pill alternative if 3:2 still feels overwhelming.
+          </td>
+        </tr>
+        <tr>
+          <td class="q"><strong>B4.</strong> Required-field indicator</td>
+          <td class="r">
+            <span class="recommend">Red asterisk after label.</span> No "(required)" tag. Reserve "(optional)" italic ink-faint tag for Booth name only — same convention as today, just inverted (most fields are required now, not optional). Optional-tag for Booth name preserved because it's the one field where the default behavior matters (UI helper "Leave blank to use your name" is dropped per cuts; the "(optional)" tag now carries that signal).
+          </td>
+        </tr>
+        <tr>
+          <td class="q"><strong>B5.</strong> Layout cuts</td>
+          <td class="r">
+            <span class="recommend">Drop intro h1 24px + entire intro paragraph; keep title only at 22px tight just above form.</span> Drop "Leave blank to use your name" booth-name helper (covered by "(optional)" tag). Pair Mall + Booth number side-by-side (saves ~60pt). Side-by-side First/Last + Mall/Booth keeps name + booth identity grouped logically.
+          </td>
+        </tr>
+        <tr>
+          <td class="q"><strong>B6.</strong> Title typography</td>
+          <td class="r">
+            <span class="recommend">"Request your digital booth" — IM Fell 22px regular, ink-primary, top of form.</span> Stays inside the editorial voice. No subhead. Title acts as page identifier in lieu of the dropped intro paragraph.
+          </td>
+        </tr>
+        <tr>
+          <td class="q"><strong>B7.</strong> Server payload</td>
+          <td class="r">
+            <span class="recommend">Add <code>owner_acknowledged: true</code> to the POST body</span> alongside existing fields. The <code>/api/vendor-request</code> handler should require it (400 if false/missing). Captured in <code>vendor_requests</code> table row as a new boolean column (one-line Supabase migration). Becomes useful audit trail when admin reviews a request.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="legend">
+    <strong>Frame A</strong> = production today (annotated with red ringed pain points). <strong>Frame B</strong> = recommended redesign (3:2 photo). <strong>Frame C</strong> = compact-photo alternative (most aggressive one-screen target). The <strong>red dashed horizontal ruler</strong> on Frame A shows where iPhone-13 viewport ends — content below the line requires scroll.
+  </div>
+
+  <!-- ── 3-frame compare ─────────────────────────────────────────────── -->
+
+  <div class="frames-row">
+
+    <!-- Frame A — Current (annotated) -->
+    <div class="frame-card">
+      <div class="frame-label">A · Current <span class="pill warn">Pain points</span></div>
+      <div class="frame-note">Production today. Five issues circled in red, indexed below the frame.</div>
+      <div class="phone">
+        <div class="ruler" style="left: 0; right: 0; top: 670px; width: 100%; border-right: none; border-top: 1px dashed rgba(189, 64, 64, 0.65);">
+          <div class="ruler-label" style="left: 50%; bottom: 4px;">iPhone 13 viewport ends here</div>
+        </div>
+        <div class="scroll">
+          <div class="mode-c-header">
+            <div class="back-bubble">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </div>
+          </div>
+          <div class="form-pad">
+            <div class="annot" style="margin-bottom: 16px;">
+              <div class="annot-flag">1</div>
+              <h2 class="form-h1 lg" style="font-size: 28px;">Put your booth forward.</h2>
+              <p class="form-intro-p">We're Treehouse Finds — a quiet place for vintage &amp; antique finds in Kentucky. Share a few details and a photo of your booth, and we'll be in touch when your shelf is ready.</p>
+            </div>
+
+            <div class="field-row">
+              <div><label class="label">First name</label><input class="input" value="Sarah" /></div>
+              <div><label class="label">Last name</label><input class="input" value="Morrison" /></div>
+            </div>
+            <div class="field"><label class="label">Email address</label><input class="input" value="sarah@example.com" /></div>
+
+            <div class="annot" style="margin-bottom: 14px;">
+              <div class="annot-flag">2</div>
+              <label class="label">Your mall <span class="opt">(optional)</span></label>
+              <input class="input with-arrow filled" value="America's Antique Mall — Lexington, KY" />
+            </div>
+            <div class="annot" style="margin-bottom: 14px;">
+              <div class="annot-flag">2</div>
+              <label class="label">Booth number <span class="opt">(optional)</span></label>
+              <input class="input" value="" placeholder="e.g. 369" />
+            </div>
+
+            <div class="field"><label class="label">Booth name <span class="opt">(optional)</span></label><input class="input" placeholder="e.g. The Velvet Cabinet" /><div style="font-family: var(--im-fell); font-style: italic; font-size: 11px; color: var(--ink-faint); margin-top: 5px; margin-left: 2px;">Leave blank to use your name.</div></div>
+
+            <div class="annot" style="margin-bottom: 14px;">
+              <div class="annot-flag">3</div>
+              <label class="label">A photo of your booth</label>
+              <div class="photo-dropzone r43">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <div class="pz-title imfell-low">Show us your booth</div>
+                <div class="pz-help italic-faint">A wide shot of your sign, name tag, or anything with your booth number visible. Helps us make sure the shelf is really yours.</div>
+              </div>
+            </div>
+
+            <div class="cta-green disabled">Request access</div>
+            <p class="disclaimer">We'll only use your email to follow up on this request.</p>
+          </div>
+        </div>
+      </div>
+      <div style="font-family: var(--sys); font-size: 11.5px; color: rgba(247, 175, 175, 0.92); line-height: 1.7; max-width: 320px; margin-top: 16px; text-align: left;">
+        <strong style="color:#f7afaf">1.</strong> Title + intro paragraph eat ~120pt of vertical budget. Drop both.<br>
+        <strong style="color:#f7afaf">2.</strong> Mall + Booth number labeled <em>(optional)</em> — should be required.<br>
+        <strong style="color:#f7afaf">3.</strong> Photo dropzone copy is IM Fell italic 12–16px on paper wash — David flagged as illegible. Also: the "confirm it's really yours" copy is now redundant with the new checkbox.<br>
+        <strong style="color:#f7afaf">4.</strong> No "I'm the assigned owner" checkbox.<br>
+        <strong style="color:#f7afaf">5.</strong> Form overflows iPhone 13 viewport (red dashed ruler).
+      </div>
+    </div>
+
+    <!-- Frame B — Redesign 3:2 (RECOMMENDED) -->
+    <div class="frame-card">
+      <div class="frame-label">B · Redesign — 3:2 photo <span class="pill">Recommended</span></div>
+      <div class="frame-note">Title only (22px), no intro. Side-by-side First/Last + Mall/Booth#. 3:2 photo with new high-contrast sans copy. Checkbox card above CTA. Fits one screen with margin.</div>
+      <div class="phone">
+        <div class="scroll">
+          <div class="mode-c-header">
+            <div class="back-bubble">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </div>
+          </div>
+          <div class="form-pad">
+            <h1 class="form-h1 sm">Request your digital booth</h1>
+
+            <div class="field-row">
+              <div>
+                <label class="label">First name<span class="req">*</span></label>
+                <input class="input" value="Sarah" />
+              </div>
+              <div>
+                <label class="label">Last name<span class="req">*</span></label>
+                <input class="input" value="Morrison" />
+              </div>
+            </div>
+            <div class="field">
+              <label class="label">Email address<span class="req">*</span></label>
+              <input class="input" value="sarah@example.com" />
+            </div>
+
+            <div class="field-row">
+              <div>
+                <label class="label">Mall<span class="req">*</span></label>
+                <input class="input with-arrow filled" value="America's Antique Mall" style="text-overflow: ellipsis; white-space: nowrap; overflow: hidden;" />
+              </div>
+              <div>
+                <label class="label">Booth #<span class="req">*</span></label>
+                <input class="input" placeholder="369" />
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label">Booth name <span class="opt">(optional)</span></label>
+              <input class="input" placeholder="e.g. The Velvet Cabinet" />
+            </div>
+
+            <div class="field">
+              <label class="label">Booth photo<span class="req">*</span></label>
+              <div class="photo-dropzone r32">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <div class="pz-title sys-strong">Take a photo of your booth</div>
+                <div class="pz-help sys-mid">This will be the main image on your digital booth.</div>
+              </div>
+            </div>
+
+            <div class="checkbox-row checked">
+              <div class="box"></div>
+              <div class="copy">By submitting this request you are confirming that you are the assigned owner of this booth.</div>
+            </div>
+
+            <div class="cta-green">Request access</div>
+            <p class="disclaimer">We'll only use your email to follow up on this request.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Frame C — Compact pill alternative -->
+    <div class="frame-card">
+      <div class="frame-label">C · Redesign — compact photo</div>
+      <div class="frame-note">More aggressive: photo is a 60pt-tall row with camera glyph + "Take a photo" → expands on tap to full 4:3 preview. Saves ~120pt vs 3:2. Less obvious as a "this is required" affordance — tradeoff.</div>
+      <div class="phone">
+        <div class="scroll">
+          <div class="mode-c-header">
+            <div class="back-bubble">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </div>
+          </div>
+          <div class="form-pad">
+            <h1 class="form-h1 sm">Request your digital booth</h1>
+
+            <div class="field-row">
+              <div><label class="label">First name<span class="req">*</span></label><input class="input" value="Sarah" /></div>
+              <div><label class="label">Last name<span class="req">*</span></label><input class="input" value="Morrison" /></div>
+            </div>
+            <div class="field">
+              <label class="label">Email address<span class="req">*</span></label>
+              <input class="input" value="sarah@example.com" />
+            </div>
+            <div class="field-row">
+              <div><label class="label">Mall<span class="req">*</span></label><input class="input with-arrow filled" value="America's Antique Mall" style="text-overflow: ellipsis; white-space: nowrap; overflow: hidden;" /></div>
+              <div><label class="label">Booth #<span class="req">*</span></label><input class="input" placeholder="369" /></div>
+            </div>
+            <div class="field">
+              <label class="label">Booth name <span class="opt">(optional)</span></label>
+              <input class="input" placeholder="e.g. The Velvet Cabinet" />
+            </div>
+
+            <div class="field">
+              <label class="label">Booth photo<span class="req">*</span></label>
+              <div class="photo-dropzone compact">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <div class="pz-stack">
+                  <div class="pz-title sys-strong">Take a photo of your booth</div>
+                  <div class="pz-help sys-mid">Main image on your digital booth.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="checkbox-row checked">
+              <div class="box"></div>
+              <div class="copy">By submitting this request you are confirming that you are the assigned owner of this booth.</div>
+            </div>
+
+            <div class="cta-green">Request access</div>
+            <p class="disclaimer">We'll only use your email to follow up on this request.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Implementation block ─────────────────────────────────────────── -->
+  <div class="impl">
+    <h3>Implementation (after approval)</h3>
+    <p style="margin:0 0 12px"><em>Mockup wins if anything diverges below. Single feat commit after the design-to-Ready commit per session 56 rule.</em></p>
+    <ul>
+      <li><strong>`app/vendor-request/page.tsx`:</strong> drop intro motion.div (h1 + p). Title becomes 22px IM Fell 0/0/18 above form. Add Mall + Booth side-by-side `field-row`. Drop "Leave blank to use your name" helper.</li>
+      <li><strong>Required fields:</strong> First, Last, Email, Mall (id non-empty), Booth number (non-empty trim), Photo (proofDataUrl non-null), checkbox. Validate sequentially in `handleSubmit`. Error messages inherit existing red banner primitive. Booth name optional.</li>
+      <li><strong>Required indicator:</strong> append <code>&lt;span style={requiredAsteriskStyle}&gt;*&lt;/span&gt;</code> after the field-name in the label. Color <code>v1.red</code>. Optional Booth name keeps "(optional)" italic-faint tag.</li>
+      <li><strong>Photo dropzone copy:</strong>
+        <ul style="margin-top:6px">
+          <li>Title: <code>"Take a photo of your booth"</code> — FONT_SYS 14px 600 v1.inkPrimary (was IM Fell 17px v1.inkMid).</li>
+          <li>Helper: <code>"This will be the main image on your digital booth."</code> — FONT_SYS 12px v1.inkMid (was IM Fell italic 13px v1.inkFaint).</li>
+          <li>Both line up with the contrast issue David flagged. The "confirm it's really yours" line is removed entirely.</li>
+        </ul>
+      </li>
+      <li><strong>Photo aspect ratio:</strong> 4:3 → 3:2 (Frame B recommended) OR compact pill (Frame C alternative). Pick per David's call.</li>
+      <li><strong>Checkbox row:</strong> new component inline. State `<code>ownerAck: boolean</code>`. CTA `disabled={busy || !ownerAck || ...other gates}`. Copy: <code>"By submitting this request you are confirming that you are the assigned owner of this booth."</code>. Card primitive: 11/12 padding, 1px hairline border, 10px radius, 0.55 alpha paper wash. Box 18×18, 4px radius, 1.5px border. Checked = green fill + ✓.</li>
+      <li><strong>Server (`app/api/vendor-request/route.ts`):</strong> require <code>owner_acknowledged: true</code> in body. 400 if missing. Add column <code>owner_acknowledged BOOLEAN NOT NULL DEFAULT FALSE</code> to <code>vendor_requests</code> in a new migration <code>supabase/migrations/0NN_owner_ack.sql</code>. Insert it on row create. Existing rows backfill to false (won't block — column NOT NULL with default).</li>
+      <li><strong>What does NOT change:</strong> success / already-pending / already-approved DoneScreen variants. Mode C back-arrow header. CTA color/shape. Disclaimer line. MallSheet migration still deferred.</li>
+    </ul>
+  </div>
+
+  <!-- ── Ask block ────────────────────────────────────────────────────── -->
+  <div class="ask">
+    <h3>What I need from you</h3>
+    <ol>
+      <li>
+        <strong>Photo treatment (B3):</strong>
+        <ol type="a">
+          <li><strong>3:2 dropzone</strong> (Frame B — recommended). Visible affordance, proportional to a real photo, fits one screen with margin.</li>
+          <li><strong>Compact pill</strong> (Frame C). Most aggressive one-screen target; less obvious that photo is required.</li>
+        </ol>
+      </li>
+      <li>
+        <strong>Required-field indicator (B4):</strong> red asterisk after label — <em>approve / suggest different</em>?
+      </li>
+      <li>
+        <strong>Server-side audit (B7):</strong> capture <code>owner_acknowledged: true</code> on the vendor_request row (one-line migration) — <em>approve / drop the persistence</em>?
+      </li>
+      <li>
+        <strong>Anything else to redirect?</strong> Specifically: title size (22px ok, or want bigger/smaller), checkbox card chrome (paper-wash bordered ok, or want flat/pill), CTA copy (<em>"Request access"</em> stays — or change to <em>"Submit request"</em> / <em>"Send request"</em>).
+      </li>
+    </ol>
+  </div>
+
+</div>
+
+</body>
+</html>
