@@ -72,6 +72,12 @@ import type { Post, Mall } from "@/types/treehouse";
 
 const SCROLL_KEY      = "treehouse_feed_scroll";
 const LAST_VIEWED_KEY = "treehouse_last_viewed_post";
+// Set on first feed mount in a session — any subsequent mount (back-nav,
+// re-foregrounding, etc.) treats the page as "already visited" and skips
+// the masonry tile entrance fade so the shared-element morph from
+// /find/[id] reads as the only motion on screen, not a stagger of every
+// tile fading back in. Mirrors FB Marketplace back-nav behavior.
+const FEED_VISITED_KEY = "treehouse_feed_visited";
 
 // Session 76 Track E — local EASE replaced by MOTION_EASE_OUT import
 // (docs/animation-consistency-design.md). Alias kept so MasonryTile's
@@ -541,7 +547,20 @@ export default function DiscoveryFeedPage() {
   const pendingScrollY   = useRef<number | null>(null);
   const scrollRestored   = useRef(false);
 
+  // Snapshot the "have we been here before this session?" flag on first
+  // render so it stays stable across re-renders. Set the flag in a
+  // mount-effect so subsequent navs read it as true.
+  const [hasVisitedBefore] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try { return !!sessionStorage.getItem(FEED_VISITED_KEY); } catch { return false; }
+  });
+
+  useEffect(() => {
+    try { sessionStorage.setItem(FEED_VISITED_KEY, "1"); } catch {}
+  }, []);
+
   const isRestoringScroll = pendingScrollY.current !== null && !scrollRestored.current;
+  const skipTileEntrance  = hasVisitedBefore || isRestoringScroll;
 
   // ── Bookmarks ────────────────────────────────────────────────────────────────
   function syncBookmarks() {
@@ -833,7 +852,7 @@ export default function DiscoveryFeedPage() {
               followedIds={followedIds}
               onToggleSave={handleToggleSave}
               lastViewedId={lastViewedId}
-              skipEntrance={isRestoringScroll}
+              skipEntrance={skipTileEntrance}
             />
           </AnimatePresence>
         )}
