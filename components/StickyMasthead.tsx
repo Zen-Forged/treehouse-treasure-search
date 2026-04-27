@@ -118,6 +118,25 @@ export default function StickyMasthead({
     return () => (target as Window).removeEventListener("scroll", handleScroll);
   }, [scrollTarget, threshold]);
 
+  // iOS Safari bfcache repaint fix (session 77).
+  // position:sticky + backdrop-filter doesn't repaint on bfcache restore
+  // until a scroll/touch event fires — masthead appears "missing" until
+  // the user touches the page. The pageshow event with event.persisted
+  // identifies bfcache restore; a 1px scroll round-trip inside rAF forces
+  // iOS to re-evaluate sticky positioning. Window-level only — runs once.
+  useEffect(() => {
+    function onPageShow(event: PageTransitionEvent) {
+      if (event.persisted) {
+        requestAnimationFrame(() => {
+          window.scrollBy(0, 1);
+          window.scrollBy(0, -1);
+        });
+      }
+    }
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
+
   return (
     <div
       style={{
