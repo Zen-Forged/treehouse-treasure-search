@@ -1,5 +1,5 @@
 // components/StickyMasthead.tsx
-// Shared sticky masthead chrome — session 70 lock pass
+// Shared masthead chrome — session 70 lock pass + session 77 PWA fix
 // (docs/masthead-lock-design.md).
 //
 // Visual stability with affordances. Single `1fr auto 1fr` inner grid across
@@ -8,6 +8,18 @@
 // columns regardless of left/right slot content. Both side slots reserve
 // `min-width: 80px` so an empty slot reserves the same column width as the
 // heaviest case (multi-bubble on /shelf/[slug]) — the wordmark cannot drift.
+//
+// Session 77 — `position: fixed` + layout spacer.
+// Originally `position: sticky`. iOS PWA standalone mode has a known paint
+// bug where bfcache restoration leaves position:sticky elements at zero
+// computed height until a touch/scroll event forces a layout recompute.
+// Three earlier fix attempts (loading branch chrome, pageshow handler,
+// useLayoutEffect nudge) didn't trigger reliably in iOS PWA — events
+// either don't fire or fire too late. position:fixed bypasses the bug
+// class entirely: fixed elements use viewport coords and are always
+// painted regardless of bfcache state. The component name is preserved
+// (StickyMasthead) for caller stability — the visual contract is
+// identical, only the underlying CSS primitive changed.
 //
 // Usage:
 //
@@ -20,14 +32,12 @@
 //   />
 //
 // scrollTarget is preserved as a backwards-compat prop for any caller that
-// still passes one. Session-70 D17 flattens the booth pages off internal
-// overflow-auto containers, so once those callsites migrate, scrollTarget
-// is effectively unused — but the prop survives so we don't have to choreograph
-// API + caller changes in lockstep.
+// still passes one. With fixed positioning the prop only affects the
+// hairline-on-scroll signal, not the masthead's own positioning.
 
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { v1, FONT_IM_FELL } from "@/lib/tokens";
 
 interface StickyMastheadProps {
@@ -85,6 +95,12 @@ const WORDMARK_DEFAULT = (
   </span>
 );
 
+// Total masthead height = paddingTop + inner grid minHeight + paddingBottom
+// + bottom border. paddingTop is max(14px, safe-area-inset-top); the rest
+// is fixed. The spacer below uses the same calc so layout flow matches
+// what `position: sticky` would have reserved.
+const MASTHEAD_HEIGHT = "calc(max(14px, env(safe-area-inset-top, 14px)) + 53px)";
+
 export default function StickyMasthead({
   left,
   wordmark,
@@ -93,8 +109,6 @@ export default function StickyMasthead({
   threshold = 4,
 }: StickyMastheadProps) {
   const [scrolled, setScrolled] = useState(false);
-  const lastState = useRef(false);
-  const stickyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const target: HTMLElement | Window =
@@ -105,10 +119,11 @@ export default function StickyMasthead({
       return (target as HTMLElement).scrollTop;
     }
 
+    let lastState = false;
     function handleScroll() {
       const next = readScrollY() > threshold;
-      if (next !== lastState.current) {
-        lastState.current = next;
+      if (next !== lastState) {
+        lastState = next;
         setScrolled(next);
       }
     }
@@ -119,109 +134,79 @@ export default function StickyMasthead({
     return () => (target as Window).removeEventListener("scroll", handleScroll);
   }, [scrollTarget, threshold]);
 
-  // iOS PWA standalone-mode masthead-disappears workaround (session 77).
-  //
-  // In iOS PWA standalone mode (apple-mobile-web-app-capable), back-nav from
-  // a sibling page restores the previous page with position:sticky elements
-  // rendered at zero computed height. The DOM is correct; the layout engine
-  // simply hasn't laid the sticky element out. Touch / scroll forces a
-  // recompute and the masthead reappears.
-  //
-  // Browser Safari bfcache hits the same paint bug, but `pageshow` with
-  // `event.persisted` is a reliable signal. PWA standalone mode does NOT
-  // reliably set `persisted` and may not fire `pageshow` at all on back-nav
-  // — so we have to be more aggressive:
-  //
-  //   1. Force reflow on every mount via useLayoutEffect (covers cold mount
-  //      after PWA cold-start as well).
-  //   2. Force reflow on every `pageshow` event (regardless of persisted).
-  //   3. Force reflow on every `visibilitychange` → visible (covers PWA
-  //      app-switcher return).
-  //   4. The reflow trigger directly mutates the masthead's `top` style by
-  //      a fractional px and resets it the next frame. This is the most
-  //      reliable iOS layout-recompute trigger; `window.scrollBy` no-ops
-  //      when the page isn't scrollable, and `offsetHeight` reads alone
-  //      don't always wake iOS.
-  useLayoutEffect(() => {
-    function nudge() {
-      const el = stickyRef.current;
-      if (!el) return;
-      el.style.top = "0.01px";
-      requestAnimationFrame(() => {
-        if (!stickyRef.current) return;
-        stickyRef.current.style.top = "0px";
-      });
-    }
-
-    nudge();
-
-    function onPageShow() { nudge(); }
-    function onVisibility() {
-      if (document.visibilityState === "visible") nudge();
-    }
-
-    window.addEventListener("pageshow", onPageShow);
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      window.removeEventListener("pageshow", onPageShow);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, []);
-
   return (
-    <div
-      ref={stickyRef}
-      style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 40,
-        background: "rgba(232,221,199,0.96)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
-        borderBottom: `1px solid ${scrolled ? v1.inkHairline : "transparent"}`,
-        transition: "border-color 0.2s ease",
-        paddingTop: "max(14px, env(safe-area-inset-top, 14px))",
-        paddingBottom: 12,
-        paddingLeft: 18,
-        paddingRight: 18,
-      }}
-    >
+    <>
+      {/* Layout spacer — reserves the same vertical space the sticky masthead
+          used to take, so content below is positioned identically. */}
+      <div
+        aria-hidden="true"
+        style={{
+          height: MASTHEAD_HEIGHT,
+          flexShrink: 0,
+        }}
+      />
+
+      {/* Fixed-position masthead — pinned to viewport top. Centered + capped at
+          maxWidth: 430 to match the page wrapper's content column.
+          Background extends only to the maxWidth column on iPhone (since
+          screen width is 390-430px). */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr auto 1fr",
-          alignItems: "center",
-          minHeight: 40,
-          gap: 8,
+          position: "fixed",
+          top: 0,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "100%",
+          maxWidth: 430,
+          zIndex: 40,
+          background: "rgba(232,221,199,0.96)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          borderBottom: `1px solid ${scrolled ? v1.inkHairline : "transparent"}`,
+          transition: "border-color 0.2s ease",
+          paddingTop: "max(14px, env(safe-area-inset-top, 14px))",
+          paddingBottom: 12,
+          paddingLeft: 18,
+          paddingRight: 18,
         }}
       >
         <div
           style={{
-            justifySelf: "start",
-            display: "flex",
+            display: "grid",
+            gridTemplateColumns: "1fr auto 1fr",
             alignItems: "center",
-            gap: 6,
-            minWidth: 80,
+            minHeight: 40,
+            gap: 8,
           }}
         >
-          {left}
-        </div>
-        <div style={{ textAlign: "center" }}>
-          {wordmark ?? WORDMARK_DEFAULT}
-        </div>
-        <div
-          style={{
-            justifySelf: "end",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            justifyContent: "flex-end",
-            minWidth: 80,
-          }}
-        >
-          {right}
+          <div
+            style={{
+              justifySelf: "start",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              minWidth: 80,
+            }}
+          >
+            {left}
+          </div>
+          <div style={{ textAlign: "center" }}>
+            {wordmark ?? WORDMARK_DEFAULT}
+          </div>
+          <div
+            style={{
+              justifySelf: "end",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              justifyContent: "flex-end",
+              minWidth: 80,
+            }}
+          >
+            {right}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
