@@ -27,7 +27,7 @@
 
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { v1, FONT_IM_FELL } from "@/lib/tokens";
 
 interface StickyMastheadProps {
@@ -94,6 +94,7 @@ export default function StickyMasthead({
 }: StickyMastheadProps) {
   const [scrolled, setScrolled] = useState(false);
   const lastState = useRef(false);
+  const stickyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const target: HTMLElement | Window =
@@ -118,27 +119,58 @@ export default function StickyMasthead({
     return () => (target as Window).removeEventListener("scroll", handleScroll);
   }, [scrollTarget, threshold]);
 
-  // iOS Safari bfcache repaint fix (session 77).
-  // position:sticky + backdrop-filter doesn't repaint on bfcache restore
-  // until a scroll/touch event fires — masthead appears "missing" until
-  // the user touches the page. The pageshow event with event.persisted
-  // identifies bfcache restore; a 1px scroll round-trip inside rAF forces
-  // iOS to re-evaluate sticky positioning. Window-level only — runs once.
-  useEffect(() => {
-    function onPageShow(event: PageTransitionEvent) {
-      if (event.persisted) {
-        requestAnimationFrame(() => {
-          window.scrollBy(0, 1);
-          window.scrollBy(0, -1);
-        });
-      }
+  // iOS PWA standalone-mode masthead-disappears workaround (session 77).
+  //
+  // In iOS PWA standalone mode (apple-mobile-web-app-capable), back-nav from
+  // a sibling page restores the previous page with position:sticky elements
+  // rendered at zero computed height. The DOM is correct; the layout engine
+  // simply hasn't laid the sticky element out. Touch / scroll forces a
+  // recompute and the masthead reappears.
+  //
+  // Browser Safari bfcache hits the same paint bug, but `pageshow` with
+  // `event.persisted` is a reliable signal. PWA standalone mode does NOT
+  // reliably set `persisted` and may not fire `pageshow` at all on back-nav
+  // — so we have to be more aggressive:
+  //
+  //   1. Force reflow on every mount via useLayoutEffect (covers cold mount
+  //      after PWA cold-start as well).
+  //   2. Force reflow on every `pageshow` event (regardless of persisted).
+  //   3. Force reflow on every `visibilitychange` → visible (covers PWA
+  //      app-switcher return).
+  //   4. The reflow trigger directly mutates the masthead's `top` style by
+  //      a fractional px and resets it the next frame. This is the most
+  //      reliable iOS layout-recompute trigger; `window.scrollBy` no-ops
+  //      when the page isn't scrollable, and `offsetHeight` reads alone
+  //      don't always wake iOS.
+  useLayoutEffect(() => {
+    function nudge() {
+      const el = stickyRef.current;
+      if (!el) return;
+      el.style.top = "0.01px";
+      requestAnimationFrame(() => {
+        if (!stickyRef.current) return;
+        stickyRef.current.style.top = "0px";
+      });
     }
+
+    nudge();
+
+    function onPageShow() { nudge(); }
+    function onVisibility() {
+      if (document.visibilityState === "visible") nudge();
+    }
+
     window.addEventListener("pageshow", onPageShow);
-    return () => window.removeEventListener("pageshow", onPageShow);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pageshow", onPageShow);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, []);
 
   return (
     <div
+      ref={stickyRef}
       style={{
         position: "sticky",
         top: 0,
