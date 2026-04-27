@@ -70,6 +70,7 @@ import { Pencil, Loader, ImagePlus } from "lucide-react";
 import { vendorHueBg, mapsUrl, boothNumeralSize } from "@/lib/utils";
 import { v1, FONT_IM_FELL, FONT_SYS, FONT_POSTIT_NUMERAL } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
+import PhotoLightbox from "@/components/PhotoLightbox";
 import type { Post } from "@/types/treehouse";
 
 // Re-export canonical v1.1h tokens so consumers of BoothPage primitives
@@ -102,6 +103,11 @@ export function BoothHero({
   heroUploading?: boolean;
   onHeroImageChange?: (file: File) => void;
 }) {
+  // Session 75 — tap hero photo to open lightbox (matches /find/[id] pattern).
+  // Only mounts when heroImageUrl is present; the vendorHueBg fallback has
+  // nothing to enlarge.
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
   return (
     <div style={{ padding: "0 10px", position: "relative" }}>
       {/* Hidden file input for banner edit */}
@@ -167,6 +173,29 @@ export function BoothHero({
             }}
           />
         </div>
+
+        {/* Tap-to-open lightbox overlay. Sits above the photo container but
+            below the edit pencil (z 10) and post-it (z 12) so those keep
+            their existing tap targets. Only mounted when there's a real
+            photo to enlarge. */}
+        {heroImageUrl && (
+          <button
+            type="button"
+            onClick={() => setLightboxOpen(true)}
+            aria-label="View booth photo"
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: v1.bannerRadius,
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+              zIndex: 5,
+            }}
+          />
+        )}
 
         {/* Edit banner (owner only) — top-left, dark translucent */}
         {canEdit && (
@@ -269,6 +298,13 @@ export function BoothHero({
           </div>
         )}
       </div>
+
+      <PhotoLightbox
+        open={lightboxOpen}
+        src={heroImageUrl ?? null}
+        alt={`${displayName} booth photo`}
+        onClose={() => setLightboxOpen(false)}
+      />
     </div>
   );
 }
