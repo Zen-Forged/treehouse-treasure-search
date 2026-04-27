@@ -72,7 +72,14 @@ import { getPost, getVendorPosts } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
 import { getCachedUserId, getSession, isAdmin, onAuthChange } from "@/lib/auth";
-import { v1, FONT_IM_FELL, FONT_SYS, FONT_NUMERAL } from "@/lib/tokens";
+import {
+  v1,
+  FONT_IM_FELL,
+  FONT_SYS,
+  FONT_NUMERAL,
+  MOTION_SHARED_ELEMENT_EASE,
+  MOTION_SHARED_ELEMENT_FORWARD,
+} from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { flagKey, mapsUrl, boothNumeralSize, loadFollowedIds } from "@/lib/utils";
 import { track } from "@/lib/clientEvents";
@@ -678,13 +685,12 @@ export default function FindDetailPage() {
 
       {showNormalBody && post && (
         <>
-      {/* Photograph with post-it (bottom-right) + save/share OR edit (top-right) */}
-      <motion.div
-        variants={sectionVariants(0.04)}
-        initial="hidden"
-        animate="visible"
-        style={{ padding: "0 22px", marginBottom: 28, position: "relative" }}
-      >
+      {/* Photograph with post-it (bottom-right) + save/share OR edit (top-right).
+          Track D phase 5 (docs/marketplace-transitions-design.md): the
+          photograph itself morphs in via <motion.button layoutId="find-${id}">
+          — no entrance fade on the photo wrapper, the layoutId animation IS
+          the entrance. Bubbles + post-it crossfade in per D11. */}
+      <div style={{ padding: "0 22px", marginBottom: 28, position: "relative" }}>
         <div
           style={{
             position: "relative",
@@ -695,10 +701,13 @@ export default function FindDetailPage() {
         >
           {post.image_url ? (
             // Session 61: photo is now a button → opens PhotoLightbox for
-            // pinch-zoom + full-screen view. Border/shadow/radius live on the
-            // button wrapper so the visual is identical to the prior <img>.
-            <button
+            // pinch-zoom + full-screen view. Session 78 (Track D phase 5):
+            // wrapped as <motion.button layoutId> so the photograph morphs
+            // from a feed/booth/find-map tile via shared-element transition.
+            <motion.button
               type="button"
+              layoutId={`find-${post.id}`}
+              transition={{ duration: MOTION_SHARED_ELEMENT_FORWARD, ease: MOTION_SHARED_ELEMENT_EASE }}
               onClick={() => setLightboxOpen(true)}
               aria-label="View photo full screen"
               style={{
@@ -731,7 +740,7 @@ export default function FindDetailPage() {
                     : TREEHOUSE_LENS_FILTER,
                 }}
               />
-            </button>
+            </motion.button>
           ) : (
             <div
               style={{
@@ -755,8 +764,12 @@ export default function FindDetailPage() {
           )}
 
           {/* v1.2 — owner-viewer swap. Owner: pencil bubble → /find/[id]/edit.
-              Non-owner: save + share bubbles as before. */}
-          <div
+              Non-owner: save + share bubbles as before. D11 crossfade timing —
+              detail bubbles fade in 200→360ms after photo arrives. */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.16, delay: 0.20, ease: EASE }}
             style={{
               position: "absolute",
               top: 12,
@@ -792,11 +805,15 @@ export default function FindDetailPage() {
             <IconBubble onClick={handleShare} ariaLabel="Share" variant="frosted">
               <Send size={17} strokeWidth={1.6} style={{ color: copied ? "#1e4d2b" : v1.inkPrimary }} />
             </IconBubble>
-          </div>
+          </motion.div>
 
-          {/* Post-it: bottom-right, +6deg rotation, push-pin top-center */}
+          {/* Post-it: bottom-right, +6deg rotation, push-pin top-center.
+              D11 crossfade — fades in 200→360ms after photo arrives. */}
           {boothNumber && (
-            <div
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.16, delay: 0.20, ease: EASE }}
               style={{
                 position: "absolute",
                 bottom: -14,
@@ -853,15 +870,16 @@ export default function FindDetailPage() {
               >
                 {boothNumber}
               </div>
-            </div>
+            </motion.div>
           )}
         </div>
-      </motion.div>
+      </div>
 
       {/* Title + price — session 76 Frame B: centered, price 32px twin below
-          (em-dash retired). docs/find-detail-title-center-design.md */}
+          (em-dash retired). docs/find-detail-title-center-design.md
+          Track D phase 5 D12 stagger — title delay 280ms. */}
       <motion.div
-        variants={sectionVariants(0.10)}
+        variants={sectionVariants(0.28)}
         initial="hidden"
         animate="visible"
         style={{ padding: "0 22px", marginBottom: 20, textAlign: "center" }}
@@ -896,10 +914,10 @@ export default function FindDetailPage() {
         )}
       </motion.div>
 
-      {/* Quoted caption (v1.1 19px) */}
+      {/* Quoted caption (v1.1 19px) — Track D phase 5 D12 stagger, delay 340ms. */}
       {post.caption && (
         <motion.div
-          variants={sectionVariants(0.14)}
+          variants={sectionVariants(0.34)}
           initial="hidden"
           animate="visible"
           style={{ padding: "0 30px", marginBottom: 30, textAlign: "center" }}
@@ -944,10 +962,11 @@ export default function FindDetailPage() {
         </motion.div>
       )}
 
-      {/* Divider (v1.1j plain hairline, diamond retired) */}
+      {/* Divider (v1.1j plain hairline, diamond retired) — Track D phase 5
+          D12 stagger, divider + cartographic share delay 400ms. */}
       {(vendorName || boothNumber) && (
         <motion.div
-          variants={sectionVariants(0.16)}
+          variants={sectionVariants(0.40)}
           initial="hidden"
           animate="visible"
           style={{
@@ -962,10 +981,11 @@ export default function FindDetailPage() {
       {/* Cartographic block (session 71 round 2 — fully collapsed) — single
           inkWash card with italic "Find this item at" eyebrow above. XGlyph
           spine retired since cartographic identity no longer earns its place
-          on this page (no other page carries it either). */}
+          on this page (no other page carries it either).
+          Track D phase 5 D12 stagger — cartographic shares 400ms with divider. */}
       {(vendorName || boothNumber) && (
         <motion.div
-          variants={sectionVariants(0.18)}
+          variants={sectionVariants(0.40)}
           initial="hidden"
           animate="visible"
           style={{

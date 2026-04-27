@@ -53,6 +53,8 @@ import {
   MOTION_STAGGER,
   MOTION_STAGGER_MAX,
   MOTION_EMPTY_DURATION,
+  MOTION_SHARED_ELEMENT_EASE,
+  MOTION_SHARED_ELEMENT_BACK,
 } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { flagKey, loadFollowedIds, formatTimeAgo } from "@/lib/utils";
@@ -268,68 +270,98 @@ function MasonryTile({
         onPointerDown={handleTilePointerDown}
         style={{ display: "block", textDecoration: "none" }}
       >
+        {/* Photograph slot — fixed-height layout reservation so the masonry
+            grid stays put when the photograph lifts out via layoutId during
+            forward nav (Track D phase 5, docs/marketplace-transitions-design.md
+            implementation note 3). The motion.div carries the visible
+            photograph chrome; siblings (heart, tap-flash) overlay the slot. */}
         <div
           style={{
             position: "relative",
             width: "100%",
             height: imgHeight ?? fallbackH,
-            borderRadius: v1.imageRadius,
-            overflow: "hidden",
-            background: v1.postit,
-            border: highlighted
-              ? `1.5px solid ${v1.green}`
-              : `1px solid ${v1.inkHairline}`,
-            boxShadow: highlighted
-              ? `0 0 0 3px rgba(30,77,43,0.13), 0 4px 14px rgba(42,26,10,0.11)`
-              : "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
             transform: tapped ? "scale(1.028)" : "scale(1)",
             transition: tapped
-              ? "transform 0.14s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.30s ease, border-color 0.60s ease"
-              : "transform 0.32s cubic-bezier(0.22,1,0.36,1), box-shadow 0.30s ease, border-color 0.60s ease",
+              ? "transform 0.14s cubic-bezier(0.34,1.56,0.64,1)"
+              : "transform 0.32s cubic-bezier(0.22,1,0.36,1)",
           }}
         >
-          {hasImg ? (
-            <img
-              src={post.image_url!}
-              alt={post.title}
-              onLoad={handleLoad}
-              onError={() => setImgErr(true)}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                display: "block",
-                filter:       TREEHOUSE_LENS_FILTER,
-                WebkitFilter: TREEHOUSE_LENS_FILTER,
-              }}
-            />
-          ) : (
-            // Fallback — paper card with italic title (only appears when the
-            // image failed to load). The feed tile's contract is photograph-only,
-            // but no-image is still a rare possibility so we degrade quietly.
+          <motion.div
+            layoutId={`find-${post.id}`}
+            transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: v1.imageRadius,
+              overflow: "hidden",
+              background: v1.postit,
+              border: highlighted
+                ? `1.5px solid ${v1.green}`
+                : `1px solid ${v1.inkHairline}`,
+              boxShadow: highlighted
+                ? `0 0 0 3px rgba(30,77,43,0.13), 0 4px 14px rgba(42,26,10,0.11)`
+                : "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
+              transition: "box-shadow 0.30s ease, border-color 0.60s ease",
+            }}
+          >
+            {hasImg ? (
+              <img
+                src={post.image_url!}
+                alt={post.title}
+                onLoad={handleLoad}
+                onError={() => setImgErr(true)}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                  filter:       TREEHOUSE_LENS_FILTER,
+                  WebkitFilter: TREEHOUSE_LENS_FILTER,
+                }}
+              />
+            ) : (
+              // Fallback — paper card with italic title (only appears when the
+              // image failed to load). The feed tile's contract is photograph-only,
+              // but no-image is still a rare possibility so we degrade quietly.
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  padding: "14px 12px",
+                  display: "flex",
+                  alignItems: "flex-end",
+                  fontFamily: FONT_IM_FELL,
+                  fontStyle: "italic",
+                  fontSize: 14,
+                  color: v1.inkMuted,
+                  lineHeight: 1.35,
+                }}
+              >
+                {post.title}
+              </div>
+            )}
+
+            {/* Tap flash overlay — subtle green wash on touch for tactile
+                feedback, matches the v0.2 spring-tap feel. Lives inside the
+                motion.div so its rounded clipping matches the photograph. */}
             <div
               style={{
-                width: "100%",
-                height: "100%",
-                padding: "14px 12px",
-                display: "flex",
-                alignItems: "flex-end",
-                fontFamily: FONT_IM_FELL,
-                fontStyle: "italic",
-                fontSize: 14,
-                color: v1.inkMuted,
-                lineHeight: 1.35,
+                position: "absolute",
+                inset: 0,
+                background: "rgba(30,77,43,0.08)",
+                opacity: tapped ? 1 : 0,
+                transition: tapped ? "opacity 0.08s ease" : "opacity 0.28s ease",
+                pointerEvents: "none",
               }}
-            >
-              {post.title}
-            </div>
-          )}
+            />
+          </motion.div>
 
           {/* Frosted paperCream save flag top-right — always visible, state-
               independent bg, green-filled flag when saved. Session 61:
               heart → flag per save-glyph-v1.html Variant B. The flag-on-pole
               reads as a physical-place marker (booth, vendor location) rather
-              than a commerce-style favorite. */}
+              than a commerce-style favorite. Sibling of the motion.div so it
+              stays in the layout slot during a layoutId flight. */}
           <button
             onClick={handleHeartClick}
             aria-label={isFollowed ? "Remove flag" : "Flag"}
@@ -362,19 +394,6 @@ function MasonryTile({
               }}
             />
           </button>
-
-          {/* Tap flash overlay — subtle green wash on touch for tactile
-              feedback, matches the v0.2 spring-tap feel. */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "rgba(30,77,43,0.08)",
-              opacity: tapped ? 1 : 0,
-              transition: tapped ? "opacity 0.08s ease" : "opacity 0.28s ease",
-              pointerEvents: "none",
-            }}
-          />
         </div>
 
         {/* Relative timestamp — Variant D from feed-timestamp-v1.html mockup,
