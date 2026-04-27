@@ -54,6 +54,8 @@ import {
   MOTION_STAGGER,
   MOTION_STAGGER_MAX,
   MOTION_EMPTY_DURATION,
+  MOTION_SHARED_ELEMENT_EASE,
+  MOTION_SHARED_ELEMENT_BACK,
 } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
@@ -182,6 +184,10 @@ function FindTile({
           boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
         }}
       >
+        {/* Track D phase 5 — photograph wrapped in <motion.div layoutId>
+            sharing the `find-${id}` key with the feed tile and /find/[id]
+            hero. The image lifts out of this fixed-aspect slot during the
+            forward flight; the unsave bubble stays as a sibling. */}
         <div
           style={{
             position: "relative",
@@ -190,38 +196,44 @@ function FindTile({
             background: v1.postit,
           }}
         >
-          {hasImg ? (
-            <img
-              src={post.image_url!}
-              alt={post.title}
-              loading="lazy"
-              onError={() => setImgErr(true)}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                display: "block",
-                filter:       TREEHOUSE_LENS_FILTER,
-                WebkitFilter: TREEHOUSE_LENS_FILTER,
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontFamily: FONT_IM_FELL,
-                fontStyle: "italic",
-                fontSize: 13,
-                color: v1.inkFaint,
-              }}
-            >
-              no photograph
-            </div>
-          )}
+          <motion.div
+            layoutId={`find-${post.id}`}
+            transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
+            style={{ position: "absolute", inset: 0, overflow: "hidden" }}
+          >
+            {hasImg ? (
+              <img
+                src={post.image_url!}
+                alt={post.title}
+                loading="lazy"
+                onError={() => setImgErr(true)}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                  filter:       TREEHOUSE_LENS_FILTER,
+                  WebkitFilter: TREEHOUSE_LENS_FILTER,
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: FONT_IM_FELL,
+                  fontStyle: "italic",
+                  fontSize: 13,
+                  color: v1.inkFaint,
+                }}
+              >
+                no photograph
+              </div>
+            )}
+          </motion.div>
 
           <button
             onClick={handleUnsave}
