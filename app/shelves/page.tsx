@@ -27,7 +27,7 @@ import { Pencil, Trash2, X, Loader as LoaderIcon, AlertTriangle, Bookmark } from
 import { getAllVendors, getAllMalls } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_IM_FELL, FONT_SYS, FONT_NUMERAL } from "@/lib/tokens";
 import { vendorHueBg, loadBookmarkCount, loadBookmarkedBoothIds, boothBookmarkKey } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { track } from "@/lib/clientEvents";
@@ -210,7 +210,7 @@ function VendorCard({
                 <div style={{ fontFamily: FONT_SYS, fontSize: 9, fontWeight: 700, color: v1.inkMuted, letterSpacing: "0.12em", textTransform: "uppercase", lineHeight: 1, marginBottom: 3 }}>
                   Booth
                 </div>
-                <div style={{ fontFamily: FONT_IM_FELL, fontSize: 20, color: v1.inkPrimary, lineHeight: 1, letterSpacing: "-0.01em" }}>
+                <div style={{ fontFamily: FONT_NUMERAL, fontSize: 20, fontWeight: 500, color: v1.inkPrimary, lineHeight: 1, letterSpacing: "-0.01em" }}>
                   {vendor.booth_number}
                 </div>
               </div>

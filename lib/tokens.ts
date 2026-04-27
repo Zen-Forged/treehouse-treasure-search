@@ -144,18 +144,21 @@ export const v1 = {
 export const fonts = {
   imFell: 'var(--font-im-fell), "IM Fell English", Georgia, serif',
   sys:    '-apple-system, "Segoe UI", Roboto, system-ui, sans-serif',
-  // v1.1l — post-it 36px booth numeral exception. Narrow reversal of v1.1j's
-  // FONT_SYS swap: at hero post-it scale, system-ui reads as system chrome on
-  // a material gesture. Times New Roman is broadly available, ships with a
-  // clearly disambiguated `1` (solving v1.1j's original 1-vs-I concern), and
-  // doesn't require an extra Google Fonts load. ONLY applies to the 36px
-  // numeral on the booth post-it (Find Detail + Booth banner). Inline pills
-  // on vendor rows stay on FONT_SYS.
-  postitNumeral: '"Times New Roman", Times, serif',
+  // Session 75 — booth-numeral font. Times New Roman across every booth-
+  // numeral and count-chip surface: post-it 36px, Variant B booth lockup
+  // (Booths grid, find detail, /flagged), and MallScopeHeader 22px count
+  // prefix. Disambiguated `1` (vs IM Fell's serifed `1` that read as `I`
+  // on mixed booth IDs like D19). No webfont load — TNR ships with iOS,
+  // macOS, and Windows. Originally introduced in v1.1l as `postitNumeral`
+  // and scoped only to the 36px post-it; the narrow naming kept the fix
+  // from extending to other numerals. Renamed `numeral` in session 75 to
+  // make the broader rule self-evident: letters → IM Fell or sans;
+  // numbers → FONT_NUMERAL. See docs/booth-numeral-font-design.md.
+  numeral: '"Times New Roman", Times, serif',
 } as const;
 
 // Convenience named exports (matches what Find Detail / Find Map / Booth
 // previously declared as local `FONT_IM_FELL` / `FONT_SYS` constants).
-export const FONT_IM_FELL        = fonts.imFell;
-export const FONT_SYS            = fonts.sys;
-export const FONT_POSTIT_NUMERAL = fonts.postitNumeral;
+export const FONT_IM_FELL = fonts.imFell;
+export const FONT_SYS     = fonts.sys;
+export const FONT_NUMERAL = fonts.numeral;

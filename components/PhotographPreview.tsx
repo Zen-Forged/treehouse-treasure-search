@@ -35,7 +35,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { v1, FONT_IM_FELL, FONT_POSTIT_NUMERAL } from "@/lib/tokens";
+import { v1, FONT_IM_FELL, FONT_NUMERAL } from "@/lib/tokens";
 import { boothNumeralSize } from "@/lib/utils";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 
@@ -182,7 +182,7 @@ export default function PhotographPreview({
             </div>
             <div
               style={{
-                fontFamily: FONT_POSTIT_NUMERAL,
+                fontFamily: FONT_NUMERAL,
                 fontSize: boothNumeralSize(boothNumber),
                 fontWeight: 500,
                 color: v1.inkPrimary,

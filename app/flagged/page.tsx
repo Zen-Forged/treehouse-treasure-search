@@ -44,7 +44,7 @@ import FlagGlyph from "@/components/FlagGlyph";
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
 import { BOOKMARK_PREFIX, loadBookmarkCount } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_IM_FELL, FONT_SYS, FONT_NUMERAL } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
@@ -353,8 +353,9 @@ function BoothSection({
             </div>
             <div
               style={{
-                fontFamily: FONT_IM_FELL,
+                fontFamily: FONT_NUMERAL,
                 fontSize: 26,
+                fontWeight: 500,
                 color: v1.inkPrimary,
                 lineHeight: 1,
                 letterSpacing: "-0.01em",

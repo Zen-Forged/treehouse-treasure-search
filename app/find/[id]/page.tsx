@@ -72,7 +72,7 @@ import { getPost, getVendorPosts } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
 import { getCachedUserId, getSession, isAdmin, onAuthChange } from "@/lib/auth";
-import { v1, FONT_IM_FELL, FONT_SYS, FONT_POSTIT_NUMERAL } from "@/lib/tokens";
+import { v1, FONT_IM_FELL, FONT_SYS, FONT_NUMERAL } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { flagKey, mapsUrl, boothNumeralSize, loadFollowedIds } from "@/lib/utils";
 import { track } from "@/lib/clientEvents";
@@ -857,7 +857,7 @@ export default function FindDetailPage() {
               </div>
               <div
                 style={{
-                  fontFamily: FONT_POSTIT_NUMERAL,
+                  fontFamily: FONT_NUMERAL,
                   fontSize: boothNumeralSize(boothNumber),
                   fontWeight: 500,
                   color: v1.inkPrimary,
@@ -1096,8 +1096,9 @@ export default function FindDetailPage() {
                         </div>
                         <div
                           style={{
-                            fontFamily: FONT_IM_FELL,
+                            fontFamily: FONT_NUMERAL,
                             fontSize: 26,
+                            fontWeight: 500,
                             color: v1.inkPrimary,
                             lineHeight: 1,
                             letterSpacing: "-0.01em",
