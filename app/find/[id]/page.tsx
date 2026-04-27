@@ -590,6 +590,10 @@ export default function FindDetailPage() {
     ? mapsUrl(`${post.mall.name} ${post.mall.city} ${post.mall.state}`)
     : null;
 
+  // Session 76 — masthead must render in every branch so back-nav from
+  // /shelf/[slug] never strands the user without a way back. With
+  // force-dynamic, every back-nav momentarily re-enters loading: true; if
+  // the masthead isn't in this branch the user perceives it disappearing.
   if (loading) {
     return (
       <div
@@ -599,12 +603,27 @@ export default function FindDetailPage() {
           maxWidth: 430,
           margin: "0 auto",
           display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          flexDirection: "column",
         }}
       >
-        <div style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", color: v1.inkMuted, fontSize: 15 }}>
-          Loading…
+        <StickyMasthead
+          left={
+            <IconBubble onClick={() => router.back()} ariaLabel="Go back">
+              <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+            </IconBubble>
+          }
+        />
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", color: v1.inkMuted, fontSize: 15 }}>
+            Loading…
+          </div>
         </div>
       </div>
     );
@@ -620,33 +639,48 @@ export default function FindDetailPage() {
           margin: "0 auto",
           display: "flex",
           flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 18,
-          padding: 24,
         }}
       >
-        <div style={{ fontFamily: FONT_IM_FELL, fontSize: 24, color: v1.inkPrimary, textAlign: "center" }}>
-          This find has moved on.
-        </div>
-        <button
-          onClick={() => router.push("/")}
+        <StickyMasthead
+          left={
+            <IconBubble onClick={() => router.back()} ariaLabel="Go back">
+              <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+            </IconBubble>
+          }
+        />
+        <div
           style={{
-            fontFamily: FONT_SYS,
-            fontWeight: 500,
-            fontSize: 15,
-            color: v1.inkMuted,
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            textDecoration: "underline",
-            textDecorationStyle: "dotted",
-            textDecorationColor: v1.inkFaint,
-            textUnderlineOffset: 4,
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 18,
+            padding: 24,
           }}
         >
-          Browse the feed
-        </button>
+          <div style={{ fontFamily: FONT_IM_FELL, fontSize: 24, color: v1.inkPrimary, textAlign: "center" }}>
+            This find has moved on.
+          </div>
+          <button
+            onClick={() => router.push("/")}
+            style={{
+              fontFamily: FONT_SYS,
+              fontWeight: 500,
+              fontSize: 15,
+              color: v1.inkMuted,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              textDecoration: "underline",
+              textDecorationStyle: "dotted",
+              textDecorationColor: v1.inkFaint,
+              textUnderlineOffset: 4,
+            }}
+          >
+            Browse the feed
+          </button>
+        </div>
       </div>
     );
   }
@@ -847,7 +881,7 @@ export default function FindDetailPage() {
                   fontFamily: FONT_IM_FELL,
                   fontStyle: "italic",
                   fontSize: 14,
-                  color: v1.inkMuted,
+                  color: v1.green,
                   lineHeight: 1.1,
                   marginBottom: 6,
                   textAlign: "center",
@@ -1085,7 +1119,7 @@ export default function FindDetailPage() {
                             fontFamily: FONT_SYS,
                             fontSize: 9,
                             fontWeight: 700,
-                            color: v1.inkMuted,
+                            color: v1.green,
                             letterSpacing: "0.12em",
                             textTransform: "uppercase",
                             lineHeight: 1,
