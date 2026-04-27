@@ -1,25 +1,26 @@
 // components/BottomNav.tsx
 // Fixed bottom navigation.
 //
-// Tab layout (session 67 — Booths opened to all users):
+// Tab layout (session 72 — admin gets dedicated tab):
 //   Guest:        Home · Booths · Find Map              (3 tabs)
 //   Vendor:       Home · Booths · Find Map · My Booth   (4 tabs)
-//   Admin:        Home · Booths · Find Map · My Booth   (4 tabs — same as vendor;
-//                  admin entry is the masthead pill on /shelves, not a nav tab)
+//   Admin:        Home · Booths · Find Map · Admin      (4 tabs — Admin tab
+//                  replaces My Booth, since admins have no booth assigned;
+//                  retires the masthead Admin pill on /shelves.)
 //
 // Booths is browsing/discovery — sits next to Home. Find Map is personal-saves
-// territory and reads better near My Booth.
+// territory and reads better near My Booth / Admin.
 
 "use client";
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, Store, LayoutGrid } from "lucide-react";
+import { Home, Store, LayoutGrid, Shield } from "lucide-react";
 import FlagGlyph from "./FlagGlyph";
-import { getSession } from "@/lib/auth";
+import { getSession, isAdmin } from "@/lib/auth";
 import type { User } from "@supabase/supabase-js";
 
-export type NavTab = "home" | "shelves" | "flagged" | "my-shelf" | null;
+export type NavTab = "home" | "shelves" | "flagged" | "my-shelf" | "admin" | null;
 
 interface BottomNavProps {
   active?: NavTab;
@@ -72,14 +73,21 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     key: "my-shelf", label: "My Booth", href: "/my-shelf",
     icon: <Store size={21} strokeWidth={1.7} />,
   };
+  const adminTab: TabDef = {
+    key: "admin", label: "Admin", href: "/admin",
+    icon: <Shield size={21} strokeWidth={1.7} />,
+  };
 
-  // Session 67 — Booths visible to all. Admin and vendor share the same
-  // 4-tab layout; admin entry is the masthead pill on /shelves, not a nav tab.
-  // Guest: Home · Booths · Find Map
-  // Vendor / Admin: Home · Booths · Find Map · My Booth
+  // Session 72 — admins get a dedicated Admin tab in the 4th slot in place of
+  // My Booth (admins have no booth assigned). Retires the masthead Admin pill
+  // on /shelves.
+  // Guest:  Home · Booths · Find Map
+  // Vendor: Home · Booths · Find Map · My Booth
+  // Admin:  Home · Booths · Find Map · Admin
+  const fourthTab = user && isAdmin(user) ? adminTab : myBoothTab;
   const tabs: TabDef[] = !user
     ? [homeTab, boothsTab, findsTab]
-    : [homeTab, boothsTab, findsTab, myBoothTab];
+    : [homeTab, boothsTab, findsTab, fourthTab];
 
   const navStyle: React.CSSProperties = {
     position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",

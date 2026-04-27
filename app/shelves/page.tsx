@@ -206,11 +206,9 @@ function VendorCard({
               </div>
             )}
           </div>
-          <AdminOnly user={user}>
-            <div style={{ fontSize: 9, color: v1.green, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1.4px", marginTop: 5 }}>
-              Manage
-            </div>
-          </AdminOnly>
+          {/* Session 72 — "Manage" eyebrow retired. Pencil + Trash bubbles
+              top-right of the tile already signal the admin's edit/delete
+              affordance; the green eyebrow was redundant and noisy. */}
         </div>
       </div>
     </motion.div>
@@ -467,16 +465,9 @@ export default function BoothsPage() {
   return (
     <div style={{ minHeight: "100vh", background: v1.paperCream, maxWidth: 430, margin: "0 auto", position: "relative" }}>
 
-      <StickyMasthead
-        right={
-          <AdminOnly user={user}>
-            <Link href="/admin"
-              style={{ fontSize: 9, fontWeight: 700, color: v1.green, textTransform: "uppercase", letterSpacing: "1.6px", padding: "4px 9px", borderRadius: 8, background: "rgba(30,77,43,0.08)", border: "1px solid rgba(30,77,43,0.22)", textDecoration: "none" }}>
-              Admin
-            </Link>
-          </AdminOnly>
-        }
-      />
+      {/* Session 72 — admin entry retired from masthead; admin now reaches
+          /admin via the dedicated Admin tab in BottomNav. */}
+      <StickyMasthead />
 
       {/* Mall scope header — eyebrow + tappable mall name + chevron + italic
           count line. Single source of truth for "what mall am I looking at?"
