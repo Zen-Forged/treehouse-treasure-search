@@ -894,7 +894,7 @@ export default function FindDetailPage() {
                   fontFamily: FONT_NUMERAL,
                   fontSize: boothNumeralSize(boothNumber),
                   fontWeight: 500,
-                  color: v1.inkPrimary,
+                  color: v1.green,
                   letterSpacing: "-0.01em",
                   lineHeight: 1,
                 }}
@@ -906,12 +906,13 @@ export default function FindDetailPage() {
         </div>
       </motion.div>
 
-      {/* Title + price (v1.1 32px) */}
+      {/* Title + price — session 76 Frame B: centered, price 32px twin below
+          (em-dash retired). docs/find-detail-title-center-design.md */}
       <motion.div
         variants={sectionVariants(0.10)}
         initial="hidden"
         animate="visible"
-        style={{ padding: "0 22px", marginBottom: 20 }}
+        style={{ padding: "0 22px", marginBottom: 20, textAlign: "center" }}
       >
         <h1
           style={{
@@ -925,13 +926,22 @@ export default function FindDetailPage() {
           }}
         >
           {post.title}
-          {typeof price === "number" && price > 0 && (
-            <>
-              {" "}
-              <span style={{ color: v1.priceInk }}>— ${Math.round(price)}</span>
-            </>
-          )}
         </h1>
+        {typeof price === "number" && price > 0 && (
+          <div
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontSize: 32,
+              fontWeight: 400,
+              color: v1.priceInk,
+              lineHeight: 1.18,
+              letterSpacing: "-0.005em",
+              marginTop: 2,
+            }}
+          >
+            ${Math.round(price)}
+          </div>
+        )}
       </motion.div>
 
       {/* Quoted caption (v1.1 19px) */}
@@ -1133,7 +1143,7 @@ export default function FindDetailPage() {
                             fontFamily: FONT_NUMERAL,
                             fontSize: 26,
                             fontWeight: 500,
-                            color: v1.inkPrimary,
+                            color: v1.green,
                             lineHeight: 1,
                             letterSpacing: "-0.01em",
                           }}

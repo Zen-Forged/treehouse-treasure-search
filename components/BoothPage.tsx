@@ -288,7 +288,7 @@ export function BoothHero({
                 fontFamily: FONT_NUMERAL,
                 fontSize: boothNumeralSize(boothNumber),
                 fontWeight: 500,
-                color: v1.inkPrimary,
+                color: v1.green,
                 letterSpacing: "-0.01em",
                 lineHeight: 1,
               }}

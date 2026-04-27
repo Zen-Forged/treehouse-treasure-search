@@ -356,7 +356,7 @@ function BoothSection({
                 fontFamily: FONT_NUMERAL,
                 fontSize: 26,
                 fontWeight: 500,
-                color: v1.inkPrimary,
+                color: v1.green,
                 lineHeight: 1,
                 letterSpacing: "-0.01em",
               }}
