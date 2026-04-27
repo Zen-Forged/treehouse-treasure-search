@@ -69,6 +69,9 @@ function truncate(obj: unknown, max = 120): string {
     "page_viewed", "post_saved", "post_unsaved", "filter_applied",
     "share_sent", "vendor_request_submitted", "vendor_request_approved",
     "mall_activated", "mall_deactivated",
+    // R3 v1.1 amendment (session 73) — see migration 012.
+    "booth_bookmarked", "booth_unbookmarked", "find_shared",
+    "tag_extracted", "tag_skipped",
   ];
   for (const t of types) {
     const r = await svc.from("events").select("id", { count: "exact" }).eq("event_type", t).limit(1);
