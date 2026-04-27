@@ -10,6 +10,7 @@ import {
   useCallback,
   ReactNode,
 } from "react";
+import { MotionConfig } from "framer-motion";
 import { IntentChip } from "@/types/find";
 import { Comp, ItemAttributes } from "@/types";
 
@@ -117,7 +118,7 @@ export function FindSessionProvider({ children }: { children: ReactNode }) {
 
   return (
     <FindSessionContext.Provider value={{ session, startSession, updateSession, clearSession }}>
-      {children}
+      <MotionConfig reducedMotion="user">{children}</MotionConfig>
     </FindSessionContext.Provider>
   );
 }

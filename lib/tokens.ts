@@ -172,3 +172,14 @@ export const MOTION_CARD_DURATION  = 0.32;
 export const MOTION_STAGGER        = 0.04;
 export const MOTION_STAGGER_MAX    = 0.30;
 export const MOTION_EMPTY_DURATION = 0.34;
+
+// Marketplace shared-element transitions — Track D phase 5 (session 78).
+// docs/marketplace-transitions-design.md D7 + D8. Used on the
+// <motion.div layoutId> rect on each thumbnail tile + matching detail
+// hero across the three rollout surfaces (feed → /find/[id], /shelves →
+// /shelf/[slug], /flagged → /find/[id]). Forward duration on the
+// destination motion node, back duration on the source tile node — the
+// destination's transition wins on each direction.
+export const MOTION_SHARED_ELEMENT_EASE     = [0.32, 0.72, 0, 1] as const;
+export const MOTION_SHARED_ELEMENT_FORWARD  = 0.34;
+export const MOTION_SHARED_ELEMENT_BACK     = 0.30;
