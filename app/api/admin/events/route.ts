@@ -42,11 +42,16 @@ const ALLOWED_FILTERS = [
   "saves",
   "views",
   "shares",
+  // R3 v1.1 UI buckets — chip aliases for grouped event types.
+  "bookmarks",
+  "tag_flow",
 ] as const;
 
-const SAVES_TYPES  = ["post_saved", "post_unsaved"] as const;
-const VIEWS_TYPES  = ["page_viewed"] as const;
-const SHARES_TYPES = ["share_sent"] as const;
+const SAVES_TYPES     = ["post_saved", "post_unsaved"] as const;
+const VIEWS_TYPES     = ["page_viewed"] as const;
+const SHARES_TYPES    = ["share_sent"] as const;
+const BOOKMARKS_TYPES = ["booth_bookmarked", "booth_unbookmarked"] as const;
+const TAG_FLOW_TYPES  = ["tag_extracted", "tag_skipped"] as const;
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT     = 200;
@@ -77,10 +82,12 @@ export async function GET(req: Request) {
         { status: 400 },
       );
     }
-    if (filterRaw === "saves")       typeIn = [...SAVES_TYPES];
-    else if (filterRaw === "views")  typeIn = [...VIEWS_TYPES];
-    else if (filterRaw === "shares") typeIn = [...SHARES_TYPES];
-    else                             typeIn = [filterRaw];
+    if (filterRaw === "saves")          typeIn = [...SAVES_TYPES];
+    else if (filterRaw === "views")     typeIn = [...VIEWS_TYPES];
+    else if (filterRaw === "shares")    typeIn = [...SHARES_TYPES];
+    else if (filterRaw === "bookmarks") typeIn = [...BOOKMARKS_TYPES];
+    else if (filterRaw === "tag_flow")  typeIn = [...TAG_FLOW_TYPES];
+    else                                typeIn = [filterRaw];
   }
 
   // ── Resolve limit ───────────────────────────────────────────────────────

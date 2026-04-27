@@ -144,6 +144,9 @@ type EventFilter =
   | "saves"
   | "views"
   | "shares"
+  | "bookmarks"      // R3 v1.1 — UI bucket: booth_bookmarked + booth_unbookmarked
+  | "tag_flow"       // R3 v1.1 — UI bucket: tag_extracted + tag_skipped
+  | "find_shared"    // R3 v1.1 — concrete event type
   | "filter_applied"
   | "vendor_request_submitted"
   | "vendor_request_approved"
@@ -1296,17 +1299,29 @@ const EVENT_DOT_COLOR: Record<string, string> = {
   vendor_request_approved:  "#1e4d2b",
   mall_activated:           "#1e4d2b",
   mall_deactivated:         "#8a7b68",
+  // R3 v1.1 — green for positive engagement, draft-gray for inverse,
+  // amber for share / friction signals (matches share_sent convention).
+  booth_bookmarked:         "#1e4d2b",
+  booth_unbookmarked:       "#8a7b68",
+  find_shared:              "#8a5a14",
+  tag_extracted:            "#1e4d2b",
+  tag_skipped:              "#8a5a14",
 };
 
 const FILTER_CHIPS_PRIMARY: { key: EventFilter; label: string }[] = [
-  { key: "all",    label: "All" },
-  { key: "saves",  label: "Saves" },
-  { key: "views",  label: "Views" },
-  { key: "shares", label: "Shares" },
+  { key: "all",       label: "All" },
+  { key: "saves",     label: "Saves" },
+  { key: "views",     label: "Views" },
+  { key: "shares",    label: "Shares" },
+  // R3 v1.1 — booth bookmarks are high-frequency shopper engagement, on
+  // par with saves/views/shares. Surfaced as a primary chip (not overflow).
+  { key: "bookmarks", label: "Bookmarks" },
 ];
 
 const FILTER_CHIPS_OVERFLOW: { key: EventFilter; label: string }[] = [
   { key: "filter_applied",           label: "Filters" },
+  { key: "find_shared",              label: "Find shares" },
+  { key: "tag_flow",                 label: "Tag flow" },
   { key: "vendor_request_submitted", label: "Requests submitted" },
   { key: "vendor_request_approved",  label: "Requests approved" },
   { key: "mall_activated",           label: "Mall activated" },

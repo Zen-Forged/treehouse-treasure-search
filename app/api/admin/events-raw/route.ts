@@ -63,16 +63,20 @@ export async function GET(req: Request) {
   const url       = new URL(req.url);
   const filterRaw = url.searchParams.get("event_type");
 
-  const SAVES_TYPES  = ["post_saved", "post_unsaved"];
-  const VIEWS_TYPES  = ["page_viewed"];
-  const SHARES_TYPES = ["share_sent"];
+  const SAVES_TYPES     = ["post_saved", "post_unsaved"];
+  const VIEWS_TYPES     = ["page_viewed"];
+  const SHARES_TYPES    = ["share_sent"];
+  const BOOKMARKS_TYPES = ["booth_bookmarked", "booth_unbookmarked"];
+  const TAG_FLOW_TYPES  = ["tag_extracted", "tag_skipped"];
 
   let typeIn: string[] | null = null;
   if (filterRaw && filterRaw !== "all") {
-    if (filterRaw === "saves")       typeIn = SAVES_TYPES;
-    else if (filterRaw === "views")  typeIn = VIEWS_TYPES;
-    else if (filterRaw === "shares") typeIn = SHARES_TYPES;
-    else                             typeIn = [filterRaw];
+    if (filterRaw === "saves")          typeIn = SAVES_TYPES;
+    else if (filterRaw === "views")     typeIn = VIEWS_TYPES;
+    else if (filterRaw === "shares")    typeIn = SHARES_TYPES;
+    else if (filterRaw === "bookmarks") typeIn = BOOKMARKS_TYPES;
+    else if (filterRaw === "tag_flow")  typeIn = TAG_FLOW_TYPES;
+    else                                typeIn = [filterRaw];
   }
 
   // PostgREST: GET /rest/v1/events?select=...&order=occurred_at.desc&limit=50
