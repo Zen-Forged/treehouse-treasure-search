@@ -713,7 +713,7 @@ function WindowTile({ post, index }: { post: Post; index: number }) {
               </div>
             )}
           </div>
-          <div style={{ padding: "9px 10px 11px" }}>
+          <div style={{ padding: "9px 10px 11px", minHeight: 76 }}>
             <div
               style={{
                 fontFamily: FONT_IM_FELL,
@@ -863,7 +863,7 @@ function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirs
               </div>
             )}
           </div>
-          <div style={{ padding: "9px 10px 11px" }}>
+          <div style={{ padding: "9px 10px 11px", minHeight: 76 }}>
             <div
               style={{
                 fontFamily: FONT_IM_FELL,

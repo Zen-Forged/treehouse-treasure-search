@@ -183,7 +183,7 @@ function ShelfCard({ post }: { post: Post }) {
             </div>
           )}
         </div>
-        <div style={{ padding: "9px 10px 11px" }}>
+        <div style={{ padding: "9px 10px 11px", minHeight: 56 }}>
           <div
             style={{
               fontFamily: FONT_IM_FELL,

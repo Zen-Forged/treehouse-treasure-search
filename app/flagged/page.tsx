@@ -237,7 +237,7 @@ function FindTile({
           </button>
         </div>
 
-        <div style={{ padding: "9px 10px 11px" }}>
+        <div style={{ padding: "9px 10px 11px", minHeight: 76 }}>
           <div
             style={{
               fontFamily: FONT_IM_FELL,
