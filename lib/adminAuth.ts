@@ -22,6 +22,20 @@ import type { User } from "@supabase/supabase-js";
 /**
  * Build a Supabase client using the service role key.
  * Bypasses RLS — only use in server routes after auth checks.
+ *
+ * ─── Next.js data-cache opt-out (session 73, R3 stale-data fix) ─────────
+ * Pass cache: "no-store" on every underlying fetch via supabase-js's
+ * global.fetch hook. Without this, Next.js's HTTP-level data cache
+ * intercepts every PostgREST request keyed on URL+method+headers, and
+ * since supabase-js sends identical requests, the cache returns the
+ * SAME stale snapshot indefinitely (~25–78 min observed). The route's
+ * `export const dynamic = "force-dynamic"` only disables caching of the
+ * route RESPONSE, not of fetches happening inside the route.
+ *
+ * Diagnosed via /api/admin/events vs /api/admin/events-raw side-by-side:
+ * the raw probe (which set cache: "no-store" explicitly) returned fresh
+ * data while the supabase-js path returned a 78-min-old snapshot at the
+ * same instant. R3 design record §Amendment v1.2 carries the full write-up.
  */
 export function getServiceClient(): SupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -29,6 +43,9 @@ export function getServiceClient(): SupabaseClient | null {
   if (!url || !serviceKey) return null;
   return createClient(url, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
+    global: {
+      fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
+    },
   });
 }
 
