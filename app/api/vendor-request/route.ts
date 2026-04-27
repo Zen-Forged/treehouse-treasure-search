@@ -98,9 +98,13 @@ export async function POST(req: NextRequest) {
       mall_id,
       mall_name,
       proof_image_data_url,
+      owner_acknowledged,
     } = body;
 
     // ── Validation ────────────────────────────────────────────────────────
+    // Session 75 — Mall + Booth number are now hard-required (were optional
+    // through session 74). owner_acknowledged is the new audit gate from
+    // the redesigned /vendor-request checkbox.
     if (!first_name?.trim()) {
       return NextResponse.json({ error: "Please enter your first name." }, { status: 400 });
     }
@@ -113,9 +117,21 @@ export async function POST(req: NextRequest) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
+    if (!mall_id) {
+      return NextResponse.json({ error: "Please select your mall." }, { status: 400 });
+    }
+    if (!booth_number?.trim()) {
+      return NextResponse.json({ error: "Please enter your booth number." }, { status: 400 });
+    }
     if (!proof_image_data_url || typeof proof_image_data_url !== "string") {
       return NextResponse.json(
-        { error: "Please add a photo of your booth so we can make sure it's yours." },
+        { error: "Please add a photo of your booth." },
+        { status: 400 },
+      );
+    }
+    if (owner_acknowledged !== true) {
+      return NextResponse.json(
+        { error: "Please confirm you are the assigned owner of this booth." },
         { status: 400 },
       );
     }
@@ -230,16 +246,17 @@ export async function POST(req: NextRequest) {
     // any downstream reader that still references `name` keeps working
     // through the transition.
     const insertPayload = {
-      name:            trimmedName,   // backwards-compat
-      first_name:      trimmedFirst,
-      last_name:       trimmedLast,
-      email:           trimmedEmail,
-      booth_number:    trimmedBoothNumber,
-      booth_name:      trimmedBooth,
-      mall_id:         normalizedMallId,
-      mall_name:       trimmedMall,
-      proof_image_url: proofImageUrl,
-      status:          "pending",
+      name:               trimmedName,   // backwards-compat
+      first_name:         trimmedFirst,
+      last_name:          trimmedLast,
+      email:              trimmedEmail,
+      booth_number:       trimmedBoothNumber,
+      booth_name:         trimmedBooth,
+      mall_id:            normalizedMallId,
+      mall_name:          trimmedMall,
+      proof_image_url:    proofImageUrl,
+      status:             "pending",
+      owner_acknowledged: true,        // session 75 — gated by client + server
     };
 
     const { error: insertError } = await supabase.from("vendor_requests").insert(insertPayload);

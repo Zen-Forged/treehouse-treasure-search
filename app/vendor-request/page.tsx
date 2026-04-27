@@ -1,26 +1,31 @@
 // app/vendor-request/page.tsx
 // Vendor access request flow (Flow 3 front door).
-// Session 32 (2026-04-20) — v1.2 onboarding refresh.
+// Session 75 (2026-04-27) — Gemba-walk redesign per
+//   docs/booth-request-redesign-design.md (D1-D7).
 //
-// v1.2 changes from v1.1k:
-//  - Name field split into First name + Last name (side-by-side row)
-//  - New optional "Booth name" field with helper copy ("Leave blank to use your name")
-//  - Required booth photo — Model B commitment + verification gesture. Wide
-//    shot of sign / name tag / booth-number anything. Rendered as paper-wash
-//    dropzone that swaps to a 4:3 preview on select with a Replace button.
-//  - Server responses now include { status } — "created" ships to success
-//    screen; "already_pending" and "already_approved" each show their own
-//    in-place warm state (no duplicate insert, no second email).
-//  - "Already pending" state uses a clock glyph + "We already have you"
-//    title + echo of email on file.
-//  - "Already approved" state nudges the vendor to sign in directly and
-//    echoes the email they should use.
+// Session 75 changes from v1.2:
+//  - Title: "Request your digital booth" (was "Put your booth forward.")
+//  - Intro paragraph removed entirely (D5)
+//  - Mall + Booth number now hard-required (red `*` indicator) — were optional
+//  - Mall + Booth # paired side-by-side in a single field-row (saves ~60pt)
+//  - Booth name "(optional)" preserved; "Leave blank to use your name"
+//    helper copy dropped
+//  - Photo dropzone 4:3 → 3:2 aspect (saves ~70pt)
+//  - Photo dropzone copy moved IM Fell → FONT_SYS for higher contrast on
+//    paper-wash. Title: "Take a photo of your booth" (sans 14px 600).
+//    Helper: "This will be the main image on your digital booth." (sans
+//    12px ink-mid). The "confirm it's really yours" framing removed —
+//    that role moves to the new owner-ack checkbox.
+//  - New checkbox card above the CTA: "By submitting this request you are
+//    confirming that you are the assigned owner of this booth." Gates submit.
+//  - Server payload includes `owner_acknowledged: true`. Captured server-side
+//    as a new column on vendor_requests via migration 013.
 //
-// Preserved from v1.1k:
-//  - Mode C chrome (back arrow paper bubble)
-//  - v1 palette + IM Fell for editorial voice in-form (Sprint 5 typography
-//    reassessment will revisit IM Fell usage in form labels)
-//  - Filled green CTA only on the commit action
+// v1.2 carry-forwards (unchanged):
+//  - First name + Last name split, side-by-side
+//  - Three DoneScreen variants (created / already_pending / already_approved)
+//  - Mode C chrome (back-arrow paper bubble)
+//  - Filled green CTA on commit
 //  - Email echo line primitive on success screen
 //
 // MallSheet migration to the "Your mall" field still deferred to Sprint 5
@@ -98,6 +103,15 @@ const optionalStyle: React.CSSProperties = {
   marginLeft: 3,
 };
 
+// Session 75 — required-field indicator. Small red `*` after the field name.
+// Reset font-style because the parent label is italic IM Fell; we want the
+// asterisk to read as a clean glyph, not a tilted serif star.
+const requiredStyle: React.CSSProperties = {
+  fontStyle: "normal",
+  color: v1.red,
+  marginLeft: 2,
+};
+
 // ─── Helper — read a File as a data URL via FileReader ──────────────────────
 function readFileAsDataURL(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -136,6 +150,9 @@ function VendorRequestInner() {
   const [proofDataUrl, setProofDataUrl] = useState<string | null>(null);
   const [proofBusy,    setProofBusy]    = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Session 75 — owner-acknowledgement checkbox state. Required to submit.
+  const [ownerAck, setOwnerAck] = useState(false);
 
   // UI state
   const [busy,  setBusy]  = useState(false);
@@ -194,8 +211,14 @@ function VendorRequestInner() {
       setError("Please enter a valid email address.");
       return;
     }
+    if (!mallId) { setError("Please select your mall."); return; }
+    if (!booth.trim()) { setError("Please enter your booth number."); return; }
     if (!proofDataUrl) {
       setError("Please add a photo of your booth.");
+      return;
+    }
+    if (!ownerAck) {
+      setError("Please confirm you are the assigned owner of this booth.");
       return;
     }
 
@@ -208,11 +231,12 @@ function VendorRequestInner() {
           first_name:           firstName.trim(),
           last_name:            lastName.trim(),
           email:                email.trim(),
-          booth_number:         booth.trim() || null,
+          booth_number:         booth.trim(),
           booth_name:           boothName.trim() || null,
-          mall_id:              mallId || null,
+          mall_id:              mallId,
           mall_name:            mallName || null,
           proof_image_data_url: proofDataUrl,
+          owner_acknowledged:   true,
         }),
       });
       const json = (await res.json()) as SubmitResult | { error: string };
@@ -291,50 +315,36 @@ function VendorRequestInner() {
           gap: 0,
         }}
       >
-        {/* Intro */}
-        <motion.div
+        {/* Title — session 75 (D6). Tight 22px IM Fell, no subhead. */}
+        <motion.h1
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.32, ease: EASE }}
-          style={{ margin: "16px 0 28px" }}
+          style={{
+            fontFamily: FONT_IM_FELL,
+            fontSize: 22,
+            color: v1.inkPrimary,
+            lineHeight: 1.2,
+            letterSpacing: "-0.005em",
+            margin: "10px 0 18px",
+          }}
         >
-          <h1
-            style={{
-              fontFamily: FONT_IM_FELL,
-              fontSize: 28,
-              color: v1.inkPrimary,
-              lineHeight: 1.2,
-              letterSpacing: "-0.005em",
-              margin: "0 0 12px",
-            }}
-          >
-            Put your booth forward.
-          </h1>
-          <p
-            style={{
-              fontFamily: FONT_IM_FELL,
-              fontStyle: "italic",
-              fontSize: 16,
-              color: v1.inkMuted,
-              lineHeight: 1.65,
-              margin: 0,
-            }}
-          >
-            We&rsquo;re Treehouse Finds &mdash; a quiet place for vintage &amp; antique finds in Kentucky. Share a few details and a photo of your booth, and we&rsquo;ll be in touch when your shelf is ready.
-          </p>
-        </motion.div>
+          Request your digital booth
+        </motion.h1>
 
         {/* Form */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.30, delay: 0.08, ease: EASE }}
-          style={{ display: "flex", flexDirection: "column", gap: 18 }}
+          style={{ display: "flex", flexDirection: "column", gap: 14 }}
         >
           {/* First / Last side-by-side */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
-              <label style={labelStyle}>First name</label>
+              <label style={labelStyle}>
+                First name<span style={requiredStyle}>*</span>
+              </label>
               <input
                 type="text"
                 value={firstName}
@@ -345,7 +355,9 @@ function VendorRequestInner() {
               />
             </div>
             <div>
-              <label style={labelStyle}>Last name</label>
+              <label style={labelStyle}>
+                Last name<span style={requiredStyle}>*</span>
+              </label>
               <input
                 type="text"
                 value={lastName}
@@ -358,7 +370,9 @@ function VendorRequestInner() {
           </div>
 
           <div>
-            <label style={labelStyle}>Email address</label>
+            <label style={labelStyle}>
+              Email address<span style={requiredStyle}>*</span>
+            </label>
             <input
               type="email"
               inputMode="email"
@@ -370,46 +384,49 @@ function VendorRequestInner() {
             />
           </div>
 
-          <div>
-            <label style={labelStyle}>
-              Your mall <span style={optionalStyle}>(optional)</span>
-            </label>
-            <select
-              value={mallId}
-              onChange={e => handleMallChange(e.target.value)}
-              disabled={malls.length === 0}
-              style={{
-                ...selectStyle,
-                color: mallId ? v1.inkPrimary : v1.inkFaint,
-                opacity: malls.length === 0 ? 0.55 : 1,
-                cursor: malls.length === 0 ? "default" : "pointer",
-              }}
-            >
-              <option value="">Select a mall&hellip;</option>
-              {malls.map(m => (
-                <option key={m.id} value={m.id}>{m.name} &mdash; {m.city}, {m.state}</option>
-              ))}
-            </select>
-            {malls.length === 0 && (
-              <p style={helperStyle}>
-                No malls are currently accepting new vendor requests. Check
-                back soon.
-              </p>
-            )}
+          {/* Mall + Booth # side-by-side — both required (session 75 D5). */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <label style={labelStyle}>
+                Mall<span style={requiredStyle}>*</span>
+              </label>
+              <select
+                value={mallId}
+                onChange={e => handleMallChange(e.target.value)}
+                disabled={malls.length === 0}
+                style={{
+                  ...selectStyle,
+                  color: mallId ? v1.inkPrimary : v1.inkFaint,
+                  opacity: malls.length === 0 ? 0.55 : 1,
+                  cursor: malls.length === 0 ? "default" : "pointer",
+                }}
+              >
+                <option value="">Select&hellip;</option>
+                {malls.map(m => (
+                  <option key={m.id} value={m.id}>{m.name} &mdash; {m.city}, {m.state}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>
+                Booth #<span style={requiredStyle}>*</span>
+              </label>
+              <input
+                type="text"
+                value={booth}
+                onChange={e => setBooth(e.target.value)}
+                placeholder="e.g. 369"
+                autoCapitalize="characters"
+                style={inputStyle}
+              />
+            </div>
           </div>
-
-          <div>
-            <label style={labelStyle}>
-              Booth number <span style={optionalStyle}>(optional)</span>
-            </label>
-            <input
-              type="text"
-              value={booth}
-              onChange={e => setBooth(e.target.value)}
-              placeholder="e.g. 369"
-              style={inputStyle}
-            />
-          </div>
+          {malls.length === 0 && (
+            <p style={helperStyle}>
+              No malls are currently accepting new vendor requests. Check
+              back soon.
+            </p>
+          )}
 
           <div>
             <label style={labelStyle}>
@@ -422,12 +439,16 @@ function VendorRequestInner() {
               placeholder="e.g. The Velvet Cabinet"
               style={inputStyle}
             />
-            <p style={helperStyle}>Leave blank to use your name.</p>
           </div>
 
-          {/* Booth photo — Model B */}
+          {/* Booth photo — session 75. 3:2 aspect (was 4:3); copy moved
+              to FONT_SYS at higher contrast per D3 / D5. The "confirm
+              it's really yours" framing is gone — that role lives on
+              the new ownership-acknowledgement checkbox below. */}
           <div>
-            <label style={labelStyle}>A photo of your booth</label>
+            <label style={labelStyle}>
+              Booth photo<span style={requiredStyle}>*</span>
+            </label>
             <input
               ref={fileInputRef}
               type="file"
@@ -440,7 +461,7 @@ function VendorRequestInner() {
                 style={{
                   position: "relative",
                   width: "100%",
-                  aspectRatio: "4/3",
+                  aspectRatio: "3/2",
                   borderRadius: 14,
                   overflow: "hidden",
                   background: "#1a1a18",
@@ -506,7 +527,7 @@ function VendorRequestInner() {
                 disabled={proofBusy}
                 style={{
                   width: "100%",
-                  aspectRatio: "4/3",
+                  aspectRatio: "3/2",
                   border: `1.5px dashed ${v1.inkHairline}`,
                   borderRadius: 14,
                   background: "rgba(255,253,248,0.70)",
@@ -514,40 +535,94 @@ function VendorRequestInner() {
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: 10,
-                  padding: 20,
+                  gap: 8,
+                  padding: 18,
                   textAlign: "center",
                   cursor: proofBusy ? "default" : "pointer",
                   WebkitTapHighlightColor: "transparent",
                 }}
               >
-                <Camera size={34} style={{ color: v1.inkMuted, opacity: 0.75 }} strokeWidth={1.4} />
+                <Camera size={28} style={{ color: v1.inkMuted, opacity: 0.75 }} strokeWidth={1.5} />
                 <div
                   style={{
-                    fontFamily: FONT_IM_FELL,
-                    fontSize: 17,
-                    color: v1.inkMid,
-                    letterSpacing: "-0.005em",
-                    lineHeight: 1.25,
+                    fontFamily: FONT_SYS,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: v1.inkPrimary,
+                    lineHeight: 1.3,
                   }}
                 >
-                  {proofBusy ? "Reading photo\u2026" : "Show us your booth"}
+                  {proofBusy ? "Reading photo\u2026" : "Take a photo of your booth"}
                 </div>
                 <div
                   style={{
-                    fontFamily: FONT_IM_FELL,
-                    fontStyle: "italic",
-                    fontSize: 13,
-                    color: v1.inkFaint,
+                    fontFamily: FONT_SYS,
+                    fontSize: 12,
+                    color: v1.inkMid,
                     lineHeight: 1.5,
-                    maxWidth: 260,
+                    maxWidth: 250,
                   }}
                 >
-                  A wide shot of your sign, name tag, or anything with your booth number visible. Helps us make sure the shelf is really yours.
+                  This will be the main image on your digital booth.
                 </div>
               </button>
             )}
           </div>
+
+          {/* Owner-acknowledgement checkbox card — session 75 (D2).
+              Required to submit. Captured server-side as
+              `owner_acknowledged: true` on the vendor_requests row. */}
+          <button
+            type="button"
+            onClick={() => setOwnerAck(v => !v)}
+            aria-pressed={ownerAck}
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 9,
+              padding: "11px 12px",
+              background: "rgba(255,253,248,0.55)",
+              border: `1px solid ${v1.inkHairline}`,
+              borderRadius: 10,
+              cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+              textAlign: "left",
+              width: "100%",
+              marginTop: 4,
+            }}
+          >
+            <div
+              aria-hidden="true"
+              style={{
+                flexShrink: 0,
+                width: 18,
+                height: 18,
+                borderRadius: 4,
+                background: ownerAck ? v1.green : "rgba(255,253,248,0.9)",
+                border: `1.5px solid ${ownerAck ? v1.green : v1.inkMuted}`,
+                marginTop: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontSize: 12,
+                fontWeight: 700,
+                lineHeight: 1,
+              }}
+            >
+              {ownerAck ? "✓" : ""}
+            </div>
+            <span
+              style={{
+                fontFamily: FONT_SYS,
+                fontSize: 12.5,
+                color: v1.inkMid,
+                lineHeight: 1.45,
+              }}
+            >
+              By submitting this request you are confirming that you are the assigned owner of this booth.
+            </span>
+          </button>
 
           {/* Error banner */}
           <AnimatePresence>
@@ -573,11 +648,12 @@ function VendorRequestInner() {
           </AnimatePresence>
 
           {/* Filled green CTA — commit action.
-              R4c — soft-block when no active malls exist: shopper has
-              nothing selectable, so disable submit (with no error). */}
+              R4c — soft-block when no active malls exist (vendor has
+              nothing selectable). Session 75 — also disabled until the
+              owner-acknowledgement checkbox is checked. */}
           <button
             onClick={handleSubmit}
-            disabled={busy || malls.length === 0}
+            disabled={busy || malls.length === 0 || !ownerAck}
             style={{
               width: "100%",
               padding: "15px",
@@ -586,10 +662,10 @@ function VendorRequestInner() {
               fontSize: 15,
               fontWeight: 500,
               color: "#fff",
-              background: busy || malls.length === 0 ? "rgba(30,77,43,0.40)" : v1.green,
+              background: busy || malls.length === 0 || !ownerAck ? "rgba(30,77,43,0.40)" : v1.green,
               border: "none",
-              cursor: busy || malls.length === 0 ? "default" : "pointer",
-              boxShadow: busy || malls.length === 0 ? "none" : "0 2px 14px rgba(30,77,43,0.22)",
+              cursor: busy || malls.length === 0 || !ownerAck ? "default" : "pointer",
+              boxShadow: busy || malls.length === 0 || !ownerAck ? "none" : "0 2px 14px rgba(30,77,43,0.22)",
               transition: "background 0.18s, box-shadow 0.18s",
               marginTop: 4,
             }}
