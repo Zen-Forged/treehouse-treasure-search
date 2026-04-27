@@ -647,12 +647,15 @@ export default function DiscoveryFeedPage() {
     setMallId(nextMallId);
     setMallSheetOpen(false);
     // R3 — filter_applied event. mall_id of null = "All malls".
+    // R3 v1.1 (session 73) — `page` field added so per-tab adoption is
+    // queryable via `payload->>'page'`. Mirror added to /shelves + /flagged.
     const mallSlug = nextMallId
       ? (malls.find(m => m.id === nextMallId)?.slug ?? null)
       : null;
     track("filter_applied", {
       filter_type:  "mall",
       filter_value: mallSlug ?? "all",
+      page:         "/",
     });
   }
 

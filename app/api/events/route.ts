@@ -31,6 +31,13 @@ const CLIENT_EVENT_TYPES = [
   "post_saved",
   "post_unsaved",
   "filter_applied",
+  // R3 v1.1 amendment (session 73) — booth bookmarks, find share, tag flow.
+  // All five new types fire from client-side handlers (no server hooks).
+  "booth_bookmarked",
+  "booth_unbookmarked",
+  "find_shared",
+  "tag_extracted",
+  "tag_skipped",
 ] as const;
 type ClientEventType = (typeof CLIENT_EVENT_TYPES)[number];
 

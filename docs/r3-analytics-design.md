@@ -415,3 +415,57 @@ The implementation session that follows reads from this frozen spec; it does not
 ---
 
 > Last updated: 2026-04-24 (session 58 — design-to-Ready pass complete. R3 🟢 Ready. All six decisions D1–D6 frozen + terminology locked; implementation session can run as a straight sprint against this spec.)
+
+---
+
+## Amendment v1.1 — instrumentation-gap closure (session 73, 2026-04-27)
+
+**Context.** Five sessions accumulated four deferred instrumentation gaps while waiting for the admin-tab stale-data mystery (still parked) to close: booth bookmarks (session 67), `find_shared` (session 59), tag-extraction (session 62), and per-tab mall-filter attribution (session 68). Session 73 ran `scripts/inspect-events.ts` against prod and confirmed the write path is healthy independent of the read mystery — 1,706 events flowing across all 9 v1 types. The gaps could safely land.
+
+**What v1.1 ships:**
+
+- Migration [`012_events_v11_enum_extension.sql`](../supabase/migrations/012_events_v11_enum_extension.sql) — adds 5 enum values via `ALTER TYPE event_type ADD VALUE IF NOT EXISTS`.
+- `lib/events.ts` `EventType` + `lib/clientEvents.ts` `ClientEventType` + `app/api/events/route.ts` `CLIENT_EVENT_TYPES` extended (all five new types fire from client paths).
+- `app/api/admin/events/route.ts` `ALLOWED_FILTERS` extended.
+- Six callsite wirings (see table below).
+
+**v1.1 event additions:**
+
+| Event | Payload | Callsite | Notes |
+|---|---|---|---|
+| `booth_bookmarked` | `{vendor_slug}` | [`app/shelves/page.tsx`](../app/shelves/page.tsx) `handleToggleBookmark` + [`app/shelf/[slug]/page.tsx`](../app/shelf/[slug]/page.tsx) `handleToggleBoothBookmark` | Closes session-67 carry. |
+| `booth_unbookmarked` | `{vendor_slug}` | same two | symmetric pair. |
+| `find_shared` | `{post_id, share_method: "native" \| "clipboard"}` | [`app/find/[id]/page.tsx`](../app/find/[id]/page.tsx) `handleShare` | Intent-capture semantic — fires on tap, not on share-sheet completion (native `share()` Promise rejects on dismiss with no reliable way to distinguish dismiss from error). Closes session-59 carry. |
+| `tag_extracted` | `{has_price: bool, has_title: bool}` | [`app/post/tag/page.tsx`](../app/post/tag/page.tsx) post-extraction await | Fires whenever the extractor ran, regardless of yield — so `{has_price:false, has_title:false}` is a valid event for "tried, got nothing". Distinct from `tag_skipped`. |
+| `tag_skipped` | `{}` | [`app/post/tag/page.tsx`](../app/post/tag/page.tsx) `handleSkip` | User dismissed before scanning. |
+
+**v1.1 payload-shape extensions (no enum change):**
+
+- `filter_applied` — adds `page` field (`"/"` \| `"/shelves"` \| `"/flagged"`) to enable per-primary-tab adoption queries via `payload->>'page'`. Backfilled to existing Home callsite + new wiring on [`app/shelves/page.tsx`](../app/shelves/page.tsx) `handleMallSelect` + [`app/flagged/page.tsx`](../app/flagged/page.tsx) `handleMallSelect`. Closes session-68 carry.
+
+**Decisions (frozen 2026-04-27 session 73):**
+
+| # | Question | Decision |
+|---|----------|----------|
+| D1 | Tag flow: 3 events as carry-noted, 2 events, or 1 with `outcome` enum? | **2 events** — `tag_extracted` (with `has_price`+`has_title` flags) + `tag_skipped`. Splits along the user action; outcome detail belongs in the payload. |
+| D2 | `find_shared`: capture `share_method`? | **Yes** — `"native" \| "clipboard"` distinguishes mobile-share-sheet from desktop-clipboard-fallback adoption. |
+| D3 | Booth-bookmark payload shape | **`{vendor_slug}`** for both bookmark + unbookmark. `total_bookmarks` is recoverable from session_id over time. |
+| D4 | Mall-filter `filter_applied` payload | **Add `page` field** to all three primary-tab callsites (incl. backfill on Home). Per-tab adoption becomes a `GROUP BY` query, not a JOIN. |
+
+**Out of scope for v1.1** (deliberately deferred):
+
+- **Server-side `find_shared` parity from `/api/share-booth`.** Already covered by the existing `share_sent` server event with richer auth-mode + recipient-count payload. Adding `find_shared` server-side too would double-count.
+- **Tag-extraction error path as a separate event.** Treated as `tag_extracted` with `{has_price:false, has_title:false}`. A separate `tag_extraction_error` was rejected because the user-visible action is the same.
+- **`tag_skipped` reason payload.** Single boolean dismiss path today; if multiple skip reasons emerge later (e.g., camera-denied vs explicit dismiss), the payload extends without a new event type.
+- **Tag-flow analytics that span pages** (e.g., the user skipped the tag screen and then completed the post anyway). Recoverable via `session_id` joins between `tag_skipped` and the eventual save chain. No dedicated funnel-event needed for v1.1.
+
+**Verification path:**
+
+1. 🖐️ HITL — David pastes `012_events_v11_enum_extension.sql` into the prod Supabase SQL editor. (Migration is `ALTER TYPE ADD VALUE IF NOT EXISTS` — idempotent + transactional-safe.)
+2. 🟢 AUTO — Push commit. Vercel deploys.
+3. 🖐️ HITL — David exercises each callsite once on iPhone (bookmark a booth, unbookmark it, share a find, extract a tag, skip a tag, change mall filter on each primary tab).
+4. 🟢 AUTO — Run `npx tsx scripts/inspect-events.ts` to confirm the new types appear with correct payloads.
+
+**Carry that stays parked:**
+
+- **Read-API mystery** (`/api/admin/events` intermittent stale snapshot). v1.1 is independent of it; verification path above uses the inspector script, not the admin tab. Next-viable parked probe (`/api/admin/events-raw` with bare `fetch()`) still warrants only running on a fresh symptom repro per session 60's parking guidance.

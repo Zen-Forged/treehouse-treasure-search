@@ -32,6 +32,12 @@ const ALLOWED_FILTERS = [
   "vendor_request_approved",
   "mall_activated",
   "mall_deactivated",
+  // R3 v1.1 amendment (session 73) — see migration 012.
+  "booth_bookmarked",
+  "booth_unbookmarked",
+  "find_shared",
+  "tag_extracted",
+  "tag_skipped",
   // UI bucket aliases — translated below into multi-type IN queries
   "saves",
   "views",

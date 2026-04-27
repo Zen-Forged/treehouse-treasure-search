@@ -552,6 +552,16 @@ export default function FindMapPage() {
   function handleMallSelect(nextMallId: string | null) {
     setSavedMallId(nextMallId);
     setMallSheetOpen(false);
+    // R3 v1.1 — filter_applied event. Mirrors Home; `page` field distinguishes
+    // adoption per primary tab.
+    const mallSlug = nextMallId
+      ? (malls.find(m => m.id === nextMallId)?.slug ?? null)
+      : null;
+    track("filter_applied", {
+      filter_type:  "mall",
+      filter_value: mallSlug ?? "all",
+      page:         "/flagged",
+    });
   }
 
   // Saves filtered by the cross-tab mall scope. When savedMallId is null the

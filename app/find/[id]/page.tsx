@@ -558,7 +558,13 @@ export default function FindDetailPage() {
 
   async function handleShare() {
     const url = window.location.href;
+    // R3 v1.1 — intent-capture semantic: fire find_shared when the user taps
+    // the share affordance, regardless of whether they complete the OS share
+    // sheet. The native share() Promise rejects on dismiss with no reliable
+    // way to distinguish dismiss from error, so the most truthful signal is
+    // "the user attempted to share." Closes session-59 carry-forward gap.
     if (navigator.share) {
+      track("find_shared", { post_id: id, share_method: "native" });
       try {
         await navigator.share({
           title: post?.title ?? "A Treehouse find",
@@ -567,6 +573,7 @@ export default function FindDetailPage() {
         });
       } catch {}
     } else {
+      track("find_shared", { post_id: id, share_method: "clipboard" });
       await navigator.clipboard.writeText(url).catch(() => {});
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);

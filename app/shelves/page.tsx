@@ -31,6 +31,7 @@ import { authFetch } from "@/lib/authFetch";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
 import { vendorHueBg, loadBookmarkCount, loadBookmarkedBoothIds, boothBookmarkKey } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
+import { track } from "@/lib/clientEvents";
 import AdminOnly from "@/components/AdminOnly";
 import BookmarkBoothBubble from "@/components/BookmarkBoothBubble";
 import BottomNav from "@/components/BottomNav";
@@ -390,15 +391,21 @@ export default function BoothsPage() {
 
   // Toggle a booth bookmark in localStorage and the in-memory set.
   function handleToggleBookmark(vendorId: string) {
+    const vendorSlug = vendors.find(v => v.id === vendorId)?.slug ?? null;
     setBookmarkedIds(prev => {
       const next = new Set(prev);
-      if (next.has(vendorId)) {
+      const wasBookmarked = next.has(vendorId);
+      if (wasBookmarked) {
         next.delete(vendorId);
         try { localStorage.removeItem(boothBookmarkKey(vendorId)); } catch {}
       } else {
         next.add(vendorId);
         try { localStorage.setItem(boothBookmarkKey(vendorId), "1"); } catch {}
       }
+      // R3 v1.1 — emit booth_bookmarked / booth_unbookmarked.
+      track(wasBookmarked ? "booth_unbookmarked" : "booth_bookmarked", {
+        vendor_slug: vendorSlug,
+      });
       return next;
     });
   }
@@ -460,6 +467,16 @@ export default function BoothsPage() {
   function handleMallSelect(nextMallId: string | null) {
     setSavedMallId(nextMallId);
     setMallSheetOpen(false);
+    // R3 v1.1 — filter_applied event. Mirrors Home; `page` field distinguishes
+    // adoption per primary tab.
+    const mallSlug = nextMallId
+      ? (malls.find(m => m.id === nextMallId)?.slug ?? null)
+      : null;
+    track("filter_applied", {
+      filter_type:  "mall",
+      filter_value: mallSlug ?? "all",
+      page:         "/shelves",
+    });
   }
 
   return (

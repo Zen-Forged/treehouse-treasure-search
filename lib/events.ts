@@ -22,7 +22,13 @@ export type EventType =
   | "vendor_request_submitted"
   | "vendor_request_approved"
   | "mall_activated"
-  | "mall_deactivated";
+  | "mall_deactivated"
+  // ── R3 v1.1 amendment (session 73) — see migration 012 ──────────────────
+  | "booth_bookmarked"
+  | "booth_unbookmarked"
+  | "find_shared"
+  | "tag_extracted"
+  | "tag_skipped";
 
 export interface RecordEventOptions {
   user_id?:    string | null;

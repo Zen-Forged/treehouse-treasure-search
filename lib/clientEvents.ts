@@ -17,7 +17,13 @@ export type ClientEventType =
   | "page_viewed"
   | "post_saved"
   | "post_unsaved"
-  | "filter_applied";
+  | "filter_applied"
+  // ── R3 v1.1 amendment (session 73) — see migration 012 ──────────────────
+  | "booth_bookmarked"
+  | "booth_unbookmarked"
+  | "find_shared"
+  | "tag_extracted"
+  | "tag_skipped";
 
 function getSessionId(): string {
   if (typeof window === "undefined") return "";

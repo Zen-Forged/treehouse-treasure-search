@@ -306,6 +306,12 @@ export default function PublicShelfPage() {
       try { localStorage.setItem(key, "1"); } catch {}
       setBoothBookmarked(true);
     }
+    // R3 v1.1 — emit booth_bookmarked / booth_unbookmarked. `boothBookmarked`
+    // here is the PRE-toggle value (state hasn't flushed yet) so the polarity
+    // is the reverse of the local-state branch above.
+    track(boothBookmarked ? "booth_unbookmarked" : "booth_bookmarked", {
+      vendor_slug: vendor.slug,
+    });
   }
 
   // Session 45 — read session for admin gate. Non-blocking: the page

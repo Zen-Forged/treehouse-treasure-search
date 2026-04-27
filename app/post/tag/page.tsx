@@ -41,6 +41,7 @@ import { ArrowLeft, Camera } from "lucide-react";
 import { compressImage } from "@/lib/imageUpload";
 import { postStore, type PostDraft } from "@/lib/postStore";
 import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { track } from "@/lib/clientEvents";
 
 type Stage = "ready" | "extracting";
 
@@ -132,6 +133,9 @@ function PostTagInner() {
       router.replace("/my-shelf");
       return;
     }
+    // R3 v1.1 — emit tag_skipped. No payload (the user-action signal is the
+    // event itself; per-extraction outcome detail belongs on tag_extracted).
+    track("tag_skipped", {});
     postStore.set({
       ...draft,
       extractionRan: "skip",
@@ -178,6 +182,15 @@ function PostTagInner() {
 
     const tagSucceeded     = tagResult.source === "claude";
     const captionSucceeded = captionResult.source === "claude";
+
+    // R3 v1.1 — emit tag_extracted whenever the extraction API ran (regardless
+    // of whether it returned anything useful). has_price + has_title reflect
+    // what the extractor actually surfaced. Distinct from tag_skipped, which
+    // fires when the vendor dismissed before scanning.
+    track("tag_extracted", {
+      has_price: tagSucceeded && tagResult.price !== null && tagResult.price !== undefined,
+      has_title: tagSucceeded && !!tagResult.title,
+    });
 
     const next: PostDraft = {
       imageDataUrl:    draft.imageDataUrl,
