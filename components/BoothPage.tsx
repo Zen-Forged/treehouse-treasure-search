@@ -68,7 +68,14 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Pencil, Loader, ImagePlus } from "lucide-react";
 import { vendorHueBg, mapsUrl, boothNumeralSize } from "@/lib/utils";
-import { v1, FONT_IM_FELL, FONT_SYS, FONT_NUMERAL } from "@/lib/tokens";
+import {
+  v1,
+  FONT_IM_FELL,
+  FONT_SYS,
+  FONT_NUMERAL,
+  MOTION_SHARED_ELEMENT_EASE,
+  MOTION_SHARED_ELEMENT_FORWARD,
+} from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import PhotoLightbox from "@/components/PhotoLightbox";
 import type { Post } from "@/types/treehouse";
@@ -94,6 +101,7 @@ export function BoothHero({
   canEdit,
   heroUploading,
   onHeroImageChange,
+  layoutId,
 }: {
   displayName: string;
   boothNumber: string | null;
@@ -102,6 +110,15 @@ export function BoothHero({
   canEdit: boolean;
   heroUploading?: boolean;
   onHeroImageChange?: (file: File) => void;
+  /**
+   * Track D phase 5 (docs/marketplace-transitions-design.md) — when set,
+   * the photograph container becomes a `<motion.div layoutId>` so the
+   * shared-element transition from /shelves morphs the booth tile into
+   * the hero. Public /shelf/[slug] passes `booth-${vendor.id}`; /my-shelf
+   * and admin /my-shelf views omit the prop (no source surface points at
+   * those routes via this transition).
+   */
+  layoutId?: string;
 }) {
   // Session 75 — tap hero photo to open lightbox (matches /find/[id] pattern).
   // Only mounts when heroImageUrl is present; the vendorHueBg fallback has
@@ -134,8 +151,12 @@ export function BoothHero({
           background: heroImageUrl ? undefined : vendorHueBg(displayName),
         }}
       >
-        {/* Photograph (inner-clipped at banner radius) */}
-        <div
+        {/* Photograph (inner-clipped at banner radius). Track D phase 5 —
+            when `layoutId` is set, this is the shared-element target that
+            morphs from a /shelves tile via framer-motion. */}
+        <motion.div
+          layoutId={layoutId}
+          transition={{ duration: MOTION_SHARED_ELEMENT_FORWARD, ease: MOTION_SHARED_ELEMENT_EASE }}
           style={{
             position: "absolute",
             inset: 0,
@@ -172,7 +193,7 @@ export function BoothHero({
               pointerEvents: "none",
             }}
           />
-        </div>
+        </motion.div>
 
         {/* Tap-to-open lightbox overlay. Sits above the photo container but
             below the edit pencil (z 10) and post-it (z 12) so those keep

@@ -37,6 +37,8 @@ import {
   MOTION_STAGGER,
   MOTION_STAGGER_MAX,
   MOTION_EMPTY_DURATION,
+  MOTION_SHARED_ELEMENT_EASE,
+  MOTION_SHARED_ELEMENT_BACK,
 } from "@/lib/tokens";
 import { vendorHueBg, loadBookmarkCount, loadBookmarkedBoothIds, boothBookmarkKey } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
@@ -151,13 +153,22 @@ function VendorCard({
           WebkitTapHighlightColor: "transparent",
         }}
       >
-        {/* Square hero */}
+        {/* Square hero. Track D phase 5 — wrapped in <motion.div layoutId>
+            so the photograph morphs into the BoothHero on /shelf/[slug].
+            Admin tap routes to /my-shelf?vendor=, which has no matching
+            layoutId target — framer-motion gracefully no-ops the morph. */}
         <div style={{ aspectRatio: "1 / 1", position: "relative", overflow: "hidden" }}>
-          {hasHero
-            ? <img src={heroUrl!} alt="" onError={() => setImgErr(true)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-            : <div style={{ width: "100%", height: "100%", background: vendorHueBg(vendor.display_name) }} />
-          }
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(20,14,6,0.52) 0%, transparent 55%)" }} />
+          <motion.div
+            layoutId={`booth-${vendor.id}`}
+            transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
+            style={{ position: "absolute", inset: 0 }}
+          >
+            {hasHero
+              ? <img src={heroUrl!} alt="" onError={() => setImgErr(true)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              : <div style={{ width: "100%", height: "100%", background: vendorHueBg(vendor.display_name) }} />
+            }
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(20,14,6,0.52) 0%, transparent 55%)" }} />
+          </motion.div>
 
           {/* Session 69 — Booth NN photo-overlay pill retired. The booth number
               now lives as a small-caps eyebrow above the vendor name in the card
