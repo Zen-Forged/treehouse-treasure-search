@@ -705,7 +705,6 @@ function MyBoothInner() {
                 posts={available}
                 vendorId={activeVendor.id}
                 showAddTile={true}
-                showPlaceholders={true}
                 onAddClick={openAddSheet}
               />
             ) : (

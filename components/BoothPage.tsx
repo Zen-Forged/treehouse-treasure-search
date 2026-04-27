@@ -780,10 +780,10 @@ export function WindowView({
         rowGap: 18,
       }}
     >
-      {showAddTile && <AddFindTile vendorId={vendorId} index={0} onAddClick={onAddClick} />}
       {posts.map((post, i) => (
-        <WindowTile key={post.id} post={post} index={showAddTile ? i + 1 : i} />
+        <WindowTile key={post.id} post={post} index={i} />
       ))}
+      {showAddTile && <AddFindTile vendorId={vendorId} index={posts.length} onAddClick={onAddClick} />}
       {Array.from({ length: placeholderCount }).map((_, i) => (
         <PlaceholderTile key={`ph-${i}`} index={usedCells + i} />
       ))}
@@ -1007,15 +1007,15 @@ export function ShelfView({
         WebkitOverflowScrolling: "touch",
       }}
     >
-      {showAddTile && <ShelfAddFindTile vendorId={vendorId} isFirst={true} onAddClick={onAddClick} />}
       {posts.map((post, i) => (
         <ShelfTile
           key={post.id}
           post={post}
           index={i}
-          isFirst={i === 0 && !showAddTile}
+          isFirst={i === 0}
         />
       ))}
+      {showAddTile && <ShelfAddFindTile vendorId={vendorId} isFirst={posts.length === 0} onAddClick={onAddClick} />}
       <div style={{ flexShrink: 0, width: 8 }} aria-hidden="true" />
     </div>
   );

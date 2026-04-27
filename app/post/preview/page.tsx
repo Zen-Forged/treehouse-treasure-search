@@ -77,7 +77,6 @@ import AmberNotice from "@/components/AmberNotice";
 import TagBadge from "@/components/TagBadge";
 import StickyMasthead from "@/components/StickyMasthead";
 
-const FACEBOOK_PAGE_URL = "https://www.facebook.com/KentuckyTreehouse";
 const FEED_SCROLL_KEY   = "treehouse_feed_scroll";
 
 // ── Caption API ──────────────────────────────────────────────────────────────
@@ -534,29 +533,6 @@ function PostPreviewInner() {
           >
             View my shelf
           </button>
-
-          <a
-            href={FACEBOOK_PAGE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "block",
-              width: "100%",
-              padding: "13px",
-              borderRadius: 14,
-              fontFamily: FONT_SYS,
-              fontSize: 13,
-              fontWeight: 500,
-              color: v1.inkMid,
-              background: v1.iconBubble,
-              border: `1px solid ${v1.inkHairline}`,
-              textAlign: "center",
-              textDecoration: "none",
-              boxSizing: "border-box",
-            }}
-          >
-            Visit us on Facebook
-          </a>
 
           <button
             onClick={() => router.push("/my-shelf?openAdd=1")}

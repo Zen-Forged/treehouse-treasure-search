@@ -357,9 +357,9 @@ export default function AddBoothInline({
         <input
           value={boothNumber}
           onChange={e => setBoothNumber(e.target.value)}
-          placeholder="e.g. 369"
+          placeholder="e.g. 369 or D19"
           style={inputStyle}
-          inputMode="numeric"
+          autoCapitalize="characters"
         />
       </div>
 
