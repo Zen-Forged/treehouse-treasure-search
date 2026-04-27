@@ -258,6 +258,66 @@ CURRENT ISSUE: Q-012 — Treehouse opener animation, full Design redesign. Sessi
 
 ---
 
+## Q-014 🟡 Metabase analytics surface + retire admin Events tab
+
+**Status:** Ready to scope. Captures David's session-73 strategic observation: the in-app admin Events tab was never the right shape for "telling the story of usage." Even with the supabase-js cache fix landed (session 73, design record v1.2 amendment), the tab is fundamentally a stream-of-rows view with no aggregations, no charts, no shareable URLs — and every new event type needs filter-chip wiring (we hit that twice in session 73 alone).
+
+The R3 design record §Out of scope explicitly excluded "charts, dashboards, exports" from v1. Q-014 is the natural successor surface: point [Metabase](https://www.metabase.com) at Supabase Postgres directly, build dashboards that don't depend on custom in-app code, retire the admin tab + diag strip + raw probe + the parked-mystery investigation overhead.
+
+### Why Metabase over alternatives
+
+- **Metabase Cloud free tier** OR self-hosted Metabase on Fly/Railway (~$5/mo) → both work. Open source, no vendor lock-in.
+- **Reads Postgres directly** via a read-only role provisioned in Supabase. No new SDK, no migration, no schema duplication. Data ownership stays in our warehouse.
+- **Saved dashboards + shareable URLs** → drop chart links into investor updates directly.
+- **Auto-refresh** → no chip-wiring per new event type.
+
+### Why NOT alternatives considered
+
+- **PostHog / Mixpanel / Amplitude:** would either duplicate R3 or replace it. Adding a second event-capture system is a migration cost; data ownership leaves Postgres.
+- **Supabase dashboard SQL editor:** fine for ad-hoc queries; no saved dashboards / shareable charts / investor-update-friendly views. Acceptable as a third tier (deep-dive when a Metabase chart surfaces a question worth investigating).
+- **Continue investing in admin Events tab:** competes with off-the-shelf tools that are better at this job. Maintenance debt grows linearly with event-type count.
+
+### Three starter dashboards (initial scope)
+
+1. **Vendor adoption** — booth_bookmarked + booth_unbookmarked over time, top vendors by net bookmarks, mall_activated/deactivated lifecycle.
+2. **Find engagement** — post_saved trend, share_sent + find_shared rates, page_viewed by path.
+3. **Tag-flow funnel** — tag_extracted (with has_price + has_title flags) vs tag_skipped, conversion to post_saved on the resulting find.
+
+### Effort + sequencing
+
+**~60–90 min initial session.** Provision read-only Postgres role in Supabase, spin up Metabase (Cloud free tier first attempt), connect, build the 3 starter dashboards. Update R3 design record with v1.3 amendment retiring admin Events tab as the analytics surface.
+
+**Subsequent retirement session (~30 min, post-Metabase).** Strip:
+- Admin Events tab from `app/admin/page.tsx` (5th tab → back to 4)
+- `EventsTab` component + supporting state + filter chip arrays + day-bucket helpers
+- `/api/admin/events` route + `/api/admin/events-raw` route + diag strip wiring
+- The parked-mystery references in CLAUDE.md / r3-analytics-design.md
+
+The supabase-js cache fix in `lib/adminAuth.ts` STAYS — it benefits every other admin route too.
+
+### Why parked (not running this session)
+
+(a) Real content seeding (CURRENT ISSUE recommendation, 15× bumped) is a higher-priority unblocker for V1 beta; Metabase becomes more valuable once there's real data to chart. (b) Metabase setup needs an HTTP-accessible deployment + read-only role provisioning (small ops work) which is cleaner as a focused session than a side-task.
+
+### When to unpark
+
+- Real content seeding lands (next session) → second-priority queue: visualize the seeded data.
+- OR earlier if David starts assembling investor updates and wants charts.
+- OR earlier if any further admin Events tab gap surfaces (e.g., chip wiring for a future event type) that's cheaper to skip-by-retiring.
+
+### Session opener (when picked up)
+
+```
+PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
+STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Sentry · Vercel
+Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
+Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
+
+CURRENT ISSUE: Q-014 — Metabase analytics surface. Provision a read-only Postgres role in prod Supabase, spin up Metabase (Cloud free tier first attempt; fall back to Fly hobby if free tier doesn't fit), connect, build 3 starter dashboards: vendor adoption, find engagement, tag-flow funnel. Read docs/queued-sessions.md §Q-014 for the strategic context + dashboard scope. After Metabase is live with at least the 3 starter dashboards, update R3 design record with v1.3 amendment formally retiring the admin Events tab as the analytics surface. The retirement of admin tab code is queued as a follow-up session — Q-014 is purely the additive Metabase setup; the retirement happens once dashboards prove themselves operationally for ~1 week.
+```
+
+---
+
 ## ⏸️ Q-002 — Picker affordance placement revision — SHIPPED session 57
 
 **Retirement reason:** Shipped session 57 (2026-04-24) exactly per the approved direction. `Masthead` center column reverted to the "Treehouse Finds" brand lockup (session-40 right-slot share airplane preserved). `<BoothTitleBlock>` gained an optional `onPickerOpen` prop that turns the 32px IM Fell booth name into a tap target with an inline `▾` chevron when `/my-shelf` detects `vendorList.length > 1` (i.e. `showPicker`). Public Shelf + single-booth consumers omit the prop; the affordance is invisible in those contexts. Mockup `docs/mockups/my-shelf-multi-booth-v1.html` Frames 2 + 3 updated in the same commit to keep the mockup as the source of truth per the session-28 mockup-wins rule.

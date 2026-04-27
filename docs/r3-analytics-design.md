@@ -469,3 +469,58 @@ The implementation session that follows reads from this frozen spec; it does not
 **Carry that stays parked:**
 
 - **Read-API mystery** (`/api/admin/events` intermittent stale snapshot). v1.1 is independent of it; verification path above uses the inspector script, not the admin tab. Next-viable parked probe (`/api/admin/events-raw` with bare `fetch()`) still warrants only running on a fresh symptom repro per session 60's parking guidance.
+
+---
+
+## Amendment v1.2 — Read-API stale-data mystery resolved at root (session 73, 2026-04-27)
+
+**Status: ✅ Closed.** The session-58 / 59 / 60 mystery — `/api/admin/events` intermittently returning a snapshot frozen 25–78 min behind real DB state — is fully diagnosed and fixed.
+
+### Sequence of evidence
+
+The mystery freshly reproduced during session 73's R3 v1.1 verification walk. After David exercised the new event types on iPhone, the inspector saw events through `12:35 UTC`, but the admin tab's freshest event was `11:40 UTC` — ~58 min behind. Built [`/api/admin/events-raw`](../app/api/admin/events-raw/route.ts) (the next-viable probe parked at session 60) which bypasses `@supabase/supabase-js` entirely, hitting PostgREST via bare `fetch()` with `cache: "no-store"` explicitly set. Wired an inline diag strip into the admin Events tab so both routes fire in parallel on every fetch and render side-by-side.
+
+The diag strip's first reading was the smoking gun:
+
+```
+lib /events: 11:40:42Z · 50 rows
+raw probe:   12:58:21Z · 50 rows · 78ms
+delta: raw ahead 4659s   (~78 min)
+```
+
+Same Supabase URL, same service-role key, same Vercel runtime, same `ORDER BY occurred_at DESC LIMIT 50` query semantics. The only difference: the raw probe set `cache: "no-store"` on its `fetch()` while `@supabase/supabase-js` used an unmodified fetch.
+
+### Root cause
+
+**Next.js's HTTP-level data cache was intercepting `@supabase/supabase-js`'s internal `fetch()` calls.** The cache key is URL + method + headers; since supabase-js sends identical requests every call, every hit returned the response from the very first call. The cache never invalidated.
+
+The route's `export const dynamic = "force-dynamic"` directive disables caching of the *route response*, but does **NOT** propagate `cache: "no-store"` to fetches happening *inside* the route. That gap is what session 60's stuck-Fluid-Compute theory missed: the data cache lifetime is decoupled from function instance lifetime, so a fresh deploy creates new instances but the cached response persists in the data-cache layer.
+
+### Fix
+
+Two lines in [`lib/adminAuth.ts`](../lib/adminAuth.ts) — pass a `global.fetch` wrapper to `createClient` that always sets `cache: "no-store"`:
+
+```ts
+return createClient(url, serviceKey, {
+  auth: { autoRefreshToken: false, persistSession: false },
+  global: {
+    fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
+  },
+});
+```
+
+Single change benefits every admin route + every server-side `recordEvent` path that goes through `getServiceClient()`. Verified on iPhone: diag strip flipped from red `delta: raw ahead 4659s` to green `delta: in sync · 13:05:03Z = 13:05:03Z`.
+
+### Why session 60's elimination missed this
+
+Session 60 ruled out: env-var mismatch ✓, project mismatch ✓, code mismatch ✓, stuck Fluid Compute instance ✓ (via fresh deploy). The fifth candidate — Next.js's data cache layer separate from the function lifetime — wasn't on session 60's radar because the route was already marked `force-dynamic`, which superficially looks like "no caching." The implicit assumption ("`force-dynamic` means everything inside the route is uncached") was wrong; only the route response is uncached.
+
+### Open carry from this fix
+
+- **Other supabase-js call sites in the app might have the same latent bug.** Anywhere that creates a Supabase client without the `global.fetch` wrapper is potentially reading stale data. Audit candidates: `lib/auth.ts` (browser client — different cache layer, unaffected), any inline `createClient` calls outside `getServiceClient()`. Quick grep: `grep -rn "createClient" lib/ app/` to enumerate.
+- **The `/api/admin/events-raw` probe + inline diag strip stay in the codebase as durable visibility tools.** David's session-73 decision: keep them as a sanity check during day-to-day operation. They become irrelevant when Q-014 (Metabase analytics surface) lands and the admin Events tab retires.
+- **Tech Rule candidate** captured as TR-q in [`docs/tech-rules-queue.md`](tech-rules-queue.md) — third-firing pattern of "supabase-js on Vercel + Next.js has subtle deviations from local that aren't caught by `force-dynamic` alone." Compounds with TR-l (Vercel-runtime PostgREST quirks).
+
+### What stays in v1.1 vs what becomes v1.2
+
+v1.1's instrumentation list (5 new event types + filter_applied page expansion) is unchanged. v1.2 is purely the supabase-js cache-bypass plumbing fix — no event-schema changes, no payload-shape changes, no API surface changes. The amendment captures it here so future sessions don't re-investigate the mystery.
