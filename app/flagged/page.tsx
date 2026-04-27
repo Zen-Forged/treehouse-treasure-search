@@ -44,7 +44,17 @@ import FlagGlyph from "@/components/FlagGlyph";
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
 import { BOOKMARK_PREFIX, loadBookmarkCount } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
-import { v1, FONT_IM_FELL, FONT_SYS, FONT_NUMERAL } from "@/lib/tokens";
+import {
+  v1,
+  FONT_IM_FELL,
+  FONT_SYS,
+  FONT_NUMERAL,
+  MOTION_EASE_OUT,
+  MOTION_CARD_DURATION,
+  MOTION_STAGGER,
+  MOTION_STAGGER_MAX,
+  MOTION_EMPTY_DURATION,
+} from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
@@ -55,7 +65,10 @@ import StickyMasthead from "@/components/StickyMasthead";
 import FeaturedBanner from "@/components/FeaturedBanner";
 import type { Post, Mall } from "@/types/treehouse";
 
-const EASE = [0.25, 0.46, 0.45, 0.94] as const;
+// Session 76 Track E — local EASE replaced by MOTION_EASE_OUT import
+// (docs/animation-consistency-design.md). Alias kept so existing call
+// sites inside this file remain `ease: EASE` without sweeping renames.
+const EASE = MOTION_EASE_OUT;
 
 // ── Bookmark helpers (raw localStorage per tech rules) ─────────────────────────
 

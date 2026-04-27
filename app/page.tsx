@@ -45,7 +45,15 @@ import { CircleUser } from "lucide-react";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getFeedPosts, getActiveMalls } from "@/lib/posts";
 import { getSession, signOut, onAuthChange } from "@/lib/auth";
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import {
+  v1,
+  FONT_IM_FELL,
+  FONT_SYS,
+  MOTION_EASE_OUT,
+  MOTION_STAGGER,
+  MOTION_STAGGER_MAX,
+  MOTION_EMPTY_DURATION,
+} from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { flagKey, loadFollowedIds, formatTimeAgo } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
@@ -63,7 +71,10 @@ import type { Post, Mall } from "@/types/treehouse";
 const SCROLL_KEY      = "treehouse_feed_scroll";
 const LAST_VIEWED_KEY = "treehouse_last_viewed_post";
 
-const EASE = [0.25, 0.46, 0.45, 0.94] as const;
+// Session 76 Track E — local EASE replaced by MOTION_EASE_OUT import
+// (docs/animation-consistency-design.md). Alias kept so MasonryTile's
+// inline CSS transitions can reference it without a name change.
+const EASE = MOTION_EASE_OUT;
 
 // ── Scroll reveal (unchanged from v0.2) ───────────────────────────────────────
 function useScrollReveal(threshold = 0.1, skipAnimation = false) {
@@ -91,9 +102,9 @@ function useScrollReveal(threshold = 0.1, skipAnimation = false) {
 function EmptyFeed() {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45 }}
+      transition={{ duration: MOTION_EMPTY_DURATION, ease: MOTION_EASE_OUT }}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -236,7 +247,7 @@ function MasonryTile({
     setTimeout(() => setTapped(false), 320);
   }
 
-  const staggerDelay = skipEntrance ? 0 : Math.min(index * 0.04, 0.28);
+  const staggerDelay = skipEntrance ? 0 : Math.min(index * MOTION_STAGGER, MOTION_STAGGER_MAX);
 
   return (
     <div

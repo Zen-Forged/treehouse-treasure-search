@@ -162,3 +162,13 @@ export const fonts = {
 export const FONT_IM_FELL = fonts.imFell;
 export const FONT_SYS     = fonts.sys;
 export const FONT_NUMERAL = fonts.numeral;
+
+// Motion tokens — session 76 Track E (animation consistency).
+// docs/animation-consistency-design.md. Use these on Booths VendorCard,
+// Find Map (/flagged) tiles + every primary-tab empty state. Home
+// MasonryTile keeps bespoke easing/duration for hero-grid polish (E1+E2).
+export const MOTION_EASE_OUT       = [0.25, 0.46, 0.45, 0.94] as const;
+export const MOTION_CARD_DURATION  = 0.32;
+export const MOTION_STAGGER        = 0.04;
+export const MOTION_STAGGER_MAX    = 0.30;
+export const MOTION_EMPTY_DURATION = 0.34;

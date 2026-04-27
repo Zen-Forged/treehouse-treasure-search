@@ -2,7 +2,7 @@
 status: Ready
 session: 76
 inventory: Explore-agent run 2026-04-27 (background subagent on the four primary tabs)
-scope: Home / Booths / Find Map / My Booth + /flagged (added per session-76 5.2 decision)
+scope: Home (app/page.tsx), Booths (app/shelves/page.tsx), Find Map (app/flagged/page.tsx), My Booth (app/my-shelf/page.tsx). NOTE: Find Map IS /flagged — same route. The dark-reseller-layer app/finds/page.tsx ("My Picks") is OUT of scope.
 ---
 
 # Animation consistency — primary tabs (Track E)
@@ -53,7 +53,6 @@ The tokens table below resolves all three with shared values.
 | [`lib/tokens.ts`](../lib/tokens.ts) | Add `MOTION_EASE_OUT`, `MOTION_CARD_DURATION`, `MOTION_STAGGER`, `MOTION_STAGGER_MAX`, `MOTION_EMPTY_DURATION` exports. |
 | [`app/page.tsx`](../app/page.tsx) | Replace local `EASE` const with token import. MasonryTile's bespoke CSS transitions unchanged. Section animations (FeedHero/FeaturedBanner/divider) reference tokens. |
 | [`app/shelves/page.tsx`](../app/shelves/page.tsx) | VendorCard: `[0.25, 0.1, 0.25, 1]` → `MOTION_EASE_OUT`, 0.28s → `MOTION_CARD_DURATION`, cap 0.3 → `MOTION_STAGGER_MAX`. Add `whileTap={{ scale: 0.97 }}`. Empty state already uses 0.34s + correct ease — replace with tokens. |
-| [`app/finds/page.tsx`](../app/finds/page.tsx) | FindCard: explicit `transition` block with tokens. Empty state pattern aligned to E4. |
 | [`app/my-shelf/page.tsx`](../app/my-shelf/page.tsx) | NoBooth empty state: 0.4s linear → E4 pattern with tokens. |
 | [`app/flagged/page.tsx`](../app/flagged/page.tsx) | Replace local `EASE` const with token import. Tile transitions referenced from tokens. |
 

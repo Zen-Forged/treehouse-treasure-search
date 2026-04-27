@@ -27,7 +27,17 @@ import { Pencil, Trash2, X, Loader as LoaderIcon, AlertTriangle, Bookmark } from
 import { getAllVendors, getAllMalls } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
-import { v1, FONT_IM_FELL, FONT_SYS, FONT_NUMERAL } from "@/lib/tokens";
+import {
+  v1,
+  FONT_IM_FELL,
+  FONT_SYS,
+  FONT_NUMERAL,
+  MOTION_EASE_OUT,
+  MOTION_CARD_DURATION,
+  MOTION_STAGGER,
+  MOTION_STAGGER_MAX,
+  MOTION_EMPTY_DURATION,
+} from "@/lib/tokens";
 import { vendorHueBg, loadBookmarkCount, loadBookmarkedBoothIds, boothBookmarkKey } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { track } from "@/lib/clientEvents";
@@ -122,7 +132,12 @@ function VendorCard({
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.28, delay: Math.min(index * 0.04, 0.3), ease: [0.25, 0.1, 0.25, 1] }}
+      transition={{
+        duration: MOTION_CARD_DURATION,
+        delay: Math.min(index * MOTION_STAGGER, MOTION_STAGGER_MAX),
+        ease: MOTION_EASE_OUT,
+      }}
+      whileTap={{ scale: 0.97 }}
     >
       <div
         onClick={handleCardTap}
@@ -277,7 +292,7 @@ function DeleteBoothSheet({
       <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 201, display: "flex", alignItems: "flex-end", justifyContent: "center", pointerEvents: "none" }}>
         <motion.div
           initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
-          transition={{ duration: 0.34, ease: [0.25, 0.46, 0.45, 0.94] }}
+          transition={{ duration: MOTION_EMPTY_DURATION, ease: MOTION_EASE_OUT }}
           style={{ width: "100%", maxWidth: 430, background: sheetBg, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: "20px 22px calc(24px + env(safe-area-inset-bottom, 0px))", boxShadow: "0 -10px 40px rgba(20,14,6,0.25)", pointerEvents: "auto", maxHeight: "85vh", overflowY: "auto" }}
         >
           <div style={{ width: 44, height: 4, borderRadius: 4, background: "rgba(42,26,10,0.22)", margin: "0 auto 18px" }} />

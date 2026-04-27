@@ -96,6 +96,7 @@ import {
   FONT_SYS,
   type BoothView,
 } from "@/components/BoothPage";
+import { MOTION_EASE_OUT, MOTION_EMPTY_DURATION } from "@/lib/tokens";
 import type { User } from "@supabase/supabase-js";
 
 const ADMIN_DEFAULT_VENDOR_ID = "5619b4bf-3d05-4843-8ee1-e8b747fc2d81";
@@ -194,9 +195,9 @@ function MastheadPaperAirplane() {
 function NoBooth() {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
+      transition={{ duration: MOTION_EMPTY_DURATION, ease: MOTION_EASE_OUT }}
       style={{
         display: "flex",
         flexDirection: "column",
