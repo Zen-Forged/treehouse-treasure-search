@@ -194,6 +194,19 @@ export default function AdminPage() {
   const [eventsHasMore,    setEventsHasMore]    = useState(false);
   const [showMoreFilters,  setShowMoreFilters]  = useState(false);
 
+  // R3 stale-data diag (session 73) — fires /api/admin/events-raw alongside
+  // every Events-tab fetch and stashes its first_occurred_at for side-by-side
+  // comparison against the library route. Strip out once R3 is closed (or
+  // when admin Events tab retires per Q-014 / Metabase migration).
+  const [rawProbe, setRawProbe] = useState<{
+    libFirst:  string | null;
+    rawFirst:  string | null;
+    rawFetchMs: number | null;
+    rawRows:   number | null;
+    libRows:   number | null;
+    error:     string | null;
+  } | null>(null);
+
   useEffect(() => {
     getSession().then(s => {
       setUser(s?.user ?? null);
@@ -257,7 +270,19 @@ export default function AdminPage() {
       if (opts.append && events.length > 0) {
         params.set("before", events[events.length - 1]!.occurred_at);
       }
-      const res  = await authFetch(`/api/admin/events?${params.toString()}`);
+
+      // R3 stale-data diag (session 73) — fire library route + raw probe in
+      // parallel so a side-by-side diff is visible in the UI for every fetch.
+      // The raw probe ignores filter/pagination params (it always returns the
+      // top 50 default-page query) since the symptom is on the unfiltered path.
+      const [res, rawRes] = await Promise.all([
+        authFetch(`/api/admin/events?${params.toString()}`),
+        authFetch(`/api/admin/events-raw`).catch(err => {
+          console.error("raw probe fetch error:", err);
+          return null;
+        }),
+      ]);
+
       const json = await res.json();
       if (!res.ok) {
         setToast({ kind: "error", message: json.error || "Failed to load events" });
@@ -267,6 +292,33 @@ export default function AdminPage() {
         setEvents(opts.append ? [...events, ...incoming] : incoming);
         setEventCounts(json.counts ?? { last24h: 0, last7d: 0, all: 0 });
         setEventsHasMore(incoming.length === EVENTS_PAGE_SIZE);
+      }
+
+      // Populate the diag strip — only on non-append fetches (the comparison
+      // is meaningful on the default-page query, not on Load-more pagination).
+      if (!opts.append) {
+        const libFirst = (json.events?.[0]?.occurred_at as string | undefined) ?? null;
+        const libRows  = json.events?.length ?? 0;
+        if (rawRes && rawRes.ok) {
+          const rawJson  = await rawRes.json();
+          setRawProbe({
+            libFirst,
+            rawFirst:   rawJson.first_occurred_at ?? null,
+            rawFetchMs: rawJson.fetch_ms ?? null,
+            rawRows:    rawJson.rows_returned ?? 0,
+            libRows,
+            error:      null,
+          });
+        } else {
+          setRawProbe({
+            libFirst,
+            rawFirst:   null,
+            rawFetchMs: null,
+            rawRows:    null,
+            libRows,
+            error:      rawRes ? `raw probe HTTP ${rawRes.status}` : "raw probe fetch failed",
+          });
+        }
       }
     } catch (err) {
       console.error("fetchEvents error:", err);
@@ -879,6 +931,7 @@ export default function AdminPage() {
           onToggleRow={(id) => setExpandedEventId(prev => prev === id ? null : id)}
           hasMore={eventsHasMore}
           onLoadMore={() => fetchEvents({ append: true })}
+          rawProbe={rawProbe}
         />
       )}
 
@@ -1289,6 +1342,7 @@ function EventsTab({
   events, counts, loading, filter, onFilterChange,
   showMoreFilters, onToggleMoreFilters, onRefresh,
   expandedEventId, onToggleRow, hasMore, onLoadMore,
+  rawProbe,
 }: {
   events:                EventRow[];
   counts:                { last24h: number; last7d: number; all: number };
@@ -1302,6 +1356,14 @@ function EventsTab({
   onToggleRow:           (id: string) => void;
   hasMore:               boolean;
   onLoadMore:            () => void;
+  rawProbe:              {
+    libFirst:   string | null;
+    rawFirst:   string | null;
+    rawFetchMs: number | null;
+    rawRows:    number | null;
+    libRows:    number | null;
+    error:      string | null;
+  } | null;
 }) {
   // Group events by day bucket (Today / Yesterday / Mon · …) for separator chrome.
   const groups: Array<{ label: string; rows: EventRow[] }> = [];
@@ -1316,8 +1378,60 @@ function EventsTab({
     }
   }
 
+  // R3 stale-data diag strip (session 73). Renders a small monospace row
+  // comparing /api/admin/events (library/supabase-js) against /api/admin/events-raw
+  // (bare fetch → PostgREST). Strip out once R3 closes or admin tab retires.
+  const probeStrip = (() => {
+    if (!rawProbe) return null;
+    const fmt = (iso: string | null) => {
+      if (!iso) return "—";
+      try {
+        const d = new Date(iso);
+        const hh = String(d.getUTCHours()).padStart(2, "0");
+        const mm = String(d.getUTCMinutes()).padStart(2, "0");
+        const ss = String(d.getUTCSeconds()).padStart(2, "0");
+        return `${hh}:${mm}:${ss}Z`;
+      } catch { return iso.slice(11, 19) + "Z"; }
+    };
+    const diffMs = rawProbe.libFirst && rawProbe.rawFirst
+      ? new Date(rawProbe.rawFirst).getTime() - new Date(rawProbe.libFirst).getTime()
+      : null;
+    const diffLabel = diffMs == null
+      ? "—"
+      : Math.abs(diffMs) < 5000
+        ? "in sync"
+        : `${diffMs > 0 ? "raw ahead" : "lib ahead"} ${Math.round(Math.abs(diffMs) / 1000)}s`;
+    const diffColor = diffMs == null ? "#7d8f96"
+      : Math.abs(diffMs) < 5000 ? "#1e4d2b"
+      : Math.abs(diffMs) < 60_000 ? "#8a5a14"
+      : "#a13a2c";
+    return (
+      <div style={{
+        background:    "#211f1b",
+        color:         "#e0d8c5",
+        padding:       "10px 12px",
+        borderRadius:  10,
+        fontFamily:    "ui-monospace, Menlo, Consolas, monospace",
+        fontSize:      10.5,
+        lineHeight:    1.5,
+        marginBottom:  14,
+        border:        `1px solid ${diffColor}`,
+      }}>
+        <div style={{ fontSize: 9, opacity: 0.6, letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 4 }}>
+          R3 stale-data diag
+        </div>
+        <div>lib /events: <strong>{fmt(rawProbe.libFirst)}</strong> · {rawProbe.libRows ?? 0} rows</div>
+        <div>raw probe:   <strong>{fmt(rawProbe.rawFirst)}</strong> · {rawProbe.rawRows ?? 0} rows{rawProbe.rawFetchMs != null ? ` · ${rawProbe.rawFetchMs}ms` : ""}</div>
+        <div style={{ marginTop: 4, color: diffColor }}>
+          {rawProbe.error ? `error: ${rawProbe.error}` : `delta: ${diffLabel}`}
+        </div>
+      </div>
+    );
+  })();
+
   return (
     <div style={{ margin: "20px 20px 0", paddingBottom: 80 }}>
+      {probeStrip}
       {/* Summary strip — 24h / 7d / all */}
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
         <SumCard n={counts.last24h.toLocaleString()} label="Last 24h" />
