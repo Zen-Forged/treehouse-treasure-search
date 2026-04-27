@@ -275,7 +275,7 @@ export function BoothHero({
                 fontFamily: FONT_IM_FELL,
                 fontStyle: "italic",
                 fontSize: 14,
-                color: v1.inkMuted,
+                color: v1.green,
                 lineHeight: 1.1,
                 marginBottom: 6,
                 textAlign: "center",

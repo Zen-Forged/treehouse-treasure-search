@@ -73,7 +73,7 @@ const WORDMARK_DEFAULT = (
       fontFamily: FONT_IM_FELL,
       fontStyle: "italic",
       fontSize: 22,
-      color: v1.inkPrimary,
+      color: v1.green,
       letterSpacing: "-0.005em",
       lineHeight: 1,
       whiteSpace: "nowrap",

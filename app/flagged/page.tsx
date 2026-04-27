@@ -342,7 +342,7 @@ function BoothSection({
                 fontFamily: FONT_SYS,
                 fontSize: 9,
                 fontWeight: 700,
-                color: v1.inkMuted,
+                color: v1.green,
                 letterSpacing: "0.12em",
                 textTransform: "uppercase",
                 lineHeight: 1,

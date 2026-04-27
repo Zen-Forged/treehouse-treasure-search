@@ -207,7 +207,7 @@ function VendorCard({
             </div>
             {vendor.booth_number && (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", lineHeight: 1 }}>
-                <div style={{ fontFamily: FONT_SYS, fontSize: 9, fontWeight: 700, color: v1.inkMuted, letterSpacing: "0.12em", textTransform: "uppercase", lineHeight: 1, marginBottom: 3 }}>
+                <div style={{ fontFamily: FONT_SYS, fontSize: 9, fontWeight: 700, color: v1.green, letterSpacing: "0.12em", textTransform: "uppercase", lineHeight: 1, marginBottom: 3 }}>
                   Booth
                 </div>
                 <div style={{ fontFamily: FONT_NUMERAL, fontSize: 20, fontWeight: 500, color: v1.inkPrimary, lineHeight: 1, letterSpacing: "-0.01em" }}>
