@@ -55,15 +55,38 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Service unavailable." }, { status: 503 });
   }
 
-  // Mirror the /api/admin/events default-page query shape exactly:
-  //   .from("events").select(...).order("occurred_at", { ascending: false }).limit(50)
-  // PostgREST equivalent:
-  //   GET /rest/v1/events?select=...&order=occurred_at.desc&limit=50
-  const queryUrl =
+  // Mirror /api/admin/events query shape including the optional event_type
+  // filter (UI buckets: "saves" / "views" / "shares" expand to multi-type
+  // OR; concrete types pass through). Keeping the comparison apples-to-
+  // apples is critical — without filter parity, the diag strip shows huge
+  // bogus deltas whenever the user has any chip other than "All" selected.
+  const url       = new URL(req.url);
+  const filterRaw = url.searchParams.get("event_type");
+
+  const SAVES_TYPES  = ["post_saved", "post_unsaved"];
+  const VIEWS_TYPES  = ["page_viewed"];
+  const SHARES_TYPES = ["share_sent"];
+
+  let typeIn: string[] | null = null;
+  if (filterRaw && filterRaw !== "all") {
+    if (filterRaw === "saves")       typeIn = SAVES_TYPES;
+    else if (filterRaw === "views")  typeIn = VIEWS_TYPES;
+    else if (filterRaw === "shares") typeIn = SHARES_TYPES;
+    else                             typeIn = [filterRaw];
+  }
+
+  // PostgREST: GET /rest/v1/events?select=...&order=occurred_at.desc&limit=50
+  // Filter (when present): &or=(event_type.eq.A,event_type.eq.B,...)
+  let queryUrl =
     `${supaUrl.replace(/\/+$/, "")}/rest/v1/events` +
     `?select=id,event_type,user_id,session_id,payload,occurred_at` +
     `&order=occurred_at.desc` +
     `&limit=50`;
+
+  if (typeIn && typeIn.length > 0) {
+    const orClause = typeIn.map(t => `event_type.eq.${t}`).join(",");
+    queryUrl += `&or=(${encodeURIComponent(orClause)})`;
+  }
 
   const fetchStart = Date.now();
   const res = await fetch(queryUrl, {

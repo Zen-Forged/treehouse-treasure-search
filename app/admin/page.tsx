@@ -273,11 +273,14 @@ export default function AdminPage() {
 
       // R3 stale-data diag (session 73) — fire library route + raw probe in
       // parallel so a side-by-side diff is visible in the UI for every fetch.
-      // The raw probe ignores filter/pagination params (it always returns the
-      // top 50 default-page query) since the symptom is on the unfiltered path.
+      // Pass the active event_type filter to the raw probe so the comparison
+      // is apples-to-apples (without parity, filtered chips would always
+      // show huge bogus deltas vs the unfiltered raw).
+      const rawParams = new URLSearchParams();
+      if (eventFilter !== "all") rawParams.set("event_type", eventFilter);
       const [res, rawRes] = await Promise.all([
         authFetch(`/api/admin/events?${params.toString()}`),
-        authFetch(`/api/admin/events-raw`).catch(err => {
+        authFetch(`/api/admin/events-raw?${rawParams.toString()}`).catch(err => {
           console.error("raw probe fetch error:", err);
           return null;
         }),
