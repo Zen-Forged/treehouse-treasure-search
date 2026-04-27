@@ -328,42 +328,28 @@ function IconBubble({
   );
 }
 
-// SoldLanding — Find Detail 3B (v1.1i). Full-page end-of-path layout that
-// replaces the normal Find Detail when a shopper lands on a sold find. Owner
-// path stays on the normal layout. No photograph, no post-it, no price —
-// the page IS the closure.
+// SoldLandingBody — Find Detail 3B (v1.1i). End-of-path content that replaces
+// the photograph + title + cartographic block when a shopper lands on a sold
+// find. Owner path stays on the normal layout. No photograph, no post-it,
+// no price — the body IS the closure.
 //
-// Session 36 Q-003 addendum: flaggedCount threaded through for BottomNav badge.
-function SoldLanding({
+// Session 77 — restructured to body-only. Wrapper, masthead, and BottomNav
+// now live on FindDetailPage's single return so they're stable across all
+// state transitions (loading / not-found / sold / normal). Previous nested
+// full-page returns caused the masthead to remount on iOS bfcache restore,
+// hitting a sticky-position paint bug. /shelf/[slug] uses the same pattern.
+//
+// Session 36 Q-003: flaggedCount handled by parent's BottomNav (no longer
+// passed in).
+function SoldLandingBody({
   vendorSlug,
   vendorName,
-  onBack,
-  flaggedCount,
 }: {
   vendorSlug: string | null;
   vendorName: string | null;
-  onBack: () => void;
-  flaggedCount: number;
 }) {
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: v1.paperCream,
-        maxWidth: 430,
-        margin: "0 auto",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <StickyMasthead
-        left={
-          <IconBubble onClick={onBack} ariaLabel="Go back">
-            <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
-          </IconBubble>
-        }
-      />
-
+    <>
       <motion.div
         variants={sectionVariants(0.08)}
         initial="hidden"
@@ -470,10 +456,7 @@ function SoldLanding({
       </motion.div>
 
       <div style={{ flex: 1, minHeight: 20 }} />
-
-      <div style={{ paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }} />
-      <BottomNav active={null} flaggedCount={flaggedCount} />
-    </div>
+    </>
   );
 }
 
@@ -590,29 +573,55 @@ export default function FindDetailPage() {
     ? mapsUrl(`${post.mall.name} ${post.mall.city} ${post.mall.state}`)
     : null;
 
-  // Session 76 — masthead must render in every branch so back-nav from
-  // /shelf/[slug] never strands the user without a way back. With
-  // force-dynamic, every back-nav momentarily re-enters loading: true; if
-  // the masthead isn't in this branch the user perceives it disappearing.
-  if (loading) {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: v1.paperCream,
-          maxWidth: 430,
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <StickyMasthead
-          left={
-            <IconBubble onClick={() => router.back()} ariaLabel="Go back">
-              <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
-            </IconBubble>
-          }
-        />
+  // Session 77 — root-cause masthead-disappears fix.
+  //
+  // Previously the page had three top-level returns (loading / !post /
+  // success), each with its own wrapper <div> + <StickyMasthead>. State
+  // transitions remounted the entire tree, including the masthead. On iOS
+  // bfcache back-nav, that remount hit a position:sticky paint bug — the
+  // masthead reappeared in the DOM at zero height until a touch event
+  // forced a layout recompute.
+  //
+  // Now: one return. Wrapper, masthead, and BottomNav are stable across
+  // every state. Only the body content swaps via inline conditional.
+  // /shelf/[slug] uses the same pattern and never had the bug.
+  //
+  // Session 76's "masthead in every branch" fix is now obsolete (single
+  // branch). Session 77's bfcache pageshow handler in StickyMasthead also
+  // becomes unnecessary for this path but stays as a defensive primitive
+  // for any other callsite that may later have similar shape.
+  const isSold      = post?.status === "sold";
+  const hasVendor   = !!post?.vendor;
+  const vendorSlug  = post?.vendor?.slug ?? null;
+  const vendorName  = post?.vendor?.display_name ?? null;
+  const boothNumber = post?.vendor?.booth_number ?? null;
+  const mallName    = post?.mall?.name ?? null;
+  const mallCity    = post?.mall?.city ?? null;
+  const mallState   = post?.mall?.state ?? null;
+  const price       = post?.price_asking;
+  const showSoldBody   = !!post && isSold && !isMyPost;
+  const showNormalBody = !!post && !showSoldBody;
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: v1.paperCream,
+        maxWidth: 430,
+        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <StickyMasthead
+        left={
+          <IconBubble onClick={() => router.back()} ariaLabel="Go back">
+            <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+          </IconBubble>
+        }
+      />
+
+      {loading && (
         <div
           style={{
             flex: 1,
@@ -625,29 +634,9 @@ export default function FindDetailPage() {
             Loading…
           </div>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  if (!post) {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: v1.paperCream,
-          maxWidth: 430,
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <StickyMasthead
-          left={
-            <IconBubble onClick={() => router.back()} ariaLabel="Go back">
-              <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
-            </IconBubble>
-          }
-        />
+      {!loading && !post && (
         <div
           style={{
             flex: 1,
@@ -681,51 +670,14 @@ export default function FindDetailPage() {
             Browse the feed
           </button>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  const isSold      = post.status === "sold";
-  const hasVendor   = !!post.vendor;
-  const vendorSlug  = post.vendor?.slug ?? null;
-  const vendorName  = post.vendor?.display_name ?? null;
-  const boothNumber = post.vendor?.booth_number ?? null;
-  const mallName    = post.mall?.name ?? null;
-  const mallCity    = post.mall?.city ?? null;
-  const mallState   = post.mall?.state ?? null;
-  const price       = post.price_asking;
+      {showSoldBody && (
+        <SoldLandingBody vendorSlug={vendorSlug} vendorName={vendorName} />
+      )}
 
-  // 3B sold landing state (v1.1i) — shopper-only. Owner stays on normal layout.
-  if (isSold && !isMyPost) {
-    return (
-      <SoldLanding
-        vendorSlug={vendorSlug}
-        vendorName={vendorName}
-        onBack={() => router.back()}
-        flaggedCount={bookmarkCount}
-      />
-    );
-  }
-
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: v1.paperCream,
-        maxWidth: 430,
-        margin: "0 auto",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <StickyMasthead
-        left={
-          <IconBubble onClick={() => router.back()} ariaLabel="Go back">
-            <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
-          </IconBubble>
-        }
-      />
-
+      {showNormalBody && post && (
+        <>
       {/* Photograph with post-it (bottom-right) + save/share OR edit (top-right) */}
       <motion.div
         variants={sectionVariants(0.04)}
@@ -1187,16 +1139,21 @@ export default function FindDetailPage() {
           /find/[id]/edit: the pencil bubble on the photograph (top-right) routes there, and the
           Edit page carries autosave fields + Available/Sold status pills + Remove from shelf link.
           Find Detail is the reading surface; Edit is the management surface. */}
+        </>
+      )}
 
+      {/* Stable footer chrome — rendered in every state so back-nav from
+          /shelf/[slug] never remounts the BottomNav (mirrors masthead pattern). */}
       <div style={{ paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }} />
       <BottomNav active={null} flaggedCount={bookmarkCount} />
 
       {/* Photo lightbox — session 61. Tap photo above → opens full-screen
-          viewer with pinch-zoom + double-tap. */}
+          viewer with pinch-zoom + double-tap. Always rendered; gate on
+          post + image_url so it's a no-op until data loads. */}
       <PhotoLightbox
         open={lightboxOpen}
-        src={post.image_url ?? null}
-        alt={post.title}
+        src={post?.image_url ?? null}
+        alt={post?.title ?? ""}
         onClose={() => setLightboxOpen(false)}
       />
     </div>
