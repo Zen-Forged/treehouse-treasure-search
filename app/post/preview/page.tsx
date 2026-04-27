@@ -144,6 +144,15 @@ function PostPreviewInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
 
+  // Preserve `?vendor=<id>` through the publish flow so admin (who reaches
+  // /post/preview via /my-shelf?vendor=<id> impersonation) lands back on
+  // the booth-of-origin after publish, not on their own (empty) /my-shelf.
+  const originVendorId = searchParams.get("vendor");
+  const myShelfHref    = originVendorId ? `/my-shelf?vendor=${originVendorId}` : "/my-shelf";
+  const myShelfAddHref = originVendorId
+    ? `/my-shelf?vendor=${originVendorId}&openAdd=1`
+    : "/my-shelf?openAdd=1";
+
   const [image,         setImage]         = useState<string | null>(null);
   const [vendor,        setVendor]        = useState<Vendor | null>(null);
   const [localProfile,  setLocalProfile]  = useState<LocalVendorProfile | null>(null);
@@ -515,7 +524,7 @@ function PostPreviewInner() {
           style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}
         >
           <button
-            onClick={() => router.push("/my-shelf")}
+            onClick={() => router.push(myShelfHref)}
             style={{
               width: "100%",
               padding: "15px",
@@ -535,7 +544,7 @@ function PostPreviewInner() {
           </button>
 
           <button
-            onClick={() => router.push("/my-shelf?openAdd=1")}
+            onClick={() => router.push(myShelfAddHref)}
             style={{
               width: "100%",
               padding: "12px",
@@ -639,7 +648,7 @@ function PostPreviewInner() {
             Try again
           </button>
           <button
-            onClick={() => router.push("/my-shelf")}
+            onClick={() => router.push(myShelfHref)}
             style={{
               padding: "11px 24px",
               borderRadius: 14,
