@@ -27,8 +27,91 @@
 
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
+import { slugify } from "@/lib/posts";
 
 export const dynamic = "force-dynamic";
+
+// ─── PATCH ────────────────────────────────────────────────────────────────────
+// Edit a booth's mall + booth_number + display_name. Auto-derives slug from
+// display_name. Catches 23505 (unique-constraint violation, typically the
+// (mall_id, booth_number) pair) and returns a clean 409 with code
+// BOOTH_CONFLICT so the client can surface a conflict pill rather than a
+// 500. No safety gate on user_id (D3 in docs/booth-management-design.md):
+// renaming a claimed booth is a label change, not a strand-the-auth-user
+// action like delete is.
+
+export async function PATCH(req: Request) {
+  const auth = await requireAdmin(req);
+  if (!auth.ok) return auth.response;
+
+  let body: {
+    vendorId?:     string;
+    display_name?: string;
+    booth_number?: string | null;
+    mall_id?:      string;
+  };
+  try {
+    body = (await req.json()) as typeof body;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
+  }
+
+  const vendorId    = body.vendorId?.trim();
+  const displayName = body.display_name?.trim();
+  const mallId      = body.mall_id?.trim();
+  const boothNumber =
+    typeof body.booth_number === "string"
+      ? body.booth_number.trim() || null
+      : null;
+
+  if (!vendorId)    return NextResponse.json({ error: "vendorId is required." },     { status: 400 });
+  if (!displayName) return NextResponse.json({ error: "display_name is required." }, { status: 400 });
+  if (!mallId)      return NextResponse.json({ error: "mall_id is required." },      { status: 400 });
+
+  // Re-derive slug from display_name (D2). Bookmarks/finds reference
+  // vendor_id, not slug, so URL change is the only consequence.
+  const slug = slugify(displayName);
+
+  const { data, error } = await auth.service
+    .from("vendors")
+    .update({
+      display_name: displayName,
+      booth_number: boothNumber,
+      mall_id:      mallId,
+      slug,
+    })
+    .eq("id", vendorId)
+    .select("*, mall:malls(id, name, slug, city, state, address, status)")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      return NextResponse.json(
+        {
+          error:
+            "A booth with that number already exists at this mall. Pick a different number, or change the mall.",
+          code: "BOOTH_CONFLICT",
+        },
+        { status: 409 },
+      );
+    }
+    console.error("[admin/vendors PATCH] update:", error.message, error.code);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (!data) {
+    return NextResponse.json({ error: "Booth not found." }, { status: 404 });
+  }
+
+  console.log("[admin/vendors PATCH] updated", {
+    vendorId,
+    display_name: displayName,
+    mall_id:      mallId,
+    booth_number: boothNumber,
+  });
+
+  return NextResponse.json({ ok: true, vendor: data });
+}
 
 export async function DELETE(req: Request) {
   const auth = await requireAdmin(req);

@@ -21,7 +21,6 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Pencil, Trash2, X, Loader as LoaderIcon, AlertTriangle, Bookmark } from "lucide-react";
@@ -33,8 +32,11 @@ import { vendorHueBg, loadBookmarkCount, loadBookmarkedBoothIds, boothBookmarkKe
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { track } from "@/lib/clientEvents";
 import AdminOnly from "@/components/AdminOnly";
+import AddBoothSheet from "@/components/AddBoothSheet";
+import AddBoothTile from "@/components/AddBoothTile";
 import BookmarkBoothBubble from "@/components/BookmarkBoothBubble";
 import BottomNav from "@/components/BottomNav";
+import EditBoothSheet from "@/components/EditBoothSheet";
 import MallSheet from "@/components/MallSheet";
 import MallScopeHeader, { type MallScopeGeoLine } from "@/components/MallScopeHeader";
 import StickyMasthead from "@/components/StickyMasthead";
@@ -82,6 +84,7 @@ function VendorCard({
   saved,
   onToggleBookmark,
   onRequestDelete,
+  onRequestEdit,
 }: {
   vendor: Vendor;
   index: number;
@@ -89,6 +92,7 @@ function VendorCard({
   saved: boolean;
   onToggleBookmark: (vendorId: string) => void;
   onRequestDelete: (vendor: Vendor) => void;
+  onRequestEdit:   (vendor: Vendor) => void;
 }) {
   const router = useRouter();
   const [imgErr, setImgErr] = useState(false);
@@ -107,6 +111,11 @@ function VendorCard({
   function handleDeleteTap(e: React.MouseEvent) {
     e.stopPropagation();
     onRequestDelete(vendor);
+  }
+
+  function handleEditTap(e: React.MouseEvent) {
+    e.stopPropagation();
+    onRequestEdit(vendor);
   }
 
   return (
@@ -166,13 +175,13 @@ function VendorCard({
                 <Trash2 size={10} style={{ color: "rgba(255,255,255,0.88)" }} />
               </button>
             )}
-            <Link
-              href={`/vendor/${vendor.slug}`}
-              onClick={e => e.stopPropagation()}
-              style={{ position: "absolute", top: 7, right: 8, zIndex: 10, width: 26, height: 26, borderRadius: "50%", background: "rgba(20,14,6,0.52)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}
+            <button
+              onClick={handleEditTap}
+              aria-label={`Edit ${vendor.display_name}`}
+              style={{ position: "absolute", top: 7, right: 8, zIndex: 10, width: 26, height: 26, borderRadius: "50%", background: "rgba(20,14,6,0.52)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}
             >
               <Pencil size={10} style={{ color: "rgba(255,255,255,0.88)" }} />
-            </Link>
+            </button>
           </AdminOnly>
         </div>
 
@@ -375,6 +384,8 @@ export default function BoothsPage() {
   const [bookmarkedIds,  setBookmarkedIds]  = useState<Set<string>>(new Set());
   const [filter,         setFilter]         = useState<"all" | "bookmarked">("all");
   const [deleteTarget,   setDeleteTarget]   = useState<Vendor | null>(null);
+  const [editTarget,     setEditTarget]     = useState<Vendor | null>(null);
+  const [addSheetOpen,   setAddSheetOpen]   = useState(false);
   const [savedMallId,    setSavedMallId]    = useSavedMallId();
   const [mallSheetOpen,  setMallSheetOpen]  = useState(false);
 
@@ -577,6 +588,7 @@ export default function BoothsPage() {
                     saved={bookmarkedIds.has(vendor.id)}
                     onToggleBookmark={handleToggleBookmark}
                     onRequestDelete={setDeleteTarget}
+                    onRequestEdit={setEditTarget}
                   />
                 ))}
               </div>
@@ -614,6 +626,7 @@ export default function BoothsPage() {
                         saved={bookmarkedIds.has(vendor.id)}
                         onToggleBookmark={handleToggleBookmark}
                         onRequestDelete={setDeleteTarget}
+                        onRequestEdit={setEditTarget}
                       />
                     ))}
                   </div>
@@ -622,6 +635,17 @@ export default function BoothsPage() {
               })
             )}
           </>
+        )}
+
+        {/* Admin-only "Add a booth" tile — sits below all mall sections in
+            its own grid row so it doesn't visually associate with any single
+            mall. See docs/booth-management-design.md (D6). */}
+        {!loading && (
+          <AdminOnly user={user}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 16 }}>
+              <AddBoothTile onTap={() => setAddSheetOpen(true)} />
+            </div>
+          </AdminOnly>
         )}
       </main>
 
@@ -640,12 +664,40 @@ export default function BoothsPage() {
       <AnimatePresence>
         {deleteTarget && (
           <DeleteBoothSheet
-            key={deleteTarget.id}
+            key={`delete-${deleteTarget.id}`}
             vendor={deleteTarget}
             onClose={() => setDeleteTarget(null)}
             onDeleted={(vendorId) => {
               setVendors(prev => prev.filter(v => v.id !== vendorId));
               setDeleteTarget(null);
+            }}
+          />
+        )}
+        {editTarget && (
+          <EditBoothSheet
+            key={`edit-${editTarget.id}`}
+            vendor={editTarget}
+            malls={malls}
+            onClose={() => setEditTarget(null)}
+            onUpdated={(updated) => {
+              setVendors(prev => prev.map(v => v.id === updated.id ? { ...v, ...updated } : v));
+              setEditTarget(null);
+            }}
+          />
+        )}
+        {addSheetOpen && (
+          <AddBoothSheet
+            key="add-booth"
+            malls={malls}
+            initialMallId={savedMallId}
+            onClose={() => setAddSheetOpen(false)}
+            onCreated={(created) => {
+              // Hydrate mall side-table on the new vendor so groupByMall
+              // buckets it correctly without a refetch.
+              const mall = malls.find(m => m.id === created.mall_id) ?? null;
+              const hydrated: Vendor = mall ? { ...created, mall } : created;
+              setVendors(prev => [...prev, hydrated]);
+              setAddSheetOpen(false);
             }}
           />
         )}
