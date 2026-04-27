@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Booth edit sheet (admin)</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --paper-cream:  #f5f2eb;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --ink-wash:     rgba(255, 253, 248, 0.70);
+    --price-ink:    #6a4a30;
+    --green:        #1e4d2b;
+    --red:          #8b2020;
+    --red-bg:       #fbe9e9;
+    --red-border:   #e6b8b8;
+
+    --im-fell: "IM Fell English", Georgia, serif;
+    --sys:     -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1320px; margin: 0 auto; padding: 30px 20px 60px; }
+
+  h1.title {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 760px;
+  }
+
+  .decisions {
+    max-width: 980px;
+    margin: 0 auto 30px;
+    padding: 20px 26px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--im-fell);
+    font-size: 19px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 12px;
+  }
+  .decisions table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  .decisions th, .decisions td { text-align: left; padding: 8px 12px; vertical-align: top; border-top: 1px solid rgba(232, 221, 199, 0.10); }
+  .decisions th { font-weight: 600; color: #fff9e8; font-size: 12px; }
+  .decisions td.q { width: 38%; }
+  .decisions td.r { color: rgba(232, 221, 199, 0.72); }
+  .decisions code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .decisions .recommend {
+    color: #b9e8c5;
+    font-weight: 600;
+  }
+
+  .section {
+    margin: 38px auto 18px;
+    max-width: 1300px;
+    padding: 0 14px;
+  }
+  .section h2 {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #fff9e8;
+    font-size: 24px;
+    margin: 0 0 4px;
+    border-bottom: 1px solid rgba(232,221,199,0.2);
+    padding-bottom: 8px;
+  }
+  .section .lede {
+    color: rgba(232, 221, 199, 0.62);
+    font-size: 13px;
+    margin: 0 0 20px;
+    line-height: 1.6;
+    max-width: 760px;
+  }
+
+  .frames-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px;
+    max-width: 1280px;
+    margin: 0 auto 32px;
+    align-items: start;
+  }
+  @media (max-width: 1100px) {
+    .frames-row { grid-template-columns: 1fr; max-width: 380px; }
+  }
+
+  .frame-card { display: flex; flex-direction: column; align-items: center; }
+  .frame-card .frame-label {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 17px;
+    color: #fff9e8;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .frame-card .frame-note {
+    font-size: 12px;
+    color: rgba(232, 221, 199, 0.55);
+    margin: 0 0 14px;
+    text-align: center;
+    line-height: 1.5;
+    max-width: 320px;
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 320px;
+    background: var(--paper-cream);
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 0 6px #1a1a1a, 0 0 0 7px rgba(255,255,255,0.05);
+    position: relative;
+    height: 640px;
+  }
+
+  /* Sticky masthead (simplified) */
+  .masthead {
+    height: 50px;
+    border-bottom: 1px solid var(--ink-hairline);
+    background: var(--paper-cream);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--im-fell);
+    font-size: 16px;
+    color: var(--ink-primary);
+    letter-spacing: 0.4px;
+  }
+
+  /* Page eyebrow */
+  .scope-eyebrow {
+    padding: 12px 14px 4px;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-muted);
+  }
+  .scope-eyebrow .count { font-style: normal; font-size: 18px; color: var(--ink-primary); margin-right: 4px; }
+  .scope-mall { padding: 0 14px 4px; font-family: var(--im-fell); font-size: 17px; color: var(--ink-primary); }
+  .scope-geo { padding: 0 14px 8px; font-size: 11px; color: var(--ink-muted); border-bottom: 1px solid var(--ink-hairline); }
+
+  /* Booth grid */
+  .booth-grid {
+    padding: 14px 14px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .booth-tile {
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+  .tile-hero {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: linear-gradient(135deg, #c4b89e 0%, #a89878 100%);
+    position: relative;
+  }
+  .tile-hero.alt {
+    background: linear-gradient(135deg, #b8c4a8 0%, #8a9878 100%);
+  }
+  .tile-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(20,14,6,0.52) 0%, transparent 55%);
+  }
+
+  .bubble {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(20,14,6,0.52);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+  }
+  .bubble svg { color: rgba(255,255,255,0.88); }
+  .bubble.pencil { top: 6px; right: 6px; }
+  .bubble.trash  { top: 6px; right: 36px; }
+
+  /* Bubble pulse animation when showing the affordance */
+  .bubble.pulse {
+    box-shadow: 0 0 0 0 rgba(30, 77, 43, 0.55);
+    animation: pulse 1.6s ease-out 2;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(30, 77, 43, 0.55); }
+    70%  { box-shadow: 0 0 0 14px rgba(30, 77, 43, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(30, 77, 43, 0); }
+  }
+
+  .tile-body { padding: 9px 10px 11px; display: grid; grid-template-columns: 1fr auto; column-gap: 10px; align-items: center; }
+  .tile-name { font-family: var(--im-fell); font-size: 14px; color: var(--ink-primary); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .tile-bio  { font-family: var(--im-fell); font-style: italic; font-size: 10px; color: var(--ink-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile-booth-eyebrow { font-family: var(--sys); font-size: 9px; font-weight: 700; color: var(--ink-muted); letter-spacing: 0.12em; text-transform: uppercase; line-height: 1; margin-bottom: 3px; text-align: right; }
+  .tile-booth-num { font-family: var(--im-fell); font-size: 20px; color: var(--ink-primary); line-height: 1; letter-spacing: -0.01em; text-align: right; }
+
+  /* Section header */
+  .section-header { display: flex; align-items: center; gap: 10px; padding: 16px 0 10px; }
+  .section-header .name { font-family: var(--im-fell); font-size: 15px; color: var(--ink-primary); white-space: nowrap; }
+  .section-header .rule { flex: 1; height: 1px; background: var(--ink-hairline); }
+  .section-header .ct { font-family: var(--im-fell); font-style: italic; font-size: 11px; color: var(--ink-muted); white-space: nowrap; }
+
+  /* Bottom sheet overlay */
+  .sheet-backdrop { position: absolute; inset: 0; background: rgba(20,14,6,0.50); z-index: 100; }
+  .sheet {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    background: var(--paper-cream);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    padding: 16px 20px 24px;
+    z-index: 101;
+    box-shadow: 0 -10px 40px rgba(20,14,6,0.25);
+    max-height: 84%;
+    overflow-y: auto;
+  }
+  .grabber { width: 44px; height: 4px; border-radius: 4px; background: rgba(42,26,10,0.22); margin: 0 auto 16px; }
+
+  .sheet-head { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .sheet-head .icon-bubble {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(42,26,10,0.04);
+    border: 1px solid var(--ink-hairline);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sheet-head .icon-bubble svg { color: var(--green); }
+  .sheet-head .title-block { flex: 1; }
+  .sheet-head .title-block .t { font-family: var(--im-fell); font-size: 16px; color: var(--ink-primary); }
+  .sheet-head .title-block .s { font-family: var(--im-fell); font-style: italic; font-size: 11px; color: var(--ink-muted); margin-top: 1px; }
+  .sheet-head .close {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: rgba(42,26,10,0.04);
+    border: none;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .field { margin-bottom: 13px; }
+  .field-label {
+    font-family: var(--im-fell); font-style: italic; font-size: 11px;
+    color: var(--ink-muted); margin-bottom: 5px; display: block;
+  }
+  .field-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-hairline);
+    color: var(--ink-primary);
+    font-family: var(--sys);
+    font-size: 13px;
+    outline: none;
+  }
+  .field-input.changed {
+    background: #fff9e8;
+    border-color: #c8a55a;
+  }
+  .field-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b5538' stroke-width='2' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px 12px;
+    padding-right: 32px;
+  }
+
+  .save-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    font-family: var(--sys);
+    font-size: 13px;
+    font-weight: 500;
+    margin-top: 4px;
+    box-shadow: 0 2px 10px rgba(30,77,43,0.18);
+  }
+  .save-btn.disabled {
+    background: rgba(30,77,43,0.30);
+    box-shadow: none;
+  }
+  .cancel-btn {
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ink-muted);
+    border: none;
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 12px;
+    margin-top: 6px;
+  }
+
+  /* Conflict toast variant */
+  .conflict-pill {
+    margin-top: 4px;
+    padding: 9px 11px;
+    border-radius: 9px;
+    background: var(--red-bg);
+    border: 1px solid var(--red-border);
+    color: var(--red);
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .ask-block {
+    max-width: 980px;
+    margin: 30px auto 10px;
+    padding: 22px 28px;
+    background: rgba(184, 232, 197, 0.10);
+    border: 1px solid rgba(184, 232, 197, 0.32);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.92);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  .ask-block h3 { font-family: var(--im-fell); font-size: 20px; font-weight: 400; color: #fff9e8; margin: 0 0 8px; }
+  .ask-block ol { margin: 8px 0 0; padding: 0 0 0 22px; }
+  .ask-block li { margin-bottom: 6px; }
+
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+  <h1 class="title">Booth management — admin</h1>
+  <p class="subtitle">
+    Surfaced from David's Gemba walk at America's Antique Mall. Items #2 + #3 + delete + (post-mockup addition) admin-add affordance. Pencil bubble repurposes from a misleading link-to-vendor-profile into the canonical edit affordance, opening a bottom sheet that mirrors <code>DeleteBoothSheet</code>'s pattern on the same page. A new "Add a booth" tile at the end of the grid completes the management trio (Add · Edit · Delete) on a single demo-friendly surface — admins no longer need to leave <code>/shelves</code> for booth setup. <em>Historical note: AddBoothInline lived on <code>/shelves</code> in early sessions, was removed twice (sessions 37 + 67) on the reasoning that admin work belongs on <code>/admin</code>. This third pass is intentional — David's demo posture wants the pattern back, and the Admin page is meaningfully "backend" not vendor-presentable.</em>
+  </p>
+
+  <div class="decisions">
+    <h3>Decisions D1 – D7</h3>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Decision</th><th>Recommendation</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>D1</strong></td>
+          <td class="q">Repurpose Pencil to open the edit sheet, vs add a separate edit button next to it?</td>
+          <td class="r"><span class="recommend">Repurpose Pencil.</span> Pencil = edit is the universal mental model. Today it links to <code>/vendor/[slug]</code> — read-only public profile, weak match for the icon. Profile remains reachable via direct URL or from <code>/shelf/[slug]</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>D2</strong></td>
+          <td class="q">When <code>display_name</code> changes, auto-update <code>slug</code>?</td>
+          <td class="r"><span class="recommend">Auto-update.</span> Bookmarks and finds reference <code>vendor_id</code>, not slug; URL change is the only consequence and is the expected behavior on rename.</td>
+        </tr>
+        <tr>
+          <td><strong>D3</strong></td>
+          <td class="q">Allow edit on claimed booths (<code>user_id != null</code>)?</td>
+          <td class="r"><span class="recommend">Yes.</span> Editing labels doesn't strand the auth user the way deleting does. Keep DELETE's safety gate; drop it on PATCH.</td>
+        </tr>
+        <tr>
+          <td><strong>D4</strong></td>
+          <td class="q">Allow mall change (David's #3)?</td>
+          <td class="r"><span class="recommend">Yes.</span> Conflict path: <code>vendors_mall_booth_unique</code> can fire 23505. PATCH catches it and returns a clean message — sheet shows the conflict pill (Frame 3) instead of bubbling a 500.</td>
+        </tr>
+        <tr>
+          <td><strong>D5</strong></td>
+          <td class="q">Include hero photo edit in this sheet?</td>
+          <td class="r"><span class="recommend">No — out of scope.</span> Admin already has <code>/my-shelf?vendor=&lt;id&gt;</code> as the canonical hero-edit surface. Keeping this sheet tightly scoped (3 fields) means a single PATCH endpoint and shorter Save path.</td>
+        </tr>
+        <tr>
+          <td><strong>D6</strong></td>
+          <td class="q">Where does the new "Add a booth" tile sit?</td>
+          <td class="r"><span class="recommend">Single tile at the very end of the whole grid</span> (after all mall sections), admin-only. Mirrors how "Add a find" sits at the end of <code>/my-shelf</code>'s booth grid (per item #7 we just shipped). Per-mall-section tiles would multiply the affordance for no benefit; floating-action-button breaks the masthead-anchored chrome pattern.</td>
+        </tr>
+        <tr>
+          <td><strong>D7</strong></td>
+          <td class="q">Add sheet pattern — bottom sheet (matches Edit) or inline expansion (existing AddBoothInline)?</td>
+          <td class="r"><span class="recommend">Bottom sheet.</span> Add + Edit + Delete on <code>/shelves</code> share the same sheet ergonomics — coherent admin-management trio. Inline expansion would create two visual paradigms on one page. Add sheet keeps AddBoothInline's field shape (mall · booth_number · display_name · <strong>optional hero photo</strong>, kept here unlike Edit per D5 since hero is most easily captured at create-time during the mall walk). Pre-selects the active mall filter (<code>savedMallId</code>) when present.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─── Frames ────────────────────────────────────────────────── -->
+
+  <div class="section">
+    <h2>Flow</h2>
+    <p class="lede">Admin on <code>/shelves</code> taps Pencil on a tile. Sheet slides up. Form pre-fills with the booth's current values. Admin edits. Save commits + closes sheet + tile re-renders with updated values.</p>
+  </div>
+
+  <div class="frames-row">
+
+    <!-- ─── Frame 1: BEFORE — tile with Pencil + Trash bubbles ─── -->
+    <div class="frame-card">
+      <div class="frame-label">1 · Tile (admin)</div>
+      <p class="frame-note">Pencil bubble (top right) repurposes from "open vendor profile" into "open edit sheet." Trash unchanged.</p>
+      <div class="phone">
+        <div class="masthead">Treehouse</div>
+        <div class="scope-eyebrow"><span class="count">12</span> booths at</div>
+        <div class="scope-mall">America's Antique Mall</div>
+        <div class="scope-geo">5044 Old Versailles Rd · Lexington, KY</div>
+
+        <div style="padding: 0 14px 0;">
+          <div class="section-header">
+            <span class="name">America's Antique Mall</span>
+            <span class="rule"></span>
+            <span class="ct">12 booths</span>
+          </div>
+        </div>
+
+        <div class="booth-grid">
+          <div class="booth-tile">
+            <div class="tile-hero">
+              <!-- Trash bubble — unchanged (only on unclaimed booths) -->
+              <div class="bubble trash">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+              </div>
+              <!-- Pencil bubble — REPURPOSED to open edit sheet -->
+              <div class="bubble pencil pulse">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+              </div>
+            </div>
+            <div class="tile-body">
+              <div style="min-width: 0;">
+                <div class="tile-name">Lexington Lights</div>
+                <div class="tile-bio">Mid-century lamps</div>
+              </div>
+              <div>
+                <div class="tile-booth-eyebrow">Booth</div>
+                <div class="tile-booth-num">D19</div>
+              </div>
+            </div>
+          </div>
+          <div class="booth-tile">
+            <div class="tile-hero alt"></div>
+            <div class="tile-body">
+              <div style="min-width: 0;">
+                <div class="tile-name">Riverbend Relics</div>
+                <div class="tile-bio">Tools &amp; primitives</div>
+              </div>
+              <div>
+                <div class="tile-booth-eyebrow">Booth</div>
+                <div class="tile-booth-num">42</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Frame 2: Sheet open — pre-filled with current values ─── -->
+    <div class="frame-card">
+      <div class="frame-label">2 · Sheet open (pre-filled)</div>
+      <p class="frame-note">Form pre-fills with the booth's current values. Save button shows in disabled state — no edits made yet.</p>
+      <div class="phone">
+        <div class="masthead">Treehouse</div>
+        <div class="scope-eyebrow"><span class="count">12</span> booths at</div>
+        <div class="scope-mall">America's Antique Mall</div>
+        <div class="scope-geo">5044 Old Versailles Rd · Lexington, KY</div>
+        <div style="padding: 0 14px 0;">
+          <div class="section-header">
+            <span class="name">America's Antique Mall</span>
+            <span class="rule"></span>
+            <span class="ct">12 booths</span>
+          </div>
+        </div>
+        <div class="booth-grid">
+          <div class="booth-tile">
+            <div class="tile-hero"></div>
+            <div class="tile-body">
+              <div><div class="tile-name">Lexington Lights</div><div class="tile-bio">Mid-century lamps</div></div>
+              <div><div class="tile-booth-eyebrow">Booth</div><div class="tile-booth-num">D19</div></div>
+            </div>
+          </div>
+          <div class="booth-tile">
+            <div class="tile-hero alt"></div>
+            <div class="tile-body">
+              <div><div class="tile-name">Riverbend Relics</div><div class="tile-bio">Tools &amp; primitives</div></div>
+              <div><div class="tile-booth-eyebrow">Booth</div><div class="tile-booth-num">42</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sheet-backdrop"></div>
+        <div class="sheet">
+          <div class="grabber"></div>
+          <div class="sheet-head">
+            <div class="icon-bubble">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+            </div>
+            <div class="title-block">
+              <div class="t">Edit booth</div>
+              <div class="s">Lexington Lights · America's Antique Mall</div>
+            </div>
+            <button class="close">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b5538" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div class="field">
+            <label class="field-label">Mall</label>
+            <select class="field-input field-select">
+              <option>America's Antique Mall — Lexington</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">Booth number <span style="font-style: italic; color: var(--ink-faint);">(optional)</span></label>
+            <input class="field-input" value="D19" readonly>
+          </div>
+          <div class="field">
+            <label class="field-label">Booth name</label>
+            <input class="field-input" value="Lexington Lights" readonly>
+          </div>
+
+          <button class="save-btn disabled">Save changes</button>
+          <button class="cancel-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Frame 3: Edited values — Save active + conflict variant ─── -->
+    <div class="frame-card">
+      <div class="frame-label">3 · Edited (mall + name changed)</div>
+      <p class="frame-note">Yellow-tinted inputs flag changed fields. Save active. Conflict pill appears if (mall_id, booth_number) collides on submit.</p>
+      <div class="phone">
+        <div class="masthead">Treehouse</div>
+        <div class="scope-eyebrow"><span class="count">12</span> booths at</div>
+        <div class="scope-mall">America's Antique Mall</div>
+        <div class="scope-geo">5044 Old Versailles Rd · Lexington, KY</div>
+        <div style="padding: 0 14px 0;">
+          <div class="section-header">
+            <span class="name">America's Antique Mall</span>
+            <span class="rule"></span>
+            <span class="ct">12 booths</span>
+          </div>
+        </div>
+        <div class="booth-grid">
+          <div class="booth-tile">
+            <div class="tile-hero"></div>
+            <div class="tile-body">
+              <div><div class="tile-name">Lexington Lights</div><div class="tile-bio">Mid-century lamps</div></div>
+              <div><div class="tile-booth-eyebrow">Booth</div><div class="tile-booth-num">D19</div></div>
+            </div>
+          </div>
+          <div class="booth-tile">
+            <div class="tile-hero alt"></div>
+            <div class="tile-body">
+              <div><div class="tile-name">Riverbend Relics</div><div class="tile-bio">Tools &amp; primitives</div></div>
+              <div><div class="tile-booth-eyebrow">Booth</div><div class="tile-booth-num">42</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sheet-backdrop"></div>
+        <div class="sheet">
+          <div class="grabber"></div>
+          <div class="sheet-head">
+            <div class="icon-bubble">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+            </div>
+            <div class="title-block">
+              <div class="t">Edit booth</div>
+              <div class="s">Lexington Lights · America's Antique Mall</div>
+            </div>
+            <button class="close">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b5538" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div class="field">
+            <label class="field-label">Mall</label>
+            <select class="field-input field-select changed">
+              <option>Heritage Antique Market — Frankfort</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">Booth number <span style="font-style: italic; color: var(--ink-faint);">(optional)</span></label>
+            <input class="field-input" value="D19">
+          </div>
+          <div class="field">
+            <label class="field-label">Booth name</label>
+            <input class="field-input changed" value="Lexington Light Co.">
+          </div>
+
+          <div class="conflict-pill" style="display: none;">
+            Booth D19 already exists at Heritage Antique Market. Pick a different number.
+          </div>
+
+          <button class="save-btn">Save changes</button>
+          <button class="cancel-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ─── Add-a-booth flow ─────────────────────────────────────────────── -->
+
+  <div class="section">
+    <h2>Flow — Add a booth (new affordance)</h2>
+    <p class="lede">Admin-only "Add a booth" tile at the end of the booth grid (after all mall sections). Tap → bottom sheet opens, mirroring the Edit sheet ergonomics with one extra field: optional hero photo (captured during the mall walk while the admin is standing at the booth).</p>
+  </div>
+
+  <div class="frames-row">
+
+    <!-- ─── Frame 4: Tile placement ─── -->
+    <div class="frame-card">
+      <div class="frame-label">4 · Tile (admin-only)</div>
+      <p class="frame-note">Sits at the end of the whole grid, after all mall sections. Same dashed silhouette as <code>AddFindTile</code> for visual rhyme. Hidden for non-admins.</p>
+      <div class="phone">
+        <div class="masthead">Treehouse</div>
+        <div class="scope-eyebrow"><span class="count">12</span> booths at</div>
+        <div class="scope-mall">America's Antique Mall</div>
+        <div class="scope-geo">5044 Old Versailles Rd · Lexington, KY</div>
+
+        <div style="padding: 0 14px 0;">
+          <div class="section-header">
+            <span class="name">America's Antique Mall</span>
+            <span class="rule"></span>
+            <span class="ct">12 booths</span>
+          </div>
+        </div>
+
+        <div class="booth-grid">
+          <div class="booth-tile">
+            <div class="tile-hero"></div>
+            <div class="tile-body">
+              <div><div class="tile-name">Lexington Lights</div><div class="tile-bio">Mid-century lamps</div></div>
+              <div><div class="tile-booth-eyebrow">Booth</div><div class="tile-booth-num">D19</div></div>
+            </div>
+          </div>
+          <div class="booth-tile">
+            <div class="tile-hero alt"></div>
+            <div class="tile-body">
+              <div><div class="tile-name">Riverbend Relics</div><div class="tile-bio">Tools &amp; primitives</div></div>
+              <div><div class="tile-booth-eyebrow">Booth</div><div class="tile-booth-num">42</div></div>
+            </div>
+          </div>
+          <!-- Add-a-booth tile — dashed cell -->
+          <div style="display: flex; flex-direction: column; min-width: 0;">
+            <div style="width: 100%; aspect-ratio: 1 / 1; border-radius: 12px; border: 1px dashed var(--ink-faint); background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6b5538" stroke-width="1.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span style="font-family: var(--im-fell); font-style: italic; font-size: 13px; color: var(--ink-muted); line-height: 1;">Add a booth</span>
+            </div>
+            <!-- Body slot placeholder so heights align with adjacent tiles -->
+            <div style="height: 38px;" aria-hidden="true"></div>
+          </div>
+          <div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Frame 5: Add sheet open ─── -->
+    <div class="frame-card">
+      <div class="frame-label">5 · Add sheet open</div>
+      <p class="frame-note">Same field rhythm as Edit sheet, plus optional hero photo (mall-walk capture). CTA reads "Add booth" instead of "Save changes." Mall pre-selects active filter.</p>
+      <div class="phone">
+        <div class="masthead">Treehouse</div>
+        <div class="scope-eyebrow"><span class="count">12</span> booths at</div>
+        <div class="scope-mall">America's Antique Mall</div>
+        <div class="scope-geo">5044 Old Versailles Rd · Lexington, KY</div>
+        <div style="padding: 0 14px 0;">
+          <div class="section-header">
+            <span class="name">America's Antique Mall</span>
+            <span class="rule"></span>
+            <span class="ct">12 booths</span>
+          </div>
+        </div>
+        <div class="booth-grid">
+          <div class="booth-tile">
+            <div class="tile-hero"></div>
+            <div class="tile-body">
+              <div><div class="tile-name">Lexington Lights</div><div class="tile-bio">Mid-century lamps</div></div>
+              <div><div class="tile-booth-eyebrow">Booth</div><div class="tile-booth-num">D19</div></div>
+            </div>
+          </div>
+          <div class="booth-tile">
+            <div class="tile-hero alt"></div>
+            <div class="tile-body">
+              <div><div class="tile-name">Riverbend Relics</div><div class="tile-bio">Tools &amp; primitives</div></div>
+              <div><div class="tile-booth-eyebrow">Booth</div><div class="tile-booth-num">42</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sheet-backdrop"></div>
+        <div class="sheet">
+          <div class="grabber"></div>
+          <div class="sheet-head">
+            <div class="icon-bubble">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </div>
+            <div class="title-block">
+              <div class="t">Add a booth</div>
+              <div class="s">Pre-seed for later vendor claim</div>
+            </div>
+            <button class="close">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6b5538" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div class="field">
+            <label class="field-label">Mall</label>
+            <select class="field-input field-select">
+              <option>America's Antique Mall — Lexington</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">Booth number <span style="font-style: italic; color: var(--ink-faint);">(optional)</span></label>
+            <input class="field-input" placeholder="e.g. 369 or D19">
+          </div>
+          <div class="field">
+            <label class="field-label">Booth name</label>
+            <input class="field-input" placeholder="e.g. ZenForged Finds">
+          </div>
+          <div class="field">
+            <label class="field-label">Hero photo <span style="font-style: italic; color: var(--ink-faint);">(optional)</span></label>
+            <div style="width: 100%; padding: 18px 14px; border-radius: 10px; background: rgba(42,26,10,0.02); border: 1px dashed var(--ink-hairline); display: flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--im-fell); font-style: italic; font-size: 12px; color: var(--ink-muted);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              Choose a photo
+            </div>
+          </div>
+
+          <button class="save-btn disabled" style="margin-top: 10px;">Add booth</button>
+          <button class="cancel-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- empty cell so the row stays as a 3-col grid for visual balance -->
+    <div></div>
+
+  </div>
+
+  <!-- ─── Implementation notes ─────────────────────────────────────────── -->
+
+  <div class="section">
+    <h2>Implementation</h2>
+    <p class="lede">Components + endpoint sketch (post-approval). Mockup is the commitment surface; build spec gets written after Save.</p>
+  </div>
+
+  <div class="decisions">
+    <table>
+      <tbody>
+        <tr>
+          <td><strong>UI — Edit</strong></td>
+          <td><code>EditBoothSheet</code> component on <code>/shelves</code>. Mirrors <code>DeleteBoothSheet</code>'s sheet pattern (backdrop, grabber pill, motion-y bottom-up entry, body-overflow lock). 3 form fields: mall select · booth_number input (autoCapitalize="characters") · display_name input.</td>
+        </tr>
+        <tr>
+          <td><strong>UI — Add</strong></td>
+          <td><code>AddBoothSheet</code> component, same shell as <code>EditBoothSheet</code>. 4 fields: mall select (pre-selected to <code>savedMallId</code> when active) · booth_number · display_name · optional hero photo. New admin-only <code>AddBoothTile</code> rendered after the last mall section. Both sheets share field markup via a small <code>BoothFormFields</code> sub-component to avoid drift.</td>
+        </tr>
+        <tr>
+          <td><strong>State</strong></td>
+          <td>Edit: form pre-fills from vendor; Save disabled until any field differs from initial; <code>changed</code> visual flag on diffed inputs. Add: form starts empty (mall pre-selected); Save disabled until display_name + mall present. Both: Cancel discards.</td>
+        </tr>
+        <tr>
+          <td><strong>API — Edit</strong></td>
+          <td>New <code>PATCH /api/admin/vendors</code>. Auth gate: <code>requireAdmin</code>. Body: <code>{ vendorId, display_name, booth_number, mall_id }</code>. Auto-derives <code>slug</code> from <code>display_name</code>. Catches Postgres 23505 → returns <code>{ error, code: "BOOTH_CONFLICT" }</code> with 409. <strong>No</strong> safety gate on <code>user_id</code> (D3).</td>
+        </tr>
+        <tr>
+          <td><strong>API — Add</strong></td>
+          <td>Reuses existing <code>createVendor</code> + <code>/api/vendor-hero</code> pipeline (same code path AddBoothInline already exercises). No new endpoint needed. Conflict shape: 23505 → conflict pill, identical to Edit.</td>
+        </tr>
+        <tr>
+          <td><strong>Wire</strong></td>
+          <td>Pencil bubble at <code>app/shelves/page.tsx:169-175</code> swaps from <code>&lt;Link href="/vendor/[slug]"&gt;</code> to <code>&lt;button onClick={() =&gt; setEditTarget(vendor)}&gt;</code>. <code>AddBoothTile</code> rendered after <code>groupByMall</code> output, gated on <code>isAdmin(user)</code>. Both sheets + <code>AnimatePresence</code> mounted alongside <code>DeleteBoothSheet</code> at the page root. <code>AddBoothInline</code> retained on <code>/admin</code> Vendors tab unchanged.</td>
+        </tr>
+        <tr>
+          <td><strong>Optimistic update</strong></td>
+          <td>Edit: sheet animates out + tile re-renders with new values. Add: sheet animates out + new tile fades into the grid in its mall section. Both via in-place <code>setVendors</code> updates — no full reload.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="ask-block">
+    <h3>Approval</h3>
+    <ol>
+      <li><strong>D6 + D7</strong> — accept the new "Add a booth" recommendations? Tile at end of grid, bottom-sheet pattern matching Edit, hero photo retained at create-time.</li>
+      <li><strong>D1–D5</strong> — already approved; flagged here for completeness in case anything reads differently now that Add is in scope.</li>
+      <li><strong>Pattern read OK on iPhone?</strong> Both sheets should feel native to <code>/shelves</code> (match <code>DeleteBoothSheet</code>'s ergonomics) — confirm field rhythm + Add/Save button reads cleanly.</li>
+      <li><strong>The yellow-tinted "changed" flag on edited inputs</strong> (Edit only) — keep, or drop it as visual noise? Optional polish; safe to retire if it feels heavy.</li>
+      <li><strong>Sequencing</strong> — once approved, build order: design record commit (per same-session rule) → <code>BoothFormFields</code> sub-component → <code>EditBoothSheet</code> + <code>PATCH</code> endpoint → <code>AddBoothSheet</code> + <code>AddBoothTile</code> → wire Pencil + tile. Single feat commit at end with full QA-walkthrough description, OR split as two commits (Edit first, Add second) if you'd like to QA each independently?</li>
+    </ol>
+  </div>
+
+</div>
+
+</body>
+</html>
