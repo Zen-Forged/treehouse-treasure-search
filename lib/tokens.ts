@@ -143,6 +143,12 @@ export const v1 = {
 
 export const fonts = {
   imFell: 'var(--font-im-fell), "IM Fell English", Georgia, serif',
+  // Session 82 — Lora replaces IM Fell project-wide as the literary serif.
+  // Modern editorial serif by Cyreal (Google Fonts), variable font with
+  // strong italic. IM Fell's letterpress glyph variability hurt readability
+  // at body sizes (form labels, find-tile captions). Loaded in app/layout.tsx
+  // via next/font/google. See docs/mockups/vendor-request-typography-v2.html.
+  lora:   'var(--font-lora), Georgia, serif',
   sys:    '-apple-system, "Segoe UI", Roboto, system-ui, sans-serif',
   // Session 75 — booth-numeral font. Times New Roman across every booth-
   // numeral and count-chip surface: post-it 36px, Variant B booth lockup
@@ -160,6 +166,7 @@ export const fonts = {
 // Convenience named exports (matches what Find Detail / Find Map / Booth
 // previously declared as local `FONT_IM_FELL` / `FONT_SYS` constants).
 export const FONT_IM_FELL = fonts.imFell;
+export const FONT_LORA    = fonts.lora;
 export const FONT_SYS     = fonts.sys;
 export const FONT_NUMERAL = fonts.numeral;
 
