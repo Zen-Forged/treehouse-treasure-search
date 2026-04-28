@@ -297,6 +297,19 @@ function MasonryTile({
         onPointerDown={handleTilePointerDown}
         style={{ display: "block", textDecoration: "none" }}
       >
+        {/* Polaroid frame — session 83 PoC of "consistent container against
+            random imagery" (Polaroid evolved direction A from
+            docs/mockups/card-container-v1.html). Warm-cream paper card with
+            generous bottom mat for the existing FONT_SYS italic timestamp.
+            Home only. */}
+        <div
+          style={{
+            background: "#faf2e0",
+            padding: "7px 7px 8px",
+            borderRadius: 4,
+            boxShadow: "0 4px 10px rgba(42,26,10,0.13), 0 1px 0 rgba(42,26,10,0.04)",
+          }}
+        >
         {/* Photograph slot — fixed-height layout reservation so the masonry
             grid stays put when the photograph lifts out via layoutId during
             forward nav (Track D phase 5, docs/marketplace-transitions-design.md
@@ -448,6 +461,7 @@ function MasonryTile({
           }}
         >
           {formatTimeAgo(post.created_at)}
+        </div>
         </div>
       </Link>
     </div>
