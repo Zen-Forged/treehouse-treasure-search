@@ -36,7 +36,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Mail, ArrowLeft, Loader, Clipboard } from "lucide-react";
 import { sendMagicLink, getSession, onAuthChange, isAdmin } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import type { User } from "@supabase/supabase-js";
 
 type Screen = "enter-email" | "enter-code" | "confirming";
@@ -78,7 +78,7 @@ const inputErrorStyle: React.CSSProperties = {
 
 const labelStyle: React.CSSProperties = {
   display: "block",
-  fontFamily: FONT_IM_FELL,
+  fontFamily: FONT_LORA,
   fontStyle: "italic",
   fontSize: 13,
   color: v1.inkMuted,
@@ -392,7 +392,7 @@ function LoginInner() {
 
         <h1
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontSize: 28,
             color: v1.inkPrimary,
             textAlign: "center",
@@ -405,7 +405,7 @@ function LoginInner() {
         </h1>
         <p
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 15,
             color: v1.inkMuted,
@@ -566,7 +566,7 @@ function LoginInner() {
                       border: "none",
                       padding: 0,
                       cursor: codeBusy ? "default" : "pointer",
-                      fontFamily: FONT_IM_FELL,
+                      fontFamily: FONT_LORA,
                       fontStyle: "italic",
                       fontSize: 14,
                       color: v1.inkMuted,
@@ -616,7 +616,7 @@ function LoginInner() {
                       alignItems: "center",
                       justifyContent: "center",
                       gap: 7,
-                      fontFamily: FONT_IM_FELL,
+                      fontFamily: FONT_LORA,
                       fontStyle: "italic",
                       fontSize: 13,
                       color: v1.inkMuted,
@@ -630,7 +630,7 @@ function LoginInner() {
                 {/* Fallback line */}
                 <p
                   style={{
-                    fontFamily: FONT_IM_FELL,
+                    fontFamily: FONT_LORA,
                     fontStyle: "italic",
                     fontSize: 13,
                     color: v1.inkFaint,
@@ -732,7 +732,7 @@ function PaperWashBubble({ children }: { children: React.ReactNode }) {
 }
 
 const heroTitleStyle: React.CSSProperties = {
-  fontFamily: FONT_IM_FELL,
+  fontFamily: FONT_LORA,
   fontSize: 28,
   color: v1.inkPrimary,
   textAlign: "center",
@@ -742,7 +742,7 @@ const heroTitleStyle: React.CSSProperties = {
 };
 
 const heroSubheadStyle: React.CSSProperties = {
-  fontFamily: FONT_IM_FELL,
+  fontFamily: FONT_LORA,
   fontStyle: "italic",
   fontSize: 15,
   color: v1.inkMuted,

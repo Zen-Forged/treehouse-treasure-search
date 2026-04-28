@@ -69,7 +69,7 @@ import {
   type LocalVendorProfile,
   type Vendor,
 } from "@/types/treehouse";
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import PhotographPreview from "@/components/PhotographPreview";
 import PostingAsBlock from "@/components/PostingAsBlock";
@@ -439,7 +439,7 @@ function PostPreviewInner() {
           animate={{ opacity: [0.4, 1, 0.4] }}
           transition={{ duration: 1.8, repeat: Infinity }}
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 15,
             color: v1.inkMuted,
@@ -495,7 +495,7 @@ function PostPreviewInner() {
         >
           <div
             style={{
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontSize: 22,
               color: v1.inkPrimary,
               marginBottom: 8,
@@ -506,7 +506,7 @@ function PostPreviewInner() {
           </div>
           <div
             style={{
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 13,
               color: v1.inkMuted,
@@ -549,7 +549,7 @@ function PostPreviewInner() {
               width: "100%",
               padding: "12px",
               borderRadius: 14,
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 14,
               color: v1.inkMuted,
@@ -589,7 +589,7 @@ function PostPreviewInner() {
       >
         <div
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontSize: 22,
             color: v1.inkPrimary,
             textAlign: "center",
@@ -599,7 +599,7 @@ function PostPreviewInner() {
         </div>
         <div
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 14,
             color: v1.inkMuted,
@@ -764,7 +764,7 @@ function PostPreviewInner() {
         <div style={{ padding: "16px 22px 10px" }}>
           <div
             style={{
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontSize: 24,
               color: v1.inkPrimary,
               letterSpacing: "-0.005em",
@@ -776,7 +776,7 @@ function PostPreviewInner() {
           </div>
           <div
             style={{
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 14,
               color: v1.inkMuted,
@@ -928,7 +928,7 @@ function PostPreviewInner() {
             <motion.span
               animate={{ opacity: [1, 0.5, 1] }}
               transition={{ duration: 1.2, repeat: Infinity }}
-              style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic" }}
+              style={{ fontFamily: FONT_LORA, fontStyle: "italic" }}
             >
               Publishing…
             </motion.span>
@@ -962,7 +962,7 @@ function FieldGroup({
     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
       <label
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontStyle: "italic",
           fontSize: 13,
           color: v1.inkMuted,

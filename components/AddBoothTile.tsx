@@ -9,7 +9,7 @@
 
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
-import { v1, FONT_IM_FELL } from "@/lib/tokens";
+import { v1, FONT_LORA } from "@/lib/tokens";
 
 interface AddBoothTileProps {
   onTap: () => void;
@@ -43,7 +43,7 @@ export default function AddBoothTile({ onTap }: AddBoothTileProps) {
         <Plus size={18} strokeWidth={1.6} style={{ color: v1.inkMuted }} />
         <span
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 14,
             color: v1.inkMuted,

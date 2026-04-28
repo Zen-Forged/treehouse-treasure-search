@@ -1,6 +1,6 @@
 // app/layout.tsx
 import type { Metadata, Viewport } from "next";
-import { IM_Fell_English, Caveat, Lora } from "next/font/google";
+import { Caveat, Lora } from "next/font/google";
 import * as Sentry from "@sentry/nextjs";
 import "./globals.css";
 import { FindSessionProvider } from "@/hooks/useSession";
@@ -10,14 +10,19 @@ const DevAuthPanel = process.env.NODE_ENV === "development"
   ? require("@/components/DevAuthPanel").default
   : () => null;
 
-// v1.0 typography — loaded once at root so every screen can reference the
-// CSS variables via `font-family: var(--font-im-fell)` etc. without
-// per-page font requests. See docs/design-system.md §Typography v1.0.
-const imFell = IM_Fell_English({
-  weight: ["400"],
+// Typography — loaded once at root so every screen can reference the CSS
+// variables via `font-family: var(--font-lora)` etc. without per-page font
+// requests. See docs/design-system.md §Typography.
+//
+// Session 82 — Lora replaces IM Fell project-wide. IM Fell's letterpress
+// glyph variability hurt readability at body sizes (find-tile captions,
+// form labels). Lora is screen-optimized, has a strong italic, and keeps
+// editorial warmth.
+const lora = Lora({
+  weight: ["400", "500", "600"],
   style:  ["normal", "italic"],
   subsets: ["latin"],
-  variable: "--font-im-fell",
+  variable: "--font-lora",
   display: "swap",
 });
 
@@ -25,19 +30,6 @@ const caveat = Caveat({
   weight: ["500"],
   subsets: ["latin"],
   variable: "--font-caveat",
-  display: "swap",
-});
-
-// Session 82 — Lora replaces IM Fell project-wide as the literary serif.
-// IM Fell's letterpress glyph variability hurt readability at body sizes
-// (find-tile captions, form labels). Lora is screen-optimized, has a
-// strong italic, and keeps editorial warmth. See docs/mockups/
-// vendor-request-typography-v2.html and the typography sweep design notes.
-const lora = Lora({
-  weight: ["400", "500", "600"],
-  style:  ["normal", "italic"],
-  subsets: ["latin"],
-  variable: "--font-lora",
   display: "swap",
 });
 
@@ -70,7 +62,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${imFell.variable} ${lora.variable} ${caveat.variable}`}>
+    <html lang="en" className={`${lora.variable} ${caveat.variable}`}>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/logo.png" />

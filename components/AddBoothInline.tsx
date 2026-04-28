@@ -40,7 +40,7 @@ import { motion } from "framer-motion";
 import { Plus, ChevronRight, X, Loader as LoaderIcon, Check, Image as ImageIcon } from "lucide-react";
 import { createVendor, slugify } from "@/lib/posts";
 import { compressImage } from "@/lib/imageUpload";
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import type { Mall, Vendor } from "@/types/treehouse";
 
 interface AddBoothInlineProps {
@@ -205,7 +205,7 @@ export default function AddBoothInline({
 
   const labelStyle: React.CSSProperties = {
     display: "block",
-    fontFamily: FONT_IM_FELL,
+    fontFamily: FONT_LORA,
     fontStyle: "italic",
     fontSize: 12,
     color: v1.inkMuted,
@@ -250,13 +250,13 @@ export default function AddBoothInline({
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
-            fontFamily: FONT_IM_FELL, fontSize: 14, color: v1.inkPrimary,
+            fontFamily: FONT_LORA, fontSize: 14, color: v1.inkPrimary,
             lineHeight: 1.25,
           }}>
             Add a booth
           </div>
           <div style={{
-            fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 11,
+            fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 11,
             color: v1.inkMuted, lineHeight: 1.4, marginTop: 1,
           }}>
             Pre-seed a booth for later vendor claim
@@ -298,7 +298,7 @@ export default function AddBoothInline({
             <Plus size={13} style={{ color: v1.green }} strokeWidth={1.8} />
           </div>
           <div style={{
-            fontFamily: FONT_IM_FELL, fontSize: 14, color: v1.inkPrimary,
+            fontFamily: FONT_LORA, fontSize: 14, color: v1.inkPrimary,
           }}>
             Add a booth
           </div>
@@ -424,7 +424,7 @@ export default function AddBoothInline({
               justifyContent: "center",
               gap: 8,
               cursor: "pointer",
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 13,
               color: v1.inkMuted,

@@ -15,7 +15,7 @@ import { motion } from "framer-motion";
 import { Plus, X, Loader as LoaderIcon, AlertTriangle, Image as ImageIcon } from "lucide-react";
 import { createVendor, slugify } from "@/lib/posts";
 import { compressImage } from "@/lib/imageUpload";
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import BoothFormFields from "@/components/BoothFormFields";
 import type { Vendor, Mall } from "@/types/treehouse";
 
@@ -195,12 +195,12 @@ export default function AddBoothSheet({
               <Plus size={14} style={{ color: v1.green }} strokeWidth={1.8} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: FONT_IM_FELL, fontSize: 16, color: v1.inkPrimary, lineHeight: 1.3 }}>
+              <div style={{ fontFamily: FONT_LORA, fontSize: 16, color: v1.inkPrimary, lineHeight: 1.3 }}>
                 Add a booth
               </div>
               <div
                 style={{
-                  fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 11,
+                  fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 11,
                   color: v1.inkMuted, lineHeight: 1.4, marginTop: 1,
                 }}
               >
@@ -236,7 +236,7 @@ export default function AddBoothSheet({
             <label
               style={{
                 display: "block",
-                fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 12,
+                fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 12,
                 color: v1.inkMuted, lineHeight: 1.3, marginBottom: 6,
               }}
             >
@@ -289,7 +289,7 @@ export default function AddBoothSheet({
                   display: "flex", alignItems: "center", justifyContent: "center",
                   gap: 8,
                   cursor: submitting ? "default" : "pointer",
-                  fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 13,
+                  fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 13,
                   color: v1.inkMuted,
                   WebkitTapHighlightColor: "transparent",
                 }}
@@ -363,7 +363,7 @@ export default function AddBoothSheet({
               width: "100%",
               padding: "10px",
               borderRadius: 10,
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 12,
               color: v1.inkMuted,

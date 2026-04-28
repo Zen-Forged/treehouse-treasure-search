@@ -39,7 +39,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, Mail, Clock, Camera, X } from "lucide-react";
 import { getActiveMalls } from "@/lib/posts";
 import { compressImage } from "@/lib/imageUpload";
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import type { Mall } from "@/types/treehouse";
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
@@ -79,7 +79,7 @@ const selectStyle: React.CSSProperties = {
 
 const labelStyle: React.CSSProperties = {
   display: "block",
-  fontFamily: FONT_IM_FELL,
+  fontFamily: FONT_LORA,
   fontStyle: "italic",
   fontSize: 13,
   color: v1.inkMuted,
@@ -88,7 +88,7 @@ const labelStyle: React.CSSProperties = {
 };
 
 const helperStyle: React.CSSProperties = {
-  fontFamily: FONT_IM_FELL,
+  fontFamily: FONT_LORA,
   fontStyle: "italic",
   fontSize: 12,
   color: v1.inkFaint,
@@ -320,7 +320,7 @@ function VendorRequestInner() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.32, ease: EASE }}
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontSize: 22,
             color: v1.inkPrimary,
             lineHeight: 1.2,
@@ -780,7 +780,7 @@ function DoneScreen({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.18, duration: 0.32, ease: EASE }}
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontSize: 30,
             color: v1.inkPrimary,
             lineHeight: 1.2,
@@ -800,7 +800,7 @@ function DoneScreen({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.28, duration: 0.32, ease: EASE }}
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 16,
             color: v1.inkMid,
@@ -873,7 +873,7 @@ function DoneScreen({
               <a
                 onClick={onGoSignIn}
                 style={{
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 16,
                   color: v1.inkPrimary,
@@ -889,7 +889,7 @@ function DoneScreen({
               <a
                 onClick={onGoHome}
                 style={{
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 15,
                   color: v1.inkMuted,
@@ -908,7 +908,7 @@ function DoneScreen({
               <a
                 onClick={onGoHome}
                 style={{
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 16,
                   color: v1.inkPrimary,
@@ -924,7 +924,7 @@ function DoneScreen({
               <a
                 onClick={onReset}
                 style={{
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 15,
                   color: v1.inkMuted,
@@ -947,7 +947,7 @@ function DoneScreen({
             animate={{ opacity: 1 }}
             transition={{ delay: 0.58, duration: 0.32 }}
             style={{
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 13,
               color: v1.inkMuted,

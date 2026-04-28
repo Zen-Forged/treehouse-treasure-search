@@ -43,7 +43,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Shield, Loader } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 
 type Screen = "enter-pin" | "signing-in";
 
@@ -76,7 +76,7 @@ const inputErrorStyle: React.CSSProperties = {
 
 const labelStyle: React.CSSProperties = {
   display: "block",
-  fontFamily: FONT_IM_FELL,
+  fontFamily: FONT_LORA,
   fontStyle: "italic",
   fontSize: 13,
   color: v1.inkMuted,
@@ -210,7 +210,7 @@ function AdminLoginInner() {
         </div>
         <h1
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontSize: 28,
             color: v1.inkPrimary,
             lineHeight: 1.2,
@@ -222,7 +222,7 @@ function AdminLoginInner() {
         </h1>
         <p
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 15,
             color: v1.inkMuted,
@@ -310,7 +310,7 @@ function AdminLoginInner() {
 
         <h1
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontSize: 28,
             color: v1.inkPrimary,
             textAlign: "center",
@@ -323,7 +323,7 @@ function AdminLoginInner() {
         </h1>
         <p
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 15,
             color: v1.inkMuted,
@@ -423,7 +423,7 @@ function AdminLoginInner() {
               <a
                 onClick={() => router.push("/login")}
                 style={{
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   color: v1.inkMuted,
                   textDecoration: "underline",

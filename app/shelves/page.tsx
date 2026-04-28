@@ -31,7 +31,7 @@ import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import {
   v1,
-  FONT_IM_FELL,
+  FONT_LORA,
   FONT_SYS,
   FONT_NUMERAL,
   MOTION_EASE_OUT,
@@ -201,7 +201,7 @@ function VendorCard({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontSize: 18,
               color: v1.inkPrimary,
               lineHeight: 1.2,
@@ -369,10 +369,10 @@ function DeleteBoothSheet({
               <AlertTriangle size={16} style={{ color: v1.red }} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: FONT_IM_FELL, fontSize: 17, color: v1.inkPrimary, lineHeight: 1.3 }}>
+              <div style={{ fontFamily: FONT_LORA, fontSize: 17, color: v1.inkPrimary, lineHeight: 1.3 }}>
                 Delete this booth?
               </div>
-              <div style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 13, color: v1.inkMuted, lineHeight: 1.55, marginTop: 4 }}>
+              <div style={{ fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 13, color: v1.inkMuted, lineHeight: 1.55, marginTop: 4 }}>
                 Removes the booth, every find posted to it, and all photos. This cannot be undone.
               </div>
             </div>
@@ -383,14 +383,14 @@ function DeleteBoothSheet({
           </div>
 
           <div style={{ padding: "12px 14px", background: "rgba(42,26,10,0.03)", borderRadius: 10, border: `1px solid ${borderC}`, marginBottom: 16 }}>
-            <div style={{ fontFamily: FONT_IM_FELL, fontSize: 15, color: v1.inkPrimary, lineHeight: 1.3 }}>{vendor.display_name}</div>
-            <div style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 12, color: v1.inkMuted, lineHeight: 1.5, marginTop: 3 }}>
+            <div style={{ fontFamily: FONT_LORA, fontSize: 15, color: v1.inkPrimary, lineHeight: 1.3 }}>{vendor.display_name}</div>
+            <div style={{ fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 12, color: v1.inkMuted, lineHeight: 1.5, marginTop: 3 }}>
               {vendor.mall?.name ?? "Unknown location"}{vendor.booth_number ? ` · Booth ${vendor.booth_number}` : ""}
             </div>
           </div>
 
           <div style={{ marginBottom: 12 }}>
-            <label style={{ display: "block", fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 12, color: v1.inkMuted, lineHeight: 1.4, marginBottom: 6 }}>
+            <label style={{ display: "block", fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 12, color: v1.inkMuted, lineHeight: 1.4, marginBottom: 6 }}>
               Type <span style={{ fontStyle: "normal", fontWeight: 700, color: v1.inkPrimary }}>{vendor.display_name}</span> to confirm.
             </label>
             <input
@@ -665,10 +665,10 @@ export default function BoothsPage() {
         ) : visibleVendors.length === 0 ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 32px 0", textAlign: "center" }}>
-            <div style={{ fontFamily: FONT_IM_FELL, fontSize: 20, color: v1.inkPrimary, lineHeight: 1.3, marginBottom: 10 }}>
+            <div style={{ fontFamily: FONT_LORA, fontSize: 20, color: v1.inkPrimary, lineHeight: 1.3, marginBottom: 10 }}>
               No booths yet
             </div>
-            <p style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 14, color: v1.inkMuted, lineHeight: 1.75, maxWidth: 230, margin: 0 }}>
+            <p style={{ fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 14, color: v1.inkMuted, lineHeight: 1.75, maxWidth: 230, margin: 0 }}>
               Booths will appear here once vendors start posting their finds.
             </p>
           </motion.div>
@@ -703,7 +703,7 @@ export default function BoothsPage() {
                 <div key={group.mallName}>
                   {/* Section header — IM Fell name + hairline rule + booth count */}
                   <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: groupIdx === 0 ? 0 : 20, paddingBottom: 10 }}>
-                    <span style={{ fontFamily: FONT_IM_FELL, fontSize: 15, color: v1.inkPrimary, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>
+                    <span style={{ fontFamily: FONT_LORA, fontSize: 15, color: v1.inkPrimary, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>
                       {group.mallName}
                     </span>
                     <AdminOnly user={user}>
@@ -712,7 +712,7 @@ export default function BoothsPage() {
                       )}
                     </AdminOnly>
                     <div style={{ flex: 1, height: 1, background: v1.inkHairline }} />
-                    <span style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 11, color: v1.inkMuted, whiteSpace: "nowrap" }}>
+                    <span style={{ fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 11, color: v1.inkMuted, whiteSpace: "nowrap" }}>
                       {group.vendors.length} {group.vendors.length === 1 ? "booth" : "booths"}
                     </span>
                   </div>

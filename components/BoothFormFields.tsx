@@ -5,7 +5,7 @@
 
 "use client";
 
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import type { Mall } from "@/types/treehouse";
 
 export interface BoothFormFieldsProps {
@@ -51,7 +51,7 @@ const changedStyle: React.CSSProperties = {
 
 const labelStyle: React.CSSProperties = {
   display: "block",
-  fontFamily: FONT_IM_FELL,
+  fontFamily: FONT_LORA,
   fontStyle: "italic",
   fontSize: 12,
   color: v1.inkMuted,

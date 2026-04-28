@@ -92,7 +92,7 @@ import {
   BoothCloser,
   BoothPageStyles,
   v1,
-  FONT_IM_FELL,
+  FONT_LORA,
   FONT_SYS,
   type BoothView,
 } from "@/components/BoothPage";
@@ -223,7 +223,7 @@ function NoBooth() {
       </div>
       <div
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontSize: 24,
           color: v1.inkPrimary,
           marginBottom: 10,
@@ -234,7 +234,7 @@ function NoBooth() {
       </div>
       <p
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontStyle: "italic",
           fontSize: 15,
           color: v1.inkMuted,

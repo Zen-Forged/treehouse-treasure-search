@@ -63,7 +63,7 @@ import {
   BoothCloser,
   BoothPageStyles,
   v1,
-  FONT_IM_FELL,
+  FONT_LORA,
   type BoothView,
 } from "@/components/BoothPage";
 import type { Post, Vendor, Mall } from "@/types/treehouse";
@@ -217,7 +217,7 @@ function NotFound() {
       <Heart size={32} style={{ color: v1.inkFaint }} />
       <div
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontSize: 22,
           color: v1.inkPrimary,
           textAlign: "center",
@@ -227,7 +227,7 @@ function NotFound() {
       </div>
       <p
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontStyle: "italic",
           fontSize: 14,
           color: v1.inkMuted,
@@ -242,7 +242,7 @@ function NotFound() {
       <Link
         href="/"
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontStyle: "italic",
           fontSize: 15,
           color: v1.inkPrimary,
@@ -421,7 +421,7 @@ export default function PublicShelfPage() {
                   style={{
                     padding: "48px 28px",
                     textAlign: "center",
-                    fontFamily: FONT_IM_FELL,
+                    fontFamily: FONT_LORA,
                     fontStyle: "italic",
                     fontSize: 15,
                     color: v1.inkMuted,
@@ -439,7 +439,7 @@ export default function PublicShelfPage() {
                   style={{
                     padding: "48px 28px",
                     textAlign: "center",
-                    fontFamily: FONT_IM_FELL,
+                    fontFamily: FONT_LORA,
                     fontStyle: "italic",
                     fontSize: 15,
                     color: v1.inkMuted,

@@ -16,7 +16,7 @@
 "use client";
 
 import { Tag } from "lucide-react";
-import { v1, FONT_IM_FELL } from "@/lib/tokens";
+import { v1, FONT_LORA } from "@/lib/tokens";
 
 export default function TagBadge() {
   return (
@@ -29,7 +29,7 @@ export default function TagBadge() {
         background: "rgba(30, 77, 43, 0.10)",
         border: "1px solid rgba(30, 77, 43, 0.22)",
         borderRadius: 999,
-        fontFamily: FONT_IM_FELL,
+        fontFamily: FONT_LORA,
         fontStyle: "italic",
         fontSize: 11,
         color: v1.green,

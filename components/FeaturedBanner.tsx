@@ -28,7 +28,7 @@
 
 "use client";
 
-import { v1, FONT_IM_FELL } from "@/lib/tokens";
+import { v1, FONT_LORA } from "@/lib/tokens";
 
 export type FeaturedBannerVariant = "eyebrow" | "overlay";
 
@@ -70,7 +70,7 @@ export default function FeaturedBanner({
             style={{
               paddingLeft: 12,
               marginBottom: 8,
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 14,
               color: v1.inkMuted,
@@ -99,7 +99,7 @@ export default function FeaturedBanner({
             bottom: 22,
             padding: "0 32px",
             pointerEvents: "none",
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontSize: 30,
             color: "#ffffff",
             textShadow: "0 2px 8px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.25)",
@@ -178,7 +178,7 @@ function BannerImage({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 14,
             color: v1.inkFaint,

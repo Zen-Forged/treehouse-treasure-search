@@ -15,13 +15,13 @@
 //
 // v1.1j changes (docs/design-system.md §v1.1j):
 //   - Diamond ornament retired from <DiamondDivider> and <BoothCloser>; plain hairline now
-//   - Post-it 36px numeral: FONT_IM_FELL → FONT_SYS ("1 vs I" disambiguation rule)
+//   - Post-it 36px numeral: FONT_LORA → FONT_SYS ("1 vs I" disambiguation rule)
 //   - <WindowView> gains `showPlaceholders` prop; <ShelfView> gains `showAddTile` prop (owner parity)
 //   - <PlaceholderTile> new primitive, rendered only when owner has < 9 items
 //
 // Session 46 (2026-04-22) — small-type legibility sweep:
-//   WindowTile caption: FONT_IM_FELL italic 13px → FONT_SYS 14px (400 wt).
-//   ShelfTile caption:  FONT_IM_FELL italic 14px → FONT_SYS 14px (400 wt,
+//   WindowTile caption: FONT_LORA italic 13px → FONT_SYS 14px (400 wt).
+//   ShelfTile caption:  FONT_LORA italic 14px → FONT_SYS 14px (400 wt,
 //                        same size, font swap only).
 //   Rationale lives on app/find/[id]/page.tsx's header (the Find Detail
 //   ShelfCard got the same treatment in this commit). In short: italic
@@ -54,7 +54,7 @@
 //   bubble (top-left, owner-only) still needs contrast against bright
 //   photography in that region.
 //
-// v1.1h tokens (v1, FONT_IM_FELL, FONT_SYS) are imported from lib/tokens.ts —
+// v1.1h tokens (v1, FONT_LORA, FONT_SYS) are imported from lib/tokens.ts —
 // canonical since session 19A. They are re-exported here so existing imports
 // from "@/components/BoothPage" in app/my-shelf and app/shelf/[slug] continue
 // to resolve without touching those files.
@@ -70,7 +70,7 @@ import { Pencil, Loader, ImagePlus } from "lucide-react";
 import { vendorHueBg, mapsUrl, boothNumeralSize } from "@/lib/utils";
 import {
   v1,
-  FONT_IM_FELL,
+  FONT_LORA,
   FONT_SYS,
   FONT_NUMERAL,
   MOTION_SHARED_ELEMENT_EASE,
@@ -84,7 +84,7 @@ import type { Post } from "@/types/treehouse";
 // Re-export canonical v1.1h tokens so consumers of BoothPage primitives
 // (app/my-shelf, app/shelf/[slug]) keep their existing imports working.
 // FONT_NUMERAL renamed from FONT_POSTIT_NUMERAL in session 75 (broader scope).
-export { v1, FONT_IM_FELL, FONT_SYS, FONT_NUMERAL };
+export { v1, FONT_LORA, FONT_SYS, FONT_NUMERAL };
 
 const EASE = [0.25, 0.1, 0.25, 1] as const;
 
@@ -391,7 +391,7 @@ export function BoothTitleBlock({
     <div style={{ padding: "36px 22px 6px" }}>
       <div
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontStyle: "italic",
           fontSize: 13,
           color: v1.inkMuted,
@@ -421,7 +421,7 @@ export function BoothTitleBlock({
         >
           <h1
             style={{
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontSize: 32,
               fontWeight: 400,
               color: v1.inkPrimary,
@@ -435,7 +435,7 @@ export function BoothTitleBlock({
           <span
             aria-hidden="true"
             style={{
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontSize: 20,
               color: v1.inkMuted,
               lineHeight: 1,
@@ -448,7 +448,7 @@ export function BoothTitleBlock({
       ) : (
         <h1
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontSize: 32,
             fontWeight: 400,
             color: v1.inkPrimary,
@@ -512,7 +512,7 @@ export function MallBlock({
       <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
         <div
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontSize: 18,
             color: v1.inkPrimary,
             lineHeight: 1.3,
@@ -587,7 +587,7 @@ export function ViewToggle({
 }) {
   function linkStyle(active: boolean): React.CSSProperties {
     return {
-      fontFamily: FONT_IM_FELL,
+      fontFamily: FONT_LORA,
       fontStyle: "italic",
       fontSize: 16,
       color: active ? v1.inkPrimary : v1.inkMuted,
@@ -622,7 +622,7 @@ export function ViewToggle({
       <span
         aria-hidden="true"
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontSize: 16,
           color: v1.inkFaint,
           lineHeight: 1,
@@ -679,7 +679,7 @@ export function AddFindTile({
       <ImagePlus size={22} strokeWidth={1.5} style={{ color: v1.inkMuted }} />
       <span
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontStyle: "italic",
           fontSize: 13,
           color: v1.inkMuted,
@@ -798,7 +798,7 @@ function WindowTile({ post, index }: { post: Post; index: number }) {
                   padding: "12px 10px",
                   display: "flex",
                   alignItems: "flex-end",
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontSize: 12,
                   color: v1.inkFaint,
                 }}
@@ -810,7 +810,7 @@ function WindowTile({ post, index }: { post: Post; index: number }) {
           <div style={{ padding: "9px 10px 11px", minHeight: 76 }}>
             <div
               style={{
-                fontFamily: FONT_IM_FELL,
+                fontFamily: FONT_LORA,
                 fontSize: 14,
                 color: v1.inkPrimary,
                 lineHeight: 1.2,
@@ -948,7 +948,7 @@ function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirs
                   padding: "12px 10px",
                   display: "flex",
                   alignItems: "flex-end",
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontSize: 13,
                   color: v1.inkFaint,
                 }}
@@ -960,7 +960,7 @@ function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirs
           <div style={{ padding: "9px 10px 11px", minHeight: 76 }}>
             <div
               style={{
-                fontFamily: FONT_IM_FELL,
+                fontFamily: FONT_LORA,
                 fontSize: 14,
                 color: v1.inkPrimary,
                 lineHeight: 1.2,
@@ -1027,7 +1027,7 @@ function ShelfAddFindTile({
       <ImagePlus size={24} strokeWidth={1.5} style={{ color: v1.inkMuted }} />
       <span
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontStyle: "italic",
           fontSize: 14,
           color: v1.inkMuted,
@@ -1128,7 +1128,7 @@ export function BoothCloser() {
       </div>
       <div
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontStyle: "italic",
           fontSize: 16,
           color: v1.inkMid,

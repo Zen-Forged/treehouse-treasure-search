@@ -142,30 +142,24 @@ export const v1 = {
 } as const;
 
 export const fonts = {
-  imFell: 'var(--font-im-fell), "IM Fell English", Georgia, serif',
-  // Session 82 — Lora replaces IM Fell project-wide as the literary serif.
-  // Modern editorial serif by Cyreal (Google Fonts), variable font with
+  // Session 82 — Lora is the project-wide literary serif (replaced IM Fell).
+  // Modern editorial serif by Cyreal (Google Fonts), variable font with a
   // strong italic. IM Fell's letterpress glyph variability hurt readability
   // at body sizes (form labels, find-tile captions). Loaded in app/layout.tsx
   // via next/font/google. See docs/mockups/vendor-request-typography-v2.html.
-  lora:   'var(--font-lora), Georgia, serif',
-  sys:    '-apple-system, "Segoe UI", Roboto, system-ui, sans-serif',
+  lora: 'var(--font-lora), Georgia, serif',
+  sys:  '-apple-system, "Segoe UI", Roboto, system-ui, sans-serif',
   // Session 75 — booth-numeral font. Times New Roman across every booth-
   // numeral and count-chip surface: post-it 36px, Variant B booth lockup
   // (Booths grid, find detail, /flagged), and MallScopeHeader 22px count
-  // prefix. Disambiguated `1` (vs IM Fell's serifed `1` that read as `I`
+  // prefix. Disambiguated `1` (vs the prior serif's `1` that read as `I`
   // on mixed booth IDs like D19). No webfont load — TNR ships with iOS,
-  // macOS, and Windows. Originally introduced in v1.1l as `postitNumeral`
-  // and scoped only to the 36px post-it; the narrow naming kept the fix
-  // from extending to other numerals. Renamed `numeral` in session 75 to
-  // make the broader rule self-evident: letters → IM Fell or sans;
+  // macOS, and Windows. Project-wide rule: letters → FONT_LORA or FONT_SYS;
   // numbers → FONT_NUMERAL. See docs/booth-numeral-font-design.md.
   numeral: '"Times New Roman", Times, serif',
 } as const;
 
-// Convenience named exports (matches what Find Detail / Find Map / Booth
-// previously declared as local `FONT_IM_FELL` / `FONT_SYS` constants).
-export const FONT_IM_FELL = fonts.imFell;
+// Convenience named exports.
 export const FONT_LORA    = fonts.lora;
 export const FONT_SYS     = fonts.sys;
 export const FONT_NUMERAL = fonts.numeral;

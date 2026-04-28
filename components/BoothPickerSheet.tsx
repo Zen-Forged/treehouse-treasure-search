@@ -30,7 +30,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import type { Vendor } from "@/types/treehouse";
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
@@ -139,7 +139,7 @@ export default function BoothPickerSheet({
             <div style={{ padding: "10px 22px 2px", flexShrink: 0, textAlign: "center" }}>
               <div
                 style={{
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 13,
                   color: v1.inkMuted,
@@ -151,7 +151,7 @@ export default function BoothPickerSheet({
               </div>
               <div
                 style={{
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontSize: 21,
                   color: v1.inkPrimary,
                   letterSpacing: "-0.005em",
@@ -204,7 +204,7 @@ export default function BoothPickerSheet({
                   borderRadius: 10,
                   background: "transparent",
                   color: v1.inkMid,
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 14,
                   cursor: "pointer",
@@ -263,7 +263,7 @@ function BoothRow({
       <span
         aria-hidden="true"
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontSize: 22,
           color: active ? v1.inkPrimary : v1.inkMuted,
           lineHeight: 1,
@@ -277,7 +277,7 @@ function BoothRow({
       <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
         <span
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontSize: 17,
             color: v1.inkPrimary,
             lineHeight: 1.2,

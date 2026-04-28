@@ -40,7 +40,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Camera } from "lucide-react";
 import { compressImage } from "@/lib/imageUpload";
 import { postStore, type PostDraft } from "@/lib/postStore";
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import { track } from "@/lib/clientEvents";
 
 type Stage = "ready" | "extracting";
@@ -287,7 +287,7 @@ function PostTagInner() {
           <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
             <div
               style={{
-                fontFamily: FONT_IM_FELL,
+                fontFamily: FONT_LORA,
                 fontSize: 24,
                 color: v1.inkPrimary,
                 letterSpacing: "-0.005em",
@@ -298,7 +298,7 @@ function PostTagInner() {
             </div>
             <div
               style={{
-                fontFamily: FONT_IM_FELL,
+                fontFamily: FONT_LORA,
                 fontStyle: "italic",
                 fontSize: 14,
                 color: v1.inkMuted,
@@ -336,7 +336,7 @@ function PostTagInner() {
             <div style={{ padding: "26px 22px 0", textAlign: "center" }}>
               <div
                 style={{
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 14,
                   color: v1.inkMuted,
@@ -368,7 +368,7 @@ function PostTagInner() {
               animate={{ opacity: [0.4, 1, 0.4] }}
               transition={{ duration: 1.6, repeat: Infinity }}
               style={{
-                fontFamily: FONT_IM_FELL,
+                fontFamily: FONT_LORA,
                 fontStyle: "italic",
                 fontSize: 15,
                 color: v1.inkMuted,
@@ -431,7 +431,7 @@ function PostTagInner() {
             <motion.span
               animate={{ opacity: [1, 0.5, 1] }}
               transition={{ duration: 1.2, repeat: Infinity }}
-              style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic" }}
+              style={{ fontFamily: FONT_LORA, fontStyle: "italic" }}
             >
               Reading…
             </motion.span>
@@ -450,7 +450,7 @@ function PostTagInner() {
             width: "100%",
             padding: 10,
             borderRadius: 14,
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 14,
             color: v1.inkMuted,
@@ -476,7 +476,7 @@ function PhotoPair({ label, src }: { label: string; src: string }) {
     <div style={{ flex: "0 0 42%", display: "flex", flexDirection: "column", gap: 6, alignItems: "center" }}>
       <div
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontStyle: "italic",
           fontSize: 11,
           color: v1.inkMuted,

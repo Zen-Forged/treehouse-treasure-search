@@ -45,7 +45,7 @@ import { getPost, deletePost } from "@/lib/posts";
 import { compressImage, uploadPostImageViaServer } from "@/lib/imageUpload";
 import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import PhotographPreview from "@/components/PhotographPreview";
 import AmberNotice from "@/components/AmberNotice";
 import type { Post } from "@/types/treehouse";
@@ -381,7 +381,7 @@ export default function EditFindPage() {
       >
         <div
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontStyle: "italic",
             color: v1.inkMuted,
             fontSize: 15,
@@ -474,7 +474,7 @@ export default function EditFindPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
             <div
               style={{
-                fontFamily: FONT_IM_FELL,
+                fontFamily: FONT_LORA,
                 fontSize: 24,
                 color: v1.inkPrimary,
                 letterSpacing: "-0.005em",
@@ -485,7 +485,7 @@ export default function EditFindPage() {
             </div>
             <div
               style={{
-                fontFamily: FONT_IM_FELL,
+                fontFamily: FONT_LORA,
                 fontStyle: "italic",
                 fontSize: 14,
                 color: v1.inkMuted,
@@ -560,7 +560,7 @@ export default function EditFindPage() {
             >
               <span
                 style={{
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 14,
                   color: v1.inkPrimary,
@@ -595,7 +595,7 @@ export default function EditFindPage() {
                   background: "none",
                   border: "none",
                   padding: "8px 4px",
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 13,
                   color: v1.inkMuted,
@@ -726,7 +726,7 @@ export default function EditFindPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
             <label
               style={{
-                fontFamily: FONT_IM_FELL,
+                fontFamily: FONT_LORA,
                 fontStyle: "italic",
                 fontSize: 13,
                 color: v1.inkMuted,
@@ -776,7 +776,7 @@ export default function EditFindPage() {
                   <Check size={13} strokeWidth={3} style={{ color: v1.green, flexShrink: 0 }} />
                   <span
                     style={{
-                      fontFamily: FONT_IM_FELL,
+                      fontFamily: FONT_LORA,
                       fontStyle: "italic",
                       fontSize: 13,
                       color: v1.inkMuted,
@@ -808,7 +808,7 @@ export default function EditFindPage() {
               onClick={() => setShowRemoveConfirm(true)}
               disabled={removing}
               style={{
-                fontFamily: FONT_IM_FELL,
+                fontFamily: FONT_LORA,
                 fontStyle: "italic",
                 fontSize: 14,
                 color: v1.red,
@@ -840,7 +840,7 @@ export default function EditFindPage() {
             >
               <div
                 style={{
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontSize: 16,
                   color: v1.inkPrimary,
                   marginBottom: 8,
@@ -850,7 +850,7 @@ export default function EditFindPage() {
               </div>
               <div
                 style={{
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 13,
                   color: v1.inkMuted,
@@ -865,7 +865,7 @@ export default function EditFindPage() {
                   onClick={handleRemove}
                   disabled={removing}
                   style={{
-                    fontFamily: FONT_IM_FELL,
+                    fontFamily: FONT_LORA,
                     fontStyle: "italic",
                     fontSize: 14,
                     color: v1.red,
@@ -886,7 +886,7 @@ export default function EditFindPage() {
                   onClick={() => setShowRemoveConfirm(false)}
                   disabled={removing}
                   style={{
-                    fontFamily: FONT_IM_FELL,
+                    fontFamily: FONT_LORA,
                     fontStyle: "italic",
                     fontSize: 14,
                     color: v1.inkMuted,
@@ -943,7 +943,7 @@ function EditField({
       >
         <label
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 13,
             color: v1.inkMuted,
@@ -1031,7 +1031,7 @@ function StatusPill({
       style={{
         padding: "12px 14px",
         borderRadius: 999,
-        fontFamily: FONT_IM_FELL,
+        fontFamily: FONT_LORA,
         fontSize: 16,
         color: active ? v1.inkPrimary : v1.inkMuted,
         fontWeight: active ? 500 : 400,

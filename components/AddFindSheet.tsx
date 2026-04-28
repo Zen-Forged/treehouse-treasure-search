@@ -27,7 +27,7 @@
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, ImagePlus } from "lucide-react";
-import { v1, FONT_IM_FELL } from "@/lib/tokens";
+import { v1, FONT_LORA } from "@/lib/tokens";
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
 
@@ -129,7 +129,7 @@ export default function AddFindSheet({
             <div style={{ padding: "10px 22px 2px", flexShrink: 0 }}>
               <div
                 style={{
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontSize: 22,
                   color: v1.inkPrimary,
                   letterSpacing: "-0.005em",
@@ -213,7 +213,7 @@ function SheetRow({
       </div>
       <span
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontSize: 18,
           color: v1.inkPrimary,
           lineHeight: 1.25,

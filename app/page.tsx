@@ -47,7 +47,7 @@ import { getFeedPosts, getActiveMalls } from "@/lib/posts";
 import { getSession, signOut, onAuthChange } from "@/lib/auth";
 import {
   v1,
-  FONT_IM_FELL,
+  FONT_LORA,
   FONT_SYS,
   MOTION_EASE_OUT,
   MOTION_STAGGER,
@@ -132,7 +132,7 @@ function EmptyFeed() {
     >
       <div
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontSize: 20,
           color: v1.inkPrimary,
           marginBottom: 10,
@@ -144,7 +144,7 @@ function EmptyFeed() {
       </div>
       <p
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontStyle: "italic",
           fontSize: 14,
           color: v1.inkMuted,
@@ -357,7 +357,7 @@ function MasonryTile({
                   padding: "14px 12px",
                   display: "flex",
                   alignItems: "flex-end",
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 14,
                   color: v1.inkMuted,
@@ -865,7 +865,7 @@ export default function DiscoveryFeedPage() {
             style={{
               textAlign: "center",
               paddingTop: 60,
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontStyle: "italic",
               color: v1.inkMuted,
               fontSize: 15,

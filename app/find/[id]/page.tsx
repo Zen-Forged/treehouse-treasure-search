@@ -22,7 +22,7 @@
 // limited to the pencil bubble that routes to Edit.
 //
 // v1.2 (session 46, 2026-04-22) — small-type legibility sweep:
-//   - ShelfCard caption: FONT_IM_FELL italic 13px → FONT_SYS 14px (400 wt)
+//   - ShelfCard caption: FONT_LORA italic 13px → FONT_SYS 14px (400 wt)
 //     IM Fell italic at 13px was failing the 40–65 demographic on paperCream;
 //     italic serif loses stroke contrast fastest as size drops. FONT_SYS matches
 //     the voice already used on this page for address + "Explore booth →" + booth
@@ -74,7 +74,7 @@ import { safeStorage } from "@/lib/safeStorage";
 import { getCachedUserId, getSession, isAdmin, onAuthChange } from "@/lib/auth";
 import {
   v1,
-  FONT_IM_FELL,
+  FONT_LORA,
   FONT_SYS,
   FONT_NUMERAL,
   MOTION_SHARED_ELEMENT_EASE,
@@ -184,7 +184,7 @@ function ShelfCard({ post }: { post: Post }) {
                 background: v1.postit,
               }}
             >
-              <div style={{ fontFamily: FONT_IM_FELL, fontSize: 13, color: v1.inkMuted, lineHeight: 1.25 }}>
+              <div style={{ fontFamily: FONT_LORA, fontSize: 13, color: v1.inkMuted, lineHeight: 1.25 }}>
                 {post.title}
               </div>
             </div>
@@ -193,7 +193,7 @@ function ShelfCard({ post }: { post: Post }) {
         <div style={{ padding: "9px 10px 11px", minHeight: 56 }}>
           <div
             style={{
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontSize: 14,
               color: v1.inkPrimary,
               lineHeight: 1.2,
@@ -247,7 +247,7 @@ function ShelfSection({
           paddingLeft: 22,
           paddingRight: 22,
           marginBottom: 14,
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontStyle: "italic",
           fontSize: 16,
           color: v1.inkMuted,
@@ -365,7 +365,7 @@ function SoldLandingBody({
       >
         <div
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontSize: 30,
             color: v1.inkPrimary,
             lineHeight: 1.2,
@@ -391,7 +391,7 @@ function SoldLandingBody({
       >
         <div
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 16,
             color: v1.inkMuted,
@@ -430,7 +430,7 @@ function SoldLandingBody({
           <Link
             href={`/shelf/${vendorSlug}`}
             style={{
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 15,
               color: v1.inkMid,
@@ -447,7 +447,7 @@ function SoldLandingBody({
         <Link
           href="/"
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 15,
             color: v1.inkMid,
@@ -741,7 +741,7 @@ export default function FindDetailPage() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 14,
                   color: v1.inkFaint,
@@ -891,7 +891,7 @@ export default function FindDetailPage() {
             justifyContent: "center",
           }}
         >
-          <div style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", color: v1.inkMuted, fontSize: 15 }}>
+          <div style={{ fontFamily: FONT_LORA, fontStyle: "italic", color: v1.inkMuted, fontSize: 15 }}>
             Loading…
           </div>
         </div>
@@ -909,7 +909,7 @@ export default function FindDetailPage() {
             padding: 24,
           }}
         >
-          <div style={{ fontFamily: FONT_IM_FELL, fontSize: 24, color: v1.inkPrimary, textAlign: "center" }}>
+          <div style={{ fontFamily: FONT_LORA, fontSize: 24, color: v1.inkPrimary, textAlign: "center" }}>
             This find has moved on.
           </div>
           <button
@@ -957,7 +957,7 @@ export default function FindDetailPage() {
       >
         <h1
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontSize: 32,
             fontWeight: 400,
             color: v1.inkPrimary,
@@ -971,7 +971,7 @@ export default function FindDetailPage() {
         {typeof price === "number" && price > 0 && (
           <div
             style={{
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontSize: 32,
               fontWeight: 400,
               color: v1.priceInk,
@@ -996,7 +996,7 @@ export default function FindDetailPage() {
         >
           <span
             style={{
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 26,
               color: v1.inkMuted,
@@ -1009,7 +1009,7 @@ export default function FindDetailPage() {
           </span>
           <span
             style={{
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 19,
               color: v1.inkMid,
@@ -1020,7 +1020,7 @@ export default function FindDetailPage() {
           </span>
           <span
             style={{
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 26,
               color: v1.inkMuted,
@@ -1067,7 +1067,7 @@ export default function FindDetailPage() {
         >
           <div
             style={{
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 14,
               color: v1.inkMid,
@@ -1109,7 +1109,7 @@ export default function FindDetailPage() {
                       {vendorName && (
                         <div
                           style={{
-                            fontFamily: FONT_IM_FELL,
+                            fontFamily: FONT_LORA,
                             fontSize: 18,
                             color: v1.inkPrimary,
                             lineHeight: 1.25,

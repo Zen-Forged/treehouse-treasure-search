@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Pencil, X, Loader as LoaderIcon, AlertTriangle } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import BoothFormFields from "@/components/BoothFormFields";
 import type { Vendor, Mall } from "@/types/treehouse";
 
@@ -142,12 +142,12 @@ export default function EditBoothSheet({
               <Pencil size={14} style={{ color: v1.green }} strokeWidth={1.8} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: FONT_IM_FELL, fontSize: 16, color: v1.inkPrimary, lineHeight: 1.3 }}>
+              <div style={{ fontFamily: FONT_LORA, fontSize: 16, color: v1.inkPrimary, lineHeight: 1.3 }}>
                 Edit booth
               </div>
               <div
                 style={{
-                  fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 11,
+                  fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 11,
                   color: v1.inkMuted, lineHeight: 1.4, marginTop: 1,
                   whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                 }}
@@ -234,7 +234,7 @@ export default function EditBoothSheet({
               width: "100%",
               padding: "10px",
               borderRadius: 10,
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 12,
               color: v1.inkMuted,

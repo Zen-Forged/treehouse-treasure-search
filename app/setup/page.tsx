@@ -32,7 +32,7 @@ import { getUser } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { safeStorage } from "@/lib/safeStorage";
 import { setActiveBoothId } from "@/lib/activeBooth";
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import type { Vendor, Mall } from "@/types/treehouse";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 
@@ -275,7 +275,7 @@ function SetupContent() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.18, duration: 0.32, ease: EASE }}
                 style={{
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontSize: 30,
                   color: v1.inkPrimary,
                   lineHeight: 1.2,
@@ -291,7 +291,7 @@ function SetupContent() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.28, duration: 0.32, ease: EASE }}
                 style={{
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 16,
                   color: v1.inkMid,
@@ -406,7 +406,7 @@ function SetupContent() {
 
               <p
                 style={{
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 16,
                   color: v1.inkMid,
@@ -431,7 +431,7 @@ function SetupContent() {
                 <a
                   onClick={handleRetry}
                   style={{
-                    fontFamily: FONT_IM_FELL,
+                    fontFamily: FONT_LORA,
                     fontStyle: "italic",
                     fontSize: 16,
                     color: v1.inkPrimary,
@@ -447,7 +447,7 @@ function SetupContent() {
                 <a
                   onClick={handleGoToLogin}
                   style={{
-                    fontFamily: FONT_IM_FELL,
+                    fontFamily: FONT_LORA,
                     fontStyle: "italic",
                     fontSize: 15,
                     color: v1.inkMuted,
@@ -497,7 +497,7 @@ function PaperWashBubble({ children }: { children: React.ReactNode }) {
 }
 
 const heroTitleStyle: React.CSSProperties = {
-  fontFamily: FONT_IM_FELL,
+  fontFamily: FONT_LORA,
   fontSize: 28,
   color: v1.inkPrimary,
   textAlign: "center",
@@ -507,7 +507,7 @@ const heroTitleStyle: React.CSSProperties = {
 };
 
 const heroSubheadStyle: React.CSSProperties = {
-  fontFamily: FONT_IM_FELL,
+  fontFamily: FONT_LORA,
   fontStyle: "italic",
   fontSize: 15,
   color: v1.inkMuted,

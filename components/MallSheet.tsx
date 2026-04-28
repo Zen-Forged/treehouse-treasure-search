@@ -37,7 +37,7 @@
 
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import type { Mall } from "@/types/treehouse";
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
@@ -204,7 +204,7 @@ export default function MallSheet({
             <div style={{ padding: "10px 22px 2px", flexShrink: 0 }}>
               <div
                 style={{
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontSize: 22,
                   color: v1.inkPrimary,
                   letterSpacing: "-0.005em",
@@ -219,7 +219,7 @@ export default function MallSheet({
             <div style={{ padding: "4px 22px 14px", flexShrink: 0 }}>
               <div
                 style={{
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 14,
                   color: v1.inkMuted,
@@ -259,7 +259,7 @@ export default function MallSheet({
                 label={
                   <span
                     style={{
-                      fontFamily: FONT_IM_FELL,
+                      fontFamily: FONT_LORA,
                       fontStyle: "italic",
                       fontSize: 19,
                       color: v1.inkPrimary,
@@ -305,7 +305,7 @@ export default function MallSheet({
                     label={
                       <span
                         style={{
-                          fontFamily: FONT_IM_FELL,
+                          fontFamily: FONT_LORA,
                           fontSize: 18,
                           color: v1.inkPrimary,
                           lineHeight: 1.25,

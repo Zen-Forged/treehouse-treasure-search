@@ -19,7 +19,7 @@
 
 "use client";
 
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import type { Vendor, Mall } from "@/types/treehouse";
 
 export interface PostingAsBlockProps {
@@ -84,7 +84,7 @@ export default function PostingAsBlock({ vendor }: PostingAsBlockProps) {
 
       <span
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontSize: 16,
           color: v1.inkPrimary,
           letterSpacing: "-0.005em",

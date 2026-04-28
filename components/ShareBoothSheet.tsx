@@ -48,7 +48,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import QRCode from "react-qr-code";
 import { authFetch } from "@/lib/authFetch";
-import { v1, FONT_IM_FELL, FONT_SYS } from "@/lib/tokens";
+import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import type { Mall, Post, Vendor } from "@/types/treehouse";
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
@@ -365,7 +365,7 @@ function ComposeBody({
       <div style={{ padding: "0 0 2px", flexShrink: 0, textAlign: "center" }}>
         <div
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 13,
             color: v1.inkMuted,
@@ -377,7 +377,7 @@ function ComposeBody({
         </div>
         <div
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontSize: 21,
             color: v1.inkPrimary,
             letterSpacing: "-0.005em",
@@ -438,7 +438,7 @@ function ComposeBody({
             <img src="/logo.png" alt="" width={22} height={22} style={{ display: "block" }} />
           </div>
         </div>
-        <div style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 12, color: v1.inkMuted, marginTop: 8, textAlign: "center" }}>
+        <div style={{ fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 12, color: v1.inkMuted, marginTop: 8, textAlign: "center" }}>
           Scan to visit this booth
         </div>
       </div>
@@ -553,7 +553,7 @@ function ComposeBody({
           borderRadius: 999,
           background: v1.green,
           color: "#f5ecd8",
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontSize: 16,
           letterSpacing: "-0.005em",
           cursor: (!valid || sending) ? "default" : "pointer",
@@ -589,7 +589,7 @@ function ComposeBody({
           padding: "10px 12px",
           background: "transparent",
           border: "none",
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontStyle: "italic",
           fontSize: 13,
           color: v1.inkMuted,
@@ -648,7 +648,7 @@ function SentState({
 
       <div
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontSize: 23,
           color: v1.inkPrimary,
           letterSpacing: "-0.005em",
@@ -661,7 +661,7 @@ function SentState({
 
       <p
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontStyle: "italic",
           fontSize: 14,
           color: v1.inkMid,
@@ -709,7 +709,7 @@ function SentState({
           borderRadius: 10,
           background: "transparent",
           color: v1.inkMid,
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontStyle: "italic",
           fontSize: 14,
           cursor: "pointer",
@@ -731,7 +731,7 @@ function SentState({
           padding: "10px 12px",
           background: "transparent",
           border: "none",
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontStyle: "italic",
           fontSize: 13,
           color: v1.inkMuted,
@@ -787,7 +787,7 @@ function PreviewTile({ imageUrl, title }: { imageUrl: string | null; title: stri
             background:
               "linear-gradient(135deg, rgba(42,26,10,0.06) 0%, rgba(42,26,10,0.12) 100%)",
             color: v1.inkFaint,
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontStyle: "italic",
             fontSize: 11,
           }}

@@ -46,7 +46,7 @@ import { BOOKMARK_PREFIX, loadBookmarkCount } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import {
   v1,
-  FONT_IM_FELL,
+  FONT_LORA,
   FONT_SYS,
   FONT_NUMERAL,
   MOTION_EASE_OUT,
@@ -239,7 +239,7 @@ function FindTile({
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontFamily: FONT_IM_FELL,
+                  fontFamily: FONT_LORA,
                   fontStyle: "italic",
                   fontSize: 13,
                   color: v1.inkFaint,
@@ -294,7 +294,7 @@ function FindTile({
         <div style={{ padding: "9px 10px 11px", minHeight: 76 }}>
           <div
             style={{
-              fontFamily: FONT_IM_FELL,
+              fontFamily: FONT_LORA,
               fontSize: 14,
               color: v1.inkPrimary,
               lineHeight: 1.2,
@@ -369,7 +369,7 @@ function BoothSection({
       >
         <div
           style={{
-            fontFamily: FONT_IM_FELL,
+            fontFamily: FONT_LORA,
             fontSize: 18,
             color: v1.inkPrimary,
             lineHeight: 1.25,
@@ -531,7 +531,7 @@ function EmptyState() {
     >
       <div
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontSize: 24,
           color: v1.inkPrimary,
           lineHeight: 1.3,
@@ -542,7 +542,7 @@ function EmptyState() {
       </div>
       <div
         style={{
-          fontFamily: FONT_IM_FELL,
+          fontFamily: FONT_LORA,
           fontStyle: "italic",
           fontSize: 15,
           color: v1.inkMuted,
@@ -790,7 +790,7 @@ export default function FindMapPage() {
           >
             <div
               style={{
-                fontFamily: FONT_IM_FELL,
+                fontFamily: FONT_LORA,
                 fontStyle: "italic",
                 fontSize: 15,
                 color: v1.inkPrimary,
