@@ -165,6 +165,20 @@ function FindTile({
     track("post_unsaved", { post_id: post.id });
   }
 
+  function handleTileClick() {
+    // Track D phase 5 — cache the image URL so /find/[id] can mount its
+    // <motion.button layoutId> hero synchronously on first render. Mirror
+    // of the feed handler in app/page.tsx.
+    if (post.image_url) {
+      try {
+        sessionStorage.setItem(
+          `treehouse_find_preview:${post.id}`,
+          JSON.stringify({ image_url: post.image_url, title: post.title }),
+        );
+      } catch {}
+    }
+  }
+
   const tileStyle: React.CSSProperties =
     widthMode === "scroll"
       ? { flexShrink: 0, width: "42vw", maxWidth: 170, scrollSnapAlign: "start" }
@@ -173,6 +187,7 @@ function FindTile({
   return (
     <Link
       href={`/find/${post.id}`}
+      onClick={handleTileClick}
       style={{ textDecoration: "none", color: "inherit", display: "block", ...tileStyle }}
     >
       <div

@@ -478,6 +478,25 @@ export default function FindDetailPage() {
   const [, setShelfHasItems]              = useState(false);
   const [isSaved,       setIsSaved]       = useState(false);
 
+  // Track D phase 5 — preview image URL written by the source surface
+  // (feed tile / /flagged tile) into sessionStorage on tap. Read
+  // synchronously in a useState initializer so the photograph
+  // <motion.button layoutId> can render on the very first commit, before
+  // getPost() resolves. Without this, framer-motion has lost the source
+  // tile's rect by the time the destination motion node mounts post-fetch
+  // and the shared-element morph silently snaps. Direct URL nav (no source
+  // tap) leaves this null — the page loads normally with no morph (correct
+  // — there's nothing to morph from).
+  const [previewImageUrl] = useState<string | null>(() => {
+    if (typeof window === "undefined" || !id) return null;
+    try {
+      const raw = sessionStorage.getItem(`treehouse_find_preview:${id}`);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return typeof parsed?.image_url === "string" ? parsed.image_url : null;
+    } catch { return null; }
+  });
+
   // Q-003 addendum (session 36): bookmark count for BottomNav badge on this
   // page. Unlike Home / My Booth, Find Detail can toggle the count via the
   // heart bubble, so we also resync inside handleToggleSave — not just on
@@ -628,7 +647,198 @@ export default function FindDetailPage() {
         }
       />
 
-      {loading && (
+      {/* Photograph hero — escapes the loading gate so the
+          <motion.button layoutId> mounts on the very first commit. The
+          source surface (feed / /flagged) cached the image_url in
+          sessionStorage on tile tap; we read it synchronously above.
+          Without this, framer-motion has lost the source tile's rect by
+          the time the destination motion node mounts post-fetch and the
+          shared-element morph silently snaps. Bubbles + post-it stay
+          gated on `post` since they depend on data that's not in the
+          preview cache (vendor, isMyPost, isSaved, boothNumber). */}
+      {((loading && previewImageUrl) || (showNormalBody && post)) && (
+        <div style={{ padding: "0 22px", marginBottom: 28, position: "relative" }}>
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              aspectRatio: "4/5",
+              overflow: "visible",
+            }}
+          >
+            {(post?.image_url || previewImageUrl) ? (
+              <motion.button
+                type="button"
+                layoutId={`find-${id}`}
+                transition={{ duration: MOTION_SHARED_ELEMENT_FORWARD, ease: MOTION_SHARED_ELEMENT_EASE }}
+                onClick={() => { if (post) setLightboxOpen(true); }}
+                aria-label="View photo full screen"
+                style={{
+                  display: "block",
+                  width: "100%",
+                  height: "100%",
+                  padding: 0,
+                  margin: 0,
+                  background: "transparent",
+                  borderRadius: v1.imageRadius,
+                  border: `1px solid ${v1.inkHairline}`,
+                  boxShadow: "0 3px 12px rgba(42,26,10,0.10), 0 1px 3px rgba(42,26,10,0.06)",
+                  overflow: "hidden",
+                  cursor: post ? "zoom-in" : "default",
+                }}
+              >
+                <img
+                  src={(post?.image_url ?? previewImageUrl) as string}
+                  alt={post?.title ?? ""}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
+                    filter: isSold
+                      ? `${TREEHOUSE_LENS_FILTER} grayscale(0.35) brightness(0.9)`
+                      : TREEHOUSE_LENS_FILTER,
+                    WebkitFilter: isSold
+                      ? `${TREEHOUSE_LENS_FILTER} grayscale(0.35) brightness(0.9)`
+                      : TREEHOUSE_LENS_FILTER,
+                  }}
+                />
+              </motion.button>
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  background: v1.postit,
+                  borderRadius: v1.imageRadius,
+                  border: `1px solid ${v1.inkHairline}`,
+                  boxShadow: "0 3px 12px rgba(42,26,10,0.10), 0 1px 3px rgba(42,26,10,0.06)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: FONT_IM_FELL,
+                  fontStyle: "italic",
+                  fontSize: 14,
+                  color: v1.inkFaint,
+                }}
+              >
+                no photograph
+              </div>
+            )}
+
+            {/* Bubbles — post-loaded only. D11 fade-in 200→360ms. */}
+            {post && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.16, delay: 0.20, ease: EASE }}
+                style={{
+                  position: "absolute",
+                  top: 12,
+                  right: 12,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  zIndex: 2,
+                }}
+              >
+                {isMyPost ? (
+                  <IconBubble
+                    onClick={() => router.push(`/find/${post.id}/edit`)}
+                    ariaLabel="Edit this find"
+                    variant="frosted"
+                  >
+                    <Pencil size={16} strokeWidth={1.8} style={{ color: v1.inkPrimary }} />
+                  </IconBubble>
+                ) : (
+                  <IconBubble
+                    onClick={handleToggleSave}
+                    ariaLabel={isSaved ? "Remove flag" : "Flag"}
+                    active={isSaved}
+                    variant="frosted"
+                  >
+                    <FlagGlyph
+                      size={17}
+                      strokeWidth={1.7}
+                      style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
+                    />
+                  </IconBubble>
+                )}
+                <IconBubble onClick={handleShare} ariaLabel="Share" variant="frosted">
+                  <Send size={17} strokeWidth={1.6} style={{ color: copied ? "#1e4d2b" : v1.inkPrimary }} />
+                </IconBubble>
+              </motion.div>
+            )}
+
+            {/* Post-it — post-loaded only. D11 fade-in 200→360ms. */}
+            {post && boothNumber && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.16, delay: 0.20, ease: EASE }}
+                style={{
+                  position: "absolute",
+                  bottom: -14,
+                  right: 4,
+                  width: 92,
+                  minHeight: 92,
+                  background: v1.postit,
+                  transform: "rotate(6deg)",
+                  transformOrigin: "bottom right",
+                  boxShadow: `0 6px 14px rgba(42,26,10,0.28), 0 0 0 0.5px rgba(42,26,10,0.16)`,
+                  padding: "14px 8px 10px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    top: -4,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: "rgba(42,26,10,0.72)",
+                    boxShadow: `inset 0 0 0 2px rgba(42,26,10,0.55), 0 1px 2px rgba(42,26,10,0.35)`,
+                  }}
+                />
+                <div
+                  style={{
+                    fontFamily: FONT_IM_FELL,
+                    fontStyle: "italic",
+                    fontSize: 14,
+                    color: v1.green,
+                    lineHeight: 1.1,
+                    marginBottom: 6,
+                    textAlign: "center",
+                  }}
+                >
+                  Booth
+                </div>
+                <div
+                  style={{
+                    fontFamily: FONT_NUMERAL,
+                    fontSize: boothNumeralSize(boothNumber),
+                    fontWeight: 500,
+                    color: v1.green,
+                    letterSpacing: "-0.01em",
+                    lineHeight: 1,
+                  }}
+                >
+                  {boothNumber}
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {loading && !previewImageUrl && (
         <div
           style={{
             flex: 1,
@@ -685,195 +895,11 @@ export default function FindDetailPage() {
 
       {showNormalBody && post && (
         <>
-      {/* Photograph with post-it (bottom-right) + save/share OR edit (top-right).
-          Track D phase 5 (docs/marketplace-transitions-design.md): the
-          photograph itself morphs in via <motion.button layoutId="find-${id}">
-          — no entrance fade on the photo wrapper, the layoutId animation IS
-          the entrance. Bubbles + post-it crossfade in per D11. */}
-      <div style={{ padding: "0 22px", marginBottom: 28, position: "relative" }}>
-        <div
-          style={{
-            position: "relative",
-            width: "100%",
-            aspectRatio: "4/5",
-            overflow: "visible",
-          }}
-        >
-          {post.image_url ? (
-            // Session 61: photo is now a button → opens PhotoLightbox for
-            // pinch-zoom + full-screen view. Session 78 (Track D phase 5):
-            // wrapped as <motion.button layoutId> so the photograph morphs
-            // from a feed/booth/find-map tile via shared-element transition.
-            <motion.button
-              type="button"
-              layoutId={`find-${post.id}`}
-              transition={{ duration: MOTION_SHARED_ELEMENT_FORWARD, ease: MOTION_SHARED_ELEMENT_EASE }}
-              onClick={() => setLightboxOpen(true)}
-              aria-label="View photo full screen"
-              style={{
-                display: "block",
-                width: "100%",
-                height: "100%",
-                padding: 0,
-                margin: 0,
-                background: "transparent",
-                borderRadius: v1.imageRadius,
-                border: `1px solid ${v1.inkHairline}`,
-                boxShadow: "0 3px 12px rgba(42,26,10,0.10), 0 1px 3px rgba(42,26,10,0.06)",
-                overflow: "hidden",
-                cursor: "zoom-in",
-              }}
-            >
-              <img
-                src={post.image_url}
-                alt={post.title}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  display: "block",
-                  filter: isSold
-                    ? `${TREEHOUSE_LENS_FILTER} grayscale(0.35) brightness(0.9)`
-                    : TREEHOUSE_LENS_FILTER,
-                  WebkitFilter: isSold
-                    ? `${TREEHOUSE_LENS_FILTER} grayscale(0.35) brightness(0.9)`
-                    : TREEHOUSE_LENS_FILTER,
-                }}
-              />
-            </motion.button>
-          ) : (
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                background: v1.postit,
-                borderRadius: v1.imageRadius,
-                border: `1px solid ${v1.inkHairline}`,
-                boxShadow: "0 3px 12px rgba(42,26,10,0.10), 0 1px 3px rgba(42,26,10,0.06)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontFamily: FONT_IM_FELL,
-                fontStyle: "italic",
-                fontSize: 14,
-                color: v1.inkFaint,
-              }}
-            >
-              no photograph
-            </div>
-          )}
-
-          {/* v1.2 — owner-viewer swap. Owner: pencil bubble → /find/[id]/edit.
-              Non-owner: save + share bubbles as before. D11 crossfade timing —
-              detail bubbles fade in 200→360ms after photo arrives. */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.16, delay: 0.20, ease: EASE }}
-            style={{
-              position: "absolute",
-              top: 12,
-              right: 12,
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              zIndex: 2,
-            }}
-          >
-            {isMyPost ? (
-              <IconBubble
-                onClick={() => router.push(`/find/${post.id}/edit`)}
-                ariaLabel="Edit this find"
-                variant="frosted"
-              >
-                <Pencil size={16} strokeWidth={1.8} style={{ color: v1.inkPrimary }} />
-              </IconBubble>
-            ) : (
-              <IconBubble
-                onClick={handleToggleSave}
-                ariaLabel={isSaved ? "Remove flag" : "Flag"}
-                active={isSaved}
-                variant="frosted"
-              >
-                <FlagGlyph
-                  size={17}
-                  strokeWidth={1.7}
-                  style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
-                />
-              </IconBubble>
-            )}
-            <IconBubble onClick={handleShare} ariaLabel="Share" variant="frosted">
-              <Send size={17} strokeWidth={1.6} style={{ color: copied ? "#1e4d2b" : v1.inkPrimary }} />
-            </IconBubble>
-          </motion.div>
-
-          {/* Post-it: bottom-right, +6deg rotation, push-pin top-center.
-              D11 crossfade — fades in 200→360ms after photo arrives. */}
-          {boothNumber && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.16, delay: 0.20, ease: EASE }}
-              style={{
-                position: "absolute",
-                bottom: -14,
-                right: 4,
-                width: 92,
-                minHeight: 92,
-                background: v1.postit,
-                transform: "rotate(6deg)",
-                transformOrigin: "bottom right",
-                boxShadow: `0 6px 14px rgba(42,26,10,0.28), 0 0 0 0.5px rgba(42,26,10,0.16)`,
-                padding: "14px 8px 10px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <div
-                aria-hidden="true"
-                style={{
-                  position: "absolute",
-                  top: -4,
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: "rgba(42,26,10,0.72)",
-                  boxShadow: `inset 0 0 0 2px rgba(42,26,10,0.55), 0 1px 2px rgba(42,26,10,0.35)`,
-                }}
-              />
-              <div
-                style={{
-                  fontFamily: FONT_IM_FELL,
-                  fontStyle: "italic",
-                  fontSize: 14,
-                  color: v1.green,
-                  lineHeight: 1.1,
-                  marginBottom: 6,
-                  textAlign: "center",
-                }}
-              >
-                Booth
-              </div>
-              <div
-                style={{
-                  fontFamily: FONT_NUMERAL,
-                  fontSize: boothNumeralSize(boothNumber),
-                  fontWeight: 500,
-                  color: v1.green,
-                  letterSpacing: "-0.01em",
-                  lineHeight: 1,
-                }}
-              >
-                {boothNumber}
-              </div>
-            </motion.div>
-          )}
-        </div>
-      </div>
+      {/* Photograph block was here — moved above the loading branch so the
+          <motion.button layoutId> can mount synchronously on the cached
+          preview before getPost() resolves. Bubbles + post-it inside that
+          block stay gated on `post`. See the comment over the photograph
+          hero earlier in the return. */}
 
       {/* Title + price — session 76 Frame B: centered, price 32px twin below
           (em-dash retired). docs/find-detail-title-center-design.md

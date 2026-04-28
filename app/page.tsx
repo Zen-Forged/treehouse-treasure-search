@@ -78,6 +78,21 @@ const LAST_VIEWED_KEY = "treehouse_last_viewed_post";
 // /find/[id] reads as the only motion on screen, not a stagger of every
 // tile fading back in. Mirrors FB Marketplace back-nav behavior.
 const FEED_VISITED_KEY = "treehouse_feed_visited";
+// Per-post preview cache key. Source surfaces (this page + /flagged) write
+// the image_url here on tile tap so /find/[id] can render its
+// <motion.button layoutId> hero synchronously on first mount, before the
+// post-fetch resolves. Without this, framer-motion has lost the source
+// rect by the time the destination's motion node mounts post-fetch and
+// the shared-element morph silently snaps. The key format is duplicated
+// inline in /flagged + /find/[id] — Next.js page files can't export
+// arbitrary symbols, so the constant stays page-local here.
+const findPreviewKey = (id: string) => `treehouse_find_preview:${id}`;
+
+// Module-scope feed cache. Survives /find/[id] navigation (which unmounts
+// this page in App Router). On back-nav we hydrate from this so the
+// MasonryGrid mounts synchronously with tiles already laid out — the
+// destination motion.div for the back morph exists immediately.
+let cachedFeedPosts: Post[] | null = null;
 
 // Session 76 Track E — local EASE replaced by MOTION_EASE_OUT import
 // (docs/animation-consistency-design.md). Alias kept so MasonryTile's
@@ -247,7 +262,19 @@ function MasonryTile({
   }
 
   function handleTileClick() {
-    try { sessionStorage.setItem(LAST_VIEWED_KEY, post.id); } catch {}
+    try {
+      sessionStorage.setItem(LAST_VIEWED_KEY, post.id);
+      // Track D phase 5 — cache the image URL so /find/[id] can mount its
+      // <motion.button layoutId> hero synchronously on first render. Without
+      // this, the destination's motion node only mounts after the post fetch
+      // resolves, by which time framer-motion has lost the source rect.
+      if (post.image_url) {
+        sessionStorage.setItem(
+          findPreviewKey(post.id),
+          JSON.stringify({ image_url: post.image_url, title: post.title }),
+        );
+      }
+    } catch {}
   }
 
   function handleTilePointerDown() {
@@ -532,9 +559,12 @@ function FeedHero({
 
 // ══════════════════════════════════════════════════════════════════════════════
 export default function DiscoveryFeedPage() {
-  const [posts,             setPosts]             = useState<Post[]>([]);
+  // Hydrate from module-scope cache so back-nav from /find/[id] mounts
+  // tiles synchronously — the destination motion.div for the shared-element
+  // back-morph needs to exist before framer-motion releases the source rect.
+  const [posts,             setPosts]             = useState<Post[]>(cachedFeedPosts ?? []);
   const [malls,             setMalls]             = useState<Mall[]>([]);
-  const [loading,           setLoading]           = useState(true);
+  const [loading,           setLoading]           = useState<boolean>(cachedFeedPosts === null);
   const [error,             setError]             = useState(false);
   const [mallId,            setMallId]            = useSavedMallId();
   const [mallSheetOpen,     setMallSheetOpen]     = useState(false);
@@ -581,14 +611,20 @@ export default function DiscoveryFeedPage() {
 
   // ── Feed load ────────────────────────────────────────────────────────────────
   async function loadFeed() {
-    setLoading(true);
+    // Only flip into "loading" state when we have nothing cached to render.
+    // On back-nav with a warm cache, refresh in the background so the user
+    // never sees a skeleton replace tiles they were just looking at.
+    if (cachedFeedPosts === null) setLoading(true);
     setError(false);
     try {
       const data = await getFeedPosts(80);
       setPosts(data);
+      cachedFeedPosts = data;
       setLoading(false);
     } catch {
-      setError(true);
+      // Only surface the error state if we have no cached posts to fall
+      // back on; otherwise keep showing the cached feed.
+      if (cachedFeedPosts === null) setError(true);
       setLoading(false);
     }
   }
