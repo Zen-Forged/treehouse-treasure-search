@@ -77,21 +77,25 @@ const selectStyle: React.CSSProperties = {
   backgroundSize: "12px 12px",
 };
 
+// Session 82 — Option C label primitive (Lora upright 15px ink-mid).
+// Replaces the italic-13-muted treatment that was failing readability for
+// David and surfacing the photo-dropzone bolt-on smell. See
+// docs/mockups/vendor-request-typography-v2.html.
 const labelStyle: React.CSSProperties = {
   display: "block",
   fontFamily: FONT_LORA,
-  fontStyle: "italic",
-  fontSize: 13,
-  color: v1.inkMuted,
-  lineHeight: 1.3,
+  fontStyle: "normal",
+  fontSize: 15,
+  color: v1.inkMid,
+  lineHeight: 1.25,
   marginBottom: 7,
 };
 
 const helperStyle: React.CSSProperties = {
   fontFamily: FONT_LORA,
   fontStyle: "italic",
-  fontSize: 12,
-  color: v1.inkFaint,
+  fontSize: 13,
+  color: v1.inkMuted,
   lineHeight: 1.5,
   marginTop: 6,
   marginLeft: 2,
@@ -99,17 +103,18 @@ const helperStyle: React.CSSProperties = {
 
 const optionalStyle: React.CSSProperties = {
   fontStyle: "italic",
+  fontSize: 14,
   color: v1.inkFaint,
-  marginLeft: 3,
+  marginLeft: 5,
+  fontWeight: 400,
 };
 
-// Session 75 — required-field indicator. Small red `*` after the field name.
-// Reset font-style because the parent label is italic IM Fell; we want the
-// asterisk to read as a clean glyph, not a tilted serif star.
+// Required-field indicator — small red `*`.
 const requiredStyle: React.CSSProperties = {
   fontStyle: "normal",
   color: v1.red,
-  marginLeft: 2,
+  marginLeft: 3,
+  fontWeight: 700,
 };
 
 // ─── Helper — read a File as a data URL via FileReader ──────────────────────
@@ -314,7 +319,11 @@ function VendorRequestInner() {
           gap: 0,
         }}
       >
-        {/* Title — session 75 (D6). Tight 22px IM Fell, no subhead. */}
+        {/* Title + intro — session 82. New title "Set up your digital booth"
+            (was "Request your digital booth"). Intro paragraph reinstated
+            (had been removed session 75 D5) with permission/value framing.
+            Title sized 22px / weight 400 in Lora — the new font holds at
+            this size without the bump to 24/500 the V2 mockup explored. */}
         <motion.h1
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -322,14 +331,32 @@ function VendorRequestInner() {
           style={{
             fontFamily: FONT_LORA,
             fontSize: 22,
+            fontWeight: 400,
             color: v1.inkPrimary,
             lineHeight: 1.2,
             letterSpacing: "-0.005em",
-            margin: "10px 0 18px",
+            margin: "10px 0 12px",
           }}
         >
-          Request your digital booth
+          Set up your digital booth
         </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.32, delay: 0.04, ease: EASE }}
+          style={{
+            fontFamily: FONT_LORA,
+            fontStyle: "italic",
+            fontSize: 15.5,
+            fontWeight: 400,
+            color: v1.inkMid,
+            lineHeight: 1.55,
+            margin: "0 0 20px",
+          }}
+        >
+          A simple, shareable window into your physical space &mdash; waiting to be found in person.
+        </motion.p>
 
         {/* Form */}
         <motion.div
@@ -544,9 +571,9 @@ function VendorRequestInner() {
                 <Camera size={28} style={{ color: v1.inkMuted, opacity: 0.75 }} strokeWidth={1.5} />
                 <div
                   style={{
-                    fontFamily: FONT_SYS,
-                    fontSize: 14,
-                    fontWeight: 600,
+                    fontFamily: FONT_LORA,
+                    fontSize: 16,
+                    fontWeight: 500,
                     color: v1.inkPrimary,
                     lineHeight: 1.3,
                   }}
@@ -555,11 +582,12 @@ function VendorRequestInner() {
                 </div>
                 <div
                   style={{
-                    fontFamily: FONT_SYS,
-                    fontSize: 12,
-                    color: v1.inkMid,
-                    lineHeight: 1.5,
-                    maxWidth: 250,
+                    fontFamily: FONT_LORA,
+                    fontStyle: "italic",
+                    fontSize: 13,
+                    color: v1.inkMuted,
+                    lineHeight: 1.55,
+                    maxWidth: 260,
                   }}
                 >
                   This will be the main image on your digital booth.
@@ -613,10 +641,11 @@ function VendorRequestInner() {
             </div>
             <span
               style={{
-                fontFamily: FONT_SYS,
-                fontSize: 12.5,
-                color: v1.inkMid,
-                lineHeight: 1.45,
+                fontFamily: FONT_LORA,
+                fontStyle: "italic",
+                fontSize: 13.5,
+                color: v1.inkMuted,
+                lineHeight: 1.5,
               }}
             >
               By submitting this request you are confirming that you are the assigned owner of this booth.
