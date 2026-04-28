@@ -40,7 +40,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -69,6 +69,21 @@ import {
 } from "@/components/BoothPage";
 import type { Post, Vendor, Mall } from "@/types/treehouse";
 import type { User } from "@supabase/supabase-js";
+
+// Session 79 — back-nav scroll anchoring + fast back-morph. Module-scope
+// cache survives /find/[id] navigation (App Router unmounts the page;
+// module scope persists for the SPA session). Hydrating state from cache
+// on mount lets WindowTile/ShelfTile motion.divs render synchronously
+// before getVendorBySlug() resolves — the destination motion node for the
+// back-morph exists on first commit. Per-slug scroll key persists scroll
+// position across the same boundary.
+let cachedPublicShelf: {
+  slug: string;
+  vendor: Vendor;
+  posts: Post[];
+  mall: Mall | null;
+} | null = null;
+const shelfScrollKey = (slug: string) => `treehouse_shelf_scroll:${slug}`;
 
 // ─── Masthead (Mode A, public variant — back arrow left, empty right slot) ────
 // v1.1l — migrated to <StickyMasthead>. scrollTarget is the page's overflow-auto
@@ -273,10 +288,15 @@ export default function PublicShelfPage() {
   const { slug } = useParams<{ slug: string }>();
   const router   = useRouter();
 
-  const [vendor,         setVendor]         = useState<Vendor | null>(null);
-  const [posts,          setPosts]          = useState<Post[]>([]);
-  const [mall,           setMall]           = useState<Mall | null>(null);
-  const [loading,        setLoading]        = useState(true);
+  // Session 79 — hydrate from module-scope cache when the slug matches so
+  // back-nav from /find/[id] mounts tiles synchronously. The destination
+  // motion.div for the back-morph needs to exist before framer-motion
+  // releases the source rect on /find/[id].
+  const cacheHit = cachedPublicShelf?.slug === slug ? cachedPublicShelf : null;
+  const [vendor,         setVendor]         = useState<Vendor | null>(cacheHit?.vendor ?? null);
+  const [posts,          setPosts]          = useState<Post[]>(cacheHit?.posts ?? []);
+  const [mall,           setMall]           = useState<Mall | null>(cacheHit?.mall ?? null);
+  const [loading,        setLoading]        = useState<boolean>(cacheHit === null);
   const [notFound,       setNotFound]       = useState(false);
   const [view,           setView]           = useState<BoothView>("window");
   const [bookmarkCount,  setBookmarkCount]  = useState(0);
@@ -285,6 +305,9 @@ export default function PublicShelfPage() {
   // Session 45 — admin Window share state.
   const [user,           setUser]           = useState<User | null>(null);
   const [shareOpen,      setShareOpen]      = useState(false);
+
+  const pendingScrollY = useRef<number | null>(null);
+  const scrollRestored = useRef(false);
 
 
   useEffect(() => { setBookmarkCount(loadBookmarkCount()); }, []);
@@ -331,14 +354,50 @@ export default function PublicShelfPage() {
       setVendor(v);
       const p = await getVendorPosts(v.id, 200);
       setPosts(p);
+      let resolvedMall: Mall | null = null;
       if (v.mall) {
-        setMall(v.mall as Mall);
+        resolvedMall = v.mall as Mall;
+        setMall(resolvedMall);
       } else if (v.mall_id) {
-        getAllMalls().then(malls => setMall(malls.find(m => m.id === v.mall_id) ?? null));
+        const malls = await getAllMalls();
+        resolvedMall = malls.find(m => m.id === v.mall_id) ?? null;
+        setMall(resolvedMall);
       }
+      cachedPublicShelf = { slug, vendor: v, posts: p, mall: resolvedMall };
       setLoading(false);
     });
   }, [slug]);
+
+  // Session 79 — scroll save + restore. Per-slug key so navigating between
+  // different shelves doesn't restore a scroll position from a different
+  // shelf's layout. Save on every scroll event so back-nav from /find/[id]
+  // lands exactly where the user tapped. Restore once after mount, gated on
+  // data being available so the BoothPage layout is final before scrollTo.
+  useEffect(() => {
+    if (!slug) return;
+    try {
+      const saved = sessionStorage.getItem(shelfScrollKey(slug));
+      if (saved) {
+        const y = parseInt(saved, 10);
+        if (!isNaN(y) && y > 0) pendingScrollY.current = y;
+      }
+    } catch {}
+
+    function onScroll() {
+      try { sessionStorage.setItem(shelfScrollKey(slug), String(Math.round(window.scrollY))); } catch {}
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [slug]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (scrollRestored.current) return;
+    if (pendingScrollY.current === null) return;
+    scrollRestored.current = true;
+    const y = pendingScrollY.current;
+    requestAnimationFrame(() => { window.scrollTo({ top: y, behavior: "instant" }); });
+  }, [loading]);
 
   if (notFound) {
     return (

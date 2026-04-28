@@ -101,6 +101,18 @@ import type { User } from "@supabase/supabase-js";
 
 const ADMIN_DEFAULT_VENDOR_ID = "5619b4bf-3d05-4843-8ee1-e8b747fc2d81";
 
+// Session 79 — back-nav scroll anchoring + fast back-morph. Module-scope
+// cache survives /find/[id] navigation (App Router unmounts the page;
+// module scope persists for the SPA session). Hydrating posts from cache
+// on mount lets WindowTile/ShelfTile motion.divs render synchronously,
+// before the vendor + posts fetches resolve — the destination motion node
+// for the back-morph exists on first commit. SCROLL_KEY in sessionStorage
+// persists scroll position across the same boundary. Cache is keyed by
+// vendorId so multi-booth picker switching never restores stale posts to
+// the wrong booth.
+let cachedMyShelf: { vendorId: string; posts: Post[] } | null = null;
+const MY_SHELF_SCROLL_KEY = "treehouse_my_shelf_scroll";
+
 function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promise<string> {
   return new Promise(resolve => {
     const img = new window.Image();
@@ -297,7 +309,12 @@ function MyBoothInner() {
   // Session 40 — Window share sheet state.
   const [shareOpen,     setShareOpen]     = useState(false);
 
-  const [posts,         setPosts]         = useState<Post[]>([]);
+  // Session 79 — hydrate posts from module-scope cache. We don't yet know
+  // the active vendor on initial render (resolution happens async below),
+  // but if the cache exists from a prior visit we render those tiles
+  // synchronously. The posts effect below verifies the resolved vendor
+  // matches the cached vendorId and refetches if not.
+  const [posts,         setPosts]         = useState<Post[]>(cachedMyShelf?.posts ?? []);
   const [postsLoading,  setPostsLoading]  = useState(false);
   const [mall,          setMall]          = useState<Mall | null>(null);
   const [view,          setView]          = useState<BoothView>("window");
@@ -318,6 +335,10 @@ function MyBoothInner() {
   const [bookmarkCount, setBookmarkCount] = useState(0);
 
   const heroLockedRef = useRef(false);
+
+  // Session 79 — scroll save + restore refs.
+  const pendingScrollY = useRef<number | null>(null);
+  const scrollRestored = useRef(false);
 
   // ── Auth gate ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -505,14 +526,59 @@ function MyBoothInner() {
   }
 
   // ── Posts hydration ────────────────────────────────────────────────────
+  // Session 79 — when the resolved active vendor matches the module-scope
+  // cache, hydrate state from cache immediately and refresh in the
+  // background. Without the cache hit (cold start, vendor switch), do the
+  // normal fetch with the loading flag set.
   useEffect(() => {
     if (!activeVendor) return;
+    if (cachedMyShelf?.vendorId === activeVendor.id) {
+      setPosts(cachedMyShelf.posts);
+      setPostsLoading(false);
+      // Background refresh so the user sees up-to-date inventory after a
+      // round-trip without ever showing a skeleton on cache hits.
+      getVendorPosts(activeVendor.id, 200).then(data => {
+        setPosts(data);
+        cachedMyShelf = { vendorId: activeVendor.id, posts: data };
+      });
+      return;
+    }
     setPostsLoading(true);
     getVendorPosts(activeVendor.id, 200).then(data => {
       setPosts(data);
+      cachedMyShelf = { vendorId: activeVendor.id, posts: data };
       setPostsLoading(false);
     });
   }, [activeVendor?.id]);
+
+  // Session 79 — scroll save + restore. Save on every scroll event so
+  // back-nav from /find/[id] lands exactly where the user tapped. Restore
+  // once after mount, gated on data being available so the WindowView /
+  // ShelfView layout is final before scrollTo fires.
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(MY_SHELF_SCROLL_KEY);
+      if (saved) {
+        const y = parseInt(saved, 10);
+        if (!isNaN(y) && y > 0) pendingScrollY.current = y;
+      }
+    } catch {}
+
+    function onScroll() {
+      try { sessionStorage.setItem(MY_SHELF_SCROLL_KEY, String(Math.round(window.scrollY))); } catch {}
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (!vendorReady || postsLoading) return;
+    if (scrollRestored.current) return;
+    if (pendingScrollY.current === null) return;
+    scrollRestored.current = true;
+    const y = pendingScrollY.current;
+    requestAnimationFrame(() => { window.scrollTo({ top: y, behavior: "instant" }); });
+  }, [vendorReady, postsLoading]);
 
   // ── Picker selection ───────────────────────────────────────────────────
   function handlePickerSelect(vendorId: string) {
