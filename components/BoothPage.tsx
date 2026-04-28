@@ -328,11 +328,13 @@ export function BoothHero({
             />
             <div
               style={{
-                fontFamily: FONT_IM_FELL,
-                fontStyle: "italic",
-                fontSize: 14,
+                fontFamily: FONT_SYS,
+                fontSize: 9,
+                fontWeight: 700,
                 color: v1.green,
-                lineHeight: 1.1,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                lineHeight: 1,
                 marginBottom: 6,
                 textAlign: "center",
               }}
