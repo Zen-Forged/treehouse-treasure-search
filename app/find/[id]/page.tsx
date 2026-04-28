@@ -752,12 +752,14 @@ export default function FindDetailPage() {
             )}
 
             {/* Flag — SIBLING of the photograph motion.div with its own
-                layoutId. R4 fix: explicit width/height on the motion.div
-                + layout="position" so framer-motion's measurement is
-                unambiguous (the flag size is identical at both ends, only
-                position changes). Without these the layoutId animation
-                was dropping out mid-flight and the flag disappeared for
-                several frames before reappearing at the destination. */}
+                layoutId. Size + position now identical to the home + /flagged
+                tile flags (36×36 at top:8 right:8) so the layoutId path is
+                pure corner-tracking — the bubble sits in the exact same
+                relative-corner position on both surfaces, the morph
+                interpolates only the screen-space offset between them.
+                Earlier the find-detail offset was 12/12 vs 8/8 on tiles,
+                which read as a subtle size mismatch even with identical
+                bubble dimensions. */}
             {post && (post?.image_url || previewImageUrl) && (
               <motion.div
                 layoutId={`flag-${id}`}
@@ -765,8 +767,8 @@ export default function FindDetailPage() {
                 transition={{ duration: MOTION_SHARED_ELEMENT_FORWARD, ease: MOTION_SHARED_ELEMENT_EASE }}
                 style={{
                   position: "absolute",
-                  top: 12,
-                  right: 12,
+                  top: 8,
+                  right: 8,
                   width: 36,
                   height: 36,
                   zIndex: 3,
