@@ -39,6 +39,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import FlagGlyph from "@/components/FlagGlyph";
@@ -167,6 +168,7 @@ function FindTile({
   onUnsave: (id: string) => void;
   widthMode: "grid" | "scroll";
 }) {
+  const router = useRouter();
   const [imgErr, setImgErr] = useState(false);
   const hasImg = !!post.image_url && !imgErr;
 
@@ -180,18 +182,15 @@ function FindTile({
     track("post_unsaved", { post_id: post.id });
   }
 
-  function handleTileClick() {
-    // Session 79 — gate layoutId via the morph tracker (see lib/morphTracker).
-    // flushSync forces the source tile to commit its layoutId to the DOM
-    // synchronously, BEFORE Link's navigation runs — without it the
-    // re-render is batched past the unmount and framer-motion has no
-    // source rect to morph from. See app/page.tsx for full rationale.
+  function handleTileClick(e: React.MouseEvent) {
+    // Session 79 R5 — defer navigation by one animation frame. flushSync
+    // commits the layoutId-bearing render in this frame; rAF gives the
+    // browser a paint to capture the rect; router.push then navigates.
+    // See app/page.tsx for full rationale.
+    e.preventDefault();
     flushSync(() => {
       setLastTappedPostId(post.id);
     });
-    // Track D phase 5 — cache the image URL so /find/[id] can mount its
-    // <motion.button layoutId> hero synchronously on first render. Mirror
-    // of the feed handler in app/page.tsx.
     if (post.image_url) {
       try {
         sessionStorage.setItem(
@@ -200,6 +199,9 @@ function FindTile({
         );
       } catch {}
     }
+    requestAnimationFrame(() => {
+      router.push(`/find/${post.id}`);
+    });
   }
 
   // Session 79 — only the tapped tile carries layoutIds + layout tracking.

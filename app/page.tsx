@@ -41,6 +41,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { flushSync } from "react-dom";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { CircleUser } from "lucide-react";
 import FlagGlyph from "@/components/FlagGlyph";
@@ -230,6 +231,7 @@ function MasonryTile({
   isLastViewed: boolean;
   skipEntrance: boolean;
 }) {
+  const router = useRouter();
   const [imgErr,      setImgErr]      = useState(false);
   const [imgHeight,   setImgHeight]   = useState<number | null>(null);
   const [highlighted, setHighlighted] = useState(isLastViewed);
@@ -261,31 +263,23 @@ function MasonryTile({
     onToggleSave(post.id);
   }
 
-  function handleTileClick() {
-    // Session 79 — gate layoutId via the morph tracker so only the tapped
-    // tile gets a `find-${id}` layoutId. Other tiles render without one,
-    // which prevents framer-motion from connecting every tile's predecessor
-    // rect to its successor rect on remount and triggering a slide-in
-    // animation when scroll position differs between unmount and remount.
-    //
-    // flushSync forces React to commit the state update — and framer's
-    // useLayoutEffect-time layoutId registration — synchronously inside
-    // this click handler, BEFORE the Link's default navigation runs. Without
-    // it, the re-render is batched past the unmount and the source tile
-    // never commits a layoutId to the DOM in time, so framer-motion has
-    // no source rect to morph from and the forward animation snaps. (The
-    // back-morph still works on the second tap because the tile retained
-    // its layoutId from the back-morph render — that's the "second click
-    // works" symptom David flagged on R3.)
+  function handleTileClick(e: React.MouseEvent) {
+    // Session 79 R5 — defer navigation by one animation frame so the browser
+    // can paint the layoutId-bearing tile before unmount. flushSync alone
+    // commits React's render and framer's useLayoutEffect, but framer's
+    // projection system measures rects after a paint — and Next.js App
+    // Router's Link navigation is fast enough to unmount the source before
+    // that paint completes, leaving framer with no source rect to morph
+    // from. preventDefault stops Link's synchronous navigation; rAF defers
+    // router.push to the next frame; flushSync commits the layoutId
+    // re-render in this frame. Framer captures the rect on paint, then
+    // navigation completes and the morph fires cleanly.
+    e.preventDefault();
     flushSync(() => {
       setLastTappedPostId(post.id);
     });
     try {
       sessionStorage.setItem(LAST_VIEWED_KEY, post.id);
-      // Track D phase 5 — cache the image URL so /find/[id] can mount its
-      // <motion.button layoutId> hero synchronously on first render. Without
-      // this, the destination's motion node only mounts after the post fetch
-      // resolves, by which time framer-motion has lost the source rect.
       if (post.image_url) {
         sessionStorage.setItem(
           findPreviewKey(post.id),
@@ -293,6 +287,9 @@ function MasonryTile({
         );
       }
     } catch {}
+    requestAnimationFrame(() => {
+      router.push(`/find/${post.id}`);
+    });
   }
 
   // Session 79 — only the tapped tile carries layoutIds + layout tracking.
