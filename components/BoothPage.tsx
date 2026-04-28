@@ -75,7 +75,6 @@ import {
   FONT_NUMERAL,
   MOTION_SHARED_ELEMENT_EASE,
   MOTION_SHARED_ELEMENT_FORWARD,
-  MOTION_SHARED_ELEMENT_BACK,
 } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import PhotoLightbox from "@/components/PhotoLightbox";
@@ -709,23 +708,6 @@ export function PlaceholderTile({ index }: { index: number }) {
   );
 }
 
-// Session 79 — Track D phase 5 extension. WindowTile photograph wrapped in
-// motion.div with `find-${post.id}` layoutId so taps morph cross-route into
-// /find/[id]'s photograph hero. Tap also writes the preview cache so the
-// destination renders synchronously on first commit (same primitive as
-// session 78 c3b9541). Outer card wrapper retired so the photograph
-// carries its own chrome and the morph travels with consistent visual.
-function writeFindPreview(post: Post) {
-  try {
-    if (post.image_url) {
-      sessionStorage.setItem(
-        `treehouse_find_preview:${post.id}`,
-        JSON.stringify({ image_url: post.image_url, title: post.title }),
-      );
-    }
-  } catch {}
-}
-
 function WindowTile({ post, index }: { post: Post; index: number }) {
   const [imgErr, setImgErr] = useState(false);
   const hasPrice = typeof post.price_asking === "number" && post.price_asking > 0;
@@ -738,21 +720,22 @@ function WindowTile({ post, index }: { post: Post; index: number }) {
     >
       <Link
         href={`/find/${post.id}`}
-        onClick={() => writeFindPreview(post)}
         style={{ display: "block", textDecoration: "none", color: "inherit", minWidth: 0 }}
       >
-        <div style={{ position: "relative", width: "100%", aspectRatio: "4/5" }}>
-          <motion.div
-            layoutId={`find-${post.id}`}
-            transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
+        <div
+          style={{
+            background: v1.inkWash,
+            border: `1px solid ${v1.inkHairline}`,
+            borderRadius: v1.imageRadius,
+            overflow: "hidden",
+            boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
+          }}
+        >
+          <div
             style={{
-              position: "absolute",
-              inset: 0,
-              borderRadius: v1.imageRadius,
-              overflow: "hidden",
+              width: "100%",
+              aspectRatio: "4/5",
               background: v1.postit,
-              border: `1px solid ${v1.inkHairline}`,
-              boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
             }}
           >
             {post.image_url && !imgErr ? (
@@ -786,37 +769,37 @@ function WindowTile({ post, index }: { post: Post; index: number }) {
                 no photograph
               </div>
             )}
-          </motion.div>
-        </div>
-        <div style={{ padding: "8px 4px 4px", minHeight: 56 }}>
-          <div
-            style={{
-              fontFamily: FONT_IM_FELL,
-              fontSize: 14,
-              color: v1.inkPrimary,
-              lineHeight: 1.2,
-              overflow: "hidden",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical" as const,
-            }}
-          >
-            {post.title}
           </div>
-          {hasPrice && (
+          <div style={{ padding: "9px 10px 11px", minHeight: 76 }}>
             <div
               style={{
-                fontFamily: FONT_SYS,
-                fontSize: 12,
-                color: v1.priceInk,
-                lineHeight: 1.4,
-                marginTop: 3,
-                letterSpacing: "-0.005em",
+                fontFamily: FONT_IM_FELL,
+                fontSize: 14,
+                color: v1.inkPrimary,
+                lineHeight: 1.2,
+                overflow: "hidden",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical" as const,
               }}
             >
-              ${Math.round(post.price_asking as number)}
+              {post.title}
             </div>
-          )}
+            {hasPrice && (
+              <div
+                style={{
+                  fontFamily: FONT_SYS,
+                  fontSize: 12,
+                  color: v1.priceInk,
+                  lineHeight: 1.4,
+                  marginTop: 3,
+                  letterSpacing: "-0.005em",
+                }}
+              >
+                ${Math.round(post.price_asking as number)}
+              </div>
+            )}
+          </div>
         </div>
       </Link>
     </motion.div>
@@ -869,9 +852,6 @@ export function WindowView({
 // Shelf View — horizontal scroll, larger 4:5 tiles
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Session 79 — Track D phase 5 extension. ShelfTile photograph wrapped in
-// motion.div with `find-${post.id}` layoutId. Same restructure as WindowTile:
-// outer card wrapper retired, photograph carries its own chrome.
 function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirst: boolean }) {
   const [imgErr, setImgErr] = useState(false);
   const hasPrice = typeof post.price_asking === "number" && post.price_asking > 0;
@@ -890,21 +870,22 @@ function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirs
     >
       <Link
         href={`/find/${post.id}`}
-        onClick={() => writeFindPreview(post)}
         style={{ display: "block", textDecoration: "none", color: "inherit" }}
       >
-        <div style={{ position: "relative", width: "100%", aspectRatio: "4/5" }}>
-          <motion.div
-            layoutId={`find-${post.id}`}
-            transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
+        <div
+          style={{
+            background: v1.inkWash,
+            border: `1px solid ${v1.inkHairline}`,
+            borderRadius: v1.imageRadius,
+            overflow: "hidden",
+            boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
+          }}
+        >
+          <div
             style={{
-              position: "absolute",
-              inset: 0,
-              borderRadius: v1.imageRadius,
-              overflow: "hidden",
+              width: "100%",
+              aspectRatio: "4/5",
               background: v1.postit,
-              border: `1px solid ${v1.inkHairline}`,
-              boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
             }}
           >
             {post.image_url && !imgErr ? (
@@ -938,37 +919,37 @@ function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirs
                 no photograph
               </div>
             )}
-          </motion.div>
-        </div>
-        <div style={{ padding: "8px 4px 4px", minHeight: 56 }}>
-          <div
-            style={{
-              fontFamily: FONT_IM_FELL,
-              fontSize: 14,
-              color: v1.inkPrimary,
-              lineHeight: 1.2,
-              overflow: "hidden",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical" as const,
-            }}
-          >
-            {post.title}
           </div>
-          {hasPrice && (
+          <div style={{ padding: "9px 10px 11px", minHeight: 76 }}>
             <div
               style={{
-                fontFamily: FONT_SYS,
-                fontSize: 12,
-                color: v1.priceInk,
-                lineHeight: 1.4,
-                marginTop: 3,
-                letterSpacing: "-0.005em",
+                fontFamily: FONT_IM_FELL,
+                fontSize: 14,
+                color: v1.inkPrimary,
+                lineHeight: 1.2,
+                overflow: "hidden",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical" as const,
               }}
             >
-              ${Math.round(post.price_asking as number)}
+              {post.title}
             </div>
-          )}
+            {hasPrice && (
+              <div
+                style={{
+                  fontFamily: FONT_SYS,
+                  fontSize: 12,
+                  color: v1.priceInk,
+                  lineHeight: 1.4,
+                  marginTop: 3,
+                  letterSpacing: "-0.005em",
+                }}
+              >
+                ${Math.round(post.price_asking as number)}
+              </div>
+            )}
+          </div>
         </div>
       </Link>
     </motion.div>
