@@ -684,12 +684,9 @@ export default function FindDetailPage() {
           >
             {(post?.image_url || previewImageUrl) ? (
               // Session 78 — motion.div instead of motion.button so the
-              // flag/pencil bubble can live as a real <button> child without
-              // nested-button HTML. role="button" + tabIndex preserve the
-              // keyboard semantics of the prior <button>. The flag travels
-              // WITH the photograph during the layoutId morph because it's a
-              // descendant of this motion node — framer-motion applies the
-              // shared-element transform to this element and its children.
+              // flag/pencil bubble (now a sibling, see below) can be a real
+              // <button> without conflicting with parent button semantics.
+              // role="button" + tabIndex preserve the keyboard activation.
               <motion.div
                 layoutId={`find-${id}`}
                 transition={{ duration: MOTION_SHARED_ELEMENT_FORWARD, ease: MOTION_SHARED_ELEMENT_EASE }}
@@ -731,59 +728,6 @@ export default function FindDetailPage() {
                       : TREEHOUSE_LENS_FILTER,
                   }}
                 />
-
-                {/* Flag (or pencil for owner) — Session 78: own layoutId so
-                    it morphs as a peer of the photograph at constant 36-38px
-                    instead of being scale-transformed alongside the parent
-                    (which made it visually overshoot at the morph endpoint).
-                    stopPropagation prevents the flag tap from also firing
-                    the lightbox open on the parent motion node. */}
-                {post && (
-                  <motion.div
-                    layoutId={`flag-${id}`}
-                    transition={{ duration: MOTION_SHARED_ELEMENT_FORWARD, ease: MOTION_SHARED_ELEMENT_EASE }}
-                    style={{
-                      position: "absolute",
-                      top: 12,
-                      right: 12,
-                      zIndex: 2,
-                    }}
-                  >
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (isMyPost) router.push(`/find/${post.id}/edit`);
-                        else handleToggleSave();
-                      }}
-                      aria-label={isMyPost ? "Edit this find" : (isSaved ? "Remove flag" : "Flag")}
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: "50%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        background: "rgba(232,221,199,0.78)",
-                        backdropFilter: "blur(8px)",
-                        WebkitBackdropFilter: "blur(8px)",
-                        border: `0.5px solid rgba(42,26,10,0.12)`,
-                        cursor: "pointer",
-                        padding: 0,
-                        WebkitTapHighlightColor: "transparent",
-                      }}
-                    >
-                      {isMyPost ? (
-                        <Pencil size={16} strokeWidth={1.8} style={{ color: v1.inkPrimary }} />
-                      ) : (
-                        <FlagGlyph
-                          size={17}
-                          strokeWidth={1.7}
-                          style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
-                        />
-                      )}
-                    </button>
-                  </motion.div>
-                )}
               </motion.div>
             ) : (
               <div
@@ -807,18 +751,73 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Post-it — Session 78: zooms into place with a slight
-                overshoot so it reads as being PINNED to the photograph,
-                not just fading in. Scale 0.6 → 1 with the existing rotate
-                preserved as a framer-motion animated value (not a static
-                style transform — mixing those produces a single combined
-                matrix and the rotate would otherwise get clobbered by
-                framer's scale animation). */}
+            {/* Flag (or pencil for owner) — SIBLING of the photograph
+                motion.div, not a child. As a child it disappeared mid-flight
+                because framer-motion can't reliably co-animate a layoutId
+                inside a parent that's itself being layoutId-transformed.
+                As a sibling, both layoutIds run independently against the
+                same shared aspectRatio wrapper — flag morphs from
+                (top:8, right:8, 36×36) on the source tile to
+                (top:12, right:12, 36×36) here without losing tracking. */}
+            {post && (post?.image_url || previewImageUrl) && (
+              <motion.div
+                layoutId={`flag-${id}`}
+                transition={{ duration: MOTION_SHARED_ELEMENT_FORWARD, ease: MOTION_SHARED_ELEMENT_EASE }}
+                style={{
+                  position: "absolute",
+                  top: 12,
+                  right: 12,
+                  zIndex: 3,
+                }}
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (isMyPost) router.push(`/find/${post.id}/edit`);
+                    else handleToggleSave();
+                  }}
+                  aria-label={isMyPost ? "Edit this find" : (isSaved ? "Remove flag" : "Flag")}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "rgba(232,221,199,0.78)",
+                    backdropFilter: "blur(8px)",
+                    WebkitBackdropFilter: "blur(8px)",
+                    border: `0.5px solid rgba(42,26,10,0.12)`,
+                    cursor: "pointer",
+                    padding: 0,
+                    WebkitTapHighlightColor: "transparent",
+                  }}
+                >
+                  {isMyPost ? (
+                    <Pencil size={16} strokeWidth={1.8} style={{ color: v1.inkPrimary }} />
+                  ) : (
+                    <FlagGlyph
+                      size={17}
+                      strokeWidth={1.7}
+                      style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
+                    />
+                  )}
+                </button>
+              </motion.div>
+            )}
+
+            {/* Post-it — Session 78 R2: zoom from larger → final size so it
+                reads as being PLACED onto the photograph (a stamp settling),
+                not pinned-from-tiny. initial scale 1.4 → animate scale 1 over
+                the same duration as the photograph morph, eased with the
+                shared-element curve so the whole entrance reads as a single
+                coordinated motion. Rotate held at 6deg as an animated value
+                so framer-motion's combined-transform doesn't drop it. */}
             {post && boothNumber && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.6, rotate: 6 }}
+                initial={{ opacity: 0, scale: 1.4, rotate: 6 }}
                 animate={{ opacity: 1, scale: 1, rotate: 6 }}
-                transition={{ duration: 0.42, ease: [0.34, 1.56, 0.64, 1] }}
+                transition={{ duration: MOTION_SHARED_ELEMENT_FORWARD, ease: MOTION_SHARED_ELEMENT_EASE }}
                 style={{
                   position: "absolute",
                   bottom: -14,

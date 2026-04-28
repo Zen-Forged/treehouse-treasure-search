@@ -381,54 +381,53 @@ function MasonryTile({
                 pointerEvents: "none",
               }}
             />
+          </motion.div>
 
-            {/* Frosted paperCream save flag top-right — always visible, state-
-                independent bg, green-filled flag when saved. Session 61:
-                heart → flag per save-glyph-v1.html Variant B. Session 78 —
-                wrapped in its own <motion.div layoutId={`flag-${id}`}> so
-                the flag morphs as a peer of the photograph (same id space
-                across feed/flagged tile + /find/[id] destination). Without
-                this, the flag was a transformed child of the photograph
-                motion node and visually overshot during the morph. */}
-            <motion.div
-              layoutId={`flag-${post.id}`}
-              transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
+          {/* Flag — SIBLING of the photograph motion.div (Session 78 R3).
+              As a child of the photograph motion node, framer-motion lost
+              tracking of its own layoutId during the cross-route morph and
+              it disappeared for several frames mid-flight. As a sibling on
+              the same fixed-aspect parent, both layoutIds (`find-${id}`
+              and `flag-${id}`) animate independently against a stable
+              outer rect and the flag stays visible throughout. */}
+          <motion.div
+            layoutId={`flag-${post.id}`}
+            transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
+            style={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              zIndex: 3,
+            }}
+          >
+            <button
+              onClick={handleHeartClick}
+              aria-label={isFollowed ? "Remove flag" : "Flag"}
               style={{
-                position: "absolute",
-                top: 8,
-                right: 8,
-                zIndex: 2,
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                background: "rgba(232,221,199,0.78)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                border: `0.5px solid rgba(42,26,10,0.12)`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 0,
+                cursor: "pointer",
+                WebkitTapHighlightColor: "transparent",
               }}
             >
-              <button
-                onClick={handleHeartClick}
-                aria-label={isFollowed ? "Remove flag" : "Flag"}
+              <FlagGlyph
+                size={17}
+                strokeWidth={1.7}
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: "50%",
-                  background: "rgba(232,221,199,0.78)",
-                  backdropFilter: "blur(8px)",
-                  WebkitBackdropFilter: "blur(8px)",
-                  border: `0.5px solid rgba(42,26,10,0.12)`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: 0,
-                  cursor: "pointer",
-                  WebkitTapHighlightColor: "transparent",
+                  color: isFollowed ? v1.green : v1.inkPrimary,
+                  fill:  isFollowed ? v1.green : "none",
                 }}
-              >
-                <FlagGlyph
-                  size={17}
-                  strokeWidth={1.7}
-                  style={{
-                    color: isFollowed ? v1.green : v1.inkPrimary,
-                    fill:  isFollowed ? v1.green : "none",
-                  }}
-                />
-              </button>
-            </motion.div>
+              />
+            </button>
           </motion.div>
         </div>
 

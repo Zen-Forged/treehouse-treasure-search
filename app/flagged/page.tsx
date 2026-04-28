@@ -249,41 +249,43 @@ function FindTile({
               </div>
             )}
 
-            {/* Session 78 — flag wrapped in its own
-                <motion.div layoutId={`flag-${id}`}> so it morphs as a peer
-                of the photograph rather than being scaled by it. */}
-            <motion.div
-              layoutId={`flag-${post.id}`}
-              transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
+          </motion.div>
+
+          {/* Session 78 R3 — flag is a SIBLING of the photograph motion.div,
+              not a child, so its layoutId animation stays tracked across
+              the cross-route morph (child layoutIds inside transformed
+              parents drop frames). */}
+          <motion.div
+            layoutId={`flag-${post.id}`}
+            transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
+            style={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              zIndex: 3,
+            }}
+          >
+            <button
+              onClick={handleUnsave}
+              aria-label="Remove flag"
               style={{
-                position: "absolute",
-                top: 8,
-                right: 8,
-                zIndex: 2,
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                background: "rgba(232,221,199,0.78)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                border: `0.5px solid rgba(42,26,10,0.12)`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 0,
+                cursor: "pointer",
+                WebkitTapHighlightColor: "transparent",
               }}
             >
-              <button
-                onClick={handleUnsave}
-                aria-label="Remove flag"
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: "50%",
-                  background: "rgba(232,221,199,0.78)",
-                  backdropFilter: "blur(8px)",
-                  WebkitBackdropFilter: "blur(8px)",
-                  border: `0.5px solid rgba(42,26,10,0.12)`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: 0,
-                  cursor: "pointer",
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                <FlagGlyph size={17} strokeWidth={1.7} style={{ color: v1.green, fill: v1.green }} />
-              </button>
-            </motion.div>
+              <FlagGlyph size={17} strokeWidth={1.7} style={{ color: v1.green, fill: v1.green }} />
+            </button>
           </motion.div>
         </div>
 
