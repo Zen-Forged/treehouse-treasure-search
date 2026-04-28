@@ -42,13 +42,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
-import { BOOKMARK_PREFIX, loadBookmarkCount } from "@/lib/utils";
+import { BOOKMARK_PREFIX, loadBookmarkCount, loadBookmarkedBoothIds, boothBookmarkKey } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import {
   v1,
   FONT_LORA,
   FONT_SYS,
-  FONT_NUMERAL,
   MOTION_EASE_OUT,
   MOTION_CARD_DURATION,
   MOTION_STAGGER,
@@ -60,6 +59,7 @@ import {
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
+import BoothLockupCard from "@/components/BoothLockupCard";
 import BottomNav from "@/components/BottomNav";
 import MallSheet from "@/components/MallSheet";
 import MallScopeHeader, { type MallScopeGeoLine } from "@/components/MallScopeHeader";
@@ -101,13 +101,14 @@ function pruneStaleBookmarks(savedIds: string[], returnedIds: string[]) {
 // ── Grouping ───────────────────────────────────────────────────────────────────
 
 type BoothGroup = {
+  vendorId:    string | null;  // Session 82 — added for booth-bookmark wiring
   boothNumber: string | null;
-  vendorName: string;
+  vendorName:  string;
   vendorSlug?: string;
-  mallName: string | null;
-  mallCity: string | null;
-  mallState: string | null;
-  posts: Post[];
+  mallName:    string | null;
+  mallCity:    string | null;
+  mallState:   string | null;
+  posts:       Post[];
 };
 
 function groupByBooth(posts: Post[]): BoothGroup[] {
@@ -115,13 +116,14 @@ function groupByBooth(posts: Post[]): BoothGroup[] {
 
   for (const post of posts) {
     const booth      = post.vendor?.booth_number ?? null;
+    const vendorId   = post.vendor?.id ?? null;
     const vendorName = post.vendor?.display_name ?? "Unknown Vendor";
     const vendorSlug = post.vendor?.slug;
     const mallName   = post.mall?.name ?? null;
     const mallCity   = post.mall?.city ?? null;
     const mallState  = post.mall?.state ?? null;
-    const key        = post.vendor?.id ?? `__orphan__${post.id}`;
-    if (!map.has(key)) map.set(key, { boothNumber: booth, vendorName, vendorSlug, mallName, mallCity, mallState, posts: [] });
+    const key        = vendorId ?? `__orphan__${post.id}`;
+    if (!map.has(key)) map.set(key, { vendorId, boothNumber: booth, vendorName, vendorSlug, mallName, mallCity, mallState, posts: [] });
     map.get(key)!.posts.push(post);
   }
 
@@ -337,109 +339,37 @@ function FindTile({
 function BoothSection({
   group,
   scopeIsAllMalls,
+  saved,
+  onToggleBookmark,
   onUnsave,
 }: {
   group: BoothGroup;
   scopeIsAllMalls: boolean;
+  saved: boolean;
+  onToggleBookmark: (vendorId: string) => void;
   onUnsave: (id: string) => void;
 }) {
   const useScroll = group.posts.length >= 3;
   const savedLabel = `${group.posts.length} flagged find${group.posts.length === 1 ? "" : "s"}`;
 
-  // Session 70 round 2 — Variant B lockup. Vendor name on left, "Booth" small-
-  // caps label + IM Fell numeral stacked on right. When booth number is missing
-  // (rare orphan case), the lockup collapses to vendor name alone.
+  // Session 82 — section header now uses shared BoothLockupCard primitive
+  // (matches /shelves rows + /find/[id] cartographic card). Adds booth-bookmark
+  // affordance on the left; mall subtitle continues to render only when scope
+  // is "All malls" (D5 carry-forward). The dashed sub-card is retired in favor
+  // of the inline BOOTH eyebrow + numeral.
+  const showLocation = scopeIsAllMalls && !!group.mallName;
   const headerInner = (
-    <div
-      style={{
-        background: v1.inkWash,
-        border: `1px solid ${v1.inkHairline}`,
-        borderRadius: 8,
-        padding: "10px 12px",
-        marginBottom: 12,
-      }}
-    >
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: group.boothNumber ? "1fr auto" : "1fr",
-          columnGap: 12,
-          alignItems: "center",
-        }}
-      >
-        <div
-          style={{
-            fontFamily: FONT_LORA,
-            fontSize: 18,
-            color: v1.inkPrimary,
-            lineHeight: 1.25,
-            letterSpacing: "-0.005em",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            minWidth: 0,
-          }}
-        >
-          {group.vendorName}
-        </div>
-        {group.boothNumber && (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              lineHeight: 1,
-              flexShrink: 0,
-              border: "1.5px dashed rgba(30,77,43,0.78)",
-              background: "rgba(232,221,199,0.55)",
-              boxShadow: "0 1px 3px rgba(42,26,10,0.12), 0 1px 1px rgba(42,26,10,0.06)",
-              borderRadius: 6,
-              padding: "6px 12px 7px",
-            }}
-          >
-            <div
-              style={{
-                fontFamily: FONT_SYS,
-                fontSize: 9,
-                fontWeight: 700,
-                color: v1.green,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                lineHeight: 1,
-                marginBottom: 4,
-              }}
-            >
-              Booth
-            </div>
-            <div
-              style={{
-                fontFamily: FONT_NUMERAL,
-                fontSize: 22,
-                fontWeight: 500,
-                color: v1.green,
-                lineHeight: 1,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              {group.boothNumber}
-            </div>
-          </div>
-        )}
-      </div>
-      {scopeIsAllMalls && group.mallName && (
-        <div
-          style={{
-            fontFamily: FONT_SYS,
-            fontSize: 11.5,
-            color: v1.inkMuted,
-            marginTop: 2,
-            lineHeight: 1.4,
-          }}
-        >
-          {group.mallName}
-          {group.mallCity ? ` · ${group.mallCity}${group.mallState ? `, ${group.mallState}` : ""}` : ""}
-        </div>
-      )}
+    <div style={{ marginBottom: 12 }}>
+      <BoothLockupCard
+        vendorName={group.vendorName}
+        boothNumber={group.boothNumber}
+        mall={showLocation ? { name: group.mallName, city: group.mallCity, state: group.mallState } : null}
+        bookmark={
+          group.vendorId
+            ? { saved, onToggle: () => onToggleBookmark(group.vendorId!) }
+            : null
+        }
+      />
     </div>
   );
 
@@ -558,15 +488,17 @@ function EmptyState() {
 
 // ──────────────────────────────────────────────────────────────────────────────
 export default function FindMapPage() {
-  const [posts,          setPosts]          = useState<Post[]>([]);
-  const [malls,          setMalls]          = useState<Mall[]>([]);
-  const [loading,        setLoading]        = useState(true);
-  const [bookmarkCount,  setBookmarkCount]  = useState(0);
-  const [bannerImageUrl, setBannerImageUrl] = useState<string | null>(null);
-  const [savedMallId,    setSavedMallId]    = useSavedMallId();
-  const [mallSheetOpen,  setMallSheetOpen]  = useState(false);
+  const [posts,              setPosts]              = useState<Post[]>([]);
+  const [malls,              setMalls]              = useState<Mall[]>([]);
+  const [loading,            setLoading]            = useState(true);
+  const [bookmarkCount,      setBookmarkCount]      = useState(0);
+  const [bookmarkedBoothIds, setBookmarkedBoothIds] = useState<Set<string>>(new Set());
+  const [bannerImageUrl,     setBannerImageUrl]     = useState<string | null>(null);
+  const [savedMallId,        setSavedMallId]        = useSavedMallId();
+  const [mallSheetOpen,      setMallSheetOpen]      = useState(false);
 
   function syncCount() { setBookmarkCount(loadBookmarkCount()); }
+  function syncBoothBookmarks() { setBookmarkedBoothIds(loadBookmarkedBoothIds()); }
 
   async function loadPosts() {
     const ids = loadFlaggedIds();
@@ -590,7 +522,7 @@ export default function FindMapPage() {
     getActiveMalls().then(setMalls);
   }, []);
 
-  useEffect(() => { syncCount(); loadPosts(); }, []);
+  useEffect(() => { syncCount(); syncBoothBookmarks(); loadPosts(); }, []);
 
   // R3 — page_viewed analytics event. saved_count is captured at view time
   // (not later) so the payload reflects the user's saved-items state on the
@@ -600,7 +532,7 @@ export default function FindMapPage() {
   }, []);
 
   useEffect(() => {
-    function onFocus() { syncCount(); loadPosts(); }
+    function onFocus() { syncCount(); syncBoothBookmarks(); loadPosts(); }
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, []);
@@ -608,6 +540,28 @@ export default function FindMapPage() {
   function handleUnsave(postId: string) {
     setPosts(prev => prev.filter(p => p.id !== postId));
     setBookmarkCount(prev => Math.max(0, prev - 1));
+  }
+
+  // Session 82 — booth-bookmark toggle on /flagged section header.
+  // Mirrors the /shelves implementation (lib/utils boothBookmarkKey + R3 v1.1
+  // booth_bookmarked / booth_unbookmarked events).
+  function handleToggleBoothBookmark(vendorId: string) {
+    const vendorSlug = posts.find(p => p.vendor?.id === vendorId)?.vendor?.slug ?? null;
+    setBookmarkedBoothIds(prev => {
+      const next = new Set(prev);
+      const wasBookmarked = next.has(vendorId);
+      if (wasBookmarked) {
+        next.delete(vendorId);
+        try { localStorage.removeItem(boothBookmarkKey(vendorId)); } catch {}
+      } else {
+        next.add(vendorId);
+        try { localStorage.setItem(boothBookmarkKey(vendorId), "1"); } catch {}
+      }
+      track(wasBookmarked ? "booth_unbookmarked" : "booth_bookmarked", {
+        vendor_slug: vendorSlug,
+      });
+      return next;
+    });
   }
 
   function handleMallSelect(nextMallId: string | null) {
@@ -836,6 +790,8 @@ export default function FindMapPage() {
                 key={(group.boothNumber ?? "nb") + "·" + group.vendorName}
                 group={group}
                 scopeIsAllMalls={savedMallId === null}
+                saved={!!group.vendorId && bookmarkedBoothIds.has(group.vendorId)}
+                onToggleBookmark={handleToggleBoothBookmark}
                 onUnsave={handleUnsave}
               />
             ))}
