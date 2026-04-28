@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Postcard language PoC v1 (Home only)</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper-cream:  #e8ddc7;
+    --paper-warm:   #f5f2eb;
+    --postit:       #fbf3df;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --green:        #1e4d2b;
+    --postit-cream: #fbf3df;
+
+    --sys: -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+    --tnr: "Times New Roman", Times, serif;
+    --lora: "Lora", Georgia, serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1380px; margin: 0 auto; padding: 30px 20px 80px; }
+
+  h1.title { font-family: var(--lora); font-weight: 400; color: #e8ddc7; font-size: 30px; margin: 0 0 8px; text-align: center; letter-spacing: -0.005em; }
+  .subtitle { text-align: center; color: rgba(232,221,199,0.65); font-size: 14px; margin: 0 auto 22px; line-height: 1.6; max-width: 880px; }
+
+  .decisions-pane { background: rgba(232,221,199,0.08); border: 1px solid rgba(232,221,199,0.2); border-radius: 10px; padding: 16px 20px; margin: 0 auto 26px; color: rgba(232,221,199,0.85); font-size: 13px; line-height: 1.65; max-width: 880px; }
+  .decisions-pane h3 { margin: 0 0 8px; font-size: 12px; color: #fff9e8; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .decisions-pane strong { color: #fff9e8; }
+  .decisions-pane ul { margin: 6px 0 0 0; padding-left: 22px; }
+  .decisions-pane li { margin-bottom: 5px; }
+
+  /* phone row */
+  .phones { display: grid; grid-template-columns: repeat(3, 320px); gap: 28px; justify-content: center; margin-bottom: 32px; }
+  .phone-col { display: flex; flex-direction: column; align-items: center; }
+  .phone-label { font-family: var(--lora); font-style: italic; color: #e8ddc7; font-size: 14px; margin-bottom: 6px; }
+  .phone-sublabel { color: rgba(232,221,199,0.55); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; text-align: center; max-width: 300px; line-height: 1.4; }
+
+  /* iPhone frame */
+  .phone {
+    width: 320px;
+    height: 690px;
+    background: #000;
+    border-radius: 38px;
+    padding: 7px;
+    box-shadow: 0 22px 50px rgba(0,0,0,0.5);
+    position: relative;
+  }
+  .screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 32px;
+    overflow: hidden;
+    position: relative;
+    background: var(--paper-cream);
+  }
+
+  /* PAPER TEXTURE — SVG noise overlay layered onto paperCream */
+  .paper-texture {
+    position: absolute; inset: 0;
+    background-color: var(--paper-cream);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.16  0 0 0 0 0.10  0 0 0 0 0.04  0 0 0 0.42 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    background-size: 220px 220px;
+    background-blend-mode: multiply;
+  }
+  /* extra warmth — slightly varying tone field */
+  .paper-tone {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(255,245,210,0.18), transparent 60%),
+      radial-gradient(ellipse at 70% 85%, rgba(120,80,30,0.07), transparent 55%);
+    pointer-events: none;
+  }
+
+  /* DEBOSSED VIEWPORT FRAME — double hairline */
+  .viewport-frame {
+    position: absolute;
+    inset: 10px;
+    pointer-events: none;
+    border: 1px solid rgba(42,26,10,0.22);
+    border-radius: 4px;
+  }
+  .viewport-frame::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 2px;
+  }
+
+  /* APP CHROME — masthead + content */
+  .status-bar { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px 6px; font-family: var(--sys); font-size: 13px; font-weight: 600; color: var(--ink-primary); }
+  .status-icons { display: flex; gap: 4px; align-items: center; font-size: 11px; }
+
+  .masthead { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px 6px; }
+  .wordmark { font-family: var(--tnr); font-size: 16px; color: var(--ink-primary); font-weight: 400; }
+  .profile-icon { width: 22px; height: 22px; border: 1.5px solid var(--ink-mid); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .profile-icon::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ink-mid); margin-top: -3px; }
+  .profile-icon::after { content: ""; position: absolute; width: 14px; height: 7px; border-radius: 7px 7px 0 0; background: var(--ink-mid); margin-top: 8px; }
+
+  .scope-block { padding: 14px 20px 4px; position: relative; }
+  .eyebrow { font-family: var(--lora); font-style: italic; font-size: 14.5px; color: var(--ink-muted); margin: 0 0 2px; }
+  .scope-title { font-family: var(--lora); font-size: 26px; color: var(--ink-primary); font-weight: 500; margin: 0 0 6px; line-height: 1.15; letter-spacing: -0.005em; display: flex; align-items: baseline; gap: 6px; }
+  .chevron { color: var(--ink-muted); font-size: 16px; }
+  .address-line { display: flex; align-items: center; gap: 5px; font-family: var(--sys); font-size: 12px; color: var(--ink-muted); text-decoration: underline; text-decoration-thickness: 0.5px; text-underline-offset: 2px; }
+  .address-line::before { content: ""; width: 10px; height: 13px; background: var(--ink-muted); -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z'/><circle cx='12' cy='10' r='3'/></svg>") center / contain no-repeat; mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z'/><circle cx='12' cy='10' r='3'/></svg>") center / contain no-repeat; }
+
+  .hairline { margin: 14px 28px 14px; border-top: 1px solid var(--ink-hairline); position: relative; }
+  .hairline::after { content: ""; width: 4px; height: 4px; background: var(--ink-hairline); border-radius: 50%; position: absolute; left: 50%; top: -2.5px; transform: translateX(-50%); }
+
+  /* Tiles 2x2 */
+  .tile-grid { padding: 0 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .tile { background: #fff; border-radius: 4px; padding: 6px 6px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.10), 0 1px 0 rgba(0,0,0,0.04); position: relative; }
+  .tile-photo { aspect-ratio: 1/1; border-radius: 2px; overflow: hidden; position: relative; }
+  .tile-flag { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; background: rgba(245,242,235,0.85); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--sys); font-size: 13px; }
+  .tile-flag.empty { color: var(--ink-mid); }
+  .tile-flag.filled { color: var(--green); }
+  .tile-caption { font-family: var(--lora); font-style: italic; font-size: 13px; color: var(--ink-muted); padding: 6px 4px 8px; border-top: 0.5px dashed var(--ink-hairline); margin-top: 6px; }
+
+  /* placeholder photo gradients */
+  .photo-1 { background: linear-gradient(160deg, #4a6580 0%, #2a3a4a 50%, #6b5b48 100%); }
+  .photo-2 { background: linear-gradient(160deg, #c8b89c 0%, #6b5b48 60%, #3a2e22 100%); }
+  .photo-3 { background: linear-gradient(160deg, #c4ccb8 0%, #8a8b6e 60%, #3a4030 100%); }
+  .photo-4 { background: linear-gradient(160deg, #6b4a32 0%, #3a2818 60%, #1a1410 100%); }
+
+  /* CRESTWOOD STAMP — overlaid in masthead area, frame C only */
+  .crestwood-stamp {
+    position: absolute;
+    top: 36px;
+    right: 14px;
+    width: 88px;
+    height: 88px;
+    pointer-events: none;
+    opacity: 0.78;
+    transform: rotate(-6deg);
+  }
+  .crestwood-stamp svg { width: 100%; height: 100%; }
+
+  /* Bottom nav */
+  .bottom-nav { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(232,221,199,0.96); backdrop-filter: blur(8px); padding: 10px 0 18px; display: flex; justify-content: space-around; border-top: 1px solid var(--ink-hairline); }
+  .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: var(--sys); font-size: 10px; color: var(--ink-muted); position: relative; }
+  .nav-item.active { color: var(--green); }
+  .nav-icon { width: 22px; height: 22px; }
+  .nav-icon svg { width: 100%; height: 100%; }
+  .badge { position: absolute; top: -3px; right: -10px; min-width: 14px; height: 14px; padding: 0 4px; background: var(--green); color: #fff9e8; font-family: var(--sys); font-size: 9px; font-weight: 700; border-radius: 7px; display: flex; align-items: center; justify-content: center; }
+
+  /* QUESTIONS PANE */
+  .questions-pane { background: rgba(232,221,199,0.06); border: 1px solid rgba(232,221,199,0.18); border-radius: 10px; padding: 18px 22px; margin: 12px auto 0; max-width: 880px; color: rgba(232,221,199,0.85); font-size: 13px; line-height: 1.65; }
+  .questions-pane h3 { margin: 0 0 10px; font-size: 12px; color: #fff9e8; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+  .questions-pane .q { margin-bottom: 14px; }
+  .questions-pane .q-label { color: #fff9e8; font-weight: 600; margin-bottom: 4px; }
+  .questions-pane code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; background: rgba(232,221,199,0.1); padding: 1px 6px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <h1 class="title">Postcard / paper visual language — proof of concept</h1>
+  <p class="subtitle">Three additive frames on Home only. Each adds one layer to the previous frame so you can see the cumulative effect and pick a stopping point.</p>
+
+  <div class="decisions-pane">
+    <h3>What you're judging</h3>
+    <ul>
+      <li><strong>Frame A</strong> — Paper texture only. Subtle SVG noise overlay on existing <code>paperCream</code> bg. Zero new chrome. <em>Tests: does texture alone do enough work to read as "paper"?</em></li>
+      <li><strong>Frame B</strong> — A + debossed double-hairline frame at viewport edges. Letterhead/stationery feel. <em>Tests: does the frame add postcard language without postmarks supporting it?</em></li>
+      <li><strong>Frame C</strong> — B + static Crestwood stamp graphic in masthead area, slight rotation, ~78% opacity. <em>Tests: does the stamp work as identity, or feel forced without a system to support it across malls?</em></li>
+    </ul>
+    <ul style="margin-top: 8px;">
+      <li><strong>Out of scope per Q2(c):</strong> corner postmark cancellation lines.</li>
+      <li><strong>Out of scope per Q3(b):</strong> a real per-mall stamp system. Crestwood stamp is one static asset to see on screen, not infrastructure.</li>
+      <li><strong>Out of scope per Q1(a):</strong> any screen besides Home.</li>
+    </ul>
+  </div>
+
+  <div class="phones">
+
+    <!-- ============= FRAME A — TEXTURE ONLY ============= -->
+    <div class="phone-col">
+      <div class="phone-label">Frame A — Texture only</div>
+      <div class="phone-sublabel">SVG paper grain on paperCream. No frame, no stamp.</div>
+      <div class="phone">
+        <div class="screen">
+          <div class="paper-texture"></div>
+          <div class="paper-tone"></div>
+
+          <div class="status-bar">
+            <span>5:16</span>
+            <span class="status-icons">●●●● ▢ 21</span>
+          </div>
+          <div class="masthead">
+            <span></span>
+            <span class="wordmark">Treehouse Finds</span>
+            <div style="width: 22px; height: 22px; border: 1.5px solid var(--ink-mid); border-radius: 50%;"></div>
+          </div>
+          <div class="scope-block">
+            <p class="eyebrow">Finds from</p>
+            <h2 class="scope-title">Crestwood Mercantile <span class="chevron">⌄</span></h2>
+            <span class="address-line">6541 KY-22, Crestwood, KY 40014</span>
+          </div>
+          <div class="hairline"></div>
+          <div class="tile-grid">
+            <div class="tile"><div class="tile-photo photo-1"><div class="tile-flag empty">⚐</div></div><div class="tile-caption">Today</div></div>
+            <div class="tile"><div class="tile-photo photo-2"><div class="tile-flag filled">⚑</div></div><div class="tile-caption">Today</div></div>
+            <div class="tile"><div class="tile-photo photo-3"><div class="tile-flag empty">⚐</div></div><div class="tile-caption">Today</div></div>
+            <div class="tile"><div class="tile-photo photo-4"><div class="tile-flag filled">⚑</div></div><div class="tile-caption">Yesterday</div></div>
+          </div>
+
+          <div class="bottom-nav">
+            <div class="nav-item active"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg></div>Home</div>
+            <div class="nav-item"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>Booths</div>
+            <div class="nav-item"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21V4h12l-2 4 2 4H4"/></svg></div>Flagged<span class="badge">5</span></div>
+            <div class="nav-item"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>Admin</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============= FRAME B — TEXTURE + FRAME ============= -->
+    <div class="phone-col">
+      <div class="phone-label">Frame B — Texture + viewport frame</div>
+      <div class="phone-sublabel">Adds debossed double-hairline border, ~10px inset.</div>
+      <div class="phone">
+        <div class="screen">
+          <div class="paper-texture"></div>
+          <div class="paper-tone"></div>
+          <div class="viewport-frame"></div>
+
+          <div class="status-bar">
+            <span>5:16</span>
+            <span class="status-icons">●●●● ▢ 21</span>
+          </div>
+          <div class="masthead">
+            <span></span>
+            <span class="wordmark">Treehouse Finds</span>
+            <div style="width: 22px; height: 22px; border: 1.5px solid var(--ink-mid); border-radius: 50%;"></div>
+          </div>
+          <div class="scope-block">
+            <p class="eyebrow">Finds from</p>
+            <h2 class="scope-title">Crestwood Mercantile <span class="chevron">⌄</span></h2>
+            <span class="address-line">6541 KY-22, Crestwood, KY 40014</span>
+          </div>
+          <div class="hairline"></div>
+          <div class="tile-grid">
+            <div class="tile"><div class="tile-photo photo-1"><div class="tile-flag empty">⚐</div></div><div class="tile-caption">Today</div></div>
+            <div class="tile"><div class="tile-photo photo-2"><div class="tile-flag filled">⚑</div></div><div class="tile-caption">Today</div></div>
+            <div class="tile"><div class="tile-photo photo-3"><div class="tile-flag empty">⚐</div></div><div class="tile-caption">Today</div></div>
+            <div class="tile"><div class="tile-photo photo-4"><div class="tile-flag filled">⚑</div></div><div class="tile-caption">Yesterday</div></div>
+          </div>
+
+          <div class="bottom-nav">
+            <div class="nav-item active"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg></div>Home</div>
+            <div class="nav-item"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>Booths</div>
+            <div class="nav-item"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21V4h12l-2 4 2 4H4"/></svg></div>Flagged<span class="badge">5</span></div>
+            <div class="nav-item"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>Admin</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============= FRAME C — TEXTURE + FRAME + STAMP ============= -->
+    <div class="phone-col">
+      <div class="phone-label">Frame C — + Crestwood stamp</div>
+      <div class="phone-sublabel">Static SVG stamp, masthead area, slight rotation, 78% opacity.</div>
+      <div class="phone">
+        <div class="screen">
+          <div class="paper-texture"></div>
+          <div class="paper-tone"></div>
+          <div class="viewport-frame"></div>
+
+          <div class="status-bar">
+            <span>5:16</span>
+            <span class="status-icons">●●●● ▢ 21</span>
+          </div>
+          <div class="masthead">
+            <span></span>
+            <span class="wordmark">Treehouse Finds</span>
+            <div style="width: 22px; height: 22px; border: 1.5px solid var(--ink-mid); border-radius: 50%;"></div>
+          </div>
+          <div class="scope-block">
+            <p class="eyebrow">Finds from</p>
+            <h2 class="scope-title" style="max-width: 200px;">Crestwood Mercantile <span class="chevron">⌄</span></h2>
+            <span class="address-line">6541 KY-22, Crestwood, KY 40014</span>
+
+            <!-- The stamp -->
+            <div class="crestwood-stamp">
+              <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <path id="topArc" d="M 18 50 A 32 32 0 0 1 82 50" fill="none"/>
+                  <path id="botArc" d="M 22 58 A 28 28 0 0 0 78 58" fill="none"/>
+                </defs>
+                <!-- outer + inner circle -->
+                <circle cx="50" cy="50" r="38" fill="none" stroke="#1e4d2b" stroke-width="1.2"/>
+                <circle cx="50" cy="50" r="34" fill="none" stroke="#1e4d2b" stroke-width="0.6"/>
+                <!-- laurel left -->
+                <g stroke="#1e4d2b" stroke-width="0.9" fill="none" stroke-linecap="round">
+                  <path d="M30 38 Q35 35 40 36"/>
+                  <path d="M32 36 Q34 34 36 34"/>
+                  <path d="M34 34 Q36 32 38 33"/>
+                  <path d="M37 32 Q39 30 41 31"/>
+                  <path d="M40 31 Q42 29 44 30"/>
+                </g>
+                <!-- laurel right -->
+                <g stroke="#1e4d2b" stroke-width="0.9" fill="none" stroke-linecap="round">
+                  <path d="M70 38 Q65 35 60 36"/>
+                  <path d="M68 36 Q66 34 64 34"/>
+                  <path d="M66 34 Q64 32 62 33"/>
+                  <path d="M63 32 Q61 30 59 31"/>
+                  <path d="M60 31 Q58 29 56 30"/>
+                </g>
+                <!-- text top arc -->
+                <text font-family="Times New Roman, serif" font-size="6.2" font-weight="600" fill="#1e4d2b" letter-spacing="1.4">
+                  <textPath href="#topArc" startOffset="50%" text-anchor="middle">CRESTWOOD</textPath>
+                </text>
+                <!-- text bottom -->
+                <text x="50" y="62" font-family="Times New Roman, serif" font-size="6.5" font-weight="600" fill="#1e4d2b" text-anchor="middle" letter-spacing="1.2">MERCANTILE</text>
+                <!-- center small mark -->
+                <circle cx="50" cy="50" r="1.4" fill="#1e4d2b"/>
+                <!-- cancellation lines extending from right -->
+                <g stroke="#1e4d2b" stroke-width="0.7" stroke-linecap="round" opacity="0.7">
+                  <path d="M 78 44 Q 95 44 100 50" fill="none"/>
+                  <path d="M 80 50 Q 96 50 102 56" fill="none"/>
+                  <path d="M 78 56 Q 94 56 100 62" fill="none"/>
+                </g>
+              </svg>
+            </div>
+          </div>
+          <div class="hairline"></div>
+          <div class="tile-grid">
+            <div class="tile"><div class="tile-photo photo-1"><div class="tile-flag empty">⚐</div></div><div class="tile-caption">Today</div></div>
+            <div class="tile"><div class="tile-photo photo-2"><div class="tile-flag filled">⚑</div></div><div class="tile-caption">Today</div></div>
+            <div class="tile"><div class="tile-photo photo-3"><div class="tile-flag empty">⚐</div></div><div class="tile-caption">Today</div></div>
+            <div class="tile"><div class="tile-photo photo-4"><div class="tile-flag filled">⚑</div></div><div class="tile-caption">Yesterday</div></div>
+          </div>
+
+          <div class="bottom-nav">
+            <div class="nav-item active"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg></div>Home</div>
+            <div class="nav-item"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>Booths</div>
+            <div class="nav-item"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21V4h12l-2 4 2 4H4"/></svg></div>Flagged<span class="badge">5</span></div>
+            <div class="nav-item"><div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>Admin</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="questions-pane">
+    <h3>Decisions for David</h3>
+    <div class="q">
+      <div class="q-label">1. Which frame's level of postcard treatment do you want to ship as a PoC on Home?</div>
+      <div>(a) Frame A — texture only · (b) Frame B — texture + frame · (c) Frame C — texture + frame + stamp · (d) None of these read right; mock different axes</div>
+    </div>
+    <div class="q">
+      <div class="q-label">2. The mockup uses a <em>generated</em> SVG paper grain. Your attached <code>.png</code> is presumably warmer/more literal. For a PoC, do we…</div>
+      <div>(a) Ship with the generated SVG grain (zero asset management, immediately portable) · (b) Save your <code>.png</code> to <code>public/textures/paper.png</code> and use it (slightly heavier asset, more literal) · (c) Build it both ways and A/B in production preview</div>
+    </div>
+    <div class="q">
+      <div class="q-label">3. If Frame B or C wins — should the viewport frame travel to other tabs (Booths, Flagged, Admin) right away as part of the same PoC commit, or stay scoped strictly to Home?</div>
+      <div>(a) Home only — see it live in production for a day before extending · (b) All primary tabs in the same PoC commit · (c) Defer to a follow-up after Home QA passes</div>
+    </div>
+    <div class="q">
+      <div class="q-label">4. The Crestwood stamp in Frame C is hand-drawn SVG. If you pick C, what's the next move?</div>
+      <div>(a) Ship the SVG as-is (treats it as decorative chrome, no per-mall system) · (b) Skip the stamp from PoC entirely — texture + frame only — and revisit per-mall identity later · (c) Park the whole stamp question, defer to a v2 mockup focused only on per-mall identity</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
