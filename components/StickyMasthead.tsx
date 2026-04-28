@@ -38,7 +38,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
-import { v1, FONT_IM_FELL } from "@/lib/tokens";
+import { v1, FONT_NUMERAL } from "@/lib/tokens";
 
 interface StickyMastheadProps {
   /**
@@ -73,22 +73,23 @@ interface StickyMastheadProps {
   threshold?: number;
 }
 
-// IM Fell italic ascenders sit slightly above the line-box center, so a
-// span vertically aligned to grid-row-center reads as dropping ~1px below
-// the slot icons / pills around it. Lift the wordmark by 1px so the visual
-// center matches the side-slot icon centers.
+// Session 80 — wordmark redesign. Switched from IM Fell italic green @22px
+// to Times New Roman upright ink-black @18px. The decorative italic serif
+// felt like a flourish over the chrome; upright TNR in inkPrimary reads as
+// a quieter brand label and lets photos / page content lead. The -1px lift
+// that compensated for IM Fell italic's ascender drift is removed (TNR
+// upright sits true on its line-box). FONT_NUMERAL is the existing TNR
+// stack already used for booth numerals — no new webfont load.
 const WORDMARK_DEFAULT = (
   <span
     style={{
-      fontFamily: FONT_IM_FELL,
-      fontStyle: "italic",
-      fontSize: 22,
-      color: v1.green,
+      fontFamily: FONT_NUMERAL,
+      fontSize: 18,
+      color: v1.inkPrimary,
       letterSpacing: "-0.005em",
       lineHeight: 1,
       whiteSpace: "nowrap",
       display: "inline-block",
-      transform: "translateY(-1px)",
     }}
   >
     Treehouse Finds
