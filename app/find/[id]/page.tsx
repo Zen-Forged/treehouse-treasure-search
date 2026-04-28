@@ -1112,7 +1112,10 @@ export default function FindDetailPage() {
                             fontFamily: FONT_LORA,
                             fontSize: 18,
                             color: v1.inkPrimary,
-                            lineHeight: 1.25,
+                            // Session 82 — lineHeight 1.4 (was 1.25) for
+                            // descender clearance under overflow:hidden
+                            // (matches BoothLockupCard primitive).
+                            lineHeight: 1.4,
                             letterSpacing: "-0.005em",
                             overflow: "hidden",
                             textOverflow: "ellipsis",

@@ -138,7 +138,11 @@ export default function BoothLockupCard({
             fontFamily: FONT_LORA,
             fontSize: 18,
             color: v1.inkPrimary,
-            lineHeight: 1.25,
+            // Session 82 — lineHeight 1.4 (was 1.25) so descenders on g/p/y
+            // clear the overflow:hidden boundary required by text-overflow
+            // ellipsis. At 1.25 the line-box was 22.5px on an 18px font and
+            // descenders clipped at the box edge ("Bennett & Hall Designs").
+            lineHeight: 1.4,
             letterSpacing: "-0.005em",
             overflow: "hidden",
             textOverflow: "ellipsis",
