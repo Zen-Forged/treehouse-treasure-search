@@ -79,7 +79,6 @@ import {
   FONT_NUMERAL,
   MOTION_SHARED_ELEMENT_EASE,
   MOTION_SHARED_ELEMENT_FORWARD,
-  MOTION_SHARED_ELEMENT_BACK,
 } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { flagKey, mapsUrl, boothNumeralSize, loadFollowedIds } from "@/lib/utils";
@@ -126,56 +125,31 @@ async function detectOwnershipAsync(post: Post): Promise<boolean> {
 }
 
 // Shelf card (v1.1)
-//
-// Session 79 — Track D phase 5 extension. Photograph wrapped in motion.div
-// with `find-${id}` layoutId so More-from-shelf taps morph cross-route into
-// /find/[other-id]'s photograph hero. Tap also writes the preview cache so
-// the destination renders its motion node synchronously on first commit
-// (same pattern as feed + /flagged in session 78 — see commit c3b9541).
-//
-// The unified-card outer wrapper retired: photograph carries its own chrome
-// (border, radius, shadow) so the morph travels with consistent visual.
-// Caption sits below as plain text, matching home + /find detail pattern.
 function ShelfCard({ post }: { post: Post }) {
   const [imgErr, setImgErr] = useState(false);
   const isSold = post.status === "sold";
   const hasImg = !!post.image_url && !imgErr;
 
-  function handleTileClick() {
-    try {
-      if (post.image_url) {
-        sessionStorage.setItem(
-          `treehouse_find_preview:${post.id}`,
-          JSON.stringify({ image_url: post.image_url, title: post.title }),
-        );
-      }
-    } catch {}
-  }
-
   return (
     <Link
       href={`/find/${post.id}`}
-      onClick={handleTileClick}
       style={{ display: "block", textDecoration: "none", flexShrink: 0, width: "42vw", maxWidth: 170 }}
     >
       <div
         style={{
-          position: "relative",
-          width: "100%",
-          aspectRatio: "3/4",
+          background: v1.inkWash,
+          border: `1px solid ${v1.inkHairline}`,
+          borderRadius: v1.imageRadius,
+          overflow: "hidden",
+          boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
         }}
       >
-        <motion.div
-          layoutId={`find-${post.id}`}
-          transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
+        <div
           style={{
-            position: "absolute",
-            inset: 0,
-            borderRadius: v1.imageRadius,
-            overflow: "hidden",
+            position: "relative",
+            width: "100%",
+            aspectRatio: "3/4",
             background: v1.postit,
-            border: `1px solid ${v1.inkHairline}`,
-            boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
             opacity: isSold ? 0.62 : 1,
             transition: "opacity 0.2s",
           }}
@@ -215,23 +189,23 @@ function ShelfCard({ post }: { post: Post }) {
               </div>
             </div>
           )}
-        </motion.div>
-      </div>
-      <div style={{ padding: "8px 4px 4px" }}>
-        <div
-          style={{
-            fontFamily: FONT_IM_FELL,
-            fontSize: 14,
-            color: v1.inkPrimary,
-            lineHeight: 1.2,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical" as const,
-          }}
-        >
-          {post.title}
+        </div>
+        <div style={{ padding: "9px 10px 11px", minHeight: 56 }}>
+          <div
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontSize: 14,
+              color: v1.inkPrimary,
+              lineHeight: 1.2,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical" as const,
+            }}
+          >
+            {post.title}
+          </div>
         </div>
       </div>
     </Link>
