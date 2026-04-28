@@ -272,7 +272,7 @@ export async function POST(req: Request) {
       details: { vendorId: activeVendorId },
     });
     return NextResponse.json(
-      { ok: false, error: "This booth is missing its mall. Contact admin." },
+      { ok: false, error: "This booth is missing its location. Contact admin." },
       { status: 500 },
     );
   }

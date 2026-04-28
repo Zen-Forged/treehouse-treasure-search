@@ -76,7 +76,7 @@ export default function EditBoothSheet({
         if (json.code === "BOOTH_CONFLICT") {
           setError(
             json.error ??
-            "A booth with that number already exists at this mall. Pick a different number.",
+            "A booth with that number already exists at this location. Pick a different number.",
           );
         } else {
           setError(json.error ?? `HTTP ${res.status}`);

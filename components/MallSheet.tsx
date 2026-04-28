@@ -156,7 +156,7 @@ export default function MallSheet({
           <motion.div
             role="dialog"
             aria-modal="true"
-            aria-label="Choose a mall"
+            aria-label="Choose a location"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
@@ -211,7 +211,7 @@ export default function MallSheet({
                   lineHeight: 1.2,
                 }}
               >
-                Choose a mall
+                Choose a location
               </div>
             </div>
 
@@ -273,7 +273,7 @@ export default function MallSheet({
                       paddingBottom: 1,
                     }}
                   >
-                    All malls
+                    All Kentucky Locations
                   </span>
                 }
                 subLabel={null}

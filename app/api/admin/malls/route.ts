@@ -60,7 +60,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: fetchErr.message }, { status: 500 });
   }
   if (!current) {
-    return NextResponse.json({ error: "Mall not found." }, { status: 404 });
+    return NextResponse.json({ error: "Location not found." }, { status: 404 });
   }
 
   const stampActivatedAt = status === "active" && !current.activated_at;

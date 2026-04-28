@@ -89,7 +89,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json(
         {
           error:
-            "A booth with that number already exists at this mall. Pick a different number, or change the mall.",
+            "A booth with that number already exists at this location. Pick a different number, or change the location.",
           code: "BOOTH_CONFLICT",
         },
         { status: 409 },

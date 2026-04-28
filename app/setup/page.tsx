@@ -146,7 +146,7 @@ function SetupContent() {
   const renderSuccessSubhead = (vendors: Vendor[]) => {
     if (vendors.length === 1) {
       const v = vendors[0];
-      const mallName = v.mall?.name ?? "your mall";
+      const mallName = v.mall?.name ?? "your location";
       return (
         <>
           Your booth at{" "}

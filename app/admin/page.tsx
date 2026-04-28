@@ -357,7 +357,7 @@ export default function AdminPage() {
       if (!res.ok || !json.ok) {
         // Revert optimistic update
         setMalls(prev => prev.map(m => (m.id === mall.id ? mall : m)));
-        setToast({ kind: "error", message: json.error || "Failed to update mall status." });
+        setToast({ kind: "error", message: json.error || "Failed to update location status." });
       } else {
         // Replace with server-canonical row (picks up activated_at stamp)
         setMalls(prev => prev.map(m => (m.id === mall.id ? (json.mall as Mall) : m)));
@@ -373,7 +373,7 @@ export default function AdminPage() {
       setMalls(prev => prev.map(m => (m.id === mall.id ? mall : m)));
       setToast({
         kind: "error",
-        message: err instanceof Error ? err.message : "Failed to update mall status.",
+        message: err instanceof Error ? err.message : "Failed to update location status.",
       });
     }
 
@@ -645,7 +645,7 @@ export default function AdminPage() {
             border: `1px solid ${activeTab === "malls" ? colors.green : colors.border}`,
             cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3,
           }}>
-          <MapPin size={13} /> Malls
+          <MapPin size={13} /> Locations
         </button>
         <button
           onClick={() => setActiveTab("events")}
@@ -754,7 +754,7 @@ export default function AdminPage() {
                           {request.email}
                         </div>
                         <div style={{ fontSize: 11, color: colors.textMuted }}>
-                          {request.booth_number ? `Booth ${request.booth_number}` : "No booth specified"} • {request.mall_name || "No mall specified"}
+                          {request.booth_number ? `Booth ${request.booth_number}` : "No booth specified"} • {request.mall_name || "No location specified"}
                         </div>
                         <div style={{ fontSize: 10, color: colors.textFaint, fontFamily: "monospace", marginTop: 4 }}>
                           {new Date(request.created_at).toLocaleDateString()} • {request.status}
@@ -1028,7 +1028,7 @@ export default function AdminPage() {
                     {toast.email}
                   </div>
                   <div style={{ fontSize: 11, color: colors.textMuted }}>
-                    {toast.booth ? `Booth ${toast.booth}` : "No booth"} · {toast.mall || "No mall"}
+                    {toast.booth ? `Booth ${toast.booth}` : "No booth"} · {toast.mall || "No location"}
                   </div>
                   {toast.note && (
                     <div style={{
@@ -1324,8 +1324,8 @@ const FILTER_CHIPS_OVERFLOW: { key: EventFilter; label: string }[] = [
   { key: "tag_flow",                 label: "Tag flow" },
   { key: "vendor_request_submitted", label: "Requests submitted" },
   { key: "vendor_request_approved",  label: "Requests approved" },
-  { key: "mall_activated",           label: "Mall activated" },
-  { key: "mall_deactivated",         label: "Mall deactivated" },
+  { key: "mall_activated",           label: "Location activated" },
+  { key: "mall_deactivated",         label: "Location deactivated" },
 ];
 
 function formatEventClock(iso: string): string {

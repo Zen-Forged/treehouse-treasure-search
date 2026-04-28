@@ -385,7 +385,7 @@ function DeleteBoothSheet({
           <div style={{ padding: "12px 14px", background: "rgba(42,26,10,0.03)", borderRadius: 10, border: `1px solid ${borderC}`, marginBottom: 16 }}>
             <div style={{ fontFamily: FONT_IM_FELL, fontSize: 15, color: v1.inkPrimary, lineHeight: 1.3 }}>{vendor.display_name}</div>
             <div style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 12, color: v1.inkMuted, lineHeight: 1.5, marginTop: 3 }}>
-              {vendor.mall?.name ?? "Unknown mall"}{vendor.booth_number ? ` · Booth ${vendor.booth_number}` : ""}
+              {vendor.mall?.name ?? "Unknown location"}{vendor.booth_number ? ` · Booth ${vendor.booth_number}` : ""}
             </div>
           </div>
 

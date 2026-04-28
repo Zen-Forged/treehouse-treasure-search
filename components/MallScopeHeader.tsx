@@ -44,7 +44,7 @@ export default function MallScopeHeader({
 }: MallScopeHeaderProps) {
   const isAll = mallName === null;
   const eyebrow = isAll ? eyebrowAll : eyebrowOne;
-  const title   = isAll ? "Kentucky" : mallName!;
+  const title   = isAll ? "All Kentucky Locations" : mallName!;
 
   return (
     <div style={{ padding: "20px 22px 6px" }}>
@@ -84,7 +84,7 @@ export default function MallScopeHeader({
       {/* Tappable name + chevron */}
       <button
         onClick={onTap}
-        aria-label="Choose a mall"
+        aria-label="Choose a location"
         style={{
           display: "inline-flex",
           alignItems: "baseline",

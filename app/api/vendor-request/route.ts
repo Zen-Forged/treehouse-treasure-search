@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
     if (!mall_id) {
-      return NextResponse.json({ error: "Please select your mall." }, { status: 400 });
+      return NextResponse.json({ error: "Please select your location." }, { status: 400 });
     }
     if (!booth_number?.trim()) {
       return NextResponse.json({ error: "Please enter your booth number." }, { status: 400 });

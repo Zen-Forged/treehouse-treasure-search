@@ -100,7 +100,7 @@ export default function MallPage() {
   if (notFound) {
     return (
       <div style={{ minHeight: "100vh", background: "#050f05", maxWidth: 430, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
-        <div style={{ fontFamily: "Georgia, serif", fontSize: 18, color: "#c8b47e" }}>Mall not found.</div>
+        <div style={{ fontFamily: "Georgia, serif", fontSize: 18, color: "#c8b47e" }}>Location not found.</div>
         <button onClick={() => router.push("/")} style={{ fontSize: 13, color: "#6a5528", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", textDecorationColor: "rgba(106,85,40,0.3)" }}>Back to feed</button>
       </div>
     );

@@ -84,7 +84,7 @@ export default function BoothFormFields({
     <>
       {/* Mall */}
       <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle}>Mall</label>
+        <label style={labelStyle}>Location</label>
         <select
           value={mallId}
           onChange={e => setMallId(e.target.value)}

@@ -152,7 +152,7 @@ export default function AddBoothInline({
 
   async function handleSubmit() {
     if (!displayName.trim()) { setError("Booth name is required."); return; }
-    if (!mallId) { setError("Please select a mall location."); return; }
+    if (!mallId) { setError("Please select a location."); return; }
     setSubmitting(true);
     setError(null);
 
@@ -318,7 +318,7 @@ export default function AddBoothInline({
 
       {/* Mall */}
       <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle}>Mall</label>
+        <label style={labelStyle}>Location</label>
         <select
           value={mallId}
           onChange={e => setMallId(e.target.value)}
