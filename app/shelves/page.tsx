@@ -33,7 +33,6 @@ import {
   v1,
   FONT_LORA,
   FONT_SYS,
-  FONT_NUMERAL,
   MOTION_EASE_OUT,
   MOTION_CARD_DURATION,
   MOTION_STAGGER,
@@ -46,6 +45,7 @@ import { track } from "@/lib/clientEvents";
 import AdminOnly from "@/components/AdminOnly";
 import AddBoothSheet from "@/components/AddBoothSheet";
 import AddBoothTile from "@/components/AddBoothTile";
+import BoothLockupCard from "@/components/BoothLockupCard";
 import BottomNav from "@/components/BottomNav";
 import EditBoothSheet from "@/components/EditBoothSheet";
 import MallSheet from "@/components/MallSheet";
@@ -136,6 +136,47 @@ function VendorCard({
     onToggleBookmark(vendor.id);
   }
 
+  // Session 82 — admin chrome (Pencil + Trash) slot, only renders for admins.
+  // Trash only when !user_id (booth isn't claimed yet — matches admin behavior).
+  const adminChrome = adminUser ? (
+    <>
+      <button
+        type="button"
+        onClick={handleEditTap}
+        aria-label={`Edit ${vendor.display_name}`}
+        style={{
+          width: 26, height: 26, borderRadius: "50%",
+          background: "rgba(42,26,10,0.04)",
+          border: `1px solid ${v1.inkHairline}`,
+          padding: 0,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer",
+          WebkitTapHighlightColor: "transparent",
+        }}
+      >
+        <Pencil size={12} strokeWidth={1.7} style={{ color: v1.inkMid }} />
+      </button>
+      {!vendor.user_id && (
+        <button
+          type="button"
+          onClick={handleDeleteTap}
+          aria-label={`Delete ${vendor.display_name}`}
+          style={{
+            width: 26, height: 26, borderRadius: "50%",
+            background: "rgba(139,32,32,0.06)",
+            border: `1px solid ${v1.redBorder}`,
+            padding: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <Trash2 size={12} strokeWidth={1.7} style={{ color: v1.red }} />
+        </button>
+      )}
+    </>
+  ) : null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -146,163 +187,15 @@ function VendorCard({
         ease: MOTION_EASE_OUT,
       }}
       whileTap={{ scale: 0.99 }}
+      onClick={handleCardTap}
+      style={{ cursor: "pointer", WebkitTapHighlightColor: "transparent" }}
     >
-      <div
-        onClick={handleCardTap}
-        style={{
-          background: v1.inkWash,
-          border: `1px solid ${v1.inkHairline}`,
-          borderRadius: 10,
-          padding: "12px 14px 12px 12px",
-          boxShadow: "0 1px 6px rgba(42,26,10,0.06)",
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          cursor: "pointer",
-          WebkitTapHighlightColor: "transparent",
-        }}
-      >
-        {/* D6 — bookmark column 22px. Empty spacer for admins (D8 + session
-            67 D10). Inline Lucide Bookmark, no bubble — the row card is the
-            affordance container. Saved-state fills with v1.green. */}
-        <div style={{ width: 22, height: 22, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {!adminUser && (
-            <button
-              type="button"
-              onClick={handleBookmarkTap}
-              aria-label={saved ? "Remove booth bookmark" : "Bookmark this booth"}
-              style={{
-                width: 22,
-                height: 22,
-                background: "transparent",
-                border: "none",
-                padding: 0,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <Bookmark
-                size={18}
-                strokeWidth={1.8}
-                style={{
-                  color: saved ? v1.green : v1.inkPrimary,
-                  fill:  saved ? v1.green : "none",
-                }}
-              />
-            </button>
-          )}
-        </div>
-
-        {/* D4 — vendor name flex middle. IM Fell 18px (matches Find Map
-            booth-section header). Single line, ellipsis on overflow. */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontFamily: FONT_LORA,
-              fontSize: 18,
-              color: v1.inkPrimary,
-              lineHeight: 1.2,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              letterSpacing: "-0.005em",
-            }}
-          >
-            {vendor.display_name}
-          </div>
-        </div>
-
-        {/* D8 — admin chrome. Pencil always; Trash only when !user_id (booth
-            isn't claimed yet — matches existing /shelves admin behavior).
-            Sits between vendor name and booth stack. Small inline icons with
-            no bubble; the row card visually contains them. */}
-        <AdminOnly user={user}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            <button
-              type="button"
-              onClick={handleEditTap}
-              aria-label={`Edit ${vendor.display_name}`}
-              style={{
-                width: 26, height: 26, borderRadius: "50%",
-                background: "rgba(42,26,10,0.04)",
-                border: `1px solid ${v1.inkHairline}`,
-                padding: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                cursor: "pointer",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <Pencil size={12} strokeWidth={1.7} style={{ color: v1.inkMid }} />
-            </button>
-            {!vendor.user_id && (
-              <button
-                type="button"
-                onClick={handleDeleteTap}
-                aria-label={`Delete ${vendor.display_name}`}
-                style={{
-                  width: 26, height: 26, borderRadius: "50%",
-                  background: "rgba(139,32,32,0.06)",
-                  border: `1px solid ${v1.redBorder}`,
-                  padding: 0,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  cursor: "pointer",
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                <Trash2 size={12} strokeWidth={1.7} style={{ color: v1.red }} />
-              </button>
-            )}
-          </div>
-        </AdminOnly>
-
-        {/* Session 81 — Option A3 lockup card. Dashed green border + paper-cream
-            fill + soft drop shadow. Eyebrow + numeral stay v1.green. Numeral
-            drops 26 → 22 to fit the card without breaking row vertical rhythm. */}
-        {vendor.booth_number && (
-          <div style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            lineHeight: 1,
-            flexShrink: 0,
-            border: "1.5px dashed rgba(30,77,43,0.78)",
-            background: "rgba(232,221,199,0.55)",
-            boxShadow: "0 1px 3px rgba(42,26,10,0.12), 0 1px 1px rgba(42,26,10,0.06)",
-            borderRadius: 6,
-            padding: "6px 12px 7px",
-          }}>
-            <div
-              style={{
-                fontFamily: FONT_SYS,
-                fontSize: 9,
-                fontWeight: 700,
-                color: v1.green,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                lineHeight: 1,
-                marginBottom: 4,
-              }}
-            >
-              Booth
-            </div>
-            <div
-              style={{
-                fontFamily: FONT_NUMERAL,
-                fontSize: 22,
-                fontWeight: 500,
-                color: v1.green,
-                lineHeight: 1,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              {vendor.booth_number}
-            </div>
-          </div>
-        )}
-      </div>
+      <BoothLockupCard
+        vendorName={vendor.display_name}
+        boothNumber={vendor.booth_number ?? null}
+        bookmark={!adminUser ? { saved, onToggle: () => onToggleBookmark(vendor.id) } : null}
+        adminChrome={adminChrome}
+      />
     </motion.div>
   );
 }
