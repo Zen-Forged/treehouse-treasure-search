@@ -106,7 +106,7 @@ export const spacing = {
 export const v1 = {
   // Paper + post-it
   paperCream:   "#e8ddc7",
-  postit:       "#fffaea",
+  postit:       "#fbf3df",
 
   // Ink scale
   inkPrimary:   "#2a1a0a",
