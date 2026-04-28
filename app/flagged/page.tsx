@@ -36,20 +36,13 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useRef, useState } from "react";
-import { flushSync } from "react-dom";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
 import { BOOKMARK_PREFIX, loadBookmarkCount } from "@/lib/utils";
-import {
-  useLastTappedPostId,
-  setLastTappedPostId,
-  scheduleClearLastTapped,
-} from "@/lib/morphTracker";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import {
   v1,
@@ -78,15 +71,6 @@ import type { Post, Mall } from "@/types/treehouse";
 // (docs/animation-consistency-design.md). Alias kept so existing call
 // sites inside this file remain `ease: EASE` without sweeping renames.
 const EASE = MOTION_EASE_OUT;
-
-// Session 79 — back-nav scroll anchoring. Same pattern as home (`app/page.tsx`):
-// module-scope cache survives /find/[id] navigation (App Router unmounts the
-// page; module scope persists for the SPA session). SCROLL_KEY persists scroll
-// position across the same boundary. Together they let back-nav land the user
-// exactly where they tapped, with the destination motion node already mounted
-// for the back-morph.
-const SCROLL_KEY = "treehouse_flagged_scroll";
-let cachedFlaggedPosts: Post[] | null = null;
 
 // ── Bookmark helpers (raw localStorage per tech rules) ─────────────────────────
 
@@ -168,7 +152,6 @@ function FindTile({
   onUnsave: (id: string) => void;
   widthMode: "grid" | "scroll";
 }) {
-  const router = useRouter();
   const [imgErr, setImgErr] = useState(false);
   const hasImg = !!post.image_url && !imgErr;
 
@@ -182,15 +165,10 @@ function FindTile({
     track("post_unsaved", { post_id: post.id });
   }
 
-  function handleTileClick(e: React.MouseEvent) {
-    // Session 79 R5 — defer navigation by one animation frame. flushSync
-    // commits the layoutId-bearing render in this frame; rAF gives the
-    // browser a paint to capture the rect; router.push then navigates.
-    // See app/page.tsx for full rationale.
-    e.preventDefault();
-    flushSync(() => {
-      setLastTappedPostId(post.id);
-    });
+  function handleTileClick() {
+    // Track D phase 5 — cache the image URL so /find/[id] can mount its
+    // <motion.button layoutId> hero synchronously on first render. Mirror
+    // of the feed handler in app/page.tsx.
     if (post.image_url) {
       try {
         sessionStorage.setItem(
@@ -199,16 +177,7 @@ function FindTile({
         );
       } catch {}
     }
-    requestAnimationFrame(() => {
-      router.push(`/find/${post.id}`);
-    });
   }
-
-  // Session 79 — only the tapped tile carries layoutIds + layout tracking.
-  // Subscribe via the hook so React re-renders the tile when the morph
-  // tracker changes (see app/page.tsx for the full rationale).
-  const morphingId = useLastTappedPostId();
-  const isMorphTile = morphingId === post.id;
 
   const tileStyle: React.CSSProperties =
     widthMode === "scroll"
@@ -243,7 +212,7 @@ function FindTile({
           }}
         >
           <motion.div
-            layoutId={isMorphTile ? `find-${post.id}` : undefined}
+            layoutId={`find-${post.id}`}
             transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
             style={{ position: "absolute", inset: 0, overflow: "hidden" }}
           >
@@ -286,8 +255,8 @@ function FindTile({
               R4: explicit width/height + layout="position" for stable
               cross-route layoutId tracking. */}
           <motion.div
-            layoutId={isMorphTile ? `flag-${post.id}` : undefined}
-            layout={isMorphTile ? "position" : false}
+            layoutId={`flag-${post.id}`}
+            layout="position"
             transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
             style={{
               position: "absolute",
@@ -583,36 +552,25 @@ function EmptyState() {
 
 // ──────────────────────────────────────────────────────────────────────────────
 export default function FindMapPage() {
-  // Hydrate from module-scope cache so back-nav from /find/[id] mounts tiles
-  // synchronously — the destination motion.div for the back morph needs to
-  // exist before framer-motion releases the source rect.
-  const [posts,          setPosts]          = useState<Post[]>(cachedFlaggedPosts ?? []);
+  const [posts,          setPosts]          = useState<Post[]>([]);
   const [malls,          setMalls]          = useState<Mall[]>([]);
-  const [loading,        setLoading]        = useState<boolean>(cachedFlaggedPosts === null);
+  const [loading,        setLoading]        = useState(true);
   const [bookmarkCount,  setBookmarkCount]  = useState(0);
   const [bannerImageUrl, setBannerImageUrl] = useState<string | null>(null);
   const [savedMallId,    setSavedMallId]    = useSavedMallId();
   const [mallSheetOpen,  setMallSheetOpen]  = useState(false);
-  const pendingScrollY = useRef<number | null>(null);
-  const scrollRestored = useRef(false);
 
   function syncCount() { setBookmarkCount(loadBookmarkCount()); }
 
   async function loadPosts() {
     const ids = loadFlaggedIds();
-    if (ids.length === 0) {
-      setPosts([]);
-      cachedFlaggedPosts = [];
-      setLoading(false);
-      return;
-    }
+    if (ids.length === 0) { setPosts([]); setLoading(false); return; }
     const data = await getPostsByIds(ids);
     if (data.length < ids.length) {
       pruneStaleBookmarks(ids, data.map(p => p.id));
       setBookmarkCount(loadBookmarkCount());
     }
     setPosts(data);
-    cachedFlaggedPosts = data;
     setLoading(false);
   }
 
@@ -635,52 +593,14 @@ export default function FindMapPage() {
     track("page_viewed", { path: "/flagged", saved_count: loadBookmarkCount() });
   }, []);
 
-  // Session 79 — after the back-morph from /find/[id] has had time to
-  // complete, clear the morph tracker so future lateral navigations
-  // (BottomNav tab switches) don't carry a stale tapped id forward.
-  useEffect(() => { scheduleClearLastTapped(500); }, []);
-
   useEffect(() => {
     function onFocus() { syncCount(); loadPosts(); }
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
-  // Session 79 — scroll save + restore. Mirrors `app/page.tsx`. Save scroll
-  // position on every scroll event so back-nav from /find/[id] lands exactly
-  // where the user tapped. Restore once after mount, gated on data being
-  // available so the masonry layout is final before scrollTo fires.
-  useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem(SCROLL_KEY);
-      if (saved) {
-        const y = parseInt(saved, 10);
-        if (!isNaN(y) && y > 0) pendingScrollY.current = y;
-      }
-    } catch {}
-
-    function onScroll() {
-      try { sessionStorage.setItem(SCROLL_KEY, String(Math.round(window.scrollY))); } catch {}
-    }
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
-    if (loading) return;
-    if (scrollRestored.current) return;
-    if (pendingScrollY.current === null) return;
-    scrollRestored.current = true;
-    const y = pendingScrollY.current;
-    requestAnimationFrame(() => { window.scrollTo({ top: y, behavior: "instant" }); });
-  }, [loading]);
-
   function handleUnsave(postId: string) {
-    setPosts(prev => {
-      const next = prev.filter(p => p.id !== postId);
-      cachedFlaggedPosts = next;
-      return next;
-    });
+    setPosts(prev => prev.filter(p => p.id !== postId));
     setBookmarkCount(prev => Math.max(0, prev - 1));
   }
 

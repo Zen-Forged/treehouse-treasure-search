@@ -39,9 +39,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState, useRef, useMemo } from "react";
-import { flushSync } from "react-dom";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { CircleUser } from "lucide-react";
 import FlagGlyph from "@/components/FlagGlyph";
@@ -60,11 +58,6 @@ import {
 } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { flagKey, loadFollowedIds, formatTimeAgo } from "@/lib/utils";
-import {
-  useLastTappedPostId,
-  setLastTappedPostId,
-  scheduleClearLastTapped,
-} from "@/lib/morphTracker";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { safeStorage } from "@/lib/safeStorage";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
@@ -231,7 +224,6 @@ function MasonryTile({
   isLastViewed: boolean;
   skipEntrance: boolean;
 }) {
-  const router = useRouter();
   const [imgErr,      setImgErr]      = useState(false);
   const [imgHeight,   setImgHeight]   = useState<number | null>(null);
   const [highlighted, setHighlighted] = useState(isLastViewed);
@@ -263,23 +255,13 @@ function MasonryTile({
     onToggleSave(post.id);
   }
 
-  function handleTileClick(e: React.MouseEvent) {
-    // Session 79 R5 — defer navigation by one animation frame so the browser
-    // can paint the layoutId-bearing tile before unmount. flushSync alone
-    // commits React's render and framer's useLayoutEffect, but framer's
-    // projection system measures rects after a paint — and Next.js App
-    // Router's Link navigation is fast enough to unmount the source before
-    // that paint completes, leaving framer with no source rect to morph
-    // from. preventDefault stops Link's synchronous navigation; rAF defers
-    // router.push to the next frame; flushSync commits the layoutId
-    // re-render in this frame. Framer captures the rect on paint, then
-    // navigation completes and the morph fires cleanly.
-    e.preventDefault();
-    flushSync(() => {
-      setLastTappedPostId(post.id);
-    });
+  function handleTileClick() {
     try {
       sessionStorage.setItem(LAST_VIEWED_KEY, post.id);
+      // Track D phase 5 — cache the image URL so /find/[id] can mount its
+      // <motion.button layoutId> hero synchronously on first render. Without
+      // this, the destination's motion node only mounts after the post fetch
+      // resolves, by which time framer-motion has lost the source rect.
       if (post.image_url) {
         sessionStorage.setItem(
           findPreviewKey(post.id),
@@ -287,18 +269,7 @@ function MasonryTile({
         );
       }
     } catch {}
-    requestAnimationFrame(() => {
-      router.push(`/find/${post.id}`);
-    });
   }
-
-  // Session 79 — only the tapped tile carries layoutIds + layout tracking.
-  // Subscribe via useLastTappedPostId so React re-renders this tile when
-  // the morph tracker changes (tap → set → re-render → navigate, in that
-  // order; without re-render the source tile never commits its layoutId
-  // to the DOM and framer-motion has no source rect to morph from).
-  const morphingId = useLastTappedPostId();
-  const isMorphTile = morphingId === post.id;
 
   function handleTilePointerDown() {
     setTapped(true);
@@ -343,7 +314,7 @@ function MasonryTile({
           }}
         >
           <motion.div
-            layoutId={isMorphTile ? `find-${post.id}` : undefined}
+            layoutId={`find-${post.id}`}
             transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
             style={{
               position: "absolute",
@@ -419,8 +390,8 @@ function MasonryTile({
               layoutId animation dropped frames mid-flight and the flag
               briefly disappeared. */}
           <motion.div
-            layoutId={isMorphTile ? `flag-${post.id}` : undefined}
-            layout={isMorphTile ? "position" : false}
+            layoutId={`flag-${post.id}`}
+            layout="position"
             transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
             style={{
               position: "absolute",
@@ -632,12 +603,6 @@ export default function DiscoveryFeedPage() {
 
   // R3 — page_viewed analytics event (fire-and-forget; runs once on mount).
   useEffect(() => { track("page_viewed", { path: "/" }); }, []);
-
-  // Session 79 — after the back-morph from /find/[id] has had time to
-  // complete (~300ms morph duration), clear the morph tracker so future
-  // lateral navigations (BottomNav tab switches) don't carry a stale tapped
-  // id forward and trigger a single-tile morph between unrelated pages.
-  useEffect(() => { scheduleClearLastTapped(500); }, []);
 
   // ── Feed load ────────────────────────────────────────────────────────────────
   async function loadFeed() {

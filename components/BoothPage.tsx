@@ -653,9 +653,13 @@ export function AddFindTile({
       </span>
     </>
   );
-  // Session 79 — entrance animation dropped (matches WindowTile + ShelfTile).
   return (
-    <div style={{ width: "100%", display: "flex", flexDirection: "column", minWidth: 0 }}>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: EASE }}
+      style={{ width: "100%", display: "flex", flexDirection: "column", minWidth: 0 }}
+    >
       {onAddClick ? (
         <button
           type="button"
@@ -672,19 +676,20 @@ export function AddFindTile({
       )}
       {/* Placeholder under the add tile so adjacent cells' titles+prices don't visually orphan it */}
       <div style={{ height: 22 }} aria-hidden="true" />
-    </div>
+    </motion.div>
   );
 }
 
-export function PlaceholderTile({ }: { index: number }) {
+export function PlaceholderTile({ index }: { index: number }) {
   // v1.1j — owner-only 4:5 empty cell used to complete the 9-pane window
   // composition when inventory is sparse. Same silhouette as <AddFindTile>
   // without the action affordance so the grid reads as "nine panels filling
   // from the top-left" rather than "a few tiles and a gap."
-  //
-  // Session 79 — entrance animation dropped (matches WindowTile + ShelfTile).
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: EASE }}
       style={{ width: "100%", display: "flex", flexDirection: "column", minWidth: 0 }}
       aria-hidden="true"
     >
@@ -699,21 +704,20 @@ export function PlaceholderTile({ }: { index: number }) {
       />
       {/* Match AddFindTile's 22px title-slot placeholder so row heights align */}
       <div style={{ height: 22 }} aria-hidden="true" />
-    </div>
+    </motion.div>
   );
 }
 
-// Session 79 — entrance animation dropped. Tiles render at full opacity
-// from frame 1 on every mount. The per-tile fade+scale stagger fired on
-// every page visit (cold start, back-nav, foreground) and read as
-// "thumbnails animating in on load" against the ecosystem-wide pattern
-// of static-on-mount tiles. Matches the home feed pattern from session 78
-// (skipTileEntrance=true).
-function WindowTile({ post }: { post: Post; index: number }) {
+function WindowTile({ post, index }: { post: Post; index: number }) {
   const [imgErr, setImgErr] = useState(false);
   const hasPrice = typeof post.price_asking === "number" && post.price_asking > 0;
   return (
-    <div style={{ width: "100%", display: "flex", flexDirection: "column", minWidth: 0 }}>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: EASE }}
+      style={{ width: "100%", display: "flex", flexDirection: "column", minWidth: 0 }}
+    >
       <Link
         href={`/find/${post.id}`}
         style={{ display: "block", textDecoration: "none", color: "inherit", minWidth: 0 }}
@@ -798,7 +802,7 @@ function WindowTile({ post }: { post: Post; index: number }) {
           </div>
         </div>
       </Link>
-    </div>
+    </motion.div>
   );
 }
 
@@ -848,12 +852,14 @@ export function WindowView({
 // Shelf View — horizontal scroll, larger 4:5 tiles
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Session 79 — entrance animation dropped (matches WindowTile).
-function ShelfTile({ post, isFirst }: { post: Post; index: number; isFirst: boolean }) {
+function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirst: boolean }) {
   const [imgErr, setImgErr] = useState(false);
   const hasPrice = typeof post.price_asking === "number" && post.price_asking > 0;
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: EASE }}
       style={{
         flexShrink: 0,
         width: "52vw",
@@ -946,7 +952,7 @@ function ShelfTile({ post, isFirst }: { post: Post; index: number; isFirst: bool
           </div>
         </div>
       </Link>
-    </div>
+    </motion.div>
   );
 }
 
@@ -995,9 +1001,11 @@ function ShelfAddFindTile({
       </span>
     </>
   );
-  // Session 79 — entrance animation dropped (matches WindowTile + ShelfTile).
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.26, ease: EASE }}
       style={{
         flexShrink: 0,
         width: "52vw",
@@ -1023,7 +1031,7 @@ function ShelfAddFindTile({
       {/* Match ShelfTile's title + price vertical rhythm so the AddFindTile
           doesn't visually orphan against neighboring items. */}
       <div style={{ height: 42 }} aria-hidden="true" />
-    </div>
+    </motion.div>
   );
 }
 
