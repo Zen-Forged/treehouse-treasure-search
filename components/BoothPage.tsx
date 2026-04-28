@@ -3,7 +3,7 @@
 //
 // Primitives exported:
 //   - <BoothHero>            — vendor banner + booth post-it + edit bubble
-//   - <BoothTitleBlock>      — "a curated shelf from" eyebrow + vendor name (32px)
+//   - <BoothTitleBlock>      — "A curated booth from" eyebrow + vendor name (32px)
 //   - <MallBlock>            — small pin + mall name + dotted-underline address
 //   - <DiamondDivider>       — plain hairline (diamond retired v1.1j; name kept for export stability)
 //   - <ViewToggle>           — "Window View · Shelf View" text-link pair
@@ -331,7 +331,7 @@ export function BoothHero({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Title block — "a curated shelf from" eyebrow + vendor name (32px)
+// Title block — "A curated booth from" eyebrow + vendor name (32px)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function BoothTitleBlock({
@@ -362,7 +362,7 @@ export function BoothTitleBlock({
           margin: "0 0 4px",
         }}
       >
-        a curated shelf from
+        A curated booth from
       </div>
       {hasPicker ? (
         <button
