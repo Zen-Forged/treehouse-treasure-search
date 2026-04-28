@@ -773,6 +773,7 @@ export default function DiscoveryFeedPage() {
           backgroundPosition: "center",
           pointerEvents: "none",
           zIndex: 0,
+          opacity: 0.5,
         }}
       />
     <div

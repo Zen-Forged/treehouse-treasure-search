@@ -28,7 +28,7 @@ interface BottomNavProps {
 }
 
 const C = {
-  bg:         "rgba(232,221,199,0.96)", // v1.1d — paperCream translucent to match Find Detail
+  bg:         "rgba(251,243,223,0.96)", // session 83 — postit warm cream to echo booth lockup card against textured Home bg
   border:     "rgba(42,26,10,0.18)",     // v1.1d — inkHairline for visible separation
   textMuted:  "#6b5538",                 // v1.1l — aligned to v1.inkMuted (was #8a8476 legacy textMuted which disappeared against paperCream)
   green:      "#1e4d2b",
