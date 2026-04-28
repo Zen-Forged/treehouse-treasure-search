@@ -211,7 +211,7 @@ function VendorRequestInner() {
       setError("Please enter a valid email address.");
       return;
     }
-    if (!mallId) { setError("Please select your mall."); return; }
+    if (!mallId) { setError("Please select your location."); return; }
     if (!booth.trim()) { setError("Please enter your booth number."); return; }
     if (!proofDataUrl) {
       setError("Please add a photo of your booth.");
@@ -388,7 +388,7 @@ function VendorRequestInner() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div>
               <label style={labelStyle}>
-                Mall<span style={requiredStyle}>*</span>
+                Location<span style={requiredStyle}>*</span>
               </label>
               <select
                 value={mallId}
