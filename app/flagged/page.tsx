@@ -43,6 +43,11 @@ import { ArrowLeft } from "lucide-react";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
 import { BOOKMARK_PREFIX, loadBookmarkCount } from "@/lib/utils";
+import {
+  getLastTappedPostId,
+  setLastTappedPostId,
+  scheduleClearLastTapped,
+} from "@/lib/morphTracker";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import {
   v1,
@@ -175,6 +180,8 @@ function FindTile({
   }
 
   function handleTileClick() {
+    // Session 79 — gate layoutId via the morph tracker (see lib/morphTracker).
+    setLastTappedPostId(post.id);
     // Track D phase 5 — cache the image URL so /find/[id] can mount its
     // <motion.button layoutId> hero synchronously on first render. Mirror
     // of the feed handler in app/page.tsx.
@@ -187,6 +194,9 @@ function FindTile({
       } catch {}
     }
   }
+
+  // Session 79 — only the tapped tile carries layoutIds.
+  const isMorphTile = getLastTappedPostId() === post.id;
 
   const tileStyle: React.CSSProperties =
     widthMode === "scroll"
@@ -221,7 +231,7 @@ function FindTile({
           }}
         >
           <motion.div
-            layoutId={`find-${post.id}`}
+            layoutId={isMorphTile ? `find-${post.id}` : undefined}
             transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
             style={{ position: "absolute", inset: 0, overflow: "hidden" }}
           >
@@ -264,7 +274,7 @@ function FindTile({
               R4: explicit width/height + layout="position" for stable
               cross-route layoutId tracking. */}
           <motion.div
-            layoutId={`flag-${post.id}`}
+            layoutId={isMorphTile ? `flag-${post.id}` : undefined}
             layout="position"
             transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
             style={{
@@ -612,6 +622,11 @@ export default function FindMapPage() {
   useEffect(() => {
     track("page_viewed", { path: "/flagged", saved_count: loadBookmarkCount() });
   }, []);
+
+  // Session 79 — after the back-morph from /find/[id] has had time to
+  // complete, clear the morph tracker so future lateral navigations
+  // (BottomNav tab switches) don't carry a stale tapped id forward.
+  useEffect(() => { scheduleClearLastTapped(500); }, []);
 
   useEffect(() => {
     function onFocus() { syncCount(); loadPosts(); }

@@ -58,6 +58,11 @@ import {
 } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { flagKey, loadFollowedIds, formatTimeAgo } from "@/lib/utils";
+import {
+  getLastTappedPostId,
+  setLastTappedPostId,
+  scheduleClearLastTapped,
+} from "@/lib/morphTracker";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { safeStorage } from "@/lib/safeStorage";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
@@ -256,6 +261,12 @@ function MasonryTile({
   }
 
   function handleTileClick() {
+    // Session 79 — gate layoutId via the morph tracker so only the tapped
+    // tile gets a `find-${id}` layoutId. Other tiles render without one,
+    // which prevents framer-motion from connecting every tile's predecessor
+    // rect to its successor rect on remount and triggering a slide-in
+    // animation when scroll position differs between unmount and remount.
+    setLastTappedPostId(post.id);
     try {
       sessionStorage.setItem(LAST_VIEWED_KEY, post.id);
       // Track D phase 5 — cache the image URL so /find/[id] can mount its
@@ -270,6 +281,11 @@ function MasonryTile({
       }
     } catch {}
   }
+
+  // Session 79 — only the tapped tile carries layoutIds. Render others as
+  // plain motion.divs (with layoutId={undefined}) so framer doesn't track
+  // them at all.
+  const isMorphTile = getLastTappedPostId() === post.id;
 
   function handleTilePointerDown() {
     setTapped(true);
@@ -314,7 +330,7 @@ function MasonryTile({
           }}
         >
           <motion.div
-            layoutId={`find-${post.id}`}
+            layoutId={isMorphTile ? `find-${post.id}` : undefined}
             transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
             style={{
               position: "absolute",
@@ -390,7 +406,7 @@ function MasonryTile({
               layoutId animation dropped frames mid-flight and the flag
               briefly disappeared. */}
           <motion.div
-            layoutId={`flag-${post.id}`}
+            layoutId={isMorphTile ? `flag-${post.id}` : undefined}
             layout="position"
             transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
             style={{
@@ -603,6 +619,12 @@ export default function DiscoveryFeedPage() {
 
   // R3 — page_viewed analytics event (fire-and-forget; runs once on mount).
   useEffect(() => { track("page_viewed", { path: "/" }); }, []);
+
+  // Session 79 — after the back-morph from /find/[id] has had time to
+  // complete (~300ms morph duration), clear the morph tracker so future
+  // lateral navigations (BottomNav tab switches) don't carry a stale tapped
+  // id forward and trigger a single-tile morph between unrelated pages.
+  useEffect(() => { scheduleClearLastTapped(500); }, []);
 
   // ── Feed load ────────────────────────────────────────────────────────────────
   async function loadFeed() {
