@@ -59,23 +59,23 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
 
   const homeTab: TabDef = {
     key: "home", label: "Home", href: "/",
-    icon: <Home size={21} strokeWidth={1.7} />,
+    icon: <Home size={21} strokeWidth={2.0} />,
   };
   const findsTab: TabDef = {
     key: "flagged", label: "Flagged", href: "/flagged",
-    icon: <FlagGlyph size={21} strokeWidth={1.7} />, badge: true,
+    icon: <FlagGlyph size={21} strokeWidth={2.0} />, badge: true,
   };
   const boothsTab: TabDef = {
     key: "shelves", label: "Booths", href: "/shelves",
-    icon: <LayoutGrid size={21} strokeWidth={1.7} />,
+    icon: <LayoutGrid size={21} strokeWidth={2.0} />,
   };
   const myBoothTab: TabDef = {
     key: "my-shelf", label: "My Booth", href: "/my-shelf",
-    icon: <Store size={21} strokeWidth={1.7} />,
+    icon: <Store size={21} strokeWidth={2.0} />,
   };
   const adminTab: TabDef = {
     key: "admin", label: "Admin", href: "/admin",
-    icon: <Shield size={21} strokeWidth={1.7} />,
+    icon: <Shield size={21} strokeWidth={2.0} />,
   };
 
   // Session 72 — admins get a dedicated Admin tab in the 4th slot in place of

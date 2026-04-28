@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — demo prep refinement v2 (Option A fill)</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --paper-warm:   #f5f2eb;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --green:        #1e4d2b;
+    --green-soft:   rgba(30, 77, 43, 0.78);
+    --green-faint:  rgba(30, 77, 43, 0.55);
+
+    --im-fell: "IM Fell English", Georgia, serif;
+    --tnr:     "Times New Roman", Times, serif;
+    --sys:     -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1380px; margin: 0 auto; padding: 30px 20px 80px; }
+
+  h1.title {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 820px;
+  }
+
+  /* Picks-confirmed strip */
+  .picks-strip {
+    background: rgba(30,130,60,0.18);
+    border: 1px solid rgba(30,130,60,0.4);
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin: 0 auto 26px;
+    color: #d8ffd5;
+    font-size: 13px;
+    line-height: 1.7;
+    max-width: 820px;
+  }
+  .picks-strip strong { color: #fff; }
+
+  .section { margin: 50px auto 18px; max-width: 1340px; padding: 0 14px; }
+  .section h2 {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #fff9e8;
+    font-size: 26px;
+    margin: 0 0 4px;
+    letter-spacing: -0.005em;
+    border-bottom: 1px solid rgba(232,221,199,0.2);
+    padding-bottom: 8px;
+  }
+  .section .lede {
+    color: rgba(232, 221, 199, 0.62);
+    font-size: 13px;
+    margin: 0 0 24px;
+    line-height: 1.6;
+    max-width: 820px;
+  }
+
+  .decisions-pane {
+    background: rgba(232, 221, 199, 0.08);
+    border: 1px solid rgba(232, 221, 199, 0.2);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 0 0 28px;
+    color: rgba(232, 221, 199, 0.85);
+    font-size: 13px;
+    line-height: 1.65;
+  }
+  .decisions-pane strong { color: #fff9e8; }
+  .decisions-pane ul { margin: 6px 0 0 0; padding-left: 22px; }
+  .decisions-pane li { margin-bottom: 4px; }
+
+  .questions-pane {
+    background: rgba(232, 221, 199, 0.06);
+    border: 1px dashed rgba(232, 221, 199, 0.25);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 16px auto 0;
+    color: rgba(232, 221, 199, 0.85);
+    font-size: 13px;
+    max-width: 820px;
+    line-height: 1.6;
+  }
+  .questions-pane strong { color: #fff9e8; }
+  .questions-pane ol { margin: 6px 0 0 0; padding-left: 22px; }
+  .questions-pane li { margin-bottom: 6px; }
+
+  .frames-row {
+    display: grid;
+    gap: 28px;
+    margin: 0 auto 8px;
+    align-items: start;
+  }
+  .frames-row.three-up { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 1280px; }
+  @media (max-width: 1200px) {
+    .frames-row.three-up { grid-template-columns: 1fr; max-width: 430px; }
+  }
+
+  .frame-card { display: flex; flex-direction: column; align-items: center; }
+  .frame-card .frame-label {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 18px;
+    color: #fff9e8;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .frame-card .frame-tag {
+    display: inline-block;
+    font-family: var(--sys);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 3px;
+    margin-bottom: 6px;
+  }
+  .frame-card .frame-tag.t-a1 { background: rgba(180,130,30,0.32); color: #ffe8b5; }
+  .frame-card .frame-tag.t-a2 { background: rgba(70,140,200,0.32); color: #cfe5ff; }
+  .frame-card .frame-tag.t-a3 { background: rgba(30,130,60,0.36); color: #d8ffd5; }
+  .frame-card .frame-blurb {
+    color: rgba(232,221,199,0.62);
+    font-size: 12px;
+    line-height: 1.55;
+    text-align: center;
+    margin-bottom: 14px;
+    max-width: 380px;
+    min-height: 32px;
+  }
+
+  .phone {
+    width: 100%;
+    max-width: 392px;
+    background: var(--paper-warm);
+    border: 1px solid rgba(0,0,0,0.4);
+    border-radius: 26px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+
+  .row-context-label {
+    background: rgba(0,0,0,0.04);
+    padding: 6px 14px;
+    font-family: var(--sys);
+    font-size: 10px;
+    color: var(--ink-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--ink-hairline);
+  }
+
+  .multi-stage {
+    display: flex;
+    flex-direction: column;
+    background: var(--paper-warm);
+  }
+
+  .shelves-row {
+    background: var(--paper-warm);
+    border-top: 1px solid var(--ink-hairline);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+  }
+  .row-bookmark {
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-mid);
+    flex-shrink: 0;
+  }
+  .row-vendor-name {
+    font-family: var(--im-fell);
+    font-size: 18px;
+    color: var(--ink-primary);
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .flagged-section {
+    background: var(--paper-warm);
+    padding: 14px 18px 12px;
+    border-bottom: 1px solid var(--ink-hairline);
+  }
+  .flagged-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .flagged-vendor-name {
+    font-family: var(--im-fell);
+    font-size: 18px;
+    color: var(--ink-primary);
+    line-height: 1.25;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .flagged-mall-line {
+    margin-top: 6px;
+    font-family: var(--sys);
+    font-size: 11.5px;
+    color: var(--ink-muted);
+  }
+
+  /* ─── Option A refinements ──────────────────────────────── */
+  /* Shared lockup geometry — only border + bg differ */
+  .lockup {
+    flex-shrink: 0;
+    padding: 6px 12px 7px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+    border-radius: 6px;
+  }
+  .lockup .eyebrow {
+    font-family: var(--sys);
+    font-size: 8.5px;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    line-height: 1;
+    margin-bottom: 3px;
+  }
+  .lockup .numeral {
+    font-family: var(--tnr);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--green);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  /* A1 — Dashed border + paper-cream fill (ticket stub) */
+  .lockup.a1 {
+    border: 1.5px dashed var(--green-soft);
+    background: rgba(232, 221, 199, 0.55);
+  }
+
+  /* A2 — Solid thin border + paper-cream fill (card) */
+  .lockup.a2 {
+    border: 1px solid var(--green-faint);
+    background: rgba(232, 221, 199, 0.55);
+  }
+
+  /* A3 — Dashed border + paper-cream fill + soft drop shadow (lifted ticket) */
+  .lockup.a3 {
+    border: 1.5px dashed var(--green-soft);
+    background: rgba(232, 221, 199, 0.55);
+    box-shadow: 0 1px 3px rgba(42, 26, 10, 0.12), 0 1px 1px rgba(42, 26, 10, 0.06);
+  }
+
+  /* Reference: V1 dashed-only (no fill) for direct comparison */
+  .lockup.v1 {
+    border: 1.5px dashed var(--green-soft);
+    background: transparent;
+  }
+
+  /* Reference V1 row at top of section */
+  .reference-row {
+    margin-bottom: 30px;
+    text-align: center;
+  }
+  .reference-row .ref-label {
+    color: rgba(232, 221, 199, 0.5);
+    font-size: 12px;
+    margin-bottom: 8px;
+    font-style: italic;
+  }
+  .reference-mini-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--paper-warm);
+    padding: 14px 18px;
+    border-radius: 8px;
+    border: 1px solid rgba(232, 221, 199, 0.15);
+    max-width: 320px;
+    margin: 0 auto;
+  }
+  .reference-mini-row .row-vendor-name {
+    flex: 0;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <h1 class="title">Demo Prep — V2 (Option A fill refinement)</h1>
+  <div class="subtitle">
+    Option A picked. The concern: dashed-border-no-fill reads more like floating text than a tap-target. Three
+    fill refinements below; all keep dashed-border character but address the affordance gap.
+  </div>
+
+  <div class="picks-strip">
+    <strong>V1 picks confirmed:</strong>
+    Item 1 — nav stroke <strong>2.0</strong>.
+    Item 3 — bubble bg <strong>paper-warm 0.85</strong>.
+    Item 2 — Option A <strong>(picked, refining below)</strong>.
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Reference: V1 Option A as-shown                              -->
+  <!-- ============================================================ -->
+  <div class="section">
+    <div class="reference-row">
+      <div class="ref-label">— V1 reference (no fill) —</div>
+      <div class="reference-mini-row">
+        <div class="row-vendor-name">Pickles &amp; Honey</div>
+        <div class="lockup v1">
+          <div class="eyebrow">Booth</div>
+          <div class="numeral">12</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- Item 2 V2 — Option A fill refinements                        -->
+  <!-- ============================================================ -->
+  <div class="section">
+    <h2>Option A — fill refinement</h2>
+    <div class="lede">
+      All three frames keep the dashed-green border + green-ink lockup. They differ in <strong>what's behind the
+      dashes</strong> — fill type, border weight, and elevation. Each frame shows two <code>/shelves</code>
+      rows and one <code>/flagged</code> section header so the surface repetition is judgable.
+    </div>
+
+    <div class="decisions-pane">
+      <strong>What stays from V1 Option A:</strong>
+      <ul>
+        <li>Dashed border (or solid thin in A2) — keeps the ticket-stub character.</li>
+        <li>Green ink — both eyebrow and numeral stay <code>v1.green</code>.</li>
+        <li>BOOTH eyebrow + Times New Roman numeral — unchanged.</li>
+      </ul>
+      <strong>What's varying:</strong> background fill, border style, elevation.
+    </div>
+
+    <div class="frames-row three-up">
+
+      <!-- A1 — Dashed + paper fill -->
+      <div class="frame-card">
+        <div class="frame-tag t-a1">A1</div>
+        <div class="frame-label">Dashed + paper fill</div>
+        <div class="frame-blurb">
+          Original dashed border, paper-cream fill at ~55% opacity behind. Reads as a real ticket-stub card
+          pressed onto the page.
+        </div>
+        <div class="phone">
+          <div class="multi-stage">
+            <div class="row-context-label">/shelves row</div>
+            <div class="shelves-row">
+              <div class="row-bookmark">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </div>
+              <div class="row-vendor-name">Pickles & Honey</div>
+              <div class="lockup a1">
+                <div class="eyebrow">Booth</div>
+                <div class="numeral">12</div>
+              </div>
+            </div>
+            <div class="shelves-row">
+              <div class="row-bookmark">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </div>
+              <div class="row-vendor-name">Field & Fern Vintage</div>
+              <div class="lockup a1">
+                <div class="eyebrow">Booth</div>
+                <div class="numeral">A4</div>
+              </div>
+            </div>
+            <div class="row-context-label">/flagged section</div>
+            <div class="flagged-section">
+              <div class="flagged-row">
+                <div class="flagged-vendor-name">The Painted Magnolia</div>
+                <div class="lockup a1">
+                  <div class="eyebrow">Booth</div>
+                  <div class="numeral">87</div>
+                </div>
+              </div>
+              <div class="flagged-mall-line">Country World Antique Mall</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- A2 — Solid border + paper fill -->
+      <div class="frame-card">
+        <div class="frame-tag t-a2">A2</div>
+        <div class="frame-label">Solid border + paper fill</div>
+        <div class="frame-blurb">
+          Drop the dashes — thin solid green border + paper fill. Reads as a more conventional card-like tap
+          target. Loses ticket-stub character.
+        </div>
+        <div class="phone">
+          <div class="multi-stage">
+            <div class="row-context-label">/shelves row</div>
+            <div class="shelves-row">
+              <div class="row-bookmark">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </div>
+              <div class="row-vendor-name">Pickles & Honey</div>
+              <div class="lockup a2">
+                <div class="eyebrow">Booth</div>
+                <div class="numeral">12</div>
+              </div>
+            </div>
+            <div class="shelves-row">
+              <div class="row-bookmark">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </div>
+              <div class="row-vendor-name">Field & Fern Vintage</div>
+              <div class="lockup a2">
+                <div class="eyebrow">Booth</div>
+                <div class="numeral">A4</div>
+              </div>
+            </div>
+            <div class="row-context-label">/flagged section</div>
+            <div class="flagged-section">
+              <div class="flagged-row">
+                <div class="flagged-vendor-name">The Painted Magnolia</div>
+                <div class="lockup a2">
+                  <div class="eyebrow">Booth</div>
+                  <div class="numeral">87</div>
+                </div>
+              </div>
+              <div class="flagged-mall-line">Country World Antique Mall</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- A3 — Dashed + paper fill + soft shadow -->
+      <div class="frame-card">
+        <div class="frame-tag t-a3">A3</div>
+        <div class="frame-label">Dashed + fill + lift</div>
+        <div class="frame-blurb">
+          A1 with a soft drop shadow added. The dashed-ticket card feels physically pressed onto the row —
+          most "tappable" of the three.
+        </div>
+        <div class="phone">
+          <div class="multi-stage">
+            <div class="row-context-label">/shelves row</div>
+            <div class="shelves-row">
+              <div class="row-bookmark">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </div>
+              <div class="row-vendor-name">Pickles & Honey</div>
+              <div class="lockup a3">
+                <div class="eyebrow">Booth</div>
+                <div class="numeral">12</div>
+              </div>
+            </div>
+            <div class="shelves-row">
+              <div class="row-bookmark">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </div>
+              <div class="row-vendor-name">Field & Fern Vintage</div>
+              <div class="lockup a3">
+                <div class="eyebrow">Booth</div>
+                <div class="numeral">A4</div>
+              </div>
+            </div>
+            <div class="row-context-label">/flagged section</div>
+            <div class="flagged-section">
+              <div class="flagged-row">
+                <div class="flagged-vendor-name">The Painted Magnolia</div>
+                <div class="lockup a3">
+                  <div class="eyebrow">Booth</div>
+                  <div class="numeral">87</div>
+                </div>
+              </div>
+              <div class="flagged-mall-line">Country World Antique Mall</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="questions-pane">
+      <strong>Q2.1.V2 — Fill treatment for Option A:</strong>
+      <ol>
+        <li><strong>A1</strong> — dashed border + paper fill</li>
+        <li><strong>A2</strong> — solid border + paper fill (loses dashes)</li>
+        <li><strong>A3</strong> — dashed border + paper fill + soft drop shadow</li>
+        <li>Different — name what to try</li>
+      </ol>
+      <br>
+      <strong>Q2.2 — BoothHero post-it on <code>/shelf/[slug]</code>:</strong> still open from V1 — stay as-is
+      (yellow paper, push pin) or adopt the chosen Option A treatment for cross-app consistency?
+      <br><br>
+      <strong>Q2.3 — Mall scope-header count chip ("5 booths"):</strong> still open from V1 — stay as-is, or
+      adopt the chosen Option A treatment?
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

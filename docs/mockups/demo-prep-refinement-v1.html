@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — demo prep refinement (v1)</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --paper-warm:   #f5f2eb;
+    --paper-cream:  rgba(232, 221, 199, 0.78);
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --ink-wash:     rgba(255, 253, 248, 0.70);
+    --green:        #1e4d2b;
+    --green-soft:   rgba(30, 77, 43, 0.78);
+    --price-ink:    #6a4a30;
+    --icon-bubble:  rgba(42, 26, 10, 0.06);
+    --tape-yellow:  rgba(255, 232, 130, 0.72);
+    --tape-edge:    rgba(180, 140, 30, 0.22);
+    --kraft:        #d2b48c;
+    --kraft-deep:   #b89060;
+
+    --im-fell: "IM Fell English", Georgia, serif;
+    --tnr:     "Times New Roman", Times, serif;
+    --sys:     -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1380px; margin: 0 auto; padding: 30px 20px 80px; }
+
+  h1.title {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 820px;
+  }
+
+  .section { margin: 60px auto 18px; max-width: 1340px; padding: 0 14px; }
+  .section h2 {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #fff9e8;
+    font-size: 26px;
+    margin: 0 0 4px;
+    letter-spacing: -0.005em;
+    border-bottom: 1px solid rgba(232,221,199,0.2);
+    padding-bottom: 8px;
+  }
+  .section .lede {
+    color: rgba(232, 221, 199, 0.62);
+    font-size: 13px;
+    margin: 0 0 24px;
+    line-height: 1.6;
+    max-width: 800px;
+  }
+
+  /* Decision pane — names what the section is asking David to judge */
+  .decisions-pane {
+    background: rgba(232, 221, 199, 0.08);
+    border: 1px solid rgba(232, 221, 199, 0.2);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 0 0 28px;
+    color: rgba(232, 221, 199, 0.85);
+    font-size: 13px;
+    line-height: 1.65;
+  }
+  .decisions-pane strong { color: #fff9e8; }
+  .decisions-pane ul { margin: 6px 0 0 0; padding-left: 22px; }
+  .decisions-pane li { margin-bottom: 4px; }
+
+  /* Question pane — at bottom, the specific multiple-choice ask */
+  .questions-pane {
+    background: rgba(232, 221, 199, 0.06);
+    border: 1px dashed rgba(232, 221, 199, 0.25);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 16px auto 0;
+    color: rgba(232, 221, 199, 0.85);
+    font-size: 13px;
+    max-width: 820px;
+    line-height: 1.6;
+  }
+  .questions-pane strong { color: #fff9e8; }
+  .questions-pane ol { margin: 6px 0 0 0; padding-left: 22px; }
+  .questions-pane li { margin-bottom: 6px; }
+
+  .frames-row {
+    display: grid;
+    gap: 28px;
+    margin: 0 auto 8px;
+    align-items: start;
+  }
+  .frames-row.three-up { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 1280px; }
+  @media (max-width: 1200px) {
+    .frames-row.three-up { grid-template-columns: 1fr; max-width: 430px; }
+  }
+
+  .frame-card { display: flex; flex-direction: column; align-items: center; }
+  .frame-card .frame-label {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 18px;
+    color: #fff9e8;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .frame-card .frame-tag {
+    display: inline-block;
+    font-family: var(--sys);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 3px;
+    margin-bottom: 6px;
+  }
+  .frame-card .frame-tag.t-current { background: rgba(180,130,30,0.32); color: #ffe8b5; }
+  .frame-card .frame-tag.t-mid     { background: rgba(70,140,200,0.32); color: #cfe5ff; }
+  .frame-card .frame-tag.t-bold    { background: rgba(30,130,60,0.36); color: #d8ffd5; }
+  .frame-card .frame-blurb {
+    color: rgba(232,221,199,0.62);
+    font-size: 12px;
+    line-height: 1.55;
+    text-align: center;
+    margin-bottom: 14px;
+    max-width: 380px;
+    min-height: 32px;
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 100%;
+    max-width: 392px;
+    background: var(--paper-warm);
+    border: 1px solid rgba(0,0,0,0.4);
+    border-radius: 26px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    position: relative;
+  }
+  .phone .stage { padding: 0; min-height: 220px; }
+
+  /* ─── BottomNav for Section 1 ────────────────────────────── */
+  .nav-bar {
+    background: rgba(232, 221, 199, 0.96);
+    border-top: 1px solid rgba(42,26,10,0.18);
+    display: flex;
+    padding: 12px 0 14px;
+  }
+  .nav-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--ink-muted);
+  }
+  .nav-tab.active { color: var(--green); }
+  .nav-tab .icon-pill {
+    width: 44px;
+    height: 28px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+  }
+  .nav-tab.active .icon-pill { background: rgba(30,77,43,0.10); }
+  .nav-tab .label {
+    font-family: var(--sys);
+    font-size: 10px;
+    letter-spacing: 0.2px;
+    line-height: 1;
+    font-weight: 400;
+  }
+  .nav-tab.active .label { font-weight: 600; }
+  .nav-svg { display: block; }
+
+  /* ─── Lockup options for Section 2 ──────────────────────── */
+  /* Surface 1: /shelves row */
+  .shelves-row {
+    background: var(--paper-warm);
+    border-top: 1px solid var(--ink-hairline);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+  }
+  .shelves-row + .shelves-row { /* second sample row to show repetition */ }
+  .row-bookmark {
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-mid);
+    flex-shrink: 0;
+  }
+  .row-vendor-name {
+    font-family: var(--im-fell);
+    font-size: 18px;
+    color: var(--ink-primary);
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Surface 2: /flagged section header (vendor + lockup right side) */
+  .flagged-section {
+    background: var(--paper-warm);
+    padding: 14px 18px 12px;
+    border-bottom: 1px solid var(--ink-hairline);
+  }
+  .flagged-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .flagged-vendor-name {
+    font-family: var(--im-fell);
+    font-size: 18px;
+    color: var(--ink-primary);
+    line-height: 1.25;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .flagged-mall-line {
+    margin-top: 6px;
+    font-family: var(--sys);
+    font-size: 11.5px;
+    color: var(--ink-muted);
+  }
+
+  /* Booth lockup — current naked stack (control reference, not used in option frames) */
+  .lockup-naked {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  .lockup-naked .eyebrow {
+    font-family: var(--sys);
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .lockup-naked .numeral {
+    font-family: var(--tnr);
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--green);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  /* Option A — perforated dashed card */
+  .lockup-perforated {
+    flex-shrink: 0;
+    border: 1.5px dashed var(--green-soft);
+    border-radius: 6px;
+    background: transparent;
+    padding: 6px 12px 7px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+  }
+  .lockup-perforated .eyebrow {
+    font-family: var(--sys);
+    font-size: 8.5px;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    line-height: 1;
+    margin-bottom: 3px;
+  }
+  .lockup-perforated .numeral {
+    font-family: var(--tnr);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--green);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  /* Option B — washi tape strip */
+  .lockup-tape {
+    flex-shrink: 0;
+    background: var(--tape-yellow);
+    border-left: 1px dashed var(--tape-edge);
+    border-right: 1px dashed var(--tape-edge);
+    padding: 5px 14px 6px;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    transform: rotate(-2deg);
+    transform-origin: center;
+    box-shadow: 0 1px 2px rgba(42,26,10,0.10);
+    position: relative;
+  }
+  /* Soft fibrous edge effect via inset shadow */
+  .lockup-tape::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(255,255,255,0.18) 0%,
+      transparent 8%,
+      transparent 92%,
+      rgba(255,255,255,0.18) 100%
+    );
+    pointer-events: none;
+  }
+  .lockup-tape .eyebrow {
+    font-family: var(--sys);
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .lockup-tape .numeral {
+    font-family: var(--tnr);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--green);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  /* Option C — kraft hanging tag with grommet */
+  .lockup-tag {
+    flex-shrink: 0;
+    position: relative;
+    background: var(--kraft);
+    border-radius: 4px 10px 10px 4px;
+    padding: 6px 12px 7px 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+    box-shadow: 0 1px 3px rgba(42,26,10,0.18), inset 0 0 0 0.5px rgba(120,80,30,0.32);
+  }
+  .lockup-tag::before {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #2a2520;
+    box-shadow: inset 0 0 0 1px rgba(120,80,30,0.4);
+  }
+  .lockup-tag .eyebrow {
+    font-family: var(--sys);
+    font-size: 8.5px;
+    font-weight: 700;
+    color: var(--ink-primary);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1;
+    margin-bottom: 3px;
+  }
+  .lockup-tag .numeral {
+    font-family: var(--tnr);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--green);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  /* ─── Section 3 — bubble lightness over photo ─────────── */
+  .photo-stage {
+    height: 280px;
+    background-image:
+      linear-gradient(135deg, rgba(0,0,0,0.18), transparent 40%),
+      linear-gradient(45deg, #5a3a2a 0%, #7a4f30 28%, #b8845a 55%, #6a4530 85%, #2a1a0a 100%);
+    background-size: cover;
+    position: relative;
+  }
+  /* Wood-grain-ish synthetic texture for sample photo */
+  .photo-stage::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(95deg, rgba(0,0,0,0.06) 0 1px, transparent 1px 8px),
+      repeating-linear-gradient(85deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 14px);
+    pointer-events: none;
+  }
+  .photo-stage .pseudo-find-title {
+    position: absolute;
+    bottom: 12px;
+    left: 14px;
+    color: rgba(255,250,240,0.92);
+    font-family: var(--im-fell);
+    font-size: 18px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    z-index: 2;
+  }
+
+  .bubble-corner {
+    position: absolute;
+    top: 12px;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 0.5px solid rgba(42,26,10,0.12);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    width: 36px;
+    height: 36px;
+  }
+  .bubble-corner.right { right: 12px; }
+  .bubble-corner.left  { left: 12px; }
+
+  .bubble-current { background: rgba(232, 221, 199, 0.78); }
+  .bubble-warmer  { background: rgba(245, 242, 235, 0.85); }
+  .bubble-bright  { background: rgba(255, 253, 247, 0.92); }
+
+  .bubble-corner svg {
+    color: var(--ink-primary);
+  }
+  .bubble-corner.saved svg {
+    color: var(--green);
+    fill: var(--green);
+  }
+
+  /* Section 2 helper — caption strip below the row sample */
+  .row-context-label {
+    background: rgba(0,0,0,0.04);
+    padding: 6px 14px;
+    font-family: var(--sys);
+    font-size: 10px;
+    color: var(--ink-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--ink-hairline);
+  }
+
+  /* Stack of multiple booth surfaces inside one phone for Section 2 */
+  .multi-stage {
+    display: flex;
+    flex-direction: column;
+    background: var(--paper-warm);
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <h1 class="title">Demo Prep — Refinement</h1>
+  <div class="subtitle">
+    Three demo-polish items in one mockup pass. Mall-location demos happen later today; seeding follows.
+    Item 1 (nav stroke) is a small visual tightening; items 2 (booth lockup integration) and 3 (photo-overlay
+    bubble lightness) are the load-bearing decisions.
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- ITEM 1 — Nav icon stroke weight                              -->
+  <!-- ============================================================ -->
+  <div class="section">
+    <h2>Item 1 — Nav icon stroke weight</h2>
+    <div class="lede">
+      All five BottomNav icons currently render at <code>strokeWidth = 1.7</code>. David asked for a slightly
+      heavier stroke so the icons read with more presence in demo screenshots.
+    </div>
+
+    <div class="decisions-pane">
+      <strong>What's frozen:</strong>
+      <ul>
+        <li>Icons stay Lucide / FlagGlyph SVG primitives — no new icon set.</li>
+        <li>Colors, sizes (21px), tab layout, and active-pill bg unchanged.</li>
+        <li>Only the <code>strokeWidth</code> numeric value changes, applied uniformly across all five icons.</li>
+      </ul>
+      <strong>What David is judging:</strong> stroke-weight value.
+    </div>
+
+    <div class="frames-row three-up">
+
+      <!-- 1.7 (current) -->
+      <div class="frame-card">
+        <div class="frame-tag t-current">Current 1.7</div>
+        <div class="frame-label">Stroke 1.7</div>
+        <div class="frame-blurb">Current production weight. Reads soft against parchment in screenshots.</div>
+        <div class="phone">
+          <div class="stage">
+            <div class="nav-bar">
+              <!-- Home -->
+              <div class="nav-tab active">
+                <div class="icon-pill">
+                  <svg class="nav-svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                </div>
+                <div class="label">Home</div>
+              </div>
+              <!-- Booths -->
+              <div class="nav-tab">
+                <div class="icon-pill">
+                  <svg class="nav-svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                </div>
+                <div class="label">Booths</div>
+              </div>
+              <!-- Flag -->
+              <div class="nav-tab">
+                <div class="icon-pill">
+                  <svg class="nav-svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="22" x2="4" y2="4"/><path d="M4 4h13l-2 4 2 4H4z"/></svg>
+                </div>
+                <div class="label">Flagged</div>
+              </div>
+              <!-- My Booth -->
+              <div class="nav-tab">
+                <div class="icon-pill">
+                  <svg class="nav-svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><line x1="2" x2="22" y1="7" y2="7"/><path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12v0a2 2 0 0 1-2-2V7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/></svg>
+                </div>
+                <div class="label">My Booth</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2.0 (mid) -->
+      <div class="frame-card">
+        <div class="frame-tag t-mid">2.0</div>
+        <div class="frame-label">Stroke 2.0</div>
+        <div class="frame-blurb">Subtle bump. Icons gain weight without becoming chunky. Reads modern.</div>
+        <div class="phone">
+          <div class="stage">
+            <div class="nav-bar">
+              <div class="nav-tab active">
+                <div class="icon-pill">
+                  <svg class="nav-svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                </div>
+                <div class="label">Home</div>
+              </div>
+              <div class="nav-tab">
+                <div class="icon-pill">
+                  <svg class="nav-svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                </div>
+                <div class="label">Booths</div>
+              </div>
+              <div class="nav-tab">
+                <div class="icon-pill">
+                  <svg class="nav-svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="22" x2="4" y2="4"/><path d="M4 4h13l-2 4 2 4H4z"/></svg>
+                </div>
+                <div class="label">Flagged</div>
+              </div>
+              <div class="nav-tab">
+                <div class="icon-pill">
+                  <svg class="nav-svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><line x1="2" x2="22" y1="7" y2="7"/><path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12v0a2 2 0 0 1-2-2V7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/></svg>
+                </div>
+                <div class="label">My Booth</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2.25 (bold) -->
+      <div class="frame-card">
+        <div class="frame-tag t-bold">2.25</div>
+        <div class="frame-label">Stroke 2.25</div>
+        <div class="frame-blurb">Demo-screenshot-strong. Icons read confidently. Risks feeling heavy on parchment.</div>
+        <div class="phone">
+          <div class="stage">
+            <div class="nav-bar">
+              <div class="nav-tab active">
+                <div class="icon-pill">
+                  <svg class="nav-svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                </div>
+                <div class="label">Home</div>
+              </div>
+              <div class="nav-tab">
+                <div class="icon-pill">
+                  <svg class="nav-svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                </div>
+                <div class="label">Booths</div>
+              </div>
+              <div class="nav-tab">
+                <div class="icon-pill">
+                  <svg class="nav-svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="22" x2="4" y2="4"/><path d="M4 4h13l-2 4 2 4H4z"/></svg>
+                </div>
+                <div class="label">Flagged</div>
+              </div>
+              <div class="nav-tab">
+                <div class="icon-pill">
+                  <svg class="nav-svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><line x1="2" x2="22" y1="7" y2="7"/><path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12v0a2 2 0 0 1-2-2V7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/></svg>
+                </div>
+                <div class="label">My Booth</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="questions-pane">
+      <strong>Q1.1 — Stroke weight:</strong>
+      <ol>
+        <li>Stay at <strong>1.7</strong> (current — no change)</li>
+        <li>Bump to <strong>2.0</strong> (subtle)</li>
+        <li>Bump to <strong>2.25</strong> (bold)</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- ITEM 2 — Booth lockup integration                            -->
+  <!-- ============================================================ -->
+  <div class="section">
+    <h2>Item 2 — Booth lockup integration</h2>
+    <div class="lede">
+      The "BOOTH N" stack (small-caps eyebrow + Times New Roman numeral, both green) currently sits naked on
+      <code>/shelves</code> rows and <code>/flagged</code> section headers — small-caps + numeral floating
+      against the parchment. David: feels out of place. Three structural alternatives, all keep the green ink
+      semantic but vary the container shape.
+    </div>
+
+    <div class="decisions-pane">
+      <strong>Surfaces in scope:</strong>
+      <ul>
+        <li><code>/shelves</code> rows — far-right of each booth row.</li>
+        <li><code>/flagged</code> section headers — far-right of each vendor's booth-section banner.</li>
+        <li><code>/shelf/[slug]</code> BoothHero post-it — <em>currently a separate yellow-paper treatment</em>.
+          Q2.2 below asks whether it stays as-is or adopts the new treatment for consistency.</li>
+        <li>Mall scope-header count chip (e.g. "5 booths") — Q2.3 below asks whether it follows.</li>
+      </ul>
+      <strong>What's frozen:</strong>
+      <ul>
+        <li>Green ink stays — both eyebrow + numeral remain <code>v1.green</code>.</li>
+        <li>Numeral font stays Times New Roman (<code>FONT_NUMERAL</code>).</li>
+        <li>Eyebrow stays "BOOTH" small-caps.</li>
+      </ul>
+    </div>
+
+    <div class="frames-row three-up">
+
+      <!-- Option A — Perforated dashed card -->
+      <div class="frame-card">
+        <div class="frame-tag t-current">Option A</div>
+        <div class="frame-label">Perforated card</div>
+        <div class="frame-blurb">
+          Dashed green border, transparent paper bg.
+          The lockup becomes a small ticket-stub card — bg is the same parchment as the page,
+          dashes carry the visual weight.
+        </div>
+        <div class="phone">
+          <div class="multi-stage">
+            <!-- /shelves row sample x2 -->
+            <div class="row-context-label">/shelves row</div>
+            <div class="shelves-row">
+              <div class="row-bookmark">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </div>
+              <div class="row-vendor-name">Pickles & Honey</div>
+              <div class="lockup-perforated">
+                <div class="eyebrow">Booth</div>
+                <div class="numeral">12</div>
+              </div>
+            </div>
+            <div class="shelves-row">
+              <div class="row-bookmark">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </div>
+              <div class="row-vendor-name">Field & Fern Vintage</div>
+              <div class="lockup-perforated">
+                <div class="eyebrow">Booth</div>
+                <div class="numeral">A4</div>
+              </div>
+            </div>
+            <!-- /flagged section header sample -->
+            <div class="row-context-label">/flagged section</div>
+            <div class="flagged-section">
+              <div class="flagged-row">
+                <div class="flagged-vendor-name">The Painted Magnolia</div>
+                <div class="lockup-perforated">
+                  <div class="eyebrow">Booth</div>
+                  <div class="numeral">87</div>
+                </div>
+              </div>
+              <div class="flagged-mall-line">Country World Antique Mall</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Option B — Washi tape strip -->
+      <div class="frame-card">
+        <div class="frame-tag t-mid">Option B</div>
+        <div class="frame-label">Masking tape</div>
+        <div class="frame-blurb">
+          Washi-tape strip — translucent yellow, slight rotation, fibrous edges.
+          Echoes the BoothHero post-it vocabulary; lockup is "taped to the page."
+        </div>
+        <div class="phone">
+          <div class="multi-stage">
+            <div class="row-context-label">/shelves row</div>
+            <div class="shelves-row">
+              <div class="row-bookmark">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </div>
+              <div class="row-vendor-name">Pickles & Honey</div>
+              <div class="lockup-tape">
+                <div class="eyebrow">Booth</div>
+                <div class="numeral">12</div>
+              </div>
+            </div>
+            <div class="shelves-row">
+              <div class="row-bookmark">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </div>
+              <div class="row-vendor-name">Field & Fern Vintage</div>
+              <div class="lockup-tape">
+                <div class="eyebrow">Booth</div>
+                <div class="numeral">A4</div>
+              </div>
+            </div>
+            <div class="row-context-label">/flagged section</div>
+            <div class="flagged-section">
+              <div class="flagged-row">
+                <div class="flagged-vendor-name">The Painted Magnolia</div>
+                <div class="lockup-tape">
+                  <div class="eyebrow">Booth</div>
+                  <div class="numeral">87</div>
+                </div>
+              </div>
+              <div class="flagged-mall-line">Country World Antique Mall</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Option C — Hanging price tag (kraft) -->
+      <div class="frame-card">
+        <div class="frame-tag t-bold">Option C</div>
+        <div class="frame-label">Hanging tag</div>
+        <div class="frame-blurb">
+          Kraft hanging-price-tag with grommet. Speaks the thrift / vintage vocabulary directly —
+          a recognizable price-tag silhouette. Numeral stays green ink on kraft.
+        </div>
+        <div class="phone">
+          <div class="multi-stage">
+            <div class="row-context-label">/shelves row</div>
+            <div class="shelves-row">
+              <div class="row-bookmark">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </div>
+              <div class="row-vendor-name">Pickles & Honey</div>
+              <div class="lockup-tag">
+                <div class="eyebrow">Booth</div>
+                <div class="numeral">12</div>
+              </div>
+            </div>
+            <div class="shelves-row">
+              <div class="row-bookmark">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </div>
+              <div class="row-vendor-name">Field & Fern Vintage</div>
+              <div class="lockup-tag">
+                <div class="eyebrow">Booth</div>
+                <div class="numeral">A4</div>
+              </div>
+            </div>
+            <div class="row-context-label">/flagged section</div>
+            <div class="flagged-section">
+              <div class="flagged-row">
+                <div class="flagged-vendor-name">The Painted Magnolia</div>
+                <div class="lockup-tag">
+                  <div class="eyebrow">Booth</div>
+                  <div class="numeral">87</div>
+                </div>
+              </div>
+              <div class="flagged-mall-line">Country World Antique Mall</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="questions-pane">
+      <strong>Q2.1 — Lockup container:</strong>
+      <ol>
+        <li>Option A — perforated dashed card</li>
+        <li>Option B — masking tape strip</li>
+        <li>Option C — kraft hanging tag</li>
+        <li>None of these — keep current naked stack and iterate further</li>
+      </ol>
+      <br>
+      <strong>Q2.2 — BoothHero post-it on <code>/shelf/[slug]</code>:</strong>
+      <ol>
+        <li>Stay as-is (yellow paper, push pin, rotate — already a strong visual)</li>
+        <li>Adopt the chosen treatment for consistency (post-it retired)</li>
+      </ol>
+      <br>
+      <strong>Q2.3 — Mall scope-header count chip ("5 booths"):</strong>
+      <ol>
+        <li>Stay as-is (count prefix in TNR, no container)</li>
+        <li>Adopt the chosen treatment for consistency</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- ITEM 3 — Photo-overlay bubble lightness                      -->
+  <!-- ============================================================ -->
+  <div class="section">
+    <h2>Item 3 — Photo-overlay bubble lightness</h2>
+    <div class="lede">
+      The bookmark + flag bubbles overlaid on hero photos currently use a paper-cream wash at 78% opacity.
+      David: bubbles get lost in busier photos. Three opacity / hue variants, each shown over the same
+      synthetic photo for direct comparison. The right-hand bubble shows saved-state (green fill) so both
+      states can be judged.
+    </div>
+
+    <div class="decisions-pane">
+      <strong>What's frozen:</strong>
+      <ul>
+        <li>Bubble dimensions (36×36 hero, 28×28 tile), border (0.5px hairline), backdrop-blur(8px) — all unchanged.</li>
+        <li>Glyph color (ink-primary unsaved / green saved) — unchanged.</li>
+        <li>Only the <code>background</code> rgba changes.</li>
+      </ul>
+      <strong>Surfaces affected:</strong> <code>BookmarkBoothBubble</code> (BoothHero corner + /shelves rows
+      after future re-photo), <code>FlagGlyph</code> bubble on <code>/find/[id]</code> + masonry tiles. Masthead
+      share-airplane bubble uses a different formula (<code>v1.iconBubble</code> dark-tint) — out of scope.
+    </div>
+
+    <div class="frames-row three-up">
+
+      <!-- V0 — current 0.78 paperCream -->
+      <div class="frame-card">
+        <div class="frame-tag t-current">Current 0.78</div>
+        <div class="frame-label">Paper-cream 0.78</div>
+        <div class="frame-blurb">
+          <code>rgba(232,221,199,0.78)</code> — current production. Warm-paper hue, blends with parchment but
+          recedes against busy photos.
+        </div>
+        <div class="phone">
+          <div class="stage">
+            <div class="photo-stage">
+              <div class="bubble-corner left bubble-current">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="22" x2="4" y2="4"/><path d="M4 4h13l-2 4 2 4H4z"/></svg>
+              </div>
+              <div class="bubble-corner right bubble-current saved">
+                <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </div>
+              <div class="pseudo-find-title">Pickles & Honey</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- V1 — 0.85 paperWarm -->
+      <div class="frame-card">
+        <div class="frame-tag t-mid">Warmer 0.85</div>
+        <div class="frame-label">Paper-warm 0.85</div>
+        <div class="frame-blurb">
+          <code>rgba(245,242,235,0.85)</code> — shifts toward paperWarm hue + 7pp more opaque. Stays in the
+          warm-paper family but stands forward of busy photos.
+        </div>
+        <div class="phone">
+          <div class="stage">
+            <div class="photo-stage">
+              <div class="bubble-corner left bubble-warmer">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="22" x2="4" y2="4"/><path d="M4 4h13l-2 4 2 4H4z"/></svg>
+              </div>
+              <div class="bubble-corner right bubble-warmer saved">
+                <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </div>
+              <div class="pseudo-find-title">Pickles & Honey</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- V2 — 0.92 near-white -->
+      <div class="frame-card">
+        <div class="frame-tag t-bold">Bright 0.92</div>
+        <div class="frame-label">Near-white 0.92</div>
+        <div class="frame-blurb">
+          <code>rgba(255,253,247,0.92)</code> — near-white, near-opaque. Maximum contrast on photos; reads as
+          a label tag rather than a glassy frosted lens. Risks losing the warm-paper voice.
+        </div>
+        <div class="phone">
+          <div class="stage">
+            <div class="photo-stage">
+              <div class="bubble-corner left bubble-bright">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="22" x2="4" y2="4"/><path d="M4 4h13l-2 4 2 4H4z"/></svg>
+              </div>
+              <div class="bubble-corner right bubble-bright saved">
+                <svg width="18" height="18" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+              </div>
+              <div class="pseudo-find-title">Pickles & Honey</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="questions-pane">
+      <strong>Q3.1 — Bubble background:</strong>
+      <ol>
+        <li>Stay at current <strong>0.78 paper-cream</strong> (no change)</li>
+        <li>Bump to <strong>0.85 paper-warm</strong> (subtle lightening, stays warm)</li>
+        <li>Bump to <strong>0.92 near-white</strong> (maximum contrast, label-tag feel)</li>
+        <li>Different value — name it</li>
+      </ol>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
