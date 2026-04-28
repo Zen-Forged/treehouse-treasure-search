@@ -650,7 +650,7 @@ export default function BoothsPage() {
               background: effectiveFilter === "bookmarked" ? "rgba(255,255,255,0.18)" : "rgba(42,26,10,0.10)",
               color:      effectiveFilter === "bookmarked" ? "#fff" : v1.inkMid,
             }}>
-              {bookmarkedIds.size}
+              {bookmarkedInScopeCount}
             </span>
           </button>
         </div>
