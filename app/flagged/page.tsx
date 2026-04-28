@@ -249,34 +249,41 @@ function FindTile({
               </div>
             )}
 
-            {/* Session 78 — unsave bubble moved INSIDE motion.div so it
-                travels with the photograph during the layoutId morph to
-                /find/[id]. Mirrors the feed tile pattern. */}
-            <button
-              onClick={handleUnsave}
-              aria-label="Remove flag"
+            {/* Session 78 — flag wrapped in its own
+                <motion.div layoutId={`flag-${id}`}> so it morphs as a peer
+                of the photograph rather than being scaled by it. */}
+            <motion.div
+              layoutId={`flag-${post.id}`}
+              transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
               style={{
                 position: "absolute",
                 top: 8,
                 right: 8,
-                width: 36,
-                height: 36,
-                borderRadius: "50%",
-                background: "rgba(232,221,199,0.78)",
-                backdropFilter: "blur(8px)",
-                WebkitBackdropFilter: "blur(8px)",
-                border: `0.5px solid rgba(42,26,10,0.12)`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: 0,
-                cursor: "pointer",
-                WebkitTapHighlightColor: "transparent",
                 zIndex: 2,
               }}
             >
-            <FlagGlyph size={17} strokeWidth={1.7} style={{ color: v1.green, fill: v1.green }} />
-            </button>
+              <button
+                onClick={handleUnsave}
+                aria-label="Remove flag"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background: "rgba(232,221,199,0.78)",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                  border: `0.5px solid rgba(42,26,10,0.12)`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 0,
+                  cursor: "pointer",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                <FlagGlyph size={17} strokeWidth={1.7} style={{ color: v1.green, fill: v1.green }} />
+              </button>
+            </motion.div>
           </motion.div>
         </div>
 

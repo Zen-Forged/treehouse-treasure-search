@@ -72,12 +72,6 @@ import type { Post, Mall } from "@/types/treehouse";
 
 const SCROLL_KEY      = "treehouse_feed_scroll";
 const LAST_VIEWED_KEY = "treehouse_last_viewed_post";
-// Set on first feed mount in a session — any subsequent mount (back-nav,
-// re-foregrounding, etc.) treats the page as "already visited" and skips
-// the masonry tile entrance fade so the shared-element morph from
-// /find/[id] reads as the only motion on screen, not a stagger of every
-// tile fading back in. Mirrors FB Marketplace back-nav behavior.
-const FEED_VISITED_KEY = "treehouse_feed_visited";
 // Per-post preview cache key. Source surfaces (this page + /flagged) write
 // the image_url here on tile tap so /find/[id] can render its
 // <motion.button layoutId> hero synchronously on first mount, before the
@@ -391,40 +385,50 @@ function MasonryTile({
             {/* Frosted paperCream save flag top-right — always visible, state-
                 independent bg, green-filled flag when saved. Session 61:
                 heart → flag per save-glyph-v1.html Variant B. Session 78 —
-                moved INSIDE the motion.div so it travels with the photograph
-                during the layoutId morph to /find/[id]. */}
-            <button
-              onClick={handleHeartClick}
-              aria-label={isFollowed ? "Remove flag" : "Flag"}
+                wrapped in its own <motion.div layoutId={`flag-${id}`}> so
+                the flag morphs as a peer of the photograph (same id space
+                across feed/flagged tile + /find/[id] destination). Without
+                this, the flag was a transformed child of the photograph
+                motion node and visually overshot during the morph. */}
+            <motion.div
+              layoutId={`flag-${post.id}`}
+              transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
               style={{
                 position: "absolute",
                 top: 8,
                 right: 8,
-                width: 36,
-                height: 36,
-                borderRadius: "50%",
-                background: "rgba(232,221,199,0.78)",
-                backdropFilter: "blur(8px)",
-                WebkitBackdropFilter: "blur(8px)",
-                border: `0.5px solid rgba(42,26,10,0.12)`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: 0,
-                cursor: "pointer",
-                WebkitTapHighlightColor: "transparent",
                 zIndex: 2,
               }}
             >
-              <FlagGlyph
-                size={17}
-                strokeWidth={1.7}
+              <button
+                onClick={handleHeartClick}
+                aria-label={isFollowed ? "Remove flag" : "Flag"}
                 style={{
-                  color: isFollowed ? v1.green : v1.inkPrimary,
-                  fill:  isFollowed ? v1.green : "none",
+                  width: 36,
+                  height: 36,
+                  borderRadius: "50%",
+                  background: "rgba(232,221,199,0.78)",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                  border: `0.5px solid rgba(42,26,10,0.12)`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 0,
+                  cursor: "pointer",
+                  WebkitTapHighlightColor: "transparent",
                 }}
-              />
-            </button>
+              >
+                <FlagGlyph
+                  size={17}
+                  strokeWidth={1.7}
+                  style={{
+                    color: isFollowed ? v1.green : v1.inkPrimary,
+                    fill:  isFollowed ? v1.green : "none",
+                  }}
+                />
+              </button>
+            </motion.div>
           </motion.div>
         </div>
 
@@ -576,20 +580,11 @@ export default function DiscoveryFeedPage() {
   const pendingScrollY   = useRef<number | null>(null);
   const scrollRestored   = useRef(false);
 
-  // Snapshot the "have we been here before this session?" flag on first
-  // render so it stays stable across re-renders. Set the flag in a
-  // mount-effect so subsequent navs read it as true.
-  const [hasVisitedBefore] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    try { return !!sessionStorage.getItem(FEED_VISITED_KEY); } catch { return false; }
-  });
-
-  useEffect(() => {
-    try { sessionStorage.setItem(FEED_VISITED_KEY, "1"); } catch {}
-  }, []);
-
-  const isRestoringScroll = pendingScrollY.current !== null && !scrollRestored.current;
-  const skipTileEntrance  = hasVisitedBefore || isRestoringScroll;
+  // Session 78 — David: "These should be fixed and not transition." Drop
+  // the per-tile entrance fade entirely. The shared-element morph is now
+  // the only motion that runs on this page; tiles render at full opacity
+  // from frame 1 on every visit (cold start, back-nav, foreground).
+  const skipTileEntrance = true;
 
   // ── Bookmarks ────────────────────────────────────────────────────────────────
   function syncBookmarks() {

@@ -732,48 +732,57 @@ export default function FindDetailPage() {
                   }}
                 />
 
-                {/* Flag (or pencil for owner) — INSIDE the motion.div so it
-                    travels with the photograph during the shared-element
-                    morph. stopPropagation prevents the flag tap from also
-                    firing the lightbox open on the parent. */}
+                {/* Flag (or pencil for owner) — Session 78: own layoutId so
+                    it morphs as a peer of the photograph at constant 36-38px
+                    instead of being scale-transformed alongside the parent
+                    (which made it visually overshoot at the morph endpoint).
+                    stopPropagation prevents the flag tap from also firing
+                    the lightbox open on the parent motion node. */}
                 {post && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (isMyPost) router.push(`/find/${post.id}/edit`);
-                      else handleToggleSave();
-                    }}
-                    aria-label={isMyPost ? "Edit this find" : (isSaved ? "Remove flag" : "Flag")}
+                  <motion.div
+                    layoutId={`flag-${id}`}
+                    transition={{ duration: MOTION_SHARED_ELEMENT_FORWARD, ease: MOTION_SHARED_ELEMENT_EASE }}
                     style={{
                       position: "absolute",
                       top: 12,
                       right: 12,
-                      width: 38,
-                      height: 38,
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: "rgba(232,221,199,0.78)",
-                      backdropFilter: "blur(8px)",
-                      WebkitBackdropFilter: "blur(8px)",
-                      border: `0.5px solid rgba(42,26,10,0.12)`,
-                      cursor: "pointer",
-                      padding: 0,
-                      WebkitTapHighlightColor: "transparent",
                       zIndex: 2,
                     }}
                   >
-                    {isMyPost ? (
-                      <Pencil size={16} strokeWidth={1.8} style={{ color: v1.inkPrimary }} />
-                    ) : (
-                      <FlagGlyph
-                        size={17}
-                        strokeWidth={1.7}
-                        style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
-                      />
-                    )}
-                  </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isMyPost) router.push(`/find/${post.id}/edit`);
+                        else handleToggleSave();
+                      }}
+                      aria-label={isMyPost ? "Edit this find" : (isSaved ? "Remove flag" : "Flag")}
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "rgba(232,221,199,0.78)",
+                        backdropFilter: "blur(8px)",
+                        WebkitBackdropFilter: "blur(8px)",
+                        border: `0.5px solid rgba(42,26,10,0.12)`,
+                        cursor: "pointer",
+                        padding: 0,
+                        WebkitTapHighlightColor: "transparent",
+                      }}
+                    >
+                      {isMyPost ? (
+                        <Pencil size={16} strokeWidth={1.8} style={{ color: v1.inkPrimary }} />
+                      ) : (
+                        <FlagGlyph
+                          size={17}
+                          strokeWidth={1.7}
+                          style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
+                        />
+                      )}
+                    </button>
+                  </motion.div>
                 )}
               </motion.div>
             ) : (
@@ -798,14 +807,18 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Post-it — post-loaded only. Session 78 timing: fade in
-                concurrently with the photograph morph so the page feels
-                like one entrance, not two. */}
+            {/* Post-it — Session 78: zooms into place with a slight
+                overshoot so it reads as being PINNED to the photograph,
+                not just fading in. Scale 0.6 → 1 with the existing rotate
+                preserved as a framer-motion animated value (not a static
+                style transform — mixing those produces a single combined
+                matrix and the rotate would otherwise get clobbered by
+                framer's scale animation). */}
             {post && boothNumber && (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: MOTION_SHARED_ELEMENT_FORWARD, ease: MOTION_SHARED_ELEMENT_EASE }}
+                initial={{ opacity: 0, scale: 0.6, rotate: 6 }}
+                animate={{ opacity: 1, scale: 1, rotate: 6 }}
+                transition={{ duration: 0.42, ease: [0.34, 1.56, 0.64, 1] }}
                 style={{
                   position: "absolute",
                   bottom: -14,
@@ -813,7 +826,6 @@ export default function FindDetailPage() {
                   width: 92,
                   minHeight: 92,
                   background: v1.postit,
-                  transform: "rotate(6deg)",
                   transformOrigin: "bottom right",
                   boxShadow: `0 6px 14px rgba(42,26,10,0.28), 0 0 0 0.5px rgba(42,26,10,0.16)`,
                   padding: "14px 8px 10px",
