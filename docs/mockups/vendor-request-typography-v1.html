@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — /vendor-request typography v1 (project-wide label primitive)</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper-cream:  #e8ddc7;
+    --paper-warm:   #f5f2eb;
+    --postit:       #fbf3df;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --green:        #1e4d2b;
+    --red:          #9b2c2c;
+    --input-wash:   rgba(255,253,248,0.70);
+
+    --im-fell: "IM Fell English", Georgia, serif;
+    --sys:     -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1380px; margin: 0 auto; padding: 30px 20px 80px; }
+
+  h1.title {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 880px;
+  }
+
+  /* Decisions pane */
+  .decisions-pane {
+    background: rgba(232, 221, 199, 0.08);
+    border: 1px solid rgba(232, 221, 199, 0.2);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 0 auto 18px;
+    color: rgba(232, 221, 199, 0.85);
+    font-size: 13px;
+    line-height: 1.65;
+    max-width: 880px;
+  }
+  .decisions-pane h3 {
+    margin: 0 0 8px;
+    font-size: 13px;
+    color: #fff9e8;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+  }
+  .decisions-pane strong { color: #fff9e8; }
+  .decisions-pane ul { margin: 6px 0 0 0; padding-left: 22px; }
+  .decisions-pane li { margin-bottom: 5px; }
+
+  /* Reminder strip */
+  .reminder-strip {
+    background: rgba(30,130,60,0.18);
+    border: 1px solid rgba(30,130,60,0.4);
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin: 0 auto 26px;
+    color: #d8ffd5;
+    font-size: 13px;
+    line-height: 1.65;
+    max-width: 880px;
+  }
+  .reminder-strip strong { color: #fff; }
+
+  /* Questions pane */
+  .questions-pane {
+    background: rgba(232, 221, 199, 0.06);
+    border: 1px dashed rgba(232, 221, 199, 0.25);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 24px auto 0;
+    color: rgba(232, 221, 199, 0.85);
+    font-size: 13px;
+    max-width: 880px;
+    line-height: 1.65;
+  }
+  .questions-pane strong { color: #fff9e8; }
+  .questions-pane ol { margin: 8px 0 0 0; padding-left: 22px; }
+  .questions-pane li { margin-bottom: 8px; }
+  .questions-pane .options { margin: 4px 0 0 8px; color: rgba(232,221,199,0.72); }
+  .questions-pane code {
+    background: rgba(0,0,0,0.3);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: #ffe8b5;
+  }
+
+  .frames-row {
+    display: grid;
+    gap: 28px;
+    margin: 0 auto 8px;
+    align-items: start;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: 1340px;
+  }
+  @media (max-width: 1200px) {
+    .frames-row { grid-template-columns: 1fr; max-width: 430px; }
+  }
+
+  .frame-card { display: flex; flex-direction: column; align-items: center; }
+  .frame-card .frame-label {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 20px;
+    color: #fff9e8;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .frame-card .frame-tag {
+    display: inline-block;
+    font-family: var(--sys);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 3px;
+    margin-bottom: 8px;
+  }
+  .frame-card .frame-tag.t-a { background: rgba(180,130,30,0.32); color: #ffe8b5; }
+  .frame-card .frame-tag.t-b { background: rgba(70,140,200,0.32); color: #cfe5ff; }
+  .frame-card .frame-tag.t-c { background: rgba(30,130,60,0.36); color: #d8ffd5; }
+  .frame-card .frame-blurb {
+    color: rgba(232,221,199,0.62);
+    font-size: 12px;
+    line-height: 1.55;
+    text-align: center;
+    margin-bottom: 14px;
+    max-width: 380px;
+    min-height: 56px;
+  }
+  .frame-card .frame-blurb code {
+    background: rgba(0,0,0,0.3);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 11px;
+    color: #ffe8b5;
+  }
+
+  .phone {
+    width: 100%;
+    max-width: 392px;
+    background: var(--paper-cream);
+    border: 1px solid rgba(0,0,0,0.4);
+    border-radius: 26px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+
+  .phone-status {
+    height: 26px;
+    background: var(--paper-cream);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 18px;
+    font-size: 12px;
+    color: var(--ink-primary);
+    font-weight: 600;
+  }
+
+  .phone-header {
+    padding: 14px 16px 8px;
+  }
+  .back-bubble {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: rgba(245,242,235,0.55);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-primary);
+  }
+
+  .form-page {
+    padding: 8px 28px 28px;
+    background: var(--paper-cream);
+  }
+
+  .form-title {
+    font-family: var(--im-fell);
+    font-size: 22px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+    margin: 10px 0 14px;
+  }
+
+  /* ────────────────────────────────────────────────────────────────────────
+     INTRO PARAGRAPH — varies by option to match its body-copy treatment
+     ──────────────────────────────────────────────────────────────────────── */
+
+  .intro-a {
+    font-family: var(--sys);
+    font-size: 13.5px;
+    font-weight: 400;
+    color: var(--ink-mid);
+    line-height: 1.55;
+    margin: 0 0 18px;
+  }
+  .intro-b {
+    font-family: var(--sys);
+    font-size: 13.5px;
+    font-weight: 400;
+    color: var(--ink-mid);
+    line-height: 1.55;
+    margin: 0 0 18px;
+  }
+  .intro-c {
+    font-family: var(--im-fell);
+    font-style: normal;
+    font-weight: 400;
+    font-size: 15px;
+    color: var(--ink-mid);
+    line-height: 1.5;
+    margin: 0 0 18px;
+  }
+
+  /* ────────────────────────────────────────────────────────────────────────
+     LABEL PRIMITIVES — three options
+     ──────────────────────────────────────────────────────────────────────── */
+
+  /* OPTION A — FONT_SYS small-caps eyebrow (matches session 81 eyebrow rule) */
+  .label-a {
+    display: block;
+    font-family: var(--sys);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink-muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1.3;
+    margin-bottom: 7px;
+  }
+  .label-a .req { color: var(--red); margin-left: 4px; font-weight: 700; letter-spacing: 0; }
+  .label-a .opt {
+    font-family: var(--sys);
+    font-weight: 500;
+    color: var(--ink-faint);
+    margin-left: 5px;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 10px;
+  }
+
+  /* OPTION B — FONT_SYS sentence case medium (input-family-aligned) */
+  .label-b {
+    display: block;
+    font-family: var(--sys);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-mid);
+    line-height: 1.3;
+    margin-bottom: 7px;
+  }
+  .label-b .req { color: var(--red); margin-left: 3px; font-weight: 700; }
+  .label-b .opt {
+    font-family: var(--sys);
+    font-weight: 400;
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    margin-left: 5px;
+    font-style: normal;
+  }
+
+  /* OPTION C — IM Fell upright (NOT italic), larger + darker */
+  .label-c {
+    display: block;
+    font-family: var(--im-fell);
+    font-style: normal;
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--ink-mid);
+    line-height: 1.25;
+    margin-bottom: 7px;
+  }
+  .label-c .req { color: var(--red); margin-left: 3px; font-weight: 700; font-style: normal; }
+  .label-c .opt {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-faint);
+    margin-left: 5px;
+    font-weight: 400;
+  }
+
+  /* Inputs — same across all three options. Text in FONT_SYS 16px. */
+  .input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px 14px;
+    border-radius: 14px;
+    background: var(--input-wash);
+    border: 1px solid var(--ink-hairline);
+    color: var(--ink-primary);
+    font-size: 16px;
+    font-family: var(--sys);
+    outline: none;
+    appearance: none;
+  }
+  .input.placeholder-color { color: var(--ink-faint); }
+  .select-arrow {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b5538' stroke-width='2' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 12px 12px;
+    padding-right: 40px;
+  }
+
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .field-stack { display: flex; flex-direction: column; gap: 14px; }
+
+  /* Photo dropzone — copy varies per option to match label treatment */
+  .dropzone {
+    width: 100%;
+    aspect-ratio: 3/2;
+    border: 1.5px dashed var(--ink-hairline);
+    border-radius: 14px;
+    background: var(--input-wash);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 18px;
+    text-align: center;
+  }
+  .dropzone svg.cam {
+    color: var(--ink-muted);
+    opacity: 0.75;
+  }
+
+  /* Option A dropzone: small-caps eyebrow PRIMARY, sans helper */
+  .dz-primary-a {
+    font-family: var(--sys);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-primary);
+    line-height: 1.3;
+  }
+  .dz-helper-a {
+    font-family: var(--sys);
+    font-size: 12px;
+    color: var(--ink-mid);
+    line-height: 1.5;
+    max-width: 250px;
+  }
+
+  /* Option B dropzone: sans medium PRIMARY, sans helper (current shipped) */
+  .dz-primary-b {
+    font-family: var(--sys);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink-primary);
+    line-height: 1.3;
+  }
+  .dz-helper-b {
+    font-family: var(--sys);
+    font-size: 12px;
+    color: var(--ink-mid);
+    line-height: 1.5;
+    max-width: 250px;
+  }
+
+  /* Option C dropzone: IM Fell upright PRIMARY, IM Fell helper */
+  .dz-primary-c {
+    font-family: var(--im-fell);
+    font-style: normal;
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--ink-primary);
+    line-height: 1.3;
+  }
+  .dz-helper-c {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.55;
+    max-width: 260px;
+  }
+
+  /* Owner-ack checkbox card */
+  .ack-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 11px 12px;
+    background: rgba(255,253,248,0.55);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 10px;
+    margin-top: 4px;
+  }
+  .ack-checkbox {
+    flex-shrink: 0;
+    width: 18px; height: 18px;
+    border-radius: 4px;
+    background: rgba(255,253,248,0.9);
+    border: 1.5px solid var(--ink-muted);
+    margin-top: 1px;
+  }
+  /* Ack copy treatments */
+  .ack-copy-a { font-family: var(--sys); font-size: 12.5px; color: var(--ink-mid); line-height: 1.45; }
+  .ack-copy-b { font-family: var(--sys); font-size: 12.5px; color: var(--ink-mid); line-height: 1.45; }
+  .ack-copy-c { font-family: var(--im-fell); font-style: italic; font-size: 13.5px; color: var(--ink-muted); line-height: 1.5; }
+
+  /* CTA */
+  .cta {
+    width: 100%;
+    padding: 15px;
+    border-radius: 14px;
+    font-family: var(--sys);
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+    background: rgba(30,77,43,0.40);
+    border: none;
+    margin-top: 4px;
+    text-align: center;
+    cursor: default;
+  }
+
+  .privacy {
+    font-family: var(--sys);
+    font-size: 12px;
+    color: var(--ink-faint);
+    text-align: center;
+    line-height: 1.6;
+    margin-top: 14px;
+  }
+
+  /* Sample list of OTHER pages this primitive lands on */
+  .impact-list {
+    margin-top: 36px;
+    padding: 18px 22px;
+    background: rgba(232,221,199,0.07);
+    border: 1px solid rgba(232,221,199,0.22);
+    border-radius: 10px;
+    color: rgba(232,221,199,0.78);
+    font-size: 13px;
+    line-height: 1.7;
+    max-width: 880px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .impact-list strong { color: #fff9e8; }
+  .impact-list ul { margin: 8px 0 0 0; padding-left: 22px; }
+  .impact-list li { margin-bottom: 4px; }
+
+  .pros-cons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: rgba(232,221,199,0.72);
+    text-align: left;
+    width: 100%;
+    max-width: 380px;
+  }
+  .pros-cons .pro { background: rgba(30,130,60,0.15); border: 1px solid rgba(30,130,60,0.3); border-radius: 6px; padding: 8px 10px; }
+  .pros-cons .con { background: rgba(180,80,30,0.15); border: 1px solid rgba(180,80,30,0.3); border-radius: 6px; padding: 8px 10px; }
+  .pros-cons strong { color: #fff9e8; display: block; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 3px; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <h1 class="title">/vendor-request — typography pass v1</h1>
+  <p class="subtitle">
+    Three label-primitive options × the permission/value intro paragraph (locked across all frames so you can compare apples-to-apples).
+    Pick one, then the change sweeps project-wide as a <code>LABEL_STYLE</code> token in <code>lib/tokens.ts</code> and lands across all forms (EditBoothSheet, AddBoothSheet, AddBoothInline, AddFindSheet, post-flow caption editor).
+  </p>
+
+  <div class="reminder-strip">
+    <strong>Already shipped this session</strong> — booth # is now <em>(optional)</em> · "Mall" → "Location" on this form. Both visible on Vercel preview.
+  </div>
+
+  <div class="decisions-pane">
+    <h3>What this mockup is asking you to judge</h3>
+    <ul>
+      <li><strong>Item 3a/3b</strong> — Which form-label typography reads cleanest on real content + integrates the photo dropzone instead of leaving it as a bolt-on?</li>
+      <li><strong>Item 3c</strong> — The intro paragraph is locked at the permission/value framing. Wording is a draft — adjust it after you pick the typography.</li>
+      <li><strong>Locked</strong> — Title (IM Fell 22px), input values (FONT_SYS 16px), CTA (FONT_SYS 15px white-on-green). Those don't move.</li>
+    </ul>
+  </div>
+
+  <div class="frames-row">
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         FRAME A — FONT_SYS small-caps eyebrow
+         ════════════════════════════════════════════════════════════════════ -->
+    <div class="frame-card">
+      <div class="frame-label">Option A</div>
+      <div class="frame-tag t-a">Sans small-caps eyebrow</div>
+      <div class="frame-blurb">
+        Labels: <code>FONT_SYS</code> 10px · weight 700 · 0.12em tracking · uppercase · ink-muted.<br>
+        Same primitive as the booth-eyebrow + post-it-eyebrow shipped session 81.
+      </div>
+
+      <div class="phone">
+        <div class="phone-status"><span>11:43</span><span>5G  33%</span></div>
+        <div class="phone-header"><div class="back-bubble"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></div></div>
+
+        <div class="form-page">
+          <div class="form-title">Request your digital booth</div>
+
+          <p class="intro-a">
+            Your booth becomes a digital storefront on Treehouse Finds — discoverable by shoppers browsing the locations they love.
+          </p>
+
+          <div class="field-stack">
+
+            <div class="field-row">
+              <div>
+                <label class="label-a">First name<span class="req">*</span></label>
+                <input class="input placeholder-color" placeholder="Sarah">
+              </div>
+              <div>
+                <label class="label-a">Last name<span class="req">*</span></label>
+                <input class="input placeholder-color" placeholder="Morrison">
+              </div>
+            </div>
+
+            <div>
+              <label class="label-a">Email address<span class="req">*</span></label>
+              <input class="input placeholder-color" placeholder="you@example.com">
+            </div>
+
+            <div class="field-row">
+              <div>
+                <label class="label-a">Location<span class="req">*</span></label>
+                <div class="input select-arrow placeholder-color">Select&hellip;</div>
+              </div>
+              <div>
+                <label class="label-a">Booth #<span class="opt">(optional)</span></label>
+                <input class="input placeholder-color" placeholder="e.g. 369">
+              </div>
+            </div>
+
+            <div>
+              <label class="label-a">Booth name<span class="opt">(optional)</span></label>
+              <input class="input placeholder-color" placeholder="e.g. The Velvet Cabinet">
+            </div>
+
+            <div>
+              <label class="label-a">Booth photo<span class="req">*</span></label>
+              <div class="dropzone">
+                <svg class="cam" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <div class="dz-primary-a">Take a photo of your booth</div>
+                <div class="dz-helper-a">This will be the main image on your digital booth.</div>
+              </div>
+            </div>
+
+            <div class="ack-card">
+              <div class="ack-checkbox"></div>
+              <span class="ack-copy-a">By submitting this request you are confirming that you are the assigned owner of this booth.</span>
+            </div>
+
+            <div class="cta">Request access</div>
+
+            <div class="privacy">We&rsquo;ll only use your email to follow up on this request.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pro"><strong>Pro</strong> Aligned with shipped eyebrow primitive. Functional micro-copy reads as functional.</div>
+        <div class="con"><strong>Con</strong> 10px is small. Works because caps + tracking add weight back, but vendors with reading-glasses may squint.</div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         FRAME B — FONT_SYS sentence case medium
+         ════════════════════════════════════════════════════════════════════ -->
+    <div class="frame-card">
+      <div class="frame-label">Option B</div>
+      <div class="frame-tag t-b">Sans sentence case</div>
+      <div class="frame-blurb">
+        Labels: <code>FONT_SYS</code> 13px · weight 500 · ink-mid · sentence case.<br>
+        Matches input value font family — eliminates the serif-to-sans whiplash inside each field.
+      </div>
+
+      <div class="phone">
+        <div class="phone-status"><span>11:43</span><span>5G  33%</span></div>
+        <div class="phone-header"><div class="back-bubble"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></div></div>
+
+        <div class="form-page">
+          <div class="form-title">Request your digital booth</div>
+
+          <p class="intro-b">
+            Your booth becomes a digital storefront on Treehouse Finds — discoverable by shoppers browsing the locations they love.
+          </p>
+
+          <div class="field-stack">
+
+            <div class="field-row">
+              <div>
+                <label class="label-b">First name<span class="req">*</span></label>
+                <input class="input placeholder-color" placeholder="Sarah">
+              </div>
+              <div>
+                <label class="label-b">Last name<span class="req">*</span></label>
+                <input class="input placeholder-color" placeholder="Morrison">
+              </div>
+            </div>
+
+            <div>
+              <label class="label-b">Email address<span class="req">*</span></label>
+              <input class="input placeholder-color" placeholder="you@example.com">
+            </div>
+
+            <div class="field-row">
+              <div>
+                <label class="label-b">Location<span class="req">*</span></label>
+                <div class="input select-arrow placeholder-color">Select&hellip;</div>
+              </div>
+              <div>
+                <label class="label-b">Booth #<span class="opt">(optional)</span></label>
+                <input class="input placeholder-color" placeholder="e.g. 369">
+              </div>
+            </div>
+
+            <div>
+              <label class="label-b">Booth name<span class="opt">(optional)</span></label>
+              <input class="input placeholder-color" placeholder="e.g. The Velvet Cabinet">
+            </div>
+
+            <div>
+              <label class="label-b">Booth photo<span class="req">*</span></label>
+              <div class="dropzone">
+                <svg class="cam" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <div class="dz-primary-b">Take a photo of your booth</div>
+                <div class="dz-helper-b">This will be the main image on your digital booth.</div>
+              </div>
+            </div>
+
+            <div class="ack-card">
+              <div class="ack-checkbox"></div>
+              <span class="ack-copy-b">By submitting this request you are confirming that you are the assigned owner of this booth.</span>
+            </div>
+
+            <div class="cta">Request access</div>
+
+            <div class="privacy">We&rsquo;ll only use your email to follow up on this request.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pro"><strong>Pro</strong> Maximum scanability. Labels and values share family — no whiplash. Modern, calm.</div>
+        <div class="con"><strong>Con</strong> Loses the literary IM Fell warmth on form chrome. Reads more "generic web app" than "Treehouse Finds."</div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         FRAME C — IM Fell upright (NOT italic) larger
+         ════════════════════════════════════════════════════════════════════ -->
+    <div class="frame-card">
+      <div class="frame-label">Option C</div>
+      <div class="frame-tag t-c">IM Fell upright</div>
+      <div class="frame-blurb">
+        Labels: <code>FONT_IM_FELL</code> 15px · weight 400 · upright (NOT italic) · ink-mid.<br>
+        Keeps the literary feel; bigger + upright fixes the readability concern of italic-13-muted.
+      </div>
+
+      <div class="phone">
+        <div class="phone-status"><span>11:43</span><span>5G  33%</span></div>
+        <div class="phone-header"><div class="back-bubble"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></div></div>
+
+        <div class="form-page">
+          <div class="form-title">Request your digital booth</div>
+
+          <p class="intro-c">
+            Your booth becomes a digital storefront on Treehouse Finds — discoverable by shoppers browsing the locations they love.
+          </p>
+
+          <div class="field-stack">
+
+            <div class="field-row">
+              <div>
+                <label class="label-c">First name<span class="req">*</span></label>
+                <input class="input placeholder-color" placeholder="Sarah">
+              </div>
+              <div>
+                <label class="label-c">Last name<span class="req">*</span></label>
+                <input class="input placeholder-color" placeholder="Morrison">
+              </div>
+            </div>
+
+            <div>
+              <label class="label-c">Email address<span class="req">*</span></label>
+              <input class="input placeholder-color" placeholder="you@example.com">
+            </div>
+
+            <div class="field-row">
+              <div>
+                <label class="label-c">Location<span class="req">*</span></label>
+                <div class="input select-arrow placeholder-color">Select&hellip;</div>
+              </div>
+              <div>
+                <label class="label-c">Booth #<span class="opt">(optional)</span></label>
+                <input class="input placeholder-color" placeholder="e.g. 369">
+              </div>
+            </div>
+
+            <div>
+              <label class="label-c">Booth name<span class="opt">(optional)</span></label>
+              <input class="input placeholder-color" placeholder="e.g. The Velvet Cabinet">
+            </div>
+
+            <div>
+              <label class="label-c">Booth photo<span class="req">*</span></label>
+              <div class="dropzone">
+                <svg class="cam" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <div class="dz-primary-c">Take a photo of your booth</div>
+                <div class="dz-helper-c">This will be the main image on your digital booth.</div>
+              </div>
+            </div>
+
+            <div class="ack-card">
+              <div class="ack-checkbox"></div>
+              <span class="ack-copy-c">By submitting this request you are confirming that you are the assigned owner of this booth.</span>
+            </div>
+
+            <div class="cta">Request access</div>
+
+            <div class="privacy">We&rsquo;ll only use your email to follow up on this request.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pro"><strong>Pro</strong> Most cohesive with brand voice. Upright + 15px reads cleanly. Photo-dropzone copy joins the family instead of standing out.</div>
+        <div class="con"><strong>Con</strong> Still IM Fell, which has more glyph-shape variability than sans. Three font sizes of IM Fell on one page (22 / 15 / 13).</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="impact-list">
+    <strong>Project-wide sweep — surfaces this primitive will land on after pick</strong>
+    <ul>
+      <li><code>app/vendor-request/page.tsx</code> — this page (the trigger)</li>
+      <li><code>components/EditBoothSheet.tsx</code> — admin booth edit (session 74)</li>
+      <li><code>components/AddBoothSheet.tsx</code> — Add Booth modal on /shelves (session 74)</li>
+      <li><code>components/AddBoothInline.tsx</code> — admin Vendors-tab inline add</li>
+      <li><code>components/BoothFormFields.tsx</code> — shared form-field primitive</li>
+      <li><code>components/AddFindSheet.tsx</code> — find caption + price editor (post flow)</li>
+      <li><code>app/post/preview/page.tsx</code> — caption editor labels</li>
+      <li><code>app/setup/page.tsx</code> — first-run vendor setup labels</li>
+    </ul>
+    All currently use the same italic-IM-Fell-13px-muted label. New <code>LABEL_STYLE</code> exported from <code>lib/tokens.ts</code> after pick; sweep is a single search-replace.
+  </div>
+
+  <div class="questions-pane">
+    <strong>Decide</strong>
+    <ol>
+      <li>
+        <strong>Which label primitive?</strong>
+        <div class="options">
+          <code>A</code> Sans small-caps eyebrow (10px caps · matches session 81 eyebrow rule)<br>
+          <code>B</code> Sans sentence case (13px medium · same family as input values)<br>
+          <code>C</code> IM Fell upright (15px upright · keeps literary feel · biggest glyphs)
+        </div>
+      </li>
+      <li>
+        <strong>Intro paragraph wording</strong> — is the draft right ("Your booth becomes a digital storefront on Treehouse Finds — discoverable by shoppers browsing the locations they love."), or do you want a different wording? Permission/value framing locked; just the words.
+      </li>
+      <li>
+        <strong>Sweep scope</strong> — confirmed project-wide. Any specific surface I should EXCLUDE from the sweep (e.g. dark <code>app/finds/page.tsx</code> reseller layer, or sheet-internal labels you'd rather audit separately)?
+      </li>
+    </ol>
+  </div>
+
+</div>
+</body>
+</html>
