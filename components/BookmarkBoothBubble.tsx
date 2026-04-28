@@ -7,11 +7,19 @@
 // Two save vocabularies for two object classes; both use the green-fill
 // saved-state behavior on cream-paper backgrounds.
 //
-// Two visual variants via the `size` prop:
+// Three visual variants via the `size` prop:
 //   - "tile"     — 28px frosted bubble on /shelves grid hero tiles, 14px glyph
+//   - "hero"     — 36px frosted bubble on BoothHero photo corner (session 80
+//                  bookmark relocation, docs/bookmark-relocation-design.md
+//                  D5), 18px glyph. Same frosted-paper formula as tile,
+//                  sized to match /find/[id] flag rect for visual sibling
+//                  rhythm with that surface.
 //   - "masthead" — 38px wash bubble on /shelf/[slug] right slot, 18px glyph
 //                  (matches the existing share-airplane bubble dimensions so
-//                   the two right-slot affordances visually pair)
+//                   the two right-slot affordances visually pair). Session 80:
+//                   this variant is no longer used on /shelf/[slug] (bookmark
+//                   moved to BoothHero corner) but kept available for any
+//                   future masthead-bookmark surface.
 //
 // State semantics: parent owns the saved boolean (derived from
 // `loadBookmarkedBoothIds()` in lib/utils.ts), passes it down. The component
@@ -25,18 +33,19 @@ import { v1 } from "@/lib/tokens";
 
 interface Props {
   saved:   boolean;
-  size?:   "tile" | "masthead";
+  size?:   "tile" | "hero" | "masthead";
   onClick: (e: React.MouseEvent) => void;
 }
 
 export default function BookmarkBoothBubble({ saved, size = "tile", onClick }: Props) {
   const isMasthead = size === "masthead";
-  const bubble = isMasthead ? 38 : 28;
-  const glyph  = isMasthead ? 18 : 14;
+  const isHero     = size === "hero";
+  const bubble = isMasthead ? 38 : isHero ? 36 : 28;
+  const glyph  = isMasthead ? 18 : isHero ? 18 : 14;
 
-  // Tile: frosted-paper wash (matches the FlagGlyph feed-tile bubble formula
-  // at smaller scale). Masthead: existing v1.iconBubble wash (matches the
-  // share-airplane bubble on the same masthead).
+  // Tile + hero: frosted-paper wash (matches the FlagGlyph feed-tile + find-
+  // detail bubble formula). Masthead: existing v1.iconBubble wash (matches
+  // the share-airplane bubble on the same masthead).
   const bg = isMasthead
     ? v1.iconBubble
     : "rgba(232,221,199,0.78)";

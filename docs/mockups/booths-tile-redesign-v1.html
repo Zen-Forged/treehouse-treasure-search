@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Booths tile redesign (mirror Find Map booth lockup)</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --ink-wash:     rgba(255, 253, 248, 0.70);
+    --pill-frost:   rgba(232, 221, 199, 0.78);
+    --green:        #1e4d2b;
+
+    --im-fell: "IM Fell English", Georgia, serif;
+    --tnr:     "Times New Roman", Times, serif;
+    --sys:     -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1320px; margin: 0 auto; padding: 30px 20px 80px; }
+
+  h1.title {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 760px;
+  }
+
+  .decisions {
+    max-width: 920px;
+    margin: 0 auto 34px;
+    padding: 18px 24px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--im-fell);
+    font-size: 18px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 10px;
+    letter-spacing: -0.005em;
+  }
+  .decisions ul { margin: 6px 0 0; padding: 0 0 0 20px; }
+  .decisions li { margin-bottom: 4px; }
+  .decisions strong { color: #fff9e8; font-weight: 500; }
+
+  .section { margin: 38px auto 18px; max-width: 1280px; padding: 0 14px; }
+  .section h2 {
+    font-family: var(--im-fell);
+    font-weight: 400;
+    color: #fff9e8;
+    font-size: 24px;
+    margin: 0 0 4px;
+    letter-spacing: -0.005em;
+    border-bottom: 1px solid rgba(232,221,199,0.2);
+    padding-bottom: 8px;
+  }
+  .section .lede {
+    color: rgba(232, 221, 199, 0.62);
+    font-size: 13px;
+    margin: 0 0 24px;
+    line-height: 1.6;
+    max-width: 760px;
+  }
+
+  .frames-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px;
+    max-width: 1280px;
+    margin: 0 auto 32px;
+    align-items: start;
+  }
+  @media (max-width: 1200px) {
+    .frames-row { grid-template-columns: 1fr; max-width: 430px; }
+  }
+
+  .frame-card { display: flex; flex-direction: column; align-items: center; }
+  .frame-card .frame-label {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 18px;
+    color: #fff9e8;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .frame-card .frame-tag {
+    display: inline-block;
+    font-family: var(--sys);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 3px;
+    margin-bottom: 6px;
+  }
+  .frame-card .frame-tag.before { background: rgba(180,60,60,0.32); color: #ffd5d5; }
+  .frame-card .frame-tag.option-a { background: rgba(180,130,30,0.32); color: #ffe8b5; }
+  .frame-card .frame-tag.option-b { background: rgba(30,130,60,0.36); color: #d8ffd5; }
+  .frame-card .frame-blurb {
+    color: rgba(232,221,199,0.62);
+    font-size: 12px;
+    line-height: 1.55;
+    text-align: center;
+    margin-bottom: 14px;
+    max-width: 380px;
+    min-height: 32px;
+  }
+
+  .phone {
+    width: 100%;
+    max-width: 392px;
+    background: var(--paper);
+    border-radius: 32px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+    border: 4px solid #1a1812;
+  }
+  .phone.medium { aspect-ratio: 392 / 720; }
+
+  /* Masthead — current state, IM Fell italic green wordmark */
+  .masthead {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 14px 18px 12px;
+    background: rgba(232,221,199,0.96);
+    border-bottom: 1px solid var(--ink-hairline);
+  }
+  .masthead .wordmark {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 22px;
+    color: var(--green);
+    text-align: center;
+  }
+
+  /* Mall scope header */
+  .mall-scope {
+    padding: 14px 18px 12px;
+    border-bottom: 1px solid var(--ink-hairline);
+  }
+  .mall-scope .eyebrow {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 4px;
+  }
+  .mall-scope .name {
+    font-family: var(--im-fell);
+    font-size: 20px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+    margin-bottom: 2px;
+  }
+  .mall-scope .name .chevron { font-size: 13px; margin-left: 6px; color: var(--ink-muted); }
+  .mall-scope .geo { font-size: 11px; color: var(--ink-muted); font-style: italic; font-family: var(--im-fell); }
+
+  /* Section header within booths grid */
+  .group-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 14px 8px;
+  }
+  .group-header .name {
+    font-family: var(--im-fell);
+    font-size: 15px;
+    color: var(--ink-primary);
+    white-space: nowrap;
+  }
+  .group-header .rule { flex: 1; height: 1px; background: var(--ink-hairline); }
+  .group-header .count {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink-muted);
+    white-space: nowrap;
+  }
+
+  /* Tile grid — 2-up, mirrors the live page */
+  .grid {
+    padding: 4px 14px 18px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* ================= CURRENT STATE TILE ================= */
+  .tile-current {
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-hairline);
+    box-shadow: 0 1px 6px rgba(42,26,10,0.06);
+  }
+  .tile-current .photo {
+    aspect-ratio: 1 / 1;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+  }
+  .tile-current .photo .scrim {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(20,14,6,0.52) 0%, transparent 55%);
+  }
+  .tile-current .photo .bookmark-corner {
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--pill-frost);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 0.5px solid rgba(42,26,10,0.12);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tile-current .body {
+    padding: 9px 10px 11px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 10px;
+    align-items: center;
+  }
+  .tile-current .body .vendor {
+    font-family: var(--im-fell);
+    font-size: 14px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tile-current .body .booth-stack {
+    display: flex; flex-direction: column;
+    align-items: flex-end;
+    line-height: 1;
+  }
+  .tile-current .body .booth-stack .eyebrow {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1;
+    margin-bottom: 3px;
+  }
+  .tile-current .body .booth-stack .num {
+    font-family: var(--tnr);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--green);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  /* ================= VARIANT A — photoless card ================= */
+  .tile-A {
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 8px;
+    padding: 12px 12px;
+    box-shadow: 0 1px 6px rgba(42,26,10,0.06);
+    display: grid;
+    grid-template-columns: 26px 1fr auto;
+    column-gap: 10px;
+    align-items: center;
+    min-height: 76px;
+  }
+  .tile-A .bookmark {
+    width: 22px; height: 22px;
+    color: var(--ink-mid);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tile-A .bookmark svg { width: 18px; height: 18px; }
+  .tile-A .vendor {
+    font-family: var(--im-fell);
+    font-size: 18px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .tile-A .booth-stack {
+    display: flex; flex-direction: column;
+    align-items: flex-end;
+    line-height: 1;
+  }
+  .tile-A .booth-stack .eyebrow {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .tile-A .booth-stack .num {
+    font-family: var(--tnr);
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--green);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  /* ================= VARIANT B — photo kept, lockup restyled ================= */
+  .tile-B {
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-hairline);
+    box-shadow: 0 1px 6px rgba(42,26,10,0.06);
+  }
+  .tile-B .photo {
+    aspect-ratio: 1 / 1;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+  }
+  .tile-B .photo .scrim {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(20,14,6,0.52) 0%, transparent 55%);
+  }
+  .tile-B .body {
+    padding: 10px 12px 12px;
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    column-gap: 10px;
+    align-items: center;
+  }
+  .tile-B .body .bookmark {
+    width: 22px; height: 22px;
+    color: var(--ink-mid);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tile-B .body .bookmark svg { width: 18px; height: 18px; }
+  .tile-B .body .vendor {
+    font-family: var(--im-fell);
+    font-size: 18px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .tile-B .body .booth-stack {
+    display: flex; flex-direction: column;
+    align-items: flex-end;
+    line-height: 1;
+  }
+  .tile-B .body .booth-stack .eyebrow {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .tile-B .body .booth-stack .num {
+    font-family: var(--tnr);
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--green);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  /* Filled bookmark = saved state */
+  .saved svg { fill: var(--green); color: var(--green); }
+
+  /* Reference card — Find Map booth header (so reviewer can match it visually) */
+  .reference {
+    max-width: 700px;
+    margin: 0 auto 38px;
+    padding: 22px 24px 18px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(232,221,199,0.18);
+    border-radius: 10px;
+  }
+  .reference h3 {
+    font-family: var(--im-fell);
+    font-size: 17px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 4px;
+  }
+  .reference .lede {
+    color: rgba(232,221,199,0.62);
+    font-size: 12px;
+    margin: 0 0 14px;
+    line-height: 1.5;
+  }
+  .ref-card {
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    column-gap: 12px;
+    align-items: center;
+  }
+  .ref-card .vendor {
+    font-family: var(--im-fell);
+    font-size: 18px;
+    color: var(--ink-primary);
+    line-height: 1.25;
+    letter-spacing: -0.005em;
+  }
+  .ref-card .booth-stack {
+    display: flex; flex-direction: column;
+    align-items: flex-end;
+    line-height: 1;
+  }
+  .ref-card .booth-stack .eyebrow {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .ref-card .booth-stack .num {
+    font-family: var(--tnr);
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--green);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  /* Question pane */
+  .questions {
+    max-width: 920px;
+    margin: 30px auto 0;
+    padding: 22px 26px 26px;
+    background: rgba(255,253,248,0.04);
+    border: 1px solid rgba(232,221,199,0.22);
+    border-radius: 12px;
+    color: rgba(232,221,199,0.92);
+  }
+  .questions h3 {
+    font-family: var(--im-fell);
+    font-style: italic;
+    font-size: 19px;
+    color: #fff9e8;
+    margin: 0 0 14px;
+    font-weight: 400;
+  }
+  .question { margin-bottom: 16px; font-size: 13px; line-height: 1.6; }
+  .question .q { color: #fff9e8; font-weight: 500; margin-bottom: 6px; }
+  .question .opts { padding-left: 12px; color: rgba(232,221,199,0.78); }
+  .question .opts li { margin-bottom: 3px; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <h1 class="title">Booths tile — mirror the Find Map booth lockup</h1>
+  <div class="subtitle">
+    Item 2 from David's session 80 redirect bundle. Two readings of "mirror the Booth Component (Booth Name | Booth Number) from the Find Map page but include a Bookmark Icon to the far left."
+  </div>
+
+  <div class="decisions">
+    <h3>What's being decided</h3>
+    <ul>
+      <li><strong>The lockup pattern</strong> — vendor name on the left, "BOOTH" small-caps + Times New Roman numeral stacked on the right, on an inkWash card. This is settled — the pattern itself comes from the Find Map booth-section header, no question marks here.</li>
+      <li><strong>What to do with the hero photo</strong> — drop it (Variant A) or keep it (Variant B). This is the open question.</li>
+      <li><strong>Bookmark placement</strong> — far left of the lockup row, regardless of A or B. Replaces the current photo-corner bookmark.</li>
+      <li><strong>Sizing</strong> — vendor name 18px IM Fell (was 14px), booth numeral 26px Times New Roman (was 20px). Matches Find Map exactly. Tiles get visually heavier per row, but two-column layout keeps them legible.</li>
+    </ul>
+  </div>
+
+  <div class="reference">
+    <h3>Reference — the Find Map booth section header you're mirroring</h3>
+    <div class="lede">This is what /flagged renders today as the header of each booth section. The pattern Item 2 is asking us to mirror.</div>
+    <div class="ref-card">
+      <div class="vendor">Pickers &amp; Pearls</div>
+      <div class="booth-stack">
+        <div class="eyebrow">Booth</div>
+        <div class="num">D14</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Three frames</h2>
+    <div class="lede">Each phone shows a slice of the /shelves grid (one mall section, two tiles wide) so you can see the tile in context. Variant B's "saved" tile in the right column carries a green-filled bookmark to show the active state.</div>
+
+    <div class="frames-row">
+
+      <!-- ============================================================ -->
+      <!-- FRAME 1 — CURRENT (BEFORE)                                  -->
+      <!-- ============================================================ -->
+      <div class="frame-card">
+        <div class="frame-tag before">Before — current</div>
+        <div class="frame-label">Photo + small lockup</div>
+        <div class="frame-blurb">Photo dominates. Bookmark sits on photo top-right. Lockup beneath at 14px / 20px (smaller than Find Map).</div>
+
+        <div class="phone medium">
+          <div class="masthead">
+            <div></div>
+            <div class="wordmark">Treehouse Finds</div>
+            <div></div>
+          </div>
+          <div class="mall-scope">
+            <div class="eyebrow">42 booths across</div>
+            <div class="name">All malls <span class="chevron">▾</span></div>
+            <div class="geo">Kentucky &amp; Southern Indiana</div>
+          </div>
+          <div class="group-header">
+            <span class="name">America's Antique Mall</span>
+            <span class="rule"></span>
+            <span class="count">12 booths</span>
+          </div>
+          <div class="grid">
+            <div class="tile-current">
+              <div class="photo" style="background-image: linear-gradient(135deg, #8a7042 0%, #5a4220 50%, #6f5024 100%);">
+                <div class="scrim"></div>
+                <div class="bookmark-corner">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2a1a0a" stroke-width="1.8" stroke-linejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="body">
+                <div class="vendor">Pickers &amp; Pearls</div>
+                <div class="booth-stack">
+                  <div class="eyebrow">Booth</div>
+                  <div class="num">D14</div>
+                </div>
+              </div>
+            </div>
+            <div class="tile-current">
+              <div class="photo" style="background-image: linear-gradient(160deg, #7a8c5f 0%, #4f6342 50%, #5d6f4a 100%);">
+                <div class="scrim"></div>
+                <div class="bookmark-corner saved">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#1e4d2b" stroke="#1e4d2b" stroke-width="1.8" stroke-linejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="body">
+                <div class="vendor">The Cottage Loft</div>
+                <div class="booth-stack">
+                  <div class="eyebrow">Booth</div>
+                  <div class="num">22</div>
+                </div>
+              </div>
+            </div>
+            <div class="tile-current">
+              <div class="photo" style="background-image: linear-gradient(120deg, #98624a 0%, #6c3f2c 60%, #7a4a36 100%);">
+                <div class="scrim"></div>
+                <div class="bookmark-corner">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2a1a0a" stroke-width="1.8" stroke-linejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="body">
+                <div class="vendor">Hen &amp; Hollow</div>
+                <div class="booth-stack">
+                  <div class="eyebrow">Booth</div>
+                  <div class="num">7</div>
+                </div>
+              </div>
+            </div>
+            <div class="tile-current">
+              <div class="photo" style="background-image: linear-gradient(150deg, #5e708a 0%, #3a4960 60%, #475a76 100%);">
+                <div class="scrim"></div>
+                <div class="bookmark-corner">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2a1a0a" stroke-width="1.8" stroke-linejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="body">
+                <div class="vendor">Tin Roof Vintage</div>
+                <div class="booth-stack">
+                  <div class="eyebrow">Booth</div>
+                  <div class="num">A3</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- FRAME 2 — VARIANT A (PHOTOLESS)                             -->
+      <!-- ============================================================ -->
+      <div class="frame-card">
+        <div class="frame-tag option-a">Option A — photoless</div>
+        <div class="frame-label">Lockup card only</div>
+        <div class="frame-blurb">Drop the photo entirely. Each booth is one inkWash card with bookmark / vendor / booth number. Leaner directory feel; structurally identical to Find Map's section header.</div>
+
+        <div class="phone medium">
+          <div class="masthead">
+            <div></div>
+            <div class="wordmark">Treehouse Finds</div>
+            <div></div>
+          </div>
+          <div class="mall-scope">
+            <div class="eyebrow">42 booths across</div>
+            <div class="name">All malls <span class="chevron">▾</span></div>
+            <div class="geo">Kentucky &amp; Southern Indiana</div>
+          </div>
+          <div class="group-header">
+            <span class="name">America's Antique Mall</span>
+            <span class="rule"></span>
+            <span class="count">12 booths</span>
+          </div>
+          <div class="grid">
+            <div class="tile-A">
+              <div class="bookmark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#4a3520" stroke-width="1.8" stroke-linejoin="round">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+              </div>
+              <div class="vendor">Pickers &amp; Pearls</div>
+              <div class="booth-stack">
+                <div class="eyebrow">Booth</div>
+                <div class="num">D14</div>
+              </div>
+            </div>
+            <div class="tile-A">
+              <div class="bookmark saved">
+                <svg viewBox="0 0 24 24" fill="#1e4d2b" stroke="#1e4d2b" stroke-width="1.8" stroke-linejoin="round">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+              </div>
+              <div class="vendor">The Cottage Loft</div>
+              <div class="booth-stack">
+                <div class="eyebrow">Booth</div>
+                <div class="num">22</div>
+              </div>
+            </div>
+            <div class="tile-A">
+              <div class="bookmark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#4a3520" stroke-width="1.8" stroke-linejoin="round">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+              </div>
+              <div class="vendor">Hen &amp; Hollow</div>
+              <div class="booth-stack">
+                <div class="eyebrow">Booth</div>
+                <div class="num">7</div>
+              </div>
+            </div>
+            <div class="tile-A">
+              <div class="bookmark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#4a3520" stroke-width="1.8" stroke-linejoin="round">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+              </div>
+              <div class="vendor">Tin Roof Vintage</div>
+              <div class="booth-stack">
+                <div class="eyebrow">Booth</div>
+                <div class="num">A3</div>
+              </div>
+            </div>
+            <div class="tile-A">
+              <div class="bookmark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#4a3520" stroke-width="1.8" stroke-linejoin="round">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+              </div>
+              <div class="vendor">Brassroots</div>
+              <div class="booth-stack">
+                <div class="eyebrow">Booth</div>
+                <div class="num">B11</div>
+              </div>
+            </div>
+            <div class="tile-A">
+              <div class="bookmark saved">
+                <svg viewBox="0 0 24 24" fill="#1e4d2b" stroke="#1e4d2b" stroke-width="1.8" stroke-linejoin="round">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+              </div>
+              <div class="vendor">Mossy Glass</div>
+              <div class="booth-stack">
+                <div class="eyebrow">Booth</div>
+                <div class="num">9</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- FRAME 3 — VARIANT B (PHOTO + RESTYLED LOCKUP)              -->
+      <!-- ============================================================ -->
+      <div class="frame-card">
+        <div class="frame-tag option-b">Option B — photo + bigger lockup</div>
+        <div class="frame-label">Photo kept, bookmark moves to lockup row</div>
+        <div class="frame-blurb">Hero photo stays as the visual hook. Lockup below grows to Find-Map sizing (18px / 26px). Bookmark leaves photo corner, sits at far-left of the lockup row.</div>
+
+        <div class="phone medium">
+          <div class="masthead">
+            <div></div>
+            <div class="wordmark">Treehouse Finds</div>
+            <div></div>
+          </div>
+          <div class="mall-scope">
+            <div class="eyebrow">42 booths across</div>
+            <div class="name">All malls <span class="chevron">▾</span></div>
+            <div class="geo">Kentucky &amp; Southern Indiana</div>
+          </div>
+          <div class="group-header">
+            <span class="name">America's Antique Mall</span>
+            <span class="rule"></span>
+            <span class="count">12 booths</span>
+          </div>
+          <div class="grid">
+            <div class="tile-B">
+              <div class="photo" style="background-image: linear-gradient(135deg, #8a7042 0%, #5a4220 50%, #6f5024 100%);">
+                <div class="scrim"></div>
+              </div>
+              <div class="body">
+                <div class="bookmark">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#4a3520" stroke-width="1.8" stroke-linejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </div>
+                <div class="vendor">Pickers &amp; Pearls</div>
+                <div class="booth-stack">
+                  <div class="eyebrow">Booth</div>
+                  <div class="num">D14</div>
+                </div>
+              </div>
+            </div>
+            <div class="tile-B">
+              <div class="photo" style="background-image: linear-gradient(160deg, #7a8c5f 0%, #4f6342 50%, #5d6f4a 100%);">
+                <div class="scrim"></div>
+              </div>
+              <div class="body">
+                <div class="bookmark saved">
+                  <svg viewBox="0 0 24 24" fill="#1e4d2b" stroke="#1e4d2b" stroke-width="1.8" stroke-linejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </div>
+                <div class="vendor">The Cottage Loft</div>
+                <div class="booth-stack">
+                  <div class="eyebrow">Booth</div>
+                  <div class="num">22</div>
+                </div>
+              </div>
+            </div>
+            <div class="tile-B">
+              <div class="photo" style="background-image: linear-gradient(120deg, #98624a 0%, #6c3f2c 60%, #7a4a36 100%);">
+                <div class="scrim"></div>
+              </div>
+              <div class="body">
+                <div class="bookmark">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#4a3520" stroke-width="1.8" stroke-linejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </div>
+                <div class="vendor">Hen &amp; Hollow</div>
+                <div class="booth-stack">
+                  <div class="eyebrow">Booth</div>
+                  <div class="num">7</div>
+                </div>
+              </div>
+            </div>
+            <div class="tile-B">
+              <div class="photo" style="background-image: linear-gradient(150deg, #5e708a 0%, #3a4960 60%, #475a76 100%);">
+                <div class="scrim"></div>
+              </div>
+              <div class="body">
+                <div class="bookmark">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#4a3520" stroke-width="1.8" stroke-linejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </div>
+                <div class="vendor">Tin Roof Vintage</div>
+                <div class="booth-stack">
+                  <div class="eyebrow">Booth</div>
+                  <div class="num">A3</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="questions">
+    <h3>Questions for review</h3>
+    <div class="question">
+      <div class="q">1. Photo or no photo?</div>
+      <ul class="opts">
+        <li><strong>A</strong> — drop the photo, photoless directory.</li>
+        <li><strong>B</strong> — keep the photo, restyle the lockup beneath it.</li>
+      </ul>
+    </div>
+    <div class="question">
+      <div class="q">2. If B — does the bookmark really leave the photo corner, or stay there?</div>
+      <ul class="opts">
+        <li>Per your spec: bookmark moves to the far left of the lockup row (B as drawn). Photo corner is empty.</li>
+        <li>Alternative: bookmark stays on photo corner, lockup row stays simple two-column with no bookmark. Reply if you want this option mocked.</li>
+      </ul>
+    </div>
+    <div class="question">
+      <div class="q">3. Eyebrow/numeral color — keep <strong>v1.green</strong> (#1e4d2b) on the lockup?</div>
+      <ul class="opts">
+        <li>Yes — green eyebrow + green numeral, matches Find Map exactly.</li>
+        <li>Switch to <strong>v1.inkPrimary</strong> (#2a1a0a, ink-black) to match the wordmark change you're making in item 5.</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -78,6 +78,7 @@ import {
 } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import PhotoLightbox from "@/components/PhotoLightbox";
+import BookmarkBoothBubble from "@/components/BookmarkBoothBubble";
 import type { Post } from "@/types/treehouse";
 
 // Re-export canonical v1.1h tokens so consumers of BoothPage primitives
@@ -88,9 +89,13 @@ export { v1, FONT_IM_FELL, FONT_SYS, FONT_NUMERAL };
 const EASE = [0.25, 0.1, 0.25, 1] as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Booth hero — banner + booth post-it + edit bubble
+// Booth hero — banner + booth post-it + edit bubble + (session 80) bookmark
 // Session 45 (2026-04-22) — top-right frosted share bubble removed; see
 // file-header note. Masthead airplane is now the sole share affordance.
+// Session 80 (2026-04-28) — bookmark relocated FROM /shelf/[slug] masthead
+// TO BoothHero photo top-right corner per docs/bookmark-relocation-design.md.
+// Mirrors session 78 /find/[id] flag-on-photo pattern. Bubble is a sibling
+// of the photograph motion.div (D2), no own layoutId (D4) — static fade-in.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function BoothHero({
@@ -102,6 +107,8 @@ export function BoothHero({
   heroUploading,
   onHeroImageChange,
   layoutId,
+  saved,
+  onToggleBookmark,
 }: {
   displayName: string;
   boothNumber: string | null;
@@ -119,6 +126,15 @@ export function BoothHero({
    * those routes via this transition).
    */
   layoutId?: string;
+  /**
+   * Session 80 — bookmark on photo corner (docs/bookmark-relocation-design.md).
+   * When both `saved` and `onToggleBookmark` are passed, the BoothHero renders
+   * a 36×36 bookmark bubble at top:8 right:8 of the photograph. /shelf/[slug]
+   * passes both for non-owners; /my-shelf and owners omit them (D6 — owners
+   * can't bookmark their own booth).
+   */
+  saved?: boolean;
+  onToggleBookmark?: () => void;
 }) {
   // Session 75 — tap hero photo to open lightbox (matches /find/[id] pattern).
   // Only mounts when heroImageUrl is present; the vendorHueBg fallback has
@@ -254,6 +270,25 @@ export function BoothHero({
 
         {/* Session 45 — share bubble retired here. Share affordance lives on
             the page masthead (top-right airplane → <ShareBoothSheet>). */}
+
+        {/* Session 80 — bookmark bubble (D2: SIBLING of photograph motion.div,
+            D4: no own layoutId). Position + dimensions mirror the /find/[id]
+            flag bubble (top:8 right:8, 36×36 frosted). z-index 11 sits between
+            the lightbox overlay (z 5) and the post-it (z 12) so the bookmark
+            stays interactive without obstructing the post-it tap target. Only
+            mounts when caller passes both saved + onToggleBookmark (D6). */}
+        {saved !== undefined && onToggleBookmark && (
+          <div style={{ position: "absolute", top: 8, right: 8, zIndex: 11 }}>
+            <BookmarkBoothBubble
+              saved={saved}
+              size="hero"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleBookmark();
+              }}
+            />
+          </div>
+        )}
 
         {/* Booth post-it — bottom-right, pinned; same primitive as Find Detail */}
         {boothNumber && (

@@ -52,7 +52,6 @@ import { track } from "@/lib/clientEvents";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import ShareBoothSheet from "@/components/ShareBoothSheet";
-import BookmarkBoothBubble from "@/components/BookmarkBoothBubble";
 import {
   BoothHero,
   BoothTitleBlock,
@@ -79,6 +78,13 @@ import type { User } from "@supabase/supabase-js";
 // Airplane exactly (v1.green stroke, v1.iconBubble bg, same SVG). When false
 // (shopper/guest), the right slot is a 38px spacer so the grid center stays
 // balanced.
+//
+// Session 80 — bookmark relocated to BoothHero photo corner per
+// docs/bookmark-relocation-design.md. Right slot is share-airplane-only now;
+// the BookmarkBoothBubble + showBookmark/saved/onToggleBookmark props are
+// retired from this Masthead's API. Mirrors session 78 /find/[id] convention
+// where masthead carries share only and the save affordance lives on the
+// photograph.
 
 function MastheadPaperAirplane() {
   return (
@@ -103,16 +109,10 @@ function Masthead({
   onBack,
   canShare,
   onShareOpen,
-  showBookmark,
-  saved,
-  onToggleBookmark,
 }: {
   onBack: () => void;
   canShare: boolean;
   onShareOpen: () => void;
-  showBookmark: boolean;
-  saved: boolean;
-  onToggleBookmark: () => void;
 }) {
   // Session 70 — locked-grid slot API. Inner grid + safe-area padding now
   // owned by StickyMasthead itself. Page just provides slot content; the
@@ -141,36 +141,27 @@ function Masthead({
         </button>
       }
       right={
-        <>
-          {showBookmark && (
-            <BookmarkBoothBubble
-              saved={saved}
-              size="masthead"
-              onClick={onToggleBookmark}
-            />
-          )}
-          {canShare && (
-            <button
-              onClick={onShareOpen}
-              aria-label="Share this booth by email"
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: "50%",
-                background: v1.iconBubble,
-                border: "none",
-                padding: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <MastheadPaperAirplane />
-            </button>
-          )}
-        </>
+        canShare ? (
+          <button
+            onClick={onShareOpen}
+            aria-label="Share this booth by email"
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: "50%",
+              background: v1.iconBubble,
+              border: "none",
+              padding: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <MastheadPaperAirplane />
+          </button>
+        ) : null
       }
     />
   );
@@ -356,9 +347,6 @@ export default function PublicShelfPage() {
           onBack={() => router.back()}
           canShare={false}
           onShareOpen={() => {}}
-          showBookmark={false}
-          saved={false}
-          onToggleBookmark={() => {}}
         />
         <NotFound />
         <BottomNav active="shelves" flaggedCount={bookmarkCount} />
@@ -404,9 +392,6 @@ export default function PublicShelfPage() {
         onBack={() => router.back()}
         canShare={canShare}
         onShareOpen={() => setShareOpen(true)}
-        showBookmark={showBookmark}
-        saved={boothBookmarked}
-        onToggleBookmark={handleToggleBoothBookmark}
       />
         {loading ? (
           <Skeleton />
@@ -419,6 +404,8 @@ export default function PublicShelfPage() {
               heroKey={0}
               canEdit={false}
               layoutId={vendor ? `booth-${vendor.id}` : undefined}
+              saved={showBookmark ? boothBookmarked : undefined}
+              onToggleBookmark={showBookmark ? handleToggleBoothBookmark : undefined}
             />
 
             <BoothTitleBlock displayName={displayName} />
