@@ -74,13 +74,14 @@ const inputErrorStyle: React.CSSProperties = {
   padding: "17.5px 13.5px",
 };
 
+// Session 82 — Option C label primitive (Lora upright 13px ink-mid, centered).
 const labelStyle: React.CSSProperties = {
   display: "block",
   fontFamily: FONT_LORA,
-  fontStyle: "italic",
+  fontStyle: "normal",
   fontSize: 13,
-  color: v1.inkMuted,
-  lineHeight: 1.3,
+  color: v1.inkMid,
+  lineHeight: 1.25,
   marginBottom: 7,
   textAlign: "center",
 };

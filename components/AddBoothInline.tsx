@@ -203,20 +203,23 @@ export default function AddBoothInline({
     WebkitAppearance: "none",
   };
 
+  // Session 82 — Option C label primitive scaled for inline-admin context.
   const labelStyle: React.CSSProperties = {
     display: "block",
     fontFamily: FONT_LORA,
-    fontStyle: "italic",
-    fontSize: 12,
-    color: v1.inkMuted,
-    lineHeight: 1.3,
+    fontStyle: "normal",
+    fontSize: 13,
+    color: v1.inkMid,
+    lineHeight: 1.25,
     marginBottom: 6,
   };
 
   const optionalStyle: React.CSSProperties = {
     fontStyle: "italic",
+    fontSize: 12,
     color: v1.inkFaint,
-    marginLeft: 3,
+    marginLeft: 5,
+    fontWeight: 400,
   };
 
   // Collapsed state — single-row entry point

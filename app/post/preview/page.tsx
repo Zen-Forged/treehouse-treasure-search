@@ -962,11 +962,12 @@ function FieldGroup({
     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
       <label
         style={{
+          // Session 82 — Option C label primitive (Lora upright 13px ink-mid).
           fontFamily: FONT_LORA,
-          fontStyle: "italic",
+          fontStyle: "normal",
           fontSize: 13,
-          color: v1.inkMuted,
-          lineHeight: 1.3,
+          color: v1.inkMid,
+          lineHeight: 1.25,
           display: "flex",
           alignItems: "center",
           gap: 8,
@@ -976,7 +977,7 @@ function FieldGroup({
         <span>
           {label}
           {optional && (
-            <span style={{ color: v1.inkFaint, fontStyle: "italic", marginLeft: 4 }}>
+            <span style={{ color: v1.inkFaint, fontStyle: "italic", fontSize: 12, marginLeft: 5 }}>
               (optional)
             </span>
           )}

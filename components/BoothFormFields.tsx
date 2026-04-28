@@ -49,20 +49,26 @@ const changedStyle: React.CSSProperties = {
   borderColor: "#c8a55a",
 };
 
+// Session 82 — Option C label primitive scaled for sheet-context (14px
+// input). 13px upright Lora ink-mid; matches /vendor-request structurally
+// (italic → upright, ink-muted → ink-mid) but smaller because the input
+// it labels is smaller. See docs/mockups/vendor-request-typography-v2.html.
 const labelStyle: React.CSSProperties = {
   display: "block",
   fontFamily: FONT_LORA,
-  fontStyle: "italic",
-  fontSize: 12,
-  color: v1.inkMuted,
-  lineHeight: 1.3,
+  fontStyle: "normal",
+  fontSize: 13,
+  color: v1.inkMid,
+  lineHeight: 1.25,
   marginBottom: 6,
 };
 
 const optionalStyle: React.CSSProperties = {
   fontStyle: "italic",
+  fontSize: 12,
   color: v1.inkFaint,
-  marginLeft: 3,
+  marginLeft: 5,
+  fontWeight: 400,
 };
 
 export default function BoothFormFields({
