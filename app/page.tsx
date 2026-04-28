@@ -39,6 +39,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState, useRef, useMemo } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { CircleUser } from "lucide-react";
@@ -266,7 +267,19 @@ function MasonryTile({
     // which prevents framer-motion from connecting every tile's predecessor
     // rect to its successor rect on remount and triggering a slide-in
     // animation when scroll position differs between unmount and remount.
-    setLastTappedPostId(post.id);
+    //
+    // flushSync forces React to commit the state update — and framer's
+    // useLayoutEffect-time layoutId registration — synchronously inside
+    // this click handler, BEFORE the Link's default navigation runs. Without
+    // it, the re-render is batched past the unmount and the source tile
+    // never commits a layoutId to the DOM in time, so framer-motion has
+    // no source rect to morph from and the forward animation snaps. (The
+    // back-morph still works on the second tap because the tile retained
+    // its layoutId from the back-morph render — that's the "second click
+    // works" symptom David flagged on R3.)
+    flushSync(() => {
+      setLastTappedPostId(post.id);
+    });
     try {
       sessionStorage.setItem(LAST_VIEWED_KEY, post.id);
       // Track D phase 5 — cache the image URL so /find/[id] can mount its

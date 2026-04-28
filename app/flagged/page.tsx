@@ -37,6 +37,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
@@ -181,7 +182,13 @@ function FindTile({
 
   function handleTileClick() {
     // Session 79 — gate layoutId via the morph tracker (see lib/morphTracker).
-    setLastTappedPostId(post.id);
+    // flushSync forces the source tile to commit its layoutId to the DOM
+    // synchronously, BEFORE Link's navigation runs — without it the
+    // re-render is batched past the unmount and framer-motion has no
+    // source rect to morph from. See app/page.tsx for full rationale.
+    flushSync(() => {
+      setLastTappedPostId(post.id);
+    });
     // Track D phase 5 — cache the image URL so /find/[id] can mount its
     // <motion.button layoutId> hero synchronously on first render. Mirror
     // of the feed handler in app/page.tsx.
