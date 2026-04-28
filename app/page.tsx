@@ -409,7 +409,7 @@ function MasonryTile({
                 width: "100%",
                 height: "100%",
                 borderRadius: "50%",
-                background: "rgba(232,221,199,0.78)",
+                background: "rgba(245,242,235,0.85)",
                 backdropFilter: "blur(8px)",
                 WebkitBackdropFilter: "blur(8px)",
                 border: `0.5px solid rgba(42,26,10,0.12)`,

@@ -307,7 +307,7 @@ function IconBubble({
   // inside flips color/fill to signal the saved state. Against warm/dark photos the
   // green-tinted translucent bg was blending into the image; holding paperCream tone
   // keeps the bubble as a stable mark and lets the heart glyph carry the state.
-  const frostedBg = "rgba(232,221,199,0.78)";
+  const frostedBg = "rgba(245,242,235,0.85)";
 
   return (
     <button
@@ -788,7 +788,7 @@ export default function FindDetailPage() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    background: "rgba(232,221,199,0.78)",
+                    background: "rgba(245,242,235,0.85)",
                     backdropFilter: "blur(8px)",
                     WebkitBackdropFilter: "blur(8px)",
                     border: `0.5px solid rgba(42,26,10,0.12)`,

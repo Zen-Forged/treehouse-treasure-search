@@ -48,7 +48,7 @@ export default function BookmarkBoothBubble({ saved, size = "tile", onClick }: P
   // the share-airplane bubble on the same masthead).
   const bg = isMasthead
     ? v1.iconBubble
-    : "rgba(232,221,199,0.78)";
+    : "rgba(245,242,235,0.85)";
 
   const border = isMasthead ? "none" : "0.5px solid rgba(42,26,10,0.12)";
 
