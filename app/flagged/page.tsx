@@ -432,7 +432,7 @@ function BoothSection({
             fontFamily: FONT_SYS,
             fontSize: 11.5,
             color: v1.inkMuted,
-            marginTop: 6,
+            marginTop: 2,
             lineHeight: 1.4,
           }}
         >
