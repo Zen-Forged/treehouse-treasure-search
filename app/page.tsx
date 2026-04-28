@@ -383,20 +383,22 @@ function MasonryTile({
             />
           </motion.div>
 
-          {/* Flag — SIBLING of the photograph motion.div (Session 78 R3).
-              As a child of the photograph motion node, framer-motion lost
-              tracking of its own layoutId during the cross-route morph and
-              it disappeared for several frames mid-flight. As a sibling on
-              the same fixed-aspect parent, both layoutIds (`find-${id}`
-              and `flag-${id}`) animate independently against a stable
-              outer rect and the flag stays visible throughout. */}
+          {/* Flag — SIBLING of the photograph motion.div (Session 78 R3+).
+              R4: explicit width/height + layout="position" so framer-motion's
+              rect measurement is unambiguous. Flag size is identical at both
+              ends; only its absolute position changes. Without these the
+              layoutId animation dropped frames mid-flight and the flag
+              briefly disappeared. */}
           <motion.div
             layoutId={`flag-${post.id}`}
+            layout="position"
             transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
             style={{
               position: "absolute",
               top: 8,
               right: 8,
+              width: 36,
+              height: 36,
               zIndex: 3,
             }}
           >
@@ -404,8 +406,8 @@ function MasonryTile({
               onClick={handleHeartClick}
               aria-label={isFollowed ? "Remove flag" : "Flag"}
               style={{
-                width: 36,
-                height: 36,
+                width: "100%",
+                height: "100%",
                 borderRadius: "50%",
                 background: "rgba(232,221,199,0.78)",
                 backdropFilter: "blur(8px)",

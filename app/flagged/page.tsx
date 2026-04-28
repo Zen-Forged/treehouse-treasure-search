@@ -251,17 +251,19 @@ function FindTile({
 
           </motion.div>
 
-          {/* Session 78 R3 — flag is a SIBLING of the photograph motion.div,
-              not a child, so its layoutId animation stays tracked across
-              the cross-route morph (child layoutIds inside transformed
-              parents drop frames). */}
+          {/* Session 78 R3+ — flag is a SIBLING of the photograph motion.div.
+              R4: explicit width/height + layout="position" for stable
+              cross-route layoutId tracking. */}
           <motion.div
             layoutId={`flag-${post.id}`}
+            layout="position"
             transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
             style={{
               position: "absolute",
               top: 8,
               right: 8,
+              width: 36,
+              height: 36,
               zIndex: 3,
             }}
           >
@@ -269,8 +271,8 @@ function FindTile({
               onClick={handleUnsave}
               aria-label="Remove flag"
               style={{
-                width: 36,
-                height: 36,
+                width: "100%",
+                height: "100%",
                 borderRadius: "50%",
                 background: "rgba(232,221,199,0.78)",
                 backdropFilter: "blur(8px)",

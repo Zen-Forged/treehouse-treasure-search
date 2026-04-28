@@ -751,22 +751,24 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Flag (or pencil for owner) — SIBLING of the photograph
-                motion.div, not a child. As a child it disappeared mid-flight
-                because framer-motion can't reliably co-animate a layoutId
-                inside a parent that's itself being layoutId-transformed.
-                As a sibling, both layoutIds run independently against the
-                same shared aspectRatio wrapper — flag morphs from
-                (top:8, right:8, 36×36) on the source tile to
-                (top:12, right:12, 36×36) here without losing tracking. */}
+            {/* Flag — SIBLING of the photograph motion.div with its own
+                layoutId. R4 fix: explicit width/height on the motion.div
+                + layout="position" so framer-motion's measurement is
+                unambiguous (the flag size is identical at both ends, only
+                position changes). Without these the layoutId animation
+                was dropping out mid-flight and the flag disappeared for
+                several frames before reappearing at the destination. */}
             {post && (post?.image_url || previewImageUrl) && (
               <motion.div
                 layoutId={`flag-${id}`}
+                layout="position"
                 transition={{ duration: MOTION_SHARED_ELEMENT_FORWARD, ease: MOTION_SHARED_ELEMENT_EASE }}
                 style={{
                   position: "absolute",
                   top: 12,
                   right: 12,
+                  width: 36,
+                  height: 36,
                   zIndex: 3,
                 }}
               >
@@ -778,8 +780,8 @@ export default function FindDetailPage() {
                   }}
                   aria-label={isMyPost ? "Edit this find" : (isSaved ? "Remove flag" : "Flag")}
                   style={{
-                    width: 36,
-                    height: 36,
+                    width: "100%",
+                    height: "100%",
                     borderRadius: "50%",
                     display: "flex",
                     alignItems: "center",
@@ -806,16 +808,13 @@ export default function FindDetailPage() {
               </motion.div>
             )}
 
-            {/* Post-it — Session 78 R2: zoom from larger → final size so it
-                reads as being PLACED onto the photograph (a stamp settling),
-                not pinned-from-tiny. initial scale 1.4 → animate scale 1 over
-                the same duration as the photograph morph, eased with the
-                shared-element curve so the whole entrance reads as a single
-                coordinated motion. Rotate held at 6deg as an animated value
-                so framer-motion's combined-transform doesn't drop it. */}
+            {/* Post-it — Session 78 R3: subtler zoom-in. David's spec was
+                "like the push pin is just being pushed in, not slammed on."
+                Initial scale dialed back from 1.4 → 1.15 so the post-it
+                lands close to its final size and just lightly settles. */}
             {post && boothNumber && (
               <motion.div
-                initial={{ opacity: 0, scale: 1.4, rotate: 6 }}
+                initial={{ opacity: 0, scale: 1.15, rotate: 6 }}
                 animate={{ opacity: 1, scale: 1, rotate: 6 }}
                 transition={{ duration: MOTION_SHARED_ELEMENT_FORWARD, ease: MOTION_SHARED_ELEMENT_EASE }}
                 style={{
