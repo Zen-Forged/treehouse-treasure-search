@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — /vendor-request typography v2 (IM Fell replacement candidates)</title>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper-cream:  #e8ddc7;
+    --paper-warm:   #f5f2eb;
+    --postit:       #fbf3df;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --green:        #1e4d2b;
+    --red:          #9b2c2c;
+    --input-wash:   rgba(255,253,248,0.70);
+
+    --im-fell:    "IM Fell English", Georgia, serif;
+    --sys:        -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+    --tnr:        "Times New Roman", Times, serif;
+    --lora:       "Lora", Georgia, serif;
+    --newsreader: "Newsreader", Georgia, serif;
+    --georgia:    Georgia, "Times New Roman", serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); font-optical-sizing: auto; }
+  .page-wrap { max-width: 1380px; margin: 0 auto; padding: 30px 20px 80px; }
+
+  h1.title {
+    font-family: var(--newsreader);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 880px;
+  }
+
+  /* Decisions pane */
+  .decisions-pane {
+    background: rgba(232, 221, 199, 0.08);
+    border: 1px solid rgba(232, 221, 199, 0.2);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 0 auto 18px;
+    color: rgba(232, 221, 199, 0.85);
+    font-size: 13px;
+    line-height: 1.65;
+    max-width: 880px;
+  }
+  .decisions-pane h3 {
+    margin: 0 0 8px;
+    font-size: 13px;
+    color: #fff9e8;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+  }
+  .decisions-pane strong { color: #fff9e8; }
+  .decisions-pane ul { margin: 6px 0 0 0; padding-left: 22px; }
+  .decisions-pane li { margin-bottom: 5px; }
+
+  .reminder-strip {
+    background: rgba(30,130,60,0.18);
+    border: 1px solid rgba(30,130,60,0.4);
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin: 0 auto 26px;
+    color: #d8ffd5;
+    font-size: 13px;
+    line-height: 1.65;
+    max-width: 880px;
+  }
+  .reminder-strip strong { color: #fff; }
+  .reminder-strip code { background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 3px; font-size: 12px; color: #ffe8b5; }
+
+  .questions-pane {
+    background: rgba(232, 221, 199, 0.06);
+    border: 1px dashed rgba(232, 221, 199, 0.25);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 30px auto 0;
+    color: rgba(232, 221, 199, 0.85);
+    font-size: 13px;
+    max-width: 880px;
+    line-height: 1.65;
+  }
+  .questions-pane strong { color: #fff9e8; }
+  .questions-pane ol { margin: 8px 0 0 0; padding-left: 22px; }
+  .questions-pane li { margin-bottom: 8px; }
+  .questions-pane .options { margin: 4px 0 0 8px; color: rgba(232,221,199,0.72); }
+  .questions-pane code {
+    background: rgba(0,0,0,0.3);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: #ffe8b5;
+  }
+
+  .section-label {
+    font-family: var(--newsreader);
+    font-style: italic;
+    font-size: 22px;
+    color: #fff9e8;
+    margin: 50px auto 4px;
+    text-align: center;
+  }
+  .section-blurb {
+    color: rgba(232, 221, 199, 0.62);
+    font-size: 13px;
+    margin: 0 auto 28px;
+    line-height: 1.6;
+    max-width: 720px;
+    text-align: center;
+  }
+
+  .frames-row {
+    display: grid;
+    gap: 28px;
+    margin: 0 auto 8px;
+    align-items: start;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: 1340px;
+  }
+  @media (max-width: 1200px) {
+    .frames-row { grid-template-columns: 1fr; max-width: 430px; }
+  }
+
+  .frame-card { display: flex; flex-direction: column; align-items: center; }
+  .frame-card .frame-label {
+    font-family: var(--newsreader);
+    font-style: italic;
+    font-size: 22px;
+    color: #fff9e8;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .frame-card .frame-tag {
+    display: inline-block;
+    font-family: var(--sys);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 3px;
+    margin-bottom: 8px;
+  }
+  .frame-card .frame-tag.t-lora       { background: rgba(180,130,30,0.32); color: #ffe8b5; }
+  .frame-card .frame-tag.t-newsreader { background: rgba(70,140,200,0.32); color: #cfe5ff; }
+  .frame-card .frame-tag.t-georgia    { background: rgba(30,130,60,0.36); color: #d8ffd5; }
+  .frame-card .frame-blurb {
+    color: rgba(232,221,199,0.62);
+    font-size: 12px;
+    line-height: 1.55;
+    text-align: center;
+    margin-bottom: 14px;
+    max-width: 380px;
+    min-height: 64px;
+  }
+  .frame-card .frame-blurb code {
+    background: rgba(0,0,0,0.3);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 11px;
+    color: #ffe8b5;
+  }
+
+  .phone {
+    width: 100%;
+    max-width: 392px;
+    background: var(--paper-cream);
+    border: 1px solid rgba(0,0,0,0.4);
+    border-radius: 26px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+
+  .phone-status {
+    height: 26px;
+    background: var(--paper-cream);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 18px;
+    font-size: 12px;
+    color: var(--ink-primary);
+    font-weight: 600;
+  }
+
+  .phone-header { padding: 14px 16px 8px; }
+  .back-bubble {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: rgba(245,242,235,0.55);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-primary);
+  }
+
+  .form-page {
+    padding: 8px 28px 28px;
+    background: var(--paper-cream);
+  }
+
+  /* ────────────────────────────────────────────────────────────────────────
+     PER-FONT TREATMENTS — the only thing that changes between frames is
+     which font family is bound to .form-title, .form-intro, .label-c,
+     .dz-primary-c, .dz-helper-c, .ack-copy-c. Sizes/weights are matched.
+     ──────────────────────────────────────────────────────────────────────── */
+
+  /* Title */
+  .form-title {
+    font-size: 24px;
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+    color: var(--ink-primary);
+    margin: 10px 0 14px;
+    font-weight: 500;
+  }
+  .lora       .form-title { font-family: var(--lora); }
+  .newsreader .form-title { font-family: var(--newsreader); }
+  .georgia    .form-title { font-family: var(--georgia); }
+
+  /* Intro */
+  .form-intro {
+    font-size: 15.5px;
+    line-height: 1.55;
+    color: var(--ink-mid);
+    margin: 0 0 20px;
+    font-weight: 400;
+    font-style: italic;
+  }
+  .lora       .form-intro { font-family: var(--lora); }
+  .newsreader .form-intro { font-family: var(--newsreader); }
+  .georgia    .form-intro { font-family: var(--georgia); }
+
+  /* Labels — Option C structural treatment, ported to each font */
+  .label-c {
+    display: block;
+    font-style: normal;
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--ink-mid);
+    line-height: 1.25;
+    margin-bottom: 7px;
+  }
+  .label-c .req { color: var(--red); margin-left: 3px; font-weight: 700; font-style: normal; }
+  .label-c .opt {
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-faint);
+    margin-left: 5px;
+    font-weight: 400;
+  }
+  .lora       .label-c, .lora       .label-c .opt { font-family: var(--lora); }
+  .newsreader .label-c, .newsreader .label-c .opt { font-family: var(--newsreader); }
+  .georgia    .label-c, .georgia    .label-c .opt { font-family: var(--georgia); }
+
+  /* Inputs — locked across all three (FONT_SYS 16px) */
+  .input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 14px 14px;
+    border-radius: 14px;
+    background: var(--input-wash);
+    border: 1px solid var(--ink-hairline);
+    color: var(--ink-primary);
+    font-size: 16px;
+    font-family: var(--sys);
+    outline: none;
+    appearance: none;
+  }
+  .input.placeholder-color { color: var(--ink-faint); }
+  .select-arrow {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b5538' stroke-width='2' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 12px 12px;
+    padding-right: 40px;
+  }
+
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .field-stack { display: flex; flex-direction: column; gap: 14px; }
+
+  /* Photo dropzone */
+  .dropzone {
+    width: 100%;
+    aspect-ratio: 3/2;
+    border: 1.5px dashed var(--ink-hairline);
+    border-radius: 14px;
+    background: var(--input-wash);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 18px;
+    text-align: center;
+  }
+  .dropzone svg.cam {
+    color: var(--ink-muted);
+    opacity: 0.75;
+  }
+  .dz-primary {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--ink-primary);
+    line-height: 1.3;
+    font-style: normal;
+  }
+  .dz-helper {
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.55;
+    max-width: 260px;
+    font-style: italic;
+  }
+  .lora       .dz-primary, .lora       .dz-helper { font-family: var(--lora); }
+  .newsreader .dz-primary, .newsreader .dz-helper { font-family: var(--newsreader); }
+  .georgia    .dz-primary, .georgia    .dz-helper { font-family: var(--georgia); }
+
+  /* Owner-ack checkbox card */
+  .ack-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 11px 12px;
+    background: rgba(255,253,248,0.55);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 10px;
+    margin-top: 4px;
+  }
+  .ack-checkbox {
+    flex-shrink: 0;
+    width: 18px; height: 18px;
+    border-radius: 4px;
+    background: rgba(255,253,248,0.9);
+    border: 1.5px solid var(--ink-muted);
+    margin-top: 1px;
+  }
+  .ack-copy {
+    font-size: 13.5px;
+    color: var(--ink-muted);
+    line-height: 1.5;
+    font-style: italic;
+  }
+  .lora       .ack-copy { font-family: var(--lora); }
+  .newsreader .ack-copy { font-family: var(--newsreader); }
+  .georgia    .ack-copy { font-family: var(--georgia); }
+
+  /* CTA */
+  .cta {
+    width: 100%;
+    padding: 15px;
+    border-radius: 14px;
+    font-family: var(--sys);
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+    background: rgba(30,77,43,0.40);
+    border: none;
+    margin-top: 4px;
+    text-align: center;
+    cursor: default;
+  }
+
+  .privacy {
+    font-family: var(--sys);
+    font-size: 12px;
+    color: var(--ink-faint);
+    text-align: center;
+    line-height: 1.6;
+    margin-top: 14px;
+  }
+
+  /* Pros/cons block */
+  .pros-cons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 14px;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: rgba(232,221,199,0.78);
+    text-align: left;
+    width: 100%;
+    max-width: 380px;
+  }
+  .pros-cons .pro { background: rgba(30,130,60,0.15); border: 1px solid rgba(30,130,60,0.3); border-radius: 6px; padding: 8px 10px; }
+  .pros-cons .con { background: rgba(180,80,30,0.15); border: 1px solid rgba(180,80,30,0.3); border-radius: 6px; padding: 8px 10px; }
+  .pros-cons strong { color: #fff9e8; display: block; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 3px; }
+
+  /* ════════════════════════════════════════════════════════════════════════
+     STRESS-TEST SECTION — same fonts on other surfaces
+     ════════════════════════════════════════════════════════════════════════ */
+
+  .stress-strip {
+    display: grid;
+    grid-template-columns: 200px repeat(3, 1fr);
+    gap: 18px;
+    align-items: stretch;
+    max-width: 1340px;
+    margin: 0 auto 22px;
+    padding: 18px 20px;
+    background: rgba(232,221,199,0.06);
+    border: 1px solid rgba(232,221,199,0.18);
+    border-radius: 12px;
+  }
+  @media (max-width: 1200px) {
+    .stress-strip { grid-template-columns: 1fr; }
+  }
+  .stress-strip-label {
+    color: rgba(232,221,199,0.85);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .stress-strip-label strong {
+    display: block;
+    color: #fff9e8;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .stress-strip-label code {
+    background: rgba(0,0,0,0.3);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+    color: #ffe8b5;
+    display: inline-block;
+    margin-top: 6px;
+  }
+
+  .stress-cell {
+    background: var(--paper-cream);
+    border-radius: 10px;
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+  }
+  .stress-cell.bg-warm { background: var(--paper-warm); }
+
+  /* Header sample (MallScopeHeader-style) */
+  .sample-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ink-primary);
+    font-size: 26px;
+    font-weight: 500;
+    line-height: 1.15;
+  }
+  .sample-header svg { color: var(--ink-mid); }
+  .lora       .sample-header { font-family: var(--lora); }
+  .newsreader .sample-header { font-family: var(--newsreader); }
+  .georgia    .sample-header { font-family: var(--georgia); }
+
+  /* Find tile caption sample */
+  .sample-tile {
+    width: 100%;
+    max-width: 240px;
+  }
+  .sample-tile-photo {
+    width: 100%;
+    aspect-ratio: 4/5;
+    background: linear-gradient(135deg, #b09060 0%, #5e3a1a 100%);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.4);
+    font-family: var(--sys);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .sample-tile-caption {
+    font-size: 14.5px;
+    color: var(--ink-mid);
+    line-height: 1.35;
+    font-style: italic;
+    font-weight: 400;
+  }
+  .sample-tile-price {
+    font-size: 13px;
+    color: var(--ink-primary);
+    font-weight: 500;
+    margin-top: 3px;
+    font-family: var(--tnr);
+  }
+  .lora       .sample-tile-caption { font-family: var(--lora); }
+  .newsreader .sample-tile-caption { font-family: var(--newsreader); }
+  .georgia    .sample-tile-caption { font-family: var(--georgia); }
+
+  /* Post-it sample */
+  .sample-postit {
+    background: var(--postit);
+    border-radius: 4px;
+    padding: 14px 16px 12px;
+    transform: rotate(-1.2deg);
+    box-shadow: 0 1px 3px rgba(42,26,10,0.18), 0 1px 1px rgba(42,26,10,0.08);
+    width: 92%;
+    max-width: 220px;
+    text-align: center;
+  }
+  .sample-postit-eyebrow {
+    font-family: var(--sys);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+  .sample-postit-name {
+    font-size: 18px;
+    color: var(--ink-primary);
+    font-style: italic;
+    line-height: 1.2;
+    font-weight: 400;
+    margin-bottom: 4px;
+  }
+  .sample-postit-num {
+    font-family: var(--tnr);
+    font-size: 26px;
+    color: var(--ink-primary);
+    line-height: 1.05;
+    font-weight: 400;
+  }
+  .lora       .sample-postit-name { font-family: var(--lora); }
+  .newsreader .sample-postit-name { font-family: var(--newsreader); }
+  .georgia    .sample-postit-name { font-family: var(--georgia); }
+
+  /* Reference (current IM Fell) row */
+  .reference-strip {
+    margin: 36px auto 0;
+    padding: 18px 20px;
+    background: rgba(180, 80, 30, 0.10);
+    border: 1px dashed rgba(180,80,30, 0.32);
+    border-radius: 10px;
+    color: rgba(232,221,199,0.65);
+    font-size: 12px;
+    line-height: 1.6;
+    max-width: 880px;
+    text-align: center;
+  }
+  .reference-strip strong { color: rgba(255,200,150,0.95); }
+
+  .impact-list {
+    margin-top: 22px;
+    padding: 18px 22px;
+    background: rgba(232,221,199,0.07);
+    border: 1px solid rgba(232,221,199,0.22);
+    border-radius: 10px;
+    color: rgba(232,221,199,0.78);
+    font-size: 13px;
+    line-height: 1.7;
+    max-width: 880px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .impact-list strong { color: #fff9e8; }
+  .impact-list ul { margin: 8px 0 0 0; padding-left: 22px; }
+  .impact-list li { margin-bottom: 4px; }
+  .impact-list code { background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 3px; font-size: 12px; color: #ffe8b5; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <h1 class="title">/vendor-request typography v2 — IM Fell replacement</h1>
+  <p class="subtitle">
+    Same Option C treatment (large upright serif labels) — three candidate fonts for app-wide IM Fell replacement.
+    Each phone shows the new title + intro copy you locked. Stress-test strips below show how each font reads on
+    the other surfaces IM Fell currently lives on (page header / find-tile caption / post-it).
+  </p>
+
+  <div class="reminder-strip">
+    <strong>Locked this round</strong> — Title: <em>"Set up your digital booth"</em> · Intro: <em>"A simple, shareable window into your physical space — waiting to be found in person."</em>
+    Title font weight 500 (slightly heavier than 400 IM Fell) so it holds up against the new body. Numerals stay <code>FONT_NUMERAL</code> (Times New Roman). System sans stays for inputs + CTA.
+  </div>
+
+  <div class="decisions-pane">
+    <h3>What this mockup is asking you to judge</h3>
+    <ul>
+      <li><strong>Which serif replaces IM Fell project-wide</strong> — across titles, intros, labels, find-tile captions, post-it booth names, ack copy, helper text. Wherever the current code says <code>FONT_IM_FELL</code>, the chosen font lands.</li>
+      <li><strong>Italic legibility</strong> — the find-tile caption sample is the hardest test. IM Fell italic at 14px on a 4:5 tile is the surface David named as a recurring readability sore.</li>
+      <li><strong>Hierarchy across sizes</strong> — title 24px / header 26px / labels 15px / caption 14.5px / post-it name 18px. The font has to hold on all of these.</li>
+    </ul>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       MAIN: 3 phones × /vendor-request
+       ════════════════════════════════════════════════════════════════════ -->
+
+  <div class="frames-row">
+
+    <!-- LORA -->
+    <div class="frame-card">
+      <div class="frame-label">Lora</div>
+      <div class="frame-tag t-lora">Modern editorial serif</div>
+      <div class="frame-blurb">
+        Google Fonts. Modern editorial serif by Cyreal. Slight calligraphic warmth.
+        Italic is its strong suit — readable at small sizes (IM Fell's biggest weakness).
+      </div>
+
+      <div class="phone lora">
+        <div class="phone-status"><span>11:43</span><span>5G  33%</span></div>
+        <div class="phone-header"><div class="back-bubble"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></div></div>
+
+        <div class="form-page">
+          <div class="form-title">Set up your digital booth</div>
+          <p class="form-intro">A simple, shareable window into your physical space &mdash; waiting to be found in person.</p>
+
+          <div class="field-stack">
+            <div class="field-row">
+              <div><label class="label-c">First name<span class="req">*</span></label><input class="input placeholder-color" placeholder="Sarah"></div>
+              <div><label class="label-c">Last name<span class="req">*</span></label><input class="input placeholder-color" placeholder="Morrison"></div>
+            </div>
+            <div><label class="label-c">Email address<span class="req">*</span></label><input class="input placeholder-color" placeholder="you@example.com"></div>
+            <div class="field-row">
+              <div><label class="label-c">Location<span class="req">*</span></label><div class="input select-arrow placeholder-color">Select&hellip;</div></div>
+              <div><label class="label-c">Booth #<span class="opt">(optional)</span></label><input class="input placeholder-color" placeholder="e.g. 369"></div>
+            </div>
+            <div><label class="label-c">Booth name<span class="opt">(optional)</span></label><input class="input placeholder-color" placeholder="e.g. The Velvet Cabinet"></div>
+            <div>
+              <label class="label-c">Booth photo<span class="req">*</span></label>
+              <div class="dropzone">
+                <svg class="cam" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <div class="dz-primary">Take a photo of your booth</div>
+                <div class="dz-helper">This will be the main image on your digital booth.</div>
+              </div>
+            </div>
+            <div class="ack-card">
+              <div class="ack-checkbox"></div>
+              <span class="ack-copy">By submitting this request you are confirming that you are the assigned owner of this booth.</span>
+            </div>
+            <div class="cta">Request access</div>
+            <div class="privacy">We&rsquo;ll only use your email to follow up on this request.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pro"><strong>Pro</strong> Best italic of the three. Modern editorial feel. Lots of writers/blogs use it — vendors will perceive it as polished.</div>
+        <div class="con"><strong>Con</strong> Slightly less "old-world" than IM Fell. Some warmth lost on post-its specifically.</div>
+      </div>
+    </div>
+
+    <!-- NEWSREADER -->
+    <div class="frame-card">
+      <div class="frame-label">Newsreader</div>
+      <div class="frame-tag t-newsreader">Editorial w/ optical sizes</div>
+      <div class="frame-blurb">
+        Production Type, Google Fonts. Variable font with separate display + small optical cuts.
+        Title at 24px and label at 15px each get the right cut automatically — solves the "same font at three sizes" smell.
+      </div>
+
+      <div class="phone newsreader">
+        <div class="phone-status"><span>11:43</span><span>5G  33%</span></div>
+        <div class="phone-header"><div class="back-bubble"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></div></div>
+
+        <div class="form-page">
+          <div class="form-title">Set up your digital booth</div>
+          <p class="form-intro">A simple, shareable window into your physical space &mdash; waiting to be found in person.</p>
+
+          <div class="field-stack">
+            <div class="field-row">
+              <div><label class="label-c">First name<span class="req">*</span></label><input class="input placeholder-color" placeholder="Sarah"></div>
+              <div><label class="label-c">Last name<span class="req">*</span></label><input class="input placeholder-color" placeholder="Morrison"></div>
+            </div>
+            <div><label class="label-c">Email address<span class="req">*</span></label><input class="input placeholder-color" placeholder="you@example.com"></div>
+            <div class="field-row">
+              <div><label class="label-c">Location<span class="req">*</span></label><div class="input select-arrow placeholder-color">Select&hellip;</div></div>
+              <div><label class="label-c">Booth #<span class="opt">(optional)</span></label><input class="input placeholder-color" placeholder="e.g. 369"></div>
+            </div>
+            <div><label class="label-c">Booth name<span class="opt">(optional)</span></label><input class="input placeholder-color" placeholder="e.g. The Velvet Cabinet"></div>
+            <div>
+              <label class="label-c">Booth photo<span class="req">*</span></label>
+              <div class="dropzone">
+                <svg class="cam" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <div class="dz-primary">Take a photo of your booth</div>
+                <div class="dz-helper">This will be the main image on your digital booth.</div>
+              </div>
+            </div>
+            <div class="ack-card">
+              <div class="ack-checkbox"></div>
+              <span class="ack-copy">By submitting this request you are confirming that you are the assigned owner of this booth.</span>
+            </div>
+            <div class="cta">Request access</div>
+            <div class="privacy">We&rsquo;ll only use your email to follow up on this request.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pro"><strong>Pro</strong> Optical sizing — title and labels visually distinguish even though same family. Most flexible for hierarchy. Editorial polish.</div>
+        <div class="con"><strong>Con</strong> Newer (less of a known quantity than Lora or Georgia). Variable font payload heavier than single-weight cuts.</div>
+      </div>
+    </div>
+
+    <!-- GEORGIA -->
+    <div class="frame-card">
+      <div class="frame-label">Georgia</div>
+      <div class="frame-tag t-georgia">Web-safe screen serif</div>
+      <div class="frame-blurb">
+        Designed by Matthew Carter for screen at small sizes (1996). Web-safe — zero font load delay.
+        Most legible at body sizes. Slightly less "modern" but warmest of the three at 14–15px.
+      </div>
+
+      <div class="phone georgia">
+        <div class="phone-status"><span>11:43</span><span>5G  33%</span></div>
+        <div class="phone-header"><div class="back-bubble"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></div></div>
+
+        <div class="form-page">
+          <div class="form-title">Set up your digital booth</div>
+          <p class="form-intro">A simple, shareable window into your physical space &mdash; waiting to be found in person.</p>
+
+          <div class="field-stack">
+            <div class="field-row">
+              <div><label class="label-c">First name<span class="req">*</span></label><input class="input placeholder-color" placeholder="Sarah"></div>
+              <div><label class="label-c">Last name<span class="req">*</span></label><input class="input placeholder-color" placeholder="Morrison"></div>
+            </div>
+            <div><label class="label-c">Email address<span class="req">*</span></label><input class="input placeholder-color" placeholder="you@example.com"></div>
+            <div class="field-row">
+              <div><label class="label-c">Location<span class="req">*</span></label><div class="input select-arrow placeholder-color">Select&hellip;</div></div>
+              <div><label class="label-c">Booth #<span class="opt">(optional)</span></label><input class="input placeholder-color" placeholder="e.g. 369"></div>
+            </div>
+            <div><label class="label-c">Booth name<span class="opt">(optional)</span></label><input class="input placeholder-color" placeholder="e.g. The Velvet Cabinet"></div>
+            <div>
+              <label class="label-c">Booth photo<span class="req">*</span></label>
+              <div class="dropzone">
+                <svg class="cam" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                <div class="dz-primary">Take a photo of your booth</div>
+                <div class="dz-helper">This will be the main image on your digital booth.</div>
+              </div>
+            </div>
+            <div class="ack-card">
+              <div class="ack-checkbox"></div>
+              <span class="ack-copy">By submitting this request you are confirming that you are the assigned owner of this booth.</span>
+            </div>
+            <div class="cta">Request access</div>
+            <div class="privacy">We&rsquo;ll only use your email to follow up on this request.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pros-cons">
+        <div class="pro"><strong>Pro</strong> Most legible at small sizes. Web-safe (no FOUT, no font load). Familiar — readers don't notice the typography.</div>
+        <div class="con"><strong>Con</strong> "Familiar" cuts both ways — may feel a step back from custom-feeling brand. Less editorial character than Lora or Newsreader.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       STRESS-TEST: same fonts on the OTHER surfaces IM Fell currently lives on
+       ════════════════════════════════════════════════════════════════════ -->
+
+  <div class="section-label">Stress test — other surfaces</div>
+  <p class="section-blurb">
+    These are the other places IM Fell currently lives. The font you pick lands here too. Each row shows the same surface in Lora / Newsreader / Georgia, side-by-side, so you can compare on the surface that matters.
+  </p>
+
+  <!-- Row 1: Page header (MallScopeHeader-style) -->
+  <div class="stress-strip">
+    <div class="stress-strip-label">
+      <strong>Page header</strong>
+      Treehouse Finds masthead trigger — this is what you see on every primary tab when you open the location picker.
+      <code>26px upright</code>
+    </div>
+    <div class="stress-cell lora">
+      <div class="sample-header">
+        All Kentucky Locations
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    </div>
+    <div class="stress-cell newsreader">
+      <div class="sample-header">
+        All Kentucky Locations
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    </div>
+    <div class="stress-cell georgia">
+      <div class="sample-header">
+        All Kentucky Locations
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: Find-tile caption — the readability sore David named -->
+  <div class="stress-strip">
+    <div class="stress-strip-label">
+      <strong>Find tile caption</strong>
+      The hardest readability test — italic body copy at 14.5px on a small portrait tile in the masonry feed.
+      David: "every time I see it I feel like it's just hard to read."
+      <code>14.5px italic</code>
+    </div>
+    <div class="stress-cell lora">
+      <div class="sample-tile">
+        <div class="sample-tile-photo">PHOTO</div>
+        <div class="sample-tile-caption">A petite cabinet of curiosities, hand-painted ochre.</div>
+        <div class="sample-tile-price">$48</div>
+      </div>
+    </div>
+    <div class="stress-cell newsreader">
+      <div class="sample-tile">
+        <div class="sample-tile-photo">PHOTO</div>
+        <div class="sample-tile-caption">A petite cabinet of curiosities, hand-painted ochre.</div>
+        <div class="sample-tile-price">$48</div>
+      </div>
+    </div>
+    <div class="stress-cell georgia">
+      <div class="sample-tile">
+        <div class="sample-tile-photo">PHOTO</div>
+        <div class="sample-tile-caption">A petite cabinet of curiosities, hand-painted ochre.</div>
+        <div class="sample-tile-price">$48</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 3: Post-it sample (BoothHero / /find/[id]) -->
+  <div class="stress-strip">
+    <div class="stress-strip-label">
+      <strong>Post-it lockup</strong>
+      BoothHero + /find/[id] post-it. Eyebrow stays small-caps sans (session 81). Booth name italic + numeral TNR.
+      <code>18px italic + 26px TNR</code>
+    </div>
+    <div class="stress-cell bg-warm lora">
+      <div class="sample-postit">
+        <div class="sample-postit-eyebrow">Booth</div>
+        <div class="sample-postit-name">Velvet Cabinet</div>
+        <div class="sample-postit-num">369</div>
+      </div>
+    </div>
+    <div class="stress-cell bg-warm newsreader">
+      <div class="sample-postit">
+        <div class="sample-postit-eyebrow">Booth</div>
+        <div class="sample-postit-name">Velvet Cabinet</div>
+        <div class="sample-postit-num">369</div>
+      </div>
+    </div>
+    <div class="stress-cell bg-warm georgia">
+      <div class="sample-postit">
+        <div class="sample-postit-eyebrow">Booth</div>
+        <div class="sample-postit-name">Velvet Cabinet</div>
+        <div class="sample-postit-num">369</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="reference-strip">
+    <strong>For reference, current shipped (IM Fell):</strong>
+    <span style="font-family: 'IM Fell English', Georgia, serif; font-size: 18px; color: rgba(232,221,199,0.8); margin-left: 6px;">All Kentucky Locations</span>
+    <span style="font-family: 'IM Fell English', Georgia, serif; font-style: italic; font-size: 14px; color: rgba(232,221,199,0.8); margin-left: 14px;">A petite cabinet of curiosities, hand-painted ochre.</span>
+    <span style="font-family: 'IM Fell English', Georgia, serif; font-style: italic; font-size: 16px; color: rgba(232,221,199,0.8); margin-left: 14px;">Velvet Cabinet</span>
+  </div>
+
+  <div class="impact-list">
+    <strong>Project-wide sweep — surfaces this font replaces IM Fell on</strong>
+    <ul>
+      <li><code>StickyMasthead.tsx</code> — wordmark stays Times New Roman (session 80 lock)</li>
+      <li><code>MallScopeHeader.tsx</code> — "All Kentucky Locations" title + chevron group</li>
+      <li><code>BoothPage.tsx</code> — BoothHero post-it booth name + cartographic block subtitles</li>
+      <li><code>app/find/[id]/page.tsx</code> — find title (32px) + post-it name + cartographic card mall name</li>
+      <li><code>app/page.tsx</code> + <code>app/flagged/page.tsx</code> — masonry tile captions</li>
+      <li><code>app/vendor-request/page.tsx</code> — title + intro + labels + ack copy + Done-screen titles + bodies</li>
+      <li><code>app/post/preview/page.tsx</code>, <code>app/setup/page.tsx</code> — page titles + labels</li>
+      <li><code>EditBoothSheet</code> / <code>AddBoothSheet</code> / <code>BoothFormFields</code> / <code>AddFindSheet</code> — all form labels</li>
+      <li><code>VendorCard.tsx</code> ( /shelves rows) — vendor name + numeral lockup</li>
+      <li>All Done-screen titles (vendor-request, post-publish, share confirmations)</li>
+    </ul>
+    <strong style="display:block;margin-top:10px;">Sweep mechanics:</strong>
+    Replace <code>FONT_IM_FELL</code> in <code>lib/tokens.ts</code> with the chosen family. All consumers update at once.
+    Numerals (<code>FONT_NUMERAL</code> = Times New Roman) and wordmark (also TNR) stay as-is.
+    For Lora / Newsreader: add font-load <code>&lt;link&gt;</code> to <code>app/layout.tsx</code>.
+    For Georgia: web-safe, no font load needed (immediate paint, zero FOUT).
+  </div>
+
+  <div class="questions-pane">
+    <strong>Decide</strong>
+    <ol>
+      <li>
+        <strong>Which font replaces IM Fell?</strong>
+        <div class="options">
+          <code>Lora</code> Modern editorial · best italic · most polished body feel<br>
+          <code>Newsreader</code> Editorial w/ optical sizes · most flexible hierarchy · slightly newer<br>
+          <code>Georgia</code> Web-safe · most legible at small sizes · slightly less custom-feeling
+        </div>
+      </li>
+      <li>
+        <strong>Title size + weight</strong> — V2 set page title to 24px / weight 500 (was IM Fell 22px / weight 400). The new fonts are slightly less wispy than IM Fell so weight 400 reads heavy enough — happy to drop to 22px / 400 if 24px / 500 feels too display.
+      </li>
+      <li>
+        <strong>Ack-card copy</strong> — kept italic in V2 (matched the IM Fell italic primitive). Easy flip to upright if italic feels off in the new font.
+      </li>
+    </ol>
+  </div>
+
+</div>
+</body>
+</html>
