@@ -258,11 +258,22 @@ function VendorCard({
           </div>
         </AdminOnly>
 
-        {/* D4 — BOOTH stack auto right. Small-caps eyebrow + 26px Times New
-            Roman numeral, both v1.green (D5 — keep green per David's V2
-            answer). Hidden when booth_number is missing (rare orphan case). */}
+        {/* Session 81 — Option A3 lockup card. Dashed green border + paper-cream
+            fill + soft drop shadow. Eyebrow + numeral stay v1.green. Numeral
+            drops 26 → 22 to fit the card without breaking row vertical rhythm. */}
         {vendor.booth_number && (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", lineHeight: 1, flexShrink: 0 }}>
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            lineHeight: 1,
+            flexShrink: 0,
+            border: "1.5px dashed rgba(30,77,43,0.78)",
+            background: "rgba(232,221,199,0.55)",
+            boxShadow: "0 1px 3px rgba(42,26,10,0.12), 0 1px 1px rgba(42,26,10,0.06)",
+            borderRadius: 6,
+            padding: "6px 12px 7px",
+          }}>
             <div
               style={{
                 fontFamily: FONT_SYS,
@@ -280,7 +291,7 @@ function VendorCard({
             <div
               style={{
                 fontFamily: FONT_NUMERAL,
-                fontSize: 26,
+                fontSize: 22,
                 fontWeight: 500,
                 color: v1.green,
                 lineHeight: 1,
