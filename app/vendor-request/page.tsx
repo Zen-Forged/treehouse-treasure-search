@@ -212,7 +212,6 @@ function VendorRequestInner() {
       return;
     }
     if (!mallId) { setError("Please select your location."); return; }
-    if (!booth.trim()) { setError("Please enter your booth number."); return; }
     if (!proofDataUrl) {
       setError("Please add a photo of your booth.");
       return;
@@ -409,7 +408,7 @@ function VendorRequestInner() {
             </div>
             <div>
               <label style={labelStyle}>
-                Booth #<span style={requiredStyle}>*</span>
+                Booth # <span style={optionalStyle}>(optional)</span>
               </label>
               <input
                 type="text"

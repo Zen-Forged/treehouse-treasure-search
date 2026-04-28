@@ -102,9 +102,9 @@ export async function POST(req: NextRequest) {
     } = body;
 
     // ── Validation ────────────────────────────────────────────────────────
-    // Session 75 — Mall + Booth number are now hard-required (were optional
-    // through session 74). owner_acknowledged is the new audit gate from
-    // the redesigned /vendor-request checkbox.
+    // Session 82 — Booth # back to optional (some locations don't number
+    // booths; surfaced during content seeding). Location remains hard-required.
+    // owner_acknowledged is the audit gate from the redesigned checkbox.
     if (!first_name?.trim()) {
       return NextResponse.json({ error: "Please enter your first name." }, { status: 400 });
     }
@@ -119,9 +119,6 @@ export async function POST(req: NextRequest) {
     }
     if (!mall_id) {
       return NextResponse.json({ error: "Please select your location." }, { status: 400 });
-    }
-    if (!booth_number?.trim()) {
-      return NextResponse.json({ error: "Please enter your booth number." }, { status: 400 });
     }
     if (!proof_image_data_url || typeof proof_image_data_url !== "string") {
       return NextResponse.json(
