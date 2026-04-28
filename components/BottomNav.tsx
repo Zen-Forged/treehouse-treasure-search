@@ -62,7 +62,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     icon: <Home size={21} strokeWidth={1.7} />,
   };
   const findsTab: TabDef = {
-    key: "flagged", label: "Find Map", href: "/flagged",
+    key: "flagged", label: "Flagged", href: "/flagged",
     icon: <FlagGlyph size={21} strokeWidth={1.7} />, badge: true,
   };
   const boothsTab: TabDef = {
