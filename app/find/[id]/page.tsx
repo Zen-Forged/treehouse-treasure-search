@@ -1136,7 +1136,7 @@ export default function FindDetailPage() {
                               textDecorationStyle: "dotted",
                               textDecorationColor: v1.inkFaint,
                               textUnderlineOffset: 3,
-                              marginTop: 4,
+                              marginTop: 2,
                               lineHeight: 1.4,
                             }}
                           >
@@ -1148,7 +1148,7 @@ export default function FindDetailPage() {
                               fontFamily: FONT_SYS,
                               fontSize: 11.5,
                               color: v1.inkMuted,
-                              marginTop: 4,
+                              marginTop: 2,
                               lineHeight: 1.4,
                             }}
                           >

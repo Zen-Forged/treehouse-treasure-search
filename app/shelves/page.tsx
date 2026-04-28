@@ -578,16 +578,25 @@ export default function BoothsPage() {
 
       {/* Mall scope header — eyebrow + tappable mall name + chevron + italic
           count line. Single source of truth for "what mall am I looking at?"
-          across Home / Booths / Find Map. Replaces the prior local subtitle. */}
+          across Home / Booths / Find Map. Replaces the prior local subtitle.
+          Session 80 — gains the same fade-up entrance animation that Home and
+          /flagged carry on their MallScopeHeader so the three primary tabs
+          have matching first-paint behavior. */}
       {!loading && (
-        <MallScopeHeader
-          eyebrowAll={scopeEyebrowAll}
-          eyebrowOne={scopeEyebrowOne}
-          count={boothCount}
-          mallName={selectedMall?.name ?? null}
-          geoLine={scopeGeoLine}
-          onTap={() => setMallSheetOpen(true)}
-        />
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.34, delay: 0.04, ease: MOTION_EASE_OUT }}
+        >
+          <MallScopeHeader
+            eyebrowAll={scopeEyebrowAll}
+            eyebrowOne={scopeEyebrowOne}
+            count={boothCount}
+            mallName={selectedMall?.name ?? null}
+            geoLine={scopeGeoLine}
+            onTap={() => setMallSheetOpen(true)}
+          />
+        </motion.div>
       )}
 
       {/* Filter chip row — All booths · Bookmarked (n). Hidden entirely when
