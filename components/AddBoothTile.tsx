@@ -1,8 +1,9 @@
 // components/AddBoothTile.tsx
-// Admin-only "Add a booth" tile rendered after all mall sections on
-// /shelves. Mirrors AddFindTile's silhouette (dashed cell + plus icon
-// + IM Fell italic label) for visual rhyme. See
-// docs/booth-management-design.md (D6).
+// Admin-only "Add a booth" affordance rendered after all mall sections on
+// /shelves. Session 80 — converted from a 1:1 dashed square (the old grid-
+// tile shape) to a full-width dashed row to match the new Booths row pattern
+// (docs/booths-row-pattern-design.md D9). File name preserved for callsite
+// stability — visual is now a row, not a tile.
 
 "use client";
 
@@ -27,48 +28,30 @@ export default function AddBoothTile({ onTap }: AddBoothTileProps) {
         aria-label="Add a booth"
         style={{
           width: "100%",
-          padding: 0,
+          padding: "14px 16px",
           background: "transparent",
-          border: "none",
+          border: `1px dashed ${v1.inkFaint}`,
+          borderRadius: 10,
           cursor: "pointer",
           WebkitTapHighlightColor: "transparent",
           display: "flex",
-          flexDirection: "column",
-          minWidth: 0,
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
         }}
       >
-        <div
+        <Plus size={18} strokeWidth={1.6} style={{ color: v1.inkMuted }} />
+        <span
           style={{
-            width: "100%",
-            aspectRatio: "1 / 1",
-            borderRadius: 12,
-            border: `1px dashed ${v1.inkFaint}`,
-            background: "transparent",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
+            fontFamily: FONT_IM_FELL,
+            fontStyle: "italic",
+            fontSize: 14,
+            color: v1.inkMuted,
+            lineHeight: 1,
           }}
         >
-          <Plus size={22} strokeWidth={1.6} style={{ color: v1.inkMuted }} />
-          <span
-            style={{
-              fontFamily: FONT_IM_FELL,
-              fontStyle: "italic",
-              fontSize: 13,
-              color: v1.inkMuted,
-              lineHeight: 1,
-            }}
-          >
-            Add a booth
-          </span>
-        </div>
-        {/* Body slot placeholder so heights align with adjacent VendorCards
-            (which carry a 9/10/11 padded body row with vendor name + booth
-            lockup). The exact height is approximate; the tile is meant to
-            sit alongside other booth cards without orphaning. */}
-        <div style={{ height: 38 }} aria-hidden="true" />
+          Add a booth
+        </span>
       </button>
     </motion.div>
   );

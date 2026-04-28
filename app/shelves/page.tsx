@@ -1,18 +1,20 @@
 // app/shelves/page.tsx
 // Booths — cross-mall vendor booth directory.
 //
-// Session 67 — opened from admin-only to all users. Three changes:
-//   1. AddBoothInline removed (admins use the masthead Admin pill → /admin).
-//   2. Filter chip row above the first mall section: All booths · Bookmarked (n).
-//      Chip row hidden entirely when bookmarkedIds is empty (D9).
-//   3. Each non-admin VendorCard hero gets a <BookmarkBoothBubble> (top-right,
-//      28px frosted bubble). Admin tiles already carry Pencil + Trash bubbles
-//      in the same corner; bookmark hidden on admin tiles to keep the chrome
-//      uncluttered. Admin can still bookmark via the /shelf/[slug] masthead.
+// Session 80 — Option C2 row pattern (docs/booths-row-pattern-design.md).
+// Photo retired from the directory; each booth is now a single full-width
+// row with bookmark on the far left, vendor name in the middle, "BOOTH N"
+// stack on the right. Track D phase 5 source layoutId retired (no photo
+// means no source motion.div); destination layoutId on /shelf/[slug]
+// BoothHero is preserved and graceful-no-ops the morph when no source.
+// Bookmark icon is rendered inline (no bubble) since the row card itself
+// is the affordance container.
 //
-// v1.2 redesign (session 49) — migrated from v0.2 Georgia + legacy colors to
-// v1.2 tokens (v1.*, FONT_IM_FELL, StickyMasthead). Layout: 2-column grid
-// (Option B from booths-v1-2-options.html mockup).
+// Session 67 — opened from admin-only to all users. Filter chip row above
+// the first mall section: All booths · Bookmarked (n). Chip row hidden
+// entirely when bookmarkedIds is empty (D9). Bookmark hidden on admin
+// rows to keep chrome uncluttered (session 67 D10 + session 80 D8); admin
+// reaches bookmark via /shelf/[slug] BoothHero (item 4 of session 80).
 //
 // Session 45 (2026-04-22) — cross-mall fix + admin delete affordance.
 
@@ -37,16 +39,13 @@ import {
   MOTION_STAGGER,
   MOTION_STAGGER_MAX,
   MOTION_EMPTY_DURATION,
-  MOTION_SHARED_ELEMENT_EASE,
-  MOTION_SHARED_ELEMENT_BACK,
 } from "@/lib/tokens";
-import { vendorHueBg, loadBookmarkCount, loadBookmarkedBoothIds, boothBookmarkKey } from "@/lib/utils";
+import { loadBookmarkCount, loadBookmarkedBoothIds, boothBookmarkKey } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { track } from "@/lib/clientEvents";
 import AdminOnly from "@/components/AdminOnly";
 import AddBoothSheet from "@/components/AddBoothSheet";
 import AddBoothTile from "@/components/AddBoothTile";
-import BookmarkBoothBubble from "@/components/BookmarkBoothBubble";
 import BottomNav from "@/components/BottomNav";
 import EditBoothSheet from "@/components/EditBoothSheet";
 import MallSheet from "@/components/MallSheet";
@@ -87,7 +86,12 @@ function MallStatusPill({ status }: { status: MallStatus }) {
   );
 }
 
-// ─── Grid card ────────────────────────────────────────────────────────────────
+// ─── Booth row (session 80 — Option C2) ──────────────────────────────────────
+//
+// Single full-width row per booth. Bookmark on the far left (shopper) /
+// blank spacer (admin per session 67 D10), vendor name in the middle,
+// admin Pencil + Trash inline before the booth stack, "BOOTH N" stack on
+// the right. See docs/booths-row-pattern-design.md.
 
 function VendorCard({
   vendor,
@@ -107,9 +111,6 @@ function VendorCard({
   onRequestEdit:   (vendor: Vendor) => void;
 }) {
   const router = useRouter();
-  const [imgErr, setImgErr] = useState(false);
-  const heroUrl = (vendor as any).hero_image_url as string | null | undefined;
-  const hasHero = !!heroUrl && !imgErr;
   const adminUser = isAdmin(user);
 
   function handleCardTap() {
@@ -130,6 +131,11 @@ function VendorCard({
     onRequestEdit(vendor);
   }
 
+  function handleBookmarkTap(e: React.MouseEvent) {
+    e.stopPropagation();
+    onToggleBookmark(vendor.id);
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -139,113 +145,152 @@ function VendorCard({
         delay: Math.min(index * MOTION_STAGGER, MOTION_STAGGER_MAX),
         ease: MOTION_EASE_OUT,
       }}
-      whileTap={{ scale: 0.97 }}
+      whileTap={{ scale: 0.99 }}
     >
       <div
         onClick={handleCardTap}
         style={{
-          borderRadius: 12,
-          overflow: "hidden",
           background: v1.inkWash,
           border: `1px solid ${v1.inkHairline}`,
+          borderRadius: 10,
+          padding: "12px 14px 12px 12px",
           boxShadow: "0 1px 6px rgba(42,26,10,0.06)",
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
           cursor: "pointer",
           WebkitTapHighlightColor: "transparent",
         }}
       >
-        {/* Square hero. Track D phase 5 — wrapped in <motion.div layoutId>
-            so the photograph morphs into the BoothHero on /shelf/[slug].
-            Admin tap routes to /my-shelf?vendor=, which has no matching
-            layoutId target — framer-motion gracefully no-ops the morph. */}
-        <div style={{ aspectRatio: "1 / 1", position: "relative", overflow: "hidden" }}>
-          <motion.div
-            layoutId={`booth-${vendor.id}`}
-            transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
-            style={{ position: "absolute", inset: 0 }}
-          >
-            {hasHero
-              ? <img src={heroUrl!} alt="" onError={() => setImgErr(true)} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-              : <div style={{ width: "100%", height: "100%", background: vendorHueBg(vendor.display_name) }} />
-            }
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(20,14,6,0.52) 0%, transparent 55%)" }} />
-          </motion.div>
-
-          {/* Session 69 — Booth NN photo-overlay pill retired. The booth number
-              now lives as a small-caps eyebrow above the vendor name in the card
-              body (Option B), unifying the three pieces ("Booth" + number + name)
-              into one coherent label per docs/caption-and-booth-label-design.md. */}
-
-          {/* Session 67 — bookmark bubble for non-admins. Admin tiles already
-              carry Pencil + Trash in the top-right; bookmark hidden there to
-              avoid 4-bubble pile-up. Admin can bookmark via /shelf/[slug]. */}
+        {/* D6 — bookmark column 22px. Empty spacer for admins (D8 + session
+            67 D10). Inline Lucide Bookmark, no bubble — the row card is the
+            affordance container. Saved-state fills with v1.green. */}
+        <div style={{ width: 22, height: 22, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
           {!adminUser && (
-            <div style={{ position: "absolute", top: 6, right: 6, zIndex: 3 }}>
-              <BookmarkBoothBubble
-                saved={saved}
-                size="tile"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleBookmark(vendor.id);
+            <button
+              type="button"
+              onClick={handleBookmarkTap}
+              aria-label={saved ? "Remove booth bookmark" : "Bookmark this booth"}
+              style={{
+                width: 22,
+                height: 22,
+                background: "transparent",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <Bookmark
+                size={18}
+                strokeWidth={1.8}
+                style={{
+                  color: saved ? v1.green : v1.inkPrimary,
+                  fill:  saved ? v1.green : "none",
                 }}
               />
-            </div>
+            </button>
           )}
+        </div>
 
-          <AdminOnly user={user}>
-            {!vendor.user_id && (
-              <button
-                onClick={handleDeleteTap}
-                aria-label={`Delete ${vendor.display_name}`}
-                style={{ position: "absolute", top: 7, right: 38, zIndex: 10, width: 26, height: 26, borderRadius: "50%", background: "rgba(20,14,6,0.52)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}
-              >
-                <Trash2 size={10} style={{ color: "rgba(255,255,255,0.88)" }} />
-              </button>
-            )}
+        {/* D4 — vendor name flex middle. IM Fell 18px (matches Find Map
+            booth-section header). Single line, ellipsis on overflow. */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontFamily: FONT_IM_FELL,
+              fontSize: 18,
+              color: v1.inkPrimary,
+              lineHeight: 1.2,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              letterSpacing: "-0.005em",
+            }}
+          >
+            {vendor.display_name}
+          </div>
+        </div>
+
+        {/* D8 — admin chrome. Pencil always; Trash only when !user_id (booth
+            isn't claimed yet — matches existing /shelves admin behavior).
+            Sits between vendor name and booth stack. Small inline icons with
+            no bubble; the row card visually contains them. */}
+        <AdminOnly user={user}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <button
+              type="button"
               onClick={handleEditTap}
               aria-label={`Edit ${vendor.display_name}`}
-              style={{ position: "absolute", top: 7, right: 8, zIndex: 10, width: 26, height: 26, borderRadius: "50%", background: "rgba(20,14,6,0.52)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}
+              style={{
+                width: 26, height: 26, borderRadius: "50%",
+                background: "rgba(42,26,10,0.04)",
+                border: `1px solid ${v1.inkHairline}`,
+                padding: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer",
+                WebkitTapHighlightColor: "transparent",
+              }}
             >
-              <Pencil size={10} style={{ color: "rgba(255,255,255,0.88)" }} />
+              <Pencil size={12} strokeWidth={1.7} style={{ color: v1.inkMid }} />
             </button>
-          </AdminOnly>
-        </div>
-
-        {/* Info — Session 70 round 2 Variant B lockup: vendor name on left,
-            "Booth" small-caps + IM Fell numeral stacked on right. Tile width
-            is tighter than Find Map / Find Detail so the numeral scales to
-            20px (vs the spec's 26px on those surfaces); vendor stays at 14px
-            for tile-tile parity with bio below. Lockup structure identical. */}
-        <div style={{ padding: "9px 10px 11px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: vendor.booth_number ? "1fr auto" : "1fr", columnGap: 10, alignItems: "center" }}>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontFamily: FONT_IM_FELL, fontSize: 14, color: v1.inkPrimary, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {vendor.display_name}
-              </div>
-              {/* Session 67 — mall name removed from tile subtitle (already
-                  grouped under a mall section header on /shelves). Bio still
-                  renders when set; otherwise subtitle line is omitted. */}
-              {vendor.bio && (
-                <div style={{ fontFamily: FONT_IM_FELL, fontStyle: "italic", fontSize: 10, color: v1.inkMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 2 }}>
-                  {vendor.bio}
-                </div>
-              )}
-            </div>
-            {vendor.booth_number && (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", lineHeight: 1 }}>
-                <div style={{ fontFamily: FONT_SYS, fontSize: 9, fontWeight: 700, color: v1.green, letterSpacing: "0.12em", textTransform: "uppercase", lineHeight: 1, marginBottom: 3 }}>
-                  Booth
-                </div>
-                <div style={{ fontFamily: FONT_NUMERAL, fontSize: 20, fontWeight: 500, color: v1.green, lineHeight: 1, letterSpacing: "-0.01em" }}>
-                  {vendor.booth_number}
-                </div>
-              </div>
+            {!vendor.user_id && (
+              <button
+                type="button"
+                onClick={handleDeleteTap}
+                aria-label={`Delete ${vendor.display_name}`}
+                style={{
+                  width: 26, height: 26, borderRadius: "50%",
+                  background: "rgba(139,32,32,0.06)",
+                  border: `1px solid ${v1.redBorder}`,
+                  padding: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                <Trash2 size={12} strokeWidth={1.7} style={{ color: v1.red }} />
+              </button>
             )}
           </div>
-          {/* Session 72 — "Manage" eyebrow retired. Pencil + Trash bubbles
-              top-right of the tile already signal the admin's edit/delete
-              affordance; the green eyebrow was redundant and noisy. */}
-        </div>
+        </AdminOnly>
+
+        {/* D4 — BOOTH stack auto right. Small-caps eyebrow + 26px Times New
+            Roman numeral, both v1.green (D5 — keep green per David's V2
+            answer). Hidden when booth_number is missing (rare orphan case). */}
+        {vendor.booth_number && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", lineHeight: 1, flexShrink: 0 }}>
+            <div
+              style={{
+                fontFamily: FONT_SYS,
+                fontSize: 9,
+                fontWeight: 700,
+                color: v1.green,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                lineHeight: 1,
+                marginBottom: 4,
+              }}
+            >
+              Booth
+            </div>
+            <div
+              style={{
+                fontFamily: FONT_NUMERAL,
+                fontSize: 26,
+                fontWeight: 500,
+                color: v1.green,
+                lineHeight: 1,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              {vendor.booth_number}
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   );
@@ -368,16 +413,24 @@ function DeleteBoothSheet({
   );
 }
 
-// ─── Grid skeleton ─────────────────────────────────────────────────────────────
+// ─── Row skeleton (session 80) ──────────────────────────────────────────────
 
 function SkeletonCard() {
   return (
-    <div style={{ borderRadius: 12, overflow: "hidden", border: `1px solid ${v1.inkHairline}` }}>
-      <div className="skeleton-shimmer" style={{ aspectRatio: "1 / 1" }} />
-      <div style={{ padding: "9px 10px 11px", display: "flex", flexDirection: "column", gap: 5 }}>
-        <div className="skeleton-shimmer" style={{ height: 12, width: "70%", borderRadius: 5 }} />
-        <div className="skeleton-shimmer" style={{ height: 10, width: "50%", borderRadius: 5 }} />
-      </div>
+    <div
+      style={{
+        background: v1.inkWash,
+        border: `1px solid ${v1.inkHairline}`,
+        borderRadius: 10,
+        padding: "12px 14px",
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+      }}
+    >
+      <div className="skeleton-shimmer" style={{ width: 22, height: 22, borderRadius: 4, flexShrink: 0 }} />
+      <div className="skeleton-shimmer" style={{ flex: 1, height: 16, borderRadius: 5 }} />
+      <div className="skeleton-shimmer" style={{ width: 40, height: 26, borderRadius: 5, flexShrink: 0 }} />
     </div>
   );
 }
@@ -586,7 +639,7 @@ export default function BoothsPage() {
       <main style={{ padding: "14px 14px 0", paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))" }}>
 
         {loading ? (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {[0, 1, 2, 3, 4, 5].map(i => <SkeletonCard key={i} />)}
           </div>
         ) : visibleVendors.length === 0 ? (
@@ -602,9 +655,10 @@ export default function BoothsPage() {
         ) : (
           <>
             {savedMallId ? (
-              // D4 — mall picked, render flat grid (no per-mall section headers).
-              // The MallScopeHeader above already names the mall.
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              // Mall picked, render flat row list (no per-mall section headers).
+              // The MallScopeHeader above already names the mall. Session 80 —
+              // grid retired in favor of single-column row pattern.
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {visibleVendors.map((vendor, i) => (
                   <VendorCard
                     key={vendor.id}
@@ -642,7 +696,7 @@ export default function BoothsPage() {
                       {group.vendors.length} {group.vendors.length === 1 ? "booth" : "booths"}
                     </span>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {group.vendors.map((vendor, i) => (
                       <VendorCard
                         key={vendor.id}
@@ -663,12 +717,12 @@ export default function BoothsPage() {
           </>
         )}
 
-        {/* Admin-only "Add a booth" tile — sits below all mall sections in
-            its own grid row so it doesn't visually associate with any single
-            mall. See docs/booth-management-design.md (D6). */}
+        {/* Admin-only "Add a booth" affordance — sits below all mall sections.
+            Session 80 — converted to a full-width dashed row matching the
+            new row pattern (docs/booths-row-pattern-design.md D9). */}
         {!loading && (
           <AdminOnly user={user}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 16 }}>
+            <div style={{ marginTop: 16 }}>
               <AddBoothTile onTap={() => setAddSheetOpen(true)} />
             </div>
           </AdminOnly>
