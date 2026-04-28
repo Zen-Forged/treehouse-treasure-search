@@ -44,7 +44,7 @@ import FlagGlyph from "@/components/FlagGlyph";
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
 import { BOOKMARK_PREFIX, loadBookmarkCount } from "@/lib/utils";
 import {
-  getLastTappedPostId,
+  useLastTappedPostId,
   setLastTappedPostId,
   scheduleClearLastTapped,
 } from "@/lib/morphTracker";
@@ -195,8 +195,11 @@ function FindTile({
     }
   }
 
-  // Session 79 — only the tapped tile carries layoutIds.
-  const isMorphTile = getLastTappedPostId() === post.id;
+  // Session 79 — only the tapped tile carries layoutIds + layout tracking.
+  // Subscribe via the hook so React re-renders the tile when the morph
+  // tracker changes (see app/page.tsx for the full rationale).
+  const morphingId = useLastTappedPostId();
+  const isMorphTile = morphingId === post.id;
 
   const tileStyle: React.CSSProperties =
     widthMode === "scroll"
@@ -275,7 +278,7 @@ function FindTile({
               cross-route layoutId tracking. */}
           <motion.div
             layoutId={isMorphTile ? `flag-${post.id}` : undefined}
-            layout="position"
+            layout={isMorphTile ? "position" : false}
             transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
             style={{
               position: "absolute",

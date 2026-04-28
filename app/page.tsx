@@ -59,7 +59,7 @@ import {
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { flagKey, loadFollowedIds, formatTimeAgo } from "@/lib/utils";
 import {
-  getLastTappedPostId,
+  useLastTappedPostId,
   setLastTappedPostId,
   scheduleClearLastTapped,
 } from "@/lib/morphTracker";
@@ -282,10 +282,13 @@ function MasonryTile({
     } catch {}
   }
 
-  // Session 79 — only the tapped tile carries layoutIds. Render others as
-  // plain motion.divs (with layoutId={undefined}) so framer doesn't track
-  // them at all.
-  const isMorphTile = getLastTappedPostId() === post.id;
+  // Session 79 — only the tapped tile carries layoutIds + layout tracking.
+  // Subscribe via useLastTappedPostId so React re-renders this tile when
+  // the morph tracker changes (tap → set → re-render → navigate, in that
+  // order; without re-render the source tile never commits its layoutId
+  // to the DOM and framer-motion has no source rect to morph from).
+  const morphingId = useLastTappedPostId();
+  const isMorphTile = morphingId === post.id;
 
   function handleTilePointerDown() {
     setTapped(true);
@@ -407,7 +410,7 @@ function MasonryTile({
               briefly disappeared. */}
           <motion.div
             layoutId={isMorphTile ? `flag-${post.id}` : undefined}
-            layout="position"
+            layout={isMorphTile ? "position" : false}
             transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
             style={{
               position: "absolute",
