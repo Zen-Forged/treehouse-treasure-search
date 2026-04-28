@@ -248,33 +248,36 @@ function FindTile({
                 no photograph
               </div>
             )}
-          </motion.div>
 
-          <button
-            onClick={handleUnsave}
-            aria-label="Remove flag"
-            style={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              width: 36,
-              height: 36,
-              borderRadius: "50%",
-              background: "rgba(232,221,199,0.78)",
-              backdropFilter: "blur(8px)",
-              WebkitBackdropFilter: "blur(8px)",
-              border: `0.5px solid rgba(42,26,10,0.12)`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 0,
-              cursor: "pointer",
-              WebkitTapHighlightColor: "transparent",
-              zIndex: 2,
-            }}
-          >
+            {/* Session 78 — unsave bubble moved INSIDE motion.div so it
+                travels with the photograph during the layoutId morph to
+                /find/[id]. Mirrors the feed tile pattern. */}
+            <button
+              onClick={handleUnsave}
+              aria-label="Remove flag"
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                background: "rgba(232,221,199,0.78)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                border: `0.5px solid rgba(42,26,10,0.12)`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 0,
+                cursor: "pointer",
+                WebkitTapHighlightColor: "transparent",
+                zIndex: 2,
+              }}
+            >
             <FlagGlyph size={17} strokeWidth={1.7} style={{ color: v1.green, fill: v1.green }} />
-          </button>
+            </button>
+          </motion.div>
         </div>
 
         <div style={{ padding: "9px 10px 11px", minHeight: 76 }}>

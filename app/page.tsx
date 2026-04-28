@@ -387,46 +387,45 @@ function MasonryTile({
                 pointerEvents: "none",
               }}
             />
-          </motion.div>
 
-          {/* Frosted paperCream save flag top-right — always visible, state-
-              independent bg, green-filled flag when saved. Session 61:
-              heart → flag per save-glyph-v1.html Variant B. The flag-on-pole
-              reads as a physical-place marker (booth, vendor location) rather
-              than a commerce-style favorite. Sibling of the motion.div so it
-              stays in the layout slot during a layoutId flight. */}
-          <button
-            onClick={handleHeartClick}
-            aria-label={isFollowed ? "Remove flag" : "Flag"}
-            style={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              width: 36,
-              height: 36,
-              borderRadius: "50%",
-              background: "rgba(232,221,199,0.78)",
-              backdropFilter: "blur(8px)",
-              WebkitBackdropFilter: "blur(8px)",
-              border: `0.5px solid rgba(42,26,10,0.12)`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 0,
-              cursor: "pointer",
-              WebkitTapHighlightColor: "transparent",
-              zIndex: 2,
-            }}
-          >
-            <FlagGlyph
-              size={17}
-              strokeWidth={1.7}
+            {/* Frosted paperCream save flag top-right — always visible, state-
+                independent bg, green-filled flag when saved. Session 61:
+                heart → flag per save-glyph-v1.html Variant B. Session 78 —
+                moved INSIDE the motion.div so it travels with the photograph
+                during the layoutId morph to /find/[id]. */}
+            <button
+              onClick={handleHeartClick}
+              aria-label={isFollowed ? "Remove flag" : "Flag"}
               style={{
-                color: isFollowed ? v1.green : v1.inkPrimary,
-                fill:  isFollowed ? v1.green : "none",
+                position: "absolute",
+                top: 8,
+                right: 8,
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                background: "rgba(232,221,199,0.78)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                border: `0.5px solid rgba(42,26,10,0.12)`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 0,
+                cursor: "pointer",
+                WebkitTapHighlightColor: "transparent",
+                zIndex: 2,
               }}
-            />
-          </button>
+            >
+              <FlagGlyph
+                size={17}
+                strokeWidth={1.7}
+                style={{
+                  color: isFollowed ? v1.green : v1.inkPrimary,
+                  fill:  isFollowed ? v1.green : "none",
+                }}
+              />
+            </button>
+          </motion.div>
         </div>
 
         {/* Relative timestamp — Variant D from feed-timestamp-v1.html mockup,

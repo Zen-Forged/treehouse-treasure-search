@@ -645,6 +645,22 @@ export default function FindDetailPage() {
             <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
           </IconBubble>
         }
+        right={
+          // Session 78 — share airplane lifted off the photograph onto the
+          // masthead, mirroring /shelf/[slug] + /my-shelf. Cross-page
+          // consistency: top-right airplane shares the current entity (find
+          // here, booth there). Gated on `post` so it doesn't flash during
+          // the cached-preview window before data loads.
+          post ? (
+            <IconBubble onClick={handleShare} ariaLabel="Share this find">
+              <Send
+                size={18}
+                strokeWidth={1.7}
+                style={{ color: copied ? "#1e4d2b" : v1.green }}
+              />
+            </IconBubble>
+          ) : null
+        }
       />
 
       {/* Photograph hero — escapes the loading gate so the
@@ -667,18 +683,30 @@ export default function FindDetailPage() {
             }}
           >
             {(post?.image_url || previewImageUrl) ? (
-              <motion.button
-                type="button"
+              // Session 78 — motion.div instead of motion.button so the
+              // flag/pencil bubble can live as a real <button> child without
+              // nested-button HTML. role="button" + tabIndex preserve the
+              // keyboard semantics of the prior <button>. The flag travels
+              // WITH the photograph during the layoutId morph because it's a
+              // descendant of this motion node — framer-motion applies the
+              // shared-element transform to this element and its children.
+              <motion.div
                 layoutId={`find-${id}`}
                 transition={{ duration: MOTION_SHARED_ELEMENT_FORWARD, ease: MOTION_SHARED_ELEMENT_EASE }}
                 onClick={() => { if (post) setLightboxOpen(true); }}
+                onKeyDown={(e) => {
+                  if (post && (e.key === "Enter" || e.key === " ")) {
+                    e.preventDefault();
+                    setLightboxOpen(true);
+                  }
+                }}
+                role="button"
+                tabIndex={post ? 0 : -1}
                 aria-label="View photo full screen"
                 style={{
-                  display: "block",
+                  position: "relative",
                   width: "100%",
                   height: "100%",
-                  padding: 0,
-                  margin: 0,
                   background: "transparent",
                   borderRadius: v1.imageRadius,
                   border: `1px solid ${v1.inkHairline}`,
@@ -703,7 +731,51 @@ export default function FindDetailPage() {
                       : TREEHOUSE_LENS_FILTER,
                   }}
                 />
-              </motion.button>
+
+                {/* Flag (or pencil for owner) — INSIDE the motion.div so it
+                    travels with the photograph during the shared-element
+                    morph. stopPropagation prevents the flag tap from also
+                    firing the lightbox open on the parent. */}
+                {post && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isMyPost) router.push(`/find/${post.id}/edit`);
+                      else handleToggleSave();
+                    }}
+                    aria-label={isMyPost ? "Edit this find" : (isSaved ? "Remove flag" : "Flag")}
+                    style={{
+                      position: "absolute",
+                      top: 12,
+                      right: 12,
+                      width: 38,
+                      height: 38,
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "rgba(232,221,199,0.78)",
+                      backdropFilter: "blur(8px)",
+                      WebkitBackdropFilter: "blur(8px)",
+                      border: `0.5px solid rgba(42,26,10,0.12)`,
+                      cursor: "pointer",
+                      padding: 0,
+                      WebkitTapHighlightColor: "transparent",
+                      zIndex: 2,
+                    }}
+                  >
+                    {isMyPost ? (
+                      <Pencil size={16} strokeWidth={1.8} style={{ color: v1.inkPrimary }} />
+                    ) : (
+                      <FlagGlyph
+                        size={17}
+                        strokeWidth={1.7}
+                        style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
+                      />
+                    )}
+                  </button>
+                )}
+              </motion.div>
             ) : (
               <div
                 style={{
@@ -726,56 +798,14 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Bubbles — post-loaded only. D11 fade-in 200→360ms. */}
-            {post && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.16, delay: 0.20, ease: EASE }}
-                style={{
-                  position: "absolute",
-                  top: 12,
-                  right: 12,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  zIndex: 2,
-                }}
-              >
-                {isMyPost ? (
-                  <IconBubble
-                    onClick={() => router.push(`/find/${post.id}/edit`)}
-                    ariaLabel="Edit this find"
-                    variant="frosted"
-                  >
-                    <Pencil size={16} strokeWidth={1.8} style={{ color: v1.inkPrimary }} />
-                  </IconBubble>
-                ) : (
-                  <IconBubble
-                    onClick={handleToggleSave}
-                    ariaLabel={isSaved ? "Remove flag" : "Flag"}
-                    active={isSaved}
-                    variant="frosted"
-                  >
-                    <FlagGlyph
-                      size={17}
-                      strokeWidth={1.7}
-                      style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
-                    />
-                  </IconBubble>
-                )}
-                <IconBubble onClick={handleShare} ariaLabel="Share" variant="frosted">
-                  <Send size={17} strokeWidth={1.6} style={{ color: copied ? "#1e4d2b" : v1.inkPrimary }} />
-                </IconBubble>
-              </motion.div>
-            )}
-
-            {/* Post-it — post-loaded only. D11 fade-in 200→360ms. */}
+            {/* Post-it — post-loaded only. Session 78 timing: fade in
+                concurrently with the photograph morph so the page feels
+                like one entrance, not two. */}
             {post && boothNumber && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.16, delay: 0.20, ease: EASE }}
+                transition={{ duration: MOTION_SHARED_ELEMENT_FORWARD, ease: MOTION_SHARED_ELEMENT_EASE }}
                 style={{
                   position: "absolute",
                   bottom: -14,
@@ -903,9 +933,10 @@ export default function FindDetailPage() {
 
       {/* Title + price — session 76 Frame B: centered, price 32px twin below
           (em-dash retired). docs/find-detail-title-center-design.md
-          Track D phase 5 D12 stagger — title delay 280ms. */}
+          Session 78 — delay 0 so title fades in WITH the photograph morph.
+          David's request: "feels like one transition, not two." */}
       <motion.div
-        variants={sectionVariants(0.28)}
+        variants={sectionVariants(0)}
         initial="hidden"
         animate="visible"
         style={{ padding: "0 22px", marginBottom: 20, textAlign: "center" }}
@@ -940,10 +971,11 @@ export default function FindDetailPage() {
         )}
       </motion.div>
 
-      {/* Quoted caption (v1.1 19px) — Track D phase 5 D12 stagger, delay 340ms. */}
+      {/* Quoted caption (v1.1 19px) — session 78: delay 0 so it arrives
+          with the photograph morph as one cohesive entrance. */}
       {post.caption && (
         <motion.div
-          variants={sectionVariants(0.34)}
+          variants={sectionVariants(0)}
           initial="hidden"
           animate="visible"
           style={{ padding: "0 30px", marginBottom: 30, textAlign: "center" }}
@@ -988,11 +1020,11 @@ export default function FindDetailPage() {
         </motion.div>
       )}
 
-      {/* Divider (v1.1j plain hairline, diamond retired) — Track D phase 5
-          D12 stagger, divider + cartographic share delay 400ms. */}
+      {/* Divider (v1.1j plain hairline, diamond retired) — session 78:
+          delay 0 alongside the rest of the entrance. */}
       {(vendorName || boothNumber) && (
         <motion.div
-          variants={sectionVariants(0.40)}
+          variants={sectionVariants(0)}
           initial="hidden"
           animate="visible"
           style={{
@@ -1008,10 +1040,10 @@ export default function FindDetailPage() {
           inkWash card with italic "Find this item at" eyebrow above. XGlyph
           spine retired since cartographic identity no longer earns its place
           on this page (no other page carries it either).
-          Track D phase 5 D12 stagger — cartographic shares 400ms with divider. */}
+          Session 78 — delay 0 alongside the rest of the entrance. */}
       {(vendorName || boothNumber) && (
         <motion.div
-          variants={sectionVariants(0.40)}
+          variants={sectionVariants(0)}
           initial="hidden"
           animate="visible"
           style={{
