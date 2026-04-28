@@ -261,13 +261,13 @@ function ShelfSection({
 
   if (!ready || items.length === 0) return null;
 
-  // Session 79 R1 — entrance animation dropped. The 0.22s delay re-fired on
-  // every /find/[id] mount and arrived AFTER the photograph morph + delay-0
-  // title/caption/divider/cartographic group, producing the "disjointed"
-  // arrival David flagged in iPhone QA. ShelfCards within now render at full
-  // opacity from frame 1; only the tapped tile's photograph morphs cross-route.
   return (
-    <div style={{ marginBottom: 32 }}>
+    <motion.div
+      variants={sectionVariants(0.22)}
+      initial="hidden"
+      animate="visible"
+      style={{ marginBottom: 32 }}
+    >
       <div
         style={{
           paddingLeft: 22,
@@ -309,7 +309,7 @@ function ShelfSection({
         ))}
         <div style={{ flexShrink: 0, width: 10 }} />
       </div>
-    </div>
+    </motion.div>
   );
 }
 
