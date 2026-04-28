@@ -759,30 +759,13 @@ export default function DiscoveryFeedPage() {
   }, [posts]);
 
   return (
-    <>
-      {/* Paper texture overlay — fixed to viewport, sits behind all content.
-          Home-only PoC of the postcard/paper visual language (session 83). */}
-      <div
-        aria-hidden
-        style={{
-          position: "fixed",
-          inset: 0,
-          backgroundImage: "url('/paper.png')",
-          backgroundSize: "cover",
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "center",
-          pointerEvents: "none",
-          zIndex: 0,
-          opacity: 0.5,
-        }}
-      />
     <div
       style={{
         minHeight: "100vh",
+        background: v1.paperCream,
         maxWidth: 430,
         margin: "0 auto",
         position: "relative",
-        zIndex: 1,
       }}
     >
       {/* ── 1. Masthead — session-70 locked-grid slot API ───────────────── */}
@@ -948,6 +931,5 @@ export default function DiscoveryFeedPage() {
         }
       `}</style>
     </div>
-    </>
   );
 }
