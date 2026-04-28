@@ -1091,7 +1091,7 @@ export default function FindDetailPage() {
               const cardInner = (
                 <div
                   style={{
-                    background: v1.inkWash,
+                    background: v1.postit,
                     border: `1px solid ${v1.inkHairline}`,
                     borderRadius: 10,
                     padding: "12px 14px",
