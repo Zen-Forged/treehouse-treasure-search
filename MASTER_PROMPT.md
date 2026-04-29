@@ -313,11 +313,17 @@ Safari / iPhone:
   - safeStorage: localStorage → sessionStorage → in-memory fallback
 
 Supabase:
-  - RLS disabled on all tables (malls, vendors, posts)
+  - RLS enabled on every public table (session 84). malls/vendors/posts have
+    explicit policies; vendor_requests is service-role-only; site_settings
+    has a public-read policy; events has zero policies (default-deny except
+    service-role). Audit via: npx tsx scripts/security-audit/inspect-rls.ts
+  - Service-role bypasses RLS — server routes use it via getServiceClient()
+    in lib/adminAuth.ts. Anon supabase-js writes are gated by RLS.
   - Unique constraint: vendors_mall_booth_unique on (mall_id, booth_number)
   - 23505 = duplicate key error → createVendor recovers by fetching existing row
-  - Storage bucket: post-images (public)
+  - Storage buckets: post-images (public, find images), site-assets (public, banners)
   - Placeholder URL used at build time to avoid prerender crash
+  - Security audit runbook: docs/security-audit-runbook.md
 
 Vercel:
   - Project scope: david-6613s-projects (NOT zen-forged)
