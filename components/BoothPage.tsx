@@ -807,7 +807,7 @@ function WindowTile({ post, index }: { post: Post; index: number }) {
               </div>
             )}
           </div>
-          <div style={{ padding: "9px 3px 11px", minHeight: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
+          <div style={{ padding: "9px 3px 4px", height: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
             <div
               style={{
                 fontFamily: FONT_LORA,
@@ -958,7 +958,7 @@ function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirs
               </div>
             )}
           </div>
-          <div style={{ padding: "9px 3px 11px", minHeight: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
+          <div style={{ padding: "9px 3px 4px", height: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
             <div
               style={{
                 fontFamily: FONT_LORA,
