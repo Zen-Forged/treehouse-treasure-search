@@ -350,12 +350,14 @@ function BoothSection({
   saved,
   onToggleBookmark,
   onUnsave,
+  skipEntrance,
 }: {
   group: BoothGroup;
   scopeIsAllMalls: boolean;
   saved: boolean;
   onToggleBookmark: (vendorId: string) => void;
   onUnsave: (id: string) => void;
+  skipEntrance: boolean;
 }) {
   const useScroll = group.posts.length >= 3;
   const savedLabel = `${group.posts.length} flagged find${group.posts.length === 1 ? "" : "s"}`;
@@ -383,7 +385,7 @@ function BoothSection({
 
   return (
     <motion.section
-      initial={{ opacity: 0, y: 10 }}
+      initial={skipEntrance ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -4, transition: { duration: 0.18 } }}
       transition={{ duration: 0.32, ease: EASE }}
@@ -509,6 +511,22 @@ export default function FindMapPage() {
 
   const pendingScrollY = useRef<number | null>(null);
   const scrollRestored = useRef(false);
+
+  // Session 88 — skip-entrance-on-revisit gate. Page-level entrance animations
+  // (MallScopeHeader / FeaturedBanner / divider / filter-empty banner) replay
+  // on every back-nav from /find/[id], which David flagged as recurring
+  // visual noise. Read sessionStorage synchronously in the initializer so the
+  // first-render decision is correct (no flicker between mount and effect).
+  // Set the flag once on mount; subsequent in-session mounts skip the entrance.
+  // Per-tab via sessionStorage — tab/PWA close resets, so cold start always
+  // animates and in-session navigations don't.
+  const [skipEntrance] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try { return sessionStorage.getItem("treehouse_flagged_seen_entrance") === "1"; } catch { return false; }
+  });
+  useEffect(() => {
+    try { sessionStorage.setItem("treehouse_flagged_seen_entrance", "1"); } catch {}
+  }, []);
 
   function syncCount() { setBookmarkCount(loadBookmarkCount()); }
   function syncBoothBookmarks() { setBookmarkedBoothIds(loadBookmarkedBoothIds()); }
@@ -719,7 +737,7 @@ export default function FindMapPage() {
           the EmptyState's own copy carries the page identity. */}
       {!loading && posts.length > 0 && (
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={skipEntrance ? false : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.34, delay: 0.04, ease: EASE }}
         >
@@ -740,7 +758,7 @@ export default function FindMapPage() {
           session 68 — page identity now comes from MallScopeHeader (when there
           are saves) or from EmptyState's own copy (when there are none). */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={skipEntrance ? false : { opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.34, delay: 0.08, ease: EASE }}
       >
@@ -755,7 +773,7 @@ export default function FindMapPage() {
       {/* 5. Hairline divider (v1.1j — diamond retired) */}
       {!loading && groups.length > 0 && (
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={skipEntrance ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.34, delay: 0.16, ease: EASE }}
           style={{ padding: "14px 44px 18px" }}
@@ -845,6 +863,7 @@ export default function FindMapPage() {
                 saved={!!group.vendorId && bookmarkedBoothIds.has(group.vendorId)}
                 onToggleBookmark={handleToggleBoothBookmark}
                 onUnsave={handleUnsave}
+                skipEntrance={skipEntrance}
               />
             ))}
           </AnimatePresence>

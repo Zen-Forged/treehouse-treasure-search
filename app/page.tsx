@@ -601,6 +601,25 @@ export default function DiscoveryFeedPage() {
   // from frame 1 on every visit (cold start, back-nav, foreground).
   const skipTileEntrance = true;
 
+  // Session 88 — skip-entrance-on-revisit gate for the section-level entrance
+  // animations (FeedHero / FeaturedBanner / divider). David's iPhone QA
+  // surfaced the recurring pain of the staggered entrance replaying on every
+  // back-nav from /find/[id]. The animation is appropriate on cold-start;
+  // on subsequent visits within the same session, it reads as flicker.
+  // Pattern: read sessionStorage flag synchronously in the useState
+  // initializer so first-render skip decision is correct (no flicker between
+  // mount and effect-flag-check). Set the flag once on mount; subsequent
+  // mounts in the same session see the flag and skip. Flag is per-tab via
+  // sessionStorage, so closing the tab/PWA resets — first launch always
+  // animates, in-session navigations skip.
+  const [skipEntrance] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try { return sessionStorage.getItem("treehouse_home_seen_entrance") === "1"; } catch { return false; }
+  });
+  useEffect(() => {
+    try { sessionStorage.setItem("treehouse_home_seen_entrance", "1"); } catch {}
+  }, []);
+
   // ── Bookmarks ────────────────────────────────────────────────────────────────
   function syncBookmarks() {
     const ids = loadFollowedIds();
@@ -827,7 +846,7 @@ export default function DiscoveryFeedPage() {
           FeaturedBanner per session-68 QA so the persisted mall filter is
           the first thing the eye lands on after the masthead. */}
       <motion.div
-        initial={{ opacity: 0, y: 8 }}
+        initial={skipEntrance ? false : { opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.34, delay: 0.04, ease: EASE }}
       >
@@ -840,7 +859,7 @@ export default function DiscoveryFeedPage() {
       {/* ── 2. FeaturedBanner (eyebrow variant) — admin-editable. Only
              renders when an image URL is set; otherwise collapses quietly. */}
       <motion.div
-        initial={{ opacity: 0, y: 8 }}
+        initial={skipEntrance ? false : { opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.34, delay: 0.06, ease: EASE }}
       >
@@ -854,7 +873,7 @@ export default function DiscoveryFeedPage() {
 
       {/* ── 3. Diamond divider ─────────────────────────────────────────── */}
       <motion.div
-        initial={{ opacity: 0 }}
+        initial={skipEntrance ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.34, delay: 0.12, ease: EASE }}
         style={{
