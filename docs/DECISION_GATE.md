@@ -329,6 +329,53 @@ TS downlevelIteration            This project's tsconfig `target` is pre-ES2015 
                                    in `/api/share-booth/route.ts`). One-line fix: replace
                                    `for (const [k, ts] of recentSends)` with
                                    `recentSends.forEach((ts, k) => ...)`. Added session 39.
+Lora lineHeight 1.4 minimum     Lora's descenders ('g', 'y', 'p', 'q') extend ~5px below
+when clipped + ≤14px            baseline. At ≤14px text + lineHeight 1.2 + overflow:hidden
+                                   + WebkitLineClamp, descenders clip on the bottom line —
+                                   visually the bottom of the text reads as if a thin slice
+                                   has been cut off. The minimum safe lineHeight for clipped
+                                   Lora at ≤14px is 1.4. The rule fires anywhere we use Lora
+                                   under those three conditions simultaneously: the line-clamp
+                                   primitive, fixed-height tile metadata blocks, sheet/card
+                                   labels with character limits. Without the rule, the bug
+                                   surfaces only on real content with descender-heavy strings
+                                   (vendor names containing 'g'/'y'/'p', tile titles with
+                                   "shopping"/"vintage"/"copper"/etc.) and is invisible against
+                                   synthetic seed data. 2 firings: session 82 (vendor names in
+                                   BoothLockupCard primitive + /find/[id] inline cartographic
+                                   card — fixed in `a045058`) and session 83 (tile titles
+                                   across FindTile + WindowTile + ShelfTile + ShelfCard —
+                                   fixed during the Polaroid evolved tile pattern rollout).
+                                   When extending Lora to a new surface that meets all three
+                                   conditions, set `lineHeight: 1.4` from the start; do not
+                                   wait for QA to surface the clipping. Added session 88.
+Vercel-runtime PostgREST        Local-vs-Vercel divergence on identical Supabase config (URL
+divergence on identical          + anon key + code + query) is a recurring bug class. Two
+Supabase queries                 distinct shapes have fired:
+                                   (1) Session 58: `.eq()` returned 0 rows on Vercel runtime
+                                   while `.or()` returned the correct rows; workaround was
+                                   always-`.or()` for the affected route.
+                                   (2) Session 60: identical `.order().limit(50)` returned a
+                                   stale snapshot frozen ~25 minutes behind real DB state,
+                                   intermittently, even after a fresh Vercel deploy. Fresh-
+                                   deploy is NOT a reliable workaround; session 60 disproved
+                                   session 59's stuck-instance theory. The actual cause was
+                                   later traced (session 73) to Next.js HTTP-level data
+                                   caching intercepting `@supabase/supabase-js`'s internal
+                                   `fetch()` calls — see TR-q `force-dynamic does NOT
+                                   propagate cache: "no-store"` in the queue. The two rules
+                                   compound: subtle deviations between local and Vercel
+                                   runtimes that identical-looking code reveals only under
+                                   specific conditions, where standard build/test/QA cycles
+                                   pass cleanly. When this fires next: write a tiny raw-
+                                   `fetch()` PostgREST endpoint that bypasses
+                                   `@supabase/supabase-js` entirely, render the diff inline
+                                   (per `feedback_side_by_side_probe_for_divergence.md`),
+                                   and isolate where the divergence lives — the supabase-js
+                                   client itself, the Next.js fetch cache, the Vercel
+                                   runtime's HTTP layer, or PostgREST. Do NOT assume it's
+                                   query syntax until the parallel probe proves so. Fired
+                                   sessions 58 + 60. Added session 88.
 ```
 
 ### Tech Rule promotion queue (pending a dedicated Tech Rule batch session)
