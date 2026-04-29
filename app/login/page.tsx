@@ -33,7 +33,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, ArrowLeft, Loader, Clipboard, CircleUser } from "lucide-react";
-import { sendMagicLink, getSession, onAuthChange, isAdmin } from "@/lib/auth";
+import { sendMagicLink, getSession, signOut, onAuthChange, isAdmin } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import type { User } from "@supabase/supabase-js";
@@ -114,6 +114,14 @@ function LoginInner() {
   const [busy,   setBusy]   = useState(false);
   const [error,  setError]  = useState<string | null>(null);
   const [sentTo, setSentTo] = useState("");
+  // Session 90 — sign-out affordance for users already logged in. The
+  // BottomNav Sign In tab routes here in every state; authed users see
+  // the standard form plus a "sign out" italic link below the first-time
+  // helper. Auto-redirect now only fires when a `redirect`/`next` query
+  // param is present (approval email, deep-link, etc.) — bare /login
+  // visits stay put so the sign-out is reachable.
+  const [authedUser, setAuthedUser] = useState<User | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
 
   // OTP state
   const [code,          setCode]          = useState("");
@@ -168,12 +176,27 @@ function LoginInner() {
       return () => clearInterval(interval);
     }
 
-    // Already logged in — honor redirect if present; admins to /, vendors to /my-shelf
-    getSession().then(s => { if (s?.user) router.replace(pickDest(s.user)); });
+    // Session 90 — only auto-redirect already-signed-in users when an
+    // explicit destination was passed (approval-email tap, deep-link).
+    // A bare /login visit (BottomNav tap) hydrates the user into local
+    // state so the sign-out affordance can render below the form.
+    const explicitRedirect = searchParams.get("redirect") ?? searchParams.get("next");
+    getSession().then(s => {
+      if (!s?.user) return;
+      if (explicitRedirect) router.replace(pickDest(s.user));
+      else setAuthedUser(s.user);
+    });
 
-    // Supabase auth state change (same-tab magic link flow)
+    // Supabase auth state change. Only redirect when an explicit destination
+    // is set; otherwise hydrate local state so the sign-out affordance
+    // tracks the live session.
     const unsub = onAuthChange(user => {
-      if (user) router.replace(pickDest(user));
+      if (user) {
+        if (explicitRedirect) router.replace(pickDest(user));
+        else setAuthedUser(user);
+      } else {
+        setAuthedUser(null);
+      }
     });
 
     // BroadcastChannel — detect auth from another tab
@@ -292,6 +315,17 @@ function LoginInner() {
       bc.close();
     } catch {}
     router.replace(pickDest(verifyData?.user ?? null));
+  }
+
+  // Sign out — moved off the masthead onto this page (session 90). Visible
+  // only when `authedUser` is hydrated; clears Supabase session + local
+  // state so the form returns to its standard guest shape.
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    try { await signOut(); } catch {}
+    setAuthedUser(null);
+    setSigningOut(false);
   }
 
   // Resend code
@@ -470,6 +504,38 @@ function LoginInner() {
                 >
                   First time? An account is created automatically.
                 </p>
+
+                {/* Session 90 — sign-out affordance for users already signed
+                    in. Lives below the first-time helper per the directive
+                    ("display 'sign out' in italics under the last
+                    sentence"). Lora italic matches the page's other
+                    secondary-vocabulary links. */}
+                {authedUser && (
+                  <button
+                    onClick={handleSignOut}
+                    disabled={signingOut}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: signingOut ? "default" : "pointer",
+                      fontFamily: FONT_LORA,
+                      fontStyle: "italic",
+                      fontSize: 14,
+                      color: v1.inkMuted,
+                      textDecoration: "underline",
+                      textDecorationStyle: "dotted",
+                      textDecorationColor: v1.inkFaint,
+                      textUnderlineOffset: 3,
+                      textAlign: "center",
+                      margin: "8px auto 0",
+                      display: "block",
+                      opacity: signingOut ? 0.5 : 1,
+                    }}
+                  >
+                    {signingOut ? "Signing out…" : "Sign out"}
+                  </button>
+                )}
               </motion.div>
             )}
 

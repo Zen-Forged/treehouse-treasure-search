@@ -1,25 +1,28 @@
 // components/BottomNav.tsx
 // Fixed bottom navigation.
 //
-// Tab layout (session 90 — Booths gated to admin-only; vendors lose it too):
-//   Guest:        Home · Saved                  (2 tabs)
-//   Vendor:       Home · Saved · My Booth       (3 tabs)
-//   Admin:        Home · Booths · Saved · Admin (4 tabs)
+// Tab layout (session 90 — Sign-in moved off the masthead into the BottomNav,
+// always present after Home regardless of auth state. Booths gated to
+// admin-only; vendors lose it too):
+//   Guest:        Home · Sign In · Saved                  (3 tabs)
+//   Vendor:       Home · Sign In · Saved · My Booth       (4 tabs)
+//   Admin:        Home · Sign In · Booths · Saved · Admin (5 tabs)
 //
-// Booths is the admin browsing/management surface — vendors discover other
-// booths via the feed → /shelf/[slug] like shoppers do. The dedicated Booths
-// nav stays admin-only.
+// The Sign In tab routes to /login in every state — guests see the OTP
+// flow, authed users see the same page with a "sign out" affordance under
+// the first-time helper line. Keeping the icon stable across states keeps
+// the nav anchor consistent regardless of session.
 
 "use client";
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, Store, LayoutGrid, Shield } from "lucide-react";
+import { Home, Store, LayoutGrid, Shield, CircleUser } from "lucide-react";
 import FlagGlyph from "./FlagGlyph";
 import { getSession, isAdmin } from "@/lib/auth";
 import type { User } from "@supabase/supabase-js";
 
-export type NavTab = "home" | "shelves" | "flagged" | "my-shelf" | "admin" | null;
+export type NavTab = "home" | "shelves" | "flagged" | "my-shelf" | "admin" | "login" | null;
 
 interface BottomNavProps {
   active?: NavTab;
@@ -60,6 +63,10 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     key: "home", label: "Home", href: "/",
     icon: <Home size={21} strokeWidth={2.0} />,
   };
+  const loginTab: TabDef = {
+    key: "login", label: "Sign In", href: "/login",
+    icon: <CircleUser size={21} strokeWidth={1.8} />,
+  };
   const findsTab: TabDef = {
     key: "flagged", label: "Saved", href: "/flagged",
     icon: <FlagGlyph size={21} strokeWidth={2.0} />, badge: true,
@@ -77,18 +84,17 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     icon: <Shield size={21} strokeWidth={2.0} />,
   };
 
-  // Session 90 — Booths gated to admin-only. Vendors lose the dedicated
-  // entry; they discover other booths via the feed → /shelf/[slug] like
-  // shoppers do.
-  // Guest:  Home · Saved
-  // Vendor: Home · Saved · My Booth
-  // Admin:  Home · Booths · Saved · Admin
+  // Session 90 — Sign In sits second-position after Home in every state.
+  // Booths is admin-only; vendors discover via the feed → /shelf/[slug].
+  // Guest:  Home · Sign In · Saved
+  // Vendor: Home · Sign In · Saved · My Booth
+  // Admin:  Home · Sign In · Booths · Saved · Admin
   const userIsAdmin = !!user && isAdmin(user);
   const tabs: TabDef[] = !user
-    ? [homeTab, findsTab]
+    ? [homeTab, loginTab, findsTab]
     : userIsAdmin
-      ? [homeTab, boothsTab, findsTab, adminTab]
-      : [homeTab, findsTab, myBoothTab];
+      ? [homeTab, loginTab, boothsTab, findsTab, adminTab]
+      : [homeTab, loginTab, findsTab, myBoothTab];
 
   const navStyle: React.CSSProperties = {
     position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",

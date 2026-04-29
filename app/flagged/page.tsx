@@ -38,10 +38,9 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CircleUser } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
-import { getSession, signOut, onAuthChange } from "@/lib/auth";
 import { BOOKMARK_PREFIX, loadBookmarkCount, loadBookmarkedBoothIds, boothBookmarkKey } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import {
@@ -468,10 +467,6 @@ export default function FindMapPage() {
   const [bannerImageUrl,     setBannerImageUrl]     = useState<string | null>(null);
   const [savedMallId,        setSavedMallId]        = useSavedMallId();
   const [mallSheetOpen,      setMallSheetOpen]      = useState(false);
-  // Session 89 (iPhone QA #2) — auth state for the masthead right slot.
-  // Mirrors Home's pattern at app/page.tsx:569 + 674-675.
-  const [isAuthed,           setIsAuthed]           = useState<boolean | null>(null);
-
   const pendingScrollY = useRef<number | null>(null);
   const scrollRestored = useRef(false);
 
@@ -507,20 +502,6 @@ export default function FindMapPage() {
   }, []);
 
   useEffect(() => { syncCount(); syncBoothBookmarks(); loadPosts(); }, []);
-
-  // Session 89 (iPhone QA #2) — auth state hydration. Mirrors Home so the
-  // masthead right slot can show CircleUser sign-in (guest) or "Sign out"
-  // (vendor/admin) consistent with the app's other primary tabs.
-  useEffect(() => {
-    getSession().then((s) => setIsAuthed(!!s?.user));
-    const unsub = onAuthChange((user) => setIsAuthed(!!user));
-    return () => unsub();
-  }, []);
-
-  async function handleSignOut() {
-    await signOut();
-    setIsAuthed(false);
-  }
 
   // R3 — page_viewed analytics event. saved_count is captured at view time
   // (not later) so the payload reflects the user's saved-items state on the
@@ -688,43 +669,6 @@ export default function FindMapPage() {
           >
             <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
           </button>
-        }
-        right={
-          isAuthed === false ? (
-            <Link
-              href="/login"
-              aria-label="Sign in"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 44,
-                height: 44,
-                color: v1.inkMuted,
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <CircleUser size={22} strokeWidth={1.4} />
-            </Link>
-          ) : isAuthed === true ? (
-            <button
-              onClick={handleSignOut}
-              style={{
-                fontFamily: FONT_SYS,
-                fontSize: 13,
-                fontWeight: 500,
-                color: v1.inkMuted,
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-                WebkitTapHighlightColor: "transparent",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Sign out
-            </button>
-          ) : null
         }
       />
 

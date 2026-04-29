@@ -40,10 +40,8 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
-import { CircleUser } from "lucide-react";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getFeedPosts, getActiveMalls } from "@/lib/posts";
-import { getSession, signOut, onAuthChange } from "@/lib/auth";
 import {
   v1,
   FONT_LORA,
@@ -566,7 +564,6 @@ export default function DiscoveryFeedPage() {
   const [mallSheetOpen,     setMallSheetOpen]     = useState(false);
   const [followedIds,       setFollowedIds]       = useState<Set<string>>(new Set());
   const [bookmarkCount,     setBookmarkCount]     = useState(0);
-  const [isAuthed,          setIsAuthed]          = useState<boolean | null>(null);
   const [lastViewedId,      setLastViewedId]      = useState<string | null>(null);
   const [featuredImageUrl,  setFeaturedImageUrl]  = useState<string | null>(null);
   const wasHidden        = useRef(false);
@@ -669,13 +666,6 @@ export default function DiscoveryFeedPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Auth ────────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    getSession().then((s) => setIsAuthed(!!s?.user));
-    const unsub = onAuthChange((user) => setIsAuthed(!!user));
-    return unsub;
-  }, []);
-
   // ── Visibility change: reload feed + sync bookmarks when tab comes back ──
   useEffect(() => {
     function onVisibilityChange() {
@@ -731,11 +721,6 @@ export default function DiscoveryFeedPage() {
     });
   }
 
-  async function handleSignOut() {
-    await signOut();
-    setIsAuthed(false);
-  }
-
   // ── Derived ─────────────────────────────────────────────────────────────────
   const filtered = posts.filter((p) => !mallId || p.mall_id === mallId);
   const selectedMall = malls.find((m) => m.id === mallId) ?? null;
@@ -761,45 +746,11 @@ export default function DiscoveryFeedPage() {
       }}
     >
       {/* ── 1. Masthead — session-70 locked-grid slot API ───────────────── */}
-      <StickyMasthead
-        right={
-          isAuthed === false ? (
-            <Link
-              href="/login"
-              aria-label="Sign in"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 44,
-                height: 44,
-                color: v1.inkMuted,
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <CircleUser size={22} strokeWidth={1.4} />
-            </Link>
-          ) : isAuthed === true ? (
-            <button
-              onClick={handleSignOut}
-              style={{
-                fontFamily: FONT_SYS,
-                fontSize: 13,
-                fontWeight: 500,
-                color: v1.inkMuted,
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-                WebkitTapHighlightColor: "transparent",
-                whiteSpace: "nowrap",
-              }}
-            >
-              Sign out
-            </button>
-          ) : null
-        }
-      />
+      {/* Session 90 — sign-in/sign-out moved off the masthead onto the
+          BottomNav (sign-in tab) and /login (sign-out affordance). The
+          right slot is now empty here; the StickyMasthead's default share
+          treatment fills it. */}
+      <StickyMasthead />
 
       {/* 1.5 Mall scope header (FeedHero wrapper) — moved above the
           FeaturedBanner per session-68 QA so the persisted mall filter is
