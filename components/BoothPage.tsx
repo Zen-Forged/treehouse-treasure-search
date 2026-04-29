@@ -807,13 +807,14 @@ function WindowTile({ post, index }: { post: Post; index: number }) {
               </div>
             )}
           </div>
-          <div style={{ padding: "9px 3px 11px", minHeight: 76 }}>
+          <div style={{ padding: "9px 3px 11px", minHeight: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
             <div
               style={{
                 fontFamily: FONT_LORA,
                 fontSize: 14,
                 color: v1.inkPrimary,
-                lineHeight: 1.2,
+                lineHeight: 1.4,
+                width: "100%",
                 overflow: "hidden",
                 display: "-webkit-box",
                 WebkitLineClamp: 2,
@@ -825,11 +826,11 @@ function WindowTile({ post, index }: { post: Post; index: number }) {
             {hasPrice && (
               <div
                 style={{
-                  fontFamily: FONT_SYS,
-                  fontSize: 12,
+                  fontFamily: FONT_LORA,
+                  fontSize: 14,
                   color: v1.priceInk,
                   lineHeight: 1.4,
-                  marginTop: 3,
+                  marginTop: 4,
                   letterSpacing: "-0.005em",
                 }}
               >
@@ -957,13 +958,14 @@ function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirs
               </div>
             )}
           </div>
-          <div style={{ padding: "9px 3px 11px", minHeight: 76 }}>
+          <div style={{ padding: "9px 3px 11px", minHeight: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
             <div
               style={{
                 fontFamily: FONT_LORA,
                 fontSize: 14,
                 color: v1.inkPrimary,
-                lineHeight: 1.2,
+                lineHeight: 1.4,
+                width: "100%",
                 overflow: "hidden",
                 display: "-webkit-box",
                 WebkitLineClamp: 2,
@@ -975,11 +977,11 @@ function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirs
             {hasPrice && (
               <div
                 style={{
-                  fontFamily: FONT_SYS,
-                  fontSize: 12,
+                  fontFamily: FONT_LORA,
+                  fontSize: 14,
                   color: v1.priceInk,
                   lineHeight: 1.4,
-                  marginTop: 3,
+                  marginTop: 4,
                   letterSpacing: "-0.005em",
                 }}
               >

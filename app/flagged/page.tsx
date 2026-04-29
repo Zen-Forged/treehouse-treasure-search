@@ -293,13 +293,14 @@ function FindTile({
           </motion.div>
         </div>
 
-        <div style={{ padding: "9px 3px 11px", minHeight: 76 }}>
+        <div style={{ padding: "9px 3px 11px", minHeight: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
           <div
             style={{
               fontFamily: FONT_LORA,
               fontSize: 14,
               color: v1.inkPrimary,
-              lineHeight: 1.2,
+              lineHeight: 1.4,
+              width: "100%",
               overflow: "hidden",
               textOverflow: "ellipsis",
               display: "-webkit-box",
@@ -313,9 +314,9 @@ function FindTile({
           {typeof post.price_asking === "number" && post.price_asking > 0 && (
             <div
               style={{
-                marginTop: 3,
-                fontFamily: FONT_SYS,
-                fontSize: 12,
+                marginTop: 4,
+                fontFamily: FONT_LORA,
+                fontSize: 14,
                 color: v1.priceInk,
                 lineHeight: 1.4,
                 letterSpacing: "-0.005em",
