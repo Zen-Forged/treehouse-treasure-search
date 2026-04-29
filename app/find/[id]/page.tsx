@@ -230,6 +230,18 @@ const findStripScrollKey = (postId: string) => `treehouse_find_strip_scroll_x:${
 // when the new id mounts.
 let findScrollWriteBlocked = false;
 
+// Module-scope back-navigation detection. popstate fires for both browser
+// back AND forward button presses; both should restore from saved scroll.
+// Direct nav via router.push (Link tap) does NOT fire popstate, so the flag
+// stays false → fresh forward navigation lands at the top of the page even
+// when revisiting a previously-scrolled find. Per David: "when a new find
+// is selected it should default to opening like a new page, even if that
+// item was selected before and scrolled through."
+let isBackForwardNav = false;
+if (typeof window !== "undefined") {
+  window.addEventListener("popstate", () => { isBackForwardNav = true; });
+}
+
 function ShelfSection({
   vendorId,
   currentPostId,
@@ -252,10 +264,13 @@ function ShelfSection({
   const stripRestored = useRef(false);
 
   // Read saved horizontal scroll position before items load so it's ready
-  // to restore the moment the strip renders.
+  // to restore the moment the strip renders. Only restore on browser
+  // back/forward (popstate fired); forward Link-tap opens the find as a
+  // new page with the strip at scroll-left 0.
   useEffect(() => {
     stripRestored.current = false;
     stripPendingX.current = null;
+    if (!isBackForwardNav) return;
     try {
       const saved = sessionStorage.getItem(findStripScrollKey(currentPostId));
       if (saved) {
@@ -617,30 +632,36 @@ export default function FindDetailPage() {
   }, []);
 
   // Save scrollY on every scroll event so back-nav lands exactly where the
-  // user tapped a "More from this booth" thumb. Three guards in play:
+  // user tapped a "More from this booth" thumb. Branch on isBackForwardNav:
+  //   - Back/forward via browser history (popstate fired) → restore from
+  //     saved value if present.
+  //   - Forward via Link tap (no popstate) → always scrollTo(0, 0). David:
+  //     "when a new find is selected it should default to opening like a
+  //     new page, even if that item was selected before and scrolled
+  //     through."
+  // Three write guards stay in place:
   //   - findScrollWriteBlocked (module scope) — set by the strip's capture-
   //     phase click before the Link processes; prevents the auto-clamp
   //     scroll event during render-commit from clobbering A's saved value.
   //   - Refuse-to-write-0 — empty storage already restores to 0 by default.
-  //   - Reset on [id] change — peer-nav restoration starts fresh for the
-  //     new find; if no saved scroll exists for this id, explicit scrollTo
-  //     to top because Next.js doesn't reliably scroll-to-top on same-route
-  //     param changes (window.scrollY persists from the previous /find/[id]).
+  //   - Reset on [id] change.
   useEffect(() => {
     if (!id) return;
     scrollRestored.current = false;
     pendingScrollY.current = null;
     findScrollWriteBlocked = false;
-    let savedY: number | null = null;
-    try {
-      const raw = sessionStorage.getItem(findScrollKey(id));
-      if (raw) {
-        const y = parseInt(raw, 10);
-        if (!isNaN(y) && y > 0) savedY = y;
-      }
-    } catch {}
-    if (savedY !== null) {
-      pendingScrollY.current = savedY;
+    const wasBackForward = isBackForwardNav;
+    isBackForwardNav = false;
+    if (wasBackForward) {
+      let savedY: number | null = null;
+      try {
+        const raw = sessionStorage.getItem(findScrollKey(id));
+        if (raw) {
+          const y = parseInt(raw, 10);
+          if (!isNaN(y) && y > 0) savedY = y;
+        }
+      } catch {}
+      if (savedY !== null) pendingScrollY.current = savedY;
     } else {
       requestAnimationFrame(() => window.scrollTo(0, 0));
     }
