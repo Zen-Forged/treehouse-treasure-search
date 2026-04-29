@@ -38,9 +38,10 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CircleUser } from "lucide-react";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
+import { getSession, signOut, onAuthChange } from "@/lib/auth";
 import { BOOKMARK_PREFIX, loadBookmarkCount, loadBookmarkedBoothIds, boothBookmarkKey } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import {
@@ -343,8 +344,12 @@ function BoothSection({
   onToggleBookmark: (vendorId: string) => void;
   onUnsave: (id: string) => void;
 }) {
-  const useScroll = group.posts.length >= 3;
-  const savedLabel = `${group.posts.length} flagged find${group.posts.length === 1 ? "" : "s"}`;
+  // Session 89 (iPhone QA #5) — useScroll branch retired. The horizontal
+  // scroll mode read as broken padding-on-the-right rather than a peek-in
+  // carousel, and pushed first-card flush to screen edge. Grid is the
+  // canonical layout now; 3-col matches /my-shelf WindowView so finds
+  // visually pair across the booth-page family.
+  const savedLabel = `${group.posts.length} saved find${group.posts.length === 1 ? "" : "s"}`;
 
   // Session 82 — section header now uses shared BoothLockupCard primitive
   // (matches /shelves rows + /find/[id] cartographic card). Adds booth-bookmark
@@ -397,37 +402,17 @@ function BoothSection({
         {savedLabel}
       </div>
 
-      {useScroll ? (
-        <div
-          className="hide-scrollbar"
-          style={{
-            display: "flex",
-            gap: 10,
-            overflowX: "auto",
-            overflowY: "hidden",
-            paddingBottom: 4,
-            scrollSnapType: "x mandatory",
-            WebkitOverflowScrolling: "touch",
-          }}
-        >
-          {group.posts.map((post) => (
-            <FindTile key={post.id} post={post} onUnsave={onUnsave} widthMode="scroll" />
-          ))}
-          <div style={{ flexShrink: 0, width: 10 }} />
-        </div>
-      ) : (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 10,
-          }}
-        >
-          {group.posts.map((post) => (
-            <FindTile key={post.id} post={post} onUnsave={onUnsave} widthMode="grid" />
-          ))}
-        </div>
-      )}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: 10,
+        }}
+      >
+        {group.posts.map((post) => (
+          <FindTile key={post.id} post={post} onUnsave={onUnsave} widthMode="grid" />
+        ))}
+      </div>
     </section>
   );
 }
@@ -453,7 +438,7 @@ function EmptyState() {
           marginBottom: 12,
         }}
       >
-        No finds flagged yet
+        No finds saved yet
       </div>
       <div
         style={{
@@ -465,7 +450,7 @@ function EmptyState() {
           maxWidth: 280,
         }}
       >
-        Tap the flag on any find to add it to your find map.
+        Tap the leaf on any find to save it here.
       </div>
     </div>
   );
@@ -483,6 +468,9 @@ export default function FindMapPage() {
   const [bannerImageUrl,     setBannerImageUrl]     = useState<string | null>(null);
   const [savedMallId,        setSavedMallId]        = useSavedMallId();
   const [mallSheetOpen,      setMallSheetOpen]      = useState(false);
+  // Session 89 (iPhone QA #2) — auth state for the masthead right slot.
+  // Mirrors Home's pattern at app/page.tsx:569 + 674-675.
+  const [isAuthed,           setIsAuthed]           = useState<boolean | null>(null);
 
   const pendingScrollY = useRef<number | null>(null);
   const scrollRestored = useRef(false);
@@ -519,6 +507,20 @@ export default function FindMapPage() {
   }, []);
 
   useEffect(() => { syncCount(); syncBoothBookmarks(); loadPosts(); }, []);
+
+  // Session 89 (iPhone QA #2) — auth state hydration. Mirrors Home so the
+  // masthead right slot can show CircleUser sign-in (guest) or "Sign out"
+  // (vendor/admin) consistent with the app's other primary tabs.
+  useEffect(() => {
+    getSession().then((s) => setIsAuthed(!!s?.user));
+    const unsub = onAuthChange((user) => setIsAuthed(!!user));
+    return () => unsub();
+  }, []);
+
+  async function handleSignOut() {
+    await signOut();
+    setIsAuthed(false);
+  }
 
   // R3 — page_viewed analytics event. saved_count is captured at view time
   // (not later) so the payload reflects the user's saved-items state on the
@@ -629,8 +631,8 @@ export default function FindMapPage() {
   // matching Home's pattern so the address is reachable from any primary tab.
   const findCount = filteredPosts.length;
   const findNoun = findCount === 1 ? "find" : "finds";
-  const scopeEyebrowAll = `flagged ${findNoun} across`;
-  const scopeEyebrowOne = `flagged ${findNoun} at`;
+  const scopeEyebrowAll = `saved ${findNoun} across`;
+  const scopeEyebrowOne = `saved ${findNoun} at`;
 
   const scopeGeoLine: MallScopeGeoLine =
     savedMallId && selectedMall
@@ -686,6 +688,43 @@ export default function FindMapPage() {
           >
             <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
           </button>
+        }
+        right={
+          isAuthed === false ? (
+            <Link
+              href="/login"
+              aria-label="Sign in"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 44,
+                height: 44,
+                color: v1.inkMuted,
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <CircleUser size={22} strokeWidth={1.4} />
+            </Link>
+          ) : isAuthed === true ? (
+            <button
+              onClick={handleSignOut}
+              style={{
+                fontFamily: FONT_SYS,
+                fontSize: 13,
+                fontWeight: 500,
+                color: v1.inkMuted,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                WebkitTapHighlightColor: "transparent",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Sign out
+            </button>
+          ) : null
         }
       />
 
@@ -760,7 +799,7 @@ export default function FindMapPage() {
                 lineHeight: 1.4,
               }}
             >
-              No flagged finds at <span style={{ color: v1.green }}>{selectedMall?.name ?? "this mall"}</span>.
+              No saved finds at <span style={{ color: v1.green }}>{selectedMall?.name ?? "this mall"}</span>.
             </div>
             <div
               style={{
@@ -771,7 +810,7 @@ export default function FindMapPage() {
                 lineHeight: 1.5,
               }}
             >
-              Flagged finds at other malls are hidden by the active filter.{" "}
+              Saved finds at other malls are hidden by the active filter.{" "}
               <button
                 onClick={() => setSavedMallId(null)}
                 style={{
