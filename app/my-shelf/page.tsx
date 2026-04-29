@@ -572,8 +572,24 @@ function MyBoothInner() {
     if (scrollRestored.current) return;
     if (pendingScrollY.current === null) return;
     scrollRestored.current = true;
-    const y = pendingScrollY.current;
-    requestAnimationFrame(() => { window.scrollTo({ top: y, behavior: "instant" }); });
+    const targetY = pendingScrollY.current;
+    // Retry scrollTo until the position sticks or budget runs out. /my-shelf
+    // has multiple async gates (authReady → vendorReady → posts hydrate →
+    // BoothHero image load → masonry commit), so the document height grows
+    // across several renders after this effect fires. A single rAF can fire
+    // while document.scrollHeight is still smaller than targetY, which makes
+    // window.scrollTo clamp to the (then-shorter) max and the user lands at
+    // the top of the BoothHero. We re-attempt until the position takes or
+    // we've spent ~500ms (10 × 50ms).
+    let attempts = 0;
+    function attempt() {
+      window.scrollTo({ top: targetY, behavior: "instant" });
+      attempts++;
+      if (attempts >= 10) return;
+      if (Math.abs(window.scrollY - targetY) <= 2) return;
+      setTimeout(attempt, 50);
+    }
+    requestAnimationFrame(attempt);
   }, [vendorReady, postsLoading]);
 
   // ── Picker selection ───────────────────────────────────────────────────
