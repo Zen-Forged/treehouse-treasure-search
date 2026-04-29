@@ -133,21 +133,14 @@ function readScrollY(): number | null {
   } catch {}
   return null;
 }
-// Session 86 — refuse to write 0. Inspector confirmed the bug:
-// `treehouse_my_shelf_scroll = 0` in both storages on the broken path,
-// which means a handler is firing with window.scrollY === 0 (most likely
-// Next.js App Router's scroll-to-top fires real scroll events during the
-// outbound navigation transition, and our scroll listener catches them).
-// 0 is a meaningless restore target — refuse it. The user's last
-// meaningful scroll position stays in storage.
-function writeScrollY(y: number, eventType?: string) {
+// Refuse to write 0. Next.js App Router's scroll-to-top transition fires
+// real scroll events on outbound navigation; without this filter our
+// scroll listener would clobber the user's actual scroll position with 0
+// just before unmount, breaking back-nav restore. 0 is meaningless as a
+// restore target anyway (empty storage already restores to 0 by default).
+function writeScrollY(y: number) {
   const rounded = Math.round(y);
-  if (rounded <= 0) {
-    if (eventType) {
-      console.warn(`[my-shelf] skipped zero-write from event=${eventType}`);
-    }
-    return;
-  }
+  if (rounded <= 0) return;
   const v = String(rounded);
   try { localStorage.setItem(MY_SHELF_SCROLL_KEY, v); } catch {}
   try { sessionStorage.setItem(MY_SHELF_SCROLL_KEY, v); } catch {}
@@ -388,22 +381,6 @@ function MyBoothInner() {
   const pendingScrollY = useRef<number | null>(null);
   const scrollRestored = useRef(false);
 
-  // Session 85 — TEMP scroll-restore diagnostic. Renders a tiny pill in
-  // the top-right under the masthead showing read state, retry attempts,
-  // doc height, and final landed scrollY. Remove once the regression on
-  // /my-shelf is closed.
-  const [diag, setDiag] = useState<{
-    saved: number | null;
-    target: number | null;
-    attempts: number;
-    maxScroll: number;
-    landedY: number;
-    bfcache: number;
-    popstate: number;
-    urlchange: number;
-    source: "none" | "ls" | "ss" | "both";
-    status: "init" | "waiting-vendor" | "waiting-posts" | "no-target" | "trying" | "landed" | "gave-up";
-  }>({ saved: null, target: null, attempts: 0, maxScroll: 0, landedY: 0, bfcache: 0, popstate: 0, urlchange: 0, source: "none", status: "init" });
   const [mall,          setMall]          = useState<Mall | null>(null);
   const [view,          setView]          = useState<BoothView>("window");
   const [heroImageUrl,  setHeroImageUrl]  = useState<string | null>(null);
@@ -655,34 +632,22 @@ function MyBoothInner() {
   useEffect(() => {
     const savedNum = readScrollY();
     if (savedNum !== null) pendingScrollY.current = savedNum;
-    let lsHit = false, ssHit = false;
-    try { lsHit = !!localStorage.getItem(MY_SHELF_SCROLL_KEY); } catch {}
-    try { ssHit = !!sessionStorage.getItem(MY_SHELF_SCROLL_KEY); } catch {}
-    const source = lsHit && ssHit ? "both" : lsHit ? "ls" : ssHit ? "ss" : "none";
-    setDiag(d => ({ ...d, saved: savedNum, target: savedNum, source }));
 
-    // Each listener passes its event type through to writeScrollY so any
-    // skipped zero-write logs the responsible event. Cleanup needs the
-    // exact same fn refs, so handlers are declared once each.
-    function onScroll()             { writeScrollY(window.scrollY, "scroll"); }
-    function onClick()              { writeScrollY(window.scrollY, "click"); }
-    function onTouchEnd()           { writeScrollY(window.scrollY, "touchend"); }
-    function onVisibilityChange()   { writeScrollY(window.scrollY, "visibilitychange"); }
-    function onPageHide()           { writeScrollY(window.scrollY, "pagehide"); }
+    function persistScroll() { writeScrollY(window.scrollY); }
     // Save on multiple deterministic moments — iPhone iOS Safari sometimes
     // de-prioritizes scroll events during transitions, and listener cleanup
     // can run before the final scroll event lands. Belt-and-suspenders.
-    window.addEventListener("scroll", onScroll, { passive: true });
-    document.addEventListener("click", onClick, true);
-    document.addEventListener("touchend", onTouchEnd, { passive: true });
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("scroll", persistScroll, { passive: true });
+    document.addEventListener("click", persistScroll, true);
+    document.addEventListener("touchend", persistScroll, { passive: true });
+    document.addEventListener("visibilitychange", persistScroll);
+    window.addEventListener("pagehide", persistScroll);
     return () => {
-      window.removeEventListener("scroll", onScroll);
-      document.removeEventListener("click", onClick, true);
-      document.removeEventListener("touchend", onTouchEnd);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.removeEventListener("pagehide", onPageHide);
+      window.removeEventListener("scroll", persistScroll);
+      document.removeEventListener("click", persistScroll, true);
+      document.removeEventListener("touchend", persistScroll);
+      document.removeEventListener("visibilitychange", persistScroll);
+      window.removeEventListener("pagehide", persistScroll);
     };
   }, []);
 
@@ -705,14 +670,11 @@ function MyBoothInner() {
         window.scrollTo({ top: targetY, behavior: "instant" });
         if (Math.abs(window.scrollY - targetY) <= 2) {
           scrollRestored.current = true;
-          setDiag(d => ({ ...d, attempts, maxScroll: maxScrollableY, landedY: window.scrollY, status: "landed" }));
           return;
         }
       }
-      setDiag(d => ({ ...d, attempts, maxScroll: maxScrollableY, landedY: window.scrollY }));
       if (attempts >= 60) {
         scrollRestored.current = true;
-        setDiag(d => ({ ...d, status: "gave-up" }));
         return;
       }
       setTimeout(attempt, 50);
@@ -722,16 +684,11 @@ function MyBoothInner() {
   }
 
   useLayoutEffect(() => {
-    if (!vendorReady) { setDiag(d => ({ ...d, status: "waiting-vendor" })); return; }
-    if (postsLoading) { setDiag(d => ({ ...d, status: "waiting-posts" })); return; }
+    if (!vendorReady) return;
+    if (postsLoading) return;
     if (scrollRestored.current) return;
-    if (pendingScrollY.current === null) {
-      setDiag(d => ({ ...d, status: "no-target" }));
-      return;
-    }
-    const targetY = pendingScrollY.current;
-    setDiag(d => ({ ...d, status: "trying", target: targetY }));
-    return runRestore(targetY);
+    if (pendingScrollY.current === null) return;
+    return runRestore(pendingScrollY.current);
   }, [vendorReady, postsLoading]);
 
   // Re-read storage and try restore. Reusable across mount, BFCache,
@@ -742,7 +699,6 @@ function MyBoothInner() {
     if (targetY === null) return;
     pendingScrollY.current = targetY;
     scrollRestored.current = false;
-    setDiag(d => ({ ...d, saved: targetY, target: targetY, status: "trying" }));
     runRestore(targetY);
   }
 
@@ -752,7 +708,6 @@ function MyBoothInner() {
   useEffect(() => {
     function onPageShow(e: PageTransitionEvent) {
       if (!e.persisted) return;
-      setDiag(d => ({ ...d, bfcache: d.bfcache + 1 }));
       rereadAndRestore();
     }
     window.addEventListener("pageshow", onPageShow);
@@ -761,13 +716,9 @@ function MyBoothInner() {
   }, []);
 
   // popstate handler — fires on browser back-nav even when Next.js App
-  // Router keeps the page in its router cache without unmounting. This is
-  // the most likely path for the "mixed results" pattern: when Next.js
-  // serves the cached /my-shelf instance, useEffect mount logic doesn't
-  // fire on the back-nav, but popstate does.
+  // Router keeps the page in its router cache without unmounting.
   useEffect(() => {
     function onPopState() {
-      setDiag(d => ({ ...d, popstate: d.popstate + 1 }));
       rereadAndRestore();
     }
     window.addEventListener("popstate", onPopState);
@@ -776,11 +727,8 @@ function MyBoothInner() {
   }, []);
 
   // URL-change handler — useSearchParams reactivity catches the
-  // back-to-/my-shelf transition even when nothing else does. The vendor
-  // param string changes on each round-trip URL parse even if the value
-  // is the same; this effect runs for every param-state delivery.
+  // back-to-/my-shelf transition even when nothing else does.
   useEffect(() => {
-    setDiag(d => ({ ...d, urlchange: d.urlchange + 1 }));
     rereadAndRestore();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -932,39 +880,6 @@ function MyBoothInner() {
         onBack={adminOverride ? () => router.back() : undefined}
       />
 
-      {/* Session 85 — scroll-restore diagnostic, gated behind ?debug=1 so
-          it stays available for the future debugging session that picks up
-          /my-shelf back-nav anchor (now a known carry-forward) without
-          showing in normal admin/vendor usage. Append &debug=1 to the URL
-          to surface the pill. */}
-      {searchParams.get("debug") === "1" && (
-        <div
-          style={{
-            position: "fixed",
-            top: 56,
-            right: 8,
-            zIndex: 9999,
-            background: "rgba(0,0,0,0.78)",
-            color: "#fff",
-            fontFamily: "ui-monospace, monospace",
-            fontSize: 9,
-            lineHeight: 1.3,
-            padding: "5px 7px",
-            borderRadius: 4,
-            maxWidth: 180,
-            pointerEvents: "none",
-          }}
-        >
-          <div>status: {diag.status}</div>
-          <div>saved: {diag.saved ?? "—"}</div>
-          <div>target: {diag.target ?? "—"}</div>
-          <div>attempts: {diag.attempts}</div>
-          <div>maxScroll: {diag.maxScroll}</div>
-          <div>landedY: {diag.landedY}</div>
-          <div>src: {diag.source}</div>
-          <div>bfc/pop/url: {diag.bfcache}/{diag.popstate}/{diag.urlchange}</div>
-        </div>
-      )}
         {loading ? (
           <Skeleton />
         ) : !activeVendor ? (
