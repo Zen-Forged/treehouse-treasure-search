@@ -190,13 +190,14 @@ function ShelfCard({ post }: { post: Post }) {
             </div>
           )}
         </div>
-        <div style={{ padding: "9px 10px 11px", minHeight: 56 }}>
+        <div style={{ padding: "9px 10px 4px", height: 56, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
           <div
             style={{
               fontFamily: FONT_LORA,
               fontSize: 14,
               color: v1.inkPrimary,
-              lineHeight: 1.2,
+              lineHeight: 1.4,
+              width: "100%",
               overflow: "hidden",
               textOverflow: "ellipsis",
               display: "-webkit-box",
@@ -253,7 +254,7 @@ function ShelfSection({
           color: v1.inkMuted,
         }}
       >
-        More from this shelf…
+        More from this booth…
       </div>
       <div
         className="hide-scrollbar"
