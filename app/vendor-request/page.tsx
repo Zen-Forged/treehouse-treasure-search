@@ -40,6 +40,7 @@ import { ArrowLeft, Check, Mail, Clock, Camera, X } from "lucide-react";
 import { getActiveMalls } from "@/lib/posts";
 import { compressImage } from "@/lib/imageUpload";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import StickyMasthead from "@/components/StickyMasthead";
 import type { Mall } from "@/types/treehouse";
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
@@ -287,27 +288,28 @@ function VendorRequestInner() {
         flexDirection: "column",
       }}
     >
-      {/* Mode C header — back arrow only */}
-      <header style={{ padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px" }}>
-        <button
-          onClick={() => router.back()}
-          aria-label="Back"
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: v1.iconBubble,
-            border: "none",
-            cursor: "pointer",
-            WebkitTapHighlightColor: "transparent",
-          }}
-        >
-          <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
-        </button>
-      </header>
+      <StickyMasthead
+        left={
+          <button
+            onClick={() => router.back()}
+            aria-label="Back"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: v1.iconBubble,
+              border: "none",
+              cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+          </button>
+        }
+      />
 
       <main
         style={{
@@ -319,11 +321,10 @@ function VendorRequestInner() {
           gap: 0,
         }}
       >
-        {/* Title + intro — session 82. New title "Set up your digital booth"
-            (was "Request your digital booth"). Intro paragraph reinstated
-            (had been removed session 75 D5) with permission/value framing.
-            Title sized 22px / weight 400 in Lora — the new font holds at
-            this size without the bump to 24/500 the V2 mockup explored. */}
+        {/* Title + intro — session 89. Title "Create your digital booth"
+            (was "Set up your digital booth" session 82). Title sized 22px /
+            weight 400 in Lora — the new font holds at this size without
+            the bump to 24/500 the V2 mockup explored. */}
         <motion.h1
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -338,7 +339,7 @@ function VendorRequestInner() {
             margin: "10px 0 12px",
           }}
         >
-          Set up your digital booth
+          Create your digital booth
         </motion.h1>
 
         <motion.p
@@ -748,26 +749,28 @@ function DoneScreen({
         flexDirection: "column",
       }}
     >
-      <header style={{ padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px" }}>
-        <button
-          onClick={onReset}
-          aria-label="Back"
-          style={{
-            width: 38,
-            height: 38,
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: v1.iconBubble,
-            border: "none",
-            cursor: "pointer",
-            WebkitTapHighlightColor: "transparent",
-          }}
-        >
-          <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
-        </button>
-      </header>
+      <StickyMasthead
+        left={
+          <button
+            onClick={onReset}
+            aria-label="Back"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: v1.iconBubble,
+              border: "none",
+              cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+          </button>
+        }
+      />
 
       <div
         style={{
