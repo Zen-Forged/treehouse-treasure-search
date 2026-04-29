@@ -1,16 +1,14 @@
 // components/BottomNav.tsx
 // Fixed bottom navigation.
 //
-// Tab layout (session 89 — Booths hidden from guests):
-//   Guest:        Home · Saved                          (2 tabs)
-//   Vendor:       Home · Booths · Saved · My Booth      (4 tabs)
-//   Admin:        Home · Booths · Saved · Admin         (4 tabs — Admin tab
-//                  replaces My Booth, since admins have no booth assigned;
-//                  retires the masthead Admin pill on /shelves.)
+// Tab layout (session 90 — Booths gated to admin-only; vendors lose it too):
+//   Guest:        Home · Saved                  (2 tabs)
+//   Vendor:       Home · Saved · My Booth       (3 tabs)
+//   Admin:        Home · Booths · Saved · Admin (4 tabs)
 //
-// Booths is admin/vendor browsing territory — duplicates content already
-// reachable via /shelf/[slug] from the feed for guests. Hiding it from
-// guests cleans up the surface and keeps the nav intentional.
+// Booths is the admin browsing/management surface — vendors discover other
+// booths via the feed → /shelf/[slug] like shoppers do. The dedicated Booths
+// nav stays admin-only.
 
 "use client";
 
@@ -79,15 +77,18 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     icon: <Shield size={21} strokeWidth={2.0} />,
   };
 
-  // Session 89 — Booths hidden from guests (browse-via-feed already covers
-  // discovery; admin/vendor still need a direct entry for management).
+  // Session 90 — Booths gated to admin-only. Vendors lose the dedicated
+  // entry; they discover other booths via the feed → /shelf/[slug] like
+  // shoppers do.
   // Guest:  Home · Saved
-  // Vendor: Home · Booths · Saved · My Booth
+  // Vendor: Home · Saved · My Booth
   // Admin:  Home · Booths · Saved · Admin
-  const fourthTab = user && isAdmin(user) ? adminTab : myBoothTab;
+  const userIsAdmin = !!user && isAdmin(user);
   const tabs: TabDef[] = !user
     ? [homeTab, findsTab]
-    : [homeTab, boothsTab, findsTab, fourthTab];
+    : userIsAdmin
+      ? [homeTab, boothsTab, findsTab, adminTab]
+      : [homeTab, findsTab, myBoothTab];
 
   const navStyle: React.CSSProperties = {
     position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
