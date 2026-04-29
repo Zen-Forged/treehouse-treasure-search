@@ -621,10 +621,11 @@ function MyBoothInner() {
     setDiag(d => ({ ...d, saved: savedNum, target: savedNum }));
 
     function onScroll() {
-      // Ignore scroll events while a restore is in flight — they fire as
-      // the page reflows from skeleton → full content and would otherwise
-      // overwrite the user's saved position with 0.
-      if (!scrollRestored.current) return;
+      // Always save user-initiated scroll positions. The earlier suppression
+      // gate (require scrollRestored.current first) was a chicken-and-egg
+      // bug: on first visit there's nothing to restore, so the gate stayed
+      // closed forever and the user's scrolls were never saved. Result on
+      // back-nav: status=no-target, saved=—.
       try { sessionStorage.setItem(MY_SHELF_SCROLL_KEY, String(Math.round(window.scrollY))); } catch {}
     }
     window.addEventListener("scroll", onScroll, { passive: true });
