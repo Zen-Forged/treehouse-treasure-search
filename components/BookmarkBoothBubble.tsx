@@ -40,8 +40,11 @@ interface Props {
 export default function BookmarkBoothBubble({ saved, size = "tile", onClick }: Props) {
   const isMasthead = size === "masthead";
   const isHero     = size === "hero";
-  const bubble = isMasthead ? 44 : isHero ? 36 : 28;
-  const glyph  = isMasthead ? 22 : isHero ? 18 : 14;
+  // Session 89 (iPhone QA #4) — hero variant 36/18 → 44/22 to match the
+  // back button + masthead share-airplane on the same surface. Tile stays
+  // 28/14 since it's a small list-tile affordance, not a hero-level glyph.
+  const bubble = isMasthead ? 44 : isHero ? 44 : 28;
+  const glyph  = isMasthead ? 22 : isHero ? 22 : 14;
 
   // Tile + hero: frosted-paper wash (matches the FlagGlyph feed-tile + find-
   // detail bubble formula). Masthead: existing v1.iconBubble wash (matches

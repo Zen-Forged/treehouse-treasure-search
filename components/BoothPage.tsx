@@ -271,14 +271,17 @@ export function BoothHero({
         {/* Session 45 — share bubble retired here. Share affordance lives on
             the page masthead (top-right airplane → <ShareBoothSheet>). */}
 
-        {/* Session 80 — bookmark bubble (D2: SIBLING of photograph motion.div,
-            D4: no own layoutId). Position + dimensions mirror the /find/[id]
-            flag bubble (top:8 right:8, 36×36 frosted). z-index 11 sits between
-            the lightbox overlay (z 5) and the post-it (z 12) so the bookmark
-            stays interactive without obstructing the post-it tap target. Only
-            mounts when caller passes both saved + onToggleBookmark (D6). */}
+        {/* Bookmark bubble (session 80 D2: SIBLING of photograph motion.div,
+            D4: no own layoutId). Session 89 (iPhone QA #3): position moved
+            from top-right → bottom-left (12/12 offsets) so the bookmark
+            balances diagonally against the booth post-it pinned at
+            bottom-right. Old top-right slot was visually competing with
+            the photograph's own focal point. z-index 11 sits between the
+            lightbox overlay (z 5) and the post-it (z 12) so the bookmark
+            stays interactive without obstructing the post-it tap target.
+            Only mounts when caller passes both saved + onToggleBookmark. */}
         {saved !== undefined && onToggleBookmark && (
-          <div style={{ position: "absolute", top: 8, right: 8, zIndex: 11 }}>
+          <div style={{ position: "absolute", bottom: 12, left: 12, zIndex: 11 }}>
             <BookmarkBoothBubble
               saved={saved}
               size="hero"
