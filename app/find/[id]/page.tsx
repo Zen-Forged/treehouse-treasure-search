@@ -360,7 +360,8 @@ function ShelfSection({
           // dropped since the container padding now owns the leading inset.
           paddingLeft: 22,
           paddingRight: 22,
-          paddingBottom: 4,
+          paddingTop: 6,
+          paddingBottom: 18,
           scrollSnapType: "x mandatory",
           WebkitOverflowScrolling: "touch",
         }}
