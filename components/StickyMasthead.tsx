@@ -73,19 +73,19 @@ interface StickyMastheadProps {
   threshold?: number;
 }
 
-// Session 87 — wordmark logo replaces TNR text. Brand identity now lives
-// as a transparent-PNG wordmark (`public/wordmark.png`) rather than typeset
-// text. Height tuned to 30px to leave 5px breathing room within the 40px
-// inner-grid row; width auto-sizes from the asset's 1500×800 aspect ratio
-// (~56px). Asset is transparent-bg so it composites cleanly over the
-// masthead's paper-warm rgba(232,221,199,0.96) background. Display:block
-// removes the inline-image baseline gap.
+// Session 88 — wordmark fills the 40px inner-grid row (was 30px session 87).
+// Height matches the inner grid's minHeight so the wordmark reads as the
+// strongest element in the row — appropriate since it IS the brand anchor.
+// Width auto-sizes from the 1500×800 aspect ratio (~75px). Asset is
+// transparent-bg so it composites cleanly over the masthead's paper-warm
+// rgba(232,221,199,0.96) background. Display:block removes the inline-image
+// baseline gap.
 const WORDMARK_DEFAULT = (
   <img
     src="/wordmark.png"
     alt="Treehouse Finds"
     style={{
-      height: 30,
+      height: 40,
       width: "auto",
       display: "block",
     }}
