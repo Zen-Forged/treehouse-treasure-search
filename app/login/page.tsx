@@ -31,9 +31,8 @@ export const dynamic = "force-dynamic";
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, ArrowLeft, Loader, Clipboard } from "lucide-react";
+import { Mail, ArrowLeft, Loader, Clipboard, CircleUser } from "lucide-react";
 import { sendMagicLink, getSession, onAuthChange, isAdmin } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
@@ -349,8 +348,8 @@ function LoginInner() {
           }}
           aria-label="Back"
           style={{
-            width: 38,
-            height: 38,
+            width: 44,
+            height: 44,
             borderRadius: "50%",
             display: "flex",
             alignItems: "center",
@@ -360,7 +359,7 @@ function LoginInner() {
             cursor: "pointer",
           }}
         >
-          <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
         </button>
       </header>
 
@@ -373,7 +372,10 @@ function LoginInner() {
           padding: screen === "enter-code" ? "40px 28px 80px" : "64px 28px 80px",
         }}
       >
-        {/* Logo mark (paper-wash bubble + leaf logo) */}
+        {/* Sign-in glyph — matches the masthead CircleUser used as the
+            sign-in entry on Home (app/page.tsx). Session 89: replaces the
+            /logo.png favicon-as-icon treatment that was reading as the
+            wrong primitive on a sign-in surface. */}
         <div
           style={{
             width: 44,
@@ -387,7 +389,7 @@ function LoginInner() {
             marginBottom: 22,
           }}
         >
-          <Image src="/logo.png" alt="Treehouse Finds" width={22} height={22} />
+          <CircleUser size={22} strokeWidth={1.4} style={{ color: v1.inkPrimary }} />
         </div>
 
         <h1
