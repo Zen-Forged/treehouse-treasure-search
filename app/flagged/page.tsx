@@ -36,7 +36,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
@@ -71,6 +71,13 @@ import type { Post, Mall } from "@/types/treehouse";
 // (docs/animation-consistency-design.md). Alias kept so existing call
 // sites inside this file remain `ease: EASE` without sweeping renames.
 const EASE = MOTION_EASE_OUT;
+
+// Session 85 — back-nav scroll anchoring. Same primitive as home (`app/page.tsx`):
+// module-scope cache survives /find/[id] navigation (App Router unmounts the
+// page; module scope persists for the SPA session). SCROLL_KEY persists scroll
+// position across the same boundary. Pure scroll behavior — no motion changes.
+const SCROLL_KEY = "treehouse_flagged_scroll";
+let cachedFlaggedPosts: Post[] | null = null;
 
 // ── Bookmark helpers (raw localStorage per tech rules) ─────────────────────────
 
@@ -489,27 +496,38 @@ function EmptyState() {
 
 // ──────────────────────────────────────────────────────────────────────────────
 export default function FindMapPage() {
-  const [posts,              setPosts]              = useState<Post[]>([]);
+  // Hydrate from module-scope cache so back-nav from /find/[id] mounts tiles
+  // synchronously without a skeleton flash.
+  const [posts,              setPosts]              = useState<Post[]>(cachedFlaggedPosts ?? []);
   const [malls,              setMalls]              = useState<Mall[]>([]);
-  const [loading,            setLoading]            = useState(true);
+  const [loading,            setLoading]            = useState<boolean>(cachedFlaggedPosts === null);
   const [bookmarkCount,      setBookmarkCount]      = useState(0);
   const [bookmarkedBoothIds, setBookmarkedBoothIds] = useState<Set<string>>(new Set());
   const [bannerImageUrl,     setBannerImageUrl]     = useState<string | null>(null);
   const [savedMallId,        setSavedMallId]        = useSavedMallId();
   const [mallSheetOpen,      setMallSheetOpen]      = useState(false);
 
+  const pendingScrollY = useRef<number | null>(null);
+  const scrollRestored = useRef(false);
+
   function syncCount() { setBookmarkCount(loadBookmarkCount()); }
   function syncBoothBookmarks() { setBookmarkedBoothIds(loadBookmarkedBoothIds()); }
 
   async function loadPosts() {
     const ids = loadFlaggedIds();
-    if (ids.length === 0) { setPosts([]); setLoading(false); return; }
+    if (ids.length === 0) {
+      setPosts([]);
+      cachedFlaggedPosts = [];
+      setLoading(false);
+      return;
+    }
     const data = await getPostsByIds(ids);
     if (data.length < ids.length) {
       pruneStaleBookmarks(ids, data.map(p => p.id));
       setBookmarkCount(loadBookmarkCount());
     }
     setPosts(data);
+    cachedFlaggedPosts = data;
     setLoading(false);
   }
 
@@ -538,8 +556,41 @@ export default function FindMapPage() {
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
+  // Scroll save + restore. Save on every scroll event so back-nav from
+  // /find/[id] lands exactly where the user tapped. Restore once after
+  // mount, gated on data being available so the masonry layout is final
+  // before scrollTo fires.
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(SCROLL_KEY);
+      if (saved) {
+        const y = parseInt(saved, 10);
+        if (!isNaN(y) && y > 0) pendingScrollY.current = y;
+      }
+    } catch {}
+
+    function onScroll() {
+      try { sessionStorage.setItem(SCROLL_KEY, String(Math.round(window.scrollY))); } catch {}
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    if (scrollRestored.current) return;
+    if (pendingScrollY.current === null) return;
+    scrollRestored.current = true;
+    const y = pendingScrollY.current;
+    requestAnimationFrame(() => { window.scrollTo({ top: y, behavior: "instant" }); });
+  }, [loading]);
+
   function handleUnsave(postId: string) {
-    setPosts(prev => prev.filter(p => p.id !== postId));
+    setPosts(prev => {
+      const next = prev.filter(p => p.id !== postId);
+      cachedFlaggedPosts = next;
+      return next;
+    });
     setBookmarkCount(prev => Math.max(0, prev - 1));
   }
 
