@@ -620,16 +620,31 @@ function MyBoothInner() {
     } catch {}
     setDiag(d => ({ ...d, saved: savedNum, target: savedNum }));
 
-    function onScroll() {
-      // Always save user-initiated scroll positions. The earlier suppression
-      // gate (require scrollRestored.current first) was a chicken-and-egg
-      // bug: on first visit there's nothing to restore, so the gate stayed
-      // closed forever and the user's scrolls were never saved. Result on
-      // back-nav: status=no-target, saved=—.
+    function persistScroll() {
       try { sessionStorage.setItem(MY_SHELF_SCROLL_KEY, String(Math.round(window.scrollY))); } catch {}
     }
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    // Save on multiple deterministic moments — iPhone iOS Safari sometimes
+    // de-prioritizes scroll events during transitions, and listener cleanup
+    // can run before the final scroll event lands. Belt-and-suspenders:
+    //   - scroll: live update during interaction
+    //   - click (capture): right before SPA navigation kicks in (tile tap
+    //     bubbles up; we save in capture phase before Next.js intercepts)
+    //   - touchend: backup for mobile in case click is throttled
+    //   - visibilitychange: when tab hides, browser navigates, etc.
+    //   - pagehide: full-page unload (back-nav from /find/[id] back to the
+    //     server-rendered shell sometimes fires this on iOS)
+    window.addEventListener("scroll", persistScroll, { passive: true });
+    document.addEventListener("click", persistScroll, true);
+    document.addEventListener("touchend", persistScroll, { passive: true });
+    document.addEventListener("visibilitychange", persistScroll);
+    window.addEventListener("pagehide", persistScroll);
+    return () => {
+      window.removeEventListener("scroll", persistScroll);
+      document.removeEventListener("click", persistScroll, true);
+      document.removeEventListener("touchend", persistScroll);
+      document.removeEventListener("visibilitychange", persistScroll);
+      window.removeEventListener("pagehide", persistScroll);
+    };
   }, []);
 
   // Restore scroll. useLayoutEffect fires synchronously after DOM commit
