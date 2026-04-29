@@ -65,7 +65,6 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { ArrowLeft, Send, Pencil } from "lucide-react";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getPost, getVendorPosts } from "@/lib/posts";
@@ -77,8 +76,6 @@ import {
   FONT_LORA,
   FONT_SYS,
   FONT_NUMERAL,
-  MOTION_SHARED_ELEMENT_EASE,
-  MOTION_SHARED_ELEMENT_FORWARD,
 } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { flagKey, mapsUrl, boothNumeralSize, loadFollowedIds } from "@/lib/utils";
@@ -838,13 +835,13 @@ export default function FindDetailPage() {
             }}
           >
             {(post?.image_url || previewImageUrl) ? (
-              // Session 78 — motion.div instead of motion.button so the
-              // flag/pencil bubble (now a sibling, see below) can be a real
-              // <button> without conflicting with parent button semantics.
-              // role="button" + tabIndex preserve the keyboard activation.
-              <motion.div
-                layoutId={`find-${id}`}
-                transition={{ duration: MOTION_SHARED_ELEMENT_FORWARD, ease: MOTION_SHARED_ELEMENT_EASE }}
+              // Session 88 — layoutId stripped per David's 'pull out all
+              // animations' call. The shared-element morph (tile photo
+              // → /find/[id] hero) is gone with this; the photo now
+              // simply renders in place. preview-cache pattern stays so
+              // the photo appears synchronously on first mount rather
+              // than waiting for getPost() to resolve.
+              <div
                 onClick={() => { if (post) setLightboxOpen(true); }}
                 onKeyDown={(e) => {
                   if (post && (e.key === "Enter" || e.key === " ")) {
@@ -883,7 +880,7 @@ export default function FindDetailPage() {
                       : TREEHOUSE_LENS_FILTER,
                   }}
                 />
-              </motion.div>
+              </div>
             ) : (
               <div
                 style={{
@@ -916,10 +913,7 @@ export default function FindDetailPage() {
                 which read as a subtle size mismatch even with identical
                 bubble dimensions. */}
             {post && (post?.image_url || previewImageUrl) && (
-              <motion.div
-                layoutId={`flag-${id}`}
-                layout="position"
-                transition={{ duration: MOTION_SHARED_ELEMENT_FORWARD, ease: MOTION_SHARED_ELEMENT_EASE }}
+              <div
                 style={{
                   position: "absolute",
                   top: 8,
@@ -962,13 +956,10 @@ export default function FindDetailPage() {
                     />
                   )}
                 </button>
-              </motion.div>
+              </div>
             )}
 
-            {/* Post-it — Session 78 R3: subtler zoom-in. David's spec was
-                "like the push pin is just being pushed in, not slammed on."
-                Initial scale dialed back from 1.4 → 1.15 so the post-it
-                lands close to its final size and just lightly settles. */}
+            {/* Post-it — static, no entrance animation. */}
             {post && boothNumber && (
               <div
                 style={{

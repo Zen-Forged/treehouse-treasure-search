@@ -40,7 +40,6 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
 import { CircleUser } from "lucide-react";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getFeedPosts, getActiveMalls } from "@/lib/posts";
@@ -52,9 +51,6 @@ import {
   MOTION_EASE_OUT,
   MOTION_STAGGER,
   MOTION_STAGGER_MAX,
-  MOTION_EMPTY_DURATION,
-  MOTION_SHARED_ELEMENT_EASE,
-  MOTION_SHARED_ELEMENT_BACK,
 } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { flagKey, loadFollowedIds, formatTimeAgo } from "@/lib/utils";
@@ -315,9 +311,11 @@ function MasonryTile({
               : "transform 0.32s cubic-bezier(0.22,1,0.36,1)",
           }}
         >
-          <motion.div
-            layoutId={`find-${post.id}`}
-            transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
+          {/* Session 88 — layoutId stripped per David's 'pull out all
+              animations' call. Track D shared-element morph (tile photo
+              → /find/[id] hero) is gone with this; revisit in a future
+              full session. */}
+          <div
             style={{
               position: "absolute",
               inset: 0,
@@ -382,18 +380,10 @@ function MasonryTile({
                 pointerEvents: "none",
               }}
             />
-          </motion.div>
+          </div>
 
-          {/* Flag — SIBLING of the photograph motion.div (Session 78 R3+).
-              R4: explicit width/height + layout="position" so framer-motion's
-              rect measurement is unambiguous. Flag size is identical at both
-              ends; only its absolute position changes. Without these the
-              layoutId animation dropped frames mid-flight and the flag
-              briefly disappeared. */}
-          <motion.div
-            layoutId={`flag-${post.id}`}
-            layout="position"
-            transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
+          {/* Session 88 — flag layoutId stripped too (full Nuke per David). */}
+          <div
             style={{
               position: "absolute",
               top: 8,
@@ -431,7 +421,7 @@ function MasonryTile({
                 }}
               />
             </button>
-          </motion.div>
+          </div>
         </div>
 
         {/* Relative timestamp — Variant D from feed-timestamp-v1.html mockup,
@@ -860,15 +850,13 @@ export default function DiscoveryFeedPage() {
         ) : filtered.length === 0 ? (
           <EmptyFeed />
         ) : (
-          <AnimatePresence>
-            <MasonryGrid
-              posts={filtered}
-              followedIds={followedIds}
-              onToggleSave={handleToggleSave}
-              lastViewedId={lastViewedId}
-              skipEntrance={skipTileEntrance}
-            />
-          </AnimatePresence>
+          <MasonryGrid
+            posts={filtered}
+            followedIds={followedIds}
+            onToggleSave={handleToggleSave}
+            lastViewedId={lastViewedId}
+            skipEntrance={skipTileEntrance}
+          />
         )}
 
         {/* ── Vendor CTA — bottom of feed ────────────────────────────── */}
