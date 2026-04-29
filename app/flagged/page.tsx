@@ -38,7 +38,7 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
@@ -350,14 +350,12 @@ function BoothSection({
   saved,
   onToggleBookmark,
   onUnsave,
-  skipEntrance,
 }: {
   group: BoothGroup;
   scopeIsAllMalls: boolean;
   saved: boolean;
   onToggleBookmark: (vendorId: string) => void;
   onUnsave: (id: string) => void;
-  skipEntrance: boolean;
 }) {
   const useScroll = group.posts.length >= 3;
   const savedLabel = `${group.posts.length} flagged find${group.posts.length === 1 ? "" : "s"}`;
@@ -384,13 +382,7 @@ function BoothSection({
   );
 
   return (
-    <motion.section
-      initial={skipEntrance ? false : { opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -4, transition: { duration: 0.18 } }}
-      transition={{ duration: 0.32, ease: EASE }}
-      style={{ paddingBottom: 22 }}
-    >
+    <section style={{ paddingBottom: 22 }}>
       {group.vendorSlug ? (
         <Link
           href={`/shelf/${group.vendorSlug}`}
@@ -450,17 +442,14 @@ function BoothSection({
           ))}
         </div>
       )}
-    </motion.section>
+    </section>
   );
 }
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 function EmptyState() {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.34, ease: EASE }}
+    <div
       style={{
         display: "flex",
         flexDirection: "column",
@@ -492,7 +481,7 @@ function EmptyState() {
       >
         Tap the flag on any find to add it to your find map.
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -511,22 +500,6 @@ export default function FindMapPage() {
 
   const pendingScrollY = useRef<number | null>(null);
   const scrollRestored = useRef(false);
-
-  // Session 88 — skip-entrance-on-revisit gate. Page-level entrance animations
-  // (MallScopeHeader / FeaturedBanner / divider / filter-empty banner) replay
-  // on every back-nav from /find/[id], which David flagged as recurring
-  // visual noise. Read sessionStorage synchronously in the initializer so the
-  // first-render decision is correct (no flicker between mount and effect).
-  // Set the flag once on mount; subsequent in-session mounts skip the entrance.
-  // Per-tab via sessionStorage — tab/PWA close resets, so cold start always
-  // animates and in-session navigations don't.
-  const [skipEntrance] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    try { return sessionStorage.getItem("treehouse_flagged_seen_entrance") === "1"; } catch { return false; }
-  });
-  useEffect(() => {
-    try { sessionStorage.setItem("treehouse_flagged_seen_entrance", "1"); } catch {}
-  }, []);
 
   function syncCount() { setBookmarkCount(loadBookmarkCount()); }
   function syncBoothBookmarks() { setBookmarkedBoothIds(loadBookmarkedBoothIds()); }
@@ -736,20 +709,14 @@ export default function FindMapPage() {
           a wholly empty saved-list shows the "Nothing saved yet" state and
           the EmptyState's own copy carries the page identity. */}
       {!loading && posts.length > 0 && (
-        <motion.div
-          initial={skipEntrance ? false : { opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.34, delay: 0.04, ease: EASE }}
-        >
-          <MallScopeHeader
-            eyebrowAll={scopeEyebrowAll}
-            eyebrowOne={scopeEyebrowOne}
-            count={findCount}
-            mallName={selectedMall?.name ?? null}
-            geoLine={scopeGeoLine}
-            onTap={() => setMallSheetOpen(true)}
-          />
-        </motion.div>
+        <MallScopeHeader
+          eyebrowAll={scopeEyebrowAll}
+          eyebrowOne={scopeEyebrowOne}
+          count={findCount}
+          mallName={selectedMall?.name ?? null}
+          geoLine={scopeGeoLine}
+          onTap={() => setMallSheetOpen(true)}
+        />
       )}
 
       {/* 3. FeaturedBanner (overlay variant) — admin-editable.
@@ -757,29 +724,18 @@ export default function FindMapPage() {
           The "Find Map" fallback heading + intro voice paragraph were retired
           session 68 — page identity now comes from MallScopeHeader (when there
           are saves) or from EmptyState's own copy (when there are none). */}
-      <motion.div
-        initial={skipEntrance ? false : { opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.34, delay: 0.08, ease: EASE }}
-      >
-        <FeaturedBanner
-          variant="overlay"
-          imageUrl={bannerImageUrl}
-          minHeight={180}
-          marginBottom={6}
-        />
-      </motion.div>
+      <FeaturedBanner
+        variant="overlay"
+        imageUrl={bannerImageUrl}
+        minHeight={180}
+        marginBottom={6}
+      />
 
       {/* 5. Hairline divider (v1.1j — diamond retired) */}
       {!loading && groups.length > 0 && (
-        <motion.div
-          initial={skipEntrance ? false : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.34, delay: 0.16, ease: EASE }}
-          style={{ padding: "14px 44px 18px" }}
-        >
+        <div style={{ padding: "14px 44px 18px" }}>
           <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
-        </motion.div>
+        </div>
       )}
 
       {/* 6. Itinerary / loading / empty */}
@@ -799,10 +755,7 @@ export default function FindMapPage() {
         ) : posts.length === 0 ? (
           <EmptyState />
         ) : filterHidesAllSaves ? (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.34, ease: EASE }}
+          <div
             style={{
               margin: "20px 0",
               padding: "18px 20px",
@@ -852,9 +805,9 @@ export default function FindMapPage() {
               </button>{" "}
               to see them.
             </div>
-          </motion.div>
+          </div>
         ) : (
-          <AnimatePresence initial={false}>
+          <>
             {groups.map((group) => (
               <BoothSection
                 key={(group.boothNumber ?? "nb") + "·" + group.vendorName}
@@ -863,10 +816,9 @@ export default function FindMapPage() {
                 saved={!!group.vendorId && bookmarkedBoothIds.has(group.vendorId)}
                 onToggleBookmark={handleToggleBoothBookmark}
                 onUnsave={handleUnsave}
-                skipEntrance={skipEntrance}
               />
             ))}
-          </AnimatePresence>
+          </>
         )}
       </main>
 

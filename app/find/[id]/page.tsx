@@ -91,13 +91,6 @@ import type { Post } from "@/types/treehouse";
 // v1.1 tokens imported from lib/tokens.ts (canonical since session 19A). v1 palette +
 // fonts match docs/design-system.md v1.1h.
 
-const EASE = [0.25, 0.46, 0.45, 0.94] as const;
-
-const sectionVariants = (delay: number) => ({
-  hidden:  { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.32, delay, ease: EASE } },
-});
-
 // Ownership detection
 //
 // Session 50 fix: path 3 (LOCAL_VENDOR_KEY match) now requires a valid
@@ -321,12 +314,7 @@ function ShelfSection({
   if (!ready || items.length === 0) return null;
 
   return (
-    <motion.div
-      variants={sectionVariants(0.22)}
-      initial="hidden"
-      animate="visible"
-      style={{ marginBottom: 32 }}
-    >
+    <div style={{ marginBottom: 32 }}>
       <div
         style={{
           paddingLeft: 22,
@@ -385,7 +373,7 @@ function ShelfSection({
         ))}
         <div style={{ flexShrink: 0, width: 10 }} />
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -459,12 +447,7 @@ function SoldLandingBody({
 }) {
   return (
     <>
-      <motion.div
-        variants={sectionVariants(0.08)}
-        initial="hidden"
-        animate="visible"
-        style={{ padding: "90px 32px 0", textAlign: "center" }}
-      >
+      <div style={{ padding: "90px 32px 0", textAlign: "center" }}>
         <div
           style={{
             fontFamily: FONT_LORA,
@@ -478,12 +461,9 @@ function SoldLandingBody({
           <br />
           found a home.
         </div>
-      </motion.div>
+      </div>
 
-      <motion.div
-        variants={sectionVariants(0.14)}
-        initial="hidden"
-        animate="visible"
+      <div
         style={{
           padding: "14px 32px 0",
           display: "flex",
@@ -503,23 +483,13 @@ function SoldLandingBody({
         >
           The piece you saved has been claimed by someone else. That&rsquo;s the way of good things.
         </div>
-      </motion.div>
+      </div>
 
-      <motion.div
-        variants={sectionVariants(0.18)}
-        initial="hidden"
-        animate="visible"
-        style={{
-          padding: "20px 60px 16px",
-        }}
-      >
+      <div style={{ padding: "20px 60px 16px" }}>
         <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
-      </motion.div>
+      </div>
 
-      <motion.div
-        variants={sectionVariants(0.22)}
-        initial="hidden"
-        animate="visible"
+      <div
         style={{
           display: "flex",
           flexDirection: "column",
@@ -562,7 +532,7 @@ function SoldLandingBody({
         >
           Back to Treehouse Finds
         </Link>
-      </motion.div>
+      </div>
 
       <div style={{ flex: 1, minHeight: 20 }} />
     </>
@@ -985,10 +955,7 @@ export default function FindDetailPage() {
                 Initial scale dialed back from 1.4 → 1.15 so the post-it
                 lands close to its final size and just lightly settles. */}
             {post && boothNumber && (
-              <motion.div
-                initial={{ opacity: 0, scale: 1.15, rotate: 6 }}
-                animate={{ opacity: 1, scale: 1, rotate: 6 }}
-                transition={{ duration: MOTION_SHARED_ELEMENT_FORWARD, ease: MOTION_SHARED_ELEMENT_EASE }}
+              <div
                 style={{
                   position: "absolute",
                   bottom: -14,
@@ -996,6 +963,7 @@ export default function FindDetailPage() {
                   width: 92,
                   minHeight: 92,
                   background: v1.postit,
+                  transform: "rotate(6deg)",
                   transformOrigin: "bottom right",
                   boxShadow: `0 6px 14px rgba(42,26,10,0.28), 0 0 0 0.5px rgba(42,26,10,0.16)`,
                   padding: "14px 8px 10px",
@@ -1046,7 +1014,7 @@ export default function FindDetailPage() {
                 >
                   {boothNumber}
                 </div>
-              </motion.div>
+              </div>
             )}
           </div>
         </div>
@@ -1119,12 +1087,7 @@ export default function FindDetailPage() {
           (em-dash retired). docs/find-detail-title-center-design.md
           Session 78 — delay 0 so title fades in WITH the photograph morph.
           David's request: "feels like one transition, not two." */}
-      <motion.div
-        variants={sectionVariants(0)}
-        initial="hidden"
-        animate="visible"
-        style={{ padding: "0 22px", marginBottom: 20, textAlign: "center" }}
-      >
+      <div style={{ padding: "0 22px", marginBottom: 20, textAlign: "center" }}>
         <h1
           style={{
             fontFamily: FONT_LORA,
@@ -1153,17 +1116,11 @@ export default function FindDetailPage() {
             ${Math.round(price)}
           </div>
         )}
-      </motion.div>
+      </div>
 
-      {/* Quoted caption (v1.1 19px) — session 78: delay 0 so it arrives
-          with the photograph morph as one cohesive entrance. */}
+      {/* Quoted caption (v1.1 19px) */}
       {post.caption && (
-        <motion.div
-          variants={sectionVariants(0)}
-          initial="hidden"
-          animate="visible"
-          style={{ padding: "0 30px", marginBottom: 30, textAlign: "center" }}
-        >
+        <div style={{ padding: "0 30px", marginBottom: 30, textAlign: "center" }}>
           <span
             style={{
               fontFamily: FONT_LORA,
@@ -1201,35 +1158,27 @@ export default function FindDetailPage() {
           >
             ”
           </span>
-        </motion.div>
+        </div>
       )}
 
-      {/* Divider (v1.1j plain hairline, diamond retired) — session 78:
-          delay 0 alongside the rest of the entrance. */}
+      {/* Divider (v1.1j plain hairline, diamond retired) */}
       {(vendorName || boothNumber) && (
-        <motion.div
-          variants={sectionVariants(0)}
-          initial="hidden"
-          animate="visible"
+        <div
           style={{
             padding: "0 44px",
             marginBottom: 22,
           }}
         >
           <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
-        </motion.div>
+        </div>
       )}
 
       {/* Cartographic block (session 71 round 2 — fully collapsed) — single
           inkWash card with italic "Find this item at" eyebrow above. XGlyph
           spine retired since cartographic identity no longer earns its place
-          on this page (no other page carries it either).
-          Session 78 — delay 0 alongside the rest of the entrance. */}
+          on this page (no other page carries it either). */}
       {(vendorName || boothNumber) && (
-        <motion.div
-          variants={sectionVariants(0)}
-          initial="hidden"
-          animate="visible"
+        <div
           style={{
             padding: "0 28px",
             marginBottom: 32,
@@ -1388,7 +1337,7 @@ export default function FindDetailPage() {
               );
             })()}
           </div>
-        </motion.div>
+        </div>
       )}
 
       {/* "More from this shelf…" strip */}
