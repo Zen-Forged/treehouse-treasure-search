@@ -38,7 +38,6 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
@@ -48,13 +47,6 @@ import {
   v1,
   FONT_LORA,
   FONT_SYS,
-  MOTION_EASE_OUT,
-  MOTION_CARD_DURATION,
-  MOTION_STAGGER,
-  MOTION_STAGGER_MAX,
-  MOTION_EMPTY_DURATION,
-  MOTION_SHARED_ELEMENT_EASE,
-  MOTION_SHARED_ELEMENT_BACK,
 } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
@@ -67,10 +59,6 @@ import StickyMasthead from "@/components/StickyMasthead";
 import FeaturedBanner from "@/components/FeaturedBanner";
 import type { Post, Mall } from "@/types/treehouse";
 
-// Session 76 Track E — local EASE replaced by MOTION_EASE_OUT import
-// (docs/animation-consistency-design.md). Alias kept so existing call
-// sites inside this file remain `ease: EASE` without sweeping renames.
-const EASE = MOTION_EASE_OUT;
 
 // Session 85 — back-nav scroll anchoring. Same primitive as home (`app/page.tsx`):
 // module-scope cache survives /find/[id] navigation (App Router unmounts the
@@ -220,11 +208,13 @@ function FindTile({
             background: v1.postit,
           }}
         >
-          <motion.div
-            layoutId={`find-${post.id}`}
-            transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
-            style={{ position: "absolute", inset: 0, overflow: "hidden" }}
-          >
+          {/* Session 88 — layoutId stripped (B1). Home and /flagged both had
+              layoutId={`find-${id}`} matching, so framer-motion was morphing
+              the photograph across the route change when the same find
+              appeared on both pages. Track D source-side morph from /flagged
+              tile to /find/[id] hero is gone with this change; only the
+              Home → /find/[id] morph survives. */}
+          <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
             {hasImg ? (
               <img
                 src={post.image_url!}
@@ -258,15 +248,11 @@ function FindTile({
               </div>
             )}
 
-          </motion.div>
+          </div>
 
-          {/* Session 78 R3+ — flag is a SIBLING of the photograph motion.div.
-              R4: explicit width/height + layout="position" for stable
-              cross-route layoutId tracking. */}
-          <motion.div
-            layoutId={`flag-${post.id}`}
-            layout="position"
-            transition={{ duration: MOTION_SHARED_ELEMENT_BACK, ease: MOTION_SHARED_ELEMENT_EASE }}
+          {/* Session 88 — flag layoutId stripped too (B1). Same reason:
+              Home and /flagged both had layoutId={`flag-${id}`} matching. */}
+          <div
             style={{
               position: "absolute",
               top: 8,
@@ -297,7 +283,7 @@ function FindTile({
             >
               <FlagGlyph size={17} strokeWidth={1.7} style={{ color: v1.green, fill: v1.green }} />
             </button>
-          </motion.div>
+          </div>
         </div>
 
         <div style={{ padding: "9px 3px 4px", height: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
