@@ -64,6 +64,7 @@ import { useEffect, useLayoutEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { PiLeaf } from "react-icons/pi";
+import { ArrowLeft } from "lucide-react";
 import { getVendorsByUserId, getVendorById, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
@@ -141,14 +142,42 @@ function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promis
 function Masthead({
   canShare,
   onShareOpen,
+  onBack,
 }: {
   canShare:     boolean;
   onShareOpen:  () => void;
+  onBack?:      () => void;
 }) {
   // Session 70 — locked-grid slot API. Inner grid + safe-area padding now
   // owned by StickyMasthead itself.
+  // Session 85 — back button only renders when onBack is supplied (admin
+  // path from /shelves; vendor self-view has no back since /my-shelf is
+  // the canonical landing for the vendor mode).
   return (
     <StickyMasthead
+      left={
+        onBack ? (
+          <button
+            onClick={onBack}
+            aria-label="Go back"
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: "50%",
+              background: "rgba(42,26,10,0.06)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+          </button>
+        ) : null
+      }
       right={
         canShare ? (
           <button
@@ -316,6 +345,19 @@ function MyBoothInner() {
 
   const pendingScrollY = useRef<number | null>(null);
   const scrollRestored = useRef(false);
+
+  // Session 85 — TEMP scroll-restore diagnostic. Renders a tiny pill in
+  // the top-right under the masthead showing read state, retry attempts,
+  // doc height, and final landed scrollY. Remove once the regression on
+  // /my-shelf is closed.
+  const [diag, setDiag] = useState<{
+    saved: number | null;
+    target: number | null;
+    attempts: number;
+    maxScroll: number;
+    landedY: number;
+    status: "init" | "waiting-vendor" | "waiting-posts" | "no-target" | "trying" | "landed" | "gave-up";
+  }>({ saved: null, target: null, attempts: 0, maxScroll: 0, landedY: 0, status: "init" });
   const [mall,          setMall]          = useState<Mall | null>(null);
   const [view,          setView]          = useState<BoothView>("window");
   const [heroImageUrl,  setHeroImageUrl]  = useState<string | null>(null);
@@ -565,13 +607,18 @@ function MyBoothInner() {
   // events (iOS Safari fires onScroll during page-height transitions); the
   // ref captures the saved value before any of that can happen.
   useEffect(() => {
+    let savedNum: number | null = null;
     try {
       const saved = sessionStorage.getItem(MY_SHELF_SCROLL_KEY);
       if (saved) {
         const y = parseInt(saved, 10);
-        if (!isNaN(y) && y > 0) pendingScrollY.current = y;
+        if (!isNaN(y) && y > 0) {
+          pendingScrollY.current = y;
+          savedNum = y;
+        }
       }
     } catch {}
+    setDiag(d => ({ ...d, saved: savedNum, target: savedNum }));
 
     function onScroll() {
       // Ignore scroll events while a restore is in flight — they fire as
@@ -591,10 +638,15 @@ function MyBoothInner() {
   // fires (BoothHero image load, masonry layout commit, etc.) — each
   // attempt is skipped while document isn't tall enough to reach targetY.
   useLayoutEffect(() => {
-    if (!vendorReady || postsLoading) return;
+    if (!vendorReady) { setDiag(d => ({ ...d, status: "waiting-vendor" })); return; }
+    if (postsLoading) { setDiag(d => ({ ...d, status: "waiting-posts" })); return; }
     if (scrollRestored.current) return;
-    if (pendingScrollY.current === null) return;
+    if (pendingScrollY.current === null) {
+      setDiag(d => ({ ...d, status: "no-target" }));
+      return;
+    }
     const targetY = pendingScrollY.current;
+    setDiag(d => ({ ...d, status: "trying", target: targetY }));
 
     let attempts = 0;
     let cancelled = false;
@@ -610,12 +662,15 @@ function MyBoothInner() {
           // Mark restored only AFTER we land successfully — the save
           // listener above ignores scroll events until this flips true.
           scrollRestored.current = true;
+          setDiag(d => ({ ...d, attempts, maxScroll: maxScrollableY, landedY: window.scrollY, status: "landed" }));
           return;
         }
       }
+      setDiag(d => ({ ...d, attempts, maxScroll: maxScrollableY, landedY: window.scrollY }));
       // Cap at 60 attempts × 50ms = 3 seconds. After that, give up.
       if (attempts >= 60) {
         scrollRestored.current = true;
+        setDiag(d => ({ ...d, status: "gave-up" }));
         return;
       }
       setTimeout(attempt, 50);
@@ -768,7 +823,35 @@ function MyBoothInner() {
       <Masthead
         canShare={canShare}
         onShareOpen={() => setShareOpen(true)}
+        onBack={adminOverride ? () => router.back() : undefined}
       />
+
+      {/* Session 85 — TEMP scroll-restore diagnostic. Remove once /my-shelf
+          back-nav anchor lands on iPhone QA. */}
+      <div
+        style={{
+          position: "fixed",
+          top: 56,
+          right: 8,
+          zIndex: 9999,
+          background: "rgba(0,0,0,0.78)",
+          color: "#fff",
+          fontFamily: "ui-monospace, monospace",
+          fontSize: 9,
+          lineHeight: 1.3,
+          padding: "5px 7px",
+          borderRadius: 4,
+          maxWidth: 180,
+          pointerEvents: "none",
+        }}
+      >
+        <div>status: {diag.status}</div>
+        <div>saved: {diag.saved ?? "—"}</div>
+        <div>target: {diag.target ?? "—"}</div>
+        <div>attempts: {diag.attempts}</div>
+        <div>maxScroll: {diag.maxScroll}</div>
+        <div>landedY: {diag.landedY}</div>
+      </div>
         {loading ? (
           <Skeleton />
         ) : !activeVendor ? (
