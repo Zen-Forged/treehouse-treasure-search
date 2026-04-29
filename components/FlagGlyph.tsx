@@ -20,7 +20,7 @@
 // /find/[id] photo bubble.
 
 import * as React from "react";
-import { PiLeaf, PiLeafFill } from "react-icons/pi";
+import { PiLeafBold, PiLeafFill } from "react-icons/pi";
 
 interface Props {
   size?:        number;
@@ -34,7 +34,11 @@ export default function FlagGlyph({
 }: Props) {
   const fillProp  = style?.fill;
   const isFilled  = !!fillProp && fillProp !== "none";
-  const Icon      = isFilled ? PiLeafFill : PiLeaf;
+  // Session 89 (iPhone QA #1) — PiLeaf → PiLeafBold for the unsaved state
+  // so the leaf's outline weight matches the BottomNav Home icon's
+  // strokeWidth 2.0. PiLeafFill stays for the saved state (solid green;
+  // no stroke matching needed since it's filled, not outlined).
+  const Icon      = isFilled ? PiLeafFill : PiLeafBold;
 
   // Phosphor icons fill from `color`. Strip `fill` from the forwarded
   // style — leaving it on the wrapper would cascade to descendant SVG
