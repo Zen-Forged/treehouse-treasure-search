@@ -39,6 +39,7 @@
 
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { v1 } from "@/lib/tokens";
+import MastheadShareButton from "./MastheadShareButton";
 
 interface StickyMastheadProps {
   /**
@@ -55,9 +56,14 @@ interface StickyMastheadProps {
    */
   wordmark?: ReactNode;
   /**
-   * Right-slot content. Variable: sign-in icon, sign-out text, Admin pill,
-   * bookmark + share bubbles. Renders right-aligned within the locked
-   * `min-width: 80px` column.
+   * Right-slot content. Variable: bookmark, custom share bubbles, etc.
+   * Renders right-aligned within the locked `min-width: 80px` column.
+   *
+   * Session 90 — when omitted, defaults to <MastheadShareButton /> so every
+   * page in the app carries a share-this-page affordance for sign-up
+   * acquisition. Pass `right={null}` to render an empty slot. Pages with
+   * context-specific share treatments (/find/[id], /shelf/[slug],
+   * /my-shelf) pass their own `right` and opt out of the default.
    */
   right?: ReactNode;
   /**
@@ -200,7 +206,7 @@ export default function StickyMasthead({
               minWidth: 80,
             }}
           >
-            {right}
+            {right === undefined ? <MastheadShareButton /> : right}
           </div>
         </div>
       </div>
