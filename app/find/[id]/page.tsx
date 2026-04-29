@@ -114,7 +114,12 @@ async function detectOwnershipAsync(post: Post): Promise<boolean> {
   return false;
 }
 
-// Shelf card (v1.1)
+// Shelf card (v1.1; session 89 iPhone QA #6 — polaroid treatment to match
+// the rest of the find-tile family: warm cream paper bg, 4px radius, dual
+// dimensional shadow, 7px photo mat top+sides. The "browse vs navigate"
+// rule from session 83 that previously kept this card chrome-light is
+// retired — David's call for cross-page consistency wins here since this
+// strip IS a browse surface, just embedded inside a detail page.
 function ShelfCard({ post }: { post: Post }) {
   const [imgErr, setImgErr] = useState(false);
   const isSold = post.status === "sold";
@@ -127,18 +132,18 @@ function ShelfCard({ post }: { post: Post }) {
     >
       <div
         style={{
-          background: v1.inkWash,
-          border: `1px solid ${v1.inkHairline}`,
-          borderRadius: v1.imageRadius,
+          background: "#faf2e0",
+          borderRadius: 4,
           overflow: "hidden",
-          boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
+          boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
+          padding: "7px 7px 0",
         }}
       >
         <div
           style={{
             position: "relative",
             width: "100%",
-            aspectRatio: "3/4",
+            aspectRatio: "4/5",
             background: v1.postit,
             opacity: isSold ? 0.62 : 1,
             transition: "opacity 0.2s",
@@ -349,7 +354,11 @@ function ShelfSection({
           gap: 12,
           overflowX: "auto",
           overflowY: "hidden",
-          paddingLeft: 0,
+          // Session 89 (iPhone QA #7) — paddingLeft 0 → 22 so the strip's
+          // first card aligns with the section header above it (which uses
+          // paddingLeft: 22). Per-item marginLeft compensation on idx===0
+          // dropped since the container padding now owns the leading inset.
+          paddingLeft: 22,
           paddingRight: 22,
           paddingBottom: 4,
           scrollSnapType: "x mandatory",
@@ -378,7 +387,6 @@ function ShelfSection({
             style={{
               scrollSnapAlign: "start",
               flexShrink: 0,
-              marginLeft: idx === 0 ? 22 : 0,
             }}
           >
             <ShelfCard post={item} />
