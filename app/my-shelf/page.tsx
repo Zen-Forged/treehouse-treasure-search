@@ -356,8 +356,9 @@ function MyBoothInner() {
     attempts: number;
     maxScroll: number;
     landedY: number;
+    bfcache: number;
     status: "init" | "waiting-vendor" | "waiting-posts" | "no-target" | "trying" | "landed" | "gave-up";
-  }>({ saved: null, target: null, attempts: 0, maxScroll: 0, landedY: 0, status: "init" });
+  }>({ saved: null, target: null, attempts: 0, maxScroll: 0, landedY: 0, bfcache: 0, status: "init" });
   const [mall,          setMall]          = useState<Mall | null>(null);
   const [view,          setView]          = useState<BoothView>("window");
   const [heroImageUrl,  setHeroImageUrl]  = useState<string | null>(null);
@@ -653,6 +654,35 @@ function MyBoothInner() {
   // async gates that grow document.scrollHeight after this effect first
   // fires (BoothHero image load, masonry layout commit, etc.) — each
   // attempt is skipped while document isn't tall enough to reach targetY.
+  // Restore loop — extracted so the BFCache (pageshow) handler below can
+  // re-trigger it without remounting. Returns a cancel function.
+  function runRestore(targetY: number): () => void {
+    let attempts = 0;
+    let cancelled = false;
+    function attempt() {
+      if (cancelled) return;
+      attempts++;
+      const maxScrollableY = document.documentElement.scrollHeight - window.innerHeight;
+      if (maxScrollableY >= targetY - 2) {
+        window.scrollTo({ top: targetY, behavior: "instant" });
+        if (Math.abs(window.scrollY - targetY) <= 2) {
+          scrollRestored.current = true;
+          setDiag(d => ({ ...d, attempts, maxScroll: maxScrollableY, landedY: window.scrollY, status: "landed" }));
+          return;
+        }
+      }
+      setDiag(d => ({ ...d, attempts, maxScroll: maxScrollableY, landedY: window.scrollY }));
+      if (attempts >= 60) {
+        scrollRestored.current = true;
+        setDiag(d => ({ ...d, status: "gave-up" }));
+        return;
+      }
+      setTimeout(attempt, 50);
+    }
+    requestAnimationFrame(attempt);
+    return () => { cancelled = true; };
+  }
+
   useLayoutEffect(() => {
     if (!vendorReady) { setDiag(d => ({ ...d, status: "waiting-vendor" })); return; }
     if (postsLoading) { setDiag(d => ({ ...d, status: "waiting-posts" })); return; }
@@ -663,37 +693,39 @@ function MyBoothInner() {
     }
     const targetY = pendingScrollY.current;
     setDiag(d => ({ ...d, status: "trying", target: targetY }));
-
-    let attempts = 0;
-    let cancelled = false;
-    function attempt() {
-      if (cancelled) return;
-      attempts++;
-      const maxScrollableY = document.documentElement.scrollHeight - window.innerHeight;
-      // If document isn't tall enough yet, wait — clamp would land at top
-      // of the BoothHero and never recover.
-      if (maxScrollableY >= targetY - 2) {
-        window.scrollTo({ top: targetY, behavior: "instant" });
-        if (Math.abs(window.scrollY - targetY) <= 2) {
-          // Mark restored only AFTER we land successfully — the save
-          // listener above ignores scroll events until this flips true.
-          scrollRestored.current = true;
-          setDiag(d => ({ ...d, attempts, maxScroll: maxScrollableY, landedY: window.scrollY, status: "landed" }));
-          return;
-        }
-      }
-      setDiag(d => ({ ...d, attempts, maxScroll: maxScrollableY, landedY: window.scrollY }));
-      // Cap at 60 attempts × 50ms = 3 seconds. After that, give up.
-      if (attempts >= 60) {
-        scrollRestored.current = true;
-        setDiag(d => ({ ...d, status: "gave-up" }));
-        return;
-      }
-      setTimeout(attempt, 50);
-    }
-    requestAnimationFrame(attempt);
-    return () => { cancelled = true; };
+    return runRestore(targetY);
   }, [vendorReady, postsLoading]);
+
+  // BFCache handler — iOS Safari aggressively caches the previous page on
+  // back-nav. When the page is restored from BFCache, React state is
+  // preserved exactly as it was at navigation time and useEffect/useLayoutEffect
+  // do NOT re-run. That meant the one-time sessionStorage read at mount
+  // never refreshed, pendingScrollY ref stayed at its mount-time value
+  // (often null, since save fires AFTER mount), and the restore never had
+  // a target. pageshow with persisted=true is the BFCache restore signal —
+  // re-read sessionStorage manually and trigger the restore.
+  useEffect(() => {
+    function onPageShow(e: PageTransitionEvent) {
+      if (!e.persisted) return;
+      let targetY: number | null = null;
+      try {
+        const saved = sessionStorage.getItem(MY_SHELF_SCROLL_KEY);
+        if (saved) {
+          const y = parseInt(saved, 10);
+          if (!isNaN(y) && y > 0) targetY = y;
+        }
+      } catch {}
+      setDiag(d => ({ ...d, bfcache: d.bfcache + 1, saved: targetY, target: targetY }));
+      if (targetY === null) return;
+      pendingScrollY.current = targetY;
+      scrollRestored.current = false;
+      setDiag(d => ({ ...d, status: "trying" }));
+      runRestore(targetY);
+    }
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Picker selection ───────────────────────────────────────────────────
   function handlePickerSelect(vendorId: string) {
@@ -867,6 +899,7 @@ function MyBoothInner() {
         <div>attempts: {diag.attempts}</div>
         <div>maxScroll: {diag.maxScroll}</div>
         <div>landedY: {diag.landedY}</div>
+        <div>bfcache: {diag.bfcache}</div>
       </div>
         {loading ? (
           <Skeleton />
