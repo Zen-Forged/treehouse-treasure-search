@@ -1,15 +1,16 @@
 // components/BottomNav.tsx
 // Fixed bottom navigation.
 //
-// Tab layout (session 72 — admin gets dedicated tab):
-//   Guest:        Home · Booths · Find Map              (3 tabs)
-//   Vendor:       Home · Booths · Find Map · My Booth   (4 tabs)
-//   Admin:        Home · Booths · Find Map · Admin      (4 tabs — Admin tab
+// Tab layout (session 89 — Booths hidden from guests):
+//   Guest:        Home · Saved                          (2 tabs)
+//   Vendor:       Home · Booths · Saved · My Booth      (4 tabs)
+//   Admin:        Home · Booths · Saved · Admin         (4 tabs — Admin tab
 //                  replaces My Booth, since admins have no booth assigned;
 //                  retires the masthead Admin pill on /shelves.)
 //
-// Booths is browsing/discovery — sits next to Home. Find Map is personal-saves
-// territory and reads better near My Booth / Admin.
+// Booths is admin/vendor browsing territory — duplicates content already
+// reachable via /shelf/[slug] from the feed for guests. Hiding it from
+// guests cleans up the surface and keeps the nav intentional.
 
 "use client";
 
@@ -62,7 +63,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     icon: <Home size={21} strokeWidth={2.0} />,
   };
   const findsTab: TabDef = {
-    key: "flagged", label: "Flagged", href: "/flagged",
+    key: "flagged", label: "Saved", href: "/flagged",
     icon: <FlagGlyph size={21} strokeWidth={2.0} />, badge: true,
   };
   const boothsTab: TabDef = {
@@ -78,15 +79,14 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     icon: <Shield size={21} strokeWidth={2.0} />,
   };
 
-  // Session 72 — admins get a dedicated Admin tab in the 4th slot in place of
-  // My Booth (admins have no booth assigned). Retires the masthead Admin pill
-  // on /shelves.
-  // Guest:  Home · Booths · Find Map
-  // Vendor: Home · Booths · Find Map · My Booth
-  // Admin:  Home · Booths · Find Map · Admin
+  // Session 89 — Booths hidden from guests (browse-via-feed already covers
+  // discovery; admin/vendor still need a direct entry for management).
+  // Guest:  Home · Saved
+  // Vendor: Home · Booths · Saved · My Booth
+  // Admin:  Home · Booths · Saved · Admin
   const fourthTab = user && isAdmin(user) ? adminTab : myBoothTab;
   const tabs: TabDef[] = !user
-    ? [homeTab, boothsTab, findsTab]
+    ? [homeTab, findsTab]
     : [homeTab, boothsTab, findsTab, fourthTab];
 
   const navStyle: React.CSSProperties = {
@@ -127,13 +127,16 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
             }}>
               {tab.icon}
               {showBadge && (
+                // Session 89 — count badge stripped of paper-warm stroke and
+                // bumped from 16 → 20 so the saved-count signal reads at a
+                // glance. Shifted further from the icon (top/right -4 → -6)
+                // for clearer visual separation now that the badge is bigger.
                 <div style={{
-                  position: "absolute", top: -4, right: -4,
-                  minWidth: 16, height: 16, paddingLeft: 4, paddingRight: 4,
-                  borderRadius: 8, background: C.green,
+                  position: "absolute", top: -6, right: -6,
+                  minWidth: 20, height: 20, paddingLeft: 5, paddingRight: 5,
+                  borderRadius: 10, background: C.green,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 9, fontWeight: 700, color: "#fff",
-                  border: "1.5px solid rgba(245,242,235,0.97)",
+                  fontSize: 11, fontWeight: 700, color: "#fff",
                   lineHeight: 1, letterSpacing: "-0.3px",
                   boxSizing: "border-box", whiteSpace: "nowrap",
                 }}>
