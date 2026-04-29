@@ -372,24 +372,17 @@ function LoginInner() {
           padding: screen === "enter-code" ? "40px 28px 80px" : "64px 28px 80px",
         }}
       >
-        {/* Sign-in glyph — matches the masthead CircleUser used as the
-            sign-in entry on Home (app/page.tsx). Session 89: replaces the
-            /logo.png favicon-as-icon treatment that was reading as the
-            wrong primitive on a sign-in surface. */}
+        {/* Session 90 — background circle dropped, glyph itself sized up to
+            ~44 to fill the visual footprint the bubble used to occupy. */}
         <div
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: "50%",
-            background: "rgba(42,26,10,0.04)",
-            border: `0.5px solid ${v1.inkHairline}`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             marginBottom: 22,
           }}
         >
-          <CircleUser size={22} strokeWidth={1.4} style={{ color: v1.inkPrimary }} />
+          <CircleUser size={44} strokeWidth={1.2} style={{ color: v1.inkPrimary }} />
         </div>
 
         <h1
