@@ -266,8 +266,8 @@ function PostTagInner() {
             aria-label="Go back"
             disabled={isExtracting}
             style={{
-              width: 38,
-              height: 38,
+              width: 44,
+              height: 44,
               borderRadius: "50%",
               background: v1.iconBubble,
               border: "none",
@@ -281,7 +281,7 @@ function PostTagInner() {
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            <ArrowLeft size={17} strokeWidth={2} style={{ color: v1.inkPrimary }} />
+            <ArrowLeft size={22} strokeWidth={2} style={{ color: v1.inkPrimary }} />
           </button>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>

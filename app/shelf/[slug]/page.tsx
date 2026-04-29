@@ -104,8 +104,8 @@ import type { User } from "@supabase/supabase-js";
 function MastheadPaperAirplane() {
   return (
     <svg
-      width={18}
-      height={18}
+      width={22}
+      height={22}
       viewBox="0 0 24 24"
       fill="none"
       stroke={v1.green}
@@ -139,8 +139,8 @@ function Masthead({
           onClick={onBack}
           aria-label="Go back"
           style={{
-            width: 38,
-            height: 38,
+            width: 44,
+            height: 44,
             borderRadius: "50%",
             background: "rgba(42,26,10,0.06)",
             display: "flex",
@@ -152,7 +152,7 @@ function Masthead({
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
         </button>
       }
       right={
@@ -161,8 +161,8 @@ function Masthead({
             onClick={onShareOpen}
             aria-label="Share this booth by email"
             style={{
-              width: 38,
-              height: 38,
+              width: 44,
+              height: 44,
               borderRadius: "50%",
               background: v1.iconBubble,
               border: "none",

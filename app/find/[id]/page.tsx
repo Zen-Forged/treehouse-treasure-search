@@ -417,8 +417,8 @@ function IconBubble({
       onClick={onClick}
       aria-label={ariaLabel}
       style={{
-        width: 38,
-        height: 38,
+        width: 44,
+        height: 44,
         borderRadius: "50%",
         display: "flex",
         alignItems: "center",
@@ -794,7 +794,7 @@ export default function FindDetailPage() {
       <StickyMasthead
         left={
           <IconBubble onClick={() => router.back()} ariaLabel="Go back">
-            <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
           </IconBubble>
         }
         right={
@@ -806,7 +806,7 @@ export default function FindDetailPage() {
           post ? (
             <IconBubble onClick={handleShare} ariaLabel="Share this find">
               <Send
-                size={18}
+                size={22}
                 strokeWidth={1.7}
                 style={{ color: copied ? "#1e4d2b" : v1.green }}
               />
@@ -929,7 +929,7 @@ export default function FindDetailPage() {
                     if (isMyPost) router.push(`/find/${post.id}/edit`);
                     else handleToggleSave();
                   }}
-                  aria-label={isMyPost ? "Edit this find" : (isSaved ? "Remove flag" : "Flag")}
+                  aria-label={isMyPost ? "Edit this find" : (isSaved ? "Unsave" : "Save")}
                   style={{
                     width: "100%",
                     height: "100%",

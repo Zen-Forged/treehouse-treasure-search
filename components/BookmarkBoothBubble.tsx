@@ -40,8 +40,8 @@ interface Props {
 export default function BookmarkBoothBubble({ saved, size = "tile", onClick }: Props) {
   const isMasthead = size === "masthead";
   const isHero     = size === "hero";
-  const bubble = isMasthead ? 38 : isHero ? 36 : 28;
-  const glyph  = isMasthead ? 18 : isHero ? 18 : 14;
+  const bubble = isMasthead ? 44 : isHero ? 36 : 28;
+  const glyph  = isMasthead ? 22 : isHero ? 18 : 14;
 
   // Tile + hero: frosted-paper wash (matches the FlagGlyph feed-tile + find-
   // detail bubble formula). Masthead: existing v1.iconBubble wash (matches

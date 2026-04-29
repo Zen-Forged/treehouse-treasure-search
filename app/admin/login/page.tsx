@@ -259,8 +259,8 @@ function AdminLoginInner() {
           onClick={() => router.push("/")}
           aria-label="Back"
           style={{
-            width: 38,
-            height: 38,
+            width: 44,
+            height: 44,
             borderRadius: "50%",
             display: "flex",
             alignItems: "center",
@@ -271,7 +271,7 @@ function AdminLoginInner() {
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
         </button>
       </header>
 

@@ -73,11 +73,12 @@ interface StickyMastheadProps {
   threshold?: number;
 }
 
-// Session 88 — wordmark fills the 40px inner-grid row (was 30px session 87).
-// Height matches the inner grid's minHeight so the wordmark reads as the
-// strongest element in the row — appropriate since it IS the brand anchor.
-// Width auto-sizes from the 1500×800 aspect ratio (~75px). Asset is
-// transparent-bg so it composites cleanly over the masthead's paper-warm
+// Session 89 — wordmark fills the 50px inner-grid row (was 40px session 88,
+// 30px session 87). Bumped to give the app more breathing room and improve
+// readability for older shoppers. Asset cropped tighter (1500×800, less
+// padding) so the visual logo grows more than the height delta suggests.
+// Width auto-sizes from the 1500×800 aspect ratio (~94px at 50px height).
+// Transparent-bg so it composites cleanly over the masthead's paper-warm
 // rgba(232,221,199,0.96) background. Display:block removes the inline-image
 // baseline gap.
 const WORDMARK_DEFAULT = (
@@ -85,7 +86,7 @@ const WORDMARK_DEFAULT = (
     src="/wordmark.png"
     alt="Treehouse Finds"
     style={{
-      height: 40,
+      height: 50,
       width: "auto",
       display: "block",
     }}
@@ -94,9 +95,8 @@ const WORDMARK_DEFAULT = (
 
 // Total masthead height = paddingTop + inner grid minHeight + paddingBottom
 // + bottom border. paddingTop is max(14px, safe-area-inset-top); the rest
-// is fixed. The spacer below uses the same calc so layout flow matches
-// what `position: sticky` would have reserved.
-const MASTHEAD_HEIGHT = "calc(max(14px, env(safe-area-inset-top, 14px)) + 53px)";
+// is fixed. Session 89: inner grid 40 → 50, so calc 53 → 63. Spacer matches.
+const MASTHEAD_HEIGHT = "calc(max(14px, env(safe-area-inset-top, 14px)) + 63px)";
 
 export default function StickyMasthead({
   left,
@@ -172,7 +172,7 @@ export default function StickyMasthead({
             display: "grid",
             gridTemplateColumns: "1fr auto 1fr",
             alignItems: "center",
-            minHeight: 40,
+            minHeight: 50,
             gap: 8,
           }}
         >

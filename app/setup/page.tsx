@@ -185,8 +185,8 @@ function SetupContent() {
             onClick={handleGoToLogin}
             aria-label="Back to sign-in"
             style={{
-              width: 38,
-              height: 38,
+              width: 44,
+              height: 44,
               borderRadius: "50%",
               display: "flex",
               alignItems: "center",
@@ -196,7 +196,7 @@ function SetupContent() {
               cursor: "pointer",
             }}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={v1.inkPrimary} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={v1.inkPrimary} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <line x1="19" y1="12" x2="5" y2="12" />
               <polyline points="12 19 5 12 12 5" />
             </svg>

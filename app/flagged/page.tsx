@@ -264,7 +264,7 @@ function FindTile({
           >
             <button
               onClick={handleUnsave}
-              aria-label="Remove flag"
+              aria-label="Unsave"
               style={{
                 width: "100%",
                 height: "100%",
@@ -671,8 +671,8 @@ export default function FindMapPage() {
             onClick={() => history.back()}
             aria-label="Go back"
             style={{
-              width: 38,
-              height: 38,
+              width: 44,
+              height: 44,
               borderRadius: "50%",
               background: v1.iconBubble,
               border: "none",
@@ -684,7 +684,7 @@ export default function FindMapPage() {
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            <ArrowLeft size={18} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
           </button>
         }
       />
