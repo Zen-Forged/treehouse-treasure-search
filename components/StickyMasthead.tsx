@@ -38,7 +38,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
-import { v1, FONT_NUMERAL } from "@/lib/tokens";
+import { v1 } from "@/lib/tokens";
 
 interface StickyMastheadProps {
   /**
@@ -48,8 +48,8 @@ interface StickyMastheadProps {
    */
   left?: ReactNode;
   /**
-   * Center-slot content. Defaults to the "Treehouse Finds" wordmark in
-   * IM Fell italic 22px on inkPrimary. Override only for surfaces that
+   * Center-slot content. Defaults to the Treehouse Finds wordmark logo
+   * (`/wordmark.png`, transparent-bg). Override only for surfaces that
    * carry a different center identity (rare — the masthead lock spec
    * keeps this single).
    */
@@ -73,27 +73,23 @@ interface StickyMastheadProps {
   threshold?: number;
 }
 
-// Session 80 — wordmark redesign. Switched from IM Fell italic green @22px
-// to Times New Roman upright ink-black @18px. The decorative italic serif
-// felt like a flourish over the chrome; upright TNR in inkPrimary reads as
-// a quieter brand label and lets photos / page content lead. The -1px lift
-// that compensated for IM Fell italic's ascender drift is removed (TNR
-// upright sits true on its line-box). FONT_NUMERAL is the existing TNR
-// stack already used for booth numerals — no new webfont load.
+// Session 87 — wordmark logo replaces TNR text. Brand identity now lives
+// as a transparent-PNG wordmark (`public/wordmark.png`) rather than typeset
+// text. Height tuned to 30px to leave 5px breathing room within the 40px
+// inner-grid row; width auto-sizes from the asset's 1500×800 aspect ratio
+// (~56px). Asset is transparent-bg so it composites cleanly over the
+// masthead's paper-warm rgba(232,221,199,0.96) background. Display:block
+// removes the inline-image baseline gap.
 const WORDMARK_DEFAULT = (
-  <span
+  <img
+    src="/wordmark.png"
+    alt="Treehouse Finds"
     style={{
-      fontFamily: FONT_NUMERAL,
-      fontSize: 18,
-      color: v1.inkPrimary,
-      letterSpacing: "-0.005em",
-      lineHeight: 1,
-      whiteSpace: "nowrap",
-      display: "inline-block",
+      height: 30,
+      width: "auto",
+      display: "block",
     }}
-  >
-    Treehouse Finds
-  </span>
+  />
 );
 
 // Total masthead height = paddingTop + inner grid minHeight + paddingBottom
