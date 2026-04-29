@@ -40,7 +40,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -67,6 +67,21 @@ import {
   type BoothView,
 } from "@/components/BoothPage";
 import type { Post, Vendor, Mall } from "@/types/treehouse";
+
+// Session 85 — back-nav scroll anchoring. Module-scope cache survives
+// /find/[id] navigation (App Router unmounts the page; module scope persists
+// for the SPA session). Hydrating state from cache on mount when the slug
+// matches lets WindowTile/ShelfTile photographs render without a skeleton
+// flash. Per-slug scroll key persists scroll position across the same
+// boundary so navigating between different shelves doesn't restore a
+// position from a different layout. Pure scroll behavior — no motion changes.
+let cachedPublicShelf: {
+  slug:   string;
+  vendor: Vendor;
+  posts:  Post[];
+  mall:   Mall | null;
+} | null = null;
+const shelfScrollKey = (slug: string) => `treehouse_shelf_scroll:${slug}`;
 import type { User } from "@supabase/supabase-js";
 
 // ─── Masthead (Mode A, public variant — back arrow left, empty right slot) ────
@@ -264,11 +279,18 @@ export default function PublicShelfPage() {
   const { slug } = useParams<{ slug: string }>();
   const router   = useRouter();
 
-  const [vendor,         setVendor]         = useState<Vendor | null>(null);
-  const [posts,          setPosts]          = useState<Post[]>([]);
-  const [mall,           setMall]           = useState<Mall | null>(null);
-  const [loading,        setLoading]        = useState(true);
+  // Hydrate from module-scope cache when the slug matches so back-nav from
+  // /find/[id] mounts tiles synchronously — destination motion nodes for any
+  // back-morph need to exist before framer-motion releases the source rect.
+  const cacheHit = cachedPublicShelf?.slug === slug ? cachedPublicShelf : null;
+  const [vendor,         setVendor]         = useState<Vendor | null>(cacheHit?.vendor ?? null);
+  const [posts,          setPosts]          = useState<Post[]>(cacheHit?.posts ?? []);
+  const [mall,           setMall]           = useState<Mall | null>(cacheHit?.mall ?? null);
+  const [loading,        setLoading]        = useState<boolean>(cacheHit === null);
   const [notFound,       setNotFound]       = useState(false);
+
+  const pendingScrollY = useRef<number | null>(null);
+  const scrollRestored = useRef(false);
   const [view,           setView]           = useState<BoothView>("window");
   const [bookmarkCount,  setBookmarkCount]  = useState(0);
   const [boothBookmarked, setBoothBookmarked] = useState(false);
@@ -322,14 +344,49 @@ export default function PublicShelfPage() {
       setVendor(v);
       const p = await getVendorPosts(v.id, 200);
       setPosts(p);
+      let resolvedMall: Mall | null = null;
       if (v.mall) {
-        setMall(v.mall as Mall);
+        resolvedMall = v.mall as Mall;
+        setMall(resolvedMall);
       } else if (v.mall_id) {
-        getAllMalls().then(malls => setMall(malls.find(m => m.id === v.mall_id) ?? null));
+        const malls = await getAllMalls();
+        resolvedMall = malls.find(m => m.id === v.mall_id) ?? null;
+        setMall(resolvedMall);
       }
+      cachedPublicShelf = { slug, vendor: v, posts: p, mall: resolvedMall };
       setLoading(false);
     });
   }, [slug]);
+
+  // Scroll save + restore. Per-slug key so navigating between different
+  // shelves doesn't restore a scroll position from a different shelf's
+  // layout. Save on every scroll event; restore once after mount, gated on
+  // data being available so the BoothPage layout is final before scrollTo.
+  useEffect(() => {
+    if (!slug) return;
+    try {
+      const saved = sessionStorage.getItem(shelfScrollKey(slug));
+      if (saved) {
+        const y = parseInt(saved, 10);
+        if (!isNaN(y) && y > 0) pendingScrollY.current = y;
+      }
+    } catch {}
+
+    function onScroll() {
+      try { sessionStorage.setItem(shelfScrollKey(slug), String(Math.round(window.scrollY))); } catch {}
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [slug]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (scrollRestored.current) return;
+    if (pendingScrollY.current === null) return;
+    scrollRestored.current = true;
+    const y = pendingScrollY.current;
+    requestAnimationFrame(() => { window.scrollTo({ top: y, behavior: "instant" }); });
+  }, [loading]);
 
   if (notFound) {
     return (
