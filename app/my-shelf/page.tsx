@@ -911,34 +911,39 @@ function MyBoothInner() {
         onBack={adminOverride ? () => router.back() : undefined}
       />
 
-      {/* Session 85 — TEMP scroll-restore diagnostic. Remove once /my-shelf
-          back-nav anchor lands on iPhone QA. */}
-      <div
-        style={{
-          position: "fixed",
-          top: 56,
-          right: 8,
-          zIndex: 9999,
-          background: "rgba(0,0,0,0.78)",
-          color: "#fff",
-          fontFamily: "ui-monospace, monospace",
-          fontSize: 9,
-          lineHeight: 1.3,
-          padding: "5px 7px",
-          borderRadius: 4,
-          maxWidth: 180,
-          pointerEvents: "none",
-        }}
-      >
-        <div>status: {diag.status}</div>
-        <div>saved: {diag.saved ?? "—"}</div>
-        <div>target: {diag.target ?? "—"}</div>
-        <div>attempts: {diag.attempts}</div>
-        <div>maxScroll: {diag.maxScroll}</div>
-        <div>landedY: {diag.landedY}</div>
-        <div>src: {diag.source}</div>
-        <div>bfc/pop/url: {diag.bfcache}/{diag.popstate}/{diag.urlchange}</div>
-      </div>
+      {/* Session 85 — scroll-restore diagnostic, gated behind ?debug=1 so
+          it stays available for the future debugging session that picks up
+          /my-shelf back-nav anchor (now a known carry-forward) without
+          showing in normal admin/vendor usage. Append &debug=1 to the URL
+          to surface the pill. */}
+      {searchParams.get("debug") === "1" && (
+        <div
+          style={{
+            position: "fixed",
+            top: 56,
+            right: 8,
+            zIndex: 9999,
+            background: "rgba(0,0,0,0.78)",
+            color: "#fff",
+            fontFamily: "ui-monospace, monospace",
+            fontSize: 9,
+            lineHeight: 1.3,
+            padding: "5px 7px",
+            borderRadius: 4,
+            maxWidth: 180,
+            pointerEvents: "none",
+          }}
+        >
+          <div>status: {diag.status}</div>
+          <div>saved: {diag.saved ?? "—"}</div>
+          <div>target: {diag.target ?? "—"}</div>
+          <div>attempts: {diag.attempts}</div>
+          <div>maxScroll: {diag.maxScroll}</div>
+          <div>landedY: {diag.landedY}</div>
+          <div>src: {diag.source}</div>
+          <div>bfc/pop/url: {diag.bfcache}/{diag.popstate}/{diag.urlchange}</div>
+        </div>
+      )}
         {loading ? (
           <Skeleton />
         ) : !activeVendor ? (
