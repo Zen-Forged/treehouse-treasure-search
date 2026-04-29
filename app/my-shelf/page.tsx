@@ -133,16 +133,20 @@ function readScrollY(): number | null {
   } catch {}
   return null;
 }
-function writeScrollY(y: number) {
+// Session 86 — refuse to write 0. Inspector confirmed the bug:
+// `treehouse_my_shelf_scroll = 0` in both storages on the broken path,
+// which means a handler is firing with window.scrollY === 0 (most likely
+// Next.js App Router's scroll-to-top fires real scroll events during the
+// outbound navigation transition, and our scroll listener catches them).
+// 0 is a meaningless restore target — refuse it. The user's last
+// meaningful scroll position stays in storage.
+function writeScrollY(y: number, eventType?: string) {
   const rounded = Math.round(y);
-  // Session 86 — diagnostic: capture the call stack whenever something
-  // tries to write 0. Inspector showed `treehouse_my_shelf_scroll = 0` in
-  // both Local + Session Storage on the broken path, which means a handler
-  // is firing with window.scrollY === 0 and clobbering the good value
-  // saved during user scroll. Stack trace identifies which handler.
-  // Remove once /my-shelf admin scroll-restore lands.
-  if (rounded === 0) {
-    console.warn("[my-shelf:writeScrollY] wrote 0 — stack:", new Error().stack);
+  if (rounded <= 0) {
+    if (eventType) {
+      console.warn(`[my-shelf] skipped zero-write from event=${eventType}`);
+    }
+    return;
   }
   const v = String(rounded);
   try { localStorage.setItem(MY_SHELF_SCROLL_KEY, v); } catch {}
@@ -657,21 +661,28 @@ function MyBoothInner() {
     const source = lsHit && ssHit ? "both" : lsHit ? "ls" : ssHit ? "ss" : "none";
     setDiag(d => ({ ...d, saved: savedNum, target: savedNum, source }));
 
-    function persistScroll() { writeScrollY(window.scrollY); }
+    // Each listener passes its event type through to writeScrollY so any
+    // skipped zero-write logs the responsible event. Cleanup needs the
+    // exact same fn refs, so handlers are declared once each.
+    function onScroll()             { writeScrollY(window.scrollY, "scroll"); }
+    function onClick()              { writeScrollY(window.scrollY, "click"); }
+    function onTouchEnd()           { writeScrollY(window.scrollY, "touchend"); }
+    function onVisibilityChange()   { writeScrollY(window.scrollY, "visibilitychange"); }
+    function onPageHide()           { writeScrollY(window.scrollY, "pagehide"); }
     // Save on multiple deterministic moments — iPhone iOS Safari sometimes
     // de-prioritizes scroll events during transitions, and listener cleanup
     // can run before the final scroll event lands. Belt-and-suspenders.
-    window.addEventListener("scroll", persistScroll, { passive: true });
-    document.addEventListener("click", persistScroll, true);
-    document.addEventListener("touchend", persistScroll, { passive: true });
-    document.addEventListener("visibilitychange", persistScroll);
-    window.addEventListener("pagehide", persistScroll);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("click", onClick, true);
+    document.addEventListener("touchend", onTouchEnd, { passive: true });
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("pagehide", onPageHide);
     return () => {
-      window.removeEventListener("scroll", persistScroll);
-      document.removeEventListener("click", persistScroll, true);
-      document.removeEventListener("touchend", persistScroll);
-      document.removeEventListener("visibilitychange", persistScroll);
-      window.removeEventListener("pagehide", persistScroll);
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("click", onClick, true);
+      document.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("pagehide", onPageHide);
     };
   }, []);
 
