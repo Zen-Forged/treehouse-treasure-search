@@ -60,7 +60,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useRef, useState, Suspense } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { PiLeaf } from "react-icons/pi";
@@ -547,10 +547,23 @@ function MyBoothInner() {
     });
   }, [activeVendor?.id]);
 
-  // Scroll save + restore. Save on every scroll event so back-nav from
-  // /find/[id] lands exactly where the user tapped. Restore once after
-  // mount, gated on data being available so the WindowView/ShelfView layout
-  // is final before scrollTo fires.
+  // Disable browser scroll restoration on /my-shelf so it doesn't fight our
+  // manual restore. iOS Safari + Next.js App Router both attempt to anchor
+  // scroll on back-nav, but neither cooperates with this page's multi-stage
+  // async render (authReady → vendorReady → posts hydrate → image load).
+  // Manual mode means our retry-scrollTo is the sole authority.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const prev = window.history.scrollRestoration;
+    try { window.history.scrollRestoration = "manual"; } catch {}
+    return () => { try { window.history.scrollRestoration = prev; } catch {} };
+  }, []);
+
+  // Save on every scroll event so back-nav from /find/[id] lands where the
+  // user tapped. Read sessionStorage once on mount into the pendingScrollY
+  // ref — sessionStorage may be clobbered later by reflow-triggered scroll
+  // events (iOS Safari fires onScroll during page-height transitions); the
+  // ref captures the saved value before any of that can happen.
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(MY_SHELF_SCROLL_KEY);
@@ -561,35 +574,54 @@ function MyBoothInner() {
     } catch {}
 
     function onScroll() {
+      // Ignore scroll events while a restore is in flight — they fire as
+      // the page reflows from skeleton → full content and would otherwise
+      // overwrite the user's saved position with 0.
+      if (!scrollRestored.current) return;
       try { sessionStorage.setItem(MY_SHELF_SCROLL_KEY, String(Math.round(window.scrollY))); } catch {}
     }
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => {
+  // Restore scroll. useLayoutEffect fires synchronously after DOM commit
+  // and before paint, which is the earliest reliable hook to win against
+  // any framework / browser auto-scroll-to-top. The retry loop covers the
+  // async gates that grow document.scrollHeight after this effect first
+  // fires (BoothHero image load, masonry layout commit, etc.) — each
+  // attempt is skipped while document isn't tall enough to reach targetY.
+  useLayoutEffect(() => {
     if (!vendorReady || postsLoading) return;
     if (scrollRestored.current) return;
     if (pendingScrollY.current === null) return;
-    scrollRestored.current = true;
     const targetY = pendingScrollY.current;
-    // Retry scrollTo until the position sticks or budget runs out. /my-shelf
-    // has multiple async gates (authReady → vendorReady → posts hydrate →
-    // BoothHero image load → masonry commit), so the document height grows
-    // across several renders after this effect fires. A single rAF can fire
-    // while document.scrollHeight is still smaller than targetY, which makes
-    // window.scrollTo clamp to the (then-shorter) max and the user lands at
-    // the top of the BoothHero. We re-attempt until the position takes or
-    // we've spent ~500ms (10 × 50ms).
+
     let attempts = 0;
+    let cancelled = false;
     function attempt() {
-      window.scrollTo({ top: targetY, behavior: "instant" });
+      if (cancelled) return;
       attempts++;
-      if (attempts >= 10) return;
-      if (Math.abs(window.scrollY - targetY) <= 2) return;
+      const maxScrollableY = document.documentElement.scrollHeight - window.innerHeight;
+      // If document isn't tall enough yet, wait — clamp would land at top
+      // of the BoothHero and never recover.
+      if (maxScrollableY >= targetY - 2) {
+        window.scrollTo({ top: targetY, behavior: "instant" });
+        if (Math.abs(window.scrollY - targetY) <= 2) {
+          // Mark restored only AFTER we land successfully — the save
+          // listener above ignores scroll events until this flips true.
+          scrollRestored.current = true;
+          return;
+        }
+      }
+      // Cap at 60 attempts × 50ms = 3 seconds. After that, give up.
+      if (attempts >= 60) {
+        scrollRestored.current = true;
+        return;
+      }
       setTimeout(attempt, 50);
     }
     requestAnimationFrame(attempt);
+    return () => { cancelled = true; };
   }, [vendorReady, postsLoading]);
 
   // ── Picker selection ───────────────────────────────────────────────────
