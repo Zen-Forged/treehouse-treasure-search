@@ -307,7 +307,7 @@ function MasonryTile({
             background: "#faf2e0",
             padding: "7px 7px 8px",
             borderRadius: 4,
-            boxShadow: "0 4px 10px rgba(42,26,10,0.13), 0 1px 0 rgba(42,26,10,0.04)",
+            boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
           }}
         >
         {/* Photograph slot — fixed-height layout reservation so the masonry
@@ -453,7 +453,7 @@ function MasonryTile({
             padding: "4px 0 0",
             fontFamily: FONT_SYS,
             fontStyle: "italic",
-            fontSize: 10,
+            fontSize: 11.5,
             color: v1.inkMuted,
             letterSpacing: "0.01em",
             lineHeight: 1.2,
