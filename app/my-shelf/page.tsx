@@ -134,7 +134,17 @@ function readScrollY(): number | null {
   return null;
 }
 function writeScrollY(y: number) {
-  const v = String(Math.round(y));
+  const rounded = Math.round(y);
+  // Session 86 — diagnostic: capture the call stack whenever something
+  // tries to write 0. Inspector showed `treehouse_my_shelf_scroll = 0` in
+  // both Local + Session Storage on the broken path, which means a handler
+  // is firing with window.scrollY === 0 and clobbering the good value
+  // saved during user scroll. Stack trace identifies which handler.
+  // Remove once /my-shelf admin scroll-restore lands.
+  if (rounded === 0) {
+    console.warn("[my-shelf:writeScrollY] wrote 0 — stack:", new Error().stack);
+  }
+  const v = String(rounded);
   try { localStorage.setItem(MY_SHELF_SCROLL_KEY, v); } catch {}
   try { sessionStorage.setItem(MY_SHELF_SCROLL_KEY, v); } catch {}
 }
