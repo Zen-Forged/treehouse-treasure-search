@@ -761,11 +761,11 @@ function WindowTile({ post, index }: { post: Post; index: number }) {
       >
         <div
           style={{
-            background: v1.inkWash,
-            border: `1px solid ${v1.inkHairline}`,
-            borderRadius: v1.imageRadius,
+            background: "#faf2e0",
+            borderRadius: 4,
             overflow: "hidden",
-            boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
+            boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
+            padding: "7px 7px 0",
           }}
         >
           <div
@@ -807,7 +807,7 @@ function WindowTile({ post, index }: { post: Post; index: number }) {
               </div>
             )}
           </div>
-          <div style={{ padding: "9px 10px 11px", minHeight: 76 }}>
+          <div style={{ padding: "9px 3px 11px", minHeight: 76 }}>
             <div
               style={{
                 fontFamily: FONT_LORA,
@@ -911,11 +911,11 @@ function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirs
       >
         <div
           style={{
-            background: v1.inkWash,
-            border: `1px solid ${v1.inkHairline}`,
-            borderRadius: v1.imageRadius,
+            background: "#faf2e0",
+            borderRadius: 4,
             overflow: "hidden",
-            boxShadow: "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
+            boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
+            padding: "7px 7px 0",
           }}
         >
           <div
@@ -957,7 +957,7 @@ function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirs
               </div>
             )}
           </div>
-          <div style={{ padding: "9px 10px 11px", minHeight: 76 }}>
+          <div style={{ padding: "9px 3px 11px", minHeight: 76 }}>
             <div
               style={{
                 fontFamily: FONT_LORA,
