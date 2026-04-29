@@ -1,16 +1,26 @@
 // components/FlagGlyph.tsx
-// Save-state glyph — rectangular flag on a pole with a chevron-cut right edge.
-// Session 61, Variant B from docs/mockups/save-glyph-v1.html.
+// Save-state glyph — rendered as a leaf (PiLeaf / PiLeafFill from
+// react-icons/pi). Session 89: visual swapped from the chevron-cut flag
+// (session 61) to a leaf to reinforce the brand vocabulary that already
+// runs through Treehouse Finds (paper, parchment, organic forms).
 //
-// Drop-in replacement for Lucide's <Pin>/<Heart>: same `size` + `strokeWidth`
-// + `style` props, uses `currentColor` for stroke so inline `style.color`
-// resolves the stroke (the same pattern Lucide icons use). Inline `style.fill`
-// overrides the default `fill="none"` for saved-state filling.
+// File + component name kept as `FlagGlyph` so callsite imports stay
+// unchanged — internal identifier per the user-facing-copy-scrub rule
+// (memory: feedback_user_facing_copy_scrub_skip_db_identifiers.md).
+// User-visible labels move to "Save / Saved / Unsave" in callsites.
 //
-// Used in: feed masonry tile, Find Detail photo bubble, Find Map saved-tile
-// badge, and BottomNav Find Map tab.
+// Drop-in API: same `size` + `strokeWidth` + `style` props. Saved state
+// is detected from `style.fill` — when callsites pass a non-"none" fill
+// (typically `v1.green`), we render `PiLeafFill`. Otherwise the outline
+// `PiLeaf` is used. `strokeWidth` is preserved in the prop type for
+// caller compatibility but Phosphor icons ignore it (their stroke is
+// baked into the path geometry).
+//
+// Used in: BottomNav Saved tab, feed masonry tile, /flagged tile,
+// /find/[id] photo bubble.
 
 import * as React from "react";
+import { PiLeaf, PiLeafFill } from "react-icons/pi";
 
 interface Props {
   size?:        number;
@@ -20,31 +30,23 @@ interface Props {
 
 export default function FlagGlyph({
   size = 17,
-  strokeWidth = 1.7,
   style,
 }: Props) {
+  const fillProp  = style?.fill;
+  const isFilled  = !!fillProp && fillProp !== "none";
+  const Icon      = isFilled ? PiLeafFill : PiLeaf;
+
+  // Phosphor icons fill from `color`. Strip `fill` from the forwarded
+  // style — leaving it on the wrapper would cascade to descendant SVG
+  // children and override the icon's intrinsic styling.
+  const wrapperStyle: React.CSSProperties = { ...style };
+  delete (wrapperStyle as { fill?: string }).fill;
+
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={style}
+    <Icon
+      size={size}
+      style={wrapperStyle}
       aria-hidden="true"
-    >
-      {/* Two elements so saved-state fill renders cleanly:
-            - line = pole (strokes only; never fills since lines have no
-              interior)
-            - path = chevron-cut flag (closed → fills when style.fill is set)
-          Callsites pass strokeWidth={1.7} regardless of saved state so the
-          pole stays visible; saved/unsaved differ via color + fill only. */}
-      <line x1="4" y1="22" x2="4" y2="4" />
-      <path d="M4 4h13l-2 4 2 4H4z" />
-    </svg>
+    />
   );
 }

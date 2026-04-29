@@ -395,7 +395,7 @@ function MasonryTile({
           >
             <button
               onClick={handleHeartClick}
-              aria-label={isFollowed ? "Remove flag" : "Flag"}
+              aria-label={isFollowed ? "Unsave" : "Save"}
               style={{
                 width: "100%",
                 height: "100%",
