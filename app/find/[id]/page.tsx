@@ -220,6 +220,16 @@ function ShelfCard({ post }: { post: Post }) {
 const findScrollKey = (postId: string) => `treehouse_find_scroll_y:${postId}`;
 const findStripScrollKey = (postId: string) => `treehouse_find_strip_scroll_x:${postId}`;
 
+// Module-scope navigation-departure flag. Same-route param navigation
+// (/find/A → /find/B) leaves the save listener attached during the brief
+// render-commit window where the browser auto-clamps scrollY to fit the
+// new page's shorter loading-state document. Those auto-clamp scroll events
+// would clobber the user's true scroll position for A. Setting this flag
+// synchronously on the strip-thumb capture-phase click lets the listener
+// skip writes during that transition window. Reset by the [id] save effect
+// when the new id mounts.
+let findScrollWriteBlocked = false;
+
 function ShelfSection({
   vendorId,
   currentPostId,
@@ -333,6 +343,22 @@ function ShelfSection({
         {items.map((item, idx) => (
           <div
             key={item.id}
+            // Session 88 — capture-phase click snapshot. Fires before the
+            // child Link's bubble-phase click handler, so we record the
+            // user's true scroll position synchronously before any
+            // route-transition events (scroll-to-top, document auto-clamp)
+            // can clobber the listener's saved value. Pairs with
+            // findScrollWriteBlocked (module scope) which the page-level
+            // listener checks before writing.
+            onClickCapture={() => {
+              try {
+                const y = Math.round(window.scrollY);
+                if (y > 0) {
+                  sessionStorage.setItem(findScrollKey(currentPostId), String(y));
+                }
+              } catch {}
+              findScrollWriteBlocked = true;
+            }}
             style={{
               scrollSnapAlign: "start",
               flexShrink: 0,
@@ -591,21 +617,35 @@ export default function FindDetailPage() {
   }, []);
 
   // Save scrollY on every scroll event so back-nav lands exactly where the
-  // user tapped a "More from this booth" thumb. Refuse-to-write-0 keeps
-  // storage clean — empty storage already restores to 0 by default. Reset
-  // refs on id change so peer-nav restoration starts fresh for the new find.
+  // user tapped a "More from this booth" thumb. Three guards in play:
+  //   - findScrollWriteBlocked (module scope) — set by the strip's capture-
+  //     phase click before the Link processes; prevents the auto-clamp
+  //     scroll event during render-commit from clobbering A's saved value.
+  //   - Refuse-to-write-0 — empty storage already restores to 0 by default.
+  //   - Reset on [id] change — peer-nav restoration starts fresh for the
+  //     new find; if no saved scroll exists for this id, explicit scrollTo
+  //     to top because Next.js doesn't reliably scroll-to-top on same-route
+  //     param changes (window.scrollY persists from the previous /find/[id]).
   useEffect(() => {
     if (!id) return;
     scrollRestored.current = false;
     pendingScrollY.current = null;
+    findScrollWriteBlocked = false;
+    let savedY: number | null = null;
     try {
-      const saved = sessionStorage.getItem(findScrollKey(id));
-      if (saved) {
-        const y = parseInt(saved, 10);
-        if (!isNaN(y) && y > 0) pendingScrollY.current = y;
+      const raw = sessionStorage.getItem(findScrollKey(id));
+      if (raw) {
+        const y = parseInt(raw, 10);
+        if (!isNaN(y) && y > 0) savedY = y;
       }
     } catch {}
+    if (savedY !== null) {
+      pendingScrollY.current = savedY;
+    } else {
+      requestAnimationFrame(() => window.scrollTo(0, 0));
+    }
     function onScroll() {
+      if (findScrollWriteBlocked) return;
       const y = Math.round(window.scrollY);
       if (y <= 0) return;
       try { sessionStorage.setItem(findScrollKey(id), String(y)); } catch {}
