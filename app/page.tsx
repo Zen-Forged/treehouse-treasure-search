@@ -157,12 +157,16 @@ function EmptyFeed() {
 }
 
 // ── Skeleton masonry ──────────────────────────────────────────────────────────
-const SKELETON_HEIGHTS = [130, 160, 170, 105, 115, 145, 155, 118];
-const SKELETON_OFFSET  = Math.round(SKELETON_HEIGHTS[0] * 0.5);
+// Session 88 (A1) — fixed 4:5 aspect to match the real tiles. Eight slots
+// per render. Offset on column 2 retained for visual rhythm. Skeleton no
+// longer carries variable heights (the real tiles don't either now).
+const SKELETON_SLOT_COUNT = 8;
+const SKELETON_OFFSET = 70;
 
 function SkeletonMasonry() {
-  const col1 = SKELETON_HEIGHTS.filter((_, i) => i % 2 === 0);
-  const col2 = SKELETON_HEIGHTS.filter((_, i) => i % 2 === 1);
+  const slots = Array.from({ length: SKELETON_SLOT_COUNT });
+  const col1 = slots.filter((_, i) => i % 2 === 0);
+  const col2 = slots.filter((_, i) => i % 2 === 1);
   return (
     <div
       style={{
@@ -182,7 +186,7 @@ function SkeletonMasonry() {
             marginTop: ci === 1 ? SKELETON_OFFSET : 0,
           }}
         >
-          {col.map((h, i) => (
+          {col.map((_, i) => (
             <div
               key={i}
               style={{
@@ -190,7 +194,7 @@ function SkeletonMasonry() {
                 overflow: "hidden",
                 background: v1.postit,
                 border: `1px solid ${v1.inkHairline}`,
-                height: h,
+                aspectRatio: "4/5",
               }}
             >
               <div className="skeleton-shimmer" style={{ height: "100%" }} />
@@ -219,29 +223,16 @@ function MasonryTile({
   skipEntrance: boolean;
 }) {
   const [imgErr,      setImgErr]      = useState(false);
-  const [imgHeight,   setImgHeight]   = useState<number | null>(null);
   const [highlighted, setHighlighted] = useState(isLastViewed);
   const [tapped,      setTapped]      = useState(false);
   const { ref: revealRef, visible } = useScrollReveal(0.1, skipEntrance);
   const hasImg = !!post.image_url && !imgErr;
-  const fallbackHeights = [180, 210, 160, 230, 195, 155, 220, 185];
-  const fallbackH = fallbackHeights[index % fallbackHeights.length];
 
   useEffect(() => {
     if (!isLastViewed) return;
     const t = setTimeout(() => setHighlighted(false), 1600);
     return () => clearTimeout(t);
   }, [isLastViewed]);
-
-  function handleLoad(e: React.SyntheticEvent<HTMLImageElement>) {
-    const img = e.currentTarget;
-    const containerWidth = img.parentElement?.offsetWidth ?? 160;
-    const ratio = img.naturalHeight / img.naturalWidth;
-    // Clamp heights so no single tile dominates the column; variable height is
-    // the point of the masonry, but a 4x-aspect tile would break the rhythm.
-    const computed = Math.min(310, Math.max(120, Math.round(containerWidth * ratio)));
-    setImgHeight(computed);
-  }
 
   function handleHeartClick(e: React.MouseEvent) {
     e.preventDefault();
@@ -304,16 +295,20 @@ function MasonryTile({
             boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
           }}
         >
-        {/* Photograph slot — fixed-height layout reservation so the masonry
-            grid stays put when the photograph lifts out via layoutId during
-            forward nav (Track D phase 5, docs/marketplace-transitions-design.md
-            implementation note 3). The motion.div carries the visible
-            photograph chrome; siblings (heart, tap-flash) overlay the slot. */}
+        {/* Photograph slot — session 88 (A1): fixed 4:5 aspect ratio matching
+            /flagged FindTile, so the masonry layout is stable from frame 1.
+            Previously each tile resized as its image loaded (height computed
+            from natural aspect ratio in onLoad), which produced cascading
+            layout reflows that read as 'animation.' Trade-off: tiles no
+            longer match real photo aspect ratios; vendor photos taken
+            portrait from a phone naturally sit close to 4:5 so the cropping
+            is minimal. The motion.div carries the visible photograph chrome;
+            siblings (heart, tap-flash) overlay the slot. */}
         <div
           style={{
             position: "relative",
             width: "100%",
-            height: imgHeight ?? fallbackH,
+            aspectRatio: "4/5",
             transform: tapped ? "scale(1.028)" : "scale(1)",
             transition: tapped
               ? "transform 0.14s cubic-bezier(0.34,1.56,0.64,1)"
@@ -342,7 +337,6 @@ function MasonryTile({
               <img
                 src={post.image_url!}
                 alt={post.title}
-                onLoad={handleLoad}
                 onError={() => setImgErr(true)}
                 style={{
                   width: "100%",
