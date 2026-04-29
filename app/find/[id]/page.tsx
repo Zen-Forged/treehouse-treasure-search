@@ -62,7 +62,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -213,6 +213,13 @@ function ShelfCard({ post }: { post: Post }) {
   );
 }
 
+// Session 88 — peer-nav scroll-restore primitive. Two storage keys, both
+// per-find (scoped by current post id) so peer-nav between different finds
+// doesn't cross-contaminate scroll state. Pattern lifted from /flagged
+// (canonical clean Phase 3 shape) + session-86 refuse-to-write-0 primitive.
+const findScrollKey = (postId: string) => `treehouse_find_scroll_y:${postId}`;
+const findStripScrollKey = (postId: string) => `treehouse_find_strip_scroll_x:${postId}`;
+
 function ShelfSection({
   vendorId,
   currentPostId,
@@ -225,6 +232,29 @@ function ShelfSection({
   const [items, setItems] = useState<Post[]>([]);
   const [ready, setReady] = useState(false);
 
+  // Session 88 — horizontal scroll-restore on the carousel. Refs survive
+  // re-renders; state would force unnecessary re-paints. Same shape as the
+  // page-level vertical scroll-restore in FindDetailPage below, just on
+  // scrollLeft instead of scrollY and on the inner overflow-x container
+  // instead of window.
+  const stripRef = useRef<HTMLDivElement>(null);
+  const stripPendingX = useRef<number | null>(null);
+  const stripRestored = useRef(false);
+
+  // Read saved horizontal scroll position before items load so it's ready
+  // to restore the moment the strip renders.
+  useEffect(() => {
+    stripRestored.current = false;
+    stripPendingX.current = null;
+    try {
+      const saved = sessionStorage.getItem(findStripScrollKey(currentPostId));
+      if (saved) {
+        const x = parseInt(saved, 10);
+        if (!isNaN(x) && x > 0) stripPendingX.current = x;
+      }
+    } catch {}
+  }, [currentPostId]);
+
   useEffect(() => {
     getVendorPosts(vendorId, 12).then((posts) => {
       const filtered = posts.filter((p) => p.id !== currentPostId);
@@ -233,6 +263,35 @@ function ShelfSection({
       onReady(filtered.length > 0);
     });
   }, [vendorId, currentPostId, onReady]);
+
+  // Save scrollLeft on every horizontal scroll. Refuse-to-write-0: empty
+  // storage already restores to 0, so 0 is a meaningless write target.
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    function onScroll() {
+      if (!stripRef.current) return;
+      const x = Math.round(stripRef.current.scrollLeft);
+      if (x <= 0) return;
+      try { sessionStorage.setItem(findStripScrollKey(currentPostId), String(x)); } catch {}
+    }
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [currentPostId, ready]);
+
+  // Restore scrollLeft once items are ready and the overflow container has
+  // its full content width. Single RAF — DOM is committed by then.
+  useEffect(() => {
+    if (!ready) return;
+    if (stripRestored.current) return;
+    if (stripPendingX.current === null) return;
+    if (!stripRef.current) return;
+    stripRestored.current = true;
+    const x = stripPendingX.current;
+    requestAnimationFrame(() => {
+      if (stripRef.current) stripRef.current.scrollLeft = x;
+    });
+  }, [ready]);
 
   if (!ready || items.length === 0) return null;
 
@@ -257,6 +316,7 @@ function ShelfSection({
         More from this booth…
       </div>
       <div
+        ref={stripRef}
         className="hide-scrollbar"
         style={{
           display: "flex",
@@ -505,6 +565,14 @@ export default function FindDetailPage() {
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const [lightboxOpen,  setLightboxOpen]  = useState(false);
 
+  // Session 88 — page vertical scroll-restore for back-nav from peer finds
+  // (taps on the "More from this booth" strip → /find/[id-B] → back). Same
+  // shape as /flagged (canonical Phase 3 primitive) + session-86 refuse-to-
+  // write-0. Per-id key so peer-nav between distinct finds doesn't cross-
+  // contaminate scroll state.
+  const pendingScrollY = useRef<number | null>(null);
+  const scrollRestored = useRef(false);
+
   useEffect(() => {
     function sync() {
       try { setBookmarkCount(loadFollowedIds().size); } catch {}
@@ -521,6 +589,46 @@ export default function FindDetailPage() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, []);
+
+  // Save scrollY on every scroll event so back-nav lands exactly where the
+  // user tapped a "More from this booth" thumb. Refuse-to-write-0 keeps
+  // storage clean — empty storage already restores to 0 by default. Reset
+  // refs on id change so peer-nav restoration starts fresh for the new find.
+  useEffect(() => {
+    if (!id) return;
+    scrollRestored.current = false;
+    pendingScrollY.current = null;
+    try {
+      const saved = sessionStorage.getItem(findScrollKey(id));
+      if (saved) {
+        const y = parseInt(saved, 10);
+        if (!isNaN(y) && y > 0) pendingScrollY.current = y;
+      }
+    } catch {}
+    function onScroll() {
+      const y = Math.round(window.scrollY);
+      if (y <= 0) return;
+      try { sessionStorage.setItem(findScrollKey(id), String(y)); } catch {}
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [id]);
+
+  // Restore scrollY once data has loaded. Single RAF — by then post body
+  // sections have rendered and the document has substantial height. The
+  // strip below loads asynchronously and may extend the page after restore;
+  // if the saved scroll position lands in that region, scrollTo clamps to
+  // current document height and the strip-area landing position settles
+  // close enough on real content. Re-runs on id change via the [id, loading]
+  // dep so peer-nav into /find/[id-B] can restore B's saved scroll.
+  useEffect(() => {
+    if (loading) return;
+    if (scrollRestored.current) return;
+    if (pendingScrollY.current === null) return;
+    scrollRestored.current = true;
+    const y = pendingScrollY.current;
+    requestAnimationFrame(() => { window.scrollTo({ top: y, behavior: "instant" }); });
+  }, [id, loading]);
 
   useEffect(() => {
     if (!id) return;
