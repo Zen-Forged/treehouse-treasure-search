@@ -111,6 +111,34 @@ const ADMIN_DEFAULT_VENDOR_ID = "5619b4bf-3d05-4843-8ee1-e8b747fc2d81";
 let cachedMyShelf: { vendorId: string; posts: Post[] } | null = null;
 const MY_SHELF_SCROLL_KEY = "treehouse_my_shelf_scroll";
 
+// Session 85 — write to BOTH localStorage and sessionStorage. iOS Safari
+// has been observed to lose sessionStorage values intermittently across
+// back-nav (suspected Next.js App Router router cache + iOS lifecycle
+// suspension interaction). localStorage has stronger persistence guarantees
+// on iOS. Read from both with localStorage as primary.
+function readScrollY(): number | null {
+  try {
+    const ls = localStorage.getItem(MY_SHELF_SCROLL_KEY);
+    if (ls) {
+      const y = parseInt(ls, 10);
+      if (!isNaN(y) && y > 0) return y;
+    }
+  } catch {}
+  try {
+    const ss = sessionStorage.getItem(MY_SHELF_SCROLL_KEY);
+    if (ss) {
+      const y = parseInt(ss, 10);
+      if (!isNaN(y) && y > 0) return y;
+    }
+  } catch {}
+  return null;
+}
+function writeScrollY(y: number) {
+  const v = String(Math.round(y));
+  try { localStorage.setItem(MY_SHELF_SCROLL_KEY, v); } catch {}
+  try { sessionStorage.setItem(MY_SHELF_SCROLL_KEY, v); } catch {}
+}
+
 function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promise<string> {
   return new Promise(resolve => {
     const img = new window.Image();
@@ -357,8 +385,11 @@ function MyBoothInner() {
     maxScroll: number;
     landedY: number;
     bfcache: number;
+    popstate: number;
+    urlchange: number;
+    source: "none" | "ls" | "ss" | "both";
     status: "init" | "waiting-vendor" | "waiting-posts" | "no-target" | "trying" | "landed" | "gave-up";
-  }>({ saved: null, target: null, attempts: 0, maxScroll: 0, landedY: 0, bfcache: 0, status: "init" });
+  }>({ saved: null, target: null, attempts: 0, maxScroll: 0, landedY: 0, bfcache: 0, popstate: 0, urlchange: 0, source: "none", status: "init" });
   const [mall,          setMall]          = useState<Mall | null>(null);
   const [view,          setView]          = useState<BoothView>("window");
   const [heroImageUrl,  setHeroImageUrl]  = useState<string | null>(null);
@@ -608,32 +639,18 @@ function MyBoothInner() {
   // events (iOS Safari fires onScroll during page-height transitions); the
   // ref captures the saved value before any of that can happen.
   useEffect(() => {
-    let savedNum: number | null = null;
-    try {
-      const saved = sessionStorage.getItem(MY_SHELF_SCROLL_KEY);
-      if (saved) {
-        const y = parseInt(saved, 10);
-        if (!isNaN(y) && y > 0) {
-          pendingScrollY.current = y;
-          savedNum = y;
-        }
-      }
-    } catch {}
-    setDiag(d => ({ ...d, saved: savedNum, target: savedNum }));
+    const savedNum = readScrollY();
+    if (savedNum !== null) pendingScrollY.current = savedNum;
+    let lsHit = false, ssHit = false;
+    try { lsHit = !!localStorage.getItem(MY_SHELF_SCROLL_KEY); } catch {}
+    try { ssHit = !!sessionStorage.getItem(MY_SHELF_SCROLL_KEY); } catch {}
+    const source = lsHit && ssHit ? "both" : lsHit ? "ls" : ssHit ? "ss" : "none";
+    setDiag(d => ({ ...d, saved: savedNum, target: savedNum, source }));
 
-    function persistScroll() {
-      try { sessionStorage.setItem(MY_SHELF_SCROLL_KEY, String(Math.round(window.scrollY))); } catch {}
-    }
+    function persistScroll() { writeScrollY(window.scrollY); }
     // Save on multiple deterministic moments — iPhone iOS Safari sometimes
     // de-prioritizes scroll events during transitions, and listener cleanup
-    // can run before the final scroll event lands. Belt-and-suspenders:
-    //   - scroll: live update during interaction
-    //   - click (capture): right before SPA navigation kicks in (tile tap
-    //     bubbles up; we save in capture phase before Next.js intercepts)
-    //   - touchend: backup for mobile in case click is throttled
-    //   - visibilitychange: when tab hides, browser navigates, etc.
-    //   - pagehide: full-page unload (back-nav from /find/[id] back to the
-    //     server-rendered shell sometimes fires this on iOS)
+    // can run before the final scroll event lands. Belt-and-suspenders.
     window.addEventListener("scroll", persistScroll, { passive: true });
     document.addEventListener("click", persistScroll, true);
     document.addEventListener("touchend", persistScroll, { passive: true });
@@ -696,36 +713,56 @@ function MyBoothInner() {
     return runRestore(targetY);
   }, [vendorReady, postsLoading]);
 
-  // BFCache handler — iOS Safari aggressively caches the previous page on
-  // back-nav. When the page is restored from BFCache, React state is
-  // preserved exactly as it was at navigation time and useEffect/useLayoutEffect
-  // do NOT re-run. That meant the one-time sessionStorage read at mount
-  // never refreshed, pendingScrollY ref stayed at its mount-time value
-  // (often null, since save fires AFTER mount), and the restore never had
-  // a target. pageshow with persisted=true is the BFCache restore signal —
-  // re-read sessionStorage manually and trigger the restore.
+  // Re-read storage and try restore. Reusable across mount, BFCache,
+  // popstate, and URL-param-change paths since any of them can deliver us
+  // back to /my-shelf with content present but pendingScrollY ref stale.
+  function rereadAndRestore() {
+    const targetY = readScrollY();
+    if (targetY === null) return;
+    pendingScrollY.current = targetY;
+    scrollRestored.current = false;
+    setDiag(d => ({ ...d, saved: targetY, target: targetY, status: "trying" }));
+    runRestore(targetY);
+  }
+
+  // BFCache handler — pageshow with persisted=true fires when iOS Safari
+  // restores a fully-cached page. React state is preserved as-is so
+  // mount-time effects don't re-run; we re-read manually.
   useEffect(() => {
     function onPageShow(e: PageTransitionEvent) {
       if (!e.persisted) return;
-      let targetY: number | null = null;
-      try {
-        const saved = sessionStorage.getItem(MY_SHELF_SCROLL_KEY);
-        if (saved) {
-          const y = parseInt(saved, 10);
-          if (!isNaN(y) && y > 0) targetY = y;
-        }
-      } catch {}
-      setDiag(d => ({ ...d, bfcache: d.bfcache + 1, saved: targetY, target: targetY }));
-      if (targetY === null) return;
-      pendingScrollY.current = targetY;
-      scrollRestored.current = false;
-      setDiag(d => ({ ...d, status: "trying" }));
-      runRestore(targetY);
+      setDiag(d => ({ ...d, bfcache: d.bfcache + 1 }));
+      rereadAndRestore();
     }
     window.addEventListener("pageshow", onPageShow);
     return () => window.removeEventListener("pageshow", onPageShow);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // popstate handler — fires on browser back-nav even when Next.js App
+  // Router keeps the page in its router cache without unmounting. This is
+  // the most likely path for the "mixed results" pattern: when Next.js
+  // serves the cached /my-shelf instance, useEffect mount logic doesn't
+  // fire on the back-nav, but popstate does.
+  useEffect(() => {
+    function onPopState() {
+      setDiag(d => ({ ...d, popstate: d.popstate + 1 }));
+      rereadAndRestore();
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // URL-change handler — useSearchParams reactivity catches the
+  // back-to-/my-shelf transition even when nothing else does. The vendor
+  // param string changes on each round-trip URL parse even if the value
+  // is the same; this effect runs for every param-state delivery.
+  useEffect(() => {
+    setDiag(d => ({ ...d, urlchange: d.urlchange + 1 }));
+    rereadAndRestore();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // ── Picker selection ───────────────────────────────────────────────────
   function handlePickerSelect(vendorId: string) {
@@ -899,7 +936,8 @@ function MyBoothInner() {
         <div>attempts: {diag.attempts}</div>
         <div>maxScroll: {diag.maxScroll}</div>
         <div>landedY: {diag.landedY}</div>
-        <div>bfcache: {diag.bfcache}</div>
+        <div>src: {diag.source}</div>
+        <div>bfc/pop/url: {diag.bfcache}/{diag.popstate}/{diag.urlchange}</div>
       </div>
         {loading ? (
           <Skeleton />
