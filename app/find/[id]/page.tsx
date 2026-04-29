@@ -223,16 +223,32 @@ const findStripScrollKey = (postId: string) => `treehouse_find_strip_scroll_x:${
 // when the new id mounts.
 let findScrollWriteBlocked = false;
 
-// Module-scope back-navigation detection. popstate fires for both browser
-// back AND forward button presses; both should restore from saved scroll.
-// Direct nav via router.push (Link tap) does NOT fire popstate, so the flag
-// stays false → fresh forward navigation lands at the top of the page even
-// when revisiting a previously-scrolled find. Per David: "when a new find
-// is selected it should default to opening like a new page, even if that
-// item was selected before and scrolled through."
-let isBackForwardNav = false;
+// Module-scope navigation-type tracker. The flag holds the type of the
+// MOST RECENT navigation: popstate (browser back/forward) or pushState
+// (router.push from a Link tap). On any /find/[id] mount, the flag tells
+// us whether the user got here via back/forward (restore saved scroll)
+// or via a Link tap (open like a new page, scroll to top — including
+// revisits of a find that was previously scrolled through).
+//
+// The previous popstate-only listener had a flag-staleness bug: a
+// popstate setting `true` was never reset until /find/[id] mounted to
+// consume it, so a subsequent forward Link tap would incorrectly read
+// stale `true` and restore. Monkey-patching pushState resets the flag
+// synchronously on every router.push, so the flag always reflects the
+// current navigation accurately.
+let lastNavWasPopstate = false;
 if (typeof window !== "undefined") {
-  window.addEventListener("popstate", () => { isBackForwardNav = true; });
+  window.addEventListener("popstate", () => { lastNavWasPopstate = true; });
+  const origPushState = window.history.pushState.bind(window.history);
+  window.history.pushState = function (...args: Parameters<typeof origPushState>) {
+    lastNavWasPopstate = false;
+    return origPushState(...args);
+  };
+  const origReplaceState = window.history.replaceState.bind(window.history);
+  window.history.replaceState = function (...args: Parameters<typeof origReplaceState>) {
+    lastNavWasPopstate = false;
+    return origReplaceState(...args);
+  };
 }
 
 function ShelfSection({
@@ -263,7 +279,7 @@ function ShelfSection({
   useEffect(() => {
     stripRestored.current = false;
     stripPendingX.current = null;
-    if (!isBackForwardNav) return;
+    if (!lastNavWasPopstate) return;
     try {
       const saved = sessionStorage.getItem(findStripScrollKey(currentPostId));
       if (saved) {
@@ -602,7 +618,7 @@ export default function FindDetailPage() {
   }, []);
 
   // Save scrollY on every scroll event so back-nav lands exactly where the
-  // user tapped a "More from this booth" thumb. Branch on isBackForwardNav:
+  // user tapped a "More from this booth" thumb. Branch on lastNavWasPopstate:
   //   - Back/forward via browser history (popstate fired) → restore from
   //     saved value if present.
   //   - Forward via Link tap (no popstate) → always scrollTo(0, 0). David:
@@ -620,8 +636,7 @@ export default function FindDetailPage() {
     scrollRestored.current = false;
     pendingScrollY.current = null;
     findScrollWriteBlocked = false;
-    const wasBackForward = isBackForwardNav;
-    isBackForwardNav = false;
+    const wasBackForward = lastNavWasPopstate;
     if (wasBackForward) {
       let savedY: number | null = null;
       try {
