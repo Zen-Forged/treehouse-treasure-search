@@ -113,9 +113,8 @@ export default function EditBoothSheet({
       const compressed = await compressImage(dataUrl);
       // Optimistic preview — sheet shows the new photo immediately.
       setHeroUrl(compressed);
-      const res  = await fetch("/api/vendor-hero", {
+      const res  = await authFetch("/api/vendor-hero", {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ base64DataUrl: compressed, vendorId: vendor.id }),
       });
       const json = await res.json();
@@ -142,9 +141,8 @@ export default function EditBoothSheet({
     try {
       // Optimistic clear.
       setHeroUrl(null);
-      const res  = await fetch("/api/vendor-hero", {
+      const res  = await authFetch("/api/vendor-hero", {
         method:  "DELETE",
-        headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ vendorId: vendor.id }),
       });
       const json = await res.json();

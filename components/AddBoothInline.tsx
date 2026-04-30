@@ -40,6 +40,7 @@ import { motion } from "framer-motion";
 import { Plus, ChevronRight, X, Loader as LoaderIcon, Check, Image as ImageIcon } from "lucide-react";
 import { createVendor, slugify } from "@/lib/posts";
 import { compressImage } from "@/lib/imageUpload";
+import { authFetch } from "@/lib/authFetch";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import type { Mall, Vendor } from "@/types/treehouse";
 
@@ -135,9 +136,8 @@ export default function AddBoothInline({
         reader.readAsDataURL(file);
       });
       const compressed = await compressImage(dataUrl);
-      const res = await fetch("/api/vendor-hero", {
+      const res = await authFetch("/api/vendor-hero", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ base64DataUrl: compressed, vendorId }),
       });
       const json = await res.json();
