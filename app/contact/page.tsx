@@ -22,7 +22,10 @@ import { ArrowLeft, Mail } from "lucide-react";
 import StickyMasthead from "@/components/StickyMasthead";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
+// Public-facing contact address. Kept distinct from NEXT_PUBLIC_ADMIN_EMAIL,
+// which gates admin authentication and must continue to match the actor's
+// sign-in email — conflating the two would lock the admin out of /admin.
+const CONTACT_EMAIL = "info@kentuckytreehouse.com";
 
 const categories = [
   { label: "Ask a question",  subject: "Question: " },
@@ -32,7 +35,7 @@ const categories = [
 
 function buildMailto(subjectPrefix: string): string {
   const params = new URLSearchParams({ subject: subjectPrefix });
-  return `mailto:${ADMIN_EMAIL}?${params.toString()}`;
+  return `mailto:${CONTACT_EMAIL}?${params.toString()}`;
 }
 
 export default function ContactPage() {

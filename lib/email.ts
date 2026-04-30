@@ -194,7 +194,6 @@ export interface ApprovalPayload {
 export async function sendRequestReceived(
   payload: RequestReceivedPayload,
 ): Promise<{ ok: boolean; error?: string }> {
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
   const firstName  = payload.firstName.trim() || "there";
   const subject    = `We got your Treehouse Finds request, ${firstName}`;
 
@@ -220,7 +219,7 @@ export async function sendRequestReceived(
 
   return sendEmail({
     to:      payload.email,
-    replyTo: adminEmail || undefined,
+    replyTo: "info@kentuckytreehouse.com",
     subject,
     html,
     text,
@@ -242,7 +241,6 @@ export async function sendRequestReceived(
 export async function sendApprovalInstructions(
   payload: ApprovalPayload,
 ): Promise<{ ok: boolean; error?: string }> {
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
   const firstName  = payload.firstName.trim() || "there";
   const subject    = `Your Treehouse Finds booth is ready, ${firstName}`;
 
@@ -294,7 +292,7 @@ export async function sendApprovalInstructions(
 
   return sendEmail({
     to:      payload.email,
-    replyTo: adminEmail || undefined,
+    replyTo: "info@kentuckytreehouse.com",
     subject,
     html,
     text,
@@ -370,7 +368,6 @@ export interface ShareBoothWindowPayload {
 export async function sendBoothWindow(
   payload: ShareBoothWindowPayload,
 ): Promise<{ ok: boolean; error?: string }> {
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? "";
   const siteUrl    = getSiteUrl();
 
   const vendorName    = payload.vendor.displayName.trim() || "a booth";
@@ -424,7 +421,7 @@ export async function sendBoothWindow(
 
   return sendEmail({
     to:      payload.recipientEmail,
-    replyTo: adminEmail || undefined,
+    replyTo: "info@kentuckytreehouse.com",
     subject,
     html,
     text,
