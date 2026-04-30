@@ -55,7 +55,7 @@ npx tsx scripts/security-audit/inspect-keys.ts
 | Role-grant drift | ✅ Covered (session 92) | `audit_role_grants()` RPC (migration 018) + `inspect-grants.ts`. Flags anon writes on public + any anon/authenticated grant on auth.users. |
 | `auth.users` exposure check | ✅ Covered (session 92) | Same diagnostic — anon/authenticated grants on auth.users surface as 🔴 findings. |
 | OTP / password policy | 🟡 Manual procedure (session 92) — see [§ OTP & password policy (manual)](#otp--password-policy-manual) below. Auth Advisor findings (`auth_otp_long_expiry`, `auth_password_no_minimum_length`) are dashboard-only; no PostgREST surface for `auth.config`. |
-| API route auth audit | ⏳ Pending | Every `/api/admin/*` route must call `requireAdmin`; every `/api/*` mutating route must auth. Walk the routes. |
+| API route auth audit | 🟡 Mostly covered (session 92) | All `/api/admin/*` use `requireAdmin`. Mutating routes audited; `vendor-hero`, `post-image` hardened, `my-posts/[id]` multi-booth ownership bug fixed, orphan `/api/debug` deleted. **AI/cost routes (`extract-tag`, `identify`, `post-caption`, `report-comps`, `story`, `suggest`) deliberately left unauthed** — IP rate-limit only — because adding `requireAuth` would break the reseller-intel layer (`/scan`, `/decide`) which is `localStorage`-only by design. Revisit when beta opens to general traffic OR when cost spikes. Move to Upstash Redis if in-memory rate limits prove insufficient. |
 | Image-upload size guard | 🟡 Partial | Server route enforces 12 MB limit; not all upload surfaces audited. CLAUDE.md carry-forward. |
 
 These are flagged in the runbook so future sessions can pick them up without re-discovering the gaps.
