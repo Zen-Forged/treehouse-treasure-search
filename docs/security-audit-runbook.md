@@ -54,7 +54,7 @@ npx tsx scripts/security-audit/inspect-keys.ts
 | Function `search_path` mutability | ✅ Covered (session 92) | `audit_function_search_path()` RPC (migration 017) + `inspect-functions.ts`. Migration 017 also locks `is_treehouse_admin()` and `set_updated_at()`. |
 | Role-grant drift | ✅ Covered (session 92) | `audit_role_grants()` RPC (migration 018) + `inspect-grants.ts`. Flags anon writes on public + any anon/authenticated grant on auth.users. |
 | `auth.users` exposure check | ✅ Covered (session 92) | Same diagnostic — anon/authenticated grants on auth.users surface as 🔴 findings. |
-| OTP / password policy | ⏳ Pending | Supabase Advisor flags OTP expiry > 1h and password min length < 8. Surface from `auth.config`. |
+| OTP / password policy | 🟡 Manual procedure (session 92) — see [§ OTP & password policy (manual)](#otp--password-policy-manual) below. Auth Advisor findings (`auth_otp_long_expiry`, `auth_password_no_minimum_length`) are dashboard-only; no PostgREST surface for `auth.config`. |
 | API route auth audit | ⏳ Pending | Every `/api/admin/*` route must call `requireAdmin`; every `/api/*` mutating route must auth. Walk the routes. |
 | Image-upload size guard | 🟡 Partial | Server route enforces 12 MB limit; not all upload surfaces audited. CLAUDE.md carry-forward. |
 
@@ -97,6 +97,41 @@ The email subject is one of:
 
 ---
 
+## OTP & password policy (manual)
+
+The two `auth_*` Advisor findings — `auth_otp_long_expiry` and
+`auth_password_no_minimum_length` — live in `auth.config`, which Supabase
+exposes via the Auth section of the dashboard, not through PostgREST. There
+is no SQL migration that closes them; the fix is two dashboard toggles.
+
+Walk this every time the Advisor surfaces an `auth_*` finding, plus once
+per pre-milestone sweep:
+
+1. **OTP / email-link expiry** — Authentication → Providers → Email
+   - Confirm "Mailer OTP Expiration" ≤ **3600 seconds** (1 hour).
+   - Recommended: **600** (10 minutes). Magic-link OTPs are confirmed
+     immediately by the user; a 10-minute window is plenty and minimises
+     the steal-and-replay window.
+   - Save → re-check Database → Advisors → Security; the
+     `auth_otp_long_expiry` row should clear within 5 minutes.
+
+2. **Password minimum length** — Authentication → Providers → Email
+   - Confirm "Minimum password length" ≥ **8**.
+   - Recommended: **8** (Supabase's default; matches NIST guidance).
+   - Note: Treehouse Finds is currently magic-link-only — there is no
+     password-based sign-in surface — but the policy still has to be set
+     to a sane value because the Advisor checks the config regardless of
+     whether passwords are in use.
+   - Save → re-check Advisors.
+
+**Both projects.** Apply both toggles to staging AND prod every time. The
+projects diverge silently if treated separately.
+
+After applying, the Database → Advisors → Security pane re-scans every
+~5 minutes; both findings should clear.
+
+---
+
 ## Standard procedure — pre-milestone full sweep
 
 Run all three diagnostics against both projects. Expected output: zero findings.
@@ -105,9 +140,16 @@ Run all three diagnostics against both projects. Expected output: zero findings.
 npx tsx scripts/security-audit/inspect-keys.ts && \
 npx tsx scripts/security-audit/inspect-rls.ts && \
 npx tsx scripts/security-audit/inspect-rls.ts staging && \
+npx tsx scripts/security-audit/inspect-functions.ts && \
+npx tsx scripts/security-audit/inspect-functions.ts staging && \
+npx tsx scripts/security-audit/inspect-grants.ts && \
+npx tsx scripts/security-audit/inspect-grants.ts staging && \
 npx tsx scripts/security-audit/inspect-storage-acls.ts && \
 npx tsx scripts/security-audit/inspect-storage-acls.ts staging
 ```
+
+Then walk the [OTP & password policy (manual)](#otp--password-policy-manual)
+checklist for both projects.
 
 If any finding surfaces, follow the "Supabase Security Advisor email arrives" procedure above. Don't ship to milestone with open security findings.
 
