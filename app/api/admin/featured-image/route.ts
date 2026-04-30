@@ -25,6 +25,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
+import { recordEvent } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
 
@@ -116,6 +117,12 @@ export async function POST(req: NextRequest) {
   }
 
   console.log(`[featured-image] Success: ${settingKey} → ${publicUrl}`);
+
+  await recordEvent("featured_image_uploaded_by_admin", {
+    user_id: user.id,
+    payload: { setting_key: settingKey, mime_type: mimeType, size_bytes: binary.length },
+  });
+
   return NextResponse.json({ url: publicUrl });
 }
 
@@ -123,7 +130,7 @@ export async function DELETE(req: NextRequest) {
   // 1. Admin gate
   const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
-  const { service } = auth;
+  const { service, user } = auth;
 
   // settingKey can ride in the body OR as a ?settingKey= query param.
   // Body is the canonical shape (matches POST); query is a convenience for
@@ -192,5 +199,11 @@ export async function DELETE(req: NextRequest) {
   }
 
   console.log(`[featured-image:DELETE] Success: ${settingKey} cleared`);
+
+  await recordEvent("featured_image_removed_by_admin", {
+    user_id: user.id,
+    payload: { setting_key: settingKey },
+  });
+
   return NextResponse.json({ ok: true });
 }

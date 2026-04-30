@@ -28,6 +28,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { slugify } from "@/lib/posts";
+import { recordEvent } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
 
@@ -108,6 +109,17 @@ export async function PATCH(req: Request) {
     display_name: displayName,
     mall_id:      mallId,
     booth_number: boothNumber,
+  });
+
+  await recordEvent("booth_edited_by_admin", {
+    user_id: auth.user.id,
+    payload: {
+      vendor_id:    vendorId,
+      vendor_slug:  data.slug,
+      display_name: displayName,
+      mall_id:      mallId,
+      booth_number: boothNumber,
+    },
   });
 
   return NextResponse.json({ ok: true, vendor: data });
@@ -247,6 +259,16 @@ export async function DELETE(req: Request) {
     display_name: vendor.display_name,
     postsDeleted: posts?.length ?? 0,
     imagesDeleted,
+  });
+
+  await recordEvent("booth_deleted_by_admin", {
+    user_id: auth.user.id,
+    payload: {
+      vendor_id:     vendorId,
+      display_name:  vendor.display_name,
+      posts_deleted: posts?.length ?? 0,
+      images_deleted: imagesDeleted,
+    },
   });
 
   return NextResponse.json({

@@ -7,6 +7,7 @@
 
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
+import { recordEvent } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
 
@@ -58,5 +59,16 @@ export async function DELETE(req: Request) {
     ? await deleteQuery.neq("id", "00000000-0000-0000-0000-000000000000")
     : await deleteQuery.in("id", ids ?? []);
   if (deleteErr) return NextResponse.json({ error: deleteErr.message }, { status: 500 });
+
+  await recordEvent("post_deleted_by_admin", {
+    user_id: auth.user.id,
+    payload: {
+      mode:            deleteAll ? "all" : "selected",
+      posts_deleted:   count ?? 0,
+      storage_deleted: storageDeleted,
+      requested_ids:   deleteAll ? null : (ids ?? []),
+    },
+  });
+
   return NextResponse.json({ ok: true, postsDeleted: count ?? 0, storageDeleted });
 }

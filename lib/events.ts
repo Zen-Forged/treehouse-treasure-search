@@ -28,7 +28,17 @@ export type EventType =
   | "booth_unbookmarked"
   | "find_shared"
   | "tag_extracted"
-  | "tag_skipped";
+  | "tag_skipped"
+  // ── Wave 1 admin audit logging (session 91) — destructive + state-changing
+  // admin actions only (per Wave 1 decision 6). Read actions intentionally
+  // excluded. `vendor_request_approved` and `mall_activated`/`_deactivated`
+  // already capture admin actor via `user_id` and stay above; these are the
+  // additional admin-only actions that previously went unlogged.
+  | "booth_deleted_by_admin"
+  | "booth_edited_by_admin"
+  | "post_deleted_by_admin"
+  | "featured_image_uploaded_by_admin"
+  | "featured_image_removed_by_admin";
 
 export interface RecordEventOptions {
   user_id?:    string | null;
