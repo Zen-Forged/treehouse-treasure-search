@@ -478,7 +478,8 @@ export default function BoothsPage() {
 
       {/* Session 72 — admin entry retired from masthead; admin now reaches
           /admin via the dedicated Admin tab in BottomNav. */}
-      <StickyMasthead />
+      {/* Session 90 — share opt-out on primary tabs. */}
+      <StickyMasthead right={null} />
 
       {/* Mall scope header — eyebrow + tappable mall name + chevron + italic
           count line. Single source of truth for "what mall am I looking at?"

@@ -647,7 +647,8 @@ export default function FindMapPage() {
         flexDirection: "column",
       }}
     >
-      {/* 1. StickyMasthead — session-70 locked-grid slot API */}
+      {/* 1. StickyMasthead — session-70 locked-grid slot API. Session 90:
+          share opt-out on primary tabs (right={null}). */}
       <StickyMasthead
         left={
           <button
@@ -670,6 +671,7 @@ export default function FindMapPage() {
             <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
           </button>
         }
+        right={null}
       />
 
       {/* 2. Mall scope header — moved above the FeaturedBanner per session-68

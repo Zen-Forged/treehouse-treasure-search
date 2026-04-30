@@ -746,11 +746,11 @@ export default function DiscoveryFeedPage() {
       }}
     >
       {/* ── 1. Masthead — session-70 locked-grid slot API ───────────────── */}
-      {/* Session 90 — sign-in/sign-out moved off the masthead onto the
-          BottomNav (sign-in tab) and /login (sign-out affordance). The
-          right slot is now empty here; the StickyMasthead's default share
-          treatment fills it. */}
-      <StickyMasthead />
+      {/* Session 90 — auth chrome moved to BottomNav (Profile tab) and
+          /login. Right slot explicitly empty: the StickyMasthead default
+          share treatment is opt-out here so the Home masthead stays the
+          quietest surface in the app. */}
+      <StickyMasthead right={null} />
 
       {/* 1.5 Mall scope header (FeedHero wrapper) — moved above the
           FeaturedBanner per session-68 QA so the persisted mall filter is
