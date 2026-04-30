@@ -61,7 +61,6 @@ import MallSheet from "@/components/MallSheet";
 import MallScopeHeader from "@/components/MallScopeHeader";
 import StickyMasthead from "@/components/StickyMasthead";
 import FeaturedBanner from "@/components/FeaturedBanner";
-import VendorCTACard from "@/components/VendorCTACard";
 import type { Post, Mall } from "@/types/treehouse";
 
 const SCROLL_KEY      = "treehouse_feed_scroll";
@@ -823,18 +822,6 @@ export default function DiscoveryFeedPage() {
           />
         )}
 
-        {/* ── Vendor CTA — bottom of feed ────────────────────────────── */}
-        {/* Editorial banner card per docs/mockups/vendor-cta-v2.html (γ).    */}
-        {/* Renders outside the empty/has-finds conditional, so when a mall   */}
-        {/* has no posts the card sits below <EmptyFeed /> for free.          */}
-        {!loading && (
-          <div style={{ padding: "40px 6px 0" }}>
-            <div style={{ padding: "0 16px 24px" }}>
-              <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
-            </div>
-            <VendorCTACard />
-          </div>
-        )}
       </main>
 
       <BottomNav active="home" flaggedCount={bookmarkCount} />
