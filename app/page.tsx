@@ -519,9 +519,11 @@ function MasonryGrid({
 //
 // R11 (Wave 1 Task 7, session 91) — when the user has filtered to a specific
 // mall AND that mall has hero_image_url set, render the photo as a banner
-// ABOVE the MallScopeHeader (Frame A per docs/mockups/mall-hero-feed-v1.html).
-// All-malls and no-hero cases fall back to the text-only header — no
-// re-layout, the photo block simply isn't there.
+// BELOW the MallScopeHeader using the same <FeaturedBanner> primitive that
+// powers the home Featured Find banner — so dimensions match exactly (200px
+// min-height, 16px corner radius, 10px horizontal padding via v1.bannerRadius).
+// All-malls and no-hero cases fall back to the text-only header — FeaturedBanner
+// returns null when imageUrl is absent, so the layout collapses cleanly.
 function FeedHero({
   selectedMall,
   onTapMall,
@@ -550,29 +552,6 @@ function FeedHero({
 
   return (
     <>
-      {heroUrl && (
-        <div
-          style={{
-            margin: "12px 22px 0",
-            height: 160,
-            borderRadius: 8,
-            overflow: "hidden",
-            background: v1.inkWash,
-          }}
-        >
-          <img
-            src={heroUrl}
-            alt={`${selectedMall!.name} hero`}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "center",
-              display: "block",
-            }}
-          />
-        </div>
-      )}
       <MallScopeHeader
         eyebrowAll="Finds from across"
         eyebrowOne="Finds from"
@@ -580,6 +559,7 @@ function FeedHero({
         geoLine={geoLine}
         onTap={onTapMall}
       />
+      <FeaturedBanner variant="eyebrow" imageUrl={heroUrl} />
     </>
   );
 }
