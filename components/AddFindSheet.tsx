@@ -38,6 +38,12 @@ export interface AddFindSheetProps {
   onTakePhoto: () => void;
   /** Called when the user taps the "Choose from library" row. */
   onChooseFromLibrary: () => void;
+  /**
+   * Header label. Defaults to "Add a find" for the primary capture flow.
+   * Retake-photo callers (session 94 capture-flow refinement) pass
+   * "Replace photo" so the sheet doesn't read as a fresh add.
+   */
+  title?: string;
 }
 
 export default function AddFindSheet({
@@ -45,6 +51,7 @@ export default function AddFindSheet({
   onClose,
   onTakePhoto,
   onChooseFromLibrary,
+  title = "Add a find",
 }: AddFindSheetProps) {
   // Lock body scroll while open (same pattern as MallSheet)
   useEffect(() => {
@@ -136,7 +143,7 @@ export default function AddFindSheet({
                   lineHeight: 1.2,
                 }}
               >
-                Add a find
+                {title}
               </div>
             </div>
 

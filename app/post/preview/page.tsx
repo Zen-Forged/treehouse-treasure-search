@@ -1,48 +1,37 @@
 // app/post/preview/page.tsx
-// v1.2 — "Review your find" page.
-// See docs/design-system-v1.2-build-spec.md §4 and the approved mockup
-// docs/mockups/review-page-v1-2.html.
+// "Review your find" page — refreshed end-to-end in session 94 per
+// docs/capture-flow-refinement-design.md (V3 commitment surface).
 //
-// Session 35 (2026-04-20) — multi-booth identity resolution:
-//   - Replaced getVendorByUserId(user.id) with getVendorsByUserId +
-//     resolveActiveBooth(vendors). Vendors with multiple booths post to
-//     whichever booth is currently active on /my-shelf. The post flow
-//     itself has NO booth picker — single-path for the 99% case per the
-//     session-34 build spec. The 1% of users who want to post to a
-//     different booth switch on /my-shelf first.
-//   - Admin `?vendor=id` impersonation path unchanged.
-//   - Unauth/localStorage fallback unchanged (KI-003 guard preserved —
-//     signed-in users never fall through to stale localStorage identity).
+// What changed vs. v1.2:
+//   D7  Title / Caption / Price moved ABOVE the photo (was below the photo
+//       under the posting-as block).
+//   D8  <PostingAsBlock /> removed entirely; <PhotographPreview /> retired
+//       on this page (still used by /post/edit/[id]). Booth-location post-it
+//       gone with it.
+//   D9  Input field bg: v1.inkWash → v1.postit (#fbf3df) — matches the
+//       sign-in email input on /login/email.
+//   D10 Caption textarea = auto-grow; height tracks scrollHeight on every
+//       change. No internal scroll. Page scrolls on overflow.
+//   D11 Disabled publish button unified to the rgba(30,77,43,0.40) +
+//       white-text pattern used by /vendor-request and /login/email.
+//   D12 Post-publish "View my shelf / Add another find" interstitial
+//       retired. On success: router.replace(myShelfHref) directly.
+//   D13 Find-photo retake added — italic dotted-link below the polaroid.
+//       Tap → AddFindSheet → file picker → updates postStore.imageDataUrl.
+//       Hard rule: NO /api/post-caption refire on retake; fields preserved.
+//   D14 Vertical centering — middle band is a flex column with
+//       justify-content: center; falls to top-anchored scroll on overflow.
+//   D15 Title block padded with extra top space (~32px) so it reads
+//       slightly shifted-down from the masthead — David's call accepting
+//       a small scroll on a content-heavy page.
 //
-// The vendor lands here from /my-shelf's <AddFindSheet> after picking a
-// photo. The photograph is shown exactly as shoppers will see it on Find
-// Detail (via <PhotographPreview>'s photo truth rule — no crop, paper fills
-// letterbox). The vendor edits Title / Caption / Price inline (no Edit/Done
-// pill — fields are always editable) and taps Publish.
-//
-// Layout (top-to-bottom):
-//   1. Masthead (Mode C) — 38px paper back-bubble + stacked "Review your find"
-//      IM Fell 24px title + italic 14px muted subhead
-//   2. <PhotographPreview> with vendor booth post-it
-//   3. 22px spacer (clears post-it overhang)
-//   4. <PostingAsBlock> attribution row
-//   5. Fields section: Title → Caption → Price
-//      - AmberNotice above the Title when AI caption failed
-//      - Labels: IM Fell italic 13px muted
-//      - Inputs: v1.inkWash bg, 14px radius, FONT_SYS 16px
-//      - Price has $ prefix, 28px padding-left
-//   6. Sticky save bar: filled green "Publish" button
-//
-// Behavior preserved from v0.2:
-//   - Auto-generate title + caption on mount via /api/post-caption
-//   - Session-27 `source: "claude" | "mock"` check — non-claude responses
-//     leave fields blank and surface an AmberNotice instead of populating
-//     with generic mock strings
-//   - uploadPostImageViaServer throws on any upload failure, surfacing as
-//     error screen rather than orphan post with image_url: null
-//
-// Success screen (stage === "done") is separate below — paper-wash check
-// bubble + IM Fell 22px "Saved to shelf." + three stacked actions.
+// Identity resolution + publish behavior preserved verbatim from the
+// session-35 multi-booth pass:
+//   - Admin with ?vendor=id → impersonate that vendor.
+//   - Authed user → getVendorsByUserId + resolveActiveBooth (multi-booth
+//     safe; single-booth users get vendors[0]).
+//   - Authed user with zero vendors → route back to /my-shelf for self-heal.
+//   - Unauth → legacy LOCAL_VENDOR_KEY fallback.
 
 "use client";
 
@@ -51,7 +40,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Check, Camera } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import {
   createPost,
   createVendor,
@@ -71,17 +60,12 @@ import {
 } from "@/types/treehouse";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
-import PhotographPreview from "@/components/PhotographPreview";
-import PostingAsBlock from "@/components/PostingAsBlock";
 import AmberNotice from "@/components/AmberNotice";
 import TagBadge from "@/components/TagBadge";
 import StickyMasthead from "@/components/StickyMasthead";
+import AddFindSheet from "@/components/AddFindSheet";
 
-const FEED_SCROLL_KEY   = "treehouse_feed_scroll";
-
-// ── Caption API ──────────────────────────────────────────────────────────────
-// Re-uses the v0.2 compressForUpload + two-pass pattern so phone photos don't
-// balloon the request body. Session-27 `source` field is still the truth test.
+const FEED_SCROLL_KEY = "treehouse_feed_scroll";
 
 async function compressForUpload(
   dataUrl: string,
@@ -111,10 +95,6 @@ async function generateTitleAndCaption(
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    // Session 27: mock responses are generic hardcoded strings, NOT
-    // descriptions of the photographed item. Non-claude source means we
-    // should leave the fields blank and show the amber notice rather than
-    // populate with misleading generic text.
     if (data.source !== "claude") {
       console.warn("[preview] caption API returned mock fallback:", data.reason ?? "unknown");
       return { title: "", caption: "", aiSucceeded: false };
@@ -128,30 +108,22 @@ async function generateTitleAndCaption(
   }
 }
 
-// ── Stage machine ────────────────────────────────────────────────────────────
-// "loading"    — caption API pending, photograph shown at reduced opacity
+// "loading"    — caption API pending
 // "edit"       — form is editable; publish button active
 // "publishing" — upload + createPost in progress
-// "done"       — success screen visible
 // "error"      — error screen with Try again + Go back
-type Stage = "loading" | "edit" | "publishing" | "done" | "error";
-
-// ══════════════════════════════════════════════════════════════════════════════
-// Inner page (wrapped in Suspense below for useSearchParams)
-// ══════════════════════════════════════════════════════════════════════════════
+//
+// Session 94: "done" stage retired (D12). On publish success the page
+// navigates directly to /my-shelf via router.replace.
+type Stage = "loading" | "edit" | "publishing" | "error";
 
 function PostPreviewInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
 
-  // Preserve `?vendor=<id>` through the publish flow so admin (who reaches
-  // /post/preview via /my-shelf?vendor=<id> impersonation) lands back on
-  // the booth-of-origin after publish, not on their own (empty) /my-shelf.
+  // Preserve `?vendor=<id>` so admin lands back on the booth-of-origin.
   const originVendorId = searchParams.get("vendor");
   const myShelfHref    = originVendorId ? `/my-shelf?vendor=${originVendorId}` : "/my-shelf";
-  const myShelfAddHref = originVendorId
-    ? `/my-shelf?vendor=${originVendorId}&openAdd=1`
-    : "/my-shelf?openAdd=1";
 
   const [image,         setImage]         = useState<string | null>(null);
   const [vendor,        setVendor]        = useState<Vendor | null>(null);
@@ -160,8 +132,6 @@ function PostPreviewInner() {
   const [errorDetail,   setErrorDetail]   = useState<string>("");
   const [aiFailed,      setAiFailed]      = useState(false);
 
-  // Session 62 — tag-flow display flags. All default to false; only set true
-  // when /post/tag pre-populated postStore with extraction results.
   const [tagFailed,     setTagFailed]     = useState(false);
   const [titleFromTag,  setTitleFromTag]  = useState(false);
   const [priceFromTag,  setPriceFromTag]  = useState(false);
@@ -170,6 +140,14 @@ function PostPreviewInner() {
   const [title,   setTitle]   = useState("");
   const [caption, setCaption] = useState("");
   const [price,   setPrice]   = useState("");
+
+  // Find retake (session 94) — sheet open + file input refs
+  const [retakeOpen, setRetakeOpen] = useState(false);
+  const retakeCameraRef  = useRef<HTMLInputElement | null>(null);
+  const retakeLibraryRef = useRef<HTMLInputElement | null>(null);
+
+  // Auto-grow caption textarea
+  const captionRef = useRef<HTMLTextAreaElement | null>(null);
 
   const started = useRef(false);
 
@@ -186,13 +164,6 @@ function PostPreviewInner() {
       }
       setImage(draft.imageDataUrl);
 
-      // Session 35 identity resolution order:
-      //   1. Admin with ?vendor=id → impersonate that vendor directly
-      //   2. Authed user → getVendorsByUserId + resolveActiveBooth
-      //      (multi-booth safe; single-booth users get vendors[0] trivially)
-      //   3. Authed user with zero vendors → route back to /my-shelf so its
-      //      self-heal lookup-vendor path can run
-      //   4. Unauth → legacy LOCAL_VENDOR_KEY path
       const session   = await getSession();
       const user      = session?.user ?? null;
       const admin     = user ? isAdmin(user) : false;
@@ -215,15 +186,10 @@ function PostPreviewInner() {
           hydrateFields(draft);
           return;
         }
-        // Signed-in user with no linked vendor — route back to /my-shelf
-        // which runs the self-heal lookup-vendor path.
         router.replace("/my-shelf");
         return;
       }
 
-      // Unauth fallback to localStorage (legacy support; the v1.2 flow
-      // originates from /my-shelf which is auth-gated, so this path is
-      // only reached by direct deep-link).
       const raw = safeStorage.getItem(LOCAL_VENDOR_KEY);
       if (raw) {
         try {
@@ -237,22 +203,6 @@ function PostPreviewInner() {
       router.replace("/login?next=/my-shelf");
     })();
 
-    // Session 62 — branches between two flows:
-    //
-    //   Skip flow (extractionRan undefined or "skip"): today's behavior —
-    //     fire /api/post-caption on mount, prefill title + caption from
-    //     Claude on the item photo, leave price empty.
-    //
-    //   Tag flow (extractionRan "success" or "error"): /post/tag already
-    //     pre-fetched extract-tag + post-caption in parallel and wrote
-    //     results into postStore. Read them and prefill — no network call
-    //     here, so the page renders fully populated on first paint.
-    //
-    // Tag-success priority (D6): extractedTitle wins over captionTitle.
-    // Caption is always interpretive (Claude on item photo), never tag.
-    // When tag both-fields-empty (full failure), surface the tag-fail
-    // notice and let the vendor type both fields. Caption-fail in tag
-    // flow is silent — caption is optional, no notice needed.
     function hydrateFields(d: PostDraft) {
       if (d.extractionRan === "success" || d.extractionRan === "error") {
         const extTitle    = d.extractedTitle ?? "";
@@ -278,7 +228,6 @@ function PostPreviewInner() {
         return;
       }
 
-      // Skip flow — today's behavior.
       generateTitleAndCaption(d.imageDataUrl).then(({ title: t, caption: c, aiSucceeded }) => {
         setTitle(t);
         setCaption(c);
@@ -289,6 +238,48 @@ function PostPreviewInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Auto-grow the caption — recompute height on every value change.
+  // Reset to "auto" first so the box can SHRINK when text is deleted; without
+  // the reset, scrollHeight stays at the historical max.
+  useEffect(() => {
+    const el = captionRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [caption, stage]);
+
+  // ── Find retake (session 94) — no AI calls ──────────────────────────────
+  async function handleFindRetake(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    let dataUrl: string;
+    try {
+      dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("FileReader failed"));
+        reader.readAsDataURL(file);
+      });
+    } catch (err) {
+      console.error("[preview] find retake reader error:", err);
+      return;
+    }
+
+    const draft = postStore.get();
+    if (!draft) {
+      router.replace("/my-shelf");
+      return;
+    }
+
+    // Update postStore + local image. Hard rule: NO /api/post-caption call,
+    // NO /api/extract-tag call. Title / Caption / Price preserved verbatim.
+    postStore.set({ ...draft, imageDataUrl: dataUrl });
+    setImage(dataUrl);
+    setRetakeOpen(false);
+  }
+
   // ── Publish ──────────────────────────────────────────────────────────────
   async function handlePublish() {
     if (!image || !title.trim()) return;
@@ -298,7 +289,6 @@ function PostPreviewInner() {
     setErrorDetail("");
 
     try {
-      // Resolve active identity fields from whichever source populated them.
       const activeMallId     = vendor?.mall_id      ?? localProfile?.mall_id      ?? null;
       const activeVendorId   = vendor?.id           ?? localProfile?.vendor_id    ?? null;
       const activeDispName   = vendor?.display_name ?? localProfile?.display_name ?? null;
@@ -310,8 +300,6 @@ function PostPreviewInner() {
         throw new Error("missing identity");
       }
 
-      // Compress once more for the upload (defensive; phone-photo sizes can
-      // still be multi-MB even after an earlier pass).
       let uploadImage: string;
       try {
         uploadImage = await compressForUpload(image, 1200, 0.78);
@@ -323,9 +311,6 @@ function PostPreviewInner() {
         throw err;
       }
 
-      // If we don't yet have a vendor row (unauth/localStorage path), create
-      // one. This preserves v0.2 behavior and the 23505 recovery in
-      // createVendor.
       let vendorId = activeVendorId;
       if (!vendorId) {
         const baseSlug = slugify(activeDispName);
@@ -359,8 +344,6 @@ function PostPreviewInner() {
         }
       }
 
-      // Upload — throws on any failure; we never write a post row with
-      // image_url: null.
       let imageUrl: string;
       try {
         imageUrl = await uploadPostImageViaServer(uploadImage, vendorId);
@@ -395,9 +378,13 @@ function PostPreviewInner() {
       }
 
       postStore.clear();
-      // Clear feed scroll cache so Home lands at top showing the new post.
       try { sessionStorage.removeItem(FEED_SCROLL_KEY); } catch {}
-      setStage("done");
+
+      // Session 94 (D12) — drop the post-publish interstitial. Land directly
+      // on /my-shelf so vendors see the new post in context with the rest of
+      // their shelf. Admin ?vendor=<id> impersonation preserved through
+      // myShelfHref.
+      router.replace(myShelfHref);
     } catch (err) {
       console.error("[preview] publish failed:", err);
       setStage("error");
@@ -421,18 +408,8 @@ function PostPreviewInner() {
         }}
       >
         {image && (
-          <div style={{ width: "78%", borderRadius: v1.imageRadius, overflow: "hidden", opacity: 0.55 }}>
-            <img
-              src={image}
-              alt=""
-              style={{
-                width: "100%",
-                height: "auto",
-                objectFit: "contain",
-                filter:       TREEHOUSE_LENS_FILTER,
-                WebkitFilter: TREEHOUSE_LENS_FILTER,
-              }}
-            />
+          <div style={{ width: "62%" }}>
+            <PolaroidPreview imageUrl={image} dim />
           </div>
         )}
         <motion.div
@@ -446,125 +423,6 @@ function PostPreviewInner() {
           }}
         >
           Reading your find…
-        </motion.div>
-      </div>
-    );
-  }
-
-  // ── Render: done ──────────────────────────────────────────────────────────
-  if (stage === "done") {
-    return (
-      <div
-        style={{
-          minHeight: "100dvh",
-          background: v1.paperCream,
-          maxWidth: 430,
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 22,
-          padding: "0 24px",
-        }}
-      >
-        {/* Paper-wash check bubble (v1.1k primitive) */}
-        <motion.div
-          initial={{ scale: 0.7, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 260, damping: 20 }}
-          style={{
-            width: 60,
-            height: 60,
-            borderRadius: "50%",
-            background: v1.iconBubble,
-            border: `1px solid ${v1.inkHairline}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Check size={24} strokeWidth={1.8} style={{ color: v1.green }} />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.18 }}
-          style={{ textAlign: "center" }}
-        >
-          <div
-            style={{
-              fontFamily: FONT_LORA,
-              fontSize: 22,
-              color: v1.inkPrimary,
-              marginBottom: 8,
-              lineHeight: 1.2,
-            }}
-          >
-            Posted to your shelf.
-          </div>
-          <div
-            style={{
-              fontFamily: FONT_LORA,
-              fontStyle: "italic",
-              fontSize: 13,
-              color: v1.inkMuted,
-              lineHeight: 1.6,
-            }}
-          >
-            It&rsquo;s live in the Treehouse feed.
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.30 }}
-          style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}
-        >
-          <button
-            onClick={() => router.push(myShelfHref)}
-            style={{
-              width: "100%",
-              padding: "15px",
-              borderRadius: 14,
-              fontFamily: FONT_SYS,
-              fontSize: 15,
-              fontWeight: 500,
-              color: "#fff",
-              background: v1.green,
-              border: "none",
-              cursor: "pointer",
-              boxShadow: "0 2px 12px rgba(30,77,43,0.25)",
-              letterSpacing: "0.2px",
-            }}
-          >
-            View my shelf
-          </button>
-
-          <button
-            onClick={() => router.push(myShelfAddHref)}
-            style={{
-              width: "100%",
-              padding: "12px",
-              borderRadius: 14,
-              fontFamily: FONT_LORA,
-              fontStyle: "italic",
-              fontSize: 14,
-              color: v1.inkMuted,
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-            }}
-          >
-            <Camera size={13} style={{ color: v1.inkMuted }} />
-            Add another find
-          </button>
         </motion.div>
       </div>
     );
@@ -669,50 +527,10 @@ function PostPreviewInner() {
   }
 
   // ── Render: edit ──────────────────────────────────────────────────────────
-  // TypeScript narrows `stage` to `"edit"` after the three early returns
-  // above, which makes any `stage === "publishing"` check in the JSX below
-  // look unreachable. At runtime it IS reachable — handlePublish() calls
-  // setStage("publishing") and React re-renders synchronously into this
-  // branch. Cast once to the full Stage union via `as Stage` so the JSX
-  // comparisons typecheck without suppressing the runtime check.
+  // After the early returns above, TS narrows `stage` to `"edit"`. The
+  // publishing-disabled UI is keyed off the runtime cast.
   const isPublishing = (stage as Stage) === "publishing";
-
-  // Resolve the display identity for PostingAsBlock. If we have a real
-  // Vendor row, pass it straight through. If we only have a LocalVendorProfile
-  // (unauth fallback), shim it into a Vendor-shaped object with the minimal
-  // fields PostingAsBlock reads. This keeps that primitive strict about its
-  // Vendor type without us spreading conditional rendering through the page.
-  const postingVendor: Vendor | null = vendor
-    ? vendor
-    : localProfile
-    ? ({
-        id:             localProfile.vendor_id ?? "",
-        created_at:     "",
-        updated_at:     "",
-        user_id:        localProfile.user_id ?? null,
-        mall_id:        localProfile.mall_id,
-        display_name:   localProfile.display_name,
-        booth_number:   localProfile.booth_number || null,
-        bio:            null,
-        avatar_url:     null,
-        slug:           localProfile.slug ?? "",
-        facebook_url:   null,
-        hero_image_url: null,
-        mall: {
-          id:         localProfile.mall_id,
-          created_at: "",
-          updated_at: "",
-          name:       localProfile.mall_name,
-          city:       localProfile.mall_city,
-          state:      "",
-          slug:       "",
-          address:    null,
-        },
-      } as Vendor)
-    : null;
-
-  const boothNumber = vendor?.booth_number ?? localProfile?.booth_number ?? null;
-  const canPublish  = title.trim().length >= 2 && !!image && !isPublishing;
+  const canPublish   = title.trim().length >= 2 && !!image && !isPublishing;
 
   return (
     <div
@@ -725,43 +543,63 @@ function PostPreviewInner() {
         flexDirection: "column",
       }}
     >
-      {/* Session 70 — D17 + D18: scroll container flattened to document scroll;
-          custom sticky masthead retired in favor of StickyMasthead. The page
-          title + subhead now live as a content block BELOW the masthead instead
-          of being stacked inside the sticky chrome. Save bar still pinned
-          separately at the bottom (outside this content tree). */}
+      {/* Hidden file inputs for Find retake */}
+      <input
+        ref={retakeCameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFindRetake}
+        style={{ display: "none" }}
+      />
+      <input
+        ref={retakeLibraryRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFindRetake}
+        style={{ display: "none" }}
+      />
+
+      {/* ── Masthead ───────────────────────────────────────────────────── */}
+      <StickyMasthead
+        left={
+          <button
+            onClick={() => router.back()}
+            aria-label="Go back"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: "50%",
+              background: v1.iconBubble,
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              padding: 0,
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <ArrowLeft size={22} strokeWidth={2} style={{ color: v1.inkPrimary }} />
+          </button>
+        }
+      />
+
+      {/* ── Middle band — vertically centered when content fits ────────── */}
       <div
         style={{
-          paddingBottom: "max(108px, calc(env(safe-area-inset-bottom, 0px) + 96px))",
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          overflowY: "auto",
+          paddingTop: 18,
+          paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 96px))",
         }}
       >
-        {/* ── 1. Masthead — locked-grid slot API ────────────────────────── */}
-        <StickyMasthead
-          left={
-            <button
-              onClick={() => router.back()}
-              aria-label="Go back"
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: "50%",
-                background: v1.iconBubble,
-                border: "none",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                padding: 0,
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <ArrowLeft size={22} strokeWidth={2} style={{ color: v1.inkPrimary }} />
-            </button>
-          }
-        />
-
-        {/* ── 1.5 Page title + subhead (content block below masthead) ──── */}
-        <div style={{ padding: "16px 22px 10px" }}>
+        {/* Title block — D15 extra top spacing for the slight shift-down */}
+        <div style={{ textAlign: "center", padding: "14px 22px 18px" }}>
           <div
             style={{
               fontFamily: FONT_LORA,
@@ -769,7 +607,7 @@ function PostPreviewInner() {
               color: v1.inkPrimary,
               letterSpacing: "-0.005em",
               lineHeight: 1.15,
-              marginBottom: 2,
+              marginBottom: 4,
             }}
           >
             Review your find
@@ -780,31 +618,19 @@ function PostPreviewInner() {
               fontStyle: "italic",
               fontSize: 14,
               color: v1.inkMuted,
-              lineHeight: 1.4,
+              lineHeight: 1.5,
+              maxWidth: 290,
+              margin: "0 auto",
             }}
           >
-            Here&rsquo;s how shoppers will see it.
+            Make sure everything looks right before publishing.
           </div>
         </div>
 
-        {/* ── 2. Photograph ────────────────────────────────────────────── */}
-        {image && (
-          <PhotographPreview
-            imageUrl={image}
-            boothNumber={boothNumber}
-          />
-        )}
-
-        {/* ── 3. Post-it overhang spacer ───────────────────────────────── */}
-        <div style={{ height: 22 }} aria-hidden="true" />
-
-        {/* ── 4. Posting-as attribution row ────────────────────────────── */}
-        {postingVendor && <PostingAsBlock vendor={postingVendor} />}
-
-        {/* ── 5. Fields ────────────────────────────────────────────────── */}
+        {/* Fields ABOVE the photo (D7) */}
         <div
           style={{
-            padding: "18px 22px 20px",
+            padding: "0 22px",
             display: "flex",
             flexDirection: "column",
             gap: 16,
@@ -839,18 +665,19 @@ function PostPreviewInner() {
             />
           </FieldGroup>
 
-          {/* Caption */}
+          {/* Caption — auto-grow */}
           <FieldGroup label="Caption" optional>
             <textarea
+              ref={captionRef}
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               placeholder="A short description or story about this piece…"
-              rows={3}
+              rows={2}
               style={{
                 ...inputStyle,
-                minHeight: 78,
                 resize: "none",
                 lineHeight: 1.5,
+                overflow: "hidden",
               }}
             />
           </FieldGroup>
@@ -885,9 +712,46 @@ function PostPreviewInner() {
             </div>
           </FieldGroup>
         </div>
+
+        {/* Polaroid photo — below the fields, centered, retake link below */}
+        {image && (
+          <div
+            style={{
+              padding: "20px 22px 0",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <div style={{ width: "62%" }}>
+              <PolaroidPreview imageUrl={image} />
+            </div>
+            <button
+              onClick={() => setRetakeOpen(true)}
+              style={{
+                marginTop: 8,
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                fontFamily: FONT_LORA,
+                fontStyle: "italic",
+                fontSize: 13,
+                color: v1.inkPrimary,
+                textDecoration: "underline",
+                textDecorationStyle: "dotted",
+                textDecorationColor: v1.inkFaint,
+                textUnderlineOffset: 3,
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              Retake
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* ── 6. Sticky save bar ─────────────────────────────────────────── */}
+      {/* ── Sticky save bar ─────────────────────────────────────────────── */}
       <div
         style={{
           position: "fixed",
@@ -916,12 +780,12 @@ function PostPreviewInner() {
             fontSize: 15,
             fontWeight: 500,
             letterSpacing: "0.2px",
-            color: canPublish ? "#fff" : v1.inkFaint,
-            background: canPublish ? v1.green : v1.inkWash,
+            color: "#fff",
+            background: canPublish ? v1.green : "rgba(30, 77, 43, 0.40)",
             border: "none",
             cursor: canPublish && !isPublishing ? "pointer" : "default",
             boxShadow: canPublish ? "0 2px 12px rgba(30,77,43,0.25)" : "none",
-            transition: "background 0.18s ease, color 0.18s ease",
+            transition: "background 0.18s ease",
           }}
         >
           {isPublishing ? (
@@ -939,14 +803,73 @@ function PostPreviewInner() {
           )}
         </button>
       </div>
+
+      {/* ── Find retake sheet ───────────────────────────────────────────── */}
+      <AddFindSheet
+        open={retakeOpen}
+        onClose={() => setRetakeOpen(false)}
+        onTakePhoto={() => retakeCameraRef.current?.click()}
+        onChooseFromLibrary={() => retakeLibraryRef.current?.click()}
+        title="Replace photo"
+      />
+    </div>
+  );
+}
+
+// ── PolaroidPreview — inline polaroid wrapper for the find photo ──────────
+// Replaces the v1.2 <PhotographPreview /> on this page (D8). PhotographPreview
+// itself is preserved for /post/edit/[id]. Polaroid pattern (warm cream paper
+// mat, 4px corner radius, dual warm shadow) carved out of the session-83
+// "browse-only" rule per docs/capture-flow-refinement-design.md deviation.
+function PolaroidPreview({
+  imageUrl,
+  dim = false,
+}: {
+  imageUrl: string;
+  dim?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        background: "#faf2e0",
+        padding: "7px 7px 8px",
+        borderRadius: 4,
+        boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
+        opacity: dim ? 0.55 : 1,
+      }}
+    >
+      <div
+        style={{
+          aspectRatio: "4 / 5",
+          borderRadius: 4,
+          overflow: "hidden",
+          background: v1.paperCream,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={imageUrl}
+          alt="Your find"
+          style={{
+            maxWidth: "100%",
+            maxHeight: "100%",
+            width: "auto",
+            height: "auto",
+            objectFit: "contain",
+            display: "block",
+            filter:       TREEHOUSE_LENS_FILTER,
+            WebkitFilter: TREEHOUSE_LENS_FILTER,
+          }}
+        />
+      </div>
     </div>
   );
 }
 
 // ── FieldGroup helper ─────────────────────────────────────────────────────────
-// Encapsulates the label + input pair so the markup above stays scannable.
-// Session 62 — `badge` prop accepts an inline node (e.g. <TagBadge />) shown
-// alongside the label; used to signal "this field was prefilled from the tag."
 function FieldGroup({
   label,
   optional,
@@ -962,7 +885,6 @@ function FieldGroup({
     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
       <label
         style={{
-          // Session 82 — Option C label primitive (Lora upright 13px ink-mid).
           fontFamily: FONT_LORA,
           fontStyle: "normal",
           fontSize: 13,
@@ -989,12 +911,12 @@ function FieldGroup({
   );
 }
 
-// Shared input style — v1.2 inkWash bg, 14px radius, FONT_SYS 16px inkPrimary.
+// Shared input style — D9: bg flips inkWash → postit (matches /login/email).
 const inputStyle: React.CSSProperties = {
   fontFamily: FONT_SYS,
   fontSize: 16,
   color: v1.inkPrimary,
-  background: v1.inkWash,
+  background: v1.postit,
   border: `1px solid ${v1.inkHairline}`,
   borderRadius: 14,
   padding: 14,
@@ -1005,7 +927,6 @@ const inputStyle: React.CSSProperties = {
   WebkitTapHighlightColor: "transparent",
 };
 
-// ══════════════════════════════════════════════════════════════════════════════
 export default function PostPreviewPage() {
   return (
     <Suspense>

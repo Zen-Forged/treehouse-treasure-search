@@ -3,9 +3,19 @@
 // Tag-capture step of the Add Find flow. Sits between /my-shelf
 // (AddFindSheet item-photo capture) and /post/preview (review + publish).
 //
-// Mockup: docs/mockups/add-find-with-tag-v1.html — Frame 1 (ready state),
-// Frame 2 (extracting). Decisions D1-D8 + M1-M5 frozen in
-// docs/add-find-tag-design.md.
+// Session 94 — capture-flow refinement (docs/capture-flow-refinement-design.md).
+// Adopted shared <StickyMasthead />; bespoke sticky chrome retired (D3).
+// Title + subtitle relocated to a centered block below the masthead (D4).
+// New instructional ready-state copy (D6). Find + Tag photos rendered in
+// polaroid wrappers, stacked vertically with lowercase italic labels below
+// (D5). Find retake affordance below the polaroid (D13) — does NOT re-fire
+// /api/post-caption or /api/extract-tag. Vertical centering on the middle
+// band between masthead and CTAs (D14).
+//
+// Original mockup: docs/mockups/add-find-with-tag-v1.html — Frame 1 (ready
+// state), Frame 2 (extracting). D1-D8 + M1-M5 frozen in
+// docs/add-find-tag-design.md. Capture-flow refinement V3 supersedes the
+// visual layout but the flow logic + analytics events are unchanged.
 //
 // Flow:
 //   1. Mount — read postStore.imageDataUrl (set by /my-shelf). If absent,
@@ -23,6 +33,11 @@
 //      postStore gets extractionRan="skip" → router.replace("/post/preview").
 //      Preview's hydrate branches to today's behavior (fire post-caption on
 //      mount).
+//   6. Retake path (session 94) — "Retake" link below Find polaroid opens
+//      <AddFindSheet title="Replace photo" /> → file-picker → reads new
+//      image → updates postStore.imageDataUrl. NO /api/post-caption call;
+//      caption stays as whatever /post/preview will fire on first arrival.
+//      AI APIs do not re-run.
 //
 // Failure handling per D5: HTTP / mock-fallback failures on either API are
 // captured into postStore (extractionRan="error" / captionFailed=true) and
@@ -42,6 +57,8 @@ import { compressImage } from "@/lib/imageUpload";
 import { postStore, type PostDraft } from "@/lib/postStore";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import { track } from "@/lib/clientEvents";
+import StickyMasthead from "@/components/StickyMasthead";
+import AddFindSheet from "@/components/AddFindSheet";
 
 type Stage = "ready" | "extracting";
 
@@ -103,14 +120,74 @@ async function callPostCaption(itemDataUrl: string): Promise<PostCaptionResponse
   }
 }
 
+// ── Polaroid wrapper — V3 evolved tile pattern carved into the post flow.
+// Photo with 7px paper mat, dual warm shadow, 4px corner radius. Children
+// are the photo + (optional) below-mat label/retake content.
+function Polaroid({ src, alt }: { src: string; alt: string }) {
+  return (
+    <div
+      style={{
+        background: "#faf2e0",
+        padding: "7px 7px 8px",
+        borderRadius: 4,
+        boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
+        width: "100%",
+      }}
+    >
+      <div
+        style={{
+          aspectRatio: "4 / 5",
+          borderRadius: 4,
+          overflow: "hidden",
+          background: "#cdb88e",
+          boxShadow: "inset 0 0 30px rgba(42,26,10,0.12)",
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={alt}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function PolLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        fontFamily: FONT_LORA,
+        fontStyle: "italic",
+        fontSize: 13,
+        color: v1.inkMuted,
+        letterSpacing: "0.04em",
+        textAlign: "center",
+        textTransform: "lowercase",
+        lineHeight: 1.2,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function PostTagInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
-  const cameraRef    = useRef<HTMLInputElement | null>(null);
 
-  const [stage,        setStage]        = useState<Stage>("ready");
-  const [itemImage,    setItemImage]    = useState<string | null>(null);
-  const [tagImage,     setTagImage]     = useState<string | null>(null);
+  // File-input refs:
+  //   tagCameraRef       — Tag photo capture (existing flow)
+  //   findRetakeCameraRef / findRetakeLibraryRef — Find retake (session 94)
+  const tagCameraRef         = useRef<HTMLInputElement | null>(null);
+  const findRetakeCameraRef  = useRef<HTMLInputElement | null>(null);
+  const findRetakeLibraryRef = useRef<HTMLInputElement | null>(null);
+
+  const [stage,      setStage]      = useState<Stage>("ready");
+  const [itemImage,  setItemImage]  = useState<string | null>(null);
+  const [tagImage,   setTagImage]   = useState<string | null>(null);
+  const [retakeOpen, setRetakeOpen] = useState(false);
 
   // Preserve admin ?vendor= impersonation param across redirects to preview.
   const vendorParam = searchParams.get("vendor");
@@ -133,8 +210,6 @@ function PostTagInner() {
       router.replace("/my-shelf");
       return;
     }
-    // R3 v1.1 — emit tag_skipped. No payload (the user-action signal is the
-    // event itself; per-extraction outcome detail belongs on tag_extracted).
     track("tag_skipped", {});
     postStore.set({
       ...draft,
@@ -143,10 +218,42 @@ function PostTagInner() {
     router.replace(previewDest);
   }
 
+  // ── Find retake (session 94) — no AI calls ──────────────────────────────
+  async function handleFindRetake(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";  // reset so re-picking the same file refires
+    if (!file) return;
+
+    let dataUrl: string;
+    try {
+      dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("FileReader failed"));
+        reader.readAsDataURL(file);
+      });
+    } catch (err) {
+      console.error("[post/tag] find retake reader error:", err);
+      return;
+    }
+
+    const draft = postStore.get();
+    if (!draft) {
+      router.replace("/my-shelf");
+      return;
+    }
+
+    // Update postStore.imageDataUrl. Hard rule: no /api/post-caption refire,
+    // no /api/extract-tag refire — vendor's typed/extracted fields preserved.
+    postStore.set({ ...draft, imageDataUrl: dataUrl });
+    setItemImage(dataUrl);
+    setRetakeOpen(false);
+  }
+
   // ── Tag capture path ─────────────────────────────────────────────────────
   async function handleTagFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    e.target.value = "";  // reset so re-picking the same file refires onChange
+    e.target.value = "";
     if (!file) return;
 
     const draft = postStore.get();
@@ -155,7 +262,6 @@ function PostTagInner() {
       return;
     }
 
-    // Read the tag file as a data URL
     let tagDataUrl: string;
     try {
       tagDataUrl = await new Promise<string>((resolve, reject) => {
@@ -166,7 +272,6 @@ function PostTagInner() {
       });
     } catch (err) {
       console.error("[post/tag] FileReader error:", err);
-      // Fall back to skip semantics — don't strand the vendor.
       handleSkip();
       return;
     }
@@ -174,7 +279,6 @@ function PostTagInner() {
     setTagImage(tagDataUrl);
     setStage("extracting");
 
-    // Fire both APIs in parallel — preview lands ready on first paint.
     const [tagResult, captionResult] = await Promise.all([
       callExtractTag(tagDataUrl),
       callPostCaption(draft.imageDataUrl),
@@ -183,10 +287,6 @@ function PostTagInner() {
     const tagSucceeded     = tagResult.source === "claude";
     const captionSucceeded = captionResult.source === "claude";
 
-    // R3 v1.1 — emit tag_extracted whenever the extraction API ran (regardless
-    // of whether it returned anything useful). has_price + has_title reflect
-    // what the extractor actually surfaced. Distinct from tag_skipped, which
-    // fires when the vendor dismissed before scanning.
     track("tag_extracted", {
       has_price: tagSucceeded && tagResult.price !== null && tagResult.price !== undefined,
       has_title: tagSucceeded && !!tagResult.title,
@@ -213,7 +313,6 @@ function PostTagInner() {
     router.replace(previewDest);
   }
 
-  // ── Render ───────────────────────────────────────────────────────────────
   const isExtracting = stage === "extracting";
 
   return (
@@ -227,40 +326,34 @@ function PostTagInner() {
         flexDirection: "column",
       }}
     >
-      {/* Hidden camera input — tag capture only */}
+      {/* Hidden file inputs */}
       <input
-        ref={cameraRef}
+        ref={tagCameraRef}
         type="file"
         accept="image/*"
         capture="environment"
         onChange={handleTagFile}
         style={{ display: "none" }}
       />
+      <input
+        ref={findRetakeCameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFindRetake}
+        style={{ display: "none" }}
+      />
+      <input
+        ref={findRetakeLibraryRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFindRetake}
+        style={{ display: "none" }}
+      />
 
-      {/* Scrollable body */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          paddingBottom: "max(108px, calc(env(safe-area-inset-bottom, 0px) + 96px))",
-        }}
-      >
-        {/* ── Masthead (Mode C) ─────────────────────────────────────── */}
-        <div
-          style={{
-            padding: "max(14px, env(safe-area-inset-top, 14px)) 22px 10px",
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 14,
-            background: "rgba(232,221,199,0.96)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            borderBottom: `1px solid ${v1.inkHairline}`,
-            position: "sticky",
-            top: 0,
-            zIndex: 30,
-          }}
-        >
+      {/* ── Masthead (session 94 — shared StickyMasthead) ──────────────── */}
+      <StickyMasthead
+        left={
           <button
             onClick={() => router.back()}
             aria-label="Go back"
@@ -276,237 +369,237 @@ function PostTagInner() {
               justifyContent: "center",
               cursor: isExtracting ? "default" : "pointer",
               opacity: isExtracting ? 0.45 : 1,
-              flexShrink: 0,
-              marginTop: 1,
+              padding: 0,
               WebkitTapHighlightColor: "transparent",
             }}
           >
             <ArrowLeft size={22} strokeWidth={2} style={{ color: v1.inkPrimary }} />
           </button>
+        }
+      />
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-            <div
-              style={{
-                fontFamily: FONT_LORA,
-                fontSize: 24,
-                color: v1.inkPrimary,
-                letterSpacing: "-0.005em",
-                lineHeight: 1.15,
-              }}
-            >
-              {isExtracting ? "Reading the tag…" : "Now the tag"}
-            </div>
-            <div
-              style={{
-                fontFamily: FONT_LORA,
-                fontStyle: "italic",
-                fontSize: 14,
-                color: v1.inkMuted,
-                lineHeight: 1.4,
-              }}
-            >
-              {isExtracting ? "Just a moment." : "Capture the title and price in one shot."}
-            </div>
+      {/* ── Middle band — vertically centered when content fits ───────── */}
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          overflowY: "auto",
+          paddingTop: 18,
+          paddingBottom: isExtracting
+            ? 18
+            : "max(140px, calc(env(safe-area-inset-bottom, 0px) + 128px))",
+        }}
+      >
+        {/* Centered title block */}
+        <div style={{ textAlign: "center", padding: "0 22px 14px" }}>
+          <div
+            style={{
+              fontFamily: FONT_LORA,
+              fontSize: 24,
+              color: v1.inkPrimary,
+              letterSpacing: "-0.005em",
+              lineHeight: 1.15,
+              marginBottom: 4,
+            }}
+          >
+            {isExtracting ? "Reading the tag…" : "Take a photo of the tag"}
+          </div>
+          <div
+            style={{
+              fontFamily: FONT_LORA,
+              fontStyle: "italic",
+              fontSize: 14,
+              color: v1.inkMuted,
+              lineHeight: 1.5,
+              maxWidth: 290,
+              margin: "0 auto",
+            }}
+          >
+            {isExtracting
+              ? "Just a moment."
+              : "We'll read the title and price right off the tag, so you don't have to type them in."}
           </div>
         </div>
 
-        {/* ── Body — Frame 1 (ready) or Frame 2 (extracting) ────────── */}
-        {!isExtracting && itemImage && (
-          <>
-            <div style={{ padding: "20px 22px 0" }}>
-              <div
-                style={{
-                  width: "78%",
-                  margin: "0 auto",
-                  borderRadius: v1.imageRadius,
-                  overflow: "hidden",
-                  background: "#cdb88e",
-                  boxShadow: "0 4px 20px rgba(42,26,10,0.18)",
-                }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={itemImage}
-                  alt="item to be tagged"
-                  style={{ width: "100%", height: "auto", display: "block" }}
-                />
-              </div>
-            </div>
-
-            <div style={{ padding: "26px 22px 0", textAlign: "center" }}>
-              <div
-                style={{
-                  fontFamily: FONT_LORA,
-                  fontStyle: "italic",
-                  fontSize: 14,
-                  color: v1.inkMuted,
-                  lineHeight: 1.6,
-                }}
-              >
-                We&rsquo;ll read the item name and price<br />directly from the inventory tag.
-              </div>
-            </div>
-          </>
-        )}
-
-        {isExtracting && itemImage && (
-          <>
+        {/* Photos — Find always; Tag added during extraction */}
+        <div
+          style={{
+            padding: "0 22px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 14,
+            alignItems: "center",
+          }}
+        >
+          {itemImage && (
             <div
               style={{
-                padding: "22px 22px 0",
+                width: "60%",
                 display: "flex",
-                gap: 14,
-                alignItems: "flex-start",
-                justifyContent: "center",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 4,
               }}
             >
-              <PhotoPair label="Item" src={itemImage} />
-              {tagImage && <PhotoPair label="Tag" src={tagImage} />}
+              <Polaroid src={itemImage} alt="your find" />
+              <div
+                style={{
+                  marginTop: 6,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 2,
+                }}
+              >
+                <PolLabel>Find</PolLabel>
+                {!isExtracting && (
+                  <button
+                    onClick={() => setRetakeOpen(true)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      cursor: "pointer",
+                      fontFamily: FONT_LORA,
+                      fontStyle: "italic",
+                      fontSize: 13,
+                      color: v1.inkPrimary,
+                      textDecoration: "underline",
+                      textDecorationStyle: "dotted",
+                      textDecorationColor: v1.inkFaint,
+                      textUnderlineOffset: 3,
+                      WebkitTapHighlightColor: "transparent",
+                    }}
+                  >
+                    Retake
+                  </button>
+                )}
+              </div>
             </div>
+          )}
 
-            <motion.div
-              animate={{ opacity: [0.4, 1, 0.4] }}
-              transition={{ duration: 1.6, repeat: Infinity }}
+          {isExtracting && tagImage && (
+            <div
               style={{
-                fontFamily: FONT_LORA,
-                fontStyle: "italic",
-                fontSize: 15,
-                color: v1.inkMuted,
-                textAlign: "center",
-                marginTop: 28,
-                lineHeight: 1.5,
+                width: "60%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 4,
               }}
             >
-              Pulling title and price…
-            </motion.div>
-          </>
+              <Polaroid src={tagImage} alt="price tag" />
+              <div style={{ marginTop: 6 }}>
+                <PolLabel>Tag</PolLabel>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {isExtracting && (
+          <motion.div
+            animate={{ opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 1.6, repeat: Infinity }}
+            style={{
+              fontFamily: FONT_LORA,
+              fontStyle: "italic",
+              fontSize: 14,
+              color: v1.inkMuted,
+              textAlign: "center",
+              marginTop: 16,
+              lineHeight: 1.5,
+            }}
+          >
+            Pulling title and price…
+          </motion.div>
         )}
       </div>
 
-      {/* ── Sticky bottom CTA stack ─────────────────────────────────── */}
-      <div
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          maxWidth: 430,
-          margin: "0 auto",
-          padding: "12px 22px",
-          paddingBottom: "max(18px, env(safe-area-inset-bottom, 18px))",
-          background: "rgba(232,221,199,0.96)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          borderTop: `1px solid ${v1.inkHairline}`,
-          zIndex: 40,
-          display: "flex",
-          flexDirection: "column",
-          gap: 6,
-        }}
-      >
-        <button
-          onClick={() => cameraRef.current?.click()}
-          disabled={isExtracting}
+      {/* ── Bottom CTA stack — only in ready state ────────────────────── */}
+      {!isExtracting && (
+        <div
           style={{
-            width: "100%",
-            padding: 15,
-            borderRadius: 14,
-            fontFamily: FONT_SYS,
-            fontSize: 15,
-            fontWeight: 500,
-            letterSpacing: "0.2px",
-            color: isExtracting ? v1.inkFaint : "#fff",
-            background: isExtracting ? v1.inkWash : v1.green,
-            border: "none",
-            cursor: isExtracting ? "default" : "pointer",
-            boxShadow: isExtracting ? "none" : "0 2px 12px rgba(30,77,43,0.25)",
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            maxWidth: 430,
+            margin: "0 auto",
+            padding: "12px 22px",
+            paddingBottom: "max(18px, env(safe-area-inset-bottom, 18px))",
+            background: "rgba(232,221,199,0.96)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            borderTop: `1px solid ${v1.inkHairline}`,
+            zIndex: 40,
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            transition: "background 0.18s ease, color 0.18s ease",
+            flexDirection: "column",
+            gap: 6,
           }}
         >
-          {isExtracting ? (
-            <motion.span
-              animate={{ opacity: [1, 0.5, 1] }}
-              transition={{ duration: 1.2, repeat: Infinity }}
-              style={{ fontFamily: FONT_LORA, fontStyle: "italic" }}
-            >
-              Reading…
-            </motion.span>
-          ) : (
-            <>
-              <Camera size={18} strokeWidth={1.6} />
-              Take photo of tag
-            </>
-          )}
-        </button>
+          <button
+            onClick={() => tagCameraRef.current?.click()}
+            style={{
+              width: "100%",
+              padding: 15,
+              borderRadius: 14,
+              fontFamily: FONT_SYS,
+              fontSize: 15,
+              fontWeight: 500,
+              letterSpacing: "0.2px",
+              color: "#fff",
+              background: v1.green,
+              border: "none",
+              cursor: "pointer",
+              boxShadow: "0 2px 12px rgba(30,77,43,0.25)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+            }}
+          >
+            <Camera size={18} strokeWidth={1.6} />
+            Take photo of tag
+          </button>
 
-        <button
-          onClick={handleSkip}
-          disabled={isExtracting}
-          style={{
-            width: "100%",
-            padding: 10,
-            borderRadius: 14,
-            fontFamily: FONT_LORA,
-            fontStyle: "italic",
-            fontSize: 14,
-            color: v1.inkMuted,
-            background: "transparent",
-            border: "none",
-            textDecoration: "underline",
-            textDecorationColor: v1.inkFaint,
-            textUnderlineOffset: 3,
-            cursor: isExtracting ? "default" : "pointer",
-            opacity: isExtracting ? 0.45 : 1,
-          }}
-        >
-          Skip — I&rsquo;ll add title and price manually
-        </button>
-      </div>
+          <button
+            onClick={handleSkip}
+            style={{
+              width: "100%",
+              padding: 10,
+              borderRadius: 14,
+              fontFamily: FONT_LORA,
+              fontStyle: "italic",
+              fontSize: 14,
+              color: v1.inkMuted,
+              background: "transparent",
+              border: "none",
+              textDecoration: "underline",
+              textDecorationColor: v1.inkFaint,
+              textUnderlineOffset: 3,
+              cursor: "pointer",
+            }}
+          >
+            Skip — I&rsquo;ll add title and price manually
+          </button>
+        </div>
+      )}
+
+      {/* ── Find retake sheet (session 94) ────────────────────────────── */}
+      <AddFindSheet
+        open={retakeOpen}
+        onClose={() => setRetakeOpen(false)}
+        onTakePhoto={() => findRetakeCameraRef.current?.click()}
+        onChooseFromLibrary={() => findRetakeLibraryRef.current?.click()}
+        title="Replace photo"
+      />
     </div>
   );
 }
 
-// ── PhotoPair — small labeled thumbnail used in the extracting state ─────
-function PhotoPair({ label, src }: { label: string; src: string }) {
-  return (
-    <div style={{ flex: "0 0 42%", display: "flex", flexDirection: "column", gap: 6, alignItems: "center" }}>
-      <div
-        style={{
-          fontFamily: FONT_LORA,
-          fontStyle: "italic",
-          fontSize: 11,
-          color: v1.inkMuted,
-          letterSpacing: "0.04em",
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{
-          width: "100%",
-          aspectRatio: "4 / 5",
-          borderRadius: v1.imageRadius,
-          overflow: "hidden",
-          background: "#cdb88e",
-          boxShadow: "0 3px 12px rgba(42,26,10,0.16)",
-        }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt={label.toLowerCase()}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-        />
-      </div>
-    </div>
-  );
-}
-
-// Suspense wrapper required by useSearchParams in Next 14.
 export default function PostTagPage() {
   return (
     <Suspense>
