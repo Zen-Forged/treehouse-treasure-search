@@ -184,19 +184,23 @@ export async function PATCH(
     return NextResponse.json({ ok: false, error: "Post not found." }, { status: 404 });
   }
 
-  // Ownership: admin bypass, else vendor_id must match caller's vendor
+  // Ownership: admin bypass, else verify the caller owns the booth that owns
+  // the post. Filtering on (user_id, id) in one query is at-most-one-row by
+  // construction — earlier shape `.eq("user_id", ...).maybeSingle()` errored
+  // on multi-booth vendors (Q-002 supports users owning >1 booth).
   const admin = isAdmin(user);
   if (!admin) {
     const { data: vendor, error: vendorErr } = await service
       .from("vendors")
       .select("id")
       .eq("user_id", user.id)
+      .eq("id", post.vendor_id)
       .maybeSingle();
     if (vendorErr) {
       console.error("[api/my-posts PATCH] fetch vendor failed:", vendorErr.message);
       return NextResponse.json({ ok: false, error: "Internal error." }, { status: 500 });
     }
-    if (!vendor || vendor.id !== post.vendor_id) {
+    if (!vendor) {
       return NextResponse.json({ ok: false, error: "Forbidden." }, { status: 403 });
     }
   }
