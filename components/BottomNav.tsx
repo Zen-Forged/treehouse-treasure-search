@@ -1,23 +1,24 @@
 // components/BottomNav.tsx
 // Fixed bottom navigation.
 //
-// Tab layout (session 90 — Sign-in moved off the masthead into the BottomNav,
-// always present after Home regardless of auth state. Booths gated to
-// admin-only; vendors lose it too):
-//   Guest:        Home · Sign In · Saved                  (3 tabs)
-//   Vendor:       Home · Sign In · Saved · My Booth       (4 tabs)
-//   Admin:        Home · Sign In · Booths · Saved · Admin (5 tabs)
+// Tab layout (session 90):
+//   Guest:        Home · Profile · Saved                  (3 tabs)
+//   Vendor:       Home · Profile · Saved · My Booth       (4 tabs)
+//   Admin:        Home · Profile · Booths · Saved · Admin (5 tabs)
 //
-// The Sign In tab routes to /login in every state — guests see the OTP
+// The Profile tab routes to /login in every state — guests see the OTP
 // flow, authed users see the same page with a "sign out" affordance under
-// the first-time helper line. Keeping the icon stable across states keeps
-// the nav anchor consistent regardless of session.
+// the first-time helper line. The icon outline turns green when the user
+// is signed in so the nav reflects auth state without changing position
+// or label. Admin tab uses IoKey (react-icons/io5) for visual distinction
+// from the other Lucide-stroked tabs.
 
 "use client";
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, Store, LayoutGrid, Shield, CircleUser } from "lucide-react";
+import { Home, Store, LayoutGrid, CircleUser } from "lucide-react";
+import { IoKey } from "react-icons/io5";
 import FlagGlyph from "./FlagGlyph";
 import { getSession, isAdmin } from "@/lib/auth";
 import type { User } from "@supabase/supabase-js";
@@ -64,7 +65,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     icon: <Home size={21} strokeWidth={2.0} />,
   };
   const loginTab: TabDef = {
-    key: "login", label: "Sign In", href: "/login",
+    key: "login", label: "Profile", href: "/login",
     icon: <CircleUser size={21} strokeWidth={1.8} />,
   };
   const findsTab: TabDef = {
@@ -81,7 +82,8 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
   };
   const adminTab: TabDef = {
     key: "admin", label: "Admin", href: "/admin",
-    icon: <Shield size={21} strokeWidth={2.0} />,
+    // IoKey is filled (no strokeWidth); size 21 matches the row.
+    icon: <IoKey size={21} />,
   };
 
   // Session 90 — Sign In sits second-position after Home in every state.
@@ -113,6 +115,12 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
       {tabs.map(tab => {
         const isActive  = active === tab.key;
         const showBadge = tab.badge && flaggedCount > 0;
+        // Session 90 — Profile icon goes green when the user is signed in,
+        // regardless of active state. Outline only — the label stays muted
+        // unless the tab is also active. Decoupled label/icon colors.
+        const profileGreenWhenAuthed = tab.key === "login" && !!user;
+        const labelColor = isActive ? C.green : C.textMuted;
+        const iconColor  = isActive || profileGreenWhenAuthed ? C.green : C.textMuted;
         return (
           <button
             key={tab.key}
@@ -121,7 +129,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
               flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
               justifyContent: "center", gap: 4, padding: "12px 0 10px",
               background: "none", border: "none", cursor: "pointer",
-              color: isActive ? C.green : C.textMuted,
+              color: labelColor,
               position: "relative", transition: "color 0.15s",
               WebkitTapHighlightColor: "transparent",
             }}
@@ -130,7 +138,8 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
               position: "relative", display: "flex", alignItems: "center", justifyContent: "center",
               width: 44, height: 28, borderRadius: 14,
               background: isActive ? C.greenLight : "transparent",
-              transition: "background 0.18s",
+              color: iconColor,
+              transition: "background 0.18s, color 0.15s",
             }}>
               {tab.icon}
               {showBadge && (
