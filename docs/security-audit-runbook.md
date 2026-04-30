@@ -26,6 +26,7 @@
 |---|---|---|
 | [`scripts/security-audit/inspect-rls.ts`](../scripts/security-audit/inspect-rls.ts) | Per-table RLS state + behavioral access pattern | State-aware via `audit_rls_state()` RPC (migration 015); falls back to behavioral-only if RPC absent |
 | [`scripts/security-audit/inspect-functions.ts`](../scripts/security-audit/inspect-functions.ts) | Per-function search_path setting in `public` schema (Advisor's `function_search_path_mutable`) | State-aware via `audit_function_search_path()` RPC (migration 017) |
+| [`scripts/security-audit/inspect-grants.ts`](../scripts/security-audit/inspect-grants.ts) | Role-grant drift on `public` + `auth.users` exposure baseline | State-aware via `audit_role_grants()` RPC (migration 018) — reads `information_schema.role_table_grants` |
 | [`scripts/security-audit/inspect-storage-acls.ts`](../scripts/security-audit/inspect-storage-acls.ts) | Storage bucket public/private state + recent file sample | `supabase.storage.listBuckets()` + per-bucket listing |
 | [`scripts/security-audit/inspect-keys.ts`](../scripts/security-audit/inspect-keys.ts) | `.env*` gitignore state + service-role key leaks + hardcoded anon key in source | `git check-ignore` + `git grep -F` against env values |
 
@@ -51,8 +52,8 @@ npx tsx scripts/security-audit/inspect-keys.ts
 | Category | Status | Note |
 |---|---|---|
 | Function `search_path` mutability | ✅ Covered (session 92) | `audit_function_search_path()` RPC (migration 017) + `inspect-functions.ts`. Migration 017 also locks `is_treehouse_admin()` and `set_updated_at()`. |
-| Role-grant drift | ⏳ Pending | What does `anon` / `authenticated` actually have on each table? Currently only inferred via behavioral probes. |
-| `auth.users` exposure check | ⏳ Pending | Confirm Supabase's default `auth.users` access policy isn't open to anon. |
+| Role-grant drift | ✅ Covered (session 92) | `audit_role_grants()` RPC (migration 018) + `inspect-grants.ts`. Flags anon writes on public + any anon/authenticated grant on auth.users. |
+| `auth.users` exposure check | ✅ Covered (session 92) | Same diagnostic — anon/authenticated grants on auth.users surface as 🔴 findings. |
 | OTP / password policy | ⏳ Pending | Supabase Advisor flags OTP expiry > 1h and password min length < 8. Surface from `auth.config`. |
 | API route auth audit | ⏳ Pending | Every `/api/admin/*` route must call `requireAdmin`; every `/api/*` mutating route must auth. Walk the routes. |
 | Image-upload size guard | 🟡 Partial | Server route enforces 12 MB limit; not all upload surfaces audited. CLAUDE.md carry-forward. |
@@ -142,6 +143,7 @@ These shaped the audit design and should hold for future expansions:
 | **`014_security_advisor_rls.sql`** | Enable RLS on `site_settings` + `events` to clear `rls_disabled_in_public` (session 84) | ✅ Session 84 | ⏳ Pending |
 | **`015_security_audit_helpers.sql`** | Add `audit_rls_state()` RPC for state-aware diagnostics (session 84) | ⏳ Pending | ⏳ Pending |
 | **`017_security_function_search_path.sql`** | Pin `is_treehouse_admin()` + `set_updated_at()` search_path; add `audit_function_search_path()` RPC (session 92) | ⏳ Pending | ⏳ Pending |
+| **`018_security_grants_audit.sql`** | Add `audit_role_grants()` RPC for grant-drift diagnostic (session 92) | ⏳ Pending | ⏳ Pending |
 
 Update this table whenever a new security migration ships.
 
