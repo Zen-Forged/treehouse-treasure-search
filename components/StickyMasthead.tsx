@@ -79,20 +79,17 @@ interface StickyMastheadProps {
   threshold?: number;
 }
 
-// Session 89 — wordmark fills the 50px inner-grid row (was 40px session 88,
-// 30px session 87). Bumped to give the app more breathing room and improve
-// readability for older shoppers. Asset cropped tighter (1500×800, less
-// padding) so the visual logo grows more than the height delta suggests.
-// Width auto-sizes from the 1500×800 aspect ratio (~94px at 50px height).
-// Transparent-bg so it composites cleanly over the masthead's paper-warm
-// rgba(232,221,199,0.96) background. Display:block removes the inline-image
-// baseline gap.
+// Session 94 — wordmark fills the 90px inner-grid row (was 50 session 89, 40
+// session 88, 30 session 87). Heavier brand anchor as the capture-flow
+// refinement called for; David picked option C from
+// docs/mockups/capture-flow-refinement-v3.html. Width auto-sizes from the
+// 1500×800 aspect ratio (~169px at 90px height).
 const WORDMARK_DEFAULT = (
   <img
     src="/wordmark.png"
     alt="Treehouse Finds"
     style={{
-      height: 50,
+      height: 90,
       width: "auto",
       display: "block",
     }}
@@ -101,8 +98,8 @@ const WORDMARK_DEFAULT = (
 
 // Total masthead height = paddingTop + inner grid minHeight + paddingBottom
 // + bottom border. paddingTop is max(14px, safe-area-inset-top); the rest
-// is fixed. Session 89: inner grid 40 → 50, so calc 53 → 63. Spacer matches.
-const MASTHEAD_HEIGHT = "calc(max(14px, env(safe-area-inset-top, 14px)) + 63px)";
+// is fixed. Session 94: inner grid 50 → 90, so calc 63 → 103. Spacer matches.
+const MASTHEAD_HEIGHT = "calc(max(14px, env(safe-area-inset-top, 14px)) + 103px)";
 
 export default function StickyMasthead({
   left,
@@ -178,7 +175,7 @@ export default function StickyMasthead({
             display: "grid",
             gridTemplateColumns: "1fr auto 1fr",
             alignItems: "center",
-            minHeight: 50,
+            minHeight: 90,
             gap: 8,
           }}
         >
