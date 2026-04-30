@@ -47,7 +47,7 @@ David reviews and can override any of these.
 | R1 | Guest/shopper profiles | User/Auth | L | — (but compounds with R3, R9) | 🟡 Captured | Biggest single swing. Enables persistent likes, booth-following, shopper notifications. |
 | R2 | Stripe vendor subscriptions | Monetization | L | R5b (tier definition) | 🟡 Captured | Without tiers, Stripe is checkout-theater. Scope R2 + R5b together. |
 | R3 | Analytics event capture | Data | M | — | 🟢 Ready (session 58) | Foundational. Tunes R5a, R5b, future feed ranking. Instrument early for compounding data. Design record: [`docs/r3-analytics-design.md`](r3-analytics-design.md). Mockup: [`docs/mockups/r3-admin-analytics-v1.html`](mockups/r3-admin-analytics-v1.html). All six decisions D1–D6 frozen; implementation session can run as a straight sprint. |
-| R4a | Admin: delete booth | Admin tooling | S | — | 🟡 Captured | Primitive exists on `/shelves` (session 45). Port to `/admin`. |
+| R4a | Admin: delete booth | Admin tooling | S | — | ✅ Shipped session 45+74 | Functionally complete via `/shelves` admin chrome (Pencil + Trash bubbles, EditBoothSheet, DeleteBoothSheet). Single-pane-of-glass `/admin` Vendors tab captured separately as `Q-015` in `docs/queued-sessions.md`. |
 | R4b | Admin: delete/replace hero image | Admin tooling | S | — | 🟡 Captured | Currently upload-only; no remove. |
 | R4c | Mall active/inactive toggle | Admin tooling + Feed UX | M | — | ✅ Shipped (session 57) | **First roadmap item shipped end-to-end.** Design-to-Ready session 56 (`daca2a5`) → implementation + on-device QA PASSED 4/4 on prod session 57 (`ff87047`). Unblocks R10 map. Design record: [`docs/r4c-mall-active-design.md`](r4c-mall-active-design.md). Mockup: [`docs/mockups/r4c-admin-v1.html`](mockups/r4c-admin-v1.html). |
 | R5a | 30-day feed window | Feed quality | S | — | 🟡 Captured | Single query filter. Forces vendor freshness. |
@@ -193,17 +193,13 @@ Waves 1 + 2 + 3 together are realistically ~9–14 sessions (mix of S + M). That
 
 ---
 
-### R4a — Admin: delete booth 🟡
+### R4a — Admin: delete booth ✅ Shipped sessions 45 + 74
 
-**What:** Admin-facing booth delete in `/admin`. Today the delete primitive exists on `/shelves` (shipped session 45), but `/admin` — the more natural admin surface — doesn't yet call it.
+> **Status:** ✅ Shipped. Functionally complete via `/shelves` admin chrome — Pencil + Trash bubbles render only for admins, opening `EditBoothSheet` (session 74) and `DeleteBoothSheet` (session 45 typed-name confirmation flow) respectively. The session-91 Wave 1 reassessment confirmed `/shelves` is admin's canonical booth-management surface; building a duplicate Vendors tab on `/admin` adds maintenance surface without UX gain.
+>
+> **Single-pane-of-glass alternative captured separately:** the "admin shouldn't have to navigate to a shopper-facing page" argument is preserved as `Q-015` in [`docs/queued-sessions.md`](queued-sessions.md). Becomes more valuable when a second admin-only booth action lands (bulk activate, claim transfer, etc.) that doesn't fit naturally on `/shelves`, or when mall-operator accounts (R13) need a parallel admin-only booth view.
 
-**Why:** Consolidates admin tooling. Avoids the admin needing to navigate to a vendor-facing page to do admin work.
-
-**Open questions:**
-- Soft-delete vs. hard-delete parity with `/shelves` existing behavior.
-- Cascade: what happens to posts on a deleted booth? (Session-45 behavior is canonical.)
-
-**Design prereq:** Low. Button placement in existing `/admin` tab.
+**What shipped:** Booth-row delete via `DELETE /api/admin/vendors` (session 45) — typed-name confirmation, claimed-vendor safety gate, full cascade (posts + storage + row). Edit via `PATCH /api/admin/vendors` (session 74) — display_name + booth_number + mall reassignment with auto-slug derivation + 23505 conflict path. Both routes audit-logged via R3 events as of session 91 Wave 1 Task 2 (`booth_deleted_by_admin` + `booth_edited_by_admin`).
 
 ---
 

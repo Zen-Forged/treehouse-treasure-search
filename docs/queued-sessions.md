@@ -318,6 +318,46 @@ CURRENT ISSUE: Q-014 — Metabase analytics surface. Provision a read-only Postg
 
 ---
 
+## Q-015 🟡 /admin Vendors tab — single-pane-of-glass booth management
+
+**Status:** Ready to scope. Captures the path-a alternative deferred from Wave 1 Task 3 (session 91). The original R4a brief assumed a Vendors tab existed on `/admin` and proposed porting the delete affordance there. Discovery during execution: no Vendors tab exists; current `/admin` has 5 tabs (`requests · posts · banners · malls · events`). Booth-row CRUD (edit + delete) lives on `/shelves` since session 74 (admin-only Pencil + Trash bubbles via `BoothLockupCard` + `EditBoothSheet` + the session-45 typed-name confirmation flow).
+
+R4a is functionally shipped via `/shelves` admin chrome. **This Q-015 captures the separate "single-pane-of-glass" argument** — admin shouldn't have to navigate to a shopper-facing page to do admin work, even if the page renders admin-only chrome when admin is logged in.
+
+### What
+
+Add a 6th tab `Vendors` to `/admin` rendering a list of every booth (active + unclaimed) with row-level Pencil + Trash bubbles. Reuses:
+
+- `BoothLockupCard` primitive (already supports admin chrome slot)
+- `EditBoothSheet` from `/shelves` (already shared)
+- `DeleteBoothSheet` — extract from `/shelves` to `components/DeleteBoothSheet.tsx` so both surfaces use the same primitive
+- `DELETE /api/admin/vendors` + `PATCH /api/admin/vendors` already wired with audit logging (session 91, Wave 1 Task 2)
+
+### Why parked (not running this session)
+
+Building a Vendors tab right now adds maintenance surface without UX gain — admin chrome on `/shelves` is *better* than R4a's original framing because it puts the admin actions next to the data they target. The single-pane-of-glass argument is real but second-order to the current Wave 1 priorities (R5a, R5b decisions, R7 contact, R11 mall heros). Becomes more valuable when:
+
+- A second admin-only booth action lands (e.g., bulk activate, claim transfer) that doesn't fit naturally on `/shelves`
+- `/shelves` itself gets a redesign that obscures admin chrome
+- Mall-operator accounts (R13) land and need a parallel admin-only booth view that excludes them
+
+### Effort
+
+~60–90 min. Reuses every primitive; new work is just the tab UI + list-fetch. **Filter chips + search** would extend the scope (active/unclaimed, by-mall, by-name) — defer to a follow-up if this Q-015 lands and surfaces them as needed.
+
+### Session opener (when picked up)
+
+```
+PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
+STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Sentry · Vercel
+Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
+Read CLAUDE.md, CONTEXT.md, and docs/DECISION_GATE.md. Then run the session opening standup from MASTER_PROMPT.md.
+
+CURRENT ISSUE: Q-015 — /admin Vendors tab single-pane-of-glass. Add a 6th tab to /admin (after requests · posts · banners · malls · events) listing every booth with row-level Pencil + Trash. Extract DeleteBoothSheet from app/shelves/page.tsx into components/DeleteBoothSheet.tsx and share with both surfaces. Reuse EditBoothSheet + BoothLockupCard. The DELETE/PATCH /api/admin/vendors routes are already wired with audit logging (session 91 Task 2). No new backend.
+```
+
+---
+
 ## ⏸️ Q-002 — Picker affordance placement revision — SHIPPED session 57
 
 **Retirement reason:** Shipped session 57 (2026-04-24) exactly per the approved direction. `Masthead` center column reverted to the "Treehouse Finds" brand lockup (session-40 right-slot share airplane preserved). `<BoothTitleBlock>` gained an optional `onPickerOpen` prop that turns the 32px IM Fell booth name into a tap target with an inline `▾` chevron when `/my-shelf` detects `vendorList.length > 1` (i.e. `showPicker`). Public Shelf + single-booth consumers omit the prop; the affordance is invisible in those contexts. Mockup `docs/mockups/my-shelf-multi-booth-v1.html` Frames 2 + 3 updated in the same commit to keep the mockup as the source of truth per the session-28 mockup-wins rule.
