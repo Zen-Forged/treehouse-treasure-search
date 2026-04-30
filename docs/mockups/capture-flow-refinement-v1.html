@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Capture flow refinement v1</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper-cream:  #e8ddc7;
+    --postit:       #fbf3df;
+    --polaroid:     #faf2e0;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --ink-wash:     rgba(255, 253, 248, 0.70);
+    --green:        #1e4d2b;
+    --red-bg:       rgba(176, 64, 42, 0.10);
+    --red-border:   rgba(176, 64, 42, 0.35);
+
+    --lora: "Lora", Georgia, serif;
+    --sys:  -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1860px; margin: 0 auto; padding: 30px 20px 60px; }
+
+  h1.title {
+    font-family: var(--lora);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 820px;
+  }
+
+  .decisions, .questions {
+    max-width: 1180px;
+    margin: 0 auto 30px;
+    padding: 22px 28px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .questions { background: rgba(30, 77, 43, 0.10); border-color: rgba(30, 77, 43, 0.40); }
+  .decisions h3, .questions h3 {
+    font-family: var(--lora);
+    font-size: 19px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 12px;
+  }
+  .decisions ul { margin: 6px 0 0; padding-left: 18px; }
+  .decisions li { margin-bottom: 6px; }
+  .decisions strong, .questions strong { color: #fff9e8; }
+  .decisions code, .questions code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .decisions .deviation {
+    border-left: 3px solid rgba(176, 64, 42, 0.65);
+    padding: 6px 0 6px 12px;
+    margin-top: 12px;
+    color: rgba(255, 220, 200, 0.85);
+  }
+  .questions ol { margin: 8px 0 0; padding-left: 22px; }
+  .questions ol li { margin-bottom: 14px; }
+  .questions .pick { color: #d8e8d8; font-style: italic; }
+
+  .row {
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    max-width: 1860px;
+    margin: 0 auto 34px;
+  }
+  .row-label {
+    font-family: var(--lora);
+    color: #fff9e8;
+    font-size: 22px;
+    margin: 18px auto 18px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .frame { display: flex; flex-direction: column; align-items: center; }
+  .frame-label {
+    font-family: var(--lora);
+    color: #fff9e8;
+    font-size: 17px;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .frame-route {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    color: rgba(232, 221, 199, 0.50);
+    margin-bottom: 12px;
+  }
+  .frame-note {
+    color: rgba(232, 221, 199, 0.55);
+    font-size: 11px;
+    margin: 10px auto 0;
+    max-width: 320px;
+    text-align: center;
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  /* ── Phone frame ──────────────────────────────────────────────── */
+  .phone {
+    width: 390px;
+    background: var(--paper-cream);
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    position: relative;
+    height: 780px;
+  }
+  .phone.tall { height: 880px; }
+
+  /* ── Masthead ─────────────────────────────────────────────────── */
+  /* Defaults match current production: padding-top 14, grid minHeight 50,
+     padding-bottom 12. Each variant overrides --grid-min and --wordmark-h. */
+  .masthead {
+    --grid-min: 50px;
+    --wordmark-h: 50px;
+    background: rgba(232, 221, 199, 0.96);
+    backdrop-filter: blur(24px);
+    border-bottom: 1px solid var(--ink-hairline);
+    padding: 14px 18px 12px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    column-gap: 8px;
+    min-height: var(--grid-min);
+  }
+  .masthead.taller { padding-top: 14px; padding-bottom: 12px; }
+  .masthead .left { justify-self: start; min-width: 80px; }
+  .masthead .center { display: flex; justify-content: center; }
+  .masthead .right { justify-self: end; min-width: 80px; display: flex; justify-content: flex-end; }
+
+  .bubble {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--ink-wash);
+    border: 0.5px solid var(--ink-hairline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .bubble svg { stroke: var(--ink-primary); }
+
+  /* Wordmark stand-in: render the actual asset. Path is relative to
+     /docs/mockups/ → /public/wordmark.png. */
+  .wordmark {
+    height: var(--wordmark-h);
+    width: auto;
+    display: block;
+  }
+
+  /* Variant overrides for the masthead-size compare row */
+  .v-modest   { --grid-min: 60px; --wordmark-h: 65px; }
+  .v-spec     { --grid-min: 75px; --wordmark-h: 75px; }
+  .v-heavy    { --grid-min: 90px; --wordmark-h: 90px; }
+
+  /* ── Generic page-context strip (used below masthead in Frame 1) ── */
+  .ctx-strip {
+    padding: 18px 22px 0;
+  }
+  .ctx-eyebrow {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    text-align: center;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+  }
+  .ctx-title {
+    font-family: var(--lora);
+    font-size: 26px;
+    color: var(--ink-primary);
+    text-align: center;
+    letter-spacing: -0.005em;
+    line-height: 1.15;
+  }
+  .ctx-sub {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    text-align: center;
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  .ctx-divider {
+    margin: 18px 44px;
+    height: 1px;
+    background: var(--ink-hairline);
+  }
+  .ctx-masonry {
+    padding: 0 22px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .ctx-tile {
+    background: var(--polaroid);
+    padding: 7px 7px 8px;
+    border-radius: 4px;
+    box-shadow: 0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10);
+  }
+  .ctx-tile-photo {
+    aspect-ratio: 4/5;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #b29873 0%, #cdb88e 100%);
+    border: 1px solid var(--ink-hairline);
+  }
+
+  /* ── /post/tag content (Frame 2) ─────────────────────────────── */
+  .below-mast-title {
+    text-align: center;
+    padding: 18px 22px 6px;
+  }
+  .below-mast-title .h {
+    font-family: var(--lora);
+    font-size: 24px;
+    color: var(--ink-primary);
+    letter-spacing: -0.005em;
+    line-height: 1.15;
+    margin-bottom: 4px;
+  }
+  .below-mast-title .s {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-muted);
+    line-height: 1.4;
+  }
+
+  .stack {
+    padding: 14px 22px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    align-items: center;
+  }
+  .pol {
+    /* Polaroid wrapper */
+    background: var(--polaroid);
+    padding: 7px 7px 8px;
+    border-radius: 4px;
+    box-shadow: 0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10);
+    width: 64%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .pol .photo {
+    aspect-ratio: 4/5;
+    border-radius: 4px;
+    background: linear-gradient(135deg, #b29873 0%, #cdb88e 100%);
+    /* Vignette to imply "an actual photo" */
+    box-shadow: inset 0 0 30px rgba(42,26,10,0.18);
+  }
+  .pol.tag .photo {
+    background:
+      linear-gradient(135deg, #f5e9c8 0%, #e8d8b0 100%);
+    /* faux text lines representing a price tag */
+    position: relative;
+  }
+  .pol.tag .photo::before {
+    content: "";
+    position: absolute;
+    top: 32%; left: 22%; right: 22%;
+    height: 3px;
+    background: rgba(42,26,10,0.45);
+    border-radius: 2px;
+  }
+  .pol.tag .photo::after {
+    content: "$28";
+    position: absolute;
+    top: 50%; left: 0; right: 0;
+    text-align: center;
+    font-family: var(--lora);
+    font-size: 22px;
+    color: rgba(42,26,10,0.62);
+    font-weight: 600;
+  }
+  .pol-label {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-muted);
+    letter-spacing: 0.04em;
+    text-align: center;
+    text-transform: lowercase;
+  }
+
+  .reading {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-muted);
+    text-align: center;
+    margin-top: 22px;
+  }
+
+  /* ── /post/preview content (Frame 3) ─────────────────────────── */
+  .field-stack {
+    padding: 12px 22px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .label {
+    font-family: var(--lora);
+    font-size: 13px;
+    color: var(--ink-mid);
+    line-height: 1.25;
+  }
+  .label .opt {
+    color: var(--ink-faint);
+    font-style: italic;
+    font-size: 12px;
+    margin-left: 5px;
+  }
+  .input {
+    width: 100%;
+    background: var(--postit);  /* (2f) postit cream — same as sign-in */
+    border: 1px solid var(--ink-hairline);
+    border-radius: 14px;
+    padding: 13px 14px;
+    font-family: var(--sys);
+    font-size: 16px;
+    color: var(--ink-primary);
+    line-height: 1.4;
+  }
+  .input.placeholder { color: var(--ink-faint); }
+  .input.caption {
+    /* Auto-grow shown filled with several sentences — nothing cut */
+    white-space: normal;
+    min-height: unset;
+    height: auto;
+  }
+  .input.price-wrap { position: relative; padding-left: 28px; }
+  .input.price-wrap::before {
+    content: "$";
+    position: absolute;
+    left: 14px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--ink-muted);
+    font-size: 16px;
+  }
+
+  .preview-photo-wrap {
+    padding: 18px 22px 0;
+    display: flex;
+    justify-content: center;
+  }
+  .pol.preview {
+    width: 62%;
+  }
+  .pol.preview .photo {
+    background: linear-gradient(135deg, #b29873 0%, #cdb88e 100%);
+  }
+
+  .save-bar {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 12px 22px 22px;
+    background: rgba(232, 221, 199, 0.96);
+    backdrop-filter: blur(24px);
+    border-top: 1px solid var(--ink-hairline);
+  }
+  .btn-publish {
+    width: 100%;
+    padding: 15px;
+    border-radius: 14px;
+    font-family: var(--sys);
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+    background: var(--green);
+    border: none;
+    box-shadow: 0 2px 12px rgba(30,77,43,0.25);
+    text-align: center;
+    letter-spacing: 0.2px;
+  }
+  .btn-publish.disabled {
+    /* (2g) consistency w/ /vendor-request + /login: 40% green w/ white,
+       not white-on-inkWash like today */
+    background: rgba(30, 77, 43, 0.40);
+    box-shadow: none;
+  }
+
+  /* ── Tiny svg helpers ────────────────────────────────────────── */
+  .icon { width: 22px; height: 22px; }
+
+  /* Annotation pill on phone frames */
+  .pin {
+    position: absolute;
+    background: rgba(255, 235, 175, 0.96);
+    color: #2a1a0a;
+    border: 1px solid rgba(42, 26, 10, 0.30);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-family: var(--sys);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    z-index: 5;
+  }
+  .pin-arrow {
+    position: absolute;
+    width: 18px; height: 1px;
+    background: rgba(255, 235, 175, 0.96);
+    z-index: 4;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <h1 class="title">Capture flow refinement — V1</h1>
+  <p class="subtitle">Bundle: Home (1a) · Masthead height bump (system-wide) · /post/tag · /post/preview · post-publish redirect.</p>
+
+  <!-- ─── Decisions pane ──────────────────────────────────────── -->
+  <div class="decisions">
+    <h3>Locked decisions for V1</h3>
+    <ul>
+      <li><strong>1a.</strong> Drop <code>&lt;VendorCTACard /&gt;</code> from <code>app/page.tsx</code>. The "Request Digital Booth" CTA now lives on <code>/login</code> + <code>/login/email</code>, so the Home footer is redundant.</li>
+      <li><strong>Masthead height + wordmark.</strong> Bump system-wide on every <code>&lt;StickyMasthead /&gt;</code> surface (~13 pages). 3 size options below — pick one.</li>
+      <li><strong>2a.</strong> <code>/post/tag</code> retires its bespoke sticky chrome and adopts <code>&lt;StickyMasthead /&gt;</code>.</li>
+      <li><strong>2b + 2d.</strong> Page title + italic subtitle move to a centered block <em>below</em> the masthead. Same typography as <code>/post/preview</code> (Lora 24 / italic 14 muted). Same shape on both pages.</li>
+      <li><strong>2c.</strong> When both photos are visible, vertical stack: <strong>Find</strong> on top, <strong>Tag</strong> below, both labeled. "Item" → "Find".</li>
+      <li><strong>2e.</strong> On <code>/post/preview</code>: Title, Caption, Price all move <em>above</em> the photo. Drop <code>&lt;PostingAsBlock /&gt;</code> (display name + booth # + mall city).</li>
+      <li><strong>2f.</strong> Title / Caption / Price input bg: <code>v1.inkWash</code> → <code>v1.postit</code> (#fbf3df), matching the sign-in email field.</li>
+      <li><strong>2g.</strong> Caption textarea = auto-grow (height = scrollHeight, recomputes on input). No internal scroll. Page scrolls if it overflows.</li>
+      <li><strong>2g.</strong> Disabled-publish button unified to the standard pattern: 40% green bg + white text (current is white-on-inkWash, doesn't match other surfaces).</li>
+      <li><strong>2h + 2i.</strong> Photos on both <code>/post/tag</code> and <code>/post/preview</code> get the polaroid wrapper (<code>#faf2e0</code> bg, 7px mat, dual shadow). The current <code>&lt;PhotographPreview /&gt;</code> 4:5 frame + paperCream letterbox + hairline border + drop-shadow chrome retires on <code>/post/preview</code>. Photo also shrinks (~62% width, centered).</li>
+      <li><strong>2j.</strong> Booth-location post-it removed from the preview photo.</li>
+      <li><strong>2k.</strong> Drop the <code>stage === "done"</code> "View my shelf / Add another find" interstitial. On publish success, <code>router.replace(myShelfHref)</code> directly. Admin <code>?vendor=&lt;id&gt;</code> impersonation preserved through <code>myShelfHref</code>.</li>
+    </ul>
+
+    <div class="deviation">
+      <strong>Rule deviation flagged.</strong> Session 83 froze <em>"polaroid skips navigate/detail surfaces."</em> The post flow is review-not-detail (the photo is the artifact under review), so we're carving an explicit exception. Recording in the design record so a future session doesn't reflexively retire the polaroid here on consistency grounds.
+    </div>
+  </div>
+
+  <!-- ═══ Frame 1 — Masthead size compare ════════════════════════ -->
+  <div class="row-label">Frame 1 — Masthead height + wordmark size · pick one</div>
+  <div class="row">
+
+    <!-- A — modest -->
+    <div class="frame">
+      <div class="frame-label">A — Modest</div>
+      <div class="frame-route">wordmark 65px · masthead +18px</div>
+      <div class="phone">
+        <div class="masthead v-modest">
+          <div class="left">
+            <div class="bubble">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </div>
+          </div>
+          <div class="center">
+            <img class="wordmark" src="../../public/wordmark.png" alt="Treehouse Finds">
+          </div>
+          <div class="right">
+            <div class="bubble">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </div>
+          </div>
+        </div>
+        <div class="ctx-strip">
+          <div class="ctx-eyebrow">Finds from across</div>
+          <div class="ctx-title">Kentucky &amp; Southern Indiana</div>
+          <div class="ctx-sub">8 finds across the state</div>
+          <div class="ctx-divider"></div>
+        </div>
+        <div class="ctx-masonry">
+          <div class="ctx-tile"><div class="ctx-tile-photo"></div></div>
+          <div class="ctx-tile" style="margin-top: 50px;"><div class="ctx-tile-photo"></div></div>
+        </div>
+      </div>
+      <div class="frame-note">Smallest of the three. Reads premium without dominating. Closest to today.</div>
+    </div>
+
+    <!-- B — David's spec -->
+    <div class="frame">
+      <div class="frame-label">B — Your spec</div>
+      <div class="frame-route">wordmark 75px · masthead +25px</div>
+      <div class="phone">
+        <div class="masthead v-spec">
+          <div class="left">
+            <div class="bubble">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </div>
+          </div>
+          <div class="center">
+            <img class="wordmark" src="../../public/wordmark.png" alt="Treehouse Finds">
+          </div>
+          <div class="right">
+            <div class="bubble">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </div>
+          </div>
+        </div>
+        <div class="ctx-strip">
+          <div class="ctx-eyebrow">Finds from across</div>
+          <div class="ctx-title">Kentucky &amp; Southern Indiana</div>
+          <div class="ctx-sub">8 finds across the state</div>
+          <div class="ctx-divider"></div>
+        </div>
+        <div class="ctx-masonry">
+          <div class="ctx-tile"><div class="ctx-tile-photo"></div></div>
+          <div class="ctx-tile" style="margin-top: 50px;"><div class="ctx-tile-photo"></div></div>
+        </div>
+      </div>
+      <div class="frame-note">Wordmark exactly fills the inner grid. Matches your "+25px" target.</div>
+    </div>
+
+    <!-- C — heavier -->
+    <div class="frame">
+      <div class="frame-label">C — Heaviest anchor</div>
+      <div class="frame-route">wordmark 90px · masthead +40px</div>
+      <div class="phone">
+        <div class="masthead v-heavy">
+          <div class="left">
+            <div class="bubble">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </div>
+          </div>
+          <div class="center">
+            <img class="wordmark" src="../../public/wordmark.png" alt="Treehouse Finds">
+          </div>
+          <div class="right">
+            <div class="bubble">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </div>
+          </div>
+        </div>
+        <div class="ctx-strip">
+          <div class="ctx-eyebrow">Finds from across</div>
+          <div class="ctx-title">Kentucky &amp; Southern Indiana</div>
+          <div class="ctx-sub">8 finds across the state</div>
+          <div class="ctx-divider"></div>
+        </div>
+        <div class="ctx-masonry">
+          <div class="ctx-tile"><div class="ctx-tile-photo"></div></div>
+          <div class="ctx-tile" style="margin-top: 50px;"><div class="ctx-tile-photo"></div></div>
+        </div>
+      </div>
+      <div class="frame-note">Goes past your "+25px" spec — adds another ~15px of breathing room. Heaviest brand anchor of the three.</div>
+    </div>
+
+  </div>
+
+  <!-- ═══ Frame 2 + 3 — Capture flow ═════════════════════════════ -->
+  <div class="row-label">Frames 2 &amp; 3 — Capture flow refresh (using B masthead)</div>
+  <div class="row">
+
+    <!-- Frame 2 — /post/tag refresh -->
+    <div class="frame">
+      <div class="frame-label">/post/tag — extracting state</div>
+      <div class="frame-route">Find + Tag stacked + polaroid + masthead applied</div>
+      <div class="phone tall">
+        <div class="masthead v-spec">
+          <div class="left">
+            <div class="bubble">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </div>
+          </div>
+          <div class="center">
+            <img class="wordmark" src="../../public/wordmark.png" alt="Treehouse Finds">
+          </div>
+          <div class="right">
+            <div class="bubble">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="below-mast-title">
+          <div class="h">Reading the tag…</div>
+          <div class="s">Just a moment.</div>
+        </div>
+
+        <div class="stack">
+          <div class="pol find">
+            <div class="photo"></div>
+            <div class="pol-label">Find</div>
+          </div>
+          <div class="pol tag">
+            <div class="photo"></div>
+            <div class="pol-label">Tag</div>
+          </div>
+        </div>
+
+        <div class="reading">Pulling title and price…</div>
+      </div>
+      <div class="frame-note">"Now the tag" / "Capture the title and price in one shot." copy used in the ready state. Switches to "Reading the tag…" / "Just a moment." while extracting (today's behavior, preserved).</div>
+    </div>
+
+    <!-- Frame 3 — /post/preview refresh -->
+    <div class="frame">
+      <div class="frame-label">/post/preview</div>
+      <div class="frame-route">Title + Caption + Price above polaroid · no booth chrome</div>
+      <div class="phone tall">
+        <div class="masthead v-spec">
+          <div class="left">
+            <div class="bubble">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </div>
+          </div>
+          <div class="center">
+            <img class="wordmark" src="../../public/wordmark.png" alt="Treehouse Finds">
+          </div>
+          <div class="right">
+            <div class="bubble">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="below-mast-title">
+          <div class="h">Review your find</div>
+          <div class="s">Here's how shoppers will see it.</div>
+        </div>
+
+        <div class="field-stack">
+          <div>
+            <div class="label">Title</div>
+            <div class="input" style="margin-top: 7px;">Vintage walnut sewing chest</div>
+          </div>
+
+          <div>
+            <div class="label">Caption <span class="opt">(optional)</span></div>
+            <div class="input caption" style="margin-top: 7px;">A handsome mid-century walnut chest with a folding lid and tray inset. Brass pulls, dovetailed drawers, and the kind of patina you can't fake. Found at the back of the booth — likely from the early 60s.</div>
+          </div>
+
+          <div>
+            <div class="label">Price <span class="opt">(optional)</span></div>
+            <div class="input price-wrap" style="margin-top: 7px;">85</div>
+          </div>
+        </div>
+
+        <div class="preview-photo-wrap">
+          <div class="pol preview">
+            <div class="photo"></div>
+          </div>
+        </div>
+
+        <div class="save-bar">
+          <div class="btn-publish">Publish</div>
+        </div>
+      </div>
+      <div class="frame-note">Caption shown auto-grown to 4 lines — nothing cut. No PostingAsBlock; no post-it on the photo; no PhotographPreview frame chrome (border + paperCream letterbox + drop shadow all retired here). Photo is ~62% page width.</div>
+    </div>
+
+  </div>
+
+  <!-- ═══ Questions for you ═════════════════════════════════════ -->
+  <div class="questions">
+    <h3>Open picks for you</h3>
+    <ol>
+      <li>
+        <strong>Q1 — Masthead size.</strong> Frame 1 A / B / C above.<br>
+        <span class="pick">My read: B (your spec). A is too modest given the "premium feel" framing; C is heavier than your +25px target.</span>
+      </li>
+      <li>
+        <strong>Q2 — /post/tag ready-state copy.</strong> Keep current "Now the tag" / "Capture the title and price in one shot." OR rewrite to match the /post/preview tonal shape (e.g. "Add the tag" / "We'll read the title and price for you.")?<br>
+        <span class="pick">My read: keep current. The italic subtitle does real work explaining what the tag photo is for — first-time vendors need it.</span>
+      </li>
+      <li>
+        <strong>Q3 — Auto-grow caption cap.</strong> No cap (page scrolls when caption is huge) OR cap at viewport (~60vh, then scroll inside the textarea)?<br>
+        <span class="pick">My read: no cap. AI captions average 2–4 sentences; a 10-sentence one is a corner case where natural page scroll is fine.</span>
+      </li>
+      <li>
+        <strong>Q4 — Polaroid label position.</strong> On Frame 2, labels "Find" and "Tag" sit <em>below</em> each polaroid (italic Lora muted). Alternative: put labels <em>above</em> each polaroid (more like a section header), or as a top-of-photo eyebrow inside the polaroid.<br>
+        <span class="pick">My read: below each polaroid. Reads as caption-on-photo; doesn't compete with the page title above.</span>
+      </li>
+    </ol>
+  </div>
+
+</div>
+
+</body>
+</html>

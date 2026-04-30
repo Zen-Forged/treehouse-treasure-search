@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Capture flow refinement v3</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper-cream:  #e8ddc7;
+    --postit:       #fbf3df;
+    --polaroid:     #faf2e0;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --ink-wash:     rgba(255, 253, 248, 0.70);
+    --green:        #1e4d2b;
+
+    --lora: "Lora", Georgia, serif;
+    --sys:  -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1860px; margin: 0 auto; padding: 30px 20px 60px; }
+
+  h1.title {
+    font-family: var(--lora);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 920px;
+  }
+
+  .decisions {
+    max-width: 1180px;
+    margin: 0 auto 30px;
+    padding: 22px 28px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--lora);
+    font-size: 19px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 12px;
+  }
+  .decisions ul { margin: 6px 0 0; padding-left: 18px; }
+  .decisions li { margin-bottom: 6px; }
+  .decisions strong { color: #fff9e8; }
+  .decisions code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .decisions .new-callout {
+    border-left: 3px solid rgba(96, 200, 100, 0.65);
+    padding: 6px 0 6px 12px;
+    margin-top: 12px;
+    color: rgba(218, 240, 220, 0.92);
+  }
+
+  .row {
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    max-width: 1860px;
+    margin: 0 auto 34px;
+  }
+  .frame { display: flex; flex-direction: column; align-items: center; }
+  .frame-label {
+    font-family: var(--lora);
+    color: #fff9e8;
+    font-size: 17px;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .frame-route {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    color: rgba(232, 221, 199, 0.50);
+    margin-bottom: 12px;
+  }
+  .frame-note {
+    color: rgba(232, 221, 199, 0.55);
+    font-size: 11px;
+    margin: 10px auto 0;
+    max-width: 340px;
+    text-align: center;
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  /* ── Phone frame ──────────────────────────────────────────────── */
+  .phone {
+    width: 390px;
+    background: var(--paper-cream);
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    position: relative;
+    height: 880px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Masthead — Q1=C: 90 wordmark / +40 masthead ─────────────── */
+  .masthead {
+    flex-shrink: 0;
+    background: rgba(232, 221, 199, 0.96);
+    backdrop-filter: blur(24px);
+    border-bottom: 1px solid var(--ink-hairline);
+    padding: 14px 18px 12px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    column-gap: 8px;
+    min-height: 90px;
+  }
+  .masthead .left { justify-self: start; min-width: 80px; }
+  .masthead .center { display: flex; justify-content: center; }
+  .masthead .right { justify-self: end; min-width: 80px; display: flex; justify-content: flex-end; }
+
+  .bubble {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--ink-wash);
+    border: 0.5px solid var(--ink-hairline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .bubble svg { stroke: var(--ink-primary); }
+
+  .wordmark {
+    height: 90px;
+    width: auto;
+    display: block;
+  }
+
+  /* ── NEW V3: vertical-centering middle band ──────────────────── */
+  /* The content between masthead and bottom chrome flexes to fill, with
+     justify-content: center. When content fits, it centers vertically.
+     When content overflows (long auto-grown caption on /post/preview),
+     overflow scrolls top-anchored — center-bias falls away gracefully. */
+  .middle {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 18px 0 18px;
+  }
+
+  .below-mast-title {
+    text-align: center;
+    padding: 0 22px 14px;
+    flex-shrink: 0;
+  }
+  .below-mast-title .h {
+    font-family: var(--lora);
+    font-size: 24px;
+    color: var(--ink-primary);
+    letter-spacing: -0.005em;
+    line-height: 1.15;
+    margin-bottom: 4px;
+  }
+  .below-mast-title .s {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-muted);
+    line-height: 1.5;
+    max-width: 290px;
+    margin: 0 auto;
+  }
+
+  /* ── Polaroid stack ──────────────────────────────────────────── */
+  .stack {
+    padding: 0 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .pol-group { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 60%; }
+  .pol-group.preview { width: 58%; }
+  .pol {
+    background: var(--polaroid);
+    padding: 7px 7px 8px;
+    border-radius: 4px;
+    box-shadow: 0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10);
+    width: 100%;
+  }
+  .pol .photo {
+    aspect-ratio: 4/5;
+    border-radius: 4px;
+    background: linear-gradient(135deg, #b29873 0%, #cdb88e 100%);
+    box-shadow: inset 0 0 30px rgba(42,26,10,0.18);
+  }
+  .pol.tag .photo {
+    background: linear-gradient(135deg, #f5e9c8 0%, #e8d8b0 100%);
+    position: relative;
+  }
+  .pol.tag .photo::before {
+    content: "";
+    position: absolute;
+    top: 32%; left: 22%; right: 22%;
+    height: 3px;
+    background: rgba(42,26,10,0.45);
+    border-radius: 2px;
+  }
+  .pol.tag .photo::after {
+    content: "$28";
+    position: absolute;
+    top: 50%; left: 0; right: 0;
+    text-align: center;
+    font-family: var(--lora);
+    font-size: 22px;
+    color: rgba(42,26,10,0.62);
+    font-weight: 600;
+  }
+  .pol-meta {
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+  }
+  .pol-label {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    letter-spacing: 0.04em;
+    text-align: center;
+    text-transform: lowercase;
+  }
+  .retake {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-primary);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--ink-faint);
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+
+  .reading {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-muted);
+    text-align: center;
+    margin-top: 14px;
+    flex-shrink: 0;
+  }
+
+  /* ── /post/tag ready-state CTAs (bottom chrome) ──────────────── */
+  .tag-cta-stack {
+    flex-shrink: 0;
+    padding: 12px 22px 22px;
+    background: rgba(232, 221, 199, 0.96);
+    backdrop-filter: blur(24px);
+    border-top: 1px solid var(--ink-hairline);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .btn-primary {
+    width: 100%;
+    padding: 15px;
+    border-radius: 14px;
+    font-family: var(--sys);
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+    background: var(--green);
+    border: none;
+    box-shadow: 0 2px 12px rgba(30,77,43,0.25);
+    text-align: center;
+    letter-spacing: 0.2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .btn-skip {
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    border: none;
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-muted);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--ink-faint);
+    text-underline-offset: 3px;
+    text-align: center;
+  }
+
+  /* ── /post/preview content ───────────────────────────────────── */
+  .field-stack {
+    padding: 0 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex-shrink: 0;
+  }
+  .label {
+    font-family: var(--lora);
+    font-size: 13px;
+    color: var(--ink-mid);
+    line-height: 1.25;
+  }
+  .label .opt {
+    color: var(--ink-faint);
+    font-style: italic;
+    font-size: 12px;
+    margin-left: 5px;
+  }
+  .input {
+    width: 100%;
+    background: var(--postit);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 14px;
+    padding: 13px 14px;
+    font-family: var(--sys);
+    font-size: 16px;
+    color: var(--ink-primary);
+    line-height: 1.4;
+  }
+  .input.caption {
+    white-space: normal;
+    height: auto;
+    min-height: unset;
+  }
+  .input.price-wrap { position: relative; padding-left: 28px; }
+  .input.price-wrap::before {
+    content: "$";
+    position: absolute;
+    left: 14px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--ink-muted);
+    font-size: 16px;
+  }
+
+  .preview-photo-wrap {
+    padding: 16px 22px 0;
+    display: flex;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .save-bar {
+    flex-shrink: 0;
+    padding: 12px 22px 22px;
+    background: rgba(232, 221, 199, 0.96);
+    backdrop-filter: blur(24px);
+    border-top: 1px solid var(--ink-hairline);
+  }
+  .btn-publish {
+    width: 100%;
+    padding: 15px;
+    border-radius: 14px;
+    font-family: var(--sys);
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+    background: var(--green);
+    border: none;
+    box-shadow: 0 2px 12px rgba(30,77,43,0.25);
+    text-align: center;
+    letter-spacing: 0.2px;
+  }
+
+  .icon { width: 22px; height: 22px; }
+  .icon-camera { width: 18px; height: 18px; stroke: #fff; }
+
+  /* Visual aid — show the centering band on a couple of frames */
+  .center-rule {
+    position: absolute;
+    left: 8px; right: 8px;
+    height: 1px;
+    background: repeating-linear-gradient(90deg, rgba(96,200,100,0.55) 0 6px, transparent 6px 12px);
+    pointer-events: none;
+    z-index: 9;
+  }
+  .center-rule .lbl {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 4px;
+    font-size: 9px;
+    color: rgba(96,200,100,0.85);
+    background: #2a2520;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: var(--sys);
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+
+  <h1 class="title">Capture flow refinement — V3</h1>
+  <p class="subtitle">Q5 = new subtitle locked. Q6 deferred (no Tag retake this round). NEW: title + photo block vertically centered between masthead and bottom chrome.</p>
+
+  <!-- ─── Decisions pane ──────────────────────────────────────── -->
+  <div class="decisions">
+    <h3>All decisions locked — V3 is the build commit</h3>
+    <ul>
+      <li><strong>Q1 = C.</strong> Wordmark 90px · masthead +40px (system-wide).</li>
+      <li><strong>Q2.</strong> /post/tag ready state — instructional copy: "Take a photo of the tag" + "We'll read the title and price right off the tag, so you don't have to type them in."</li>
+      <li><strong>Q3.</strong> Caption = auto-grow, no cap.</li>
+      <li><strong>Q4.</strong> Find / Tag labels lowercase italic Lora muted, below each polaroid.</li>
+      <li><strong>Q5.</strong> /post/preview subtitle: "Make sure everything looks right before publishing."</li>
+      <li><strong>Q6.</strong> Tag retake deferred — Find retake only this round.</li>
+      <li><strong>Retake.</strong> Italic dotted-link below Find polaroid (both /post/tag ready + /post/preview). Tap → AddFindSheet picker → updates <code>postStore.imageDataUrl</code>. <strong>Fields preserved · <code>/api/post-caption</code> + <code>/api/extract-tag</code> do NOT re-fire.</strong></li>
+    </ul>
+
+    <div class="new-callout">
+      <strong>NEW V3 — vertical centering.</strong> The middle content area (everything between masthead and bottom chrome) becomes a flex column with <code>justify-content: center</code>. When content fits, title + polaroid + retake center vertically — no more pushed-up-to-top feel. When content overflows (e.g. very long auto-grown caption on /post/preview), it scrolls top-anchored gracefully — the center-bias only kicks in when there's room. Dashed green guide on each frame below shows the geometric center of the available band.
+    </div>
+  </div>
+
+  <!-- ═══ Frames ═════════════════════════════════════════════════ -->
+  <div class="row">
+
+    <!-- Frame A — /post/tag ready state -->
+    <div class="frame">
+      <div class="frame-label">/post/tag — ready state</div>
+      <div class="frame-route">title + Find polaroid centered between masthead &amp; CTA</div>
+      <div class="phone">
+        <div class="masthead">
+          <div class="left">
+            <div class="bubble">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </div>
+          </div>
+          <div class="center">
+            <img class="wordmark" src="../../public/wordmark.png" alt="Treehouse Finds">
+          </div>
+          <div class="right">
+            <div class="bubble">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="middle">
+          <div class="below-mast-title">
+            <div class="h">Take a photo of the tag</div>
+            <div class="s">We'll read the title and price right off the tag, so you don't have to type them in.</div>
+          </div>
+
+          <div class="stack">
+            <div class="pol-group">
+              <div class="pol find">
+                <div class="photo"></div>
+              </div>
+              <div class="pol-meta">
+                <div class="pol-label">Find</div>
+                <div class="retake">Retake</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tag-cta-stack">
+          <div class="btn-primary">
+            <svg class="icon-camera" viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Take photo of tag
+          </div>
+          <div class="btn-skip">Skip — I'll add title and price manually</div>
+        </div>
+      </div>
+      <div class="frame-note">Title + Find polaroid + Retake group sits centered vertically. The whitespace above and below the group is balanced — no more "everything piled at the top of the page" feel.</div>
+    </div>
+
+    <!-- Frame B — /post/tag extracting state -->
+    <div class="frame">
+      <div class="frame-label">/post/tag — extracting state</div>
+      <div class="frame-route">title + Find/Tag stack + reading text · centered as a group</div>
+      <div class="phone">
+        <div class="masthead">
+          <div class="left">
+            <div class="bubble" style="opacity: 0.45;">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </div>
+          </div>
+          <div class="center">
+            <img class="wordmark" src="../../public/wordmark.png" alt="Treehouse Finds">
+          </div>
+          <div class="right">
+            <div class="bubble">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="middle">
+          <div class="below-mast-title">
+            <div class="h">Reading the tag…</div>
+            <div class="s">Just a moment.</div>
+          </div>
+
+          <div class="stack">
+            <div class="pol-group">
+              <div class="pol find">
+                <div class="photo"></div>
+              </div>
+              <div class="pol-meta">
+                <div class="pol-label">Find</div>
+              </div>
+            </div>
+            <div class="pol-group">
+              <div class="pol tag">
+                <div class="photo"></div>
+              </div>
+              <div class="pol-meta">
+                <div class="pol-label">Tag</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="reading">Pulling title and price…</div>
+        </div>
+      </div>
+      <div class="frame-note">No bottom CTA in extracting state. Title + Find/Tag + "Pulling…" string center as a group between masthead and bottom safe-area. Find polaroid shrunk to 60% width to keep the stacked pair on one screen.</div>
+    </div>
+
+    <!-- Frame C — /post/preview -->
+    <div class="frame">
+      <div class="frame-label">/post/preview</div>
+      <div class="frame-route">title + 3 fields + polaroid centered when content fits</div>
+      <div class="phone">
+        <div class="masthead">
+          <div class="left">
+            <div class="bubble">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </div>
+          </div>
+          <div class="center">
+            <img class="wordmark" src="../../public/wordmark.png" alt="Treehouse Finds">
+          </div>
+          <div class="right">
+            <div class="bubble">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="middle">
+          <div class="below-mast-title">
+            <div class="h">Review your find</div>
+            <div class="s">Make sure everything looks right before publishing.</div>
+          </div>
+
+          <div class="field-stack">
+            <div>
+              <div class="label">Title</div>
+              <div class="input" style="margin-top: 7px;">Vintage walnut sewing chest</div>
+            </div>
+
+            <div>
+              <div class="label">Caption <span class="opt">(optional)</span></div>
+              <div class="input caption" style="margin-top: 7px;">A handsome mid-century walnut chest with a folding lid and tray inset. Brass pulls, dovetailed drawers, and the kind of patina you can't fake.</div>
+            </div>
+
+            <div>
+              <div class="label">Price <span class="opt">(optional)</span></div>
+              <div class="input price-wrap" style="margin-top: 7px;">85</div>
+            </div>
+          </div>
+
+          <div class="preview-photo-wrap">
+            <div class="pol-group preview">
+              <div class="pol find">
+                <div class="photo"></div>
+              </div>
+              <div class="pol-meta">
+                <div class="retake">Retake</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="save-bar">
+          <div class="btn-publish">Publish</div>
+        </div>
+      </div>
+      <div class="frame-note">Page is content-rich (title + 3 fields + polaroid) — vertical centering nudges the whole group down so it sits balanced between masthead and publish bar. If caption auto-grows past available space, content scrolls top-anchored — center-bias yields gracefully.</div>
+    </div>
+
+  </div>
+
+</div>
+
+</body>
+</html>
