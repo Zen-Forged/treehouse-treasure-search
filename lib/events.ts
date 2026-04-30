@@ -38,7 +38,12 @@ export type EventType =
   | "booth_edited_by_admin"
   | "post_deleted_by_admin"
   | "featured_image_uploaded_by_admin"
-  | "featured_image_removed_by_admin";
+  | "featured_image_removed_by_admin"
+  // R4b (session 91, Wave 1) — vendor hero remove. Generic event (no admin
+  // distinction) since /api/vendor-hero is currently unauthed; auth/ownership
+  // hardening lands in Wave 1.5 security continuation, after which an admin
+  // distinction can split off if useful.
+  | "vendor_hero_removed";
 
 export interface RecordEventOptions {
   user_id?:    string | null;

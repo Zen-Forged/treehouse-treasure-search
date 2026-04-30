@@ -386,6 +386,7 @@ function MyBoothInner() {
   const [heroImageUrl,  setHeroImageUrl]  = useState<string | null>(null);
   const [heroKey,       setHeroKey]       = useState(0);
   const [heroUploading, setHeroUploading] = useState(false);
+  const [heroRemoving,  setHeroRemoving]  = useState(false);
   const [heroError,     setHeroError]     = useState<string | null>(null);
 
   // v1.2 — AddFindSheet state + hidden file inputs.
@@ -790,6 +791,48 @@ function MyBoothInner() {
     }
   }
 
+  // R4b (session 91) — remove hero. No confirmation — re-upload is the
+  // undo path, action is reversible. Mirrors the upload error-recovery
+  // pattern: stash the current URL as fallback, optimistically clear, on
+  // error restore. Touches the same activeVendor + vendorList rows as
+  // upload so a subsequent booth switch back doesn't show a stale image.
+  async function handleHeroImageRemove() {
+    if (!activeVendor?.id || heroRemoving || heroUploading) return;
+    const vendorId    = activeVendor.id;
+    const fallbackUrl = (activeVendor.hero_image_url as string | null) ?? null;
+    setHeroRemoving(true);
+    setHeroError(null);
+    heroLockedRef.current = true;
+    try {
+      // Optimistic clear so the photo disappears immediately.
+      setHeroImageUrl(null);
+      setHeroKey(k => k + 1);
+      const res  = await fetch("/api/vendor-hero", {
+        method:  "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ vendorId }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        setHeroError(json.error ?? "Remove failed.");
+        setHeroImageUrl(fallbackUrl);
+        setHeroKey(k => k + 1);
+        return;
+      }
+      setActiveVendor(v => v ? { ...v, hero_image_url: null } : v);
+      setVendorList(list =>
+        list.map(v => v.id === vendorId ? { ...v, hero_image_url: null } : v),
+      );
+    } catch (err) {
+      setHeroError(`Unexpected error: ${err instanceof Error ? err.message : String(err)}`);
+      setHeroImageUrl(fallbackUrl);
+      setHeroKey(k => k + 1);
+    } finally {
+      setHeroRemoving(false);
+      setTimeout(() => { heroLockedRef.current = false; }, 3000);
+    }
+  }
+
   // ── AddFindSheet plumbing (unchanged from v1.2) ────────────────────────
   function openAddSheet() {
     setShowAddSheet(true);
@@ -893,7 +936,9 @@ function MyBoothInner() {
               heroKey={heroKey}
               canEdit={true}
               heroUploading={heroUploading}
+              heroRemoving={heroRemoving}
               onHeroImageChange={handleHeroImageChange}
+              onHeroImageRemove={handleHeroImageRemove}
             />
 
             {heroError && (

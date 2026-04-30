@@ -66,7 +66,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Pencil, Loader, ImagePlus } from "lucide-react";
+import { Pencil, Loader, ImagePlus, Trash2 } from "lucide-react";
 import { vendorHueBg, mapsUrl, boothNumeralSize } from "@/lib/utils";
 import {
   v1,
@@ -105,7 +105,9 @@ export function BoothHero({
   heroKey,
   canEdit,
   heroUploading,
+  heroRemoving,
   onHeroImageChange,
+  onHeroImageRemove,
   layoutId,
   saved,
   onToggleBookmark,
@@ -116,7 +118,16 @@ export function BoothHero({
   heroKey: number;
   canEdit: boolean;
   heroUploading?: boolean;
+  /** R4b (session 91) — true while a remove request is in flight. */
+  heroRemoving?: boolean;
   onHeroImageChange?: (file: File) => void;
+  /**
+   * R4b (session 91) — when both `canEdit` and `heroImageUrl` are present and
+   * this handler is supplied, BoothHero renders a Trash bubble below the edit
+   * Pencil at top-left. Tap fires the handler immediately (no confirmation;
+   * action is reversible by re-uploading).
+   */
+  onHeroImageRemove?: () => void;
   /**
    * Track D phase 5 (docs/marketplace-transitions-design.md) — when set,
    * the photograph container becomes a `<motion.div layoutId>` so the
@@ -264,6 +275,44 @@ export function BoothHero({
               <Loader size={13} style={{ color: "rgba(255,255,255,0.80)", animation: "spin 0.9s linear infinite" }} />
             ) : (
               <Pencil size={13} style={{ color: "rgba(255,255,255,0.88)" }} strokeWidth={1.8} />
+            )}
+          </button>
+        )}
+
+        {/* R4b (session 91) — Remove hero bubble. Sits below the Pencil at
+            top:54 left:12 (Pencil is 34px tall at top:12, +8 gap). Only
+            mounts when there's actually a hero to remove and the caller
+            supplied the handler. Action is immediate (no confirm) — re-
+            upload is the undo path. */}
+        {canEdit && heroImageUrl && onHeroImageRemove && (
+          <button
+            onClick={onHeroImageRemove}
+            disabled={heroRemoving || heroUploading}
+            aria-label="Remove banner photo"
+            style={{
+              position: "absolute",
+              top: 54,
+              left: 12,
+              width: 34,
+              height: 34,
+              borderRadius: "50%",
+              background: "rgba(20,18,12,0.52)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              border: "1px solid rgba(255,255,255,0.18)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: heroRemoving || heroUploading ? "default" : "pointer",
+              WebkitTapHighlightColor: "transparent",
+              zIndex: 10,
+              padding: 0,
+            }}
+          >
+            {heroRemoving ? (
+              <Loader size={13} style={{ color: "rgba(255,255,255,0.80)", animation: "spin 0.9s linear infinite" }} />
+            ) : (
+              <Trash2 size={13} style={{ color: "rgba(255,255,255,0.88)" }} strokeWidth={1.8} />
             )}
           </button>
         )}
