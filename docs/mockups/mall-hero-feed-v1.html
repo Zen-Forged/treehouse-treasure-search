@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Mall hero in feed (R11)</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper-cream:  #e8ddc7;  /* canonical v1.paperCream */
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --ink-wash:     rgba(255, 253, 248, 0.70);
+    --green:        #1e4d2b;
+    --banner-radius: 8px;
+
+    --lora: "Lora", Georgia, serif;
+    --sys:  -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1320px; margin: 0 auto; padding: 30px 20px 60px; }
+
+  h1.title {
+    font-family: var(--lora);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 760px;
+  }
+
+  .decisions {
+    max-width: 1080px;
+    margin: 0 auto 30px;
+    padding: 20px 26px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--lora);
+    font-size: 19px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 12px;
+  }
+  .decisions ul { margin: 6px 0 0; padding-left: 18px; }
+  .decisions li { margin-bottom: 6px; }
+  .decisions code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .frames {
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    max-width: 1320px;
+    margin: 0 auto;
+  }
+  .frame { display: flex; flex-direction: column; align-items: center; }
+  .frame-label {
+    font-family: var(--lora);
+    color: #fff9e8;
+    font-size: 17px;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .frame-note {
+    color: rgba(232, 221, 199, 0.55);
+    font-size: 11px;
+    margin: 8px auto 0;
+    max-width: 380px;
+    text-align: center;
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  .phone {
+    width: 390px;
+    background: var(--paper-cream);
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    position: relative;
+    height: 760px;
+  }
+
+  /* ── Masthead ── */
+  .masthead {
+    padding: 18px 18px 12px;
+    background: rgba(232, 221, 199, 0.96);
+    backdrop-filter: blur(24px);
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+    min-height: 50px;
+  }
+  .masthead .left  { justify-self: start; min-width: 80px; }
+  .masthead .right { justify-self: end;   min-width: 80px; }
+  .wordmark {
+    font-family: var(--lora);
+    font-size: 17px;
+    color: var(--ink-primary);
+  }
+
+  /* ── Mall scope header (current production shape) ── */
+  .mall-scope {
+    padding: 20px 22px 6px;
+  }
+  .mall-eyebrow {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink-muted);
+    line-height: 1.4;
+    margin-bottom: 4px;
+  }
+  .mall-eyebrow .count {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: normal;
+    font-weight: 500;
+    font-size: 22px;
+    color: var(--ink-primary);
+    letter-spacing: -0.01em;
+  }
+  .mall-title-button {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+  .mall-title {
+    font-family: var(--lora);
+    font-size: 26px;
+    color: var(--ink-primary);
+    letter-spacing: -0.005em;
+    line-height: 1.2;
+  }
+  .mall-chev {
+    color: var(--ink-muted);
+    font-size: 14px;
+    transform: translateY(-2px);
+  }
+  .mall-geo {
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--sys);
+    font-size: 14px;
+    color: var(--ink-muted);
+  }
+
+  /* ── Frame A — Hero photo ABOVE mall-scope ── */
+  .hero-banner-a {
+    margin: 0 22px;
+    height: 160px;
+    border-radius: var(--banner-radius);
+    overflow: hidden;
+    position: relative;
+    background:
+      linear-gradient(135deg, #8b7250 0%, #c4a878 50%, #6b5538 100%);
+  }
+  .hero-banner-a::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle at 30% 40%, rgba(255,255,255,0.15) 0%, transparent 50%),
+                      radial-gradient(circle at 70% 60%, rgba(0,0,0,0.20) 0%, transparent 50%);
+  }
+  .hero-banner-a::after {
+    content: "Mall photo";
+    position: absolute;
+    bottom: 12px;
+    right: 14px;
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 11px;
+    color: rgba(255,255,255,0.55);
+  }
+
+  /* ── Frame B — Hero photo BEHIND mall-scope (text overlay) ── */
+  .hero-overlay-b {
+    margin: 0 22px;
+    height: 200px;
+    border-radius: var(--banner-radius);
+    overflow: hidden;
+    position: relative;
+    background:
+      linear-gradient(135deg, #8b7250 0%, #c4a878 50%, #6b5538 100%);
+  }
+  .hero-overlay-b::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle at 30% 40%, rgba(255,255,255,0.15) 0%, transparent 50%),
+                      radial-gradient(circle at 70% 60%, rgba(0,0,0,0.20) 0%, transparent 50%);
+  }
+  .hero-overlay-b .scrim {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to bottom,
+        rgba(20,18,12,0.05) 0%,
+        rgba(20,18,12,0.50) 100%);
+  }
+  .hero-overlay-b .overlay-text {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 18px 18px 14px;
+    color: #fff9e8;
+  }
+  .hero-overlay-b .overlay-eyebrow {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 14px;
+    color: rgba(255, 249, 232, 0.85);
+    line-height: 1.4;
+    margin-bottom: 4px;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.35);
+  }
+  .hero-overlay-b .overlay-eyebrow .count {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: normal;
+    font-weight: 500;
+    font-size: 22px;
+    color: #fff;
+  }
+  .hero-overlay-b .overlay-title {
+    font-family: var(--lora);
+    font-size: 26px;
+    color: #fff;
+    letter-spacing: -0.005em;
+    line-height: 1.15;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.35);
+  }
+
+  /* ── No-hero fallback frame (frame D in concept — shown for completeness) ── */
+  .feed-stub {
+    padding: 16px 22px 14px;
+  }
+  .stub-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--ink-hairline);
+  }
+
+  .icon { width: 18px; height: 18px; }
+  .filter-pill {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    padding: 6px 10px;
+    background: rgba(42,26,10,0.06);
+    border-radius: 14px;
+    font-size: 11px;
+    color: var(--ink-muted);
+  }
+</style>
+</head>
+<body>
+  <div class="page-wrap">
+    <h1 class="title">Mall hero in feed — R11 v1</h1>
+    <p class="subtitle">Two compositions for showing a mall's hero photo when the feed is filtered to that mall. All-malls case shows no photo (current behavior).</p>
+
+    <div class="decisions">
+      <h3>Decisions already locked</h3>
+      <ul>
+        <li><strong>Schema:</strong> new <code>malls.hero_image_url</code> column via migration 016. Optional. NULL = no hero set for that mall.</li>
+        <li><strong>Storage:</strong> reuse <code>site-assets</code> bucket; admin upload via existing pattern (mirrors featured-image route).</li>
+        <li><strong>Admin UI:</strong> upload affordance lives inside the expanded <code>/admin</code> Malls tab row (next to the status-toggle).</li>
+        <li><strong>Fallback:</strong> when no hero is set OR when filter = "All Kentucky Locations", render the existing MallScopeHeader exactly as today (no photo).</li>
+        <li><strong>Photo container:</strong> rounded 8px corners (matches BoothHero <code>v1.bannerRadius</code>), 22px horizontal page padding (matches MallScopeHeader).</li>
+      </ul>
+      <h3 style="margin-top: 18px;">What this mockup is asking you to judge</h3>
+      <ul>
+        <li>Composition: A (photo ABOVE the existing text header) vs B (photo BEHIND the text with white-on-photo overlay).</li>
+        <li>Implicitly: how dramatic should the mall-hero moment be?</li>
+      </ul>
+    </div>
+
+    <div class="frames">
+      <!-- ─────────── Frame A — Photo ABOVE ─────────── -->
+      <div class="frame">
+        <div class="frame-label">Frame A — Photo above text header</div>
+        <div class="phone">
+          <div class="masthead">
+            <div class="left"></div>
+            <div class="wordmark">Treehouse Finds</div>
+            <div class="right"></div>
+          </div>
+
+          <div style="height: 12px;"></div>
+          <div class="hero-banner-a"></div>
+          <div style="height: 8px;"></div>
+
+          <div class="mall-scope">
+            <div class="mall-eyebrow"><span class="count">14</span> finds from</div>
+            <button class="mall-title-button">
+              <span class="mall-title">America's Antique Mall</span>
+              <span class="mall-chev">▾</span>
+            </button>
+            <div class="mall-geo">📍 9131 Hwy 42, Goshen, KY</div>
+          </div>
+
+          <div class="feed-stub">
+            <div class="stub-divider"></div>
+          </div>
+        </div>
+        <div class="frame-note">
+          Photo is purely decorative; text remains crisp on paper-warm. Composition is additive — when filter is "All", the photo simply isn't there and nothing else shifts. Lowest risk, easiest to read at a glance.
+        </div>
+      </div>
+
+      <!-- ─────────── Frame B — Photo BEHIND text ─────────── -->
+      <div class="frame">
+        <div class="frame-label">Frame B — Photo behind, text overlay</div>
+        <div class="phone">
+          <div class="masthead">
+            <div class="left"></div>
+            <div class="wordmark">Treehouse Finds</div>
+            <div class="right"></div>
+          </div>
+
+          <div style="height: 12px;"></div>
+          <div class="hero-overlay-b">
+            <div class="scrim"></div>
+            <div class="overlay-text">
+              <div class="overlay-eyebrow"><span class="count">14</span> finds from</div>
+              <div class="overlay-title">America's Antique Mall ▾</div>
+            </div>
+          </div>
+          <div style="height: 8px;"></div>
+
+          <div class="mall-scope" style="padding-top: 10px;">
+            <div class="mall-geo">📍 9131 Hwy 42, Goshen, KY</div>
+          </div>
+
+          <div class="feed-stub">
+            <div class="stub-divider"></div>
+          </div>
+        </div>
+        <div class="frame-note">
+          Editorial / magazine. Mall name + count sit on the photo with a bottom scrim. Address line stays below on paper. Higher visual impact, but tied to photo brightness — long mall names risk overflow, and white-on-photo can clash with the warm parchment paper voice.
+        </div>
+      </div>
+
+      <!-- ─────────── Reference — All-malls fallback (no photo) ─────────── -->
+      <div class="frame">
+        <div class="frame-label">Reference — All-malls (no photo)</div>
+        <div class="phone">
+          <div class="masthead">
+            <div class="left"></div>
+            <div class="wordmark">Treehouse Finds</div>
+            <div class="right"></div>
+          </div>
+
+          <div class="mall-scope" style="padding-top: 32px;">
+            <div class="mall-eyebrow"><span class="count">42</span> finds from across</div>
+            <button class="mall-title-button">
+              <span class="mall-title">All Kentucky Locations</span>
+              <span class="mall-chev">▾</span>
+            </button>
+            <div class="mall-geo" style="font-style: italic; font-family: var(--lora); font-size: 13.5px;">Kentucky &amp; Southern Indiana</div>
+          </div>
+
+          <div class="feed-stub">
+            <div class="stub-divider"></div>
+          </div>
+        </div>
+        <div class="frame-note">
+          Both A and B fall back to this exact rendering when filter is "All" or when the picked mall has no hero set. No re-layout — the photo block simply isn't there.
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
