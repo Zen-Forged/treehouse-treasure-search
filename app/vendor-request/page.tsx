@@ -271,7 +271,7 @@ function VendorRequestInner() {
         email={email}
         onReset={() => setDone(null)}
         onGoHome={() => router.push("/")}
-        onGoSignIn={() => router.push("/login")}
+        onGoSignIn={() => router.push("/login/email")}
       />
     );
   }

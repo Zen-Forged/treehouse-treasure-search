@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Login triage v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --paper-cream:  #e8ddc7;
+    --postit:       #fbf3df;     /* the warmer white — matches polaroid + post-it */
+    --postit-soft:  #f7eed5;     /* slightly more saturated, used for hover/focus */
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --green:        #1e4d2b;
+
+    --lora: "Lora", Georgia, serif;
+    --sys:  -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1480px; margin: 0 auto; padding: 30px 20px 60px; }
+
+  h1.title {
+    font-family: var(--lora);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 820px;
+  }
+
+  .decisions {
+    max-width: 1120px;
+    margin: 0 auto 30px;
+    padding: 22px 28px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--lora);
+    font-size: 19px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 12px;
+  }
+  .decisions ul { margin: 6px 0 0; padding-left: 18px; }
+  .decisions li { margin-bottom: 6px; }
+  .decisions code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .decisions strong { color: #fff9e8; }
+  .decisions .v2-changes {
+    background: rgba(120, 200, 130, 0.07);
+    border: 1px solid rgba(120, 200, 130, 0.20);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-top: 14px;
+  }
+
+  .frames {
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    max-width: 1480px;
+    margin: 0 auto;
+  }
+  .frame { display: flex; flex-direction: column; align-items: center; }
+  .frame-label {
+    font-family: var(--lora);
+    color: #fff9e8;
+    font-size: 17px;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+  .frame-route {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    color: rgba(232, 221, 199, 0.50);
+    margin-bottom: 12px;
+  }
+  .frame-note {
+    color: rgba(232, 221, 199, 0.55);
+    font-size: 11px;
+    margin: 10px auto 0;
+    max-width: 320px;
+    text-align: center;
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  .phone {
+    width: 390px;
+    background: var(--paper-cream);
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    position: relative;
+    height: 780px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header (back arrow only) ── */
+  .topbar {
+    padding: 18px 16px 14px;
+    flex-shrink: 0;
+  }
+  .back-bubble {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(42,26,10,0.06);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── Vertical-centered body ── */
+  .center-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;   /* V2 — vertical centering */
+    padding: 0 24px 8px;
+    min-height: 0;
+  }
+
+  .footer-pinned {
+    flex-shrink: 0;
+    padding: 0 24px 26px;
+    text-align: center;
+  }
+
+  /* ── Screen 1 — triage hero ── */
+  .triage-hero {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .wordmark-img {
+    display: block;
+    margin: 0 auto 14px;
+    object-fit: contain;
+    height: 96px;
+  }
+  .wordmark-fallback {
+    font-family: var(--lora);
+    font-size: 28px;
+    color: var(--green);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin: 0 auto 14px;
+    text-align: center;
+  }
+  .triage-hero p {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-muted);
+    line-height: 1.55;
+    margin: 0 auto;
+    max-width: 290px;
+  }
+
+  /* ── Triage cards (V2 — warm postit white) ── */
+  .triage-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .triage-card {
+    padding: 16px 16px 14px;
+    background: var(--postit);   /* V2 — warmer white */
+    border-radius: 14px;
+    border: 1px solid var(--ink-hairline);
+    cursor: pointer;
+  }
+  .triage-card-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .triage-card-icon {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: rgba(30,77,43,0.08);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: var(--green);
+  }
+  .triage-card-body { flex: 1; min-width: 0; }
+  .triage-card-title {
+    font-family: var(--lora);
+    font-size: 16px;
+    color: var(--ink-primary);
+    line-height: 1.25;
+    margin: 0 0 3px;
+  }
+  .triage-card-sub {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-muted);
+    line-height: 1.45;
+  }
+  .triage-card-chev {
+    color: var(--ink-faint);
+    flex-shrink: 0;
+    font-size: 22px;
+    line-height: 1;
+    font-family: var(--lora);
+  }
+  .triage-card-cta {
+    margin-top: 12px;
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    font-family: var(--sys);
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .cta-filled {
+    color: #fff;
+    background: var(--green);
+    box-shadow: 0 2px 12px rgba(30,77,43,0.20);
+  }
+  .cta-outline {
+    color: var(--ink-primary);
+    background: transparent;
+    border: 1px solid var(--ink-hairline);
+  }
+
+  /* ── Guest disambiguation (Frame 2 only) ── */
+  .guest-line {
+    margin-top: 18px;
+    text-align: center;
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.5;
+    padding: 0 8px;
+  }
+  .guest-line strong {
+    color: var(--ink-primary);
+    font-weight: 500;
+    font-style: normal;
+  }
+
+  /* ── Footer (Contact us) ── */
+  .footer-pinned a {
+    font-family: var(--lora);
+    font-size: 13px;
+    color: var(--ink-muted);
+    text-decoration: none;
+  }
+  .help-glyph {
+    display: inline-flex;
+    width: 18px; height: 18px;
+    align-items: center; justify-content: center;
+    margin-right: 6px;
+    vertical-align: -3px;
+  }
+  .help-link {
+    text-decoration: underline !important;
+    text-decoration-style: dotted !important;
+    text-decoration-color: var(--ink-faint) !important;
+    text-underline-offset: 3px;
+    color: var(--ink-primary) !important;
+  }
+
+  /* ── Screen 2 — sign-in form ── */
+  .form-glyph {
+    margin: 0 auto 22px;
+    color: var(--ink-primary);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .form-hero {
+    text-align: center;
+    margin-bottom: 26px;
+  }
+  .form-hero h1 {
+    font-family: var(--lora);
+    font-size: 28px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+    margin: 0 0 8px;
+  }
+  .form-hero p {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink-muted);
+    line-height: 1.55;
+    margin: 0 auto;
+    max-width: 300px;
+  }
+  .form-stack { width: 100%; max-width: 340px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+  .field-label {
+    display: block;
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.3;
+    margin-bottom: 7px;
+  }
+  .field-input {
+    width: 100%;
+    padding: 14px 14px;
+    border-radius: 14px;
+    background: var(--postit);   /* V2 — warmer white */
+    border: 1px solid var(--ink-hairline);
+    color: var(--ink-primary);
+    font-size: 16px;
+    font-family: var(--sys);
+  }
+  .field-input::placeholder { color: rgba(42,26,10,0.32); }
+  .form-cta {
+    width: 100%;
+    padding: 15px;
+    border-radius: 14px;
+    font-family: var(--sys);
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+    background: var(--green);
+    border: none;
+    box-shadow: 0 2px 14px rgba(30,77,43,0.22);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .form-helper-line {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-faint);
+    text-align: center;
+    line-height: 1.6;
+    margin: 6px 0 0;
+  }
+  .form-help {
+    margin: 22px auto 0;
+    padding: 14px 14px;
+    background: var(--postit);   /* V2 — warmer white */
+    border-radius: 12px;
+    border: 1px solid var(--ink-hairline);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    width: 100%;
+    max-width: 340px;
+  }
+  .form-help-icon {
+    width: 30px; height: 30px;
+    flex-shrink: 0;
+    color: var(--green);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .form-help-body { flex: 1; min-width: 0; }
+  .form-help-title {
+    font-family: var(--lora);
+    font-size: 14px;
+    color: var(--ink-muted);
+    line-height: 1.3;
+  }
+  .form-help-cta {
+    font-family: var(--lora);
+    font-size: 14px;
+    color: var(--ink-primary);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--ink-faint);
+    text-underline-offset: 3px;
+    line-height: 1.3;
+  }
+  .form-help-chev {
+    color: var(--ink-faint);
+    flex-shrink: 0;
+    font-size: 22px;
+    font-family: var(--lora);
+  }
+
+  .icon { width: 18px; height: 18px; }
+
+  .questions {
+    max-width: 1120px;
+    margin: 50px auto 0;
+    padding: 22px 28px;
+    background: rgba(255, 245, 200, 0.06);
+    border: 1px solid rgba(255, 245, 200, 0.20);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.92);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .questions h3 {
+    font-family: var(--lora);
+    font-size: 19px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 14px;
+  }
+  .questions .q { margin-bottom: 16px; }
+  .questions .q-label { color: #fff9e8; font-weight: 500; margin-bottom: 4px; }
+  .questions ul.choices { margin: 4px 0 0; padding-left: 22px; }
+  .questions ul.choices li { margin-bottom: 3px; }
+</style>
+</head>
+<body>
+  <div class="page-wrap">
+    <h1 class="title">Login triage v2 — refinements within Frame 2</h1>
+    <p class="subtitle">V1 picks locked: Frame 2 hero (wordmark only, no welcome text), authed-user default (skip triage), CTA copy "Email me a code" stays. V2 applies vertical centering + warmer white on cards/inputs, and surfaces the guest-disambiguation question.</p>
+
+    <div class="decisions">
+      <h3>Decisions locked from V1</h3>
+      <ul>
+        <li><strong>Routing:</strong> <code>/login</code> = triage, <code>/login/email</code> = sign-in form. Magic-link callback stays at <code>/login</code> (path a).</li>
+        <li><strong>Q1 ✓</strong> Screen 1 hero = wordmark only + subtitle (no "Welcome to Treehouse Finds" line).</li>
+        <li><strong>Q2 ✓</strong> Authed-user behavior preserved — skip triage, route straight to Screen 2 with sign-out below the form.</li>
+        <li><strong>Q3 ✓</strong> Screen 2 CTA stays "Email me a code".</li>
+        <li><strong>"Create Vendor Account"</strong> routes to <code>/vendor-request</code>. No Google OAuth in V1. Wordmark = existing <code>public/wordmark.png</code>. No footer illustration.</li>
+        <li><strong>R1 (shopper accounts)</strong> queued — out of scope for this pass. When R1 ships, Screen 2 generalizes ("Vendor Sign in" → "Sign in") and Screen 1 gains a third "I'm shopping" card.</li>
+      </ul>
+
+      <div class="v2-changes">
+        <strong>V2 fill-refinements applied:</strong>
+        <ul style="margin-top: 6px;">
+          <li>Vertical centering — content centers in viewport via flex; footer pinned to bottom of safe area.</li>
+          <li>Warmer white — cards + form inputs + bottom callout switched from <code>rgba(255,253,248,0.78)</code> (cool white) to <code>v1.postit</code> (<code>#fbf3df</code>) — the same warm cream as the polaroid tile pattern + post-it accents elsewhere in the system.</li>
+        </ul>
+      </div>
+
+      <h3 style="margin-top: 18px;">What V2 is asking you to judge</h3>
+      <ul>
+        <li><strong>Frame 1 vs Frame 2</strong> — same Screen 1 layout, only difference is whether to add a small "Just shopping?" line below the cards for guest disambiguation, given R1 isn't shipping for a while. Frame 1 = vendor-only as picked. Frame 2 = with a guest-shopping line.</li>
+        <li><strong>Frame 3</strong> — Screen 2 with V2 styling applied. Confirm the warm-white treatment reads cleanly against <code>paperCream</code>.</li>
+      </ul>
+    </div>
+
+    <div class="frames">
+
+      <!-- ─────────── Frame 1 — Screen 1 (vendor-only, V2 styling) ─────────── -->
+      <div class="frame">
+        <div class="frame-label">Frame 1 — Screen 1 (vendor-only, V2 styling)</div>
+        <div class="frame-route">/login &nbsp;·&nbsp; guest</div>
+        <div class="phone">
+          <div class="topbar">
+            <div class="back-bubble">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#2a1a0a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M19 12H5"></path><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </div>
+          </div>
+
+          <div class="center-body">
+            <div class="triage-hero">
+              <img src="../../public/wordmark.png" alt="Treehouse Finds" class="wordmark-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              <div class="wordmark-fallback" style="display:none;">Treehouse&nbsp;Finds</div>
+              <p>Manage your digital booth, update your Shelf, and share your finds with shoppers.</p>
+            </div>
+
+            <div class="triage-cards">
+              <div class="triage-card">
+                <div class="triage-card-row">
+                  <div class="triage-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="10" r="3"></circle><path d="M6.5 18.5a6 6 0 0 1 11 0"></path></svg>
+                  </div>
+                  <div class="triage-card-body">
+                    <div class="triage-card-title">I already have an account</div>
+                    <div class="triage-card-sub">Sign in to access and manage your digital booth.</div>
+                  </div>
+                  <div class="triage-card-chev">›</div>
+                </div>
+                <button class="triage-card-cta cta-filled">Sign in</button>
+              </div>
+
+              <div class="triage-card">
+                <div class="triage-card-row">
+                  <div class="triage-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><path d="M3 21V8l9-5 9 5v13"></path><path d="M9 21V12h6v9"></path></svg>
+                  </div>
+                  <div class="triage-card-body">
+                    <div class="triage-card-title">I'm new to Treehouse Finds</div>
+                    <div class="triage-card-sub">Create your vendor account and set up your digital booth.</div>
+                  </div>
+                  <div class="triage-card-chev">›</div>
+                </div>
+                <button class="triage-card-cta cta-outline">Create Vendor Account</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer-pinned">
+            <span class="help-glyph">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;color:var(--ink-muted);"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </span>
+            <a href="/contact" class="help-link">Need help? Contact us</a>
+          </div>
+        </div>
+        <div class="frame-note">Vendor-only language as scoped. A non-vendor who lands here from BottomNav reads the cards, recognizes "vendor account," and (correctly) understands this isn't for them yet. Cleanest until R1.</div>
+      </div>
+
+      <!-- ─────────── Frame 2 — Screen 1 (with guest disambiguation line) ─────────── -->
+      <div class="frame">
+        <div class="frame-label">Frame 2 — Screen 1 + guest disambiguation</div>
+        <div class="frame-route">/login &nbsp;·&nbsp; guest</div>
+        <div class="phone">
+          <div class="topbar">
+            <div class="back-bubble">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#2a1a0a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M19 12H5"></path><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </div>
+          </div>
+
+          <div class="center-body">
+            <div class="triage-hero">
+              <img src="../../public/wordmark.png" alt="Treehouse Finds" class="wordmark-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              <div class="wordmark-fallback" style="display:none;">Treehouse&nbsp;Finds</div>
+              <p>Manage your digital booth, update your Shelf, and share your finds with shoppers.</p>
+            </div>
+
+            <div class="triage-cards">
+              <div class="triage-card">
+                <div class="triage-card-row">
+                  <div class="triage-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="10" r="3"></circle><path d="M6.5 18.5a6 6 0 0 1 11 0"></path></svg>
+                  </div>
+                  <div class="triage-card-body">
+                    <div class="triage-card-title">I already have an account</div>
+                    <div class="triage-card-sub">Sign in to access and manage your digital booth.</div>
+                  </div>
+                  <div class="triage-card-chev">›</div>
+                </div>
+                <button class="triage-card-cta cta-filled">Sign in</button>
+              </div>
+
+              <div class="triage-card">
+                <div class="triage-card-row">
+                  <div class="triage-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><path d="M3 21V8l9-5 9 5v13"></path><path d="M9 21V12h6v9"></path></svg>
+                  </div>
+                  <div class="triage-card-body">
+                    <div class="triage-card-title">I'm new to Treehouse Finds</div>
+                    <div class="triage-card-sub">Create your vendor account and set up your digital booth.</div>
+                  </div>
+                  <div class="triage-card-chev">›</div>
+                </div>
+                <button class="triage-card-cta cta-outline">Create Vendor Account</button>
+              </div>
+            </div>
+
+            <div class="guest-line">
+              <strong>Just shopping?</strong> Keep browsing — no account needed.
+            </div>
+          </div>
+
+          <div class="footer-pinned">
+            <span class="help-glyph">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;color:var(--ink-muted);"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </span>
+            <a href="/contact" class="help-link">Need help? Contact us</a>
+          </div>
+        </div>
+        <div class="frame-note">Same as Frame 1 + a small italic "Just shopping?" line under the cards. Removes naturally when R1 ships and the third "I'm shopping" card replaces this. ~1 DOM node.</div>
+      </div>
+
+      <!-- ─────────── Frame 3 — Screen 2 (V2 styling applied) ─────────── -->
+      <div class="frame">
+        <div class="frame-label">Frame 3 — Screen 2 (V2 styling)</div>
+        <div class="frame-route">/login/email &nbsp;·&nbsp; guest</div>
+        <div class="phone">
+          <div class="topbar">
+            <div class="back-bubble">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#2a1a0a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M19 12H5"></path><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </div>
+          </div>
+
+          <div class="center-body">
+            <div class="form-hero">
+              <div class="form-glyph">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="width:44px;height:44px;"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="10" r="3"></circle><path d="M6.5 18.5a6 6 0 0 1 11 0"></path></svg>
+              </div>
+              <h1>Vendor Sign in</h1>
+              <p>Enter the email connected to your booth.<br>We'll email you a 6-digit code.</p>
+            </div>
+
+            <div class="form-stack">
+              <div>
+                <label class="field-label">Email address</label>
+                <input class="field-input" type="email" placeholder="you@example.com" disabled>
+              </div>
+              <button class="form-cta">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22 6 12 13 2 6"></polyline></svg>
+                Email me a code
+              </button>
+              <p class="form-helper-line">First time? An account is created automatically.</p>
+            </div>
+
+            <a href="/vendor-request" class="form-help">
+              <div class="form-help-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M3 21V8l9-5 9 5v13"></path><path d="M9 21V12h6v9"></path></svg>
+              </div>
+              <div class="form-help-body">
+                <div class="form-help-title">New to Treehouse Finds?</div>
+                <div class="form-help-cta">Create a vendor account</div>
+              </div>
+              <div class="form-help-chev">›</div>
+            </a>
+          </div>
+
+          <div class="footer-pinned" style="display:flex; flex-direction:column; gap:8px;">
+            <button style="background:none; border:none; padding:0; cursor:pointer; font-family:var(--lora); font-style:italic; font-size:14px; color:var(--ink-muted); text-decoration:underline; text-decoration-style:dotted; text-decoration-color:var(--ink-faint); text-underline-offset:3px;">Sign out</button>
+            <span style="font-family:var(--lora); font-style:italic; font-size:11px; color:rgba(42,26,10,0.32);">(visible only when authed)</span>
+          </div>
+        </div>
+        <div class="frame-note">Vertically centered. Email field, CTA, and "Create vendor account" callout all share the warm postit white. Sign-out italic dotted-link below — current behavior preserved (renders when authed).</div>
+      </div>
+
+    </div>
+
+    <div class="questions">
+      <h3>Multiple-choice questions</h3>
+
+      <div class="q">
+        <div class="q-label">Q1 — Guest disambiguation copy</div>
+        <ul class="choices">
+          <li>(a) Frame 1 — vendor-only as scoped. Refresh copy when R1 ships.</li>
+          <li>(b) Frame 2 — add the "Just shopping? Keep browsing — no account needed." line now. Removes when R1 lands.</li>
+          <li>(c) Other — &lt;your direction&gt;</li>
+        </ul>
+      </div>
+
+      <div class="q">
+        <div class="q-label">Q2 — Anything else to redirect?</div>
+        <ul class="choices">
+          <li>(open) Vertical position, warm-white intensity, card spacing, hero glyph (CircleUser ring), copy details, etc.</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
