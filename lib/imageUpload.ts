@@ -62,9 +62,14 @@ export function compressImage(
 // bucket visibility issue that makes lib/posts.ts:uploadPostImage silently
 // fail). Returns the public URL on success.
 //
+// Auth (Wave 1.5, session 92): /api/post-image now requires bearer auth +
+// ownership-or-admin, so this helper goes through authFetch.
+//
 // THROWS on any failure path — HTTP non-200, missing url in response body,
 // network error, malformed inputs. Callers MUST try/catch and abort the
 // post/update write on throw. See CLAUDE.md "Image uploads" section.
+
+import { authFetch } from "./authFetch";
 
 export async function uploadPostImageViaServer(
   base64DataUrl: string,
@@ -79,10 +84,9 @@ export async function uploadPostImageViaServer(
 
   let res: Response;
   try {
-    res = await fetch("/api/post-image", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ base64DataUrl, vendorId }),
+    res = await authFetch("/api/post-image", {
+      method: "POST",
+      body:   JSON.stringify({ base64DataUrl, vendorId }),
     });
   } catch (networkErr) {
     throw new Error(
