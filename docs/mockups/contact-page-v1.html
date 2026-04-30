@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Contact page (R7)</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --paper-cream:  #e8ddc7;  /* canonical v1.paperCream — same warm paper as masthead */
+    --postit:       #fffaea;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --ink-wash:     rgba(255, 253, 248, 0.70);
+    --green:        #1e4d2b;
+
+    --lora: "Lora", Georgia, serif;
+    --sys:  -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1320px; margin: 0 auto; padding: 30px 20px 60px; }
+
+  h1.title {
+    font-family: var(--lora);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 760px;
+  }
+
+  .decisions {
+    max-width: 1080px;
+    margin: 0 auto 30px;
+    padding: 20px 26px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--lora);
+    font-size: 19px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 12px;
+  }
+  .decisions ul { margin: 6px 0 0; padding-left: 18px; }
+  .decisions li { margin-bottom: 6px; }
+  .decisions code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .frames {
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    max-width: 1320px;
+    margin: 0 auto;
+  }
+  .frame { display: flex; flex-direction: column; align-items: center; }
+  .frame-label {
+    font-family: var(--lora);
+    color: #fff9e8;
+    font-size: 17px;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .frame-note {
+    color: rgba(232, 221, 199, 0.55);
+    font-size: 11px;
+    margin: 8px auto 0;
+    max-width: 320px;
+    text-align: center;
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  .phone {
+    width: 390px;
+    background: var(--paper-cream);
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    position: relative;
+    height: 700px;
+  }
+
+  /* ── Masthead ── */
+  .masthead {
+    padding: 18px 18px 12px;
+    background: rgba(232, 221, 199, 0.96);
+    backdrop-filter: blur(24px);
+    border-bottom: 1px solid transparent;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+    min-height: 50px;
+  }
+  .masthead .left  { justify-self: start; min-width: 80px; display: flex; align-items: center; }
+  .masthead .right { justify-self: end;   min-width: 80px; display: flex; align-items: center; justify-content: flex-end; }
+  .back-bubble {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(42,26,10,0.06);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .wordmark {
+    font-family: var(--lora);
+    font-size: 17px;
+    color: var(--ink-primary);
+    letter-spacing: 0.01em;
+  }
+
+  /* ── Page hero ── */
+  .hero {
+    padding: 40px 28px 24px;
+    text-align: center;
+  }
+  .hero-glyph {
+    width: 44px; height: 44px;
+    margin: 0 auto 18px;
+    color: var(--ink-primary);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hero h1 {
+    font-family: var(--lora);
+    font-size: 28px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+    margin: 0 0 8px;
+  }
+  .hero p {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink-muted);
+    line-height: 1.55;
+    margin: 0 auto 28px;
+    max-width: 300px;
+  }
+
+  /* ── Frame A — Filled green CTA buttons ── */
+  .button-stack { padding: 0 28px; display: flex; flex-direction: column; gap: 12px; }
+  .cta-btn {
+    width: 100%;
+    padding: 15px;
+    border-radius: 14px;
+    font-family: var(--sys);
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+    background: var(--green);
+    border: none;
+    box-shadow: 0 2px 14px rgba(30,77,43,0.22);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .cta-btn-secondary {
+    background: rgba(30,77,43,0.08);
+    color: var(--green);
+    box-shadow: none;
+    border: 1px solid rgba(30,77,43,0.18);
+  }
+
+  /* ── Frame B — Soft cards (paper-cream with icon) ── */
+  .card-stack { padding: 0 22px; display: flex; flex-direction: column; gap: 10px; }
+  .contact-card {
+    width: 100%;
+    padding: 16px 16px;
+    background: rgba(255, 253, 248, 0.70);
+    border-radius: 12px;
+    border: 1px solid var(--ink-hairline);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  .contact-card:hover { background: rgba(255, 253, 248, 0.88); }
+  .card-icon {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: rgba(30,77,43,0.08);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: var(--green);
+  }
+  .card-body { flex: 1; min-width: 0; }
+  .card-title {
+    font-family: var(--lora);
+    font-size: 16px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+    margin: 0 0 2px;
+  }
+  .card-sub {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-muted);
+    line-height: 1.45;
+  }
+  .card-chev {
+    color: var(--ink-faint);
+    flex-shrink: 0;
+    font-size: 16px;
+  }
+
+  /* ── Frame C — Minimal text rows ── */
+  .text-stack { padding: 0 28px; display: flex; flex-direction: column; gap: 0; }
+  .text-row {
+    padding: 16px 4px;
+    border-bottom: 1px solid var(--ink-hairline);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .text-row:first-child { border-top: 1px solid var(--ink-hairline); }
+  .text-label {
+    font-family: var(--lora);
+    font-size: 17px;
+    color: var(--ink-primary);
+  }
+  .text-arrow {
+    font-family: var(--lora);
+    color: var(--ink-faint);
+    font-size: 15px;
+  }
+
+  /* ── Footer note (all frames) ── */
+  .footer-note {
+    margin-top: 24px;
+    padding: 0 28px;
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-faint);
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .icon { width: 18px; height: 18px; }
+</style>
+</head>
+<body>
+  <div class="page-wrap">
+    <h1 class="title">Contact page — R7 v1</h1>
+    <p class="subtitle">v0 mechanism is mailto with a category subject prefix. Three visual treatments for the picker. Pick one or redirect.</p>
+
+    <div class="decisions">
+      <h3>Decisions already locked</h3>
+      <ul>
+        <li><strong>Mechanism:</strong> mailto link, no backend, no Tally subscription.</li>
+        <li><strong>Categories:</strong> Question / Feedback / Bug — each prefills the email subject (<code>?subject=Question:%20</code>, etc.).</li>
+        <li><strong>Discoverability:</strong> link added to <code>/login</code> below the "First time? An account…" line. Footer-everywhere is post-Wave-1 polish.</li>
+        <li><strong>Recipient:</strong> the project's admin email (NEXT_PUBLIC_ADMIN_EMAIL).</li>
+      </ul>
+      <h3 style="margin-top: 18px;">What this mockup is asking you to judge</h3>
+      <ul>
+        <li>Visual treatment of the 3-option picker — Frame A filled green buttons, Frame B soft cards with icons, Frame C minimalist text rows.</li>
+        <li>Which best matches the brand voice (warm, parchment, literary serif)?</li>
+      </ul>
+    </div>
+
+    <div class="frames">
+      <!-- ─────────── Frame A — Filled green buttons ─────────── -->
+      <div class="frame">
+        <div class="frame-label">Frame A — Filled CTA buttons</div>
+        <div class="phone">
+          <div class="masthead">
+            <div class="left">
+              <div class="back-bubble">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#2a1a0a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M19 12H5"></path><polyline points="12 19 5 12 12 5"></polyline></svg>
+              </div>
+            </div>
+            <div class="wordmark">Treehouse Finds</div>
+            <div class="right"></div>
+          </div>
+
+          <div class="hero">
+            <div class="hero-glyph">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="width:44px;height:44px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22 6 12 13 2 6"></polyline></svg>
+            </div>
+            <h1>Reach out</h1>
+            <p>Pick the option that fits and we'll get back to you.</p>
+          </div>
+
+          <div class="button-stack">
+            <button class="cta-btn">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              Ask a question
+            </button>
+            <button class="cta-btn cta-btn-secondary">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              Send feedback
+            </button>
+            <button class="cta-btn cta-btn-secondary">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="6" width="8" height="14" rx="4"></rect><line x1="12" y1="2" x2="12" y2="6"></line><line x1="6" y1="14" x2="2" y2="14"></line><line x1="22" y1="14" x2="18" y2="14"></line></svg>
+              Report a bug
+            </button>
+          </div>
+
+          <div class="footer-note">Opens your email app with our address pre-filled.</div>
+        </div>
+        <div class="frame-note">Familiar app pattern. Clear primary action. The 3-button stack reads as a form CTA — heavier than the brand voice elsewhere.</div>
+      </div>
+
+      <!-- ─────────── Frame B — Soft cards ─────────── -->
+      <div class="frame">
+        <div class="frame-label">Frame B — Soft cards with icons</div>
+        <div class="phone">
+          <div class="masthead">
+            <div class="left">
+              <div class="back-bubble">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#2a1a0a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M19 12H5"></path><polyline points="12 19 5 12 12 5"></polyline></svg>
+              </div>
+            </div>
+            <div class="wordmark">Treehouse Finds</div>
+            <div class="right"></div>
+          </div>
+
+          <div class="hero">
+            <div class="hero-glyph">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="width:44px;height:44px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22 6 12 13 2 6"></polyline></svg>
+            </div>
+            <h1>Reach out</h1>
+            <p>Pick the option that fits and we'll get back to you.</p>
+          </div>
+
+          <div class="card-stack">
+            <a class="contact-card" href="#">
+              <div class="card-icon">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              </div>
+              <div class="card-body">
+                <div class="card-title">Ask a question</div>
+                <div class="card-sub">Anything about how Treehouse Finds works.</div>
+              </div>
+              <div class="card-chev">›</div>
+            </a>
+
+            <a class="contact-card" href="#">
+              <div class="card-icon">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              </div>
+              <div class="card-body">
+                <div class="card-title">Send feedback</div>
+                <div class="card-sub">What's working, what isn't, what's missing.</div>
+              </div>
+              <div class="card-chev">›</div>
+            </a>
+
+            <a class="contact-card" href="#">
+              <div class="card-icon">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="6" width="8" height="14" rx="4"></rect><line x1="12" y1="2" x2="12" y2="6"></line><line x1="6" y1="14" x2="2" y2="14"></line><line x1="22" y1="14" x2="18" y2="14"></line></svg>
+              </div>
+              <div class="card-body">
+                <div class="card-title">Report a bug</div>
+                <div class="card-sub">Something looks broken or didn't behave right.</div>
+              </div>
+              <div class="card-chev">›</div>
+            </a>
+          </div>
+
+          <div class="footer-note">Opens your email app with our address pre-filled.</div>
+        </div>
+        <div class="frame-note">Brand-voice match. Each card is a complete thought (icon + label + helper line). Reads less like a "form" and more like a quiet invitation.</div>
+      </div>
+
+      <!-- ─────────── Frame C — Minimal text rows ─────────── -->
+      <div class="frame">
+        <div class="frame-label">Frame C — Minimal text rows</div>
+        <div class="phone">
+          <div class="masthead">
+            <div class="left">
+              <div class="back-bubble">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="#2a1a0a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px;"><path d="M19 12H5"></path><polyline points="12 19 5 12 12 5"></polyline></svg>
+              </div>
+            </div>
+            <div class="wordmark">Treehouse Finds</div>
+            <div class="right"></div>
+          </div>
+
+          <div class="hero">
+            <div class="hero-glyph">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="width:44px;height:44px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22 6 12 13 2 6"></polyline></svg>
+            </div>
+            <h1>Reach out</h1>
+            <p>Pick the option that fits and we'll get back to you.</p>
+          </div>
+
+          <div class="text-stack">
+            <a class="text-row" href="#">
+              <span class="text-label">Ask a question</span>
+              <span class="text-arrow">→</span>
+            </a>
+            <a class="text-row" href="#">
+              <span class="text-label">Send feedback</span>
+              <span class="text-arrow">→</span>
+            </a>
+            <a class="text-row" href="#">
+              <span class="text-label">Report a bug</span>
+              <span class="text-arrow">→</span>
+            </a>
+          </div>
+
+          <div class="footer-note">Opens your email app with our address pre-filled.</div>
+        </div>
+        <div class="frame-note">Most restrained. Reads as a settings list. Lowest visual signal — risks feeling utilitarian rather than welcoming.</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
