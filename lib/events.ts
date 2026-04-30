@@ -43,7 +43,11 @@ export type EventType =
   // distinction) since /api/vendor-hero is currently unauthed; auth/ownership
   // hardening lands in Wave 1.5 security continuation, after which an admin
   // distinction can split off if useful.
-  | "vendor_hero_removed";
+  | "vendor_hero_removed"
+  // Wave 1 Task 4 (session 91) — vendor self-edits their own booth name
+  // (display_name only; booth_number + mall stay admin-only). Distinct from
+  // `booth_edited_by_admin` since the actor is the vendor, not an admin.
+  | "vendor_profile_edited";
 
 export interface RecordEventOptions {
   user_id?:    string | null;

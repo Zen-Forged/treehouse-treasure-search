@@ -1,10 +1,17 @@
 // components/EditBoothSheet.tsx
-// Bottom sheet for editing a booth's mall + number + name on /shelves.
-// Pencil bubble (top-right of admin tile) opens this sheet.
+// Bottom sheet for editing a booth.
+//
+// Mode `"admin"` (default) — full booth row edit (mall + booth_number +
+// display_name). Used by /shelves admin Pencil bubble. Submits via
+// PATCH /api/admin/vendors.
+//
+// Mode `"vendor"` (Wave 1 Task 4, session 91) — display_name only. Used by
+// /my-shelf vendor self-edit Pencil. Submits via PATCH /api/vendor/profile
+// which gates on requireAuth + vendor ownership check. Booth_number stays
+// the dedup key + mall reassignment stays admin-only.
 //
 // Mirrors DeleteBoothSheet's shell pattern (backdrop + grabber + motion-y
-// entry + body-overflow lock). Field shape from BoothFormFields. Submit
-// via PATCH /api/admin/vendors. See docs/booth-management-design.md (D1–D5).
+// entry + body-overflow lock). See docs/booth-management-design.md (D1–D5).
 
 "use client";
 
@@ -18,7 +25,17 @@ import type { Vendor, Mall } from "@/types/treehouse";
 
 interface EditBoothSheetProps {
   vendor:    Vendor;
-  malls:     Mall[];
+  /**
+   * Admin mode requires malls (for the relocation select). Vendor mode
+   * doesn't render the select, so the prop is optional in vendor mode.
+   */
+  malls?:    Mall[];
+  /**
+   * Wave 1 Task 4 (session 91) — `"admin"` (default) edits all 3 fields via
+   * /api/admin/vendors PATCH. `"vendor"` edits display_name only via
+   * /api/vendor/profile PATCH.
+   */
+  mode?:     "admin" | "vendor";
   onClose:   () => void;
   onUpdated: (vendor: Vendor) => void;
 }
@@ -26,6 +43,7 @@ interface EditBoothSheetProps {
 export default function EditBoothSheet({
   vendor,
   malls,
+  mode = "admin",
   onClose,
   onUpdated,
 }: EditBoothSheetProps) {
@@ -51,25 +69,35 @@ export default function EditBoothSheet({
 
   const trimmedName  = displayName.trim();
   const hasChange =
-    mallId !== initial.mallId ||
-    boothNumber !== initial.boothNumber ||
-    trimmedName !== initial.displayName.trim();
+    mode === "vendor"
+      ? trimmedName !== initial.displayName.trim()
+      : (mallId !== initial.mallId ||
+         boothNumber !== initial.boothNumber ||
+         trimmedName !== initial.displayName.trim());
 
-  const canSave = !submitting && hasChange && trimmedName.length > 0 && mallId.length > 0;
+  const canSave =
+    !submitting &&
+    hasChange &&
+    trimmedName.length > 0 &&
+    (mode === "vendor" || mallId.length > 0);
 
   async function handleSave() {
     if (!canSave) return;
     setSubmitting(true);
     setError(null);
     try {
-      const res = await authFetch("/api/admin/vendors", {
+      const endpoint = mode === "vendor" ? "/api/vendor/profile" : "/api/admin/vendors";
+      const payload  = mode === "vendor"
+        ? { vendorId: vendor.id, display_name: trimmedName }
+        : {
+            vendorId:     vendor.id,
+            display_name: trimmedName,
+            booth_number: boothNumber.trim() || null,
+            mall_id:      mallId,
+          };
+      const res = await authFetch(endpoint, {
         method: "PATCH",
-        body: JSON.stringify({
-          vendorId:     vendor.id,
-          display_name: trimmedName,
-          booth_number: boothNumber.trim() || null,
-          mall_id:      mallId,
-        }),
+        body:   JSON.stringify(payload),
       });
       const json = await res.json();
       if (!res.ok || !json.ok) {
@@ -143,7 +171,7 @@ export default function EditBoothSheet({
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: FONT_LORA, fontSize: 16, color: v1.inkPrimary, lineHeight: 1.3 }}>
-                Edit booth
+                {mode === "vendor" ? "Edit booth name" : "Edit booth"}
               </div>
               <div
                 style={{
@@ -170,15 +198,67 @@ export default function EditBoothSheet({
             </button>
           </div>
 
-          {/* Form */}
-          <BoothFormFields
-            malls={malls}
-            mallId={mallId} setMallId={setMallId}
-            boothNumber={boothNumber} setBoothNumber={setBoothNumber}
-            displayName={displayName} setDisplayName={setDisplayName}
-            initialValues={initial}
-            disabled={submitting}
-          />
+          {/* Form — vendor mode renders display_name only; admin mode renders
+              the full 3-field BoothFormFields. */}
+          {mode === "vendor" ? (
+            <div style={{ marginBottom: 14 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontFamily: FONT_LORA,
+                  fontSize: 13,
+                  color: v1.inkMid,
+                  lineHeight: 1.25,
+                  marginBottom: 6,
+                }}
+              >
+                Booth name
+              </label>
+              <input
+                value={displayName}
+                onChange={e => setDisplayName(e.target.value)}
+                placeholder="e.g. ZenForged Finds"
+                disabled={submitting}
+                autoFocus
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  padding: "11px 12px",
+                  borderRadius: 10,
+                  background: trimmedName !== initial.displayName.trim() ? "#fff9e8" : v1.inkWash,
+                  border: `1px solid ${trimmedName !== initial.displayName.trim() ? "#c8a55a" : v1.inkHairline}`,
+                  color: v1.inkPrimary,
+                  fontSize: 14,
+                  outline: "none",
+                  fontFamily: FONT_SYS,
+                  appearance: "none",
+                  WebkitAppearance: "none",
+                }}
+              />
+              <div
+                style={{
+                  fontFamily: FONT_LORA,
+                  fontStyle: "italic",
+                  fontSize: 11,
+                  color: v1.inkFaint,
+                  lineHeight: 1.4,
+                  marginTop: 6,
+                }}
+              >
+                Booth number and location are managed by Treehouse Finds.
+                Reach out if either needs to change.
+              </div>
+            </div>
+          ) : (
+            <BoothFormFields
+              malls={malls ?? []}
+              mallId={mallId} setMallId={setMallId}
+              boothNumber={boothNumber} setBoothNumber={setBoothNumber}
+              displayName={displayName} setDisplayName={setDisplayName}
+              initialValues={initial}
+              disabled={submitting}
+            />
+          )}
 
           {/* Conflict / error */}
           {error && (

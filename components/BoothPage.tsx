@@ -426,6 +426,7 @@ export function BoothHero({
 export function BoothTitleBlock({
   displayName,
   onPickerOpen,
+  onEditName,
 }: {
   displayName: string;
   /**
@@ -437,8 +438,16 @@ export function BoothTitleBlock({
    * unchanged.
    */
   onPickerOpen?: () => void;
+  /**
+   * Wave 1 Task 4 (session 91) — vendor self-edit affordance. When supplied,
+   * renders a small Pencil bubble inline at the right of the title block.
+   * Only `/my-shelf` passes this when the actor is the booth's owner (not
+   * admin impersonating); shopper Shelf and admin /shelves omit it.
+   */
+  onEditName?: () => void;
 }) {
   const hasPicker = !!onPickerOpen;
+  const hasEdit   = !!onEditName;
   return (
     <div style={{ padding: "36px 22px 6px" }}>
       <div
@@ -453,24 +462,53 @@ export function BoothTitleBlock({
       >
         A curated booth from
       </div>
-      {hasPicker ? (
-        <button
-          onClick={onPickerOpen}
-          aria-label={`Switch booth — viewing ${displayName}`}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 10,
-            margin: 0,
-            padding: 0,
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            textAlign: "left",
-            WebkitTapHighlightColor: "transparent",
-            maxWidth: "100%",
-          }}
-        >
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+        {hasPicker ? (
+          <button
+            onClick={onPickerOpen}
+            aria-label={`Switch booth — viewing ${displayName}`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 10,
+              margin: 0,
+              padding: 0,
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              textAlign: "left",
+              WebkitTapHighlightColor: "transparent",
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
+            <h1
+              style={{
+                fontFamily: FONT_LORA,
+                fontSize: 32,
+                fontWeight: 400,
+                color: v1.inkPrimary,
+                lineHeight: 1.1,
+                letterSpacing: "-0.005em",
+                margin: 0,
+              }}
+            >
+              {displayName}
+            </h1>
+            <span
+              aria-hidden="true"
+              style={{
+                fontFamily: FONT_LORA,
+                fontSize: 20,
+                color: v1.inkMuted,
+                lineHeight: 1,
+                marginTop: 4,
+              }}
+            >
+              ▾
+            </span>
+          </button>
+        ) : (
           <h1
             style={{
               fontFamily: FONT_LORA,
@@ -480,38 +518,38 @@ export function BoothTitleBlock({
               lineHeight: 1.1,
               letterSpacing: "-0.005em",
               margin: 0,
+              flex: 1,
+              minWidth: 0,
             }}
           >
             {displayName}
           </h1>
-          <span
-            aria-hidden="true"
+        )}
+
+        {hasEdit && (
+          <button
+            onClick={onEditName}
+            aria-label="Edit booth name"
             style={{
-              fontFamily: FONT_LORA,
-              fontSize: 20,
-              color: v1.inkMuted,
-              lineHeight: 1,
+              flexShrink: 0,
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              background: "rgba(42,26,10,0.04)",
+              border: `1px solid ${v1.inkHairline}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              padding: 0,
               marginTop: 4,
+              WebkitTapHighlightColor: "transparent",
             }}
           >
-            ▾
-          </span>
-        </button>
-      ) : (
-        <h1
-          style={{
-            fontFamily: FONT_LORA,
-            fontSize: 32,
-            fontWeight: 400,
-            color: v1.inkPrimary,
-            lineHeight: 1.1,
-            letterSpacing: "-0.005em",
-            margin: 0,
-          }}
-        >
-          {displayName}
-        </h1>
-      )}
+            <Pencil size={13} style={{ color: v1.green }} strokeWidth={1.8} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

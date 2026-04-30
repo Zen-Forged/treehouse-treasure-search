@@ -82,6 +82,7 @@ import StickyMasthead from "@/components/StickyMasthead";
 import AddFindSheet from "@/components/AddFindSheet";
 import BoothPickerSheet from "@/components/BoothPickerSheet";
 import ShareBoothSheet from "@/components/ShareBoothSheet";
+import EditBoothSheet from "@/components/EditBoothSheet";
 import {
   BoothHero,
   BoothTitleBlock,
@@ -390,7 +391,9 @@ function MyBoothInner() {
   const [heroError,     setHeroError]     = useState<string | null>(null);
 
   // v1.2 — AddFindSheet state + hidden file inputs.
-  const [showAddSheet, setShowAddSheet] = useState(false);
+  const [showAddSheet,  setShowAddSheet]  = useState(false);
+  // Wave 1 Task 4 (session 91) — vendor self-edit booth name sheet.
+  const [showEditSheet, setShowEditSheet] = useState(false);
   const cameraInputRef  = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -962,6 +965,11 @@ function MyBoothInner() {
             <BoothTitleBlock
               displayName={displayName}
               onPickerOpen={showPicker ? () => setPickerOpen(true) : undefined}
+              // Wave 1 Task 4 — vendor self-edit affordance. Hidden on admin
+              // impersonation (admin uses /shelves EditBoothSheet for any
+              // booth, including impersonated ones — that route handles
+              // the full 3-field edit).
+              onEditName={!adminOverride ? () => setShowEditSheet(true) : undefined}
             />
             <MallBlock mallName={mallName} mallCity={mallCity} address={address} />
             <DiamondDivider topPad={22} bottomPad={12} horizontalPad={44} />
@@ -1023,6 +1031,25 @@ function MyBoothInner() {
         onTakePhoto={() => cameraInputRef.current?.click()}
         onChooseFromLibrary={() => galleryInputRef.current?.click()}
       />
+
+      {/* Wave 1 Task 4 — vendor self-edit booth name. Vendor mode renders
+          display_name only; submit hits /api/vendor/profile (requireAuth +
+          ownership). Admin impersonation hides the affordance entirely so
+          this sheet only mounts for booth owners. */}
+      {showEditSheet && activeVendor && !adminOverride && (
+        <EditBoothSheet
+          vendor={activeVendor}
+          mode="vendor"
+          onClose={() => setShowEditSheet(false)}
+          onUpdated={(updated) => {
+            setActiveVendor(updated);
+            setVendorList(list =>
+              list.map(v => v.id === updated.id ? updated : v),
+            );
+            setShowEditSheet(false);
+          }}
+        />
+      )}
 
       {/* Booth picker — only instantiated when vendor owns >1 booth */}
       {showPicker && activeVendor && user?.email && (
