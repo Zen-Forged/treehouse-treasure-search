@@ -47,7 +47,10 @@ export type EventType =
   // Wave 1 Task 4 (session 91) — vendor self-edits their own booth name
   // (display_name only; booth_number + mall stay admin-only). Distinct from
   // `booth_edited_by_admin` since the actor is the vendor, not an admin.
-  | "vendor_profile_edited";
+  | "vendor_profile_edited"
+  // R11 (Wave 1 Task 7, session 91) — admin uploads/removes a mall hero.
+  | "mall_hero_uploaded_by_admin"
+  | "mall_hero_removed_by_admin";
 
 export interface RecordEventOptions {
   user_id?:    string | null;

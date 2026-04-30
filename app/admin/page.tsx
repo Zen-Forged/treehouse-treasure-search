@@ -1826,7 +1826,157 @@ function MallRow({
               Updating…
             </div>
           )}
+
+          {/* R11 (Wave 1 Task 7, session 91) — mall hero upload affordance.
+              Sits below the status toggle so the lifecycle controls stay
+              the row's primary surface. Only renders when expanded. */}
+          <MallHeroBlock mall={mall} />
         </>
+      )}
+    </div>
+  );
+}
+
+// ── Mall hero upload (R11) ──────────────────────────────────────────────────
+
+function MallHeroBlock({ mall }: { mall: Mall }) {
+  const [currentUrl, setCurrentUrl] = useState<string | null>(mall.hero_image_url ?? null);
+  const [uploading,  setUploading]  = useState(false);
+  const [removing,   setRemoving]   = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 12_000_000) {
+      setError("Image too large. Please choose a photo smaller than 12MB.");
+      return;
+    }
+    setUploading(true);
+    setError(null);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error("Could not read file"));
+        reader.readAsDataURL(file);
+      });
+      const compressed = await compressImage(dataUrl);
+      const res = await authFetch("/api/admin/malls/hero-image", {
+        method: "POST",
+        body:   JSON.stringify({ base64DataUrl: compressed, mallId: mall.id }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.url) {
+        setError(json.error ?? `Upload failed (HTTP ${res.status})`);
+      } else {
+        setCurrentUrl(json.url);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unexpected error");
+    }
+    setUploading(false);
+  }
+
+  async function handleRemove() {
+    if (!currentUrl) return;
+    if (!window.confirm(`Remove the hero image for ${mall.name}? It will disappear from the feed when shoppers filter to this mall.`)) return;
+    setRemoving(true);
+    setError(null);
+    try {
+      const res = await authFetch(`/api/admin/malls/hero-image?mallId=${encodeURIComponent(mall.id)}`, { method: "DELETE" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.error ?? `Remove failed (HTTP ${res.status})`);
+      } else {
+        setCurrentUrl(null);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unexpected error");
+    }
+    setRemoving(false);
+  }
+
+  const inputId = `mall-hero-input-${mall.id}`;
+
+  return (
+    <div style={{ marginTop: 12, padding: "12px 12px 14px", borderRadius: 10, border: `1px solid ${colors.border}`, background: colors.surface }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: colors.textPrimary }}>
+          Hero photo
+        </div>
+        {currentUrl && (
+          <div style={{ fontSize: 9, color: colors.green, textTransform: "uppercase", letterSpacing: "1.5px", fontWeight: 600 }}>
+            Live
+          </div>
+        )}
+      </div>
+      <div style={{ fontSize: 10, color: colors.textMuted, lineHeight: 1.55, marginBottom: 10 }}>
+        Renders above the feed header when shoppers filter to this mall.
+      </div>
+
+      <div style={{
+        position: "relative",
+        width: "100%",
+        aspectRatio: "16/9",
+        borderRadius: 8,
+        overflow: "hidden",
+        border: `1px ${currentUrl ? "solid" : "dashed"} ${currentUrl ? colors.border : colors.textFaint}`,
+        background: colors.bg,
+        marginBottom: 10,
+      }}>
+        {currentUrl ? (
+          <img src={currentUrl} alt={`${mall.name} hero preview`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        ) : (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 11, color: colors.textFaint, fontStyle: "italic", fontFamily: "Georgia, serif" }}>
+            <ImageIcon size={13} />
+            No hero set
+          </div>
+        )}
+        {(uploading || removing) && (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "rgba(255,255,255,0.82)", fontSize: 12, fontWeight: 500, color: colors.textMid }}>
+            <LoaderIcon size={14} style={{ animation: "spin 0.9s linear infinite" }} />
+            {uploading ? "Uploading…" : "Removing…"}
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: "flex", gap: 8 }}>
+        <label htmlFor={inputId} style={{
+          flex: 1,
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          padding: "9px 12px",
+          borderRadius: 8,
+          border: `1px solid ${colors.border}`,
+          background: "#fff",
+          cursor: uploading || removing ? "default" : "pointer",
+          fontSize: 11, fontWeight: 600, color: colors.textPrimary,
+          opacity: uploading || removing ? 0.5 : 1,
+        }}>
+          <Upload size={12} />
+          {currentUrl ? "Replace" : "Upload"}
+        </label>
+        <input id={inputId} type="file" accept="image/*" onChange={handleFileChange} disabled={uploading || removing} style={{ display: "none" }} />
+        {currentUrl && (
+          <button onClick={handleRemove} disabled={uploading || removing} style={{
+            padding: "9px 12px",
+            borderRadius: 8,
+            border: `1px solid ${colors.border}`,
+            background: "#fff",
+            cursor: uploading || removing ? "default" : "pointer",
+            fontSize: 11, fontWeight: 600, color: colors.textMid,
+            opacity: uploading || removing ? 0.5 : 1,
+          }}>
+            Remove
+          </button>
+        )}
+      </div>
+
+      {error && (
+        <div style={{ marginTop: 8, padding: "8px 10px", borderRadius: 6, background: v1.redBg, border: `1px solid ${v1.redBorder}`, fontSize: 11, color: v1.red, lineHeight: 1.4 }}>
+          {error}
+        </div>
       )}
     </div>
   );

@@ -516,6 +516,12 @@ function MasonryGrid({
 // ── Feed hero — paper, no gradient, no CTA ────────────────────────────────────
 // Thin wrapper around <MallScopeHeader>. Computes the geo line from the
 // selected mall (address link when one mall picked, italic geography when All).
+//
+// R11 (Wave 1 Task 7, session 91) — when the user has filtered to a specific
+// mall AND that mall has hero_image_url set, render the photo as a banner
+// ABOVE the MallScopeHeader (Frame A per docs/mockups/mall-hero-feed-v1.html).
+// All-malls and no-hero cases fall back to the text-only header — no
+// re-layout, the photo block simply isn't there.
 function FeedHero({
   selectedMall,
   onTapMall,
@@ -540,14 +546,41 @@ function FeedHero({
         return { kind: "address" as const, text, href };
       })();
 
+  const heroUrl = !isAll ? (selectedMall!.hero_image_url ?? null) : null;
+
   return (
-    <MallScopeHeader
-      eyebrowAll="Finds from across"
-      eyebrowOne="Finds from"
-      mallName={isAll ? null : selectedMall!.name}
-      geoLine={geoLine}
-      onTap={onTapMall}
-    />
+    <>
+      {heroUrl && (
+        <div
+          style={{
+            margin: "12px 22px 0",
+            height: 160,
+            borderRadius: 8,
+            overflow: "hidden",
+            background: v1.inkWash,
+          }}
+        >
+          <img
+            src={heroUrl}
+            alt={`${selectedMall!.name} hero`}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center",
+              display: "block",
+            }}
+          />
+        </div>
+      )}
+      <MallScopeHeader
+        eyebrowAll="Finds from across"
+        eyebrowOne="Finds from"
+        mallName={isAll ? null : selectedMall!.name}
+        geoLine={geoLine}
+        onTap={onTapMall}
+      />
+    </>
   );
 }
 
