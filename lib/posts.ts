@@ -5,7 +5,15 @@ import type { Post, Vendor, Mall } from "@/types/treehouse";
 
 // ── POSTS ─────────────────────────────────────────────────────────────────────
 
+// R5a (session 91, Wave 1) — 30-day feed window. Posts older than 30 days roll
+// off the public feed unless re-posted. Forces vendor freshness; prevents the
+// feed from degrading into a stale archive. Vendor-self surfaces (/my-shelf)
+// + booth pages (/shelf/[slug]) + saved finds (/flagged) intentionally do
+// NOT apply this filter — only the public discovery feed.
+const FEED_WINDOW_DAYS = 30;
+
 export async function getFeedPosts(limit = 40): Promise<Post[]> {
+  const cutoff = new Date(Date.now() - FEED_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase
     .from("posts")
     .select(`
@@ -14,6 +22,7 @@ export async function getFeedPosts(limit = 40): Promise<Post[]> {
       mall:malls     ( id, name, city, state, slug )
     `)
     .eq("status", "available")
+    .gte("created_at", cutoff)
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) { console.error("[posts] getFeedPosts:", error.message); return []; }
