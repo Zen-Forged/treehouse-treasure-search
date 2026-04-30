@@ -505,6 +505,29 @@ function LoginInner() {
                   First time? An account is created automatically.
                 </p>
 
+                {/* R7 (Wave 1 Task 6, session 91) — Contact us link.
+                    Discoverability anchor for the new /contact page. Same
+                    Lora italic dotted-underline vocabulary as Sign out below
+                    so they read as a pair. */}
+                <a
+                  href="/contact"
+                  style={{
+                    fontFamily: FONT_LORA,
+                    fontStyle: "italic",
+                    fontSize: 13,
+                    color: v1.inkMuted,
+                    textDecoration: "underline",
+                    textDecorationStyle: "dotted",
+                    textDecorationColor: v1.inkFaint,
+                    textUnderlineOffset: 3,
+                    textAlign: "center",
+                    margin: "10px auto 0",
+                    display: "block",
+                  }}
+                >
+                  Need help? Contact us
+                </a>
+
                 {/* Session 90 — sign-out affordance for users already signed
                     in. Lives below the first-time helper per the directive
                     ("display 'sign out' in italics under the last
