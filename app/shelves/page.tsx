@@ -675,7 +675,9 @@ export default function BoothsPage() {
             onClose={() => setEditTarget(null)}
             onUpdated={(updated) => {
               setVendors(prev => prev.map(v => v.id === updated.id ? { ...v, ...updated } : v));
-              setEditTarget(null);
+              // Sync the open sheet's source-of-truth so successive hero
+              // edits inside the sheet see the latest hero_image_url.
+              setEditTarget(updated);
             }}
           />
         )}

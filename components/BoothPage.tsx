@@ -66,7 +66,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Pencil, Loader, ImagePlus, Trash2 } from "lucide-react";
+import { Pencil, ImagePlus } from "lucide-react";
 import { vendorHueBg, mapsUrl, boothNumeralSize } from "@/lib/utils";
 import {
   v1,
@@ -103,11 +103,6 @@ export function BoothHero({
   boothNumber,
   heroImageUrl,
   heroKey,
-  canEdit,
-  heroUploading,
-  heroRemoving,
-  onHeroImageChange,
-  onHeroImageRemove,
   layoutId,
   saved,
   onToggleBookmark,
@@ -116,18 +111,6 @@ export function BoothHero({
   boothNumber: string | null;
   heroImageUrl: string | null | undefined;
   heroKey: number;
-  canEdit: boolean;
-  heroUploading?: boolean;
-  /** R4b (session 91) — true while a remove request is in flight. */
-  heroRemoving?: boolean;
-  onHeroImageChange?: (file: File) => void;
-  /**
-   * R4b (session 91) — when both `canEdit` and `heroImageUrl` are present and
-   * this handler is supplied, BoothHero renders a Trash bubble below the edit
-   * Pencil at top-left. Tap fires the handler immediately (no confirmation;
-   * action is reversible by re-uploading).
-   */
-  onHeroImageRemove?: () => void;
   /**
    * Track D phase 5 (docs/marketplace-transitions-design.md) — when set,
    * the photograph container becomes a `<motion.div layoutId>` so the
@@ -154,21 +137,6 @@ export function BoothHero({
 
   return (
     <div style={{ padding: "0 10px", position: "relative" }}>
-      {/* Hidden file input for banner edit */}
-      {canEdit && onHeroImageChange && (
-        <input
-          id="booth-banner-file"
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) onHeroImageChange(f);
-            e.target.value = "";
-          }}
-        />
-      )}
-
       <div
         style={{
           position: "relative",
@@ -207,19 +175,6 @@ export function BoothHero({
               }}
             />
           )}
-          {/* Subtle top scrim so the edit bubble reads against light or dark photos.
-              (Session 45: share bubble removed; scrim preserved for the edit bubble.) */}
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              height: "40%",
-              background: "linear-gradient(to bottom, rgba(18,34,20,0.32) 0%, transparent 100%)",
-              pointerEvents: "none",
-            }}
-          />
         </motion.div>
 
         {/* Tap-to-open lightbox overlay. Sits above the photo container but
@@ -245,80 +200,11 @@ export function BoothHero({
           />
         )}
 
-        {/* Edit banner (owner only) — top-left, dark translucent */}
-        {canEdit && (
-          <button
-            onClick={() => document.getElementById("booth-banner-file")?.click()}
-            disabled={heroUploading}
-            aria-label="Edit banner"
-            style={{
-              position: "absolute",
-              top: 12,
-              left: 12,
-              width: 34,
-              height: 34,
-              borderRadius: "50%",
-              background: "rgba(20,18,12,0.52)",
-              backdropFilter: "blur(8px)",
-              WebkitBackdropFilter: "blur(8px)",
-              border: "1px solid rgba(255,255,255,0.18)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: heroUploading ? "default" : "pointer",
-              WebkitTapHighlightColor: "transparent",
-              zIndex: 10,
-              padding: 0,
-            }}
-          >
-            {heroUploading ? (
-              <Loader size={13} style={{ color: "rgba(255,255,255,0.80)", animation: "spin 0.9s linear infinite" }} />
-            ) : (
-              <Pencil size={13} style={{ color: "rgba(255,255,255,0.88)" }} strokeWidth={1.8} />
-            )}
-          </button>
-        )}
-
-        {/* R4b (session 91) — Remove hero bubble. Sits below the Pencil at
-            top:54 left:12 (Pencil is 34px tall at top:12, +8 gap). Only
-            mounts when there's actually a hero to remove and the caller
-            supplied the handler. Action is immediate (no confirm) — re-
-            upload is the undo path. */}
-        {canEdit && heroImageUrl && onHeroImageRemove && (
-          <button
-            onClick={onHeroImageRemove}
-            disabled={heroRemoving || heroUploading}
-            aria-label="Remove banner photo"
-            style={{
-              position: "absolute",
-              top: 54,
-              left: 12,
-              width: 34,
-              height: 34,
-              borderRadius: "50%",
-              background: "rgba(20,18,12,0.52)",
-              backdropFilter: "blur(8px)",
-              WebkitBackdropFilter: "blur(8px)",
-              border: "1px solid rgba(255,255,255,0.18)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: heroRemoving || heroUploading ? "default" : "pointer",
-              WebkitTapHighlightColor: "transparent",
-              zIndex: 10,
-              padding: 0,
-            }}
-          >
-            {heroRemoving ? (
-              <Loader size={13} style={{ color: "rgba(255,255,255,0.80)", animation: "spin 0.9s linear infinite" }} />
-            ) : (
-              <Trash2 size={13} style={{ color: "rgba(255,255,255,0.88)" }} strokeWidth={1.8} />
-            )}
-          </button>
-        )}
-
-        {/* Session 45 — share bubble retired here. Share affordance lives on
-            the page masthead (top-right airplane → <ShareBoothSheet>). */}
+        {/* Hero edit affordances (replace photo + remove photo) live inside
+            EditBoothSheet now — entered via the title-block Pencil. The old
+            on-photo Pencil + Trash bubbles + their hidden file input were
+            retired so the photograph reads as a clean image, with all booth
+            edit chrome consolidated on the single title affordance. */}
 
         {/* Bookmark bubble (session 80 D2: SIBLING of photograph motion.div,
             D4: no own layoutId). Session 89 (iPhone QA #3): position moved

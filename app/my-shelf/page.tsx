@@ -95,7 +95,6 @@ import {
   BoothPageStyles,
   v1,
   FONT_LORA,
-  FONT_SYS,
   type BoothView,
 } from "@/components/BoothPage";
 import { MOTION_EASE_OUT, MOTION_EMPTY_DURATION } from "@/lib/tokens";
@@ -145,22 +144,6 @@ function writeScrollY(y: number) {
   const v = String(rounded);
   try { localStorage.setItem(MY_SHELF_SCROLL_KEY, v); } catch {}
   try { sessionStorage.setItem(MY_SHELF_SCROLL_KEY, v); } catch {}
-}
-
-function compressImage(dataUrl: string, maxWidth = 1400, quality = 0.82): Promise<string> {
-  return new Promise(resolve => {
-    const img = new window.Image();
-    img.onload = () => {
-      const scale  = Math.min(1, maxWidth / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width  = Math.round(img.width  * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL("image/jpeg", quality));
-    };
-    img.onerror = () => resolve(dataUrl);
-    img.src = dataUrl;
-  });
 }
 
 // ─── Masthead ─────────────────────────────────────────────────────────────────
@@ -386,9 +369,6 @@ function MyBoothInner() {
   const [view,          setView]          = useState<BoothView>("window");
   const [heroImageUrl,  setHeroImageUrl]  = useState<string | null>(null);
   const [heroKey,       setHeroKey]       = useState(0);
-  const [heroUploading, setHeroUploading] = useState(false);
-  const [heroRemoving,  setHeroRemoving]  = useState(false);
-  const [heroError,     setHeroError]     = useState<string | null>(null);
 
   // v1.2 — AddFindSheet state + hidden file inputs.
   const [showAddSheet,  setShowAddSheet]  = useState(false);
@@ -402,8 +382,6 @@ function MyBoothInner() {
   // refreshed on focus and visibilitychange so bookmarks toggled elsewhere
   // propagate back to the badge when the user returns to this tab.
   const [bookmarkCount, setBookmarkCount] = useState(0);
-
-  const heroLockedRef = useRef(false);
 
   // ── Auth gate ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -561,9 +539,6 @@ function MyBoothInner() {
 
   function loadVendor(vendor: Vendor, userId: string) {
     setActiveVendor(vendor);
-    // Reset hero-locked flag on vendor switch so the new booth's hero image
-    // loads instead of keeping the previous one pinned.
-    heroLockedRef.current = false;
     if (vendor.hero_image_url) {
       setHeroImageUrl(vendor.hero_image_url as string);
       setHeroKey(k => k + 1);
@@ -746,95 +721,10 @@ function MyBoothInner() {
     loadVendor(next, user.id);
   }
 
-  // ── Hero upload (unchanged from v1.1l) ─────────────────────────────────
-  async function handleHeroImageChange(file: File) {
-    if (!activeVendor?.id) return;
-    if (file.size > 12_000_000) {
-      setHeroError("Image too large. Please choose a photo smaller than 12MB.");
-      return;
-    }
-    setHeroUploading(true);
-    setHeroError(null);
-    heroLockedRef.current = true;
-    const vendorId    = activeVendor.id;
-    const fallbackUrl = (activeVendor.hero_image_url as string | null) ?? null;
-    try {
-      const reader  = new FileReader();
-      const dataUrl = await new Promise<string>((res, rej) => {
-        reader.onload  = e => res(e.target?.result as string);
-        reader.onerror = rej;
-        reader.readAsDataURL(file);
-      });
-      const compressed = await compressImage(dataUrl);
-      setHeroImageUrl(compressed);
-      setHeroKey(k => k + 1);
-      const res  = await fetch("/api/vendor-hero", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ base64DataUrl: compressed, vendorId }) });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        setHeroError(json.error ?? "Upload failed.");
-        setHeroImageUrl(fallbackUrl);
-        setHeroKey(k => k + 1);
-        return;
-      }
-      setHeroImageUrl(json.url);
-      setHeroKey(k => k + 1);
-      setActiveVendor(v => v ? { ...v, hero_image_url: json.url } : v);
-      // Also mutate the matching row in vendorList so a subsequent booth
-      // switch back returns the new hero, not the stale one.
-      setVendorList(list =>
-        list.map(v => v.id === vendorId ? { ...v, hero_image_url: json.url } : v)
-      );
-    } catch (err) {
-      setHeroError(`Unexpected error: ${err instanceof Error ? err.message : String(err)}`);
-      setHeroImageUrl(fallbackUrl);
-      setHeroKey(k => k + 1);
-    } finally {
-      setHeroUploading(false);
-      setTimeout(() => { heroLockedRef.current = false; }, 3000);
-    }
-  }
-
-  // R4b (session 91) — remove hero. No confirmation — re-upload is the
-  // undo path, action is reversible. Mirrors the upload error-recovery
-  // pattern: stash the current URL as fallback, optimistically clear, on
-  // error restore. Touches the same activeVendor + vendorList rows as
-  // upload so a subsequent booth switch back doesn't show a stale image.
-  async function handleHeroImageRemove() {
-    if (!activeVendor?.id || heroRemoving || heroUploading) return;
-    const vendorId    = activeVendor.id;
-    const fallbackUrl = (activeVendor.hero_image_url as string | null) ?? null;
-    setHeroRemoving(true);
-    setHeroError(null);
-    heroLockedRef.current = true;
-    try {
-      // Optimistic clear so the photo disappears immediately.
-      setHeroImageUrl(null);
-      setHeroKey(k => k + 1);
-      const res  = await fetch("/api/vendor-hero", {
-        method:  "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ vendorId }),
-      });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        setHeroError(json.error ?? "Remove failed.");
-        setHeroImageUrl(fallbackUrl);
-        setHeroKey(k => k + 1);
-        return;
-      }
-      setActiveVendor(v => v ? { ...v, hero_image_url: null } : v);
-      setVendorList(list =>
-        list.map(v => v.id === vendorId ? { ...v, hero_image_url: null } : v),
-      );
-    } catch (err) {
-      setHeroError(`Unexpected error: ${err instanceof Error ? err.message : String(err)}`);
-      setHeroImageUrl(fallbackUrl);
-      setHeroKey(k => k + 1);
-    } finally {
-      setHeroRemoving(false);
-      setTimeout(() => { heroLockedRef.current = false; }, 3000);
-    }
-  }
+  // Hero edit — fully owned by EditBoothSheet (vendor self-edit Pencil at the
+  // booth title). Sheet calls `/api/vendor-hero` POST/DELETE itself; our
+  // `onUpdated` callback reconciles activeVendor + vendorList + heroImageUrl
+  // so the BoothHero behind the open sheet reflects in-flight hero changes.
 
   // ── AddFindSheet plumbing (unchanged from v1.2) ────────────────────────
   function openAddSheet() {
@@ -937,30 +827,7 @@ function MyBoothInner() {
               boothNumber={boothNumber}
               heroImageUrl={heroImageUrl}
               heroKey={heroKey}
-              canEdit={true}
-              heroUploading={heroUploading}
-              heroRemoving={heroRemoving}
-              onHeroImageChange={handleHeroImageChange}
-              onHeroImageRemove={handleHeroImageRemove}
             />
-
-            {heroError && (
-              <div
-                style={{
-                  margin: "8px 22px 0",
-                  padding: "10px 14px",
-                  borderRadius: 6,
-                  background: v1.redBg,
-                  border: `1px solid ${v1.redBorder}`,
-                  fontSize: 12,
-                  color: v1.red,
-                  lineHeight: 1.5,
-                  fontFamily: FONT_SYS,
-                }}
-              >
-                ⚠️ Upload error: {heroError}
-              </div>
-            )}
 
             <BoothTitleBlock
               displayName={displayName}
@@ -1046,7 +913,10 @@ function MyBoothInner() {
             setVendorList(list =>
               list.map(v => v.id === updated.id ? updated : v),
             );
-            setShowEditSheet(false);
+            // Keep the heroImageUrl render state in sync so the BoothHero
+            // behind the sheet reflects hero ops while the sheet stays open.
+            setHeroImageUrl(updated.hero_image_url ?? null);
+            setHeroKey(k => k + 1);
           }}
         />
       )}

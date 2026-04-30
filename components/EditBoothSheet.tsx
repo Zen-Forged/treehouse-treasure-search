@@ -15,11 +15,13 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Pencil, X, Loader as LoaderIcon, AlertTriangle } from "lucide-react";
+import { Pencil, X, Loader as LoaderIcon, AlertTriangle, ImagePlus, Trash2 } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
+import { compressImage } from "@/lib/imageUpload";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import { vendorHueBg } from "@/lib/utils";
 import BoothFormFields from "@/components/BoothFormFields";
 import type { Vendor, Mall } from "@/types/treehouse";
 
@@ -60,6 +62,17 @@ export default function EditBoothSheet({
   const [submitting,  setSubmitting]  = useState(false);
   const [error,       setError]       = useState<string | null>(null);
 
+  // Hero photo — sheet owns its own state. Replace + Remove fire immediately
+  // (NOT batched into Save) — keeps the "photo change feels atomic" mental
+  // model that the old on-photo bubbles had. onUpdated() is called for both
+  // text-field saves and hero ops so the parent reconciles a single way.
+  const [heroUrl,     setHeroUrl]     = useState<string | null>(
+    (vendor.hero_image_url as string | null | undefined) ?? null,
+  );
+  const [heroBusy,    setHeroBusy]    = useState<"uploading" | "removing" | null>(null);
+  const [heroError,   setHeroError]   = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Lock body overflow for the duration of the sheet.
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -80,6 +93,74 @@ export default function EditBoothSheet({
     hasChange &&
     trimmedName.length > 0 &&
     (mode === "vendor" || mallId.length > 0);
+
+  async function handleHeroUpload(file: File) {
+    if (heroBusy) return;
+    if (!file.type.startsWith("image/")) {
+      setHeroError("Pick an image file.");
+      return;
+    }
+    setHeroBusy("uploading");
+    setHeroError(null);
+    const fallbackUrl = heroUrl;
+    try {
+      const reader  = new FileReader();
+      const dataUrl = await new Promise<string>((res, rej) => {
+        reader.onload  = e => res(e.target?.result as string);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+      const compressed = await compressImage(dataUrl);
+      // Optimistic preview — sheet shows the new photo immediately.
+      setHeroUrl(compressed);
+      const res  = await fetch("/api/vendor-hero", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ base64DataUrl: compressed, vendorId: vendor.id }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        setHeroError(json.error ?? "Upload failed.");
+        setHeroUrl(fallbackUrl);
+        return;
+      }
+      setHeroUrl(json.url);
+      onUpdated({ ...vendor, hero_image_url: json.url } as Vendor);
+    } catch (err) {
+      setHeroError(err instanceof Error ? err.message : String(err));
+      setHeroUrl(fallbackUrl);
+    } finally {
+      setHeroBusy(null);
+    }
+  }
+
+  async function handleHeroRemove() {
+    if (heroBusy || !heroUrl) return;
+    setHeroBusy("removing");
+    setHeroError(null);
+    const fallbackUrl = heroUrl;
+    try {
+      // Optimistic clear.
+      setHeroUrl(null);
+      const res  = await fetch("/api/vendor-hero", {
+        method:  "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ vendorId: vendor.id }),
+      });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        setHeroError(json.error ?? "Remove failed.");
+        setHeroUrl(fallbackUrl);
+        return;
+      }
+      onUpdated({ ...vendor, hero_image_url: null } as Vendor);
+    } catch (err) {
+      setHeroError(err instanceof Error ? err.message : String(err));
+      setHeroUrl(fallbackUrl);
+    } finally {
+      setHeroBusy(null);
+    }
+  }
 
   async function handleSave() {
     if (!canSave) return;
@@ -113,6 +194,7 @@ export default function EditBoothSheet({
         return;
       }
       onUpdated(json.vendor as Vendor);
+      onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setSubmitting(false);
@@ -196,6 +278,154 @@ export default function EditBoothSheet({
             >
               <X size={14} style={{ color: v1.inkMuted }} />
             </button>
+          </div>
+
+          {/* Booth photo — replace + remove. Shipped in both vendor and admin
+              modes (admin self-help and vendor self-edit converge on the same
+              affordance set). Hero ops fire immediately, NOT on Save — keeps
+              the change-feels-atomic mental model the on-photo bubbles had. */}
+          <div style={{ marginBottom: 16 }}>
+            <label
+              style={{
+                display: "block",
+                fontFamily: FONT_LORA,
+                fontSize: 13,
+                color: v1.inkMid,
+                lineHeight: 1.25,
+                marginBottom: 8,
+              }}
+            >
+              Booth photo
+            </label>
+            <div style={{ display: "flex", alignItems: "stretch", gap: 12 }}>
+              <div
+                style={{
+                  flexShrink: 0,
+                  width: 84,
+                  height: 84,
+                  borderRadius: 8,
+                  overflow: "hidden",
+                  position: "relative",
+                  background: heroUrl ? undefined : vendorHueBg(vendor.display_name ?? ""),
+                  border: `1px solid ${v1.inkHairline}`,
+                }}
+              >
+                {heroUrl && (
+                  <img
+                    src={heroUrl}
+                    alt=""
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                )}
+                {heroBusy && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      background: "rgba(20,14,6,0.42)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <LoaderIcon
+                      size={18}
+                      style={{ color: "rgba(255,255,255,0.92)", animation: "spin 0.9s linear infinite" }}
+                    />
+                  </div>
+                )}
+              </div>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleHeroUpload(f);
+                    e.target.value = "";
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={!!heroBusy || submitting}
+                  style={{
+                    flex: 1,
+                    padding: "0 12px",
+                    borderRadius: 8,
+                    background: v1.inkWash,
+                    border: `1px solid ${v1.inkHairline}`,
+                    fontFamily: FONT_SYS,
+                    fontSize: 13,
+                    color: v1.inkPrimary,
+                    cursor: heroBusy || submitting ? "default" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    WebkitTapHighlightColor: "transparent",
+                  }}
+                >
+                  <ImagePlus size={14} strokeWidth={1.7} style={{ color: v1.inkMid }} />
+                  {heroUrl ? "Replace photo" : "Add photo"}
+                </button>
+                {heroUrl && (
+                  <button
+                    type="button"
+                    onClick={handleHeroRemove}
+                    disabled={!!heroBusy || submitting}
+                    style={{
+                      flex: 1,
+                      padding: "0 12px",
+                      borderRadius: 8,
+                      background: "transparent",
+                      border: `1px solid ${v1.inkHairline}`,
+                      fontFamily: FONT_SYS,
+                      fontSize: 13,
+                      color: v1.inkMuted,
+                      cursor: heroBusy || submitting ? "default" : "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      WebkitTapHighlightColor: "transparent",
+                    }}
+                  >
+                    <Trash2 size={13} strokeWidth={1.7} style={{ color: v1.inkMuted }} />
+                    Remove photo
+                  </button>
+                )}
+              </div>
+            </div>
+            {heroError && (
+              <div
+                style={{
+                  marginTop: 8,
+                  padding: "8px 10px",
+                  borderRadius: 8,
+                  background: v1.redBg,
+                  border: `1px solid ${v1.redBorder}`,
+                  fontFamily: FONT_SYS,
+                  fontSize: 12,
+                  color: v1.red,
+                  lineHeight: 1.5,
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 6,
+                }}
+              >
+                <AlertTriangle size={12} style={{ flexShrink: 0, marginTop: 2, color: v1.red }} />
+                <span>{heroError}</span>
+              </div>
+            )}
           </div>
 
           {/* Form — vendor mode renders display_name only; admin mode renders

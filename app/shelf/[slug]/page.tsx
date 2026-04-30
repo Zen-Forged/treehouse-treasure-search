@@ -459,7 +459,6 @@ export default function PublicShelfPage() {
               boothNumber={boothNumber}
               heroImageUrl={(vendor?.hero_image_url as string | null | undefined) ?? null}
               heroKey={0}
-              canEdit={false}
               layoutId={vendor ? `booth-${vendor.id}` : undefined}
               saved={showBookmark ? boothBookmarked : undefined}
               onToggleBookmark={showBookmark ? handleToggleBoothBookmark : undefined}
