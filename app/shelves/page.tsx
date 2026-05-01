@@ -48,6 +48,7 @@ import AddBoothTile from "@/components/AddBoothTile";
 import BoothLockupCard from "@/components/BoothLockupCard";
 import BottomNav from "@/components/BottomNav";
 import EditBoothSheet from "@/components/EditBoothSheet";
+import EmptyState from "@/components/EmptyState";
 import MallSheet from "@/components/MallSheet";
 import MallScopeHeader, { type MallScopeGeoLine } from "@/components/MallScopeHeader";
 import StickyMasthead from "@/components/StickyMasthead";
@@ -557,14 +558,11 @@ export default function BoothsPage() {
             {[0, 1, 2, 3, 4, 5].map(i => <SkeletonCard key={i} />)}
           </div>
         ) : visibleVendors.length === 0 ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "80px 32px 0", textAlign: "center" }}>
-            <div style={{ fontFamily: FONT_LORA, fontSize: 20, color: v1.inkPrimary, lineHeight: 1.3, marginBottom: 10 }}>
-              No booths yet
-            </div>
-            <p style={{ fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 14, color: v1.inkMuted, lineHeight: 1.75, maxWidth: 230, margin: 0 }}>
-              Booths will appear here once vendors start posting their finds.
-            </p>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <EmptyState
+              title="No booths yet"
+              subtitle="Booths will appear here once vendors start posting their finds."
+            />
           </motion.div>
         ) : (
           <>
