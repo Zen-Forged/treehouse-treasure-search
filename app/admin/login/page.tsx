@@ -44,65 +44,28 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Shield, Loader } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import FormField, { formInputStyle } from "@/components/FormField";
+import FormButton from "@/components/FormButton";
 
 type Screen = "enter-pin" | "signing-in";
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
 
-// ─── v1.1k primitives (inlined — matches /login for visual parity) ──────────
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  boxSizing: "border-box",
+// PIN input is a large-font numeric entry — preserves +4px vertical
+// padding over the canonical 14×14 to give the 22px digits more
+// breathing room (matches /login/email OTP code input pattern).
+const pinInputOverride: React.CSSProperties = {
   padding: "18px 14px",
-  borderRadius: 14,
-  background: "rgba(255,253,248,0.70)",
-  border: `1px solid ${v1.inkHairline}`,
-  color: v1.inkPrimary,
   fontSize: 22,
-  outline: "none",
   fontFamily: FONT_SYS,
   textAlign: "center",
   letterSpacing: "0.4em",
-  appearance: "none",
-  WebkitAppearance: "none",
 };
 
-const inputErrorStyle: React.CSSProperties = {
-  ...inputStyle,
+const pinInputErrorOverride: React.CSSProperties = {
   border: `1.5px solid ${v1.redBorder}`,
   padding: "17.5px 13.5px",
 };
-
-// Session 82 — Option C label primitive (Lora upright 13px ink-mid, centered).
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  fontFamily: FONT_LORA,
-  fontStyle: "normal",
-  fontSize: 13,
-  color: v1.inkMid,
-  lineHeight: 1.25,
-  marginBottom: 7,
-  textAlign: "center",
-};
-
-const ctaStyle = (disabled: boolean): React.CSSProperties => ({
-  width: "100%",
-  padding: "15px",
-  borderRadius: 14,
-  fontFamily: FONT_SYS,
-  fontSize: 15,
-  fontWeight: 500,
-  color: "#fff",
-  background: disabled ? "rgba(30,77,43,0.40)" : v1.green,
-  border: "none",
-  cursor: disabled ? "default" : "pointer",
-  boxShadow: disabled ? "none" : "0 2px 14px rgba(30,77,43,0.22)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 8,
-});
 
 // ─── Inner component ──────────────────────────────────────────────────────────
 
@@ -344,29 +307,35 @@ function AdminLoginInner() {
             transition={{ duration: 0.32, ease: EASE }}
             style={{ display: "flex", flexDirection: "column", gap: 14 }}
           >
-            <div>
-              <label style={labelStyle}>PIN</label>
-              <input
-                type="password"
-                inputMode="numeric"
-                autoComplete="off"
-                autoFocus
-                value={pin}
-                onChange={(e) => {
-                  setPin(e.target.value);
-                  setError(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !busy && pin.trim()) {
-                    handleSubmit();
-                  }
-                }}
-                disabled={busy}
-                style={{
-                  ...(error ? inputErrorStyle : inputStyle),
-                  opacity: busy ? 0.6 : 1,
-                }}
-              />
+            <div style={{ textAlign: "center" }}>
+              <FormField label="PIN" size="page">
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  autoFocus
+                  value={pin}
+                  onChange={(e) => {
+                    setPin(e.target.value);
+                    setError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !busy && pin.trim()) {
+                      handleSubmit();
+                    }
+                  }}
+                  disabled={busy}
+                  style={{
+                    ...formInputStyle("page"),
+                    boxSizing: "border-box",
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    ...pinInputOverride,
+                    opacity: busy ? 0.6 : 1,
+                    ...(error ? pinInputErrorOverride : null),
+                  }}
+                />
+              </FormField>
             </div>
 
             <AnimatePresence>
@@ -392,10 +361,10 @@ function AdminLoginInner() {
               )}
             </AnimatePresence>
 
-            <button
+            <FormButton
               onClick={handleSubmit}
               disabled={busy || !pin.trim()}
-              style={ctaStyle(busy || !pin.trim())}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
             >
               {busy ? (
                 <>
@@ -408,7 +377,7 @@ function AdminLoginInner() {
                   Sign in as Admin
                 </>
               )}
-            </button>
+            </FormButton>
 
             <p
               style={{
