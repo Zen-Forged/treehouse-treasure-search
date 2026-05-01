@@ -23,7 +23,8 @@ import { ArrowLeft, Camera, X, Check, Loader } from "lucide-react";
 import { getPost, updatePost } from "@/lib/posts";
 import { compressImage, uploadPostImageViaServer } from "@/lib/imageUpload";
 import { getSession, isAdmin, getCachedUserId } from "@/lib/auth";
-import { colors } from "@/lib/tokens";
+import { v1 } from "@/lib/tokens";
+import FormButton from "@/components/FormButton";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
 import type { Post } from "@/types/treehouse";
@@ -48,24 +49,25 @@ async function detectOwnership(post: Post): Promise<boolean> {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
+// Phase 2 Session E — local palette migrated to v1 tokens.
 const C = {
-  bg:          "#f0ede6",
-  surface:     colors.surface,
-  surfaceDeep: colors.surfaceDeep,
-  border:      colors.border,
-  textPrimary: colors.textPrimary,
-  textMid:     colors.textMid,
-  textMuted:   colors.textMuted,
-  textFaint:   colors.textFaint,
-  green:       colors.green,
-  greenLight:  colors.greenLight,
-  greenBorder: colors.greenBorder,
-  greenSolid:  colors.greenSolid,
-  input:       "rgba(255,255,255,0.7)",
-  inputBorder: "rgba(26,26,24,0.14)",
-  red:         colors.red,
-  redBg:       colors.redBg,
-  redBorder:   colors.redBorder,
+  bg:          v1.paperCream,
+  surface:     v1.paperWarm,
+  surfaceDeep: "rgba(42,26,10,0.08)",
+  border:      v1.inkHairline,
+  textPrimary: v1.inkPrimary,
+  textMid:     v1.inkMid,
+  textMuted:   v1.inkMuted,
+  textFaint:   v1.inkFaint,
+  green:       v1.green,
+  greenLight:  "rgba(30,77,43,0.08)",
+  greenBorder: "rgba(30,77,43,0.20)",
+  greenSolid:  "rgba(30,77,43,0.90)",
+  input:       v1.postit,
+  inputBorder: v1.inkHairline,
+  red:         v1.red,
+  redBg:       v1.redBg,
+  redBorder:   v1.redBorder,
 };
 
 const inputStyle: React.CSSProperties = {
@@ -398,19 +400,19 @@ function EditPostInner() {
           </div>
 
           {/* Save */}
-          <button onClick={handleSave} disabled={!canSave}
+          <FormButton
+            onClick={handleSave}
+            disabled={!canSave}
             style={{
-              width: "100%", padding: "14px", borderRadius: 14,
-              fontSize: 14, fontWeight: 600, fontFamily: "Georgia, serif",
-              color: canSave ? "#fff" : C.textFaint,
-              background: canSave ? C.green : C.surfaceDeep,
-              border: "none", cursor: canSave ? "pointer" : "default",
+              fontFamily: "Georgia, serif",
+              fontSize: 14,
+              fontWeight: 600,
               transition: "all 0.2s",
-              boxShadow: canSave ? "0 2px 12px rgba(30,77,43,0.25)" : "none",
               marginTop: 4,
-            }}>
+            }}
+          >
             Save changes
-          </button>
+          </FormButton>
         </main>
       </div>
 
