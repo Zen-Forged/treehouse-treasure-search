@@ -912,23 +912,19 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Flag — SIBLING of the photograph motion.div with its own
-                layoutId. Size + position now identical to the home + /flagged
-                tile flags (36×36 at top:8 right:8) so the layoutId path is
-                pure corner-tracking — the bubble sits in the exact same
-                relative-corner position on both surfaces, the morph
-                interpolates only the screen-space offset between them.
-                Earlier the find-detail offset was 12/12 vs 8/8 on tiles,
-                which read as a subtle size mismatch even with identical
-                bubble dimensions. */}
+            {/* Flag — SIBLING of the photograph. Session 97: bubble scaled
+                from 36×36 → 72×72 (and glyphs proportionally) so the save
+                affordance maintains the same visual weight on the hero photo
+                as it has on the Home tile (~21% of photo width — the hero is
+                ~2× the tile width, so bubble + glyph double to match). */}
             {post && (post?.image_url || previewImageUrl) && (
               <div
                 style={{
                   position: "absolute",
-                  top: 8,
-                  right: 8,
-                  width: 36,
-                  height: 36,
+                  top: 12,
+                  right: 12,
+                  width: 72,
+                  height: 72,
                   zIndex: 3,
                 }}
               >
@@ -956,10 +952,10 @@ export default function FindDetailPage() {
                   }}
                 >
                   {isMyPost ? (
-                    <Pencil size={16} strokeWidth={1.8} style={{ color: v1.inkPrimary }} />
+                    <Pencil size={32} strokeWidth={1.8} style={{ color: v1.inkPrimary }} />
                   ) : (
                     <FlagGlyph
-                      size={17}
+                      size={34}
                       strokeWidth={1.7}
                       style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
                     />
