@@ -33,6 +33,7 @@ import { authFetch } from "@/lib/authFetch";
 import { safeStorage } from "@/lib/safeStorage";
 import { setActiveBoothId } from "@/lib/activeBooth";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import FormButton from "@/components/FormButton";
 import type { Vendor, Mall } from "@/types/treehouse";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 
@@ -344,30 +345,25 @@ function SetupContent() {
               </motion.p>
 
               {/* Filled green CTA — commit action (vendor moves forward) */}
-              <motion.button
+              <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.56, duration: 0.32, ease: EASE }}
-                onClick={handleGoToMyBooth}
-                style={{
-                  padding: "14px 22px",
-                  borderRadius: 14,
-                  fontFamily: FONT_SYS,
-                  fontSize: 15,
-                  fontWeight: 500,
-                  color: "#fff",
-                  background: v1.green,
-                  border: "none",
-                  cursor: "pointer",
-                  boxShadow: "0 2px 14px rgba(30,77,43,0.22)",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
+                style={{ display: "inline-block" }}
               >
-                Go to my shelf
-                <ArrowRight size={15} strokeWidth={1.8} />
-              </motion.button>
+                <FormButton
+                  onClick={handleGoToMyBooth}
+                  style={{
+                    width: "auto",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  Go to my shelf
+                  <ArrowRight size={15} strokeWidth={1.8} />
+                </FormButton>
+              </motion.div>
             </motion.div>
           )}
 
