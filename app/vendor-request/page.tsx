@@ -877,40 +877,22 @@ function DoneScreen({
               </a>
             </>
           ) : (
-            <>
-              <a
-                onClick={onGoHome}
-                style={{
-                  fontFamily: FONT_LORA,
-                  fontStyle: "italic",
-                  fontSize: 16,
-                  color: v1.inkPrimary,
-                  textDecoration: "underline",
-                  textDecorationStyle: "dotted",
-                  textDecorationColor: v1.inkFaint,
-                  textUnderlineOffset: 4,
-                  cursor: "pointer",
-                }}
-              >
-                Explore the feed &rarr;
-              </a>
-              <a
-                onClick={onReset}
-                style={{
-                  fontFamily: FONT_LORA,
-                  fontStyle: "italic",
-                  fontSize: 15,
-                  color: v1.inkMuted,
-                  textDecoration: "underline",
-                  textDecorationStyle: "dotted",
-                  textDecorationColor: v1.inkFaint,
-                  textUnderlineOffset: 4,
-                  cursor: "pointer",
-                }}
-              >
-                Go back
-              </a>
-            </>
+            <a
+              onClick={onGoHome}
+              style={{
+                fontFamily: FONT_LORA,
+                fontStyle: "italic",
+                fontSize: 16,
+                color: v1.inkPrimary,
+                textDecoration: "underline",
+                textDecorationStyle: "dotted",
+                textDecorationColor: v1.inkFaint,
+                textUnderlineOffset: 4,
+                cursor: "pointer",
+              }}
+            >
+              Explore the feed &rarr;
+            </a>
           )}
         </motion.div>
 
