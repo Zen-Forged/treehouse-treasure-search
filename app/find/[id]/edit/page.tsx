@@ -42,11 +42,9 @@ import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check } from "lucide-react";
 import { getPost, deletePost } from "@/lib/posts";
-import { compressImage, uploadPostImageViaServer } from "@/lib/imageUpload";
 import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
-import PolaroidTile from "@/components/PolaroidTile";
 import AmberNotice from "@/components/AmberNotice";
 import type { Post } from "@/types/treehouse";
 
@@ -86,11 +84,6 @@ export default function EditFindPage() {
   // Status confirmation banner (visible for ~3s after flip)
   const [statusConfirm, setStatusConfirm] = useState<"sold" | "available" | null>(null);
 
-  // Replace-photo flow state
-  const [pendingPhoto, setPendingPhoto] = useState<string | null>(null);
-  const [replaceBusy,  setReplaceBusy]  = useState(false);
-  const [replaceError, setReplaceError] = useState<string | null>(null);
-
   // Remove flow state
   const [removing, setRemoving] = useState(false);
 
@@ -98,10 +91,6 @@ export default function EditFindPage() {
   const debouncers = useRef<Partial<Record<TextField, ReturnType<typeof setTimeout>>>>({});
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const statusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Hidden input refs for Replace-photo
-  const cameraInputRef  = useRef<HTMLInputElement | null>(null);
-  const galleryInputRef = useRef<HTMLInputElement | null>(null);
 
   // v1.2 polish (session 31E) — ref on the caption textarea so an effect can
   // size it to content on initial fill + on every keystroke. See captionResize
@@ -275,56 +264,6 @@ export default function EditFindPage() {
     statusTimer.current = setTimeout(() => setStatusConfirm(null), STATUS_CONFIRM_FADE_MS);
   }
 
-  // Replace photo flow (immediate write on confirm)
-  function openPhotoPicker() {
-    setReplaceError(null);
-    galleryInputRef.current?.click();
-  }
-
-  async function onPhotoPicked(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !file.type.startsWith("image/")) return;
-    setReplaceError(null);
-    try {
-      const reader = new FileReader();
-      const raw = await new Promise<string>((res, rej) => {
-        reader.onload  = (ev) => res(ev.target?.result as string);
-        reader.onerror = rej;
-        reader.readAsDataURL(file);
-      });
-      const compressed = await compressImage(raw, 1400, 0.82);
-      setPendingPhoto(compressed);
-    } catch (err) {
-      console.error("[edit] photo read failed:", err);
-      setReplaceError("Couldn't read that photo. Try another.");
-    }
-  }
-
-  async function confirmReplacePhoto() {
-    if (!pendingPhoto || !post) return;
-    setReplaceBusy(true);
-    setReplaceError(null);
-    try {
-      const url = await uploadPostImageViaServer(pendingPhoto, post.vendor_id);
-      const ok  = await patchPost({ image_url: url }, null);
-      if (!ok) throw new Error("PATCH failed");
-      setPendingPhoto(null);
-    } catch (err) {
-      console.error("[edit] photo replace failed:", err);
-      setReplaceError(
-        err instanceof Error ? err.message : "Couldn't save the new photo.",
-      );
-    } finally {
-      setReplaceBusy(false);
-    }
-  }
-
-  function cancelReplacePhoto() {
-    setPendingPhoto(null);
-    setReplaceError(null);
-  }
-
   // Remove from shelf (quiet destructive)
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   async function handleRemove() {
@@ -395,9 +334,6 @@ export default function EditFindPage() {
 
   if (!post) return null;
 
-  const displayedPhoto = pendingPhoto ?? post.image_url ?? "";
-  const sold = post.status === "sold";
-
   return (
     <div
       style={{
@@ -409,25 +345,6 @@ export default function EditFindPage() {
         flexDirection: "column",
       }}
     >
-      {/* Hidden file input for photo replacement */}
-      <input
-        ref={galleryInputRef}
-        type="file"
-        accept="image/*"
-        onChange={onPhotoPicked}
-        style={{ display: "none" }}
-        aria-hidden="true"
-      />
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={onPhotoPicked}
-        style={{ display: "none" }}
-        aria-hidden="true"
-      />
-
       <header style={{ padding: "max(12px, env(safe-area-inset-top, 12px)) 16px 6px", flexShrink: 0 }}>
         <button
           onClick={() => router.back()}
@@ -653,131 +570,6 @@ export default function EditFindPage() {
             </AnimatePresence>
           </div>
         </div>
-
-        {/* Polaroid photo — below fields, mirrors /post/preview "Review your find" */}
-        {displayedPhoto && (
-          <div
-            style={{
-              padding: "20px 22px 0",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
-          >
-            <div style={{ width: "62%", opacity: sold ? 0.55 : 1 }}>
-              <PolaroidTile
-                src={displayedPhoto}
-                alt="Your find"
-                photoBg={v1.paperCream}
-                photoRadius={4}
-                objectFit="contain"
-              />
-            </div>
-            <button
-              onClick={openPhotoPicker}
-              disabled={replaceBusy}
-              style={{
-                marginTop: 8,
-                background: "none",
-                border: "none",
-                padding: 0,
-                cursor: replaceBusy ? "default" : "pointer",
-                fontFamily: FONT_LORA,
-                fontStyle: "italic",
-                fontSize: 13,
-                color: v1.inkPrimary,
-                textDecoration: "underline",
-                textDecorationStyle: "dotted",
-                textDecorationColor: v1.inkFaint,
-                textUnderlineOffset: 3,
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              Replace photo
-            </button>
-          </div>
-        )}
-
-        {/* Replace-photo confirmation bar */}
-        <AnimatePresence>
-          {pendingPhoto && (
-            <motion.div
-              key="replace-confirm"
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.22 }}
-              style={{
-                margin: "14px 22px 4px",
-                padding: "12px 14px",
-                borderRadius: 10,
-                background: v1.inkWash,
-                border: `1px solid ${v1.inkHairline}`,
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                flexWrap: "wrap",
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: FONT_LORA,
-                  fontStyle: "italic",
-                  fontSize: 14,
-                  color: v1.inkPrimary,
-                  flex: 1,
-                  minWidth: 140,
-                }}
-              >
-                New photo picked. Save replacement?
-              </span>
-              <button
-                onClick={confirmReplacePhoto}
-                disabled={replaceBusy}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: 10,
-                  background: v1.green,
-                  color: "#fff",
-                  fontFamily: FONT_SYS,
-                  fontSize: 13,
-                  fontWeight: 500,
-                  border: "none",
-                  cursor: replaceBusy ? "default" : "pointer",
-                  opacity: replaceBusy ? 0.7 : 1,
-                }}
-              >
-                {replaceBusy ? "Saving…" : "Save"}
-              </button>
-              <button
-                onClick={cancelReplacePhoto}
-                disabled={replaceBusy}
-                style={{
-                  background: "none",
-                  border: "none",
-                  padding: "8px 4px",
-                  fontFamily: FONT_LORA,
-                  fontStyle: "italic",
-                  fontSize: 13,
-                  color: v1.inkMuted,
-                  cursor: replaceBusy ? "default" : "pointer",
-                  textDecoration: "underline",
-                  textDecorationStyle: "dotted",
-                  textDecorationColor: v1.inkFaint,
-                  textUnderlineOffset: 3,
-                }}
-              >
-                Cancel
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {replaceError && (
-          <div style={{ padding: "0 22px 14px" }}>
-            <AmberNotice>{replaceError}</AmberNotice>
-          </div>
-        )}
 
         {/* Remove from shelf (destructive quiet link) */}
         <div
