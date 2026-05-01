@@ -108,6 +108,13 @@ export const v1 = {
   paperCream:   "#e8ddc7",
   postit:       "#fbf3df",
 
+  // Phase 2 Session A — paperWarm is the warm-cream variant used as the
+  // polaroid mat across Home masonry, /flagged FindTile, /shelf/[slug]
+  // WindowTile + ShelfTile, /post/tag Find/Tag photos, /post/preview
+  // PolaroidPreview. Adoption deferred to Session B PolaroidTile primitive
+  // extraction; declared here so the value lives in one place.
+  paperWarm:    "#faf2e0",
+
   // Ink scale
   inkPrimary:   "#2a1a0a",
   inkMid:       "#4a3520",
@@ -127,6 +134,16 @@ export const v1 = {
   redBg:        "rgba(139,32,32,0.07)",
   redBorder:    "rgba(139,32,32,0.18)",
 
+  // Phase 2 Session A — text/icon color on filled green CTAs (28+ inline
+  // `#fff` usages). Adoption deferred to Session D <FormButton> primitive.
+  onGreen:      "#fff",
+
+  // Phase 2 Session A — disabled-state filled green button background.
+  // Replaces three close opacity variants (0.18 / 0.22 / 0.25) inlined
+  // across /post/preview, /login/email, /vendor-request. Adoption deferred
+  // to Session D <FormButton> primitive.
+  greenDisabled: "rgba(30,77,43,0.40)",
+
   // v1.2 — form input wash (warm off-white on paperCream)
   inkWash:      "rgba(255,253,248,0.70)",
 
@@ -136,9 +153,61 @@ export const v1 = {
   amberBg:      "rgba(122,92,30,0.08)",
   amberBorder:  "rgba(122,92,30,0.22)",
 
-  // Radii
+  // Radii — flat values are the canonical photograph + banner radii
+  // committed in v1.1h. New scales (radius.input/button/pill/sheet) live
+  // under v1.radius below; image + banner stay flat for backwards-compat.
   imageRadius:  6,
   bannerRadius: 16,
+
+  // Phase 2 Session A — shadow scale. Replaces 12+ inline boxShadow strings
+  // with five canonical stacks. Adoption rolls in across Sessions B–F as
+  // each primitive ships:
+  //   polaroid     — Session B <PolaroidTile> (8 verbatim duplicates today)
+  //   polaroidPin  — Session B (BoothPage post-it pin variant)
+  //   ctaGreen     — Session D <FormButton> (resolves 0.18/0.22/0.25 drift)
+  //   sheetRise    — Session D/F (resolves 0.25/0.28 drift on bottom sheets)
+  //   cardSubtle   — Session F (light counterpart used on /find/[id] strip)
+  shadow: {
+    polaroid:    "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
+    polaroidPin: "0 6px 14px rgba(42,26,10,0.32), 0 0 0 0.5px rgba(42,26,10,0.16)",
+    ctaGreen:    "0 2px 12px rgba(30,77,43,0.22)",
+    sheetRise:   "0 -8px 30px rgba(30,20,10,0.28)",
+    cardSubtle:  "0 3px 12px rgba(42,26,10,0.10), 0 1px 3px rgba(42,26,10,0.06)",
+  },
+
+  // Phase 2 Session A — spacing rhythm scale. Phase 1 audit found gap +
+  // padding values scattered across 4–28px with no clear cadence. This is
+  // the canonical step set; adoption rolls in across Sessions B–F.
+  gap: {
+    xs: 6,
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 22,
+  },
+
+  // Phase 2 Session A — radius scale for chrome NOT covered by imageRadius
+  // / bannerRadius. Phase 1 audit found button + input radius drift across
+  // 8/9/10/12/14 with no canonical step. Adoption rolls in across Sessions
+  // B–F. Photo + banner stay on the flat tokens above.
+  radius: {
+    input:  14,
+    button: 14,
+    pill:   999,
+    sheet:  20,
+  },
+
+  // Phase 2 Session A — icon size scale. Phase 1 audit found 14 distinct
+  // icon sizes used; canonical ramp from BottomNav (21) + utility (18) +
+  // feature (22-24) usage clusters. Adoption rolls in across Sessions B–F.
+  icon: {
+    xs:  14,
+    sm:  16,
+    md:  18,
+    nav: 21,
+    lg:  22,
+    xl:  24,
+  },
 } as const;
 
 export const fonts = {
