@@ -168,11 +168,12 @@ export const v1 = {
   //   sheetRise    — Session D/F (resolves 0.25/0.28 drift on bottom sheets)
   //   cardSubtle   — Session F (light counterpart used on /find/[id] strip)
   shadow: {
-    polaroid:    "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
-    polaroidPin: "0 6px 14px rgba(42,26,10,0.32), 0 0 0 0.5px rgba(42,26,10,0.16)",
-    ctaGreen:    "0 2px 12px rgba(30,77,43,0.22)",
-    sheetRise:   "0 -8px 30px rgba(30,20,10,0.28)",
-    cardSubtle:  "0 3px 12px rgba(42,26,10,0.10), 0 1px 3px rgba(42,26,10,0.06)",
+    polaroid:        "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
+    polaroidPin:     "0 6px 14px rgba(42,26,10,0.32), 0 0 0 0.5px rgba(42,26,10,0.16)",
+    ctaGreen:        "0 2px 12px rgba(30,77,43,0.22)",
+    ctaGreenCompact: "0 2px 10px rgba(30,77,43,0.18)",
+    sheetRise:       "0 -8px 30px rgba(30,20,10,0.28)",
+    cardSubtle:      "0 3px 12px rgba(42,26,10,0.10), 0 1px 3px rgba(42,26,10,0.06)",
   },
 
   // Phase 2 Session A — spacing rhythm scale. Phase 1 audit found gap +
