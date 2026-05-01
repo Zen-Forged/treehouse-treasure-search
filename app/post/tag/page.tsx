@@ -59,6 +59,7 @@ import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import { track } from "@/lib/clientEvents";
 import StickyMasthead from "@/components/StickyMasthead";
 import AddFindSheet from "@/components/AddFindSheet";
+import PolaroidTile from "@/components/PolaroidTile";
 
 type Stage = "ready" | "extracting";
 
@@ -118,40 +119,6 @@ async function callPostCaption(itemDataUrl: string): Promise<PostCaptionResponse
     console.error("[post/tag] post-caption fetch failed:", err);
     return { title: "", caption: "", source: "mock", reason: "fetch" };
   }
-}
-
-// ── Polaroid wrapper — V3 evolved tile pattern carved into the post flow.
-// Photo with 7px paper mat, dual warm shadow, 4px corner radius. Children
-// are the photo + (optional) below-mat label/retake content.
-function Polaroid({ src, alt }: { src: string; alt: string }) {
-  return (
-    <div
-      style={{
-        background: "#faf2e0",
-        padding: "7px 7px 8px",
-        borderRadius: 4,
-        boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
-        width: "100%",
-      }}
-    >
-      <div
-        style={{
-          aspectRatio: "4 / 5",
-          borderRadius: 4,
-          overflow: "hidden",
-          background: "#cdb88e",
-          boxShadow: "inset 0 0 30px rgba(42,26,10,0.12)",
-        }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt={alt}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-        />
-      </div>
-    </div>
-  );
 }
 
 function PolLabel({ children }: { children: React.ReactNode }) {
@@ -444,7 +411,14 @@ function PostTagInner() {
                 gap: 4,
               }}
             >
-              <Polaroid src={itemImage} alt="your find" />
+              <PolaroidTile
+                src={itemImage}
+                alt="your find"
+                photoBg="#cdb88e"
+                photoRadius={4}
+                lens={false}
+                innerInsetShadow
+              />
               <div
                 style={{
                   marginTop: 6,
@@ -491,7 +465,14 @@ function PostTagInner() {
                 gap: 4,
               }}
             >
-              <Polaroid src={tagImage} alt="price tag" />
+              <PolaroidTile
+                src={tagImage}
+                alt="price tag"
+                photoBg="#cdb88e"
+                photoRadius={4}
+                lens={false}
+                innerInsetShadow
+              />
               <div style={{ marginTop: 6 }}>
                 <PolLabel>Tag</PolLabel>
               </div>
