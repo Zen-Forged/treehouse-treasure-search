@@ -226,10 +226,14 @@ function PostTagInner() {
     setTagImage(tagDataUrl);
     setStage("extracting");
 
+    // Minimum dwell so "Reading the tag…" doesn't flicker when the AI calls
+    // resolve quickly. The screen stays visible for at least 1.2s either way.
+    const minDwell = new Promise<void>((r) => setTimeout(r, 1200));
     const [tagResult, captionResult] = await Promise.all([
       callExtractTag(tagDataUrl),
       callPostCaption(draft.imageDataUrl),
     ]);
+    await minDwell;
 
     const tagSucceeded     = tagResult.source === "claude";
     const captionSucceeded = captionResult.source === "claude";
