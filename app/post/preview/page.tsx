@@ -127,6 +127,7 @@ function PostPreviewInner() {
   const myShelfHref    = originVendorId ? `/my-shelf?vendor=${originVendorId}` : "/my-shelf";
 
   const [image,         setImage]         = useState<string | null>(null);
+  const [tagImage,      setTagImage]      = useState<string | null>(null);
   const [vendor,        setVendor]        = useState<Vendor | null>(null);
   const [localProfile,  setLocalProfile]  = useState<LocalVendorProfile | null>(null);
   const [stage,         setStage]         = useState<Stage>("loading");
@@ -161,6 +162,7 @@ function PostPreviewInner() {
         return;
       }
       setImage(draft.imageDataUrl);
+      setTagImage(draft.tagImageDataUrl ?? null);
 
       const session   = await getSession();
       const user      = session?.user ?? null;
@@ -689,8 +691,56 @@ function PostPreviewInner() {
           </FieldGroup>
         </div>
 
-        {/* Polaroid photo — below the fields, centered, retake link below */}
-        {image && (
+        {/* Polaroids — find + tag side-by-side when tag was captured (D7-2e).
+            Skip path (no tag) keeps the centered single-polaroid layout. */}
+        {image && tagImage && (
+          <div style={{ padding: "16px 22px 0" }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <PolaroidTile
+                  src={image}
+                  alt="Your find"
+                  photoBg={v1.paperCream}
+                  photoRadius={4}
+                  objectFit="contain"
+                />
+                <button
+                  onClick={() => setRetakeOpen(true)}
+                  style={{
+                    marginTop: 8,
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                    fontFamily: FONT_LORA,
+                    fontStyle: "italic",
+                    fontSize: 13,
+                    color: v1.inkPrimary,
+                    textDecoration: "underline",
+                    textDecorationStyle: "dotted",
+                    textDecorationColor: v1.inkFaint,
+                    textUnderlineOffset: 3,
+                    WebkitTapHighlightColor: "transparent",
+                  }}
+                >
+                  Retake
+                </button>
+              </div>
+              <div style={{ flex: 1 }}>
+                <PolaroidTile
+                  src={tagImage}
+                  alt="Price tag"
+                  photoBg="#cdb88e"
+                  photoRadius={4}
+                  lens={false}
+                  innerInsetShadow
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {image && !tagImage && (
           <div
             style={{
               padding: "20px 22px 0",
