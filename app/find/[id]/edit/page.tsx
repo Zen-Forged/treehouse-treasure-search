@@ -428,7 +428,7 @@ export default function EditFindPage() {
         aria-hidden="true"
       />
 
-      <header style={{ padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px", flexShrink: 0 }}>
+      <header style={{ padding: "max(12px, env(safe-area-inset-top, 12px)) 16px 6px", flexShrink: 0 }}>
         <button
           onClick={() => router.back()}
           aria-label="Back"
@@ -458,7 +458,7 @@ export default function EditFindPage() {
         }}
       >
         {/* Title block — body header (mirrors /post/preview "Review your find") */}
-        <div style={{ textAlign: "center", padding: "14px 22px 18px" }}>
+        <div style={{ textAlign: "center", padding: "2px 22px 14px" }}>
           <div
             style={{
               fontFamily: FONT_LORA,
