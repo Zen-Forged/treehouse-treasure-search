@@ -404,14 +404,14 @@ function PostTagInner() {
                 <button
                   onClick={() => setRetakeOpen(true)}
                   style={{
-                    marginTop: 8,
+                    marginTop: 10,
                     background: "none",
                     border: "none",
                     padding: 0,
                     cursor: "pointer",
                     fontFamily: FONT_LORA,
                     fontStyle: "italic",
-                    fontSize: 13,
+                    fontSize: 15,
                     color: v1.inkPrimary,
                     textDecoration: "underline",
                     textDecorationStyle: "dotted",
