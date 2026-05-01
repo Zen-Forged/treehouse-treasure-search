@@ -52,7 +52,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Camera } from "lucide-react";
+import { ArrowLeft, Camera, Check, Tag } from "lucide-react";
 import { compressImage } from "@/lib/imageUpload";
 import { postStore, type PostDraft } from "@/lib/postStore";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
@@ -300,7 +300,7 @@ function PostTagInner() {
       />
 
       {/* ── Header — back button only (vendor flow, no wordmark/share) ─── */}
-      <header style={{ padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px", flexShrink: 0 }}>
+      <header style={{ padding: "max(12px, env(safe-area-inset-top, 12px)) 16px 6px", flexShrink: 0 }}>
         <button
           onClick={() => router.back()}
           aria-label="Go back"
@@ -324,23 +324,22 @@ function PostTagInner() {
         </button>
       </header>
 
-      {/* ── Middle band — vertically centered when content fits ───────── */}
+      {/* ── Middle band — top-anchored for flow continuity ──────────────── */}
       <div
         style={{
           flex: 1,
           minHeight: 0,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
           overflowY: "auto",
-          paddingTop: 18,
+          paddingTop: 4,
           paddingBottom: isExtracting
             ? 18
             : "max(140px, calc(env(safe-area-inset-bottom, 0px) + 128px))",
         }}
       >
-        {/* Centered title block */}
-        <div style={{ textAlign: "center", padding: "0 22px 14px" }}>
+        {/* Title block */}
+        <div style={{ textAlign: "center", padding: "2px 22px 18px" }}>
           <div
             style={{
               fontFamily: FONT_LORA,
@@ -370,34 +369,52 @@ function PostTagInner() {
           </div>
         </div>
 
-        {/* Photos — Find always; Tag added during extraction */}
+        {/* Find + Tag side-by-side — find shows ✓ overlay (captured),
+            tag is dotted placeholder until extraction populates it. */}
         <div
           style={{
             padding: "0 22px",
             display: "flex",
-            flexDirection: "column",
-            gap: 14,
-            alignItems: "center",
+            gap: 12,
+            alignItems: "flex-start",
           }}
         >
-          {itemImage && !isExtracting && (
-            <div
-              style={{
-                width: "60%",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              <PolaroidTile
-                src={itemImage}
-                alt="your find"
-                photoBg="#cdb88e"
-                photoRadius={4}
-                lens={false}
-                innerInsetShadow
-              />
+          {/* Left column: find polaroid + check overlay + retake link */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
+            {itemImage && (
+              <div style={{ width: "100%", position: "relative" }}>
+                <PolaroidTile
+                  src={itemImage}
+                  alt="your find"
+                  photoBg="#cdb88e"
+                  photoRadius={4}
+                  lens={false}
+                  innerInsetShadow
+                />
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    bottom: 14,
+                    right: 14,
+                    width: 32,
+                    height: 32,
+                    borderRadius: "50%",
+                    background: "rgba(245,242,235,0.88)",
+                    backdropFilter: "blur(6px)",
+                    WebkitBackdropFilter: "blur(6px)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 1px 4px rgba(42,26,10,0.18)",
+                    zIndex: 3,
+                  }}
+                >
+                  <Check size={16} strokeWidth={2.5} style={{ color: v1.green }} />
+                </div>
+              </div>
+            )}
+            {!isExtracting && itemImage && (
               <button
                 onClick={() => setRetakeOpen(true)}
                 style={{
@@ -419,11 +436,44 @@ function PostTagInner() {
               >
                 Retake
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
-          {isExtracting && tagImage && (
-            <div style={{ width: "60%" }}>
+          {/* Right column: dotted tag placeholder OR captured tag photo */}
+          <div style={{ flex: 1 }}>
+            {!isExtracting && (
+              <div
+                aria-label="Tag photo will appear here"
+                style={{
+                  width: "100%",
+                  aspectRatio: "4 / 5",
+                  borderRadius: 4,
+                  border: `2px dashed ${v1.inkFaint}`,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  padding: 18,
+                  boxSizing: "border-box",
+                }}
+              >
+                <Tag size={26} strokeWidth={1.5} style={{ color: v1.inkFaint }} />
+                <div
+                  style={{
+                    fontFamily: FONT_LORA,
+                    fontStyle: "italic",
+                    fontSize: 14,
+                    color: v1.inkMuted,
+                    textAlign: "center",
+                    lineHeight: 1.3,
+                  }}
+                >
+                  Tag
+                </div>
+              </div>
+            )}
+            {isExtracting && tagImage && (
               <PolaroidTile
                 src={tagImage}
                 alt="price tag"
@@ -432,8 +482,8 @@ function PostTagInner() {
                 lens={false}
                 innerInsetShadow
               />
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {isExtracting && (
@@ -446,7 +496,7 @@ function PostTagInner() {
               fontSize: 14,
               color: v1.inkMuted,
               textAlign: "center",
-              marginTop: 16,
+              marginTop: 18,
               lineHeight: 1.5,
             }}
           >
