@@ -79,17 +79,19 @@ interface StickyMastheadProps {
   threshold?: number;
 }
 
-// Session 94 — wordmark fills the 90px inner-grid row (was 50 session 89, 40
-// session 88, 30 session 87). Heavier brand anchor as the capture-flow
-// refinement called for; David picked option C from
-// docs/mockups/capture-flow-refinement-v3.html. Width auto-sizes from the
-// 1500×800 aspect ratio (~169px at 90px height).
+// Session 95 — wordmark height 90 → 72 (-20%) per David's call. Session 94
+// bumped to 90 for "heavier brand anchor"; iPhone QA found it heavier than
+// intended. Inner-grid minHeight + MASTHEAD_HEIGHT calc both stay at session
+// 94 values (90 + 103) — wordmark now centers within the 90px grid with ~9px
+// of breathing room above and below. If the chrome ends up reading too tall
+// around the smaller wordmark, drop minHeight 90 → 72 + calc 103 → 85.
+// Width auto-sizes from the 1500×800 aspect ratio (~135px at 72px height).
 const WORDMARK_DEFAULT = (
   <img
     src="/wordmark.png"
     alt="Treehouse Finds"
     style={{
-      height: 90,
+      height: 72,
       width: "auto",
       display: "block",
     }}
