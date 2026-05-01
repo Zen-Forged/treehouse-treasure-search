@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — &lt;FormField&gt; + &lt;FormButton&gt; primitives v1</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper-cream:  #e8ddc7;
+    --paper-warm:   #faf2e0;
+    --postit:       #fbf3df;
+    --ink-wash:     rgba(255, 253, 248, 0.70);
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --green:        #1e4d2b;
+    --green-disabled: rgba(30, 77, 43, 0.40);
+    --green-disabled-30: rgba(30, 77, 43, 0.30); /* sheet outlier */
+    --on-green:     #fff;
+
+    --shadow-cta-page-current: 0 2px 14px rgba(30, 77, 43, 0.22);
+    --shadow-cta-page-token:   0 2px 12px rgba(30, 77, 43, 0.22);
+    --shadow-cta-page-extra:   0 2px 12px rgba(30, 77, 43, 0.25);
+    --shadow-cta-compact:      0 2px 10px rgba(30, 77, 43, 0.18);
+
+    --lora: "Lora", Georgia, serif;
+    --sys:  -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1480px; margin: 0 auto; padding: 30px 20px 60px; }
+
+  h1.title {
+    font-family: var(--lora);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 920px;
+  }
+
+  .section-header {
+    max-width: 1180px;
+    margin: 30px auto 14px;
+    color: rgba(232, 221, 199, 0.92);
+    font-family: var(--lora);
+    font-size: 22px;
+    font-weight: 400;
+    border-bottom: 1px solid rgba(232, 221, 199, 0.16);
+    padding-bottom: 6px;
+  }
+
+  .legend-line {
+    max-width: 1180px;
+    margin: 0 auto 12px;
+    color: rgba(232, 221, 199, 0.55);
+    font-size: 12px;
+    line-height: 1.6;
+    text-align: center;
+    font-style: italic;
+  }
+  .legend-line code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11.5px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: rgba(232, 221, 199, 0.78);
+  }
+
+  .decisions {
+    max-width: 1180px;
+    margin: 0 auto 30px;
+    padding: 22px 28px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--lora);
+    font-size: 19px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 12px;
+  }
+  .decisions h4 {
+    font-family: var(--lora);
+    font-size: 15px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 14px 0 4px;
+  }
+  .decisions ul { margin: 4px 0 0; padding-left: 18px; }
+  .decisions li { margin-bottom: 6px; }
+  .decisions strong { color: #fff9e8; }
+  .decisions code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .decisions .my-read { color: #b8e8b8; font-style: italic; }
+  .decisions table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 12.5px;
+  }
+  .decisions th, .decisions td {
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(232, 221, 199, 0.10);
+    vertical-align: top;
+  }
+  .decisions th { color: #fff9e8; font-weight: 600; font-family: var(--lora); }
+  .decisions tr:last-child td { border-bottom: none; }
+
+  .row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    max-width: 1480px;
+    margin: 0 auto 34px;
+  }
+  .frame { display: flex; flex-direction: column; align-items: center; }
+  .frame-label {
+    font-family: var(--lora);
+    color: #fff9e8;
+    font-size: 16px;
+    margin-bottom: 3px;
+    text-align: center;
+  }
+  .frame-route {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 10px;
+    color: rgba(232, 221, 199, 0.50);
+    margin-bottom: 10px;
+    max-width: 320px;
+    text-align: center;
+  }
+  .frame-spec {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 10px;
+    color: rgba(232, 221, 199, 0.55);
+    margin: 10px auto 0;
+    text-align: left;
+    line-height: 1.55;
+    padding: 10px 14px;
+    background: rgba(0,0,0,0.18);
+    border-left: 2px solid rgba(232, 221, 199, 0.20);
+    border-radius: 0 4px 4px 0;
+    width: 320px;
+  }
+
+  /* ── Phone frame ─────────────────────────────────────────── */
+  .phone {
+    width: 320px;
+    background: var(--paper-cream);
+    border-radius: 22px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.45);
+    padding: 30px 22px 28px;
+  }
+  .phone .form-eyebrow {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink-muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .phone h2 {
+    font-family: var(--lora);
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--ink-primary);
+    text-align: center;
+    margin: 0 0 18px;
+    line-height: 1.3;
+  }
+
+  /* ── BEFORE — vendor-request style ───────────────────────── */
+  .field-vendor {
+    margin-bottom: 12px;
+  }
+  .field-vendor label {
+    display: block;
+    font-family: var(--lora);
+    font-size: 15px;
+    color: var(--ink-mid);
+    margin-bottom: 6px;
+    line-height: 1.25;
+  }
+  .field-vendor input {
+    width: 100%;
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 14px;
+    padding: 14px;
+    font-family: var(--sys);
+    font-size: 16px;
+    color: var(--ink-primary);
+    outline: none;
+  }
+
+  /* ── BEFORE — login/email style (italic label, postit bg) ── */
+  .field-login {
+    margin-bottom: 12px;
+  }
+  .field-login label {
+    display: block;
+    font-family: var(--lora);
+    font-size: 13px;
+    font-style: italic;
+    color: var(--ink-muted);
+    margin-bottom: 6px;
+    line-height: 1.25;
+  }
+  .field-login input {
+    width: 100%;
+    background: var(--postit);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 14px;
+    padding: 14px;
+    font-family: var(--sys);
+    font-size: 16px;
+    color: var(--ink-primary);
+    outline: none;
+  }
+
+  /* ── BEFORE — EditBoothSheet style (compact, inkWash) ────── */
+  .field-sheet {
+    margin-bottom: 10px;
+  }
+  .field-sheet label {
+    display: block;
+    font-family: var(--lora);
+    font-size: 13px;
+    color: var(--ink-mid);
+    margin-bottom: 4px;
+    line-height: 1.25;
+  }
+  .field-sheet input {
+    width: 100%;
+    background: var(--ink-wash);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 10px;
+    padding: 11px 12px;
+    font-family: var(--sys);
+    font-size: 16px;
+    color: var(--ink-primary);
+    outline: none;
+  }
+
+  /* ── AFTER — unified <FormField> page tier ───────────────── */
+  .field-page {
+    margin-bottom: 12px;
+  }
+  .field-page label {
+    display: block;
+    font-family: var(--lora);
+    font-size: 15px;
+    color: var(--ink-mid);
+    margin-bottom: 6px;
+    line-height: 1.25;
+  }
+  .field-page input {
+    width: 100%;
+    background: var(--postit);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 14px;
+    padding: 14px;
+    font-family: var(--sys);
+    font-size: 16px;
+    color: var(--ink-primary);
+    outline: none;
+  }
+
+  /* ── AFTER — unified <FormField> compact tier ────────────── */
+  .field-compact {
+    margin-bottom: 10px;
+  }
+  .field-compact label {
+    display: block;
+    font-family: var(--lora);
+    font-size: 13px;
+    color: var(--ink-mid);
+    margin-bottom: 4px;
+    line-height: 1.25;
+  }
+  .field-compact input {
+    width: 100%;
+    background: var(--postit);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 10px;
+    padding: 11px 12px;
+    font-family: var(--sys);
+    font-size: 16px;
+    color: var(--ink-primary);
+    outline: none;
+  }
+
+  /* ── BUTTONS ─────────────────────────────────────────────── */
+  /* BEFORE — vendor-request */
+  .btn-page-before {
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+    background: var(--green);
+    color: var(--on-green);
+    border: none;
+    border-radius: 14px;
+    padding: 15px;
+    font-family: var(--sys);
+    font-size: 15px;
+    font-weight: 600;
+    box-shadow: var(--shadow-cta-page-current);
+    cursor: pointer;
+  }
+
+  /* BEFORE — sheet */
+  .btn-sheet-before {
+    display: block;
+    width: 100%;
+    margin-top: 14px;
+    background: var(--green);
+    color: var(--on-green);
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    font-family: var(--sys);
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: var(--shadow-cta-compact);
+    cursor: pointer;
+  }
+
+  /* AFTER — page primary */
+  .btn-page {
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+    background: var(--green);
+    color: var(--on-green);
+    border: none;
+    border-radius: 14px;
+    padding: 15px;
+    font-family: var(--sys);
+    font-size: 15px;
+    font-weight: 600;
+    box-shadow: var(--shadow-cta-page-token);
+    cursor: pointer;
+  }
+  .btn-page-disabled {
+    background: var(--green-disabled);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  /* AFTER — compact primary */
+  .btn-compact {
+    display: block;
+    width: 100%;
+    margin-top: 14px;
+    background: var(--green);
+    color: var(--on-green);
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    font-family: var(--sys);
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: var(--shadow-cta-compact);
+    cursor: pointer;
+  }
+  .btn-compact-disabled {
+    background: var(--green-disabled);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  /* AFTER — link variant */
+  .btn-link {
+    display: inline-block;
+    background: none;
+    border: none;
+    margin: 14px auto 0;
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-mid);
+    text-decoration: underline dotted;
+    text-underline-offset: 4px;
+    cursor: pointer;
+  }
+
+  /* ── Showcase / variants row ─────────────────────────────── */
+  .variants {
+    background: var(--paper-cream);
+    border-radius: 22px;
+    padding: 32px 28px;
+    width: 700px;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.45);
+  }
+  .variants .row-block {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .variants .label-row {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-muted);
+    text-align: center;
+    margin-top: 6px;
+  }
+
+  /* ── Spec callouts inline in phone frame ────────────────── */
+  .pill {
+    display: inline-block;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 9px;
+    background: rgba(42, 26, 10, 0.08);
+    color: var(--ink-muted);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <h1 class="title">&lt;FormField&gt; + &lt;FormButton&gt; · v1</h1>
+  <p class="subtitle">
+    Phase 2 Session D · 10 form surfaces unified · two-tier scale (page · compact) · mockup-first
+  </p>
+
+  <!-- ═══════════════════════ DECISIONS PANE ═══════════════════════ -->
+  <div class="decisions">
+    <h3>What I'm asking you to judge</h3>
+
+    <p>
+      The 10 form surfaces audited cluster cleanly into <strong>page tier</strong> (full-page routes — vendor-request, login/email, post/preview, admin/login, setup) and
+      <strong>compact tier</strong> (booth sheets — BoothFormFields, AddBoothInline, EditBoothSheet, AddBoothSheet). The drift is per-tier, not per-surface.
+      Both primitives accept <code>size?: "page" | "compact"</code> (default <code>"page"</code>).
+    </p>
+
+    <p>
+      Frame 1 shows three representative surfaces today. Frame 2 shows the unified primitives in both tiers.
+      Frame 3 shows the four button shapes (primary enabled · primary disabled · compact primary · italic dotted-link helper).
+    </p>
+
+    <h4>Decisions D1–D5 to freeze</h4>
+
+    <table>
+      <tr><th style="width: 50px;">D#</th><th>Question</th><th>My read</th></tr>
+      <tr>
+        <td><strong>D1</strong></td>
+        <td>Input background — <code>v1.postit</code> (#fbf3df, warm paper-honest, used 4×) or <code>v1.inkWash</code> (rgba 0.70, translucent panel, used 6×)?</td>
+        <td class="my-read">postit. Most-recent commitment was session 94 (/post/preview canonized postit). Postit is more on-brand. Adopt for both tiers.</td>
+      </tr>
+      <tr>
+        <td><strong>D2</strong></td>
+        <td>Label register — drop italic + drop inkMuted + converge to upright <code>15</code> (page) and <code>13</code> (sheet) FONT_LORA <code>inkMid</code>?</td>
+        <td class="my-read">Yes. Adopt session 82's two-tier register. Retires login/email's italic 13 inkMuted.</td>
+      </tr>
+      <tr>
+        <td><strong>D3</strong></td>
+        <td>CTA padding — <code>15</code> page · <code>12</code> sheet · setup's <code>14×22</code> outlier?</td>
+        <td class="my-read">15 / 12. Setup adopts page-tier 15. Two clean tiers, no special cases.</td>
+      </tr>
+      <tr>
+        <td><strong>D4</strong></td>
+        <td><code>Buttons.tsx</code> (Tailwind, zero callers verified) — retire or rebuild?</td>
+        <td class="my-read">Retire. Confirmed zero callers. New <code>&lt;FormButton&gt;</code> at <code>components/FormButton.tsx</code>, inline-style, no Tailwind.</td>
+      </tr>
+      <tr>
+        <td><strong>D5</strong></td>
+        <td>Page-tier CTA enabled shadow — converge <code>0 2px 14px rgba(...,0.22)</code> (3 surfaces) + <code>0 2px 12px rgba(...,0.25)</code> (post/preview) to session-95's <code>v1.shadow.ctaGreen</code> = <code>0 2px 12px rgba(...,0.22)</code>?</td>
+        <td class="my-read">Yes — adopt the token. 14 → 12 blur is barely perceptible; 0.25 → 0.22 is barely perceptible. First adoption of the session-95 token.</td>
+      </tr>
+    </table>
+
+    <h4>Already settled (no decision needed)</h4>
+    <ul>
+      <li><strong>Disabled CTA bg:</strong> <code>v1.greenDisabled</code> (rgba 0.40) — retires the 0.30 outlier on EditBoothSheet + AddBoothSheet.</li>
+      <li><strong>Disabled CTA shadow:</strong> none — already universal.</li>
+      <li><strong>Sheet CTA shadow (compact tier):</strong> new token <code>v1.shadow.ctaGreenCompact</code> = <code>0 2px 10px rgba(...,0.18)</code> — formalizes the current 3-sheet pattern.</li>
+      <li><strong>Input border:</strong> <code>1px solid v1.inkHairline</code> — universal.</li>
+      <li><strong>Input bg both tiers:</strong> <code>v1.postit</code> (per D1).</li>
+      <li><strong>Italic dotted-link helper:</strong> <code>&lt;FormButton variant="link"&gt;</code> — italic Lora, dotted underline, inkMid, no fill, no shadow. For Resend / Sign in instead / Sign out / Replace photo.</li>
+    </ul>
+
+    <h4>Out of scope (V1)</h4>
+    <ul>
+      <li>API shape (<code>children</code> vs spread-props) — build-spec-level decision; not for visual review.</li>
+      <li>Helper text + error states — add when first surface needs them.</li>
+      <li>Icon-bubble buttons (44px back / close) — separate primitive scope.</li>
+      <li><code>/contact</code> mailto rows — they're styled cards, not inputs/buttons. Different primitive family (LinkRow).</li>
+    </ul>
+  </div>
+
+  <!-- ═══════════════════════ FRAME 1 — BEFORE ═══════════════════════ -->
+  <div class="section-header">Frame 1 — BEFORE · 3 representative surfaces</div>
+  <div class="legend-line">
+    Drift across page-tier (vendor-request vs login/email) and between page-tier and sheet-tier (EditBoothSheet).
+  </div>
+
+  <div class="row">
+
+    <!-- /vendor-request — inkWash + label 15 upright -->
+    <div class="frame">
+      <div class="frame-label">/vendor-request</div>
+      <div class="frame-route">app/vendor-request/page.tsx · page tier</div>
+      <div class="phone">
+        <div class="form-eyebrow">Set up your digital booth</div>
+        <h2>Tell us about your booth</h2>
+
+        <div class="field-vendor">
+          <label>Booth name</label>
+          <input type="text" placeholder="" value="Stillwater Curios">
+        </div>
+        <div class="field-vendor">
+          <label>Location</label>
+          <input type="text" placeholder="" value="Kentucky Treehouse">
+        </div>
+        <div class="field-vendor">
+          <label>Booth # <span style="color: var(--ink-muted); font-style: italic; font-weight: 400;">(optional)</span></label>
+          <input type="text" placeholder="" value="A12">
+        </div>
+
+        <button class="btn-page-before">Submit request</button>
+      </div>
+      <div class="frame-spec">
+        bg: <strong style="color:#ffd9a8;">inkWash</strong> · label <strong style="color:#ffd9a8;">15 upright</strong><br>
+        input pad 14×14 · radius 14<br>
+        btn pad 15 · radius 14<br>
+        shadow <strong style="color:#ffd9a8;">0 2px 14px ...0.22</strong>
+      </div>
+    </div>
+
+    <!-- /login/email — postit + label 13 italic -->
+    <div class="frame">
+      <div class="frame-label">/login/email</div>
+      <div class="frame-route">app/login/email/page.tsx · page tier</div>
+      <div class="phone">
+        <div class="form-eyebrow">Vendor sign in</div>
+        <h2>Sign in</h2>
+
+        <div class="field-login">
+          <label>Email address</label>
+          <input type="email" placeholder="you@example.com" value="">
+        </div>
+
+        <button class="btn-page-before">Email me a code</button>
+
+        <button class="btn-link">Already have a code?</button>
+      </div>
+      <div class="frame-spec">
+        bg: <strong style="color:#ffd9a8;">postit</strong> · label <strong style="color:#ffd9a8;">13 ITALIC</strong> inkMuted<br>
+        input pad 14×14 · radius 14<br>
+        btn pad 15 · radius 14<br>
+        shadow 0 2px 14px ...0.22
+      </div>
+    </div>
+
+    <!-- EditBoothSheet — inkWash + 13 upright + compact -->
+    <div class="frame">
+      <div class="frame-label">EditBoothSheet</div>
+      <div class="frame-route">components/EditBoothSheet.tsx · sheet tier</div>
+      <div class="phone">
+        <div class="form-eyebrow">Booth details</div>
+        <h2 style="margin-bottom: 14px;">Edit booth</h2>
+
+        <div class="field-sheet">
+          <label>Booth name</label>
+          <input type="text" placeholder="" value="Stillwater Curios">
+        </div>
+        <div class="field-sheet">
+          <label>Booth #</label>
+          <input type="text" placeholder="" value="A12">
+        </div>
+        <div class="field-sheet">
+          <label>Location</label>
+          <input type="text" placeholder="" value="Kentucky Treehouse">
+        </div>
+
+        <button class="btn-sheet-before" style="background: var(--green-disabled-30);">Save changes</button>
+      </div>
+      <div class="frame-spec">
+        bg: <strong style="color:#ffd9a8;">inkWash</strong> · label 13 upright inkMid<br>
+        input pad <strong style="color:#ffd9a8;">11×12</strong> · radius <strong style="color:#ffd9a8;">10</strong><br>
+        btn pad 12 · radius 10<br>
+        disabled bg <strong style="color:#ffd9a8;">0.30</strong> (outlier)
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════ FRAME 2 — AFTER ═══════════════════════ -->
+  <div class="section-header">Frame 2 — AFTER · unified <code style="font-size: 18px; background: rgba(232,221,199,0.08); padding: 1px 6px; border-radius: 4px;">&lt;FormField&gt;</code> + <code style="font-size: 18px; background: rgba(232,221,199,0.08); padding: 1px 6px; border-radius: 4px;">&lt;FormButton&gt;</code></div>
+  <div class="legend-line">
+    Same surfaces · postit bg both tiers · canonical label register · two-tier scale preserved
+  </div>
+
+  <div class="row">
+
+    <!-- AFTER /vendor-request → page tier -->
+    <div class="frame">
+      <div class="frame-label">page tier</div>
+      <div class="frame-route">size="page" · /vendor-request · /login/email · /post/preview · /admin/login</div>
+      <div class="phone">
+        <div class="form-eyebrow">Set up your digital booth</div>
+        <h2>Tell us about your booth</h2>
+
+        <div class="field-page">
+          <label>Booth name</label>
+          <input type="text" placeholder="" value="Stillwater Curios">
+        </div>
+        <div class="field-page">
+          <label>Location</label>
+          <input type="text" placeholder="" value="Kentucky Treehouse">
+        </div>
+        <div class="field-page">
+          <label>Booth # <span style="color: var(--ink-muted); font-style: italic; font-weight: 400;">(optional)</span></label>
+          <input type="text" placeholder="" value="A12">
+        </div>
+
+        <button class="btn-page">Submit request</button>
+      </div>
+      <div class="frame-spec">
+        bg: <strong style="color:#b8e8b8;">postit</strong> · label <strong style="color:#b8e8b8;">15 upright</strong><br>
+        input pad 14×14 · radius 14<br>
+        btn pad 15 · radius 14<br>
+        shadow <strong style="color:#b8e8b8;">v1.shadow.ctaGreen</strong>
+      </div>
+    </div>
+
+    <!-- AFTER login/email → page tier -->
+    <div class="frame">
+      <div class="frame-label">page tier · 2nd surface</div>
+      <div class="frame-route">size="page" · /login/email</div>
+      <div class="phone">
+        <div class="form-eyebrow">Vendor sign in</div>
+        <h2>Sign in</h2>
+
+        <div class="field-page">
+          <label>Email address</label>
+          <input type="email" placeholder="you@example.com" value="">
+        </div>
+
+        <button class="btn-page">Email me a code</button>
+
+        <button class="btn-link">Already have a code?</button>
+      </div>
+      <div class="frame-spec">
+        Same primitive · same tier<br>
+        Drops italic + inkMuted from label<br>
+        Same postit bg · same input chrome<br>
+        <strong style="color:#b8e8b8;">link variant for "Already have a code?"</strong>
+      </div>
+    </div>
+
+    <!-- AFTER EditBoothSheet → compact tier -->
+    <div class="frame">
+      <div class="frame-label">compact tier</div>
+      <div class="frame-route">size="compact" · BoothFormFields · AddBooth* · EditBoothSheet</div>
+      <div class="phone">
+        <div class="form-eyebrow">Booth details</div>
+        <h2 style="margin-bottom: 14px;">Edit booth</h2>
+
+        <div class="field-compact">
+          <label>Booth name</label>
+          <input type="text" placeholder="" value="Stillwater Curios">
+        </div>
+        <div class="field-compact">
+          <label>Booth #</label>
+          <input type="text" placeholder="" value="A12">
+        </div>
+        <div class="field-compact">
+          <label>Location</label>
+          <input type="text" placeholder="" value="Kentucky Treehouse">
+        </div>
+
+        <button class="btn-compact btn-compact-disabled">Save changes</button>
+      </div>
+      <div class="frame-spec">
+        bg: <strong style="color:#b8e8b8;">postit</strong> (was inkWash)<br>
+        input pad 11×12 · radius 10<br>
+        btn pad 12 · radius 10<br>
+        disabled bg <strong style="color:#b8e8b8;">0.40</strong> (was 0.30)<br>
+        shadow <strong style="color:#b8e8b8;">v1.shadow.ctaGreenCompact</strong>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════ FRAME 3 — BUTTON VARIANTS ═══════════════════════ -->
+  <div class="section-header">Frame 3 — &lt;FormButton&gt; variants + states</div>
+  <div class="legend-line">
+    Four canonical shapes — primary enabled · primary disabled · compact primary · italic dotted-link helper.
+  </div>
+
+  <div class="row">
+
+    <div class="variants">
+      <h3 style="font-family: var(--lora); color: var(--ink-primary); margin: 0 0 18px; font-size: 18px; font-weight: 400; text-align: center;">Button shapes</h3>
+
+      <div class="row-block">
+        <div>
+          <button class="btn-page" style="margin-top: 0;">Submit request</button>
+          <div class="label-row">primary · page · enabled</div>
+        </div>
+        <div>
+          <button class="btn-page btn-page-disabled" style="margin-top: 0;">Submit request</button>
+          <div class="label-row">primary · page · disabled</div>
+        </div>
+      </div>
+
+      <div class="row-block">
+        <div>
+          <button class="btn-compact" style="margin-top: 0;">Save changes</button>
+          <div class="label-row">primary · compact · enabled</div>
+        </div>
+        <div>
+          <button class="btn-compact btn-compact-disabled" style="margin-top: 0;">Save changes</button>
+          <div class="label-row">primary · compact · disabled</div>
+        </div>
+      </div>
+
+      <div style="text-align: center; padding-top: 8px; border-top: 1px solid var(--ink-hairline); margin-top: 6px;">
+        <button class="btn-link" style="margin-top: 12px;">Resend code</button>
+        <button class="btn-link" style="margin-top: 12px; margin-left: 22px;">Sign in instead</button>
+        <button class="btn-link" style="margin-top: 12px; margin-left: 22px;">Sign out</button>
+        <div class="label-row" style="margin-top: 8px;">link variant — italic Lora · dotted underline · no fill</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════ DELTA NOTES ═══════════════════════ -->
+  <div class="section-header">What changes vs. today</div>
+
+  <div class="decisions">
+    <h4>Page tier (5 surfaces)</h4>
+    <table>
+      <tr><th>Surface</th><th>Input bg</th><th>Label</th><th>CTA shadow</th><th>CTA padding</th></tr>
+      <tr><td>vendor-request</td><td>inkWash → <strong>postit</strong></td><td>15 ✓</td><td>14b → <strong>12b</strong> (token)</td><td>15 ✓</td></tr>
+      <tr><td>login/email</td><td>postit ✓</td><td>13 italic muted → <strong>15 upright mid</strong></td><td>14b → <strong>12b</strong> (token)</td><td>15 ✓</td></tr>
+      <tr><td>post/preview</td><td>postit ✓</td><td>13 → <strong>15</strong></td><td>0.25 → <strong>0.22</strong> (token)</td><td>15 ✓</td></tr>
+      <tr><td>admin/login</td><td>inkWash → <strong>postit</strong></td><td>13 → <strong>15</strong></td><td>14b → <strong>12b</strong> (token)</td><td>15 ✓ (PIN 18×14 → 14×14)</td></tr>
+      <tr><td>setup</td><td>—</td><td>—</td><td>14b → <strong>12b</strong> (token)</td><td>14×22 → <strong>15</strong></td></tr>
+    </table>
+
+    <h4>Compact tier (4 surfaces)</h4>
+    <table>
+      <tr><th>Surface</th><th>Input bg</th><th>Label</th><th>Disabled bg</th></tr>
+      <tr><td>BoothFormFields</td><td>inkWash → <strong>postit</strong></td><td>13 ✓</td><td>0.40 ✓</td></tr>
+      <tr><td>AddBoothInline</td><td>inkWash → <strong>postit</strong></td><td>13 ✓</td><td>0.40 ✓</td></tr>
+      <tr><td>EditBoothSheet</td><td>inkWash → <strong>postit</strong></td><td>13 ✓</td><td>0.30 → <strong>0.40</strong></td></tr>
+      <tr><td>AddBoothSheet</td><td>inkWash → <strong>postit</strong></td><td>13 ✓</td><td>0.30 → <strong>0.40</strong></td></tr>
+    </table>
+
+    <h4>Net visual delta — small but real</h4>
+    <ul>
+      <li><strong>Input bg unification:</strong> 6 surfaces flip from inkWash to postit. Postit (#fbf3df) is opaque + slightly warmer than inkWash (rgba 255,253,248,0.70). Side-by-side delta is subtle on paperCream backgrounds; more visible on darker sheet backgrounds (sheets retain paperCream bg, so the delta there is also subtle).</li>
+      <li><strong>Label register:</strong> 4 surfaces gain a label-size adjustment (13 → 15 on page tier, plus login/email drops italic + inkMuted). Reads as more authoritative + more on-brand vs. session-82's typography pass.</li>
+      <li><strong>Page-tier CTA shadow:</strong> 4 surfaces gain a barely-perceptible shadow tightening (14px-blur → 12px-blur · 0.25 → 0.22 on post/preview only). First adoption of <code>v1.shadow.ctaGreen</code>.</li>
+      <li><strong>Sheet disabled bg:</strong> EditBoothSheet + AddBoothSheet bump from 0.30 → 0.40 — slightly less translucent. Aligns with <code>v1.greenDisabled</code> token.</li>
+      <li><strong>Setup CTA:</strong> loses the wide 14×22 padding for the canonical 15. Modest narrowing.</li>
+      <li><strong>admin/login PIN input:</strong> drops the +4px left padding (18 → 14). The PIN input visually shrinks slightly; UX impact zero.</li>
+    </ul>
+
+    <h4>If the visual delta from D2 (login/email label change) feels too far</h4>
+    <ul>
+      <li>Alternative: keep login/email at 13 upright (compact-tier) since the form is single-input + minimal. Forces an extra "label size doesn't follow tier" rule. Not recommended.</li>
+      <li class="my-read">My read: pick the converge. 15 reads as authoritative without overwhelming a single-input form.</li>
+    </ul>
+  </div>
+
+  <p style="text-align: center; color: rgba(232,221,199,0.45); font-size: 11px; margin: 40px 0 0; font-style: italic;">
+    docs/mockups/form-chrome-primitive-v1.html · Phase 2 Session D · 2026-05-01
+  </p>
+
+</div>
+</body>
+</html>
