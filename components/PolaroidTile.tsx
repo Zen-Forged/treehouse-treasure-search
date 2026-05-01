@@ -153,6 +153,14 @@ export default function PolaroidTile({
         borderRadius: 4,
         boxShadow: v1.shadow.polaroid,
         opacity: dim ? 0.55 : 1,
+        // width: 100% so the polaroid fills its parent in flex-center contexts
+        // (e.g. /post/tag's flex column with alignItems: center). Block-level
+        // parents (Home masonry's <Link display: block>, /flagged grid cell)
+        // already stretch block children to fill, so this is a no-op there.
+        // Without this, flex-center parents shrink the polaroid to its content
+        // width — which is 0 because the inner photo slot is width: 100% of
+        // nothing.
+        width: "100%",
         // /flagged + /shelf wrappers carry overflow:hidden because the caption
         // block sits flush against the bottom edge of the wrapper.
         ...(bottomMat === "outside" ? { overflow: "hidden" } : null),
