@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — &lt;PolaroidTile&gt; primitive v1</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper-cream:  #e8ddc7;
+    --postit:       #fbf3df;
+    --polaroid:     #faf2e0;
+    --warm-tan:     #cdb88e;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --price-ink:    #6a4a30;
+    --green:        #1e4d2b;
+
+    --lora: "Lora", Georgia, serif;
+    --sys:  -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+
+    --shadow-polaroid: 0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10);
+    --treehouse-lens: contrast(1.08) saturate(1.05) sepia(0.05);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1860px; margin: 0 auto; padding: 30px 20px 60px; }
+
+  h1.title {
+    font-family: var(--lora);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 920px;
+  }
+
+  .section-header {
+    max-width: 1180px;
+    margin: 26px auto 14px;
+    color: rgba(232, 221, 199, 0.92);
+    font-family: var(--lora);
+    font-size: 22px;
+    font-weight: 400;
+    border-bottom: 1px solid rgba(232, 221, 199, 0.16);
+    padding-bottom: 6px;
+  }
+
+  .decisions {
+    max-width: 1180px;
+    margin: 0 auto 30px;
+    padding: 22px 28px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--lora);
+    font-size: 19px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 12px;
+  }
+  .decisions h4 {
+    font-family: var(--lora);
+    font-size: 15px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 14px 0 4px;
+  }
+  .decisions ul { margin: 4px 0 0; padding-left: 18px; }
+  .decisions li { margin-bottom: 4px; }
+  .decisions strong { color: #fff9e8; }
+  .decisions code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .decisions pre {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(0, 0, 0, 0.30);
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin: 6px 0;
+    overflow-x: auto;
+    line-height: 1.55;
+    color: rgba(232, 221, 199, 0.92);
+  }
+  .decisions .row-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+  }
+  .decisions .my-read {
+    color: #b8e8b8;
+    font-style: italic;
+  }
+
+  .row {
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    max-width: 1860px;
+    margin: 0 auto 34px;
+  }
+  .frame { display: flex; flex-direction: column; align-items: center; }
+  .frame-label {
+    font-family: var(--lora);
+    color: #fff9e8;
+    font-size: 16px;
+    margin-bottom: 3px;
+    text-align: center;
+  }
+  .frame-route {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 10px;
+    color: rgba(232, 221, 199, 0.50);
+    margin-bottom: 10px;
+    max-width: 220px;
+    text-align: center;
+  }
+  .frame-note {
+    color: rgba(232, 221, 199, 0.55);
+    font-size: 11px;
+    margin: 10px auto 0;
+    max-width: 220px;
+    text-align: center;
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  /* ── Tile cell — common photograph chrome ────────────────────────── */
+  .tile {
+    width: 220px;
+    background: var(--paper-cream);
+    padding: 18px;
+    border-radius: 12px;
+  }
+  .tile-wide {
+    width: 240px;
+  }
+
+  /* ── Polaroid wrapper (inside-mat: 8px bottom) ────────────────────── */
+  .polaroid-inside {
+    background: var(--polaroid);
+    padding: 7px 7px 8px;
+    border-radius: 4px;
+    box-shadow: var(--shadow-polaroid);
+  }
+  /* ── Polaroid wrapper (outside-mat: 0 bottom) ─────────────────────── */
+  .polaroid-outside {
+    background: var(--polaroid);
+    padding: 7px 7px 0;
+    border-radius: 4px;
+    box-shadow: var(--shadow-polaroid);
+    overflow: hidden;
+  }
+
+  /* ── Photo slot — 4:5 aspect ──────────────────────────────────────── */
+  .photo-slot {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    background: var(--postit);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .photo-slot.bg-paper-cream { background: var(--paper-cream); }
+  .photo-slot.bg-warm-tan { background: var(--warm-tan); }
+  .photo-slot.with-border {
+    border: 1px solid var(--ink-hairline);
+  }
+  .photo-slot.with-inset-shadow {
+    box-shadow: inset 0 0 30px rgba(42, 26, 10, 0.12);
+  }
+  .photo-slot.highlighted {
+    border: 1.5px solid var(--green);
+    box-shadow: 0 0 0 3px rgba(30, 77, 43, 0.13), 0 4px 14px rgba(42, 26, 10, 0.11);
+  }
+  .photo-slot img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    filter: var(--treehouse-lens);
+  }
+  .photo-slot img.fit-contain {
+    object-fit: contain;
+  }
+  .photo-slot img.no-lens {
+    filter: none;
+  }
+
+  /* ── Top-right overlay slot (bookmark/heart) ──────────────────────── */
+  .top-right-bubble {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(245, 242, 235, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 0.5px solid rgba(42, 26, 10, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+  }
+  .top-right-bubble svg {
+    width: 17px; height: 17px;
+  }
+
+  /* ── Below-frame caption block ────────────────────────────────────── */
+  .below-timestamp {
+    padding: 4px 0 0;
+    font-family: var(--sys);
+    font-style: italic;
+    font-size: 11.5px;
+    color: var(--ink-muted);
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+    text-align: left;
+  }
+  .below-caption-block {
+    padding: 9px 3px 4px;
+    height: 76px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .below-caption-block .title {
+    font-family: var(--lora);
+    font-size: 14px;
+    color: var(--ink-primary);
+    line-height: 1.4;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .below-caption-block .price {
+    margin-top: 4px;
+    font-family: var(--lora);
+    font-size: 14px;
+    color: var(--price-ink);
+    line-height: 1.4;
+    letter-spacing: -0.005em;
+  }
+  .below-tag-label {
+    margin-top: 8px;
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    letter-spacing: 0.04em;
+    text-align: center;
+    text-transform: lowercase;
+    line-height: 1.2;
+  }
+
+  /* ── Variant comparison label ──────────────────────────────────── */
+  .var-label {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 10px;
+    color: rgba(232, 221, 199, 0.65);
+    margin: 8px auto 0;
+    max-width: 220px;
+    text-align: center;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <h1 class="title">&lt;PolaroidTile&gt; primitive — v1</h1>
+  <p class="subtitle">
+    Phase 2 Session B · design-system hardening pass · extracts the polaroid wrapper inlined across 6 callsites
+    into a single primitive. Goal: zero visual delta. Each callsite below renders today inside its own
+    inline polaroid block; after extraction they render through &lt;PolaroidTile&gt;.
+  </p>
+
+  <div class="decisions">
+    <h3>Decisions to lock</h3>
+
+    <h4>D1 · Wrapper variant API</h4>
+    <p>Two padding patterns observed across the 6 surfaces:</p>
+    <ul>
+      <li><code>7px 7px 8px</code> — Home, /post/preview, /post/tag (caption integrated <em>inside</em> the polaroid)</li>
+      <li><code>7px 7px 0</code> — /flagged, /shelf/[slug] WindowTile, /shelf/[slug] ShelfTile (caption block <em>outside</em>, in a 76px metadata strip below the frame)</li>
+    </ul>
+    <p>Options:</p>
+    <ul>
+      <li><strong>(a)</strong> <code>bottomMat: "inside" | "outside"</code> — semantic enum naming the conceptual variant</li>
+      <li><strong>(b)</strong> <code>captionInside: boolean</code> — boolean prop, simpler</li>
+      <li><strong>(c)</strong> <code>padding: string</code> — pass-through, maximally flexible but loses semantic meaning</li>
+    </ul>
+    <p class="my-read">My read: <strong>(a)</strong>. The two variants are conceptually distinct ("polaroid with a caption mat" vs. "polaroid as a pure photo, caption sits below"). Enum reads better in callsites than a boolean.</p>
+
+    <h4>D2 · Photo inner background</h4>
+    <p>Three values observed:</p>
+    <ul>
+      <li><code>v1.postit</code> (#fbf3df) — Home, /flagged, /shelf/[slug] (real-photo placeholder + image-load shimmer)</li>
+      <li><code>v1.paperCream</code> (#e8ddc7) — /post/preview (review-state contrast against any image bg)</li>
+      <li><code>#cdb88e</code> warm tan — /post/tag (warm placeholder while photo loads on capture)</li>
+    </ul>
+    <p>Options:</p>
+    <ul>
+      <li><strong>(a)</strong> <code>photoBg?: "postit" | "paperCream" | "warmTan"</code> — enum, tight</li>
+      <li><strong>(b)</strong> <code>photoBg?: string</code> — pass-through any color</li>
+      <li><strong>(c)</strong> Tokenize the warm-tan as <code>v1.warmTan</code> + accept any v1 color name</li>
+    </ul>
+    <p class="my-read">My read: <strong>(b)</strong>. Three values isn't enough to justify an enum; the prop name signals intent. Default <code>v1.postit</code>.</p>
+
+    <h4>D3 · Tap interaction (Home only)</h4>
+    <p>Home masonry tile has a tap-flash + scale animation on touch (<code>scale(1.028)</code> on tap, returns over 320ms). No other surface uses it.</p>
+    <p>Options:</p>
+    <ul>
+      <li><strong>(a)</strong> <code>tap?: boolean</code> — primitive owns the tap state internally</li>
+      <li><strong>(b)</strong> Parent owns tap state, passes <code>tapped?: boolean</code></li>
+      <li><strong>(c)</strong> Skip — leave Home's tap behavior outside the primitive (Home wraps the primitive in its own touch handlers)</li>
+    </ul>
+    <p class="my-read">My read: <strong>(a)</strong>. Self-contained interaction is cleaner; Home can opt in with one prop. If a future surface wants tap, no extra wiring.</p>
+
+    <h4>D4 · "Last viewed" highlighted state (Home only)</h4>
+    <p>Home masonry highlights the last-tapped tile when the user navigates back, with a 1.5px green border + halo shadow that fades after 1.6s.</p>
+    <p>Options:</p>
+    <ul>
+      <li><strong>(a)</strong> <code>highlighted?: boolean</code> — parent controls the state via timeout</li>
+      <li><strong>(b)</strong> <code>lastViewedKey?: string</code> — primitive reads from sessionStorage</li>
+      <li><strong>(c)</strong> Skip — Home keeps inline rendering of the highlight effect</li>
+    </ul>
+    <p class="my-read">My read: <strong>(a)</strong>. State management belongs to the parent; primitive just renders the visual.</p>
+
+    <h4>D5 · Lens filter</h4>
+    <p>Treehouse Lens filter (<code>contrast(1.08) saturate(1.05) sepia(0.05)</code>) is applied on every surface EXCEPT /post/tag. Capture flow shows the raw photo; everywhere else applies the lens.</p>
+    <p>Options:</p>
+    <ul>
+      <li><strong>(a)</strong> <code>lens?: boolean</code> default <code>true</code> — opt-out for capture</li>
+      <li><strong>(b)</strong> <code>lens?: boolean</code> default <code>false</code> — opt-in for browse surfaces</li>
+    </ul>
+    <p class="my-read">My read: <strong>(a)</strong>. 5 of 6 surfaces apply the lens; default-on minimizes prop noise on the common case.</p>
+
+    <h4>D6 · Render slots</h4>
+    <p>The primitive needs two slot positions:</p>
+    <ul>
+      <li><code>topRight</code> — bookmark / unsave / heart bubble (Home + /flagged today). Positioned absolutely top:8 right:8 inside the photo slot.</li>
+      <li><code>below</code> — content rendered <em>after</em> the polaroid wrapper closes (timestamp on Home; 76px caption block on /flagged + /shelf; italic label on /post/tag). The "outside-mat" variant in D1 is essentially "this slot is non-empty + sized."</li>
+    </ul>
+    <p>API: both pass through as <code>ReactNode</code> children-style props. <code>topRight</code> renders inside the photo slot z-index 3; <code>below</code> renders as a sibling after the polaroid wrapper.</p>
+    <p class="my-read">My read: confirm slot shape — any concerns?</p>
+
+    <h4>D7 · Sizing + carousel variants</h4>
+    <p>/shelf/[slug] ShelfTile uses <code>width: 52vw, max-width: 210, scrollSnapAlign: start</code> for horizontal-scroll carousel. Other surfaces are full-width within their grid cell.</p>
+    <p>Options:</p>
+    <ul>
+      <li><strong>(a)</strong> Primitive accepts no sizing props — caller wraps in their own container with the carousel sizing</li>
+      <li><strong>(b)</strong> Primitive accepts <code>maxWidth?: number</code> + <code>flexShrink?: 0</code> + <code>scrollSnap?: boolean</code></li>
+    </ul>
+    <p class="my-read">My read: <strong>(a)</strong>. Sizing is layout concern, not chrome concern. Keeps the primitive's API tight; ShelfView wraps in the carousel container as today.</p>
+
+    <h4>Decisions ready for D1-D7 picks</h4>
+    <p>Reply with picks (e.g. "D1=a, D2=b, D3=a, D4=a, D5=a, D6=ok, D7=a") and any redirects. V2 mockup if any structural pick changes; build spec otherwise.</p>
+  </div>
+
+  <h2 class="section-header">Frame 1 — Current state across 6 callsites</h2>
+
+  <div class="row">
+    <!-- Home masonry -->
+    <div class="frame">
+      <div class="frame-label">Home — masonry</div>
+      <div class="frame-route">app/page.tsx — MasonryTile</div>
+      <div class="tile">
+        <div class="polaroid-inside">
+          <div class="photo-slot with-border">
+            <img src="https://images.unsplash.com/photo-1493106819501-66d381c466f1?w=400&q=80" alt="">
+            <div class="top-right-bubble">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#2a1a0a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+            </div>
+          </div>
+          <div class="below-timestamp">2 days ago</div>
+        </div>
+      </div>
+      <div class="var-label">padding: 7 7 8 · postit bg · w/ border · lens · w/ tap + highlight · timestamp inside mat</div>
+    </div>
+
+    <!-- /flagged FindTile -->
+    <div class="frame">
+      <div class="frame-label">/flagged — FindTile</div>
+      <div class="frame-route">app/flagged/page.tsx</div>
+      <div class="tile">
+        <div class="polaroid-outside">
+          <div class="photo-slot">
+            <img src="https://images.unsplash.com/photo-1493106819501-66d381c466f1?w=400&q=80" alt="">
+            <div class="top-right-bubble">
+              <svg viewBox="0 0 24 24" fill="#1e4d2b" stroke="#1e4d2b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+            </div>
+          </div>
+          <div class="below-caption-block">
+            <div class="title">Brass kerosene lantern, 1920s</div>
+            <div class="price">$48</div>
+          </div>
+        </div>
+      </div>
+      <div class="var-label">padding: 7 7 0 · postit bg · no border · lens · 76px caption block outside mat</div>
+    </div>
+
+    <!-- /shelf/[slug] WindowTile -->
+    <div class="frame">
+      <div class="frame-label">/shelf/[slug] — WindowTile</div>
+      <div class="frame-route">components/BoothPage.tsx</div>
+      <div class="tile">
+        <div class="polaroid-outside">
+          <div class="photo-slot">
+            <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80" alt="">
+          </div>
+          <div class="below-caption-block">
+            <div class="title">Hand-painted ceramic vase</div>
+            <div class="price">$32</div>
+          </div>
+        </div>
+      </div>
+      <div class="var-label">padding: 7 7 0 · postit bg · no border · lens · no overlay · 76px caption block</div>
+    </div>
+
+    <!-- /shelf/[slug] ShelfTile -->
+    <div class="frame">
+      <div class="frame-label">/shelf/[slug] — ShelfTile</div>
+      <div class="frame-route">components/BoothPage.tsx (carousel)</div>
+      <div class="tile tile-wide">
+        <div class="polaroid-outside">
+          <div class="photo-slot">
+            <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80" alt="">
+          </div>
+          <div class="below-caption-block">
+            <div class="title">Hand-painted ceramic vase</div>
+            <div class="price">$32</div>
+          </div>
+        </div>
+      </div>
+      <div class="var-label">same chrome as WindowTile · 52vw / max 210 width · scrollSnapAlign</div>
+    </div>
+
+    <!-- /post/preview PolaroidPreview -->
+    <div class="frame">
+      <div class="frame-label">/post/preview — PolaroidPreview</div>
+      <div class="frame-route">app/post/preview/page.tsx</div>
+      <div class="tile">
+        <div class="polaroid-inside">
+          <div class="photo-slot bg-paper-cream">
+            <img src="https://images.unsplash.com/photo-1552853558-1efaeebcdf63?w=400&q=80" alt="" class="fit-contain">
+          </div>
+        </div>
+      </div>
+      <div class="var-label">padding: 7 7 8 · paperCream bg · no border · lens · objectFit: contain · dim prop (sold)</div>
+    </div>
+
+    <!-- /post/tag Polaroid -->
+    <div class="frame">
+      <div class="frame-label">/post/tag — Polaroid</div>
+      <div class="frame-route">app/post/tag/page.tsx</div>
+      <div class="tile">
+        <div class="polaroid-inside">
+          <div class="photo-slot bg-warm-tan with-inset-shadow">
+            <img src="https://images.unsplash.com/photo-1493106819501-66d381c466f1?w=400&q=80" alt="" class="no-lens">
+          </div>
+        </div>
+        <div class="below-tag-label"><em>find</em></div>
+      </div>
+      <div class="var-label">padding: 7 7 8 · warm-tan #cdb88e bg · inset shadow · no lens · italic label outside</div>
+    </div>
+  </div>
+
+  <h2 class="section-header">Frame 2 — Same surfaces re-rendered through &lt;PolaroidTile&gt;</h2>
+
+  <p class="subtitle" style="max-width: 1180px;">
+    Visually identical to Frame 1 (zero delta is the goal). The differences are entirely in the JSX of the
+    callsites — instead of inlining ~30 lines of polaroid wrapper code per surface, each callsite renders
+    a <code style="background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 4px;">&lt;PolaroidTile&gt;</code>
+    with the appropriate variant props.
+  </p>
+
+  <div class="row">
+    <!-- Home — primitive output (looks identical) -->
+    <div class="frame">
+      <div class="frame-label">Home — via primitive</div>
+      <div class="frame-route">&lt;PolaroidTile bottomMat="inside" tap below=&#123;timestamp&#125;...</div>
+      <div class="tile">
+        <div class="polaroid-inside">
+          <div class="photo-slot with-border">
+            <img src="https://images.unsplash.com/photo-1493106819501-66d381c466f1?w=400&q=80" alt="">
+            <div class="top-right-bubble">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#2a1a0a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+            </div>
+          </div>
+          <div class="below-timestamp">2 days ago</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- /flagged via primitive -->
+    <div class="frame">
+      <div class="frame-label">/flagged — via primitive</div>
+      <div class="frame-route">&lt;PolaroidTile bottomMat="outside" topRight=&#123;heart&#125; below=&#123;caption&#125;</div>
+      <div class="tile">
+        <div class="polaroid-outside">
+          <div class="photo-slot">
+            <img src="https://images.unsplash.com/photo-1493106819501-66d381c466f1?w=400&q=80" alt="">
+            <div class="top-right-bubble">
+              <svg viewBox="0 0 24 24" fill="#1e4d2b" stroke="#1e4d2b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+            </div>
+          </div>
+          <div class="below-caption-block">
+            <div class="title">Brass kerosene lantern, 1920s</div>
+            <div class="price">$48</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- /post/tag via primitive -->
+    <div class="frame">
+      <div class="frame-label">/post/tag — via primitive</div>
+      <div class="frame-route">&lt;PolaroidTile photoBg="warmTan" lens=&#123;false&#125; insetShadow ...</div>
+      <div class="tile">
+        <div class="polaroid-inside">
+          <div class="photo-slot bg-warm-tan with-inset-shadow">
+            <img src="https://images.unsplash.com/photo-1493106819501-66d381c466f1?w=400&q=80" alt="" class="no-lens">
+          </div>
+        </div>
+        <div class="below-tag-label"><em>find</em></div>
+      </div>
+    </div>
+
+    <!-- Home highlighted variant -->
+    <div class="frame">
+      <div class="frame-label">Home — last-viewed highlight</div>
+      <div class="frame-route">&lt;PolaroidTile highlighted ...</div>
+      <div class="tile">
+        <div class="polaroid-inside">
+          <div class="photo-slot highlighted">
+            <img src="https://images.unsplash.com/photo-1493106819501-66d381c466f1?w=400&q=80" alt="">
+            <div class="top-right-bubble">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#2a1a0a" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>
+            </div>
+          </div>
+          <div class="below-timestamp">2 days ago</div>
+        </div>
+      </div>
+      <div class="frame-note">Green halo + 1.5px border state on the photo slot when parent passes <code style="font-size: 10px;">highlighted</code>.</div>
+    </div>
+
+    <!-- Sold dim variant -->
+    <div class="frame">
+      <div class="frame-label">Sold — dim variant</div>
+      <div class="frame-route">&lt;PolaroidTile dim ...</div>
+      <div class="tile">
+        <div class="polaroid-inside" style="opacity: 0.55;">
+          <div class="photo-slot bg-paper-cream">
+            <img src="https://images.unsplash.com/photo-1552853558-1efaeebcdf63?w=400&q=80" alt="" class="fit-contain">
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">Whole polaroid dims to 0.55 opacity. Used for "found a home" sold state.</div>
+    </div>
+  </div>
+
+  <div class="decisions" style="margin-top: 30px;">
+    <h3>Frame 3 — Proposed API + callsite examples</h3>
+    <pre>// components/PolaroidTile.tsx
+interface PolaroidTileProps {
+  src:     string;
+  alt:     string;
+
+  // D1 — wrapper variant
+  bottomMat?:  "inside" | "outside";  // default "inside"
+
+  // D2 — photo inner background
+  photoBg?:    string;                // default v1.postit
+
+  // D3-D4 — interaction states
+  tap?:        boolean;               // default false; Home only
+  highlighted?: boolean;              // default false; Home only
+
+  // D5 — lens filter
+  lens?:       boolean;               // default true
+
+  // photo render
+  aspectRatio?: string;               // default "4/5"
+  objectFit?:  "cover" | "contain";   // default "cover"
+
+  // global state
+  dim?:        boolean;               // default false; sold
+
+  // photo inner chrome
+  innerBorder?:     boolean;          // default false; Home only
+  innerInsetShadow?: boolean;         // default false; /post/tag only
+
+  // D6 — render slots
+  topRight?:   ReactNode;             // bubble overlay inside photo slot
+  below?:      ReactNode;             // sibling after polaroid wrapper
+
+  // image error fallback
+  fallback?:   ReactNode;             // rendered inside photo slot on error
+}</pre>
+
+    <h4>Callsite shapes</h4>
+
+    <p><strong>Home masonry</strong> — 8px mat, postit bg, border, tap, highlighted, top-right heart:</p>
+    <pre>&lt;PolaroidTile
+  src={post.image_url}
+  alt={post.title}
+  tap
+  highlighted={isLastViewed}
+  innerBorder
+  topRight={<HeartBubble saved={isFollowed} onClick={...} />}
+  below={<Timestamp at={post.created_at} />}
+/&gt;</pre>
+
+    <p><strong>/flagged FindTile</strong> — 0 mat, postit bg, no border, top-right unsave, caption below:</p>
+    <pre>&lt;PolaroidTile
+  src={post.image_url}
+  alt={post.title}
+  bottomMat="outside"
+  topRight={<HeartBubble saved onClick={handleUnsave} />}
+  below={<CaptionBlock title={post.title} price={post.price_asking} />}
+/&gt;</pre>
+
+    <p><strong>/shelf/[slug] WindowTile</strong> — outside mat, no overlay:</p>
+    <pre>&lt;PolaroidTile
+  src={post.image_url}
+  alt={post.title}
+  bottomMat="outside"
+  below={<CaptionBlock title={post.title} price={post.price_asking} />}
+/&gt;</pre>
+
+    <p><strong>/post/preview PolaroidPreview</strong> — paperCream bg, contain fit, dim for sold:</p>
+    <pre>&lt;PolaroidTile
+  src={imageUrl}
+  alt="Your find"
+  photoBg={v1.paperCream}
+  objectFit="contain"
+  dim={dim}
+/&gt;</pre>
+
+    <p><strong>/post/tag Polaroid</strong> — warm tan bg, no lens, inset shadow, label below:</p>
+    <pre>&lt;PolaroidTile
+  src={src}
+  alt={alt}
+  photoBg="#cdb88e"
+  lens={false}
+  innerInsetShadow
+  below={<PolLabel>find</PolLabel>}
+/&gt;</pre>
+
+    <h4>Token usage in primitive</h4>
+    <p>Reads <code>v1.shadow.polaroid</code> + <code>v1.paperWarm</code> from the Phase 2 Session A token additions. Default <code>photoBg</code> is <code>v1.postit</code>.</p>
+
+    <h4>Out of scope for this primitive</h4>
+    <ul>
+      <li>Sizing / carousel container — caller wraps (D7).</li>
+      <li>Image preview cache (sessionStorage <code>treehouse_find_preview:</code>) — stays at the callsite.</li>
+      <li><code>Link</code> / <code>onClick</code> wrapping — caller composes; the primitive renders just the visual.</li>
+      <li>framer-motion <code>layoutId</code> for shared-element transitions — Track D is currently dormant; if it's revived in a future session, the primitive can grow a <code>layoutId</code> prop then.</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>
