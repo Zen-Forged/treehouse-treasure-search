@@ -431,36 +431,6 @@ export default function EditFindPage() {
             />
           </EditField>
 
-          {/* Caption — v1.2 polish (session 31E) auto-grow via captionRef + effect.
-              Start height matches prior static minHeight so first paint is
-              unchanged for short captions; grows with content; hard-clamped
-              so pasted essays don't explode the layout. */}
-          <EditField
-            field="caption"
-            label="Caption"
-            optional
-            savedFlash={savedFlash}
-            error={fieldErrors.caption ?? null}
-            onRetry={() => {
-              setFieldErrors((e) => ({ ...e, caption: undefined }));
-              scheduleTextSave("caption", caption);
-            }}
-          >
-            <textarea
-              ref={captionRef}
-              value={caption}
-              onChange={(e) => onCaptionChange(e.target.value)}
-              style={{
-                ...inputStyle,
-                minHeight: CAPTION_MIN_HEIGHT_PX,
-                maxHeight: CAPTION_MAX_HEIGHT_PX,
-                resize: "none",
-                lineHeight: 1.5,
-                overflowY: "auto",
-              }}
-            />
-          </EditField>
-
           {/* Price */}
           <EditField
             field="price_asking"
@@ -499,6 +469,36 @@ export default function EditFindPage() {
                 style={{ ...inputStyle, paddingLeft: 28 }}
               />
             </div>
+          </EditField>
+
+          {/* Caption — v1.2 polish (session 31E) auto-grow via captionRef + effect.
+              Start height matches prior static minHeight so first paint is
+              unchanged for short captions; grows with content; hard-clamped
+              so pasted essays don't explode the layout. */}
+          <EditField
+            field="caption"
+            label="Caption"
+            optional
+            savedFlash={savedFlash}
+            error={fieldErrors.caption ?? null}
+            onRetry={() => {
+              setFieldErrors((e) => ({ ...e, caption: undefined }));
+              scheduleTextSave("caption", caption);
+            }}
+          >
+            <textarea
+              ref={captionRef}
+              value={caption}
+              onChange={(e) => onCaptionChange(e.target.value)}
+              style={{
+                ...inputStyle,
+                minHeight: CAPTION_MIN_HEIGHT_PX,
+                maxHeight: CAPTION_MAX_HEIGHT_PX,
+                resize: "none",
+                lineHeight: 1.5,
+                overflowY: "auto",
+              }}
+            />
           </EditField>
 
           {/* Status */}
