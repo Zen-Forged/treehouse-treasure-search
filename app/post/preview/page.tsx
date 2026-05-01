@@ -558,7 +558,7 @@ function PostPreviewInner() {
       />
 
       {/* ── Header — back button only (no wordmark/share, vendor flow) ─── */}
-      <header style={{ padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px", flexShrink: 0 }}>
+      <header style={{ padding: "max(12px, env(safe-area-inset-top, 12px)) 16px 6px", flexShrink: 0 }}>
         <button
           onClick={() => router.back()}
           aria-label="Back"
@@ -580,21 +580,20 @@ function PostPreviewInner() {
         </button>
       </header>
 
-      {/* ── Middle band — vertically centered when content fits ────────── */}
+      {/* ── Middle band — top-anchored for flow continuity (session 2) ── */}
       <div
         style={{
           flex: 1,
           minHeight: 0,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "center",
           overflowY: "auto",
-          paddingTop: 18,
+          paddingTop: 4,
           paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 96px))",
         }}
       >
-        {/* Title block — D15 extra top spacing for the slight shift-down */}
-        <div style={{ textAlign: "center", padding: "14px 22px 18px" }}>
+        {/* Title block — tightened to match flow rhythm */}
+        <div style={{ textAlign: "center", padding: "2px 22px 14px" }}>
           <div
             style={{
               fontFamily: FONT_LORA,
