@@ -1130,7 +1130,7 @@ export default function FindDetailPage() {
             aria-label="Edit this find"
             style={{
               position: "absolute",
-              top: 8,
+              bottom: 4,
               right: 14,
               background: "none",
               border: "none",
