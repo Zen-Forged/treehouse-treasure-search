@@ -1,0 +1,85 @@
+// components/FormField.tsx
+//
+// Phase 2 Session D primitive (session 96). Unifies form labels + input
+// chrome across 9 form surfaces audited in Phase 1 / pre-flight grep.
+//
+// Decisions D1–D5 frozen at David's mockup approval (session 96):
+//   D1 — input bg postit (#fbf3df) for both tiers
+//   D2 — label register: 15 page / 13 compact upright Lora inkMid
+//   D3 — input padding: 14×14 page / 11×12 compact (settled, no D-row)
+//
+// API shape: children-passes-input pattern. Caller renders the
+// <input> / <textarea> via children + applies the canonical chrome
+// via the `formInputStyle(size)` helper. This preserves ref-forwarding,
+// auto-grow textarea logic, autoComplete, autoFocus, and any other
+// per-input quirk the caller needs.
+//
+// Usage:
+//   <FormField label="Email" size="page">
+//     <input
+//       type="email"
+//       style={formInputStyle("page")}
+//       placeholder="you@example.com"
+//       value={email}
+//       onChange={(e) => setEmail(e.target.value)}
+//     />
+//   </FormField>
+//
+// See docs/form-chrome-primitive-design.md for the full design record.
+
+import type { CSSProperties, ReactNode } from "react";
+import { FONT_LORA, fonts, v1 } from "../lib/tokens";
+
+type FormFieldSize = "page" | "compact";
+
+type FormFieldProps = {
+  label?: string;
+  size?: FormFieldSize;
+  htmlFor?: string;
+  children: ReactNode;
+};
+
+export function formInputStyle(size: FormFieldSize = "page"): CSSProperties {
+  const isPage = size === "page";
+  return {
+    width: "100%",
+    background: v1.postit,
+    border: `1px solid ${v1.inkHairline}`,
+    borderRadius: isPage ? v1.radius.input : 10,
+    padding: isPage ? 14 : "11px 12px",
+    fontFamily: fonts.sys,
+    fontSize: 16,
+    color: v1.inkPrimary,
+    outline: "none",
+  };
+}
+
+function labelStyle(size: FormFieldSize): CSSProperties {
+  const isPage = size === "page";
+  return {
+    display: "block",
+    fontFamily: FONT_LORA,
+    fontSize: isPage ? 15 : 13,
+    color: v1.inkMid,
+    marginBottom: isPage ? 6 : 4,
+    lineHeight: 1.25,
+  };
+}
+
+export default function FormField({
+  label,
+  size = "page",
+  htmlFor,
+  children,
+}: FormFieldProps) {
+  return (
+    <div style={{ marginBottom: size === "page" ? 12 : 10 }}>
+      {label && (
+        <label htmlFor={htmlFor} style={labelStyle(size)}>
+          {label}
+        </label>
+      )}
+      {children}
+    </div>
+  );
+}
