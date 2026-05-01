@@ -9,19 +9,22 @@ import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, MapPin, ExternalLink, Facebook } from "lucide-react";
 import { getVendorBySlug, getVendorPosts } from "@/lib/posts";
+import { v1 } from "@/lib/tokens";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Vendor, type Post } from "@/types/treehouse";
 
+// Phase 2 Session E — local palette migrated to v1 tokens. Surface +
+// header derive from paperCream (no separate v1 token needed).
 const C = {
-  bg:          "#f0ede6",
-  surface:     "#e8e4db",
-  border:      "rgba(26,26,24,0.1)",
-  textPrimary: "#1a1a18",
-  textMid:     "#4a4a42",
-  textMuted:   "#8a8478",
-  textFaint:   "#b0aa9e",
-  green:       "#1e4d2b",
+  bg:          v1.paperCream,
+  surface:     v1.paperWarm,
+  border:      v1.inkHairline,
+  textPrimary: v1.inkPrimary,
+  textMid:     v1.inkMid,
+  textMuted:   v1.inkMuted,
+  textFaint:   v1.inkFaint,
+  green:       v1.green,
   greenBorder: "rgba(30,77,43,0.18)",
-  header:      "rgba(240,237,230,0.96)",
+  header:      "rgba(232,221,199,0.96)",
 };
 
 function VendorPostCard({ post, index }: { post: Post; index: number }) {
