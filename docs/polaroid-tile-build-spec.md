@@ -121,7 +121,18 @@ TREEHOUSE_LENS_FILTER  // image filter (when lens=true)
 | 5 | /flagged FindTile | `app/flagged/page.tsx` | `bottomMat="outside"`, `topRight={<UnsaveBubble />}`, `below={<CaptionBlock />}` |
 | 6 | Home MasonryTile | `app/page.tsx` | `bottomMat="inside"`, `tap`, `highlighted={isLastViewed}`, `innerBorder`, `topRight={<HeartBubble />}`, `below={<Timestamp />}`, `fallback={<ItalicTitle />}` |
 
-After all 6 land, no inline polaroid wrapper code should remain in the codebase. `grep -rn "background: \"#faf2e0\"" app/ components/` should return zero hits.
+After all 6 land, no inline polaroid wrapper code should remain in the codebase EXCEPT one known carry-forward (see below). `grep -rn "background: \"#faf2e0\"" app/ components/` should return one hit at `app/find/[id]/page.tsx`.
+
+### Known Phase 2.x carry-forward — /find/[id] ShelfCard
+
+The "More from this booth" carousel on `/find/[id]` (`app/find/[id]/page.tsx:135`) uses the polaroid pattern but was missed in the Phase 1 audit's surface roster. It has unique sold-state handling that doesn't fit the current `<PolaroidTile>` API cleanly:
+
+- **Photo-only opacity dim** when `isSold` (whole-tile `dim` prop dims wrapper + photo + caption together; this surface dims only the photo wrapper to 0.62)
+- **Per-image filter override** when `isSold` (extends the lens with `grayscale(0.5) brightness(0.88)`)
+- 56px caption block (vs 76px on /flagged + /shelf)
+- No price, no overlay
+
+Migrating this surface requires either two new props (`photoOpacity?: number`, `imageFilter?: string`) or a `dim: "tile" | "photo"` variant + an extension of the lens prop. Decide as a Phase 2.x follow-up — out of scope for the original Session B 6-callsite plan.
 
 ---
 
