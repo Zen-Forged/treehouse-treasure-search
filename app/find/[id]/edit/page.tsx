@@ -40,13 +40,14 @@ export const dynamic = "force-dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, RefreshCw, Check } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 import { getPost, deletePost } from "@/lib/posts";
 import { compressImage, uploadPostImageViaServer } from "@/lib/imageUpload";
 import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
-import PhotographPreview from "@/components/PhotographPreview";
+import StickyMasthead from "@/components/StickyMasthead";
+import PolaroidTile from "@/components/PolaroidTile";
 import AmberNotice from "@/components/AmberNotice";
 import type { Post } from "@/types/treehouse";
 
@@ -428,29 +429,8 @@ export default function EditFindPage() {
         aria-hidden="true"
       />
 
-      <div
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          paddingBottom: "max(40px, env(safe-area-inset-bottom, 40px))",
-        }}
-      >
-        {/* Masthead (Mode C) */}
-        <div
-          style={{
-            padding: "max(14px, env(safe-area-inset-top, 14px)) 22px 10px",
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 14,
-            background: "rgba(232,221,199,0.96)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            borderBottom: `1px solid ${v1.inkHairline}`,
-            position: "sticky",
-            top: 0,
-            zIndex: 30,
-          }}
-        >
+      <StickyMasthead
+        left={
           <button
             onClick={() => router.back()}
             aria-label="Go back"
@@ -464,170 +444,55 @@ export default function EditFindPage() {
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              flexShrink: 0,
-              marginTop: 1,
+              padding: 0,
               WebkitTapHighlightColor: "transparent",
             }}
           >
             <ArrowLeft size={22} strokeWidth={2} style={{ color: v1.inkPrimary }} />
           </button>
-          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-            <div
-              style={{
-                fontFamily: FONT_LORA,
-                fontSize: 24,
-                color: v1.inkPrimary,
-                letterSpacing: "-0.005em",
-                lineHeight: 1.15,
-              }}
-            >
-              Edit your find
-            </div>
-            <div
-              style={{
-                fontFamily: FONT_LORA,
-                fontStyle: "italic",
-                fontSize: 14,
-                color: v1.inkMuted,
-                lineHeight: 1.4,
-              }}
-            >
-              Changes save as you type.
-            </div>
+        }
+      />
+
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          paddingBottom: "max(40px, env(safe-area-inset-bottom, 40px))",
+        }}
+      >
+        {/* Title block — body header (mirrors /post/preview "Review your find") */}
+        <div style={{ textAlign: "center", padding: "14px 22px 18px" }}>
+          <div
+            style={{
+              fontFamily: FONT_LORA,
+              fontSize: 24,
+              color: v1.inkPrimary,
+              letterSpacing: "-0.005em",
+              lineHeight: 1.15,
+              marginBottom: 4,
+            }}
+          >
+            Edit your find
+          </div>
+          <div
+            style={{
+              fontFamily: FONT_LORA,
+              fontStyle: "italic",
+              fontSize: 14,
+              color: v1.inkMuted,
+              lineHeight: 1.5,
+              maxWidth: 290,
+              margin: "0 auto",
+            }}
+          >
+            Changes save as you type.
           </div>
         </div>
-
-        {/* Photograph — v1.2 polish (session 31E): boothNumber explicitly null
-            so <PhotographPreview> skips the post-it. Redundant metadata on a
-            management surface. */}
-        <PhotographPreview
-          imageUrl={displayedPhoto}
-          boothNumber={null}
-          sold={sold}
-          topLeftAction={
-            <button
-              onClick={openPhotoPicker}
-              disabled={replaceBusy}
-              aria-label="Replace photo"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "7px 11px 7px 9px",
-                background: "rgba(20,18,12,0.58)",
-                backdropFilter: "blur(8px)",
-                WebkitBackdropFilter: "blur(8px)",
-                borderRadius: 999,
-                border: "1px solid rgba(255,255,255,0.14)",
-                color: "#fff9e8",
-                fontFamily: FONT_SYS,
-                fontSize: 12,
-                cursor: replaceBusy ? "default" : "pointer",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <RefreshCw size={12} strokeWidth={2} style={{ color: "#fff9e8" }} />
-              Replace photo
-            </button>
-          }
-        />
-
-        {/* v1.2 polish (session 31E): post-it overhang spacer retired along
-            with the post-it. Photograph now sits cleanly above the content.
-            The 18px bottom padding inside <PhotographPreview> already gives
-            breathing room before the replace confirmation bar / fields. */}
-
-        {/* Replace-photo confirmation bar */}
-        <AnimatePresence>
-          {pendingPhoto && (
-            <motion.div
-              key="replace-confirm"
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.22 }}
-              style={{
-                margin: "14px 22px 4px",
-                padding: "12px 14px",
-                borderRadius: 10,
-                background: v1.inkWash,
-                border: `1px solid ${v1.inkHairline}`,
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                flexWrap: "wrap",
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: FONT_LORA,
-                  fontStyle: "italic",
-                  fontSize: 14,
-                  color: v1.inkPrimary,
-                  flex: 1,
-                  minWidth: 140,
-                }}
-              >
-                New photo picked. Save replacement?
-              </span>
-              <button
-                onClick={confirmReplacePhoto}
-                disabled={replaceBusy}
-                style={{
-                  padding: "8px 16px",
-                  borderRadius: 10,
-                  background: v1.green,
-                  color: "#fff",
-                  fontFamily: FONT_SYS,
-                  fontSize: 13,
-                  fontWeight: 500,
-                  border: "none",
-                  cursor: replaceBusy ? "default" : "pointer",
-                  opacity: replaceBusy ? 0.7 : 1,
-                }}
-              >
-                {replaceBusy ? "Saving…" : "Save"}
-              </button>
-              <button
-                onClick={cancelReplacePhoto}
-                disabled={replaceBusy}
-                style={{
-                  background: "none",
-                  border: "none",
-                  padding: "8px 4px",
-                  fontFamily: FONT_LORA,
-                  fontStyle: "italic",
-                  fontSize: 13,
-                  color: v1.inkMuted,
-                  cursor: replaceBusy ? "default" : "pointer",
-                  textDecoration: "underline",
-                  textDecorationStyle: "dotted",
-                  textDecorationColor: v1.inkFaint,
-                  textUnderlineOffset: 3,
-                }}
-              >
-                Cancel
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {replaceError && (
-          <div style={{ padding: "0 22px 14px" }}>
-            <AmberNotice>{replaceError}</AmberNotice>
-          </div>
-        )}
-
-        {/* v1.2 polish (session 31E): <PostingAsBlock> retired on this surface.
-            Edit is focused on image/title/caption/price. Vendor identity is
-            implicit once the post exists — publishing was the identity moment,
-            editing is not. /post/preview keeps <PostingAsBlock> because that
-            surface IS the identity moment. */}
 
         {/* Fields */}
         <div
           style={{
-            padding: "18px 22px 10px",
+            padding: "0 22px",
             display: "flex",
             flexDirection: "column",
             gap: 16,
@@ -791,6 +656,131 @@ export default function EditFindPage() {
             </AnimatePresence>
           </div>
         </div>
+
+        {/* Polaroid photo — below fields, mirrors /post/preview "Review your find" */}
+        {displayedPhoto && (
+          <div
+            style={{
+              padding: "20px 22px 0",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <div style={{ width: "62%", opacity: sold ? 0.55 : 1 }}>
+              <PolaroidTile
+                src={displayedPhoto}
+                alt="Your find"
+                photoBg={v1.paperCream}
+                photoRadius={4}
+                objectFit="contain"
+              />
+            </div>
+            <button
+              onClick={openPhotoPicker}
+              disabled={replaceBusy}
+              style={{
+                marginTop: 8,
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: replaceBusy ? "default" : "pointer",
+                fontFamily: FONT_LORA,
+                fontStyle: "italic",
+                fontSize: 13,
+                color: v1.inkPrimary,
+                textDecoration: "underline",
+                textDecorationStyle: "dotted",
+                textDecorationColor: v1.inkFaint,
+                textUnderlineOffset: 3,
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              Replace photo
+            </button>
+          </div>
+        )}
+
+        {/* Replace-photo confirmation bar */}
+        <AnimatePresence>
+          {pendingPhoto && (
+            <motion.div
+              key="replace-confirm"
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.22 }}
+              style={{
+                margin: "14px 22px 4px",
+                padding: "12px 14px",
+                borderRadius: 10,
+                background: v1.inkWash,
+                border: `1px solid ${v1.inkHairline}`,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: FONT_LORA,
+                  fontStyle: "italic",
+                  fontSize: 14,
+                  color: v1.inkPrimary,
+                  flex: 1,
+                  minWidth: 140,
+                }}
+              >
+                New photo picked. Save replacement?
+              </span>
+              <button
+                onClick={confirmReplacePhoto}
+                disabled={replaceBusy}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 10,
+                  background: v1.green,
+                  color: "#fff",
+                  fontFamily: FONT_SYS,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  border: "none",
+                  cursor: replaceBusy ? "default" : "pointer",
+                  opacity: replaceBusy ? 0.7 : 1,
+                }}
+              >
+                {replaceBusy ? "Saving…" : "Save"}
+              </button>
+              <button
+                onClick={cancelReplacePhoto}
+                disabled={replaceBusy}
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: "8px 4px",
+                  fontFamily: FONT_LORA,
+                  fontStyle: "italic",
+                  fontSize: 13,
+                  color: v1.inkMuted,
+                  cursor: replaceBusy ? "default" : "pointer",
+                  textDecoration: "underline",
+                  textDecorationStyle: "dotted",
+                  textDecorationColor: v1.inkFaint,
+                  textUnderlineOffset: 3,
+                }}
+              >
+                Cancel
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {replaceError && (
+          <div style={{ padding: "0 22px 14px" }}>
+            <AmberNotice>{replaceError}</AmberNotice>
+          </div>
+        )}
 
         {/* Remove from shelf (destructive quiet link) */}
         <div
