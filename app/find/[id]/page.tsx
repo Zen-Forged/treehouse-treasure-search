@@ -912,19 +912,20 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Flag — SIBLING of the photograph. Session 97: bubble scaled
-                from 36×36 → 72×72 (and glyphs proportionally) so the save
-                affordance maintains the same visual weight on the hero photo
-                as it has on the Home tile (~21% of photo width — the hero is
-                ~2× the tile width, so bubble + glyph double to match). */}
+            {/* Flag — SIBLING of the photograph. Session 97 hero scale:
+                bubble 44×44 / glyph 22 — matches BookmarkBoothBubble hero
+                + back button + share airplane (the codebase's established
+                "hero scale" precedent). Modest bump from the 36/17 tile
+                size; the tile size itself read too small relative to the
+                hero photo. */}
             {post && (post?.image_url || previewImageUrl) && (
               <div
                 style={{
                   position: "absolute",
-                  top: 12,
-                  right: 12,
-                  width: 72,
-                  height: 72,
+                  top: 10,
+                  right: 10,
+                  width: 44,
+                  height: 44,
                   zIndex: 3,
                 }}
               >
@@ -952,10 +953,10 @@ export default function FindDetailPage() {
                   }}
                 >
                   {isMyPost ? (
-                    <Pencil size={32} strokeWidth={1.8} style={{ color: v1.inkPrimary }} />
+                    <Pencil size={20} strokeWidth={1.8} style={{ color: v1.inkPrimary }} />
                   ) : (
                     <FlagGlyph
-                      size={34}
+                      size={22}
                       strokeWidth={1.7}
                       style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
                     />
