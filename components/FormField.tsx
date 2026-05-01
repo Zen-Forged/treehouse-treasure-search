@@ -43,14 +43,19 @@ export function formInputStyle(size: FormFieldSize = "page"): CSSProperties {
   const isPage = size === "page";
   return {
     width: "100%",
+    boxSizing: "border-box",
     background: v1.postit,
     border: `1px solid ${v1.inkHairline}`,
     borderRadius: isPage ? v1.radius.input : 10,
     padding: isPage ? 14 : "11px 12px",
     fontFamily: fonts.sys,
     fontSize: 16,
+    lineHeight: 1.4,
     color: v1.inkPrimary,
     outline: "none",
+    appearance: "none",
+    WebkitAppearance: "none",
+    WebkitTapHighlightColor: "transparent",
   };
 }
 

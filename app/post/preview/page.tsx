@@ -59,6 +59,8 @@ import {
   type Vendor,
 } from "@/types/treehouse";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import { formInputStyle } from "@/components/FormField";
+import FormButton from "@/components/FormButton";
 import AmberNotice from "@/components/AmberNotice";
 import TagBadge from "@/components/TagBadge";
 import StickyMasthead from "@/components/StickyMasthead";
@@ -668,7 +670,7 @@ function PostPreviewInner() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="What is this?"
-              style={inputStyle}
+              style={formInputStyle("page")}
             />
           </FieldGroup>
 
@@ -681,7 +683,7 @@ function PostPreviewInner() {
               placeholder="A short description or story about this piece…"
               rows={2}
               style={{
-                ...inputStyle,
+                ...formInputStyle("page"),
                 resize: "none",
                 lineHeight: 1.5,
                 overflow: "hidden",
@@ -714,7 +716,7 @@ function PostPreviewInner() {
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="0"
-                style={{ ...inputStyle, paddingLeft: 28 }}
+                style={{ ...formInputStyle("page"), paddingLeft: 28 }}
               />
             </div>
           </FieldGroup>
@@ -782,22 +784,12 @@ function PostPreviewInner() {
           zIndex: 40,
         }}
       >
-        <button
+        <FormButton
           onClick={handlePublish}
           disabled={!canPublish || isPublishing}
           style={{
-            width: "100%",
-            padding: 15,
-            borderRadius: 14,
-            fontFamily: FONT_SYS,
-            fontSize: 15,
             fontWeight: 500,
             letterSpacing: "0.2px",
-            color: "#fff",
-            background: canPublish ? v1.green : "rgba(30, 77, 43, 0.40)",
-            border: "none",
-            cursor: canPublish && !isPublishing ? "pointer" : "default",
-            boxShadow: canPublish ? "0 2px 12px rgba(30,77,43,0.25)" : "none",
             transition: "background 0.18s ease",
           }}
         >
@@ -814,7 +806,7 @@ function PostPreviewInner() {
           ) : (
             "Publish"
           )}
-        </button>
+        </FormButton>
       </div>
 
       {/* ── Find retake sheet ───────────────────────────────────────────── */}
@@ -847,7 +839,7 @@ function FieldGroup({
         style={{
           fontFamily: FONT_LORA,
           fontStyle: "normal",
-          fontSize: 13,
+          fontSize: 15,
           color: v1.inkMid,
           lineHeight: 1.25,
           display: "flex",
@@ -870,22 +862,6 @@ function FieldGroup({
     </div>
   );
 }
-
-// Shared input style — D9: bg flips inkWash → postit (matches /login/email).
-const inputStyle: React.CSSProperties = {
-  fontFamily: FONT_SYS,
-  fontSize: 16,
-  color: v1.inkPrimary,
-  background: v1.postit,
-  border: `1px solid ${v1.inkHairline}`,
-  borderRadius: 14,
-  padding: 14,
-  width: "100%",
-  boxSizing: "border-box",
-  outline: "none",
-  lineHeight: 1.4,
-  WebkitTapHighlightColor: "transparent",
-};
 
 export default function PostPreviewPage() {
   return (
