@@ -298,6 +298,12 @@ function LoginEmailInner() {
               setScreen("enter-email");
               setCode("");
               setCodeError(null);
+            } else if (authedUser) {
+              // Authed user arrived here via /login auto-forward (BottomNav
+              // Profile tap surfaces the sign-out screen). Back should exit
+              // to Home — pushing to /login would auto-forward straight back
+              // here and trap the user in a loop.
+              router.push("/");
             } else {
               router.push("/login");
             }
