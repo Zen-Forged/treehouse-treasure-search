@@ -52,6 +52,7 @@ import { track } from "@/lib/clientEvents";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import ShareBoothSheet from "@/components/ShareBoothSheet";
+import EmptyState from "@/components/EmptyState";
 import {
   BoothHero,
   BoothTitleBlock,
@@ -473,37 +474,19 @@ export default function PublicShelfPage() {
               available.length > 0 ? (
                 <WindowView posts={available} showAddTile={false} />
               ) : (
-                <div
-                  style={{
-                    padding: "48px 28px",
-                    textAlign: "center",
-                    fontFamily: FONT_LORA,
-                    fontStyle: "italic",
-                    fontSize: 15,
-                    color: v1.inkMuted,
-                    lineHeight: 1.65,
-                  }}
-                >
-                  Nothing on the shelf yet — check back soon.
-                </div>
+                <EmptyState
+                  subtitle="Nothing on the shelf yet — check back soon."
+                  clearance={48}
+                />
               )
             ) : (
               available.length > 0 ? (
                 <ShelfView posts={available} />
               ) : (
-                <div
-                  style={{
-                    padding: "48px 28px",
-                    textAlign: "center",
-                    fontFamily: FONT_LORA,
-                    fontStyle: "italic",
-                    fontSize: 15,
-                    color: v1.inkMuted,
-                    lineHeight: 1.65,
-                  }}
-                >
-                  Nothing on the shelf yet — check back soon.
-                </div>
+                <EmptyState
+                  subtitle="Nothing on the shelf yet — check back soon."
+                  clearance={48}
+                />
               )
             )}
 
