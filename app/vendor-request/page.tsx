@@ -509,7 +509,7 @@ function VendorRequestInner() {
                   aspectRatio: "3/2",
                   border: `1.5px dashed ${v1.inkHairline}`,
                   borderRadius: 14,
-                  background: "rgba(255,253,248,0.70)",
+                  background: v1.postit,
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
