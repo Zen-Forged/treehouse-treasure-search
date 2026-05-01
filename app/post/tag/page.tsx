@@ -382,7 +382,7 @@ function PostTagInner() {
             alignItems: "center",
           }}
         >
-          {itemImage && (
+          {itemImage && !isExtracting && (
             <div
               style={{
                 width: "60%",
@@ -400,29 +400,27 @@ function PostTagInner() {
                 lens={false}
                 innerInsetShadow
               />
-              {!isExtracting && (
-                <button
-                  onClick={() => setRetakeOpen(true)}
-                  style={{
-                    marginTop: 10,
-                    background: "none",
-                    border: "none",
-                    padding: 0,
-                    cursor: "pointer",
-                    fontFamily: FONT_LORA,
-                    fontStyle: "italic",
-                    fontSize: 15,
-                    color: v1.inkPrimary,
-                    textDecoration: "underline",
-                    textDecorationStyle: "dotted",
-                    textDecorationColor: v1.inkFaint,
-                    textUnderlineOffset: 3,
-                    WebkitTapHighlightColor: "transparent",
-                  }}
-                >
-                  Retake
-                </button>
-              )}
+              <button
+                onClick={() => setRetakeOpen(true)}
+                style={{
+                  marginTop: 10,
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  fontFamily: FONT_LORA,
+                  fontStyle: "italic",
+                  fontSize: 15,
+                  color: v1.inkPrimary,
+                  textDecoration: "underline",
+                  textDecorationStyle: "dotted",
+                  textDecorationColor: v1.inkFaint,
+                  textUnderlineOffset: 3,
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                Retake
+              </button>
             </div>
           )}
 
