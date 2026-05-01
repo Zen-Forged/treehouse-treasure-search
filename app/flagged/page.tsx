@@ -58,6 +58,7 @@ import StickyMasthead from "@/components/StickyMasthead";
 import FeaturedBanner from "@/components/FeaturedBanner";
 import PolaroidTile from "@/components/PolaroidTile";
 import EmptyStatePrimitive from "@/components/EmptyState";
+import FormButton from "@/components/FormButton";
 import type { Post, Mall } from "@/types/treehouse";
 
 
@@ -636,57 +637,15 @@ export default function FindMapPage() {
             subtitle="Tap the leaf on any find to save it here."
           />
         ) : filterHidesAllSaves ? (
-          <div
-            style={{
-              margin: "20px 0",
-              padding: "18px 20px",
-              background: "rgba(255, 253, 248, 0.92)",
-              border: `1px dashed rgba(122, 92, 30, 0.45)`,
-              borderRadius: 10,
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{
-                fontFamily: FONT_LORA,
-                fontStyle: "italic",
-                fontSize: 15,
-                color: v1.inkPrimary,
-                lineHeight: 1.4,
-              }}
-            >
-              No saved finds at <span style={{ color: v1.green }}>{selectedMall?.name ?? "this mall"}</span>.
-            </div>
-            <div
-              style={{
-                marginTop: 6,
-                fontFamily: FONT_SYS,
-                fontSize: 13,
-                color: v1.inkMid,
-                lineHeight: 1.5,
-              }}
-            >
-              Saved finds at other malls are hidden by the active filter.{" "}
-              <button
-                onClick={() => setSavedMallId(null)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  padding: 0,
-                  color: v1.green,
-                  textDecoration: "underline",
-                  fontFamily: FONT_SYS,
-                  fontSize: 13,
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
+          <EmptyStatePrimitive
+            title={`No saved finds at ${selectedMall?.name ?? "this mall"}.`}
+            subtitle="Saved finds at other malls are hidden by the active filter."
+            cta={
+              <FormButton variant="link" onClick={() => setSavedMallId(null)}>
                 Show all malls
-              </button>{" "}
-              to see them.
-            </div>
-          </div>
+              </FormButton>
+            }
+          />
         ) : (
           <>
             {groups.map((group) => (
