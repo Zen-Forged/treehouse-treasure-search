@@ -50,7 +50,6 @@ import {
   MOTION_STAGGER,
   MOTION_STAGGER_MAX,
 } from "@/lib/tokens";
-import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { flagKey, loadFollowedIds, formatTimeAgo } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { safeStorage } from "@/lib/safeStorage";
@@ -61,6 +60,7 @@ import MallSheet from "@/components/MallSheet";
 import MallScopeHeader from "@/components/MallScopeHeader";
 import StickyMasthead from "@/components/StickyMasthead";
 import FeaturedBanner from "@/components/FeaturedBanner";
+import PolaroidTile from "@/components/PolaroidTile";
 import type { Post, Mall } from "@/types/treehouse";
 
 const SCROLL_KEY      = "treehouse_feed_scroll";
@@ -215,11 +215,8 @@ function MasonryTile({
   isLastViewed: boolean;
   skipEntrance: boolean;
 }) {
-  const [imgErr,      setImgErr]      = useState(false);
   const [highlighted, setHighlighted] = useState(isLastViewed);
-  const [tapped,      setTapped]      = useState(false);
   const { ref: revealRef, visible } = useScrollReveal(0.1, skipEntrance);
-  const hasImg = !!post.image_url && !imgErr;
 
   useEffect(() => {
     if (!isLastViewed) return;
@@ -249,11 +246,6 @@ function MasonryTile({
     } catch {}
   }
 
-  function handleTilePointerDown() {
-    setTapped(true);
-    setTimeout(() => setTapped(false), 320);
-  }
-
   const staggerDelay = skipEntrance ? 0 : Math.min(index * MOTION_STAGGER, MOTION_STAGGER_MAX);
 
   return (
@@ -272,124 +264,36 @@ function MasonryTile({
       <Link
         href={`/find/${post.id}`}
         onClick={handleTileClick}
-        onPointerDown={handleTilePointerDown}
         style={{ display: "block", textDecoration: "none" }}
       >
-        {/* Polaroid frame — session 83 PoC of "consistent container against
-            random imagery" (Polaroid evolved direction A from
-            docs/mockups/card-container-v1.html). Warm-cream paper card with
-            generous bottom mat for the existing FONT_SYS italic timestamp.
-            Home only. */}
-        <div
-          style={{
-            background: "#faf2e0",
-            padding: "7px 7px 8px",
-            borderRadius: 4,
-            boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
-          }}
-        >
-        {/* Photograph slot — session 88 (A1): fixed 4:5 aspect ratio matching
-            /flagged FindTile, so the masonry layout is stable from frame 1.
-            Previously each tile resized as its image loaded (height computed
-            from natural aspect ratio in onLoad), which produced cascading
-            layout reflows that read as 'animation.' Trade-off: tiles no
-            longer match real photo aspect ratios; vendor photos taken
-            portrait from a phone naturally sit close to 4:5 so the cropping
-            is minimal. The motion.div carries the visible photograph chrome;
-            siblings (heart, tap-flash) overlay the slot. */}
-        <div
-          style={{
-            position: "relative",
-            width: "100%",
-            aspectRatio: "4/5",
-            transform: tapped ? "scale(1.028)" : "scale(1)",
-            transition: tapped
-              ? "transform 0.14s cubic-bezier(0.34,1.56,0.64,1)"
-              : "transform 0.32s cubic-bezier(0.22,1,0.36,1)",
-          }}
-        >
-          {/* Session 88 — layoutId stripped per David's 'pull out all
-              animations' call. Track D shared-element morph (tile photo
-              → /find/[id] hero) is gone with this; revisit in a future
-              full session. */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              borderRadius: v1.imageRadius,
-              overflow: "hidden",
-              background: v1.postit,
-              border: highlighted
-                ? `1.5px solid ${v1.green}`
-                : `1px solid ${v1.inkHairline}`,
-              boxShadow: highlighted
-                ? `0 0 0 3px rgba(30,77,43,0.13), 0 4px 14px rgba(42,26,10,0.11)`
-                : "0 2px 8px rgba(42,26,10,0.08), 0 1px 3px rgba(42,26,10,0.05)",
-              transition: "box-shadow 0.30s ease, border-color 0.60s ease",
-            }}
-          >
-            {hasImg ? (
-              <img
-                src={post.image_url!}
-                alt={post.title}
-                onError={() => setImgErr(true)}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  display: "block",
-                  filter:       TREEHOUSE_LENS_FILTER,
-                  WebkitFilter: TREEHOUSE_LENS_FILTER,
-                }}
-              />
-            ) : (
-              // Fallback — paper card with italic title (only appears when the
-              // image failed to load). The feed tile's contract is photograph-only,
-              // but no-image is still a rare possibility so we degrade quietly.
-              <div
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  padding: "14px 12px",
-                  display: "flex",
-                  alignItems: "flex-end",
-                  fontFamily: FONT_LORA,
-                  fontStyle: "italic",
-                  fontSize: 14,
-                  color: v1.inkMuted,
-                  lineHeight: 1.35,
-                }}
-              >
-                {post.title}
-              </div>
-            )}
-
-            {/* Tap flash overlay — subtle green wash on touch for tactile
-                feedback, matches the v0.2 spring-tap feel. Lives inside the
-                motion.div so its rounded clipping matches the photograph. */}
+        <PolaroidTile
+          src={post.image_url ?? ""}
+          alt={post.title}
+          tap
+          highlighted={highlighted}
+          innerBorder
+          photoRadius={v1.imageRadius}
+          fallback={
+            // Photograph-only contract; no-image is rare but we degrade quietly
+            // with an italic title in the photo slot.
             <div
               style={{
-                position: "absolute",
-                inset: 0,
-                background: "rgba(30,77,43,0.08)",
-                opacity: tapped ? 1 : 0,
-                transition: tapped ? "opacity 0.08s ease" : "opacity 0.28s ease",
-                pointerEvents: "none",
+                width: "100%",
+                height: "100%",
+                padding: "14px 12px",
+                display: "flex",
+                alignItems: "flex-end",
+                fontFamily: FONT_LORA,
+                fontStyle: "italic",
+                fontSize: 14,
+                color: v1.inkMuted,
+                lineHeight: 1.35,
               }}
-            />
-          </div>
-
-          {/* Session 88 — flag layoutId stripped too (full Nuke per David). */}
-          <div
-            style={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              width: 36,
-              height: 36,
-              zIndex: 3,
-            }}
-          >
+            >
+              {post.title}
+            </div>
+          }
+          topRight={
             <button
               onClick={handleHeartClick}
               aria-label={isFollowed ? "Unsave" : "Save"}
@@ -418,26 +322,26 @@ function MasonryTile({
                 }}
               />
             </button>
-          </div>
-        </div>
-
-        {/* Relative timestamp — Variant D from feed-timestamp-v1.html mockup,
-            italicized session 69 to nod toward IM Fell italic vocabulary. */}
-        <div
-          style={{
-            padding: "4px 0 0",
-            fontFamily: FONT_SYS,
-            fontStyle: "italic",
-            fontSize: 11.5,
-            color: v1.inkMuted,
-            letterSpacing: "0.01em",
-            lineHeight: 1.2,
-            textAlign: "left",
-          }}
-        >
-          {formatTimeAgo(post.created_at)}
-        </div>
-        </div>
+          }
+          below={
+            // Relative timestamp — Variant D from feed-timestamp-v1.html mockup,
+            // italicized session 69 to nod toward IM Fell italic vocabulary.
+            <div
+              style={{
+                padding: "4px 0 0",
+                fontFamily: FONT_SYS,
+                fontStyle: "italic",
+                fontSize: 11.5,
+                color: v1.inkMuted,
+                letterSpacing: "0.01em",
+                lineHeight: 1.2,
+                textAlign: "left",
+              }}
+            >
+              {formatTimeAgo(post.created_at)}
+            </div>
+          }
+        />
       </Link>
     </div>
   );
