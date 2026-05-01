@@ -57,7 +57,6 @@ import { compressImage } from "@/lib/imageUpload";
 import { postStore, type PostDraft } from "@/lib/postStore";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import { track } from "@/lib/clientEvents";
-import StickyMasthead from "@/components/StickyMasthead";
 import AddFindSheet from "@/components/AddFindSheet";
 import PolaroidTile from "@/components/PolaroidTile";
 
@@ -299,32 +298,30 @@ function PostTagInner() {
         style={{ display: "none" }}
       />
 
-      {/* ── Masthead (session 94 — shared StickyMasthead) ──────────────── */}
-      <StickyMasthead
-        left={
-          <button
-            onClick={() => router.back()}
-            aria-label="Go back"
-            disabled={isExtracting}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: "50%",
-              background: v1.iconBubble,
-              border: "none",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: isExtracting ? "default" : "pointer",
-              opacity: isExtracting ? 0.45 : 1,
-              padding: 0,
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            <ArrowLeft size={22} strokeWidth={2} style={{ color: v1.inkPrimary }} />
-          </button>
-        }
-      />
+      {/* ── Header — back button only (vendor flow, no wordmark/share) ─── */}
+      <header style={{ padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px", flexShrink: 0 }}>
+        <button
+          onClick={() => router.back()}
+          aria-label="Go back"
+          disabled={isExtracting}
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: v1.iconBubble,
+            border: "none",
+            cursor: isExtracting ? "default" : "pointer",
+            opacity: isExtracting ? 0.45 : 1,
+            padding: 0,
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+        </button>
+      </header>
 
       {/* ── Middle band — vertically centered when content fits ───────── */}
       <div
