@@ -41,55 +41,24 @@ import { getActiveMalls } from "@/lib/posts";
 import { compressImage } from "@/lib/imageUpload";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import StickyMasthead from "@/components/StickyMasthead";
+import FormField, { formInputStyle } from "@/components/FormField";
+import FormButton from "@/components/FormButton";
 import type { Mall } from "@/types/treehouse";
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
 
-// ─── Primitives (v1.1k) ───────────────────────────────────────────────────────
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  boxSizing: "border-box",
-  padding: "14px 14px",
-  borderRadius: 14,
-  background: "rgba(255,253,248,0.70)",
-  border: `1px solid ${v1.inkHairline}`,
-  color: v1.inkPrimary,
-  fontSize: 16,
-  outline: "none",
-  fontFamily: FONT_SYS,
-  appearance: "none",
-  WebkitAppearance: "none",
-};
-
-const inputErrorStyle: React.CSSProperties = {
-  ...inputStyle,
+const inputErrorOverride: React.CSSProperties = {
   border: `1.5px solid ${v1.redBorder}`,
   padding: "13.5px 13.5px",
 };
 
-const selectStyle: React.CSSProperties = {
-  ...inputStyle,
+const selectExtra: React.CSSProperties = {
   paddingRight: 40,
   backgroundImage:
     "url(\"data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b5538' stroke-width='2' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")",
   backgroundRepeat: "no-repeat",
   backgroundPosition: "right 14px center",
   backgroundSize: "12px 12px",
-};
-
-// Session 82 — Option C label primitive (Lora upright 15px ink-mid).
-// Replaces the italic-13-muted treatment that was failing readability for
-// David and surfacing the photo-dropzone bolt-on smell. See
-// docs/mockups/vendor-request-typography-v2.html.
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  fontFamily: FONT_LORA,
-  fontStyle: "normal",
-  fontSize: 15,
-  color: v1.inkMid,
-  lineHeight: 1.25,
-  marginBottom: 7,
 };
 
 const helperStyle: React.CSSProperties = {
@@ -368,61 +337,53 @@ function VendorRequestInner() {
         >
           {/* First / Last side-by-side */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <label style={labelStyle}>
-                First name<span style={requiredStyle}>*</span>
-              </label>
+            <FormField label={<>First name<span style={requiredStyle}>*</span></>}>
               <input
                 type="text"
                 value={firstName}
                 onChange={e => setFirstName(e.target.value)}
                 placeholder="Sarah"
-                style={inputStyle}
+                style={formInputStyle("page")}
                 autoComplete="given-name"
               />
-            </div>
-            <div>
-              <label style={labelStyle}>
-                Last name<span style={requiredStyle}>*</span>
-              </label>
+            </FormField>
+            <FormField label={<>Last name<span style={requiredStyle}>*</span></>}>
               <input
                 type="text"
                 value={lastName}
                 onChange={e => setLastName(e.target.value)}
                 placeholder="Morrison"
-                style={inputStyle}
+                style={formInputStyle("page")}
                 autoComplete="family-name"
               />
-            </div>
+            </FormField>
           </div>
 
-          <div>
-            <label style={labelStyle}>
-              Email address<span style={requiredStyle}>*</span>
-            </label>
+          <FormField label={<>Email address<span style={requiredStyle}>*</span></>}>
             <input
               type="email"
               inputMode="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com"
-              style={error && !email.trim() ? inputErrorStyle : inputStyle}
+              style={{
+                ...formInputStyle("page"),
+                ...(error && !email.trim() ? inputErrorOverride : null),
+              }}
               autoComplete="email"
             />
-          </div>
+          </FormField>
 
           {/* Mall + Booth # side-by-side — both required (session 75 D5). */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <label style={labelStyle}>
-                Location<span style={requiredStyle}>*</span>
-              </label>
+            <FormField label={<>Location<span style={requiredStyle}>*</span></>}>
               <select
                 value={mallId}
                 onChange={e => handleMallChange(e.target.value)}
                 disabled={malls.length === 0}
                 style={{
-                  ...selectStyle,
+                  ...formInputStyle("page"),
+                  ...selectExtra,
                   color: mallId ? v1.inkPrimary : v1.inkFaint,
                   opacity: malls.length === 0 ? 0.55 : 1,
                   cursor: malls.length === 0 ? "default" : "pointer",
@@ -433,20 +394,17 @@ function VendorRequestInner() {
                   <option key={m.id} value={m.id}>{m.name} &mdash; {m.city}, {m.state}</option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label style={labelStyle}>
-                Booth # <span style={optionalStyle}>(optional)</span>
-              </label>
+            </FormField>
+            <FormField label={<>Booth # <span style={optionalStyle}>(optional)</span></>}>
               <input
                 type="text"
                 value={booth}
                 onChange={e => setBooth(e.target.value)}
                 placeholder="e.g. 369"
                 autoCapitalize="characters"
-                style={inputStyle}
+                style={formInputStyle("page")}
               />
-            </div>
+            </FormField>
           </div>
           {malls.length === 0 && (
             <p style={helperStyle}>
@@ -455,27 +413,21 @@ function VendorRequestInner() {
             </p>
           )}
 
-          <div>
-            <label style={labelStyle}>
-              Booth name <span style={optionalStyle}>(optional)</span>
-            </label>
+          <FormField label={<>Booth name <span style={optionalStyle}>(optional)</span></>}>
             <input
               type="text"
               value={boothName}
               onChange={e => setBoothName(e.target.value)}
               placeholder="e.g. The Velvet Cabinet"
-              style={inputStyle}
+              style={formInputStyle("page")}
             />
-          </div>
+          </FormField>
 
           {/* Booth photo — session 75. 3:2 aspect (was 4:3); copy moved
               to FONT_SYS at higher contrast per D3 / D5. The "confirm
               it's really yours" framing is gone — that role lives on
               the new ownership-acknowledgement checkbox below. */}
-          <div>
-            <label style={labelStyle}>
-              Booth photo<span style={requiredStyle}>*</span>
-            </label>
+          <FormField label={<>Booth photo<span style={requiredStyle}>*</span></>}>
             <input
               ref={fileInputRef}
               type="file"
@@ -595,7 +547,7 @@ function VendorRequestInner() {
                 </div>
               </button>
             )}
-          </div>
+          </FormField>
 
           {/* Owner-acknowledgement checkbox card — session 75 (D2).
               Required to submit. Captured server-side as
@@ -680,27 +632,16 @@ function VendorRequestInner() {
               R4c — soft-block when no active malls exist (vendor has
               nothing selectable). Session 75 — also disabled until the
               owner-acknowledgement checkbox is checked. */}
-          <button
+          <FormButton
             onClick={handleSubmit}
             disabled={busy || malls.length === 0 || !ownerAck}
             style={{
-              width: "100%",
-              padding: "15px",
-              borderRadius: 14,
-              fontFamily: FONT_SYS,
-              fontSize: 15,
-              fontWeight: 500,
-              color: "#fff",
-              background: busy || malls.length === 0 || !ownerAck ? "rgba(30,77,43,0.40)" : v1.green,
-              border: "none",
-              cursor: busy || malls.length === 0 || !ownerAck ? "default" : "pointer",
-              boxShadow: busy || malls.length === 0 || !ownerAck ? "none" : "0 2px 14px rgba(30,77,43,0.22)",
               transition: "background 0.18s, box-shadow 0.18s",
               marginTop: 4,
             }}
           >
             {busy ? "Sending\u2026" : "Request access"}
-          </button>
+          </FormButton>
 
           <p
             style={{

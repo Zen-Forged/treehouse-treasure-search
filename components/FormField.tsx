@@ -33,7 +33,7 @@ import { FONT_LORA, fonts, v1 } from "../lib/tokens";
 type FormFieldSize = "page" | "compact";
 
 type FormFieldProps = {
-  label?: string;
+  label?: ReactNode;
   size?: FormFieldSize;
   htmlFor?: string;
   children: ReactNode;
