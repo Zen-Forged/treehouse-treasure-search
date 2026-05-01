@@ -63,7 +63,6 @@ import { formInputStyle } from "@/components/FormField";
 import FormButton from "@/components/FormButton";
 import AmberNotice from "@/components/AmberNotice";
 import TagBadge from "@/components/TagBadge";
-import StickyMasthead from "@/components/StickyMasthead";
 import AddFindSheet from "@/components/AddFindSheet";
 import PolaroidTile from "@/components/PolaroidTile";
 
@@ -569,30 +568,28 @@ function PostPreviewInner() {
         style={{ display: "none" }}
       />
 
-      {/* ── Masthead ───────────────────────────────────────────────────── */}
-      <StickyMasthead
-        left={
-          <button
-            onClick={() => router.back()}
-            aria-label="Go back"
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: "50%",
-              background: v1.iconBubble,
-              border: "none",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              padding: 0,
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            <ArrowLeft size={22} strokeWidth={2} style={{ color: v1.inkPrimary }} />
-          </button>
-        }
-      />
+      {/* ── Header — back button only (no wordmark/share, vendor flow) ─── */}
+      <header style={{ padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px", flexShrink: 0 }}>
+        <button
+          onClick={() => router.back()}
+          aria-label="Back"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: v1.iconBubble,
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+        </button>
+      </header>
 
       {/* ── Middle band — vertically centered when content fits ────────── */}
       <div

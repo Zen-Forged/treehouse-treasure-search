@@ -46,7 +46,6 @@ import { compressImage, uploadPostImageViaServer } from "@/lib/imageUpload";
 import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
-import StickyMasthead from "@/components/StickyMasthead";
 import PolaroidTile from "@/components/PolaroidTile";
 import AmberNotice from "@/components/AmberNotice";
 import type { Post } from "@/types/treehouse";
@@ -429,29 +428,27 @@ export default function EditFindPage() {
         aria-hidden="true"
       />
 
-      <StickyMasthead
-        left={
-          <button
-            onClick={() => router.back()}
-            aria-label="Go back"
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: "50%",
-              background: v1.iconBubble,
-              border: "none",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              padding: 0,
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            <ArrowLeft size={22} strokeWidth={2} style={{ color: v1.inkPrimary }} />
-          </button>
-        }
-      />
+      <header style={{ padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px", flexShrink: 0 }}>
+        <button
+          onClick={() => router.back()}
+          aria-label="Back"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: v1.iconBubble,
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+        </button>
+      </header>
 
       <div
         style={{
