@@ -147,9 +147,6 @@ function PostPreviewInner() {
   const retakeCameraRef  = useRef<HTMLInputElement | null>(null);
   const retakeLibraryRef = useRef<HTMLInputElement | null>(null);
 
-  // Auto-grow caption textarea
-  const captionRef = useRef<HTMLTextAreaElement | null>(null);
-
   const started = useRef(false);
 
   // ── Mount: resolve identity + hydrate image + kick off caption ───────────
@@ -238,16 +235,6 @@ function PostPreviewInner() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Auto-grow the caption — recompute height on every value change.
-  // Reset to "auto" first so the box can SHRINK when text is deleted; without
-  // the reset, scrollHeight stays at the historical max.
-  useEffect(() => {
-    const el = captionRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [caption, stage]);
 
   // ── Find retake (session 94) — no AI calls ──────────────────────────────
   async function handleFindRetake(e: React.ChangeEvent<HTMLInputElement>) {
@@ -668,23 +655,6 @@ function PostPreviewInner() {
               onChange={(e) => setTitle(e.target.value)}
               placeholder="What is this?"
               style={formInputStyle("page")}
-            />
-          </FieldGroup>
-
-          {/* Caption — auto-grow */}
-          <FieldGroup label="Caption" optional>
-            <textarea
-              ref={captionRef}
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder="A short description or story about this piece…"
-              rows={2}
-              style={{
-                ...formInputStyle("page"),
-                resize: "none",
-                lineHeight: 1.5,
-                overflow: "hidden",
-              }}
             />
           </FieldGroup>
 
