@@ -76,9 +76,9 @@ import {
   MOTION_SHARED_ELEMENT_EASE,
   MOTION_SHARED_ELEMENT_FORWARD,
 } from "@/lib/tokens";
-import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import PhotoLightbox from "@/components/PhotoLightbox";
 import BookmarkBoothBubble from "@/components/BookmarkBoothBubble";
+import PolaroidTile from "@/components/PolaroidTile";
 import type { Post } from "@/types/treehouse";
 
 // Re-export canonical v1.1h tokens so consumers of BoothPage primitives
@@ -722,7 +722,6 @@ export function PlaceholderTile({ index }: { index: number }) {
 }
 
 function WindowTile({ post, index }: { post: Post; index: number }) {
-  const [imgErr, setImgErr] = useState(false);
   const hasPrice = typeof post.price_asking === "number" && post.price_asking > 0;
   return (
     <motion.div
@@ -735,86 +734,61 @@ function WindowTile({ post, index }: { post: Post; index: number }) {
         href={`/find/${post.id}`}
         style={{ display: "block", textDecoration: "none", color: "inherit", minWidth: 0 }}
       >
-        <div
-          style={{
-            background: "#faf2e0",
-            borderRadius: 4,
-            overflow: "hidden",
-            boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
-            padding: "7px 7px 0",
-          }}
-        >
-          <div
-            style={{
-              width: "100%",
-              aspectRatio: "4/5",
-              background: v1.postit,
-            }}
-          >
-            {post.image_url && !imgErr ? (
-              <img
-                src={post.image_url}
-                alt={post.title}
-                onError={() => setImgErr(true)}
-                loading="lazy"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  display: "block",
-                  filter:       TREEHOUSE_LENS_FILTER,
-                  WebkitFilter: TREEHOUSE_LENS_FILTER,
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  padding: "12px 10px",
-                  display: "flex",
-                  alignItems: "flex-end",
-                  fontFamily: FONT_LORA,
-                  fontSize: 12,
-                  color: v1.inkFaint,
-                }}
-              >
-                no photograph
-              </div>
-            )}
-          </div>
-          <div style={{ padding: "9px 3px 4px", height: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
+        <PolaroidTile
+          src={post.image_url ?? ""}
+          alt={post.title}
+          bottomMat="outside"
+          loading="lazy"
+          fallback={
             <div
               style={{
-                fontFamily: FONT_LORA,
-                fontSize: 14,
-                color: v1.inkPrimary,
-                lineHeight: 1.4,
                 width: "100%",
-                overflow: "hidden",
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical" as const,
+                height: "100%",
+                padding: "12px 10px",
+                display: "flex",
+                alignItems: "flex-end",
+                fontFamily: FONT_LORA,
+                fontSize: 12,
+                color: v1.inkFaint,
               }}
             >
-              {post.title}
+              no photograph
             </div>
-            {hasPrice && (
+          }
+          below={
+            <div style={{ padding: "9px 3px 4px", height: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
               <div
                 style={{
                   fontFamily: FONT_LORA,
                   fontSize: 14,
-                  color: v1.priceInk,
+                  color: v1.inkPrimary,
                   lineHeight: 1.4,
-                  marginTop: 4,
-                  letterSpacing: "-0.005em",
+                  width: "100%",
+                  overflow: "hidden",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical" as const,
                 }}
               >
-                ${Math.round(post.price_asking as number)}
+                {post.title}
               </div>
-            )}
-          </div>
-        </div>
+              {hasPrice && (
+                <div
+                  style={{
+                    fontFamily: FONT_LORA,
+                    fontSize: 14,
+                    color: v1.priceInk,
+                    lineHeight: 1.4,
+                    marginTop: 4,
+                    letterSpacing: "-0.005em",
+                  }}
+                >
+                  ${Math.round(post.price_asking as number)}
+                </div>
+              )}
+            </div>
+          }
+        />
       </Link>
     </motion.div>
   );
@@ -867,7 +841,6 @@ export function WindowView({
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirst: boolean }) {
-  const [imgErr, setImgErr] = useState(false);
   const hasPrice = typeof post.price_asking === "number" && post.price_asking > 0;
   return (
     <motion.div
@@ -886,86 +859,61 @@ function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirs
         href={`/find/${post.id}`}
         style={{ display: "block", textDecoration: "none", color: "inherit" }}
       >
-        <div
-          style={{
-            background: "#faf2e0",
-            borderRadius: 4,
-            overflow: "hidden",
-            boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
-            padding: "7px 7px 0",
-          }}
-        >
-          <div
-            style={{
-              width: "100%",
-              aspectRatio: "4/5",
-              background: v1.postit,
-            }}
-          >
-            {post.image_url && !imgErr ? (
-              <img
-                src={post.image_url}
-                alt={post.title}
-                onError={() => setImgErr(true)}
-                loading="lazy"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  display: "block",
-                  filter:       TREEHOUSE_LENS_FILTER,
-                  WebkitFilter: TREEHOUSE_LENS_FILTER,
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  padding: "12px 10px",
-                  display: "flex",
-                  alignItems: "flex-end",
-                  fontFamily: FONT_LORA,
-                  fontSize: 13,
-                  color: v1.inkFaint,
-                }}
-              >
-                no photograph
-              </div>
-            )}
-          </div>
-          <div style={{ padding: "9px 3px 4px", height: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
+        <PolaroidTile
+          src={post.image_url ?? ""}
+          alt={post.title}
+          bottomMat="outside"
+          loading="lazy"
+          fallback={
             <div
               style={{
-                fontFamily: FONT_LORA,
-                fontSize: 14,
-                color: v1.inkPrimary,
-                lineHeight: 1.4,
                 width: "100%",
-                overflow: "hidden",
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical" as const,
+                height: "100%",
+                padding: "12px 10px",
+                display: "flex",
+                alignItems: "flex-end",
+                fontFamily: FONT_LORA,
+                fontSize: 13,
+                color: v1.inkFaint,
               }}
             >
-              {post.title}
+              no photograph
             </div>
-            {hasPrice && (
+          }
+          below={
+            <div style={{ padding: "9px 3px 4px", height: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
               <div
                 style={{
                   fontFamily: FONT_LORA,
                   fontSize: 14,
-                  color: v1.priceInk,
+                  color: v1.inkPrimary,
                   lineHeight: 1.4,
-                  marginTop: 4,
-                  letterSpacing: "-0.005em",
+                  width: "100%",
+                  overflow: "hidden",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical" as const,
                 }}
               >
-                ${Math.round(post.price_asking as number)}
+                {post.title}
               </div>
-            )}
-          </div>
-        </div>
+              {hasPrice && (
+                <div
+                  style={{
+                    fontFamily: FONT_LORA,
+                    fontSize: 14,
+                    color: v1.priceInk,
+                    lineHeight: 1.4,
+                    marginTop: 4,
+                    letterSpacing: "-0.005em",
+                  }}
+                >
+                  ${Math.round(post.price_asking as number)}
+                </div>
+              )}
+            </div>
+          }
+        />
       </Link>
     </motion.div>
   );
