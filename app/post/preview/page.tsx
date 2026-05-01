@@ -59,11 +59,11 @@ import {
   type Vendor,
 } from "@/types/treehouse";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
-import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import AmberNotice from "@/components/AmberNotice";
 import TagBadge from "@/components/TagBadge";
 import StickyMasthead from "@/components/StickyMasthead";
 import AddFindSheet from "@/components/AddFindSheet";
+import PolaroidTile from "@/components/PolaroidTile";
 
 const FEED_SCROLL_KEY = "treehouse_feed_scroll";
 
@@ -409,7 +409,14 @@ function PostPreviewInner() {
       >
         {image && (
           <div style={{ width: "62%" }}>
-            <PolaroidPreview imageUrl={image} dim />
+            <PolaroidTile
+              src={image}
+              alt="Your find"
+              photoBg={v1.paperCream}
+              photoRadius={4}
+              objectFit="contain"
+              dim
+            />
           </div>
         )}
         <motion.div
@@ -724,7 +731,13 @@ function PostPreviewInner() {
             }}
           >
             <div style={{ width: "62%" }}>
-              <PolaroidPreview imageUrl={image} />
+              <PolaroidTile
+                src={image}
+                alt="Your find"
+                photoBg={v1.paperCream}
+                photoRadius={4}
+                objectFit="contain"
+              />
             </div>
             <button
               onClick={() => setRetakeOpen(true)}
@@ -812,59 +825,6 @@ function PostPreviewInner() {
         onChooseFromLibrary={() => retakeLibraryRef.current?.click()}
         title="Replace photo"
       />
-    </div>
-  );
-}
-
-// ── PolaroidPreview — inline polaroid wrapper for the find photo ──────────
-// Replaces the v1.2 <PhotographPreview /> on this page (D8). PhotographPreview
-// itself is preserved for /post/edit/[id]. Polaroid pattern (warm cream paper
-// mat, 4px corner radius, dual warm shadow) carved out of the session-83
-// "browse-only" rule per docs/capture-flow-refinement-design.md deviation.
-function PolaroidPreview({
-  imageUrl,
-  dim = false,
-}: {
-  imageUrl: string;
-  dim?: boolean;
-}) {
-  return (
-    <div
-      style={{
-        background: "#faf2e0",
-        padding: "7px 7px 8px",
-        borderRadius: 4,
-        boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
-        opacity: dim ? 0.55 : 1,
-      }}
-    >
-      <div
-        style={{
-          aspectRatio: "4 / 5",
-          borderRadius: 4,
-          overflow: "hidden",
-          background: v1.paperCream,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={imageUrl}
-          alt="Your find"
-          style={{
-            maxWidth: "100%",
-            maxHeight: "100%",
-            width: "auto",
-            height: "auto",
-            objectFit: "contain",
-            display: "block",
-            filter:       TREEHOUSE_LENS_FILTER,
-            WebkitFilter: TREEHOUSE_LENS_FILTER,
-          }}
-        />
-      </div>
     </div>
   );
 }

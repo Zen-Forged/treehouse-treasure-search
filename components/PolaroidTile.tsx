@@ -55,6 +55,15 @@ interface PolaroidTileProps {
   /** Image objectFit. Default "cover"; /post/preview uses "contain". */
   objectFit?: "cover" | "contain";
 
+  /**
+   * Photo inner border-radius. Default 0 (square corners — matches the session-83
+   * polaroid pattern on /flagged + /shelf where the photo sits on the polaroid
+   * mat with no inner radius). Home masonry passes `v1.imageRadius` (6) because
+   * its inner border needs visible rounded corners. /post/preview + /post/tag
+   * pass `4` to match their existing rendering.
+   */
+  photoRadius?: number;
+
   /** Sold-state dim. Whole polaroid drops to 0.55 opacity when true. */
   dim?: boolean;
 
@@ -94,6 +103,7 @@ export default function PolaroidTile({
   lens = true,
   aspectRatio = "4/5",
   objectFit = "cover",
+  photoRadius = 0,
   dim = false,
   innerBorder = false,
   innerInsetShadow = false,
@@ -166,7 +176,7 @@ export default function PolaroidTile({
           style={{
             position: "absolute",
             inset: 0,
-            borderRadius: v1.imageRadius,
+            borderRadius: photoRadius,
             overflow: "hidden",
             background: photoBg ?? v1.postit,
             border: photoBorder,
