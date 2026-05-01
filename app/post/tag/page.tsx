@@ -244,6 +244,7 @@ function PostTagInner() {
       extractionRan:   tagSucceeded ? "success" : "error",
       extractedTitle:  tagSucceeded ? tagResult.title : "",
       extractedPrice:  tagSucceeded ? tagResult.price : null,
+      tagImageDataUrl: tagDataUrl,
       captionTitle:    captionSucceeded ? captionResult.title : "",
       captionText:     captionSucceeded ? captionResult.caption : "",
       captionFailed:   !captionSucceeded,

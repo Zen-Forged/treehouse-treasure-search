@@ -35,6 +35,7 @@ export interface PostDraft {
   extractionRan?:   ExtractionStatus;
   extractedTitle?:  string;            // "" when title-area unreadable
   extractedPrice?:  number | null;     // null when price unreadable or absent
+  tagImageDataUrl?: string;            // raw tag photo, surfaced on /post/preview
 
   // Caption pre-fetch (tag flow only — skip flow fires post-caption on
   // /post/preview mount as today)
