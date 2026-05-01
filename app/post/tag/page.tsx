@@ -121,25 +121,6 @@ async function callPostCaption(itemDataUrl: string): Promise<PostCaptionResponse
   }
 }
 
-function PolLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        fontFamily: FONT_LORA,
-        fontStyle: "italic",
-        fontSize: 13,
-        color: v1.inkMuted,
-        letterSpacing: "0.04em",
-        textAlign: "center",
-        textTransform: "lowercase",
-        lineHeight: 1.2,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
 function PostTagInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
@@ -419,52 +400,34 @@ function PostTagInner() {
                 lens={false}
                 innerInsetShadow
               />
-              <div
-                style={{
-                  marginTop: 6,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 2,
-                }}
-              >
-                <PolLabel>Find</PolLabel>
-                {!isExtracting && (
-                  <button
-                    onClick={() => setRetakeOpen(true)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      padding: 0,
-                      cursor: "pointer",
-                      fontFamily: FONT_LORA,
-                      fontStyle: "italic",
-                      fontSize: 13,
-                      color: v1.inkPrimary,
-                      textDecoration: "underline",
-                      textDecorationStyle: "dotted",
-                      textDecorationColor: v1.inkFaint,
-                      textUnderlineOffset: 3,
-                      WebkitTapHighlightColor: "transparent",
-                    }}
-                  >
-                    Retake
-                  </button>
-                )}
-              </div>
+              {!isExtracting && (
+                <button
+                  onClick={() => setRetakeOpen(true)}
+                  style={{
+                    marginTop: 8,
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                    fontFamily: FONT_LORA,
+                    fontStyle: "italic",
+                    fontSize: 13,
+                    color: v1.inkPrimary,
+                    textDecoration: "underline",
+                    textDecorationStyle: "dotted",
+                    textDecorationColor: v1.inkFaint,
+                    textUnderlineOffset: 3,
+                    WebkitTapHighlightColor: "transparent",
+                  }}
+                >
+                  Retake
+                </button>
+              )}
             </div>
           )}
 
           {isExtracting && tagImage && (
-            <div
-              style={{
-                width: "60%",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
+            <div style={{ width: "60%" }}>
               <PolaroidTile
                 src={tagImage}
                 alt="price tag"
@@ -473,9 +436,6 @@ function PostTagInner() {
                 lens={false}
                 innerInsetShadow
               />
-              <div style={{ marginTop: 6 }}>
-                <PolLabel>Tag</PolLabel>
-              </div>
             </div>
           )}
         </div>
