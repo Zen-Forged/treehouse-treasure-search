@@ -57,6 +57,7 @@ import MallScopeHeader, { type MallScopeGeoLine } from "@/components/MallScopeHe
 import StickyMasthead from "@/components/StickyMasthead";
 import FeaturedBanner from "@/components/FeaturedBanner";
 import PolaroidTile from "@/components/PolaroidTile";
+import EmptyStatePrimitive from "@/components/EmptyState";
 import type { Post, Mall } from "@/types/treehouse";
 
 
@@ -361,45 +362,6 @@ function BoothSection({
   );
 }
 
-// ── Empty state ───────────────────────────────────────────────────────────────
-function EmptyState() {
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        padding: "60px 32px 0",
-        textAlign: "center",
-      }}
-    >
-      <div
-        style={{
-          fontFamily: FONT_LORA,
-          fontSize: 24,
-          color: v1.inkPrimary,
-          lineHeight: 1.3,
-          marginBottom: 12,
-        }}
-      >
-        No finds saved yet
-      </div>
-      <div
-        style={{
-          fontFamily: FONT_LORA,
-          fontStyle: "italic",
-          fontSize: 15,
-          color: v1.inkMuted,
-          lineHeight: 1.65,
-          maxWidth: 280,
-        }}
-      >
-        Tap the leaf on any find to save it here.
-      </div>
-    </div>
-  );
-}
-
 // ──────────────────────────────────────────────────────────────────────────────
 export default function FindMapPage() {
   // Hydrate from module-scope cache so back-nav from /find/[id] mounts tiles
@@ -669,7 +631,10 @@ export default function FindMapPage() {
             ))}
           </div>
         ) : posts.length === 0 ? (
-          <EmptyState />
+          <EmptyStatePrimitive
+            title="No finds saved yet"
+            subtitle="Tap the leaf on any find to save it here."
+          />
         ) : filterHidesAllSaves ? (
           <div
             style={{
