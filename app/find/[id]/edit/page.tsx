@@ -1,100 +1,73 @@
 // app/find/[id]/edit/page.tsx
-// v1.2 — "Edit your find" page. New route. See build spec §5 and the
-// approved mockup docs/mockups/edit-listing-v1-2.html.
+// "Edit find details" — vendor/admin form for an existing post.
 //
-// v1.2 polish pass (session 31E) applied four changes per on-device QA feedback:
-//   1. Post-it on photograph removed (redundant metadata on a management surface).
-//      We pass boothNumber={null} to <PhotographPreview> — the primitive no-ops
-//      the post-it when the prop is null.
-//   2. <PostingAsBlock> vendor attribution row retired on this surface entirely.
-//      Edit is focused on image/title/caption/price — identity is implicit.
-//      /post/preview KEEPS <PostingAsBlock> because publishing is a moment where
-//      vendor identity matters; editing an already-committed post is not.
-//   3. Caption textarea auto-grows with content. Min height 78px; grows to
-//      scrollHeight as user types. iOS-native feel. Manual resize stays off.
-//   4. No functional changes to autosave / status / replace-photo / remove flows.
+// Session 2 (2026-05-01) — converted from autosave to form-submit:
+//   - Single "Post changes" button in a sticky bottom bar (matches /post/preview)
+//   - All fields (title / price / caption / status) batched in one PATCH on submit
+//   - No per-field debounce, no Saved flash badge, no per-field amber notice
+//   - On failure: single AmberNotice above the submit button
+//   - On success: router.replace(`/find/[id]`) — vendor sees committed changes
 //
-// The layout deliberately parallels /post/preview in chrome (masthead, photograph
-// primitive, field rhythm) but removes the vendor-attribution row since identity
-// is committed. Three surfaces are unique to Edit:
-//   - Replace-photo pill overlaid on the photograph (top-left)
-//   - Status toggle pair beneath Price (Available · Sold)
-//   - Quiet "Remove from shelf" destructive link at the very bottom
-//
-// Save model: AUTOSAVE. No save button. Per-field debounce of ~800ms; on
-// success a small "Saved" check glyph appears next to the field label for
-// ~2s and fades. On failure, an <AmberNotice> surfaces above the field with
-// a retry affordance. Status toggle and Replace-photo are IMMEDIATE writes
-// (explicit user gestures, different UX contract).
+// Also session 2:
+//   - Replace photo flow + polaroid display retired entirely (vendor sees the
+//     photo on /find/[id] before tapping the inline pencil; this page is now
+//     details-only). Photo replacement re-enters the codebase later if needed.
+//   - Field order: Title → Price → Caption → Status (David's call — Price
+//     belongs immediately under Title in the vendor's mental model).
+//   - Title block tightened: "Edit find details" + "Click submit when finished".
 //
 // Auth gate, on mount:
 //   1. getSession() — if no user, route to /login?next=/find/[id]/edit
 //   2. getPost(id) — if not found, route to /find/[id] (404 lives there)
 //   3. Ownership check via post.vendor.user_id; isAdmin(user) bypasses.
 //   4. Non-admin, non-owner → silent route back to /find/[id]
+//
+// "Remove from shelf" destructive link stays at the bottom (separate from the
+// submit flow — it deletes rather than saves edits).
 
 "use client";
 
 export const dynamic = "force-dynamic";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Check } from "lucide-react";
+import { motion } from "framer-motion";
+import { ArrowLeft } from "lucide-react";
 import { getPost, deletePost } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import AmberNotice from "@/components/AmberNotice";
+import FormButton from "@/components/FormButton";
 import type { Post } from "@/types/treehouse";
 
-const AUTOSAVE_DEBOUNCE_MS  = 800;
-const SAVED_FADE_MS         = 2000;
-const STATUS_CONFIRM_FADE_MS = 3000;
-
-// v1.2 polish (session 31E): caption auto-grow bounds. Floor matches prior
-// static minHeight so fresh posts with a short caption look identical to how
-// they looked before this change. Ceiling prevents wild expansion on pasted
-// essays — beyond this the textarea's own scroll takes over.
+// Caption auto-grow bounds (preserved from v1.2 polish session 31E).
 const CAPTION_MIN_HEIGHT_PX = 78;
 const CAPTION_MAX_HEIGHT_PX = 260;
 
-// Fields we locally debounce before PATCHing. Status and image_url are
-// handled as immediate writes elsewhere.
-type TextField = "title" | "caption" | "price_asking";
+type PostStatus = "available" | "sold";
 
 export default function EditFindPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
-  // Core state
   const [post,        setPost]        = useState<Post | null>(null);
   const [stage,       setStage]       = useState<"loading" | "edit" | "forbidden" | "notfound">("loading");
 
-  // Per-field local values (what the vendor sees while typing)
+  // Local field values
   const [title,   setTitle]   = useState("");
   const [caption, setCaption] = useState("");
   const [price,   setPrice]   = useState("");
+  const [status,  setStatus]  = useState<PostStatus>("available");
 
-  // Autosave flash state per field — which one is currently showing "Saved"
-  const [savedFlash, setSavedFlash] = useState<TextField | null>(null);
-  // Per-field error state — sets an amber notice that appears above the field
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<TextField, string>>>({});
-
-  // Status confirmation banner (visible for ~3s after flip)
-  const [statusConfirm, setStatusConfirm] = useState<"sold" | "available" | null>(null);
+  // Submit state
+  const [submitting,   setSubmitting]   = useState(false);
+  const [submitError,  setSubmitError]  = useState<string | null>(null);
 
   // Remove flow state
-  const [removing, setRemoving] = useState(false);
+  const [removing,           setRemoving]           = useState(false);
+  const [showRemoveConfirm,  setShowRemoveConfirm]  = useState(false);
 
-  // Debounce refs per text field
-  const debouncers = useRef<Partial<Record<TextField, ReturnType<typeof setTimeout>>>>({});
-  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const statusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // v1.2 polish (session 31E) — ref on the caption textarea so an effect can
-  // size it to content on initial fill + on every keystroke. See captionResize
-  // effect below.
   const captionRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Mount: auth gate + identity resolution
@@ -139,25 +112,17 @@ export default function EditFindPage() {
           ? String(fetched.price_asking)
           : "",
       );
+      setStatus(fetched.status === "sold" ? "sold" : "available");
       setStage("edit");
     })();
 
     return () => {
       cancelled = true;
-      Object.values(debouncers.current).forEach((t) => { if (t) clearTimeout(t); });
-      debouncers.current = {};
-      if (savedTimer.current)  clearTimeout(savedTimer.current);
-      if (statusTimer.current) clearTimeout(statusTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // v1.2 polish (session 31E) — caption auto-grow effect. Fires on every
-  // caption change (including the initial setCaption from the server fetch)
-  // so the textarea lands at the correct size for its content on first paint.
-  // Algorithm: reset height to auto (so scrollHeight reads the true content
-  // height, not the previous style.height), then clamp scrollHeight between
-  // CAPTION_MIN_HEIGHT_PX and CAPTION_MAX_HEIGHT_PX.
+  // Caption auto-grow — recompute on every value change.
   useEffect(() => {
     const el = captionRef.current;
     if (!el) return;
@@ -169,12 +134,38 @@ export default function EditFindPage() {
     el.style.height = `${next}px`;
   }, [caption]);
 
-  // Autosave helpers
-  async function patchPost(
-    updates: Record<string, string | number | null>,
-    flashField: TextField | null,
-  ): Promise<boolean> {
-    if (!post) return false;
+  // ── Submit (form-submit replacement for autosave) ────────────────────────
+  async function handleSubmit() {
+    if (!post || submitting) return;
+
+    const trimmedTitle = title.trim();
+    if (trimmedTitle.length < 1) {
+      setSubmitError("Title can't be empty.");
+      return;
+    }
+
+    let priceValue: number | null = null;
+    const priceTrimmed = price.trim();
+    if (priceTrimmed !== "") {
+      const n = parseFloat(priceTrimmed.replace(/[^0-9.]/g, ""));
+      if (!isFinite(n) || n < 0) {
+        setSubmitError("Price must be a positive number.");
+        return;
+      }
+      priceValue = n;
+    }
+
+    const captionTrimmed = caption.trim();
+    const updates = {
+      title:         trimmedTitle,
+      caption:       captionTrimmed.length > 0 ? captionTrimmed : null,
+      price_asking:  priceValue,
+      status,
+    };
+
+    setSubmitting(true);
+    setSubmitError(null);
+
     try {
       const res = await authFetch(`/api/my-posts/${post.id}`, {
         method: "PATCH",
@@ -182,90 +173,19 @@ export default function EditFindPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.ok) {
-        const msg = json?.error ?? `Couldn't save that change (${res.status}).`;
-        if (flashField) {
-          setFieldErrors((prev) => ({ ...prev, [flashField]: msg }));
-        }
-        return false;
+        setSubmitError(json?.error ?? `Couldn't save your changes (${res.status}).`);
+        setSubmitting(false);
+        return;
       }
-      setPost(json.post as Post);
-      if (flashField) {
-        setFieldErrors((prev) => {
-          if (!prev[flashField]) return prev;
-          const { [flashField]: _removed, ...rest } = prev;
-          return rest;
-        });
-        setSavedFlash(flashField);
-        if (savedTimer.current) clearTimeout(savedTimer.current);
-        savedTimer.current = setTimeout(() => setSavedFlash(null), SAVED_FADE_MS);
-      }
-      return true;
+      router.replace(`/find/${post.id}`);
     } catch (err) {
-      console.error("[edit] patch failed:", err);
-      if (flashField) {
-        setFieldErrors((prev) => ({
-          ...prev,
-          [flashField]: "Couldn't save that change — retry?",
-        }));
-      }
-      return false;
+      console.error("[edit] submit failed:", err);
+      setSubmitError("Couldn't save your changes — try again.");
+      setSubmitting(false);
     }
   }
 
-  function scheduleTextSave(field: TextField, rawValue: string) {
-    if (debouncers.current[field]) clearTimeout(debouncers.current[field]);
-
-    debouncers.current[field] = setTimeout(() => {
-      if (!post) return;
-
-      let update: Record<string, string | number | null>;
-      if (field === "title") {
-        const t = rawValue.trim();
-        if (t.length < 1) {
-          setFieldErrors((prev) => ({ ...prev, title: "Title can't be empty." }));
-          return;
-        }
-        update = { title: t };
-      } else if (field === "caption") {
-        const c = rawValue.trim();
-        update = { caption: c.length > 0 ? c : null };
-      } else {
-        if (rawValue.trim() === "") {
-          update = { price_asking: null };
-        } else {
-          const n = parseFloat(rawValue.replace(/[^0-9.]/g, ""));
-          if (!isFinite(n) || n < 0) {
-            setFieldErrors((prev) => ({ ...prev, price_asking: "Price must be a positive number." }));
-            return;
-          }
-          update = { price_asking: n };
-        }
-      }
-
-      patchPost(update, field);
-    }, AUTOSAVE_DEBOUNCE_MS);
-  }
-
-  // Status toggle (immediate write)
-  async function handleStatusChange(next: "available" | "sold") {
-    if (!post || post.status === next) return;
-    const prev = post.status;
-    setPost({ ...post, status: next });
-
-    const ok = await patchPost({ status: next }, null);
-    if (!ok) {
-      setPost({ ...post, status: prev });
-      setFieldErrors((e) => ({ ...e, title: "Couldn't update status — try again." }));
-      return;
-    }
-
-    setStatusConfirm(next);
-    if (statusTimer.current) clearTimeout(statusTimer.current);
-    statusTimer.current = setTimeout(() => setStatusConfirm(null), STATUS_CONFIRM_FADE_MS);
-  }
-
-  // Remove from shelf (quiet destructive)
-  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  // ── Remove from shelf (separate destructive flow) ────────────────────────
   async function handleRemove() {
     if (!post || removing) return;
     setRemoving(true);
@@ -275,7 +195,7 @@ export default function EditFindPage() {
         router.replace("/my-shelf");
       } else {
         setRemoving(false);
-        setFieldErrors((e) => ({ ...e, title: "Couldn't remove that find — try again." }));
+        setSubmitError("Couldn't remove that find — try again.");
         setShowRemoveConfirm(false);
       }
     } catch (err) {
@@ -284,25 +204,6 @@ export default function EditFindPage() {
       setShowRemoveConfirm(false);
     }
   }
-
-  // Callbacks for onChange wiring
-  const onTitleChange = useCallback((v: string) => {
-    setTitle(v);
-    scheduleTextSave("title", v);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [post?.id]);
-
-  const onCaptionChange = useCallback((v: string) => {
-    setCaption(v);
-    scheduleTextSave("caption", v);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [post?.id]);
-
-  const onPriceChange = useCallback((v: string) => {
-    setPrice(v);
-    scheduleTextSave("price_asking", v);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [post?.id]);
 
   // Render: loading / forbidden / notfound
   if (stage === "loading" || stage === "forbidden" || stage === "notfound") {
@@ -333,6 +234,8 @@ export default function EditFindPage() {
   }
 
   if (!post) return null;
+
+  const canSubmit = title.trim().length >= 1 && !submitting;
 
   return (
     <div
@@ -371,10 +274,10 @@ export default function EditFindPage() {
         style={{
           flex: 1,
           overflowY: "auto",
-          paddingBottom: "max(40px, env(safe-area-inset-bottom, 40px))",
+          paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 96px))",
         }}
       >
-        {/* Title block — body header (mirrors /post/preview "Review your find") */}
+        {/* Title block */}
         <div style={{ textAlign: "center", padding: "2px 22px 14px" }}>
           <div
             style={{
@@ -386,7 +289,7 @@ export default function EditFindPage() {
               marginBottom: 4,
             }}
           >
-            Edit your find
+            Edit find details
           </div>
           <div
             style={{
@@ -399,11 +302,11 @@ export default function EditFindPage() {
               margin: "0 auto",
             }}
           >
-            Changes save as you type.
+            Click submit when finished
           </div>
         </div>
 
-        {/* Fields */}
+        {/* Fields — Title / Price / Caption / Status */}
         <div
           style={{
             padding: "0 22px",
@@ -412,37 +315,16 @@ export default function EditFindPage() {
             gap: 16,
           }}
         >
-          {/* Title */}
-          <EditField
-            field="title"
-            label="Title"
-            savedFlash={savedFlash}
-            error={fieldErrors.title ?? null}
-            onRetry={() => {
-              setFieldErrors((e) => ({ ...e, title: undefined }));
-              scheduleTextSave("title", title);
-            }}
-          >
+          <FieldGroup label="Title">
             <input
               type="text"
               value={title}
-              onChange={(e) => onTitleChange(e.target.value)}
+              onChange={(e) => setTitle(e.target.value)}
               style={inputStyle}
             />
-          </EditField>
+          </FieldGroup>
 
-          {/* Price */}
-          <EditField
-            field="price_asking"
-            label="Price"
-            optional
-            savedFlash={savedFlash}
-            error={fieldErrors.price_asking ?? null}
-            onRetry={() => {
-              setFieldErrors((e) => ({ ...e, price_asking: undefined }));
-              scheduleTextSave("price_asking", price);
-            }}
-          >
+          <FieldGroup label="Price" optional>
             <div style={{ position: "relative" }}>
               <span
                 style={{
@@ -464,32 +346,18 @@ export default function EditFindPage() {
                 min="0"
                 step="1"
                 value={price}
-                onChange={(e) => onPriceChange(e.target.value)}
+                onChange={(e) => setPrice(e.target.value)}
                 placeholder="0"
                 style={{ ...inputStyle, paddingLeft: 28 }}
               />
             </div>
-          </EditField>
+          </FieldGroup>
 
-          {/* Caption — v1.2 polish (session 31E) auto-grow via captionRef + effect.
-              Start height matches prior static minHeight so first paint is
-              unchanged for short captions; grows with content; hard-clamped
-              so pasted essays don't explode the layout. */}
-          <EditField
-            field="caption"
-            label="Caption"
-            optional
-            savedFlash={savedFlash}
-            error={fieldErrors.caption ?? null}
-            onRetry={() => {
-              setFieldErrors((e) => ({ ...e, caption: undefined }));
-              scheduleTextSave("caption", caption);
-            }}
-          >
+          <FieldGroup label="Caption" optional>
             <textarea
               ref={captionRef}
               value={caption}
-              onChange={(e) => onCaptionChange(e.target.value)}
+              onChange={(e) => setCaption(e.target.value)}
               style={{
                 ...inputStyle,
                 minHeight: CAPTION_MIN_HEIGHT_PX,
@@ -499,9 +367,8 @@ export default function EditFindPage() {
                 overflowY: "auto",
               }}
             />
-          </EditField>
+          </FieldGroup>
 
-          {/* Status */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label
               style={{
@@ -522,59 +389,22 @@ export default function EditFindPage() {
             >
               <StatusPill
                 label="Available"
-                active={post.status === "available"}
-                onClick={() => handleStatusChange("available")}
+                active={status === "available"}
+                onClick={() => setStatus("available")}
               />
               <StatusPill
                 label="Sold"
-                active={post.status === "sold"}
-                onClick={() => handleStatusChange("sold")}
+                active={status === "sold"}
+                onClick={() => setStatus("sold")}
               />
             </div>
-
-            <AnimatePresence>
-              {statusConfirm && (
-                <motion.div
-                  key={`status-${statusConfirm}`}
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.22 }}
-                  style={{
-                    marginTop: 10,
-                    padding: "10px 14px",
-                    background: v1.inkWash,
-                    borderRadius: 10,
-                    border: `0.5px solid ${v1.inkHairline}`,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
-                  <Check size={13} strokeWidth={3} style={{ color: v1.green, flexShrink: 0 }} />
-                  <span
-                    style={{
-                      fontFamily: FONT_LORA,
-                      fontStyle: "italic",
-                      fontSize: 13,
-                      color: v1.inkMuted,
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {statusConfirm === "sold"
-                      ? "Marked sold. Shoppers will see this as \u201cFound a home.\u201d"
-                      : "Marked available again."}
-                  </span>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         </div>
 
         {/* Remove from shelf (destructive quiet link) */}
         <div
           style={{
-            padding: "28px 22px 40px",
+            padding: "28px 22px 16px",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -685,116 +515,93 @@ export default function EditFindPage() {
           )}
         </div>
       </div>
+
+      {/* ── Sticky save bar with "Post changes" submit ──────────────────── */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          maxWidth: 430,
+          margin: "0 auto",
+          padding: "12px 22px",
+          paddingBottom: "max(18px, env(safe-area-inset-bottom, 18px))",
+          background: "rgba(232,221,199,0.96)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          borderTop: `1px solid ${v1.inkHairline}`,
+          zIndex: 40,
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+        }}
+      >
+        {submitError && (
+          <AmberNotice>{submitError}</AmberNotice>
+        )}
+        <FormButton
+          onClick={handleSubmit}
+          disabled={!canSubmit}
+          style={{
+            fontWeight: 500,
+            letterSpacing: "0.2px",
+            transition: "background 0.18s ease",
+          }}
+        >
+          {submitting ? (
+            <motion.span
+              animate={{ opacity: [1, 0.5, 1] }}
+              transition={{ duration: 1.2, repeat: Infinity }}
+              style={{ fontFamily: FONT_LORA, fontStyle: "italic" }}
+            >
+              Saving…
+            </motion.span>
+          ) : (
+            "Post changes"
+          )}
+        </FormButton>
+      </div>
     </div>
   );
 }
 
 // Helpers
 
-function EditField({
-  field,
+function FieldGroup({
   label,
   optional,
-  savedFlash,
-  error,
-  onRetry,
   children,
 }: {
-  field: TextField;
   label: string;
   optional?: boolean;
-  savedFlash: TextField | null;
-  error: string | null;
-  onRetry: () => void;
   children: React.ReactNode;
 }) {
-  const showSaved = savedFlash === field;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div
+    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+      <label
         style={{
-          display: "flex",
-          alignItems: "baseline",
-          justifyContent: "space-between",
-          minHeight: 19,
+          fontFamily: FONT_LORA,
+          fontSize: 15,
+          color: v1.inkMid,
+          lineHeight: 1.25,
         }}
       >
-        <label
-          style={{
-            fontFamily: FONT_LORA,
-            fontSize: 15,
-            color: v1.inkMid,
-            lineHeight: 1.25,
-          }}
-        >
-          {label}
-          {optional && (
-            <span
-              style={{
-                fontStyle: "italic",
-                fontSize: 14,
-                color: v1.inkFaint,
-                marginLeft: 5,
-                fontWeight: 400,
-              }}
-            >
-              (optional)
-            </span>
-          )}
-        </label>
-
-        <AnimatePresence>
-          {showSaved && (
-            <motion.span
-              key="saved"
-              initial={{ opacity: 0, x: 2 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.22 }}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-                fontFamily: FONT_SYS,
-                fontStyle: "italic",
-                fontSize: 11,
-                color: v1.green,
-              }}
-            >
-              <Check size={11} strokeWidth={3} />
-              Saved
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {error && (
-        <AmberNotice
-          action={
-            <button
-              onClick={onRetry}
-              style={{
-                background: "none",
-                border: "none",
-                padding: 0,
-                fontFamily: FONT_SYS,
-                fontSize: 12,
-                color: v1.amber,
-                cursor: "pointer",
-                textDecoration: "underline",
-                textDecorationStyle: "dotted",
-                textDecorationColor: "rgba(122,92,30,0.4)",
-                textUnderlineOffset: 3,
-              }}
-            >
-              Retry
-            </button>
-          }
-        >
-          {error}
-        </AmberNotice>
-      )}
-
+        {label}
+        {optional && (
+          <span
+            style={{
+              fontStyle: "italic",
+              fontSize: 14,
+              color: v1.inkFaint,
+              marginLeft: 5,
+              fontWeight: 400,
+            }}
+          >
+            (optional)
+          </span>
+        )}
+      </label>
       {children}
     </div>
   );
