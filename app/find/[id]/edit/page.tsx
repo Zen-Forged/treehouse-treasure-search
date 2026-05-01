@@ -723,14 +723,13 @@ export default function EditFindPage() {
           </EditField>
 
           {/* Status */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label
               style={{
                 fontFamily: FONT_LORA,
-                fontStyle: "italic",
-                fontSize: 13,
-                color: v1.inkMuted,
-                lineHeight: 1.3,
+                fontSize: 15,
+                color: v1.inkMid,
+                lineHeight: 1.25,
               }}
             >
               Status
@@ -932,27 +931,34 @@ function EditField({
 }) {
   const showSaved = savedFlash === field;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <div
         style={{
           display: "flex",
-          alignItems: "center",
+          alignItems: "baseline",
           justifyContent: "space-between",
-          minHeight: 18,
+          minHeight: 19,
         }}
       >
         <label
           style={{
             fontFamily: FONT_LORA,
-            fontStyle: "italic",
-            fontSize: 13,
-            color: v1.inkMuted,
-            lineHeight: 1.3,
+            fontSize: 15,
+            color: v1.inkMid,
+            lineHeight: 1.25,
           }}
         >
           {label}
           {optional && (
-            <span style={{ color: v1.inkFaint, fontStyle: "italic", marginLeft: 4 }}>
+            <span
+              style={{
+                fontStyle: "italic",
+                fontSize: 14,
+                color: v1.inkFaint,
+                marginLeft: 5,
+                fontWeight: 400,
+              }}
+            >
               (optional)
             </span>
           )}
@@ -1053,7 +1059,7 @@ const inputStyle: React.CSSProperties = {
   fontFamily: FONT_SYS,
   fontSize: 16,
   color: v1.inkPrimary,
-  background: v1.inkWash,
+  background: v1.postit,
   border: `1px solid ${v1.inkHairline}`,
   borderRadius: 14,
   padding: 14,
