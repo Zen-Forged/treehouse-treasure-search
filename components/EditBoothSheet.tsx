@@ -23,6 +23,7 @@ import { compressImage } from "@/lib/imageUpload";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import { vendorHueBg } from "@/lib/utils";
 import BoothFormFields from "@/components/BoothFormFields";
+import FormButton from "@/components/FormButton";
 import type { Vendor, Mall } from "@/types/treehouse";
 
 interface EditBoothSheetProps {
@@ -512,29 +513,23 @@ export default function EditBoothSheet({
           )}
 
           {/* CTA */}
-          <button
+          <FormButton
+            size="compact"
             onClick={handleSave}
             disabled={!canSave}
             style={{
-              width: "100%",
-              padding: "12px",
-              borderRadius: 10,
-              fontFamily: FONT_SYS,
               fontSize: 13,
               fontWeight: 500,
-              color: "#fff",
-              background: canSave ? v1.green : "rgba(30,77,43,0.30)",
-              border: "none",
-              cursor: canSave ? "pointer" : "default",
-              display: "flex", alignItems: "center", justifyContent: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               gap: 7,
-              boxShadow: canSave ? "0 2px 10px rgba(30,77,43,0.18)" : "none",
             }}
           >
             {submitting
               ? <><LoaderIcon size={14} style={{ animation: "spin 0.9s linear infinite" }} /> Saving…</>
               : "Save changes"}
-          </button>
+          </FormButton>
           <button
             onClick={submitting ? undefined : onClose}
             disabled={submitting}

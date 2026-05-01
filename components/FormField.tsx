@@ -49,7 +49,7 @@ export function formInputStyle(size: FormFieldSize = "page"): CSSProperties {
     borderRadius: isPage ? v1.radius.input : 10,
     padding: isPage ? 14 : "11px 12px",
     fontFamily: fonts.sys,
-    fontSize: 16,
+    fontSize: isPage ? 16 : 14,
     lineHeight: 1.4,
     color: v1.inkPrimary,
     outline: "none",

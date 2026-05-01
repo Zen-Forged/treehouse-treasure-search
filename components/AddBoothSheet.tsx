@@ -18,6 +18,7 @@ import { compressImage } from "@/lib/imageUpload";
 import { authFetch } from "@/lib/authFetch";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import BoothFormFields from "@/components/BoothFormFields";
+import FormButton from "@/components/FormButton";
 import type { Vendor, Mall } from "@/types/treehouse";
 
 interface AddBoothSheetProps {
@@ -333,29 +334,23 @@ export default function AddBoothSheet({
           )}
 
           {/* CTA */}
-          <button
+          <FormButton
+            size="compact"
             onClick={handleAdd}
             disabled={!canAdd}
             style={{
-              width: "100%",
-              padding: "12px",
-              borderRadius: 10,
-              fontFamily: FONT_SYS,
               fontSize: 13,
               fontWeight: 500,
-              color: "#fff",
-              background: canAdd ? v1.green : "rgba(30,77,43,0.30)",
-              border: "none",
-              cursor: canAdd ? "pointer" : "default",
-              display: "flex", alignItems: "center", justifyContent: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               gap: 7,
-              boxShadow: canAdd ? "0 2px 10px rgba(30,77,43,0.18)" : "none",
             }}
           >
             {submitting
               ? <><LoaderIcon size={14} style={{ animation: "spin 0.9s linear infinite" }} /> {heroFile ? "Adding + uploading photo…" : "Adding…"}</>
               : "Add booth"}
-          </button>
+          </FormButton>
           <button
             onClick={submitting ? undefined : onClose}
             disabled={submitting}

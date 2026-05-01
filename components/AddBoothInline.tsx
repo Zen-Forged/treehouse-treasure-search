@@ -42,6 +42,8 @@ import { createVendor, slugify } from "@/lib/posts";
 import { compressImage } from "@/lib/imageUpload";
 import { authFetch } from "@/lib/authFetch";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import FormField, { formInputStyle } from "@/components/FormField";
+import FormButton from "@/components/FormButton";
 import type { Mall, Vendor } from "@/types/treehouse";
 
 interface AddBoothInlineProps {
@@ -188,32 +190,6 @@ export default function AddBoothInline({
     }, 800);
   }
 
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    boxSizing: "border-box",
-    padding: "11px 12px",
-    borderRadius: 10,
-    background: v1.inkWash,
-    border: `1px solid ${v1.inkHairline}`,
-    color: v1.inkPrimary,
-    fontSize: 14,
-    outline: "none",
-    fontFamily: FONT_SYS,
-    appearance: "none",
-    WebkitAppearance: "none",
-  };
-
-  // Session 82 — Option C label primitive scaled for inline-admin context.
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    fontFamily: FONT_LORA,
-    fontStyle: "normal",
-    fontSize: 13,
-    color: v1.inkMid,
-    lineHeight: 1.25,
-    marginBottom: 6,
-  };
-
   const optionalStyle: React.CSSProperties = {
     fontStyle: "italic",
     fontSize: 12,
@@ -319,14 +295,12 @@ export default function AddBoothInline({
         </button>
       </div>
 
-      {/* Mall */}
-      <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle}>Location</label>
+      <FormField label="Location" size="compact">
         <select
           value={mallId}
           onChange={e => setMallId(e.target.value)}
           style={{
-            ...inputStyle,
+            ...formInputStyle("compact"),
             paddingRight: 36,
             cursor: "pointer",
             backgroundImage:
@@ -350,39 +324,35 @@ export default function AddBoothInline({
             );
           })}
         </select>
-      </div>
+      </FormField>
 
-      {/* Booth number */}
-      <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle}>
-          Booth number <span style={optionalStyle}>(optional)</span>
-        </label>
+      <FormField
+        label={<>Booth number <span style={optionalStyle}>(optional)</span></>}
+        size="compact"
+      >
         <input
           value={boothNumber}
           onChange={e => setBoothNumber(e.target.value)}
           placeholder="e.g. 369 or D19"
-          style={inputStyle}
+          style={formInputStyle("compact")}
           autoCapitalize="characters"
         />
-      </div>
+      </FormField>
 
-      {/* Booth name */}
-      <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle}>Booth name</label>
+      <FormField label="Booth name" size="compact">
         <input
           value={displayName}
           onChange={e => setDisplayName(e.target.value)}
           placeholder="e.g. ZenForged Finds"
-          style={inputStyle}
+          style={formInputStyle("compact")}
         />
-      </div>
+      </FormField>
 
       {/* Hero photo — session 44, optional */}
-      <div style={{ marginBottom: 16 }}>
-        <label style={labelStyle}>
-          Hero photo <span style={optionalStyle}>(optional)</span>
-        </label>
-
+      <FormField
+        label={<>Hero photo <span style={optionalStyle}>(optional)</span></>}
+        size="compact"
+      >
         {heroPreview ? (
           <div style={{
             position: "relative",
@@ -447,7 +417,7 @@ export default function AddBoothInline({
           style={{ display: "none" }}
           aria-hidden="true"
         />
-      </div>
+      </FormField>
 
       {error && (
         <div style={{
@@ -465,23 +435,17 @@ export default function AddBoothInline({
         </div>
       )}
 
-      <button
+      <FormButton
+        size="compact"
         onClick={handleSubmit}
         disabled={submitting || done}
         style={{
-          width: "100%",
-          padding: "12px",
-          borderRadius: 10,
-          fontFamily: FONT_SYS,
           fontSize: 13,
           fontWeight: 500,
-          color: "#fff",
-          background: submitting || done ? "rgba(30,77,43,0.40)" : v1.green,
-          border: "none",
-          cursor: submitting || done ? "default" : "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           gap: 7,
-          boxShadow: submitting || done ? "none" : "0 2px 10px rgba(30,77,43,0.18)",
         }}
       >
         {done ? (
@@ -491,7 +455,7 @@ export default function AddBoothInline({
         ) : (
           "Add booth"
         )}
-      </button>
+      </FormButton>
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

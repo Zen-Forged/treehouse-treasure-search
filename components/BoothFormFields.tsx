@@ -2,10 +2,14 @@
 // Shared 3-field form markup for AddBoothSheet + EditBoothSheet on /shelves.
 // Field shape mirrors AddBoothInline (mall select · booth_number · display_name).
 // See docs/booth-management-design.md (D7).
+//
+// Phase 2 Session D — adopts <FormField size="compact"> + formInputStyle.
+// Local inputStyle / labelStyle retired.
 
 "use client";
 
-import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import { v1 } from "@/lib/tokens";
+import FormField, { formInputStyle } from "@/components/FormField";
 import type { Mall } from "@/types/treehouse";
 
 export interface BoothFormFieldsProps {
@@ -29,38 +33,9 @@ export interface BoothFormFieldsProps {
   disabled?: boolean;
 }
 
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  boxSizing: "border-box",
-  padding: "11px 12px",
-  borderRadius: 10,
-  background: v1.inkWash,
-  border: `1px solid ${v1.inkHairline}`,
-  color: v1.inkPrimary,
-  fontSize: 14,
-  outline: "none",
-  fontFamily: FONT_SYS,
-  appearance: "none" as const,
-  WebkitAppearance: "none" as const,
-};
-
 const changedStyle: React.CSSProperties = {
   background: "#fff9e8",
   borderColor: "#c8a55a",
-};
-
-// Session 82 — Option C label primitive scaled for sheet-context (14px
-// input). 13px upright Lora ink-mid; matches /vendor-request structurally
-// (italic → upright, ink-muted → ink-mid) but smaller because the input
-// it labels is smaller. See docs/mockups/vendor-request-typography-v2.html.
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  fontFamily: FONT_LORA,
-  fontStyle: "normal",
-  fontSize: 13,
-  color: v1.inkMid,
-  lineHeight: 1.25,
-  marginBottom: 6,
 };
 
 const optionalStyle: React.CSSProperties = {
@@ -88,15 +63,13 @@ export default function BoothFormFields({
 
   return (
     <>
-      {/* Mall */}
-      <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle}>Location</label>
+      <FormField label="Location" size="compact">
         <select
           value={mallId}
           onChange={e => setMallId(e.target.value)}
           disabled={disabled}
           style={{
-            ...inputStyle,
+            ...formInputStyle("compact"),
             ...(mallChanged ? changedStyle : null),
             paddingRight: 36,
             cursor: disabled ? "default" : "pointer",
@@ -120,13 +93,12 @@ export default function BoothFormFields({
             );
           })}
         </select>
-      </div>
+      </FormField>
 
-      {/* Booth number */}
-      <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle}>
-          Booth number <span style={optionalStyle}>(optional)</span>
-        </label>
+      <FormField
+        label={<>Booth number <span style={optionalStyle}>(optional)</span></>}
+        size="compact"
+      >
         <input
           value={boothNumber}
           onChange={e => setBoothNumber(e.target.value)}
@@ -134,26 +106,24 @@ export default function BoothFormFields({
           disabled={disabled}
           autoCapitalize="characters"
           style={{
-            ...inputStyle,
+            ...formInputStyle("compact"),
             ...(boothChanged ? changedStyle : null),
           }}
         />
-      </div>
+      </FormField>
 
-      {/* Booth name */}
-      <div style={{ marginBottom: 14 }}>
-        <label style={labelStyle}>Booth name</label>
+      <FormField label="Booth name" size="compact">
         <input
           value={displayName}
           onChange={e => setDisplayName(e.target.value)}
           placeholder="e.g. ZenForged Finds"
           disabled={disabled}
           style={{
-            ...inputStyle,
+            ...formInputStyle("compact"),
             ...(nameChanged ? changedStyle : null),
           }}
         />
-      </div>
+      </FormField>
     </>
   );
 }
