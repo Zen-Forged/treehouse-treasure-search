@@ -61,6 +61,7 @@ import MallScopeHeader from "@/components/MallScopeHeader";
 import StickyMasthead from "@/components/StickyMasthead";
 import FeaturedBanner from "@/components/FeaturedBanner";
 import PolaroidTile from "@/components/PolaroidTile";
+import EmptyState from "@/components/EmptyState";
 import type { Post, Mall } from "@/types/treehouse";
 
 const SCROLL_KEY      = "treehouse_feed_scroll";
@@ -106,47 +107,6 @@ function useScrollReveal(threshold = 0.1, skipAnimation = false) {
   }, [threshold, skipAnimation]);
 
   return { ref, visible };
-}
-
-// ── Empty state (paper-voice rewrite) ──────────────────────────────────────────
-function EmptyFeed() {
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        paddingTop: 72,
-        textAlign: "center",
-      }}
-    >
-      <div
-        style={{
-          fontFamily: FONT_LORA,
-          fontSize: 20,
-          color: v1.inkPrimary,
-          marginBottom: 10,
-          lineHeight: 1.3,
-          letterSpacing: "-0.005em",
-        }}
-      >
-        The shelves are quiet.
-      </div>
-      <p
-        style={{
-          fontFamily: FONT_LORA,
-          fontStyle: "italic",
-          fontSize: 14,
-          color: v1.inkMuted,
-          lineHeight: 1.7,
-          maxWidth: 230,
-          margin: "0 auto",
-        }}
-      >
-        Check back soon — new finds land here the moment a vendor posts them.
-      </p>
-    </div>
-  );
 }
 
 // ── Skeleton masonry ──────────────────────────────────────────────────────────
@@ -715,7 +675,10 @@ export default function DiscoveryFeedPage() {
             Couldn&apos;t load finds. Check your connection and try again.
           </div>
         ) : filtered.length === 0 ? (
-          <EmptyFeed />
+          <EmptyState
+            title="The shelves are quiet."
+            subtitle="Check back soon — new finds land here the moment a vendor posts them."
+          />
         ) : (
           <MasonryGrid
             posts={filtered}
