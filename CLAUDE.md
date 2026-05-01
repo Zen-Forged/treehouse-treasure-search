@@ -67,117 +67,93 @@ Exception: a single chained command with `&&` stays in one block — that's one 
 
 ---
 
-## ✅ Session 96 (2026-05-01) — Phase 2 design-system hardening: Sessions C+D+E end-to-end + F partial — 23 runtime commits + close
+## ✅ Session 97 (2026-05-01) — iPhone QA bundle from session 96 close + Edit your find layout restructure + hero bubble proportionality — 9 runtime commits + close
 
-David's session 95 closer recommended iPhone QA bundle + Phase 2 Session C if QA clean. He opened with "Profile back button resolved. QA walked no issues identified. move the Phase 2 session C." and approved each subsequent decision rapidly through Sessions D, E, and F. Five arcs across the session.
+David opened with `/session-open` and I delivered the standup recommending the iPhone QA bundle for Sessions C+D+E. He responded with a screenshot of `/find/[id]/edit` ("Edit your find") + 6 specific iPhone QA findings. Three arcs across the session.
 
-**Arc 1 — Phase 2 Session C: `<EmptyState>` primitive (6 commits).** Mockup-first per Design Agent rule.
+**Arc 1 — 6-item iPhone QA bundle from session 96 close (5 commits).**
 
-| Commit | Scope |
-|---|---|
-| `64098e9` | docs(empty-state): design record + V1 mockup |
-| `497058d` | feat(components): add `<EmptyState>` primitive |
-| `8913e39` | refactor(home): EmptyFeed adopts |
-| `e838364` | refactor(flagged): EmptyState adopts |
-| `b70f614` | refactor(shelves): empty state adopts |
-| `6324c7d` | refactor(shelf): both branches adopt |
+| Commit | Item | Scope |
+|---|---|---|
+| `a39196d` | 4 | fix(vendor-request): drop redundant 'Go back' link post-submit |
+| `90f3d20` | 1 | refactor(bottom-nav): retire green-on-authed Profile icon cue |
+| `a965aa4` | 2 | fix(flag-glyph): unsaved variant PiLeafBold → PiLeaf for lighter weight |
+| `7500b8a` | 3 | refactor(flagged): filterHidesAllSaves branch adopts `<EmptyState>` |
+| `5abed1d` | 6 | refactor(find-edit): EditField chrome aligns with FormField primitive |
 
-[V1 mockup](docs/mockups/empty-state-primitive-v1.html) — David approved D1–D6 as proposed: title size **22** (was 20/24/none), title **optional** (preserves /shelf/[slug] subtitle-only register), voice **preserved per-surface** (primitive owns structure not copy), subtitle lineHeight **1.7**, maxWidth **260**, **`clearance` prop** with `"masthead"` default (= `MASTHEAD_HEIGHT + 32`) + numeric override for nested mid-page contexts. Net runtime change: ~-1 line (essentially a wash) but 4 surfaces × 5 callsites of structural drift collapsed into one primitive.
+Notable details:
+- **Item 1** (Profile icon green-on-authed cue) — session 90 chrome retired. With `/login` routing fully self-explanatory + sign-out lives on `/login` itself, the cue was redundant.
+- **Item 2** (FlagGlyph weight) — session 89 swapped PiLeaf → PiLeafBold to match Lucide strokeWidth 2.0; David reported PiLeafBold reads heavier than the rest of the BottomNav stack. Reverted to PiLeaf (regular Phosphor weight). Affects 4 callsites with one source change.
+- **Item 3** (filterHidesAllSaves block) — second branch of /flagged empty-states that session 96 missed (mall filter active + zero saves at that mall). Now uses `<EmptyStatePrimitive>` with `<FormButton variant="link">` for the "Show all malls" affordance.
+- **Item 6** (/find/[id]/edit chrome) — page has a bespoke `EditField` helper for autosave + savedFlash + AmberNotice ergonomics that `<FormField>` doesn't host. Tuned EditField's visual chrome to match FormField (label upright Lora 15 ink-mid, input bg `inkWash → postit`) rather than fold autosave UX into the primitive. **3rd firing of "per-context sizing on a swept primitive"** (sessions 82 + 96 + 97) — promotion-ready.
+- **Item 5** (leaf icon sizing) — initially audited as already-standardized at glyph 17 / 36×36 bubble across all 3 product surfaces; deferred pending QA. David's actual concern surfaced in Arc 2.
 
-**Arc 2 — Phase 2 Session D: `<FormField>` + `<FormButton>` primitives across 9 form surfaces (10 commits).** Most invasive primitive extraction in Phase 2 — touches every form in the activation funnel.
+Item 5 audit result: BottomNav 21/44×28 (intentional nav scale), Home masonry tile 17/36×36 (PolaroidTile topRight), /flagged FindTile 17/36×36, /find/[id] hero 17/36×36 — all product surfaces uniform. The perceived weight drift was the PiLeafBold issue (closed by Item 2).
 
-| Commit | Scope |
-|---|---|
-| `38378bb` | docs(form-chrome): design record + V1 mockup |
-| `bc140ff` | feat(tokens): v1.shadow.ctaGreenCompact |
-| `dddddc7` | feat(components): FormField + FormButton |
-| `5d424da` | refactor(login-email) |
-| `518b299` | refactor(admin-login) |
-| `c4b2f3b` | refactor(setup) |
-| `3650251` | refactor(post-preview) + formInputStyle defaults |
-| `c492789` | refactor(vendor-request) + label ReactNode prop |
-| `11234c4` | refactor(booth-sheets) — 4 surfaces bundled |
-| `0808cb1` | chore: retire Buttons.tsx |
+**Arc 2 — David's "Item 5 redirect" — Edit your find layout restructure (1 commit).**
 
-Key structural premise frozen via [V1 mockup](docs/mockups/form-chrome-primitive-v1.html): **two-tier scale, one primitive.** Both `<FormField>` and `<FormButton>` accept `size?: "page" | "compact"`. Page tier = 15 label, 14×14 input, 14 radius, 15 button, `v1.shadow.ctaGreen`. Compact tier = 13 label, 11×12 input, 10 radius, 12 button, `v1.shadow.ctaGreenCompact` (new token).
+After QA, David's actual Item 5 concern wasn't leaf-icon sizing but `/find/[id]/edit` missing polaroid treatment + masthead. Verbatim: *"It still doesnt have the polaroid treatment. The masthead is missing. Is should look like the Review your find page."*
 
-D1–D5 + settled outcomes:
-- D1 input bg = `v1.postit` (postit beats inkWash; was 4/6 split)
-- D2 label register = upright Lora 15 (page) / 13 (compact); retires login/email's italic 13 muted outlier
-- D3 CTA padding = 15/12; setup's 14×22 outlier retires
-- D4 retire `Buttons.tsx` (zero callers verified)
-- D5 page CTA shadow = `v1.shadow.ctaGreen` token (12b/0.22) — first token adoption
-- Settled: disabled bg unifies to `v1.greenDisabled` (0.40) on EditBoothSheet + AddBoothSheet (was 0.30 outliers); italic dotted-link helpers ship as `<FormButton variant="link">`.
+Mirrored `/post/preview` structure literally on `/find/[id]/edit` (commit `03490df`):
 
-**Three primitive APIs expanded mid-migration** when callers hit constraints — all first-firings of "API expansion mid-migration when first non-trivial caller hits a constraint":
+| Decision | Old | New |
+|---|---|---|
+| Masthead | Custom inline header with back button + title baked-in | `<StickyMasthead left={backButton} />` (wordmark center + share airplane right by default) |
+| Title | Inside masthead row | Body title block (Lora 24 + italic Lora 14, centered) |
+| Photo location | Above fields | Below fields (literal /post/preview match per session-31E D7) |
+| Photo wrapper | `<PhotographPreview>` | `<PolaroidTile src photoBg=paperCream photoRadius=4 objectFit=contain>` at 62% width |
+| Replace photo | Dark overlay pill, top-left of photo | Italic dotted Lora link below polaroid (mirrors /post/preview Retake) |
 
-1. `formInputStyle` defaults expanded (boxSizing, lineHeight, appearance/WebkitAppearance, WebkitTapHighlightColor) — early callers were repeating these as inline overrides. Centralizing kept callsites lean.
-2. `<FormField>` `label` prop expanded `string` → `ReactNode` when /vendor-request hit rich label children (required `<span>*</span>` + optional `<span>(optional)</span>`).
-3. `formInputStyle` `fontSize` differentiated by tier (page 16 / compact 14) — formalizes BoothFormFields' shipped 14, retroactively. **2nd firing of "per-context sizing on a swept primitive"** (session 82 labels = 1st).
+**NEW first-firing — "User-references-existing-page as the spec, not a fresh mockup."** When David said "should look like Review your find page" — the live, already-approved page IS the mockup. No fresh mockup cycle needed. Saves a mockup → review → revise round-trip. Tech Rule on second firing.
 
-Net runtime change: ~-141 lines. -94 from Buttons.tsx retire alone. Migration commits net -47 to -76 each.
+**Arc 3 — Vendor/admin chrome retire + hero bubble proportionality (3 commits).**
 
-**Arc 3 — Mid-session iPhone QA fixes (2 commits).** ~6th and ~7th firings of [`feedback_mid_session_iphone_qa_on_vercel_preview.md`](/Users/davidbutler/.claude/projects/-Users-davidbutler-Projects-treehouse-treasure-search/memory/feedback_mid_session_iphone_qa_on_vercel_preview.md) — already promoted-via-memory.
+David's iPhone QA on the Arc-2 ship surfaced 2 new items: (i) Item 1 (the actual leaf-icon sizing concern, finally specified — "relative sizing" means proportional to the image the icon sits on, starting from Home tile ratio), and (ii) Item 2 — vendor/admin internal flow surfaces don't need the share-rich masthead.
 
-| Commit | Scope |
-|---|---|
-| `c18a7d5` | fix(vendor-request): photo dropzone bg → v1.postit |
-| `b6bfdfd` | fix(vendor-request): owner-ack card postit bg + radius 14 |
+| Commit | Item | Scope |
+|---|---|---|
+| `821a3c3` | 2 | refactor(vendor-flow): retire StickyMasthead from Edit + Review your find |
+| `fa6dc1a` | 1a | fix(find-detail): scale hero save bubble proportionally to home tile ratio (36→72 / glyph 17→34) |
+| `e425084` | 1b | fix(find-detail): dial hero save bubble down to 44/22 (BookmarkBoothBubble hero scale) |
 
-Both surfaced from David's iPhone walk on /vendor-request. The dropzone was a clear contract miss — still hardcoded `rgba(255,253,248,0.70)` after the FormField primitive flipped inputs to `v1.postit`. The ack card I had initially dismissed as "intentionally a different register" before David's redirect proved his read was right. **3rd and 4th firings of "verify primitive contract via grep before declaring scope"** (1st in session 95 PolaroidTile 7th-surface miss). **Promoted to memory at this session close** as [`feedback_verify_primitive_contract_via_grep.md`](/Users/davidbutler/.claude/projects/-Users-davidbutler-Projects-treehouse-treasure-search/memory/feedback_verify_primitive_contract_via_grep.md).
+**Item 2 (chrome retire on vendor/admin flow):**
+- `/find/[id]/edit` — StickyMasthead → plain inline `<header>` with just a back-button bubble (mirrors `/login` pattern). Wordmark + share-airplane retired.
+- `/post/preview` — same retire. Body title block "Review your find" + fields + polaroid + Publish all preserved.
+- `/login` — already in this state (didn't need touching).
 
-**Arc 4 — Phase 2 Session E: v0.2 → v1.x palette migrations (2 commits).**
+**NEW promoted-via-memory:** [`feedback_vendor_admin_internal_flow_no_share_masthead.md`](/Users/davidbutler/.claude/projects/-Users-davidbutler-Projects-treehouse-treasure-search/memory/feedback_vendor_admin_internal_flow_no_share_masthead.md). David's framing: *"it doesn't make sense and we don't need to share these screens."* Discovery/acquisition surfaces (Home, /find/[id], /flagged, /shelves, /shelf/[slug], /vendor/[slug], /mall/[slug], /contact) get full StickyMasthead with wordmark + share airplane. Vendor/admin internal flow surfaces (/login, /login/email, /post/preview, /find/[id]/edit) get plain back-button-only inline header.
 
-| Commit | Scope |
-|---|---|
-| `5da508e` | refactor(vendor-slug): palette → v1 tokens |
-| `1da395a` | refactor(post-edit): palette → v1 tokens + FormButton |
+`/vendor-request`, `/post/edit/[id]`, `/admin/login` still use StickyMasthead as of session 97 close — likely candidates for the same retire but require David's explicit ask before extending the sweep (scope-what-was-asked rule).
 
-Both pages retired from the v0.2 cool-cream palette (`#f0ede6` / `#e8e4db` / `#1a1a18`) for the v1.x warm-paper system. Visual delta on `/vendor/[slug]` is real (`v1.paperCream` is warmer + more saturated than the old `#f0ede6`); typography (Georgia serif) intentionally NOT migrated — Session E scope was palette tokens only per Phase 2 plan. /post/edit also adopted FormButton for its Save CTA (with Georgia font preserved via inline override).
+**Item 1 (hero save bubble proportionality):**
+- Home tile: bubble 36 / photo ~167px wide → ratio 21.5%
+- /find/[id] hero: bubble 36 / photo ~346px wide → ratio 10.4% (half of home, felt too small)
+- First attempt: scale to true proportion (bubble 72 / glyph 34, ~2× home tile) — **shipped, then David: "definitely too large"**
+- Final: dial to 44/22 (BookmarkBoothBubble hero variant + StickyMasthead bubble scale — codebase's established hero scale precedent)
 
-After this arc, the `colors` v0.2 token set has zero v1.x-layer consumers.
+**NEW first-firing — "Ship a reasonable midpoint when math gives an unbounded answer; accept dial-back."** Proportional math gave 72/34, which read too large; David redirected to a known precedent at 44/22. One round-trip total vs option-list-upfront which would have asked David to pick blind from numbers. Compresses the "what number?" decision into ship-then-tune.
 
-**Arc 5 — Phase 2 Session F partial: IM Fell comment rot strip (1 commit).**
-
-| Commit | Scope |
-|---|---|
-| `ac7ea6e` | chore(comments): retire IM Fell rot — Lora is the runtime literary serif |
-
-17 files of stale comments updated. Lora replaced IM Fell project-wide at session 82, but ~22 inline comments still described chrome elements as "IM Fell" — pure rot. Updated to "Lora" so future Claude sessions read truthfully from file headers. **Skipped intentionally:** `lib/email.ts` (IM Fell IS still functionally used in window-share emails per session 52), `lib/tokens.ts` + `app/layout.tsx` (historical narrative comments — load-bearing context), and a handful of files where the IM Fell reference explains a design DECISION not the current state. **First firing of "preserve historical-context comments + retire current-state-rot ones in doc cleanup passes."**
-
-**Build green —** all 23 commits passed `npm run build`.
-
-**iPhone QA mid-session** caught (a) /vendor-request photo dropzone bg drift, (b) /vendor-request owner-ack card bg+radius drift. Both fixed in same session — saved 2 ship-then-QA cycles.
+**Build green —** all 9 commits passed `npm run build`.
 
 **Memory updates this session:**
-- ~35th firing of [`feedback_smallest_to_largest_commit_sequencing.md`](/Users/davidbutler/.claude/projects/-Users-davidbutler-Projects-treehouse-treasure-search/memory/feedback_smallest_to_largest_commit_sequencing.md) — already promoted-via-memory.
-- ~7th firing of [`feedback_mid_session_iphone_qa_on_vercel_preview.md`](/Users/davidbutler/.claude/projects/-Users-davidbutler-Projects-treehouse-treasure-search/memory/feedback_mid_session_iphone_qa_on_vercel_preview.md) — already promoted-via-memory.
-- **NEW promoted-via-memory:** [`feedback_verify_primitive_contract_via_grep.md`](/Users/davidbutler/.claude/projects/-Users-davidbutler-Projects-treehouse-treasure-search/memory/feedback_verify_primitive_contract_via_grep.md) — 4 firings (session 95 + session 96 × 3) crossed the promotion threshold.
-- "Per-context sizing on a swept primitive" — 2nd firing (session 82 labels + session 96 FormField/FormButton size prop). Tech Rule on third firing.
-- "API expansion mid-migration when first non-trivial caller hits a constraint" — first firing (3 expansions in session 96 alone). Tech Rule on second firing across sessions.
-- "Two-tier scale primitive (`size: 'page' | 'compact'`) for sheets vs full pages" — first firing as a system pattern. Tech Rule on second firing.
-- "Preserve historical-context comments + retire current-state-rot ones in doc cleanup" — first firing.
+- ~37th firing of [`feedback_smallest_to_largest_commit_sequencing.md`](/Users/davidbutler/.claude/projects/-Users-davidbutler-Projects-treehouse-treasure-search/memory/feedback_smallest_to_largest_commit_sequencing.md) — already promoted-via-memory.
+- ~8th firing of [`feedback_mid_session_iphone_qa_on_vercel_preview.md`](/Users/davidbutler/.claude/projects/-Users-davidbutler-Projects-treehouse-treasure-search/memory/feedback_mid_session_iphone_qa_on_vercel_preview.md) — already promoted-via-memory.
+- 6th firing of [`feedback_v2_mockup_as_fill_refinement.md`](/Users/davidbutler/.claude/projects/-Users-davidbutler-Projects-treehouse-treasure-search/memory/feedback_v2_mockup_as_fill_refinement.md) — David's bubble redirect 72→44 falls in the same fill-refinement-within-picked-direction shape (he picked "scale up," then dialed within that direction).
+- **NEW promoted-via-memory:** [`feedback_vendor_admin_internal_flow_no_share_masthead.md`](/Users/davidbutler/.claude/projects/-Users-davidbutler-Projects-treehouse-treasure-search/memory/feedback_vendor_admin_internal_flow_no_share_masthead.md).
+- "User-references-existing-page-as-spec" — first firing. Tech Rule on second firing.
+- "Ship a reasonable midpoint when math gives an unbounded answer" — first firing.
+- "Per-context sizing on a swept primitive" — 3rd firing across sessions 82/96/97. Tech Rule promotion-ready.
 
-**Operational follow-ups (carry into session 97):**
+**Operational follow-ups (carry into session 98):**
 
-- **🟡 NEW PRIMARY (session 96): iPhone QA bundle for Sessions C + D + E.** Three sub-walks:
-  - **Session C empty states** — Home (no posts state) · /flagged (no saves) · /shelves (no booths) · /shelf/[slug] (booth with no posts). Confirm 22 title / 14 italic Lora subtitle / lineHeight 1.7 / maxWidth 260 / clearance reads cleanly across all 4. Needs simulated empty-state setup (clear localStorage saves, find a booth with 0 posts, etc.).
-  - **Session D form chrome** — /login/email (email + OTP) · /admin/login (PIN) · /vendor-request (multi-input + photo dropzone + ack) · /post/preview (Title/Caption/Price + Publish) · /setup (success CTA) · /shelves admin EditBoothSheet + AddBoothSheet. Confirm: postit input bg flat across all surfaces, Lora 15 page labels / Lora 13 compact labels, page CTA shadow `ctaGreen` (12b/0.22) / compact `ctaGreenCompact` (10b/0.18), disabled CTA flat (no shadow), italic dotted-link helpers (Resend / Sign in instead / Sign out).
-  - **Session E palette** — /vendor/[slug] cool-cream → warm paper visual delta · /post/edit/[id] admin impersonation flow.
-- **🟢 NEW (session 96): Phase 2 Session F continuation.** 6 cleanup items + showcase page deferred:
-  - HairlineDivider primitive extraction (12+ inline border-top/bottom sites — non-trivial audit + adoption)
-  - MastheadShareButton unification at /my-shelf + /shelf/[slug]
-  - Font-size outlier audit (17, 19, 21, 30 — typo or justified?)
-  - monospace font fate decision (declare token or retire 3 occurrences)
-  - `<main>` semantic standardization across non-form pages
-  - BookmarkBoothBubble extension or `<FrostedBubble>` shell extraction
-  - **/design-system showcase page** — separate session (mockup-first per Design Agent rule, decisions on gating + live-vs-static + tabs-vs-scroll)
-- **🟢 CARRY (session 95→96 closed via QA): iPhone QA of Session A + B end-to-end** — David walked at session-96 standup and reported "Profile back button resolved. QA walked no issues identified." Closed.
-- **🟡 CARRY (session 94→96 still un-walked): Wave 1 follow-ups** (contact mailto, mall hero composition BELOW MallScopeHeader, EditBoothSheet hero photo section). Now bundled into Session D iPhone QA above.
-- **🟢 CARRY (session 95→96): /find/[id] ShelfCard polaroid migration deferred** as Phase 2.x. Needs `photoOpacity` + custom `imageFilter` props on PolaroidTile for sold-state handling.
-- **🟢 CARRY (session 95→96): If wordmark feels lost in 90px chrome on iPhone QA**, follow-up drops `minHeight 90 → 72` + calc `103 → 85`.
-- **🟢 CARRY (session 94→96): Scheduled VendorCTACard cleanup agent fires May 21.** Auto-handles via routine.
-- **🟢 CARRY (session 93→96): R1 (shopper accounts) routing slot pre-baked.** Largest unblocked R-item; Wave 1.5 hard prereqs all green from session 92.
+- **🟡 NEW PRIMARY (session 97): iPhone QA pass 3** — verify the 44/22 hero bubble dial-down + masthead retire on /find/[id]/edit + /post/preview. If 44/22 still reads off, easy halfway stops at 38/19 or 50/24. + cold-start walk through the new /find/[id]/edit layout (plain back-button header → body title block → fields → polaroid 62% paperCream contain → Replace photo link → autosave + savedFlash interactions).
+- **🟢 NEW (session 97): "Edit your find" body title block size on mobile real estate.** Lora 24 title costs ~64px before content starts; combined with the new plain-header chrome, /find/[id]/edit no longer has a sticky title context. If that becomes an issue, options: (a) retire the body title block entirely, (b) keep but shrink, (c) tighten the header padding. Defer.
+- **🟢 NEW (session 97): /vendor-request, /post/edit/[id], /admin/login still use StickyMasthead.** Per the new vendor/admin-internal-flow rule, candidates for the same retire as /find/[id]/edit + /post/preview, but require David's explicit ask. Surface in next session if QA flow runs through them.
+- **🟢 CARRY (session 96→97 mostly closed): iPhone QA bundle for Sessions C + D + E.** David's session 97 QA covered Sessions C (filterHidesAllSaves) + D (FormField/FormButton — implicitly via the Item 6 EditField sweep). Session E palette migrations still un-walked end-to-end (vendor/[slug] cool-cream → warm + /post/edit admin impersonation) but no concerns surfaced. Effectively closed unless a beta-feedback regression surfaces.
+- **🟢 CARRY (session 96→97): Phase 2 Session F continuation.** Still 5/6 done. Remaining XS items: HairlineDivider extraction (12+ sites, non-trivial audit), MastheadShareButton unification at /my-shelf + /shelf/[slug], font-size outlier audit, monospace token decision, `<main>` semantic standardization, BookmarkBoothBubble extension. + showcase page deferred as separate cycle.
+- **🟢 CARRY (session 95→97): /find/[id] ShelfCard polaroid migration deferred** as Phase 2.x. Needs `photoOpacity` + custom `imageFilter` props on PolaroidTile for sold-state handling.
+- **🟢 CARRY (session 94→97): Scheduled VendorCTACard cleanup agent fires May 21.** Auto-handles via routine.
+- **🟢 CARRY (session 93→97): R1 (shopper accounts) routing slot pre-baked.** Largest unblocked R-item; Wave 1.5 hard prereqs all green from session 92.
 - 🟡 CARRY (session 92): `inspect-grants.ts` heuristic refinement (~20 min).
 - 🟡 CARRY (session 92): Migration 010 + 011 staging gap.
 - 🟢 CARRY (session 92): AI-route auth deferred.
@@ -191,34 +167,31 @@ After this arc, the `colors` v0.2 token set has zero v1.x-layer consumers.
 - 🟡 CARRY (session 87): wordmark asset-weight optimization (455KB).
 - 🟡 CARRY (session 87): docs/design-system.md wordmark spec stale (now 72px height system-wide).
 
-**Roadmap movement:** No new R-items. Phase 2 design-system hardening pass at **5/6 sessions complete** (A+B done in 95, C+D+E done in 96, F partial in 96). The system has its full primitive layer now — PolaroidTile, EmptyState, FormField, FormButton, BoothLockupCard, FeaturedBanner, MallScopeHeader, StickyMasthead, BookmarkBoothBubble — plus a clean v1.x token system with the v0.2 set having zero v1.x-layer consumers.
+**Roadmap movement:** No new R-items. Phase 2 design-system hardening: 5/6 sessions complete (unchanged from session 96 close — the 9 commits this session were polish on top of Phase 2 ship + a layout restructure on /find/[id]/edit that had been quietly stale since v1.2 era). Roadmap unchanged at 8/15.
 
-**Commits this session (23 runtime + close):**
+**Commits this session (9 runtime + close):**
 
 | Commit | Message |
 |---|---|
-| `64098e9` | docs(empty-state): empty-state primitive design record + V1 mockup |
-| `497058d` | feat(components): add <EmptyState> primitive |
-| `8913e39` | refactor(home): EmptyFeed adopts <EmptyState> primitive |
-| `e838364` | refactor(flagged): EmptyState adopts <EmptyState> primitive |
-| `b70f614` | refactor(shelves): empty state adopts <EmptyState> primitive |
-| `6324c7d` | refactor(shelf): both empty branches adopt <EmptyState> primitive |
-| `38378bb` | docs(form-chrome): form-chrome primitive design record + V1 mockup |
-| `bc140ff` | feat(tokens): add v1.shadow.ctaGreenCompact |
-| `dddddc7` | feat(components): add <FormField> + <FormButton> |
-| `5d424da` | refactor(login-email): adopts <FormField> + <FormButton> |
-| `518b299` | refactor(admin-login): adopts <FormField> + <FormButton> |
-| `c4b2f3b` | refactor(setup): success-state CTA adopts <FormButton> |
-| `3650251` | refactor(post-preview): adopts <FormButton> + formInputStyle helper |
-| `c492789` | refactor(vendor-request): adopts <FormField> + <FormButton> |
-| `11234c4` | refactor(booth-sheets): adopt <FormField> + <FormButton> compact tier |
-| `0808cb1` | chore(components): retire Buttons.tsx (zero callers) |
-| `c18a7d5` | fix(vendor-request): photo dropzone bg adopts v1.postit |
-| `b6bfdfd` | fix(vendor-request): owner-ack card adopts postit bg + radius 14 |
-| `5da508e` | refactor(vendor-slug): /vendor/[slug] palette migrates to v1 tokens |
-| `1da395a` | refactor(post-edit): /post/edit/[id] palette migrates to v1 tokens |
-| `ac7ea6e` | chore(comments): retire IM Fell rot — Lora is the runtime literary serif |
-| (session close) | docs: session 96 close — Phase 2 hardening Sessions C+D+E + F partial |
+| `a39196d` | fix(vendor-request): drop redundant 'Go back' link post-submit |
+| `90f3d20` | refactor(bottom-nav): retire green-on-authed Profile icon cue |
+| `a965aa4` | fix(flag-glyph): unsaved variant PiLeafBold → PiLeaf for lighter weight |
+| `7500b8a` | refactor(flagged): filterHidesAllSaves branch adopts `<EmptyState>` |
+| `5abed1d` | refactor(find-edit): EditField chrome aligns with FormField primitive |
+| `03490df` | refactor(find-edit): mirror /post/preview chrome — StickyMasthead + PolaroidTile |
+| `821a3c3` | refactor(vendor-flow): retire StickyMasthead from Edit + Review your find |
+| `fa6dc1a` | fix(find-detail): scale hero save bubble proportionally to home tile ratio |
+| `e425084` | fix(find-detail): dial hero save bubble down to 44/22 (BookmarkBoothBubble hero scale) |
+| (session close) | docs: session 97 close — iPhone QA bundle + Edit your find restructure + hero bubble proportionality |
+
+---
+
+## ✅ Session 96 (2026-05-01) — Phase 2 design-system hardening: Sessions C+D+E end-to-end + F partial — 23 commits + close (rotated to mini-block session 97 close)
+
+> Full block rotated out at session 97 close. Net: 23 runtime commits across five arcs. **Session C** shipped `<EmptyState>` primitive (6 commits, 4 surfaces × 5 callsites). **Session D** shipped `<FormField>` + `<FormButton>` primitives across 9 form surfaces (10 commits, ~-141 net lines, retired Buttons.tsx, two-tier scale `size: 'page' | 'compact'`, page label upright Lora 15 / compact 13 ink-mid, input bg `v1.postit`, page CTA shadow `v1.shadow.ctaGreen` / compact `ctaGreenCompact`). **Session E** retired v0.2 cool-cream palette from /vendor/[slug] + /post/edit (2 commits — zero v1.x-layer consumers of v0.2 tokens remain). **Session F partial** stripped IM Fell stale comments across 17 files (Lora replaced IM Fell at session 82 — comments were rot). 2 mid-session iPhone QA fixes on /vendor-request: photo dropzone bg → `v1.postit` + owner-ack card → `v1.postit` + radius 14. 3 API expansions on FormField/formInputStyle when callers hit constraints mid-migration (boxSizing/lineHeight defaults, `label` prop ReactNode, fontSize differentiated by tier). NEW promoted-via-memory: `feedback_verify_primitive_contract_via_grep.md` (4 firings sessions 95+96 crossed promotion threshold).
+
+_(Session 96 detailed beat narrative removed at session 97 close — see [`feedback_smallest_to_largest_commit_sequencing.md`](/Users/davidbutler/.claude/projects/-Users-davidbutler-Projects-treehouse-treasure-search/memory/feedback_smallest_to_largest_commit_sequencing.md) + [`feedback_verify_primitive_contract_via_grep.md`](/Users/davidbutler/.claude/projects/-Users-davidbutler-Projects-treehouse-treasure-search/memory/feedback_verify_primitive_contract_via_grep.md) + the session 97 block above for the iPhone QA followup that closed the Sessions C+D+E QA loop and surfaced the Edit your find layout restructure.)_
+
 
 ---
 
@@ -246,83 +219,78 @@ _(Session 93 detailed beat narrative removed at session 94 close — see [`feedb
 
 ---
 
-## ✅ Session 92 (2026-04-30) — Wave 1 follow-up + Wave 1.5 security closed end-to-end — 11 commits + close (rotated to mini-block session 93 close)
-
-> Full block rotated out at session 93 close. Net: 11 runtime commits across two arcs. **Act 1 — Wave 1 design refinements (3 commits):** contact email split (`8ec7884` — caught `NEXT_PUBLIC_ADMIN_EMAIL` conflation between admin gating identity + public-facing contact email; hardcoded `info@kentuckytreehouse.com` at `/contact` + 3 `replyTo` sites in `lib/email.ts`), mall hero relocation BELOW MallScopeHeader at FeaturedBanner dimensions (`4b515b2` — reused `<FeaturedBanner variant="eyebrow">` primitive, net -20 lines), EditBoothSheet hero consolidation (`b6919b7` — retired BoothHero on-photo Pencil + Trash + scrim, moved replace + remove controls into sheet's "Booth photo" section). **Act 2 — Wave 1.5 security continuation (8 commits):** `/api/vendor-hero` + `/api/post-image` auth+ownership tightened (`c811f97` + `58f73ac`), real multi-booth ownership bug fixed in `/api/my-posts/[id]` (`3f76871` — `.eq("user_id").maybeSingle()` errors when user owns >1 booth, latent 500 since session 57), orphan `/api/debug` deleted (`3cd5fab`), migration 017 (function search_path) + diagnostic (`ce48f29`), migration 018 (role-grant + auth.users exposure RPC) + diagnostic (`56d92b0`), runbook updates for OTP/password manual procedure (`c5b48bb`) + AI-route auth deferral (`d6480cb`). HITL: David completed migrations 016/017/018 paste in both projects + OTP→600s + password→8 dashboard toggles. **R1 (shopper accounts) FULLY UNBLOCKED** — every Wave 1.5 hard prereq is green. NEW first-firings: surface auth/identity conflation issues BEFORE editing (the NEXT_PUBLIC_ADMIN_EMAIL catch), multi-booth `maybeSingle()` ownership bug pattern, diagnostic-heuristic-must-cross-reference-RLS-state. Smallest→largest fired 20+ times across both arcs.
-
-_(Session 92 detailed beat narrative removed at session 93 close — see [`feedback_smallest_to_largest_commit_sequencing.md`](/Users/davidbutler/.claude/projects/-Users-davidbutler-Projects-treehouse-treasure-search/memory/feedback_smallest_to_largest_commit_sequencing.md) for sequencing firings + the session 91 mini-block below for the Wave 1 + R5a context that Act 1 followed up on.)_
-
----
-
 ## Recent session tombstones (last 5)
 
-> Older tombstones live in [`docs/session-archive.md`](docs/session-archive.md). Sessions 28–43 still awaiting archive-drift backfill (one-liner only); sessions 44–53 + 56 in archive (54 + 55 + 57–95 still missing — operational backlog growing). Session 91 mini-block retired at session 96 close (tombstone bullets below stay as historical record). Visible window now sessions 92–95 mini + 96 full.
+> Older tombstones live in [`docs/session-archive.md`](docs/session-archive.md). Sessions 28–43 still awaiting archive-drift backfill (one-liner only); sessions 44–53 + 56 in archive (54 + 55 + 57–96 still missing — operational backlog growing). Session 92 mini-block retired at session 97 close. Visible window now sessions 93–96 mini + 97 full.
 
+- **Session 96** (2026-05-01) — Phase 2 design-system hardening: Sessions C+D+E end-to-end + F partial: 23 runtime commits across five arcs. **Arc 1 — Session C `<EmptyState>`:** mockup-first, 6 commits, 4 surfaces × 5 callsites. **Arc 2 — Session D `<FormField>` + `<FormButton>`:** 10 commits, ~-141 net lines, 9 form surfaces (login/email + admin/login + vendor-request + post/preview + setup + EditBoothSheet + AddBoothSheet + AddBoothInline + BoothFormFields), Buttons.tsx retired, two-tier scale `size: 'page' | 'compact'`, page label upright Lora 15 / compact 13 ink-mid, input bg `v1.postit`, page CTA shadow `v1.shadow.ctaGreen` / compact `ctaGreenCompact`. **Arc 3 — mid-session iPhone QA fixes** on /vendor-request: photo dropzone bg + owner-ack card. **Arc 4 — Session E palette:** /vendor/[slug] + /post/edit migrated to v1.x tokens (zero v1.x-layer consumers of v0.2 cool-cream tokens remain). **Arc 5 — Session F partial:** IM Fell stale comment rot strip across 17 files. NEW promoted-via-memory: feedback_verify_primitive_contract_via_grep.md. 3 API expansions on FormField/formInputStyle when callers hit constraints mid-migration.
 - **Session 95** (2026-05-01) — Design system audit + Phase 2 A+B + bug fixes + masthead polish: 13 runtime commits across three arcs. **Arc 1:** Phase 1 design-system audit + 6-session Phase 2 plan as durable docs (`docs/design-system-audit-phase1.md` + `docs/design-system-phase2-plan.md`). **Arc 2 — Session A token foundation:** export `MASTHEAD_HEIGHT` + add v1.* color/shadow/gap/radius/icon scales (zero visual delta). **Arc 3 — Session B `<PolaroidTile>`:** mockup-first, 6-callsite primitive extraction (~250 net lines deleted), 1 hotfix (`width: 100%` after iPhone QA caught flex-center collapse on /post/tag), 7th polaroid surface on `/find/[id]` ShelfCard discovered post-migration via grep (Phase 2.x carry — needs photoOpacity + custom imageFilter for sold-state). Plus `/login/email` back-arrow fix for cross-session redirect loop (sessions 90+93 stacked auto-forwards trapped authed users) + wordmark 90→72 trim. NEW first-firings: verify-primitive-contract-via-grep (promoted at session 96 close after 4 firings), primitives-need-width-100-on-flex-parents, cross-route-redirect-cycles-stack.
 - **Session 94** (2026-04-30) — Capture flow refinement shipped end-to-end + scheduled cleanup agent: 4 runtime commits across V1→V2→V3 mockup iteration. /post/tag adopted shared `<StickyMasthead />` (bespoke chrome retired) + new instructional copy + Find/Tag photos in polaroid wrappers stacked with lowercase italic Lora "find"/"tag" labels + Find retake link (opens AddFindSheet → updates `postStore.imageDataUrl` with no AI re-fire — David's hard constraint). /post/preview retired `<PostingAsBlock />` + `<PhotographPreview />` for inline `<PolaroidPreview />`; Title + Caption + Price moved ABOVE the photo; input bg `v1.inkWash → v1.postit`; Caption auto-grows via `useEffect` on `scrollHeight`; disabled-publish unified to `rgba(30,77,43,0.40) + #fff`; post-publish "View my shelf / Add another find" interstitial dropped (`router.replace(myShelfHref)` direct). Home dropped VendorCTACard from feed footer. Masthead system-wide wordmark 50→90px + total +40px (~13 ecosystem pages — note: session 95 reduced wordmark back to 72px). AddFindSheet gained optional `title` prop (default "Add a find"; retake callers pass "Replace photo"). Cleanup agent `trig_017455nMVrTTZb6PxYnYcYZY` scheduled for May 21 to delete unused VendorCTACard.tsx if soak clean. NEW first-firings: surface coupled-requirement conflict in user spec, AI APIs skip on retake/redo unless explicitly stated, drop done-stage interstitials when redirect target is sufficient. Smallest→largest 22+ firings; 5th firing of feedback_v2_mockup_as_fill_refinement.md.
 - **Session 93** (2026-04-30) — Login triage shipped end-to-end + iPhone QA passed: 1 runtime commit splitting `/login` into a triage page (returning vendor + new vendor cards + "Just shopping?" guest disambiguation + Contact us footer) + `/login/email` for the OTP form. Magic-link callback URL preserved at `/login` per path (a) decision — no `lib/auth.ts` or email-template changes. Two inbound `/login` callsites (`/vendor-request` "Sign in instead" + `/my-shelf` re-auth bounce) upgraded to `/login/email` directly to skip triage for known returning users. Two self-caught bugs fixed before push (React hook-ordering after early-return + URLSearchParams typing). iPhone QA passed end-to-end across 6+ routing paths. R1 (shopper accounts) routing slot pre-baked. NEW first-firings: triage-first routing for ambiguous-state pages, inbound deep-link audit when splitting routes, forward-known-states + render-fresh-states routing primitive.
 - **Session 92** (2026-04-30) — Wave 1 follow-up + Wave 1.5 security closed end-to-end: 11 runtime commits across two arcs. Act 1 shipped 3 design refinements David surfaced during iPhone QA — contact email split (NEXT_PUBLIC_ADMIN_EMAIL conflation caught and avoided), mall hero relocation BELOW MallScopeHeader at FeaturedBanner dimensions, EditBoothSheet hero consolidation that retired BoothHero on-photo Pencil + Trash + scrim. Act 2 closed Wave 1.5: tightened `/api/vendor-hero` + `/api/post-image` auth+ownership; fixed a real multi-booth ownership bug in `/api/my-posts/[id]` (latent 500 since session 57); deleted orphan `/api/debug`; shipped migration 017 (function search_path) + diagnostic; shipped migration 018 (role-grant + auth.users exposure RPC) + diagnostic; ran OTP/password dashboard toggles. R1 shopper accounts now FULLY UNBLOCKED — every Wave 1.5 hard prereq is green. NEW first-firings: surface auth/identity conflation issues BEFORE editing (NEXT_PUBLIC_ADMIN_EMAIL catch), multi-booth `maybeSingle()` ownership bug pattern, diagnostic-heuristic-must-cross-reference-RLS-state.
-- **Session 91** (2026-04-30) — Strategic reset + Wave 1 cleanup pass shipped end-to-end: 13 runtime commits in one session run after David's "true assessment of where we are" opener, after 30+ prior sessions where roadmap stood at 3/15 R-items shipped. Roadmap moved 3/15 → 8/15 (largest single-session jump to date). **R5a 30-day public-feed window**, **5 admin destructive-action audit event types**, **R4a marked shipped via /shelves** with Q-015 captured for the alternative path, **R4b BoothHero remove-photo Trash bubble + DELETE /api/vendor-hero**, **vendor self-edit booth name** via EditBoothSheet vendor mode + `/api/vendor/profile` route, **R7 /contact page** Frame C minimal mailto rows + `/login` discovery link, **R11 mall hero images** with migration 016 + admin upload UI + Frame A photo-above-MallScopeHeader feed render. Smallest→largest fired 16th–19th times. **NOTE: at session 92 close, the R4b Trash bubble + on-photo Pencil affordances were RETIRED** — David asked to consolidate hero edit into EditBoothSheet, so the photograph reads clean and replace+remove live in the sheet at the title-Pencil entry point. Migration 016 column + admin upload route preserved; mall hero composition position flipped from "above" to "below" MallScopeHeader.
-_(Session 90 tombstone rotated off at session 96 close — sessions 87–95 missing from `docs/session-archive.md`; backfill remains operational backlog.)_
+_(Session 91 tombstone rotated off at session 97 close — sessions 87–96 missing from `docs/session-archive.md`; backfill remains operational backlog.)_
 
 ---
 
 ## CURRENT ISSUE
-> Last updated: 2026-05-01 (session 96 close — Phase 2 hardening Sessions C+D+E end-to-end + F partial. Session C: 6-commit `<EmptyState>` primitive across 4 surfaces. Session D: 12-commit `<FormField>` + `<FormButton>` primitives across 9 form surfaces + Buttons.tsx retired (~-141 lines). 2 mid-session iPhone QA fixes on /vendor-request (dropzone bg + ack card). Session E: 2-commit palette migrations on /vendor/[slug] + /post/edit (zero v1.x-layer consumers of v0.2 tokens remain). Session F partial: IM Fell comment rot strip across 17 files. NEW promoted-via-memory: feedback_verify_primitive_contract_via_grep.md. 23 runtime commits + close.)
+> Last updated: 2026-05-01 (session 97 close — iPhone QA bundle from session 96 + Edit your find layout restructure + hero bubble proportionality. 9 runtime commits across 3 arcs. Items 1+2+3+4+6 from David's QA closed clean. Item 5 split into two parts: leaf-icon sizing (audited as already standardized; PiLeafBold weight was the actual issue, fixed via Item 2) + Edit your find layout restructure (mirrored /post/preview chrome including StickyMasthead, then iPhone QA surfaced "vendor/admin flow surfaces don't need share-rich masthead" so retired StickyMasthead from /find/[id]/edit + /post/preview, replaced with /login-style plain inline header). Hero bubble scaled 36→72 (proportional math, too big) → dialed back to 44/22 (BookmarkBoothBubble hero precedent). New promoted-via-memory: feedback_vendor_admin_internal_flow_no_share_masthead.md.)
 
-**Working tree:** clean (after close commit). **Build:** green. **Beta gate:** unblocked. **Net change this session:** 23 runtime commits + close. Phase 2 Sessions C+D+E shipped end-to-end + F partial; v1.x layer now has its full primitive set — PolaroidTile, EmptyState, FormField, FormButton — plus tokenized chrome across all form surfaces. R1 hard prereqs still all green from session 92; routing slot still pre-baked from session 93. Roadmap unchanged at 8/15 (Phase 2 design-system hardening ≠ R-item).
+**Working tree:** clean (after close commit). **Build:** green. **Beta gate:** unblocked. **Net change this session:** 9 runtime commits + close. Phase 2 design-system hardening unchanged at 5/6 sessions complete; the 9 commits this session were polish on top of Phase 2 ship + a layout restructure on /find/[id]/edit (Edit your find) that had been quietly stale since v1.2 era. R1 hard prereqs still all green from session 92; routing slot still pre-baked from session 93. Roadmap unchanged at 8/15.
 
-### 🚧 Recommended next session — iPhone QA bundle for Sessions C + D + E (~60–90 min)
+### 🚧 Recommended next session — iPhone QA pass 3 + Phase 2 Session F or R1 (~60–90 min)
 
-Walk session-96 ship across the empty states + form chrome + palette migrations. The form-chrome migration touches every activation-funnel surface; the palette migration on /vendor/[slug] has a real visible delta (cool-cream → warm paper). Bundle in still-unwalked session-94 + session-92 watch-items.
+Walk session-97 ship: the 44/22 hero bubble dial-down + masthead retire on /find/[id]/edit + /post/preview. Then choose between Phase 2 Session F continuation (HairlineDivider, MastheadShareButton unification, /design-system showcase) or pivot to R1 shopper accounts.
 
 **Why this shape:**
-- 9 form surfaces migrated to FormField + FormButton — biggest activation-funnel touch since the typography pass at session 82.
-- /vendor/[slug] flipped from cool-cream `#f0ede6` to warm `v1.paperCream`. Real delta on a low-traffic legacy page; iPhone read confirms acceptability.
-- Empty states only render on `data === []`, so they need explicit setup (clear localStorage saves, find a booth with 0 posts) — easier to bundle into a single QA pass than to walk separately later.
+- /find/[id]/edit got a layout restructure (Arc 2) AND a chrome retire (Arc 3) in the same session — no cold-start walk yet. Worth 10 min on the fresh state.
+- Hero bubble at 44/22 is the third dimension we've shipped this session (36→72→44); David's feel-test on the final value confirms or redirects. Easy halfway stops at 38/19 or 50/24 if needed.
+- /vendor-request, /post/edit/[id], /admin/login still use StickyMasthead. Per the new vendor/admin-internal-flow rule they're candidates for the same retire — surface to David if QA flow runs through them.
 
 **Plan (in order):**
 
-1. **🖐️ HITL — iPhone QA walk (~25–40 min):**
-   - **Session C empty states** — Home (clear posts) · /flagged (clear localStorage saves) · /shelves (filter to mall with 0 booths if possible — admin-only) · /shelf/[slug] (booth with 0 available posts). Confirm 22px Lora title / 14px italic Lora subtitle / lineHeight 1.7 / maxWidth 260 / clearance reads cleanly.
-   - **Session D form chrome** — /login/email (email + 6-digit OTP) · /admin/login (PIN) · /vendor-request (multi-input + photo dropzone + ack card — note these were dropzone+ack iPhone QA fixes mid-session) · /post/preview (Title/Caption/Price + Publish) · /setup (success-state CTA) · /shelves admin EditBoothSheet + AddBoothSheet (compact tier). Confirm: postit input bg flat across all surfaces, Lora 15 page labels / Lora 13 compact labels, page CTA shadow `ctaGreen` (12b/0.22) / compact `ctaGreenCompact` (10b/0.18), disabled CTA flat (no shadow), italic dotted-link helpers (Resend / Sign in instead / Sign out).
-   - **Session E palette** — /vendor/[slug] cool-cream → warm paper visual delta · /post/edit/[id] (admin impersonation flow). If /vendor/[slug] reads off, consider rolling back to a hybrid where ink scale stays warm but bg keeps `#f0ede6` (low-cost revert).
-   - **Session 94 + 92 carry-forward watch-items still unwalked:** /post/tag retake, /post/preview auto-grow caption + redirect, /contact mailto rows, mall hero composition BELOW MallScopeHeader.
-2. **Address concrete issues from #1.** Likely 0–3 small commits.
-3. **Phase 2 Session F continuation OR new direction.** If QA clean, the menu is: HairlineDivider extraction (12+ sites — non-trivial audit) · MastheadShareButton unification at /my-shelf + /shelf/[slug] · /design-system showcase page (mockup-first) · Or pivot to R1 shopper accounts.
+1. **🖐️ HITL — iPhone QA pass 3 (~10–20 min):**
+   - **/find/[id] hero save bubble** — bubble 44×44 / FlagGlyph 22 / Pencil 20 / margin 10. Visual weight should now match Home tile saved icon better than 36/17 did. Dial direction if off: 38/19 (down) or 50/24 (up).
+   - **/find/[id]/edit cold-start walk** — header (plain back-button bubble, no wordmark, no share) → body title block "Edit your find" + "Changes save as you type." → fields (Title/Caption/Price/Status) → polaroid 62% paperCream contain → Replace photo italic dotted Lora link → autosave + savedFlash + AmberNotice still firing per-field → Remove from shelf at bottom.
+   - **/post/preview** — same chrome retire. Body content unchanged (title block + fields + polaroid + Publish). Fresh QA on the publish flow.
+2. **Address concrete issues from #1.** Likely 0–2 small commits.
+3. **Choose direction.** Phase 2 Session F continuation: `<HairlineDivider>` extraction (12+ sites, non-trivial audit) · MastheadShareButton unification at /my-shelf + /shelf/[slug] · /design-system showcase page (mockup-first, separate cycle). OR pivot to R1 shopper accounts.
 
 ### Alternative next moves (top 4)
 
 1. **R1 (shopper accounts) design pass** (~60–80 min, mockup-first). Largest unblocked R-item; routing slot pre-baked at session 93; Wave 1.5 hard prereqs all green from session 92. The biggest investor-narrative beat available.
-2. **Phase 2 Session F continuation — `<HairlineDivider>` extraction** (~M). 12+ inline border-top/bottom sites. Requires audit before adoption.
-3. **Phase 2 Session F — `/design-system` showcase page** (mockup-first). New admin-gated route rendering all tokens + primitives + composite chrome in one walkable surface. Decisions on gating + live-vs-static + tabs-vs-scroll.
-4. **/find/[id] ShelfCard polaroid migration** (~30 min). Phase 2.x carry — needs `photoOpacity` + custom `imageFilter` props on PolaroidTile for sold-state handling.
+2. **Extend the vendor/admin-internal-flow masthead retire** to /vendor-request + /post/edit/[id] + /admin/login. Per the new rule, these surfaces also don't need wordmark + share. ~30 min if David approves the sweep.
+3. **Phase 2 Session F continuation — `<HairlineDivider>` extraction** (~M). 12+ inline border-top/bottom sites. Requires audit before adoption.
+4. **Phase 2 Session F — `/design-system` showcase page** (mockup-first). New admin-gated route rendering all tokens + primitives + composite chrome in one walkable surface. Decisions on gating + live-vs-static + tabs-vs-scroll.
 
 Full alternatives + operational backlog in [`docs/queued-sessions.md`](docs/queued-sessions.md).
 
-### Session 97 opener (pre-filled — iPhone QA bundle + Phase 2 Session F continuation)
+### Session 98 opener (pre-filled — iPhone QA pass 3 + Phase 2 Session F or R1)
 
 ```
 PROJECT: Treehouse Finds — Zen-Forged/treehouse-treasure-search — app.kentuckytreehouse.com
 STACK: Next.js 14 App Router · TypeScript · Tailwind · Framer Motion · Anthropic SDK · Supabase · SerpAPI · Sentry · Vercel
 Filesystem MCP is connected at /Users/davidbutler/Projects/treehouse-treasure-search
-Read CLAUDE.md, CONTEXT.md, docs/design-system-phase2-plan.md (Session F row), docs/empty-state-primitive-design.md, docs/form-chrome-primitive-design.md. Then run the session opening standup from MASTER_PROMPT.md.
+Read CLAUDE.md, CONTEXT.md, docs/design-system-phase2-plan.md (Session F row). Then run the session opening standup from MASTER_PROMPT.md.
 
-CURRENT ISSUE: iPhone QA bundle for Sessions C + D + E end-to-end, then Phase 2 Session F continuation if QA clean. (1) Walk Session C empty states across 4 surfaces (need simulated empty-state setup). (2) Walk Session D form chrome across 9 form surfaces — every activation-funnel touch. (3) Walk Session E palette migrations on /vendor/[slug] + /post/edit. (4) If QA clean, choose between HairlineDivider extraction (12+ sites, non-trivial audit) OR /design-system showcase page (mockup-first, separate cycle) OR pivot to R1 shopper accounts.
+CURRENT ISSUE: iPhone QA pass 3 verifying session-97 ship (44/22 hero bubble + masthead retire on Edit/Review your find + cold-start walk through new /find/[id]/edit layout). Then choose: (a) Phase 2 Session F continuation (HairlineDivider, MastheadShareButton unification, /design-system showcase), (b) extend vendor/admin-internal-flow masthead retire to /vendor-request + /post/edit/[id] + /admin/login per the new rule, or (c) pivot to R1 shopper accounts.
 
-PROBLEMS SESSION 96 ALREADY SOLVED — don't accidentally revive: (a) <EmptyState> primitive at components/EmptyState.tsx is the canonical empty-state. 5 callsites use it: app/page.tsx EmptyFeed (Home), app/flagged/page.tsx EmptyState (saves), app/shelves/page.tsx (booths), app/shelf/[slug]/page.tsx ×2 (window-view + shelf-view, identical copy). DO NOT inline empty-state markup anywhere new — extend the primitive instead. (b) <EmptyState> API: title?, subtitle?, cta?, clearance?: 'masthead' | number. clearance="masthead" default = calc(MASTHEAD_HEIGHT + 32px). /shelf/[slug] passes clearance={48} (nested mid-page). (c) /my-shelf is NOT an EmptyState callsite — it uses AddFindTile as its empty affordance, structurally different from a text-block empty state. DO NOT migrate /my-shelf to EmptyState. (d) <FormField> + <FormButton> primitives at components/FormField.tsx + components/FormButton.tsx own canonical form chrome. Both accept size?: "page" | "compact". formInputStyle(size) helper exports the canonical input chrome (postit bg, hairline border, 14/10 radius, 14/14 or 11/12 padding, 16/14 fontSize). 9 form surfaces use them: /login/email, /admin/login, /vendor-request, /post/preview, /setup, BoothFormFields (shared by AddBoothSheet + EditBoothSheet), AddBoothInline. DO NOT inline form chrome anywhere new — extend the primitives. (e) Buttons.tsx RETIRED (zero callers verified). DO NOT recreate Tailwind button components. (f) v1.shadow.ctaGreenCompact (0 2px 10px rgba(30,77,43,0.18)) is the new sheet-tier CTA shadow token. Used by FormButton size="compact". (g) /vendor-request photo dropzone bg is v1.postit (NOT rgba inkWash); owner-acknowledgement card bg is v1.postit + radius 14 (NOT rgba 0.55 + radius 10). Both fixed mid-session — DO NOT revert. (h) /vendor/[slug] palette is v1.x (paperCream / inkPrimary etc, NOT old #f0ede6 / #1a1a18). Georgia serif typography preserved (out of scope for Session E). (i) /post/edit/[id] palette migrated to v1.x; Save button is FormButton with Georgia font preserved via inline override. colors v0.2 token set has zero v1.x-layer consumers. (j) IM Fell stale comments stripped across 17 files at session 96 (Lora replaced IM Fell at session 82). Comments in lib/email.ts intentionally NOT touched (IM Fell still functionally used in window-share email templates).
+PROBLEMS SESSION 97 ALREADY SOLVED — don't accidentally revive: (a) /find/[id] hero save bubble: 44×44 outer / FlagGlyph 22 / Pencil 20 / margin top:10 right:10. Matches BookmarkBoothBubble hero scale. DO NOT revert to 36/17 (read too small relative to hero photo) or 72/34 (too large). (b) FlagGlyph unsaved variant uses PiLeaf (regular Phosphor weight), NOT PiLeafBold. Saved variant still PiLeafFill. Affects 4 callsites with one source change. (c) BottomNav Profile icon does NOT tint green when authed. The session-90 cue retired — Profile-tab routing + sign-out on /login is fully self-explanatory. (d) /flagged filterHidesAllSaves branch uses <EmptyStatePrimitive> with <FormButton variant="link"> for "Show all malls". DO NOT inline a dashed-amber notice block. (e) /find/[id]/edit is structurally a mirror of /post/preview: plain inline <header> with just a back-button bubble (NO StickyMasthead, NO wordmark, NO share airplane) → centered body title block "Edit your find" Lora 24 + italic Lora 14 subtitle → fields ABOVE photo (per /post/preview D7 layout) → <PolaroidTile> at 62% width (paperCream bg, radius 4, objectFit contain) → italic dotted Lora "Replace photo" link below polaroid (NOT a dark overlay pill on the photo). The autosave + savedFlash + AmberNotice + Status pills + Remove-from-shelf chrome unchanged. (f) /post/preview also uses plain inline <header> now — StickyMasthead retired. Body content unchanged. (g) EditField helper at /find/[id]/edit uses upright Lora 15 ink-mid label (NOT italic Lora 13 ink-muted), input bg v1.postit (NOT v1.inkWash). DO NOT revert to old register. (h) /vendor-request post-submit footer has only one link: "Explore the feed →". The duplicate "Go back" was retired (masthead back-arrow remains).
 
-PROBLEMS SESSION 95 ALREADY SOLVED — don't accidentally revive: (a) v1.x tokens at lib/tokens.ts include shadow scale (polaroid, polaroidPin, ctaGreen, ctaGreenCompact, sheetRise, cardSubtle), gap scale (xs/sm/md/lg/xl = 6/8/12/16/22), radius scale (input/button/pill/sheet = 14/14/999/20), icon scale (xs/sm/md/nav/lg/xl = 14/16/18/21/22/24), v1.paperWarm (#faf2e0), v1.onGreen (#fff), v1.greenDisabled (rgba(30,77,43,0.40)). Session D adopted ctaGreen + ctaGreenCompact + onGreen + greenDisabled. (b) MASTHEAD_HEIGHT exported from components/StickyMasthead.tsx as SSOT. Adopted by EmptyState's clearance="masthead". (c) <PolaroidTile> primitive at components/PolaroidTile.tsx owns 6 callsites + width: 100% wrapper. (d) /find/[id] "More from this booth" ShelfCard at line 135 is a 7th polaroid surface — KNOWN unmigrated, Phase 2.x carry-forward. (e) /login/email back-arrow handler checks authedUser state to escape redirect loop. (f) Wordmark height 72px in StickyMasthead.
+NEW RULE (session 97): vendor/admin internal flow surfaces use plain inline <header> with just a back-button bubble — NOT full StickyMasthead. Captured as memory (feedback_vendor_admin_internal_flow_no_share_masthead.md). Currently applied to /login, /login/email, /post/preview, /find/[id]/edit. CANDIDATES for the same sweep but require David's explicit ask: /vendor-request, /post/edit/[id], /admin/login.
 
-PROBLEMS SESSION 94/93/92 ALREADY SOLVED — don't accidentally revive: (a) Home VendorCTACard dropped (cleanup agent fires May 21). (b) /post/tag uses shared <StickyMasthead /> + new instructional copy. (c) /post/preview Title + Caption + Price ABOVE the photo, input bg postit, auto-grow caption, post-publish redirect direct (no interstitial). (d) /login = triage cards, /login/email = OTP form. (e) NEXT_PUBLIC_ADMIN_EMAIL is admin gating ONLY; public contact email hardcoded info@kentuckytreehouse.com. (f) Mall hero BELOW MallScopeHeader via <FeaturedBanner variant="eyebrow">. (g) BoothHero clean (no on-photo Pencil + Trash + scrim). EditBoothSheet has "Booth photo" section. (h) /api/vendor-hero + /api/post-image require auth + ownership-or-admin. /api/my-posts/[id] PATCH multi-booth-safe via combined .eq filter. (i) Migrations 016+017+018 applied; OTP expiry 600s + password min 8.
+PROBLEMS SESSION 96 ALREADY SOLVED — don't accidentally revive: (a) <EmptyState> primitive at components/EmptyState.tsx is the canonical empty-state. 5 callsites use it: app/page.tsx EmptyFeed (Home), app/flagged/page.tsx EmptyState (saves) + filterHidesAllSaves (session 97 added), app/shelves/page.tsx (booths), app/shelf/[slug]/page.tsx ×2 (window-view + shelf-view, identical copy). DO NOT inline empty-state markup anywhere new. (b) <EmptyState> API: title?, subtitle?, cta?, clearance?: 'masthead' | number. (c) /my-shelf is NOT an EmptyState callsite — it uses AddFindTile as its empty affordance. (d) <FormField> + <FormButton> primitives at components/FormField.tsx + components/FormButton.tsx own canonical form chrome. Both accept size?: "page" | "compact". formInputStyle(size) helper exports the canonical input chrome. 9 form surfaces use them. /find/[id]/edit's bespoke EditField helper is intentionally NOT migrated to FormField (autosave + savedFlash + AmberNotice ergonomics that FormField doesn't host) — its visual chrome is tuned to match FormField, but its API stays bespoke. (e) Buttons.tsx RETIRED. (f) v1.shadow.ctaGreen / ctaGreenCompact tokens. (g) /vendor-request photo dropzone bg + owner-ack card use v1.postit. (h) /vendor/[slug] + /post/edit/[id] palette is v1.x. (i) IM Fell stale comments stripped across 17 files (Lora replaced IM Fell at session 82). lib/email.ts comments NOT touched.
 
-ALTERNATIVES IF DEFERRED: (1) R1 shopper accounts design pass. (2) HairlineDivider extraction. (3) /design-system showcase page (mockup-first). (4) /find/[id] ShelfCard polaroid migration.
+PROBLEMS SESSION 95 ALREADY SOLVED — don't accidentally revive: (a) v1.x tokens at lib/tokens.ts include shadow/gap/radius/icon scales + v1.paperWarm + v1.onGreen + v1.greenDisabled. (b) MASTHEAD_HEIGHT exported as SSOT. (c) <PolaroidTile> at components/PolaroidTile.tsx owns 6 callsites + width: 100% wrapper. (d) /find/[id] ShelfCard polaroid still NOT migrated (Phase 2.x carry-forward). (e) /login/email back-arrow handler checks authedUser to escape redirect loop. (f) Wordmark 72px in StickyMasthead (only used on discovery/acquisition surfaces now per new rule).
 
-CARRY-FORWARDS FROM SESSIONS 78–96: Phase 3 scroll-restore CLOSED. Wordmark `public/wordmark.png` 72px in StickyMasthead. Masthead inner-grid minHeight 90 + MASTHEAD_HEIGHT calc constant 103 (exported). ~13 ecosystem back-button surfaces 44px with ArrowLeft 22. /post/tag + /post/preview both adopt StickyMasthead. <PolaroidTile> primitive owns Home masonry, /flagged FindTile, /shelf/[slug] WindowTile + ShelfTile, /post/tag Find + Tag, /post/preview PolaroidPreview. Phase 2.x carry: /find/[id] ShelfCard polaroid not yet migrated. <EmptyState> primitive owns 4 surfaces × 5 callsites. <FormField> + <FormButton> own 9 form surfaces. Buttons.tsx RETIRED. PostingAsBlock + PhotographPreview retired from /post/preview, kept for /post/edit/[id]. /login = triage cards. /login/email = OTP form. /contact has 3 mailto rows pointing at info@kentuckytreehouse.com. EditBoothSheet supports mode={"admin"|"vendor"} + "Booth photo" section. /api/vendor-hero + /api/post-image require auth + ownership-or-admin. /api/admin/malls/hero-image POST + DELETE admin-gated. RLS enabled on every public table. All public functions have search_path pinned (migration 017). Migrations 016+017+018 applied. OTP expiry 600s + password min 8. R5a getFeedPosts uses gte("created_at", cutoff = now − 30 days). /flagged is 3-col grid. preview-cache pattern (treehouse_find_preview:${id}) stays. BoothLockupCard owns /shelves + /flagged. IM Fell retired from runtime UI (still used in window-share emails). v0.2 colors token set has zero v1.x-layer consumers (Session E closed it). AI routes deliberately unauthed per session-92 deferral. Tech Rules queue: 0 🟢, ~33 🟡.
+PROBLEMS SESSION 94/93/92 ALREADY SOLVED — don't accidentally revive: (a) Home VendorCTACard dropped (cleanup agent fires May 21). (b) /post/tag uses shared <StickyMasthead /> + new instructional copy. (c) /post/preview Title+Caption+Price ABOVE photo, postit input bg, auto-grow caption, direct redirect. (d) /login = triage cards, /login/email = OTP form. (e) NEXT_PUBLIC_ADMIN_EMAIL is admin gating ONLY; public contact info@kentuckytreehouse.com. (f) Mall hero BELOW MallScopeHeader via <FeaturedBanner variant="eyebrow">. (g) BoothHero clean (no on-photo Pencil/Trash/scrim). EditBoothSheet has "Booth photo" section. (h) /api/vendor-hero + /api/post-image require auth+ownership. /api/my-posts/[id] PATCH multi-booth-safe. (i) Migrations 016+017+018 applied; OTP expiry 600s + password min 8.
 
-SCHEDULED AGENT: trig_017455nMVrTTZb6PxYnYcYZY fires Thu May 21 9:00 AM EDT — checks if VendorCTACard still unused → opens cleanup PR if so. Manage at https://claude.ai/code/routines/trig_017455nMVrTTZb6PxYnYcYZY.
+ALTERNATIVES IF DEFERRED: (1) R1 shopper accounts design pass. (2) Extend vendor/admin masthead retire to /vendor-request + /post/edit/[id] + /admin/login. (3) HairlineDivider extraction. (4) /design-system showcase page.
 
-PHASE 2 PLAN STATE: Sessions A+B (95) + C+D+E (96) DONE. Session F PARTIAL — IM Fell comment rot stripped (17 files); deferred: HairlineDivider extraction, MastheadShareButton unification, font-size outlier audit, monospace token decision, <main> semantic standardization, BookmarkBoothBubble extension, /design-system showcase page (mockup-first). 5/6 sessions complete. See docs/design-system-phase2-plan.md.
+CARRY-FORWARDS FROM SESSIONS 78–97: Phase 3 scroll-restore CLOSED. Wordmark `public/wordmark.png` 72px in StickyMasthead (used on discovery/acquisition surfaces only). MASTHEAD_HEIGHT calc constant 103 (exported). ~13 ecosystem back-button surfaces 44px with ArrowLeft 22. /post/tag adopts StickyMasthead; /post/preview + /find/[id]/edit + /login + /login/email use plain inline <header> per new rule. <PolaroidTile> primitive owns Home masonry + /flagged FindTile + /shelf/[slug] WindowTile + ShelfTile + /post/tag Find + Tag + /post/preview PolaroidPreview + /find/[id]/edit photo wrapper (NEW session 97). Phase 2.x carry: /find/[id] ShelfCard polaroid still unmigrated. <EmptyState> primitive owns 4 surfaces × 6 callsites (filterHidesAllSaves added session 97). <FormField> + <FormButton> own 9 form surfaces. EditField helper at /find/[id]/edit visually aligns with FormField but keeps its bespoke autosave API. Buttons.tsx RETIRED. PostingAsBlock + PhotographPreview retired from /post/preview AND /find/[id]/edit (session 97); PhotographPreview kept for /post/edit/[id]. /login = triage cards. /login/email = OTP form. /contact has 3 mailto rows. EditBoothSheet supports mode={"admin"|"vendor"}. /api/vendor-hero + /api/post-image require auth+ownership. /api/admin/malls/hero-image POST + DELETE admin-gated. RLS enabled on every public table. All public functions have search_path pinned. Migrations 016+017+018 applied. OTP 600s + password min 8. R5a getFeedPosts 30-day window. /flagged is 3-col grid. preview-cache pattern (treehouse_find_preview:${id}). BoothLockupCard owns /shelves + /flagged. IM Fell retired from runtime UI (still in window-share emails). v0.2 colors token set has zero v1.x-layer consumers. AI routes deliberately unauthed per session-92 deferral. /find/[id] hero save bubble 44×44 / glyph 22 (NEW session 97 — was 36/17). FlagGlyph uses PiLeaf for unsaved (NEW session 97 — was PiLeafBold). BottomNav Profile icon NOT tinted green when authed (NEW session 97). Tech Rules queue: 0 🟢, ~33 🟡.
+
+SCHEDULED AGENT: trig_017455nMVrTTZb6PxYnYcYZY fires Thu May 21 9:00 AM EDT — checks if VendorCTACard still unused → opens cleanup PR if so.
+
+PHASE 2 PLAN STATE: Sessions A+B (95) + C+D+E (96) DONE. Session F PARTIAL — IM Fell comment rot stripped (17 files); deferred: HairlineDivider extraction, MastheadShareButton unification, font-size outlier audit, monospace token decision, <main> semantic standardization, BookmarkBoothBubble extension, /design-system showcase page (mockup-first). 5/6 sessions complete.
 ```
 
 ---
@@ -335,6 +303,12 @@ PHASE 2 PLAN STATE: Sessions A+B (95) + C+D+E (96) DONE. Session F PARTIAL — I
 
 ### 🟡 Remaining pre-beta polish (operational, not code-gating)
 
+- **NEW (session 97): iPhone QA pass 3** — verify 44/22 hero bubble + masthead retire on /find/[id]/edit + /post/preview. If 44/22 still reads off, halfway stops at 38/19 or 50/24. Also do a cold-start walk through the new /find/[id]/edit layout (plain-header → body title block → fields → polaroid → Replace photo link → autosave/savedFlash interactions).
+- **NEW (session 97): "Edit your find" body title block on mobile real estate** — Lora 24 title costs ~64px before content starts; combined with new plain-header chrome, /find/[id]/edit no longer has a sticky title context. Watch-item; if surfaced, options are (a) retire the body title, (b) shrink, (c) tighten header padding.
+- **NEW (session 97): /vendor-request, /post/edit/[id], /admin/login still use StickyMasthead** — likely candidates for the same retire as /find/[id]/edit + /post/preview per the new vendor/admin-internal-flow rule, but require David's explicit ask before extending the sweep.
+- **NEW (session 97): "Per-context sizing on a swept primitive"** — 3rd firing across sessions 82 + 96 + 97. Tech Rule promotion-ready.
+- **NEW (session 97): "User-references-existing-page as the spec, not a fresh mockup"** — first firing. Tech Rule on second firing.
+- **NEW (session 97): "Ship a reasonable midpoint when math gives an unbounded answer; accept dial-back"** — first firing.
 - **R3 admin-Events stale-data mystery** ✅ — **resolved session 73**. Root cause: Next.js HTTP-level data cache intercepting `@supabase/supabase-js`'s internal `fetch()` calls. Two-line fix in [`lib/adminAuth.ts`](lib/adminAuth.ts) (`global.fetch` wrapper). Diag strip + raw probe stay as durable visibility tooling per David's session-73 decision until admin tab retires post-Q-014. Verbose console.logs in `/api/admin/events/route.ts` are now duplicative; cleanup deferred.
 - **`/find/[id]` `navigator.share()` instrumentation gap** ✅ — **resolved session 73**. `find_shared` event with `share_method` payload, intent-capture semantic.
 - **Items 1 + 5 + 6 + 7 (Gemba polish quartet)** ✅ — **resolved session 74** in `30b9922`. Alphanumeric booth keyboard, FB CTA retired, AddFindTile to grid tail, my-shelf 9-cell placeholder grid dropped.
@@ -584,4 +558,4 @@ QR-code approval, admin-cleanup tool (session 45 materially reduces the need; se
 - Trigger: say "generate investor update" at session close
 - Process doc: Notion → Agent System Operating Manual → 📋 Investor Update — Process & Cadence
 
-> **Sprint 4 fully closed sessions 40–41; sessions 42–53 ran the pre-beta polish arc; sessions 54–69 carried the polish + observability + brand + navigation + persistence + terminology + caption-typography + Option B booth-identity sweep; session 70 was the largest layout-redesign sweep in recent memory; session 71 closed three independent decision arcs; session 72 rationalized admin entry; session 73 closed R3 end-to-end; session 74 closed the Gemba-walk admin-management gap; sessions 75 + 76 closed David-redirect bundles end-to-end; session 77 shipped Track D phases 1–4 + the masthead 5-attempt arc; session 78 shipped Track D phase 5 end-to-end. Session 79 was net-zero (Track D extension attempt reverted). Session 80 closed a David-redirect bundle (5 items + 2 polish). Session 81 closed the demo-prep refinement bundle. Session 82 closed the largest design-system consolidation pass since the v1.x layer was named. Session 83 closed the polaroid evolved tile direction end-to-end. Session 84 was the first pure-security session since R12 Sentry. Session 85 closed Phase 3 scroll-restore on 2 of 3 surfaces. Session 86 closed the third — /my-shelf admin scroll-restore — in 1 fix commit + 1 cleanup after Safari Web Inspector via USB connected. Session 87 reconciled the Tech Rule queue (17 → 33 candidates) and shipped the brand asset overhaul. Session 88 closed the Tech Rule promotion batch end-to-end + bumped the wordmark height + ran a 9-commit animation/scroll-restore arc that ended in David's "pull out all the animations" call. Session 89 was a design intentionality pass — 9 runtime commits across two arcs. Session 90 was the auth-chrome relocation pass — 7 runtime commits relocating auth chrome off masthead onto BottomNav Profile tab + /login. Session 91 was the strategic-reset + Wave 1 cleanup pass — 13 runtime commits, roadmap moved 3/15 → 8/15. Session 92 was the Wave 1 follow-up + Wave 1.5 security continuation — 11 runtime commits across two arcs; R1 shopper accounts FULLY UNBLOCKED. Session 93 was the login triage cleanup — 1 runtime commit splitting `/login` into triage + `/login/email` for the OTP form. Session 94 was the capture-and-add-find UX refinement — 4 runtime commits with masthead +40 + wordmark 90 system-wide. Session 95 was the design system audit + Phase 2 A+B — 13 runtime commits across Phase 1 audit + Phase 2 plan + Session A token foundation + Session B `<PolaroidTile>` primitive (6 callsites, ~250 lines deleted) + cross-session login redirect fix + wordmark trim 90→72. **Session 96 was the largest Phase 2 push of the project — 23 runtime commits across Sessions C+D+E end-to-end + F partial. (1) Session C `<EmptyState>` primitive across 4 surfaces; (2) Session D `<FormField>` + `<FormButton>` primitives across 9 form surfaces with Buttons.tsx retired (~-141 lines); (3) Session E v0.2 → v1.x palette migrations on /vendor/[slug] + /post/edit (the v0.2 colors token set now has zero v1.x-layer consumers); (4) Session F partial — IM Fell comment rot strip across 17 files; (5) 2 mid-session iPhone QA fixes on /vendor-request (dropzone bg + ack card). NEW promoted-via-memory: feedback_verify_primitive_contract_via_grep.md (4 firings across sessions 95+96).** Smallest→largest commit sequencing now **35+ firings** total, promoted-via-memory at session 88. Mid-session iPhone QA on Vercel preview now **~7 firings**, also promoted-via-memory. **Next natural investor-update trigger point** is still after R1 (shopper accounts) lands — Phase 2's primitive layer + the chrome consolidation it produced are foundation moves that matter more for future velocity than as a single investor narrative beat, but they put the visual-system on solid enough footing that R1's design pass can ride on shipped primitives instead of fighting drift. After session 96, Phase 2 is at 5/6 sessions complete; only the showcase page + a handful of XS cleanups remain in Session F continuation.
+> **Sprint 4 fully closed sessions 40–41; sessions 42–53 ran the pre-beta polish arc; sessions 54–69 carried the polish + observability + brand + navigation + persistence + terminology + caption-typography + Option B booth-identity sweep; session 70 was the largest layout-redesign sweep in recent memory; session 71 closed three independent decision arcs; session 72 rationalized admin entry; session 73 closed R3 end-to-end; session 74 closed the Gemba-walk admin-management gap; sessions 75 + 76 closed David-redirect bundles end-to-end; session 77 shipped Track D phases 1–4 + the masthead 5-attempt arc; session 78 shipped Track D phase 5 end-to-end. Session 79 was net-zero (Track D extension attempt reverted). Session 80 closed a David-redirect bundle (5 items + 2 polish). Session 81 closed the demo-prep refinement bundle. Session 82 closed the largest design-system consolidation pass since the v1.x layer was named. Session 83 closed the polaroid evolved tile direction end-to-end. Session 84 was the first pure-security session since R12 Sentry. Session 85 closed Phase 3 scroll-restore on 2 of 3 surfaces. Session 86 closed the third — /my-shelf admin scroll-restore — in 1 fix commit + 1 cleanup after Safari Web Inspector via USB connected. Session 87 reconciled the Tech Rule queue (17 → 33 candidates) and shipped the brand asset overhaul. Session 88 closed the Tech Rule promotion batch end-to-end + bumped the wordmark height + ran a 9-commit animation/scroll-restore arc that ended in David's "pull out all the animations" call. Session 89 was a design intentionality pass — 9 runtime commits across two arcs. Session 90 was the auth-chrome relocation pass — 7 runtime commits relocating auth chrome off masthead onto BottomNav Profile tab + /login. Session 91 was the strategic-reset + Wave 1 cleanup pass — 13 runtime commits, roadmap moved 3/15 → 8/15. Session 92 was the Wave 1 follow-up + Wave 1.5 security continuation — 11 runtime commits across two arcs; R1 shopper accounts FULLY UNBLOCKED. Session 93 was the login triage cleanup — 1 runtime commit splitting `/login` into triage + `/login/email` for the OTP form. Session 94 was the capture-and-add-find UX refinement — 4 runtime commits with masthead +40 + wordmark 90 system-wide. Session 95 was the design system audit + Phase 2 A+B — 13 runtime commits across Phase 1 audit + Phase 2 plan + Session A token foundation + Session B `<PolaroidTile>` primitive (6 callsites, ~250 lines deleted) + cross-session login redirect fix + wordmark trim 90→72. Session 96 was the largest Phase 2 push of the project — 23 runtime commits across Sessions C+D+E end-to-end + F partial (EmptyState + FormField/FormButton + palette migrations + IM Fell comment rot strip). **Session 97 was the iPhone QA followup + Edit your find layout restructure + hero bubble proportionality — 9 runtime commits across 3 arcs. (1) 6-item iPhone QA bundle from session 96 close (vendor-request Go-back link, BottomNav green-on-authed cue, FlagGlyph weight calibration, /flagged filterHidesAllSaves → EmptyState, /find/[id]/edit EditField visual chrome alignment with FormField). (2) /find/[id]/edit layout restructure mirroring /post/preview — StickyMasthead + body title block + PolaroidTile + Replace-photo link below polaroid. (3) Vendor/admin chrome retire (StickyMasthead off /find/[id]/edit + /post/preview, replaced with /login-style plain inline header per new "vendor/admin internal flow surfaces use plain back-button-only header" rule) + hero save bubble proportionality (36→72 too big → dialed to 44/22, BookmarkBoothBubble hero precedent). NEW promoted-via-memory: feedback_vendor_admin_internal_flow_no_share_masthead.md.** Smallest→largest commit sequencing now **37+ firings** total, promoted-via-memory at session 88. Mid-session iPhone QA on Vercel preview now **~8 firings**, also promoted-via-memory. **Next natural investor-update trigger point** is still after R1 (shopper accounts) lands — Phase 2 sits at 5/6 complete with primitive layer fully shipped; the visual-system is on solid enough footing that R1's design pass can ride on shipped primitives instead of fighting drift.
