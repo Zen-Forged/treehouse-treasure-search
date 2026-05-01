@@ -13,7 +13,7 @@
 //   - 22px horizontal padding throughout
 //
 // Mockup-approved decisions (session 34):
-//   - Booth name LEADS (bold IM Fell 17px), mall + booth number as FONT_SYS 13px subtitle.
+//   - Booth name LEADS (bold Lora 17px), mall + booth number as FONT_SYS 13px subtitle.
 //     Reframed session 34: "This page is for the Booth owners. It should feel like
 //     their page, not the malls page." Booth identity centers the hierarchy.
 //   - X-glyph at left (per locked glyph hierarchy: pin=mall, X=booth, session 17)

@@ -15,7 +15,7 @@
 // but it renders at both /admin and /shelves so the mall-walk entry
 // point is right where the instinct reaches for it.
 //
-// Chrome: v1.1k primitives (paperCream, IM Fell italic labels, inkHairline
+// Chrome: v1.1k primitives (paperCream, Lora upright labels, inkHairline
 // borders, inkWash input bg, filled green CTA). Matches /admin/login and
 // /vendor-request so that when /admin gets a v1.2 pass this primitive is
 // already aligned.

@@ -10,7 +10,7 @@
 //   (a) ShelfGridStyles may still be injected by other surfaces that use
 //       skeleton-shimmer — double-check before deletion.
 //   (b) FoundTile encodes a committed sold-state treatment (0.5 opacity +
-//       grayscale + IM Fell italic bottom-left caption) that a future
+//       grayscale + Lora italic bottom-left caption) that a future
 //       post-beta "vendor story" or "sold history" surface will want to reuse
 //       without redesigning. Parked against that future.
 //   (c) ThreeColGrid, AvailableTile, SkeletonGrid — check callers before

@@ -31,7 +31,7 @@
 //   - Form input primitive (white translucent 14px radius + inkHairline)
 //   - Filled green CTA (commit action rule — v1.1k (c))
 //   - Paper-wash 60px bubble + spinner for signing-in bridge
-//   - IM Fell English title + italic subhead; FONT_SYS for the PIN input
+//   - Lora title + italic subhead; FONT_SYS for the PIN input
 //     itself (precise data voice)
 
 "use client";

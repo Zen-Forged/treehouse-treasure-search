@@ -361,7 +361,7 @@ function ComposeBody({
 }) {
   return (
     <>
-      {/* Eyebrow + title — matches BoothPickerSheet's centered IM Fell heading */}
+      {/* Eyebrow + title — matches BoothPickerSheet's centered Lora heading */}
       <div style={{ padding: "0 0 2px", flexShrink: 0, textAlign: "center" }}>
         <div
           style={{

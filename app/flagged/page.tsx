@@ -8,7 +8,7 @@
 //   3. FeaturedBanner (overlay variant) — admin-editable
 //   4. Hairline divider (v1.1j) between banner and content sections
 //   5. Sectioned list grouped by booth — each section is a BoothSection with:
-//      - inkWash card header (small-caps `BOOTH NN` eyebrow + IM Fell 18px
+//      - inkWash card header (small-caps `BOOTH NN` eyebrow + Lora 18px
 //        vendor name; small mall subtitle ONLY when scope = "All malls" per D5);
 //        whole card tappable → /shelf/[vendorSlug] when slug exists
 //      - "N flagged finds" label below the card
@@ -273,7 +273,7 @@ function FindTile({
 // ── Booth section ─────────────────────────────────────────────────────────────
 // Session 70 — cartographic spine retired. Each booth becomes a flat content
 // section with a tappable inkWash card header carrying session-69 Option B
-// vocabulary (small-caps `BOOTH NN` eyebrow + IM Fell vendor name). Mall name
+// vocabulary (small-caps `BOOTH NN` eyebrow + Lora vendor name). Mall name
 // surfaces as a small subtitle in the card ONLY when the page scope is
 // "All malls" (D5).
 function BoothSection({

@@ -11,7 +11,7 @@
 //   - <PlaceholderTile>      — dashed empty 4:5 cell (owner-only, completes the 9-pane window)
 //   - <ShelfView>            — horizontal scroll; first tile is <AddFindTile> when showAddTile=true
 //   - <AddFindTile>          — dashed 4:5 CTA that links to /post
-//   - <BoothCloser>          — hairline rule + quiet IM Fell italic closing line
+//   - <BoothCloser>          — hairline rule + quiet Lora italic closing line
 //
 // v1.1j changes (docs/design-system.md §v1.1j):
 //   - Diamond ornament retired from <DiamondDivider> and <BoothCloser>; plain hairline now
@@ -1042,7 +1042,7 @@ export function ShelfView({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Booth closer — diamond divider + quiet IM Fell italic line
+// Booth closer — diamond divider + quiet Lora italic line
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function BoothCloser() {

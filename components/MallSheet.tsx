@@ -22,11 +22,11 @@
 //   1. Backdrop (tap to dismiss)
 //   2. Sheet container (paperCream, 20px top radius, shadow)
 //   3. Drag handle (visual only — backdrop tap does the dismiss)
-//   4. Header "Choose a mall" IM Fell 22px
-//   5. Subhead "Kentucky & Southern Indiana — tap to filter the feed." IM Fell italic 14px muted
+//   4. Header "Choose a mall" Lora 22px
+//   5. Subhead "Kentucky & Southern Indiana — tap to filter the feed." Lora italic 14px muted
 //   6. Diamond divider
 //   7. All malls row — no pin glyph, italic label, active-underline on active
-//   8. Mall rows — pin glyph + IM Fell 18px name + system-ui 13px city + right-aligned find-count
+//   8. Mall rows — pin glyph + Lora 18px name + system-ui 13px city + right-aligned find-count
 //
 // The active state (whether All or a specific mall) gets a 1px hairline
 // underline on its label in inkPrimary, matching the Booth page ViewToggle's

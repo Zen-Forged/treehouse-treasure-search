@@ -12,7 +12,7 @@
 //   1. Backdrop (tap to dismiss)
 //   2. Sheet container — paperCream, 20px top radius, shadow, max-height 78vh
 //   3. Drag handle (visual only; backdrop dismisses)
-//   4. Header: IM Fell 22px "Add a find" (no subhead — stripped variant)
+//   4. Header: Lora 22px "Add a find" (no subhead — stripped variant)
 //   5. Hairline divider
 //   6. Two rows, 24px glyph column + label + empty right slot:
 //      - Camera glyph + "Take a photo"
@@ -178,7 +178,7 @@ export default function AddFindSheet({
   );
 }
 
-// ── Single sheet row — glyph + IM Fell 18px label, clean single-line rows ──
+// ── Single sheet row — glyph + Lora 18px label, clean single-line rows ──
 function SheetRow({
   glyph,
   label,

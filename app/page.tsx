@@ -6,7 +6,7 @@
 //      lands here in 21B), centered "Treehouse Finds" wordmark, right slot
 //      sign-in/sign-out text link (preserved from v0.2 auth affordance;
 //      profile-circle icon deferred pending real profile page)
-//   2. Feed hero on paper — IM Fell italic eyebrow ("Finds from across" /
+//   2. Feed hero on paper — Lora italic eyebrow ("Finds from across" /
 //      "Finds from") + 26px mall/geography name as tappable MallSheet
 //      trigger + chevron-down glyph + state-dependent address/geo line
 //   3. Diamond divider

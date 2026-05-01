@@ -6,7 +6,7 @@
 //
 // Design: docs/mockups/vendor-cta-v2.html (γ editorial banner, button
 // Treatment 1 — sans semibold). Replaces the centered hairline + italic line
-// + IM Fell pill button that lived inline in app/page.tsx through session 62.
+// + Lora pill button that lived inline in app/page.tsx through session 62.
 
 "use client";
 

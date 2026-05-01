@@ -51,7 +51,7 @@
 // the mockup wins.
 //
 // Booth page v1.1h commitments otherwise unchanged:
-//   - Banner is a pure photograph; vendor name as IM Fell 32px title below
+//   - Banner is a pure photograph; vendor name as Lora 32px title below
 //   - Booth post-it pinned to banner (bottom-right, +6deg)
 //   - Window View (default) / Shelf View toggle
 //   - AddFindSheet + ?openAdd=1 redirect shim from /post preserved

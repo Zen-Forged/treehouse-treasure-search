@@ -5,7 +5,7 @@
 // Composition (top-to-bottom, within a single flex-wrap row):
 //   - 16px 22px 14px padding
 //   - 14px muted pin glyph (flex-shrink: 0)
-//   - IM Fell 16px inkPrimary vendor name
+//   - Lora 16px inkPrimary vendor name
 //   - `·` separator in inkFaint
 //   - system-ui 13px inkMuted booth / mall / city (separated by `·` inkFaint)
 //   - 0.5px inkHairline border-bottom

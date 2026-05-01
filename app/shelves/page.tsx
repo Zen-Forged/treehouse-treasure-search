@@ -593,7 +593,7 @@ export default function BoothsPage() {
                 const groupMall = group.mallId ? malls.find(m => m.id === group.mallId) : undefined;
                 return (
                 <div key={group.mallName}>
-                  {/* Section header — IM Fell name + hairline rule + booth count */}
+                  {/* Section header — Lora name + hairline rule + booth count */}
                   <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: groupIdx === 0 ? 0 : 20, paddingBottom: 10 }}>
                     <span style={{ fontFamily: FONT_LORA, fontSize: 15, color: v1.inkPrimary, letterSpacing: "-0.01em", whiteSpace: "nowrap" }}>
                       {group.mallName}

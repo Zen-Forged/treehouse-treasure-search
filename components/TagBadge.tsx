@@ -2,7 +2,7 @@
 //
 // Inline pill that signals "this field was prefilled from the inventory tag."
 // Variant α from docs/mockups/add-find-with-tag-v1.html — green-on-green pill
-// with a Lucide Tag glyph and italic IM Fell "from tag" label.
+// with a Lucide Tag glyph and italic Lora "from tag" label.
 //
 // Used on /post/preview next to the Title and Price field labels when the
 // vendor came through the tag-capture flow and Claude returned values for

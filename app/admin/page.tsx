@@ -665,7 +665,7 @@ export default function AdminPage() {
         <div style={{ margin: "24px 20px 0" }}>
 
           {/* T4b (session 37) — Add Booth primitive folded in from /shelves.
-              Rendered on v1.1k chrome (paperCream + IM Fell + filled green CTA)
+              Rendered on v1.1k chrome (paperCream + Lora + filled green CTA)
               so that when /admin gets its eventual v1.2 pass this primitive
               doesn't need re-chroming. It reads as a Treehouse-shaped insertion
               inside the legacy v0.2 admin tab — intentional mismatch flagged

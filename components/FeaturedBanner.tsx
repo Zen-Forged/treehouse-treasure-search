@@ -5,7 +5,7 @@
 //   - eyebrow: title renders ABOVE the image as a separate text block (Home
 //     "Featured Find" treatment). Used where the banner sits inside a content
 //     flow and shouldn't carry a page-identifying label on top of the image.
-//   - overlay: title renders ON TOP of the image in IM Fell 30px white with
+//   - overlay: title renders ON TOP of the image in Lora 30px white with
 //     a text-shadow for legibility against any photograph (Find Map
 //     treatment). Used where the banner IS the page-title surface and
 //     replaces a previously-standalone heading.
@@ -64,7 +64,7 @@ export default function FeaturedBanner({
   if (variant === "eyebrow") {
     return (
       <div style={{ padding: "14px 10px 0", marginBottom }}>
-        {/* Eyebrow title — IM Fell italic 14px muted, sentence case */}
+        {/* Eyebrow title — Lora italic 14px muted, sentence case */}
         {title && (
           <div
             style={{
@@ -89,7 +89,7 @@ export default function FeaturedBanner({
   return (
     <div style={{ padding: "10px 10px 0", marginBottom, position: "relative" }}>
       <BannerImage imageUrl={imageUrl} minHeight={minHeight} scrim={true} />
-      {/* Overlay title — IM Fell 30px white with text-shadow for legibility */}
+      {/* Overlay title — Lora 30px white with text-shadow for legibility */}
       {title && (
         <div
           style={{
