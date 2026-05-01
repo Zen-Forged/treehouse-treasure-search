@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — &lt;EmptyState&gt; primitive v1</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper-cream:  #e8ddc7;
+    --paper-warm:   #faf2e0;
+    --postit:       #fbf3df;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --green:        #1e4d2b;
+
+    --lora: "Lora", Georgia, serif;
+    --sys:  -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+
+    --masthead-h: 103px; /* MASTHEAD_HEIGHT exported session 95 */
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1480px; margin: 0 auto; padding: 30px 20px 60px; }
+
+  h1.title {
+    font-family: var(--lora);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 920px;
+  }
+
+  .section-header {
+    max-width: 1180px;
+    margin: 26px auto 14px;
+    color: rgba(232, 221, 199, 0.92);
+    font-family: var(--lora);
+    font-size: 22px;
+    font-weight: 400;
+    border-bottom: 1px solid rgba(232, 221, 199, 0.16);
+    padding-bottom: 6px;
+  }
+
+  .decisions {
+    max-width: 1180px;
+    margin: 0 auto 30px;
+    padding: 22px 28px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--lora);
+    font-size: 19px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 12px;
+  }
+  .decisions h4 {
+    font-family: var(--lora);
+    font-size: 15px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 14px 0 4px;
+  }
+  .decisions ul { margin: 4px 0 0; padding-left: 18px; }
+  .decisions li { margin-bottom: 6px; }
+  .decisions strong { color: #fff9e8; }
+  .decisions code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .decisions .my-read { color: #b8e8b8; font-style: italic; }
+  .decisions table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 12.5px;
+  }
+  .decisions th, .decisions td {
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(232, 221, 199, 0.10);
+    vertical-align: top;
+  }
+  .decisions th { color: #fff9e8; font-weight: 600; font-family: var(--lora); }
+  .decisions tr:last-child td { border-bottom: none; }
+
+  .row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    max-width: 1480px;
+    margin: 0 auto 34px;
+  }
+  .frame { display: flex; flex-direction: column; align-items: center; }
+  .frame-label {
+    font-family: var(--lora);
+    color: #fff9e8;
+    font-size: 16px;
+    margin-bottom: 3px;
+    text-align: center;
+  }
+  .frame-route {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 10px;
+    color: rgba(232, 221, 199, 0.50);
+    margin-bottom: 10px;
+    max-width: 280px;
+    text-align: center;
+  }
+  .frame-spec {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 10px;
+    color: rgba(232, 221, 199, 0.55);
+    margin: 10px auto 0;
+    max-width: 320px;
+    text-align: left;
+    line-height: 1.55;
+    padding: 10px 14px;
+    background: rgba(0,0,0,0.18);
+    border-left: 2px solid rgba(232, 221, 199, 0.20);
+    border-radius: 0 4px 4px 0;
+    width: 320px;
+  }
+
+  /* ── Phone frame ─────────────────────────────────────────── */
+  .phone {
+    width: 320px;
+    height: 540px;
+    background: var(--paper-cream);
+    border-radius: 22px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.45);
+  }
+
+  /* ── Masthead silhouette (top-of-screen surfaces only) ──── */
+  .masthead {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--masthead-h);
+    background: rgba(232, 221, 199, 0.94);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--ink-hairline);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+  .masthead .wordmark {
+    font-family: var(--lora);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 17px;
+    color: var(--ink-primary);
+    letter-spacing: 0.01em;
+  }
+  .masthead .mall-scope {
+    margin-top: 8px;
+    font-family: var(--lora);
+    font-size: 13px;
+    color: var(--ink-muted);
+  }
+
+  /* ── Mid-page chrome silhouette (BoothPage above /shelf empty) ── */
+  .booth-chrome {
+    padding-top: var(--masthead-h);
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--ink-hairline);
+    background: var(--paper-cream);
+    text-align: center;
+  }
+  .booth-chrome .hero {
+    width: 80%;
+    height: 72px;
+    margin: 12px auto 10px;
+    background: linear-gradient(135deg, #d8c8a8, #c4b290);
+    border-radius: 8px;
+  }
+  .booth-chrome .booth-title {
+    font-family: var(--lora);
+    font-size: 16px;
+    color: var(--ink-primary);
+    margin-bottom: 2px;
+  }
+  .booth-chrome .booth-mall {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink-muted);
+  }
+  .booth-chrome .toggle {
+    margin-top: 12px;
+    display: inline-flex;
+    gap: 6px;
+    font-family: var(--lora);
+    font-size: 11px;
+    color: var(--ink-muted);
+  }
+  .booth-chrome .toggle span {
+    padding: 4px 10px;
+    border: 1px solid var(--ink-hairline);
+    border-radius: 999px;
+  }
+  .booth-chrome .toggle span.active {
+    background: var(--ink-primary);
+    color: var(--paper-cream);
+    border-color: var(--ink-primary);
+  }
+
+  /* ── Empty state container variations ───────────────────── */
+  .empty-region {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .empty-region.nested-context {
+    position: relative;
+    top: auto;
+    bottom: auto;
+  }
+
+  /* CURRENT (BEFORE) — per-surface inline values */
+  .empty-home    { padding-top: calc(var(--masthead-h) + 72px); text-align: center; padding-left: 16px; padding-right: 16px; }
+  .empty-flagged { padding-top: calc(var(--masthead-h) + 60px); text-align: center; padding-left: 32px; padding-right: 32px; }
+  .empty-shelves { padding-top: calc(var(--masthead-h) + 80px); text-align: center; padding-left: 32px; padding-right: 32px; }
+  .empty-shelf-nested { padding: 48px 28px 0; text-align: center; }
+
+  /* AFTER — unified primitive */
+  .empty-after-masthead { padding-top: calc(var(--masthead-h) + 32px); text-align: center; padding-left: 16px; padding-right: 16px; }
+  .empty-after-nested   { padding: 48px 28px 0; text-align: center; }
+
+  /* ── Title + subtitle styles per current state ──────────── */
+  .t-home    { font-family: var(--lora); font-size: 20px; color: var(--ink-primary); line-height: 1.3; margin-bottom: 10px; }
+  .t-flagged { font-family: var(--lora); font-size: 24px; color: var(--ink-primary); line-height: 1.3; margin-bottom: 12px; }
+  .t-shelves { font-family: var(--lora); font-size: 20px; color: var(--ink-primary); line-height: 1.3; margin-bottom: 10px; }
+
+  .s-home    { font-family: var(--lora); font-style: italic; font-size: 14px; color: var(--ink-muted); line-height: 1.7;  max-width: 230px; margin: 0 auto; }
+  .s-flagged { font-family: var(--lora); font-style: italic; font-size: 15px; color: var(--ink-muted); line-height: 1.65; max-width: 280px; margin: 0 auto; }
+  .s-shelves { font-family: var(--lora); font-style: italic; font-size: 14px; color: var(--ink-muted); line-height: 1.75; max-width: 230px; margin: 0; }
+  .s-shelf-nested { font-family: var(--lora); font-style: italic; font-size: 15px; color: var(--ink-muted); line-height: 1.65; }
+
+  /* Unified primitive title + subtitle */
+  .t-unified { font-family: var(--lora); font-size: 22px; color: var(--ink-primary); line-height: 1.3; margin-bottom: 10px; }
+  .s-unified { font-family: var(--lora); font-style: italic; font-size: 14px; color: var(--ink-muted); line-height: 1.7;  max-width: 260px; margin: 0 auto; }
+
+  /* Shorthand for muted dotted helpers */
+  .legend-line {
+    max-width: 1180px;
+    margin: 0 auto 12px;
+    color: rgba(232, 221, 199, 0.55);
+    font-size: 12px;
+    line-height: 1.6;
+    text-align: center;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <h1 class="title">&lt;EmptyState&gt; primitive · v1</h1>
+  <p class="subtitle">
+    Phase 2 Session C · 4 inline empty states unified · mockup-first per Design Agent rule
+  </p>
+
+  <!-- ═══════════════════════ DECISIONS PANE ═══════════════════════ -->
+  <div class="decisions">
+    <h3>What I'm asking you to judge</h3>
+
+    <p>
+      Phase 1 audit found <strong>4 inline empty states</strong> drifting on every visual axis except font family.
+      Frame 1 below shows what's shipping today. Frame 2 shows the same 4 surfaces re-rendered with
+      a single proposed primitive. The primitive enforces structure (clearance, sizing, centering);
+      it does <em>not</em> change copy or voice.
+    </p>
+
+    <h4>Decisions D1–D6 to freeze</h4>
+
+    <table>
+      <tr><th style="width: 50px;">D#</th><th>Question</th><th>My read</th></tr>
+      <tr>
+        <td><strong>D1</strong></td>
+        <td>Title font size — currently <code>20</code> (Home + /shelves), <code>24</code> (/flagged), none (/shelf/[slug]).</td>
+        <td class="my-read">22 — splits the difference; Lora at 22 reads as journal, not display chrome.</td>
+      </tr>
+      <tr>
+        <td><strong>D2</strong></td>
+        <td>Title <em>required</em> or <em>optional</em>? /shelf/[slug] ships subtitle-only today.</td>
+        <td class="my-read">Optional. Either-or-both. Preserves the scenic single-line on /shelf/[slug].</td>
+      </tr>
+      <tr>
+        <td><strong>D3</strong></td>
+        <td>Voice unification — should I rewrite copy across the 4 surfaces?</td>
+        <td class="my-read">No. Preserve per-surface voice. The voices ARE deliberately different. Primitive enforces structure, not copy.</td>
+      </tr>
+      <tr>
+        <td><strong>D4</strong></td>
+        <td>Subtitle line-height — currently <code>1.65</code> / <code>1.7</code> / <code>1.75</code>.</td>
+        <td class="my-read">1.7 — median. Balances air without feeling spacy at 14px italic Lora.</td>
+      </tr>
+      <tr>
+        <td><strong>D5</strong></td>
+        <td>Subtitle maxWidth — currently <code>230</code> / <code>280</code> / none.</td>
+        <td class="my-read">260. Keeps single-clause subtitles from wrapping awkwardly; reads as narrative not paragraph.</td>
+      </tr>
+      <tr>
+        <td><strong>D6</strong></td>
+        <td>Clearance — paddingTop currently <code>72</code> / <code>60</code> / <code>80</code> (top-level) / <code>48</code> (mid-page nested in /shelf/[slug]).</td>
+        <td class="my-read"><code>clearance</code> prop with two modes: <code>"masthead"</code> default (= MASTHEAD_HEIGHT + 32 = 135), or a number for nested mid-page contexts. /shelf/[slug] passes <code>48</code>.</td>
+      </tr>
+    </table>
+
+    <h4>Already settled (no decision needed)</h4>
+    <ul>
+      <li>Family: <code>FONT_LORA</code> · Title color: <code>v1.inkPrimary</code> · Subtitle color: <code>v1.inkMuted</code> · Subtitle style: italic.</li>
+      <li>Title-to-subtitle gap: <code>10px</code> (Home + /shelves agree; /flagged drifts to 12 — pulling to 10).</li>
+      <li>Centering: flex column · alignItems center · textAlign center.</li>
+      <li>CTA slot: pass-through <code>cta?: ReactNode</code>, optional, rendered below subtitle (not used by any current callsite).</li>
+    </ul>
+
+    <h4>Out of scope</h4>
+    <ul>
+      <li><code>/my-shelf</code> — uses <code>AddFindTile</code> (interactive card), not a text-block empty state. Not a primitive candidate.</li>
+      <li>Skeleton states (<code>data === undefined</code>) — separate primitive, not unified here.</li>
+      <li>Entrance animation — <code>/shelves</code> wraps its empty in <code>motion.div</code>; primitive stays static. Callers compose motion if they want it.</li>
+    </ul>
+  </div>
+
+  <!-- ═══════════════════════ FRAME 1 — BEFORE ═══════════════════════ -->
+  <div class="section-header">Frame 1 — BEFORE · 4 current empty states</div>
+  <div class="legend-line">
+    Drift: paddingTop <code>72 / 60 / 80 / 48</code> · title size <code>20 / 24 / — / —</code> · subtitle maxWidth <code>230 / 280 / 230 / —</code>
+  </div>
+
+  <div class="row">
+
+    <!-- Home -->
+    <div class="frame">
+      <div class="frame-label">Home — feed empty</div>
+      <div class="frame-route">app/page.tsx · EmptyFeed()</div>
+      <div class="phone">
+        <div class="masthead">
+          <div class="wordmark">Treehouse Finds</div>
+          <div class="mall-scope">All Kentucky Locations ▾</div>
+        </div>
+        <div class="empty-region empty-home">
+          <div class="t-home">The shelves are quiet.</div>
+          <p class="s-home">Check back soon — new finds land here the moment a vendor posts them.</p>
+        </div>
+      </div>
+      <div class="frame-spec">
+        title 20 / sub 14 / pT 72<br>
+        sub maxW 230 · lh 1.7
+      </div>
+    </div>
+
+    <!-- Flagged -->
+    <div class="frame">
+      <div class="frame-label">/flagged — saves empty</div>
+      <div class="frame-route">app/flagged/page.tsx · EmptyState()</div>
+      <div class="phone">
+        <div class="masthead">
+          <div class="wordmark">Treehouse Finds</div>
+          <div class="mall-scope">All Kentucky Locations ▾</div>
+        </div>
+        <div class="empty-region empty-flagged">
+          <div class="t-flagged">No finds saved yet</div>
+          <div class="s-flagged">Tap the leaf on any find to save it here.</div>
+        </div>
+      </div>
+      <div class="frame-spec">
+        title 24 / sub 15 / pT 60<br>
+        sub maxW 280 · lh 1.65
+      </div>
+    </div>
+
+    <!-- Shelves -->
+    <div class="frame">
+      <div class="frame-label">/shelves — booths empty</div>
+      <div class="frame-route">app/shelves/page.tsx · line 559</div>
+      <div class="phone">
+        <div class="masthead">
+          <div class="wordmark">Treehouse Finds</div>
+          <div class="mall-scope">All Kentucky Locations ▾</div>
+        </div>
+        <div class="empty-region empty-shelves">
+          <div class="t-shelves">No booths yet</div>
+          <p class="s-shelves">Booths will appear here once vendors start posting their finds.</p>
+        </div>
+      </div>
+      <div class="frame-spec">
+        title 20 / sub 14 / pT 80<br>
+        sub maxW 230 · lh 1.75
+      </div>
+    </div>
+
+    <!-- Shelf [slug] — NESTED -->
+    <div class="frame">
+      <div class="frame-label">/shelf/[slug] — booth empty</div>
+      <div class="frame-route">app/shelf/[slug]/page.tsx · line 476</div>
+      <div class="phone">
+        <div class="masthead">
+          <div class="wordmark">Treehouse Finds</div>
+        </div>
+        <div class="booth-chrome">
+          <div class="hero"></div>
+          <div class="booth-title">Stillwater Curios</div>
+          <div class="booth-mall">Kentucky Treehouse · booth A12</div>
+          <div class="toggle">
+            <span class="active">Window</span>
+            <span>Shelf</span>
+          </div>
+        </div>
+        <div class="empty-region nested-context empty-shelf-nested">
+          <div class="s-shelf-nested">Nothing on the shelf yet — check back soon.</div>
+        </div>
+      </div>
+      <div class="frame-spec">
+        no title · sub 15 · pT 48<br>
+        nested mid-page · lh 1.65<br>
+        no maxW
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════ FRAME 2 — AFTER ═══════════════════════ -->
+  <div class="section-header">Frame 2 — AFTER · unified <code style="font-size: 18px; background: rgba(232,221,199,0.08); padding: 1px 6px; border-radius: 4px;">&lt;EmptyState&gt;</code> primitive</div>
+  <div class="legend-line">
+    Same copy. Unified structure: title 22 · subtitle 14 italic · maxW 260 · lh 1.7 · clearance "masthead" or 48 (nested).
+  </div>
+
+  <div class="row">
+
+    <!-- Home — unified -->
+    <div class="frame">
+      <div class="frame-label">Home — feed empty</div>
+      <div class="frame-route">&lt;EmptyState&gt; clearance="masthead"</div>
+      <div class="phone">
+        <div class="masthead">
+          <div class="wordmark">Treehouse Finds</div>
+          <div class="mall-scope">All Kentucky Locations ▾</div>
+        </div>
+        <div class="empty-region empty-after-masthead">
+          <div class="t-unified">The shelves are quiet.</div>
+          <p class="s-unified">Check back soon — new finds land here the moment a vendor posts them.</p>
+        </div>
+      </div>
+      <div class="frame-spec">
+        title 22 / sub 14 / pT 135<br>
+        (= MASTHEAD_HEIGHT 103 + 32)
+      </div>
+    </div>
+
+    <!-- Flagged — unified -->
+    <div class="frame">
+      <div class="frame-label">/flagged — saves empty</div>
+      <div class="frame-route">&lt;EmptyState&gt; clearance="masthead"</div>
+      <div class="phone">
+        <div class="masthead">
+          <div class="wordmark">Treehouse Finds</div>
+          <div class="mall-scope">All Kentucky Locations ▾</div>
+        </div>
+        <div class="empty-region empty-after-masthead">
+          <div class="t-unified">No finds saved yet</div>
+          <p class="s-unified">Tap the leaf on any find to save it here.</p>
+        </div>
+      </div>
+      <div class="frame-spec">
+        title 22 / sub 14 / pT 135<br>
+        copy preserved verbatim
+      </div>
+    </div>
+
+    <!-- Shelves — unified -->
+    <div class="frame">
+      <div class="frame-label">/shelves — booths empty</div>
+      <div class="frame-route">&lt;EmptyState&gt; clearance="masthead"</div>
+      <div class="phone">
+        <div class="masthead">
+          <div class="wordmark">Treehouse Finds</div>
+          <div class="mall-scope">All Kentucky Locations ▾</div>
+        </div>
+        <div class="empty-region empty-after-masthead">
+          <div class="t-unified">No booths yet</div>
+          <p class="s-unified">Booths will appear here once vendors start posting their finds.</p>
+        </div>
+      </div>
+      <div class="frame-spec">
+        title 22 / sub 14 / pT 135<br>
+        was 80 · normalizes to 135
+      </div>
+    </div>
+
+    <!-- Shelf [slug] — unified, nested clearance -->
+    <div class="frame">
+      <div class="frame-label">/shelf/[slug] — booth empty</div>
+      <div class="frame-route">&lt;EmptyState&gt; clearance={48}</div>
+      <div class="phone">
+        <div class="masthead">
+          <div class="wordmark">Treehouse Finds</div>
+        </div>
+        <div class="booth-chrome">
+          <div class="hero"></div>
+          <div class="booth-title">Stillwater Curios</div>
+          <div class="booth-mall">Kentucky Treehouse · booth A12</div>
+          <div class="toggle">
+            <span class="active">Window</span>
+            <span>Shelf</span>
+          </div>
+        </div>
+        <div class="empty-region nested-context empty-after-nested">
+          <p class="s-unified">Nothing on the shelf yet — check back soon.</p>
+        </div>
+      </div>
+      <div class="frame-spec">
+        title omitted · sub 14 / pT 48<br>
+        nested · same clearance preserved<br>
+        sub size 15 → 14 (normalize)
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════ DELTA NOTES ═══════════════════════ -->
+  <div class="section-header">What changes vs. today</div>
+
+  <div class="decisions">
+    <table>
+      <tr><th>Surface</th><th>Title size</th><th>Subtitle size</th><th>paddingTop</th><th>Subtitle maxW</th><th>Subtitle lineHeight</th></tr>
+      <tr>
+        <td>Home</td>
+        <td>20 → <strong>22</strong></td>
+        <td>14 → <strong>14</strong> ✓</td>
+        <td>72 → <strong>135</strong></td>
+        <td>230 → <strong>260</strong></td>
+        <td>1.7 → <strong>1.7</strong> ✓</td>
+      </tr>
+      <tr>
+        <td>/flagged</td>
+        <td>24 → <strong>22</strong></td>
+        <td>15 → <strong>14</strong></td>
+        <td>60 → <strong>135</strong></td>
+        <td>280 → <strong>260</strong></td>
+        <td>1.65 → <strong>1.7</strong></td>
+      </tr>
+      <tr>
+        <td>/shelves</td>
+        <td>20 → <strong>22</strong></td>
+        <td>14 → <strong>14</strong> ✓</td>
+        <td>80 → <strong>135</strong></td>
+        <td>230 → <strong>260</strong></td>
+        <td>1.75 → <strong>1.7</strong></td>
+      </tr>
+      <tr>
+        <td>/shelf/[slug]</td>
+        <td>— ✓</td>
+        <td>15 → <strong>14</strong></td>
+        <td>48 → <strong>48</strong> ✓</td>
+        <td>none → <strong>260</strong></td>
+        <td>1.65 → <strong>1.7</strong></td>
+      </tr>
+    </table>
+
+    <h4>Net visual delta — small but real</h4>
+    <ul>
+      <li><strong>Title size:</strong> /flagged drops 2px (24 → 22); Home + /shelves gain 2px (20 → 22). All converge to 22.</li>
+      <li><strong>paddingTop on top-level surfaces:</strong> all three jump to 135 (= MASTHEAD_HEIGHT + 32). Home was 72 (sat too tight under masthead at the new 90px-grid system); /shelves was 80 (close); /flagged was 60 (tightest). Unified 135 reads more open without feeling lost — and removes the per-surface guesswork that paid for the drift.</li>
+      <li><strong>/shelf/[slug] subtitle</strong> shrinks 1px (15 → 14) and gains a maxW (none → 260). Both small. Single-line Lora at 14 vs 15 is barely perceptible at this length.</li>
+      <li><strong>Voice retention:</strong> all 4 copies preserved exactly. Per D3.</li>
+    </ul>
+
+    <h4>If the visual delta from D6 (paddingTop normalization) feels too far</h4>
+    <ul>
+      <li>Alternative: split the default into two — <code>"top-of-page"</code> (= <code>MASTHEAD_HEIGHT + 32</code>, used by Home + /shelves) vs <code>"comfortable"</code> (= <code>MASTHEAD_HEIGHT</code> only, no extra, used by /flagged where the action affordance lives in the masthead so the empty wants tighter clearance).</li>
+      <li>Or accept the converge and revisit if iPhone QA reads as "too low on /flagged."</li>
+      <li class="my-read">My read: pick the converge. The current 60/72/80 split is unjustified drift. If one surface needs a custom value, pass <code>clearance={60}</code> explicitly; the prop already supports it.</li>
+    </ul>
+  </div>
+
+  <p style="text-align: center; color: rgba(232,221,199,0.45); font-size: 11px; margin: 40px 0 0; font-style: italic;">
+    docs/mockups/empty-state-primitive-v1.html · Phase 2 Session C · 2026-05-01
+  </p>
+
+</div>
+</body>
+</html>
