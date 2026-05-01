@@ -99,7 +99,11 @@ const WORDMARK_DEFAULT = (
 // Total masthead height = paddingTop + inner grid minHeight + paddingBottom
 // + bottom border. paddingTop is max(14px, safe-area-inset-top); the rest
 // is fixed. Session 94: inner grid 50 → 90, so calc 63 → 103. Spacer matches.
-const MASTHEAD_HEIGHT = "calc(max(14px, env(safe-area-inset-top, 14px)) + 103px)";
+// Exported as the canonical SSOT for any future surface that needs to compute
+// layout against the masthead footprint (fixed overlays, scroll-snap targets,
+// etc.). The spacer inside this component already reserves the height for
+// content rendered after <StickyMasthead /> in the React tree.
+export const MASTHEAD_HEIGHT = "calc(max(14px, env(safe-area-inset-top, 14px)) + 103px)";
 
 export default function StickyMasthead({
   left,
