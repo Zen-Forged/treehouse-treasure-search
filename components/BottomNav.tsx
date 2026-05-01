@@ -8,10 +8,8 @@
 //
 // The Profile tab routes to /login in every state — guests see the OTP
 // flow, authed users see the same page with a "sign out" affordance under
-// the first-time helper line. The icon outline turns green when the user
-// is signed in so the nav reflects auth state without changing position
-// or label. Admin tab uses IoKey (react-icons/io5) for visual distinction
-// from the other Lucide-stroked tabs.
+// the first-time helper line. Admin tab uses IoKey (react-icons/io5) for
+// visual distinction from the other Lucide-stroked tabs.
 
 "use client";
 
@@ -115,12 +113,8 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
       {tabs.map(tab => {
         const isActive  = active === tab.key;
         const showBadge = tab.badge && flaggedCount > 0;
-        // Session 90 — Profile icon goes green when the user is signed in,
-        // regardless of active state. Outline only — the label stays muted
-        // unless the tab is also active. Decoupled label/icon colors.
-        const profileGreenWhenAuthed = tab.key === "login" && !!user;
         const labelColor = isActive ? C.green : C.textMuted;
-        const iconColor  = isActive || profileGreenWhenAuthed ? C.green : C.textMuted;
+        const iconColor  = isActive ? C.green : C.textMuted;
         return (
           <button
             key={tab.key}
