@@ -40,6 +40,8 @@ import { Mail, ArrowLeft, Loader, Clipboard, CircleUser } from "lucide-react";
 import { sendMagicLink, getSession, signOut, onAuthChange, isAdmin } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import FormField, { formInputStyle } from "@/components/FormField";
+import FormButton from "@/components/FormButton";
 import type { User } from "@supabase/supabase-js";
 
 type Screen = "enter-email" | "enter-code";
@@ -54,54 +56,10 @@ function safeRedirect(next: string | null, fallback = "/my-shelf"): string {
   return next;
 }
 
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  boxSizing: "border-box",
-  padding: "14px 14px",
-  borderRadius: 14,
-  background: v1.postit,
-  border: `1px solid ${v1.inkHairline}`,
-  color: v1.inkPrimary,
-  fontSize: 16,
-  outline: "none",
-  fontFamily: FONT_SYS,
-  appearance: "none",
-  WebkitAppearance: "none",
-};
-
-const inputErrorStyle: React.CSSProperties = {
-  ...inputStyle,
+const inputErrorOverride: React.CSSProperties = {
   border: `1.5px solid ${v1.redBorder}`,
   padding: "13.5px 13.5px",
 };
-
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  fontFamily: FONT_LORA,
-  fontStyle: "italic",
-  fontSize: 13,
-  color: v1.inkMuted,
-  lineHeight: 1.3,
-  marginBottom: 7,
-};
-
-const ctaStyle = (disabled: boolean): React.CSSProperties => ({
-  width: "100%",
-  padding: "15px",
-  borderRadius: 14,
-  fontFamily: FONT_SYS,
-  fontSize: 15,
-  fontWeight: 500,
-  color: "#fff",
-  background: disabled ? "rgba(30,77,43,0.40)" : v1.green,
-  border: "none",
-  cursor: disabled ? "default" : "pointer",
-  boxShadow: disabled ? "none" : "0 2px 14px rgba(30,77,43,0.22)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 8,
-});
 
 function LoginEmailInner() {
   const router       = useRouter();
@@ -389,8 +347,7 @@ function LoginEmailInner() {
                 transition={{ duration: 0.22 }}
                 style={{ display: "flex", flexDirection: "column", gap: 14 }}
               >
-                <div>
-                  <label style={labelStyle}>Email address</label>
+                <FormField label="Email address" size="page">
                   <input
                     type="email"
                     value={email}
@@ -401,23 +358,29 @@ function LoginEmailInner() {
                     autoCapitalize="none"
                     autoCorrect="off"
                     autoComplete="email"
-                    style={error ? inputErrorStyle : inputStyle}
+                    style={{
+                      ...formInputStyle("page"),
+                      boxSizing: "border-box",
+                      appearance: "none",
+                      WebkitAppearance: "none",
+                      ...(error ? inputErrorOverride : null),
+                    }}
                   />
-                </div>
+                </FormField>
 
                 {error && <ErrorBanner message={error} />}
 
-                <button
+                <FormButton
                   onClick={handleSend}
                   disabled={busy || !email.trim()}
-                  style={ctaStyle(busy || !email.trim())}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
                 >
                   {busy ? (
                     <><Loader size={14} style={{ animation: "spin 0.9s linear infinite" }} /> Sending…</>
                   ) : (
                     <><Mail size={14} strokeWidth={1.8} /> Email me a code</>
                   )}
-                </button>
+                </FormButton>
 
                 <p
                   style={{
@@ -473,8 +436,7 @@ function LoginEmailInner() {
                   </span>
                 </div>
 
-                <div>
-                  <label style={labelStyle}>6-digit code</label>
+                <FormField label="6-digit code" size="page">
                   <input
                     ref={codeInputRef}
                     type="text"
@@ -500,16 +462,20 @@ function LoginEmailInner() {
                     autoFocus
                     disabled={codeBusy}
                     style={{
-                      ...(codeError ? inputErrorStyle : inputStyle),
+                      ...formInputStyle("page"),
+                      boxSizing: "border-box",
+                      appearance: "none",
+                      WebkitAppearance: "none",
                       fontSize: 28,
                       padding: "18px 14px",
                       textAlign: "center",
                       letterSpacing: "0.4em",
                       fontFamily: FONT_SYS,
                       opacity: codeBusy ? 0.6 : 1,
+                      ...(codeError ? inputErrorOverride : null),
                     }}
                   />
-                </div>
+                </FormField>
 
                 {canPaste && (
                   <button
@@ -692,27 +658,14 @@ function LoginEmailInner() {
 
       {authedUser && screen === "enter-email" && (
         <div style={{ flexShrink: 0, padding: "0 28px 26px", textAlign: "center" }}>
-          <button
+          <FormButton
+            variant="link"
             onClick={handleSignOut}
             disabled={signingOut}
-            style={{
-              background: "none",
-              border: "none",
-              padding: 0,
-              cursor: signingOut ? "default" : "pointer",
-              fontFamily: FONT_LORA,
-              fontStyle: "italic",
-              fontSize: 14,
-              color: v1.inkMuted,
-              textDecoration: "underline",
-              textDecorationStyle: "dotted",
-              textDecorationColor: v1.inkFaint,
-              textUnderlineOffset: 3,
-              opacity: signingOut ? 0.5 : 1,
-            }}
+            style={{ opacity: signingOut ? 0.5 : 1 }}
           >
             {signingOut ? "Signing out…" : "Sign out"}
-          </button>
+          </FormButton>
         </div>
       )}
 
