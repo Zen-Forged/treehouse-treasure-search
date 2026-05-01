@@ -915,10 +915,9 @@ export default function FindDetailPage() {
             {/* Flag — SIBLING of the photograph. Session 97 hero scale:
                 bubble 44×44 / glyph 22 — matches BookmarkBoothBubble hero
                 + back button + share airplane (the codebase's established
-                "hero scale" precedent). Modest bump from the 36/17 tile
-                size; the tile size itself read too small relative to the
-                hero photo. */}
-            {post && (post?.image_url || previewImageUrl) && (
+                "hero scale" precedent). Owner pencil retired from this
+                slot in session 2 — moved inline next-to-title (no bg). */}
+            {post && (post?.image_url || previewImageUrl) && !isMyPost && (
               <div
                 style={{
                   position: "absolute",
@@ -932,10 +931,9 @@ export default function FindDetailPage() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (isMyPost) router.push(`/find/${post.id}/edit`);
-                    else handleToggleSave();
+                    handleToggleSave();
                   }}
-                  aria-label={isMyPost ? "Edit this find" : (isSaved ? "Unsave" : "Save")}
+                  aria-label={isSaved ? "Unsave" : "Save"}
                   style={{
                     width: "100%",
                     height: "100%",
@@ -952,15 +950,11 @@ export default function FindDetailPage() {
                     WebkitTapHighlightColor: "transparent",
                   }}
                 >
-                  {isMyPost ? (
-                    <Pencil size={20} strokeWidth={1.8} style={{ color: v1.inkPrimary }} />
-                  ) : (
-                    <FlagGlyph
-                      size={22}
-                      strokeWidth={1.7}
-                      style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
-                    />
-                  )}
+                  <FlagGlyph
+                    size={22}
+                    strokeWidth={1.7}
+                    style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
+                  />
                 </button>
               </div>
             )}
@@ -1098,8 +1092,10 @@ export default function FindDetailPage() {
       {/* Title + price — session 76 Frame B: centered, price 32px twin below
           (em-dash retired). docs/find-detail-title-center-design.md
           Session 78 — delay 0 so title fades in WITH the photograph morph.
-          David's request: "feels like one transition, not two." */}
-      <div style={{ padding: "0 22px", marginBottom: 20, textAlign: "center" }}>
+          David's request: "feels like one transition, not two."
+          Session 2 — owner-only inline edit pencil at right edge (no bg).
+          Title stays centered; pencil floats in the right gutter. */}
+      <div style={{ position: "relative", padding: "0 22px", marginBottom: 20, textAlign: "center" }}>
         <h1
           style={{
             fontFamily: FONT_LORA,
@@ -1127,6 +1123,24 @@ export default function FindDetailPage() {
           >
             ${Math.round(price)}
           </div>
+        )}
+        {isMyPost && (
+          <button
+            onClick={() => router.push(`/find/${post.id}/edit`)}
+            aria-label="Edit this find"
+            style={{
+              position: "absolute",
+              top: 8,
+              right: 14,
+              background: "none",
+              border: "none",
+              padding: 6,
+              cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <Pencil size={18} strokeWidth={1.6} style={{ color: v1.inkMid }} />
+          </button>
         )}
       </div>
 
