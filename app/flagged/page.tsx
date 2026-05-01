@@ -48,7 +48,6 @@ import {
   FONT_LORA,
   FONT_SYS,
 } from "@/lib/tokens";
-import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
 import BoothLockupCard from "@/components/BoothLockupCard";
@@ -57,6 +56,7 @@ import MallSheet from "@/components/MallSheet";
 import MallScopeHeader, { type MallScopeGeoLine } from "@/components/MallScopeHeader";
 import StickyMasthead from "@/components/StickyMasthead";
 import FeaturedBanner from "@/components/FeaturedBanner";
+import PolaroidTile from "@/components/PolaroidTile";
 import type { Post, Mall } from "@/types/treehouse";
 
 
@@ -149,9 +149,6 @@ function FindTile({
   onUnsave: (id: string) => void;
   widthMode: "grid" | "scroll";
 }) {
-  const [imgErr, setImgErr] = useState(false);
-  const hasImg = !!post.image_url && !imgErr;
-
   function handleUnsave(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -187,139 +184,87 @@ function FindTile({
       onClick={handleTileClick}
       style={{ textDecoration: "none", color: "inherit", display: "block", ...tileStyle }}
     >
-      <div
-        style={{
-          background: "#faf2e0",
-          borderRadius: 4,
-          overflow: "hidden",
-          boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
-          padding: "7px 7px 0",
-        }}
-      >
-        {/* Track D phase 5 — photograph wrapped in <motion.div layoutId>
-            sharing the `find-${id}` key with the feed tile and /find/[id]
-            hero. The image lifts out of this fixed-aspect slot during the
-            forward flight; the unsave bubble stays as a sibling. */}
-        <div
-          style={{
-            position: "relative",
-            width: "100%",
-            aspectRatio: "4/5",
-            background: v1.postit,
-          }}
-        >
-          {/* Session 88 — layoutId stripped (B1). Home and /flagged both had
-              layoutId={`find-${id}`} matching, so framer-motion was morphing
-              the photograph across the route change when the same find
-              appeared on both pages. Track D source-side morph from /flagged
-              tile to /find/[id] hero is gone with this change; only the
-              Home → /find/[id] morph survives. */}
-          <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
-            {hasImg ? (
-              <img
-                src={post.image_url!}
-                alt={post.title}
-                loading="lazy"
-                onError={() => setImgErr(true)}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  display: "block",
-                  filter:       TREEHOUSE_LENS_FILTER,
-                  WebkitFilter: TREEHOUSE_LENS_FILTER,
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontFamily: FONT_LORA,
-                  fontStyle: "italic",
-                  fontSize: 13,
-                  color: v1.inkFaint,
-                }}
-              >
-                no photograph
-              </div>
-            )}
-
-          </div>
-
-          {/* Session 88 — flag layoutId stripped too (B1). Same reason:
-              Home and /flagged both had layoutId={`flag-${id}`} matching. */}
+      <PolaroidTile
+        src={post.image_url ?? ""}
+        alt={post.title}
+        bottomMat="outside"
+        loading="lazy"
+        fallback={
           <div
             style={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              width: 36,
-              height: 36,
-              zIndex: 3,
-            }}
-          >
-            <button
-              onClick={handleUnsave}
-              aria-label="Unsave"
-              style={{
-                width: "100%",
-                height: "100%",
-                borderRadius: "50%",
-                background: "rgba(245,242,235,0.85)",
-                backdropFilter: "blur(8px)",
-                WebkitBackdropFilter: "blur(8px)",
-                border: `0.5px solid rgba(42,26,10,0.12)`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: 0,
-                cursor: "pointer",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <FlagGlyph size={17} strokeWidth={1.7} style={{ color: v1.green, fill: v1.green }} />
-            </button>
-          </div>
-        </div>
-
-        <div style={{ padding: "9px 3px 4px", height: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
-          <div
-            style={{
-              fontFamily: FONT_LORA,
-              fontSize: 14,
-              color: v1.inkPrimary,
-              lineHeight: 1.4,
               width: "100%",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical" as const,
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: FONT_LORA,
+              fontStyle: "italic",
+              fontSize: 13,
+              color: v1.inkFaint,
             }}
           >
-            {post.title}
+            no photograph
           </div>
-
-          {typeof post.price_asking === "number" && post.price_asking > 0 && (
+        }
+        topRight={
+          <button
+            onClick={handleUnsave}
+            aria-label="Unsave"
+            style={{
+              width: "100%",
+              height: "100%",
+              borderRadius: "50%",
+              background: "rgba(245,242,235,0.85)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              border: `0.5px solid rgba(42,26,10,0.12)`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 0,
+              cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <FlagGlyph size={17} strokeWidth={1.7} style={{ color: v1.green, fill: v1.green }} />
+          </button>
+        }
+        below={
+          <div style={{ padding: "9px 3px 4px", height: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
             <div
               style={{
-                marginTop: 4,
                 fontFamily: FONT_LORA,
                 fontSize: 14,
-                color: v1.priceInk,
+                color: v1.inkPrimary,
                 lineHeight: 1.4,
-                letterSpacing: "-0.005em",
+                width: "100%",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical" as const,
               }}
             >
-              ${Math.round(post.price_asking)}
+              {post.title}
             </div>
-          )}
-        </div>
-      </div>
+
+            {typeof post.price_asking === "number" && post.price_asking > 0 && (
+              <div
+                style={{
+                  marginTop: 4,
+                  fontFamily: FONT_LORA,
+                  fontSize: 14,
+                  color: v1.priceInk,
+                  lineHeight: 1.4,
+                  letterSpacing: "-0.005em",
+                }}
+              >
+                ${Math.round(post.price_asking)}
+              </div>
+            )}
+          </div>
+        }
+      />
     </Link>
   );
 }
