@@ -25,7 +25,9 @@ export type ClientEventType =
   | "tag_extracted"
   | "tag_skipped"
   // ── Session 99 — /flagged destination redesign ────────────────────────
-  | "flagged_booth_explored";
+  | "flagged_booth_explored"
+  // ── Session 100 — /find/[id] swipe-between-finds nav ─────────────────
+  | "find_swiped";
 
 function getSessionId(): string {
   if (typeof window === "undefined") return "";

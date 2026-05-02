@@ -66,6 +66,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Send, Pencil } from "lucide-react";
+import { motion, useAnimation, type PanInfo } from "framer-motion";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getPost, getVendorPosts } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
@@ -365,6 +366,12 @@ function ShelfSection({
           paddingBottom: 18,
           scrollSnapType: "x mandatory",
           WebkitOverflowScrolling: "touch",
+          // Session 100 (Phase B) — declare horizontal-scroll intent so the
+          // page-level swipe-between-finds drag (touch-action: pan-y on the
+          // motion.div parent) doesn't capture pointer events here.
+          // Browser handles X-axis pans natively for this region (carousel
+          // scrolls); page swipe still works above + below.
+          touchAction: "pan-x",
         }}
       >
         {items.map((item, idx) => (
@@ -575,54 +582,137 @@ export default function FindDetailPage() {
 
   // Track D phase 5 — preview image URL written by the source surface
   // (feed tile / /flagged tile) into sessionStorage on tap. Read
-  // synchronously in a useState initializer so the photograph
-  // <motion.button layoutId> can render on the very first commit, before
-  // getPost() resolves. Without this, framer-motion has lost the source
-  // tile's rect by the time the destination motion node mounts post-fetch
-  // and the shared-element morph silently snaps. Direct URL nav (no source
-  // tap) leaves this null — the page loads normally with no morph (correct
-  // — there's nothing to morph from).
-  const [previewImageUrl] = useState<string | null>(() => {
-    if (typeof window === "undefined" || !id) return null;
+  // synchronously so the photograph can render on the very first commit,
+  // before getPost() resolves. Direct URL nav (no source tap) leaves this
+  // null — the page loads normally.
+  //
+  // Phase B (session 100) — convert from useState initializer (one-shot
+  // mount-only read) to state updated on [id] change. Required for
+  // swipe-driven router.replace, which keeps the page mounted but swaps
+  // params; the photograph must paint synchronously for the new id too.
+  const readPreviewImage = (forId: string): string | null => {
+    if (typeof window === "undefined" || !forId) return null;
     try {
-      const raw = sessionStorage.getItem(`treehouse_find_preview:${id}`);
+      const raw = sessionStorage.getItem(`treehouse_find_preview:${forId}`);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       return typeof parsed?.image_url === "string" ? parsed.image_url : null;
     } catch { return null; }
-  });
+  };
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(() => readPreviewImage(id ?? ""));
 
-  // Phase A (session 100) — read the swipe-context handoff written by the
-  // entry tap site (Home feed today; /flagged + /shelf in Phase C). Phase
-  // B will use the resolved prev/next ids to drive left/right swipe nav
-  // between adjacent finds via router.replace (no history growth). Direct
-  // deep-link arrival (no context blob) resolves both to null — page
-  // falls back to current behavior with no swipe affordance.
-  //
-  // Re-runs on [id] change so swipe-driven router.replace updates the
-  // resolution without re-mounting the page. The cursor is re-derived
-  // by id lookup (NOT by ±1 on the previous cursor) so resolution stays
-  // correct even if the user lands here via browser back inside the
-  // same context list.
-  //
-  // Phase A is a verification harness — the resolved values are logged
-  // to console for Inspector confirmation but not yet consumed by any
-  // visual or gesture behavior. Phase B replaces this block with
-  // state + a gesture handler.
+  // Swipe-nav state. prevId/nextId resolve from the entry context blob
+  // (lib/findContext) on [id] change; they're null when the user arrived
+  // via direct deep-link or has no surrounding context. swipeDirRef
+  // carries direction across the router.replace boundary so the new
+  // [id] effect knows which side to slide in from. swipeControls drives
+  // the drag/animate position imperatively.
+  const [prevId, setPrevId] = useState<string | null>(null);
+  const [nextId, setNextId] = useState<string | null>(null);
+  const swipeDirRef = useRef<"left" | "right" | null>(null);
+  const swipeControls = useAnimation();
+  const swipeTransitioningRef = useRef(false);
+
+  // Re-resolve preview cache + neighbors + slide-in animation on [id]
+  // change. Runs on initial mount AND on every router.replace fired by
+  // the swipe gesture (page stays mounted across param changes in App
+  // Router; useEffect on [id] is the load-bearing reactivity hook).
   useEffect(() => {
     if (!id) return;
+
+    // Sync paint of the new photograph for both initial mount and
+    // swipe-driven id changes.
+    setPreviewImageUrl(readPreviewImage(id));
+
+    // Resolve neighbors from context.
     const ctx = readFindContext();
     if (!ctx) {
-      // eslint-disable-next-line no-console
-      console.log("[find-context]", { id, ctx: null });
-      return;
+      setPrevId(null);
+      setNextId(null);
+    } else {
+      const cursor = ctx.findRefs.findIndex((r) => r.id === id);
+      const resolvedPrev = cursor > 0 ? ctx.findRefs[cursor - 1] : null;
+      const resolvedNext = cursor >= 0 && cursor < ctx.findRefs.length - 1
+        ? ctx.findRefs[cursor + 1]
+        : null;
+      setPrevId(resolvedPrev?.id ?? null);
+      setNextId(resolvedNext?.id ?? null);
+
+      // Pre-warm the preview cache for adjacent ids so the NEXT swipe
+      // also paints synchronously. Same payload shape as the entry tap
+      // site writes; if a tap-write already populated this key, we
+      // simply re-write the same data.
+      const warmPreview = (ref: typeof resolvedPrev) => {
+        if (!ref || !ref.image_url) return;
+        try {
+          sessionStorage.setItem(
+            `treehouse_find_preview:${ref.id}`,
+            JSON.stringify({ image_url: ref.image_url, title: ref.title }),
+          );
+        } catch {}
+      };
+      warmPreview(resolvedPrev);
+      warmPreview(resolvedNext);
     }
-    const cursor = ctx.findRefs.findIndex((r) => r.id === id);
-    const prev = cursor > 0 ? ctx.findRefs[cursor - 1].id : null;
-    const next = cursor >= 0 && cursor < ctx.findRefs.length - 1 ? ctx.findRefs[cursor + 1].id : null;
-    // eslint-disable-next-line no-console
-    console.log("[find-context]", { id, originPath: ctx.originPath, listLength: ctx.findRefs.length, cursor, prev, next });
-  }, [id]);
+
+    // If we got here via a swipe (swipeDirRef set), slide the new content
+    // in from the opposite side. Direction "right" = user swiped finger
+    // right (toward prev), so old content slid OFF to the right at
+    // +innerWidth, and the new (prev) content needs to slide in from
+    // -innerWidth. Direction "left" = symmetrical.
+    if (swipeDirRef.current === "right") {
+      swipeControls.set({ x: -window.innerWidth });
+      swipeControls.start({ x: 0, transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] } });
+      swipeDirRef.current = null;
+      swipeTransitioningRef.current = false;
+    } else if (swipeDirRef.current === "left") {
+      swipeControls.set({ x: window.innerWidth });
+      swipeControls.start({ x: 0, transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] } });
+      swipeDirRef.current = null;
+      swipeTransitioningRef.current = false;
+    }
+  }, [id, swipeControls]);
+
+  // Drag-end commit logic. Threshold: 80px offset OR 500px/s velocity in
+  // the swipe direction. Below threshold → snap back. At-edge swipe
+  // (toward null prev/next) → snap back regardless of threshold. During
+  // transition → ignore drag (defensive; framer-motion's drag is gated
+  // by animation state but the user can still chain quick gestures).
+  async function handleSwipeEnd(_e: PointerEvent | MouseEvent | TouchEvent, info: PanInfo) {
+    if (swipeTransitioningRef.current) return;
+    const offsetX = info.offset.x;
+    const velX = info.velocity.x;
+    const SWIPE_DIST = 80;
+    const SWIPE_VEL = 500;
+    const swipeRight = offsetX > SWIPE_DIST || velX > SWIPE_VEL;
+    const swipeLeft = offsetX < -SWIPE_DIST || velX < -SWIPE_VEL;
+
+    if (swipeRight && prevId) {
+      swipeTransitioningRef.current = true;
+      swipeDirRef.current = "right";
+      track("find_swiped", { direction: "right", from_id: id, to_id: prevId });
+      await swipeControls.start({
+        x: window.innerWidth,
+        transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
+      });
+      router.replace(`/find/${prevId}`);
+    } else if (swipeLeft && nextId) {
+      swipeTransitioningRef.current = true;
+      swipeDirRef.current = "left";
+      track("find_swiped", { direction: "left", from_id: id, to_id: nextId });
+      await swipeControls.start({
+        x: -window.innerWidth,
+        transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
+      });
+      router.replace(`/find/${nextId}`);
+    } else {
+      // Snap back — below threshold, or at-edge with no neighbor.
+      swipeControls.start({
+        x: 0,
+        transition: { duration: 0.18, ease: "easeOut" },
+      });
+    }
+  }
 
   // Q-003 addendum (session 36): bookmark count for BottomNav badge on this
   // page. Unlike Home / My Booth, Find Detail can toggle the count via the
@@ -857,15 +947,31 @@ export default function FindDetailPage() {
         }
       />
 
-      {/* Photograph hero — escapes the loading gate so the
-          <motion.button layoutId> mounts on the very first commit. The
-          source surface (feed / /flagged) cached the image_url in
-          sessionStorage on tile tap; we read it synchronously above.
-          Without this, framer-motion has lost the source tile's rect by
-          the time the destination motion node mounts post-fetch and the
-          shared-element morph silently snaps. Bubbles + post-it stay
-          gated on `post` since they depend on data that's not in the
-          preview cache (vendor, isMyPost, isSaved, boothNumber). */}
+      {/* Phase B (session 100) — swipe-between-finds wrapper. Drags
+          horizontally; on commit (offset > 80px OR velocity > 500px/s)
+          animates offscreen, then router.replace's to prev/next id.
+          Drag is disabled when there's no neighbor on either side
+          (deep-link arrival or single-item context). touchAction: pan-y
+          lets vertical scroll pass through; the More-from-this-booth
+          carousel below sets its own touch-action: pan-x to keep its
+          native horizontal scroll working over its own region. */}
+      <motion.div
+        animate={swipeControls}
+        drag={prevId || nextId ? "x" : false}
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.4}
+        dragMomentum={false}
+        onDragEnd={handleSwipeEnd}
+        style={{ touchAction: "pan-y" }}
+      >
+
+      {/* Photograph hero — escapes the loading gate so the photograph
+          renders on the very first commit. The source surface (feed /
+          /flagged) cached the image_url in sessionStorage on tile tap;
+          we read it via readPreviewImage on [id] change. Bubbles +
+          post-it stay gated on `post` since they depend on data that's
+          not in the preview cache (vendor, isMyPost, isSaved,
+          boothNumber). */}
       {((loading && previewImageUrl) || (showNormalBody && post)) && (
         <div style={{ padding: "0 22px", marginBottom: 28, position: "relative" }}>
           <div
@@ -1414,6 +1520,8 @@ export default function FindDetailPage() {
           Find Detail is the reading surface; Edit is the management surface. */}
         </>
       )}
+
+      </motion.div>
 
       {/* Stable footer chrome — rendered in every state so back-nav from
           /shelf/[slug] never remounts the BottomNav (mirrors masthead pattern). */}
