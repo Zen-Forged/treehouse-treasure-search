@@ -268,30 +268,39 @@ let findScrollWriteBlocked = false;
 
 // Module-scope navigation-type tracker. The flag holds the type of the
 // MOST RECENT navigation: popstate (browser back/forward) or pushState
-// (router.push from a Link tap). On any /find/[id] mount, the flag tells
+// (router.push from a Link tap). On any /find/[id] mount, this tells
 // us whether the user got here via back/forward (restore saved scroll)
-// or via a Link tap (open like a new page, scroll to top — including
-// revisits of a find that was previously scrolled through).
+// or via a Link tap (open like a new page, scroll to top).
 //
-// The previous popstate-only listener had a flag-staleness bug: a
-// popstate setting `true` was never reset until /find/[id] mounted to
-// consume it, so a subsequent forward Link tap would incorrectly read
-// stale `true` and restore. Monkey-patching pushState resets the flag
-// synchronously on every router.push, so the flag always reflects the
-// current navigation accurately.
-let lastNavWasPopstate = false;
+// Phase C QA fix #8 (session 100) — switched from a JS flag (let
+// lastNavWasPopstate = ...) to a sessionStorage marker. Diagnostic
+// logs revealed Next.js's internal pushState/replaceState calls during
+// route transition were flipping the flag false BEFORE our [id] effect
+// could consume it. The sessionStorage marker is set on real popstate
+// events ONLY, and read-then-deleted by the consuming effect — Next.js's
+// internal history calls don't touch it.
+
+const POPSTATE_MARKER_KEY = "th_popstate_pending";
+
 if (typeof window !== "undefined") {
-  window.addEventListener("popstate", () => { lastNavWasPopstate = true; });
-  const origPushState = window.history.pushState.bind(window.history);
-  window.history.pushState = function (...args: Parameters<typeof origPushState>) {
-    lastNavWasPopstate = false;
-    return origPushState(...args);
-  };
-  const origReplaceState = window.history.replaceState.bind(window.history);
-  window.history.replaceState = function (...args: Parameters<typeof origReplaceState>) {
-    lastNavWasPopstate = false;
-    return origReplaceState(...args);
-  };
+  window.addEventListener("popstate", () => {
+    try { sessionStorage.setItem(POPSTATE_MARKER_KEY, String(Date.now())); } catch {}
+  });
+}
+
+// Returns true if a popstate event fired within the last `maxAgeMs`.
+// The window is wide enough (800ms) to cover Next.js's route transition
+// + ShelfSection's getVendorPosts fetch + render commit, so all the
+// effects that need this signal can read it consistently.
+function wasRecentPopstate(maxAgeMs = 800): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = sessionStorage.getItem(POPSTATE_MARKER_KEY);
+    if (!raw) return false;
+    const ts = parseInt(raw, 10);
+    if (isNaN(ts)) return false;
+    return Date.now() - ts < maxAgeMs;
+  } catch { return false; }
 }
 
 function ShelfSection({
@@ -332,7 +341,7 @@ function ShelfSection({
   useEffect(() => {
     stripRestored.current = false;
     stripPendingX.current = null;
-    if (!lastNavWasPopstate) return;
+    if (!wasRecentPopstate()) return;
     try {
       const saved = sessionStorage.getItem(findStripScrollKey(currentPostId));
       if (saved) {
@@ -857,7 +866,7 @@ export default function FindDetailPage() {
     scrollRestored.current = false;
     pendingScrollY.current = null;
     findScrollWriteBlocked = false;
-    const wasBackForward = lastNavWasPopstate;
+    const wasBackForward = wasRecentPopstate();
     let savedYRead: number | null = null;
     if (wasBackForward) {
       try {
@@ -875,7 +884,7 @@ export default function FindDetailPage() {
     console.log("[scroll-restore] id-effect", {
       id,
       wasBackForward,
-      lastNavWasPopstate,
+      popstateMarker: typeof window !== "undefined" ? sessionStorage.getItem(POPSTATE_MARKER_KEY) : null,
       savedYRead,
       pending: pendingScrollY.current,
     });
