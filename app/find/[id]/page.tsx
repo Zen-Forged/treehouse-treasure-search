@@ -902,14 +902,18 @@ export default function FindDetailPage() {
     scrollRestored.current = true;
     const targetY = pendingScrollY.current;
 
-    // Phase C QA fix #4 (revised) — back off the ResizeObserver watchdog
-    // that QA #4-original tried (caused a React #418 hydration error in
-    // prod). Use a small staircase of retry timeouts instead — each
-    // attempt re-fires scrollTo; if document height grew between calls,
-    // the later attempt lands further. Total 4 attempts over 600ms;
-    // cheap and idempotent (browsers no-op scrollTo when already at
-    // target). Cleanup clears pending timeouts on [id] change so a
-    // mid-restore navigation doesn't scroll the newly-mounted page.
+    // Phase C QA fix #5 (session 100) — David Inspector data showed the
+    // saved Y getting clobbered from 785 → 502 across a single back-nav
+    // cycle. Root cause: scrollTo triggers a scroll event, our onScroll
+    // listener fires with findScrollWriteBlocked=false (just reset by the
+    // [id] mount effect), and writes the CLAMPED scrollY back to
+    // sessionStorage — destroying the original savedY for next time.
+    //
+    // Fix: hold findScrollWriteBlocked=true through the staircase retry
+    // window so onScroll skips writes while we're driving programmatic
+    // scrolls. Re-allow writes after 700ms so subsequent user-initiated
+    // scrolls save normally.
+    findScrollWriteBlocked = true;
     const tryScroll = () => window.scrollTo({ top: targetY, behavior: "instant" });
     const timeouts: number[] = [];
     const raf = requestAnimationFrame(() => {
@@ -917,10 +921,14 @@ export default function FindDetailPage() {
       timeouts.push(window.setTimeout(tryScroll, 100));
       timeouts.push(window.setTimeout(tryScroll, 300));
       timeouts.push(window.setTimeout(tryScroll, 600));
+      timeouts.push(window.setTimeout(() => {
+        findScrollWriteBlocked = false;
+      }, 700));
     });
     return () => {
       cancelAnimationFrame(raf);
       timeouts.forEach((t) => clearTimeout(t));
+      findScrollWriteBlocked = false;
     };
   }, [id, loading, shelfReady, post]);
 
