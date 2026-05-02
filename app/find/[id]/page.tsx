@@ -900,8 +900,40 @@ export default function FindDetailPage() {
     if (scrollRestored.current) return;
     if (pendingScrollY.current === null) return;
     scrollRestored.current = true;
-    const y = pendingScrollY.current;
-    requestAnimationFrame(() => { window.scrollTo({ top: y, behavior: "instant" }); });
+    const targetY = pendingScrollY.current;
+
+    // Phase C QA fix #4 — David QA: scroll restore was clamping. Even
+    // with the shelfReady gate, layout-after-paint can still grow the
+    // document AFTER scrollTo fires (image decode, font shifts, lazy
+    // images in the carousel paginating in). The browser's scrollY is
+    // capped to documentHeight - viewportHeight at the moment scrollTo
+    // runs — and stays there even when the document grows later.
+    //
+    // Defensive watchdog: try scrollTo, then watch the body for height
+    // growth and re-fire scrollTo each time until either we hit the
+    // target Y exactly or 1.2s elapses (ample for any fetch + decode).
+    // The watchdog disconnects on either condition.
+    const tryScroll = () => window.scrollTo({ top: targetY, behavior: "instant" });
+
+    requestAnimationFrame(() => {
+      tryScroll();
+      if (Math.round(window.scrollY) >= targetY) return;
+
+      const ro = new ResizeObserver(() => {
+        tryScroll();
+        if (Math.round(window.scrollY) >= targetY) {
+          ro.disconnect();
+          if (timeoutId) clearTimeout(timeoutId);
+        }
+      });
+      ro.observe(document.body);
+      const timeoutId = window.setTimeout(() => {
+        ro.disconnect();
+        // Final attempt after the watchdog window — useful if late image
+        // decode pushed content down right at the deadline.
+        tryScroll();
+      }, 1200);
+    });
   }, [id, loading, shelfReady, post]);
 
   useEffect(() => {
