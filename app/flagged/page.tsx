@@ -206,12 +206,13 @@ function BoothDestinationContainer({
               style={{
                 flexShrink: 0,
                 fontFamily: FONT_NUMERAL,
+                fontWeight: 500,
                 color: v1.green,
-                fontSize: 19,
-                lineHeight: 1,
+                fontSize: 21,
+                lineHeight: 1.2,
               }}
             >
-              · {group.boothNumber}
+              {group.boothNumber}
             </div>
           )}
         </div>
@@ -614,12 +615,12 @@ export default function FlaggedPage() {
             />
           </div>
         ) : (
-          /* Booth-container stack on a subtle scrim (D2). Each container is
-             a self-contained destination unit. */
+          /* Booth-container stack — containers float on the page paperCream
+             background (scrim retired session 99 iPhone QA). Each container
+             is a self-contained destination unit. */
           <div
             style={{
               padding: "14px 14px 18px",
-              background: "rgba(0,0,0,0.04)",
               display: "flex",
               flexDirection: "column",
               gap: 14,
