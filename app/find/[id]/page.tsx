@@ -857,26 +857,28 @@ export default function FindDetailPage() {
     scrollRestored.current = false;
     pendingScrollY.current = null;
     findScrollWriteBlocked = false;
-    // Phase C QA fix #3 — setShelfReady(false) moved to the [id]
-    // useLayoutEffect above so the reset commits sync before paint
-    // (and before this scroll-restore effect runs). Otherwise the
-    // scroll-restore closure read a stale shelfReady=true and fired
-    // scrollTo before the carousel's new currentPostId render had
-    // landed in the DOM.
     const wasBackForward = lastNavWasPopstate;
+    let savedYRead: number | null = null;
     if (wasBackForward) {
-      let savedY: number | null = null;
       try {
         const raw = sessionStorage.getItem(findScrollKey(id));
         if (raw) {
           const y = parseInt(raw, 10);
-          if (!isNaN(y) && y > 0) savedY = y;
+          if (!isNaN(y) && y > 0) savedYRead = y;
         }
       } catch {}
-      if (savedY !== null) pendingScrollY.current = savedY;
+      if (savedYRead !== null) pendingScrollY.current = savedYRead;
     } else {
       requestAnimationFrame(() => window.scrollTo(0, 0));
     }
+    // eslint-disable-next-line no-console
+    console.log("[scroll-restore] id-effect", {
+      id,
+      wasBackForward,
+      lastNavWasPopstate,
+      savedYRead,
+      pending: pendingScrollY.current,
+    });
     function onScroll() {
       if (findScrollWriteBlocked) return;
       const y = Math.round(window.scrollY);
@@ -916,13 +918,39 @@ export default function FindDetailPage() {
   }, []);
 
   useEffect(() => {
-    if (loading) return;
+    const gateInfo = {
+      id,
+      loading,
+      shelfReady,
+      hasVendor: !!post?.vendor,
+      pending: pendingScrollY.current,
+      restored: scrollRestored.current,
+    };
+    if (loading) {
+      // eslint-disable-next-line no-console
+      console.log("[scroll-restore] gate:loading", gateInfo);
+      return;
+    }
     const hasVendor = !!post?.vendor;
-    if (hasVendor && !shelfReady) return;
-    if (scrollRestored.current) return;
-    if (pendingScrollY.current === null) return;
+    if (hasVendor && !shelfReady) {
+      // eslint-disable-next-line no-console
+      console.log("[scroll-restore] gate:waiting-shelfReady", gateInfo);
+      return;
+    }
+    if (scrollRestored.current) {
+      // eslint-disable-next-line no-console
+      console.log("[scroll-restore] gate:already-restored", gateInfo);
+      return;
+    }
+    if (pendingScrollY.current === null) {
+      // eslint-disable-next-line no-console
+      console.log("[scroll-restore] gate:no-pending", gateInfo);
+      return;
+    }
     scrollRestored.current = true;
     const targetY = pendingScrollY.current;
+    // eslint-disable-next-line no-console
+    console.log("[scroll-restore] firing", { ...gateInfo, targetY, max: document.body.scrollHeight - window.innerHeight, currentY: window.scrollY });
 
     // Phase C QA fix #5 (session 100) — David Inspector data showed the
     // saved Y getting clobbered from 785 → 502 across a single back-nav
@@ -936,13 +964,18 @@ export default function FindDetailPage() {
     // scrolls. Re-allow writes after 700ms so subsequent user-initiated
     // scrolls save normally.
     findScrollWriteBlocked = true;
-    const tryScroll = () => window.scrollTo({ top: targetY, behavior: "instant" });
+    const tryScroll = (label: string) => {
+      const before = window.scrollY;
+      window.scrollTo({ top: targetY, behavior: "instant" });
+      // eslint-disable-next-line no-console
+      console.log("[scroll-restore] tryScroll:" + label, { before, after: window.scrollY, targetY, max: document.body.scrollHeight - window.innerHeight });
+    };
     const timeouts: number[] = [];
     const raf = requestAnimationFrame(() => {
-      tryScroll();
-      timeouts.push(window.setTimeout(tryScroll, 100));
-      timeouts.push(window.setTimeout(tryScroll, 300));
-      timeouts.push(window.setTimeout(tryScroll, 600));
+      tryScroll("raf");
+      timeouts.push(window.setTimeout(() => tryScroll("100ms"), 100));
+      timeouts.push(window.setTimeout(() => tryScroll("300ms"), 300));
+      timeouts.push(window.setTimeout(() => tryScroll("600ms"), 600));
       timeouts.push(window.setTimeout(() => {
         findScrollWriteBlocked = false;
       }, 700));
