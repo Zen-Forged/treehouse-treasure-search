@@ -39,6 +39,7 @@ import {
 } from "@/lib/tokens";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
+import { writeFindContext, setPostCache, type FindRef } from "@/lib/findContext";
 import BottomNav from "@/components/BottomNav";
 import MallSheet from "@/components/MallSheet";
 import MallScopeHeader, { type MallScopeGeoLine } from "@/components/MallScopeHeader";
@@ -131,20 +132,38 @@ function groupByBooth(posts: Post[]): BoothGroup[] {
 function BoothDestinationContainer({
   group,
   scopeIsAllMalls,
+  flatFindRefs,
 }: {
   group: BoothGroup;
   scopeIsAllMalls: boolean;
+  // Phase C — the FULL ordered list of saved finds in the user's current
+  // /flagged view (mall-scope-filtered, flattened across booth groups).
+  // Tap on a row writes this as the swipe-nav context so the user can
+  // swipe across all their saved finds, not just within one booth.
+  flatFindRefs: FindRef[];
 }) {
   const showMallSubtitle = scopeIsAllMalls && !!group.mallName;
 
-  function handleTilePreCache(post: Post) {
-    if (!post.image_url) return;
-    try {
-      sessionStorage.setItem(
-        `treehouse_find_preview:${post.id}`,
-        JSON.stringify({ image_url: post.image_url, title: post.title }),
-      );
-    } catch {}
+  function handleTileTap(post: Post) {
+    // Preview-cache write — same shape as Home + session 99 baseline. Lets
+    // /find/[id]'s photograph paint synchronously on first commit.
+    if (post.image_url) {
+      try {
+        sessionStorage.setItem(
+          `treehouse_find_preview:${post.id}`,
+          JSON.stringify({ image_url: post.image_url, title: post.title }),
+        );
+      } catch {}
+    }
+    // Phase C swipe-nav handoff — write the context blob with cursor at
+    // this post's position in the flattened saved-finds list. /find/[id]
+    // reads this on mount and exposes prev/next ids for the drag gesture.
+    const cursor = flatFindRefs.findIndex((r) => r.id === post.id);
+    writeFindContext({
+      originPath: "/flagged",
+      findRefs: flatFindRefs,
+      cursorIndex: cursor >= 0 ? cursor : 0,
+    });
   }
 
   function handleExploreBooth() {
@@ -229,7 +248,7 @@ function BoothDestinationContainer({
         <Link
           key={post.id}
           href={`/find/${post.id}`}
-          onClick={() => handleTilePreCache(post)}
+          onClick={() => handleTileTap(post)}
           style={{
             textDecoration: "none",
             color: "inherit",
@@ -381,6 +400,11 @@ export default function FlaggedPage() {
     }
     setPosts(data);
     cachedFlaggedPosts = data;
+    // Phase C — populate the shared post cache for instant tap-to-detail
+    // metadata paint when the user steps into any saved find. Mirrors
+    // Home loadFeed's setPostCache loop. The cache is shared across the
+    // detail page's swipe-nav handoff via lib/findContext.
+    for (const p of data) setPostCache(p);
     setLoading(false);
   }
 
@@ -446,6 +470,18 @@ export default function FlaggedPage() {
     ? posts.filter(p => p.mall_id === savedMallId)
     : posts;
   const groups = groupByBooth(filteredPosts);
+
+  // Phase C — flat ordered ref list passed to each BoothDestinationContainer
+  // so a tap on any find row writes the swipe-nav context with the full
+  // mall-scope-filtered list (not just the tapped booth's slice). The
+  // order matches `groups` flattened — booth-by-booth in render order.
+  const flatFindRefs: FindRef[] = groups.flatMap((g) =>
+    g.posts.map((p) => ({
+      id:        p.id,
+      image_url: p.image_url ?? null,
+      title:     p.title ?? null,
+    })),
+  );
 
   const selectedMall = malls.find(m => m.id === savedMallId) ?? null;
 
@@ -601,6 +637,7 @@ export default function FlaggedPage() {
                   key={(group.boothNumber ?? "nb") + "·" + group.vendorName}
                   group={group}
                   scopeIsAllMalls={savedMallId === null}
+                  flatFindRefs={flatFindRefs}
                 />
               ))}
             </div>

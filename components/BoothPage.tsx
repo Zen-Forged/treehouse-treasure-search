@@ -79,6 +79,7 @@ import {
 import PhotoLightbox from "@/components/PhotoLightbox";
 import BookmarkBoothBubble from "@/components/BookmarkBoothBubble";
 import PolaroidTile from "@/components/PolaroidTile";
+import { writeFindContext, type FindRef } from "@/lib/findContext";
 import type { Post } from "@/types/treehouse";
 
 // Re-export canonical v1.1h tokens so consumers of BoothPage primitives
@@ -721,8 +722,40 @@ export function PlaceholderTile({ index }: { index: number }) {
   );
 }
 
-function WindowTile({ post, index }: { post: Post; index: number }) {
+function WindowTile({
+  post,
+  index,
+  findRefs,
+  swipeOriginPath,
+}: {
+  post: Post;
+  index: number;
+  // Phase C — when both are provided, tap writes the swipe-nav context
+  // (lib/findContext) so /find/[id] can drag-swipe between adjacent finds.
+  findRefs?: FindRef[];
+  swipeOriginPath?: string;
+}) {
   const hasPrice = typeof post.price_asking === "number" && post.price_asking > 0;
+
+  function handleTap() {
+    if (post.image_url) {
+      try {
+        sessionStorage.setItem(
+          `treehouse_find_preview:${post.id}`,
+          JSON.stringify({ image_url: post.image_url, title: post.title }),
+        );
+      } catch {}
+    }
+    if (findRefs && swipeOriginPath) {
+      const cursor = findRefs.findIndex((r) => r.id === post.id);
+      writeFindContext({
+        originPath:  swipeOriginPath,
+        findRefs,
+        cursorIndex: cursor >= 0 ? cursor : 0,
+      });
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }}
@@ -732,6 +765,7 @@ function WindowTile({ post, index }: { post: Post; index: number }) {
     >
       <Link
         href={`/find/${post.id}`}
+        onClick={handleTap}
         style={{ display: "block", textDecoration: "none", color: "inherit", minWidth: 0 }}
       >
         <PolaroidTile
@@ -800,13 +834,22 @@ export function WindowView({
   showAddTile,
   showPlaceholders = false,
   onAddClick,
+  swipeOriginPath,
 }: {
   posts: Post[];
   vendorId?: string;
   showAddTile: boolean;
   showPlaceholders?: boolean;
   onAddClick?: () => void;
+  // Phase C — when set, tile taps write the swipe-nav context
+  // (lib/findContext) so /find/[id] can drag-swipe between adjacent posts.
+  // Caller is /shelf/[slug] (originPath = `/shelf/${slug}`); /my-shelf
+  // omits this for now (vendor-self surfaces don't need swipe-nav).
+  swipeOriginPath?: string;
 }) {
+  const findRefs: FindRef[] = swipeOriginPath
+    ? posts.map((p) => ({ id: p.id, image_url: p.image_url ?? null, title: p.title ?? null }))
+    : [];
   // v1.1j — owner 9-cell window composition. When showPlaceholders is true,
   // the grid always renders exactly 9 cells: [AddFindTile if shown] + real posts
   // + PlaceholderTiles to fill the remainder. Public shelf omits placeholders
@@ -826,7 +869,13 @@ export function WindowView({
       }}
     >
       {posts.map((post, i) => (
-        <WindowTile key={post.id} post={post} index={i} />
+        <WindowTile
+          key={post.id}
+          post={post}
+          index={i}
+          findRefs={swipeOriginPath ? findRefs : undefined}
+          swipeOriginPath={swipeOriginPath}
+        />
       ))}
       {showAddTile && <AddFindTile vendorId={vendorId} index={posts.length} onAddClick={onAddClick} />}
       {Array.from({ length: placeholderCount }).map((_, i) => (
@@ -840,8 +889,40 @@ export function WindowView({
 // Shelf View — horizontal scroll, larger 4:5 tiles
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirst: boolean }) {
+function ShelfTile({
+  post,
+  index,
+  isFirst,
+  findRefs,
+  swipeOriginPath,
+}: {
+  post: Post;
+  index: number;
+  isFirst: boolean;
+  findRefs?: FindRef[];
+  swipeOriginPath?: string;
+}) {
   const hasPrice = typeof post.price_asking === "number" && post.price_asking > 0;
+
+  function handleTap() {
+    if (post.image_url) {
+      try {
+        sessionStorage.setItem(
+          `treehouse_find_preview:${post.id}`,
+          JSON.stringify({ image_url: post.image_url, title: post.title }),
+        );
+      } catch {}
+    }
+    if (findRefs && swipeOriginPath) {
+      const cursor = findRefs.findIndex((r) => r.id === post.id);
+      writeFindContext({
+        originPath:  swipeOriginPath,
+        findRefs,
+        cursorIndex: cursor >= 0 ? cursor : 0,
+      });
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }}
@@ -857,6 +938,7 @@ function ShelfTile({ post, index, isFirst }: { post: Post; index: number; isFirs
     >
       <Link
         href={`/find/${post.id}`}
+        onClick={handleTap}
         style={{ display: "block", textDecoration: "none", color: "inherit" }}
       >
         <PolaroidTile
@@ -1003,12 +1085,19 @@ export function ShelfView({
   vendorId,
   showAddTile = false,
   onAddClick,
+  swipeOriginPath,
 }: {
   posts: Post[];
   vendorId?: string;
   showAddTile?: boolean;
   onAddClick?: () => void;
+  // Phase C — see WindowView for semantics. /shelf/[slug] passes the
+  // current path; /my-shelf omits.
+  swipeOriginPath?: string;
 }) {
+  const findRefs: FindRef[] = swipeOriginPath
+    ? posts.map((p) => ({ id: p.id, image_url: p.image_url ?? null, title: p.title ?? null }))
+    : [];
   // v1.1j — owner parity with Window View: when showAddTile is true, the
   // first tile in the horizontal scroll is an AddFindTile (same silhouette
   // as the Window View AddFindTile, sized to match ShelfTile). Reverses the
@@ -1033,6 +1122,8 @@ export function ShelfView({
           post={post}
           index={i}
           isFirst={i === 0}
+          findRefs={swipeOriginPath ? findRefs : undefined}
+          swipeOriginPath={swipeOriginPath}
         />
       ))}
       {showAddTile && <ShelfAddFindTile vendorId={vendorId} isFirst={posts.length === 0} onAddClick={onAddClick} />}

@@ -62,12 +62,16 @@ export async function getPost(id: string): Promise<Post | null> {
  */
 export async function getPostsByIds(ids: string[]): Promise<Post[]> {
   if (ids.length === 0) return [];
+  // Phase C (session 100) — SELECT extended to match getPost so /flagged
+  // can dump loaded posts directly into the post cache (lib/findContext)
+  // for the swipe-nav handoff. Adds: vendor.user_id (detectOwnershipAsync
+  // on /find/[id]), vendor.bio, mall.address (cartographic maps link).
   const { data, error } = await supabase
     .from("posts")
     .select(`
       *,
-      vendor:vendors ( id, display_name, booth_number, slug, avatar_url, facebook_url ),
-      mall:malls     ( id, name, city, state, slug )
+      vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url ),
+      mall:malls     ( id, name, city, state, slug, address )
     `)
     .in("id", ids)
     .order("created_at", { ascending: false });
@@ -88,9 +92,19 @@ export async function getMallPosts(mallId: string, limit = 60): Promise<Post[]> 
 }
 
 export async function getVendorPosts(vendorId: string, limit = 40): Promise<Post[]> {
+  // Phase C (session 100) — SELECT extended to match getPost so /shelf/[slug]
+  // and the More-from-this-booth carousel on /find/[id] can dump loaded
+  // posts directly into the post cache (lib/findContext) for the swipe-nav
+  // handoff. Adds vendor join (was implicit-by-context before — every row
+  // shares the same vendor here, so this redundancy is mild) plus
+  // mall.state + mall.address for the cartographic maps link.
   const { data, error } = await supabase
     .from("posts")
-    .select(`*, mall:malls ( id, name, city, slug )`)
+    .select(`
+      *,
+      vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url ),
+      mall:malls     ( id, name, city, state, slug, address )
+    `)
     .eq("vendor_id", vendorId)
     .order("created_at", { ascending: false })
     .limit(limit);

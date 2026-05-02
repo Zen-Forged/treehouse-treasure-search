@@ -46,6 +46,7 @@ import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, Heart } from "lucide-react";
 import { getVendorBySlug, getVendorPosts, getAllMalls } from "@/lib/posts";
+import { setPostCache } from "@/lib/findContext";
 import { getSession, isAdmin } from "@/lib/auth";
 import { loadBookmarkCount, loadBookmarkedBoothIds, boothBookmarkKey } from "@/lib/utils";
 import { track } from "@/lib/clientEvents";
@@ -345,6 +346,11 @@ export default function PublicShelfPage() {
       setVendor(v);
       const p = await getVendorPosts(v.id, 200);
       setPosts(p);
+      // Phase C (session 100) — populate the shared post cache so a tap
+      // from this booth into /find/[id] paints metadata synchronously,
+      // matching Home + /flagged behavior. The cache is shared via
+      // lib/findContext and used by /find/[id]'s useLayoutEffect.
+      for (const post of p) setPostCache(post);
       let resolvedMall: Mall | null = null;
       if (v.mall) {
         resolvedMall = v.mall as Mall;
@@ -472,7 +478,11 @@ export default function PublicShelfPage() {
 
             {view === "window" ? (
               available.length > 0 ? (
-                <WindowView posts={available} showAddTile={false} />
+                <WindowView
+                  posts={available}
+                  showAddTile={false}
+                  swipeOriginPath={`/shelf/${slug}`}
+                />
               ) : (
                 <EmptyState
                   subtitle="Nothing on the shelf yet — check back soon."
@@ -481,7 +491,10 @@ export default function PublicShelfPage() {
               )
             ) : (
               available.length > 0 ? (
-                <ShelfView posts={available} />
+                <ShelfView
+                  posts={available}
+                  swipeOriginPath={`/shelf/${slug}`}
+                />
               ) : (
                 <EmptyState
                   subtitle="Nothing on the shelf yet — check back soon."

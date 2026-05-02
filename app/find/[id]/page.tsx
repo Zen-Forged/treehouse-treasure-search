@@ -81,7 +81,7 @@ import {
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { flagKey, mapsUrl, boothNumeralSize, loadFollowedIds } from "@/lib/utils";
 import { track } from "@/lib/clientEvents";
-import { readFindContext, getPostCache, setPostCache } from "@/lib/findContext";
+import { readFindContext, getPostCache, setPostCache, writeFindContext, type FindRef } from "@/lib/findContext";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import PhotoLightbox from "@/components/PhotoLightbox";
@@ -122,14 +122,46 @@ async function detectOwnershipAsync(post: Post): Promise<boolean> {
 // rule from session 83 that previously kept this card chrome-light is
 // retired — David's call for cross-page consistency wins here since this
 // strip IS a browse surface, just embedded inside a detail page.
-function ShelfCard({ post }: { post: Post }) {
+function ShelfCard({
+  post,
+  findRefs,
+  swipeOriginPath,
+}: {
+  post: Post;
+  // Phase C — when both are provided, tapping this card writes the
+  // swipe-nav context with the booth's posts (the user is "stepping
+  // into" a different find within the same booth — context re-scopes
+  // from feed/saved to this booth's catalog).
+  findRefs?: FindRef[];
+  swipeOriginPath?: string;
+}) {
   const [imgErr, setImgErr] = useState(false);
   const isSold = post.status === "sold";
   const hasImg = !!post.image_url && !imgErr;
 
+  function handleTap() {
+    if (post.image_url) {
+      try {
+        sessionStorage.setItem(
+          `treehouse_find_preview:${post.id}`,
+          JSON.stringify({ image_url: post.image_url, title: post.title }),
+        );
+      } catch {}
+    }
+    if (findRefs && swipeOriginPath) {
+      const cursor = findRefs.findIndex((r) => r.id === post.id);
+      writeFindContext({
+        originPath:  swipeOriginPath,
+        findRefs,
+        cursorIndex: cursor >= 0 ? cursor : 0,
+      });
+    }
+  }
+
   return (
     <Link
       href={`/find/${post.id}`}
+      onClick={handleTap}
       style={{ display: "block", textDecoration: "none", flexShrink: 0, width: "42vw", maxWidth: 170 }}
     >
       <div
@@ -264,14 +296,24 @@ if (typeof window !== "undefined") {
 
 function ShelfSection({
   vendorId,
+  vendorSlug,
   currentPostId,
   onReady,
 }: {
   vendorId: string;
+  // Phase C — vendor slug threaded through so the carousel can write a
+  // booth-scoped swipe context (`/shelf/${slug}`) on tap. Tapping a card
+  // is the user re-scoping their swipe-nav from feed/saved to "this
+  // booth's catalog." Null when the vendor lacks a slug.
+  vendorSlug: string | null;
   currentPostId: string;
   onReady: (hasItems: boolean) => void;
 }) {
-  const [items, setItems] = useState<Post[]>([]);
+  // Phase C — store ALL booth posts (unfiltered). Carousel display is
+  // filtered to exclude currentPostId; the swipe-nav findRefs uses the
+  // full list so swiping from a "More from this booth" landing can reach
+  // back to the previously-viewed find.
+  const [allItems, setAllItems] = useState<Post[]>([]);
   const [ready, setReady] = useState(false);
 
   // Session 88 — horizontal scroll-restore on the carousel. Refs survive
@@ -302,10 +344,16 @@ function ShelfSection({
 
   useEffect(() => {
     getVendorPosts(vendorId, 12).then((posts) => {
-      const filtered = posts.filter((p) => p.id !== currentPostId);
-      setItems(filtered);
+      setAllItems(posts);
       setReady(true);
-      onReady(filtered.length > 0);
+      // Phase C — populate the shared post cache so a tap into any
+      // booth post paints metadata synchronously. Same pattern as
+      // Home loadFeed and /flagged loadPosts.
+      for (const p of posts) setPostCache(p);
+      // Display filter excludes the currently-viewed post (carousel
+      // shows OTHER finds in the booth). onReady reflects the visible
+      // item count, not the full booth size.
+      onReady(posts.filter((p) => p.id !== currentPostId).length > 0);
     });
   }, [vendorId, currentPostId, onReady]);
 
@@ -337,6 +385,20 @@ function ShelfSection({
       if (stripRef.current) stripRef.current.scrollLeft = x;
     });
   }, [ready]);
+
+  // Display list — booth posts excluding the one currently being viewed.
+  const items = allItems.filter((p) => p.id !== currentPostId);
+  // Swipe-nav findRefs — full booth list including current. Tapping a
+  // card switches the swipe context to this booth so the user can move
+  // through booth siblings (and back to the current find via swipe).
+  const findRefs: FindRef[] = vendorSlug
+    ? allItems.map((p) => ({
+        id:        p.id,
+        image_url: p.image_url ?? null,
+        title:     p.title ?? null,
+      }))
+    : [];
+  const swipeOriginPath = vendorSlug ? `/shelf/${vendorSlug}` : undefined;
 
   if (!ready || items.length === 0) return null;
 
@@ -405,7 +467,11 @@ function ShelfSection({
               flexShrink: 0,
             }}
           >
-            <ShelfCard post={item} />
+            <ShelfCard
+              post={item}
+              findRefs={swipeOriginPath ? findRefs : undefined}
+              swipeOriginPath={swipeOriginPath}
+            />
           </div>
         ))}
         <div style={{ flexShrink: 0, width: 10 }} />
@@ -1527,6 +1593,7 @@ export default function FindDetailPage() {
       {hasVendor && (
         <ShelfSection
           vendorId={post.vendor!.id}
+          vendorSlug={post.vendor?.slug ?? null}
           currentPostId={post.id}
           onReady={handleShelfReady}
         />
