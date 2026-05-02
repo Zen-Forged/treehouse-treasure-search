@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — /flagged destination v2 (booth-container fill)</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --paper-warm:   #f5f2eb;
+    --paper-cream:  #faf2e0;
+    --postit:       #fbf3df;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.40);
+    --ink-hairline: rgba(42, 26, 10, 0.16);
+    --green:        #1e4d2b;
+    --green-soft:   rgba(30, 77, 43, 0.78);
+    --green-faint:  rgba(30, 77, 43, 0.55);
+    --price-ink:    #5a4a2e;
+
+    --lora: "Lora", Georgia, serif;
+    --tnr:  "Times New Roman", Times, serif;
+    --sys:  -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1380px; margin: 0 auto; padding: 30px 20px 80px; }
+
+  h1.title {
+    font-family: var(--lora);
+    font-weight: 500;
+    color: #e8ddc7;
+    font-size: 28px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 820px;
+  }
+
+  .picks-strip {
+    background: rgba(30,130,60,0.18);
+    border: 1px solid rgba(30,130,60,0.4);
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin: 0 auto 20px;
+    color: #d8ffd5;
+    font-size: 13px;
+    line-height: 1.65;
+    max-width: 820px;
+  }
+  .picks-strip strong { color: #fff; }
+
+  .decisions-pane {
+    background: rgba(232, 221, 199, 0.08);
+    border: 1px solid rgba(232, 221, 199, 0.2);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 0 auto 28px;
+    color: rgba(232, 221, 199, 0.85);
+    font-size: 13px;
+    line-height: 1.65;
+    max-width: 820px;
+  }
+  .decisions-pane strong { color: #fff9e8; }
+  .decisions-pane ul { margin: 6px 0 0 0; padding-left: 22px; }
+  .decisions-pane li { margin-bottom: 4px; }
+
+  .frames-row {
+    display: grid;
+    gap: 24px;
+    margin: 0 auto 8px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: 1280px;
+    align-items: start;
+  }
+  @media (max-width: 1200px) {
+    .frames-row { grid-template-columns: 1fr; max-width: 430px; }
+  }
+
+  .frame-card { display: flex; flex-direction: column; align-items: center; }
+  .frame-card .frame-label {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 18px;
+    color: #fff9e8;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .frame-card .frame-tag {
+    display: inline-block;
+    font-family: var(--sys);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 3px;
+    margin-bottom: 6px;
+  }
+  .frame-card .frame-tag.t-a { background: rgba(180,130,30,0.32); color: #ffe8b5; }
+  .frame-card .frame-tag.t-b { background: rgba(70,140,200,0.32); color: #cfe5ff; }
+  .frame-card .frame-tag.t-c { background: rgba(30,130,60,0.36); color: #d8ffd5; }
+  .frame-card .frame-blurb {
+    color: rgba(232,221,199,0.62);
+    font-size: 12px;
+    line-height: 1.55;
+    text-align: center;
+    margin-bottom: 14px;
+    max-width: 380px;
+    min-height: 56px;
+  }
+
+  .phone {
+    width: 100%;
+    max-width: 392px;
+    background: var(--paper-warm);
+    border: 1px solid rgba(0,0,0,0.4);
+    border-radius: 26px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+
+  /* ─── Masthead mock ──────────────────────────────────── */
+  .masthead {
+    background: var(--paper-warm);
+    border-bottom: 1px solid var(--ink-hairline);
+    padding: 14px 18px 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .masthead .back {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: rgba(245,242,235,0.85);
+    color: var(--ink-mid);
+  }
+  .masthead .wordmark {
+    flex: 1;
+    text-align: center;
+    font-family: var(--tnr);
+    color: var(--ink-primary);
+    font-size: 18px;
+    line-height: 1;
+  }
+  .masthead .right-slot { width: 36px; height: 36px; }
+
+  /* ─── Mall scope header (OUTSIDE containers) ─────────── */
+  .mall-scope {
+    background: var(--paper-warm);
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid var(--ink-hairline);
+  }
+  .mall-scope-title {
+    font-family: var(--lora);
+    font-weight: 500;
+    font-size: 22px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mall-scope-title .chev { font-size: 14px; color: var(--ink-muted); }
+  .mall-scope-meta {
+    margin-top: 4px;
+    font-family: var(--sys);
+    font-size: 11px;
+    color: var(--ink-muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .scope-row-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+  .save-count-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--postit);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 14px;
+    padding: 4px 11px 5px;
+    font-family: var(--sys);
+    font-size: 11px;
+    color: var(--ink-mid);
+    letter-spacing: 0.04em;
+  }
+  .save-count-chip .heart { color: var(--green); }
+
+  /* ─── Booth container ────────────────────────────────── */
+  .containers-stack {
+    background: rgba(0,0,0,0.04);
+    padding: 14px 14px 18px;
+  }
+  .booth-container {
+    background: var(--paper-warm);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(42, 26, 10, 0.05);
+  }
+  .booth-container + .booth-container { margin-top: 14px; }
+
+  .booth-header {
+    padding: 13px 16px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--ink-hairline);
+  }
+  .booth-header-name {
+    flex: 1;
+    font-family: var(--lora);
+    font-weight: 500;
+    font-size: 21px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .booth-header-pill {
+    flex-shrink: 0;
+    font-family: var(--tnr);
+    color: var(--green);
+    font-size: 19px;
+    line-height: 1;
+  }
+  .booth-header-chev {
+    flex-shrink: 0;
+    color: var(--green);
+    font-size: 22px;
+    line-height: 1;
+    margin-left: 6px;
+    margin-right: -2px;
+    font-family: var(--lora);
+  }
+
+  /* ─── Find row — horizontal layout ───────────────────── */
+  .find-row-h {
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--ink-hairline);
+  }
+  .find-row-h:last-child { border-bottom: none; }
+
+  .find-thumb {
+    flex-shrink: 0;
+    background: var(--paper-cream);
+    padding: 4px 4px 6px;
+    border-radius: 3px;
+    box-shadow:
+      0 3px 8px rgba(42, 26, 10, 0.18),
+      0 1px 2px rgba(42, 26, 10, 0.10);
+    width: 62px;
+    position: relative;
+  }
+  .find-thumb-photo {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    border-radius: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.85);
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 8px;
+    letter-spacing: 0.04em;
+    text-align: center;
+    padding: 0 4px;
+    line-height: 1.3;
+  }
+  .photo-1 { background: linear-gradient(135deg, #8a6d4a, #5c4528); }
+  .photo-2 { background: linear-gradient(135deg, #6e7d62, #3f4e3a); }
+  .photo-3 { background: linear-gradient(135deg, #9c7d68, #6a5240); }
+  .photo-4 { background: linear-gradient(135deg, #a09080, #6a5e50); }
+  .photo-5 { background: linear-gradient(135deg, #6b5d4a, #3d3527); }
+
+  /* Leaf bubble matches polaroid shape (paper-cream frosted) */
+  .find-thumb-leaf {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 18px;
+    height: 18px;
+    background: rgba(245,242,235,0.88);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--green);
+    font-size: 11px;
+    line-height: 1;
+    box-shadow: 0 1px 2px rgba(42, 26, 10, 0.12);
+  }
+
+  .find-meta {
+    flex: 1;
+    min-width: 0;
+  }
+  .find-meta-title {
+    font-family: var(--lora);
+    font-weight: 400;
+    font-size: 14px;
+    color: var(--ink-primary);
+    line-height: 1.4;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .find-price {
+    flex-shrink: 0;
+    font-family: var(--lora);
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--price-ink);
+    align-self: flex-start;
+    padding-top: 1px;
+  }
+
+  /* ─── Footer affordances per frame ───────────────────── */
+  .cta-footer-link {
+    padding: 13px 16px 14px;
+    text-align: center;
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--green);
+    border-top: 1px solid var(--ink-hairline);
+  }
+  .cta-footer-btn {
+    margin: 12px;
+    padding: 11px;
+    width: calc(100% - 24px);
+    border: 1px solid var(--green);
+    background: var(--paper-warm);
+    color: var(--green);
+    font-family: var(--lora);
+    font-weight: 500;
+    font-size: 14px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .footer-note {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.5);
+    font-size: 11px;
+    margin-top: 36px;
+    font-style: italic;
+    max-width: 820px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <h1 class="title">/flagged — destination v2 (booth-container fill)</h1>
+  <p class="subtitle">Mall location outside, booth-as-container with horizontal find rows inside, leaf bubble on the polaroid thumbnail. Three frames refining only one detail: where the "Explore the booth →" affordance lives.</p>
+
+  <div class="picks-strip">
+    <strong>What's locked from V1:</strong> mall scope outside · booth-as-container framing · horizontal find rows (polaroid + title + price) · leaf bubble follows polaroid shape · grouped by booth (no per-find CTA).
+  </div>
+
+  <div class="decisions-pane">
+    <strong>Decision axis — where does "Explore the booth" live?</strong>
+    <ul>
+      <li><strong>Frame A — Header chevron.</strong> A green <code>›</code> sits next to the booth pill. Whole booth-container is tappable. Quietest expression. Implied affordance.</li>
+      <li><strong>Frame B — Footer link (italic Lora).</strong> A subtle <em>Explore the booth →</em> link below the find rows. Editorial register, doesn't compete with the polaroid thumbnails.</li>
+      <li><strong>Frame C — Footer button.</strong> Outlined green button at the bottom of the container, AirSplit-style. Strongest CTA weight. Most explicit "go here" gesture.</li>
+    </ul>
+    <strong>Sample data:</strong> 5 saves across 2 booths at Bluegrass Antique Mall — Cardinal Curiosities (3) and Old Soul Provisions (2).
+  </div>
+
+  <div class="frames-row">
+
+    <!-- ───────── FRAME A — Header chevron ───────── -->
+    <div class="frame-card">
+      <div class="frame-tag t-a">Frame A</div>
+      <div class="frame-label">Header chevron</div>
+      <div class="frame-blurb">Quietest. Booth-container itself is the destination affordance — no explicit button. Reads cleanest visually but relies on the user discovering the tap.</div>
+
+      <div class="phone">
+        <div class="masthead">
+          <div class="back">←</div>
+          <div class="wordmark">Treehouse Finds</div>
+          <div class="right-slot"></div>
+        </div>
+
+        <div class="mall-scope">
+          <div class="mall-scope-title">Bluegrass Antique Mall <span class="chev">▾</span></div>
+          <div class="scope-row-inner">
+            <div class="mall-scope-meta">Saved finds</div>
+            <div class="save-count-chip"><span class="heart">♥</span> 5 saved</div>
+          </div>
+        </div>
+
+        <div class="containers-stack">
+
+          <!-- Booth 1 -->
+          <div class="booth-container">
+            <div class="booth-header">
+              <div class="booth-header-name">Cardinal Curiosities</div>
+              <div class="booth-header-pill">· C-12</div>
+              <div class="booth-header-chev">›</div>
+            </div>
+            <div class="find-row-h">
+              <div class="find-thumb">
+                <div class="find-thumb-photo photo-1">brass elephant</div>
+                <div class="find-thumb-leaf">♥</div>
+              </div>
+              <div class="find-meta">
+                <p class="find-meta-title">Mid-century brass elephant figurine, 1960s patina</p>
+              </div>
+              <div class="find-price">$48</div>
+            </div>
+            <div class="find-row-h">
+              <div class="find-thumb">
+                <div class="find-thumb-photo photo-2">tobacciana box</div>
+                <div class="find-thumb-leaf">♥</div>
+              </div>
+              <div class="find-meta">
+                <p class="find-meta-title">Carved wooden tobacciana box with original brass hinges</p>
+              </div>
+              <div class="find-price">$125</div>
+            </div>
+            <div class="find-row-h">
+              <div class="find-thumb">
+                <div class="find-thumb-photo photo-4">card tray</div>
+                <div class="find-thumb-leaf">♥</div>
+              </div>
+              <div class="find-meta">
+                <p class="find-meta-title">Edwardian silver-plate calling card tray, monogrammed</p>
+              </div>
+              <div class="find-price">$89</div>
+            </div>
+          </div>
+
+          <!-- Booth 2 -->
+          <div class="booth-container">
+            <div class="booth-header">
+              <div class="booth-header-name">Old Soul Provisions</div>
+              <div class="booth-header-pill">· B-22</div>
+              <div class="booth-header-chev">›</div>
+            </div>
+            <div class="find-row-h">
+              <div class="find-thumb">
+                <div class="find-thumb-photo photo-3">linen napkins</div>
+                <div class="find-thumb-leaf">♥</div>
+              </div>
+              <div class="find-meta">
+                <p class="find-meta-title">Set of hand-blocked linen napkins, indigo damask print</p>
+              </div>
+              <div class="find-price">$32</div>
+            </div>
+            <div class="find-row-h">
+              <div class="find-thumb">
+                <div class="find-thumb-photo photo-5">scissors</div>
+                <div class="find-thumb-leaf">♥</div>
+              </div>
+              <div class="find-meta">
+                <p class="find-meta-title">Vintage cast-iron sewing scissors, marked "Solingen"</p>
+              </div>
+              <div class="find-price">$24</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ───────── FRAME B — Footer link ───────── -->
+    <div class="frame-card">
+      <div class="frame-tag t-b">Frame B</div>
+      <div class="frame-label">Footer link</div>
+      <div class="frame-blurb">Italic Lora link below the find rows. Editorial register — feels like a page-turn invitation rather than a button. Doesn't visually compete with polaroids.</div>
+
+      <div class="phone">
+        <div class="masthead">
+          <div class="back">←</div>
+          <div class="wordmark">Treehouse Finds</div>
+          <div class="right-slot"></div>
+        </div>
+
+        <div class="mall-scope">
+          <div class="mall-scope-title">Bluegrass Antique Mall <span class="chev">▾</span></div>
+          <div class="scope-row-inner">
+            <div class="mall-scope-meta">Saved finds</div>
+            <div class="save-count-chip"><span class="heart">♥</span> 5 saved</div>
+          </div>
+        </div>
+
+        <div class="containers-stack">
+
+          <div class="booth-container">
+            <div class="booth-header">
+              <div class="booth-header-name">Cardinal Curiosities</div>
+              <div class="booth-header-pill">· C-12</div>
+            </div>
+            <div class="find-row-h">
+              <div class="find-thumb">
+                <div class="find-thumb-photo photo-1">brass elephant</div>
+                <div class="find-thumb-leaf">♥</div>
+              </div>
+              <div class="find-meta">
+                <p class="find-meta-title">Mid-century brass elephant figurine, 1960s patina</p>
+              </div>
+              <div class="find-price">$48</div>
+            </div>
+            <div class="find-row-h">
+              <div class="find-thumb">
+                <div class="find-thumb-photo photo-2">tobacciana box</div>
+                <div class="find-thumb-leaf">♥</div>
+              </div>
+              <div class="find-meta">
+                <p class="find-meta-title">Carved wooden tobacciana box with original brass hinges</p>
+              </div>
+              <div class="find-price">$125</div>
+            </div>
+            <div class="find-row-h">
+              <div class="find-thumb">
+                <div class="find-thumb-photo photo-4">card tray</div>
+                <div class="find-thumb-leaf">♥</div>
+              </div>
+              <div class="find-meta">
+                <p class="find-meta-title">Edwardian silver-plate calling card tray, monogrammed</p>
+              </div>
+              <div class="find-price">$89</div>
+            </div>
+            <div class="cta-footer-link"><em>Explore the booth →</em></div>
+          </div>
+
+          <div class="booth-container">
+            <div class="booth-header">
+              <div class="booth-header-name">Old Soul Provisions</div>
+              <div class="booth-header-pill">· B-22</div>
+            </div>
+            <div class="find-row-h">
+              <div class="find-thumb">
+                <div class="find-thumb-photo photo-3">linen napkins</div>
+                <div class="find-thumb-leaf">♥</div>
+              </div>
+              <div class="find-meta">
+                <p class="find-meta-title">Set of hand-blocked linen napkins, indigo damask print</p>
+              </div>
+              <div class="find-price">$32</div>
+            </div>
+            <div class="find-row-h">
+              <div class="find-thumb">
+                <div class="find-thumb-photo photo-5">scissors</div>
+                <div class="find-thumb-leaf">♥</div>
+              </div>
+              <div class="find-meta">
+                <p class="find-meta-title">Vintage cast-iron sewing scissors, marked "Solingen"</p>
+              </div>
+              <div class="find-price">$24</div>
+            </div>
+            <div class="cta-footer-link"><em>Explore the booth →</em></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ───────── FRAME C — Footer button ───────── -->
+    <div class="frame-card">
+      <div class="frame-tag t-c">Frame C</div>
+      <div class="frame-label">Footer button</div>
+      <div class="frame-blurb">AirSplit-style outlined green button. Strongest CTA weight. Most explicit "go here" gesture but adds visual weight to every booth container.</div>
+
+      <div class="phone">
+        <div class="masthead">
+          <div class="back">←</div>
+          <div class="wordmark">Treehouse Finds</div>
+          <div class="right-slot"></div>
+        </div>
+
+        <div class="mall-scope">
+          <div class="mall-scope-title">Bluegrass Antique Mall <span class="chev">▾</span></div>
+          <div class="scope-row-inner">
+            <div class="mall-scope-meta">Saved finds</div>
+            <div class="save-count-chip"><span class="heart">♥</span> 5 saved</div>
+          </div>
+        </div>
+
+        <div class="containers-stack">
+
+          <div class="booth-container">
+            <div class="booth-header">
+              <div class="booth-header-name">Cardinal Curiosities</div>
+              <div class="booth-header-pill">· C-12</div>
+            </div>
+            <div class="find-row-h">
+              <div class="find-thumb">
+                <div class="find-thumb-photo photo-1">brass elephant</div>
+                <div class="find-thumb-leaf">♥</div>
+              </div>
+              <div class="find-meta">
+                <p class="find-meta-title">Mid-century brass elephant figurine, 1960s patina</p>
+              </div>
+              <div class="find-price">$48</div>
+            </div>
+            <div class="find-row-h">
+              <div class="find-thumb">
+                <div class="find-thumb-photo photo-2">tobacciana box</div>
+                <div class="find-thumb-leaf">♥</div>
+              </div>
+              <div class="find-meta">
+                <p class="find-meta-title">Carved wooden tobacciana box with original brass hinges</p>
+              </div>
+              <div class="find-price">$125</div>
+            </div>
+            <div class="find-row-h">
+              <div class="find-thumb">
+                <div class="find-thumb-photo photo-4">card tray</div>
+                <div class="find-thumb-leaf">♥</div>
+              </div>
+              <div class="find-meta">
+                <p class="find-meta-title">Edwardian silver-plate calling card tray, monogrammed</p>
+              </div>
+              <div class="find-price">$89</div>
+            </div>
+            <button class="cta-footer-btn">Explore the booth <span>→</span></button>
+          </div>
+
+          <div class="booth-container">
+            <div class="booth-header">
+              <div class="booth-header-name">Old Soul Provisions</div>
+              <div class="booth-header-pill">· B-22</div>
+            </div>
+            <div class="find-row-h">
+              <div class="find-thumb">
+                <div class="find-thumb-photo photo-3">linen napkins</div>
+                <div class="find-thumb-leaf">♥</div>
+              </div>
+              <div class="find-meta">
+                <p class="find-meta-title">Set of hand-blocked linen napkins, indigo damask print</p>
+              </div>
+              <div class="find-price">$32</div>
+            </div>
+            <div class="find-row-h">
+              <div class="find-thumb">
+                <div class="find-thumb-photo photo-5">scissors</div>
+                <div class="find-thumb-leaf">♥</div>
+              </div>
+              <div class="find-meta">
+                <p class="find-meta-title">Vintage cast-iron sewing scissors, marked "Solingen"</p>
+              </div>
+              <div class="find-price">$24</div>
+            </div>
+            <button class="cta-footer-btn">Explore the booth <span>→</span></button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="footer-note">Open in browser, then iPhone-test by AirDropping or sharing the page. Pick the CTA placement that feels right on a real device — and call out anything else that wants to change (thumbnail size, title weight, price color, leaf bubble, container padding).</p>
+
+</div>
+</body>
+</html>
