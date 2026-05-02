@@ -217,6 +217,22 @@ function ShelfCard({ post }: { post: Post }) {
 const findScrollKey = (postId: string) => `treehouse_find_scroll_y:${postId}`;
 const findStripScrollKey = (postId: string) => `treehouse_find_strip_scroll_x:${postId}`;
 
+// Phase B QA fix (session 100) — module-scope post cache. Survives across
+// swipe-driven router.replace (page stays mounted) so metadata paints
+// instantly when the user reaches an already-fetched neighbor. Populated
+// by:
+//   1. The fetch effect on [id] change — every successful getPost lands
+//      its result in the cache.
+//   2. Pre-fetch in the [id] context effect — kicks off background
+//      getPost for prevId + nextId so the very next swipe is instant.
+//
+// Cache lifetime = page session (module scope is reset on full reload).
+// No LRU cap — sessions are short and Post payloads are ~few KB each.
+// Stale-data risk is bounded: vendors can edit their own finds, but
+// Find Detail does not subscribe to those events; cache is refreshed
+// when the user does a full reload.
+const findPostCache = new Map<string, Post>();
+
 // Module-scope navigation-departure flag. Same-route param navigation
 // (/find/A → /find/B) leaves the save listener attached during the brief
 // render-commit window where the browser auto-clamps scrollY to fit the
@@ -653,6 +669,21 @@ export default function FindDetailPage() {
       };
       warmPreview(resolvedPrev);
       warmPreview(resolvedNext);
+
+      // Phase B QA fix — pre-fetch full Post data for adjacent ids in
+      // the background so the next swipe paints the metadata (save
+      // icon, post-it, title, price, caption, share airplane) synchron-
+      // ously. The fetch effect's cache check will hit on the next
+      // [id] change. Skips ids already in cache so a back-and-forth
+      // swipe doesn't fire redundant requests.
+      const prefetchNeighbor = (ref: typeof resolvedPrev) => {
+        if (!ref || findPostCache.has(ref.id)) return;
+        getPost(ref.id).then((data) => {
+          if (data) findPostCache.set(ref.id, data);
+        });
+      };
+      prefetchNeighbor(resolvedPrev);
+      prefetchNeighbor(resolvedNext);
     }
 
     // If we got here via a swipe (swipeDirRef set), slide the new content
@@ -811,7 +842,26 @@ export default function FindDetailPage() {
     // R3 — page_viewed analytics event. Fires once per `id` (re-fires on
     // navigation between distinct finds in-app).
     track("page_viewed", { path: "/find/[id]", post_id: id });
+
+    // Phase B QA fix — cache hit (typically: pre-fetched neighbor reached
+    // via swipe) paints the new find's metadata synchronously. No loading
+    // state, no stale-data flash from the previous find.
+    const cached = findPostCache.get(id);
+    if (cached) {
+      setPost(cached);
+      setLoading(false);
+      detectOwnershipAsync(cached).then(setIsMyPost);
+      return;
+    }
+
+    // Cache miss — first ever view of this find. Reset post + loading so
+    // the previous find's metadata clears immediately while the photograph
+    // (sync first paint via preview cache) holds the slot. Avoids the
+    // stale-data flash that would otherwise persist until getPost resolves.
+    setPost(null);
+    setLoading(true);
     getPost(id).then(async (data) => {
+      if (data) findPostCache.set(id, data);
       setPost(data);
       setLoading(false);
       if (data) {
