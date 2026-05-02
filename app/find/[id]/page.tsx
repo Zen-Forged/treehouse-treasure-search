@@ -1148,7 +1148,10 @@ export default function FindDetailPage() {
       <DebugToast />
       <StickyMasthead
         left={
-          <IconBubble onClick={() => router.back()} ariaLabel="Go back">
+          <IconBubble onClick={() => {
+            try { sessionStorage.setItem(POPSTATE_MARKER_KEY, String(Date.now())); } catch {}
+            router.back();
+          }} ariaLabel="Go back">
             <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
           </IconBubble>
         }
