@@ -902,38 +902,26 @@ export default function FindDetailPage() {
     scrollRestored.current = true;
     const targetY = pendingScrollY.current;
 
-    // Phase C QA fix #4 — David QA: scroll restore was clamping. Even
-    // with the shelfReady gate, layout-after-paint can still grow the
-    // document AFTER scrollTo fires (image decode, font shifts, lazy
-    // images in the carousel paginating in). The browser's scrollY is
-    // capped to documentHeight - viewportHeight at the moment scrollTo
-    // runs — and stays there even when the document grows later.
-    //
-    // Defensive watchdog: try scrollTo, then watch the body for height
-    // growth and re-fire scrollTo each time until either we hit the
-    // target Y exactly or 1.2s elapses (ample for any fetch + decode).
-    // The watchdog disconnects on either condition.
+    // Phase C QA fix #4 (revised) — back off the ResizeObserver watchdog
+    // that QA #4-original tried (caused a React #418 hydration error in
+    // prod). Use a small staircase of retry timeouts instead — each
+    // attempt re-fires scrollTo; if document height grew between calls,
+    // the later attempt lands further. Total 4 attempts over 600ms;
+    // cheap and idempotent (browsers no-op scrollTo when already at
+    // target). Cleanup clears pending timeouts on [id] change so a
+    // mid-restore navigation doesn't scroll the newly-mounted page.
     const tryScroll = () => window.scrollTo({ top: targetY, behavior: "instant" });
-
-    requestAnimationFrame(() => {
+    const timeouts: number[] = [];
+    const raf = requestAnimationFrame(() => {
       tryScroll();
-      if (Math.round(window.scrollY) >= targetY) return;
-
-      const ro = new ResizeObserver(() => {
-        tryScroll();
-        if (Math.round(window.scrollY) >= targetY) {
-          ro.disconnect();
-          if (timeoutId) clearTimeout(timeoutId);
-        }
-      });
-      ro.observe(document.body);
-      const timeoutId = window.setTimeout(() => {
-        ro.disconnect();
-        // Final attempt after the watchdog window — useful if late image
-        // decode pushed content down right at the deadline.
-        tryScroll();
-      }, 1200);
+      timeouts.push(window.setTimeout(tryScroll, 100));
+      timeouts.push(window.setTimeout(tryScroll, 300));
+      timeouts.push(window.setTimeout(tryScroll, 600));
     });
+    return () => {
+      cancelAnimationFrame(raf);
+      timeouts.forEach((t) => clearTimeout(t));
+    };
   }, [id, loading, shelfReady, post]);
 
   useEffect(() => {
