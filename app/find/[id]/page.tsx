@@ -728,6 +728,15 @@ export default function FindDetailPage() {
           : null,
       );
     }
+
+    // Phase C QA fix #3 — reset shelfReady SYNCHRONOUSLY before paint so
+    // the scroll-restore useEffect (which runs after paint) sees the
+    // fresh false value via its closure. Previously this lived in a
+    // sibling useEffect and the reset was scheduled after the scroll-
+    // restore effect had already read the stale true value, fired
+    // scrollTo too early, and clamped against the document height
+    // captured before the carousel re-rendered with the new currentPostId.
+    setShelfReady(false);
   }, [id]);
 
   // Drag-end commit. Threshold: 80px offset OR 500px/s velocity. Above →
@@ -840,11 +849,12 @@ export default function FindDetailPage() {
     scrollRestored.current = false;
     pendingScrollY.current = null;
     findScrollWriteBlocked = false;
-    // Phase C QA fix #2 — reset the carousel readiness flag on each
-    // [id] change so the scroll-restore for the new id waits for the
-    // new carousel's fetch to resolve (document height grows after
-    // ShelfSection renders its items).
-    setShelfReady(false);
+    // Phase C QA fix #3 — setShelfReady(false) moved to the [id]
+    // useLayoutEffect above so the reset commits sync before paint
+    // (and before this scroll-restore effect runs). Otherwise the
+    // scroll-restore closure read a stale shelfReady=true and fired
+    // scrollTo before the carousel's new currentPostId render had
+    // landed in the DOM.
     const wasBackForward = lastNavWasPopstate;
     if (wasBackForward) {
       let savedY: number | null = null;
