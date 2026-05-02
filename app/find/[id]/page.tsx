@@ -282,24 +282,9 @@ let findScrollWriteBlocked = false;
 
 const POPSTATE_MARKER_KEY = "th_popstate_pending";
 
-// Diagnostic toast queue (Chrome + PWA visibility). Strip after Path-4
-// back-nav bug is closed.
-type DebugEntry = { t: number; msg: string };
-const debugLog: DebugEntry[] = [];
-const debugListeners = new Set<() => void>();
-function pushDebug(msg: string) {
-  debugLog.push({ t: Date.now(), msg });
-  if (debugLog.length > 12) debugLog.shift();
-  debugListeners.forEach((fn) => fn());
-}
-
 if (typeof window !== "undefined") {
   window.addEventListener("popstate", () => {
     try { sessionStorage.setItem(POPSTATE_MARKER_KEY, String(Date.now())); } catch {}
-    pushDebug("popstate");
-  });
-  window.addEventListener("pageshow", (e) => {
-    pushDebug(`pageshow persisted=${(e as PageTransitionEvent).persisted}`);
   });
 }
 
@@ -316,40 +301,6 @@ function wasRecentPopstate(maxAgeMs = 800): boolean {
     if (isNaN(ts)) return false;
     return Date.now() - ts < maxAgeMs;
   } catch { return false; }
-}
-
-function DebugToast() {
-  const [, force] = useState(0);
-  useEffect(() => {
-    const fn = () => force((n) => n + 1);
-    debugListeners.add(fn);
-    return () => { debugListeners.delete(fn); };
-  }, []);
-  if (debugLog.length === 0) return null;
-  const now = Date.now();
-  return (
-    <div
-      style={{
-        position: "fixed",
-        bottom: 8,
-        left: 8,
-        right: 8,
-        zIndex: 99999,
-        background: "rgba(0,0,0,0.78)",
-        color: "#fff",
-        font: "11px/1.3 ui-monospace,monospace",
-        padding: "6px 8px",
-        borderRadius: 6,
-        pointerEvents: "none",
-        maxHeight: "40vh",
-        overflow: "hidden",
-      }}
-    >
-      {debugLog.map((e, i) => (
-        <div key={i}>{`-${((now - e.t) / 1000).toFixed(1)}s  ${e.msg}`}</div>
-      ))}
-    </div>
-  );
 }
 
 function ShelfSection({
@@ -926,10 +877,8 @@ export default function FindDetailPage() {
         }
       } catch {}
       if (savedYRead !== null) pendingScrollY.current = savedYRead;
-      pushDebug(`id=${id.slice(0,4)} back-forward saved=${savedYRead}`);
     } else {
       requestAnimationFrame(() => window.scrollTo(0, 0));
-      pushDebug(`id=${id.slice(0,4)} link-tap → 0,0`);
     }
     function onScroll() {
       if (findScrollWriteBlocked) return;
@@ -990,7 +939,6 @@ export default function FindDetailPage() {
     // scrolls. Re-allow writes after 700ms so subsequent user-initiated
     // scrolls save normally.
     findScrollWriteBlocked = true;
-    pushDebug(`restore → ${targetY}`);
     const tryScroll = () => window.scrollTo({ top: targetY, behavior: "instant" });
     const timeouts: number[] = [];
     const raf = requestAnimationFrame(() => {
@@ -1145,7 +1093,6 @@ export default function FindDetailPage() {
         flexDirection: "column",
       }}
     >
-      <DebugToast />
       <StickyMasthead
         left={
           <IconBubble onClick={() => {
