@@ -662,10 +662,18 @@ export default function FindDetailPage() {
   const [isSaved,       setIsSaved]       = useState(false);
 
   // Preview image URL written by the source surface (Home tile / /flagged
-  // / /shelf, eventually) into sessionStorage on tap. Read synchronously
-  // before paint via the useLayoutEffect below so the photograph can
-  // render on the very first commit, both on initial mount and on every
-  // swipe-driven router.replace.
+  // / /shelf, eventually) into sessionStorage on tap. Loaded by the
+  // useLayoutEffect below — runs synchronously after the first commit
+  // but before paint, so the photograph still appears on the first
+  // visible frame.
+  //
+  // Phase C QA fix #7 (session 100) — initial state must be null on
+  // BOTH server and client, otherwise hydration mismatches (React #418).
+  // The previous code read sessionStorage in the useState initializer,
+  // which returned null on server (typeof window === "undefined") but
+  // a URL on client (when the user tapped a Home tile that wrote a
+  // preview entry). The mismatch crashed hydration and React fell
+  // back to a full client re-render (#423) on every first-tap nav.
   const readPreviewImage = (forId: string): string | null => {
     if (typeof window === "undefined" || !forId) return null;
     try {
@@ -675,7 +683,7 @@ export default function FindDetailPage() {
       return typeof parsed?.image_url === "string" ? parsed.image_url : null;
     } catch { return null; }
   };
-  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(() => readPreviewImage(id ?? ""));
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   // Swipe-nav neighbors. Resolved from the lib/findContext blob on [id]
   // change; null when the user arrived via direct deep-link or has no
