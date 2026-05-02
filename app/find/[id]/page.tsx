@@ -893,6 +893,20 @@ export default function FindDetailPage() {
   // never flips. Bypass the gate in that case via the !hasVendor branch.
   // Re-runs on id change via the [id, loading, shelfReady] dep so peer-
   // nav into /find/[id-B] can restore B's saved scroll.
+  // Phase C QA fix #6 (session 100) — disable iOS Safari's native scroll
+  // restoration. Inspector data showed scrollY landing at a value that
+  // matched neither the saved Y nor any retry result; only explanation
+  // consistent with the numbers is Safari's own popstate scroll restore
+  // racing our scrollTo and winning. With history.scrollRestoration =
+  // 'manual', the browser stays out of it and our staircase is the only
+  // thing scrolling on back-nav.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+  }, []);
+
   useEffect(() => {
     if (loading) return;
     const hasVendor = !!post?.vendor;
