@@ -62,11 +62,11 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useLayoutEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Send, Pencil } from "lucide-react";
-import { motion, useAnimation, type PanInfo } from "framer-motion";
+import { motion, type PanInfo } from "framer-motion";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getPost, getVendorPosts } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
@@ -587,16 +587,11 @@ export default function FindDetailPage() {
   const [, setShelfHasItems]              = useState(false);
   const [isSaved,       setIsSaved]       = useState(false);
 
-  // Track D phase 5 — preview image URL written by the source surface
-  // (feed tile / /flagged tile) into sessionStorage on tap. Read
-  // synchronously so the photograph can render on the very first commit,
-  // before getPost() resolves. Direct URL nav (no source tap) leaves this
-  // null — the page loads normally.
-  //
-  // Phase B (session 100) — convert from useState initializer (one-shot
-  // mount-only read) to state updated on [id] change. Required for
-  // swipe-driven router.replace, which keeps the page mounted but swaps
-  // params; the photograph must paint synchronously for the new id too.
+  // Preview image URL written by the source surface (Home tile / /flagged
+  // / /shelf, eventually) into sessionStorage on tap. Read synchronously
+  // before paint via the useLayoutEffect below so the photograph can
+  // render on the very first commit, both on initial mount and on every
+  // swipe-driven router.replace.
   const readPreviewImage = (forId: string): string | null => {
     if (typeof window === "undefined" || !forId) return null;
     try {
@@ -608,112 +603,64 @@ export default function FindDetailPage() {
   };
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(() => readPreviewImage(id ?? ""));
 
-  // Swipe-nav state. prevId/nextId resolve from the entry context blob
-  // (lib/findContext) on [id] change; they're null when the user arrived
-  // via direct deep-link or has no surrounding context. swipeDirRef
-  // carries direction across the router.replace boundary so the new
-  // [id] effect knows which side to slide in from. swipeControls drives
-  // the drag/animate position imperatively.
+  // Swipe-nav neighbors. Resolved from the lib/findContext blob on [id]
+  // change; null when the user arrived via direct deep-link or has no
+  // surrounding context. Drag is auto-disabled when both are null.
   const [prevId, setPrevId] = useState<string | null>(null);
   const [nextId, setNextId] = useState<string | null>(null);
-  const swipeDirRef = useRef<"left" | "right" | null>(null);
-  const swipeControls = useAnimation();
-  const swipeTransitioningRef = useRef(false);
 
-  // Re-resolve preview cache + neighbors + slide-in animation on [id]
-  // change. Runs on initial mount AND on every router.replace fired by
-  // the swipe gesture (page stays mounted across param changes in App
-  // Router; useEffect on [id] is the load-bearing reactivity hook).
-  useEffect(() => {
+  // Phase B QA fix #4 (session 100) — drop ALL slide animations and run
+  // the swap-critical state through useLayoutEffect so it commits BEFORE
+  // paint. The earlier slide-out + slide-in sequence created a transition
+  // window where the motion.div was offscreen at ±innerWidth, leaving the
+  // viewport blank between animations (the empty-page flicker David
+  // surfaced via screenshot). Without animations the wrapper never leaves
+  // x=0 except during the user's finger drag, and useLayoutEffect ensures
+  // the cache-hit setPost lands in the same paint as the route param
+  // change. Net experience: drag with finger → release → page is the
+  // next find, fully rendered, no transition state.
+  useLayoutEffect(() => {
     if (!id) return;
 
-    // Sync paint of the new photograph for both initial mount and
-    // swipe-driven id changes.
+    // Sync first paint of photograph for the new id.
     setPreviewImageUrl(readPreviewImage(id));
 
-    // Resolve neighbors from context.
+    // Sync swap of post + loading. Cache hit (Home loadFeed warmed; near-
+    // 100% of swipe-driven nav) → metadata renders with the same paint
+    // as the route change. Cache miss (direct deep-link) → post=null +
+    // loading=true; the deferred fetch effect below resolves and updates
+    // state after paint.
+    const cached = getPostCache(id);
+    if (cached) {
+      setPost(cached);
+      setLoading(false);
+    } else {
+      setPost(null);
+      setLoading(true);
+    }
+
+    // Sync resolution of neighbors. Drag enabled/disabled state on the
+    // motion.div derives from these in render.
     const ctx = readFindContext();
     if (!ctx) {
       setPrevId(null);
       setNextId(null);
     } else {
       const cursor = ctx.findRefs.findIndex((r) => r.id === id);
-      const resolvedPrev = cursor > 0 ? ctx.findRefs[cursor - 1] : null;
-      const resolvedNext = cursor >= 0 && cursor < ctx.findRefs.length - 1
-        ? ctx.findRefs[cursor + 1]
-        : null;
-      setPrevId(resolvedPrev?.id ?? null);
-      setNextId(resolvedNext?.id ?? null);
-
-      // Pre-warm the preview cache for adjacent ids so the NEXT swipe
-      // also paints synchronously. Same payload shape as the entry tap
-      // site writes; if a tap-write already populated this key, we
-      // simply re-write the same data.
-      const warmPreview = (ref: typeof resolvedPrev) => {
-        if (!ref || !ref.image_url) return;
-        try {
-          sessionStorage.setItem(
-            `treehouse_find_preview:${ref.id}`,
-            JSON.stringify({ image_url: ref.image_url, title: ref.title }),
-          );
-        } catch {}
-      };
-      warmPreview(resolvedPrev);
-      warmPreview(resolvedNext);
-
-      // Phase B QA fix #2 — pre-fetch full Post data for adjacent ids
-      // in the background as a backstop for the direct-deep-link case
-      // (no Home loadFeed warming). Home → /find/[id] entry paths
-      // typically hit cache immediately via setPostCache from loadFeed,
-      // making this a no-op (getPostCache already returns truthy and
-      // we skip the fetch).
-      const prefetchNeighbor = (ref: typeof resolvedPrev) => {
-        if (!ref || getPostCache(ref.id)) return;
-        getPost(ref.id).then((data) => {
-          if (data) setPostCache(data);
-        });
-      };
-      prefetchNeighbor(resolvedPrev);
-      prefetchNeighbor(resolvedNext);
+      setPrevId(cursor > 0 ? ctx.findRefs[cursor - 1].id : null);
+      setNextId(
+        cursor >= 0 && cursor < ctx.findRefs.length - 1
+          ? ctx.findRefs[cursor + 1].id
+          : null,
+      );
     }
+  }, [id]);
 
-    // If we got here via a swipe (swipeDirRef set), slide the new content
-    // in from the opposite side. Direction "right" = user swiped finger
-    // right (toward prev), so old content slid OFF to the right at
-    // +innerWidth, and the new (prev) content needs to slide in from
-    // -innerWidth. Direction "left" = symmetrical.
-    //
-    // Phase B QA fix #3 (session 100) — teleport happens immediately
-    // (offscreen, invisible) but the slide-in animation defers to the
-    // next animation frame. By then React has committed the cache-hit
-    // setPost / setLoading from the sibling [id] effect, so the
-    // motion.div animates in with the NEW content already painted.
-    // Without this RAF gate, the first 1-2 frames of slide-in show
-    // the previous find's content as React catches up — the residual
-    // flicker David surfaced on QA.
-    if (swipeDirRef.current === "right" || swipeDirRef.current === "left") {
-      const fromX = swipeDirRef.current === "right"
-        ? -window.innerWidth
-        : window.innerWidth;
-      swipeControls.set({ x: fromX });
-      swipeDirRef.current = null;
-      swipeTransitioningRef.current = false;
-      requestAnimationFrame(() => {
-        swipeControls.start({
-          x: 0,
-          transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
-        });
-      });
-    }
-  }, [id, swipeControls]);
-
-  // Drag-end commit logic. Threshold: 80px offset OR 500px/s velocity in
-  // the swipe direction. Below threshold → snap back. At-edge swipe
-  // (toward null prev/next) → snap back regardless of threshold. During
-  // transition → ignore drag (defensive; framer-motion's drag is gated
-  // by animation state but the user can still chain quick gestures).
-  async function handleSwipeEnd(_e: PointerEvent | MouseEvent | TouchEvent, info: PanInfo) {
-    if (swipeTransitioningRef.current) return;
+  // Drag-end commit. Threshold: 80px offset OR 500px/s velocity. Above →
+  // navigate (router.replace, no history growth). Below → no-op; framer-
+  // motion's dragConstraints={{left:0,right:0}} auto-snaps the wrapper
+  // back to x=0 on release.
+  function handleSwipeEnd(_e: PointerEvent | MouseEvent | TouchEvent, info: PanInfo) {
     const offsetX = info.offset.x;
     const velX = info.velocity.x;
     const SWIPE_DIST = 80;
@@ -722,31 +669,51 @@ export default function FindDetailPage() {
     const swipeLeft = offsetX < -SWIPE_DIST || velX < -SWIPE_VEL;
 
     if (swipeRight && prevId) {
-      swipeTransitioningRef.current = true;
-      swipeDirRef.current = "right";
       track("find_swiped", { direction: "right", from_id: id, to_id: prevId });
-      await swipeControls.start({
-        x: window.innerWidth,
-        transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
-      });
       router.replace(`/find/${prevId}`);
     } else if (swipeLeft && nextId) {
-      swipeTransitioningRef.current = true;
-      swipeDirRef.current = "left";
       track("find_swiped", { direction: "left", from_id: id, to_id: nextId });
-      await swipeControls.start({
-        x: -window.innerWidth,
-        transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
-      });
       router.replace(`/find/${nextId}`);
-    } else {
-      // Snap back — below threshold, or at-edge with no neighbor.
-      swipeControls.start({
-        x: 0,
-        transition: { duration: 0.18, ease: "easeOut" },
-      });
     }
+    // No-op otherwise — framer-motion handles the spring-back to x=0.
   }
+
+  // Deferred-async [id] work — runs after paint. Pre-warms the preview
+  // image cache + pre-fetches full Post data for the immediate neighbors
+  // so the next swipe lands cache-hit (instant metadata via the
+  // useLayoutEffect above). Home → /find/[id] entry paths are typically
+  // pre-warmed by Home loadFeed already; this is the backstop for direct
+  // deep-link arrivals.
+  useEffect(() => {
+    if (!id) return;
+    const ctx = readFindContext();
+    if (!ctx) return;
+    const cursor = ctx.findRefs.findIndex((r) => r.id === id);
+    if (cursor < 0) return;
+    const resolvedPrev = cursor > 0 ? ctx.findRefs[cursor - 1] : null;
+    const resolvedNext = cursor < ctx.findRefs.length - 1 ? ctx.findRefs[cursor + 1] : null;
+
+    const warmPreview = (ref: typeof resolvedPrev) => {
+      if (!ref || !ref.image_url) return;
+      try {
+        sessionStorage.setItem(
+          `treehouse_find_preview:${ref.id}`,
+          JSON.stringify({ image_url: ref.image_url, title: ref.title }),
+        );
+      } catch {}
+    };
+    warmPreview(resolvedPrev);
+    warmPreview(resolvedNext);
+
+    const prefetchNeighbor = (ref: typeof resolvedPrev) => {
+      if (!ref || getPostCache(ref.id)) return;
+      getPost(ref.id).then((data) => {
+        if (data) setPostCache(data);
+      });
+    };
+    prefetchNeighbor(resolvedPrev);
+    prefetchNeighbor(resolvedNext);
+  }, [id]);
 
   // Q-003 addendum (session 36): bookmark count for BottomNav badge on this
   // page. Unlike Home / My Booth, Find Detail can toggle the count via the
@@ -846,26 +813,18 @@ export default function FindDetailPage() {
     // navigation between distinct finds in-app).
     track("page_viewed", { path: "/find/[id]", post_id: id });
 
-    // Phase B QA fix #2 — cache hit (typically: warmed by Home loadFeed,
-    // or by an earlier neighbor pre-fetch) paints the new find's
-    // metadata synchronously. No loading state, no stale-data flash
-    // from the previous find.
+    // Phase B QA fix #4 — sync setPost for cache hit/miss already
+    // happened in the useLayoutEffect above (commits before paint). This
+    // effect handles the deferred async work only: ownership detection
+    // for cache-hit, and the actual fetch for cache-miss.
     const cached = getPostCache(id);
     if (cached) {
-      setPost(cached);
-      setLoading(false);
       detectOwnershipAsync(cached).then(setIsMyPost);
       return;
     }
 
-    // Cache miss — first ever view of this find in this session and no
-    // entry-path warming applied. Reset post + loading so the previous
-    // find's metadata clears immediately while the photograph (sync
-    // first paint via preview cache) holds the slot. Avoids the
-    // stale-data flash that would otherwise persist until getPost
-    // resolves.
-    setPost(null);
-    setLoading(true);
+    // Cache miss path — fetch fresh data, populate cache, then update
+    // post + loading + ownership.
     getPost(id).then(async (data) => {
       if (data) setPostCache(data);
       setPost(data);
@@ -1003,16 +962,19 @@ export default function FindDetailPage() {
         }
       />
 
-      {/* Phase B (session 100) — swipe-between-finds wrapper. Drags
-          horizontally; on commit (offset > 80px OR velocity > 500px/s)
-          animates offscreen, then router.replace's to prev/next id.
-          Drag is disabled when there's no neighbor on either side
-          (deep-link arrival or single-item context). touchAction: pan-y
-          lets vertical scroll pass through; the More-from-this-booth
-          carousel below sets its own touch-action: pan-x to keep its
-          native horizontal scroll working over its own region. */}
+      {/* Phase B (session 100) — swipe-between-finds wrapper. The user
+          drags the wrapper horizontally as gesture feedback; framer-
+          motion's dragConstraints={{left:0,right:0}} auto-snaps it back
+          to x=0 on release. On commit threshold (80px offset OR 500px/s
+          velocity), router.replace fires — useLayoutEffect commits the
+          new find's content sync before paint, so the visible state
+          jumps directly from "old find" to "new find" with no transition
+          animation in between (no slide-in / slide-out, no blank
+          viewport, no stale-content flash). Drag is auto-disabled when
+          there's no neighbor on either side. touchAction: pan-y lets
+          vertical scroll pass through; the More-from-this-booth carousel
+          below sets its own touch-action: pan-x. */}
       <motion.div
-        animate={swipeControls}
         drag={prevId || nextId ? "x" : false}
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.4}
