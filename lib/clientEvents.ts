@@ -23,7 +23,9 @@ export type ClientEventType =
   | "booth_unbookmarked"
   | "find_shared"
   | "tag_extracted"
-  | "tag_skipped";
+  | "tag_skipped"
+  // ── Session 99 — /flagged destination redesign ────────────────────────
+  | "flagged_booth_explored";
 
 function getSessionId(): string {
   if (typeof window === "undefined") return "";

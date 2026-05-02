@@ -1,36 +1,26 @@
 // app/flagged/page.tsx
-// Find Map — session 70 redesign (docs/finds-map-redesign-design.md)
+// Session 99 — destination redesign per docs/flagged-destination-design.md.
+// Each booth becomes a self-contained destination container with horizontal
+// find rows inside and an "Explore the booth →" CTA at the footer. Replaces
+// the session-70 cartographic-spine + session-82 BoothLockupCard + session-89
+// 3-col grid layout.
 //
-// Layout top-to-bottom:
-//   1. StickyMasthead (Mode A): back · "Treehouse Finds" wordmark · empty right slot
-//   2. MallScopeHeader (session 68) — eyebrow + tappable bold mall name + chevron;
-//      only renders once the user has saves
-//   3. FeaturedBanner (overlay variant) — admin-editable
-//   4. Hairline divider (v1.1j) between banner and content sections
-//   5. Sectioned list grouped by booth — each section is a BoothSection with:
-//      - inkWash card header (small-caps `BOOTH NN` eyebrow + Lora 18px
-//        vendor name; small mall subtitle ONLY when scope = "All malls" per D5);
-//        whole card tappable → /shelf/[vendorSlug] when slug exists
-//      - "N flagged finds" label below the card
-//      - Tiles: 2-up grid (≤2) or horizontal scroll (≥3); session-69 unified
-//        caption treatment preserved on FindTile
+// Behavior change: booth-bookmark glyph (session 82) is no longer surfaced on
+// /flagged. Booth-bookmarking remains accessible from /shelves where it's the
+// primary interaction. /flagged is now scoped to "places I saved finds at,"
+// and the destination affordance is the footer "Explore the booth →" CTA.
 //
-// Session 70 retirements (cartographic spine vocabulary):
-//   - XGlyph at each stop — RETIRED
-//   - Hairline tick connecting stops — RETIRED
-//   - Closer "circle + tagline" footer — RETIRED
-//   - 26px spine column — RETIRED
-//   - BoothPill (session-69 carry-over) — RETIRED here
-//   - Inline "Booth + pill" label row — replaced by Option B card-header treatment
-//
-// Preserved from v0.2 /flagged (do not retire):
-//   - localStorage bookmark scanning (BOOKMARK_PREFIX)
-//   - Stale bookmark pruning
+// Preserved:
+//   - localStorage bookmark scanning + stale pruning (BOOKMARK_PREFIX)
 //   - Grouping by vendor, sorted by booth number
-//   - Focus event refresh
-//   - Unsave gesture
-//   - BottomNav flaggedCount passthrough
-//   - Skeleton loader
+//   - Per-find unsave gesture (now via 18px leaf bubble on polaroid thumbnail)
+//   - Focus event refresh, BottomNav passthrough, skeleton loader
+//   - Scroll-restore (SCROLL_KEY)
+//   - Track D preview-cache on tap (treehouse_find_preview:${id})
+//   - R3 events: page_viewed, post_unsaved, filter_applied
+//
+// New:
+//   - flagged_booth_explored R3 event on CTA tap
 
 "use client";
 
@@ -41,16 +31,15 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
-import { BOOKMARK_PREFIX, loadBookmarkCount, loadBookmarkedBoothIds, boothBookmarkKey } from "@/lib/utils";
+import { BOOKMARK_PREFIX, loadBookmarkCount } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import {
   v1,
   FONT_LORA,
-  FONT_SYS,
+  FONT_NUMERAL,
 } from "@/lib/tokens";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
-import BoothLockupCard from "@/components/BoothLockupCard";
 import BottomNav from "@/components/BottomNav";
 import MallSheet from "@/components/MallSheet";
 import MallScopeHeader, { type MallScopeGeoLine } from "@/components/MallScopeHeader";
@@ -61,15 +50,14 @@ import EmptyStatePrimitive from "@/components/EmptyState";
 import FormButton from "@/components/FormButton";
 import type { Post, Mall } from "@/types/treehouse";
 
-
-// Session 85 — back-nav scroll anchoring. Same primitive as home (`app/page.tsx`):
-// module-scope cache survives /find/[id] navigation (App Router unmounts the
-// page; module scope persists for the SPA session). SCROLL_KEY persists scroll
-// position across the same boundary. Pure scroll behavior — no motion changes.
+// Session 85 — back-nav scroll anchoring. Module-scope cache survives
+// /find/[id] navigation (App Router unmounts the page; module scope persists
+// for the SPA session). SCROLL_KEY persists scroll position across the same
+// boundary.
 const SCROLL_KEY = "treehouse_flagged_scroll";
 let cachedFlaggedPosts: Post[] | null = null;
 
-// ── Bookmark helpers (raw localStorage per tech rules) ─────────────────────────
+// ── Bookmark helpers ───────────────────────────────────────────────────────────
 
 function loadFlaggedIds(): string[] {
   const ids: string[] = [];
@@ -98,29 +86,26 @@ function pruneStaleBookmarks(savedIds: string[], returnedIds: string[]) {
 // ── Grouping ───────────────────────────────────────────────────────────────────
 
 type BoothGroup = {
-  vendorId:    string | null;  // Session 82 — added for booth-bookmark wiring
+  vendorId:    string | null;
   boothNumber: string | null;
   vendorName:  string;
   vendorSlug?: string;
+  mallId:      string | null;
   mallName:    string | null;
-  mallCity:    string | null;
-  mallState:   string | null;
   posts:       Post[];
 };
 
 function groupByBooth(posts: Post[]): BoothGroup[] {
   const map = new Map<string, BoothGroup>();
-
   for (const post of posts) {
     const booth      = post.vendor?.booth_number ?? null;
     const vendorId   = post.vendor?.id ?? null;
     const vendorName = post.vendor?.display_name ?? "Unknown Vendor";
     const vendorSlug = post.vendor?.slug;
+    const mallId     = post.mall_id ?? null;
     const mallName   = post.mall?.name ?? null;
-    const mallCity   = post.mall?.city ?? null;
-    const mallState  = post.mall?.state ?? null;
     const key        = vendorId ?? `__orphan__${post.id}`;
-    if (!map.has(key)) map.set(key, { vendorId, boothNumber: booth, vendorName, vendorSlug, mallName, mallCity, mallState, posts: [] });
+    if (!map.has(key)) map.set(key, { vendorId, boothNumber: booth, vendorName, vendorSlug, mallId, mallName, posts: [] });
     map.get(key)!.posts.push(post);
   }
 
@@ -141,245 +126,280 @@ function groupByBooth(posts: Post[]): BoothGroup[] {
   });
 }
 
-// ── Find tile ─────────────────────────────────────────────────────────────────
-function FindTile({
-  post,
+// ── Booth destination container ───────────────────────────────────────────────
+// Single callsite — kept inline per the design record (extract on 2nd
+// callsite per project pattern, sessions 83 + 95).
+function BoothDestinationContainer({
+  group,
+  scopeIsAllMalls,
   onUnsave,
-  widthMode,
 }: {
-  post: Post;
+  group: BoothGroup;
+  scopeIsAllMalls: boolean;
   onUnsave: (id: string) => void;
-  widthMode: "grid" | "scroll";
 }) {
-  function handleUnsave(e: React.MouseEvent) {
+  const showMallSubtitle = scopeIsAllMalls && !!group.mallName;
+
+  function handleUnsavePost(e: React.MouseEvent, postId: string) {
     e.preventDefault();
     e.stopPropagation();
-    removeBookmark(post.id);
-    onUnsave(post.id);
-    // R3 — emit post_unsaved from the saved-list heart-tap. The natural place
-    // a shopper unsaves a find is here, not back on /find/[id].
-    track("post_unsaved", { post_id: post.id });
+    removeBookmark(postId);
+    onUnsave(postId);
+    track("post_unsaved", { post_id: postId });
   }
 
-  function handleTileClick() {
-    // Track D phase 5 — cache the image URL so /find/[id] can mount its
-    // <motion.button layoutId> hero synchronously on first render. Mirror
-    // of the feed handler in app/page.tsx.
-    if (post.image_url) {
-      try {
-        sessionStorage.setItem(
-          `treehouse_find_preview:${post.id}`,
-          JSON.stringify({ image_url: post.image_url, title: post.title }),
-        );
-      } catch {}
-    }
+  function handleTilePreCache(post: Post) {
+    if (!post.image_url) return;
+    try {
+      sessionStorage.setItem(
+        `treehouse_find_preview:${post.id}`,
+        JSON.stringify({ image_url: post.image_url, title: post.title }),
+      );
+    } catch {}
   }
 
-  const tileStyle: React.CSSProperties =
-    widthMode === "scroll"
-      ? { flexShrink: 0, width: "42vw", maxWidth: 170, scrollSnapAlign: "start" }
-      : {};
+  function handleExploreBooth() {
+    track("flagged_booth_explored", {
+      vendor_id:         group.vendorId,
+      vendor_slug:       group.vendorSlug ?? null,
+      mall_id:           group.mallId,
+      save_count_at_tap: group.posts.length,
+    });
+  }
 
   return (
-    <Link
-      href={`/find/${post.id}`}
-      onClick={handleTileClick}
-      style={{ textDecoration: "none", color: "inherit", display: "block", ...tileStyle }}
+    <article
+      style={{
+        background: v1.paperWarm,
+        border: `1px solid ${v1.inkHairline}`,
+        borderRadius: 12,
+        overflow: "hidden",
+        boxShadow: "0 1px 3px rgba(42, 26, 10, 0.05)",
+      }}
     >
-      <PolaroidTile
-        src={post.image_url ?? ""}
-        alt={post.title}
-        bottomMat="outside"
-        loading="lazy"
-        fallback={
+      {/* Booth header (D3) */}
+      <header
+        style={{
+          padding: "13px 16px 12px",
+          borderBottom: `1px solid ${v1.inkHairline}`,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div
             style={{
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              flex: 1,
+              fontFamily: FONT_LORA,
+              fontWeight: 500,
+              fontSize: 21,
+              color: v1.inkPrimary,
+              lineHeight: 1.2,
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {group.vendorName}
+          </div>
+          {group.boothNumber && (
+            <div
+              style={{
+                flexShrink: 0,
+                fontFamily: FONT_NUMERAL,
+                color: v1.green,
+                fontSize: 19,
+                lineHeight: 1,
+              }}
+            >
+              · {group.boothNumber}
+            </div>
+          )}
+        </div>
+
+        {/* All-Kentucky-Locations scope subtitle (mall name when scope spans
+            multiple malls — preserves session-70 D5 carry-forward). */}
+        {showMallSubtitle && (
+          <div
+            style={{
+              marginTop: 4,
               fontFamily: FONT_LORA,
               fontStyle: "italic",
               fontSize: 13,
-              color: v1.inkFaint,
+              color: v1.inkMuted,
+              lineHeight: 1.4,
             }}
           >
-            no photograph
+            at {group.mallName}
           </div>
-        }
-        topRight={
-          <button
-            onClick={handleUnsave}
-            aria-label="Unsave"
+        )}
+      </header>
+
+      {/* Find rows (D4) — horizontal: polaroid thumbnail + title + price */}
+      {group.posts.map((post) => (
+        <Link
+          key={post.id}
+          href={`/find/${post.id}`}
+          onClick={() => handleTilePreCache(post)}
+          style={{
+            textDecoration: "none",
+            color: "inherit",
+            display: "block",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <div
             style={{
-              width: "100%",
-              height: "100%",
-              borderRadius: "50%",
-              background: "rgba(245,242,235,0.85)",
-              backdropFilter: "blur(8px)",
-              WebkitBackdropFilter: "blur(8px)",
-              border: `0.5px solid rgba(42,26,10,0.12)`,
+              padding: "12px 16px",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              padding: 0,
-              cursor: "pointer",
-              WebkitTapHighlightColor: "transparent",
+              gap: 12,
+              borderBottom: `1px solid ${v1.inkHairline}`,
             }}
           >
-            <FlagGlyph size={17} strokeWidth={1.7} style={{ color: v1.green, fill: v1.green }} />
-          </button>
-        }
-        below={
-          <div style={{ padding: "9px 3px 4px", height: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
+            {/* Polaroid thumbnail (D5) — 62px wrapper. Leaf bubble (D9) sits
+                on top via abs-position; PolaroidTile's topRight slot is
+                36×36 by default which is too large for a 62px polaroid, so
+                we render the bubble as a sibling instead. */}
+            <div style={{ position: "relative", width: 62, flexShrink: 0 }}>
+              <PolaroidTile
+                src={post.image_url ?? ""}
+                alt={post.title}
+                bottomMat="inside"
+                loading="lazy"
+                fallback={
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontFamily: FONT_LORA,
+                      fontStyle: "italic",
+                      fontSize: 9,
+                      color: v1.inkFaint,
+                      textAlign: "center",
+                      padding: "0 4px",
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    no photograph
+                  </div>
+                }
+              />
+              <button
+                onClick={(e) => handleUnsavePost(e, post.id)}
+                aria-label="Unsave"
+                style={{
+                  position: "absolute",
+                  top: 8,
+                  right: 8,
+                  width: 18,
+                  height: 18,
+                  borderRadius: "50%",
+                  background: "rgba(245,242,235,0.88)",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                  border: "0.5px solid rgba(42,26,10,0.12)",
+                  boxShadow: "0 1px 2px rgba(42, 26, 10, 0.12)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 0,
+                  cursor: "pointer",
+                  WebkitTapHighlightColor: "transparent",
+                  zIndex: 4,
+                }}
+              >
+                <FlagGlyph size={11} strokeWidth={1.7} style={{ color: v1.green, fill: v1.green }} />
+              </button>
+            </div>
+
+            {/* Title — Lora 14, 3-line clamp */}
             <div
               style={{
+                flex: 1,
+                minWidth: 0,
                 fontFamily: FONT_LORA,
+                fontWeight: 400,
                 fontSize: 14,
                 color: v1.inkPrimary,
                 lineHeight: 1.4,
-                width: "100%",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
                 display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical" as const,
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
               }}
             >
               {post.title}
             </div>
 
+            {/* Price — Lora 14 priceInk, top-aligned to title's first line */}
             {typeof post.price_asking === "number" && post.price_asking > 0 && (
               <div
                 style={{
-                  marginTop: 4,
+                  flexShrink: 0,
                   fontFamily: FONT_LORA,
+                  fontWeight: 500,
                   fontSize: 14,
                   color: v1.priceInk,
-                  lineHeight: 1.4,
-                  letterSpacing: "-0.005em",
+                  alignSelf: "flex-start",
+                  paddingTop: 1,
                 }}
               >
                 ${Math.round(post.price_asking)}
               </div>
             )}
           </div>
-        }
-      />
-    </Link>
-  );
-}
+        </Link>
+      ))}
 
-// ── Booth section ─────────────────────────────────────────────────────────────
-// Session 70 — cartographic spine retired. Each booth becomes a flat content
-// section with a tappable inkWash card header carrying session-69 Option B
-// vocabulary (small-caps `BOOTH NN` eyebrow + Lora vendor name). Mall name
-// surfaces as a small subtitle in the card ONLY when the page scope is
-// "All malls" (D5).
-function BoothSection({
-  group,
-  scopeIsAllMalls,
-  saved,
-  onToggleBookmark,
-  onUnsave,
-}: {
-  group: BoothGroup;
-  scopeIsAllMalls: boolean;
-  saved: boolean;
-  onToggleBookmark: (vendorId: string) => void;
-  onUnsave: (id: string) => void;
-}) {
-  // Session 89 (iPhone QA #5) — useScroll branch retired. The horizontal
-  // scroll mode read as broken padding-on-the-right rather than a peek-in
-  // carousel, and pushed first-card flush to screen edge. Grid is the
-  // canonical layout now; 3-col matches /my-shelf WindowView so finds
-  // visually pair across the booth-page family.
-  const savedLabel = `${group.posts.length} saved find${group.posts.length === 1 ? "" : "s"}`;
-
-  // Session 82 — section header now uses shared BoothLockupCard primitive
-  // (matches /shelves rows + /find/[id] cartographic card). Adds booth-bookmark
-  // affordance on the left; mall subtitle continues to render only when scope
-  // is "All malls" (D5 carry-forward). The dashed sub-card is retired in favor
-  // of the inline BOOTH eyebrow + numeral.
-  const showLocation = scopeIsAllMalls && !!group.mallName;
-  const headerInner = (
-    <div style={{ marginBottom: 12 }}>
-      <BoothLockupCard
-        vendorName={group.vendorName}
-        boothNumber={group.boothNumber}
-        mall={showLocation ? { name: group.mallName, city: group.mallCity, state: group.mallState } : null}
-        bookmark={
-          group.vendorId
-            ? { saved, onToggle: () => onToggleBookmark(group.vendorId!) }
-            : null
-        }
-      />
-    </div>
-  );
-
-  return (
-    <section style={{ paddingBottom: 22 }}>
-      {group.vendorSlug ? (
+      {/* Footer "Explore the booth →" CTA (D6) — outlined green button,
+          inside the booth container, under the last find row. Routes to
+          /shelf/[slug] (shopper-facing booth window). Inline-not-extracted
+          per the design record (single callsite for now). */}
+      {group.vendorSlug && (
         <Link
           href={`/shelf/${group.vendorSlug}`}
+          onClick={handleExploreBooth}
           style={{
-            display: "block",
             textDecoration: "none",
-            color: "inherit",
+            margin: 12,
+            padding: "11px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            border: `1px solid ${v1.green}`,
+            background: v1.paperWarm,
+            color: v1.green,
+            fontFamily: FONT_LORA,
+            fontWeight: 500,
+            fontSize: 14,
+            borderRadius: 8,
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          {headerInner}
+          Explore the booth <span aria-hidden style={{ fontSize: 16, lineHeight: 1 }}>→</span>
         </Link>
-      ) : (
-        headerInner
       )}
-
-      <div
-        style={{
-          fontFamily: FONT_SYS,
-          fontSize: 11.5,
-          color: v1.inkMuted,
-          marginBottom: 10,
-          marginLeft: 2,
-        }}
-      >
-        {savedLabel}
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: 10,
-        }}
-      >
-        {group.posts.map((post) => (
-          <FindTile key={post.id} post={post} onUnsave={onUnsave} widthMode="grid" />
-        ))}
-      </div>
-    </section>
+    </article>
   );
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-export default function FindMapPage() {
-  // Hydrate from module-scope cache so back-nav from /find/[id] mounts tiles
-  // synchronously without a skeleton flash.
-  const [posts,              setPosts]              = useState<Post[]>(cachedFlaggedPosts ?? []);
-  const [malls,              setMalls]              = useState<Mall[]>([]);
-  const [loading,            setLoading]            = useState<boolean>(cachedFlaggedPosts === null);
-  const [bookmarkCount,      setBookmarkCount]      = useState(0);
-  const [bookmarkedBoothIds, setBookmarkedBoothIds] = useState<Set<string>>(new Set());
-  const [bannerImageUrl,     setBannerImageUrl]     = useState<string | null>(null);
-  const [savedMallId,        setSavedMallId]        = useSavedMallId();
-  const [mallSheetOpen,      setMallSheetOpen]      = useState(false);
+export default function FlaggedPage() {
+  const [posts,           setPosts]           = useState<Post[]>(cachedFlaggedPosts ?? []);
+  const [malls,           setMalls]           = useState<Mall[]>([]);
+  const [loading,         setLoading]         = useState<boolean>(cachedFlaggedPosts === null);
+  const [bookmarkCount,   setBookmarkCount]   = useState(0);
+  const [bannerImageUrl,  setBannerImageUrl]  = useState<string | null>(null);
+  const [savedMallId,     setSavedMallId]     = useSavedMallId();
+  const [mallSheetOpen,   setMallSheetOpen]   = useState(false);
   const pendingScrollY = useRef<number | null>(null);
   const scrollRestored = useRef(false);
 
   function syncCount() { setBookmarkCount(loadBookmarkCount()); }
-  function syncBoothBookmarks() { setBookmarkedBoothIds(loadBookmarkedBoothIds()); }
 
   async function loadPosts() {
     const ids = loadFlaggedIds();
@@ -399,35 +419,26 @@ export default function FindMapPage() {
     setLoading(false);
   }
 
-  // Load banner URL on mount — fire-and-forget, banner renders null when absent.
   useEffect(() => {
     getSiteSettingUrl("find_map_banner_image_url").then(setBannerImageUrl);
   }, []);
 
-  // Load active malls for the picker (cross-tab persisted mall filter).
   useEffect(() => {
     getActiveMalls().then(setMalls);
   }, []);
 
-  useEffect(() => { syncCount(); syncBoothBookmarks(); loadPosts(); }, []);
+  useEffect(() => { syncCount(); loadPosts(); }, []);
 
-  // R3 — page_viewed analytics event. saved_count is captured at view time
-  // (not later) so the payload reflects the user's saved-items state on the
-  // visit itself.
   useEffect(() => {
     track("page_viewed", { path: "/flagged", saved_count: loadBookmarkCount() });
   }, []);
 
   useEffect(() => {
-    function onFocus() { syncCount(); syncBoothBookmarks(); loadPosts(); }
+    function onFocus() { syncCount(); loadPosts(); }
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
-  // Scroll save + restore. Save on every scroll event so back-nav from
-  // /find/[id] lands exactly where the user tapped. Restore once after
-  // mount, gated on data being available so the masonry layout is final
-  // before scrollTo fires.
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(SCROLL_KEY);
@@ -462,33 +473,9 @@ export default function FindMapPage() {
     setBookmarkCount(prev => Math.max(0, prev - 1));
   }
 
-  // Session 82 — booth-bookmark toggle on /flagged section header.
-  // Mirrors the /shelves implementation (lib/utils boothBookmarkKey + R3 v1.1
-  // booth_bookmarked / booth_unbookmarked events).
-  function handleToggleBoothBookmark(vendorId: string) {
-    const vendorSlug = posts.find(p => p.vendor?.id === vendorId)?.vendor?.slug ?? null;
-    setBookmarkedBoothIds(prev => {
-      const next = new Set(prev);
-      const wasBookmarked = next.has(vendorId);
-      if (wasBookmarked) {
-        next.delete(vendorId);
-        try { localStorage.removeItem(boothBookmarkKey(vendorId)); } catch {}
-      } else {
-        next.add(vendorId);
-        try { localStorage.setItem(boothBookmarkKey(vendorId), "1"); } catch {}
-      }
-      track(wasBookmarked ? "booth_unbookmarked" : "booth_bookmarked", {
-        vendor_slug: vendorSlug,
-      });
-      return next;
-    });
-  }
-
   function handleMallSelect(nextMallId: string | null) {
     setSavedMallId(nextMallId);
     setMallSheetOpen(false);
-    // R3 v1.1 — filter_applied event. Mirrors Home; `page` field distinguishes
-    // adoption per primary tab.
     const mallSlug = nextMallId
       ? (malls.find(m => m.id === nextMallId)?.slug ?? null)
       : null;
@@ -499,8 +486,6 @@ export default function FindMapPage() {
     });
   }
 
-  // Saves filtered by the cross-tab mall scope. When savedMallId is null the
-  // user sees every save they have; otherwise the spine narrows to one mall.
   const filteredPosts = savedMallId
     ? posts.filter(p => p.mall_id === savedMallId)
     : posts;
@@ -508,16 +493,11 @@ export default function FindMapPage() {
 
   const selectedMall = malls.find(m => m.id === savedMallId) ?? null;
 
-  // Per-mall save counts for the MallSheet picker (counted from all saves the
-  // user has, independent of the active filter).
   const saveCountsByMall: Record<string, number> = {};
   for (const p of posts) {
     if (p.mall_id) saveCountsByMall[p.mall_id] = (saveCountsByMall[p.mall_id] ?? 0) + 1;
   }
 
-  // Session 70 round 2 — count merges into eyebrow per David's QA feedback;
-  // geoLine becomes the address (filtered) or italic Kentucky (all-malls)
-  // matching Home's pattern so the address is reachable from any primary tab.
   const findCount = filteredPosts.length;
   const findNoun = findCount === 1 ? "find" : "finds";
   const scopeEyebrowAll = `saved ${findNoun} across`;
@@ -539,8 +519,6 @@ export default function FindMapPage() {
         })()
       : { kind: "italic" as const, text: "Kentucky & Southern Indiana" };
 
-  // Empty-state branch: user has saves, but the active mall filter excludes
-  // all of them. Distinct from the "nothing saved yet" state below.
   const filterHidesAllSaves = savedMallId !== null && posts.length > 0 && filteredPosts.length === 0;
 
   return (
@@ -555,8 +533,6 @@ export default function FindMapPage() {
         flexDirection: "column",
       }}
     >
-      {/* 1. StickyMasthead — session-70 locked-grid slot API. Session 90:
-          share opt-out on primary tabs (right={null}). */}
       <StickyMasthead
         left={
           <button
@@ -582,11 +558,6 @@ export default function FindMapPage() {
         right={null}
       />
 
-      {/* 2. Mall scope header — moved above the FeaturedBanner per session-68
-          QA so the persisted mall filter is the first thing the eye lands on
-          after the masthead. Only renders once we know the user has saves;
-          a wholly empty saved-list shows the "Nothing saved yet" state and
-          the EmptyState's own copy carries the page identity. */}
       {!loading && posts.length > 0 && (
         <MallScopeHeader
           eyebrowAll={scopeEyebrowAll}
@@ -598,11 +569,6 @@ export default function FindMapPage() {
         />
       )}
 
-      {/* 3. FeaturedBanner (overlay variant) — admin-editable.
-          Only renders when an image URL exists; otherwise collapses quietly.
-          The "Find Map" fallback heading + intro voice paragraph were retired
-          session 68 — page identity now comes from MallScopeHeader (when there
-          are saves) or from EmptyState's own copy (when there are none). */}
       <FeaturedBanner
         variant="overlay"
         imageUrl={bannerImageUrl}
@@ -610,55 +576,64 @@ export default function FindMapPage() {
         marginBottom={6}
       />
 
-      {/* 5. Hairline divider (v1.1j — diamond retired) */}
       {!loading && groups.length > 0 && (
         <div style={{ padding: "14px 44px 18px" }}>
           <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
         </div>
       )}
 
-      {/* 6. Itinerary / loading / empty */}
       <main
         style={{
-          padding: "0 22px",
           paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
           flex: 1,
         }}
       >
         {loading ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 20 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, padding: "20px 22px 0" }}>
             {[140, 190, 120].map((h, i) => (
               <div key={i} className="skeleton-shimmer" style={{ height: h, borderRadius: 8 }} />
             ))}
           </div>
         ) : posts.length === 0 ? (
-          <EmptyStatePrimitive
-            title="No finds saved yet"
-            subtitle="Tap the leaf on any find to save it here."
-          />
+          <div style={{ padding: "0 22px" }}>
+            <EmptyStatePrimitive
+              title="No finds saved yet"
+              subtitle="Tap the leaf on any find to save it here."
+            />
+          </div>
         ) : filterHidesAllSaves ? (
-          <EmptyStatePrimitive
-            title={`No saved finds at ${selectedMall?.name ?? "this mall"}.`}
-            subtitle="Saved finds at other malls are hidden by the active filter."
-            cta={
-              <FormButton variant="link" onClick={() => setSavedMallId(null)}>
-                Show all malls
-              </FormButton>
-            }
-          />
+          <div style={{ padding: "0 22px" }}>
+            <EmptyStatePrimitive
+              title={`No saved finds at ${selectedMall?.name ?? "this mall"}.`}
+              subtitle="Saved finds at other malls are hidden by the active filter."
+              cta={
+                <FormButton variant="link" onClick={() => setSavedMallId(null)}>
+                  Show all malls
+                </FormButton>
+              }
+            />
+          </div>
         ) : (
-          <>
+          /* Booth-container stack on a subtle scrim (D2). Each container is
+             a self-contained destination unit. */
+          <div
+            style={{
+              padding: "14px 14px 18px",
+              background: "rgba(0,0,0,0.04)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 14,
+            }}
+          >
             {groups.map((group) => (
-              <BoothSection
+              <BoothDestinationContainer
                 key={(group.boothNumber ?? "nb") + "·" + group.vendorName}
                 group={group}
                 scopeIsAllMalls={savedMallId === null}
-                saved={!!group.vendorId && bookmarkedBoothIds.has(group.vendorId)}
-                onToggleBookmark={handleToggleBoothBookmark}
                 onUnsave={handleUnsave}
               />
             ))}
-          </>
+          </div>
         )}
       </main>
 
