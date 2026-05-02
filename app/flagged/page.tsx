@@ -29,7 +29,6 @@ export const dynamic = "force-dynamic";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import FlagGlyph from "@/components/FlagGlyph";
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
 import { BOOKMARK_PREFIX, loadBookmarkCount } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
@@ -132,21 +131,11 @@ function groupByBooth(posts: Post[]): BoothGroup[] {
 function BoothDestinationContainer({
   group,
   scopeIsAllMalls,
-  onUnsave,
 }: {
   group: BoothGroup;
   scopeIsAllMalls: boolean;
-  onUnsave: (id: string) => void;
 }) {
   const showMallSubtitle = scopeIsAllMalls && !!group.mallName;
-
-  function handleUnsavePost(e: React.MouseEvent, postId: string) {
-    e.preventDefault();
-    e.stopPropagation();
-    removeBookmark(postId);
-    onUnsave(postId);
-    track("post_unsaved", { post_id: postId });
-  }
 
   function handleTilePreCache(post: Post) {
     if (!post.image_url) return;
@@ -257,11 +246,12 @@ function BoothDestinationContainer({
               borderBottom: `1px solid ${v1.inkHairline}`,
             }}
           >
-            {/* Polaroid thumbnail (D5) — 62px wrapper. Leaf bubble (D9) sits
-                on top via abs-position; PolaroidTile's topRight slot is
-                36×36 by default which is too large for a 62px polaroid, so
-                we render the bubble as a sibling instead. */}
-            <div style={{ position: "relative", width: 62, flexShrink: 0 }}>
+            {/* Polaroid thumbnail — 62px wrapper. Leaf bubble retired
+                session 99 iPhone QA: hit area too small + redundant on a
+                page where every find is by definition saved. Unsave path
+                now lives only on /find/[id]; focus event re-syncs /flagged
+                state on return. */}
+            <div style={{ width: 62, flexShrink: 0 }}>
               <PolaroidTile
                 src={post.image_url ?? ""}
                 alt={post.title}
@@ -288,32 +278,6 @@ function BoothDestinationContainer({
                   </div>
                 }
               />
-              <button
-                onClick={(e) => handleUnsavePost(e, post.id)}
-                aria-label="Unsave"
-                style={{
-                  position: "absolute",
-                  top: 8,
-                  right: 8,
-                  width: 18,
-                  height: 18,
-                  borderRadius: "50%",
-                  background: "rgba(245,242,235,0.88)",
-                  backdropFilter: "blur(8px)",
-                  WebkitBackdropFilter: "blur(8px)",
-                  border: "0.5px solid rgba(42,26,10,0.12)",
-                  boxShadow: "0 1px 2px rgba(42, 26, 10, 0.12)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: 0,
-                  cursor: "pointer",
-                  WebkitTapHighlightColor: "transparent",
-                  zIndex: 4,
-                }}
-              >
-                <FlagGlyph size={11} strokeWidth={1.7} style={{ color: v1.green, fill: v1.green }} />
-              </button>
             </div>
 
             {/* Title — Lora 14, 3-line clamp */}
@@ -465,15 +429,6 @@ export default function FlaggedPage() {
     requestAnimationFrame(() => { window.scrollTo({ top: y, behavior: "instant" }); });
   }, [loading]);
 
-  function handleUnsave(postId: string) {
-    setPosts(prev => {
-      const next = prev.filter(p => p.id !== postId);
-      cachedFlaggedPosts = next;
-      return next;
-    });
-    setBookmarkCount(prev => Math.max(0, prev - 1));
-  }
-
   function handleMallSelect(nextMallId: string | null) {
     setSavedMallId(nextMallId);
     setMallSheetOpen(false);
@@ -615,26 +570,41 @@ export default function FlaggedPage() {
             />
           </div>
         ) : (
-          /* Booth-container stack — containers float on the page paperCream
-             background (scrim retired session 99 iPhone QA). Each container
-             is a self-contained destination unit. */
-          <div
-            style={{
-              padding: "14px 14px 18px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 14,
-            }}
-          >
-            {groups.map((group) => (
-              <BoothDestinationContainer
-                key={(group.boothNumber ?? "nb") + "·" + group.vendorName}
-                group={group}
-                scopeIsAllMalls={savedMallId === null}
-                onUnsave={handleUnsave}
-              />
-            ))}
-          </div>
+          /* Editorial preamble + booth-container stack. Containers float
+             on the page paperCream background (scrim retired session 99
+             iPhone QA). Each container is a self-contained destination
+             unit. */
+          <>
+            <div
+              style={{
+                padding: "0 22px 6px",
+                fontFamily: FONT_LORA,
+                fontStyle: "italic",
+                fontSize: 15,
+                color: v1.inkMuted,
+                textAlign: "center",
+                lineHeight: 1.5,
+              }}
+            >
+              The search continues at these destinations.
+            </div>
+            <div
+              style={{
+                padding: "14px 14px 18px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 14,
+              }}
+            >
+              {groups.map((group) => (
+                <BoothDestinationContainer
+                  key={(group.boothNumber ?? "nb") + "·" + group.vendorName}
+                  group={group}
+                  scopeIsAllMalls={savedMallId === null}
+                />
+              ))}
+            </div>
+          </>
         )}
       </main>
 
