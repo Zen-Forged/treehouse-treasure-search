@@ -81,7 +81,7 @@ import {
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { flagKey, mapsUrl, boothNumeralSize, loadFollowedIds } from "@/lib/utils";
 import { track } from "@/lib/clientEvents";
-import { readFindContext } from "@/lib/findContext";
+import { readFindContext, getPostCache, setPostCache } from "@/lib/findContext";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import PhotoLightbox from "@/components/PhotoLightbox";
@@ -217,21 +217,12 @@ function ShelfCard({ post }: { post: Post }) {
 const findScrollKey = (postId: string) => `treehouse_find_scroll_y:${postId}`;
 const findStripScrollKey = (postId: string) => `treehouse_find_strip_scroll_x:${postId}`;
 
-// Phase B QA fix (session 100) — module-scope post cache. Survives across
-// swipe-driven router.replace (page stays mounted) so metadata paints
-// instantly when the user reaches an already-fetched neighbor. Populated
-// by:
-//   1. The fetch effect on [id] change — every successful getPost lands
-//      its result in the cache.
-//   2. Pre-fetch in the [id] context effect — kicks off background
-//      getPost for prevId + nextId so the very next swipe is instant.
-//
-// Cache lifetime = page session (module scope is reset on full reload).
-// No LRU cap — sessions are short and Post payloads are ~few KB each.
-// Stale-data risk is bounded: vendors can edit their own finds, but
-// Find Detail does not subscribe to those events; cache is refreshed
-// when the user does a full reload.
-const findPostCache = new Map<string, Post>();
+// Phase B QA fix #2 (session 100) — post cache moved to lib/findContext.ts
+// so source surfaces (Home loadFeed; eventually /flagged + /shelf/[slug])
+// can populate it directly. The cache survives swipe-driven router.replace,
+// detail→back→detail trips, and feed→detail→home→detail trips within a
+// session. Edit pages clear per-id on successful PATCH so the next view
+// sees fresh data.
 
 // Module-scope navigation-departure flag. Same-route param navigation
 // (/find/A → /find/B) leaves the save listener attached during the brief
@@ -670,16 +661,16 @@ export default function FindDetailPage() {
       warmPreview(resolvedPrev);
       warmPreview(resolvedNext);
 
-      // Phase B QA fix — pre-fetch full Post data for adjacent ids in
-      // the background so the next swipe paints the metadata (save
-      // icon, post-it, title, price, caption, share airplane) synchron-
-      // ously. The fetch effect's cache check will hit on the next
-      // [id] change. Skips ids already in cache so a back-and-forth
-      // swipe doesn't fire redundant requests.
+      // Phase B QA fix #2 — pre-fetch full Post data for adjacent ids
+      // in the background as a backstop for the direct-deep-link case
+      // (no Home loadFeed warming). Home → /find/[id] entry paths
+      // typically hit cache immediately via setPostCache from loadFeed,
+      // making this a no-op (getPostCache already returns truthy and
+      // we skip the fetch).
       const prefetchNeighbor = (ref: typeof resolvedPrev) => {
-        if (!ref || findPostCache.has(ref.id)) return;
+        if (!ref || getPostCache(ref.id)) return;
         getPost(ref.id).then((data) => {
-          if (data) findPostCache.set(ref.id, data);
+          if (data) setPostCache(data);
         });
       };
       prefetchNeighbor(resolvedPrev);
@@ -843,10 +834,11 @@ export default function FindDetailPage() {
     // navigation between distinct finds in-app).
     track("page_viewed", { path: "/find/[id]", post_id: id });
 
-    // Phase B QA fix — cache hit (typically: pre-fetched neighbor reached
-    // via swipe) paints the new find's metadata synchronously. No loading
-    // state, no stale-data flash from the previous find.
-    const cached = findPostCache.get(id);
+    // Phase B QA fix #2 — cache hit (typically: warmed by Home loadFeed,
+    // or by an earlier neighbor pre-fetch) paints the new find's
+    // metadata synchronously. No loading state, no stale-data flash
+    // from the previous find.
+    const cached = getPostCache(id);
     if (cached) {
       setPost(cached);
       setLoading(false);
@@ -854,14 +846,16 @@ export default function FindDetailPage() {
       return;
     }
 
-    // Cache miss — first ever view of this find. Reset post + loading so
-    // the previous find's metadata clears immediately while the photograph
-    // (sync first paint via preview cache) holds the slot. Avoids the
-    // stale-data flash that would otherwise persist until getPost resolves.
+    // Cache miss — first ever view of this find in this session and no
+    // entry-path warming applied. Reset post + loading so the previous
+    // find's metadata clears immediately while the photograph (sync
+    // first paint via preview cache) holds the slot. Avoids the
+    // stale-data flash that would otherwise persist until getPost
+    // resolves.
     setPost(null);
     setLoading(true);
     getPost(id).then(async (data) => {
-      if (data) findPostCache.set(id, data);
+      if (data) setPostCache(data);
       setPost(data);
       setLoading(false);
       if (data) {

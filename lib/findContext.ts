@@ -11,6 +11,16 @@
 // Phase A writes + reads only. Phase B uses the prevId/nextId for the
 // swipe gesture; Phase C extends write sites to /flagged, /shelf/[slug],
 // and the More-from-this-booth carousel.
+//
+// Phase B QA fix #2 (session 100) — module-scope post cache. Source
+// surfaces (Home, eventually /flagged + /shelf/[slug]) populate this on
+// data load so /find/[id] can render metadata (post-it, save bubble,
+// title, caption, share airplane) synchronously on tap or swipe. Cache
+// lifetime = page session (module-scope, lost on full reload). Cleared
+// per-id by the edit pages on successful PATCH so the next view sees
+// fresh data.
+
+import type { Post } from "@/types/treehouse";
 
 const STORAGE_KEY = "treehouse_find_context";
 
@@ -52,4 +62,31 @@ export function readFindContext(): FindContext | null {
     ) return parsed as FindContext;
     return null;
   } catch { return null; }
+}
+
+// ── Post cache (Phase B QA fix #2) ───────────────────────────────────────
+// Module-scope; survives across the swipe-driven router.replace boundary
+// (page stays mounted in App Router) AND across feed→detail→back→detail
+// trips within a session. Populated by Home loadFeed (whole visible feed
+// at once) and /find/[id]'s own fetch effect (per-id on cache miss).
+// Cleared per-id by edit pages on successful PATCH.
+//
+// Source: requires the FULL Post shape (vendor.user_id + vendor.bio +
+// mall.address) — see getFeedPosts in lib/posts.ts which was extended to
+// match getPost's SELECT for this reason. A partially-populated cache
+// entry would cause /find/[id]'s detectOwnershipAsync + maps link to
+// silently misfire.
+
+const postCache = new Map<string, Post>();
+
+export function getPostCache(id: string): Post | undefined {
+  return postCache.get(id);
+}
+
+export function setPostCache(post: Post): void {
+  if (post && post.id) postCache.set(post.id, post);
+}
+
+export function clearPostCache(id: string): void {
+  postCache.delete(id);
 }

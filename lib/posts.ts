@@ -14,12 +14,18 @@ const FEED_WINDOW_DAYS = 30;
 
 export async function getFeedPosts(limit = 40): Promise<Post[]> {
   const cutoff = new Date(Date.now() - FEED_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  // Phase B QA fix #2 (session 100) — SELECT extended to match getPost so
+  // feed posts can be dumped directly into the /find/[id] post cache via
+  // setPostCache without losing fields. Added: vendor.user_id (needed by
+  // detectOwnershipAsync on /find/[id]), vendor.bio, mall.address (needed
+  // by the cartographic maps link). ~30-100 bytes/post; trivial payload
+  // bump for instant tap-to-detail metadata paint.
   const { data, error } = await supabase
     .from("posts")
     .select(`
       *,
-      vendor:vendors ( id, display_name, booth_number, slug, avatar_url, facebook_url ),
-      mall:malls     ( id, name, city, state, slug )
+      vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url ),
+      mall:malls     ( id, name, city, state, slug, address )
     `)
     .eq("status", "available")
     .gte("created_at", cutoff)

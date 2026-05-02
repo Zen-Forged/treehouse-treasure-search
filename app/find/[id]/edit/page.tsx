@@ -36,6 +36,7 @@ import { ArrowLeft } from "lucide-react";
 import { getPost, deletePost } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
+import { clearPostCache } from "@/lib/findContext";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import AmberNotice from "@/components/AmberNotice";
 import FormButton from "@/components/FormButton";
@@ -177,6 +178,10 @@ export default function EditFindPage() {
         setSubmitting(false);
         return;
       }
+      // Phase B QA fix #2 (session 100) — invalidate the shared post cache
+      // so /find/[id] re-fetches the freshly-edited row instead of showing
+      // the pre-edit cached snapshot.
+      clearPostCache(post.id);
       router.replace(`/find/${post.id}`);
     } catch (err) {
       console.error("[edit] submit failed:", err);

@@ -27,6 +27,7 @@ import { v1 } from "@/lib/tokens";
 import FormButton from "@/components/FormButton";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
+import { clearPostCache } from "@/lib/findContext";
 import type { Post } from "@/types/treehouse";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -213,6 +214,11 @@ function EditPostInner() {
       });
 
       if (!ok) { setStage("error"); return; }
+
+      // Phase B QA fix #2 (session 100) — invalidate the shared post cache
+      // so /find/[id] re-fetches the freshly-edited row instead of showing
+      // the pre-edit cached snapshot.
+      clearPostCache(post.id);
 
       setStage("done");
       setTimeout(() => {

@@ -62,7 +62,7 @@ import StickyMasthead from "@/components/StickyMasthead";
 import FeaturedBanner from "@/components/FeaturedBanner";
 import PolaroidTile from "@/components/PolaroidTile";
 import EmptyState from "@/components/EmptyState";
-import { writeFindContext, type FindRef } from "@/lib/findContext";
+import { writeFindContext, setPostCache, type FindRef } from "@/lib/findContext";
 import type { Post, Mall } from "@/types/treehouse";
 
 const SCROLL_KEY      = "treehouse_feed_scroll";
@@ -502,6 +502,12 @@ export default function DiscoveryFeedPage() {
       const data = await getFeedPosts(80);
       setPosts(data);
       cachedFeedPosts = data;
+      // Phase B QA fix #2 — populate the /find/[id] post cache with every
+      // loaded feed post. Tapping any tile now hits the cache on detail
+      // mount; metadata (post-it, save bubble, title, caption, share)
+      // paints synchronously alongside the photograph. Subsequent swipes
+      // through the context list ride the same cache.
+      for (const p of data) setPostCache(p);
       setLoading(false);
     } catch {
       // Only surface the error state if we have no cached posts to fall
