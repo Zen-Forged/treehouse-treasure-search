@@ -62,6 +62,7 @@ import StickyMasthead from "@/components/StickyMasthead";
 import FeaturedBanner from "@/components/FeaturedBanner";
 import PolaroidTile from "@/components/PolaroidTile";
 import EmptyState from "@/components/EmptyState";
+import { writeFindContext, type FindRef } from "@/lib/findContext";
 import type { Post, Mall } from "@/types/treehouse";
 
 const SCROLL_KEY      = "treehouse_feed_scroll";
@@ -167,6 +168,7 @@ function MasonryTile({
   onToggleSave,
   isLastViewed,
   skipEntrance,
+  findRefs,
 }: {
   post: Post;
   index: number;
@@ -174,6 +176,12 @@ function MasonryTile({
   onToggleSave: (postId: string) => void;
   isLastViewed: boolean;
   skipEntrance: boolean;
+  // Phase A — full ordered feed list for /find/[id] swipe context.
+  // `index` is the cursorIndex in this list (the masonry split into
+  // 2 columns is reversible: col1 takes even original indices,
+  // col2 takes odd, so MasonryTile's `index` prop equals the
+  // position in `findRefs`).
+  findRefs: FindRef[];
 }) {
   const [highlighted, setHighlighted] = useState(isLastViewed);
   const { ref: revealRef, visible } = useScrollReveal(0.1, skipEntrance);
@@ -204,6 +212,16 @@ function MasonryTile({
         );
       }
     } catch {}
+    // Phase A (session 100) — write the swipe-context handoff blob.
+    // /find/[id] reads this on mount to know the user's browsing context
+    // (origin path, ordered list of nearby finds, cursor). Phase B uses
+    // it to drive left/right swipe between adjacent finds without
+    // growing the back stack.
+    writeFindContext({
+      originPath: "/",
+      findRefs,
+      cursorIndex: index,
+    });
   }
 
   const staggerDelay = skipEntrance ? 0 : Math.min(index * MOTION_STAGGER, MOTION_STAGGER_MAX);
@@ -314,12 +332,14 @@ function MasonryGrid({
   onToggleSave,
   lastViewedId,
   skipEntrance,
+  findRefs,
 }: {
   posts: Post[];
   followedIds: Set<string>;
   onToggleSave: (postId: string) => void;
   lastViewedId: string | null;
   skipEntrance: boolean;
+  findRefs: FindRef[];
 }) {
   const col1 = posts.filter((_, i) => i % 2 === 0);
   const col2 = posts.filter((_, i) => i % 2 === 1);
@@ -355,6 +375,7 @@ function MasonryGrid({
               onToggleSave={onToggleSave}
               isLastViewed={post.id === lastViewedId}
               skipEntrance={skipEntrance}
+              findRefs={findRefs}
             />
           </div>
         ))}
@@ -369,6 +390,7 @@ function MasonryGrid({
             onToggleSave={onToggleSave}
             isLastViewed={post.id === lastViewedId}
             skipEntrance={skipEntrance}
+            findRefs={findRefs}
           />
         ))}
       </div>
@@ -601,6 +623,20 @@ export default function DiscoveryFeedPage() {
   const filtered = posts.filter((p) => !mallId || p.mall_id === mallId);
   const selectedMall = malls.find((m) => m.id === mallId) ?? null;
 
+  // Phase A (session 100) — minimal payload of the user's browsing
+  // context for /find/[id] swipe nav. Derived from `filtered` so the
+  // ordered list reflects what the user actually sees in the grid
+  // (mall scope honored). Each tile's `index` prop equals the position
+  // in this list.
+  const findRefs = useMemo<FindRef[]>(
+    () => filtered.map((p) => ({
+      id: p.id,
+      image_url: p.image_url ?? null,
+      title: p.title ?? null,
+    })),
+    [filtered],
+  );
+
   // Per-mall find counts for MallSheet (unfiltered source — shows how many
   // are available at each mall, not how many match the current filter).
   const findCounts = useMemo(() => {
@@ -686,6 +722,7 @@ export default function DiscoveryFeedPage() {
             onToggleSave={handleToggleSave}
             lastViewedId={lastViewedId}
             skipEntrance={skipTileEntrance}
+            findRefs={findRefs}
           />
         )}
 

@@ -80,6 +80,7 @@ import {
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { flagKey, mapsUrl, boothNumeralSize, loadFollowedIds } from "@/lib/utils";
 import { track } from "@/lib/clientEvents";
+import { readFindContext } from "@/lib/findContext";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import PhotoLightbox from "@/components/PhotoLightbox";
@@ -590,6 +591,38 @@ export default function FindDetailPage() {
       return typeof parsed?.image_url === "string" ? parsed.image_url : null;
     } catch { return null; }
   });
+
+  // Phase A (session 100) — read the swipe-context handoff written by the
+  // entry tap site (Home feed today; /flagged + /shelf in Phase C). Phase
+  // B will use the resolved prev/next ids to drive left/right swipe nav
+  // between adjacent finds via router.replace (no history growth). Direct
+  // deep-link arrival (no context blob) resolves both to null — page
+  // falls back to current behavior with no swipe affordance.
+  //
+  // Re-runs on [id] change so swipe-driven router.replace updates the
+  // resolution without re-mounting the page. The cursor is re-derived
+  // by id lookup (NOT by ±1 on the previous cursor) so resolution stays
+  // correct even if the user lands here via browser back inside the
+  // same context list.
+  //
+  // Phase A is a verification harness — the resolved values are logged
+  // to console for Inspector confirmation but not yet consumed by any
+  // visual or gesture behavior. Phase B replaces this block with
+  // state + a gesture handler.
+  useEffect(() => {
+    if (!id) return;
+    const ctx = readFindContext();
+    if (!ctx) {
+      // eslint-disable-next-line no-console
+      console.log("[find-context]", { id, ctx: null });
+      return;
+    }
+    const cursor = ctx.findRefs.findIndex((r) => r.id === id);
+    const prev = cursor > 0 ? ctx.findRefs[cursor - 1].id : null;
+    const next = cursor >= 0 && cursor < ctx.findRefs.length - 1 ? ctx.findRefs[cursor + 1].id : null;
+    // eslint-disable-next-line no-console
+    console.log("[find-context]", { id, originPath: ctx.originPath, listLength: ctx.findRefs.length, cursor, prev, next });
+  }, [id]);
 
   // Q-003 addendum (session 36): bookmark count for BottomNav badge on this
   // page. Unlike Home / My Booth, Find Detail can toggle the count via the
