@@ -81,7 +81,7 @@ import {
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { flagKey, mapsUrl, boothNumeralSize, loadFollowedIds } from "@/lib/utils";
 import { track } from "@/lib/clientEvents";
-import { readFindContext, getPostCache, setPostCache, writeFindContext, type FindRef } from "@/lib/findContext";
+import { readFindContext, getPostCache, setPostCache, writeFindContext, getVendorPostsCache, setVendorPostsCache, type FindRef } from "@/lib/findContext";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import PhotoLightbox from "@/components/PhotoLightbox";
@@ -351,8 +351,23 @@ function ShelfSection({
     } catch {}
   }, [currentPostId]);
 
+  // Session 101 — check vendorPostsCache synchronously via useLayoutEffect
+  // before paint. Cache hit on back-nav: populate items + signal ready in
+  // the same render cycle so parent's shelfReady gate opens before paint,
+  // letting the scroll-restore staircase fire pre-paint and kill the
+  // scrollY=0 flash. Cache miss: fall through to async fetch.
+  useLayoutEffect(() => {
+    const cached = getVendorPostsCache(vendorId);
+    if (!cached) return;
+    setAllItems(cached);
+    setReady(true);
+    onReady(cached.filter((p) => p.id !== currentPostId).length > 0);
+  }, [vendorId, currentPostId, onReady]);
+
   useEffect(() => {
+    if (getVendorPostsCache(vendorId)) return; // useLayoutEffect handled it
     getVendorPosts(vendorId, 12).then((posts) => {
+      setVendorPostsCache(vendorId, posts);
       setAllItems(posts);
       setReady(true);
       // Phase C — populate the shared post cache so a tap into any
@@ -918,7 +933,13 @@ export default function FindDetailPage() {
     }
   }, []);
 
-  useEffect(() => {
+  // Session 101 — useLayoutEffect (was useEffect) so the first scrollTo
+  // fires synchronously after DOM commit, BEFORE the browser paints. On
+  // back-nav with both gates already open (post cache hit + vendorPosts
+  // cache hit), the page never paints at scrollY=0. Eliminates the flash
+  // David surfaced after Path-4 back-nav. Staircase still recovers if the
+  // document grows after first paint (lazy images, etc.).
+  useLayoutEffect(() => {
     if (loading) return;
     const hasVendor = !!post?.vendor;
     if (hasVendor && !shelfReady) return;
@@ -940,18 +961,15 @@ export default function FindDetailPage() {
     // scrolls save normally.
     findScrollWriteBlocked = true;
     const tryScroll = () => window.scrollTo({ top: targetY, behavior: "instant" });
+    tryScroll(); // sync, pre-paint via useLayoutEffect
     const timeouts: number[] = [];
-    const raf = requestAnimationFrame(() => {
-      tryScroll();
-      timeouts.push(window.setTimeout(tryScroll, 100));
-      timeouts.push(window.setTimeout(tryScroll, 300));
-      timeouts.push(window.setTimeout(tryScroll, 600));
-      timeouts.push(window.setTimeout(() => {
-        findScrollWriteBlocked = false;
-      }, 700));
-    });
+    timeouts.push(window.setTimeout(tryScroll, 100));
+    timeouts.push(window.setTimeout(tryScroll, 300));
+    timeouts.push(window.setTimeout(tryScroll, 600));
+    timeouts.push(window.setTimeout(() => {
+      findScrollWriteBlocked = false;
+    }, 700));
     return () => {
-      cancelAnimationFrame(raf);
       timeouts.forEach((t) => clearTimeout(t));
       findScrollWriteBlocked = false;
     };
