@@ -1589,16 +1589,6 @@ export default function FindDetailPage() {
         </div>
       )}
 
-      {/* "More from this shelf…" strip */}
-      {hasVendor && (
-        <ShelfSection
-          vendorId={post.vendor!.id}
-          vendorSlug={post.vendor?.slug ?? null}
-          currentPostId={post.id}
-          onReady={handleShelfReady}
-        />
-      )}
-
       {/* Owner Manage block retired v1.2 (session 31E polish). All three affordances moved to
           /find/[id]/edit: the pencil bubble on the photograph (top-right) routes there, and the
           Edit page carries autosave fields + Available/Sold status pills + Remove from shelf link.
@@ -1607,6 +1597,23 @@ export default function FindDetailPage() {
       )}
 
       </motion.div>
+
+      {/* "More from this shelf…" strip — Phase C QA fix (session 100):
+          rendered OUTSIDE the swipe-wrapper motion.div so its native
+          horizontal scroll isn't captured by the page-level drag. The
+          motion.div above declares touch-action: pan-y for vertical
+          scroll passthrough, but framer-motion's pointer listeners
+          would still intercept horizontal pans inside it — moving the
+          carousel out of its DOM subtree restores the carousel's own
+          gesture surface. */}
+      {showNormalBody && post && hasVendor && (
+        <ShelfSection
+          vendorId={post.vendor!.id}
+          vendorSlug={post.vendor?.slug ?? null}
+          currentPostId={post.id}
+          onReady={handleShelfReady}
+        />
+      )}
 
       {/* Stable footer chrome — rendered in every state so back-nav from
           /shelf/[slug] never remounts the BottomNav (mirrors masthead pattern). */}
