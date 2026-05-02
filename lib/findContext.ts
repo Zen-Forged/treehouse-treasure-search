@@ -90,3 +90,26 @@ export function setPostCache(post: Post): void {
 export function clearPostCache(id: string): void {
   postCache.delete(id);
 }
+
+// ── Vendor-posts cache (session 101) ─────────────────────────────────────
+// Module-scope cache of getVendorPosts() results, keyed by vendorId. Lets
+// /find/[id]'s ShelfSection ("More from this booth" carousel) skip the
+// re-fetch on back-nav to a previously-visited find — onReady fires
+// synchronously on cache hit, parent's shelfReady gate opens immediately,
+// useLayoutEffect-based scroll-restore fires pre-paint, no scrollY=0 flash.
+// Cleared per-vendor by edit pages on successful PATCH (a vendor's posts
+// list could change shape — sold flag flip, removal, new post).
+
+const vendorPostsCache = new Map<string, Post[]>();
+
+export function getVendorPostsCache(vendorId: string): Post[] | undefined {
+  return vendorPostsCache.get(vendorId);
+}
+
+export function setVendorPostsCache(vendorId: string, posts: Post[]): void {
+  vendorPostsCache.set(vendorId, posts);
+}
+
+export function clearVendorPostsCache(vendorId: string): void {
+  vendorPostsCache.delete(vendorId);
+}
