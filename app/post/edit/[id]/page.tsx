@@ -27,7 +27,7 @@ import { v1 } from "@/lib/tokens";
 import FormButton from "@/components/FormButton";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
-import { clearPostCache } from "@/lib/findContext";
+import { clearPostCache, clearVendorPostsCache } from "@/lib/findContext";
 import type { Post } from "@/types/treehouse";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -217,8 +217,11 @@ function EditPostInner() {
 
       // Phase B QA fix #2 (session 100) — invalidate the shared post cache
       // so /find/[id] re-fetches the freshly-edited row instead of showing
-      // the pre-edit cached snapshot.
+      // the pre-edit cached snapshot. Session 101 — also invalidate the
+      // vendor-posts cache so the booth carousel re-fetches with the
+      // updated title / sold flag.
       clearPostCache(post.id);
+      if (post.vendor_id) clearVendorPostsCache(post.vendor_id);
 
       setStage("done");
       setTimeout(() => {
