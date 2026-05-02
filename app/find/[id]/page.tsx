@@ -682,16 +682,28 @@ export default function FindDetailPage() {
     // right (toward prev), so old content slid OFF to the right at
     // +innerWidth, and the new (prev) content needs to slide in from
     // -innerWidth. Direction "left" = symmetrical.
-    if (swipeDirRef.current === "right") {
-      swipeControls.set({ x: -window.innerWidth });
-      swipeControls.start({ x: 0, transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] } });
+    //
+    // Phase B QA fix #3 (session 100) — teleport happens immediately
+    // (offscreen, invisible) but the slide-in animation defers to the
+    // next animation frame. By then React has committed the cache-hit
+    // setPost / setLoading from the sibling [id] effect, so the
+    // motion.div animates in with the NEW content already painted.
+    // Without this RAF gate, the first 1-2 frames of slide-in show
+    // the previous find's content as React catches up — the residual
+    // flicker David surfaced on QA.
+    if (swipeDirRef.current === "right" || swipeDirRef.current === "left") {
+      const fromX = swipeDirRef.current === "right"
+        ? -window.innerWidth
+        : window.innerWidth;
+      swipeControls.set({ x: fromX });
       swipeDirRef.current = null;
       swipeTransitioningRef.current = false;
-    } else if (swipeDirRef.current === "left") {
-      swipeControls.set({ x: window.innerWidth });
-      swipeControls.start({ x: 0, transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] } });
-      swipeDirRef.current = null;
-      swipeTransitioningRef.current = false;
+      requestAnimationFrame(() => {
+        swipeControls.start({
+          x: 0,
+          transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
+        });
+      });
     }
   }, [id, swipeControls]);
 
