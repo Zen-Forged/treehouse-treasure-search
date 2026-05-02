@@ -651,6 +651,14 @@ export default function FindDetailPage() {
   const [copied,        setCopied]        = useState(false);
   const [isMyPost,      setIsMyPost]      = useState(false);
   const [, setShelfHasItems]              = useState(false);
+  // Phase C QA fix #2 (session 100) — readiness signal for scroll-restore.
+  // The "More from this booth" carousel fetches its own data after the
+  // parent post fetch resolves, so the document grows TALLER after
+  // setLoading(false). If scroll-restore fires before the carousel's
+  // ready signal, scrollTo gets clamped to the (too-short) document
+  // height and lands above the user's saved Y. shelfReady = true once
+  // the carousel's fetch has resolved (regardless of result count).
+  const [shelfReady,    setShelfReady]    = useState(false);
   const [isSaved,       setIsSaved]       = useState(false);
 
   // Preview image URL written by the source surface (Home tile / /flagged
@@ -832,6 +840,11 @@ export default function FindDetailPage() {
     scrollRestored.current = false;
     pendingScrollY.current = null;
     findScrollWriteBlocked = false;
+    // Phase C QA fix #2 — reset the carousel readiness flag on each
+    // [id] change so the scroll-restore for the new id waits for the
+    // new carousel's fetch to resolve (document height grows after
+    // ShelfSection renders its items).
+    setShelfReady(false);
     const wasBackForward = lastNavWasPopstate;
     if (wasBackForward) {
       let savedY: number | null = null;
@@ -856,21 +869,30 @@ export default function FindDetailPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, [id]);
 
-  // Restore scrollY once data has loaded. Single RAF — by then post body
-  // sections have rendered and the document has substantial height. The
-  // strip below loads asynchronously and may extend the page after restore;
-  // if the saved scroll position lands in that region, scrollTo clamps to
-  // current document height and the strip-area landing position settles
-  // close enough on real content. Re-runs on id change via the [id, loading]
-  // dep so peer-nav into /find/[id-B] can restore B's saved scroll.
+  // Restore scrollY once data has loaded AND the carousel has reported
+  // ready. The carousel ("More from this booth") fetches its own data
+  // after the parent post fetch resolves, so the document grows TALLER
+  // after setLoading(false). If we restore at !loading, scrollTo gets
+  // clamped to the (too-short) document and lands above the user's
+  // saved Y — David surfaced this when the restore landed above the
+  // tapped carousel card position. Gating on shelfReady (set by
+  // ShelfSection's onReady callback after its fetch resolves) ensures
+  // the document is at its final height when we scrollTo.
+  //
+  // When the find has no vendor → no ShelfSection renders → shelfReady
+  // never flips. Bypass the gate in that case via the !hasVendor branch.
+  // Re-runs on id change via the [id, loading, shelfReady] dep so peer-
+  // nav into /find/[id-B] can restore B's saved scroll.
   useEffect(() => {
     if (loading) return;
+    const hasVendor = !!post?.vendor;
+    if (hasVendor && !shelfReady) return;
     if (scrollRestored.current) return;
     if (pendingScrollY.current === null) return;
     scrollRestored.current = true;
     const y = pendingScrollY.current;
     requestAnimationFrame(() => { window.scrollTo({ top: y, behavior: "instant" }); });
-  }, [id, loading]);
+  }, [id, loading, shelfReady, post]);
 
   useEffect(() => {
     if (!id) return;
@@ -956,6 +978,10 @@ export default function FindDetailPage() {
 
   const handleShelfReady = useCallback((hasItems: boolean) => {
     setShelfHasItems(hasItems);
+    // Phase C QA fix #2 — flip the readiness flag so the scroll-restore
+    // effect can proceed knowing the carousel has rendered (or returned
+    // empty) and the document height is final.
+    setShelfReady(true);
   }, []);
 
   const mapLink = post?.mall?.address
