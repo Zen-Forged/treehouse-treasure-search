@@ -238,7 +238,6 @@ function VendorRequestInner() {
       <DoneScreen
         state={done}
         email={email}
-        onReset={() => setDone(null)}
         onGoHome={() => router.push("/")}
         onGoSignIn={() => router.push("/login/email")}
       />
@@ -669,13 +668,11 @@ function VendorRequestInner() {
 function DoneScreen({
   state,
   email,
-  onReset,
   onGoHome,
   onGoSignIn,
 }: {
   state: "created" | "already_pending" | "already_approved";
   email: string;
-  onReset:    () => void;
   onGoHome:   () => void;
   onGoSignIn: () => void;
 }) {
