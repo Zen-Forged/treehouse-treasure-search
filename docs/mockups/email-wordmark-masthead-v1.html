@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Email wordmark masthead v1</title>
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --ink-hairline-soft: rgba(42, 26, 10, 0.12);
+    --postit:       rgba(255, 250, 234, 0.55);
+    --green:        #1e4d2b;
+    --email-serif:  Georgia, "Times New Roman", serif;
+    --sys:          -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+
+  .page-wrap { max-width: 1500px; margin: 0 auto; padding: 28px 18px 80px; }
+
+  h1.title { font-family: var(--email-serif); font-weight: 400; color: #e8ddc7; font-size: 30px; margin: 0 0 6px; text-align: center; letter-spacing: -0.005em; }
+  .subtitle { text-align: center; color: rgba(232, 221, 199, 0.62); font-size: 13px; margin: 0 auto 18px; line-height: 1.6; max-width: 900px; }
+
+  .decisions-pane { max-width: 1180px; margin: 0 auto 36px; padding: 22px 28px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(232, 221, 199, 0.18); border-radius: 10px; color: rgba(232, 221, 199, 0.88); font-size: 13px; line-height: 1.75; }
+  .decisions-pane h3 { font-family: var(--email-serif); font-size: 17px; font-weight: 500; color: #fff9e8; margin: 0 0 10px; }
+  .decisions-pane h4 { font-family: var(--sys); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(232,221,199,0.55); margin: 16px 0 6px; font-weight: 500; }
+  .decisions-pane ul { margin: 4px 0 0; padding: 0 0 0 20px; }
+  .decisions-pane li { margin-bottom: 6px; }
+  .decisions-pane strong { color: #fff9e8; font-weight: 500; }
+  .decisions-pane del { color: rgba(232,221,199,0.45); }
+  .decisions-pane .flag { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-weight: 500; margin-right: 6px; }
+  .decisions-pane .flag.new { background: rgba(30, 77, 43, 0.35); color: #d6ebd8; }
+  .decisions-pane .flag.q { background: rgba(32, 90, 139, 0.35); color: #c8dcf0; }
+  .decisions-pane .flag.warn { background: rgba(139, 100, 32, 0.35); color: #f0e0c8; }
+
+  /* Three-up grid for size comparison */
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; max-width: 1500px; margin: 0 auto 40px; }
+  .frame { display: flex; flex-direction: column; align-items: center; }
+  .frame-label { color: #e8ddc7; font-family: var(--email-serif); font-size: 18px; font-weight: 500; margin: 0 0 4px; }
+  .frame-meta { color: rgba(232,221,199,0.55); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 14px; }
+
+  /* Email surface — paperCream, 540px max */
+  .email { width: 100%; max-width: 480px; background: var(--paper); border-radius: 6px; box-shadow: 0 12px 32px rgba(0,0,0,0.35); overflow: hidden; }
+
+  /* Wordmark masthead variants */
+  .masthead { padding: 32px 16px 22px; text-align: center; border-bottom: 1px solid var(--ink-hairline); }
+  .masthead img { display: inline-block; max-width: 100%; height: auto; }
+  .small  img { width: 160px; }
+  .medium img { width: 200px; }
+  .large  img { width: 240px; }
+
+  /* Body section — mirrors lib/email.ts shell exactly */
+  .body { padding: 24px 18px 0; }
+  .body p { margin: 0 0 16px; font-family: var(--email-serif); font-size: 15px; line-height: 1.7; color: var(--ink-primary); }
+  .body .sign { margin: 22px 0 0; font-family: var(--email-serif); font-style: italic; font-size: 15px; color: var(--ink-mid); }
+
+  .hero { margin: 0 0 24px; }
+  .hero img { display: block; width: 100%; height: 180px; object-fit: cover; border-radius: 12px; border: 1px solid var(--ink-hairline-soft); }
+  .hero.placeholder { width: 100%; height: 180px; border-radius: 12px; background: linear-gradient(135deg, #8a7555 0%, #5a4a2e 100%); border: 1px solid var(--ink-hairline-soft); display: flex; align-items: center; justify-content: center; color: rgba(255,249,232,0.4); font-style: italic; font-size: 13px; }
+
+  .cta { margin: 0 0 22px; padding: 0 4px; }
+  .cta a { display: block; padding: 14px 18px; background: var(--green); color: #fff9e8; font-family: var(--email-serif); font-size: 15px; font-weight: 600; text-decoration: none; border-radius: 10px; text-align: center; }
+
+  .ibox { margin: 18px 0 8px; padding: 16px; background: var(--postit); border: 1px solid var(--ink-hairline); border-radius: 10px; }
+  .ibox p { margin: 0 0 8px; font-family: var(--email-serif); font-size: 14px; line-height: 1.6; color: var(--ink-mid); }
+  .ibox p.center { text-align: center; }
+  .ibox p:last-child { margin-bottom: 0; }
+  .pill { display: inline-block; font-family: var(--sys); background: rgba(42,26,10,0.06); padding: 3px 10px; border-radius: 4px; font-size: 13px; color: var(--ink-primary); font-weight: 500; }
+
+  .otp-pill { margin: 18px 0 8px; padding: 20px 16px 16px; background: var(--postit); border: 1px solid var(--ink-hairline); border-radius: 10px; text-align: center; }
+  .otp-pill .label { font-family: var(--email-serif); font-style: italic; font-size: 11px; color: var(--ink-mid); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 8px; }
+  .otp-pill .code { font-family: var(--sys); font-size: 30px; letter-spacing: 0.3em; color: var(--ink-primary); font-weight: 500; padding-left: 0.3em; }
+  .otp-pill .expires { font-family: var(--email-serif); font-style: italic; font-size: 11px; color: var(--ink-mid); margin-top: 8px; }
+
+  .footer { padding: 26px 18px 22px; }
+  .footer .rule { border-top: 1px solid var(--ink-hairline); padding-top: 18px; text-align: center; }
+  .footer p { margin: 0; font-family: var(--email-serif); font-size: 10.5px; color: var(--ink-faint); line-height: 1.6; }
+
+  /* Multi-template strip */
+  .strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; max-width: 1500px; margin: 0 auto 40px; }
+  .strip .email { max-width: 100%; }
+  .strip .body { padding: 22px 14px 0; }
+  .strip .body p { font-size: 13px; }
+  .strip .otp-pill .code { font-size: 22px; }
+  .strip .hero img, .strip .hero.placeholder { height: 120px; }
+  .strip .small img { width: 130px; }
+  .strip .medium img { width: 160px; }
+  .strip .frame-label { font-size: 14px; }
+  .strip .cta a { font-size: 13px; padding: 11px 14px; }
+  .strip .ibox p { font-size: 12px; }
+
+  /* Window mini grid */
+  .wgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0 0 12px; }
+  .wgrid .tile { aspect-ratio: 4/5; background: linear-gradient(135deg, #c9a878 0%, #8a7555 100%); border-radius: 4px; }
+  .wgrid .tile + .cap { display: none; }
+
+  /* Banner with info bar — Window email */
+  .wbanner { margin: 0 0 16px; border: 1px solid var(--ink-hairline-soft); border-radius: 12px; overflow: hidden; }
+  .wbanner .img { width: 100%; height: 100px; background: linear-gradient(135deg, #b88a55 0%, #5a4a2e 100%); }
+  .wbanner table { width: 100%; border-collapse: collapse; background: var(--paper); border-top: 1px solid var(--ink-hairline); }
+  .wbanner td { padding: 10px 12px; font-family: var(--email-serif); }
+  .wbanner td.booth { width: 32%; text-align: center; border-right: 1px solid var(--ink-hairline-soft); }
+  .wbanner td.booth .eyebrow { font-style: italic; font-size: 9px; letter-spacing: 0.12em; color: var(--ink-mid); margin-bottom: 2px; }
+  .wbanner td.booth .num { font-family: "Times New Roman", serif; font-size: 22px; font-weight: 500; color: var(--ink-primary); line-height: 1; }
+  .wbanner td.mall .name { font-family: "Times New Roman", serif; font-size: 14px; color: var(--ink-primary); line-height: 1.2; margin-bottom: 1px; }
+  .wbanner td.mall .addr { font-family: var(--sys); font-size: 11px; color: var(--ink-mid); }
+
+  .invite-line { font-style: italic; font-size: 13px; color: var(--ink-mid); text-align: center; margin: 0 6px 8px; }
+  .vendor-name { font-family: "Times New Roman", serif; font-size: 26px; color: var(--ink-primary); text-align: center; margin: 0 6px 14px; line-height: 1.1; }
+
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <h1 class="title">Email wordmark masthead — v1</h1>
+  <p class="subtitle">Reverses the session-52 v4 "no body masthead" decision. Hosted /wordmark.png as the brand anchor across all four templates: receipt, approval, window-share, and the Supabase OTP. Frame 1 chooses the size — Frame 2 verifies it across the four templates.</p>
+
+  <div class="decisions-pane">
+    <h3>What this mockup is asking you to judge</h3>
+    <ul>
+      <li><span class="flag new">DECIDE</span> Wordmark size. <strong>S</strong> (160px wide, ~85px tall) reads quiet — brand-anchor without competing for the body. <strong>M</strong> (200px) is the natural midpoint. <strong>L</strong> (240px) is loudest — hard to miss, but eats vertical real-estate that used to belong to the body.</li>
+      <li><span class="flag new">DECIDE</span> Hairline divider below masthead. Mockup shows ON. Cleaner separation between brand chrome + body. OFF is also valid (more "letterhead" feel, less "section header" feel).</li>
+    </ul>
+
+    <h3>What's already locked</h3>
+    <ul>
+      <li>Image source: <code>https://app.kentuckytreehouse.com/wordmark.png</code> (hosted, served by Vercel — no CDN, but cached by mail clients after first load).</li>
+      <li>Centered, paperCream background, 32px top + 22px bottom padding.</li>
+      <li><code>alt="Treehouse Finds"</code> so Gmail's image-block-by-default still shows the brand name as text.</li>
+      <li>Applies to all four templates via <code>renderEmailShell()</code> in <code>lib/email.ts</code> + the Supabase OTP HTML in <code>docs/supabase-otp-email-templates.md</code>.</li>
+    </ul>
+
+    <h3>What this reverses</h3>
+    <ul>
+      <li><del>Session 52 Q-011 v4 — "sender envelope already names the brand; re-identifying in the body added ~45px of vertical weight for zero new information."</del> Reversed. The argument was right; the cost of failure is just low enough that David is willing to pay it for stronger brand presence.</li>
+    </ul>
+
+    <h3>Email-parity audit (per <code>MASTER_PROMPT.md §Design Agent</code>)</h3>
+    <ul>
+      <li><span class="flag warn">PRE-SHIP</span> Image-rendering check across: <strong>Gmail web</strong>, <strong>Gmail iOS</strong>, <strong>Apple Mail iOS</strong>, <strong>Apple Mail macOS</strong>. Test send to David's inbox via real Resend codepath after wiring lands. Gmail blocks images by default — first-time recipients see the alt text "Treehouse Finds" until they whitelist the sender.</li>
+      <li><span class="flag warn">FLAG</span> <code>public/wordmark.png</code> is 455KB unoptimized (operational backlog item from session 88). Email gets it inlined per send. Worth optimizing before this lands — <code>pngquant --quality 70-90 wordmark.png</code> typically cuts 60-80% for a wordmark with limited color palette.</li>
+    </ul>
+  </div>
+
+  <!-- ── FRAME 1: Three masthead-size variants on Email #2 (approval) ─── -->
+
+  <h2 style="text-align:center;color:#e8ddc7;font-family:var(--email-serif);font-weight:400;font-size:22px;margin:48px 0 6px;">Frame 1 — Pick the masthead size</h2>
+  <p class="subtitle" style="margin-bottom:28px;">Same template (Email #2 — approval), three sizes. Booth hero block + green CTA below are the just-shipped session-104 changes (commits <code style="color:#d6ebd8;background:rgba(255,255,255,0.06);padding:1px 6px;border-radius:3px;font-size:11px;">757f8df / 52f579c / 46cf115</code>).</p>
+
+  <div class="grid-3">
+
+    <div class="frame">
+      <div class="frame-label">S — 160px</div>
+      <div class="frame-meta">QUIET ANCHOR</div>
+      <div class="email">
+        <div class="masthead small">
+          <img src="https://app.kentuckytreehouse.com/wordmark.png" alt="Treehouse Finds">
+        </div>
+        <div class="body">
+          <p>Hi Sarah,</p>
+          <p>Your booth at Coppertown Mall is ready to start filling with finds.</p>
+          <div class="hero placeholder">[ booth hero photo ]</div>
+          <div class="cta"><a href="#">Open Treehouse Finds</a></div>
+          <div class="ibox">
+            <p>Once you're there, tap <strong>Sign In</strong> and enter this email:</p>
+            <p class="center"><span class="pill">sarah@example.com</span></p>
+            <p>We'll send you a 6-digit code to finish signing in.</p>
+          </div>
+          <p style="margin-top:18px;">Welcome to the search.</p>
+          <p class="sign">— Treehouse Finds</p>
+        </div>
+        <div class="footer"><div class="rule"><p>You're receiving this because you submitted a booth request to Treehouse Finds.</p></div></div>
+      </div>
+    </div>
+
+    <div class="frame">
+      <div class="frame-label">M — 200px</div>
+      <div class="frame-meta">NATURAL MIDPOINT</div>
+      <div class="email">
+        <div class="masthead medium">
+          <img src="https://app.kentuckytreehouse.com/wordmark.png" alt="Treehouse Finds">
+        </div>
+        <div class="body">
+          <p>Hi Sarah,</p>
+          <p>Your booth at Coppertown Mall is ready to start filling with finds.</p>
+          <div class="hero placeholder">[ booth hero photo ]</div>
+          <div class="cta"><a href="#">Open Treehouse Finds</a></div>
+          <div class="ibox">
+            <p>Once you're there, tap <strong>Sign In</strong> and enter this email:</p>
+            <p class="center"><span class="pill">sarah@example.com</span></p>
+            <p>We'll send you a 6-digit code to finish signing in.</p>
+          </div>
+          <p style="margin-top:18px;">Welcome to the search.</p>
+          <p class="sign">— Treehouse Finds</p>
+        </div>
+        <div class="footer"><div class="rule"><p>You're receiving this because you submitted a booth request to Treehouse Finds.</p></div></div>
+      </div>
+    </div>
+
+    <div class="frame">
+      <div class="frame-label">L — 240px</div>
+      <div class="frame-meta">LOUDEST</div>
+      <div class="email">
+        <div class="masthead large">
+          <img src="https://app.kentuckytreehouse.com/wordmark.png" alt="Treehouse Finds">
+        </div>
+        <div class="body">
+          <p>Hi Sarah,</p>
+          <p>Your booth at Coppertown Mall is ready to start filling with finds.</p>
+          <div class="hero placeholder">[ booth hero photo ]</div>
+          <div class="cta"><a href="#">Open Treehouse Finds</a></div>
+          <div class="ibox">
+            <p>Once you're there, tap <strong>Sign In</strong> and enter this email:</p>
+            <p class="center"><span class="pill">sarah@example.com</span></p>
+            <p>We'll send you a 6-digit code to finish signing in.</p>
+          </div>
+          <p style="margin-top:18px;">Welcome to the search.</p>
+          <p class="sign">— Treehouse Finds</p>
+        </div>
+        <div class="footer"><div class="rule"><p>You're receiving this because you submitted a booth request to Treehouse Finds.</p></div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── FRAME 2: Selected size (M) across all four templates ────────── -->
+
+  <h2 style="text-align:center;color:#e8ddc7;font-family:var(--email-serif);font-weight:400;font-size:22px;margin:64px 0 6px;">Frame 2 — Same masthead, all four templates</h2>
+  <p class="subtitle" style="margin-bottom:28px;">Showing M (200px) for verification. The masthead lives in <code style="color:#d6ebd8;background:rgba(255,255,255,0.06);padding:1px 6px;border-radius:3px;font-size:11px;">renderEmailShell()</code> so all three Resend templates pick up the change in one edit. The Supabase OTP is a separate paste into the dashboard.</p>
+
+  <div class="strip">
+
+    <!-- Template #1: Request received -->
+    <div class="frame">
+      <div class="frame-label">#1 — Request received</div>
+      <div class="email">
+        <div class="masthead medium"><img src="https://app.kentuckytreehouse.com/wordmark.png" alt="Treehouse Finds"></div>
+        <div class="body">
+          <p>Hi Sarah,</p>
+          <p>Thanks — we got your booth photo and details.</p>
+          <p>We'll take a look and be in touch when your shelf is ready to fill.</p>
+          <p class="sign">— Treehouse Finds</p>
+        </div>
+        <div class="footer"><div class="rule"><p>You're receiving this because you submitted a booth request.</p></div></div>
+      </div>
+    </div>
+
+    <!-- Template #2: Approval -->
+    <div class="frame">
+      <div class="frame-label">#2 — Approval</div>
+      <div class="email">
+        <div class="masthead medium"><img src="https://app.kentuckytreehouse.com/wordmark.png" alt="Treehouse Finds"></div>
+        <div class="body">
+          <p>Hi Sarah,</p>
+          <p>Your booth at Coppertown Mall is ready to start filling with finds.</p>
+          <div class="hero placeholder">[ booth photo ]</div>
+          <div class="cta"><a href="#">Open Treehouse Finds</a></div>
+          <div class="ibox">
+            <p>Tap <strong>Sign In</strong> and enter this email:</p>
+            <p class="center"><span class="pill">sarah@example.com</span></p>
+            <p>We'll send a 6-digit code.</p>
+          </div>
+          <p style="margin-top:14px;">Welcome to the search.</p>
+          <p class="sign">— Treehouse Finds</p>
+        </div>
+        <div class="footer"><div class="rule"><p>You're receiving this because you submitted a booth request.</p></div></div>
+      </div>
+    </div>
+
+    <!-- Template #3: Window share -->
+    <div class="frame">
+      <div class="frame-label">#3 — Window share</div>
+      <div class="email">
+        <div class="masthead medium"><img src="https://app.kentuckytreehouse.com/wordmark.png" alt="Treehouse Finds"></div>
+        <div class="body">
+          <p class="invite-line">You've received a personal invite to explore</p>
+          <p class="vendor-name">Kentucky Treehouse</p>
+          <div class="wbanner">
+            <div class="img"></div>
+            <table><tr>
+              <td class="booth"><div class="eyebrow">BOOTH</div><div class="num">42</div></td>
+              <td class="mall"><div class="name">Coppertown Mall</div><div class="addr">123 Main St</div></td>
+            </tr></table>
+          </div>
+          <div class="cta"><a href="#">Explore the booth</a></div>
+          <div class="wgrid">
+            <div class="tile"></div><div class="tile"></div><div class="tile"></div>
+            <div class="tile"></div><div class="tile"></div><div class="tile"></div>
+          </div>
+        </div>
+        <div class="footer"><div class="rule"><p>Someone shared a Window with you.</p></div></div>
+      </div>
+    </div>
+
+    <!-- Template #4: Supabase OTP -->
+    <div class="frame">
+      <div class="frame-label">#4 — Supabase OTP</div>
+      <div class="email">
+        <div class="masthead medium"><img src="https://app.kentuckytreehouse.com/wordmark.png" alt="Treehouse Finds"></div>
+        <div class="body">
+          <p>Here's your sign-in code. Enter it on the Treehouse Finds sign-in screen to finish.</p>
+          <div class="otp-pill">
+            <div class="label">Your code</div>
+            <div class="code">428193</div>
+            <div class="expires">Expires in 10 minutes.</div>
+          </div>
+          <p style="margin-top:14px;">If you didn't ask for this, you can ignore this email.</p>
+          <p class="sign">— Treehouse Finds</p>
+        </div>
+        <div class="footer"><div class="rule"><p>This code was requested from Treehouse Finds. Codes expire and can only be used once.</p></div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="decisions-pane" style="margin-top:48px;">
+    <h3>Questions for you</h3>
+    <ul>
+      <li><span class="flag q">Q1</span> Pick <strong>S / M / L</strong> for the wordmark size.</li>
+      <li><span class="flag q">Q2</span> Hairline divider below masthead — keep <strong>ON</strong> (mockup default) or turn <strong>OFF</strong>?</li>
+      <li><span class="flag q">Q3</span> Optimize <code>public/wordmark.png</code> from 455KB before shipping (recommended) — yes / skip?</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>
