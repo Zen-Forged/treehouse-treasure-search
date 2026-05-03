@@ -204,6 +204,15 @@ export async function sendRequestReceived(
 ): Promise<{ ok: boolean; error?: string }> {
   const firstName  = payload.firstName.trim() || "there";
   const subject    = `We got your Treehouse Finds request, ${firstName}`;
+  const siteUrl    = getSiteUrl();
+
+  // "Explore the feed →" — mirrors the in-app /vendor-request success
+  // screen affordance (app/vendor-request/page.tsx:876). Per
+  // docs/design-system.md §45, end-of-path navigation offers are italic
+  // underlined text links in ink-primary, NOT filled green buttons. Email
+  // approximation drops `text-decoration-style: dotted` for Outlook
+  // compatibility but keeps the rest of the in-app pattern.
+  const exploreLinkStyle = `display: inline-block; margin: 6px 0 0; font-family: ${SERIF}; font-style: italic; font-size: 16px; color: ${INK}; text-decoration: underline; text-underline-offset: 3px;`;
 
   const html = renderEmailShell({
     preheader: "Thanks for putting your booth forward — we'll be in touch.",
@@ -211,6 +220,9 @@ export async function sendRequestReceived(
       <p style="${pStyle}">Hi ${escapeHtml(firstName)},</p>
       <p style="${pStyle}">Thanks — we got your booth photo and details.</p>
       <p style="${pStyle}">We'll take a look and be in touch when your shelf is ready to fill.</p>
+      <p style="${pStyle} margin-top: 24px;">
+        <a href="${escapeAttr(siteUrl)}" style="${exploreLinkStyle}">Explore the feed &rarr;</a>
+      </p>
       <p style="${signStyle}">&mdash; Treehouse Finds</p>
     `,
   });
@@ -221,6 +233,8 @@ export async function sendRequestReceived(
     `Thanks — we got your booth photo and details.`,
     ``,
     `We'll take a look and be in touch when your shelf is ready to fill.`,
+    ``,
+    `Explore the feed: ${siteUrl}`,
     ``,
     `— Treehouse Finds`,
   ].join("\n");
