@@ -1,8 +1,14 @@
-# Supabase OTP Email Templates — v1.2
+# Supabase OTP Email Templates — v1.3
 
-> Session 32 (2026-04-20). These are the shipping HTML templates for
-> Supabase Auth's Magic Link and Confirm Signup emails. They match the
-> v1.1l paper-as-surface treatment used in `lib/email.ts`'s own emails.
+> Session 104 (2026-05-03) — wordmark masthead reinstated. Hosted
+> `/wordmark.png` at 160px display width replaces the v1.2 Georgia text
+> lockup, matching the renderEmailShell() change in `lib/email.ts`.
+> All four email templates (3 Resend + this Supabase OTP) now share
+> the same masthead.
+>
+> Session 32 (2026-04-20) baseline. Shipping HTML for Supabase Auth's
+> Magic Link and Confirm Signup emails. Matches v1.1l paper-as-surface
+> treatment used in `lib/email.ts`'s own emails.
 >
 > **🖐️ HITL to apply:** paste the HTML block below into BOTH of these:
 >   Supabase Dashboard → Authentication → Email Templates → Magic Link
@@ -43,15 +49,10 @@ Your Treehouse Finds sign-in code
       <td align="center" style="padding: 36px 16px 32px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 540px;">
 
-          <!-- Brand lockup -->
+          <!-- Wordmark masthead (v1.3 — session 104, hosted image) -->
           <tr>
-            <td align="center" style="padding: 8px 0 22px; border-bottom: 1px solid rgba(42,26,10,0.18);">
-              <p style="margin: 0; font-family: Georgia, 'Times New Roman', serif; font-size: 26px; font-weight: 600; color: #2a1a0a; letter-spacing: -0.01em; line-height: 1.1;">
-                Treehouse Finds
-              </p>
-              <p style="margin: 6px 0 0; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 11px; color: #4a3520; letter-spacing: 0.02em; line-height: 1.5;">
-                Embrace the Search. Treasure the Find.
-              </p>
+            <td align="center" style="padding: 8px 10px 22px; border-bottom: 1px solid rgba(42,26,10,0.18);">
+              <img src="https://app.kentuckytreehouse.com/wordmark.png" alt="Treehouse Finds" width="160" style="display: inline-block; max-width: 160px; height: auto; border: 0;" />
             </td>
           </tr>
 

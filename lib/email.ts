@@ -764,6 +764,12 @@ function renderEmailShell(opts: { preheader: string; bodyHtml: string; footerHtm
   // preserved verbatim so existing callers don't shift.
   const footerHtml = opts.footerHtml ?? `You're receiving this because you submitted a booth request to Treehouse Finds. Reply to this email if anything looks off.`;
 
+  // Session 104 — wordmark masthead reinstated (reverses session-52 v4
+  // retirement). Hosted /wordmark.png at 160px display width, hairline
+  // divider below. Gmail blocks images by default — alt="Treehouse Finds"
+  // ensures a brand-name fallback before the user shows-images.
+  const wordmarkUrl = `${getSiteUrl()}/wordmark.png`;
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -784,13 +790,15 @@ function renderEmailShell(opts: { preheader: string; bodyHtml: string; footerHtm
     <tr>
       <td align="center" style="padding: 36px 16px 32px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 540px;">
-          <!-- Body — session 52 Q-011 v4: masthead row retired. Sender
-               envelope ("Treehouse Finds" in From row) already identifies
-               the brand; re-identifying in the body added vertical weight
-               for zero new information. Body td top padding bumps from
-               24→32px to compensate for the lost masthead spacing. -->
+          <!-- Wordmark masthead — session 104 reinstatement. -->
           <tr>
-            <td style="padding: 32px 10px 0;">
+            <td align="center" style="padding: 8px 10px 22px; border-bottom: 1px solid ${HAIR};">
+              <img src="${wordmarkUrl}" alt="Treehouse Finds" width="160" style="display: inline-block; max-width: 160px; height: auto; border: 0;" />
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding: 24px 10px 0;">
               ${opts.bodyHtml}
             </td>
           </tr>
