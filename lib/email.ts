@@ -177,6 +177,14 @@ export interface ApprovalPayload {
   email:        string;
   mallName?:    string | null;
   boothNumber?: string | null;
+  /**
+   * Vendor's hero photo (proof photo from the request, or a later-uploaded
+   * booth photo). Renders as a banner above the instructions block when
+   * present. Reverses the session-32 v1.2 image-less treatment after
+   * session-104 follow-up: vendors should see *their booth* in the welcome
+   * email, not just text.
+   */
+  heroImageUrl?: string | null;
 }
 
 // ── Email #1 — Request received (receipt) ────────────────────────────────────
@@ -243,10 +251,21 @@ export async function sendApprovalInstructions(
 ): Promise<{ ok: boolean; error?: string }> {
   const firstName  = payload.firstName.trim() || "there";
   const subject    = `Your Treehouse Finds booth is ready, ${firstName}`;
+  const siteUrl    = getSiteUrl();
 
   const mallLine = payload.mallName
     ? `Your booth at ${escapeHtml(payload.mallName)} is ready to start filling with finds.`
     : `Your booth is ready to start filling with finds.`;
+
+  // Booth hero image — banner above the instructions block. Skipped silently
+  // when the vendor row has no hero (rare; createVendor backfills from the
+  // proof photo on approval).
+  const heroBlock = payload.heroImageUrl
+    ? `
+      <div style="margin: 0 0 24px;">
+        <img src="${escapeAttr(payload.heroImageUrl)}" alt="${escapeAttr(payload.mallName ?? "Your booth")}" width="540" height="200" style="display: block; width: 100%; max-width: 540px; height: 200px; object-fit: cover; border-radius: 12px; border: 1px solid ${HAIR_SOFT};" />
+      </div>`
+    : ``;
 
   const html = renderEmailShell({
     preheader: "Your booth is ready — open Treehouse to sign in.",
@@ -254,10 +273,21 @@ export async function sendApprovalInstructions(
       <p style="${pStyle}">Hi ${escapeHtml(firstName)},</p>
       <p style="${pStyle}">${mallLine}</p>
 
-      <!-- Instruction box (paper-wash primitive) -->
+      ${heroBlock}
+
+      <!-- Primary CTA — direct link to the app. Reverses session-32 v1.2
+           PWA-session-continuity decision per session-104 product call:
+           prioritize onboarding adoption; PWA install can come later. -->
+      <div style="margin: 0 0 24px; padding: 0 4px;">
+        <a href="${escapeAttr(siteUrl)}" style="display: block; padding: 15px 20px; background: #1e4d2b; color: #fff9e8; font-family: ${SERIF}; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 10px; text-align: center; letter-spacing: 0.005em;">
+          Open Treehouse Finds
+        </a>
+      </div>
+
+      <!-- Instruction box (paper-wash primitive) — sign-in helper -->
       <div style="${boxStyle}">
         <p style="${boxPStyle}">
-          To sign in, open <strong style="color:#2a1a0a;font-weight:600;">Treehouse Finds</strong> on your phone, tap <strong style="color:#2a1a0a;font-weight:600;">Sign In</strong>, and enter this email:
+          Once you're there, tap <strong style="color:#2a1a0a;font-weight:600;">Sign In</strong> and enter this email:
         </p>
         <p style="${boxPStyle} text-align:center; margin-bottom: 10px;">
           <span style="${echoPillStyle}">${escapeHtml(payload.email)}</span>
@@ -279,7 +309,10 @@ export async function sendApprovalInstructions(
       ? `Your booth at ${payload.mallName} is ready to start filling with finds.`
       : `Your booth is ready to start filling with finds.`,
     ``,
-    `To sign in, open Treehouse Finds on your phone, tap Sign In, and enter this email:`,
+    `Open Treehouse Finds:`,
+    `  ${siteUrl}`,
+    ``,
+    `Once you're there, tap Sign In and enter this email:`,
     ``,
     `  ${payload.email}`,
     ``,

@@ -185,10 +185,11 @@ export async function POST(req: Request) {
 
   // 5. Email #2: Approval + sign-in instructions (best-effort)
   const emailResult = await sendApprovalInstructions({
-    firstName:   salutationFirstName,
-    email:       request.email,
-    mallName:    request.mall_name,
-    boothNumber: request.booth_number,
+    firstName:    salutationFirstName,
+    email:        request.email,
+    mallName:     request.mall_name,
+    boothNumber:  request.booth_number,
+    heroImageUrl: vendorRow.hero_image_url,
   });
 
   if (!emailResult.ok) {
