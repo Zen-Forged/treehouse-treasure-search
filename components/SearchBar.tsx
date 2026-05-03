@@ -65,8 +65,8 @@ export default function SearchBar({
     alignItems:     "center",
     gap:            12,
     width:          "100%",
-    padding:        "14px 16px",
-    borderRadius:   20,
+    padding:        "10px 18px",
+    borderRadius:   999,
     background:     focused ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.65)",
     backdropFilter: "blur(10px)",
     WebkitBackdropFilter: "blur(10px)",
@@ -91,8 +91,8 @@ export default function SearchBar({
   };
 
   const clearButtonStyle: React.CSSProperties = {
-    width:           24,
-    height:          24,
+    width:           20,
+    height:          20,
     display:         "flex",
     alignItems:      "center",
     justifyContent:  "center",
@@ -106,14 +106,14 @@ export default function SearchBar({
 
   const dividerStyle: React.CSSProperties = {
     width:      1,
-    height:     22,
+    height:     18,
     background: "rgba(0,0,0,0.10)",
     flexShrink: 0,
   };
 
   const filterGlyphStyle: React.CSSProperties = {
-    width:           28,
-    height:          28,
+    width:           24,
+    height:          24,
     display:         "inline-flex",
     alignItems:      "center",
     justifyContent:  "center",
@@ -124,7 +124,7 @@ export default function SearchBar({
   return (
     <div style={wrapperStyle} role="search">
       <PiBinocularsFill
-        size={22}
+        size={20}
         color={v1.inkMid}
         aria-hidden="true"
         style={{ flexShrink: 0 }}
@@ -148,12 +148,12 @@ export default function SearchBar({
           aria-label="Clear search"
           style={clearButtonStyle}
         >
-          <PiX size={14} color={v1.inkMid} aria-hidden="true" />
+          <PiX size={12} color={v1.inkMid} aria-hidden="true" />
         </button>
       )}
       <div style={dividerStyle} aria-hidden="true" />
       <span style={filterGlyphStyle} aria-hidden="true">
-        <PiSlidersHorizontal size={20} color={v1.inkMid} />
+        <PiSlidersHorizontal size={18} color={v1.inkMid} />
       </span>
     </div>
   );
