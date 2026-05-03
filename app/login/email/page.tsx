@@ -445,6 +445,7 @@ function LoginEmailInner() {
                     autoComplete="one-time-code"
                     maxLength={6}
                     value={code}
+                    placeholder="______"
                     onChange={e => {
                       const digits = e.target.value.replace(/\D/g, "").slice(0, 6);
                       setCode(digits);
