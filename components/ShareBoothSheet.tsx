@@ -419,23 +419,27 @@ function ComposeBody({
             fgColor="#000000"
             bgColor="#ffffff"
           />
-          {/* Logo overlay — postit background + halo clears surrounding modules */}
+          {/* Logo overlay — circular icon + halo clears surrounding modules.
+              boxShadow follows the borderRadius so the halo is also circular.
+              icon.png (cream-on-leaf brand mark) fills the circle; overflow:
+              hidden crops the square source to a circle. */}
           <div style={{
             position: "absolute",
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            width: 32,
-            height: 32,
+            width: 36,
+            height: 36,
             background: "#ffffff",
-            borderRadius: 6,
+            borderRadius: "50%",
             boxShadow: "0 0 0 4px #ffffff",
+            overflow: "hidden",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="" width={22} height={22} style={{ display: "block" }} />
+            <img src="/icon.png" alt="" width={36} height={36} style={{ display: "block" }} />
           </div>
         </div>
         <div style={{ fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 12, color: v1.inkMuted, marginTop: 8, textAlign: "center" }}>
