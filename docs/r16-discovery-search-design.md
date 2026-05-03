@@ -49,7 +49,7 @@ R16 makes the existing 30-day Home feed **searchable in place**, backed by AI-ex
 |---|----------|----------|--------|
 | D1 | Where does discovery live — new tab / new page / in-place affordance? | **In-place affordance on Home only.** Search bar slotted between `StickyMasthead` and the mall scope block. No new BottomNav tab; no new destination page. | David, session 102 — *"all we need is a search bar at the top of the feed page."* |
 | D2 | Bar placement — above the mall scope block, or inside the masthead row (Twitter-style focus mode)? | **Above the mall scope block.** Matches the screenshot David provided; doesn't restructure the masthead. | David's screenshot, session 102. |
-| D3 | Visual treatment — flat / outlined / glass / inset? | **Glass-morphism.** Exact CSS provided by David: 65% white bg + `backdrop-filter: blur(10px)` + 1px subtle border + soft 8/24 shadow + 20px radius. Focused state adds 3px green ring + opaque bg + lifted shadow. | David, session 102. |
+| D3 | Visual treatment — flat / outlined / glass / inset? | **Glass-morphism, pill-shaped.** Exact CSS provided by David: 65% white bg + `backdrop-filter: blur(10px)` + 1px subtle border + soft 8/24 shadow. Initially shipped at 20px radius + 14/16 padding (per V2 mockup); David read as "chunky" on iPhone QA same-session → dialed to **`borderRadius: 999` (full pill) + `10px 18px` padding**. Total height ~40px. Lead `PiBinocularsFill` 20px, right `PiSlidersHorizontal` 18px. Focused state adds 3px green ring + opaque bg + lifted shadow. | David, session 102 (commit `2fb3264`). |
 | D4 | Lead icon — magnifying glass or binoculars? | **`PiBinocularsFill`.** On-brand for the Treehouse thesis (digital tool for real-world exploration); composes with the leaf brand mark (both fill weight, both field-vocabulary). | David, session 102 — *"PiBinocularsFill — more treehouse branded and scope."* |
 | D5 | Right-side glyph — present in phase 1? | **Yes, present but inert.** `PiSlidersHorizontal` in regular weight. Phase-2 hook for axis filtering. | Implication of D1 + Treehouse one-screen rule. |
 | D6 | Search target columns | **Multi-column tsvector** over `posts.title` + `posts.caption` + `posts.tags` + `vendors.display_name` + `vendors.booth_number` + `malls.name`. Single `websearch_to_tsquery` call against a generated tsvector + GIN index. Sub-50ms even at 10k rows. | Session 102 — confirmed by David. |
@@ -293,12 +293,12 @@ export function SearchBar({ initialQuery = "", placeholder, onChange }: Props) {
 }
 ```
 
-**Styles** (per David's CSS, translated to inline-style objects matching project pattern):
+**Styles** (per David's CSS, translated to inline-style objects matching project pattern; dimensions reflect the same-session slim-down to pill — see D3):
 
 ```ts
 const searchBarStyle: React.CSSProperties = {
   display: "flex", alignItems: "center", gap: 12,
-  width: "100%", padding: "14px 16px", borderRadius: 20,
+  width: "100%", padding: "10px 18px", borderRadius: 999,
   background: "rgba(255, 255, 255, 0.65)",
   backdropFilter: "blur(10px)",
   WebkitBackdropFilter: "blur(10px)",
@@ -426,4 +426,4 @@ Smallest→largest commit sequencing per [`feedback_smallest_to_largest_commit_s
 
 ---
 
-> Last updated: 2026-05-02 (session 102 — design-to-Ready pass complete. R16 🟢 Ready. All 15 decisions D1–D15 frozen; implementation session can run as a straight sprint against this spec. First R-item to be both captured AND promoted in the same session.)
+> Last updated: 2026-05-02 (session 102 close — design-to-Ready pass complete + Task 4 primitive shipped (commits `1faa2b8` + `2fb3264`). R16 🟢 Ready, Task 4/8 done. All 15 decisions D1–D15 frozen; implementation session can run Tasks 1–3 + 5–8 as a straight sprint against this spec. First R-item to be both captured AND promoted in the same session, AND first to ship its primitive in the scoping session.)
