@@ -690,28 +690,11 @@ function DoneScreen({
         flexDirection: "column",
       }}
     >
-      <StickyMasthead
-        left={
-          <button
-            onClick={onReset}
-            aria-label="Back"
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: v1.iconBubble,
-              border: "none",
-              cursor: "pointer",
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
-          </button>
-        }
-      />
+      {/* Success-state masthead — terminal screen, no back, no share.
+          Back would let users re-submit a duplicate request; share is
+          incoherent on a confirmation surface. Forward nav is covered
+          by the in-page "Explore the feed →" / "Sign in" affordances. */}
+      <StickyMasthead right={null} />
 
       <div
         style={{
