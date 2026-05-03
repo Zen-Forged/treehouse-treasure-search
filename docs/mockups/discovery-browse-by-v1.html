@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Discovery: Browse by… (v1, three structural frames)</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --paper-warm:   #faf2e0;
+    --postit:       #fbf3df;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --pill-frost:   rgba(245, 242, 235, 0.85);
+    --green:        #1e4d2b;
+    --green-light:  rgba(30,77,43,0.08);
+    --green-border: rgba(30,77,43,0.30);
+    --price-ink:    #6a4a30;
+
+    --lora:    "Lora", Georgia, serif;
+    --tnr:     "Times New Roman", Times, serif;
+    --sys:     -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1380px; margin: 0 auto; padding: 30px 20px 80px; }
+
+  h1.page-title {
+    font-family: var(--lora);
+    font-weight: 500;
+    color: #e8ddc7;
+    font-size: 28px;
+    margin: 0 0 6px;
+    text-align: center;
+    letter-spacing: -0.01em;
+  }
+  .page-subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 13px;
+    margin: 0 auto 30px;
+    line-height: 1.6;
+    max-width: 820px;
+    font-style: italic;
+    font-family: var(--lora);
+  }
+
+  .axis-section { margin: 40px auto 18px; max-width: 1340px; padding: 0 14px; }
+  .axis-section h2 {
+    font-family: var(--lora);
+    font-weight: 500;
+    color: #fff9e8;
+    font-size: 22px;
+    margin: 0 0 4px;
+    letter-spacing: -0.005em;
+    border-bottom: 1px solid rgba(232,221,199,0.2);
+    padding-bottom: 8px;
+  }
+  .axis-section .lede {
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 13px;
+    margin: 8px 0 22px;
+    line-height: 1.6;
+    max-width: 820px;
+  }
+  .axis-section .lede strong { color: #fff9e8; font-weight: 500; }
+
+  .frames-row {
+    display: grid;
+    gap: 28px;
+    margin: 0 auto 24px;
+    align-items: start;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: 1280px;
+  }
+  @media (max-width: 1200px) {
+    .frames-row { grid-template-columns: 1fr; max-width: 430px; }
+  }
+
+  .frame {
+    background: var(--paper);
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+    width: 100%;
+    max-width: 410px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .frame-label {
+    position: absolute;
+    top: -28px; left: 0;
+    color: rgba(232,221,199,0.55);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    font-family: var(--sys);
+  }
+  .frame-label strong { color: #fff9e8; font-weight: 600; text-transform: none; letter-spacing: 0; font-size: 13px; }
+
+  /* ── Masthead ─────────────────────────────────────────── */
+  .masthead {
+    height: 56px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--ink-hairline);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    position: relative;
+  }
+  .mast-back, .mast-right {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-mid);
+    font-size: 22px;
+  }
+  .mast-wordmark {
+    font-family: var(--tnr);
+    font-size: 22px;
+    color: var(--green);
+    font-weight: 500;
+    letter-spacing: 0.005em;
+  }
+
+  /* ── Page chrome ──────────────────────────────────────── */
+  .body { padding: 22px 16px 28px; min-height: 740px; }
+  .page-h {
+    font-family: var(--lora);
+    font-weight: 500;
+    font-size: 26px;
+    color: var(--ink-primary);
+    margin: 0 0 6px;
+    letter-spacing: -0.005em;
+  }
+  .page-preamble {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-muted);
+    margin: 0 0 22px;
+    line-height: 1.5;
+  }
+
+  /* ── Chip primitives ──────────────────────────────────── */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 14px;
+    border: 1px solid var(--ink-hairline);
+    background: var(--postit);
+    border-radius: 999px;
+    font-family: var(--lora);
+    font-size: 13px;
+    color: var(--ink-mid);
+    margin: 0 6px 8px 0;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .chip .count {
+    font-family: var(--tnr);
+    color: var(--green);
+    margin-left: 6px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .chip.lg { font-size: 15px; padding: 10px 16px; }
+  .chip.sm { font-size: 12px; padding: 6px 11px; }
+  .chip.green {
+    background: var(--green);
+    color: #fff9e8;
+    border-color: var(--green);
+  }
+  .chip.green .count { color: rgba(255,249,232,0.85); }
+
+  /* ── Frame A: flat tag wall ───────────────────────────── */
+  .chip-wall {
+    display: flex;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .wall-eyebrow {
+    font-family: var(--sys);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-muted);
+    font-weight: 600;
+    margin: 18px 0 8px;
+  }
+
+  /* ── Frame B: hierarchical rows ───────────────────────── */
+  .axis-block { margin-bottom: 22px; }
+  .axis-h {
+    font-family: var(--lora);
+    font-size: 17px;
+    color: var(--ink-primary);
+    margin: 0 0 4px;
+    font-weight: 500;
+  }
+  .axis-sub {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin: 0 0 10px;
+  }
+  .h-scroll {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin-right: -16px; /* bleed to edge */
+    scrollbar-width: none;
+  }
+  .h-scroll::-webkit-scrollbar { display: none; }
+  .h-scroll .chip { flex-shrink: 0; margin-right: 8px; margin-bottom: 0; }
+  .h-scroll-fade {
+    background: linear-gradient(90deg, transparent 0%, var(--paper) 90%);
+    width: 18px;
+    height: 32px;
+    margin-left: -18px;
+    pointer-events: none;
+  }
+
+  /* ── Frame C: editorial-led ───────────────────────────── */
+  .collection-card {
+    background: var(--postit);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 12px;
+    padding: 14px 14px 16px;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .collection-card .col-eyebrow {
+    font-family: var(--sys);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--green);
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+  .collection-card .col-title {
+    font-family: var(--lora);
+    font-size: 19px;
+    color: var(--ink-primary);
+    margin: 0 0 4px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+  }
+  .collection-card .col-meta {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin: 0 0 10px;
+  }
+  .col-thumbs {
+    display: flex;
+    gap: 6px;
+  }
+  .col-thumbs .thumb {
+    flex: 1;
+    aspect-ratio: 1;
+    background: #c9b89a;
+    border-radius: 4px;
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.10);
+  }
+  .col-thumbs .thumb-1 { background: linear-gradient(135deg, #b8a079 0%, #846b46 100%); }
+  .col-thumbs .thumb-2 { background: linear-gradient(135deg, #d4c4a8 0%, #a08560 100%); }
+  .col-thumbs .thumb-3 { background: linear-gradient(135deg, #9a7f5e 0%, #6e5236 100%); }
+  .col-thumbs .thumb-4 { background: linear-gradient(135deg, #c4a67d 0%, #7d603e 100%); }
+
+  .col-cta {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 12px;
+    color: var(--green);
+    font-family: var(--lora);
+    font-size: 13px;
+    border: 1px solid var(--green-border);
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(30,77,43,0.04);
+    font-weight: 500;
+  }
+
+  .browse-divider {
+    text-align: center;
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin: 18px 0 10px;
+    position: relative;
+  }
+  .browse-divider::before, .browse-divider::after {
+    content: "";
+    display: inline-block;
+    width: 30%;
+    height: 1px;
+    background: var(--ink-hairline);
+    vertical-align: middle;
+    margin: 0 10px;
+  }
+
+  /* ── Bottom nav ──────────────────────────────────────── */
+  .bottom-nav {
+    height: 60px;
+    background: var(--paper);
+    border-top: 1px solid var(--ink-hairline);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 12px;
+  }
+  .nav-icon {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-mid);
+    font-size: 22px;
+  }
+  .nav-icon.active { color: var(--green); }
+
+  /* ── Decision rail ───────────────────────────────────── */
+  .decisions {
+    background: rgba(232,221,199,0.06);
+    border: 1px solid rgba(232,221,199,0.18);
+    border-radius: 12px;
+    padding: 22px 26px;
+    margin: 36px auto 0;
+    max-width: 1120px;
+    color: rgba(232,221,199,0.82);
+    font-size: 13px;
+    line-height: 1.65;
+  }
+  .decisions h3 {
+    margin: 0 0 12px;
+    font-family: var(--lora);
+    font-weight: 500;
+    font-size: 18px;
+    color: #fff9e8;
+  }
+  .decisions ul { margin: 0; padding-left: 18px; }
+  .decisions li { margin-bottom: 8px; }
+  .decisions strong { color: #fff9e8; font-weight: 500; }
+  .decisions code {
+    background: rgba(232,221,199,0.10);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: #fff9e8;
+  }
+
+  /* ── Entry-point sub-section ─────────────────────────── */
+  .entry-row {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin: 14px auto 28px;
+    flex-wrap: wrap;
+  }
+  .entry-card {
+    background: var(--paper);
+    border-radius: 16px;
+    padding: 16px;
+    width: 270px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.30);
+  }
+  .entry-card .em-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 46px;
+    border-bottom: 1px solid var(--ink-hairline);
+    padding: 0 4px;
+  }
+  .entry-card .em-back { color: var(--ink-mid); font-size: 20px; }
+  .entry-card .em-mark { font-family: var(--tnr); font-size: 22px; color: var(--green); font-weight: 500; }
+  .entry-card .em-glyph {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-mid);
+    font-size: 22px;
+    border-radius: 999px;
+  }
+  .entry-card .em-glyph.has-bg {
+    background: rgba(42, 26, 10, 0.06);
+  }
+  .entry-card .em-label {
+    font-family: var(--lora);
+    font-size: 11px;
+    color: var(--ink-muted);
+    text-align: center;
+    margin-top: 10px;
+    font-style: italic;
+  }
+
+  /* ── Ascii icon stand-ins ────────────────────────────── */
+  .ico { font-family: var(--sys); font-weight: 300; line-height: 1; }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+  <h1 class="page-title">Discovery — "Browse by…" landing page</h1>
+  <p class="page-subtitle">
+    Three structural frames for the new discovery surface. Reached from a single masthead glyph (Compass) — no BottomNav slot consumed yet.
+    All three assume the AI extraction layer (object_type, material, era, color, subject, category) is already populating chip counts at write-time.
+  </p>
+
+  <!-- ────────────────────────────────────────────────────── -->
+  <!-- Entry-point sub-section                                -->
+  <!-- ────────────────────────────────────────────────────── -->
+  <div class="axis-section">
+    <h2>Entry point — the masthead glyph</h2>
+    <p class="lede">
+      Compass glyph (<code>PiCompass</code>, weight <code>regular</code>, 22px) in the right slot of <code>StickyMasthead</code>.
+      Picked over magnifying-glass because it matches the Treehouse thesis (<em>"digital tool for real-world exploration"</em>) — searching is what you do in a database; <strong>exploring</strong> is what you do in a mall.
+      The existing share-airplane stays on detail pages where it belongs; the compass replaces it on Home + /flagged.
+    </p>
+    <div class="entry-row">
+      <div class="entry-card">
+        <div class="em-row">
+          <div class="em-back">‹</div>
+          <div class="em-mark">Treehouse Finds</div>
+          <div class="em-glyph has-bg ico">◐</div>
+        </div>
+        <div class="em-label">Compass at top-right of Home masthead</div>
+      </div>
+      <div class="entry-card">
+        <div class="em-row">
+          <div class="em-back">‹</div>
+          <div class="em-mark">Treehouse Finds</div>
+          <div class="em-glyph ico">◐</div>
+        </div>
+        <div class="em-label">Variant: no bubble background (lighter weight)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ────────────────────────────────────────────────────── -->
+  <!-- The three structural frames                            -->
+  <!-- ────────────────────────────────────────────────────── -->
+  <div class="axis-section">
+    <h2>Three structural frames for the destination page</h2>
+    <p class="lede">
+      Each frame asks the same question: <strong>"how should the taxonomy be presented?"</strong> They are <em>not</em> style variants — they are three different mental models of what discovery is.
+      Frame A treats discovery as a flat library. Frame B treats it as a hierarchical filing cabinet. Frame C treats it as a guided editorial gallery with library access below.
+    </p>
+  </div>
+
+  <div class="frames-row">
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <!-- FRAME A — flat tag wall                              -->
+    <!-- ════════════════════════════════════════════════════ -->
+    <div>
+      <div class="frame-label"><strong>Frame A — Flat tag wall</strong> &nbsp;·&nbsp; Letterboxd / del.icio.us</div>
+      <div class="frame">
+        <div class="masthead">
+          <div class="mast-back">‹</div>
+          <div class="mast-wordmark">Treehouse Finds</div>
+          <div class="mast-right ico">◐</div>
+        </div>
+        <div class="body">
+          <h2 class="page-h">Browse</h2>
+          <p class="page-preamble">A field guide to what's out there. Tap any word.</p>
+
+          <div class="wall-eyebrow">Most-saved this week</div>
+          <div class="chip-wall">
+            <span class="chip lg">Brass <span class="count">42</span></span>
+            <span class="chip lg">MCM <span class="count">38</span></span>
+            <span class="chip lg">Ceramic <span class="count">31</span></span>
+            <span class="chip lg">Folk Art <span class="count">22</span></span>
+          </div>
+
+          <div class="wall-eyebrow">Everything else</div>
+          <div class="chip-wall">
+            <span class="chip">Amber Glass <span class="count">18</span></span>
+            <span class="chip">Art Deco <span class="count">14</span></span>
+            <span class="chip">Cast Iron <span class="count">29</span></span>
+            <span class="chip">Depression Glass <span class="count">11</span></span>
+            <span class="chip">Enamel <span class="count">7</span></span>
+            <span class="chip">Folk <span class="count">22</span></span>
+            <span class="chip">Glassware <span class="count">26</span></span>
+            <span class="chip">Hand-painted <span class="count">9</span></span>
+            <span class="chip">Industrial <span class="count">12</span></span>
+            <span class="chip">Lamps <span class="count">15</span></span>
+            <span class="chip">Linens <span class="count">6</span></span>
+            <span class="chip">Mid-Century <span class="count">38</span></span>
+            <span class="chip">Pewter <span class="count">5</span></span>
+            <span class="chip">Porcelain <span class="count">23</span></span>
+            <span class="chip">Pottery <span class="count">19</span></span>
+            <span class="chip">Pyrex <span class="count">17</span></span>
+            <span class="chip">Quilts <span class="count">8</span></span>
+            <span class="chip">Rustic <span class="count">13</span></span>
+            <span class="chip">Sterling <span class="count">10</span></span>
+            <span class="chip">Stoneware <span class="count">9</span></span>
+            <span class="chip">Toys <span class="count">14</span></span>
+            <span class="chip">Victorian <span class="count">7</span></span>
+            <span class="chip">Wood <span class="count">21</span></span>
+          </div>
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-icon ico">⌂</div>
+          <div class="nav-icon ico active">◐</div>
+          <div class="nav-icon ico">♡</div>
+          <div class="nav-icon ico">⛯</div>
+          <div class="nav-icon ico">○</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <!-- FRAME B — hierarchical rows by axis                  -->
+    <!-- ════════════════════════════════════════════════════ -->
+    <div>
+      <div class="frame-label"><strong>Frame B — Hierarchical rows</strong> &nbsp;·&nbsp; 1stDibs / Sotheby's</div>
+      <div class="frame">
+        <div class="masthead">
+          <div class="mast-back">‹</div>
+          <div class="mast-wordmark">Treehouse Finds</div>
+          <div class="mast-right ico">◐</div>
+        </div>
+        <div class="body">
+          <h2 class="page-h">Browse by…</h2>
+          <p class="page-preamble">Pick an axis. Then pick a thing.</p>
+
+          <div class="axis-block">
+            <h3 class="axis-h">By material</h3>
+            <p class="axis-sub">What it's made of.</p>
+            <div class="h-scroll">
+              <span class="chip">Brass <span class="count">42</span></span>
+              <span class="chip">Ceramic <span class="count">31</span></span>
+              <span class="chip">Glass <span class="count">26</span></span>
+              <span class="chip">Wood <span class="count">21</span></span>
+              <span class="chip">Cast Iron <span class="count">29</span></span>
+              <span class="chip">Porcelain <span class="count">23</span></span>
+            </div>
+          </div>
+
+          <div class="axis-block">
+            <h3 class="axis-h">By era</h3>
+            <p class="axis-sub">When it's from.</p>
+            <div class="h-scroll">
+              <span class="chip">Victorian <span class="count">7</span></span>
+              <span class="chip">Art Deco <span class="count">14</span></span>
+              <span class="chip">Mid-Century <span class="count">38</span></span>
+              <span class="chip">1970s <span class="count">19</span></span>
+              <span class="chip">1980s <span class="count">11</span></span>
+            </div>
+          </div>
+
+          <div class="axis-block">
+            <h3 class="axis-h">By object</h3>
+            <p class="axis-sub">What kind of thing.</p>
+            <div class="h-scroll">
+              <span class="chip">Lamps <span class="count">15</span></span>
+              <span class="chip">Vases <span class="count">22</span></span>
+              <span class="chip">Bookends <span class="count">8</span></span>
+              <span class="chip">Trays <span class="count">11</span></span>
+              <span class="chip">Quilts <span class="count">8</span></span>
+              <span class="chip">Toys <span class="count">14</span></span>
+            </div>
+          </div>
+
+          <div class="axis-block">
+            <h3 class="axis-h">By color</h3>
+            <p class="axis-sub">What catches the eye.</p>
+            <div class="h-scroll">
+              <span class="chip">Amber <span class="count">18</span></span>
+              <span class="chip">Cobalt <span class="count">9</span></span>
+              <span class="chip">Cream <span class="count">12</span></span>
+              <span class="chip">Forest Green <span class="count">7</span></span>
+              <span class="chip">Rust <span class="count">14</span></span>
+            </div>
+          </div>
+
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-icon ico">⌂</div>
+          <div class="nav-icon ico active">◐</div>
+          <div class="nav-icon ico">♡</div>
+          <div class="nav-icon ico">⛯</div>
+          <div class="nav-icon ico">○</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <!-- FRAME C — editorial-led with chip rail below         -->
+    <!-- ════════════════════════════════════════════════════ -->
+    <div>
+      <div class="frame-label"><strong>Frame C — Editorial + chip rail</strong> &nbsp;·&nbsp; Apartment Therapy / Cooper Hewitt</div>
+      <div class="frame">
+        <div class="masthead">
+          <div class="mast-back">‹</div>
+          <div class="mast-wordmark">Treehouse Finds</div>
+          <div class="mast-right ico">◐</div>
+        </div>
+        <div class="body">
+          <h2 class="page-h">Browse</h2>
+          <p class="page-preamble">Curated collections, then everything else.</p>
+
+          <!-- Editorial cards -->
+          <div class="collection-card">
+            <div class="col-eyebrow">This Week</div>
+            <h4 class="col-title">A Brass Story</h4>
+            <p class="col-meta">14 finds across 6 booths · updated Sunday</p>
+            <div class="col-thumbs">
+              <div class="thumb thumb-1"></div>
+              <div class="thumb thumb-2"></div>
+              <div class="thumb thumb-3"></div>
+              <div class="thumb thumb-4"></div>
+            </div>
+            <div class="col-cta">Open the collection →</div>
+          </div>
+
+          <div class="collection-card">
+            <div class="col-eyebrow">Curated</div>
+            <h4 class="col-title">Folk Art &amp; Found Objects</h4>
+            <p class="col-meta">22 finds · 4 Kentucky locations</p>
+            <div class="col-thumbs">
+              <div class="thumb thumb-2"></div>
+              <div class="thumb thumb-4"></div>
+              <div class="thumb thumb-1"></div>
+              <div class="thumb thumb-3"></div>
+            </div>
+            <div class="col-cta">Open the collection →</div>
+          </div>
+
+          <!-- Divider -->
+          <div class="browse-divider">or browse on your own</div>
+
+          <!-- Chip rail (compact) -->
+          <div class="chip-wall">
+            <span class="chip sm">Brass <span class="count">42</span></span>
+            <span class="chip sm">MCM <span class="count">38</span></span>
+            <span class="chip sm">Ceramic <span class="count">31</span></span>
+            <span class="chip sm">Cast Iron <span class="count">29</span></span>
+            <span class="chip sm">Glass <span class="count">26</span></span>
+            <span class="chip sm">Folk Art <span class="count">22</span></span>
+            <span class="chip sm">Wood <span class="count">21</span></span>
+            <span class="chip sm">Lamps <span class="count">15</span></span>
+            <span class="chip sm">Art Deco <span class="count">14</span></span>
+            <span class="chip sm">Pyrex <span class="count">17</span></span>
+            <span class="chip sm">Toys <span class="count">14</span></span>
+            <span class="chip sm">Pottery <span class="count">19</span></span>
+            <span class="chip sm">Quilts <span class="count">8</span></span>
+            <span class="chip sm">Sterling <span class="count">10</span></span>
+            <span class="chip sm">Victorian <span class="count">7</span></span>
+            <span class="chip sm">All tags →</span>
+          </div>
+
+        </div>
+        <div class="bottom-nav">
+          <div class="nav-icon ico">⌂</div>
+          <div class="nav-icon ico active">◐</div>
+          <div class="nav-icon ico">♡</div>
+          <div class="nav-icon ico">⛯</div>
+          <div class="nav-icon ico">○</div>
+        </div>
+      </div>
+    </div>
+
+  </div> <!-- /frames-row -->
+
+  <!-- ────────────────────────────────────────────────────── -->
+  <!-- Decision rail                                          -->
+  <!-- ────────────────────────────────────────────────────── -->
+  <div class="decisions">
+    <h3>Read-and-pick</h3>
+    <ul>
+      <li><strong>Frame A — Flat tag wall.</strong> Cheapest to ship, most "treasure-hunt feeling," but loses hierarchy. Counts are visible only by scanning. <em>Fits Treehouse if discovery is meant to feel like flipping through a card catalog.</em></li>
+      <li><strong>Frame B — Hierarchical rows.</strong> Most "professional," easiest to extend with new axes (e.g. by mall, by booth, by price-range). Horizontal scroll consumes vertical space. <em>Fits Treehouse if shoppers think in axes (material/era/object) the way they think in malls.</em></li>
+      <li><strong>Frame C — Editorial + chip rail.</strong> Most "Treehouse-voice" — collections are an editorial moment, chips are a fallback. Highest ongoing maintenance (curated collections need a human or admin tool). <em>Fits Treehouse if discovery is treated as storytelling first, taxonomy second.</em></li>
+    </ul>
+    <h3 style="margin-top: 18px;">What each implies for the data + AI layer</h3>
+    <ul>
+      <li><strong>Frame A:</strong> needs raw chip counts only. <code>posts.tags text[]</code> column populated by enriched <code>/api/post-caption</code>. Cheapest. ~+150 tokens per existing vision call.</li>
+      <li><strong>Frame B:</strong> needs <strong>typed</strong> attributes, not a flat tag list. <code>posts.material</code>, <code>posts.era</code>, <code>posts.object_type</code>, <code>posts.color</code>. Requires committing to a schema before enrichment can be useful. Slightly more upfront design.</li>
+      <li><strong>Frame C:</strong> needs Frame A's data <em>plus</em> a <code>collections</code> table (admin-curated picks: title + post_ids + cover thumbs + cadence). Adds an admin tool, but unlocks editorial voice.</li>
+    </ul>
+    <h3 style="margin-top: 18px;">What each implies for pagination</h3>
+    <ul>
+      <li><strong>All three:</strong> tapping a chip routes to <code>/?tag=brass</code> (or <code>?material=brass</code> for Frame B) — a narrowed Home feed. Pagination kicks in <em>only inside that narrowed scope</em>, not on the chip page itself. Existing infinite-scroll pattern can stay; it just runs against a smaller set.</li>
+      <li>The chip page is small (one screen, no pagination of its own). Pagination is a <em>consequence</em> of narrowing, not a parallel concern.</li>
+    </ul>
+    <h3 style="margin-top: 18px;">Recommendation</h3>
+    <ul>
+      <li><strong>Frame C with Frame A's data layer.</strong> Ship the chip rail backed by a flat <code>tags text[]</code> column (cheap enrichment), and stub the editorial cards as a single hand-curated collection at first ("This week's brass"). Defer the <code>collections</code> admin tool until the editorial cadence is proven manually.</li>
+      <li>If the editorial layer doesn't earn its keep after 3–4 weeks of beta, retire it back to Frame A. The chip rail is the durable part.</li>
+      <li>Frame B becomes interesting only if shoppers report the flat tag wall feels noisy — at which point we promote the underlying <code>tags text[]</code> values into typed columns. Defer until evidence demands it.</li>
+    </ul>
+  </div>
+
+</div>
+
+</body>
+</html>

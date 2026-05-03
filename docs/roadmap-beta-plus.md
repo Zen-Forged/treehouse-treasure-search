@@ -23,7 +23,7 @@ Each entry carries:
   - ✅ **Shipped** — absorbed by a merged PR (cross-ref the session).
 - **What / Why / Open questions** — the scoping substance.
 
-12 of 15 items (R1–R15) are 🟡 Captured. **R4c is ✅ Shipped as of session 57** — first roadmap item to go end-to-end (design-to-Ready session 56 → implementation + on-device QA PASSED 4/4 on prod session 57). **R3 is 🟢 Ready as of session 58** — second roadmap item to graduate, design-to-Ready landed in commit alongside its mockup + this status promotion. See the R3 + R4c entries below.
+**Status snapshot (as of session 102):** 16 items total (R1–R16). **8 ✅ Shipped:** R4a/R4b/R4c, R5a, R7, R11, R12 (all sessions 45–91). **2 🟢 Ready:** R3 (analytics), R16 (discovery search — captured AND promoted in session 102, only R-item to graduate same-day). **6 🟡 Captured:** R1, R2, R5b, R6, R8, R9, R10, R13, R14, R15.
 
 ---
 
@@ -62,6 +62,7 @@ David reviews and can override any of these.
 | R13 | Mall-operator accounts | User/Auth | L | R4c + shares infra with R1 | 🟡 Captured | Third persona (shopper / vendor / mall-operator / admin). Enables mall-level self-serve. |
 | R14 | Vendor profile enrichment + vendor social graph | User/Auth + Feed quality | M | — (compounds with R1, R3) | 🟡 Captured | Vendor-side counterpart to R1. Richer vendor profiles, vendor-to-vendor follow, future social surfaces. |
 | R15 | App store launch (iOS + Google Play) | Engagement + Reach | L+ | R6 (hard gate); compounds heavily with R9, R1, R12; absorbs Q-006 Universal Links | 🟡 Captured | Three possible technical paths (Capacitor wrapper / Expo rebuild / native). **Path decision is the load-bearing scoping moment.** |
+| R16 | Discovery: search bar on Home | Navigation/Discovery + Data | M | — (compounds with R3, R5b, R10) | 🟢 Ready (session 102) | Glass search bar on Home backed by AI-extracted tags written at post-publish time. No new destination page. Design record: [`docs/r16-discovery-search-design.md`](r16-discovery-search-design.md). Mockups: V1 (rejected landing page) / V1.5 / V2 picked. All 15 decisions D1–D15 frozen; implementation session can run as a straight sprint. |
 
 ---
 
@@ -503,6 +504,44 @@ Waves 1 + 2 + 3 together are realistically ~9–14 sessions (mix of S + M). That
 
 ---
 
+### R16 — Discovery: search bar on Home 🟢 Ready session 102
+
+> **Status:** 🟢 Ready. Captured AND promoted in session 102 (2026-05-02) — first R-item to graduate same-day. Full design record: [`docs/r16-discovery-search-design.md`](r16-discovery-search-design.md). Mockups: [`discovery-browse-by-v1.html`](mockups/discovery-browse-by-v1.html) (rejected landing page), [`discovery-search-bar-v1.html`](mockups/discovery-search-bar-v1.html) (3-state search bar), [`discovery-search-bar-v2.html`](mockups/discovery-search-bar-v2.html) (picked, with `PiBinocularsFill`).
+
+**What:** A glass-morphism search bar on Home, slotted between `StickyMasthead` and the mall scope block. Backed by AI-extracted tags written at post-publish time via an enriched `/api/post-caption` (no new AI route, ~+150 tokens output per existing vision call). Single Postgres `websearch_to_tsquery` against a generated tsvector covering title + caption + tags, with weights ranking title matches highest. URL-shareable (`?q=brass`), respects current mall scope by default, with a contextual "Search all of Kentucky →" escape hatch only when a mall-scoped search returns empty.
+
+**Why:** Beta-tester demand surfaced repeatedly in standups. Search, image-cataloging, and pagination are one product question dressed as three (*"how do shoppers find specific things in a growing feed?"*) — discovery via tags reduces the result set so pagination doesn't matter at beta scale, and tags are populated by the AI vision call vendors already pay for during posting. Ships the data-layer primitives (`posts.tags text[]` + tsvector + GIN index) that R10 (map), R5b (caps), and any future "trending tags" feature can reuse.
+
+**All 15 decisions frozen session 102** (D1–D15 — see design record for full detail):
+- D1 — in-place affordance, not a destination page ✅
+- D2 — bar above the mall scope block ✅
+- D3 — glass-morphism per David's CSS ✅
+- D4 — `PiBinocularsFill` lead icon (on-brand for Treehouse thesis) ✅
+- D5 — filter glyph present but inert in phase 1 ✅
+- D6 — multi-column tsvector over title + caption + tags ✅
+- D7 — search respects mall scope; "all of KY" escape hatch in empty state only ✅
+- D8 — enrich existing `/api/post-caption`, no new AI route ✅
+- D9 — flat `text[]`, not typed columns ✅
+- D10 — backfill via one-shot script (~$0.50 for ~120 posts) ✅
+- D11 — URL state `?q=brass` ✅
+- D12 — empty state: italic Lora line + outlined green CTA ✅
+- D13 — no result-count header, no matching-reason chips ✅
+- D14 — bar scrolls away with masthead (not sticky) ✅
+- D15 — placeholder copy "Search finds, booths, or styles" ✅
+
+**Remaining open questions (deferred to implementation):**
+- Whether vendor/mall name search lands phase 1 or defers (recommendation: defer; phase-1 limitation).
+- Empty-state CTA wording — "Search…" vs "Look across…" verb (decide on real device).
+- Whether to add `search_performed` event under R3 (out of scope for R16; ~5 min add later).
+
+**Design prereq:** ✅ Complete. 3 mockups + scoping doc landed session 102.
+
+**Compounds with:** R3 (search analytics events become natural extension), R10 (binoculars icon vocabulary extends to map), R5b (tag-extracted material/era data informs cap tuning).
+
+**Elevated from:** "Open additions" + CLAUDE.md `feed pagination + search` parked item. Beta-tester demand made the timing right; the Treehouse thesis (digital-to-physical bridge) sharpened the framing — search is "scout the landscape" (binoculars), not "query the database" (magnifying glass).
+
+---
+
 ## Items absorbed from CLAUDE.md parked lists
 
 These were already tracked somewhere in CLAUDE.md but are semantically related to the captured items above. Cross-referencing here so they are not double-planned later.
@@ -514,7 +553,7 @@ These were already tracked somewhere in CLAUDE.md but are semantically related t
 | `vendor directory` (Sprint 6+) | R10 (map) | Adjacent but distinct. Directory is list-based, map is geographic. Decide at R10 scoping whether to merge or keep parallel. |
 | `native app eval` (Sprint 6+) | R9 (push) | R9 is the strongest business case for a native app. Bundle the eval into R9 scoping. |
 | `/welcome` guest landing (Sprint 6+) | R8 (onboarding) | Same item. R8 supersedes. |
-| `feed pagination + search` (Sprint 6+) | R5a (feed window) | Adjacent. Pagination becomes easier once R5a caps feed length; search is independent. |
+| `feed pagination + search` (Sprint 6+) | **R16** (discovery search bar — session 102) | **Search elevated to R16 in session 102.** Pagination remains parked — R16 narrows the feed via search/scope, which keeps the result set under the degradation threshold at beta scale. |
 | KI-005 pre-approval sign-in signaling gap | R1 + R8 | Resolved at R1/R8 scoping. |
 | `PWA pull-to-refresh` (Sprint 5) | — | Not related to any captured item. Remains parked. |
 | `Post-approval booth-name edit surface` (Sprint 5) | — | Not related. Remains parked. |
@@ -538,6 +577,10 @@ Items flagged during capture but left parked pending future review:
 - ~~Mall-operator accounts~~ → **elevated as R13**.
 - ~~Vendor profile enrichment~~ → **elevated as R14** (surfaced during review as the vendor-side counterpart to R1, which was originally captured as shopper-only).
 - ~~App store launch~~ → **elevated as R15** (surfaced during cluster/priority review as a major-item gap missed in the initial 11 + 3 pass).
+
+### Resolved during session 102
+
+- ~~Feed search~~ → **elevated AND scoped to 🟢 Ready as R16** in the same session. Beta-tester demand surfaced in standup; image-cataloging + pagination + search recognized as one product question; design-to-Ready pass collapsed to one session via the V1 landing-page mockup → David pivot → V1.5 search-bar mockup → V2 binoculars-icon refinement. First R-item to graduate same-day.
 
 ---
 

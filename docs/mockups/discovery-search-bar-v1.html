@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Discovery: search bar on Home (v1, three states)</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --paper-warm:   #faf2e0;
+    --postit:       #fbf3df;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --green:        #1e4d2b;
+    --green-border: rgba(30,77,43,0.28);
+    --price-ink:    #6a4a30;
+
+    --lora:    "Lora", Georgia, serif;
+    --tnr:     "Times New Roman", Times, serif;
+    --sys:     -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1380px; margin: 0 auto; padding: 30px 20px 80px; }
+
+  h1.page-title {
+    font-family: var(--lora);
+    font-weight: 500;
+    color: #e8ddc7;
+    font-size: 28px;
+    margin: 0 0 6px;
+    text-align: center;
+    letter-spacing: -0.01em;
+  }
+  .page-subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 13px;
+    margin: 0 auto 30px;
+    line-height: 1.6;
+    max-width: 820px;
+    font-style: italic;
+    font-family: var(--lora);
+  }
+
+  .frames-row {
+    display: grid;
+    gap: 36px;
+    margin: 0 auto 24px;
+    align-items: start;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: 1320px;
+  }
+  @media (max-width: 1240px) {
+    .frames-row { grid-template-columns: 1fr; max-width: 430px; }
+  }
+
+  .frame-col { display: flex; flex-direction: column; align-items: center; }
+  .frame-label {
+    color: rgba(232,221,199,0.55);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    font-family: var(--sys);
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .frame-label strong {
+    color: #fff9e8;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 14px;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .frame {
+    background: var(--paper);
+    border-radius: 26px;
+    overflow: hidden;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+    width: 100%;
+    max-width: 410px;
+    position: relative;
+    /* Subtle leaf shadow at top-left to mimic David's screenshot vibe */
+  }
+  .frame::before {
+    content: "";
+    position: absolute;
+    top: 8px; left: 0;
+    width: 110px; height: 110px;
+    background:
+      radial-gradient(ellipse 80px 30px at 30px 30px, rgba(42,26,10,0.07), transparent 70%),
+      radial-gradient(ellipse 50px 60px at 65px 70px, rgba(42,26,10,0.05), transparent 70%);
+    pointer-events: none;
+    border-radius: 26px 0 0 0;
+    z-index: 1;
+  }
+
+  /* ── Status bar ──────────────────────────────────────── */
+  .status-bar {
+    height: 40px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 22px;
+    font-family: var(--sys);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-primary);
+    position: relative;
+    z-index: 2;
+  }
+  .status-bar .right { display: flex; gap: 6px; align-items: center; font-size: 11px; }
+  .status-bar .battery {
+    background: var(--ink-primary);
+    color: var(--paper);
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  /* ── Wordmark masthead ──────────────────────────────── */
+  .wordmark {
+    text-align: center;
+    padding: 8px 0 16px;
+    position: relative;
+    z-index: 2;
+  }
+  .wordmark .leaf {
+    font-size: 22px;
+    color: var(--green);
+    line-height: 1;
+    margin-bottom: -4px;
+    display: inline-block;
+    transform: rotate(-15deg);
+  }
+  .wordmark .name-row {
+    font-family: var(--lora);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 36px;
+    color: var(--ink-mid);
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+  .wordmark .finds-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .wordmark .finds-row .rule {
+    width: 28px; height: 1px;
+    background: var(--ink-muted);
+  }
+  .wordmark .finds-row .word {
+    font-family: var(--sys);
+    font-size: 16px;
+    color: var(--ink-mid);
+    letter-spacing: 0.01em;
+  }
+
+  /* ── Search bar (David's CSS, on paperCream context) ── */
+  .search-wrap { padding: 0 18px; position: relative; z-index: 2; }
+  .search-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow:
+      0 1px 0 rgba(0, 0, 0, 0.04),
+      0 8px 24px rgba(0, 0, 0, 0.06);
+    transition: all 180ms ease;
+  }
+  .search-bar.focused {
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow:
+      0 1px 0 rgba(0, 0, 0, 0.04),
+      0 12px 32px rgba(0, 0, 0, 0.10),
+      0 0 0 3px rgba(30,77,43,0.08);
+    border-color: rgba(30,77,43,0.20);
+  }
+  .search-bar .mag {
+    color: var(--ink-mid);
+    font-size: 18px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .search-bar input,
+  .search-bar .input-fake {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-family: var(--lora);
+    font-size: 15px;
+    color: var(--ink-primary);
+    line-height: 1.2;
+  }
+  .search-bar .input-fake.placeholder { color: var(--ink-faint); font-style: italic; }
+  .search-bar .input-fake.value      { color: var(--ink-primary); font-style: normal; }
+
+  .search-bar .divider {
+    width: 1px;
+    height: 22px;
+    background: rgba(0,0,0,0.10);
+    flex-shrink: 0;
+  }
+  .search-bar .filter-glyph,
+  .search-bar .clear-glyph {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-mid);
+    font-size: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+    border-radius: 999px;
+  }
+  .search-bar .clear-glyph { font-size: 16px; background: rgba(0,0,0,0.05); }
+
+  /* ── Mall scope block ────────────────────────────────── */
+  .scope { padding: 22px 22px 16px; position: relative; z-index: 2; }
+  .scope .eyebrow {
+    font-family: var(--sys);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-muted);
+    font-weight: 600;
+    margin: 0 0 6px;
+  }
+  .scope h1.mall-name {
+    font-family: var(--lora);
+    font-weight: 500;
+    font-size: 30px;
+    color: var(--ink-primary);
+    margin: 0 0 10px;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .scope h1.mall-name .chev {
+    font-size: 18px;
+    color: var(--ink-muted);
+    font-weight: 400;
+  }
+  .scope .addr-row {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--ink-mid);
+    font-family: var(--lora);
+    font-size: 13px;
+  }
+  .scope .addr-row .pin { color: var(--green); font-size: 16px; line-height: 1; }
+  .scope .addr-row .addr {
+    border-bottom: 1px dotted var(--ink-faint);
+    padding-bottom: 1px;
+  }
+
+  .hairline {
+    height: 1px;
+    background: var(--ink-hairline);
+    margin: 18px 22px 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* ── Masonry (polaroid tiles, simplified) ────────────── */
+  .masonry {
+    padding: 18px 14px 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    position: relative;
+    z-index: 2;
+  }
+  .tile {
+    background: var(--paper-warm);
+    border-radius: 4px;
+    padding: 7px 7px 10px;
+    box-shadow:
+      0 6px 14px rgba(0,0,0,0.20),
+      0 1.5px 3px rgba(0,0,0,0.10);
+    position: relative;
+  }
+  .tile .photo {
+    aspect-ratio: 4/5;
+    border-radius: 2px;
+    background-size: cover;
+    background-position: center;
+    margin-bottom: 6px;
+    position: relative;
+  }
+  .tile .photo .age {
+    position: absolute;
+    left: 6px; bottom: 6px;
+    background: rgba(42,26,10,0.65);
+    color: #fff9e8;
+    font-family: var(--sys);
+    font-size: 10px;
+    padding: 3px 7px;
+    border-radius: 999px;
+    backdrop-filter: blur(6px);
+  }
+  .tile .photo .save-bubble {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 32px; height: 32px;
+    border-radius: 999px;
+    background: rgba(245, 242, 235, 0.85);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-mid);
+    font-size: 16px;
+  }
+
+  /* Tile photo gradients (stand-ins for real find photos) */
+  .photo.painting-1 { background: linear-gradient(135deg, #6a8aa3 0%, #3d5566 50%, #2a3a47 100%); }
+  .photo.painting-2 { background: linear-gradient(135deg, #b8a079 0%, #846b46 50%, #4a3a26 100%); }
+  .photo.bust-1     { background: linear-gradient(135deg, #c9c0ad 0%, #8a8175 50%, #534b3f 100%); }
+  .photo.brass-1    { background: linear-gradient(135deg, #c8a155 0%, #8a6b35 50%, #4e3a1c 100%); }
+  .photo.brass-2    { background: linear-gradient(135deg, #d4b471 0%, #9a7a3e 50%, #5d4622 100%); }
+  .photo.brass-3    { background: linear-gradient(135deg, #b89a5a 0%, #75592a 100%); }
+
+  /* ── Empty state ──────────────────────────────────── */
+  .empty {
+    padding: 40px 32px;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+  }
+  .empty .em-msg {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-muted);
+    margin: 0 0 16px;
+    line-height: 1.5;
+  }
+  .empty .em-msg strong { color: var(--ink-mid); font-style: normal; font-weight: 500; }
+  .empty .em-cta {
+    display: inline-flex;
+    align-items: center;
+    color: var(--green);
+    font-family: var(--lora);
+    font-size: 14px;
+    border: 1px solid var(--green-border);
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(30,77,43,0.04);
+    font-weight: 500;
+  }
+
+  /* ── Bottom nav ──────────────────────────────────────── */
+  .bottom-nav {
+    height: 70px;
+    background: var(--paper);
+    border-top: 1px solid var(--ink-hairline);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-around;
+    padding: 8px 12px 0;
+    position: relative;
+    z-index: 2;
+  }
+  .nav-tab {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px;
+    color: var(--ink-mid);
+  }
+  .nav-tab .ic {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    line-height: 1;
+    position: relative;
+  }
+  .nav-tab .lbl {
+    font-family: var(--sys);
+    font-size: 11px;
+    color: var(--ink-mid);
+  }
+  .nav-tab.active .ic, .nav-tab.active .lbl { color: var(--green); }
+  .nav-tab.active .ic { font-weight: 700; }
+  .nav-tab .badge {
+    position: absolute;
+    top: -3px; right: -8px;
+    background: var(--green);
+    color: #fff9e8;
+    font-family: var(--sys);
+    font-size: 9px;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    padding: 0 4px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── Decision rail ───────────────────────────────────── */
+  .decisions {
+    background: rgba(232,221,199,0.06);
+    border: 1px solid rgba(232,221,199,0.18);
+    border-radius: 12px;
+    padding: 22px 26px;
+    margin: 36px auto 0;
+    max-width: 1120px;
+    color: rgba(232,221,199,0.82);
+    font-size: 13px;
+    line-height: 1.65;
+  }
+  .decisions h3 {
+    margin: 18px 0 10px;
+    font-family: var(--lora);
+    font-weight: 500;
+    font-size: 17px;
+    color: #fff9e8;
+  }
+  .decisions h3:first-child { margin-top: 0; }
+  .decisions ul { margin: 0; padding-left: 18px; }
+  .decisions li { margin-bottom: 8px; }
+  .decisions strong { color: #fff9e8; font-weight: 500; }
+  .decisions code {
+    background: rgba(232,221,199,0.10);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: #fff9e8;
+  }
+  .decisions em { color: rgba(232,221,199,0.95); }
+
+  /* ── ASCII glyph stand-ins ────────────────────────────── */
+  .ico { font-family: var(--sys); font-weight: 300; line-height: 1; }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+  <h1 class="page-title">Discovery — search bar on Home (v1)</h1>
+  <p class="page-subtitle">
+    Three states of the same surface. Per the design philosophy: one in-place affordance, no destination page.
+    Glass-morphism per David's CSS. Filter glyph on the right is inert in phase 1 — phase 2 hook.
+  </p>
+
+  <div class="frames-row">
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <!-- STATE 1 — IDLE                                       -->
+    <!-- ════════════════════════════════════════════════════ -->
+    <div class="frame-col">
+      <div class="frame-label"><strong>State 1 — Idle</strong>Default Home, no query</div>
+      <div class="frame">
+        <div class="status-bar">
+          <span>12:18 ☾</span>
+          <span class="right">SOS &nbsp; ▮▮▮ <span class="battery">50</span></span>
+        </div>
+
+        <div class="wordmark">
+          <div class="leaf">❦</div>
+          <div class="name-row">treehouse</div>
+          <div class="finds-row"><span class="rule"></span><span class="word">finds</span><span class="rule"></span></div>
+        </div>
+
+        <div class="search-wrap">
+          <div class="search-bar">
+            <span class="mag ico">⌕</span>
+            <span class="input-fake placeholder">Search finds, booths, or styles</span>
+            <span class="divider"></span>
+            <span class="filter-glyph ico">⇅</span>
+          </div>
+        </div>
+
+        <div class="scope">
+          <div class="eyebrow">Finds from</div>
+          <h1 class="mall-name">America's Antique Mall <span class="chev ico">⌄</span></h1>
+          <div class="addr-row"><span class="pin">⚲</span><span class="addr">5252 Bardstown Rd, Louisville, KY 40291</span></div>
+        </div>
+
+        <div class="hairline"></div>
+
+        <div class="masonry">
+          <div class="tile">
+            <div class="photo painting-1">
+              <div class="save-bubble ico">⌘</div>
+              <div class="age">4d ago</div>
+            </div>
+          </div>
+          <div class="tile">
+            <div class="photo painting-2">
+              <div class="save-bubble ico">⌘</div>
+              <div class="age">4d ago</div>
+            </div>
+          </div>
+          <div class="tile">
+            <div class="photo bust-1">
+              <div class="save-bubble ico">⌘</div>
+              <div class="age">4d ago</div>
+            </div>
+          </div>
+          <div class="tile">
+            <div class="photo brass-1">
+              <div class="save-bubble ico">⌘</div>
+              <div class="age">4d ago</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="nav-tab active"><div class="ic ico">⌂</div><div class="lbl">Home</div></div>
+          <div class="nav-tab"><div class="ic ico">○</div><div class="lbl">Profile</div></div>
+          <div class="nav-tab"><div class="ic ico">▦</div><div class="lbl">Booths</div></div>
+          <div class="nav-tab"><div class="ic ico">❦<div class="badge">3</div></div><div class="lbl">Saved</div></div>
+          <div class="nav-tab"><div class="ic ico">⚷</div><div class="lbl">Admin</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <!-- STATE 2 — ACTIVE WITH RESULTS                        -->
+    <!-- ════════════════════════════════════════════════════ -->
+    <div class="frame-col">
+      <div class="frame-label"><strong>State 2 — Active with results</strong>Query "brass" → masonry filters in place</div>
+      <div class="frame">
+        <div class="status-bar">
+          <span>12:18 ☾</span>
+          <span class="right">SOS &nbsp; ▮▮▮ <span class="battery">50</span></span>
+        </div>
+
+        <div class="wordmark">
+          <div class="leaf">❦</div>
+          <div class="name-row">treehouse</div>
+          <div class="finds-row"><span class="rule"></span><span class="word">finds</span><span class="rule"></span></div>
+        </div>
+
+        <div class="search-wrap">
+          <div class="search-bar focused">
+            <span class="mag ico">⌕</span>
+            <span class="input-fake value">brass</span>
+            <span class="clear-glyph ico">×</span>
+            <span class="divider"></span>
+            <span class="filter-glyph ico">⇅</span>
+          </div>
+        </div>
+
+        <div class="scope">
+          <div class="eyebrow">Finds from</div>
+          <h1 class="mall-name">America's Antique Mall <span class="chev ico">⌄</span></h1>
+          <div class="addr-row"><span class="pin">⚲</span><span class="addr">5252 Bardstown Rd, Louisville, KY 40291</span></div>
+        </div>
+
+        <div class="hairline"></div>
+
+        <div class="masonry">
+          <div class="tile">
+            <div class="photo brass-1">
+              <div class="save-bubble ico">⌘</div>
+              <div class="age">4d ago</div>
+            </div>
+          </div>
+          <div class="tile">
+            <div class="photo brass-2">
+              <div class="save-bubble ico">⌘</div>
+              <div class="age">2d ago</div>
+            </div>
+          </div>
+          <div class="tile">
+            <div class="photo brass-3">
+              <div class="save-bubble ico">⌘</div>
+              <div class="age">6d ago</div>
+            </div>
+          </div>
+          <div class="tile">
+            <div class="photo painting-2">
+              <div class="save-bubble ico">⌘</div>
+              <div class="age">4d ago</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="nav-tab active"><div class="ic ico">⌂</div><div class="lbl">Home</div></div>
+          <div class="nav-tab"><div class="ic ico">○</div><div class="lbl">Profile</div></div>
+          <div class="nav-tab"><div class="ic ico">▦</div><div class="lbl">Booths</div></div>
+          <div class="nav-tab"><div class="ic ico">❦<div class="badge">3</div></div><div class="lbl">Saved</div></div>
+          <div class="nav-tab"><div class="ic ico">⚷</div><div class="lbl">Admin</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════ -->
+    <!-- STATE 3 — EMPTY (no results in current mall)         -->
+    <!-- ════════════════════════════════════════════════════ -->
+    <div class="frame-col">
+      <div class="frame-label"><strong>State 3 — No results in mall</strong>Quiet message + escape hatch</div>
+      <div class="frame">
+        <div class="status-bar">
+          <span>12:18 ☾</span>
+          <span class="right">SOS &nbsp; ▮▮▮ <span class="battery">50</span></span>
+        </div>
+
+        <div class="wordmark">
+          <div class="leaf">❦</div>
+          <div class="name-row">treehouse</div>
+          <div class="finds-row"><span class="rule"></span><span class="word">finds</span><span class="rule"></span></div>
+        </div>
+
+        <div class="search-wrap">
+          <div class="search-bar focused">
+            <span class="mag ico">⌕</span>
+            <span class="input-fake value">depression glass</span>
+            <span class="clear-glyph ico">×</span>
+            <span class="divider"></span>
+            <span class="filter-glyph ico">⇅</span>
+          </div>
+        </div>
+
+        <div class="scope">
+          <div class="eyebrow">Finds from</div>
+          <h1 class="mall-name">America's Antique Mall <span class="chev ico">⌄</span></h1>
+          <div class="addr-row"><span class="pin">⚲</span><span class="addr">5252 Bardstown Rd, Louisville, KY 40291</span></div>
+        </div>
+
+        <div class="hairline"></div>
+
+        <div class="empty">
+          <p class="em-msg">
+            Nothing matching <strong>"depression glass"</strong> at this location yet.
+          </p>
+          <span class="em-cta">Search all of Kentucky →</span>
+        </div>
+
+        <div class="bottom-nav">
+          <div class="nav-tab active"><div class="ic ico">⌂</div><div class="lbl">Home</div></div>
+          <div class="nav-tab"><div class="ic ico">○</div><div class="lbl">Profile</div></div>
+          <div class="nav-tab"><div class="ic ico">▦</div><div class="lbl">Booths</div></div>
+          <div class="nav-tab"><div class="ic ico">❦<div class="badge">3</div></div><div class="lbl">Saved</div></div>
+          <div class="nav-tab"><div class="ic ico">⚷</div><div class="lbl">Admin</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ────────────────────────────────────────────────────── -->
+  <!-- Decision rail                                          -->
+  <!-- ────────────────────────────────────────────────────── -->
+  <div class="decisions">
+    <h3>What stays in every state</h3>
+    <ul>
+      <li>Wordmark masthead, search bar, mall scope block, hairline, BottomNav. <strong>No surfaces appear or disappear</strong> based on search state — only the masonry below the hairline changes.</li>
+      <li>Mall picker stays — search respects the current mall scope by default. The "Search all of Kentucky" link only appears in the empty state, as a contextual escape hatch.</li>
+      <li>The filter glyph (right side of bar) is inert in phase 1. Phase 2 hook for axis-narrowing (material / era / object) if shopper data shows demand.</li>
+    </ul>
+
+    <h3>What changes between states</h3>
+    <ul>
+      <li><strong>Idle → Active:</strong> bar gains a 3px green ring + lifted shadow + opaque background. Clear (×) glyph appears next to the typed query.</li>
+      <li><strong>Active with results:</strong> masonry re-sorts to matching tiles. <em>No extra labels, no "12 results" header, no matching-reason chips.</em> Per the design philosophy: "we don't need to call it out anywhere."</li>
+      <li><strong>Active empty:</strong> masonry replaced by a single italic Lora line + outlined green CTA. Both phrased contextually: <em>"Nothing matching 'X' at this location yet"</em> + <em>"Search all of Kentucky →"</em>.</li>
+    </ul>
+
+    <h3>What ships in phase 1 (UI)</h3>
+    <ul>
+      <li>One <code>&lt;SearchBar&gt;</code> primitive, slotted between <code>StickyMasthead</code> and the mall picker on Home.</li>
+      <li>Glass-morphism CSS exactly as David specified. <code>backdrop-filter: blur(10px)</code> works in iOS Safari 9+ and is harmless on browsers that don't support it (falls back to the 65% white background).</li>
+      <li>Debounced 200ms, query writes to <code>?q=brass</code>. URL-shareable. Browser back exits the search cleanly.</li>
+      <li>Empty-state escape hatch routes to the same Home with mall scope cleared (<code>?q=brass&amp;mall=all</code>).</li>
+    </ul>
+
+    <h3>What ships in phase 1 (data layer — the actual work)</h3>
+    <ul>
+      <li>New migration <code>019_post_tags_and_search.sql</code>: adds <code>posts.tags text[]</code> + a generated <code>tsvector</code> column over <code>title || caption || tags || vendor.display_name || mall.name</code> + a GIN index on it.</li>
+      <li>Enrich existing <code>/api/post-caption</code> (Sonnet 4.6 vision call already firing on every find) to also return 5–6 categorical tags in the same JSON response — same image, same model, ~+150 tokens output. <strong>No new AI route, no extra round-trip per post.</strong></li>
+      <li>One-shot backfill script <code>scripts/backfill-tags.ts</code> runs <code>/api/post-caption</code>-style enrichment over existing rows. Cost estimate at ~120 posts: ~$0.50 in Sonnet vision calls.</li>
+      <li>Search query: single Postgres call with <code>websearch_to_tsquery('english', $1)</code> against the GIN index. Sub-50ms even on 10K rows.</li>
+    </ul>
+
+    <h3>Out of scope (phase 1)</h3>
+    <ul>
+      <li>Filter glyph is non-interactive. No axis chips, no sort, no "by material" UI.</li>
+      <li>No search history, no recent-searches dropdown, no autocomplete.</li>
+      <li>No matching-reason metadata on tiles ("matched: tag" chips). The magic is that it just works.</li>
+      <li>No analytics on what shoppers search for — comes free via R3 if we add a single <code>search_performed</code> event later (~5 min).</li>
+    </ul>
+
+    <h3>Open implementation questions</h3>
+    <ul>
+      <li>Should the search bar persist when scrolling (sticky below the wordmark) or scroll away with the masthead? Default: scrolls away — sticky search bar is heavier visual chrome and the user can swipe up to expose it.</li>
+      <li>What's the tag taxonomy we ask Claude for? Suggested 6 axes: <code>material</code>, <code>era</code>, <code>object_type</code>, <code>color</code>, <code>subject</code>, <code>category</code>. Reusable from <code>/api/identify</code>'s schema (the reseller layer's prompt) but trimmed.</li>
+      <li>Empty-state copy — keep "Nothing matching 'X' at this location yet" or shorten to "No matches yet"? Long form gives more "Treehouse voice"; short form is faster to read.</li>
+    </ul>
+  </div>
+
+</div>
+
+</body>
+</html>
