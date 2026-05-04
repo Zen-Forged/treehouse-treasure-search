@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>R10 — Postcard mall card (v4 · square stamp + ink cancellation)</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper-cream:   #e8ddc7;
+    --paper-warm:    #faf2e0;
+    --postcard-bg:   #f4ecd8;
+    --ink-primary:   #2a1a0a;
+    --ink-mid:       #4a3520;
+    --ink-muted:     #6b5538;
+    --ink-faint:     rgba(42,26,10,0.45);
+    --ink-hairline:  rgba(42,26,10,0.18);
+    --green:         #1e4d2b;
+    --green-on:      #fff9e8;
+    --green-border:  rgba(30,77,43,0.40);
+
+    --lora: "Lora", Georgia, serif;
+    --sys:  -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+
+    --shadow-postcard: 0 4px 14px rgba(42,26,10,0.16), 0 1px 2px rgba(42,26,10,0.08);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #1a1612; font-family: var(--sys); color: var(--ink-primary); }
+
+  /* ── Decisions pane ─────────────────────────────────────────── */
+  .decisions {
+    max-width: 880px; margin: 0 auto; padding: 40px 24px 28px; color: rgba(232,221,199,0.92);
+  }
+  .decisions h1 {
+    font-family: var(--lora); font-weight: 400; font-size: 30px; color: #f0e6cf;
+    margin: 0 0 6px; text-align: center; letter-spacing: -0.005em;
+  }
+  .decisions .subtitle {
+    text-align: center; color: rgba(232,221,199,0.62); font-size: 14px;
+    margin: 0 auto 22px; line-height: 1.65; max-width: 700px;
+  }
+  .decisions .meta {
+    text-align: center; color: rgba(232,221,199,0.42); font-size: 11px;
+    margin: 0 auto 22px; font-family: var(--lora); font-style: italic;
+  }
+  .pick-box {
+    background: rgba(232,221,199,0.06);
+    border: 1px solid rgba(232,221,199,0.14);
+    border-radius: 12px; padding: 20px 24px; margin: 0 0 12px;
+  }
+  .pick-box .q {
+    font-family: var(--lora); font-style: italic; font-size: 15px;
+    color: rgba(232,221,199,0.74); margin: 0 0 8px;
+  }
+  .pick-box p { margin: 0 0 10px; font-size: 13px; line-height: 1.7; color: rgba(232,221,199,0.82); }
+  .pick-box p:last-child { margin-bottom: 0; }
+  .pick-box strong { color: #f0e6cf; }
+  .pick-box ul { margin: 4px 0 6px 18px; padding: 0; color: rgba(232,221,199,0.78); font-size: 12.5px; }
+  .pick-box li { line-height: 1.7; }
+  .pick-box code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 3px; color: rgba(255,243,200,0.92); }
+
+  .section-header {
+    max-width: 1120px;
+    margin: 30px auto 18px;
+    padding: 0 24px;
+    color: rgba(232, 221, 199, 0.92);
+    font-family: var(--lora);
+    font-size: 22px;
+    font-weight: 400;
+    border-bottom: 1px solid rgba(232, 221, 199, 0.16);
+    padding-bottom: 8px;
+  }
+  .section-header small {
+    display: block; font-style: italic; font-size: 13px; color: rgba(232,221,199,0.52);
+    font-family: var(--lora); margin-top: 4px;
+  }
+
+  /* ════════════════════════════════════════════════════════════════
+     POSTCARD MALL CARD — v4 (square stamp, ink cancellation)
+     ════════════════════════════════════════════════════════════════ */
+  .mall-card {
+    background: var(--postcard-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow-postcard);
+    border: 1px solid rgba(42,26,10,0.10);
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  /* Subtle paper texture */
+  .mall-card::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse at 18% 25%, rgba(255,255,255,0.18) 0%, transparent 40%),
+      radial-gradient(ellipse at 82% 75%, rgba(42,26,10,0.05) 0%, transparent 50%);
+  }
+
+  .mall-card .text-block {
+    flex: 1; min-width: 0;
+    /* Reserve space on the right for cancellation + stamp.
+       Stamp is 52, gap 14 — but we also need room for cancellation
+       which slightly overlaps stamp from the left. Add right padding so
+       the address doesn't run under the wavy ink. */
+    padding-right: 28px;
+    display: flex; flex-direction: column; justify-content: center;
+    position: relative; z-index: 1;
+  }
+  .mall-card .from-line {
+    font-family: var(--lora); font-style: italic; font-size: 18px;
+    color: var(--ink-muted); margin: 0 0 4px; line-height: 1;
+  }
+  .mall-card .name {
+    font-family: var(--lora); font-weight: 500; font-size: 26px;
+    color: var(--ink-primary); line-height: 1.15; letter-spacing: -0.005em;
+    margin: 0 0 8px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .mall-card .addr-row {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--sys); font-size: 13px; color: var(--ink-mid);
+    line-height: 1.3;
+  }
+  .mall-card .addr-row .pin {
+    color: var(--ink-mid); display: flex; flex-shrink: 0;
+  }
+  .mall-card .addr-row .addr {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* Square stamp — vertically centered as a flex item. */
+  .mall-card .stamp {
+    width: 52px; height: 52px;
+    background: var(--paper-warm);
+    border: 1.5px dashed var(--green-border);
+    border-radius: 4px;
+    padding: 4px;
+    display: flex;
+    flex-shrink: 0;
+    align-self: center;
+    z-index: 1;
+  }
+  .mall-card .stamp .stamp-inner {
+    flex: 1;
+    background: var(--green);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--green-on);
+  }
+  .mall-card .stamp .stamp-inner svg { display: block; }
+
+  /* Ink cancellation — wavy SVG paths, partial overlap with stamp.
+     Positioned absolute relative to .mall-card so it can extend across
+     the gap and slightly into the stamp's left edge. */
+  .mall-card .cancellation {
+    position: absolute;
+    /* Right edge sits ~14px into the stamp from its left edge,
+       which is 16(card-pad) + 52(stamp) - 14(overlap) = 54 from outer right. */
+    right: 54px;
+    top: 50%;
+    transform: translateY(-50%) rotate(-6deg);
+    width: 84px; height: 38px;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0.42;
+  }
+  .mall-card .cancellation path {
+    fill: none;
+    stroke: var(--ink-primary);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+  }
+
+  /* ── Variants stage ────────────────────────────────────────────── */
+  .variants-wrap {
+    max-width: 880px; margin: 0 auto 60px; padding: 0 24px;
+    display: flex; flex-direction: column; gap: 28px;
+  }
+  .variant-row {
+    display: grid; grid-template-columns: 240px 1fr;
+    gap: 28px; align-items: center;
+  }
+  .variant-row .vlabel {
+    color: rgba(232,221,199,0.92);
+    font-family: var(--lora);
+    text-align: right;
+  }
+  .variant-row .vlabel strong {
+    display: block; font-size: 20px; font-weight: 500; color: #f0e6cf;
+    margin-bottom: 6px;
+  }
+  .variant-row .vlabel .vsub {
+    font-style: italic; font-size: 13px; color: rgba(232,221,199,0.62);
+    line-height: 1.55;
+  }
+  .variant-row .vlabel code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px; color: rgba(255,243,200,0.85);
+    background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 3px;
+  }
+  .variant-row .vstage {
+    background: var(--paper-cream); border-radius: 16px;
+    padding: 22px 16px;
+    box-shadow: 0 6px 22px rgba(0,0,0,0.3);
+  }
+
+  /* ── v3 / v4 side-by-side comparison ───────────────────────────── */
+  .compare-row {
+    max-width: 1120px; margin: 0 auto 40px; padding: 0 24px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+  }
+  .compare-card {
+    background: rgba(232,221,199,0.06); border: 1px solid rgba(232,221,199,0.16);
+    border-radius: 12px; padding: 22px;
+  }
+  .compare-card h5 {
+    font-family: var(--lora); font-size: 17px; font-weight: 500; color: #f0e6cf;
+    margin: 0 0 4px;
+  }
+  .compare-card .csub {
+    font-family: var(--lora); font-style: italic; font-size: 12.5px;
+    color: rgba(232,221,199,0.6); margin: 0 0 14px;
+  }
+  .compare-card .stage {
+    background: var(--paper-cream); border-radius: 10px; padding: 16px 14px;
+  }
+  .compare-card .cnote {
+    margin-top: 10px; color: rgba(232,221,199,0.74); font-size: 12px; line-height: 1.65;
+  }
+
+  /* v3-style cancellation — for comparison only */
+  .v3-style .cancel-marks-old {
+    align-self: center;
+    display: flex; flex-direction: column; gap: 4px;
+    transform: rotate(-4deg);
+    flex-shrink: 0;
+    z-index: 1;
+    margin-right: 4px;
+  }
+  .v3-style .cancel-marks-old .mark {
+    height: 1.5px;
+    background: rgba(42,26,10,0.34);
+    border-radius: 1px;
+    opacity: 0.65;
+  }
+  .v3-style .cancel-marks-old .mark:nth-child(1) { width: 32px; }
+  .v3-style .cancel-marks-old .mark:nth-child(2) { width: 26px; transform: translateX(3px); }
+  .v3-style .cancel-marks-old .mark:nth-child(3) { width: 30px; transform: translateX(1px); }
+  .v3-style .stamp-tall {
+    width: 56px;
+    align-self: stretch;
+    background: var(--paper-warm);
+    border: 1.5px dashed var(--green-border);
+    border-radius: 4px;
+    padding: 4px;
+    display: flex;
+    flex-shrink: 0;
+  }
+  .v3-style .stamp-tall .stamp-inner {
+    flex: 1;
+    background: var(--green);
+    border-radius: 2px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--green-on);
+  }
+  .v3-style .text-block { padding-right: 0; }
+  .v3-style .cancellation { display: none; }
+
+  /* ── Composition spec ────────────────────────────────────────── */
+  .spec-row {
+    max-width: 1120px; margin: 0 auto 60px; padding: 0 24px;
+    display: grid; grid-template-columns: 1.1fr 1fr;
+    gap: 28px;
+    align-items: flex-start;
+  }
+  .spec-img {
+    background: var(--paper-cream); border-radius: 16px;
+    padding: 28px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  }
+  .spec-callouts {
+    color: rgba(232,221,199,0.85);
+    font-size: 13px; line-height: 1.7;
+  }
+  .spec-callouts h4 {
+    font-family: var(--lora); font-size: 18px; font-weight: 500; color: #f0e6cf;
+    margin: 14px 0 6px;
+  }
+  .spec-callouts h4:first-child { margin-top: 0; }
+  .spec-callouts .csub {
+    font-family: var(--lora); font-style: italic; font-size: 13px;
+    color: rgba(232,221,199,0.6); margin: 0 0 10px;
+  }
+  .spec-callouts ul { margin: 0 0 10px 18px; padding: 0; }
+  .spec-callouts ul li { margin-bottom: 5px; }
+  .spec-callouts code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 3px; color: rgba(255,243,200,0.9); }
+
+  /* ── Stress tests ──────────────────────────────────────────── */
+  .stress-row {
+    max-width: 1120px; margin: 0 auto 80px; padding: 0 24px;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .stress-card {
+    background: rgba(232,221,199,0.06); border: 1px solid rgba(232,221,199,0.16);
+    border-radius: 12px; padding: 22px;
+  }
+  .stress-card h5 {
+    font-family: var(--lora); font-size: 16px; font-weight: 500; color: #f0e6cf;
+    margin: 0 0 4px;
+  }
+  .stress-card .ssub {
+    font-family: var(--lora); font-style: italic; font-size: 12.5px;
+    color: rgba(232,221,199,0.6); margin: 0 0 14px;
+  }
+  .stress-card .stage {
+    background: var(--paper-cream); border-radius: 10px; padding: 16px 14px;
+  }
+  .stress-card .snote {
+    margin-top: 12px; color: rgba(232,221,199,0.74); font-size: 12px; line-height: 1.65;
+  }
+
+  footer {
+    color: rgba(232,221,199,0.45); font-family: var(--lora); font-style: italic;
+    font-size: 12px; text-align: center; padding: 12px 24px 60px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     DECISIONS PANE
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="decisions">
+  <h1>R10 — Postcard mall card · v4</h1>
+  <p class="subtitle">
+    Refining v3 in two places: the stamp is square again (52×52, vertically centered),
+    and the cancellation is wavy SVG ink instead of stacked hairlines —
+    looks like an actual postal cancellation, not a UI list of bars.
+  </p>
+  <p class="meta">v4 mockup · 2026-05-04 · square stamp · ink cancellation · same 4 tab variants</p>
+
+  <div class="pick-box">
+    <p class="q">What changed from v3</p>
+    <ul>
+      <li><b>Stamp is square (52×52)</b> — was 56×full-content-height in v3 (rectangular). Now vertically centered as a flex item, smaller footprint, more recognizable as a postage stamp.</li>
+      <li><b>Cancellation is wavy SVG ink</b> — 5 sinusoidal paths, ink-color stroke at 1.6px, low opacity (0.42), rotated −6° for hand-stamped feel. Reads like real postal cancellation ink.</li>
+      <li><b>Cancellation partial overlap on stamp's left edge</b> — extends ~14px into the stamp + ~70px to the left across the paper area, mimicking how real cancellation ink crosses both the stamp and the surrounding card surface.</li>
+      <li><b>Footprint smaller</b> — total cancellation+stamp area is now ~110px wide (was ~140px in v3 with stretched stamp + cancel-marks gutter).</li>
+      <li><b>Same dashed-border treatment on stamp rim</b> — kept from v3. Renders reliably, gives the "perforated edge" read without per-pixel hacks.</li>
+    </ul>
+  </div>
+
+  <div class="pick-box">
+    <p class="q">Why wavy ink reads as "real cancellation"</p>
+    <p>Real postal cancellations are wavy parallel ink lines (called "killer bars") that cross both the postage stamp and the surrounding paper. They're hand-applied at slight angles and bleed slightly. Stacked horizontal hairlines feel schematic because they're too geometric — wavy curves at low opacity feel like ink on paper.</p>
+    <p>v4 uses 5 SVG paths with quadratic Bézier curves (<code>Q</code> + <code>T</code>) at the same baseline spacing, rotated −6° as a group. Stroke color is <code>inkPrimary</code> with 0.42 opacity to keep the stamp glyph readable through any partial overlap.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SECTION 1 — V3 vs V4 SIDE-BY-SIDE
+     ═══════════════════════════════════════════════════════════════ -->
+<h2 class="section-header">
+  v3 vs v4 — direct comparison
+  <small>Same mall, same Saved tab, two cancellation+stamp treatments.</small>
+</h2>
+
+<div class="compare-row">
+
+  <div class="compare-card">
+    <h5>v3 — full-height stamp + stacked hairlines</h5>
+    <div class="csub">"Feels very UI." Stamp stretches to card height; cancellation is 3 horizontal divs.</div>
+    <div class="stage">
+      <div class="mall-card v3-style">
+        <div class="text-block">
+          <div class="from-line">from:</div>
+          <h2 class="name">America's Antique Mall</h2>
+          <div class="addr-row">
+            <span class="pin">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </span>
+            <span class="addr">5252 Bardstown Rd, Louisville, KY 40291</span>
+          </div>
+        </div>
+        <div class="cancel-marks-old">
+          <div class="mark"></div>
+          <div class="mark"></div>
+          <div class="mark"></div>
+        </div>
+        <div class="stamp-tall">
+          <div class="stamp-inner">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/>
+              <path d="M2 22s2-1 4-3"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cnote">Footprint: stamp 56 wide + ~36 cancel-marks gutter + 14 gap = ~106px right side.</div>
+  </div>
+
+  <div class="compare-card">
+    <h5>v4 — square stamp + wavy ink</h5>
+    <div class="csub">Stamp is square (52×52), cancellation is SVG ink overlapping the stamp's left edge.</div>
+    <div class="stage">
+      <div class="mall-card">
+        <div class="text-block">
+          <div class="from-line">from:</div>
+          <h2 class="name">America's Antique Mall</h2>
+          <div class="addr-row">
+            <span class="pin">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </span>
+            <span class="addr">5252 Bardstown Rd, Louisville, KY 40291</span>
+          </div>
+        </div>
+        <svg class="cancellation" viewBox="0 0 84 38">
+          <path d="M 4,4 Q 14,0 24,4 T 44,4 T 64,4 T 80,4" />
+          <path d="M 2,11 Q 12,7 22,11 T 42,11 T 62,11 T 82,11" />
+          <path d="M 4,18 Q 14,14 24,18 T 44,18 T 64,18 T 80,18" />
+          <path d="M 2,25 Q 12,21 22,25 T 42,25 T 62,25 T 82,25" />
+          <path d="M 4,32 Q 14,28 24,32 T 44,32 T 64,32 T 80,32" />
+        </svg>
+        <div class="stamp">
+          <div class="stamp-inner">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/>
+              <path d="M2 22s2-1 4-3"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cnote">Footprint: stamp 52 + visible cancellation extends ~70px left across paper (no dedicated gutter — ink overlaps the gap region itself).</div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SECTION 2 — FOUR TAB VARIANTS (V4)
+     ═══════════════════════════════════════════════════════════════ -->
+<h2 class="section-header">
+  Four tabs · four stamp glyphs (v4)
+  <small>Same card, same mall, same address. Only the stamp glyph changes.</small>
+</h2>
+
+<div class="variants-wrap">
+
+  <!-- Home -->
+  <div class="variant-row">
+    <div class="vlabel">
+      <strong>Home</strong>
+      <div class="vsub">House glyph<br><code>&lt;Home&gt;</code> · Lucide · 2.0 stroke</div>
+    </div>
+    <div class="vstage">
+      <div class="mall-card">
+        <div class="text-block">
+          <div class="from-line">from:</div>
+          <h2 class="name">America's Antique Mall</h2>
+          <div class="addr-row">
+            <span class="pin">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </span>
+            <span class="addr">5252 Bardstown Rd, Louisville, KY 40291</span>
+          </div>
+        </div>
+        <svg class="cancellation" viewBox="0 0 84 38">
+          <path d="M 4,4 Q 14,0 24,4 T 44,4 T 64,4 T 80,4" />
+          <path d="M 2,11 Q 12,7 22,11 T 42,11 T 62,11 T 82,11" />
+          <path d="M 4,18 Q 14,14 24,18 T 44,18 T 64,18 T 80,18" />
+          <path d="M 2,25 Q 12,21 22,25 T 42,25 T 62,25 T 82,25" />
+          <path d="M 4,32 Q 14,28 24,32 T 44,32 T 64,32 T 80,32" />
+        </svg>
+        <div class="stamp">
+          <div class="stamp-inner">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map -->
+  <div class="variant-row">
+    <div class="vlabel">
+      <strong>Map</strong>
+      <div class="vsub">Pin glyph<br><code>&lt;MapPin&gt;</code> · Lucide · 2.0 stroke</div>
+    </div>
+    <div class="vstage">
+      <div class="mall-card">
+        <div class="text-block">
+          <div class="from-line">from:</div>
+          <h2 class="name">America's Antique Mall</h2>
+          <div class="addr-row">
+            <span class="pin">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </span>
+            <span class="addr">5252 Bardstown Rd, Louisville, KY 40291</span>
+          </div>
+        </div>
+        <svg class="cancellation" viewBox="0 0 84 38">
+          <path d="M 4,4 Q 14,0 24,4 T 44,4 T 64,4 T 80,4" />
+          <path d="M 2,11 Q 12,7 22,11 T 42,11 T 62,11 T 82,11" />
+          <path d="M 4,18 Q 14,14 24,18 T 44,18 T 64,18 T 80,18" />
+          <path d="M 2,25 Q 12,21 22,25 T 42,25 T 62,25 T 82,25" />
+          <path d="M 4,32 Q 14,28 24,32 T 44,32 T 64,32 T 80,32" />
+        </svg>
+        <div class="stamp">
+          <div class="stamp-inner">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile -->
+  <div class="variant-row">
+    <div class="vlabel">
+      <strong>Profile</strong>
+      <div class="vsub">User glyph<br><code>&lt;CircleUser&gt;</code> · Lucide · 1.8 stroke</div>
+    </div>
+    <div class="vstage">
+      <div class="mall-card">
+        <div class="text-block">
+          <div class="from-line">from:</div>
+          <h2 class="name">America's Antique Mall</h2>
+          <div class="addr-row">
+            <span class="pin">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </span>
+            <span class="addr">5252 Bardstown Rd, Louisville, KY 40291</span>
+          </div>
+        </div>
+        <svg class="cancellation" viewBox="0 0 84 38">
+          <path d="M 4,4 Q 14,0 24,4 T 44,4 T 64,4 T 80,4" />
+          <path d="M 2,11 Q 12,7 22,11 T 42,11 T 62,11 T 82,11" />
+          <path d="M 4,18 Q 14,14 24,18 T 44,18 T 64,18 T 80,18" />
+          <path d="M 2,25 Q 12,21 22,25 T 42,25 T 62,25 T 82,25" />
+          <path d="M 4,32 Q 14,28 24,32 T 44,32 T 64,32 T 80,32" />
+        </svg>
+        <div class="stamp">
+          <div class="stamp-inner">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="10" r="3"/>
+              <path d="M6.5 19a6 6 0 0 1 11 0"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Saved -->
+  <div class="variant-row">
+    <div class="vlabel">
+      <strong>Saved</strong>
+      <div class="vsub">Leaf glyph<br><code>&lt;Leaf&gt;</code> · brand glyph · 2.0 stroke</div>
+    </div>
+    <div class="vstage">
+      <div class="mall-card">
+        <div class="text-block">
+          <div class="from-line">from:</div>
+          <h2 class="name">America's Antique Mall</h2>
+          <div class="addr-row">
+            <span class="pin">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </span>
+            <span class="addr">5252 Bardstown Rd, Louisville, KY 40291</span>
+          </div>
+        </div>
+        <svg class="cancellation" viewBox="0 0 84 38">
+          <path d="M 4,4 Q 14,0 24,4 T 44,4 T 64,4 T 80,4" />
+          <path d="M 2,11 Q 12,7 22,11 T 42,11 T 62,11 T 82,11" />
+          <path d="M 4,18 Q 14,14 24,18 T 44,18 T 64,18 T 80,18" />
+          <path d="M 2,25 Q 12,21 22,25 T 42,25 T 62,25 T 82,25" />
+          <path d="M 4,32 Q 14,28 24,32 T 44,32 T 64,32 T 80,32" />
+        </svg>
+        <div class="stamp">
+          <div class="stamp-inner">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/>
+              <path d="M2 22s2-1 4-3"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SECTION 3 — COMPOSITION SPEC
+     ═══════════════════════════════════════════════════════════════ -->
+<h2 class="section-header">
+  Composition spec
+  <small>What ships as <code>&lt;PostcardMallCard mall={…} stampGlyph={tabKey} /&gt;</code>.</small>
+</h2>
+
+<div class="spec-row">
+  <div class="spec-img">
+    <div class="mall-card">
+      <div class="text-block">
+        <div class="from-line">from:</div>
+        <h2 class="name">America's Antique Mall</h2>
+        <div class="addr-row">
+          <span class="pin">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+          </span>
+          <span class="addr">5252 Bardstown Rd, Louisville, KY 40291</span>
+        </div>
+      </div>
+      <svg class="cancellation" viewBox="0 0 84 38">
+        <path d="M 4,4 Q 14,0 24,4 T 44,4 T 64,4 T 80,4" />
+        <path d="M 2,11 Q 12,7 22,11 T 42,11 T 62,11 T 82,11" />
+        <path d="M 4,18 Q 14,14 24,18 T 44,18 T 64,18 T 80,18" />
+        <path d="M 2,25 Q 12,21 22,25 T 42,25 T 62,25 T 82,25" />
+        <path d="M 4,32 Q 14,28 24,32 T 44,32 T 64,32 T 80,32" />
+      </svg>
+      <div class="stamp">
+        <div class="stamp-inner">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/>
+            <path d="M2 22s2-1 4-3"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec-callouts">
+    <h4>Surface</h4>
+    <ul>
+      <li><b>Card bg</b> — <code>postcardBg #f4ecd8</code> (new token; warmer than paperWarm).</li>
+      <li><b>Border</b> — <code>1px solid rgba(42,26,10,0.10)</code>, radius <code>12px</code>, padding <code>16px</code>.</li>
+      <li><b>Layout</b> — flex row, <code>gap: 14px</code>, <code>align-items: center</code>, <code>position: relative</code> (anchors cancellation).</li>
+    </ul>
+
+    <h4>Text block</h4>
+    <ul>
+      <li><b>"from:"</b> — Lora italic 18 / inkMuted / line-height 1.</li>
+      <li><b>Mall name</b> — Lora 26 / 500 / inkPrimary / line-height 1.15. <code>WebkitLineClamp: 2</code>.</li>
+      <li><b>Address</b> — Lucide MapPin 13 + system-sans 13 / inkMid. Single line, ellipsis.</li>
+      <li><b>Right padding 28px</b> — reserves space for the cancellation ink so address text doesn't run under wavy lines.</li>
+    </ul>
+
+    <h4>Cancellation (SVG)</h4>
+    <ul>
+      <li>5 quadratic Bézier paths via <code>Q</code> + <code>T</code> at baselines y=4, 11, 18, 25, 32.</li>
+      <li>Stroke <code>inkPrimary</code> 1.6px, <code>linecap: round</code>, no fill.</li>
+      <li>SVG positioned absolute, <code>right: 54px</code> (~14px overlap onto stamp's left edge), <code>top: 50%</code>, <code>transform: translateY(-50%) rotate(-6deg)</code>.</li>
+      <li>Width 84, height 38, opacity 0.42, <code>z-index: 2</code> (over stamp), <code>pointer-events: none</code>.</li>
+    </ul>
+
+    <h4>Stamp (square)</h4>
+    <ul>
+      <li><b>Outer</b> — 52×52, paperWarm rim, <code>1.5px dashed greenBorder</code>, 4px radius, 4px padding.</li>
+      <li><b>Inner</b> — green fill, 2px radius, glyph centered.</li>
+      <li><b>Glyph</b> — 26px, greenOn stroke, 2px stroke. Same Lucide shape as the active BottomNav tab.</li>
+      <li><b>Position</b> — flex item, <code>align-self: center</code>.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SECTION 4 — STRESS TESTS
+     ═══════════════════════════════════════════════════════════════ -->
+<h2 class="section-header">
+  Stress tests
+  <small>Long mall name + All-Kentucky scope. Stamp stays square; cancellation stays in place.</small>
+</h2>
+
+<div class="stress-row">
+
+  <div class="stress-card">
+    <h5>Long name (2 lines)</h5>
+    <div class="ssub">26px Lora / 500 wraps to 2 lines via <code>WebkitLineClamp</code>.</div>
+    <div class="stage">
+      <div class="mall-card">
+        <div class="text-block">
+          <div class="from-line">from:</div>
+          <h2 class="name">Copper Awning Flea Market &amp; Antique Co.</h2>
+          <div class="addr-row">
+            <span class="pin">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </span>
+            <span class="addr">2422 South Hwy 53, La Grange, KY 40031</span>
+          </div>
+        </div>
+        <svg class="cancellation" viewBox="0 0 84 38">
+          <path d="M 4,4 Q 14,0 24,4 T 44,4 T 64,4 T 80,4" />
+          <path d="M 2,11 Q 12,7 22,11 T 42,11 T 62,11 T 82,11" />
+          <path d="M 4,18 Q 14,14 24,18 T 44,18 T 64,18 T 80,18" />
+          <path d="M 2,25 Q 12,21 22,25 T 42,25 T 62,25 T 82,25" />
+          <path d="M 4,32 Q 14,28 24,32 T 44,32 T 64,32 T 80,32" />
+        </svg>
+        <div class="stamp">
+          <div class="stamp-inner">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="snote">Card grows ~30px taller; stamp stays 52×52 vertically centered. Cancellation tracks the vertical center via <code>top: 50%</code>.</div>
+  </div>
+
+  <div class="stress-card">
+    <h5>All Kentucky scope</h5>
+    <div class="ssub">Card flexes to "global" mode without breaking the pattern.</div>
+    <div class="stage">
+      <div class="mall-card">
+        <div class="text-block">
+          <div class="from-line">from:</div>
+          <h2 class="name">All Kentucky Locations</h2>
+          <div class="addr-row">
+            <span class="pin">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </span>
+            <span class="addr">5 active locations · Louisville to Lexington</span>
+          </div>
+        </div>
+        <svg class="cancellation" viewBox="0 0 84 38">
+          <path d="M 4,4 Q 14,0 24,4 T 44,4 T 64,4 T 80,4" />
+          <path d="M 2,11 Q 12,7 22,11 T 42,11 T 62,11 T 82,11" />
+          <path d="M 4,18 Q 14,14 24,18 T 44,18 T 64,18 T 80,18" />
+          <path d="M 2,25 Q 12,21 22,25 T 42,25 T 62,25 T 82,25" />
+          <path d="M 4,32 Q 14,28 24,32 T 44,32 T 64,32 T 80,32" />
+        </svg>
+        <div class="stamp">
+          <div class="stamp-inner">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="snote">Same primitive. Address line becomes a literary subtitle ("5 active locations · Louisville to Lexington"). Stamp glyph reflects the active tab (Map shown).</div>
+  </div>
+
+</div>
+
+<footer>
+  R10 — Postcard mall card · v4 · 2026-05-04 · square stamp · ink cancellation · ready to lock
+</footer>
+
+</body>
+</html>

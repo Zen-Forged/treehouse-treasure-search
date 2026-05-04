@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>R10 — Location Map (v2 mockup, postcard mall card)</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper-cream:   #e8ddc7;
+    --paper-warm:    #faf2e0;
+    --postcard-bg:   #f4ecd8;
+    --postit:        #fbf3df;
+    --warm-tan:      #cdb88e;
+    --ink-primary:   #2a1a0a;
+    --ink-mid:       #4a3520;
+    --ink-muted:     #6b5538;
+    --ink-faint:     rgba(42,26,10,0.45);
+    --ink-hairline:  rgba(42,26,10,0.18);
+    --price-ink:     #6a4a30;
+    --green:         #1e4d2b;
+    --green-light:   rgba(30,77,43,0.08);
+    --green-border:  rgba(30,77,43,0.20);
+    --green-on:      #fff9e8;
+    --postmark:      rgba(42,26,10,0.34);
+
+    --lora: "Lora", Georgia, serif;
+    --sys:  -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+
+    --shadow-polaroid: 0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10);
+    --shadow-postcard: 0 4px 14px rgba(42,26,10,0.16), 0 1px 2px rgba(42,26,10,0.08);
+    --shadow-pin:      0 2px 6px rgba(42,26,10,0.32), 0 1px 2px rgba(42,26,10,0.18);
+
+    --map-cream:     #efe6cf;
+    --map-cream-2:   #e6d9b8;
+    --map-water:     #c5d6c4;
+    --map-water-2:   #aac3aa;
+    --map-road:      #fff;
+    --map-road-faint:rgba(255,255,255,0.55);
+    --map-park:      #d6e0bf;
+    --map-label:     rgba(42,26,10,0.36);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #1a1612; font-family: var(--sys); color: var(--ink-primary); }
+
+  /* ── Decisions pane ─────────────────────────────────────────── */
+  .decisions {
+    max-width: 1100px; margin: 0 auto; padding: 40px 24px 24px; color: rgba(232,221,199,0.92);
+  }
+  .decisions h1 {
+    font-family: var(--lora); font-weight: 400; font-size: 32px; color: #f0e6cf;
+    margin: 0 0 6px; text-align: center; letter-spacing: -0.005em;
+  }
+  .decisions .subtitle {
+    text-align: center; color: rgba(232,221,199,0.62); font-size: 14px;
+    margin: 0 auto 22px; line-height: 1.65; max-width: 760px;
+  }
+  .decisions .meta {
+    text-align: center; color: rgba(232,221,199,0.42); font-size: 11px;
+    margin: 0 auto 30px; font-family: var(--lora); font-style: italic;
+  }
+  .pick-box {
+    background: rgba(232,221,199,0.06);
+    border: 1px solid rgba(232,221,199,0.14);
+    border-radius: 12px; padding: 20px 24px; margin: 0 0 12px;
+  }
+  .pick-box .q {
+    font-family: var(--lora); font-style: italic; font-size: 15px;
+    color: rgba(232,221,199,0.74); margin: 0 0 8px;
+  }
+  .pick-box p { margin: 0 0 10px; font-size: 13px; line-height: 1.7; color: rgba(232,221,199,0.82); }
+  .pick-box p:last-child { margin-bottom: 0; }
+  .pick-box strong { color: #f0e6cf; }
+  .pick-box .rec { color: rgba(200,220,200,0.86); }
+  .pick-box ul { margin: 4px 0 6px 18px; padding: 0; color: rgba(232,221,199,0.78); font-size: 12.5px; }
+  .pick-box li { line-height: 1.7; }
+
+  .section-header {
+    max-width: 1280px;
+    margin: 36px auto 18px;
+    padding: 0 24px;
+    color: rgba(232, 221, 199, 0.92);
+    font-family: var(--lora);
+    font-size: 22px;
+    font-weight: 400;
+    border-bottom: 1px solid rgba(232, 221, 199, 0.16);
+    padding-bottom: 8px;
+  }
+  .section-header small {
+    display: block; font-style: italic; font-size: 13px; color: rgba(232,221,199,0.52);
+    font-family: var(--lora); margin-top: 4px;
+  }
+
+  /* ── Phone frames row ─────────────────────────────────────────── */
+  .frames-row {
+    max-width: 1320px; margin: 0 auto; padding: 0 20px 20px;
+    display: flex; gap: 28px; justify-content: center; align-items: flex-start; flex-wrap: wrap;
+  }
+  .frame-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; flex: 0 0 auto; max-width: 380px; }
+  .frame-label { font-family: var(--lora); font-style: italic; font-size: 16px; color: rgba(232,221,199,0.72); text-align: center; line-height: 1.5; }
+  .frame-label strong { display: block; font-style: normal; font-size: 19px; color: #f0e6cf; margin-bottom: 4px; }
+  .frame-tagline { color: rgba(232,221,199,0.55); font-size: 12.5px; font-style: italic; margin-top: 2px; }
+
+  .phone {
+    width: 375px; height: 812px; background: var(--paper-cream); border-radius: 40px;
+    box-shadow: 0 12px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06);
+    overflow: hidden; position: relative; display: flex; flex-direction: column;
+  }
+
+  /* ── Status bar ───────────────────────────────────────────────── */
+  .status-bar {
+    height: 44px; padding: 12px 24px 0; display: flex; align-items: center;
+    justify-content: space-between; font-size: 14px; font-weight: 600; color: var(--ink-primary);
+    flex-shrink: 0; background: var(--paper-cream);
+  }
+  .status-bar .right { display: flex; gap: 6px; align-items: center; }
+
+  /* ── Wordmark masthead (tab-page hero variant) ───────────────── */
+  .wordmark-masthead {
+    flex-shrink: 0; padding: 6px 16px 14px; text-align: center; background: var(--paper-cream);
+  }
+  .wordmark-masthead img {
+    height: 86px; width: auto; display: inline-block;
+    filter: none;
+  }
+  /* SVG fallback approximation if image fails */
+  .wordmark-svg-fallback {
+    display: block; margin: 0 auto;
+  }
+
+  /* ── Postcard mall card (persistent across tabs) ─────────────── */
+  .mall-card {
+    margin: 0 16px 14px;
+    background: var(--postcard-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow-postcard);
+    border: 1px solid rgba(42,26,10,0.10);
+    padding: 18px 18px 14px;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  /* Subtle paper texture (warm off-white speckle via subtle gradient) */
+  .mall-card::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse at 18% 25%, rgba(255,255,255,0.18) 0%, transparent 40%),
+      radial-gradient(ellipse at 82% 75%, rgba(42,26,10,0.05) 0%, transparent 50%);
+  }
+  /* Bottom postcard divider hairline */
+  .mall-card::after {
+    content: ""; position: absolute; left: 18px; right: 18px; bottom: 9px; height: 1px;
+    background: repeating-linear-gradient(
+      to right,
+      rgba(42,26,10,0.16) 0,
+      rgba(42,26,10,0.16) 4px,
+      transparent 4px,
+      transparent 8px
+    );
+  }
+
+  .mall-card .from-line {
+    font-family: var(--lora); font-style: italic; font-size: 18px;
+    color: var(--ink-muted); margin: 0 0 4px; line-height: 1.1;
+    position: relative; z-index: 1;
+  }
+  .mall-card .name {
+    font-family: var(--lora); font-weight: 500; font-size: 28px;
+    color: var(--ink-primary); line-height: 1.15; letter-spacing: -0.005em;
+    margin: 0 0 8px;
+    position: relative; z-index: 1;
+    /* Allow up to 2 lines for long names */
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .mall-card .addr-row {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--sys); font-size: 13px; color: var(--ink-mid);
+    line-height: 1.3;
+    position: relative; z-index: 1;
+    margin-bottom: 10px;
+  }
+  .mall-card .addr-row .pin {
+    color: var(--ink-mid); display: flex; flex-shrink: 0;
+  }
+  .mall-card .addr-row .addr {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* Postage stamp + cancellation marks */
+  .mall-card .stamp-wrap {
+    position: absolute; top: 14px; right: 14px;
+    display: flex; align-items: center; gap: 4px; z-index: 2;
+  }
+  .mall-card .cancel-marks {
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .mall-card .cancel-marks .mark {
+    width: 28px; height: 1.5px; background: var(--postmark); border-radius: 1px;
+    opacity: 0.55;
+  }
+  .mall-card .cancel-marks .mark:nth-child(2) { width: 22px; transform: translateX(3px); }
+  .mall-card .cancel-marks .mark:nth-child(3) { width: 26px; transform: translateX(1px); }
+  .mall-card .stamp {
+    width: 38px; height: 44px; background: var(--green); border-radius: 2px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 2px rgba(42,26,10,0.18);
+    position: relative;
+  }
+  /* Stamp perforations — dotted pseudo-edge */
+  .mall-card .stamp::before, .mall-card .stamp::after {
+    content: ""; position: absolute; left: -4px; right: -4px; height: 8px;
+    background:
+      radial-gradient(circle, var(--postcard-bg) 0%, var(--postcard-bg) 32%, transparent 33%);
+    background-size: 6px 6px;
+    background-repeat: repeat-x;
+  }
+  .mall-card .stamp::before { top: -4px; }
+  .mall-card .stamp::after { bottom: -4px; }
+  .mall-card .stamp svg { color: var(--green-on); display: block; }
+
+  /* Tap-to-change cue (subtle) */
+  .mall-card .tap-cue {
+    position: absolute; bottom: 7px; right: 16px;
+    font-family: var(--lora); font-style: italic; font-size: 10.5px;
+    color: var(--ink-faint); z-index: 2;
+    background: var(--postcard-bg); padding: 0 4px;
+  }
+
+  /* ── Search bar (binoculars) ────────────────────────────────── */
+  .search-bar {
+    margin: 0 16px 14px;
+    background: var(--paper-warm); border-radius: 999px;
+    padding: 11px 18px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 1px 3px rgba(42,26,10,0.08);
+    border: 1px solid var(--ink-hairline);
+    flex-shrink: 0;
+  }
+  .search-bar svg.glyph { color: var(--green); flex-shrink: 0; }
+  .search-bar .placeholder {
+    font-family: var(--lora); font-size: 14.5px; color: var(--ink-faint);
+    line-height: 1.2;
+  }
+
+  /* ── Body content (scrolls per page) ─────────────────────────── */
+  .body { flex: 1; overflow: hidden; position: relative; }
+
+  /* Home — masonry feed */
+  .masonry {
+    padding: 0 12px 8px;
+    column-count: 2; column-gap: 10px;
+  }
+  .polaroid {
+    background: var(--paper-warm); border-radius: 4px; padding: 7px 7px 30px;
+    box-shadow: var(--shadow-polaroid);
+    margin-bottom: 12px; break-inside: avoid;
+    position: relative;
+  }
+  .polaroid .photo {
+    width: 100%; aspect-ratio: 4 / 5; border-radius: 2px; overflow: hidden;
+    background-size: cover; background-position: center;
+  }
+  .polaroid.tall .photo { aspect-ratio: 4 / 6; }
+  .polaroid.short .photo { aspect-ratio: 4 / 4; }
+  .polaroid .caption {
+    position: absolute; bottom: 8px; left: 10px;
+    font-family: var(--lora); font-style: italic; font-size: 11.5px;
+    color: var(--ink-muted);
+  }
+  .polaroid .save-bubble {
+    position: absolute; top: 13px; right: 13px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(245,242,235,0.85);
+    box-shadow: 0 1px 3px rgba(42,26,10,0.18);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--green);
+  }
+
+  /* Saved — booth-grouped horizontal rows */
+  .booth-row {
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--ink-hairline);
+  }
+  .booth-row:last-child { border-bottom: none; }
+  .booth-row .booth-lockup {
+    background: var(--postit); border: 1px solid var(--ink-hairline);
+    border-radius: 10px; padding: 10px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .booth-row .lockup-left .eyebrow {
+    font-family: var(--sys); font-size: 9px; letter-spacing: 0.18em;
+    color: var(--ink-muted); text-transform: uppercase; font-weight: 600;
+    margin-bottom: 1px;
+  }
+  .booth-row .lockup-left .vendor {
+    font-family: var(--lora); font-size: 16px; color: var(--ink-primary);
+    font-weight: 500; line-height: 1.2;
+  }
+  .booth-row .lockup-num {
+    font-family: "Times New Roman", Times, Georgia, serif;
+    font-size: 22px; font-weight: 600; color: var(--green);
+    line-height: 1;
+  }
+  .booth-row .scroll-row {
+    display: flex; gap: 8px; overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .booth-row .scroll-row::-webkit-scrollbar { display: none; }
+  .booth-row .scroll-row .saved-tile {
+    flex: 0 0 110px;
+    background: var(--paper-warm); border-radius: 4px; padding: 5px 5px 20px;
+    box-shadow: var(--shadow-polaroid);
+    position: relative;
+  }
+  .booth-row .scroll-row .saved-tile .photo {
+    width: 100%; aspect-ratio: 4 / 5; border-radius: 2px;
+    background-size: cover; background-position: center;
+  }
+  .booth-row .scroll-row .saved-tile .save-bubble {
+    position: absolute; top: 9px; right: 9px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(245,242,235,0.85);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--green);
+  }
+  .booth-row .explore-cta {
+    margin-top: 10px;
+    font-family: var(--lora); font-style: italic; font-size: 13.5px;
+    color: var(--green); display: inline-flex; align-items: center; gap: 4px;
+    text-decoration: underline; text-decoration-color: rgba(30,77,43,0.4);
+    text-underline-offset: 3px;
+  }
+
+  /* Map — interactive map fills body */
+  .map-area {
+    position: absolute; inset: 0;
+  }
+  .map-area svg.base { display: block; width: 100%; height: 100%; position: absolute; inset: 0; }
+  .map-area .pins { position: absolute; inset: 0; pointer-events: none; }
+  .map-area .pin {
+    position: absolute; transform: translate(-50%, -100%);
+  }
+  .pin-leaf {
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--paper-warm); border-radius: 50%;
+    box-shadow: var(--shadow-pin);
+    border: 1.5px solid var(--green);
+  }
+  .pin-leaf.selected {
+    background: var(--green); border-color: var(--green);
+    transform: scale(1.1);
+  }
+  .pin-leaf.selected svg { color: var(--green-on); }
+  .pin-dot {
+    width: 14px; height: 14px; background: var(--green); border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(30,77,43,0.18), var(--shadow-pin);
+    border: 2px solid var(--paper-cream);
+  }
+
+  /* Map "you are here" subtle indicator */
+  .you-are-here {
+    position: absolute; left: 50%; top: 52%;
+    transform: translate(-50%, -50%);
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(30,77,43,0.18) 0%, rgba(30,77,43,0.08) 40%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* ── BottomNav (4-tab model) ────────────────────────────────── */
+  .bnav {
+    height: 78px; flex-shrink: 0;
+    background: var(--paper-cream); border-top: 1px solid var(--ink-hairline);
+    display: flex; align-items: center; justify-content: space-around;
+    padding: 8px 0 18px;
+  }
+  .bnav .tab {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    color: var(--ink-muted); font-size: 11px; padding: 4px 8px;
+  }
+  .bnav .tab.active { color: var(--green); }
+  .bnav .tab svg { display: block; }
+  .bnav .badge { position: relative; }
+  .bnav .badge .count-pill {
+    position: absolute; top: -4px; right: -10px;
+    background: var(--green); color: var(--green-on);
+    font-family: "Times New Roman", Times, Georgia, serif;
+    font-size: 11px; font-weight: 600; line-height: 1;
+    border-radius: 999px; padding: 2px 5px;
+    min-width: 16px; text-align: center;
+    border: 1.5px solid var(--paper-cream);
+  }
+
+  /* ── Card-spec callouts pane ────────────────────────────────── */
+  .spec-row {
+    max-width: 1280px; margin: 0 auto 60px; padding: 0 24px;
+    display: flex; gap: 28px; flex-wrap: wrap; justify-content: center;
+    align-items: flex-start;
+  }
+  .spec-img {
+    background: var(--paper-cream); padding: 32px;
+    border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    flex: 0 0 480px;
+  }
+  .spec-img .specimen { width: 100%; }
+  .spec-img .specimen .mall-card { margin: 0; }
+  .spec-callouts {
+    flex: 0 0 360px; color: rgba(232,221,199,0.85);
+    font-size: 13px; line-height: 1.7;
+  }
+  .spec-callouts h4 {
+    font-family: var(--lora); font-size: 18px; font-weight: 500; color: #f0e6cf;
+    margin: 0 0 6px;
+  }
+  .spec-callouts .csub {
+    font-family: var(--lora); font-style: italic; font-size: 13px;
+    color: rgba(232,221,199,0.6); margin: 0 0 14px;
+  }
+  .spec-callouts ul { margin: 0 0 14px 18px; padding: 0; }
+  .spec-callouts ul li { margin-bottom: 5px; }
+  .spec-callouts code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 3px; color: rgba(255,243,200,0.9); }
+
+  /* ── Scope variants pane (showing the "All Kentucky" state) ──── */
+  .scope-row {
+    max-width: 1280px; margin: 0 auto 60px; padding: 0 24px;
+    display: flex; gap: 24px; flex-wrap: wrap; justify-content: center;
+    align-items: flex-start;
+  }
+  .scope-card {
+    flex: 0 0 350px;
+    background: rgba(232,221,199,0.06); border: 1px solid rgba(232,221,199,0.16);
+    border-radius: 12px; padding: 22px;
+  }
+  .scope-card h5 {
+    font-family: var(--lora); font-size: 16px; font-weight: 500; color: #f0e6cf;
+    margin: 0 0 4px;
+  }
+  .scope-card .ssub {
+    font-family: var(--lora); font-style: italic; font-size: 12.5px;
+    color: rgba(232,221,199,0.6); margin: 0 0 14px;
+  }
+  .scope-card .scope-card-stage {
+    background: var(--paper-cream); border-radius: 10px; padding: 16px 14px;
+  }
+  .scope-card .scope-card-stage .mall-card { margin: 0; }
+  .scope-card .snote {
+    margin-top: 12px; color: rgba(232,221,199,0.74); font-size: 12px; line-height: 1.65;
+  }
+
+  /* ── BottomNav comparison ────────────────────────────────────── */
+  .nav-compare-row {
+    max-width: 1080px; margin: 0 auto 60px; padding: 0 24px;
+    display: flex; gap: 28px; flex-wrap: wrap; justify-content: center;
+  }
+  .nav-compare-card {
+    flex: 1 1 320px; max-width: 460px;
+    background: rgba(232,221,199,0.06); border: 1px solid rgba(232,221,199,0.16);
+    border-radius: 12px; padding: 22px;
+  }
+  .nav-compare-card h5 {
+    font-family: var(--lora); font-size: 17px; font-weight: 500; color: #f0e6cf;
+    margin: 0 0 4px;
+  }
+  .nav-compare-card .nlbl {
+    font-family: var(--lora); font-style: italic; font-size: 12.5px;
+    color: rgba(232,221,199,0.6); margin: 0 0 14px;
+  }
+  .nav-compare-card .nbar {
+    background: var(--paper-cream); border-radius: 8px; padding: 10px 4px 14px;
+    display: flex; justify-content: space-around; align-items: center;
+    border: 1px solid var(--ink-hairline);
+  }
+  .nav-compare-card .nbar .ntab {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    color: var(--ink-muted); font-size: 9.5px; padding: 4px 4px;
+  }
+  .nav-compare-card .nbar .ntab.active { color: var(--green); }
+  .nav-compare-card .nnote {
+    margin-top: 12px; font-size: 12.5px; line-height: 1.65; color: rgba(232,221,199,0.78);
+  }
+  .nav-compare-card .nnote b { color: #f0e6cf; }
+
+  footer {
+    color: rgba(232,221,199,0.45); font-family: var(--lora); font-style: italic;
+    font-size: 12px; text-align: center; padding: 12px 24px 60px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     DECISIONS PANE
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="decisions">
+  <h1>R10 — Location Map · v2</h1>
+  <p class="subtitle">
+    Postcard mall card as a persistent header across <b>Home / Saved / Map</b>. Below the card,
+    page content varies; above it, the wordmark is the only chrome.
+    Map tab shows an interactive map for the current scope; the card IS the scope identifier.
+  </p>
+  <p class="meta">v2 mockup · 2026-05-04 · postcard mall card primitive · 4-tab nav</p>
+
+  <div class="pick-box">
+    <p class="q">What's new in v2 vs v1</p>
+    <ul>
+      <li><b>Postcard mall card primitive</b> — paper-warm card with "from:" italic eyebrow + Lora mall name + pin/address row + leaf postage stamp with cancellation hash marks. Ships to <b>Home, Saved, and Map</b> identically.</li>
+      <li><b>Wordmark hero masthead</b> — script wordmark renders ~86px tall on tab pages (no back/right-slot to share the row with). Sub-pages still use the existing 40px inline StickyMasthead.</li>
+      <li><b>BottomNav drops to 4 tabs</b> — Home / Map / Saved / Profile. <b>Booths tab retires entirely</b> because the persistent mall card already serves the "where am I shopping" function and the saved-finds list groups by booth; the Booths-as-list tab becomes redundant.</li>
+      <li><b>Saved glyph = leaf</b> — same brand glyph as the save bubbles on tiles; replaces FlagGlyph in BottomNav. Count badge in green pill.</li>
+      <li><b>Search bar</b> — binoculars + "Search finds, booths, or styles" placeholder ("or styles" hints at R16 tag-based search; signals the tag layer landed in 105 is now searchable).</li>
+      <li><b>No bottom card on Map</b> — the V1 bottom-card spec dissolves because the persistent top card already identifies the mall. The map fills the body. Tapping a different pin re-scopes (top card updates).</li>
+    </ul>
+  </div>
+
+  <div class="pick-box">
+    <p class="q">How the map works in v2</p>
+    <p>The mall card up top is the scope identifier <b>and</b> the mall picker (tap → MallSheet, matching today's MallScopeHeader behavior). Two scope states:</p>
+    <ul>
+      <li><b>Specific mall scope</b> (shown in the third phone): card shows that mall, map zooms to its location with a single highlighted pin + surrounding cartographic context.</li>
+      <li><b>All Kentucky scope</b> (shown in the scope-variants pane below): card shows "All Kentucky locations" with a map-themed stamp, map zooms out to show all pins. Tapping a pin re-scopes (card animates to that mall, map zooms in).</li>
+    </ul>
+    <p class="rec">This dissolves the Frame B carousel + Frame C editorial card from v1 — the persistent top card replaces both.</p>
+  </div>
+
+  <div class="pick-box">
+    <p class="q">Three frames showing cross-tab consistency</p>
+    <p>Same mall scope (America's Antique Mall), three tabs. The top half is identical; the body changes per tab.</p>
+    <ul>
+      <li><b>Home</b> — masonry feed (matches your hand-drawn mockup).</li>
+      <li><b>Saved</b> — booth-grouped horizontal rows of saved finds at this mall (matches session 99's /flagged design, scoped to mall).</li>
+      <li><b>Map</b> — interactive map zoomed to this mall's location. No bottom card; the top card already identifies the place.</li>
+    </ul>
+  </div>
+
+  <div class="pick-box">
+    <p class="q">Open scoping question for design record</p>
+    <p>Booths tab retirement is a real call. Today /shelves serves three jobs:</p>
+    <ul>
+      <li><b>Browse all booths in a mall</b> — covered by Map (tap a pin → scope to that mall → "explore the booth →" CTA per booth on Saved/Map → /shelf/[slug]).</li>
+      <li><b>Add Booth (admin/vendor)</b> — relocate to /admin Locations tab and EditBoothSheet (already exists per session 74).</li>
+      <li><b>"My Booth" entry point for vendors</b> — Profile tab can host a "My booth" link inline (already partially the case via /my-shelf).</li>
+    </ul>
+    <p class="rec">Recommend retiring Booths tab. If beta feedback surfaces friction, easy to add a 5th tab back. Lock decision in the design record.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SECTION 1 — THREE TABS, ONE CARD
+     ═══════════════════════════════════════════════════════════════ -->
+<h2 class="section-header">
+  Cross-tab consistency
+  <small>Same mall scope across Home / Saved / Map. Top half identical; body varies.</small>
+</h2>
+
+<div class="frames-row">
+
+  <!-- ─────────────── HOME ─────────────── -->
+  <div class="frame-wrap">
+    <div class="frame-label">
+      <strong>Home</strong>
+      <div class="frame-tagline">Polaroid masonry feed scoped to this mall</div>
+    </div>
+    <div class="phone">
+      <!-- status -->
+      <div class="status-bar">
+        <span>8:45</span>
+        <div class="right">
+          <span style="font-size: 9px; font-weight: 700; letter-spacing: -0.5px;">SOS</span>
+          <svg width="15" height="11" viewBox="0 0 15 11"><path d="M7.5 2C5 2 2.7 2.9 1 4.4l1.4 1.4A8.5 8.5 0 0 1 7.5 4c2 0 3.7.7 5.1 1.8L14 4.4A11.5 11.5 0 0 0 7.5 2zM3.5 6.4 4.9 7.8a4.5 4.5 0 0 1 5.2 0l1.4-1.4a6.5 6.5 0 0 0-8 0zM6 8.8 7.5 10.3 9 8.8a2 2 0 0 0-3 0z" fill="currentColor"/></svg>
+          <svg width="22" height="11" viewBox="0 0 24 11"><rect x="1" y="0.5" width="20" height="10" rx="2.4" fill="rgba(30,77,43,0.92)"/><text x="11" y="8.4" font-family="system-ui" font-size="7" font-weight="700" fill="white" text-anchor="middle">88</text></svg>
+        </div>
+      </div>
+      <!-- wordmark hero masthead -->
+      <div class="wordmark-masthead">
+        <img src="../../public/wordmark.png" alt="treehouse finds"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <svg class="wordmark-svg-fallback" width="220" height="86" viewBox="0 0 220 86" style="display:none;">
+          <text x="110" y="44" text-anchor="middle" font-family="Lora, Georgia, serif" font-style="italic" font-size="36" fill="#2a1a0a" font-weight="500">treehouse</text>
+          <text x="110" y="70" text-anchor="middle" font-family="Lora, sans-serif" font-size="14" fill="#4a3520" letter-spacing="0.16em">— finds —</text>
+        </svg>
+      </div>
+      <!-- mall card -->
+      <div class="mall-card">
+        <div class="from-line">from:</div>
+        <h2 class="name">America's Antique Mall</h2>
+        <div class="addr-row">
+          <span class="pin"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+          <span class="addr">5252 Bardstown Rd, Louisville, KY 40291</span>
+        </div>
+        <div class="stamp-wrap">
+          <div class="cancel-marks">
+            <div class="mark"></div>
+            <div class="mark"></div>
+            <div class="mark"></div>
+          </div>
+          <div class="stamp">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/>
+              <path d="M2 22s2-1 4-3"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <!-- search bar -->
+      <div class="search-bar">
+        <svg class="glyph" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <ellipse cx="6" cy="13" rx="4" ry="5"/>
+          <ellipse cx="18" cy="13" rx="4" ry="5"/>
+          <rect x="9" y="11" width="6" height="2" rx="0.5"/>
+          <circle cx="6" cy="13" r="1.5" fill="white"/>
+          <circle cx="18" cy="13" r="1.5" fill="white"/>
+          <rect x="2" y="6" width="3" height="3" rx="0.5"/>
+          <rect x="19" y="6" width="3" height="3" rx="0.5"/>
+        </svg>
+        <span class="placeholder">Search finds, booths, or styles</span>
+      </div>
+      <!-- masonry feed -->
+      <div class="body">
+        <div class="masonry">
+          <div class="polaroid">
+            <div class="photo" style="background: linear-gradient(135deg, #4a6080 0%, #6e7e9a 40%, #b09870 100%);"></div>
+            <div class="save-bubble"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg></div>
+            <div class="caption">1w ago</div>
+          </div>
+          <div class="polaroid short">
+            <div class="photo" style="background: linear-gradient(135deg, #5e7090 0%, #8a8aa0 40%, #d8c4a0 100%);"></div>
+            <div class="save-bubble"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg></div>
+            <div class="caption">1w ago</div>
+          </div>
+          <div class="polaroid tall">
+            <div class="photo" style="background: linear-gradient(160deg, #2a2a2a 0%, #555 40%, #c8b8a0 100%);"></div>
+            <div class="save-bubble"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg></div>
+            <div class="caption">1w ago</div>
+          </div>
+          <div class="polaroid">
+            <div class="photo" style="background: linear-gradient(135deg, #88aaa0 0%, #b8a877 40%, #6b5538 100%);"></div>
+            <div class="save-bubble"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg></div>
+            <div class="caption">1w ago</div>
+          </div>
+        </div>
+      </div>
+      <!-- bnav (4-tab) -->
+      <div class="bnav">
+        <div class="tab active"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Home</span></div>
+        <div class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Map</span></div>
+        <div class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M6.5 19a6 6 0 0 1 11 0"/></svg><span>Profile</span></div>
+        <div class="tab badge"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/><path d="M2 22s2-1 4-3"/></svg><span class="count-pill">8</span><span>Saved</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────── SAVED ─────────────── -->
+  <div class="frame-wrap">
+    <div class="frame-label">
+      <strong>Saved</strong>
+      <div class="frame-tagline">Booth-grouped saved finds at this mall</div>
+    </div>
+    <div class="phone">
+      <div class="status-bar">
+        <span>8:45</span>
+        <div class="right">
+          <span style="font-size: 9px; font-weight: 700; letter-spacing: -0.5px;">SOS</span>
+          <svg width="15" height="11" viewBox="0 0 15 11"><path d="M7.5 2C5 2 2.7 2.9 1 4.4l1.4 1.4A8.5 8.5 0 0 1 7.5 4c2 0 3.7.7 5.1 1.8L14 4.4A11.5 11.5 0 0 0 7.5 2zM3.5 6.4 4.9 7.8a4.5 4.5 0 0 1 5.2 0l1.4-1.4a6.5 6.5 0 0 0-8 0zM6 8.8 7.5 10.3 9 8.8a2 2 0 0 0-3 0z" fill="currentColor"/></svg>
+          <svg width="22" height="11" viewBox="0 0 24 11"><rect x="1" y="0.5" width="20" height="10" rx="2.4" fill="rgba(30,77,43,0.92)"/><text x="11" y="8.4" font-family="system-ui" font-size="7" font-weight="700" fill="white" text-anchor="middle">88</text></svg>
+        </div>
+      </div>
+      <div class="wordmark-masthead">
+        <img src="../../public/wordmark.png" alt="treehouse finds"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <svg class="wordmark-svg-fallback" width="220" height="86" viewBox="0 0 220 86" style="display:none;">
+          <text x="110" y="44" text-anchor="middle" font-family="Lora, Georgia, serif" font-style="italic" font-size="36" fill="#2a1a0a" font-weight="500">treehouse</text>
+          <text x="110" y="70" text-anchor="middle" font-family="Lora, sans-serif" font-size="14" fill="#4a3520" letter-spacing="0.16em">— finds —</text>
+        </svg>
+      </div>
+      <div class="mall-card">
+        <div class="from-line">from:</div>
+        <h2 class="name">America's Antique Mall</h2>
+        <div class="addr-row">
+          <span class="pin"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+          <span class="addr">5252 Bardstown Rd, Louisville, KY 40291</span>
+        </div>
+        <div class="stamp-wrap">
+          <div class="cancel-marks">
+            <div class="mark"></div>
+            <div class="mark"></div>
+            <div class="mark"></div>
+          </div>
+          <div class="stamp">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/>
+              <path d="M2 22s2-1 4-3"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="search-bar">
+        <svg class="glyph" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <ellipse cx="6" cy="13" rx="4" ry="5"/>
+          <ellipse cx="18" cy="13" rx="4" ry="5"/>
+          <rect x="9" y="11" width="6" height="2" rx="0.5"/>
+          <circle cx="6" cy="13" r="1.5" fill="white"/>
+          <circle cx="18" cy="13" r="1.5" fill="white"/>
+          <rect x="2" y="6" width="3" height="3" rx="0.5"/>
+          <rect x="19" y="6" width="3" height="3" rx="0.5"/>
+        </svg>
+        <span class="placeholder">Search finds, booths, or styles</span>
+      </div>
+      <!-- saved booth-grouped rows -->
+      <div class="body" style="overflow-y: auto;">
+        <div class="booth-row">
+          <div class="booth-lockup">
+            <div class="lockup-left">
+              <div class="eyebrow">Booth</div>
+              <div class="vendor">Wisteria Lane</div>
+            </div>
+            <div class="lockup-num">42</div>
+          </div>
+          <div class="scroll-row">
+            <div class="saved-tile">
+              <div class="photo" style="background: linear-gradient(135deg, #4a6080 0%, #6e7e9a 40%, #b09870 100%);"></div>
+              <div class="save-bubble"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg></div>
+            </div>
+            <div class="saved-tile">
+              <div class="photo" style="background: linear-gradient(135deg, #88aaa0 0%, #b8a877 40%, #6b5538 100%);"></div>
+              <div class="save-bubble"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg></div>
+            </div>
+            <div class="saved-tile">
+              <div class="photo" style="background: linear-gradient(135deg, #2a2a2a 0%, #555 40%, #c8b8a0 100%);"></div>
+              <div class="save-bubble"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg></div>
+            </div>
+          </div>
+          <div class="explore-cta">Explore the booth →</div>
+        </div>
+
+        <div class="booth-row">
+          <div class="booth-lockup">
+            <div class="lockup-left">
+              <div class="eyebrow">Booth</div>
+              <div class="vendor">Riverbend Curiosities</div>
+            </div>
+            <div class="lockup-num">57</div>
+          </div>
+          <div class="scroll-row">
+            <div class="saved-tile">
+              <div class="photo" style="background: linear-gradient(135deg, #5e7090 0%, #8a8aa0 40%, #d8c4a0 100%);"></div>
+              <div class="save-bubble"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg></div>
+            </div>
+            <div class="saved-tile">
+              <div class="photo" style="background: linear-gradient(135deg, #b09870 0%, #6b5538 100%);"></div>
+              <div class="save-bubble"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg></div>
+            </div>
+          </div>
+          <div class="explore-cta">Explore the booth →</div>
+        </div>
+
+        <div class="booth-row">
+          <div class="booth-lockup">
+            <div class="lockup-left">
+              <div class="eyebrow">Booth</div>
+              <div class="vendor">The Oak &amp; Iron</div>
+            </div>
+            <div class="lockup-num">12</div>
+          </div>
+          <div class="scroll-row">
+            <div class="saved-tile">
+              <div class="photo" style="background: linear-gradient(135deg, #c8b78a 0%, #a89368 100%);"></div>
+              <div class="save-bubble"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg></div>
+            </div>
+            <div class="saved-tile">
+              <div class="photo" style="background: linear-gradient(135deg, #7b6850 0%, #4d3c28 100%);"></div>
+              <div class="save-bubble"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg></div>
+            </div>
+            <div class="saved-tile">
+              <div class="photo" style="background: linear-gradient(135deg, #a8956c 0%, #786040 100%);"></div>
+              <div class="save-bubble"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg></div>
+            </div>
+          </div>
+          <div class="explore-cta">Explore the booth →</div>
+        </div>
+      </div>
+      <!-- bnav -->
+      <div class="bnav">
+        <div class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Home</span></div>
+        <div class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Map</span></div>
+        <div class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M6.5 19a6 6 0 0 1 11 0"/></svg><span>Profile</span></div>
+        <div class="tab active badge"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/><path d="M2 22s2-1 4-3"/></svg><span class="count-pill">8</span><span>Saved</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────── MAP ─────────────── -->
+  <div class="frame-wrap">
+    <div class="frame-label">
+      <strong>Map</strong>
+      <div class="frame-tagline">Interactive map zoomed to this mall · no bottom card</div>
+    </div>
+    <div class="phone">
+      <div class="status-bar">
+        <span>8:45</span>
+        <div class="right">
+          <span style="font-size: 9px; font-weight: 700; letter-spacing: -0.5px;">SOS</span>
+          <svg width="15" height="11" viewBox="0 0 15 11"><path d="M7.5 2C5 2 2.7 2.9 1 4.4l1.4 1.4A8.5 8.5 0 0 1 7.5 4c2 0 3.7.7 5.1 1.8L14 4.4A11.5 11.5 0 0 0 7.5 2zM3.5 6.4 4.9 7.8a4.5 4.5 0 0 1 5.2 0l1.4-1.4a6.5 6.5 0 0 0-8 0zM6 8.8 7.5 10.3 9 8.8a2 2 0 0 0-3 0z" fill="currentColor"/></svg>
+          <svg width="22" height="11" viewBox="0 0 24 11"><rect x="1" y="0.5" width="20" height="10" rx="2.4" fill="rgba(30,77,43,0.92)"/><text x="11" y="8.4" font-family="system-ui" font-size="7" font-weight="700" fill="white" text-anchor="middle">88</text></svg>
+        </div>
+      </div>
+      <div class="wordmark-masthead">
+        <img src="../../public/wordmark.png" alt="treehouse finds"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <svg class="wordmark-svg-fallback" width="220" height="86" viewBox="0 0 220 86" style="display:none;">
+          <text x="110" y="44" text-anchor="middle" font-family="Lora, Georgia, serif" font-style="italic" font-size="36" fill="#2a1a0a" font-weight="500">treehouse</text>
+          <text x="110" y="70" text-anchor="middle" font-family="Lora, sans-serif" font-size="14" fill="#4a3520" letter-spacing="0.16em">— finds —</text>
+        </svg>
+      </div>
+      <div class="mall-card">
+        <div class="from-line">from:</div>
+        <h2 class="name">America's Antique Mall</h2>
+        <div class="addr-row">
+          <span class="pin"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+          <span class="addr">5252 Bardstown Rd, Louisville, KY 40291</span>
+        </div>
+        <div class="stamp-wrap">
+          <div class="cancel-marks">
+            <div class="mark"></div>
+            <div class="mark"></div>
+            <div class="mark"></div>
+          </div>
+          <div class="stamp">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/>
+              <path d="M2 22s2-1 4-3"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="search-bar">
+        <svg class="glyph" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <ellipse cx="6" cy="13" rx="4" ry="5"/>
+          <ellipse cx="18" cy="13" rx="4" ry="5"/>
+          <rect x="9" y="11" width="6" height="2" rx="0.5"/>
+          <circle cx="6" cy="13" r="1.5" fill="white"/>
+          <circle cx="18" cy="13" r="1.5" fill="white"/>
+          <rect x="2" y="6" width="3" height="3" rx="0.5"/>
+          <rect x="19" y="6" width="3" height="3" rx="0.5"/>
+        </svg>
+        <span class="placeholder">Search finds, booths, or styles</span>
+      </div>
+      <!-- map area fills the body -->
+      <div class="body">
+        <div class="map-area">
+          <svg class="base" viewBox="0 0 375 380" preserveAspectRatio="xMidYMid slice">
+            <rect width="375" height="380" fill="var(--map-cream)"/>
+            <!-- water -->
+            <path d="M -30 30 Q 60 20 130 50 Q 200 80 230 70 L 230 -10 -30 -10 Z" fill="var(--map-water)" opacity="0.7"/>
+            <path d="M 250 -10 Q 280 80 320 130 L 410 130 410 -10 Z" fill="var(--map-water)" opacity="0.5"/>
+            <!-- park -->
+            <ellipse cx="80" cy="240" rx="55" ry="35" fill="var(--map-park)" opacity="0.7"/>
+            <ellipse cx="290" cy="320" rx="50" ry="32" fill="var(--map-park)" opacity="0.65"/>
+            <!-- major road (Bardstown Rd diagonal) -->
+            <path d="M 30 380 Q 110 280 180 200 T 360 30" stroke="var(--map-road)" stroke-width="9" fill="none"/>
+            <path d="M 30 380 Q 110 280 180 200 T 360 30" stroke="rgba(42,26,10,0.06)" stroke-width="10" fill="none"/>
+            <!-- intersecting road -->
+            <path d="M -10 160 L 380 200" stroke="var(--map-road)" stroke-width="6" fill="none"/>
+            <path d="M -10 160 L 380 200" stroke="rgba(42,26,10,0.06)" stroke-width="7" fill="none"/>
+            <!-- minor roads -->
+            <path d="M -10 100 L 380 130" stroke="var(--map-road-faint)" stroke-width="3" fill="none"/>
+            <path d="M -10 290 L 380 320" stroke="var(--map-road-faint)" stroke-width="3" fill="none"/>
+            <path d="M 100 -10 Q 110 90 130 200 T 180 380" stroke="var(--map-road-faint)" stroke-width="3" fill="none"/>
+            <path d="M 280 -10 Q 270 80 250 180 T 210 380" stroke="var(--map-road-faint)" stroke-width="3" fill="none"/>
+
+            <!-- labels -->
+            <text x="60" y="300" font-family="Lora, serif" font-style="italic" font-size="10" fill="var(--map-label)" letter-spacing="0.04em">Cherokee Park</text>
+            <text x="240" y="345" font-family="Lora, serif" font-style="italic" font-size="10" fill="var(--map-label)" letter-spacing="0.04em">Highview</text>
+            <text x="200" y="120" font-family="Lora, serif" font-style="italic" font-size="9" fill="var(--map-label)" letter-spacing="0.06em" opacity="0.75" transform="rotate(-22, 200, 120)">Bardstown Rd</text>
+          </svg>
+
+          <div class="you-are-here"></div>
+
+          <div class="pins">
+            <div class="pin pin-leaf selected" style="top: 50%; left: 50%;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/>
+                <path d="M2 22s2-1 4-3"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bnav">
+        <div class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Home</span></div>
+        <div class="tab active"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Map</span></div>
+        <div class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M6.5 19a6 6 0 0 1 11 0"/></svg><span>Profile</span></div>
+        <div class="tab badge"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/><path d="M2 22s2-1 4-3"/></svg><span class="count-pill">8</span><span>Saved</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SECTION 2 — POSTCARD CARD SPEC
+     ═══════════════════════════════════════════════════════════════ -->
+<h2 class="section-header">
+  Postcard mall card primitive
+  <small>The persistent header. Same on every primary tab.</small>
+</h2>
+<div class="spec-row">
+  <div class="spec-img">
+    <div class="specimen">
+      <div class="mall-card" style="margin: 0;">
+        <div class="from-line">from:</div>
+        <h2 class="name">America's Antique Mall</h2>
+        <div class="addr-row">
+          <span class="pin"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+          <span class="addr">5252 Bardstown Rd, Louisville, KY 40291</span>
+        </div>
+        <div class="stamp-wrap">
+          <div class="cancel-marks">
+            <div class="mark"></div>
+            <div class="mark"></div>
+            <div class="mark"></div>
+          </div>
+          <div class="stamp">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/>
+              <path d="M2 22s2-1 4-3"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="spec-callouts">
+    <h4>Composition</h4>
+    <p class="csub">A primitive component <code>&lt;PostcardMallCard&gt;</code> shipped to Home / Saved / Map.</p>
+    <ul>
+      <li><b>Surface</b> — postcard-bg (<code>#f4ecd8</code>, slightly more saturated than paperWarm), 12px radius, hairline border, <code>shadow-postcard</code> token.</li>
+      <li><b>"from:"</b> — Lora italic 18px, inkMuted. Postal vocabulary anchor.</li>
+      <li><b>Mall name</b> — Lora 28px / 500, inkPrimary. Up to 2 lines via WebkitLineClamp; ellipsis if longer.</li>
+      <li><b>Address row</b> — pin glyph (Lucide MapPin, 13px, inkMid) + address (system-sans 13px, inkMid). Single line, ellipsis.</li>
+      <li><b>Stamp</b> — 38×44px green rectangle, leaf glyph in green-on, perforated edge via radial-gradient pseudo-elements. Decorative; not interactive.</li>
+      <li><b>Cancel marks</b> — 3 horizontal bars at postmark opacity (0.34) to the left of the stamp. Mimics a real postal cancellation.</li>
+      <li><b>Bottom hairline</b> — dashed repeating-linear-gradient at the card bottom, mimicking a postcard's printed divider.</li>
+      <li><b>Tap behavior</b> — the entire card is tappable; opens MallSheet (existing primitive) for scope change.</li>
+    </ul>
+
+    <h4>Data inputs</h4>
+    <ul>
+      <li><code>mall.name</code> — already on <code>malls.name</code>.</li>
+      <li><code>mall.address_line</code> — composes from <code>address + city + state + zip</code>.</li>
+      <li>(No image needed in the card itself — different from V1's bottom-card spec.)</li>
+    </ul>
+
+    <h4>Surfaces</h4>
+    <ul>
+      <li><b>Home</b> (<code>app/page.tsx</code>) — replaces today's MallScopeHeader.</li>
+      <li><b>Saved</b> (<code>app/flagged/page.tsx</code>) — replaces today's MallScopeHeader.</li>
+      <li><b>Map</b> (new <code>app/map/page.tsx</code>) — same primitive, drives the map's scope.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SECTION 3 — SCOPE STATES
+     ═══════════════════════════════════════════════════════════════ -->
+<h2 class="section-header">
+  Scope states
+  <small>The card flexes for "specific mall" and "All Kentucky" without breaking the pattern.</small>
+</h2>
+<div class="scope-row">
+
+  <div class="scope-card">
+    <h5>Specific mall</h5>
+    <div class="ssub">User has picked one location. Map zooms to it; feed/saved scope to it.</div>
+    <div class="scope-card-stage">
+      <div class="mall-card" style="margin: 0;">
+        <div class="from-line">from:</div>
+        <h2 class="name">Treehouse Mall</h2>
+        <div class="addr-row">
+          <span class="pin"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+          <span class="addr">2422 South Hwy 53, La Grange, KY 40031</span>
+        </div>
+        <div class="stamp-wrap">
+          <div class="cancel-marks">
+            <div class="mark"></div>
+            <div class="mark"></div>
+            <div class="mark"></div>
+          </div>
+          <div class="stamp">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/>
+              <path d="M2 22s2-1 4-3"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="snote">Default state. Map shows a single zoomed-in pin.</div>
+  </div>
+
+  <div class="scope-card">
+    <h5>All Kentucky</h5>
+    <div class="ssub">User has picked the broader scope. Map zooms out to show all pins.</div>
+    <div class="scope-card-stage">
+      <div class="mall-card" style="margin: 0;">
+        <div class="from-line">from:</div>
+        <h2 class="name">All Kentucky Locations</h2>
+        <div class="addr-row">
+          <span class="pin"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+          <span class="addr">5 active locations · Louisville to Lexington</span>
+        </div>
+        <div class="stamp-wrap">
+          <div class="cancel-marks">
+            <div class="mark"></div>
+            <div class="mark"></div>
+            <div class="mark"></div>
+          </div>
+          <div class="stamp">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/>
+              <path d="M2 22s2-1 4-3"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="snote">Same primitive. Address line becomes a literary subtitle. Stamp glyph stays the leaf — leaf is the brand mark, holds across both states.</div>
+  </div>
+
+  <div class="scope-card">
+    <h5>Long mall name (worst case)</h5>
+    <div class="ssub">Lora 28 / 500 wraps to 2 lines via WebkitLineClamp.</div>
+    <div class="scope-card-stage">
+      <div class="mall-card" style="margin: 0;">
+        <div class="from-line">from:</div>
+        <h2 class="name">Copper Awning Flea Market &amp; Antique Co.</h2>
+        <div class="addr-row">
+          <span class="pin"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+          <span class="addr">2422 South Hwy 53, La Grange, KY 40031</span>
+        </div>
+        <div class="stamp-wrap">
+          <div class="cancel-marks">
+            <div class="mark"></div>
+            <div class="mark"></div>
+            <div class="mark"></div>
+          </div>
+          <div class="stamp">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/>
+              <path d="M2 22s2-1 4-3"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="snote">Card grows ~26px in height. Acceptable. Stamp position unchanged because it's absolute-positioned to top-right.</div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SECTION 4 — BOTTOMNAV BEFORE / AFTER
+     ═══════════════════════════════════════════════════════════════ -->
+<h2 class="section-header">
+  BottomNav: 4-tab model
+  <small>Booths tab retires; Map slots in. Saved glyph swaps from FlagGlyph to leaf for brand-glyph consistency.</small>
+</h2>
+<div class="nav-compare-row">
+
+  <div class="nav-compare-card">
+    <h5>Before (today)</h5>
+    <div class="nlbl">5 tabs · FlagGlyph for Saved · CircleUser for Profile</div>
+    <div class="nbar">
+      <div class="ntab active"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>Home</span></div>
+      <div class="ntab"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M6.5 19a6 6 0 0 1 11 0"/></svg><span>Profile</span></div>
+      <div class="ntab"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4l-2-2h-7L3 4.5V20a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3M14.5 4L19 8.5V13"/></svg><span>Saved</span></div>
+      <div class="ntab"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.4"/><rect x="14" y="3" width="7" height="7" rx="1.4"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><rect x="14" y="14" width="7" height="7" rx="1.4"/></svg><span>Booths</span></div>
+    </div>
+    <div class="nnote">5th tab (My Booth or Admin) appears role-conditionally to vendors/admins.</div>
+  </div>
+
+  <div class="nav-compare-card">
+    <h5>After (v2 proposal)</h5>
+    <div class="nlbl">4 tabs · leaf for Saved · Map replaces Booths</div>
+    <div class="nbar">
+      <div class="ntab active"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>Home</span></div>
+      <div class="ntab"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Map</span></div>
+      <div class="ntab"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M6.5 19a6 6 0 0 1 11 0"/></svg><span>Profile</span></div>
+      <div class="ntab"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/><path d="M2 22s2-1 4-3"/></svg><span>Saved</span></div>
+    </div>
+    <div class="nnote">
+      <b>Saved badge moves to a count pill</b> (matches your hand-drawn mockup) — brand-green pill with Times-New-Roman numeral. Replaces today's anonymous green dot. <b>Booths retires</b> — its three jobs redistribute to Map (browse) + /admin Locations (vendor-add) + Profile (My Booth shortcut).
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  R10 — Location Map · v2 mockup · 2026-05-04 · postcard mall card · 4-tab nav · cross-tab consistency
+</footer>
+
+</body>
+</html>

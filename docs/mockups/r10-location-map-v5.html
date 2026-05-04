@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>R10 — /map page body (v5)</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper-cream:   #e8ddc7;
+    --paper-warm:    #faf2e0;
+    --postcard-bg:   #f4ecd8;
+    --ink-primary:   #2a1a0a;
+    --ink-mid:       #4a3520;
+    --ink-muted:     #6b5538;
+    --ink-faint:     rgba(42,26,10,0.45);
+    --ink-hairline:  rgba(42,26,10,0.18);
+    --green:         #1e4d2b;
+    --green-on:      #fff9e8;
+    --green-border:  rgba(30,77,43,0.40);
+
+    --lora: "Lora", Georgia, serif;
+    --sys:  -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+
+    --shadow-postcard: 0 4px 14px rgba(42,26,10,0.16), 0 1px 2px rgba(42,26,10,0.08);
+    --shadow-pin:      0 2px 6px rgba(42,26,10,0.32), 0 1px 2px rgba(42,26,10,0.18);
+    --shadow-callout:  0 6px 20px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10);
+
+    /* Cartographic warm-cream basemap palette */
+    --map-cream:     #efe6cf;
+    --map-cream-2:   #e6d9b8;
+    --map-water:     #c5d6c4;
+    --map-water-2:   #aac3aa;
+    --map-road:      #fff;
+    --map-road-faint:rgba(255,255,255,0.55);
+    --map-park:      #d6e0bf;
+    --map-label:     rgba(42,26,10,0.36);
+    --map-state-line:rgba(42,26,10,0.18);
+
+    /* Clean-light alternative */
+    --light-bg:      #f3efe5;
+    --light-water:   #d4dce0;
+    --light-park:    #dfe6c6;
+    --light-rd:      #ffffff;
+    --light-lbl:     rgba(42,26,10,0.40);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #1a1612; font-family: var(--sys); color: var(--ink-primary); }
+
+  /* ── Decisions pane ─────────────────────────────────────────── */
+  .decisions {
+    max-width: 1100px; margin: 0 auto; padding: 40px 24px 24px; color: rgba(232,221,199,0.92);
+  }
+  .decisions h1 {
+    font-family: var(--lora); font-weight: 400; font-size: 32px; color: #f0e6cf;
+    margin: 0 0 6px; text-align: center; letter-spacing: -0.005em;
+  }
+  .decisions .subtitle {
+    text-align: center; color: rgba(232,221,199,0.62); font-size: 14px;
+    margin: 0 auto 22px; line-height: 1.65; max-width: 720px;
+  }
+  .decisions .meta {
+    text-align: center; color: rgba(232,221,199,0.42); font-size: 11px;
+    margin: 0 auto 30px; font-family: var(--lora); font-style: italic;
+  }
+  .pick-box {
+    background: rgba(232,221,199,0.06);
+    border: 1px solid rgba(232,221,199,0.14);
+    border-radius: 12px; padding: 20px 24px; margin: 0 0 12px;
+  }
+  .pick-box .q {
+    font-family: var(--lora); font-style: italic; font-size: 15px;
+    color: rgba(232,221,199,0.74); margin: 0 0 8px;
+  }
+  .pick-box p { margin: 0 0 10px; font-size: 13px; line-height: 1.7; color: rgba(232,221,199,0.82); }
+  .pick-box p:last-child { margin-bottom: 0; }
+  .pick-box strong { color: #f0e6cf; }
+  .pick-box .rec { color: rgba(200,220,200,0.86); }
+  .pick-box ul { margin: 4px 0 6px 18px; padding: 0; color: rgba(232,221,199,0.78); font-size: 12.5px; }
+  .pick-box li { line-height: 1.7; }
+  .pick-box code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 3px; color: rgba(255,243,200,0.92); }
+
+  .section-header {
+    max-width: 1280px;
+    margin: 36px auto 18px;
+    padding: 0 24px;
+    color: rgba(232, 221, 199, 0.92);
+    font-family: var(--lora);
+    font-size: 22px;
+    font-weight: 400;
+    border-bottom: 1px solid rgba(232, 221, 199, 0.16);
+    padding-bottom: 8px;
+  }
+  .section-header small {
+    display: block; font-style: italic; font-size: 13px; color: rgba(232,221,199,0.52);
+    font-family: var(--lora); margin-top: 4px;
+  }
+
+  /* ── Phone frames ─────────────────────────────────────────── */
+  .frames-row {
+    max-width: 1320px; margin: 0 auto; padding: 0 20px 30px;
+    display: flex; gap: 28px; justify-content: center; align-items: flex-start; flex-wrap: wrap;
+  }
+  .frame-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; flex: 0 0 auto; max-width: 380px; }
+  .frame-label { font-family: var(--lora); font-style: italic; font-size: 16px; color: rgba(232,221,199,0.72); text-align: center; line-height: 1.5; }
+  .frame-label strong { display: block; font-style: normal; font-size: 19px; color: #f0e6cf; margin-bottom: 4px; }
+  .frame-tagline { color: rgba(232,221,199,0.55); font-size: 12.5px; font-style: italic; margin-top: 2px; }
+
+  .phone {
+    width: 375px; height: 812px; background: var(--paper-cream); border-radius: 40px;
+    box-shadow: 0 12px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06);
+    overflow: hidden; position: relative; display: flex; flex-direction: column;
+  }
+
+  /* Status bar */
+  .status-bar {
+    height: 44px; padding: 12px 24px 0; display: flex; align-items: center;
+    justify-content: space-between; font-size: 14px; font-weight: 600; color: var(--ink-primary);
+    flex-shrink: 0; background: var(--paper-cream);
+  }
+  .status-bar .right { display: flex; gap: 6px; align-items: center; }
+
+  /* Wordmark hero masthead */
+  .wordmark-masthead {
+    flex-shrink: 0; padding: 6px 16px 12px; text-align: center; background: var(--paper-cream);
+  }
+  .wordmark-masthead img { height: 70px; width: auto; display: inline-block; }
+  .wordmark-svg-fallback { display: block; margin: 0 auto; }
+
+  /* ── Postcard mall card (locked v4 spec) ──────────────────── */
+  .mall-card {
+    margin: 0 16px 12px;
+    background: var(--postcard-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow-postcard);
+    border: 1px solid rgba(42,26,10,0.10);
+    padding: 14px 14px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .mall-card::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse at 18% 25%, rgba(255,255,255,0.18) 0%, transparent 40%),
+      radial-gradient(ellipse at 82% 75%, rgba(42,26,10,0.05) 0%, transparent 50%);
+  }
+  .mall-card .text-block {
+    flex: 1; min-width: 0;
+    padding-right: 26px;
+    display: flex; flex-direction: column; justify-content: center;
+    position: relative; z-index: 1;
+  }
+  .mall-card .from-line {
+    font-family: var(--lora); font-style: italic; font-size: 16px;
+    color: var(--ink-muted); margin: 0 0 3px; line-height: 1;
+  }
+  .mall-card .name {
+    font-family: var(--lora); font-weight: 500; font-size: 22px;
+    color: var(--ink-primary); line-height: 1.15; letter-spacing: -0.005em;
+    margin: 0 0 6px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .mall-card .addr-row {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--sys); font-size: 12px; color: var(--ink-mid);
+    line-height: 1.3;
+  }
+  .mall-card .addr-row .pin { color: var(--ink-mid); display: flex; flex-shrink: 0; }
+  .mall-card .addr-row .addr { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mall-card .cancellation {
+    position: absolute;
+    right: 50px;
+    top: 50%;
+    transform: translateY(-50%) rotate(-6deg);
+    width: 76px; height: 34px;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0.42;
+  }
+  .mall-card .cancellation path {
+    fill: none;
+    stroke: var(--ink-primary);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+  }
+  .mall-card .stamp {
+    width: 46px; height: 46px;
+    background: var(--paper-warm);
+    border: 1.5px dashed var(--green-border);
+    border-radius: 4px;
+    padding: 3px;
+    display: flex;
+    flex-shrink: 0;
+    align-self: center;
+    z-index: 1;
+  }
+  .mall-card .stamp .stamp-inner {
+    flex: 1;
+    background: var(--green);
+    border-radius: 2px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--green-on);
+  }
+  .mall-card .stamp .stamp-inner svg { display: block; }
+
+  /* Search bar (locked R16 primitive) */
+  .search-bar {
+    margin: 0 16px 10px;
+    background: var(--paper-warm); border-radius: 999px;
+    padding: 9px 14px;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 1px 3px rgba(42,26,10,0.08);
+    border: 1px solid var(--ink-hairline);
+    flex-shrink: 0;
+  }
+  .search-bar svg.glyph { color: var(--green); flex-shrink: 0; }
+  .search-bar .placeholder {
+    font-family: var(--lora); font-size: 13.5px; color: var(--ink-faint); line-height: 1.2;
+  }
+
+  /* Map body */
+  .map-body { flex: 1; position: relative; overflow: hidden; }
+  .map-body svg.base { display: block; width: 100%; height: 100%; position: absolute; inset: 0; }
+  .map-body .pins { position: absolute; inset: 0; }
+  .map-body .pin {
+    position: absolute; transform: translate(-50%, -100%);
+  }
+  .pin-leaf {
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--paper-warm); border-radius: 50%;
+    box-shadow: var(--shadow-pin);
+    border: 1.5px solid var(--green);
+    color: var(--green);
+  }
+  .pin-leaf.selected {
+    background: var(--green); border-color: var(--green); color: var(--green-on);
+    transform: scale(1.15);
+    box-shadow: 0 0 0 4px rgba(30,77,43,0.18), var(--shadow-pin);
+  }
+
+  /* Inline callout (peek state) */
+  .pin-callout {
+    position: absolute; transform: translate(-50%, calc(-100% - 12px));
+    background: var(--paper-warm);
+    border-radius: 10px;
+    box-shadow: var(--shadow-callout);
+    border: 1px solid var(--ink-hairline);
+    padding: 8px 12px 8px 10px;
+    display: flex; align-items: center; gap: 10px;
+    min-width: 200px;
+    z-index: 10;
+  }
+  .pin-callout::after {
+    content: "";
+    position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid var(--paper-warm);
+    filter: drop-shadow(0 1px 1px rgba(42,26,10,0.15));
+  }
+  .pin-callout .photo {
+    width: 36px; height: 36px; border-radius: 6px; flex-shrink: 0;
+    background-size: cover; background-position: center;
+  }
+  .pin-callout .body { flex: 1; min-width: 0; }
+  .pin-callout .ctitle {
+    font-family: var(--lora); font-size: 13.5px; font-weight: 500; color: var(--ink-primary);
+    line-height: 1.2; margin: 0 0 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    max-width: 130px;
+  }
+  .pin-callout .cstats {
+    font-family: var(--lora); font-style: italic; font-size: 11px;
+    color: var(--ink-muted); line-height: 1.2;
+  }
+  .pin-callout .cstats b {
+    font-family: "Times New Roman", Times, Georgia, serif;
+    font-weight: 600; font-style: normal; color: var(--green);
+  }
+  .pin-callout .cnext {
+    color: var(--green); display: flex; align-items: center;
+    flex-shrink: 0;
+  }
+
+  /* "You are here" radial */
+  .you-are-here {
+    position: absolute;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(30,77,43,0.18) 0%, rgba(30,77,43,0.08) 40%, transparent 70%);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Provider attribution (subtle) */
+  .map-attrib {
+    position: absolute; bottom: 6px; right: 8px;
+    font-family: var(--sys); font-size: 9px;
+    color: rgba(42,26,10,0.32);
+    pointer-events: none;
+    letter-spacing: 0.02em;
+  }
+
+  /* BottomNav (4-tab locked) */
+  .bnav {
+    height: 78px; flex-shrink: 0;
+    background: var(--paper-cream); border-top: 1px solid var(--ink-hairline);
+    display: flex; align-items: center; justify-content: space-around;
+    padding: 8px 0 18px;
+  }
+  .bnav .tab {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    color: var(--ink-muted); font-size: 11px; padding: 4px 8px;
+  }
+  .bnav .tab.active { color: var(--green); }
+  .bnav .tab svg { display: block; }
+  .bnav .badge { position: relative; }
+  .bnav .badge .count-pill {
+    position: absolute; top: -4px; right: -10px;
+    background: var(--green); color: var(--green-on);
+    font-family: "Times New Roman", Times, Georgia, serif;
+    font-size: 11px; font-weight: 600; line-height: 1;
+    border-radius: 999px; padding: 2px 5px;
+    min-width: 16px; text-align: center;
+    border: 1.5px solid var(--paper-cream);
+  }
+
+  /* ── Basemap variants pane ─────────────────────────────────── */
+  .basemap-row {
+    max-width: 1100px; margin: 0 auto 50px; padding: 0 24px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+  }
+  .basemap-card {
+    background: rgba(232,221,199,0.06); border: 1px solid rgba(232,221,199,0.16);
+    border-radius: 12px; padding: 22px;
+  }
+  .basemap-card h5 {
+    font-family: var(--lora); font-size: 17px; font-weight: 500; color: #f0e6cf;
+    margin: 0 0 4px;
+  }
+  .basemap-card .bsub {
+    font-family: var(--lora); font-style: italic; font-size: 12.5px;
+    color: rgba(232,221,199,0.6); margin: 0 0 14px;
+  }
+  .basemap-stage {
+    height: 240px; border-radius: 10px; overflow: hidden; position: relative;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  }
+  .basemap-stage svg { display: block; width: 100%; height: 100%; }
+  .basemap-stage .pin {
+    position: absolute; transform: translate(-50%, -100%);
+  }
+  .basemap-card .bnote {
+    margin-top: 12px; color: rgba(232,221,199,0.74); font-size: 12px; line-height: 1.65;
+  }
+  .basemap-card .bnote b { color: #f0e6cf; }
+
+  /* ── Interaction-model pane ────────────────────────────────── */
+  .interaction-row {
+    max-width: 1100px; margin: 0 auto 60px; padding: 0 24px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+  }
+  .interaction-card {
+    background: rgba(232,221,199,0.06); border: 1px solid rgba(232,221,199,0.16);
+    border-radius: 12px; padding: 22px;
+  }
+  .interaction-card h5 {
+    font-family: var(--lora); font-size: 17px; font-weight: 500; color: #f0e6cf;
+    margin: 0 0 4px;
+  }
+  .interaction-card .isub {
+    font-family: var(--lora); font-style: italic; font-size: 12.5px;
+    color: rgba(232,221,199,0.6); margin: 0 0 14px;
+  }
+  .interaction-card .istage {
+    background: var(--paper-cream); border-radius: 10px; padding: 14px; height: 200px; position: relative;
+    overflow: hidden;
+  }
+  .interaction-card .istage svg.base { display: block; width: 100%; height: 100%; position: absolute; inset: 0; }
+  .interaction-card .inote {
+    margin-top: 12px; color: rgba(232,221,199,0.74); font-size: 12px; line-height: 1.65;
+  }
+  .interaction-card .inote b { color: #f0e6cf; }
+
+  /* Search-on-map pane */
+  .search-row {
+    max-width: 1100px; margin: 0 auto 60px; padding: 0 24px;
+  }
+  .search-row .pick-box .options {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px;
+  }
+  .search-row .pick-box .opt {
+    background: rgba(232,221,199,0.04);
+    border: 1px solid rgba(232,221,199,0.16);
+    border-radius: 8px; padding: 14px;
+  }
+  .search-row .pick-box .opt h6 {
+    font-family: var(--lora); font-size: 15px; font-weight: 500; color: #f0e6cf;
+    margin: 0 0 6px;
+  }
+  .search-row .pick-box .opt p {
+    font-size: 12px; line-height: 1.6; color: rgba(232,221,199,0.78); margin: 0;
+  }
+  .search-row .pick-box .opt.rec {
+    border-color: rgba(120,180,140,0.5); background: rgba(120,180,140,0.06);
+  }
+
+  footer {
+    color: rgba(232,221,199,0.45); font-family: var(--lora); font-style: italic;
+    font-size: 12px; text-align: center; padding: 12px 24px 60px;
+  }
+
+  @media (max-width: 1300px) {
+    .frames-row { gap: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     DECISIONS PANE
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="decisions">
+  <h1>R10 — /map page body · v5</h1>
+  <p class="subtitle">
+    Postcard card + 4-tab nav locked in v4. v5 designs the map body itself: basemap visual treatment,
+    pin-tap interaction, search behavior on the map page, and what each scope state looks like.
+  </p>
+  <p class="meta">v5 mockup · 2026-05-04 · 3 page states + basemap + interaction picks</p>
+
+  <div class="pick-box">
+    <p class="q">Three open questions for v5</p>
+    <ul>
+      <li><b>Basemap visual style</b> — cartographic warm-cream (V1 Frame A direction; matches v1.x ecosystem palette) vs. clean light Mapbox/Google standard (familiar but generic). Two stages below.</li>
+      <li><b>Pin-tap interaction</b> — instant rescope per design-record D23 (one tap = postcard card updates + map zooms in) vs. peek-then-commit (first tap = inline callout near the pin; tapping the callout commits the rescope). Two stages below.</li>
+      <li><b>Search bar behavior on Map</b> — not covered in the design record. Three options surfaced below: filter-pins / redirect-to-Home / disabled-on-Map.</li>
+    </ul>
+  </div>
+
+  <div class="pick-box">
+    <p class="q">Three page states (frames below)</p>
+    <ul>
+      <li><b>Frame A — All Kentucky overview.</b> Default state when user first taps Map tab. Card shows "All Kentucky Locations." Map shows all active mall pins on a state-shaped basemap. No selection.</li>
+      <li><b>Frame B — Specific mall scope.</b> User has set scope to one mall (via MallSheet from any tab). Card shows that mall. Map zooms to its location with a single highlighted pin + neighborhood context.</li>
+      <li><b>Frame C — Pin tapped, peek callout.</b> All-Kentucky scope with one pin tapped. Inline callout appears above the pin showing mall name + booth/find counts + chevron. Tap the callout → commits the rescope (Frame B). Tap empty map → dismisses.</li>
+    </ul>
+    <p class="rec"><b>Recommendation:</b> warm-cream cartographic basemap + peek-then-commit interaction + redirect-to-Home for search-on-map. Reasoning in each pane below.</p>
+  </div>
+
+  <div class="pick-box">
+    <p class="q">What's NOT being designed in v5</p>
+    <ul>
+      <li>Map provider implementation. Mapbox / Google Maps / Leaflet decision still deferred to the implementation arc.</li>
+      <li>Pin clustering. 5 active malls in Kentucky; clustering only matters at 15+ locations.</li>
+      <li>"You are here" GPS indicator. Permission flow + privacy-pref handling are post-launch polish unless beta feedback demands earlier.</li>
+      <li>Bounding-box constraint logic. Cap pan/zoom to KY at implementation time.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SECTION 1 — THREE PAGE STATES
+     ═══════════════════════════════════════════════════════════════ -->
+<h2 class="section-header">
+  Three page states
+  <small>All using the warm-cream cartographic basemap + leaf-bubble pins. Postcard card + search bar are the locked v4 chrome.</small>
+</h2>
+
+<div class="frames-row">
+
+  <!-- ─────────────── FRAME A — All Kentucky overview ─────────────── -->
+  <div class="frame-wrap">
+    <div class="frame-label">
+      <strong>A — All Kentucky overview</strong>
+      <div class="frame-tagline">Default Map-tab state. 5 active locations. No selection.</div>
+    </div>
+    <div class="phone">
+      <div class="status-bar">
+        <span>8:45</span>
+        <div class="right">
+          <span style="font-size: 9px; font-weight: 700; letter-spacing: -0.5px;">SOS</span>
+          <svg width="15" height="11" viewBox="0 0 15 11"><path d="M7.5 2C5 2 2.7 2.9 1 4.4l1.4 1.4A8.5 8.5 0 0 1 7.5 4c2 0 3.7.7 5.1 1.8L14 4.4A11.5 11.5 0 0 0 7.5 2zM3.5 6.4 4.9 7.8a4.5 4.5 0 0 1 5.2 0l1.4-1.4a6.5 6.5 0 0 0-8 0zM6 8.8 7.5 10.3 9 8.8a2 2 0 0 0-3 0z" fill="currentColor"/></svg>
+          <svg width="22" height="11" viewBox="0 0 24 11"><rect x="1" y="0.5" width="20" height="10" rx="2.4" fill="rgba(30,77,43,0.92)"/><text x="11" y="8.4" font-family="system-ui" font-size="7" font-weight="700" fill="white" text-anchor="middle">88</text></svg>
+        </div>
+      </div>
+      <div class="wordmark-masthead">
+        <img src="../../public/wordmark.png" alt="treehouse finds"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <svg class="wordmark-svg-fallback" width="180" height="70" viewBox="0 0 180 70" style="display:none;">
+          <text x="90" y="36" text-anchor="middle" font-family="Lora, Georgia, serif" font-style="italic" font-size="30" fill="#2a1a0a" font-weight="500">treehouse</text>
+          <text x="90" y="58" text-anchor="middle" font-family="Lora, sans-serif" font-size="12" fill="#4a3520" letter-spacing="0.16em">— finds —</text>
+        </svg>
+      </div>
+      <!-- mall card: All Kentucky variant -->
+      <div class="mall-card">
+        <div class="text-block">
+          <div class="from-line">from:</div>
+          <h2 class="name">All Kentucky Locations</h2>
+          <div class="addr-row">
+            <span class="pin"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+            <span class="addr">5 active locations · Louisville to Lexington</span>
+          </div>
+        </div>
+        <svg class="cancellation" viewBox="0 0 76 34">
+          <path d="M 4,4 Q 14,0 24,4 T 44,4 T 64,4 T 72,4" />
+          <path d="M 2,11 Q 12,7 22,11 T 42,11 T 62,11 T 74,11" />
+          <path d="M 4,17 Q 14,13 24,17 T 44,17 T 64,17 T 72,17" />
+          <path d="M 2,23 Q 12,19 22,23 T 42,23 T 62,23 T 74,23" />
+          <path d="M 4,30 Q 14,26 24,30 T 44,30 T 64,30 T 72,30" />
+        </svg>
+        <div class="stamp">
+          <div class="stamp-inner">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="search-bar">
+        <svg class="glyph" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <ellipse cx="6" cy="13" rx="4" ry="5"/>
+          <ellipse cx="18" cy="13" rx="4" ry="5"/>
+          <rect x="9" y="11" width="6" height="2" rx="0.5"/>
+          <circle cx="6" cy="13" r="1.5" fill="white"/>
+          <circle cx="18" cy="13" r="1.5" fill="white"/>
+          <rect x="2" y="6" width="3" height="3" rx="0.5"/>
+          <rect x="19" y="6" width="3" height="3" rx="0.5"/>
+        </svg>
+        <span class="placeholder">Search finds, booths, or styles</span>
+      </div>
+      <!-- All Kentucky cartographic map -->
+      <div class="map-body">
+        <svg class="base" viewBox="0 0 375 480" preserveAspectRatio="xMidYMid slice">
+          <rect width="375" height="480" fill="var(--map-cream)"/>
+          <!-- Kentucky-ish landmass silhouette -->
+          <path d="M -10 80
+                   Q 30 65 60 70
+                   Q 100 75 140 60
+                   Q 180 55 220 70
+                   Q 270 80 320 75
+                   Q 360 78 410 90
+                   L 410 380
+                   Q 380 400 340 395
+                   Q 300 390 260 410
+                   Q 220 425 180 410
+                   Q 130 405 100 420
+                   Q 60 425 30 410
+                   Q -10 395 -10 380 Z"
+                fill="var(--map-cream-2)" opacity="0.7"/>
+          <!-- Ohio River (north border) -->
+          <path d="M -10 70 Q 60 50 140 60 Q 240 70 410 80"
+                stroke="var(--map-water-2)" stroke-width="6" fill="none" opacity="0.85"/>
+          <path d="M -10 78 Q 60 58 140 68 Q 240 78 410 88"
+                stroke="var(--map-water)" stroke-width="3" fill="none" opacity="0.9"/>
+          <!-- inland river (Kentucky River) -->
+          <path d="M 220 70 Q 230 150 200 220 T 180 350"
+                stroke="var(--map-water)" stroke-width="3" fill="none" opacity="0.6"/>
+          <!-- Cumberland River south -->
+          <path d="M 60 380 Q 130 360 200 380 T 360 390"
+                stroke="var(--map-water)" stroke-width="3" fill="none" opacity="0.55"/>
+          <!-- Park / forest patches (Daniel Boone / Mammoth Cave / Cumberland Gap) -->
+          <ellipse cx="280" cy="280" rx="50" ry="34" fill="var(--map-park)" opacity="0.55"/>
+          <ellipse cx="120" cy="290" rx="40" ry="26" fill="var(--map-park)" opacity="0.55"/>
+          <ellipse cx="340" cy="370" rx="35" ry="22" fill="var(--map-park)" opacity="0.5"/>
+          <!-- Major roads (interstates) -->
+          <path d="M 60 80 Q 80 200 90 320 T 110 420"
+                stroke="var(--map-road)" stroke-width="3" fill="none"/>
+          <path d="M 230 70 Q 240 200 235 320 T 240 420"
+                stroke="var(--map-road)" stroke-width="3" fill="none"/>
+          <path d="M 0 200 Q 100 195 200 210 T 410 220"
+                stroke="var(--map-road)" stroke-width="3" fill="none"/>
+          <!-- region labels -->
+          <text x="80" y="155" font-family="Lora, serif" font-style="italic" font-size="11" fill="var(--map-label)" letter-spacing="0.08em">LOUISVILLE</text>
+          <text x="220" y="155" font-family="Lora, serif" font-style="italic" font-size="11" fill="var(--map-label)" letter-spacing="0.08em">LEXINGTON</text>
+          <text x="55" y="430" font-family="Lora, serif" font-style="italic" font-size="9" fill="var(--map-label)" letter-spacing="0.04em" opacity="0.65">Bowling Green</text>
+          <text x="280" y="370" font-family="Lora, serif" font-style="italic" font-size="9" fill="var(--map-label)" letter-spacing="0.04em" opacity="0.65">Daniel Boone NF</text>
+          <text x="170" y="280" font-family="Lora, serif" font-style="italic" font-size="9" fill="var(--map-label)" letter-spacing="0.06em" opacity="0.55" transform="rotate(-12, 170, 280)">Kentucky River</text>
+          <!-- Kentucky label -->
+          <text x="200" y="245" font-family="Lora, serif" font-style="italic" font-size="14" fill="var(--map-label)" letter-spacing="0.12em" text-anchor="middle" opacity="0.75">KENTUCKY</text>
+        </svg>
+
+        <div class="pins">
+          <div class="pin pin-leaf" style="top: 168px; left: 80px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/><path d="M2 22s2-1 4-3"/></svg>
+          </div>
+          <div class="pin pin-leaf" style="top: 195px; left: 130px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/><path d="M2 22s2-1 4-3"/></svg>
+          </div>
+          <div class="pin pin-leaf" style="top: 175px; left: 220px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/><path d="M2 22s2-1 4-3"/></svg>
+          </div>
+          <div class="pin pin-leaf" style="top: 210px; left: 280px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/><path d="M2 22s2-1 4-3"/></svg>
+          </div>
+          <div class="pin pin-leaf" style="top: 320px; left: 110px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/><path d="M2 22s2-1 4-3"/></svg>
+          </div>
+        </div>
+        <div class="map-attrib">© Mapbox · OSM</div>
+      </div>
+      <div class="bnav">
+        <div class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Home</span></div>
+        <div class="tab active"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Map</span></div>
+        <div class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M6.5 19a6 6 0 0 1 11 0"/></svg><span>Profile</span></div>
+        <div class="tab badge"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/><path d="M2 22s2-1 4-3"/></svg><span class="count-pill">8</span><span>Saved</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────── FRAME B — Specific mall scope ─────────────── -->
+  <div class="frame-wrap">
+    <div class="frame-label">
+      <strong>B — Specific mall</strong>
+      <div class="frame-tagline">User has set scope to one mall. Map zooms in. Single pin + neighborhood.</div>
+    </div>
+    <div class="phone">
+      <div class="status-bar">
+        <span>8:45</span>
+        <div class="right">
+          <span style="font-size: 9px; font-weight: 700; letter-spacing: -0.5px;">SOS</span>
+          <svg width="15" height="11" viewBox="0 0 15 11"><path d="M7.5 2C5 2 2.7 2.9 1 4.4l1.4 1.4A8.5 8.5 0 0 1 7.5 4c2 0 3.7.7 5.1 1.8L14 4.4A11.5 11.5 0 0 0 7.5 2zM3.5 6.4 4.9 7.8a4.5 4.5 0 0 1 5.2 0l1.4-1.4a6.5 6.5 0 0 0-8 0zM6 8.8 7.5 10.3 9 8.8a2 2 0 0 0-3 0z" fill="currentColor"/></svg>
+          <svg width="22" height="11" viewBox="0 0 24 11"><rect x="1" y="0.5" width="20" height="10" rx="2.4" fill="rgba(30,77,43,0.92)"/><text x="11" y="8.4" font-family="system-ui" font-size="7" font-weight="700" fill="white" text-anchor="middle">88</text></svg>
+        </div>
+      </div>
+      <div class="wordmark-masthead">
+        <img src="../../public/wordmark.png" alt="treehouse finds"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <svg class="wordmark-svg-fallback" width="180" height="70" viewBox="0 0 180 70" style="display:none;">
+          <text x="90" y="36" text-anchor="middle" font-family="Lora, Georgia, serif" font-style="italic" font-size="30" fill="#2a1a0a" font-weight="500">treehouse</text>
+          <text x="90" y="58" text-anchor="middle" font-family="Lora, sans-serif" font-size="12" fill="#4a3520" letter-spacing="0.16em">— finds —</text>
+        </svg>
+      </div>
+      <div class="mall-card">
+        <div class="text-block">
+          <div class="from-line">from:</div>
+          <h2 class="name">America's Antique Mall</h2>
+          <div class="addr-row">
+            <span class="pin"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+            <span class="addr">5252 Bardstown Rd, Louisville, KY 40291</span>
+          </div>
+        </div>
+        <svg class="cancellation" viewBox="0 0 76 34">
+          <path d="M 4,4 Q 14,0 24,4 T 44,4 T 64,4 T 72,4" />
+          <path d="M 2,11 Q 12,7 22,11 T 42,11 T 62,11 T 74,11" />
+          <path d="M 4,17 Q 14,13 24,17 T 44,17 T 64,17 T 72,17" />
+          <path d="M 2,23 Q 12,19 22,23 T 42,23 T 62,23 T 74,23" />
+          <path d="M 4,30 Q 14,26 24,30 T 44,30 T 64,30 T 72,30" />
+        </svg>
+        <div class="stamp">
+          <div class="stamp-inner">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="search-bar">
+        <svg class="glyph" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <ellipse cx="6" cy="13" rx="4" ry="5"/>
+          <ellipse cx="18" cy="13" rx="4" ry="5"/>
+          <rect x="9" y="11" width="6" height="2" rx="0.5"/>
+          <circle cx="6" cy="13" r="1.5" fill="white"/>
+          <circle cx="18" cy="13" r="1.5" fill="white"/>
+          <rect x="2" y="6" width="3" height="3" rx="0.5"/>
+          <rect x="19" y="6" width="3" height="3" rx="0.5"/>
+        </svg>
+        <span class="placeholder">Search finds, booths, or styles</span>
+      </div>
+      <!-- specific-mall zoomed cartographic -->
+      <div class="map-body">
+        <svg class="base" viewBox="0 0 375 460" preserveAspectRatio="xMidYMid slice">
+          <rect width="375" height="460" fill="var(--map-cream)"/>
+          <!-- water blob (small lake / Ohio river ref) -->
+          <path d="M -30 30 Q 60 20 130 50 Q 200 80 230 70 L 230 -10 -30 -10 Z" fill="var(--map-water)" opacity="0.7"/>
+          <path d="M 250 -10 Q 280 80 320 130 L 410 130 410 -10 Z" fill="var(--map-water)" opacity="0.5"/>
+          <!-- Cherokee Park ellipse -->
+          <ellipse cx="80" cy="280" rx="55" ry="35" fill="var(--map-park)" opacity="0.7"/>
+          <text x="50" y="340" font-family="Lora, serif" font-style="italic" font-size="11" fill="var(--map-label)" letter-spacing="0.04em">Cherokee Park</text>
+          <!-- Highview area -->
+          <ellipse cx="290" cy="370" rx="50" ry="32" fill="var(--map-park)" opacity="0.65"/>
+          <text x="240" y="395" font-family="Lora, serif" font-style="italic" font-size="11" fill="var(--map-label)" letter-spacing="0.04em">Highview</text>
+          <!-- Bardstown Rd diagonal -->
+          <path d="M 30 460 Q 110 340 180 240 T 360 30" stroke="var(--map-road)" stroke-width="9" fill="none"/>
+          <path d="M 30 460 Q 110 340 180 240 T 360 30" stroke="rgba(42,26,10,0.06)" stroke-width="10" fill="none"/>
+          <text x="220" y="160" font-family="Lora, serif" font-style="italic" font-size="11" fill="var(--map-label)" letter-spacing="0.06em" opacity="0.85" transform="rotate(-22, 220, 160)">Bardstown Rd</text>
+          <!-- intersecting major road -->
+          <path d="M -10 200 L 380 240" stroke="var(--map-road)" stroke-width="6" fill="none"/>
+          <path d="M -10 200 L 380 240" stroke="rgba(42,26,10,0.06)" stroke-width="7" fill="none"/>
+          <!-- minor roads -->
+          <path d="M -10 130 L 380 160" stroke="var(--map-road-faint)" stroke-width="3" fill="none"/>
+          <path d="M -10 320 L 380 350" stroke="var(--map-road-faint)" stroke-width="3" fill="none"/>
+          <path d="M 100 -10 Q 110 100 130 220 T 180 460" stroke="var(--map-road-faint)" stroke-width="3" fill="none"/>
+          <path d="M 320 -10 Q 310 100 280 220 T 230 460" stroke="var(--map-road-faint)" stroke-width="3" fill="none"/>
+        </svg>
+        <div class="you-are-here" style="left: 50%; top: 50%;"></div>
+        <div class="pins">
+          <div class="pin pin-leaf selected" style="top: 50%; left: 50%;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/><path d="M2 22s2-1 4-3"/></svg>
+          </div>
+        </div>
+        <div class="map-attrib">© Mapbox · OSM</div>
+      </div>
+      <div class="bnav">
+        <div class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Home</span></div>
+        <div class="tab active"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Map</span></div>
+        <div class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M6.5 19a6 6 0 0 1 11 0"/></svg><span>Profile</span></div>
+        <div class="tab badge"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/><path d="M2 22s2-1 4-3"/></svg><span class="count-pill">8</span><span>Saved</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────── FRAME C — Pin tapped, peek callout ─────────────── -->
+  <div class="frame-wrap">
+    <div class="frame-label">
+      <strong>C — Peek callout</strong>
+      <div class="frame-tagline">All-Kentucky scope. One pin tapped → inline callout. Tap callout to commit.</div>
+    </div>
+    <div class="phone">
+      <div class="status-bar">
+        <span>8:45</span>
+        <div class="right">
+          <span style="font-size: 9px; font-weight: 700; letter-spacing: -0.5px;">SOS</span>
+          <svg width="15" height="11" viewBox="0 0 15 11"><path d="M7.5 2C5 2 2.7 2.9 1 4.4l1.4 1.4A8.5 8.5 0 0 1 7.5 4c2 0 3.7.7 5.1 1.8L14 4.4A11.5 11.5 0 0 0 7.5 2zM3.5 6.4 4.9 7.8a4.5 4.5 0 0 1 5.2 0l1.4-1.4a6.5 6.5 0 0 0-8 0zM6 8.8 7.5 10.3 9 8.8a2 2 0 0 0-3 0z" fill="currentColor"/></svg>
+          <svg width="22" height="11" viewBox="0 0 24 11"><rect x="1" y="0.5" width="20" height="10" rx="2.4" fill="rgba(30,77,43,0.92)"/><text x="11" y="8.4" font-family="system-ui" font-size="7" font-weight="700" fill="white" text-anchor="middle">88</text></svg>
+        </div>
+      </div>
+      <div class="wordmark-masthead">
+        <img src="../../public/wordmark.png" alt="treehouse finds"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <svg class="wordmark-svg-fallback" width="180" height="70" viewBox="0 0 180 70" style="display:none;">
+          <text x="90" y="36" text-anchor="middle" font-family="Lora, Georgia, serif" font-style="italic" font-size="30" fill="#2a1a0a" font-weight="500">treehouse</text>
+          <text x="90" y="58" text-anchor="middle" font-family="Lora, sans-serif" font-size="12" fill="#4a3520" letter-spacing="0.16em">— finds —</text>
+        </svg>
+      </div>
+      <div class="mall-card">
+        <div class="text-block">
+          <div class="from-line">from:</div>
+          <h2 class="name">All Kentucky Locations</h2>
+          <div class="addr-row">
+            <span class="pin"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+            <span class="addr">5 active locations · Louisville to Lexington</span>
+          </div>
+        </div>
+        <svg class="cancellation" viewBox="0 0 76 34">
+          <path d="M 4,4 Q 14,0 24,4 T 44,4 T 64,4 T 72,4" />
+          <path d="M 2,11 Q 12,7 22,11 T 42,11 T 62,11 T 74,11" />
+          <path d="M 4,17 Q 14,13 24,17 T 44,17 T 64,17 T 72,17" />
+          <path d="M 2,23 Q 12,19 22,23 T 42,23 T 62,23 T 74,23" />
+          <path d="M 4,30 Q 14,26 24,30 T 44,30 T 64,30 T 72,30" />
+        </svg>
+        <div class="stamp">
+          <div class="stamp-inner">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="search-bar">
+        <svg class="glyph" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <ellipse cx="6" cy="13" rx="4" ry="5"/>
+          <ellipse cx="18" cy="13" rx="4" ry="5"/>
+          <rect x="9" y="11" width="6" height="2" rx="0.5"/>
+          <circle cx="6" cy="13" r="1.5" fill="white"/>
+          <circle cx="18" cy="13" r="1.5" fill="white"/>
+          <rect x="2" y="6" width="3" height="3" rx="0.5"/>
+          <rect x="19" y="6" width="3" height="3" rx="0.5"/>
+        </svg>
+        <span class="placeholder">Search finds, booths, or styles</span>
+      </div>
+      <!-- All Kentucky map with one pin tapped -->
+      <div class="map-body">
+        <svg class="base" viewBox="0 0 375 480" preserveAspectRatio="xMidYMid slice">
+          <rect width="375" height="480" fill="var(--map-cream)"/>
+          <path d="M -10 80 Q 30 65 60 70 Q 100 75 140 60 Q 180 55 220 70 Q 270 80 320 75 Q 360 78 410 90 L 410 380 Q 380 400 340 395 Q 300 390 260 410 Q 220 425 180 410 Q 130 405 100 420 Q 60 425 30 410 Q -10 395 -10 380 Z" fill="var(--map-cream-2)" opacity="0.7"/>
+          <path d="M -10 70 Q 60 50 140 60 Q 240 70 410 80" stroke="var(--map-water-2)" stroke-width="6" fill="none" opacity="0.85"/>
+          <path d="M -10 78 Q 60 58 140 68 Q 240 78 410 88" stroke="var(--map-water)" stroke-width="3" fill="none" opacity="0.9"/>
+          <path d="M 220 70 Q 230 150 200 220 T 180 350" stroke="var(--map-water)" stroke-width="3" fill="none" opacity="0.6"/>
+          <path d="M 60 380 Q 130 360 200 380 T 360 390" stroke="var(--map-water)" stroke-width="3" fill="none" opacity="0.55"/>
+          <ellipse cx="280" cy="280" rx="50" ry="34" fill="var(--map-park)" opacity="0.55"/>
+          <ellipse cx="120" cy="290" rx="40" ry="26" fill="var(--map-park)" opacity="0.55"/>
+          <ellipse cx="340" cy="370" rx="35" ry="22" fill="var(--map-park)" opacity="0.5"/>
+          <path d="M 60 80 Q 80 200 90 320 T 110 420" stroke="var(--map-road)" stroke-width="3" fill="none"/>
+          <path d="M 230 70 Q 240 200 235 320 T 240 420" stroke="var(--map-road)" stroke-width="3" fill="none"/>
+          <path d="M 0 200 Q 100 195 200 210 T 410 220" stroke="var(--map-road)" stroke-width="3" fill="none"/>
+          <text x="80" y="155" font-family="Lora, serif" font-style="italic" font-size="11" fill="var(--map-label)" letter-spacing="0.08em">LOUISVILLE</text>
+          <text x="220" y="155" font-family="Lora, serif" font-style="italic" font-size="11" fill="var(--map-label)" letter-spacing="0.08em">LEXINGTON</text>
+          <text x="200" y="245" font-family="Lora, serif" font-style="italic" font-size="14" fill="var(--map-label)" letter-spacing="0.12em" text-anchor="middle" opacity="0.75">KENTUCKY</text>
+        </svg>
+
+        <div class="pins">
+          <div class="pin pin-leaf" style="top: 168px; left: 80px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/><path d="M2 22s2-1 4-3"/></svg>
+          </div>
+          <div class="pin pin-leaf selected" style="top: 195px; left: 130px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/><path d="M2 22s2-1 4-3"/></svg>
+          </div>
+          <div class="pin pin-leaf" style="top: 175px; left: 220px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/><path d="M2 22s2-1 4-3"/></svg>
+          </div>
+          <div class="pin pin-leaf" style="top: 210px; left: 280px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/><path d="M2 22s2-1 4-3"/></svg>
+          </div>
+          <div class="pin pin-leaf" style="top: 320px; left: 110px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/><path d="M2 22s2-1 4-3"/></svg>
+          </div>
+
+          <!-- inline callout above the selected pin -->
+          <div class="pin-callout" style="top: 195px; left: 130px;">
+            <div class="photo" style="background-image: linear-gradient(135deg, #c8b78a 0%, #6b5538 100%);"></div>
+            <div class="body">
+              <div class="ctitle">America's Antique</div>
+              <div class="cstats"><b>14</b> booths · <b>86</b> finds</div>
+            </div>
+            <div class="cnext">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div class="map-attrib">© Mapbox · OSM</div>
+      </div>
+      <div class="bnav">
+        <div class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg><span>Home</span></div>
+        <div class="tab active"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span>Map</span></div>
+        <div class="tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M6.5 19a6 6 0 0 1 11 0"/></svg><span>Profile</span></div>
+        <div class="tab badge"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/><path d="M2 22s2-1 4-3"/></svg><span class="count-pill">8</span><span>Saved</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SECTION 2 — BASEMAP COMPARISON
+     ═══════════════════════════════════════════════════════════════ -->
+<h2 class="section-header">
+  Basemap visual style — pick one
+  <small>The cartographic warm-cream is recommended (matches v1.x palette). Standard light is the fallback if cartographic styling is too costly to implement on the chosen provider.</small>
+</h2>
+<div class="basemap-row">
+
+  <div class="basemap-card">
+    <h5>Cartographic warm-cream <span style="color: #8fb0a0; font-style: italic; font-size: 12px;">· recommended</span></h5>
+    <div class="bsub">Custom Mapbox style. Cream landmass, sage water, white roads, italic Lora region labels.</div>
+    <div class="basemap-stage">
+      <svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice" style="background: var(--map-cream);">
+        <rect width="400" height="240" fill="var(--map-cream)"/>
+        <path d="M -10 40 Q 30 30 80 35 Q 130 40 180 30 Q 230 25 280 35 Q 330 40 410 50 L 410 200 Q 350 215 280 210 Q 200 205 130 215 Q 60 220 -10 210 Z" fill="var(--map-cream-2)" opacity="0.65"/>
+        <path d="M -10 30 Q 80 18 180 25 Q 280 32 410 40" stroke="var(--map-water-2)" stroke-width="5" fill="none" opacity="0.85"/>
+        <ellipse cx="280" cy="140" rx="50" ry="28" fill="var(--map-park)" opacity="0.55"/>
+        <path d="M 60 50 Q 80 130 90 220" stroke="var(--map-road)" stroke-width="3" fill="none"/>
+        <path d="M 230 40 Q 240 130 240 220" stroke="var(--map-road)" stroke-width="3" fill="none"/>
+        <path d="M -10 110 Q 200 100 410 120" stroke="var(--map-road)" stroke-width="3" fill="none"/>
+        <text x="80" y="100" font-family="Lora, serif" font-style="italic" font-size="9" fill="var(--map-label)" letter-spacing="0.08em">LOUISVILLE</text>
+        <text x="200" y="100" font-family="Lora, serif" font-style="italic" font-size="9" fill="var(--map-label)" letter-spacing="0.08em">LEXINGTON</text>
+        <text x="200" y="130" font-family="Lora, serif" font-style="italic" font-size="11" fill="var(--map-label)" letter-spacing="0.12em" text-anchor="middle" opacity="0.7">KENTUCKY</text>
+      </svg>
+      <div class="pin pin-leaf" style="top: 95px; left: 80px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg>
+      </div>
+      <div class="pin pin-leaf" style="top: 110px; left: 150px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg>
+      </div>
+      <div class="pin pin-leaf" style="top: 100px; left: 220px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg>
+      </div>
+      <div class="pin pin-leaf" style="top: 140px; left: 290px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg>
+      </div>
+    </div>
+    <div class="bnote">
+      <b>Pros:</b> Strongest "doesn't feel tacked on" read. Composes with paperCream / Lora / leaf brand mark. Italic region labels echo the in-app cartographic eyebrow on /find/[id].<br>
+      <b>Cons:</b> Custom styling effort. Mapbox Studio styling pass needed (~half-day). Tile cost slightly higher than standard styles but well within Mapbox's free tier at projected traffic.
+    </div>
+  </div>
+
+  <div class="basemap-card">
+    <h5>Standard light</h5>
+    <div class="bsub">Mapbox-light or Google Maps default. Familiar to all shoppers; renders without custom styling.</div>
+    <div class="basemap-stage">
+      <svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice" style="background: var(--light-bg);">
+        <rect width="400" height="240" fill="var(--light-bg)"/>
+        <path d="M -10 40 Q 80 30 180 35 Q 280 40 410 50 L 410 200 -10 200 Z" fill="rgba(255,255,255,0.5)"/>
+        <path d="M -10 30 Q 80 18 180 25 Q 280 32 410 40" stroke="var(--light-water)" stroke-width="5" fill="none"/>
+        <rect x="240" y="125" width="80" height="35" rx="4" fill="var(--light-park)" opacity="0.6"/>
+        <path d="M 60 0 L 60 240" stroke="var(--light-rd)" stroke-width="5" fill="none"/>
+        <path d="M 60 0 L 60 240" stroke="rgba(0,0,0,0.04)" stroke-width="6" fill="none"/>
+        <path d="M 230 0 L 230 240" stroke="var(--light-rd)" stroke-width="5" fill="none"/>
+        <path d="M 230 0 L 230 240" stroke="rgba(0,0,0,0.04)" stroke-width="6" fill="none"/>
+        <path d="M 0 110 L 410 110" stroke="var(--light-rd)" stroke-width="5" fill="none"/>
+        <path d="M 0 110 L 410 110" stroke="rgba(0,0,0,0.04)" stroke-width="6" fill="none"/>
+        <text x="80" y="100" font-family="system-ui, sans-serif" font-size="9" fill="var(--light-lbl)" font-weight="600">LOUISVILLE</text>
+        <text x="200" y="100" font-family="system-ui, sans-serif" font-size="9" fill="var(--light-lbl)" font-weight="600">LEXINGTON</text>
+      </svg>
+      <div class="pin pin-leaf" style="top: 95px; left: 80px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg>
+      </div>
+      <div class="pin pin-leaf" style="top: 110px; left: 150px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg>
+      </div>
+      <div class="pin pin-leaf" style="top: 100px; left: 220px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg>
+      </div>
+      <div class="pin pin-leaf" style="top: 140px; left: 290px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg>
+      </div>
+    </div>
+    <div class="bnote">
+      <b>Pros:</b> Zero custom-styling cost. Familiar visual language for all shoppers. Faster ship.<br>
+      <b>Cons:</b> Reads as Airbnb/Yelp-generic. The leaf pins do most of the brand work; basemap stays neutral. Risks "tacked on" feel against the otherwise-handcrafted v1.x ecosystem.
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SECTION 3 — INTERACTION MODEL
+     ═══════════════════════════════════════════════════════════════ -->
+<h2 class="section-header">
+  Pin-tap interaction — pick one
+  <small>Refines design-record D23 (which currently specifies instant rescope). Peek-then-commit is a cheap UX upgrade for users who want to compare before committing.</small>
+</h2>
+<div class="interaction-row">
+
+  <div class="interaction-card">
+    <h5>Instant rescope <span style="color: rgba(232,221,199,0.5); font-style: italic; font-size: 12px;">(per current D23)</span></h5>
+    <div class="isub">One tap on a pin = postcard card animates to that mall + map zooms in.</div>
+    <div class="istage">
+      <svg class="base" viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice">
+        <rect width="320" height="200" fill="var(--map-cream)"/>
+        <path d="M -10 40 Q 80 30 160 35 Q 240 40 330 50 L 330 160 -10 160 Z" fill="var(--map-cream-2)" opacity="0.7"/>
+        <path d="M -10 30 Q 80 18 160 25 Q 240 32 330 40" stroke="var(--map-water-2)" stroke-width="4" fill="none" opacity="0.85"/>
+        <text x="160" y="110" font-family="Lora, serif" font-style="italic" font-size="11" fill="var(--map-label)" letter-spacing="0.12em" text-anchor="middle" opacity="0.7">tap → rescope</text>
+      </svg>
+      <div class="pin pin-leaf" style="position: absolute; left: 100px; top: 90px; transform: translate(-50%, -100%);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg>
+      </div>
+      <div class="pin pin-leaf selected" style="position: absolute; left: 220px; top: 110px; transform: translate(-50%, -100%);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg>
+      </div>
+    </div>
+    <div class="inote">
+      <b>Pros:</b> Fewer steps. Card top is the only mall identifier needed. Composes cleanly with the no-bottom-card thesis (D22).<br>
+      <b>Cons:</b> User has to commit before seeing what's at a mall. Friction for "compare before deciding" mental model. Smaller relative friction at 5 malls; scales worse if KY grows to 15+.
+    </div>
+  </div>
+
+  <div class="interaction-card">
+    <h5>Peek then commit <span style="color: #8fb0a0; font-style: italic; font-size: 12px;">· recommended refinement</span></h5>
+    <div class="isub">First tap = small inline callout near pin. Second tap (callout) = commit. Tap empty map = dismiss.</div>
+    <div class="istage">
+      <svg class="base" viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice">
+        <rect width="320" height="200" fill="var(--map-cream)"/>
+        <path d="M -10 40 Q 80 30 160 35 Q 240 40 330 50 L 330 160 -10 160 Z" fill="var(--map-cream-2)" opacity="0.7"/>
+        <path d="M -10 30 Q 80 18 160 25 Q 240 32 330 40" stroke="var(--map-water-2)" stroke-width="4" fill="none" opacity="0.85"/>
+        <text x="160" y="170" font-family="Lora, serif" font-style="italic" font-size="11" fill="var(--map-label)" letter-spacing="0.12em" text-anchor="middle" opacity="0.7">tap → peek → commit</text>
+      </svg>
+      <div class="pin pin-leaf" style="position: absolute; left: 80px; top: 110px; transform: translate(-50%, -100%);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg>
+      </div>
+      <div class="pin pin-leaf selected" style="position: absolute; left: 200px; top: 130px; transform: translate(-50%, -100%);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 019 6.4C12.6 1.7 19 2 19 2s.6 6-3.7 9.7c-2.6 2.4-5.5 1.7-5.5 1.7"/></svg>
+      </div>
+      <!-- inline mini callout demo -->
+      <div class="pin-callout" style="position: absolute; left: 200px; top: 130px; transform: translate(-50%, calc(-100% - 12px)); min-width: 165px;">
+        <div class="photo" style="background-image: linear-gradient(135deg, #c8b78a 0%, #6b5538 100%); width: 28px; height: 28px;"></div>
+        <div class="body">
+          <div class="ctitle" style="font-size: 12px;">America's Antique</div>
+          <div class="cstats" style="font-size: 10px;"><b>14</b> · <b>86</b> finds</div>
+        </div>
+        <div class="cnext"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+    </div>
+    <div class="inote">
+      <b>Pros:</b> Lets users compare malls at a glance. Doesn't violate D22 (no persistent bottom card; transient callout dismisses on tap-elsewhere). Familiar pattern from Google Maps / Apple Maps / Hipcamp.<br>
+      <b>Cons:</b> Two-tap commit is one extra step. If only 5 malls existed forever this is overkill; for growth-state UX it's worth it.
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SECTION 4 — SEARCH ON MAP
+     ═══════════════════════════════════════════════════════════════ -->
+<h2 class="section-header">
+  Search bar behavior on the Map page
+  <small>The search bar primitive ships to all 3 tabs (D20). On Map, what does it do?</small>
+</h2>
+<div class="search-row">
+  <div class="pick-box">
+    <p class="q">Three options</p>
+    <div class="options">
+      <div class="opt">
+        <h6>(a) Filter pins in place</h6>
+        <p>Type "brass" → pins of malls with no brass finds dim or hide. Map stays. Subtle, immersive.</p>
+        <p style="margin-top: 8px; color: rgba(232,221,199,0.55); font-size: 11px;"><i>Cost:</i> requires an aggregation query (mall.id × tag-match count). Not in current schema; would need a derived index or runtime query per keystroke.</p>
+      </div>
+      <div class="opt rec">
+        <h6>(b) Redirect to Home <span style="color: #8fb0a0; font-size: 11px; font-style: italic;">· recommended</span></h6>
+        <p>Type "brass" + submit → routes to <code>/?q=brass</code>. Search lives on Home; Map stays focused on geographic browse.</p>
+        <p style="margin-top: 8px; color: rgba(232,221,199,0.55); font-size: 11px;"><i>Cost:</i> trivial. Reuses existing R16 search on Home. Mall scope persists across the redirect via URL.</p>
+      </div>
+      <div class="opt">
+        <h6>(c) Disabled placeholder</h6>
+        <p>Search bar present for visual consistency, but interactions disabled. Tap shows toast: "Search lives on Home."</p>
+        <p style="margin-top: 8px; color: rgba(232,221,199,0.55); font-size: 11px;"><i>Cost:</i> trivial. But dishonest UI: present without function.</p>
+      </div>
+    </div>
+    <p style="margin-top: 14px;" class="rec"><b>Recommendation: (b) Redirect to Home.</b> Cleanest mental model — Search is a Home action, Map is a geographic action. Redirect preserves mall scope; user lands on Home with the same mall filtering plus the typed query active. Zero new infrastructure. Doesn't violate Map's "this is the geographic surface" focus.</p>
+  </div>
+</div>
+
+<footer>
+  R10 — /map page body · v5 · 2026-05-04 · pick basemap · pick interaction · pick search behavior
+</footer>
+
+</body>
+</html>
