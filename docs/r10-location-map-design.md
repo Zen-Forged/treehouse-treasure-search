@@ -1,7 +1,7 @@
 # R10 — Location map nav + persistent postcard mall card — Design record
 
-> **Status:** 🟢 **Ready** as of session 106 (2026-05-04). Design + nav + primitive frozen; implementation sprint follows in a later session.
-> **Status history:** 🟡 Captured (55) → 🟢 Ready (106).
+> **Status:** ✅ **Shipped** as of session 108 (2026-05-05). Map integration end-to-end on production PWA. See [Implementation status (session 108)](#implementation-status-session-108) for sub-task table + deferred items.
+> **Status history:** 🟡 Captured (55) → 🟢 Ready (106) → ✅ Shipped (108).
 > **Roadmap entry:** [`docs/roadmap-beta-plus.md`](roadmap-beta-plus.md#r10--location-map-nav-icon-) — R10.
 > **Mockups:**
 > - [`docs/mockups/r10-location-map-v1.html`](mockups/r10-location-map-v1.html) — V1 (3 structural frames + pin variants + bottom-card spec). Rejected: bottom-card identifier duplicated the mall picker; "where does the card live on the map" tension unresolved.
@@ -351,7 +351,42 @@ V5 contributed:
 
 ## Status notes for future sessions
 
-- **R10 graduates 🟡 Captured → 🟢 Ready in session 106 (this session).** Both the postcard primitive (V4) and the `/map` page body (V5) are locked in the same session.
-- Implementation arc is the next significant feature ship. Sequence per the implementation sequencing above.
-- The first commit of the implementation arc should land the smoke-test page (`/postcard-test`) so iPhone QA can isolate `<PostcardMallCard>` + `<PinCallout>` before they ship to live surfaces. Per `feedback_testbed_first_for_ai_unknowns.md` — same shape of risk applies: card composes across multiple consumers, so primitive-isolated validation first.
-- **Map provider choice (Mapbox / Google / Leaflet) is the only deferred design axis.** Cartographic warm-cream styling per D25 IS canonical Mapbox Studio territory; if Mapbox cost is gated, the closest fallback is Google Maps with style-array (more verbose, less stylable but cheaper). Decide in the map-integration arc, not now.
+- **R10 graduates 🟡 Captured → 🟢 Ready in session 106.** Both the postcard primitive (V4) and the `/map` page body (V5) are locked in the same session.
+- **R10 graduates 🟢 Ready → ✅ Shipped in session 108.** All 11 sub-tasks closed across 3 sessions (106 design / 107 Arc 1+2 / 108 Arc 3+4). Roadmap snapshot: 9 ✅ Shipped, 1 🟢 Ready (R3), 6 🟡 Captured.
+- The first commit of the implementation arc landed the smoke-test page (`/postcard-test`) so iPhone QA could isolate `<PostcardMallCard>` + `<PinCallout>` before they shipped to live surfaces. Per `feedback_testbed_first_for_ai_unknowns.md`.
+- **Map provider** resolved session 107 → Mapbox. **Map integration** resolved session 108 — runtime paint overrides on `mapbox/light-v11` style at `style.load`. Cartographic warm-cream palette composed from `v1.basemap.*` tokens at runtime instead of via a Studio-hosted style URL. Trade-off: zero design-time setup vs italic-Lora label font deferred. See "Implementation status (session 108)" below.
+
+---
+
+## Implementation status (session 108)
+
+All 11 sub-tasks shipped across sessions 106 / 107 / 108:
+
+| Sub-task | Status | Session | Commit(s) |
+|---|---|---|---|
+| 1. Token additions (postcardBg, shadows, basemap palette) | ✅ Shipped | 107 | `74180bc` |
+| 2. `<PostcardMallCard>` primitive | ✅ Shipped | 107 | `a2b72fb` + dial `ed3e7f4` + `df6a46d` |
+| 3. `<PinCallout>` primitive | ✅ Shipped | 107 | `a2b72fb` |
+| 4. `<TabPageMasthead>` primitive | ✅ Shipped | 107 | `a2b72fb` |
+| 5. BottomNav 4-tab redesign | ✅ Shipped | 107 | `d6703b0` |
+| 6. Home consumer wiring | ✅ Shipped | 107 | `88754cf` |
+| 7. /flagged consumer wiring | ✅ Shipped | 107 | `03a30f3` |
+| 8. /map page (skeleton + map body) | ✅ Shipped | 107 + 108 | skeleton `90a03a8` (107) + map body in 108 commits below |
+| 9. MallSheet integration on PostcardMallCard | ✅ Shipped | 107 | inside `90a03a8` + scope-unify `6099250` |
+| 10. Map-provider integration (Mapbox custom-styled per D25) | ✅ Shipped | 108 | `5959282` install + `21b08de` palette + `e643507` pins/zoom + `4acf4f3` peek-then-commit + diagnostic `9fb88b0` + dial `24cbae0` |
+| 11. /shelves disposition (301 redirect to /map) | ✅ Shipped | 108 | `ef2d2a6` |
+
+### Deferred / open items at R10 ✅ Shipped
+
+- **Italic-Lora region labels (D25 last bit)** — deferred to a Mapbox Studio-hosted style URL. Custom font upload requires Studio; runtime paint overrides on `light-v11` only support color/opacity/halo on labels, not font face. When David wants to land the polished cartographic finish (~half-day), open Mapbox Studio → New Style → Monochrome → tune palette per D25 tokens → upload Lora font → publish → swap `'mapbox://styles/mapbox/light-v11'` for `'mapbox://styles/<user>/<style-id>'` in [`components/TreehouseMap.tsx`](../components/TreehouseMap.tsx) + retire `applyCartographicPalette()` (Studio handles the palette native).
+- **`app/shelves/page.tsx` dormant** — kept in repo at session 108 close. The next.config.js redirect intercepts before route resolution so the page never executes, but the file still ships in the build (~10kb gzipped). Deletion is a small follow-up commit if cleanliness matters.
+- **Pin clustering** — design record line item ("Skip for now (5 active malls). Add a clustering layer when location count >15 OR pin overlap becomes an issue."). Not blocking.
+
+### Session 108 implementation runtime notes
+
+- **SSR safety:** `<TreehouseMap>` is imported via `next/dynamic` with `ssr: false` from `app/map/page.tsx`. mapbox-gl's UMD bundle accesses `window` at module evaluation, which crashes during SSR even when imported from a `'use client'` component. The dynamic import is aliased as `nextDynamic` to dodge the existing `export const dynamic = 'force-dynamic'` route-segment config.
+- **Container height:** the map container uses `position: absolute; inset: 0` (NOT `height: 100%`). Some Safari layouts compute children's percent height as auto inside a flex column, leaving mapbox-gl with a 0px container and refusing to render.
+- **Pin DOM:** leaf-bubble pins are rendered into Mapbox markers via `createRoot` from `react-dom/client`. Each marker gets its own React root + the LeafBubblePin React component re-renders on selected-state change. Same React vocabulary as FlagGlyph (PiLeaf glyph + green/paper-warm palette).
+- **Peek anchor projection:** `<PinCallout>` is rendered inside the map container (NOT as a sibling). Anchor coordinates come from `map.project(lngLat)` and are re-projected on `move`/`zoom`/`rotate` events so the callout tracks the pin during pan/zoom.
+- **All-locations fit:** the all-Kentucky view computes `fitBounds()` from actual mall coordinates, NOT from `KY_BOUNDS`. This auto-tightens to the current data cluster (today: Louisville-area), and auto-expands as locations activate further out. `maxZoom: 11` prevents over-zoom on tightly-clustered or single-pin sets. `maxBounds` (the pan/zoom constraint) stays at `KY_BOUNDS` so the user still can't drift out of the state.
+- **Stats helper:** `getMallStatsByMallId()` in `lib/posts.ts` provides booth + available-find counts per mall via two parallel select-only queries grouped client-side. Drives the PinCallout stat row. Acceptable for ~5 active malls + low-hundreds posts; promote to a Postgres aggregate if row counts climb 10×.
