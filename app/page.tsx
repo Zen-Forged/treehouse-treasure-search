@@ -58,8 +58,11 @@ import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
 import BottomNav from "@/components/BottomNav";
 import MallSheet from "@/components/MallSheet";
-import MallScopeHeader from "@/components/MallScopeHeader";
-import StickyMasthead from "@/components/StickyMasthead";
+// MallScopeHeader retired on Home (R10 session 107) — replaced by
+// PostcardMallCard. /flagged still consumes MallScopeHeader until that page
+// migrates in sub-task 4.
+import TabPageMasthead from "@/components/TabPageMasthead";
+import PostcardMallCard from "@/components/PostcardMallCard";
 import FeaturedBanner from "@/components/FeaturedBanner";
 import PolaroidTile from "@/components/PolaroidTile";
 import EmptyState from "@/components/EmptyState";
@@ -400,52 +403,42 @@ function MasonryGrid({
   );
 }
 
-// ── Feed hero — paper, no gradient, no CTA ────────────────────────────────────
-// Thin wrapper around <MallScopeHeader>. Computes the geo line from the
-// selected mall (address link when one mall picked, italic geography when All).
+// ── Feed hero — postcard mall card + mall hero photo (R10 session 107) ──────
+// R10 swap: MallScopeHeader → PostcardMallCard. Same role (identifies the
+// "where am I shopping" scope, opens MallSheet on tap), new visual vocabulary
+// (postcard card stock, "from:" eyebrow, page-contextual stamp).
 //
-// R11 (Wave 1 Task 7, session 91) — when the user has filtered to a specific
-// mall AND that mall has hero_image_url set, render the photo as a banner
-// BELOW the MallScopeHeader using the same <FeaturedBanner> primitive that
-// powers the home Featured Find banner — so dimensions match exactly (200px
-// min-height, 16px corner radius, 10px horizontal padding via v1.bannerRadius).
-// All-malls and no-hero cases fall back to the text-only header — FeaturedBanner
-// returns null when imageUrl is absent, so the layout collapses cleanly.
+// R11 (session 91) mall hero photo retained as a separate <FeaturedBanner>
+// below the postcard card — same dimensions (200px min-height, 16px radius)
+// across Home/Saved/Map for visual consistency.
 function FeedHero({
   selectedMall,
+  malls,
   onTapMall,
 }: {
   selectedMall: Mall | null;
+  malls:        Mall[];
   onTapMall:    () => void;
 }) {
   const isAll = selectedMall === null;
-
-  const geoLine = isAll
-    ? { kind: "italic" as const, text: "Kentucky & Southern Indiana" }
-    : (() => {
-        const address = selectedMall!.address ?? null;
-        const cityLine = selectedMall!.city
-          ? `${selectedMall!.city}${selectedMall!.state ? `, ${selectedMall!.state}` : ""}`
-          : null;
-        const text = address ?? cityLine ?? "";
-        if (!text) return null;
-        const href = `https://maps.apple.com/?q=${encodeURIComponent(
-          address ?? `${selectedMall!.name} ${selectedMall!.city ?? ""} ${selectedMall!.state ?? ""}`
-        )}`;
-        return { kind: "address" as const, text, href };
-      })();
-
   const heroUrl = !isAll ? (selectedMall!.hero_image_url ?? null) : null;
+
+  // All-Kentucky subtitle composes from the active-malls count. The
+  // "Louisville to Lexington" bounding-city pair from V5 stays out of the
+  // runtime computation for now (parked carry-forward in design record §
+  // Carry-forward) until the location footprint stabilizes.
+  const allKentuckySubtitle = `${malls.length} active locations · Kentucky`;
 
   return (
     <>
-      <MallScopeHeader
-        eyebrowAll="Finds from across"
-        eyebrowOne="Finds from"
-        mallName={isAll ? null : selectedMall!.name}
-        geoLine={geoLine}
-        onTap={onTapMall}
-      />
+      <div style={{ padding: "0 16px" }}>
+        <PostcardMallCard
+          mall={isAll ? "all-kentucky" : selectedMall!}
+          stampGlyph="home"
+          allKentuckySubtitle={allKentuckySubtitle}
+          onTap={onTapMall}
+        />
+      </div>
       <FeaturedBanner variant="eyebrow" imageUrl={heroUrl} />
     </>
   );
@@ -694,18 +687,19 @@ function DiscoveryFeedInner() {
         position: "relative",
       }}
     >
-      {/* ── 1. Masthead — session-70 locked-grid slot API ───────────────── */}
-      {/* Session 90 — auth chrome moved to BottomNav (Profile tab) and
-          /login. Right slot explicitly empty: the StickyMasthead default
-          share treatment is opt-out here so the Home masthead stays the
-          quietest surface in the app. */}
-      <StickyMasthead right={null} />
+      {/* ── 1. Masthead — R10 session 107 — TabPageMasthead (inline 86px hero
+             wordmark) per D6. Root tab pages drop the fixed-position
+             StickyMasthead since there's no back button or right-slot to
+             share the row with. Wordmark scrolls away with content; BottomNav
+             stays fixed so the user always has navigation. */}
+      <TabPageMasthead />
 
-      {/* 1.5 Mall scope header (FeedHero wrapper) — moved above the
-          FeaturedBanner per session-68 QA so the persisted mall filter is
-          the first thing the eye lands on after the masthead. */}
+      {/* 1.5 PostcardMallCard (FeedHero wrapper) — postcard-style mall scope
+          identifier. Replaces session-91 MallScopeHeader. Tap opens
+          MallSheet for scope change. */}
       <FeedHero
         selectedMall={selectedMall}
+        malls={malls}
         onTapMall={() => setMallSheetOpen(true)}
       />
 
