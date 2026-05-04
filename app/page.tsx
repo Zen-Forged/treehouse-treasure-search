@@ -57,7 +57,10 @@ import { safeStorage } from "@/lib/safeStorage";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
 import BottomNav from "@/components/BottomNav";
-import MallSheet from "@/components/MallSheet";
+// MallSheet retired from Home (R10 session 107) — scope change happens on
+// /map per David's "If the location needs to be changed, it will be changed
+// on the map page and filtered on all subsequent pages." The shared scope
+// persists via useSavedMallId; Home is now a filter consumer, not changer.
 // MallScopeHeader retired on Home (R10 session 107) — replaced by
 // PostcardMallCard. /flagged still consumes MallScopeHeader until that page
 // migrates in sub-task 4.
@@ -465,8 +468,9 @@ function DiscoveryFeedInner() {
   const [malls,             setMalls]             = useState<Mall[]>([]);
   const [loading,           setLoading]           = useState<boolean>(searching || cachedFeedPosts === null);
   const [error,             setError]             = useState(false);
-  const [mallId,            setMallId]            = useSavedMallId();
-  const [mallSheetOpen,     setMallSheetOpen]     = useState(false);
+  const [mallId, setMallId]                       = useSavedMallId();
+  // setMallId retained ONLY for stale-mall recovery (effect at ~line 580).
+  // User-initiated scope change happens on /map. R10 session 107.
   const [followedIds,       setFollowedIds]       = useState<Set<string>>(new Set());
   const [bookmarkCount,     setBookmarkCount]     = useState(0);
   const [lastViewedId,      setLastViewedId]      = useState<string | null>(null);
@@ -633,21 +637,10 @@ function DiscoveryFeedInner() {
     router.replace(qs ? `/?${qs}` : "/", { scroll: false });
   }, [router, searchParams]);
 
-  function handleMallSelect(nextMallId: string | null) {
-    setMallId(nextMallId);
-    setMallSheetOpen(false);
-    // R3 — filter_applied event. mall_id of null = "All malls".
-    // R3 v1.1 (session 73) — `page` field added so per-tab adoption is
-    // queryable via `payload->>'page'`. Mirror added to /shelves + /flagged.
-    const mallSlug = nextMallId
-      ? (malls.find(m => m.id === nextMallId)?.slug ?? null)
-      : null;
-    track("filter_applied", {
-      filter_type:  "mall",
-      filter_value: mallSlug ?? "all",
-      page:         "/",
-    });
-  }
+  // handleMallSelect retired on Home (R10 session 107) — scope change moved
+  // to /map. The `filter_applied` analytics event now fires from /map's
+  // MallSheet handler instead. This function used to live here when the
+  // postcard card opened MallSheet locally.
 
   // ── Derived ─────────────────────────────────────────────────────────────────
   const filtered = posts.filter((p) => !mallId || p.mall_id === mallId);
@@ -667,15 +660,8 @@ function DiscoveryFeedInner() {
     [filtered],
   );
 
-  // Per-mall find counts for MallSheet (unfiltered source — shows how many
-  // are available at each mall, not how many match the current filter).
-  const findCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const p of posts) {
-      if (p.mall_id) counts[p.mall_id] = (counts[p.mall_id] ?? 0) + 1;
-    }
-    return counts;
-  }, [posts]);
+  // findCounts retired (R10 session 107) — was used only by Home's
+  // MallSheet, which has moved to /map.
 
   return (
     <div
@@ -700,7 +686,10 @@ function DiscoveryFeedInner() {
       <FeedHero
         selectedMall={selectedMall}
         malls={malls}
-        onTapMall={() => setMallSheetOpen(true)}
+        // R10 session 107 — scope change moved to /map. Tap on the postcard
+        // card routes to the Map tab where the MallSheet (and eventually
+        // pin-tap per D26) handles the change. D19 reversed for Home + Saved.
+        onTapMall={() => router.push("/map")}
       />
 
       {/* ── 1.75 SearchBar (R16) ─────────────────────────────────────────
@@ -792,15 +781,8 @@ function DiscoveryFeedInner() {
 
       <BottomNav active="home" flaggedCount={bookmarkCount} />
 
-      {/* ── MallSheet ──────────────────────────────────────────────────── */}
-      <MallSheet
-        open={mallSheetOpen}
-        onClose={() => setMallSheetOpen(false)}
-        malls={malls}
-        activeMallId={mallId}
-        onSelect={handleMallSelect}
-        findCounts={findCounts}
-      />
+      {/* MallSheet retired from Home (R10 session 107) — scope change is
+          /map's responsibility per the unified-filter design. */}
 
       <style>{`
         @keyframes shimmer {

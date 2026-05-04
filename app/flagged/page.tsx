@@ -28,6 +28,7 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 // ArrowLeft retired (R10 session 107) — Saved is now a root tab page; back button gone.
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
 import { BOOKMARK_PREFIX, loadBookmarkCount } from "@/lib/utils";
@@ -41,7 +42,10 @@ import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
 import { writeFindContext, setPostCache, type FindRef } from "@/lib/findContext";
 import BottomNav from "@/components/BottomNav";
-import MallSheet from "@/components/MallSheet";
+// MallSheet retired from /flagged (R10 session 107) — scope change is /map's
+// responsibility per the unified-filter design (David: "If the location needs
+// to be changed, it will be changed on the map page and filtered on all
+// subsequent pages").
 // R10 (session 107) — MallScopeHeader retired here; replaced by PostcardMallCard.
 // StickyMasthead also retired — Saved is a root tab page, gets TabPageMasthead.
 import TabPageMasthead from "@/components/TabPageMasthead";
@@ -375,13 +379,15 @@ function BoothDestinationContainer({
 
 // ──────────────────────────────────────────────────────────────────────────────
 export default function FlaggedPage() {
+  const router                                = useRouter();
   const [posts,           setPosts]           = useState<Post[]>(cachedFlaggedPosts ?? []);
   const [malls,           setMalls]           = useState<Mall[]>([]);
   const [loading,         setLoading]         = useState<boolean>(cachedFlaggedPosts === null);
   const [bookmarkCount,   setBookmarkCount]   = useState(0);
   const [bannerImageUrl,  setBannerImageUrl]  = useState<string | null>(null);
-  const [savedMallId,     setSavedMallId]     = useSavedMallId();
-  const [mallSheetOpen,   setMallSheetOpen]   = useState(false);
+  const [savedMallId]                         = useSavedMallId();
+  // setSavedMallId + mallSheetOpen retired (R10 session 107) — scope change
+  // moved to /map.
   const pendingScrollY = useRef<number | null>(null);
   const scrollRestored = useRef(false);
 
@@ -455,18 +461,10 @@ export default function FlaggedPage() {
     requestAnimationFrame(() => { window.scrollTo({ top: y, behavior: "instant" }); });
   }, [loading]);
 
-  function handleMallSelect(nextMallId: string | null) {
-    setSavedMallId(nextMallId);
-    setMallSheetOpen(false);
-    const mallSlug = nextMallId
-      ? (malls.find(m => m.id === nextMallId)?.slug ?? null)
-      : null;
-    track("filter_applied", {
-      filter_type:  "mall",
-      filter_value: mallSlug ?? "all",
-      page:         "/flagged",
-    });
-  }
+  // handleMallSelect retired on /flagged (R10 session 107) — scope change
+  // moved to /map. The `filter_applied` analytics event with page='/flagged'
+  // no longer fires; /map fires the event with page='/map'. Cross-tab
+  // filter persistence still flows through useSavedMallId.
 
   const filteredPosts = savedMallId
     ? posts.filter(p => p.mall_id === savedMallId)
@@ -487,10 +485,8 @@ export default function FlaggedPage() {
 
   const selectedMall = malls.find(m => m.id === savedMallId) ?? null;
 
-  const saveCountsByMall: Record<string, number> = {};
-  for (const p of posts) {
-    if (p.mall_id) saveCountsByMall[p.mall_id] = (saveCountsByMall[p.mall_id] ?? 0) + 1;
-  }
+  // saveCountsByMall retired (R10 session 107) — was used only by /flagged's
+  // MallSheet, which has moved to /map.
 
   const findCount = filteredPosts.length;
   const findNoun = findCount === 1 ? "find" : "finds";
@@ -525,7 +521,10 @@ export default function FlaggedPage() {
             mall={selectedMall ?? "all-kentucky"}
             stampGlyph="saved"
             allKentuckySubtitle={`${findCount} saved ${findNoun} · Kentucky`}
-            onTap={() => setMallSheetOpen(true)}
+            // R10 session 107 — scope change happens on /map. D19 reversed
+            // for /flagged: card tap routes to Map instead of opening
+            // MallSheet. /map's MallSheet is the change UI.
+            onTap={() => router.push("/map")}
           />
         </div>
       )}
@@ -568,8 +567,11 @@ export default function FlaggedPage() {
               title={`No saved finds at ${selectedMall?.name ?? "this mall"}.`}
               subtitle="Saved finds at other malls are hidden by the active filter."
               cta={
-                <FormButton variant="link" onClick={() => setSavedMallId(null)}>
-                  Show all malls
+                // R10 session 107 — scope change moved to /map.
+                // "Show all malls" rewritten as "Change location" routing
+                // to Map where the change UI lives.
+                <FormButton variant="link" onClick={() => router.push("/map")}>
+                  Change location →
                 </FormButton>
               }
             />
@@ -614,15 +616,8 @@ export default function FlaggedPage() {
         )}
       </main>
 
-      <MallSheet
-        open={mallSheetOpen}
-        onClose={() => setMallSheetOpen(false)}
-        malls={malls}
-        activeMallId={savedMallId}
-        onSelect={handleMallSelect}
-        findCounts={saveCountsByMall}
-        countUnit={{ singular: "saved find", plural: "saved finds" }}
-      />
+      {/* MallSheet retired from /flagged (R10 session 107) — scope change
+          is /map's responsibility per the unified-filter design. */}
 
       <BottomNav active="flagged" flaggedCount={bookmarkCount} />
     </div>

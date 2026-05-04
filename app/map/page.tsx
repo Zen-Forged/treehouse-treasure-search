@@ -1,41 +1,46 @@
 // app/map/page.tsx
 // R10 (session 107) Arc 2 — /map skeleton route.
 //
-// Chrome-only — TabPageMasthead + PostcardMallCard (all-kentucky scope) +
-// SearchBar + paperWarm placeholder body. The full state machine
-// (peek-then-commit pin interaction per D26, scope persistence per D23,
-// MallSheet wiring on the postcard card) ships in Arc 3 alongside the
-// Mapbox provider integration.
+// Chrome-only — TabPageMasthead + PostcardMallCard + paperWarm placeholder
+// body. Map provider integration (cartographic warm-cream Mapbox per D25,
+// leaf-bubble pins per D24, peek-then-commit interaction per D26) ships
+// in Arc 3 as its own session.
 //
-// Design record: docs/r10-location-map-design.md decisions D22-D27 +
-// the /map page-body spec section. V5 mockup at
-// docs/mockups/r10-location-map-v5.html.
+// Per session-107 iPhone QA (David):
+//   - SearchBar removed (D20 + D27 reversed) — Map stays purely geographic.
+//   - /map is THE place to change mall scope. Home + Saved tap-on-card now
+//     routes here instead of opening MallSheet locally. The shared scope
+//     persists via the existing `useSavedMallId` hook.
 //
-// Why a skeleton ships before Arc 3:
-//   1. BottomNav redesign (sub-task 2) needs a real /map route to point
-//      at — adding a Map tab to a non-existent route would 404.
-//   2. iPhone QA on the chrome layer (postcard card + search bar
-//      composition + spacing under TabPageMasthead) is independent of
-//      whether a real map is rendered. Locking the chrome here means Arc 3
-//      only debates map-rendering choices, not layout.
-//
-// Session 107 iPhone QA — SearchBar removed from /map per David's
-// "doesn't make sense to include right now, trying to keep the scope of
-// the functionality contained by page." D20 (search bar on tab pages)
-// and D27 (search-on-Map redirects to Home) both reversed; search is now
-// a Home-only concern. Map body grows into the freed vertical space.
+// Design record: docs/r10-location-map-design.md.
 
 "use client";
 
 import * as React from "react";
 import TabPageMasthead from "@/components/TabPageMasthead";
 import PostcardMallCard from "@/components/PostcardMallCard";
+import MallSheet from "@/components/MallSheet";
 import BottomNav from "@/components/BottomNav";
+import { useSavedMallId } from "@/lib/useSavedMallId";
+import { getActiveMalls } from "@/lib/posts";
+import { track } from "@/lib/clientEvents";
 import { v1, FONT_LORA } from "@/lib/tokens";
+import type { Mall } from "@/types/treehouse";
 
 export const dynamic = "force-dynamic";
 
 export default function MapPage() {
+  const [mallId, setMallId] = useSavedMallId();
+  const [malls, setMalls] = React.useState<Mall[]>([]);
+  const [sheetOpen, setSheetOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    getActiveMalls().then(setMalls);
+  }, []);
+
+  const selectedMall = mallId ? (malls.find((m) => m.id === mallId) ?? null) : null;
+  const allKentuckySubtitle = `${malls.length} active locations · Kentucky`;
+
   return (
     <div
       style={{
@@ -52,17 +57,19 @@ export default function MapPage() {
 
       <div style={{ padding: "0 16px 12px" }}>
         <PostcardMallCard
-          mall="all-kentucky"
+          mall={selectedMall ?? "all-kentucky"}
           stampGlyph="map"
-          // Arc 2 skeleton — MallSheet wiring lands in Arc 3 alongside the
-          // scope state machine. No-op for now.
+          allKentuckySubtitle={allKentuckySubtitle}
+          // /map is THE scope-change surface (D19 partial reversal — Home +
+          // Saved no longer open MallSheet from card tap). Until Arc 3 ships
+          // pin-tap-to-rescope, MallSheet is the change UI here.
+          onTap={() => setSheetOpen(true)}
         />
       </div>
 
       {/* Placeholder map body — paperWarm with literary copy. Replaced in
           Arc 3 by the cartographic warm-cream Mapbox basemap (D25) +
-          leaf-bubble pins + peek-callout state machine (D26). Now grows
-          into the space freed by retiring the SearchBar. */}
+          leaf-bubble pins + peek-callout state machine (D26). */}
       <main
         style={{
           flex: 1,
@@ -96,9 +103,27 @@ export default function MapPage() {
         </div>
       </main>
 
-      {/* BottomNav doesn't yet support active="map" — sub-task 2 lands the
-          redesign. For now no tab is highlighted on this page. */}
-      <BottomNav active={null} />
+      <BottomNav active="map" />
+
+      <MallSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        malls={malls}
+        activeMallId={mallId}
+        onSelect={(id) => {
+          setMallId(id);
+          setSheetOpen(false);
+          // R3 filter_applied event with page='/map' — scope change is now
+          // /map's responsibility. Home + /flagged retired their own
+          // mirrors of this event when they retired their MallSheets.
+          const slug = id ? (malls.find(m => m.id === id)?.slug ?? null) : null;
+          track("filter_applied", {
+            filter_type:  "mall",
+            filter_value: slug ?? "all",
+            page:         "/map",
+          });
+        }}
+      />
     </div>
   );
 }
