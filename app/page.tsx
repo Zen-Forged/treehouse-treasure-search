@@ -716,8 +716,13 @@ function DiscoveryFeedInner() {
           for here" affordance. Subordinate visual position matches the
           conceptual subordination. Search inherits whatever mall is picked
           (single mall OR all-Kentucky scope) — no widen CTA on empty state
-          (D12 reversed same session). */}
-      <div style={{ padding: "0 22px 6px" }}>
+          (D12 reversed same session).
+
+          Vertical rhythm: paddingTop 6 + MallScopeHeader paddingBottom 6 = 12,
+          paddingBottom 12 + masonry paddingTop 0 = 12. Both gaps match the
+          masonry's stacked-thumbnail gap (12px) so the SearchBar sits in the
+          same rhythm as the find grid below it. */}
+      <div style={{ padding: "6px 22px 12px" }}>
         <SearchBar initialQuery={initialQ} onChange={handleSearchChange} />
       </div>
 

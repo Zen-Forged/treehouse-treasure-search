@@ -88,15 +88,16 @@ export default function SearchBar({
     fontFamily:  FONT_LORA,
     fontSize:    15,
     color:       v1.inkPrimary,
-    // Cursor centering on first focus (PWA + Safari + Chrome on iOS):
-    // before any value/keystroke, WebKit computes the caret's vertical
-    // position from the input's INTRINSIC content box rather than its
-    // line-box. Without an explicit height + matching lineHeight the
-    // intrinsic box collapses to the placeholder's metrics, leaving the
-    // caret a few pixels above the visual baseline. Pinning both to 22px
-    // gives the caret an unambiguous line to render against from frame 1.
-    // appearance:none strips iOS Safari's native search-decoration chrome
-    // so the input sits cleanly inside its flex slot.
+    // Caret centering — third attempt, structural this time. type="search"
+    // brings WebKit's native search-input chrome (search-decoration +
+    // cancel-button pseudo-elements) which computes the empty-state caret
+    // position differently than the post-typing caret position. CSS
+    // appearance:none + explicit height/lineHeight didn't fully neutralize
+    // the first-focus shift across PWA + Safari + Chrome. Switching to
+    // type="text" (with inputMode="search" + enterKeyHint="search" preserved
+    // for the iOS search keyboard) escapes the type-search code path
+    // entirely. The fixed 22px line-box is preserved as belt + suspenders
+    // so the caret has an unambiguous render target either way.
     height:      22,
     lineHeight:  "22px",
     appearance:  "none",
@@ -129,7 +130,7 @@ export default function SearchBar({
         style={{ flexShrink: 0 }}
       />
       <input
-        type="search"
+        type="text"
         inputMode="search"
         enterKeyHint="search"
         value={value}
