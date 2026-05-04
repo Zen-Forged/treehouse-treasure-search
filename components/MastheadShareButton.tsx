@@ -12,6 +12,12 @@
 //   - Fallback when navigator.share unavailable → clipboard write + brief
 //     "Copied" confirmation toast on the button
 //   - User dismissal of the share sheet is silent (not an error)
+//
+// Session 109 — `urlBuilder` prop. When provided, the button shares the
+// returned URL instead of `window.location.href`. Callers use this to
+// encode in-app filter state (e.g. ?mall=<slug>) so a recipient lands
+// with the same scope the sharer had. /(tabs)/layout.tsx passes a builder
+// that appends the active mall slug on Home + Map.
 
 "use client";
 
@@ -19,12 +25,21 @@ import { useState } from "react";
 import { Send } from "lucide-react";
 import { v1 } from "@/lib/tokens";
 
-export default function MastheadShareButton() {
+interface MastheadShareButtonProps {
+  /**
+   * Optional custom URL builder. When provided, share uses this URL
+   * instead of `window.location.href`. Lazy-evaluated on tap so the
+   * builder can read live state.
+   */
+  urlBuilder?: () => string;
+}
+
+export default function MastheadShareButton({ urlBuilder }: MastheadShareButtonProps = {}) {
   const [copied, setCopied] = useState(false);
 
   async function handleShare() {
     if (typeof window === "undefined") return;
-    const url = window.location.href;
+    const url = urlBuilder ? urlBuilder() : window.location.href;
     const title = document.title || "Treehouse Finds";
 
     if (typeof navigator !== "undefined" && typeof navigator.share === "function") {

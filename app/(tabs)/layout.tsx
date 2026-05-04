@@ -43,6 +43,7 @@ import PostcardMallCard from "@/components/PostcardMallCard";
 import MallSheet from "@/components/MallSheet";
 import BottomNav from "@/components/BottomNav";
 import MastheadProfileButton from "@/components/MastheadProfileButton";
+import MastheadShareButton from "@/components/MastheadShareButton";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { getActiveMalls } from "@/lib/posts";
 import { loadBookmarkCount } from "@/lib/utils";
@@ -68,6 +69,41 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, []);
+
+  // Session 109 — receive shared mall scope from URL.
+  // When a recipient taps a shared link with `?mall=<slug>`, intake the
+  // slug, look up the mall id, persist via setMallId, then drop the query
+  // param from the URL so subsequent navigation has clean URLs and a page
+  // refresh doesn't re-apply the scope. Idempotent — if the param matches
+  // current scope or the slug is unknown, no-op.
+  //
+  // Reads window.location.search directly (not Next.js useSearchParams)
+  // because useSearchParams in a client-component layout forces every
+  // child page off the static-prerender path, which the original page
+  // structure had committed to. window.location is client-only inside
+  // useEffect, so no SSR concern.
+  useEffect(() => {
+    if (malls.length === 0) return;       // wait for malls to load
+    const slugParam = new URLSearchParams(window.location.search).get("mall");
+    if (!slugParam) return;
+    const target = malls.find((m) => m.slug === slugParam);
+    if (!target) return;
+    if (target.id !== mallId) {
+      setMallId(target.id);
+      track("filter_applied", {
+        filter_type:  "mall",
+        filter_value: target.slug,
+        page:         pathname,
+        source:       "shared_url",
+      });
+    }
+    // Strip the query param. router.replace() preserves the layout so
+    // chrome doesn't flicker on the URL change.
+    router.replace(pathname);
+    // mallId intentionally excluded — the effect must not refire after we
+    // call setMallId with the new id, which would dead-loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [malls, pathname]);
 
   const selectedMall = mallId ? (malls.find((m) => m.id === mallId) ?? null) : null;
 
@@ -123,9 +159,28 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
       }}
     >
       {/* Profile-left mirrors the back-button geometry of detail pages.
-          Right slot stays null until commit 4 (share button — Home + Map
-          only, not Saved). */}
-      <StickyMasthead left={<MastheadProfileButton />} right={null} />
+          Right slot:
+          - Home + Map → MastheadShareButton with scope-encoding URL builder
+            (per David's session-109 ask: "share the location with selected
+            mall filters applied")
+          - Saved     → null (saved finds are private; sharing them publicly
+            is semantically wrong) */}
+      <StickyMasthead
+        left={<MastheadProfileButton />}
+        right={
+          (pathname === "/" || pathname === "/map") ? (
+            <MastheadShareButton
+              urlBuilder={() => {
+                const slug = mallId
+                  ? (malls.find((m) => m.id === mallId)?.slug ?? null)
+                  : null;
+                const base = `${window.location.origin}${pathname}`;
+                return slug ? `${base}?mall=${slug}` : base;
+              }}
+            />
+          ) : null
+        }
+      />
 
       {showPostcardCard && (
         <div style={{ padding: "12px 16px 0" }}>
