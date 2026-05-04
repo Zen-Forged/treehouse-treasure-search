@@ -47,7 +47,7 @@ export default function MallScopeHeader({
   const title   = isAll ? "All Kentucky Locations" : mallName!;
 
   return (
-    <div style={{ padding: "20px 22px 6px" }}>
+    <div style={{ padding: "8px 22px 6px" }}>
       {/* Eyebrow — with optional larger count prefix (session 71) */}
       <div
         style={{

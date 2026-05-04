@@ -730,11 +730,9 @@ function DiscoveryFeedInner() {
         marginBottom={6}
       />
 
-      {/* ── 3. Diamond divider ─────────────────────────────────────────── */}
-      <div style={{ padding: "16px 44px 14px" }}>
-        {/* v1.1j — diamond ornament retired; plain hairline */}
-        <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
-      </div>
+      {/* Diamond divider hairline retired session 105 — the SearchBar
+          slot above the masonry now serves as the visual separator
+          between mall scope chrome and the find grid. */}
 
       {/* ── 4. Paper masonry ───────────────────────────────────────────── */}
       <main
