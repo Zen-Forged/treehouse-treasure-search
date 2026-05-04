@@ -10,6 +10,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import nextDynamic from "next/dynamic";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { getActiveMalls, getMallStatsByMallId, type MallStats } from "@/lib/posts";
@@ -29,6 +30,7 @@ const TreehouseMap = nextDynamic(() => import("@/components/TreehouseMap"), {
 export const dynamic = "force-dynamic";
 
 export default function MapPage() {
+  const router = useRouter();
   const [mallId, setMallId] = useSavedMallId();
   const [malls, setMalls] = React.useState<Mall[]>([]);
   const [mallStats, setMallStats] = React.useState<Record<string, MallStats>>({});
@@ -66,14 +68,20 @@ export default function MapPage() {
           setMallId(id);
           setPeekedMallId(null);
           // R3 filter_applied event — pin-tap-then-commit is the canonical
-          // scope-change path on /map. MallSheet on the postcard card
-          // (handled in the layout) stays as the secondary path.
+          // scope-change path on /map.
           const slug = malls.find((m) => m.id === id)?.slug ?? null;
           track("filter_applied", {
             filter_type:  "mall",
             filter_value: slug ?? "all",
             page:         "/map",
           });
+          // D26 extension (session 110) — after committing the new scope,
+          // route to Home so the user immediately sees the feed for the
+          // mall they just picked. /map is now an interaction surface
+          // (pick a scope, return to feed), not a destination. Per David:
+          // "on the second tap it should go to the home screen to view
+          // the feed."
+          router.push("/");
         }}
       />
     </main>
