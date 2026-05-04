@@ -101,12 +101,15 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
 
   const selectedMall = mallId ? (malls.find((m) => m.id === mallId) ?? null) : null;
 
-  // Per-pathname chrome derivation. Unknown pathnames (shouldn't happen
-  // inside this route group) fall back to home defaults.
-  const stampGlyph: "home" | "map" | "saved" =
-    pathname === "/map"     ? "map"   :
-    pathname === "/flagged" ? "saved" :
-                              "home";
+  // Stamp glyph is now ALWAYS "map" (D13 reversed session 110).
+  // Original D13 mirrored the active BottomNav tab (Home glyph on Home,
+  // Map glyph on /map, Saved glyph on /flagged). With Profile retired
+  // from nav (session 109) and Map retired from nav (session 110), the
+  // BottomNav-mirroring rule no longer maps cleanly — and the card's
+  // primary role is now navigation to /map (from Home/Saved). The map
+  // pin glyph reads as "tap here to change/view location" universally,
+  // matching the actual interaction.
+  const stampGlyph = "map" as const;
 
   const activeNav: "home" | "map" | "flagged" =
     pathname === "/map"     ? "map"   :
