@@ -67,7 +67,9 @@ function CancellationInk() {
         height:        38,
         pointerEvents: "none",
         zIndex:        2,
-        opacity:       0.42,
+        // Session 107 iPhone QA dial — 0.42 → 0.28. Reads as old-postal-ink
+        // cancellation rather than a UI element.
+        opacity:       0.28,
       }}
       aria-hidden="true"
     >
@@ -139,12 +141,14 @@ export default function PostcardMallCard({
         }}
       />
 
-      {/* Text block — flex 1, padding-right reserves space for cancellation ink. */}
+      {/* Text block — flex 1. Cancellation-ink clearance is applied per-row
+          rather than on the whole block: only the NAME row sits in the ink's
+          vertical band; "from:" is above the ink, address is below it, so
+          both can extend full-width. Session 107 iPhone-QA refinement. */}
       <div
         style={{
           flex:           1,
           minWidth:       0,
-          paddingRight:   28,    // keeps address clear of the wavy ink
           position:       "relative",
           zIndex:         1,
           display:        "flex",
@@ -183,6 +187,10 @@ export default function PostcardMallCard({
             WebkitBoxOrient:       "vertical",
             overflow:              "hidden",
             paddingBottom:         2,    // descender breathing room under the clamp
+            // Cancellation ink clearance — only the name row needs this since
+            // the ink sits centered vertically in the card and overlaps the
+            // mall name's right edge.
+            paddingRight:          28,
           }}
         >
           {name}
