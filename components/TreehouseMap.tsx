@@ -352,7 +352,13 @@ export default function TreehouseMap({
   }, [peekedMallId, malls]);
 
   // ── Scope-driven view ─────────────────────────────────────────────────
-  // selectedMallId === null → fit KY bounds (all-Kentucky overview).
+  // selectedMallId === null → fit a bounding box around the active malls
+  //                           (NOT the whole KY rectangle). With pins
+  //                           clustered near a single metro, the all-
+  //                           locations view should zoom in tight enough
+  //                           that pins read as places, not specks. Falls
+  //                           back to KY_BOUNDS only if no malls have
+  //                           coordinates (degenerate case).
   // selectedMallId === id   → flyTo that mall at street-zoom.
   React.useEffect(() => {
     const map = mapRef.current;
@@ -360,7 +366,21 @@ export default function TreehouseMap({
 
     const apply = () => {
       if (!selectedMallId) {
-        map.fitBounds(KY_BOUNDS, { padding: 32, duration: 600 });
+        const coords = malls
+          .filter((m) => m.latitude != null && m.longitude != null)
+          .map((m) => [Number(m.longitude), Number(m.latitude)] as [number, number]);
+        if (coords.length === 0) {
+          map.fitBounds(KY_BOUNDS, { padding: 32, duration: 600 });
+          return;
+        }
+        const bounds = coords.reduce(
+          (acc, c) => acc.extend(c),
+          new mapboxgl.LngLatBounds(coords[0], coords[0]),
+        );
+        // maxZoom 11 stops over-zoom when malls are tightly clustered or
+        // there's only one — a single point would otherwise zoom to the
+        // map's maxZoom (14) and look like the specific-mall scope.
+        map.fitBounds(bounds, { padding: 56, duration: 600, maxZoom: 11 });
         return;
       }
       const mall = malls.find((m) => m.id === selectedMallId);
