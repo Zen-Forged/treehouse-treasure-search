@@ -85,7 +85,7 @@ export default function MapPage() {
           position:     "relative",
         }}
       >
-        <TreehouseMap />
+        <TreehouseMap malls={malls} selectedMallId={mallId} />
       </main>
 
       <BottomNav active="map" />

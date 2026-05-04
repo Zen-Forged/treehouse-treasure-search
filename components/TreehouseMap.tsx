@@ -19,9 +19,12 @@
 "use client";
 
 import * as React from "react";
+import { createRoot, type Root } from "react-dom/client";
 import mapboxgl, { type LngLatBoundsLike } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import { PiLeaf } from "react-icons/pi";
 import { v1 } from "@/lib/tokens";
+import type { Mall } from "@/types/treehouse";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
@@ -122,16 +125,60 @@ const KY_BOUNDS: LngLatBoundsLike = [
 const KY_CENTER: [number, number] = [-85.3, 37.8];
 const KY_FIT_ZOOM = 6.4;
 
-interface TreehouseMapProps {
-  className?: string;
-  style?:     React.CSSProperties;
+// D24 — leaf-bubble pin. Paper-warm circle outlined green by default;
+// selected = green fill, white glyph, scale +15%, soft halo. Pure
+// presentation; rendered into a Mapbox marker element via createRoot.
+function LeafBubblePin({ selected }: { selected: boolean }) {
+  return (
+    <div
+      style={{
+        width:        selected ? 36 : 32,
+        height:       selected ? 36 : 32,
+        borderRadius: "50%",
+        background:   selected ? v1.green : v1.paperWarm,
+        border:       `2px solid ${v1.green}`,
+        boxShadow:    selected
+          ? "0 0 0 6px rgba(30,77,43,0.18), 0 4px 10px rgba(30,77,43,0.28)"
+          : "0 2px 6px rgba(42,26,10,0.18)",
+        display:        "flex",
+        alignItems:     "center",
+        justifyContent: "center",
+        color:          selected ? v1.onGreen : v1.green,
+        cursor:         "pointer",
+        transition:     "width 160ms ease, height 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease",
+      }}
+    >
+      <PiLeaf size={selected ? 20 : 18} aria-hidden="true" />
+    </div>
+  );
 }
 
-export default function TreehouseMap({ className, style }: TreehouseMapProps) {
+interface TreehouseMapProps {
+  malls:           Mall[];
+  selectedMallId:  string | null;
+  className?:      string;
+  style?:          React.CSSProperties;
+}
+
+interface MarkerEntry {
+  marker:    mapboxgl.Marker;
+  root:      Root;
+  el:        HTMLDivElement;
+}
+
+export default function TreehouseMap({
+  malls,
+  selectedMallId,
+  className,
+  style,
+}: TreehouseMapProps) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const mapRef       = React.useRef<mapboxgl.Map | null>(null);
+  const markersRef   = React.useRef<Map<string, MarkerEntry>>(new Map());
+  const styleLoadedRef = React.useRef(false);
   const [error, setError] = React.useState<string | null>(null);
 
+  // ── Map init ──────────────────────────────────────────────────────────
   React.useEffect(() => {
     if (!containerRef.current) return;
     if (!MAPBOX_TOKEN) {
@@ -155,16 +202,90 @@ export default function TreehouseMap({ className, style }: TreehouseMapProps) {
 
     mapRef.current = map;
 
-    // D25 — apply cartographic warm-cream palette once the base style has
-    // loaded. style.load fires after Mapbox finishes parsing the style JSON
-    // and the layer registry is queryable.
-    map.on("style.load", () => applyCartographicPalette(map));
+    map.on("style.load", () => {
+      applyCartographicPalette(map);
+      styleLoadedRef.current = true;
+    });
 
     return () => {
+      // Unmount React roots before removing the map.
+      Array.from(markersRef.current.values()).forEach((entry) => {
+        try { entry.root.unmount(); } catch {}
+      });
+      markersRef.current.clear();
       map.remove();
       mapRef.current = null;
+      styleLoadedRef.current = false;
     };
   }, []);
+
+  // ── Marker sync ───────────────────────────────────────────────────────
+  // Keeps the marker collection in sync with `malls` + `selectedMallId`.
+  // Markers persist across renders; we only mount/unmount on add/remove
+  // and re-render the React content when selected state changes.
+  React.useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const live = new Set<string>();
+
+    for (const mall of malls) {
+      if (mall.latitude == null || mall.longitude == null) continue;
+      const lng = Number(mall.longitude);
+      const lat = Number(mall.latitude);
+      if (Number.isNaN(lng) || Number.isNaN(lat)) continue;
+
+      live.add(mall.id);
+      let entry = markersRef.current.get(mall.id);
+
+      if (!entry) {
+        const el = document.createElement("div");
+        el.style.willChange = "transform";
+        const root = createRoot(el);
+        const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
+          .setLngLat([lng, lat])
+          .addTo(map);
+        entry = { marker, root, el };
+        markersRef.current.set(mall.id, entry);
+      }
+
+      entry.root.render(<LeafBubblePin selected={selectedMallId === mall.id} />);
+    }
+
+    // Remove markers no longer in the malls list.
+    Array.from(markersRef.current.entries()).forEach(([id, entry]) => {
+      if (!live.has(id)) {
+        try { entry.root.unmount(); } catch {}
+        entry.marker.remove();
+        markersRef.current.delete(id);
+      }
+    });
+  }, [malls, selectedMallId]);
+
+  // ── Scope-driven view ─────────────────────────────────────────────────
+  // selectedMallId === null → fit KY bounds (all-Kentucky overview).
+  // selectedMallId === id   → flyTo that mall at street-zoom.
+  React.useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const apply = () => {
+      if (!selectedMallId) {
+        map.fitBounds(KY_BOUNDS, { padding: 32, duration: 600 });
+        return;
+      }
+      const mall = malls.find((m) => m.id === selectedMallId);
+      if (!mall || mall.latitude == null || mall.longitude == null) return;
+      map.flyTo({
+        center:   [Number(mall.longitude), Number(mall.latitude)],
+        zoom:     12.5,
+        duration: 800,
+      });
+    };
+
+    if (styleLoadedRef.current) apply();
+    else                        map.once("style.load", apply);
+  }, [selectedMallId, malls]);
 
   return (
     <div
