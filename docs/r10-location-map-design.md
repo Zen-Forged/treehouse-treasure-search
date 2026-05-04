@@ -218,12 +218,94 @@ These are **NOT** design decisions — they're implementation-time picks deferre
 
 | Question | Options | Notes |
 |----------|---------|-------|
-| Map provider | Mapbox / Google Maps / Leaflet + OSM tiles | **Mapbox is the working assumption** — D25 cartographic warm-cream styling is canonical Mapbox Studio territory. Google Maps with style-array is the fallback if Mapbox cost is prohibitive at projected pin volume. Leaflet+OSM if both are gated, but custom styling effort goes up. Decide before sub-task 10. |
+| Map provider | Mapbox / Google Maps / Leaflet + Stadia | **Resolved session 107 → Mapbox.** See [Map provider — recommendation memo](#map-provider--recommendation-memo-session-107) below for rationale, projected-traffic numbers, fallback path, and account-setup HITL. |
 | Pin clustering | Yes / no for phase 1 | Skip for now (5 active malls). Add a clustering layer when location count >15 OR pin overlap becomes an issue. |
 | Map interaction — pan/zoom limits | KY-bounded / unconstrained | Constrain to KY bounding box for phase 1 (zooms beyond reveal empty map; bad UX). |
 | `/shelves` route disposition | 301 redirect / delete / keep as deprecated | Audit outbound links (vendor invitations, admin dashboards, share links) before deciding. |
 | `<TabPageMasthead>` shared with sub-pages? | Yes / no | Default no — sub-pages keep StickyMasthead with back button. Reconsider if visual rhythm reads disjointed. |
 | Pin-screen-position for callout anchor | Provider API / DOM measurement | Both Mapbox + Google expose `project(lngLat)` to compute screen-space coordinates. Use the provider API to keep the callout in sync during pan/zoom. |
+
+---
+
+## Map provider — recommendation memo (session 107)
+
+> **Status:** Recommendation ready, awaiting David's call. If accepted, locks the last deferred design-class axis on R10 + unblocks Arc 3 (map integration) for a future session.
+
+### TL;DR
+
+**Pick Mapbox.** Free tier covers Treehouse traffic through Year 2 with margin. Mapbox Studio is the canonical territory for D25 cartographic warm-cream styling — closest match to the design record's palette + italic-Lora region labels at low opacity, no client-side approximation. Account-setup HITL is a single-step access-token grab. Fallback path is Google Maps if Mapbox account setup snags or if a future cost spike materializes.
+
+### Pricing comparison (2026 verified)
+
+| Provider | Free tier (per month) | Beyond free | Custom styling | Commercial use on free? |
+|---|---|---|---|---|
+| **Mapbox GL JS Web** | **50,000 map loads** | $5/1K (50–100K) → $4/1K (100–200K) → $3/1K (200K+) | Mapbox Studio included on every account; full vector-style expressivity | Yes |
+| **Google Maps JavaScript API** | 10,000 dynamic-map loads (Essentials SKU) | ~$7/1K (no universal $200 credit anymore) | Cloud-based JSON style array, free | Yes |
+| **Stadia Maps + Leaflet** | 200K credits (~200K tile loads) | $20/mo Starter (1M credits, 3¢/1K) | OpenMapTiles vector schema via Maputnik editor | **No — paid plan required for commercial use** |
+
+A "map load" = one `Map` object initialization on Mapbox/Google. Tile loads on Stadia are per-tile (a single map view with zoom is ~5–15 tiles).
+
+### Projected traffic (Treehouse Finds)
+
+| Phase | MAU | Map loads / user / month | Total map loads / month | Mapbox cost | Google cost | Stadia cost |
+|---|---|---|---|---|---|---|
+| Beta (now) | ~50–200 | ~5–10 | ≤2,000 | $0 | $0 | $20/mo (forced) |
+| Year 1 | 1K–2K | ~10 | 10–20K | $0 | $0–70 | $20/mo |
+| Year 2 (optimistic) | 5K–10K | ~10 | 50K–100K | $0–250 | $280–700 | $20/mo |
+
+**At every realistic projection through Year 2, Mapbox is free or cheapest. Stadia is the only provider that forces a paid plan from day one** because its free tier is non-commercial.
+
+### Custom-styling expressiveness for D25
+
+D25 calls for a *cartographic warm-cream* basemap: cream landmass (`#efe6cf`), tan lowland (`#e6d9b8`), sage water (`#c5d6c4` / `#aac3aa`), white roads, italic-Lora region labels at low opacity. This is the heart of the postcard / place-identity vocabulary — not a polish item.
+
+| Provider | D25 styling fit | Effort estimate |
+|---|---|---|
+| **Mapbox Studio** | Direct. Vector layers + per-layer paint properties + custom font upload (Lora). Layer-isolated label rotation + per-zoom opacity ramps. | ~half-day setup; style URL is a config value the runtime reads. |
+| **Google Maps style array** | Possible but verbose. JSON `featureType` + `elementType` + `stylers` per layer. **No custom font loading** — labels are Roboto-only on standard tiles. | ~half-day; design record's italic-Lora labels would need a workaround (overlay layer or compromise). |
+| **Leaflet + Stadia (vector)** | Possible via Maputnik editor on Stadia's OpenMapTiles vector schema. Label customization comparable to Mapbox. | ~half-day (Maputnik) + Leaflet integration setup. |
+
+**Mapbox > Stadia ≈ Leaflet > Google** on D25 fit. Google is the only one that doesn't support custom font loading on labels — direct hit on D25's italic-Lora requirement.
+
+### Other implementation primitives (peek-then-commit, screen-space anchor)
+
+All three providers expose:
+- Marker/symbol layer with feature-state for D26's pin-selected styling (scale +15%, halo).
+- Screen-space projection (`map.project(lngLat)` on Mapbox, `Projection.fromLatLngToContainerPixel` on Google, `latLngToContainerPoint` on Leaflet) for `<PinCallout>` anchor positioning.
+- Pan/zoom event hooks for repositioning the callout during interaction.
+
+No differentiator here — all three are equivalent for D26.
+
+### Account-setup HITL
+
+**🖐️ Mapbox setup (~5 min, one-time):**
+1. Sign up at https://account.mapbox.com/auth/signup/ — free, no credit card needed for the free tier.
+2. Create a public access token at https://account.mapbox.com/access-tokens/. URL-restrict to `app.kentuckytreehouse.com` + `*.vercel.app` (preview deployments) so token can't be hijacked off-site.
+3. Add `NEXT_PUBLIC_MAPBOX_TOKEN` to Vercel env (Production + Preview + Development).
+4. Optional but recommended: add a billing alert at $5/mo so an unexpected traffic spike pages David before a bill lands.
+
+If David later wants to lock in the cartographic warm-cream style as a Studio-hosted style URL (vs inline JSON), one extra step:
+5. Open Mapbox Studio → New Style → Monochrome → tune palette per D25 tokens → publish → copy style URL (`mapbox://styles/<user>/<style-id>`) → use in runtime instead of inline.
+
+This second step is design-time, not a blocker for Arc 3 — Arc 3 can ship with an inline JSON style and David can move to Studio later if he wants to iterate on the palette in a visual editor.
+
+### Fallback path
+
+If Mapbox account setup hits a snag (corporate billing requirements, account-creation friction, etc.):
+1. **First fallback: Google Maps** with cloud-based JSON styling. Compromise on D25's italic-Lora labels (drop the custom font, keep the palette). Account setup is heavier (Google Cloud project + billing account + API restrictions) but doable.
+2. **Second fallback: Leaflet + Stadia Maps** at $20/mo Starter plan. D25 fits cleanly via Maputnik editor on Stadia's OpenMapTiles vector schema. Slightly more runtime integration work because Leaflet is raster-first; vector tile rendering goes through `maplibre-gl-leaflet`.
+
+**Do not switch providers mid-arc** — each requires a different SDK + style format + token grab. The cost of switching post-ship is real.
+
+### Recommendation
+
+**Mapbox.** Reasons (ordered by weight):
+1. **D25 fit is direct** — italic-Lora region labels at low opacity is canonical Mapbox Studio. No compromise on the heart of the postcard place-identity vocabulary.
+2. **Free tier covers projected traffic through Year 2** with comfortable margin (50K loads/month vs ~20K projected at Year 1).
+3. **Account-setup HITL is the lightest** of the three — single-step token grab + URL restriction.
+4. **Fallback path is real** — Google Maps is a capable second choice if anything blocks Mapbox. We don't lose the option by trying Mapbox first.
+
+Decision pending David's approval before Arc 3 starts.
 
 ---
 
