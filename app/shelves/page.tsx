@@ -651,7 +651,8 @@ export default function BoothsPage() {
         countUnit={{ singular: "booth", plural: "booths" }}
       />
 
-      <BottomNav active="shelves" flaggedCount={bookmarkCount} />
+      {/* R10 (session 107) — Booths/shelves tab retired; no nav highlight here. */}
+      <BottomNav active={null} flaggedCount={bookmarkCount} />
 
       <AnimatePresence>
         {deleteTarget && (

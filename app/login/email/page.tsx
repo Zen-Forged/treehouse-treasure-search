@@ -36,7 +36,7 @@ export const dynamic = "force-dynamic";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, ArrowLeft, Loader, Clipboard, CircleUser } from "lucide-react";
+import { Mail, ArrowLeft, Loader, Clipboard, CircleUser, Store, KeyRound } from "lucide-react";
 import { sendMagicLink, getSession, signOut, onAuthChange, isAdmin } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
@@ -316,7 +316,9 @@ function LoginEmailInner() {
             margin: "0 0 8px",
           }}
         >
-          Vendor Sign in
+          {authedUser && screen === "enter-email"
+            ? "You're signed in"
+            : "Vendor Sign in"}
         </h1>
         <p
           style={{
@@ -330,7 +332,9 @@ function LoginEmailInner() {
             maxWidth: 300,
           }}
         >
-          {screen === "enter-code"
+          {authedUser && screen === "enter-email"
+            ? "Manage your booth, jump into admin tools, or sign out."
+            : screen === "enter-code"
             ? "We sent a 6-digit code to your email."
             : "Enter the email connected to your booth. We'll email you a 6-digit code."}
         </p>
@@ -338,7 +342,39 @@ function LoginEmailInner() {
         <div style={{ width: "100%", maxWidth: 340 }}>
           <AnimatePresence mode="wait">
 
-            {screen === "enter-email" && (
+            {/* R10 (session 107) — authed-state action cards. When the user
+                lands on /login/email already signed in (BottomNav Profile tap
+                forwards through /login → here), surface inline links to
+                /my-shelf + /admin (admin only) instead of the email form. The
+                BottomNav redesign drops My Booth + Admin tabs and redistributes
+                their entry points to this Profile destination. */}
+            {screen === "enter-email" && authedUser && (
+              <motion.div
+                key="authed-cards"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.22 }}
+                style={{ display: "flex", flexDirection: "column", gap: 12 }}
+              >
+                <ActionCard
+                  href="/my-shelf"
+                  title="Manage my booth"
+                  subtitle="Edit your shelf, post new finds, mark items sold."
+                  icon={<Store size={20} strokeWidth={1.6} />}
+                />
+                {isAdmin(authedUser) && (
+                  <ActionCard
+                    href="/admin"
+                    title="Admin tools"
+                    subtitle="Locations, vendors, banners, and approvals."
+                    icon={<KeyRound size={20} strokeWidth={1.6} />}
+                  />
+                )}
+              </motion.div>
+            )}
+
+            {screen === "enter-email" && !authedUser && (
               <motion.div
                 key="email-enter"
                 initial={{ opacity: 0, y: 10 }}
@@ -599,7 +635,10 @@ function LoginEmailInner() {
           </AnimatePresence>
         </div>
 
-        {screen === "enter-email" && (
+        {/* "New to Treehouse Finds?" card hides for authed users — they don't
+            need a vendor-account-creation prompt when they're already signed
+            in. */}
+        {screen === "enter-email" && !authedUser && (
           <a
             href="/vendor-request"
             style={{
@@ -674,6 +713,89 @@ function LoginEmailInner() {
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </div>
+  );
+}
+
+// R10 (session 107) — authed-state action card on /login/email. Shape mirrors
+// the /login triage cards (post-it surface, paper hairline, 14px radius, icon
+// bubble + title + italic subtitle + chevron) but without an inner CTA pill
+// since the entire card is the action.
+function ActionCard({
+  href,
+  title,
+  subtitle,
+  icon,
+}: {
+  href: string;
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      style={{
+        display: "block",
+        textDecoration: "none",
+        padding: "14px 14px",
+        background: v1.postit,
+        borderRadius: 14,
+        border: `1px solid ${v1.inkHairline}`,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            background: "rgba(30,77,43,0.08)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            color: v1.green,
+          }}
+        >
+          {icon}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontFamily: FONT_LORA,
+              fontSize: 16,
+              color: v1.inkPrimary,
+              lineHeight: 1.25,
+              margin: "0 0 2px",
+            }}
+          >
+            {title}
+          </div>
+          <div
+            style={{
+              fontFamily: FONT_LORA,
+              fontStyle: "italic",
+              fontSize: 12,
+              color: v1.inkMuted,
+              lineHeight: 1.45,
+            }}
+          >
+            {subtitle}
+          </div>
+        </div>
+        <span
+          style={{
+            color: v1.inkFaint,
+            flexShrink: 0,
+            fontSize: 22,
+            lineHeight: 1,
+            fontFamily: FONT_LORA,
+          }}
+        >
+          ›
+        </span>
+      </div>
+    </a>
   );
 }
 

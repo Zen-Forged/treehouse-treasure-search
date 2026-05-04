@@ -413,7 +413,7 @@ export default function PublicShelfPage() {
           onShareOpen={() => {}}
         />
         <NotFound />
-        <BottomNav active="shelves" flaggedCount={bookmarkCount} />
+        <BottomNav active={null} flaggedCount={bookmarkCount} />
         <BoothPageStyles />
       </div>
     );
@@ -507,7 +507,7 @@ export default function PublicShelfPage() {
           </>
         )}
 
-      <BottomNav active="shelves" flaggedCount={bookmarkCount} />
+      <BottomNav active={null} flaggedCount={bookmarkCount} />
 
       {/* Session 50 (Q-008) — Window share sheet, open to all viewers with
           at least one available post. `mode` picks transport: owners + admin

@@ -871,7 +871,9 @@ function MyBoothInner() {
           </>
         )}
 
-      <BottomNav active="my-shelf" flaggedCount={bookmarkCount} />
+      {/* R10 (session 107) — My Booth tab retired from BottomNav; reached via
+          Profile tab → "Manage my booth" inline link. No nav highlight here. */}
+      <BottomNav active={null} flaggedCount={bookmarkCount} />
 
       {/* Hidden file inputs — camera + gallery */}
       <input
