@@ -12,6 +12,58 @@ import type { Post, Vendor, Mall } from "@/types/treehouse";
 // NOT apply this filter — only the public discovery feed.
 const FEED_WINDOW_DAYS = 30;
 
+/**
+ * R16 (session 105) — Discovery search.
+ *
+ * Postgres full-text search against posts.search_tsv (generated tsvector
+ * over title weight A + tags weight B + caption weight C — see
+ * migration 019). Uses `websearch_to_tsquery` so callers can pass natural
+ * language ("brass candlestick", "art deco lamp") without knowing
+ * tsquery operators.
+ *
+ * Respects the same 30-day window + status='available' as getFeedPosts so
+ * search and feed results can flow through the same cache + tile layer.
+ * Optional mall_id narrows the scope — the picker already has the id, so
+ * we skip a slug→id round-trip per design record D7 / "Search query" (a).
+ *
+ * Phase-1 limitation per design record D6 / "Search query" (c): vendor
+ * display_name + mall name are NOT in the generated tsvector (they live
+ * in joined tables). Title + caption + tags cover ~80% of intent.
+ *
+ * Empty query → caller should fall through to getFeedPosts; this helper
+ * still returns sensibly (empty result set) but doesn't short-circuit.
+ *
+ * SELECT shape mirrors getFeedPosts so search results dump cleanly into
+ * the same /find/[id] post cache (lib/findContext).
+ */
+export async function searchPosts(opts: {
+  query:    string;
+  mallId?:  string | null;
+  limit?:   number;
+}): Promise<Post[]> {
+  const { query, mallId, limit = 40 } = opts;
+  const cutoff = new Date(Date.now() - FEED_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+  let q = supabase
+    .from("posts")
+    .select(`
+      *,
+      vendor:vendors ( id, user_id, display_name, booth_number, slug, avatar_url, bio, facebook_url ),
+      mall:malls     ( id, name, city, state, slug, address )
+    `)
+    .eq("status", "available")
+    .gte("created_at", cutoff)
+    .textSearch("search_tsv", query, { type: "websearch", config: "english" })
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (mallId) q = q.eq("mall_id", mallId);
+
+  const { data, error } = await q;
+  if (error) { console.error("[posts] searchPosts:", error.message); return []; }
+  return (data ?? []) as Post[];
+}
+
 export async function getFeedPosts(limit = 40): Promise<Post[]> {
   const cutoff = new Date(Date.now() - FEED_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
   // Phase B QA fix #2 (session 100) — SELECT extended to match getPost so
