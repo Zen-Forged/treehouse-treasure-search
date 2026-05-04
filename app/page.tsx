@@ -701,15 +701,6 @@ function DiscoveryFeedInner() {
           quietest surface in the app. */}
       <StickyMasthead right={null} />
 
-      {/* ── 1.25 SearchBar (R16) ─────────────────────────────────────────
-          Glass-morphism pill bar between masthead and mall scope. Per design
-          record D2: above the mall scope block, not inside the masthead row.
-          Padding matches mall-scope block side gutters so the pill aligns
-          visually with the picker title below. */}
-      <div style={{ padding: "8px 22px 4px" }}>
-        <SearchBar initialQuery={initialQ} onChange={handleSearchChange} />
-      </div>
-
       {/* 1.5 Mall scope header (FeedHero wrapper) — moved above the
           FeaturedBanner per session-68 QA so the persisted mall filter is
           the first thing the eye lands on after the masthead. */}
@@ -717,6 +708,18 @@ function DiscoveryFeedInner() {
         selectedMall={selectedMall}
         onTapMall={() => setMallSheetOpen(true)}
       />
+
+      {/* ── 1.75 SearchBar (R16) ─────────────────────────────────────────
+          Slotted BELOW the mall scope per session-105 iPhone QA reversal of
+          design record D2. Reasoning: the mall picker is the primary "where
+          am I shopping" choice; search is the secondary "what am I looking
+          for here" affordance. Subordinate visual position matches the
+          conceptual subordination. Search inherits whatever mall is picked
+          (single mall OR all-Kentucky scope) — no widen CTA on empty state
+          (D12 reversed same session). */}
+      <div style={{ padding: "0 22px 6px" }}>
+        <SearchBar initialQuery={initialQ} onChange={handleSearchChange} />
+      </div>
 
       {/* ── 2. FeaturedBanner (eyebrow variant) — admin-editable. Only
              renders when an image URL is set; otherwise collapses quietly. */}
@@ -758,43 +761,17 @@ function DiscoveryFeedInner() {
           </div>
         ) : filtered.length === 0 ? (
           searching ? (
-            // R16 D12 — search-empty state. Italic Lora line + outlined green
-            // CTA. CTA clears mall scope (preserving the query) so the user
-            // can widen from current location → all of Kentucky in one tap.
-            // selectedMall is null on the all-malls scope; we still surface
-            // the CTA in that state so the user gets unambiguous "we tried
-            // everywhere" feedback (the click becomes a no-op, harmless).
+            // R16 — search-empty state. Italic Lora subtitle only; no
+            // widen-to-all-Kentucky CTA (D12 reversed session 105 per
+            // David's "search only the selected mall location" framing).
+            // If the user wants to broaden, they use the mall picker
+            // above — no hand-holding affordance per the minimalistic-
+            // magic rule.
             <EmptyState
               subtitle={
                 selectedMall
                   ? `Nothing matching "${q.trim()}" at ${selectedMall.name} yet.`
                   : `Nothing matching "${q.trim()}" yet.`
-              }
-              cta={
-                selectedMall ? (
-                  <button
-                    type="button"
-                    onClick={() => handleMallSelect(null)}
-                    style={{
-                      display:        "inline-flex",
-                      alignItems:     "center",
-                      justifyContent: "center",
-                      gap:            6,
-                      padding:        "11px 18px",
-                      border:         `1px solid ${v1.green}`,
-                      background:     v1.paperWarm,
-                      color:          v1.green,
-                      fontFamily:     FONT_LORA,
-                      fontWeight:     500,
-                      fontSize:       14,
-                      borderRadius:   8,
-                      cursor:         "pointer",
-                      WebkitTapHighlightColor: "transparent",
-                    }}
-                  >
-                    Search all of Kentucky <span aria-hidden style={{ fontSize: 16, lineHeight: 1 }}>→</span>
-                  </button>
-                ) : undefined
               }
             />
           ) : (
