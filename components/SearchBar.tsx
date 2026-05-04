@@ -2,9 +2,9 @@
 // R16 discovery primitive — glass-morphism search bar.
 //
 // Slotted between StickyMasthead and the mall scope block on Home.
-// Backed (in a future commit) by an enriched /api/post-caption that
-// writes posts.tags text[] at publish time + a Postgres tsvector + GIN
-// index for sub-50ms full-text search.
+// Backed by an enriched /api/post-caption that writes posts.tags text[]
+// at publish time + a Postgres tsvector + GIN index for sub-50ms full-text
+// search.
 //
 // Design record: docs/r16-discovery-search-design.md (decisions D1–D15
 // frozen session 102). Picked mockup:
@@ -23,12 +23,30 @@
 //   - Glass-morphism bg per David's CSS (session 102):
 //     65% white + backdrop blur + 1px subtle border + soft 8/24 shadow.
 //     Focused state: opaque bg + 3px green ring + lifted shadow.
+//   - Caret is brand green (v1.green). Custom-rendered when input is empty
+//     + focused (see "Custom caret" below); native green caret takes over
+//     once typing begins.
 //
 // State semantics: parent owns the query string (kept in URL ?q=). This
 // primitive is a controlled input that debounces changes 200ms before
 // firing onChange — caller wires that to a router.replace + searchPosts
 // query. Local `value` mirror avoids losing keystrokes during the debounce
 // window.
+//
+// Custom caret (R16 session 105, round 5 — kill-the-bug-class fix):
+//   iOS WebKit renders the empty-input caret using the font's cap height
+//   (~11px for Lora 15) anchored to the line-box top, regardless of CSS
+//   line-height / vertical-align / appearance. Result: caret sits in the
+//   top half of the input until first keystroke. Four CSS-only attempts
+//   failed (rounds 1–4 — see git history bb07ff5 → 4e121c3). Verified via
+//   debug-overlay measurement that line-height is NOT the lever WebKit
+//   uses for empty-input caret position.
+//   Structural fix: hide the native caret while empty + focused
+//   (caret-color: transparent), render our own thin green vertical bar
+//   positioned with flex-friendly absolute coords, animate via CSS
+//   keyframes matching iOS native blink cadence (~1.06s, hard 50/50
+//   on/off). Once user types, native caret takes over (caret-color:
+//   v1.green so it stays brand-consistent).
 //
 // Phase 1 callsite: app/page.tsx (Home). Other surfaces (e.g. /flagged
 // search, /shelves search) deliberately out of scope until shopper data
@@ -63,6 +81,12 @@ export default function SearchBar({
     return () => clearTimeout(t);
   }, [value, onChange]);
 
+  // Custom caret renders only when the native one would render misaligned —
+  // i.e. focused + empty input. Once value is non-empty, native takes over
+  // (already correctly positioned because WebKit re-anchors to text baseline
+  // after the first keystroke).
+  const showCustomCaret = focused && value === "";
+
   const wrapperStyle: React.CSSProperties = {
     display:        "flex",
     alignItems:     "center",
@@ -88,19 +112,11 @@ export default function SearchBar({
     fontFamily:  FONT_LORA,
     fontSize:    15,
     color:       v1.inkPrimary,
-    // Caret centering — round 4, backed by overlay measurement. iOS WebKit
-    // renders the empty-input caret at the font's cap height (~11px for
-    // Lora 15) anchored to the line-box top. With lineHeight equal to the
-    // input height (22px = 22px), there's no vertical slack so "line-box
-    // top" = "input top" and the caret renders in the top half of the box.
-    // Shrinking lineHeight to 1 (= font-size = 15px) gives a 15px line-box
-    // that auto-centers in the 22px input via WebKit's default vertical
-    // centering of input content; caret follows the line-box and lands
-    // centered (y=11 in a 22px box). verticalAlign:middle is belt +
-    // suspenders for any inline-block fallback path.
+    // Native caret — green when typing, transparent (hidden) when empty +
+    // focused so the custom caret takes over without visual overlap.
+    caretColor:  showCustomCaret ? "transparent" : v1.green,
     height:      22,
     lineHeight:  1,
-    verticalAlign: "middle",
     appearance:  "none",
     WebkitAppearance: "none",
     minWidth:    0, // lets flex item shrink past content size
@@ -124,23 +140,44 @@ export default function SearchBar({
 
   return (
     <div style={wrapperStyle} role="search">
+      {/* Custom-caret blink keyframes. Inline so the primitive stays
+          self-contained; `steps(2, start)` gives the hard 50/50 on/off
+          cadence iOS native carets use (no opacity ramp). */}
+      <style>{`@keyframes th-caret-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }`}</style>
+
       <PiBinocularsFill
         size={20}
         color={v1.inkMid}
         aria-hidden="true"
         style={{ flexShrink: 0 }}
       />
-      {/* TEMP DEBUG (R16 caret-shift round 4) — three reference lines drawn
-          inside the input's bounding box so we can see where the caret renders
-          relative to top/center/bottom. Red = input top edge, green = input
-          vertical center, blue = input bottom edge. Lines extend leftward 8px
-          from the input's left edge so they're visible next to the caret.
-          REMOVE this wrapper + the three abs-positioned divs once the caret
-          fix lands. */}
+
       <div style={{ position: "relative", flex: 1, display: "flex", minWidth: 0 }}>
-        <div aria-hidden style={{ position: "absolute", left: -8, right: 0, top:    0, height: 1, background: "red"  , pointerEvents: "none", zIndex: 2 }} />
-        <div aria-hidden style={{ position: "absolute", left: -8, right: 0, top:   11, height: 1, background: "green", pointerEvents: "none", zIndex: 2 }} />
-        <div aria-hidden style={{ position: "absolute", left: -8, right: 0, top:   21, height: 1, background: "blue" , pointerEvents: "none", zIndex: 2 }} />
+        {/* Custom caret — see file-top "Custom caret" comment block.
+            position: absolute relative to the inline wrapper above. left:0
+            sits at the input's content-area left edge (the input has
+            padding:0). Vertical centering via top:50% + translateY(-50%) so
+            it tracks the 22px input box regardless of any future height
+            tweaks. height 17 + width 2 mirrors iOS native caret dimensions
+            for 15px text. */}
+        {showCustomCaret && (
+          <div
+            aria-hidden
+            style={{
+              position:      "absolute",
+              left:          0,
+              top:           "50%",
+              transform:     "translateY(-50%)",
+              width:         2,
+              height:        17,
+              background:    v1.green,
+              pointerEvents: "none",
+              animation:     "th-caret-blink 1.06s steps(2, start) infinite",
+              zIndex:        1,
+            }}
+          />
+        )}
+
         <input
           type="text"
           inputMode="search"
@@ -154,6 +191,7 @@ export default function SearchBar({
           style={inputStyle}
         />
       </div>
+
       {value && (
         <button
           type="button"
