@@ -1,6 +1,7 @@
 # R16 — Discovery: search bar on Home — Design record
 
-> **Status:** 🟢 Ready (promoted from 🟡 Captured in session 102, 2026-05-02 — first session it was captured AND promoted same-day).
+> **Status:** ✅ **Shipped session 105** (2026-05-03) end-to-end. Tasks 1–7 sprint + custom-caret bug-class kill (round 5 structural fix) + backfill polish. 17 runtime commits.
+> **Status history:** 🟡 Captured (102) → 🟢 Ready (102, same session) → ✅ Shipped (105). First R-item to graduate Captured → Shipped across just 2 sessions of work (102 design + 105 implementation, with sessions 103–104 running other arcs in between).
 > **Roadmap entry:** [`docs/roadmap-beta-plus.md`](roadmap-beta-plus.md#r16--discovery-search-bar-on-home-) — R16.
 > **Mockups:**
 > - [`docs/mockups/discovery-browse-by-v1.html`](mockups/discovery-browse-by-v1.html) — V1 (3-frame "Browse by..." landing page exploration; **rejected** as over-designed for phase 1).
@@ -48,17 +49,17 @@ R16 makes the existing 30-day Home feed **searchable in place**, backed by AI-ex
 | # | Question | Decision | Source |
 |---|----------|----------|--------|
 | D1 | Where does discovery live — new tab / new page / in-place affordance? | **In-place affordance on Home only.** Search bar slotted between `StickyMasthead` and the mall scope block. No new BottomNav tab; no new destination page. | David, session 102 — *"all we need is a search bar at the top of the feed page."* |
-| D2 | Bar placement — above the mall scope block, or inside the masthead row (Twitter-style focus mode)? | **Above the mall scope block.** Matches the screenshot David provided; doesn't restructure the masthead. | David's screenshot, session 102. |
+| D2 | Bar placement — above the mall scope block, or inside the masthead row (Twitter-style focus mode)? | ~~Above the mall scope block.~~ **REVERSED session 105** → BELOW the mall scope block. David: *"the search should probably be under the mall location filter."* The mall picker is the primary "where am I shopping" choice; search is secondary "what am I looking for here." Subordinate visual position matches conceptual subordination + reinforces the digital-to-physical thesis. | David, session 105 iPhone QA. |
 | D3 | Visual treatment — flat / outlined / glass / inset? | **Glass-morphism, pill-shaped.** Exact CSS provided by David: 65% white bg + `backdrop-filter: blur(10px)` + 1px subtle border + soft 8/24 shadow. Initially shipped at 20px radius + 14/16 padding (per V2 mockup); David read as "chunky" on iPhone QA same-session → dialed to **`borderRadius: 999` (full pill) + `10px 18px` padding**. Total height ~40px. Lead `PiBinocularsFill` 20px, right `PiSlidersHorizontal` 18px. Focused state adds 3px green ring + opaque bg + lifted shadow. | David, session 102 (commit `2fb3264`). |
 | D4 | Lead icon — magnifying glass or binoculars? | **`PiBinocularsFill`.** On-brand for the Treehouse thesis (digital tool for real-world exploration); composes with the leaf brand mark (both fill weight, both field-vocabulary). | David, session 102 — *"PiBinocularsFill — more treehouse branded and scope."* |
-| D5 | Right-side glyph — present in phase 1? | **Yes, present but inert.** `PiSlidersHorizontal` in regular weight. Phase-2 hook for axis filtering. | Implication of D1 + Treehouse one-screen rule. |
+| D5 | Right-side glyph — present in phase 1? | ~~Yes, present but inert. `PiSlidersHorizontal` in regular weight. Phase-2 hook for axis filtering.~~ **REVERSED session 105** → RETIRED. David: *"Remove the filter icon on the far right, unless it serves a purpose."* Inert iconography on a single-purpose primitive read as visual noise against the minimalistic-magic rule. Add back when there's real interactive behavior to wire to. Divider went with it (its only job was separating the two icons). | David, session 105 iPhone QA. |
 | D6 | Search target columns | **Multi-column tsvector** over `posts.title` + `posts.caption` + `posts.tags` + `vendors.display_name` + `vendors.booth_number` + `malls.name`. Single `websearch_to_tsquery` call against a generated tsvector + GIN index. Sub-50ms even at 10k rows. | Session 102 — confirmed by David. |
 | D7 | Search scope — within selected mall, or across all malls? | **Respects the current mall scope by default.** The mall picker is a pre-existing user signal — search inherits it. When results are empty, an italic "Search all of Kentucky →" CTA appears as a contextual escape hatch (only on empty). | Session 102. |
 | D8 | Tag extraction — new AI route, or enrich existing call? | **Enrich the existing `/api/post-caption` Sonnet 4.6 vision call.** Same image, same model, ~+150 tokens output, no new round-trip. Tags returned in the same JSON response as title + caption. | Session 102 — token/cost minimization. |
 | D9 | Tag schema — flat `text[]` or typed columns (material/era/object_type)? | **Flat `text[]`.** 5–6 lowercase strings per find drawn from a Claude-picked subset of {material, era, object_type, color, subject, category} axes. Simpler enrichment, simpler search. Promote to typed columns only if shopper data shows demand for axis-narrowed filtering (Frame B from the V1 mockup). | Session 102 — phase-1 minimum viable. |
 | D10 | Backfill existing posts | **One-shot `scripts/backfill-tags.ts`** runs the enriched `/api/post-caption` over existing rows that have NULL tags. Cost estimate at ~120 posts: ~$0.50 in Sonnet vision calls. | Session 102. |
 | D11 | URL shape — modal-style state or query-param? | **Query param `?q=brass`.** URL-shareable; browser back exits search cleanly; respects mall picker via co-existing `?mall=<slug>`. | Session 102 — composes with existing mall URL state. |
-| D12 | Empty-state UI when no results in current mall | **Single italic Lora line + outlined green CTA.** Copy: *"Nothing matching '{query}' at this location yet."* CTA: *"Search all of Kentucky →"*. Routes to same Home with mall scope cleared (`?q=brass&mall=all`). | Session 102. |
+| D12 | Empty-state UI when no results in current mall | ~~Single italic Lora line + outlined green CTA. CTA: "Search all of Kentucky →" routes to same Home with mall scope cleared.~~ **REVERSED session 105** → italic Lora subtitle ALONE; widen-to-all-Kentucky CTA DROPPED. David: *"search only the selected mall location."* If users want to broaden, they use the mall picker themselves — no hand-holding affordance per the minimalistic-magic rule. Copy: *"Nothing matching '{query}' at {mall} yet."* (or *"Nothing matching '{query}' yet."* on the all-Kentucky scope). | David, session 105 iPhone QA. |
 | D13 | Active-results UI — labels / count / matching-reason chips? | **Nothing.** No "12 results" header, no matching-reason chips on tiles. Per the design philosophy: *"we don't need to call it out anywhere."* The magic is that things just appear. | David, session 102 — minimalistic magic. |
 | D14 | Sticky behavior — does the bar stick on scroll? | **No, scrolls away with the masthead.** Sticky search is heavier visual chrome; user can swipe up to expose it. Reconsider only if real-content QA flags it. | Session 102 implementation default. |
 | D15 | Placeholder copy — "Search…" or "Spot…" verb? | **"Search finds, booths, or styles"** (kept). David flagged "Spot…" as potentially clever-for-clever's-sake; "Search" is the universal mental model. Easy revision if real-device QA reads stale. | Session 102 — defer to convention until evidence demands shift. |
@@ -426,4 +427,36 @@ Smallest→largest commit sequencing per [`feedback_smallest_to_largest_commit_s
 
 ---
 
-> Last updated: 2026-05-02 (session 102 close — design-to-Ready pass complete + Task 4 primitive shipped (commits `1faa2b8` + `2fb3264`). R16 🟢 Ready, Task 4/8 done. All 15 decisions D1–D15 frozen; implementation session can run Tasks 1–3 + 5–8 as a straight sprint against this spec. First R-item to be both captured AND promoted in the same session, AND first to ship its primitive in the scoping session.)
+> Last updated: 2026-05-03 (session 105 close — R16 ✅ Shipped end-to-end. Tasks 1–7 from this spec ran as a straight sprint per the 102 plan. 3 design-record reversals (D2, D5, D12) surfaced post-iPhone-QA + applied with explicit acknowledgement per `feedback_surface_locked_design_reversals.md`. Custom-caret bug-class kill (round 5 structural fix) replaced 4 failed CSS-only attempts on the iOS WebKit empty-input caret position; full chronology preserved in `components/SearchBar.tsx` file-top comment block. Backfill ran clean: 54/54 ok, 0 failed.)
+
+---
+
+## Session 105 implementation notes
+
+**What shipped (17 commits, see CLAUDE.md session 105 block for full table):**
+- Migration 019 with IMMUTABLE wrapper retry (Postgres 42P17 caught on first paste)
+- Tasks 2/3/5/6/7 chained smallest→largest
+- 3 design-record reversals (D2/D5/D12) applied post-iPhone-QA
+- Vertical rhythm match: SearchBar wrapper padding 6/12 = both gaps match masonry's 12px stacked-thumbnail gap
+- Diamond-divider hairline RETIRED on Home — SearchBar serves as the visual separator above the masonry
+- MallScopeHeader top padding 20 → 8 (inherits to /flagged + /shelves)
+- Custom green caret (round 5 structural fix — see below)
+- Backfill axis-prefix sanitizer (split-on-colon) mirrored to live `/api/post-caption` route
+
+**Custom caret (R16 round 5, kill-the-bug-class):**
+
+iOS WebKit renders the empty-input caret using the font's cap height (~11px for Lora 15) anchored to the line-box top, regardless of CSS `line-height` / `vertical-align` / `appearance` / `box-sizing`. Verified via debug-overlay measurement (3 colored reference lines at y=0/11/21 inside the input box) — caret consistently rendered at y=0–11 (top half) on first focus, then re-anchored correctly after first keystroke.
+
+**Failed CSS-only attempts (rounds 1–4):**
+1. `appearance: none` + `WebkitAppearance: none` + `lineHeight: "normal"` — caret unchanged
+2. Explicit `height: 22` + `lineHeight: "22px"` + `margin: 0` — caret unchanged
+3. `type="search"` → `type="text"` (with inputMode="search" + enterKeyHint="search" preserved) — caret unchanged
+4. `lineHeight: 1` (= font-size, smaller line-box) — caret unchanged
+
+**Round 5 structural fix:**
+- Set `caret-color: transparent` on the input WHILE empty + focused (hides the misaligned native caret)
+- Render our own thin green vertical bar (2 × 17px, `v1.green` brand) absolute-positioned via `top: 50%` + `transform: translateY(-50%)` so it tracks the input box center exactly
+- Animate via `@keyframes th-caret-blink 1.06s steps(2, start)` matching iOS native blink cadence (hard 50/50 on/off, no opacity ramp)
+- Once user types, native caret takes back over with `caret-color: v1.green` so it stays brand-consistent across both states
+
+**Future sessions:** read the `components/SearchBar.tsx` file-top "Custom caret" comment block before attempting any CSS-only fix on the empty-input caret. The 5-round chronology + lever-disconnection diagnosis is documented there to prevent re-litigation.
