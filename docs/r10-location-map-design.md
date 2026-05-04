@@ -1,7 +1,7 @@
 # R10 — Location map nav + persistent postcard mall card — Design record
 
-> **Status:** ✅ **Shipped** as of session 108 (2026-05-05). Map integration end-to-end on production PWA. See [Implementation status (session 108)](#implementation-status-session-108) for sub-task table + deferred items.
-> **Status history:** 🟡 Captured (55) → 🟢 Ready (106) → ✅ Shipped (108).
+> **Status:** ✅ **Shipped** as of session 108 (2026-05-05). Map integration end-to-end on production PWA. Session 109 added a chrome-refinement pass — flicker-eliminating shared layout + wordmark size dial + profile to masthead-left + share button on Home/Map with `?mall=` URL state. Design-record reversals: D1 (4-tab → 3-tab BottomNav) + D6 (TabPageMasthead 86px hero → StickyMasthead 72px shared with detail pages). See [Implementation status (session 108)](#implementation-status-session-108) and [Session 109 chrome refinement](#session-109-chrome-refinement) below.
+> **Status history:** 🟡 Captured (55) → 🟢 Ready (106) → ✅ Shipped (108) → chrome refinement (109).
 > **Roadmap entry:** [`docs/roadmap-beta-plus.md`](roadmap-beta-plus.md#r10--location-map-nav-icon-) — R10.
 > **Mockups:**
 > - [`docs/mockups/r10-location-map-v1.html`](mockups/r10-location-map-v1.html) — V1 (3 structural frames + pin variants + bottom-card spec). Rejected: bottom-card identifier duplicated the mall picker; "where does the card live on the map" tension unresolved.
@@ -53,12 +53,12 @@ It does **not** ship:
 
 | # | Question | Decision | Source |
 |---|----------|----------|--------|
-| D1 | Where does the Map slot in the BottomNav? | **New 5th tab → reduce to 4 tabs by retiring Booths.** Final order: Home / Map / Profile / Saved. The Booths-as-list-page becomes redundant once the postcard card identifies the mall scope and the /map tab is the canonical "browse locations" surface. | David's hand-drawn mockup, session 106. |
+| D1 | Where does the Map slot in the BottomNav? | ~~**New 5th tab → reduce to 4 tabs by retiring Booths.** Final order: Home / Map / Profile / Saved.~~ **REVERSED session 109** → 3-tab flat: Home / Map / Saved. Profile relocates to masthead left slot via `<MastheadProfileButton>` (mirrors back-button geometry on detail pages). Reasoning per David: "BottomNav's job is wayfinding between primary destinations; Profile is identity, not destination." Auth chrome relocation history is now three migrations deep (≤87 masthead-right → 90 BottomNav-tab → 109 masthead-left). | David's hand-drawn mockup, session 106 + David's session-109 iPhone refinement. |
 | D2 | Booths tab retirement — where do its three jobs go? | **Browse all booths in a mall** → /map (tap a pin → scope → existing booth-grouped Saved view + per-booth "Explore the booth →" CTA). **Vendor-add booth** → /admin Locations tab + EditBoothSheet (already exists per session 74). **My Booth entry** → Profile tab inline link (vendors only). | Session 106 redistribution. |
 | D3 | Saved tab glyph — keep FlagGlyph or swap? | **Swap to leaf glyph.** Same brand glyph as the save-bubbles on every tile; consistency across surfaces. Lucide-style stroke 2.0 to match other tabs. | David's hand-drawn mockup, session 106. |
 | D4 | Saved tab badge — dot or count? | **Count pill.** Brand-green pill with Times-New-Roman numeral (matches the booth-numeral typography system from session 75). Replaces today's anonymous green dot. | David's hand-drawn mockup, session 106. |
 | D5 | Persistent header on primary tabs (Home / Saved / Map) — what's the shape? | **`<PostcardMallCard>` primitive.** Postcard-bg surface, "from:" eyebrow + Lora mall name + pin/address row + square contextual stamp on the right. Identical across all 3 tabs. | V2 mockup approved by David. |
-| D6 | Tab masthead chrome — keep StickyMasthead or use a hero wordmark? | **Hero wordmark masthead on root-level tab pages.** Wordmark renders ~86px tall (vs 40px inline elsewhere) since there's no back-button or right-slot to share the row with. **Sub-pages still use the 40px inline StickyMasthead.** | David's hand-drawn mockup, session 106. |
+| D6 | Tab masthead chrome — keep StickyMasthead or use a hero wordmark? | ~~**Hero wordmark masthead on root-level tab pages.** Wordmark renders ~86px tall (vs 40px inline elsewhere) since there's no back-button or right-slot to share the row with. **Sub-pages still use the 40px inline StickyMasthead.**~~ **REVERSED session 109** → root tabs use `<StickyMasthead>` too (72px wordmark, fixed-position, slots filled with profile-left + share-right per session-109 ask). The "no slots to share the row with" premise dissolved when the slots got filled. Reasoning per David: "All these pages should use the wordmark dimensions that exist on the /find and /shelf pages. Now that we have the location container this size fits better and will be consistent when moving from page to page." `<TabPageMasthead>` component retired from root tabs but kept in repo (still consumed by `/postcard-test` smoke page for primitive isolation). | David's hand-drawn mockup, session 106 + David's session-109 iPhone refinement. |
 | D7 | Card surface — paperWarm or new token? | **New token: `postcardBg #f4ecd8`.** Slightly more saturated than paperWarm; reads as "card stock" rather than "off-white." | V4. |
 | D8 | Card border + radius + shadow | **1px solid rgba(42,26,10,0.10) + 12px radius + new `shadow-postcard` token** (`0 4px 14px rgba(42,26,10,0.16), 0 1px 2px rgba(42,26,10,0.08)`). Lighter than `shadow-polaroid` because the card is a chrome element, not a focal-point primitive. | V4. |
 | D9 | "from:" eyebrow typography | **Lora italic 18 / inkMuted / line-height 1.** Postal vocabulary anchor — sets up the postcard read before the user reaches the mall name. | V2 → V4. |
@@ -114,20 +114,26 @@ interface PostcardMallCardProps {
 
 ## BottomNav delta
 
-Before (today, 5 tabs role-conditional):
+Before (sessions 90+, 5 tabs role-conditional):
 ```
 Home · Profile · Saved (FlagGlyph) · Booths · [My Booth | Admin]
 ```
 
-After (R10, 4 tabs flat):
+R10 v1 (session 107, 4 tabs flat):
 ```
 Home · Map · Profile · Saved (Leaf + count pill)
 ```
 
-- **Booths** retires entirely. Three jobs redistribute per D2.
+R10 v1.1 (session 109, 3 tabs flat — D1 reversed):
+```
+Home · Map · Saved (Leaf + count pill)
+```
+
+- **Booths** retired entirely (session 107). Three jobs redistribute per D2.
 - **Saved** glyph swaps to leaf; badge swaps to count pill (Times-New-Roman numeral in green-on pill).
-- **My Booth / Admin** entry points relocate to Profile tab inline (vendor + admin role-conditional links).
-- **All 4 tabs visible to all roles.** Role-conditional content lives one level deep, not in the nav.
+- **Profile** retired from BottomNav (session 109). Relocates to masthead left slot via `<MastheadProfileButton>` — mirrors back-button geometry on detail pages so every page has a consistent left-slot affordance.
+- **My Booth / Admin** entry points still on Profile destination (`/login/email` when authed) — accessible by tapping the masthead profile icon.
+- **All 3 tabs visible to all roles.** Role-conditional content lives one level deep, not in the nav.
 
 ---
 
@@ -390,3 +396,36 @@ All 11 sub-tasks shipped across sessions 106 / 107 / 108:
 - **Peek anchor projection:** `<PinCallout>` is rendered inside the map container (NOT as a sibling). Anchor coordinates come from `map.project(lngLat)` and are re-projected on `move`/`zoom`/`rotate` events so the callout tracks the pin during pan/zoom.
 - **All-locations fit:** the all-Kentucky view computes `fitBounds()` from actual mall coordinates, NOT from `KY_BOUNDS`. This auto-tightens to the current data cluster (today: Louisville-area), and auto-expands as locations activate further out. `maxZoom: 11` prevents over-zoom on tightly-clustered or single-pin sets. `maxBounds` (the pan/zoom constraint) stays at `KY_BOUNDS` so the user still can't drift out of the state.
 - **Stats helper:** `getMallStatsByMallId()` in `lib/posts.ts` provides booth + available-find counts per mall via two parallel select-only queries grouped client-side. Drives the PinCallout stat row. Acceptable for ~5 active malls + low-hundreds posts; promote to a Postgres aggregate if row counts climb 10×.
+
+---
+
+## Session 109 chrome refinement
+
+R10's chrome shipped session 107 with `<TabPageMasthead>` (86px inline hero) + 4-tab BottomNav (Home / Map / Profile / Saved). David's session-109 refinement reframes both: matched chrome across every page (root tabs share the StickyMasthead primitive used on detail pages), Profile relocates to masthead-left (mirrors back-button geometry), Share gets surfaced on Home + Map with `?mall=<slug>` URL state. Eliminated tab-to-tab flicker via Next.js App Router shared layout.
+
+Four commits, smallest→largest:
+
+| Commit | Ship | Decision impact |
+|---|---|---|
+| `3bbcbfb` | Route-group `app/(tabs)/` + shared layout owning chrome | Eliminates tab-to-tab flicker (the load-bearing fix). No visible chrome change. |
+| `061098e` | Swap `<TabPageMasthead>` for `<StickyMasthead>` in layout | **D6 reversed.** 86px inline hero → 72px fixed-position wordmark matching `/find` + `/shelf`. |
+| `59b2769` | `<MastheadProfileButton>` to masthead left + drop Profile from BottomNav | **D1 reversed.** 4-tab → 3-tab. Auth chrome migration #3 (≤87 right → 90 nav-tab → 109 left). |
+| `c9fb59f` | `<MastheadShareButton>` on Home + Map right slot + `?mall=<slug>` URL state | New affordance — share preserves recipient scope. Saved deliberately omitted (saved finds are private). |
+
+### Session 109 implementation notes
+
+- **Shared layout architecture:** `app/(tabs)/layout.tsx` is a Client Component that owns chrome (`<StickyMasthead>` + `<PostcardMallCard>` + `<BottomNav>` + `<MallSheet>`) and persists across child route changes within the route group. Pages render only their body content (search bar, banner, main). State derivation: `usePathname()` drives `stampGlyph`, `activeNav`, the all-Kentucky subtitle copy, and the postcard-card `onTap` fork (Map → MallSheet; Home/Saved → router.push("/map")).
+- **URL state intake:** `?mall=<slug>` is read via `window.location.search` inside a `useEffect` (NOT Next.js `useSearchParams` — that triggers a static-prerender bailout when used in a layout, which would force every child page off the prerender path). After consuming the slug, `router.replace(pathname)` strips the param so refresh doesn't re-apply scope.
+- **Share URL builder:** the layout passes a `urlBuilder` prop to `<MastheadShareButton>` that lazy-evaluates on tap (so live mall scope is captured at share time, not render time). Builder shape: `${origin}${pathname}${slug ? `?mall=${slug}` : ''}`. Bare URL when scope is all-Kentucky → recipient keeps their local scope.
+- **`<MastheadProfileButton>` geometry:** 44×44 bubble with `rgba(42,26,10,0.06)` background — exact match to BackButton on `/find/[id]` + `/shelf/[slug]` per David's session-109 ask. Glyph: Lucide CircleUser size 22 strokeWidth 1.8 (preserves the visual vocabulary BottomNav had).
+- **Page-specific banners stay per-page:** Home and Saved each render their own `<FeaturedBanner>` (different admin keys, different variants). The mall hero photo on Home composes from `selectedMall.hero_image_url` — Home-specific because Map and Saved deliberately don't show it.
+- **`<TabPageMasthead>` retained:** Component file kept in `components/` because the `/postcard-test` smoke page still uses it for primitive isolation. Optional cleanup commit if no future surface re-adopts the inline-hero pattern.
+
+### Session 109 cumulative reversal count
+
+R10's design record now carries **five reversed decisions** across two refinement passes:
+
+- **Session 107:** D19 partial (Home/Saved card-tap routes to /map instead of opening MallSheet locally), D20 (search bar dropped from /map), D27 (search-on-Map redirect — moot).
+- **Session 109:** D1 (4-tab → 3-tab BottomNav), D6 (TabPageMasthead → StickyMasthead).
+
+The reversal pattern fired 5 times across 2 sessions per `feedback_surface_locked_design_reversals.md` — each surfaced explicitly with David's verbatim quotes before the code change. Promotion-strength validation continues.
