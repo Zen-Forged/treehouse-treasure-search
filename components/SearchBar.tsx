@@ -88,18 +88,19 @@ export default function SearchBar({
     fontFamily:  FONT_LORA,
     fontSize:    15,
     color:       v1.inkPrimary,
-    // Caret centering — third attempt, structural this time. type="search"
-    // brings WebKit's native search-input chrome (search-decoration +
-    // cancel-button pseudo-elements) which computes the empty-state caret
-    // position differently than the post-typing caret position. CSS
-    // appearance:none + explicit height/lineHeight didn't fully neutralize
-    // the first-focus shift across PWA + Safari + Chrome. Switching to
-    // type="text" (with inputMode="search" + enterKeyHint="search" preserved
-    // for the iOS search keyboard) escapes the type-search code path
-    // entirely. The fixed 22px line-box is preserved as belt + suspenders
-    // so the caret has an unambiguous render target either way.
+    // Caret centering — round 4, backed by overlay measurement. iOS WebKit
+    // renders the empty-input caret at the font's cap height (~11px for
+    // Lora 15) anchored to the line-box top. With lineHeight equal to the
+    // input height (22px = 22px), there's no vertical slack so "line-box
+    // top" = "input top" and the caret renders in the top half of the box.
+    // Shrinking lineHeight to 1 (= font-size = 15px) gives a 15px line-box
+    // that auto-centers in the 22px input via WebKit's default vertical
+    // centering of input content; caret follows the line-box and lands
+    // centered (y=11 in a 22px box). verticalAlign:middle is belt +
+    // suspenders for any inline-block fallback path.
     height:      22,
-    lineHeight:  "22px",
+    lineHeight:  1,
+    verticalAlign: "middle",
     appearance:  "none",
     WebkitAppearance: "none",
     minWidth:    0, // lets flex item shrink past content size
