@@ -66,11 +66,11 @@ function logError(message: string, context: { ip: string; error?: any; details?:
 // Mock fallback — used when ANTHROPIC_API_KEY is absent or Claude fails
 // ---------------------------------------------------------------------------
 const MOCK_RESPONSES = [
-  { title: "Mid-century ceramic vase", caption: "Quietly beautiful. The kind of thing that earns a permanent spot on the shelf." },
-  { title: "Brass candlestick holder", caption: "Well-made and unhurried. Still very much at home in the world." },
-  { title: "Vintage glass figurine", caption: "Simple in form, considered in craft. The sort of thing you don't see twice." },
-  { title: "Antique wooden side table", caption: "Classic lines, genuine character. It's been around long enough to have a story." },
-  { title: "Stoneware pottery bowl", caption: "Not flashy, but assured. The materials are real and the quality shows." },
+  { title: "Mid-century ceramic vase",    caption: "Quietly beautiful. The kind of thing that earns a permanent spot on the shelf.",  tags: ["ceramic",  "mid-century", "vase",        "cream",  "decor"]       },
+  { title: "Brass candlestick holder",    caption: "Well-made and unhurried. Still very much at home in the world.",                  tags: ["brass",    "candlestick", "amber",       "lighting","decor"]       },
+  { title: "Vintage glass figurine",      caption: "Simple in form, considered in craft. The sort of thing you don't see twice.",     tags: ["glass",    "vintage",     "figurine",    "decor",  "art"]         },
+  { title: "Antique wooden side table",   caption: "Classic lines, genuine character. It's been around long enough to have a story.", tags: ["wood",     "antique",     "side table",  "decor",  "furniture"]   },
+  { title: "Stoneware pottery bowl",      caption: "Not flashy, but assured. The materials are real and the quality shows.",          tags: ["stoneware","pottery",     "bowl",        "cream",  "kitchenware"] },
 ];
 
 // ---------------------------------------------------------------------------
@@ -133,12 +133,20 @@ export async function POST(req: NextRequest) {
 
     const system = `You are a writer for Treehouse, a local discovery app for antique and thrift finds.
 
-Given an image, return a JSON object with exactly two fields:
+Given an image, return a JSON object with exactly three fields:
 - "title": A concise, accurate item name (3–6 words). Be specific: material, era, type. E.g. "Mid-century ceramic lamp", "Cast iron skillet", "Art deco brass mirror".
 - "caption": One or two sentences, maximum. Notice what is genuinely interesting: the material, age, form, or patina. Write like a thoughtful friend who spotted something worth sharing — warm, brief, never precious. Do not mention price, resale value, or condition assessments. Avoid starting with "This" or the item name. Never use filler phrases like "a wonderful find" or "a must-have".
+- "tags": An array of 5–6 lowercase categorical strings drawn from these axes (pick the ones that apply, skip the ones that don't):
+  - material (brass, ceramic, wood, glass, cast iron, porcelain, leather, sterling, …)
+  - era (victorian, art deco, mid-century, 1970s, …)
+  - object_type (lamp, vase, bookend, bowl, painting, bust, mirror, …)
+  - color (amber, cobalt, cream, forest green, rust, …)
+  - subject (only when applicable — portrait of franklin, horse, eagle, …)
+  - category (lighting, kitchenware, decor, art, jewelry, toys, …)
+  All tags lowercase. Single words or short phrases. No duplicates. Aim for 5–6, never more than 8.
 
 Return ONLY valid JSON. No markdown, no code fences.
-Example: {"title":"Vintage brass candlestick","caption":"Carries its age quietly. The kind of piece that looks like it was always there."}`;
+Example: {"title":"Vintage brass candlestick","caption":"Carries its age quietly. The kind of piece that looks like it was always there.","tags":["brass","candlestick","mid-century","decor","amber"]}`;
 
     const content: Anthropic.MessageParam["content"] = [];
 
@@ -161,7 +169,7 @@ Example: {"title":"Vintage brass candlestick","caption":"Carries its age quietly
       // cheaper than Opus, still excellent on vision. Pinned (not
       // aliased) per DECISION_GATE preference for version stability.
       model:      "claude-sonnet-4-6",
-      max_tokens: 200,
+      max_tokens: 320,
       system,
       messages:   [{ role: "user", content }],
     });
@@ -175,9 +183,20 @@ Example: {"title":"Vintage brass candlestick","caption":"Carries its age quietly
       .replace(/\s*```$/, "");
 
     try {
-      const parsed = JSON.parse(raw) as { title: string; caption: string };
+      const parsed = JSON.parse(raw) as { title: string; caption: string; tags?: string[] };
+      // Sanitize tags defensively: lowercase, trim, drop empties + non-strings,
+      // dedupe, cap at 8 (matches prompt). Empty array on missing/malformed
+      // is the right default — search still works against title + caption.
+      const tags = Array.isArray(parsed.tags)
+        ? Array.from(new Set(
+            parsed.tags
+              .filter((t): t is string => typeof t === "string")
+              .map(t => t.trim().toLowerCase())
+              .filter(t => t.length > 0)
+          )).slice(0, 8)
+        : [];
       return NextResponse.json(
-        { title: parsed.title ?? "", caption: parsed.caption ?? "", source: "claude" as const },
+        { title: parsed.title ?? "", caption: parsed.caption ?? "", tags, source: "claude" as const },
         { headers: { "X-RateLimit-Remaining": String(remaining) } }
       );
     } catch (parseError) {
