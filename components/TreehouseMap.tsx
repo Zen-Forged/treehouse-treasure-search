@@ -21,8 +21,94 @@
 import * as React from "react";
 import mapboxgl, { type LngLatBoundsLike } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import { v1 } from "@/lib/tokens";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
+
+// D25 cartographic warm-cream palette. Walks the loaded light-v11 style
+// layers and overrides paint properties to swap Mapbox's grayscale defaults
+// for our v1.basemap.* tokens. Italic-Lora label font is deferred — custom
+// font upload requires Mapbox Studio per the design record memo. For now
+// we color labels in v1.basemap.label and let them fall back to Mapbox's
+// default sans face. When David moves to a Studio-hosted style URL, this
+// helper retires (style URL provides the palette + labels native).
+function applyCartographicPalette(map: mapboxgl.Map): void {
+  const style = map.getStyle();
+  if (!style?.layers) return;
+
+  for (const layer of style.layers) {
+    const id = layer.id;
+    try {
+      // Background fill = cream landmass.
+      if (layer.type === "background") {
+        map.setPaintProperty(id, "background-color", v1.basemap.cream);
+        continue;
+      }
+
+      // Land + landcover + landuse fills. Parks get the green park token,
+      // everything else gets cream2 (slightly warmer landcover).
+      if (layer.type === "fill") {
+        if (id === "land") {
+          map.setPaintProperty(id, "fill-color", v1.basemap.cream);
+        } else if (
+          id.includes("national-park") ||
+          id.includes("park") ||
+          id.includes("pitch") ||
+          id.includes("golf")
+        ) {
+          map.setPaintProperty(id, "fill-color", v1.basemap.park);
+          map.setPaintProperty(id, "fill-opacity", 0.7);
+        } else if (
+          id === "water" ||
+          id === "water-shadow" ||
+          id.startsWith("water-")
+        ) {
+          map.setPaintProperty(id, "fill-color", v1.basemap.water);
+        } else if (id.includes("landcover") || id.includes("landuse")) {
+          map.setPaintProperty(id, "fill-color", v1.basemap.cream2);
+          map.setPaintProperty(id, "fill-opacity", 0.55);
+        } else if (id.includes("hillshade")) {
+          // Soften terrain shading so it doesn't overwhelm the cream.
+          map.setPaintProperty(id, "fill-opacity", 0.15);
+        }
+        continue;
+      }
+
+      // Waterways (rivers, streams) — line layer in deeper sage.
+      if (layer.type === "line" && (id === "waterway" || id.startsWith("waterway-"))) {
+        map.setPaintProperty(id, "line-color", v1.basemap.water2);
+        continue;
+      }
+
+      // Roads — collapse the multi-tier hierarchy to plain white lines.
+      if (
+        layer.type === "line" &&
+        (id.startsWith("road-") || id.startsWith("bridge-") || id.startsWith("tunnel-"))
+      ) {
+        map.setPaintProperty(id, "line-color", "#ffffff");
+        continue;
+      }
+
+      // Admin boundaries (state, county) — soften with low-opacity ink.
+      if (layer.type === "line" && id.startsWith("admin-")) {
+        map.setPaintProperty(id, "line-color", "rgba(42,26,10,0.20)");
+        continue;
+      }
+
+      // Labels (country, state, place, settlement, road) — paint in our
+      // cartographic ink with a paper-cream halo so they read against
+      // both cream landmass and sage water.
+      if (layer.type === "symbol") {
+        map.setPaintProperty(id, "text-color", v1.basemap.label);
+        map.setPaintProperty(id, "text-halo-color", "rgba(245,242,235,0.85)");
+        map.setPaintProperty(id, "text-halo-width", 1.2);
+        continue;
+      }
+    } catch {
+      // Layer doesn't have this paint property in the loaded style — skip.
+    }
+  }
+}
 
 // Kentucky bounding box — slight padding around the actual state extents
 // so pins near the borders aren't clipped at maxBounds.
@@ -68,6 +154,11 @@ export default function TreehouseMap({ className, style }: TreehouseMapProps) {
     });
 
     mapRef.current = map;
+
+    // D25 — apply cartographic warm-cream palette once the base style has
+    // loaded. style.load fires after Mapbox finishes parsing the style JSON
+    // and the layer registry is queryable.
+    map.on("style.load", () => applyCartographicPalette(map));
 
     return () => {
       map.remove();
