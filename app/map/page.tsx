@@ -17,16 +17,25 @@
 "use client";
 
 import * as React from "react";
+import nextDynamic from "next/dynamic";
 import TabPageMasthead from "@/components/TabPageMasthead";
 import PostcardMallCard from "@/components/PostcardMallCard";
 import MallSheet from "@/components/MallSheet";
 import BottomNav from "@/components/BottomNav";
-import TreehouseMap from "@/components/TreehouseMap";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { getActiveMalls, getMallStatsByMallId, type MallStats } from "@/lib/posts";
 import { track } from "@/lib/clientEvents";
 import { v1 } from "@/lib/tokens";
 import type { Mall } from "@/types/treehouse";
+
+// SSR-safe import — mapbox-gl's UMD bundle accesses `window` at module
+// evaluation, which crashes during server render even inside a "use client"
+// component (the import statement runs in the SSR pass too). Skipping SSR
+// for the map prevents that crash and ensures the map only initializes
+// in the browser where WebGL is available.
+const TreehouseMap = nextDynamic(() => import("@/components/TreehouseMap"), {
+  ssr: false,
+});
 
 export const dynamic = "force-dynamic";
 

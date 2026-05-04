@@ -238,6 +238,23 @@ export default function TreehouseMap({
       onMapTapRef.current?.();
     });
 
+    // Surface auth / tile / style failures visibly. Without this, an
+    // unauthorized token (e.g. the URL restriction rejecting a preview
+    // domain) silently leaves an empty canvas. With this, the user sees
+    // the actual error string so we can fix the cause, not the symptom.
+    map.on("error", (ev) => {
+      const msg =
+        (ev as { error?: { message?: string } })?.error?.message ??
+        "Map failed to load.";
+      // Only surface user-relevant errors; mapbox-gl emits noisy non-fatal
+      // events during normal pan/zoom (e.g. tile retries) — skip those.
+      if (/unauthor|forbid|denied|invalid|not allowed|access/i.test(msg)) {
+        setError(`Map error: ${msg}`);
+      }
+      // Always log so we have a console trail in the iOS Safari Inspector.
+      console.error("[TreehouseMap]", msg, ev);
+    });
+
     return () => {
       // Unmount React roots before removing the map.
       Array.from(markersRef.current.values()).forEach((entry) => {
@@ -364,9 +381,14 @@ export default function TreehouseMap({
       ref={containerRef}
       className={className}
       style={{
-        width:    "100%",
-        height:   "100%",
-        position: "relative",
+        // position:absolute + inset:0 eliminates the flex-item-percent-
+        // height ambiguity. The parent <main> on /map is `flex: 1` inside
+        // a column flexbox; some Safari layouts compute children's
+        // percent height as auto in that arrangement, leaving mapbox-gl
+        // with a 0px container and refusing to render. Absolute pinning
+        // makes the container fill the parent's actual rendered box.
+        position: "absolute",
+        inset:    0,
         ...style,
       }}
     >
