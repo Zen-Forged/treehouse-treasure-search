@@ -129,18 +129,30 @@ export default function SearchBar({
         aria-hidden="true"
         style={{ flexShrink: 0 }}
       />
-      <input
-        type="text"
-        inputMode="search"
-        enterKeyHint="search"
-        value={value}
-        onChange={e => setValue(e.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        placeholder={placeholder}
-        aria-label="Search Treehouse Finds"
-        style={inputStyle}
-      />
+      {/* TEMP DEBUG (R16 caret-shift round 4) — three reference lines drawn
+          inside the input's bounding box so we can see where the caret renders
+          relative to top/center/bottom. Red = input top edge, green = input
+          vertical center, blue = input bottom edge. Lines extend leftward 8px
+          from the input's left edge so they're visible next to the caret.
+          REMOVE this wrapper + the three abs-positioned divs once the caret
+          fix lands. */}
+      <div style={{ position: "relative", flex: 1, display: "flex", minWidth: 0 }}>
+        <div aria-hidden style={{ position: "absolute", left: -8, right: 0, top:    0, height: 1, background: "red"  , pointerEvents: "none", zIndex: 2 }} />
+        <div aria-hidden style={{ position: "absolute", left: -8, right: 0, top:   11, height: 1, background: "green", pointerEvents: "none", zIndex: 2 }} />
+        <div aria-hidden style={{ position: "absolute", left: -8, right: 0, top:   21, height: 1, background: "blue" , pointerEvents: "none", zIndex: 2 }} />
+        <input
+          type="text"
+          inputMode="search"
+          enterKeyHint="search"
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          placeholder={placeholder}
+          aria-label="Search Treehouse Finds"
+          style={inputStyle}
+        />
+      </div>
       {value && (
         <button
           type="button"
