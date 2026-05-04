@@ -1,9 +1,15 @@
 // app/(tabs)/map/page.tsx
-// /map page body — TreehouseMap + peek state.
+// /map page body — TreehouseMap + peek state + MallSheet + contextual pill.
 //
-// Chrome (TabPageMasthead, PostcardMallCard with onTap → MallSheet,
-// BottomNav, MallSheet) lives in app/(tabs)/layout.tsx. This page renders
-// only the map body, which is what changes between root tab pages.
+// Outer chrome (StickyMasthead + PostcardMallCard + BottomNav) lives in
+// app/(tabs)/layout.tsx. This page owns:
+//   - <TreehouseMap>             (the map itself + pin/peek state)
+//   - <MallSheet>                (mall picker — relocated from layout
+//                                 session 110 since the only opener is
+//                                 the new contextual pill below)
+//   - <MapContextualPill>        (top-right of map; state-aware affordance
+//                                 — "Clear" when scope set, "Browse list"
+//                                 when all-Kentucky)
 //
 // Design record: docs/r10-location-map-design.md.
 
@@ -12,11 +18,61 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import nextDynamic from "next/dynamic";
+import { X, List } from "lucide-react";
+import MallSheet from "@/components/MallSheet";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { getActiveMalls, getMallStatsByMallId, type MallStats } from "@/lib/posts";
 import { track } from "@/lib/clientEvents";
-import { v1 } from "@/lib/tokens";
+import { v1, FONT_SYS } from "@/lib/tokens";
 import type { Mall } from "@/types/treehouse";
+
+// Contextual pill — single state-aware affordance (per David's session-110
+// pick). Top-right of the map container. Two states:
+//   - scope set     → "Clear" + X-glyph;     tap = setMallId(null) (stays on /map)
+//   - all-Kentucky  → "Browse list" + List;  tap = open MallSheet (stays on /map)
+function MapContextualPill({
+  scopeSet,
+  onClear,
+  onOpenList,
+}: {
+  scopeSet:   boolean;
+  onClear:    () => void;
+  onOpenList: () => void;
+}) {
+  const Icon  = scopeSet ? X    : List;
+  const label = scopeSet ? "Clear" : "Browse list";
+  const onTap = scopeSet ? onClear : onOpenList;
+  return (
+    <button
+      type="button"
+      onClick={onTap}
+      style={{
+        position:        "absolute",
+        top:             12,
+        right:           12,
+        zIndex:          5,
+        display:         "flex",
+        alignItems:      "center",
+        gap:             6,
+        padding:         "8px 14px 8px 12px",
+        borderRadius:    999,
+        background:      v1.green,
+        color:           v1.onGreen,
+        border:          "none",
+        cursor:          "pointer",
+        fontFamily:      FONT_SYS,
+        fontSize:        13,
+        fontWeight:      600,
+        letterSpacing:   "0.01em",
+        boxShadow:       v1.shadow.callout,
+        WebkitTapHighlightColor: "transparent",
+      }}
+    >
+      <Icon size={15} strokeWidth={2.0} />
+      {label}
+    </button>
+  );
+}
 
 // SSR-safe import — mapbox-gl's UMD bundle accesses `window` at module
 // evaluation, which crashes during server render even inside a "use client"
@@ -37,6 +93,10 @@ export default function MapPage() {
   // D26 — transient peek state. Pin tap sets this; tapping the callout
   // commits the rescope + clears it; tapping empty map clears it.
   const [peekedMallId, setPeekedMallId] = React.useState<string | null>(null);
+  // Session 110 — MallSheet state lives here now (relocated from layout).
+  // Opened only by the contextual pill; no other surface opens MallSheet
+  // after D19 fully reversed.
+  const [sheetOpen, setSheetOpen] = React.useState(false);
 
   React.useEffect(() => {
     getActiveMalls().then(setMalls);
@@ -82,6 +142,46 @@ export default function MapPage() {
           // "on the second tap it should go to the home screen to view
           // the feed."
           router.push("/");
+        }}
+      />
+
+      {/* Contextual pill — single state-aware affordance per session-110
+          design. Top-right inside the map container so it floats over the
+          basemap without affecting the page layout flow. */}
+      <MapContextualPill
+        scopeSet={mallId !== null}
+        onClear={() => {
+          setMallId(null);
+          // R3 filter_applied event for explicit clear via pill (distinct
+          // from MallSheet selection of "All Kentucky").
+          track("filter_applied", {
+            filter_type:  "mall",
+            filter_value: "all",
+            page:         "/map",
+            source:       "clear_pill",
+          });
+        }}
+        onOpenList={() => setSheetOpen(true)}
+      />
+
+      <MallSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        malls={malls}
+        activeMallId={mallId}
+        onSelect={(id) => {
+          setMallId(id);
+          setSheetOpen(false);
+          // R3 filter_applied event — list-pick is the secondary scope-
+          // change path (vs pin commit which auto-routes to Home).
+          // Per David: list selection STAYS on /map (no router.push).
+          const slug = id ? (malls.find(m => m.id === id)?.slug ?? null) : null;
+          track("filter_applied", {
+            filter_type:  "mall",
+            filter_value: slug ?? "all",
+            page:         "/map",
+            source:       "list_pick",
+          });
         }}
       />
     </main>

@@ -15,22 +15,18 @@
 //
 // Owned here:
 //   - Outer wrapper (paperCream bg, maxWidth 430, flex column)
-//   - <StickyMasthead> (fixed-position wordmark, 72px; left/right slots
-//     filled in commits 3 + 4 — empty for now). Reverses R10 D6: the 86px
-//     hero TabPageMasthead retires from root tabs in favor of the same
-//     primitive used on /find/[id] + /shelf/[slug], so the wordmark is
-//     visually identical across every page that has chrome. Now that the
-//     postcard mall card grounds the "where" identity below the masthead,
-//     the wordmark doesn't need to do double-duty as the page title.
-//   - <PostcardMallCard> (mall scope identifier; tap behavior varies per
-//     pathname — Map opens MallSheet, Home/Saved route to /map per D19
-//     partial reversal, session 107)
-//   - <BottomNav> (4-tab flat for now; will trim to 3-tab in commit 3)
-//   - <MallSheet> (only opens on /map per the unified-filter design)
+//   - <StickyMasthead> with profile-left + share-right (Home/Map only).
+//     Wordmark is the 72px shared primitive used on /find + /shelf too.
+//   - <PostcardMallCard> (mall scope identifier). Tap behavior:
+//       Home + Saved → routes to /map
+//       /map         → no-op (informational; affordances on the map pill)
+//   - <BottomNav> 2-tab (Home / Saved) — Map retired session 110.
+//   - URL-state intake: ?mall=<slug> consumed on layout mount.
 //
 // Owned by individual pages:
 //   - SearchBar (Home only — search is a Home concern per D20 reversal)
 //   - FeaturedBanner (Home + Saved with different admin keys)
+//   - <MallSheet> + the new contextual map pill (/map only)
 //   - main body content + per-page state (post lists, map, etc.)
 
 "use client";
@@ -40,7 +36,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import StickyMasthead from "@/components/StickyMasthead";
 import PostcardMallCard from "@/components/PostcardMallCard";
-import MallSheet from "@/components/MallSheet";
 import BottomNav from "@/components/BottomNav";
 import MastheadProfileButton from "@/components/MastheadProfileButton";
 import MastheadShareButton from "@/components/MastheadShareButton";
@@ -57,7 +52,6 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
   const [mallId, setMallId] = useSavedMallId();
   const [malls, setMalls]   = useState<Mall[]>([]);
   const [bookmarkCount, setBookmarkCount] = useState(0);
-  const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
     getActiveMalls().then(setMalls);
@@ -198,25 +192,6 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
       {children}
 
       <BottomNav active={activeNav} flaggedCount={bookmarkCount} />
-
-      <MallSheet
-        open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-        malls={malls}
-        activeMallId={mallId}
-        onSelect={(id) => {
-          setMallId(id);
-          setSheetOpen(false);
-          // R3 filter_applied event with page='/map' — scope change is
-          // /map's responsibility per the unified-filter design.
-          const slug = id ? (malls.find(m => m.id === id)?.slug ?? null) : null;
-          track("filter_applied", {
-            filter_type:  "mall",
-            filter_value: slug ?? "all",
-            page:         "/map",
-          });
-        }}
-      />
     </div>
   );
 }
