@@ -28,7 +28,7 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+// ArrowLeft retired (R10 session 107) — Saved is now a root tab page; back button gone.
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
 import { BOOKMARK_PREFIX, loadBookmarkCount } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
@@ -42,8 +42,10 @@ import { track } from "@/lib/clientEvents";
 import { writeFindContext, setPostCache, type FindRef } from "@/lib/findContext";
 import BottomNav from "@/components/BottomNav";
 import MallSheet from "@/components/MallSheet";
-import MallScopeHeader, { type MallScopeGeoLine } from "@/components/MallScopeHeader";
-import StickyMasthead from "@/components/StickyMasthead";
+// R10 (session 107) — MallScopeHeader retired here; replaced by PostcardMallCard.
+// StickyMasthead also retired — Saved is a root tab page, gets TabPageMasthead.
+import TabPageMasthead from "@/components/TabPageMasthead";
+import PostcardMallCard from "@/components/PostcardMallCard";
 import FeaturedBanner from "@/components/FeaturedBanner";
 import PolaroidTile from "@/components/PolaroidTile";
 import EmptyStatePrimitive from "@/components/EmptyState";
@@ -492,24 +494,11 @@ export default function FlaggedPage() {
 
   const findCount = filteredPosts.length;
   const findNoun = findCount === 1 ? "find" : "finds";
-  const scopeEyebrowAll = `saved ${findNoun} across`;
-  const scopeEyebrowOne = `saved ${findNoun} at`;
-
-  const scopeGeoLine: MallScopeGeoLine =
-    savedMallId && selectedMall
-      ? (() => {
-          const address = selectedMall.address ?? null;
-          const cityLine = selectedMall.city
-            ? `${selectedMall.city}${selectedMall.state ? `, ${selectedMall.state}` : ""}`
-            : null;
-          const text = address ?? cityLine ?? "";
-          if (!text) return null;
-          const href = `https://maps.apple.com/?q=${encodeURIComponent(
-            address ?? `${selectedMall.name} ${selectedMall.city ?? ""} ${selectedMall.state ?? ""}`
-          )}`;
-          return { kind: "address" as const, text, href };
-        })()
-      : { kind: "italic" as const, text: "Kentucky & Southern Indiana" };
+  // R10 (session 107) — scopeEyebrow* + scopeGeoLine retired with the
+  // MallScopeHeader swap. PostcardMallCard composes the address row from the
+  // mall fields directly, and the all-Kentucky variant uses a literary
+  // subtitle rather than a per-page eyebrow + geo line. findNoun retained
+  // because the all-Kentucky subtitle still pluralizes against findCount.
 
   const filterHidesAllSaves = savedMallId !== null && posts.length > 0 && filteredPosts.length === 0;
 
@@ -525,40 +514,20 @@ export default function FlaggedPage() {
         flexDirection: "column",
       }}
     >
-      <StickyMasthead
-        left={
-          <button
-            onClick={() => history.back()}
-            aria-label="Go back"
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: "50%",
-              background: v1.iconBubble,
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
-          </button>
-        }
-        right={null}
-      />
+      {/* R10 (session 107) — Saved is a root tab page (D6). TabPageMasthead
+          replaces the back-button-only StickyMasthead. BottomNav stays fixed
+          so users can navigate without an explicit back. */}
+      <TabPageMasthead />
 
       {!loading && posts.length > 0 && (
-        <MallScopeHeader
-          eyebrowAll={scopeEyebrowAll}
-          eyebrowOne={scopeEyebrowOne}
-          count={findCount}
-          mallName={selectedMall?.name ?? null}
-          geoLine={scopeGeoLine}
-          onTap={() => setMallSheetOpen(true)}
-        />
+        <div style={{ padding: "0 16px" }}>
+          <PostcardMallCard
+            mall={selectedMall ?? "all-kentucky"}
+            stampGlyph="saved"
+            allKentuckySubtitle={`${findCount} saved ${findNoun} · Kentucky`}
+            onTap={() => setMallSheetOpen(true)}
+          />
+        </div>
       )}
 
       <FeaturedBanner
