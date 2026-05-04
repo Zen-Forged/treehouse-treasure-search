@@ -62,6 +62,14 @@ interface Props {
   initialQuery?: string;
   placeholder?:  string;
   onChange:      (query: string) => void;
+  /**
+   * R10 (session 107) — fires when the user presses Enter / "Search" on
+   * the keyboard. Used by /map per D27 to redirect to Home with the query
+   * (Map stays geographic-only — actual full-text search lives on Home).
+   * Optional: Home itself doesn't wire this — it search-as-you-types via
+   * onChange and stays on the same page.
+   */
+  onSubmit?:     (query: string) => void;
 }
 
 const DEBOUNCE_MS = 200;
@@ -70,6 +78,7 @@ export default function SearchBar({
   initialQuery = "",
   placeholder = "Search finds, booths, or styles",
   onChange,
+  onSubmit,
 }: Props) {
   const [value,   setValue]   = React.useState(initialQuery);
   const [focused, setFocused] = React.useState(false);
@@ -186,6 +195,12 @@ export default function SearchBar({
           onChange={e => setValue(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
+          onKeyDown={e => {
+            if (e.key === "Enter" && onSubmit) {
+              e.preventDefault();
+              onSubmit(value.trim());
+            }
+          }}
           placeholder={placeholder}
           aria-label="Search Treehouse Finds"
           style={inputStyle}
