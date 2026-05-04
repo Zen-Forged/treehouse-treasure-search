@@ -38,10 +38,11 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback, Suspense } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import FlagGlyph from "@/components/FlagGlyph";
-import { getFeedPosts, getActiveMalls } from "@/lib/posts";
+import { getFeedPosts, getActiveMalls, searchPosts } from "@/lib/posts";
 import {
   v1,
   FONT_LORA,
@@ -62,6 +63,7 @@ import StickyMasthead from "@/components/StickyMasthead";
 import FeaturedBanner from "@/components/FeaturedBanner";
 import PolaroidTile from "@/components/PolaroidTile";
 import EmptyState from "@/components/EmptyState";
+import SearchBar from "@/components/SearchBar";
 import { writeFindContext, setPostCache, type FindRef } from "@/lib/findContext";
 import type { Post, Mall } from "@/types/treehouse";
 
@@ -450,13 +452,25 @@ function FeedHero({
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-export default function DiscoveryFeedPage() {
+function DiscoveryFeedInner() {
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+
+  // R16 — discovery query mirrored to ?q= URL state. Initial value pulled
+  // from URL so deep-links (?q=brass) restore search context. Cleared by
+  // SearchBar's × button → empty string → URL ?q= param dropped.
+  const initialQ = searchParams.get("q") ?? "";
+  const [q,      setQ]      = useState<string>(initialQ);
+  const searching           = q.trim().length > 0;
+
   // Hydrate from module-scope cache so back-nav from /find/[id] mounts
   // tiles synchronously — the destination motion.div for the shared-element
   // back-morph needs to exist before framer-motion releases the source rect.
-  const [posts,             setPosts]             = useState<Post[]>(cachedFeedPosts ?? []);
+  // Cache is intentionally feed-only (not search-scoped); search results
+  // fresh-fetch on every mount, including back-nav into a search URL.
+  const [posts,             setPosts]             = useState<Post[]>(searching ? [] : (cachedFeedPosts ?? []));
   const [malls,             setMalls]             = useState<Mall[]>([]);
-  const [loading,           setLoading]           = useState<boolean>(cachedFeedPosts === null);
+  const [loading,           setLoading]           = useState<boolean>(searching || cachedFeedPosts === null);
   const [error,             setError]             = useState(false);
   const [mallId,            setMallId]            = useSavedMallId();
   const [mallSheetOpen,     setMallSheetOpen]     = useState(false);
@@ -491,33 +505,37 @@ export default function DiscoveryFeedPage() {
   // R3 — page_viewed analytics event (fire-and-forget; runs once on mount).
   useEffect(() => { track("page_viewed", { path: "/" }); }, []);
 
-  // ── Feed load ────────────────────────────────────────────────────────────────
-  async function loadFeed() {
-    // Only flip into "loading" state when we have nothing cached to render.
-    // On back-nav with a warm cache, refresh in the background so the user
-    // never sees a skeleton replace tiles they were just looking at.
-    if (cachedFeedPosts === null) setLoading(true);
+  // ── Feed / search load ──────────────────────────────────────────────────────
+  // R16 — branches on `q`. Empty query → existing 30-day getFeedPosts (cache
+  // honored). Non-empty → searchPosts with mall scope pushed server-side so
+  // the empty state can mean "no results in current mall" not "filtered out
+  // client-side." Search path bypasses cachedFeedPosts; cache is feed-only.
+  const loadPosts = useCallback(async () => {
+    const isSearching = q.trim().length > 0;
+    if (isSearching) setLoading(true);
+    else if (cachedFeedPosts === null) setLoading(true);
     setError(false);
     try {
-      const data = await getFeedPosts(80);
+      const data = isSearching
+        ? await searchPosts({ query: q, mallId: mallId ?? null, limit: 80 })
+        : await getFeedPosts(80);
       setPosts(data);
-      cachedFeedPosts = data;
+      if (!isSearching) cachedFeedPosts = data;
       // Phase B QA fix #2 — populate the /find/[id] post cache with every
-      // loaded feed post. Tapping any tile now hits the cache on detail
-      // mount; metadata (post-it, save bubble, title, caption, share)
-      // paints synchronously alongside the photograph. Subsequent swipes
-      // through the context list ride the same cache.
+      // loaded post (feed OR search). Tapping any tile hits the cache on
+      // detail mount; metadata paints synchronously alongside the photo.
+      // Subsequent swipes through the context list ride the same cache.
       for (const p of data) setPostCache(p);
       setLoading(false);
     } catch {
       // Only surface the error state if we have no cached posts to fall
       // back on; otherwise keep showing the cached feed.
-      if (cachedFeedPosts === null) setError(true);
+      if (!isSearching && cachedFeedPosts === null) setError(true);
       setLoading(false);
     }
-  }
+  }, [q, mallId]);
 
-  useEffect(() => { loadFeed(); }, []);
+  useEffect(() => { loadPosts(); }, [loadPosts]);
 
   // Load featured-find banner URL on mount — fire-and-forget; banner renders
   // null when no image is set (v1.1l graceful collapse).
@@ -578,12 +596,12 @@ export default function DiscoveryFeedPage() {
       } else if (document.visibilityState === "visible" && wasHidden.current) {
         wasHidden.current = false;
         syncBookmarks();
-        loadFeed();
+        loadPosts();
       }
     }
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => document.removeEventListener("visibilitychange", onVisibilityChange);
-  }, []);
+  }, [loadPosts]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   function handleToggleSave(postId: string) {
@@ -608,6 +626,19 @@ export default function DiscoveryFeedPage() {
     // mechanic on a find (terminology section in design record).
     track(nextSavedState === "saved" ? "post_saved" : "post_unsaved", { post_id: postId });
   }
+
+  // R16 — SearchBar fires onChange (debounced 200ms inside the primitive).
+  // Update local q state + write through to ?q= URL so deep-linking and
+  // browser back work cleanly. router.replace (not push) keeps the
+  // browser history compact during typing.
+  const handleSearchChange = useCallback((next: string) => {
+    setQ(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next.trim().length > 0) params.set("q", next);
+    else                        params.delete("q");
+    const qs = params.toString();
+    router.replace(qs ? `/?${qs}` : "/", { scroll: false });
+  }, [router, searchParams]);
 
   function handleMallSelect(nextMallId: string | null) {
     setMallId(nextMallId);
@@ -670,6 +701,15 @@ export default function DiscoveryFeedPage() {
           quietest surface in the app. */}
       <StickyMasthead right={null} />
 
+      {/* ── 1.25 SearchBar (R16) ─────────────────────────────────────────
+          Glass-morphism pill bar between masthead and mall scope. Per design
+          record D2: above the mall scope block, not inside the masthead row.
+          Padding matches mall-scope block side gutters so the pill aligns
+          visually with the picker title below. */}
+      <div style={{ padding: "8px 22px 4px" }}>
+        <SearchBar initialQuery={initialQ} onChange={handleSearchChange} />
+      </div>
+
       {/* 1.5 Mall scope header (FeedHero wrapper) — moved above the
           FeaturedBanner per session-68 QA so the persisted mall filter is
           the first thing the eye lands on after the masthead. */}
@@ -717,10 +757,52 @@ export default function DiscoveryFeedPage() {
             Couldn&apos;t load finds. Check your connection and try again.
           </div>
         ) : filtered.length === 0 ? (
-          <EmptyState
-            title="The shelves are quiet."
-            subtitle="Check back soon — new finds land here the moment a vendor posts them."
-          />
+          searching ? (
+            // R16 D12 — search-empty state. Italic Lora line + outlined green
+            // CTA. CTA clears mall scope (preserving the query) so the user
+            // can widen from current location → all of Kentucky in one tap.
+            // selectedMall is null on the all-malls scope; we still surface
+            // the CTA in that state so the user gets unambiguous "we tried
+            // everywhere" feedback (the click becomes a no-op, harmless).
+            <EmptyState
+              subtitle={
+                selectedMall
+                  ? `Nothing matching "${q.trim()}" at ${selectedMall.name} yet.`
+                  : `Nothing matching "${q.trim()}" yet.`
+              }
+              cta={
+                selectedMall ? (
+                  <button
+                    type="button"
+                    onClick={() => handleMallSelect(null)}
+                    style={{
+                      display:        "inline-flex",
+                      alignItems:     "center",
+                      justifyContent: "center",
+                      gap:            6,
+                      padding:        "11px 18px",
+                      border:         `1px solid ${v1.green}`,
+                      background:     v1.paperWarm,
+                      color:          v1.green,
+                      fontFamily:     FONT_LORA,
+                      fontWeight:     500,
+                      fontSize:       14,
+                      borderRadius:   8,
+                      cursor:         "pointer",
+                      WebkitTapHighlightColor: "transparent",
+                    }}
+                  >
+                    Search all of Kentucky <span aria-hidden style={{ fontSize: 16, lineHeight: 1 }}>→</span>
+                  </button>
+                ) : undefined
+              }
+            />
+          ) : (
+            <EmptyState
+              title="The shelves are quiet."
+              subtitle="Check back soon — new finds land here the moment a vendor posts them."
+            />
+          )
         ) : (
           <MasonryGrid
             posts={filtered}
@@ -763,5 +845,15 @@ export default function DiscoveryFeedPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+// Suspense wrapper required for useSearchParams in App Router client
+// components (R16 — added with the SearchBar slot in session 105).
+export default function DiscoveryFeedPage() {
+  return (
+    <Suspense>
+      <DiscoveryFeedInner />
+    </Suspense>
   );
 }
