@@ -115,6 +115,12 @@ export const v1 = {
   // extraction; declared here so the value lives in one place.
   paperWarm:    "#faf2e0",
 
+  // R10 (session 107) — postcard mall card surface. Slightly more saturated
+  // than paperWarm; reads as "card stock" rather than "off-white." Used by
+  // <PostcardMallCard>. See docs/r10-location-map-design.md D7 + D8.
+  postcardBg:     "#f4ecd8",
+  postcardBorder: "rgba(42,26,10,0.10)",
+
   // Ink scale
   inkPrimary:   "#2a1a0a",
   inkMid:       "#4a3520",
@@ -174,6 +180,11 @@ export const v1 = {
     ctaGreenCompact: "0 2px 10px rgba(30,77,43,0.18)",
     sheetRise:       "0 -8px 30px rgba(30,20,10,0.28)",
     cardSubtle:      "0 3px 12px rgba(42,26,10,0.10), 0 1px 3px rgba(42,26,10,0.06)",
+    // R10 (session 107) — postcard card chrome (lighter than polaroid because
+    // it's a chrome element, not a focal-point) + callout (heavier because it
+    // floats on top of the map without a grounded context).
+    postcard:        "0 4px 14px rgba(42,26,10,0.16), 0 1px 2px rgba(42,26,10,0.08)",
+    callout:         "0 8px 20px rgba(42,26,10,0.22), 0 2px 6px rgba(42,26,10,0.10)",
   },
 
   // Phase 2 Session A — spacing rhythm scale. Phase 1 audit found gap +
@@ -208,6 +219,21 @@ export const v1 = {
     nav: 21,
     lg:  22,
     xl:  24,
+  },
+
+  // R10 (session 107) — cartographic warm-cream basemap palette for D25.
+  // Custom-styled Mapbox layer values: cream landmass, tan lowland, sage
+  // water (deeper for inland water), park patches, italic-Lora region
+  // labels at low opacity. Pinned here so the map-style JSON in Arc 3
+  // composes from the same palette as the rest of the v1.x ecosystem.
+  // See docs/r10-location-map-design.md D25.
+  basemap: {
+    cream:  "#efe6cf",
+    cream2: "#e6d9b8",
+    water:  "#c5d6c4",
+    water2: "#aac3aa",
+    park:   "#d3dcc4",
+    label:  "rgba(42,26,10,0.55)",
   },
 } as const;
 
