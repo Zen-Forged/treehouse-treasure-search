@@ -19,24 +19,23 @@
 //      whether a real map is rendered. Locking the chrome here means Arc 3
 //      only debates map-rendering choices, not layout.
 //
-// Per D27: SearchBar onSubmit routes to /?q=<query> — Map stays
-// geographic-only, search lives on Home.
+// Session 107 iPhone QA — SearchBar removed from /map per David's
+// "doesn't make sense to include right now, trying to keep the scope of
+// the functionality contained by page." D20 (search bar on tab pages)
+// and D27 (search-on-Map redirects to Home) both reversed; search is now
+// a Home-only concern. Map body grows into the freed vertical space.
 
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import TabPageMasthead from "@/components/TabPageMasthead";
 import PostcardMallCard from "@/components/PostcardMallCard";
-import SearchBar from "@/components/SearchBar";
 import BottomNav from "@/components/BottomNav";
 import { v1, FONT_LORA } from "@/lib/tokens";
 
 export const dynamic = "force-dynamic";
 
 export default function MapPage() {
-  const router = useRouter();
-
   return (
     <div
       style={{
@@ -51,7 +50,7 @@ export default function MapPage() {
     >
       <TabPageMasthead />
 
-      <div style={{ padding: "0 16px" }}>
+      <div style={{ padding: "0 16px 12px" }}>
         <PostcardMallCard
           mall="all-kentucky"
           stampGlyph="map"
@@ -60,22 +59,10 @@ export default function MapPage() {
         />
       </div>
 
-      {/* SearchBar — same primitive + placeholder as Home. Per D27, fires
-          onSubmit (Enter) which redirects to Home with the query so search
-          stays a Home concern; Map stays geographic. */}
-      <div style={{ padding: "12px 22px 14px" }}>
-        <SearchBar
-          onChange={() => { /* noop — Map only redirects on submit */ }}
-          onSubmit={(q) => {
-            const trimmed = q.trim();
-            router.push(trimmed ? `/?q=${encodeURIComponent(trimmed)}` : "/");
-          }}
-        />
-      </div>
-
       {/* Placeholder map body — paperWarm with literary copy. Replaced in
           Arc 3 by the cartographic warm-cream Mapbox basemap (D25) +
-          leaf-bubble pins + peek-callout state machine (D26). */}
+          leaf-bubble pins + peek-callout state machine (D26). Now grows
+          into the space freed by retiring the SearchBar. */}
       <main
         style={{
           flex: 1,
@@ -84,7 +71,7 @@ export default function MapPage() {
           background: v1.paperWarm,
           border: `1px solid ${v1.inkHairline}`,
           borderRadius: 12,
-          minHeight: 360,
+          minHeight: 480,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
