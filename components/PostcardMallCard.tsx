@@ -98,11 +98,16 @@ export default function PostcardMallCard({
   const isAllKentucky = mall === "all-kentucky";
 
   const name = isAllKentucky ? "All Kentucky Locations" : mall.name;
+  // Session 110 fix — mall.address in the seed/add-mall.ts pipeline already
+  // contains the full street + city + state + zip ("6541 KY-22, Crestwood,
+  // KY 40014"). The previous join over [address, city, state, zip] then
+  // duplicated everything after the street, producing
+  // "6541 KY-22, Crestwood, KY 40014, Crestwood, KY, 40014" which got
+  // ellipsis-clipped on the card. Use mall.address directly; fall back to
+  // composed-from-parts only if address is missing.
   const subtitle = isAllKentucky
     ? (allKentuckySubtitle ?? ALL_KENTUCKY_DEFAULT)
-    : [mall.address, mall.city, mall.state, mall.zip_code]
-        .filter(Boolean)
-        .join(", ");
+    : (mall.address ?? [mall.city, mall.state, mall.zip_code].filter(Boolean).join(", "));
 
   // Session 110 — when no onTap is provided, render as a non-interactive
   // <div> instead of a tappable <button>. The /map surface omits onTap
