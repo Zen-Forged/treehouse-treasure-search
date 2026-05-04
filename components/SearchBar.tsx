@@ -11,18 +11,23 @@
 // docs/mockups/discovery-search-bar-v2.html.
 //
 // Visual:
-//   - PiBinocularsFill (left) — on-brand for the Treehouse thesis
-//     (digital tool for real-world exploration); pairs with the leaf
-//     brand mark, both fill weight, both field-vocabulary. Magnifying
-//     glass would have read as "database query" not "scout the landscape."
+//   - Lucide Search (left) — magnifying glass. Session 107 reversal of the
+//     session-102 PiBinocularsFill pick. Original framing: binoculars =
+//     "scout the landscape" matches the digital-to-physical thesis +
+//     pairs with the leaf brand mark. iPhone-QA-time call from David:
+//     "i still like the concept but rather it be clear than too clever."
+//     Universal-recognition wins over thesis cleverness here. R16 design
+//     record D-icon updated to reflect the reversal.
 //   - Right-side filter glyph (PiSlidersHorizontal) RETIRED session 105
 //     after iPhone QA — design record D5 had it as a phase-2 hook for
 //     axis-narrowing chips, but inert iconography read as visual noise
 //     against the minimalistic-magic rule. Add it back when there's a
 //     real interactive purpose to wire to.
-//   - Glass-morphism bg per David's CSS (session 102):
-//     65% white + backdrop blur + 1px subtle border + soft 8/24 shadow.
-//     Focused state: opaque bg + 3px green ring + lifted shadow.
+//   - Form-input bg (session 107 reversal of glass-morphism). Now uses
+//     v1.postit + inkHairline border to match /vendor-request and other
+//     FormField inputs. Focused state: green-tinted border + 3px green
+//     ring shadow. Pill shape (radius 999) preserved so search vocabulary
+//     stays distinct from rectangular form fields.
 //   - Caret is brand green (v1.green). Custom-rendered when input is empty
 //     + focused (see "Custom caret" below); native green caret takes over
 //     once typing begins.
@@ -55,7 +60,8 @@
 "use client";
 
 import * as React from "react";
-import { PiBinocularsFill, PiX } from "react-icons/pi";
+import { PiX } from "react-icons/pi";
+import { Search } from "lucide-react";
 import { v1, FONT_LORA } from "@/lib/tokens";
 
 interface Props {
@@ -96,21 +102,23 @@ export default function SearchBar({
   // after the first keystroke).
   const showCustomCaret = focused && value === "";
 
+  // Session 107 — bg color now matches form inputs (v1.postit + inkHairline
+  // border) per David's "match the color of the other text input fields"
+  // call. Glass-morphism dropped (white-translucent + backdrop blur
+  // retired). Pill shape preserved — search vocabulary remains distinct
+  // from rectangular form fields. Focused state still gets a green ring
+  // shadow for clear active-input signal.
   const wrapperStyle: React.CSSProperties = {
-    display:        "flex",
-    alignItems:     "center",
-    gap:            12,
-    width:          "100%",
-    padding:        "10px 18px",
-    borderRadius:   999,
-    background:     focused ? "rgba(255, 255, 255, 0.92)" : "rgba(255, 255, 255, 0.65)",
-    backdropFilter: "blur(10px)",
-    WebkitBackdropFilter: "blur(10px)",
-    border:         focused ? "1px solid rgba(30,77,43,0.20)" : "1px solid rgba(0, 0, 0, 0.06)",
-    boxShadow:      focused
-      ? "0 1px 0 rgba(0,0,0,0.04), 0 12px 32px rgba(0,0,0,0.10), 0 0 0 3px rgba(30,77,43,0.08)"
-      : "0 1px 0 rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06)",
-    transition:     "all 180ms ease",
+    display:      "flex",
+    alignItems:   "center",
+    gap:          12,
+    width:        "100%",
+    padding:      "10px 18px",
+    borderRadius: 999,
+    background:   v1.postit,
+    border:       `1px solid ${focused ? "rgba(30,77,43,0.30)" : v1.inkHairline}`,
+    boxShadow:    focused ? "0 0 0 3px rgba(30,77,43,0.08)" : "none",
+    transition:   "border-color 180ms ease, box-shadow 180ms ease",
   };
 
   const inputStyle: React.CSSProperties = {
@@ -154,8 +162,9 @@ export default function SearchBar({
           cadence iOS native carets use (no opacity ramp). */}
       <style>{`@keyframes th-caret-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }`}</style>
 
-      <PiBinocularsFill
-        size={20}
+      <Search
+        size={18}
+        strokeWidth={1.8}
         color={v1.inkMid}
         aria-hidden="true"
         style={{ flexShrink: 0 }}
