@@ -15,7 +15,13 @@
 //
 // Owned here:
 //   - Outer wrapper (paperCream bg, maxWidth 430, flex column)
-//   - <TabPageMasthead> (wordmark hero)
+//   - <StickyMasthead> (fixed-position wordmark, 72px; left/right slots
+//     filled in commits 3 + 4 — empty for now). Reverses R10 D6: the 86px
+//     hero TabPageMasthead retires from root tabs in favor of the same
+//     primitive used on /find/[id] + /shelf/[slug], so the wordmark is
+//     visually identical across every page that has chrome. Now that the
+//     postcard mall card grounds the "where" identity below the masthead,
+//     the wordmark doesn't need to do double-duty as the page title.
 //   - <PostcardMallCard> (mall scope identifier; tap behavior varies per
 //     pathname — Map opens MallSheet, Home/Saved route to /map per D19
 //     partial reversal, session 107)
@@ -32,7 +38,7 @@
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import TabPageMasthead from "@/components/TabPageMasthead";
+import StickyMasthead from "@/components/StickyMasthead";
 import PostcardMallCard from "@/components/PostcardMallCard";
 import MallSheet from "@/components/MallSheet";
 import BottomNav from "@/components/BottomNav";
@@ -115,10 +121,13 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
         flexDirection:  "column",
       }}
     >
-      <TabPageMasthead />
+      {/* Pass right={null} explicitly to suppress the StickyMasthead default
+          (MastheadShareButton). Profile-left lands in commit 3; share-right
+          (Home + Map only) lands in commit 4. */}
+      <StickyMasthead right={null} />
 
       {showPostcardCard && (
-        <div style={{ padding: "0 16px" }}>
+        <div style={{ padding: "12px 16px 0" }}>
           <PostcardMallCard
             mall={selectedMall ?? "all-kentucky"}
             stampGlyph={stampGlyph}
