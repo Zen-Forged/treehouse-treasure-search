@@ -29,7 +29,9 @@ export const dynamic = "force-dynamic";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-// ArrowLeft retired (R10 session 107) — Saved is now a root tab page; back button gone.
+// Chrome (TabPageMasthead + PostcardMallCard + BottomNav + MallSheet) lives
+// in app/(tabs)/layout.tsx as of session 109 — flicker-eliminating shared
+// layout. This page renders only the page body (banner + find groups).
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
 import { BOOKMARK_PREFIX, loadBookmarkCount } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
@@ -41,15 +43,6 @@ import {
 import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
 import { writeFindContext, setPostCache, type FindRef } from "@/lib/findContext";
-import BottomNav from "@/components/BottomNav";
-// MallSheet retired from /flagged (R10 session 107) — scope change is /map's
-// responsibility per the unified-filter design (David: "If the location needs
-// to be changed, it will be changed on the map page and filtered on all
-// subsequent pages").
-// R10 (session 107) — MallScopeHeader retired here; replaced by PostcardMallCard.
-// StickyMasthead also retired — Saved is a root tab page, gets TabPageMasthead.
-import TabPageMasthead from "@/components/TabPageMasthead";
-import PostcardMallCard from "@/components/PostcardMallCard";
 import FeaturedBanner from "@/components/FeaturedBanner";
 import PolaroidTile from "@/components/PolaroidTile";
 import EmptyStatePrimitive from "@/components/EmptyState";
@@ -483,52 +476,16 @@ export default function FlaggedPage() {
     })),
   );
 
+  // selectedMall still resolved here for the filterHidesAllSaves empty-state
+  // copy ("No saved finds at <mall name>"). The PostcardMallCard moved to
+  // app/(tabs)/layout.tsx as of session 109 — the layout independently
+  // resolves the same selectedMall via its own useSavedMallId + getActiveMalls.
   const selectedMall = malls.find(m => m.id === savedMallId) ?? null;
-
-  // saveCountsByMall retired (R10 session 107) — was used only by /flagged's
-  // MallSheet, which has moved to /map.
-
-  const findCount = filteredPosts.length;
-  const findNoun = findCount === 1 ? "find" : "finds";
-  // R10 (session 107) — scopeEyebrow* + scopeGeoLine retired with the
-  // MallScopeHeader swap. PostcardMallCard composes the address row from the
-  // mall fields directly, and the all-Kentucky variant uses a literary
-  // subtitle rather than a per-page eyebrow + geo line. findNoun retained
-  // because the all-Kentucky subtitle still pluralizes against findCount.
 
   const filterHidesAllSaves = savedMallId !== null && posts.length > 0 && filteredPosts.length === 0;
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: v1.paperCream,
-        maxWidth: 430,
-        margin: "0 auto",
-        position: "relative",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      {/* R10 (session 107) — Saved is a root tab page (D6). TabPageMasthead
-          replaces the back-button-only StickyMasthead. BottomNav stays fixed
-          so users can navigate without an explicit back. */}
-      <TabPageMasthead />
-
-      {!loading && posts.length > 0 && (
-        <div style={{ padding: "0 16px" }}>
-          <PostcardMallCard
-            mall={selectedMall ?? "all-kentucky"}
-            stampGlyph="saved"
-            allKentuckySubtitle={`${findCount} saved ${findNoun} · Kentucky`}
-            // R10 session 107 — scope change happens on /map. D19 reversed
-            // for /flagged: card tap routes to Map instead of opening
-            // MallSheet. /map's MallSheet is the change UI.
-            onTap={() => router.push("/map")}
-          />
-        </div>
-      )}
-
+    <>
       <FeaturedBanner
         variant="overlay"
         imageUrl={bannerImageUrl}
@@ -616,10 +573,6 @@ export default function FlaggedPage() {
         )}
       </main>
 
-      {/* MallSheet retired from /flagged (R10 session 107) — scope change
-          is /map's responsibility per the unified-filter design. */}
-
-      <BottomNav active="flagged" flaggedCount={bookmarkCount} />
-    </div>
+    </>
   );
 }

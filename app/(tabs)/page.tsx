@@ -56,16 +56,10 @@ import { useSavedMallId } from "@/lib/useSavedMallId";
 import { safeStorage } from "@/lib/safeStorage";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
-import BottomNav from "@/components/BottomNav";
-// MallSheet retired from Home (R10 session 107) — scope change happens on
-// /map per David's "If the location needs to be changed, it will be changed
-// on the map page and filtered on all subsequent pages." The shared scope
-// persists via useSavedMallId; Home is now a filter consumer, not changer.
-// MallScopeHeader retired on Home (R10 session 107) — replaced by
-// PostcardMallCard. /flagged still consumes MallScopeHeader until that page
-// migrates in sub-task 4.
-import TabPageMasthead from "@/components/TabPageMasthead";
-import PostcardMallCard from "@/components/PostcardMallCard";
+// Chrome (TabPageMasthead + PostcardMallCard + BottomNav + MallSheet) lives
+// in app/(tabs)/layout.tsx as of session 109 — flicker-eliminating shared
+// layout. This page renders only the Home body (SearchBar + featured banner
+// + masonry).
 import FeaturedBanner from "@/components/FeaturedBanner";
 import PolaroidTile from "@/components/PolaroidTile";
 import EmptyState from "@/components/EmptyState";
@@ -406,47 +400,6 @@ function MasonryGrid({
   );
 }
 
-// ── Feed hero — postcard mall card + mall hero photo (R10 session 107) ──────
-// R10 swap: MallScopeHeader → PostcardMallCard. Same role (identifies the
-// "where am I shopping" scope, opens MallSheet on tap), new visual vocabulary
-// (postcard card stock, "from:" eyebrow, page-contextual stamp).
-//
-// R11 (session 91) mall hero photo retained as a separate <FeaturedBanner>
-// below the postcard card — same dimensions (200px min-height, 16px radius)
-// across Home/Saved/Map for visual consistency.
-function FeedHero({
-  selectedMall,
-  malls,
-  onTapMall,
-}: {
-  selectedMall: Mall | null;
-  malls:        Mall[];
-  onTapMall:    () => void;
-}) {
-  const isAll = selectedMall === null;
-  const heroUrl = !isAll ? (selectedMall!.hero_image_url ?? null) : null;
-
-  // All-Kentucky subtitle composes from the active-malls count. The
-  // "Louisville to Lexington" bounding-city pair from V5 stays out of the
-  // runtime computation for now (parked carry-forward in design record §
-  // Carry-forward) until the location footprint stabilizes.
-  const allKentuckySubtitle = `${malls.length} active locations · Kentucky`;
-
-  return (
-    <>
-      <div style={{ padding: "0 16px" }}>
-        <PostcardMallCard
-          mall={isAll ? "all-kentucky" : selectedMall!}
-          stampGlyph="home"
-          allKentuckySubtitle={allKentuckySubtitle}
-          onTap={onTapMall}
-        />
-      </div>
-      <FeaturedBanner variant="eyebrow" imageUrl={heroUrl} />
-    </>
-  );
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
 function DiscoveryFeedInner() {
   const router       = useRouter();
@@ -664,32 +617,13 @@ function DiscoveryFeedInner() {
   // MallSheet, which has moved to /map.
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: v1.paperCream,
-        maxWidth: 430,
-        margin: "0 auto",
-        position: "relative",
-      }}
-    >
-      {/* ── 1. Masthead — R10 session 107 — TabPageMasthead (inline 86px hero
-             wordmark) per D6. Root tab pages drop the fixed-position
-             StickyMasthead since there's no back button or right-slot to
-             share the row with. Wordmark scrolls away with content; BottomNav
-             stays fixed so the user always has navigation. */}
-      <TabPageMasthead />
-
-      {/* 1.5 PostcardMallCard (FeedHero wrapper) — postcard-style mall scope
-          identifier. Replaces session-91 MallScopeHeader. Tap opens
-          MallSheet for scope change. */}
-      <FeedHero
-        selectedMall={selectedMall}
-        malls={malls}
-        // R10 session 107 — scope change moved to /map. Tap on the postcard
-        // card routes to the Map tab where the MallSheet (and eventually
-        // pin-tap per D26) handles the change. D19 reversed for Home + Saved.
-        onTapMall={() => router.push("/map")}
+    <>
+      {/* Mall hero photo banner — sits below the postcard card (in layout)
+          and reflects the SELECTED MALL's hero image (mall_id-scoped).
+          Distinct from the admin-set site-wide banner below. */}
+      <FeaturedBanner
+        variant="eyebrow"
+        imageUrl={selectedMall?.hero_image_url ?? null}
       />
 
       {/* ── 1.75 SearchBar (R16) ─────────────────────────────────────────
@@ -779,11 +713,6 @@ function DiscoveryFeedInner() {
 
       </main>
 
-      <BottomNav active="home" flaggedCount={bookmarkCount} />
-
-      {/* MallSheet retired from Home (R10 session 107) — scope change is
-          /map's responsibility per the unified-filter design. */}
-
       <style>{`
         @keyframes shimmer {
           0%   { background-position: -400px 0; }
@@ -800,7 +729,7 @@ function DiscoveryFeedInner() {
           animation: shimmer 1.6s infinite linear;
         }
       `}</style>
-    </div>
+    </>
   );
 }
 
