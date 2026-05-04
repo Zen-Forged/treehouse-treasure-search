@@ -88,17 +88,22 @@ export default function SearchBar({
     fontFamily:  FONT_LORA,
     fontSize:    15,
     color:       v1.inkPrimary,
-    // lineHeight "normal" (was 1.2) + appearance reset fixes the iOS
-    // Safari cursor-baseline shift on type="search" — the native search
-    // chrome (search-decoration + cancel button pseudo-elements) was
-    // pushing the caret a few pixels above the visual text baseline.
-    // appearance:none strips the chrome so the input sits centered in
-    // its flex slot.
-    lineHeight:  "normal",
+    // Cursor centering on first focus (PWA + Safari + Chrome on iOS):
+    // before any value/keystroke, WebKit computes the caret's vertical
+    // position from the input's INTRINSIC content box rather than its
+    // line-box. Without an explicit height + matching lineHeight the
+    // intrinsic box collapses to the placeholder's metrics, leaving the
+    // caret a few pixels above the visual baseline. Pinning both to 22px
+    // gives the caret an unambiguous line to render against from frame 1.
+    // appearance:none strips iOS Safari's native search-decoration chrome
+    // so the input sits cleanly inside its flex slot.
+    height:      22,
+    lineHeight:  "22px",
     appearance:  "none",
     WebkitAppearance: "none",
     minWidth:    0, // lets flex item shrink past content size
     padding:     0,
+    margin:      0,
   };
 
   const clearButtonStyle: React.CSSProperties = {
