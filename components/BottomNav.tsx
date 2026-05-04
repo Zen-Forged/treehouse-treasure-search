@@ -1,16 +1,20 @@
 // components/BottomNav.tsx
 // Fixed bottom navigation.
 //
-// R10 (session 107) — 4-tab flat layout.
+// R10 (session 107) shipped a 4-tab flat: Home · Map · Profile · Saved.
+// R10 follow-up (session 109) trims to 3 tabs by relocating Profile to the
+// masthead left slot — see <MastheadProfileButton>. REVERSES R10 D1.
 //
-// Before (sessions 90+):  Guest 3-tab, Vendor 4-tab, Admin 5-tab role-conditional.
-// After  (R10 session 107): Home · Map · Profile · Saved — 4 tabs flat for everyone.
+// Before (sessions 90+):     Guest 3-tab, Vendor 4-tab, Admin 5-tab role-conditional.
+// R10 v1 (session 107):      Home · Map · Profile · Saved (4 tabs flat).
+// R10 v1.1 (session 109):    Home · Map · Saved (3 tabs flat).
 //
-// Why flat: per docs/r10-location-map-design.md D1+D2, the postcard mall card
-// header now identifies the "where am I shopping" scope on Home + Saved + Map,
-// and the Booths-as-list page becomes redundant once /map is the canonical
-// browse-locations surface. My Booth + Admin entry points relocate to inline
-// links on the Profile tab destination (/login/email when authed).
+// Why drop Profile: BottomNav's job is wayfinding between primary
+// destinations. Profile is identity, not destination — pairing it with a
+// masthead left-slot affordance (mirroring back-button geometry on detail
+// pages) gives every page a consistent "you are here / who you are" pair
+// without burning a nav slot. My Booth + Admin entry points still live as
+// inline links on the Profile destination (/login/email when authed).
 //
 // Saved tab badge (D4) — Times-New-Roman numeral on the green pill, matching
 // the booth-numeral typography system from session 75 (project-wide rule:
@@ -20,12 +24,17 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, MapPin, CircleUser } from "lucide-react";
+import { Home, MapPin } from "lucide-react";
 import FlagGlyph from "./FlagGlyph";
 import { FONT_NUMERAL } from "@/lib/tokens";
 import { getSession } from "@/lib/auth";
 import type { User } from "@supabase/supabase-js";
 
+// "login" was a valid value in sessions 107+108 when Profile occupied a
+// nav slot. Session 109 retires the Profile tab in favor of the masthead
+// left-slot affordance, but the type member is preserved so any external
+// consumer that still passes active="login" type-checks; the tab itself
+// no longer renders.
 export type NavTab = "home" | "map" | "flagged" | "login" | null;
 
 interface BottomNavProps {
@@ -66,6 +75,8 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     badge?: boolean;
   };
 
+  // Profile tab retired session 109 — relocated to masthead left slot.
+  // 3 tabs flat: Home · Map · Saved.
   const tabs: TabDef[] = [
     {
       key: "home", label: "Home", href: "/",
@@ -74,10 +85,6 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     {
       key: "map", label: "Map", href: "/map",
       icon: <MapPin size={21} strokeWidth={2.0} />,
-    },
-    {
-      key: "login", label: "Profile", href: "/login",
-      icon: <CircleUser size={21} strokeWidth={1.8} />,
     },
     {
       key: "flagged", label: "Saved", href: "/flagged",

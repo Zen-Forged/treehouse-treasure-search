@@ -42,6 +42,7 @@ import StickyMasthead from "@/components/StickyMasthead";
 import PostcardMallCard from "@/components/PostcardMallCard";
 import MallSheet from "@/components/MallSheet";
 import BottomNav from "@/components/BottomNav";
+import MastheadProfileButton from "@/components/MastheadProfileButton";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { getActiveMalls } from "@/lib/posts";
 import { loadBookmarkCount } from "@/lib/utils";
@@ -121,10 +122,10 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
         flexDirection:  "column",
       }}
     >
-      {/* Pass right={null} explicitly to suppress the StickyMasthead default
-          (MastheadShareButton). Profile-left lands in commit 3; share-right
-          (Home + Map only) lands in commit 4. */}
-      <StickyMasthead right={null} />
+      {/* Profile-left mirrors the back-button geometry of detail pages.
+          Right slot stays null until commit 4 (share button — Home + Map
+          only, not Saved). */}
+      <StickyMasthead left={<MastheadProfileButton />} right={null} />
 
       {showPostcardCard && (
         <div style={{ padding: "12px 16px 0" }}>
