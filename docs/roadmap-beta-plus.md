@@ -23,7 +23,7 @@ Each entry carries:
   - ✅ **Shipped** — absorbed by a merged PR (cross-ref the session).
 - **What / Why / Open questions** — the scoping substance.
 
-**Status snapshot (as of session 102):** 16 items total (R1–R16). **8 ✅ Shipped:** R4a/R4b/R4c, R5a, R7, R11, R12 (all sessions 45–91). **2 🟢 Ready:** R3 (analytics), R16 (discovery search — captured AND promoted in session 102, only R-item to graduate same-day). **6 🟡 Captured:** R1, R2, R5b, R6, R8, R9, R10, R13, R14, R15.
+**Status snapshot (as of session 106):** 16 items total (R1–R16). **8 ✅ Shipped:** R4a/R4b/R4c, R5a, R7, R11, R12, R16 (sessions 45–105). **2 🟢 Ready:** R3 (analytics), R10 (location map + persistent postcard mall card — graduated session 106). **6 🟡 Captured:** R1, R2, R5b, R6, R8, R9, R13, R14, R15.
 
 ---
 
@@ -56,13 +56,13 @@ David reviews and can override any of these.
 | R7 | Contact us page | Support | S | — | ✅ Shipped session 91 | `/contact` Frame C minimal text rows → `mailto:NEXT_PUBLIC_ADMIN_EMAIL?subject=…`. No backend, no Tally subscription. Discovery link on `/login` below "First time?" line. |
 | R8 | Intro animation + onboarding | Onboarding | M | — | 🟡 Captured | Design-heavy, mockup-first. |
 | R9 | SMS / Push notifications | Engagement infra | L | R1 (shoppers) + R3 (events worth notifying) | 🟡 Captured | Push = strongest native-app argument. |
-| R10 | Location map nav icon | Navigation/Discovery | M | **R4c** | 🟡 Captured | Map is misleading without active/inactive gating. |
+| R10 | Location map nav + persistent postcard mall card | Navigation/Discovery | L | **R4c** | 🟢 Ready (session 106) | New Map tab + `<PostcardMallCard>` + `<PinCallout>` primitives shared across Home/Saved/Map + 4-tab BottomNav (Booths retires) + wordmark hero masthead + cartographic warm-cream basemap + peek-then-commit pin interaction. Design record: [`docs/r10-location-map-design.md`](r10-location-map-design.md). Mockups: V1 (rejected) → V2 → V3 → V4 (postcard locked) → V5 (page body locked). All 27 decisions D1–D27 frozen. Map provider (Mapbox vs Google vs Leaflet) is the only deferred axis. |
 | R11 | Mall hero images in feed header | Navigation/Discovery | S | — | ✅ Shipped session 91 | Migration 016 + `/api/admin/malls/hero-image` + `MallHeroBlock` admin upload UI + Frame A photo-above-MallScopeHeader feed render. **Pending HITL paste of migration 016 in Supabase dashboard for prod + staging.** |
 | R12 | Error monitoring (Sentry / structured logs) | Data / Reliability | S–M | — | ✅ Shipped session 65 | Sentry exception capture (client + server) live on prod; structured logs deferred. Dashboard: zen-forged.sentry.io/issues/?project=4511286908878848. |
 | R13 | Mall-operator accounts | User/Auth | L | R4c + shares infra with R1 | 🟡 Captured | Third persona (shopper / vendor / mall-operator / admin). Enables mall-level self-serve. |
 | R14 | Vendor profile enrichment + vendor social graph | User/Auth + Feed quality | M | — (compounds with R1, R3) | 🟡 Captured | Vendor-side counterpart to R1. Richer vendor profiles, vendor-to-vendor follow, future social surfaces. |
 | R15 | App store launch (iOS + Google Play) | Engagement + Reach | L+ | R6 (hard gate); compounds heavily with R9, R1, R12; absorbs Q-006 Universal Links | 🟡 Captured | Three possible technical paths (Capacitor wrapper / Expo rebuild / native). **Path decision is the load-bearing scoping moment.** |
-| R16 | Discovery: search bar on Home | Navigation/Discovery + Data | M | — (compounds with R3, R5b, R10) | 🟢 Ready (session 102) | Glass search bar on Home backed by AI-extracted tags written at post-publish time. No new destination page. Design record: [`docs/r16-discovery-search-design.md`](r16-discovery-search-design.md). Mockups: V1 (rejected landing page) / V1.5 / V2 picked. All 15 decisions D1–D15 frozen; implementation session can run as a straight sprint. |
+| R16 | Discovery: search bar on Home | Navigation/Discovery + Data | M | — (compounds with R3, R5b, R10) | ✅ Shipped session 105 | Glass search bar on Home backed by AI-extracted tags written at post-publish time. Tasks 1–7 sprint + custom-caret bug-class kill + backfill polish. Design record: [`docs/r16-discovery-search-design.md`](r16-discovery-search-design.md). |
 
 ---
 
@@ -344,21 +344,33 @@ Waves 1 + 2 + 3 together are realistically ~9–14 sessions (mix of S + M). That
 
 ---
 
-### R10 — Location map nav icon 🟡
+### R10 — Location map nav + persistent postcard mall card 🟢
 
-**What:** Map view showing active malls (R4c). Refine-by-location to filter the feed to malls within range. Probably a new tab or a new overlay triggered from the existing filter.
+**Status:** 🟡 Captured (55) → 🟢 **Ready** (session 106, 2026-05-04). Design + nav + primitive locked across 4 mockup iterations. Implementation arc follows in a later session.
 
-**Why:** Discovery. Treehouse Finds is inherently geographic — the map makes that physical.
+**Design record:** [`docs/r10-location-map-design.md`](r10-location-map-design.md) — 24 frozen decisions (D1–D24).
 
-**Open questions:**
-- Map provider — Mapbox, Google Maps, Leaflet + OSM tiles? Cost + brand fit.
-- Location-permission UX — hard-gate ("grant location to see map") vs. soft-gate (show all active malls until user grants).
-- Shopper-centered radius vs. mall-cluster view vs. both.
-- Interaction with existing filter UI — does this *replace* the mall picker, or complement it?
+**Mockups:** [v1](mockups/r10-location-map-v1.html) (rejected), [v2](mockups/r10-location-map-v2.html), [v3](mockups/r10-location-map-v3.html), [v4 (picked)](mockups/r10-location-map-v4.html).
 
-**Design prereq:** High.
+**What ships:**
+- New BottomNav tab — **Map** — with an interactive map of active mall locations. Two scope states: specific mall (zoomed pin) or All Kentucky (all pins).
+- New persistent header primitive — **`<PostcardMallCard>`** — postcard-styled card with "from:" eyebrow, Lora mall name, address row, and a square stamp on the right whose glyph is contextual to the active tab (Home / Map / Profile / Saved). Wavy SVG ink cancellation across the stamp's left edge.
+- Same primitive ships to **Home, Saved, and Map** identically — the card IS the persistent location identifier across the app.
+- **Wordmark hero masthead** (~86px tall) on root-level tab pages, replacing the inline 40px StickyMasthead on Home/Saved/Map. Sub-pages keep the inline masthead.
+- **BottomNav redesign** — drops to 4 tabs (Home / Map / Profile / Saved). **Booths tab retires entirely**; its three jobs redistribute (browse → Map; vendor-add → /admin Locations; My Booth → Profile inline). Saved glyph swaps from FlagGlyph to leaf; badge swaps from anonymous dot to Times-New-Roman count pill.
+- **Search bar** ships to all 3 tab pages with placeholder "Search finds, booths, or styles" (adds "or styles" to surface R16's tag layer).
 
-**Dependencies:** R4c (map without active/inactive gating is just as polluted as today's picker).
+**Why:** Treehouse Finds is inherently geographic — the map makes that physical. The persistent postcard card reinforces "where you're shopping" as the always-present context, sharpens the digital-to-physical thesis, and dissolves the "where does the bottom card live on the map?" tension by making the top card the only mall identifier.
+
+**Deferred to implementation:**
+- Map provider — Mapbox / Google Maps / Leaflet + OSM tiles. Mapbox is the working assumption (custom-styling matches the cartographic warm-cream basemap).
+- Pin clustering (skip phase 1; <15 active malls).
+- Map pan/zoom limits (likely KY bounding box).
+- `/shelves` route disposition — 301 redirect to `/map` vs. delete; decided after outbound-link audit.
+
+**Effort:** L (3–4 sessions of implementation: primitive layer + tab redesign + map provider + cleanup).
+
+**Dependencies:** R4c (map without active/inactive gating is polluted) — already shipped. `malls.hero_image_url` from migration 016 — already shipped. `malls.lat / .lng` — already exists per session 103's add-mall.ts. **No remaining hard prereqs.**
 
 ---
 
