@@ -41,6 +41,7 @@ export interface PostDraft {
   // /post/preview mount as today)
   captionTitle?:   string;
   captionText?:    string;
+  captionTags?:    string[];           // 5-6 lowercase tags from /api/post-caption (R16)
   captionFailed?:  boolean;            // true when post-caption returned source:"mock"
 }
 

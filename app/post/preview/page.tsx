@@ -79,9 +79,10 @@ async function compressForUpload(
 }
 
 interface CaptionResult {
-  title: string;
-  caption: string;
-  aiSucceeded: boolean;
+  title:        string;
+  caption:      string;
+  tags:         string[];      // R16 — invisible discovery primitive; never surfaced in UI
+  aiSucceeded:  boolean;
 }
 
 async function generateTitleAndCaption(
@@ -98,14 +99,15 @@ async function generateTitleAndCaption(
     const data = await res.json();
     if (data.source !== "claude") {
       console.warn("[preview] caption API returned mock fallback:", data.reason ?? "unknown");
-      return { title: "", caption: "", aiSucceeded: false };
+      return { title: "", caption: "", tags: [], aiSucceeded: false };
     }
     const title   = data.title ?? "";
     const caption = data.caption ?? "";
-    return { title, caption, aiSucceeded: !!(title || caption) };
+    const tags    = Array.isArray(data.tags) ? data.tags : [];
+    return { title, caption, tags, aiSucceeded: !!(title || caption) };
   } catch (err) {
     console.error("[preview] generateTitleAndCaption failed:", err);
-    return { title: "", caption: "", aiSucceeded: false };
+    return { title: "", caption: "", tags: [], aiSucceeded: false };
   }
 }
 
@@ -142,6 +144,8 @@ function PostPreviewInner() {
   const [title,   setTitle]   = useState("");
   const [caption, setCaption] = useState("");
   const [price,   setPrice]   = useState("");
+  // R16 — invisible discovery primitive. Never rendered; threaded into createPost on publish.
+  const [tags,    setTags]    = useState<string[]>([]);
 
   // Find retake (session 94) — sheet open + file input refs
   const [retakeOpen, setRetakeOpen] = useState(false);
@@ -208,6 +212,7 @@ function PostPreviewInner() {
         const extTitle    = d.extractedTitle ?? "";
         const extPrice    = d.extractedPrice ?? null;
         const capText     = d.captionText ?? "";
+        const capTags     = d.captionTags ?? [];
         const ranSuccess  = d.extractionRan === "success";
         const fullyFailed = !ranSuccess || (extTitle === "" && extPrice == null);
 
@@ -224,13 +229,17 @@ function PostPreviewInner() {
           setPriceFromTag(extPrice != null);
           setPriceMissing(extPrice == null);
         }
+        // Tags ride along regardless of tag-extraction success — they come
+        // from the find photo (post-caption), not the price tag photo.
+        setTags(capTags);
         setStage("edit");
         return;
       }
 
-      generateTitleAndCaption(d.imageDataUrl).then(({ title: t, caption: c, aiSucceeded }) => {
+      generateTitleAndCaption(d.imageDataUrl).then(({ title: t, caption: c, tags: tg, aiSucceeded }) => {
         setTitle(t);
         setCaption(c);
+        setTags(tg);
         setAiFailed(!aiSucceeded);
         setStage("edit");
       });
@@ -358,6 +367,7 @@ function PostPreviewInner() {
         image_url:      imageUrl,
         price_asking:   priceNum != null && !isNaN(priceNum) ? priceNum : null,
         location_label: activeBoothNum ? `Booth ${activeBoothNum}` : undefined,
+        tags,
       });
       if (!post) {
         setErrorDetail(

@@ -72,6 +72,7 @@ interface ExtractTagResponse {
 interface PostCaptionResponse {
   title: string;
   caption: string;
+  tags?: string[];                 // R16 — 5-6 lowercase categorical tags
   source: "claude" | "mock";
   reason?: string;
 }
@@ -111,12 +112,12 @@ async function callPostCaption(itemDataUrl: string): Promise<PostCaptionResponse
     });
     if (!res.ok) {
       console.warn("[post/tag] post-caption HTTP", res.status);
-      return { title: "", caption: "", source: "mock", reason: "http" };
+      return { title: "", caption: "", tags: [], source: "mock", reason: "http" };
     }
     return (await res.json()) as PostCaptionResponse;
   } catch (err) {
     console.error("[post/tag] post-caption fetch failed:", err);
-    return { title: "", caption: "", source: "mock", reason: "fetch" };
+    return { title: "", caption: "", tags: [], source: "mock", reason: "fetch" };
   }
 }
 
@@ -251,6 +252,7 @@ function PostTagInner() {
       tagImageDataUrl: tagDataUrl,
       captionTitle:    captionSucceeded ? captionResult.title : "",
       captionText:     captionSucceeded ? captionResult.caption : "",
+      captionTags:     captionSucceeded ? (captionResult.tags ?? []) : [],
       captionFailed:   !captionSucceeded,
     };
 

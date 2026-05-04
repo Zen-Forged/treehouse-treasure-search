@@ -64,6 +64,7 @@ export interface Post {
   price_asking:   number | null;
   status:         PostStatus;
   location_label: string | null;
+  tags:           string[];   // R16 — discovery primitive (lowercase, 5-6 typical, [] until backfilled)
   // Joined
   vendor?: Vendor;
   mall?:   Mall;

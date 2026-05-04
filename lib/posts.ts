@@ -151,6 +151,7 @@ export interface CreatePostInput {
   image_url?:      string;
   price_asking?:   number | null;
   location_label?: string;
+  tags?:           string[];   // R16 — invisible discovery primitive (5-6 lowercase strings); empty array OK
 }
 
 export async function createPost(input: CreatePostInput): Promise<{ data: Post | null; error: string | null }> {
