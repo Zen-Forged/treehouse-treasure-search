@@ -21,10 +21,11 @@ import TabPageMasthead from "@/components/TabPageMasthead";
 import PostcardMallCard from "@/components/PostcardMallCard";
 import MallSheet from "@/components/MallSheet";
 import BottomNav from "@/components/BottomNav";
+import TreehouseMap from "@/components/TreehouseMap";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { getActiveMalls } from "@/lib/posts";
 import { track } from "@/lib/clientEvents";
-import { v1, FONT_LORA } from "@/lib/tokens";
+import { v1 } from "@/lib/tokens";
 import type { Mall } from "@/types/treehouse";
 
 export const dynamic = "force-dynamic";
@@ -67,40 +68,24 @@ export default function MapPage() {
         />
       </div>
 
-      {/* Placeholder map body — paperWarm with literary copy. Replaced in
-          Arc 3 by the cartographic warm-cream Mapbox basemap (D25) +
-          leaf-bubble pins + peek-callout state machine (D26). */}
+      {/* Map body — cartographic warm-cream Mapbox basemap (D25) + leaf-
+          bubble pins (D24) + peek-callout state machine (D26). Cartographic
+          palette + pins + interaction layer in this commit's siblings; this
+          shell just renders the KY-bounded map at the default Mapbox light
+          style. */}
       <main
         style={{
-          flex: 1,
-          margin: "0 16px",
+          flex:         1,
+          margin:       "0 16px",
           marginBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
-          background: v1.paperWarm,
-          border: `1px solid ${v1.inkHairline}`,
+          border:       `1px solid ${v1.inkHairline}`,
           borderRadius: 12,
-          minHeight: 480,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 24,
-          textAlign: "center",
+          minHeight:    480,
+          overflow:     "hidden",
+          position:     "relative",
         }}
       >
-        <div
-          style={{
-            fontFamily: FONT_LORA,
-            fontStyle:  "italic",
-            fontSize:   16,
-            color:      v1.inkMuted,
-            lineHeight: 1.55,
-            maxWidth:   280,
-          }}
-        >
-          A cartographic view of every treehouse in Kentucky lands here in
-          the next sprint — leaf pins on a warm-cream basemap, tap to peek a
-          location, tap again to scout it.
-        </div>
+        <TreehouseMap />
       </main>
 
       <BottomNav active="map" />
