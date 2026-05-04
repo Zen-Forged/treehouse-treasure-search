@@ -144,6 +144,7 @@ Given an image, return a JSON object with exactly three fields:
   - subject (only when applicable — portrait of franklin, horse, eagle, …)
   - category (lighting, kitchenware, decor, art, jewelry, toys, …)
   All tags lowercase. Single words or short phrases. No duplicates. Aim for 5–6, never more than 8.
+  CRITICAL: Return ONLY the tag value. Do NOT prefix with the axis name. Correct: "bee". Wrong: "subject: bee" or "color: amber".
 
 Return ONLY valid JSON. No markdown, no code fences.
 Example: {"title":"Vintage brass candlestick","caption":"Carries its age quietly. The kind of piece that looks like it was always there.","tags":["brass","candlestick","mid-century","decor","amber"]}`;
@@ -184,14 +185,21 @@ Example: {"title":"Vintage brass candlestick","caption":"Carries its age quietly
 
     try {
       const parsed = JSON.parse(raw) as { title: string; caption: string; tags?: string[] };
-      // Sanitize tags defensively: lowercase, trim, drop empties + non-strings,
-      // dedupe, cap at 8 (matches prompt). Empty array on missing/malformed
-      // is the right default — search still works against title + caption.
+      // Sanitize tags defensively: strip "axis-name: value" prefixes
+      // (Claude sometimes returns "subject: bee" despite the prompt asking
+      // for value-only — first observed in the R16 backfill, see
+      // scripts/backfill-tags.ts), then lowercase, trim, dedupe, drop
+      // empties + non-strings, cap at 8 (matches prompt). Empty array on
+      // missing/malformed is the right default — search still works
+      // against title + caption.
       const tags = Array.isArray(parsed.tags)
         ? Array.from(new Set(
             parsed.tags
               .filter((t): t is string => typeof t === "string")
-              .map(t => t.trim().toLowerCase())
+              .map(t => {
+                const stripped = t.includes(":") ? t.split(":").pop()! : t;
+                return stripped.trim().toLowerCase();
+              })
               .filter(t => t.length > 0)
           )).slice(0, 8)
         : [];
