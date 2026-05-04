@@ -129,16 +129,18 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
       ? `${bookmarkCount} saved ${bookmarkCount === 1 ? "find" : "finds"} · Kentucky`
       : `${malls.length} active locations · Kentucky`;
 
-  // PostcardMallCard tap: on /map opens MallSheet (the change UI per D19
-  // partial reversal); on Home + Saved routes to /map (the unified scope-
-  // change surface). Same primitive, divergent behavior per pathname.
-  const handlePostcardTap = () => {
-    if (pathname === "/map") {
-      setSheetOpen(true);
-    } else {
-      router.push("/map");
-    }
-  };
+  // PostcardMallCard tap:
+  //   - Home + Saved   → routes to /map (the unified scope-change surface)
+  //   - /map           → no-op (card is informational on /map; the new
+  //                      contextual pill on the map handles clear/list
+  //                      affordances per session-110 design)
+  //
+  // D19 is now fully reversed: session 107 partial reversal kept the
+  // /map → MallSheet behavior; session 110 drops it. The card's "from:
+  // <mall>" identifier role stays universal across surfaces.
+  const handlePostcardTap = pathname === "/map"
+    ? undefined
+    : () => router.push("/map");
 
   // /flagged hides the postcard card entirely until bookmarks load (matches
   // pre-layout behavior at app/flagged/page.tsx — no card on the empty

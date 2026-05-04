@@ -104,12 +104,20 @@ export default function PostcardMallCard({
         .filter(Boolean)
         .join(", ");
 
-  const handleTap = onTap ?? (() => { /* MallSheet wiring lands in Arc 2 */ });
+  // Session 110 — when no onTap is provided, render as a non-interactive
+  // <div> instead of a tappable <button>. The /map surface omits onTap
+  // because the card is informational there; affordances live on the new
+  // contextual pill on the map. Without this, the card looked tappable
+  // but did nothing — silently broken UX.
+  const interactive = typeof onTap === "function";
+  const Wrapper: React.ElementType = interactive ? "button" : "div";
+  const wrapperProps = interactive
+    ? { type: "button" as const, onClick: onTap }
+    : {};
 
   return (
-    <button
-      type="button"
-      onClick={handleTap}
+    <Wrapper
+      {...wrapperProps}
       style={{
         position:        "relative",
         display:         "flex",
@@ -122,7 +130,7 @@ export default function PostcardMallCard({
         borderRadius:    12,
         boxShadow:       v1.shadow.postcard,
         textAlign:       "left",
-        cursor:          "pointer",
+        cursor:          interactive ? "pointer" : "default",
         WebkitTapHighlightColor: "transparent",
       }}
     >
@@ -252,6 +260,6 @@ export default function PostcardMallCard({
           <StampGlyphIcon glyph={stampGlyph} />
         </div>
       </div>
-    </button>
+    </Wrapper>
   );
 }
