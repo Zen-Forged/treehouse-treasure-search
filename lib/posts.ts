@@ -654,6 +654,42 @@ export async function getMallBySlug(slug: string): Promise<Mall | null> {
   return data as Mall;
 }
 
+/**
+ * R10 Arc 3 (session 108) — booth + available-find counts per mall.
+ * Drives the <PinCallout> stat row on the /map peek state.
+ *
+ * Two parallel select-only queries (vendors + available posts), grouped
+ * client-side by mall_id. With ~5 active malls + low-hundreds posts, the
+ * payload is small (~kB range) and aggregating in-process avoids needing
+ * a database function for a single-consumer stat. If consumers grow or
+ * row counts climb 10×, promote to a Postgres aggregate or RPC.
+ */
+export interface MallStats {
+  boothCount: number;
+  findCount:  number;
+}
+
+export async function getMallStatsByMallId(): Promise<Record<string, MallStats>> {
+  const [vendorsRes, postsRes] = await Promise.all([
+    supabase.from("vendors").select("mall_id"),
+    supabase.from("posts").select("mall_id").eq("status", "available"),
+  ]);
+
+  if (vendorsRes.error) console.error("[posts] getMallStatsByMallId vendors:", vendorsRes.error.message);
+  if (postsRes.error)   console.error("[posts] getMallStatsByMallId posts:",   postsRes.error.message);
+
+  const stats: Record<string, MallStats> = {};
+  const ensure = (id: string) => (stats[id] ??= { boothCount: 0, findCount: 0 });
+
+  for (const v of vendorsRes.data ?? []) {
+    if (v.mall_id) ensure(v.mall_id).boothCount += 1;
+  }
+  for (const p of postsRes.data ?? []) {
+    if (p.mall_id) ensure(p.mall_id).findCount += 1;
+  }
+  return stats;
+}
+
 // ── IMAGE UPLOAD ──────────────────────────────────────────────────────────────
 
 /**

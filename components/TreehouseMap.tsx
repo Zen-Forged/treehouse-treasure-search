@@ -24,7 +24,10 @@ import mapboxgl, { type LngLatBoundsLike } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { PiLeaf } from "react-icons/pi";
 import { v1 } from "@/lib/tokens";
+import PinCallout from "@/components/PinCallout";
 import type { Mall } from "@/types/treehouse";
+
+import type { MallStats } from "@/lib/posts";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
@@ -156,6 +159,14 @@ function LeafBubblePin({ selected }: { selected: boolean }) {
 interface TreehouseMapProps {
   malls:           Mall[];
   selectedMallId:  string | null;
+  // D26 — transient peek state. Tap a pin → parent sets peekedMallId →
+  // TreehouseMap renders the highlighted pin + a <PinCallout> anchored
+  // above it. Tap the callout → onCommit. Tap empty map → onMapTap.
+  peekedMallId?:   string | null;
+  onPinTap?:       (mallId: string) => void;
+  onMapTap?:       () => void;
+  onCommit?:       (mallId: string) => void;
+  mallStats?:      Record<string, MallStats>;
   className?:      string;
   style?:          React.CSSProperties;
 }
@@ -169,6 +180,11 @@ interface MarkerEntry {
 export default function TreehouseMap({
   malls,
   selectedMallId,
+  peekedMallId = null,
+  onPinTap,
+  onMapTap,
+  onCommit,
+  mallStats,
   className,
   style,
 }: TreehouseMapProps) {
@@ -177,6 +193,15 @@ export default function TreehouseMap({
   const markersRef   = React.useRef<Map<string, MarkerEntry>>(new Map());
   const styleLoadedRef = React.useRef(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [peekAnchor, setPeekAnchor] = React.useState<{ x: number; y: number } | null>(null);
+
+  // Refs for handlers passed into long-lived DOM event listeners (marker
+  // click + map click). Reading via ref avoids stale-closure bugs without
+  // forcing every callback change to re-run the marker-sync effect.
+  const onPinTapRef = React.useRef(onPinTap);
+  const onMapTapRef = React.useRef(onMapTap);
+  React.useEffect(() => { onPinTapRef.current = onPinTap; }, [onPinTap]);
+  React.useEffect(() => { onMapTapRef.current = onMapTap; }, [onMapTap]);
 
   // ── Map init ──────────────────────────────────────────────────────────
   React.useEffect(() => {
@@ -207,6 +232,12 @@ export default function TreehouseMap({
       styleLoadedRef.current = true;
     });
 
+    // Empty-map tap dismisses peek (D26). Marker clicks stopPropagation()
+    // so this handler only fires for clicks that miss every pin.
+    map.on("click", () => {
+      onMapTapRef.current?.();
+    });
+
     return () => {
       // Unmount React roots before removing the map.
       Array.from(markersRef.current.values()).forEach((entry) => {
@@ -220,9 +251,9 @@ export default function TreehouseMap({
   }, []);
 
   // ── Marker sync ───────────────────────────────────────────────────────
-  // Keeps the marker collection in sync with `malls` + `selectedMallId`.
-  // Markers persist across renders; we only mount/unmount on add/remove
-  // and re-render the React content when selected state changes.
+  // Keeps the marker collection in sync with `malls` + selected/peeked
+  // state. Markers persist across renders; we only mount/unmount on
+  // add/remove and re-render the React content when state changes.
   React.useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -241,6 +272,12 @@ export default function TreehouseMap({
       if (!entry) {
         const el = document.createElement("div");
         el.style.willChange = "transform";
+        // Pin tap → fire onPinTap, stop the click before it bubbles to
+        // the map's empty-tap handler (which would dismiss any peek).
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          onPinTapRef.current?.(mall.id);
+        });
         const root = createRoot(el);
         const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
           .setLngLat([lng, lat])
@@ -249,7 +286,10 @@ export default function TreehouseMap({
         markersRef.current.set(mall.id, entry);
       }
 
-      entry.root.render(<LeafBubblePin selected={selectedMallId === mall.id} />);
+      // Both committed scope and transient peek render the same selected
+      // visual; the difference is that peek doesn't trigger the flyTo.
+      const isSelected = selectedMallId === mall.id || peekedMallId === mall.id;
+      entry.root.render(<LeafBubblePin selected={isSelected} />);
     }
 
     // Remove markers no longer in the malls list.
@@ -260,7 +300,39 @@ export default function TreehouseMap({
         markersRef.current.delete(id);
       }
     });
-  }, [malls, selectedMallId]);
+  }, [malls, selectedMallId, peekedMallId]);
+
+  // ── Peek anchor projection ────────────────────────────────────────────
+  // Resolves the screen-space coordinates for the peeked pin and keeps
+  // them in sync with map pan/zoom. Cleared when peekedMallId is null.
+  React.useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !peekedMallId) {
+      setPeekAnchor(null);
+      return;
+    }
+    const mall = malls.find((m) => m.id === peekedMallId);
+    if (!mall || mall.latitude == null || mall.longitude == null) {
+      setPeekAnchor(null);
+      return;
+    }
+    const lngLat: [number, number] = [Number(mall.longitude), Number(mall.latitude)];
+
+    const update = () => {
+      const point = map.project(lngLat);
+      setPeekAnchor({ x: point.x, y: point.y });
+    };
+
+    update();
+    map.on("move",  update);
+    map.on("zoom",  update);
+    map.on("rotate", update);
+    return () => {
+      map.off("move",  update);
+      map.off("zoom",  update);
+      map.off("rotate", update);
+    };
+  }, [peekedMallId, malls]);
 
   // ── Scope-driven view ─────────────────────────────────────────────────
   // selectedMallId === null → fit KY bounds (all-Kentucky overview).
@@ -317,6 +389,22 @@ export default function TreehouseMap({
           {error}
         </div>
       )}
+      {/* D26 — peek callout. Anchored in the map container's coordinate
+          space using map.project(lngLat) so it tracks pan + zoom. */}
+      {peekedMallId && peekAnchor && (() => {
+        const mall = malls.find((m) => m.id === peekedMallId);
+        if (!mall) return null;
+        const stats = mallStats?.[peekedMallId];
+        return (
+          <PinCallout
+            mall={mall}
+            boothCount={stats?.boothCount ?? 0}
+            findCount={stats?.findCount ?? 0}
+            anchor={peekAnchor}
+            onCommit={() => onCommit?.(peekedMallId)}
+          />
+        );
+      })()}
     </div>
   );
 }

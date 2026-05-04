@@ -23,7 +23,7 @@ import MallSheet from "@/components/MallSheet";
 import BottomNav from "@/components/BottomNav";
 import TreehouseMap from "@/components/TreehouseMap";
 import { useSavedMallId } from "@/lib/useSavedMallId";
-import { getActiveMalls } from "@/lib/posts";
+import { getActiveMalls, getMallStatsByMallId, type MallStats } from "@/lib/posts";
 import { track } from "@/lib/clientEvents";
 import { v1 } from "@/lib/tokens";
 import type { Mall } from "@/types/treehouse";
@@ -33,10 +33,15 @@ export const dynamic = "force-dynamic";
 export default function MapPage() {
   const [mallId, setMallId] = useSavedMallId();
   const [malls, setMalls] = React.useState<Mall[]>([]);
+  const [mallStats, setMallStats] = React.useState<Record<string, MallStats>>({});
   const [sheetOpen, setSheetOpen] = React.useState(false);
+  // D26 — transient peek state. Pin tap sets this; tapping the callout
+  // commits the rescope + clears it; tapping empty map clears it.
+  const [peekedMallId, setPeekedMallId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     getActiveMalls().then(setMalls);
+    getMallStatsByMallId().then(setMallStats);
   }, []);
 
   const selectedMall = mallId ? (malls.find((m) => m.id === mallId) ?? null) : null;
@@ -85,7 +90,27 @@ export default function MapPage() {
           position:     "relative",
         }}
       >
-        <TreehouseMap malls={malls} selectedMallId={mallId} />
+        <TreehouseMap
+          malls={malls}
+          selectedMallId={mallId}
+          peekedMallId={peekedMallId}
+          mallStats={mallStats}
+          onPinTap={(id) => setPeekedMallId(id)}
+          onMapTap={() => setPeekedMallId(null)}
+          onCommit={(id) => {
+            setMallId(id);
+            setPeekedMallId(null);
+            // R3 filter_applied event — pin-tap-then-commit is now the
+            // canonical scope-change path on /map. MallSheet on the
+            // postcard card stays as the secondary path.
+            const slug = malls.find((m) => m.id === id)?.slug ?? null;
+            track("filter_applied", {
+              filter_type:  "mall",
+              filter_value: slug ?? "all",
+              page:         "/map",
+            });
+          }}
+        />
       </main>
 
       <BottomNav active="map" />
