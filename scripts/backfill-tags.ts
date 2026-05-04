@@ -100,6 +100,7 @@ Given an image, return a JSON object with exactly three fields:
   - subject (only when applicable — portrait of franklin, horse, eagle, …)
   - category (lighting, kitchenware, decor, art, jewelry, toys, …)
   All tags lowercase. Single words or short phrases. No duplicates. Aim for 5–6, never more than 8.
+  CRITICAL: Return ONLY the tag value. Do NOT prefix with the axis name. Correct: "bee". Wrong: "subject: bee" or "color: amber".
 
 Return ONLY valid JSON. No markdown, no code fences.
 Example: {"title":"Vintage brass candlestick","caption":"Carries its age quietly. The kind of piece that looks like it was always there.","tags":["brass","candlestick","mid-century","decor","amber"]}`;
@@ -151,12 +152,18 @@ async function extractTags(client: Anthropic, imageUrl: string): Promise<string[
   try {
     const parsed = JSON.parse(raw) as { title?: string; caption?: string; tags?: string[] };
     if (!Array.isArray(parsed.tags)) return [];
-    // Same sanitization as /api/post-caption: lowercase, trim, dedupe, drop
-    // empties + non-strings, cap at 8.
+    // Sanitize: lowercase, trim, dedupe, drop empties + non-strings, cap at 8.
+    // ALSO strip "axis-name: value" prefixes (e.g. "subject: bee" → "bee") —
+    // Claude sometimes returns the axis label inline despite the prompt
+    // asking for value-only. Splits on ":" and keeps the last chunk; tags
+    // without a colon pass through unchanged.
     return Array.from(new Set(
       parsed.tags
         .filter((t): t is string => typeof t === "string")
-        .map(t => t.trim().toLowerCase())
+        .map(t => {
+          const stripped = t.includes(":") ? t.split(":").pop()! : t;
+          return stripped.trim().toLowerCase();
+        })
         .filter(t => t.length > 0)
     )).slice(0, 8);
   } catch (err) {
@@ -191,15 +198,24 @@ async function main() {
   });
 
   // Posts that need backfilling: tags is empty array (the migration default)
+  // OR tags contain a colon-prefixed value (e.g. "subject: bee" — written by
+  // an earlier run before the sanitizer learned to strip axis prefixes).
   // AND image_url is present (no image = nothing to extract from).
-  const pendingQuery = supabase
+  // We pull all tagged + untagged posts in scope, filter colon-tags client-side
+  // (Postgres array filter for substring match is awkward via supabase-js; the
+  // dataset is small enough for a one-pass JS filter).
+  const { data: rawPending, count, error: pendingErr } = await supabase
     .from("posts")
     .select("id, title, image_url, tags", { count: "exact" })
-    .eq("tags", "{}")
     .not("image_url", "is", null);
-
-  const { data: pending, count, error: pendingErr } = await pendingQuery;
   if (pendingErr) throw new Error(`Pending fetch failed: ${pendingErr.message}`);
+
+  const pending = (rawPending ?? []).filter(p => {
+    const tags = (p.tags ?? []) as string[];
+    if (tags.length === 0) return true;                         // empty
+    if (tags.some(t => typeof t === "string" && t.includes(":"))) return true; // colon-prefixed
+    return false;                                               // already clean
+  });
 
   const total = pending?.length ?? 0;
   console.log(`\npending posts: ${total}${count !== null ? ` (count check: ${count})` : ""}`);
