@@ -15,8 +15,11 @@
 //     (digital tool for real-world exploration); pairs with the leaf
 //     brand mark, both fill weight, both field-vocabulary. Magnifying
 //     glass would have read as "database query" not "scout the landscape."
-//   - PiSlidersHorizontal (right) — present but inert in phase 1.
-//     Phase-2 hook for axis-narrowing chips if shopper data shows demand.
+//   - Right-side filter glyph (PiSlidersHorizontal) RETIRED session 105
+//     after iPhone QA — design record D5 had it as a phase-2 hook for
+//     axis-narrowing chips, but inert iconography read as visual noise
+//     against the minimalistic-magic rule. Add it back when there's a
+//     real interactive purpose to wire to.
 //   - Glass-morphism bg per David's CSS (session 102):
 //     65% white + backdrop blur + 1px subtle border + soft 8/24 shadow.
 //     Focused state: opaque bg + 3px green ring + lifted shadow.
@@ -34,7 +37,7 @@
 "use client";
 
 import * as React from "react";
-import { PiBinocularsFill, PiSlidersHorizontal, PiX } from "react-icons/pi";
+import { PiBinocularsFill, PiX } from "react-icons/pi";
 import { v1, FONT_LORA } from "@/lib/tokens";
 
 interface Props {
@@ -85,7 +88,15 @@ export default function SearchBar({
     fontFamily:  FONT_LORA,
     fontSize:    15,
     color:       v1.inkPrimary,
-    lineHeight:  1.2,
+    // lineHeight "normal" (was 1.2) + appearance reset fixes the iOS
+    // Safari cursor-baseline shift on type="search" — the native search
+    // chrome (search-decoration + cancel button pseudo-elements) was
+    // pushing the caret a few pixels above the visual text baseline.
+    // appearance:none strips the chrome so the input sits centered in
+    // its flex slot.
+    lineHeight:  "normal",
+    appearance:  "none",
+    WebkitAppearance: "none",
     minWidth:    0, // lets flex item shrink past content size
     padding:     0,
   };
@@ -102,23 +113,6 @@ export default function SearchBar({
     cursor:          "pointer",
     flexShrink:      0,
     padding:         0,
-  };
-
-  const dividerStyle: React.CSSProperties = {
-    width:      1,
-    height:     18,
-    background: "rgba(0,0,0,0.10)",
-    flexShrink: 0,
-  };
-
-  const filterGlyphStyle: React.CSSProperties = {
-    width:           24,
-    height:          24,
-    display:         "inline-flex",
-    alignItems:      "center",
-    justifyContent:  "center",
-    color:           v1.inkMid,
-    flexShrink:      0,
   };
 
   return (
@@ -151,10 +145,6 @@ export default function SearchBar({
           <PiX size={12} color={v1.inkMid} aria-hidden="true" />
         </button>
       )}
-      <div style={dividerStyle} aria-hidden="true" />
-      <span style={filterGlyphStyle} aria-hidden="true">
-        <PiSlidersHorizontal size={18} color={v1.inkMid} />
-      </span>
     </div>
   );
 }
