@@ -1,20 +1,27 @@
 // components/BottomNav.tsx
 // Fixed bottom navigation.
 //
-// R10 (session 107) shipped a 4-tab flat: Home · Map · Profile · Saved.
-// R10 follow-up (session 109) trims to 3 tabs by relocating Profile to the
-// masthead left slot — see <MastheadProfileButton>. REVERSES R10 D1.
+// R10 D1 has now been reversed twice on top of its original lock:
+//   Before (sessions 90+):     Guest 3-tab, Vendor 4-tab, Admin 5-tab role-conditional.
+//   R10 v1   (session 107):    Home · Map · Profile · Saved (4 tabs flat) — D1 lock.
+//   R10 v1.1 (session 109):    Home · Map · Saved (3 tabs flat) — Profile to masthead.
+//   R10 v1.2 (session 110):    Home · Saved (2 tabs flat) — Map retired from nav.
 //
-// Before (sessions 90+):     Guest 3-tab, Vendor 4-tab, Admin 5-tab role-conditional.
-// R10 v1 (session 107):      Home · Map · Profile · Saved (4 tabs flat).
-// R10 v1.1 (session 109):    Home · Map · Saved (3 tabs flat).
+// Why drop Map (session 110): the two paths to /map (BottomNav tab + tap
+// the postcard mall card on Home/Saved) felt disjointed once /map became
+// purely a scope-picker rather than a destination. /map is now an
+// interaction surface — go to /map to change scope, then return to the
+// feed — accessed via the postcard card. The nav-tab path was redundant
+// AND created a "where do I go after picking a mall on /map?" navigation
+// dead-end. Per David: "remove the map icon and functionality from the
+// nav bar."
 //
-// Why drop Profile: BottomNav's job is wayfinding between primary
-// destinations. Profile is identity, not destination — pairing it with a
-// masthead left-slot affordance (mirroring back-button geometry on detail
-// pages) gives every page a consistent "you are here / who you are" pair
-// without burning a nav slot. My Booth + Admin entry points still live as
-// inline links on the Profile destination (/login/email when authed).
+// Why drop Profile (session 109): BottomNav's job is wayfinding between
+// primary destinations. Profile is identity, not destination — pairing it
+// with a masthead left-slot affordance gives every page a consistent
+// "you are here / who you are" pair without burning a nav slot. My Booth
+// + Admin entry points still live as inline links on the Profile
+// destination (/login/email when authed).
 //
 // Saved tab badge (D4) — Times-New-Roman numeral on the green pill, matching
 // the booth-numeral typography system from session 75 (project-wide rule:
@@ -24,7 +31,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, MapPin } from "lucide-react";
+import { Home } from "lucide-react";
 import FlagGlyph from "./FlagGlyph";
 import { FONT_NUMERAL } from "@/lib/tokens";
 import { getSession } from "@/lib/auth";
@@ -75,16 +82,13 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     badge?: boolean;
   };
 
-  // Profile tab retired session 109 — relocated to masthead left slot.
-  // 3 tabs flat: Home · Map · Saved.
+  // Map tab retired session 110 — /map is now an interaction surface,
+  // not a destination. Reached via the postcard mall card on Home/Saved.
+  // 2 tabs flat: Home · Saved.
   const tabs: TabDef[] = [
     {
       key: "home", label: "Home", href: "/",
       icon: <Home size={21} strokeWidth={2.0} />,
-    },
-    {
-      key: "map", label: "Map", href: "/map",
-      icon: <MapPin size={21} strokeWidth={2.0} />,
     },
     {
       key: "flagged", label: "Saved", href: "/flagged",
