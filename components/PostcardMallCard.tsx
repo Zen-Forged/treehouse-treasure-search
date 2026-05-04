@@ -168,15 +168,21 @@ export default function PostcardMallCard({
           style={{
             fontFamily:    FONT_LORA,
             fontWeight:    500,
-            fontSize:      26,
+            fontSize:      22,
             color:         v1.inkPrimary,
-            lineHeight:    1.15,
+            // Session 107 dial — name 26 → 22 + lineHeight 1.15 → 1.3 (was
+            // clipping Lora descenders/ligatures on iPhone with -webkit-box +
+            // WebkitLineClamp:2). 3rd firing of the pattern memorialized at
+            // feedback_lora_lineheight_minimum_for_clamp; rule generalizes
+            // beyond ≤14px to ANY clamped Lora.
+            lineHeight:    1.3,
             letterSpacing: "-0.005em",
-            margin:        "0 0 8px",
+            margin:        "0 0 6px",
             display:               "-webkit-box",
             WebkitLineClamp:       2,
             WebkitBoxOrient:       "vertical",
             overflow:              "hidden",
+            paddingBottom:         2,    // descender breathing room under the clamp
           }}
         >
           {name}
@@ -188,12 +194,12 @@ export default function PostcardMallCard({
             gap:        6,
             color:      v1.inkMid,
             fontFamily: FONT_SYS,
-            fontSize:   13,
+            fontSize:   12,
             lineHeight: 1.3,
             minWidth:   0,
           }}
         >
-          <MapPin size={13} strokeWidth={2.0} style={{ flexShrink: 0 }} />
+          <MapPin size={12} strokeWidth={2.0} style={{ flexShrink: 0 }} />
           <span style={{
             overflow:     "hidden",
             textOverflow: "ellipsis",
