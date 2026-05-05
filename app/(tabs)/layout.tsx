@@ -40,6 +40,7 @@ import BottomNav from "@/components/BottomNav";
 import MastheadProfileButton from "@/components/MastheadProfileButton";
 import MastheadShareButton from "@/components/MastheadShareButton";
 import { useSavedMallId } from "@/lib/useSavedMallId";
+import { useShopperAuth } from "@/lib/useShopperAuth";
 import { getActiveMalls, getPostsByIds } from "@/lib/posts";
 import { loadFollowedIds } from "@/lib/utils";
 import { track } from "@/lib/clientEvents";
@@ -50,6 +51,7 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const router   = useRouter();
   const [mallId, setMallId] = useSavedMallId();
+  const shopperAuth         = useShopperAuth();
   const [malls, setMalls]   = useState<Mall[]>([]);
   // Bookmarked posts (with mall_id) drive the BottomNav Saved badge.
   // Need full posts (not just IDs) so the badge can filter by mall when
@@ -194,7 +196,7 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
           - Saved     → null (saved finds are private; sharing them publicly
             is semantically wrong) */}
       <StickyMasthead
-        left={<MastheadProfileButton />}
+        left={<MastheadProfileButton authedInitials={shopperAuth.shopper?.initials} />}
         right={
           (pathname === "/" || pathname === "/map") ? (
             <MastheadShareButton

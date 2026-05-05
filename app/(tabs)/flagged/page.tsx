@@ -35,6 +35,7 @@ import { useRouter } from "next/navigation";
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
 import { BOOKMARK_PREFIX, loadBookmarkCount } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
+import { useShopperAuth } from "@/lib/useShopperAuth";
 import {
   v1,
   FONT_LORA,
@@ -379,6 +380,7 @@ export default function FlaggedPage() {
   const [bookmarkCount,   setBookmarkCount]   = useState(0);
   const [bannerImageUrl,  setBannerImageUrl]  = useState<string | null>(null);
   const [savedMallId]                         = useSavedMallId();
+  const shopperAuth                            = useShopperAuth();
   // setSavedMallId + mallSheetOpen retired (R10 session 107) — scope change
   // moved to /map.
   const pendingScrollY = useRef<number | null>(null);
@@ -570,6 +572,32 @@ export default function FlaggedPage() {
               ))}
             </div>
           </>
+        )}
+
+        {/* R1 — sync footer per design record D6. Visible only to guests
+            with localStorage saves. Routes to /login (which forwards to
+            /login/email?role=shopper through the 3rd triage card). */}
+        {!shopperAuth.isLoading && !shopperAuth.isAuthed && posts.length > 0 && (
+          <div
+            style={{
+              textAlign:  "center",
+              padding:    "20px 22px 32px",
+            }}
+          >
+            <Link
+              href="/login"
+              style={{
+                fontFamily: FONT_LORA,
+                fontStyle:  "italic",
+                fontSize:   13,
+                color:      v1.green,
+                textDecoration: "none",
+                lineHeight: 1.5,
+              }}
+            >
+              Sync your finds across devices →
+            </Link>
+          </div>
         )}
       </main>
 
