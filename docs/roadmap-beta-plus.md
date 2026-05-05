@@ -23,7 +23,7 @@ Each entry carries:
   - ✅ **Shipped** — absorbed by a merged PR (cross-ref the session).
 - **What / Why / Open questions** — the scoping substance.
 
-**Status snapshot (as of session 106):** 16 items total (R1–R16). **8 ✅ Shipped:** R4a/R4b/R4c, R5a, R7, R11, R12, R16 (sessions 45–105). **2 🟢 Ready:** R3 (analytics), R10 (location map + persistent postcard mall card — graduated session 106). **6 🟡 Captured:** R1, R2, R5b, R6, R8, R9, R13, R14, R15.
+**Status snapshot (as of session 111):** 16 items total (R1–R16). **9 ✅ Shipped:** R4a/R4b/R4c, R5a, R7, R10, R11, R12, R16 (sessions 45–108). **2 🟢 Ready:** R1 (shopper accounts — graduated session 111), R3 (analytics). **5 🟡 Captured:** R2, R5b, R6, R8, R9, R13, R14, R15.
 
 ---
 
@@ -44,7 +44,7 @@ David reviews and can override any of these.
 
 | ID | Title | Category | Effort | Depends on | Status | Notes |
 |----|-------|----------|--------|-----------|--------|-------|
-| R1 | Guest/shopper profiles | User/Auth | L | — (but compounds with R3, R9) | 🟡 Captured | Biggest single swing. Enables persistent likes, booth-following, shopper notifications. |
+| R1 | Guest/shopper profiles | User/Auth | M–L | — (but compounds with R3, R9) | 🟢 Ready (session 111) | **Lazy claim · Quiet identity · Saves only at MVP.** 3rd `/login` triage card + `/login/email/handle` pick + `/me` reflective page (avatar + handle + scout-since + private 3-stat row) + masthead bubble swap to v1.green initials when authed + silent localStorage→DB migration on first claim. Booth-following + scout history + notifications deferred to R1.5. Design record: [`docs/r1-shopper-accounts-design.md`](r1-shopper-accounts-design.md). Mockup: [`docs/mockups/r1-shopper-accounts-v1.html`](mockups/r1-shopper-accounts-v1.html). 17 decisions D1–D17 frozen. |
 | R2 | Stripe vendor subscriptions | Monetization | L | R5b (tier definition) | 🟡 Captured | Without tiers, Stripe is checkout-theater. Scope R2 + R5b together. |
 | R3 | Analytics event capture | Data | M | — | 🟢 Ready (session 58) | Foundational. Tunes R5a, R5b, future feed ranking. Instrument early for compounding data. Design record: [`docs/r3-analytics-design.md`](r3-analytics-design.md). Mockup: [`docs/mockups/r3-admin-analytics-v1.html`](mockups/r3-admin-analytics-v1.html). All six decisions D1–D6 frozen; implementation session can run as a straight sprint. |
 | R4a | Admin: delete booth | Admin tooling | S | — | ✅ Shipped session 45+74 | Functionally complete via `/shelves` admin chrome (Pencil + Trash bubbles, EditBoothSheet, DeleteBoothSheet). Single-pane-of-glass `/admin` Vendors tab captured separately as `Q-015` in `docs/queued-sessions.md`. |
@@ -127,22 +127,46 @@ Waves 1 + 2 + 3 together are realistically ~9–14 sessions (mix of S + M). That
 
 ## Detailed entries
 
-### R1 — Guest / shopper profiles 🟡
+### R1 — Guest / shopper profiles 🟢
 
-**What:** Account creation for non-vendor users. Shoppers can:
-- Persist liked / saved finds across devices and sessions
-- Follow specific booths (push / email notification on new finds from that booth)
-- Potentially: follow malls, follow tags
+**Status:** 🟡 Captured (55) → 🟢 **Ready** (session 111, 2026-05-06). Design + claim mechanic + schema locked across 1 reference scan + 1 mockup pick. Implementation arc follows in a later session (~sessions 112–114).
 
-**Why:** Today "save" is localStorage-only. A wiped browser wipes a shopper's entire treasure list. Following booths is also the strongest retention mechanic Treehouse has on the shopper side.
+**Design record:** [`docs/r1-shopper-accounts-design.md`](r1-shopper-accounts-design.md) — 17 frozen decisions (D1–D17).
 
-**Open questions:**
-- Anonymous Supabase sessions (`anon-auth` sub-agent in `MASTER_PROMPT.md`) vs. full email/OTP signup vs. both (anon → promote to claimed account).
-- Does "following a booth" generate a separate feed surface, or just notifications?
-- How does this intersect with R1-adjacent parked "Claim this booth" (currently Sprint 6+)? The claim flow might belong here.
-- Identity model: one email = one account, roles (shopper | vendor | admin) layered on top? Or parallel tables?
+**Mockup:** [`docs/mockups/r1-shopper-accounts-v1.html`](mockups/r1-shopper-accounts-v1.html) — V1 with 3 frames spanning the profile-destination posture (Pocket-pure / Glass-shape / Saves-as-journal). **Frame B + option ii picked** — Glass-shape reflective destination + masthead bubble swaps to v1.green initials when authed.
 
-**Design prereq:** Yes — new surfaces (signup, profile, saved-finds list, followed-booths list) all need mockups.
+**What ships (R1 MVP):**
+1. **3rd `/login` triage card** — "I'm shopping" (slot pre-baked at session 93). Routes to `/login/email`.
+2. **Handle pick** — single new screen `/login/email/handle` after OTP magic-link confirm. Auto-suggested from email local-part; user-editable; UNIQUE constraint at DB.
+3. **Schema** — `shoppers` (id, user_id, handle, created_at) + `shopper_saves` + `shopper_booth_bookmarks` with RLS.
+4. **Silent localStorage→DB migration** on first claim. Idempotent (`ON CONFLICT DO NOTHING`). No confirmation banner.
+5. **`/me` page** — reflective profile destination. Avatar (84px initials in v1.green) + handle (Lora 22 / 500) + "scouting since [month] [year]" eyebrow + private 3-stat row (*Finds saved · Booths bookmarked · Locations*) + sign-out italic-Lora link.
+6. **Masthead profile bubble swap** — `<MastheadProfileButton>` extended with `authedInitials?` prop. Initials in v1.green circle when authed; CircleUser glyph when guest. Tap routes to `/me` if authed, `/login` if guest.
+7. **Hybrid read** — new `useShopperSaves()` hook. DB if authed, localStorage if guest. Reactive on auth-state transition.
+8. **Sync footer** — italic-Lora "Sync your finds across devices →" at the bottom of Saved tab, visible only in guest state when ≥1 save exists.
+
+**Why:** Today "save" is localStorage-only. A wiped browser wipes a shopper's entire treasure list. Cross-device sync is the killer feature, but R1 also shapes the digital-to-physical bridge thesis: a shopper has identity that travels with them — the iPhone they had at the mall last week shows them the same saves on the laptop at home.
+
+**Why "lazy claim" (B):** sign-in is a graduation, never a gate. Matches the "stumble into a treehouse mall on vacation, save a few things, formalize when you want it on the second device" shopper journey. Also matches the warm-cream Treehouse voice — no marketplace-style barrier.
+
+**Why "quiet identity" (E):** no public engagement metrics, no follow graph, no leaderboards. Stats on `/me` are private — only the shopper sees them. Sharper thesis fit than Letterboxd-style public cataloging.
+
+**Why "saves only at MVP" (G):** smallest shippable scope that delivers the cross-device sync win. Doesn't introduce new primitives (visit log, notifications). R1.5 + R9 carry those forward.
+
+**Deferred to R1.5 / future R-items:**
+- Booth-following with notifications → composes with **R9** (push/SMS).
+- Scout history (visit log of malls/booths visited) → standalone follow-on.
+- Avatar photo upload → standalone follow-on.
+- Email change / password change / handle edit / account deletion UI → standalone follow-on.
+- Public profile / follow graph / engagement metrics → **deliberately rejected at D2** under quiet-identity posture.
+- Apple / Google sign-in → email-OTP only at MVP (matches vendor flow).
+- Anonymous Supabase sessions → considered + rejected; sign-in is explicit, guest stays guest until claim.
+
+**Effort:** M–L (2–3 sessions of implementation: schema arc + auth/triage arc + `/me` arc + masthead swap arc + read-side migration arc).
+
+**Dependencies:** None hard. Existing `/login/email` magic-link OTP flow (session 93). Existing Supabase auth state tracking. Existing `useSavedMallId` cross-instance-sync pattern (sessions 109+110) — `useShopperSaves` should compose with it.
+
+**Compounds with:** R3 (shopper events for analytics), R9 (push/SMS notifications), R14 (vendor profiles — same identity layer).
 
 ---
 
