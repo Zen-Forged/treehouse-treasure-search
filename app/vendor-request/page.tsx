@@ -38,6 +38,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, Mail, Clock, Camera, X } from "lucide-react";
 import { getActiveMalls } from "@/lib/posts";
+import { getUser } from "@/lib/auth";
 import { compressImage } from "@/lib/imageUpload";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import StickyMasthead from "@/components/StickyMasthead";
@@ -140,6 +141,18 @@ function VendorRequestInner() {
     // admin backlog with nothing actionable. See D6 in
     // docs/r4c-mall-active-design.md.
     getActiveMalls().then(setMalls);
+  }, []);
+
+  useEffect(() => {
+    // Shape A (session 115) — pre-fill email from authed user. Users
+    // arriving via /welcome → "I have a booth" land here already authed;
+    // pre-filling their email saves a re-type. Soft pre-fill — user can
+    // edit if they want a different email on the booth than their auth
+    // identity. Functional setState guards against overwriting any input
+    // the user has already typed in a race.
+    getUser().then(user => {
+      if (user?.email) setEmail(prev => prev || user.email!);
+    });
   }, []);
 
   function handleMallChange(id: string) {
