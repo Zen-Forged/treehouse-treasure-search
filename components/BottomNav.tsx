@@ -15,6 +15,20 @@
 //                              be doing primarily"). Booth tab restores
 //                              one-tap access without surfacing a
 //                              vendor-only chrome to shoppers/guests.
+//   R1 re-walk (session 114):  Home · Saved · [Booth | Admin] — role-conditional
+//                              tab moved to the rightmost slot. Saved holds the
+//                              stable 2nd position so muscle memory transfers
+//                              across role transitions (sign-in / sign-out flips
+//                              the rightmost slot, not the middle). Admin variant
+//                              added: admin precedence wins (Option A — admin
+//                              sees Admin → /admin, not Booth → /my-shelf, even
+//                              when admin + vendor both apply). Session 113
+//                              shipped Booth in the middle position framed as
+//                              "primary work-surface peer of Home"; the re-walk
+//                              showed admin-without-booth users hit "No booth
+//                              assigned" with no escape and no admin reachability,
+//                              so the rightmost slot becomes the role-specialty
+//                              slot regardless of which role.
 //
 // Why drop Map (session 110): the two paths to /map (BottomNav tab + tap
 // the postcard mall card on Home/Saved) felt disjointed once /map became
@@ -47,7 +61,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, Store } from "lucide-react";
+import { Home, Store, Shield } from "lucide-react";
 import FlagGlyph from "./FlagGlyph";
 import { FONT_NUMERAL } from "@/lib/tokens";
 import { getSession, onAuthChange, detectUserRole, type UserRole } from "@/lib/auth";
@@ -59,11 +73,11 @@ import { getSession, onAuthChange, detectUserRole, type UserRole } from "@/lib/a
 // no longer renders.
 //
 // "booth" added session 113 for the role-conditional Booth tab (vendors
-// + admins only). active="booth" should be passed by /my-shelf consumers
-// when this layout extends to that surface; today /my-shelf isn't inside
-// app/(tabs)/ so the active state on the BottomNav rendered there would
-// require routing changes outside this commit's scope.
-export type NavTab = "home" | "map" | "flagged" | "booth" | "login" | null;
+// only as of session 114). active="booth" passed by /my-shelf.
+// "admin" added session 114 for the role-conditional Admin tab (admins
+// only). active="admin" should be passed by /admin consumers if BottomNav
+// is ever rendered there; today /admin doesn't render BottomNav.
+export type NavTab = "home" | "map" | "flagged" | "booth" | "admin" | "login" | null;
 
 interface BottomNavProps {
   active?: NavTab;
@@ -104,7 +118,12 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     return () => { cancelled = true; unsub(); };
   }, []);
 
-  const showBoothTab = role === "vendor" || role === "admin";
+  // Admin precedence wins over vendor (Option A — admins who also have a
+  // vendor row see Admin tab, not Booth). detectUserRole returns "admin"
+  // before "vendor" already, so showAdminTab + showBoothTab are naturally
+  // mutually exclusive; the conditionals are written that way for clarity.
+  const showAdminTab = role === "admin";
+  const showBoothTab = role === "vendor";
 
   const badgeLabel = (n: number) => n > 99 ? "99+" : n > 9 ? "9+" : String(n);
 
@@ -116,23 +135,29 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     badge?: boolean;
   };
 
-  // Tab order: Home → [Booth, role-conditional] → Saved.
-  // Booth slots between Home (browse) and Saved (private collection):
-  // for vendors it's the central "manage my work" destination, which
-  // reads as a peer of browse rather than a sibling of Saved.
+  // Tab order: Home → Saved → [Booth | Admin, role-conditional].
+  // Saved holds the stable 2nd position so muscle memory transfers across
+  // role transitions (sign-in / sign-out flips the rightmost slot, not
+  // the middle). The role tab is the "specialty rightmost" — whichever
+  // surface the role unlocks: vendor → Booth (manage their work), admin
+  // → Admin (platform controls).
   const tabs: TabDef[] = [
     {
       key: "home", label: "Home", href: "/",
       icon: <Home size={21} strokeWidth={2.0} />,
     },
-    ...(showBoothTab ? [{
-      key: "booth" as NavTab, label: "Booth", href: "/my-shelf",
-      icon: <Store size={21} strokeWidth={2.0} />,
-    }] : []),
     {
       key: "flagged", label: "Saved", href: "/flagged",
       icon: <FlagGlyph size={21} strokeWidth={2.0} />, badge: true,
     },
+    ...(showBoothTab ? [{
+      key: "booth" as NavTab, label: "Booth", href: "/my-shelf",
+      icon: <Store size={21} strokeWidth={2.0} />,
+    }] : []),
+    ...(showAdminTab ? [{
+      key: "admin" as NavTab, label: "Admin", href: "/admin",
+      icon: <Shield size={21} strokeWidth={2.0} />,
+    }] : []),
   ];
 
   const navStyle: React.CSSProperties = {
