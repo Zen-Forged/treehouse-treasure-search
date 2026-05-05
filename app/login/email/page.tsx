@@ -84,6 +84,10 @@ function LoginEmailInner() {
   function pickDest(user: User | null): string {
     const explicit = searchParams.get("redirect") ?? searchParams.get("next");
     if (explicit) return safeRedirect(explicit);
+    // R1 — shopper claim flow. After in-app OTP code success, route to
+    // the handle picker instead of /my-shelf when role=shopper. The
+    // handle page idempotently bounces returning shoppers to /me.
+    if (searchParams.get("role") === "shopper") return "/login/email/handle";
     return user && isAdmin(user) ? "/" : "/my-shelf";
   }
 
@@ -165,7 +169,12 @@ function LoginEmailInner() {
     if (!trimmed.includes("@")) { setError("Please enter a valid email address."); return; }
     setBusy(true); setError(null);
 
-    const redirect = searchParams.get("redirect") ?? undefined;
+    // R1 — when role=shopper, thread /login/email/handle as the magic-link
+    // redirectTo so the email round-trip lands on the handle picker. An
+    // explicit ?redirect= param wins (e.g. /vendor-request "Sign in" ask).
+    const explicit = searchParams.get("redirect") ?? undefined;
+    const role     = searchParams.get("role");
+    const redirect = explicit ?? (role === "shopper" ? "/login/email/handle" : undefined);
     const { error: err } = await sendMagicLink(trimmed, redirect);
 
     setBusy(false);
@@ -227,7 +236,12 @@ function LoginEmailInner() {
     if (resendIn > 0 || !sentTo) return;
     setCodeError(null);
     setResendNotice(null);
-    const { error: err } = await sendMagicLink(sentTo, searchParams.get("redirect") ?? undefined);
+    // R1 — preserve role=shopper threading on resend so the magic-link
+    // round-trip still lands on /login/email/handle.
+    const explicit = searchParams.get("redirect") ?? undefined;
+    const role     = searchParams.get("role");
+    const redirect = explicit ?? (role === "shopper" ? "/login/email/handle" : undefined);
+    const { error: err } = await sendMagicLink(sentTo, redirect);
     if (err) {
       setCodeError("Couldn't resend. Try again in a moment.");
       return;

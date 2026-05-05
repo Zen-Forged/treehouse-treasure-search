@@ -45,7 +45,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Loader, CircleUser, Store, HelpCircle } from "lucide-react";
+import { ArrowLeft, Loader, CircleUser, Store, HelpCircle, Bookmark } from "lucide-react";
 import { getSession, onAuthChange, isAdmin } from "@/lib/auth";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import type { User } from "@supabase/supabase-js";
@@ -65,6 +65,10 @@ function safeRedirect(next: string | null, fallback = "/my-shelf"): string {
 function pickDest(user: User | null, searchParams: ReadonlyURLSearchParams): string {
   const explicit = searchParams.get("redirect") ?? searchParams.get("next");
   if (explicit) return safeRedirect(explicit);
+  // R1 — shopper claim flow. The magic-link round-trip carries the
+  // /login/email/handle target via `next`; this `role` branch covers the
+  // edge case where /login is reached directly with role=shopper.
+  if (searchParams.get("role") === "shopper") return "/login/email/handle";
   return user && isAdmin(user) ? "/" : "/my-shelf";
 }
 
@@ -294,7 +298,7 @@ function LoginTriageInner() {
               maxWidth: 290,
             }}
           >
-            Manage your digital booth, update your Shelf, and share your finds with shoppers.
+            Manage your booth or sync your finds across devices.
           </p>
         </div>
 
@@ -315,22 +319,18 @@ function LoginTriageInner() {
             cta="Create Vendor Account"
             ctaVariant="outline"
           />
-        </div>
-
-        <div
-          style={{
-            marginTop: 18,
-            textAlign: "center",
-            fontFamily: FONT_LORA,
-            fontStyle: "italic",
-            fontSize: 13,
-            color: v1.inkMuted,
-            lineHeight: 1.5,
-            padding: "0 8px",
-          }}
-        >
-          <strong style={{ color: v1.inkPrimary, fontWeight: 500, fontStyle: "normal" }}>Just shopping?</strong>{" "}
-          Keep browsing — no account needed.
+          {/* R1 — shopper claim entry point. role=shopper threads through
+              /login/email so the post-OTP redirect routes to the handle
+              picker instead of /my-shelf. Returning shoppers (handle
+              already exists) are bounced to /me by the handle page. */}
+          <TriageCard
+            href="/login/email?role=shopper"
+            title="I'm shopping"
+            subtitle="Sync your saved finds across devices."
+            icon={<Bookmark size={20} strokeWidth={1.6} />}
+            cta="Sign in as a shopper"
+            ctaVariant="outline"
+          />
         </div>
       </div>
 
