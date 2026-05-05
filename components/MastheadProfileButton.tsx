@@ -31,20 +31,41 @@
 //
 // Routes to /login (not /login/email) so triage cards still gate the
 // authed-state branch from the unauthed sign-in branch.
+//
+// R1 (session 111) — extended with optional `authedInitials` prop per
+// design record D5 + D16. When present, the bubble swaps to v1.green
+// fill with 2-char initials in v1.onGreen + routes to /me instead of
+// /login. Geometry preserved exactly (44×44, same border-radius, same
+// transition). Auth-state pickup itself is wired in R1 Arc 3 — Arc 2
+// only ships the prop contract + visual treatment.
 
 "use client";
 
 import { useRouter } from "next/navigation";
 import { CircleUser } from "lucide-react";
-import { v1 } from "@/lib/tokens";
+import { v1, FONT_SYS } from "@/lib/tokens";
 
-export default function MastheadProfileButton() {
-  const router = useRouter();
+interface MastheadProfileButtonProps {
+  /**
+   * R1 — when present, renders 2-char initials in v1.green circle and
+   * routes to /me instead of /login. Caller is responsible for passing
+   * the correct casing (uppercase) and length (2 chars). When absent,
+   * renders the guest CircleUser glyph + routes to /login (default).
+   */
+  authedInitials?: string;
+}
+
+export default function MastheadProfileButton({
+  authedInitials,
+}: MastheadProfileButtonProps = {}) {
+  const router  = useRouter();
+  const isAuthed = !!authedInitials;
+
   return (
     <button
       type="button"
-      onClick={() => router.push("/login")}
-      aria-label="Open profile"
+      onClick={() => router.push(isAuthed ? "/me" : "/login")}
+      aria-label={isAuthed ? "Open my account" : "Open profile"}
       style={{
         width:           44,
         height:          44,
@@ -52,7 +73,7 @@ export default function MastheadProfileButton() {
         display:         "flex",
         alignItems:      "center",
         justifyContent:  "center",
-        background:      v1.iconBubble,
+        background:      isAuthed ? v1.green : v1.iconBubble,
         border:          "none",
         cursor:          "pointer",
         padding:         0,
@@ -60,7 +81,22 @@ export default function MastheadProfileButton() {
         transition:      "background 0.18s ease",
       }}
     >
-      <CircleUser size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+      {isAuthed ? (
+        <span
+          style={{
+            fontFamily:    FONT_SYS,
+            fontWeight:    600,
+            fontSize:      15,
+            letterSpacing: "0.02em",
+            color:         v1.onGreen,
+            lineHeight:    1,
+          }}
+        >
+          {authedInitials}
+        </span>
+      ) : (
+        <CircleUser size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+      )}
     </button>
   );
 }
