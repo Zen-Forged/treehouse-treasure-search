@@ -851,9 +851,11 @@ function MyBoothInner() {
           </>
         )}
 
-      {/* R10 (session 107) — My Booth tab retired from BottomNav; reached via
-          Profile tab → "Manage my booth" inline link. No nav highlight here. */}
-      <BottomNav active={null} flaggedCount={bookmarkCount} />
+      {/* R10 (session 107) — My Booth tab retired from BottomNav.
+          R1 walk (session 113) — Booth tab restored as role-conditional
+          (vendor + admin only) per BottomNav design log. /my-shelf is
+          the destination, so highlight active="booth". */}
+      <BottomNav active="booth" flaggedCount={bookmarkCount} />
 
       {/* Hidden file inputs — camera + gallery */}
       <input

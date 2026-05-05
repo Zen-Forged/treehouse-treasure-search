@@ -1,11 +1,20 @@
 // components/BottomNav.tsx
 // Fixed bottom navigation.
 //
-// R10 D1 has now been reversed twice on top of its original lock:
+// R10 D1 history:
 //   Before (sessions 90+):     Guest 3-tab, Vendor 4-tab, Admin 5-tab role-conditional.
 //   R10 v1   (session 107):    Home · Map · Profile · Saved (4 tabs flat) — D1 lock.
 //   R10 v1.1 (session 109):    Home · Map · Saved (3 tabs flat) — Profile to masthead.
 //   R10 v1.2 (session 110):    Home · Saved (2 tabs flat) — Map retired from nav.
+//   R1 walk  (session 113):    Home · [Booth] · Saved — role-conditional Booth tab
+//                              for vendors + admins. R1 Arc 5 QA surfaced that
+//                              the previous "vendor/admin reach /my-shelf via
+//                              /login/email cards" path was 3 taps and didn't
+//                              match the everyday primary-task framing
+//                              ("manage their booth, which is what they will
+//                              be doing primarily"). Booth tab restores
+//                              one-tap access without surfacing a
+//                              vendor-only chrome to shoppers/guests.
 //
 // Why drop Map (session 110): the two paths to /map (BottomNav tab + tap
 // the postcard mall card on Home/Saved) felt disjointed once /map became
@@ -19,9 +28,16 @@
 // Why drop Profile (session 109): BottomNav's job is wayfinding between
 // primary destinations. Profile is identity, not destination — pairing it
 // with a masthead left-slot affordance gives every page a consistent
-// "you are here / who you are" pair without burning a nav slot. My Booth
-// + Admin entry points still live as inline links on the Profile
-// destination (/login/email when authed).
+// "you are here / who you are" pair without burning a nav slot. Profile
+// stays on the masthead; the new Booth tab is a destination, not identity.
+//
+// Why role-conditional, not flat (session 113): showing Booth to
+// shoppers/guests would pull them into a "No booth assigned" surface or a
+// vendor-creation flow with no useful return path. Better to surface
+// chrome only when it's actionable. Future iteration may surface a Booth
+// tab to guests for managing bookmarked booths (David's note at the
+// reversal point) — that's a different destination and gets its own
+// tab-content decision.
 //
 // Saved tab badge (D4) — Times-New-Roman numeral on the green pill, matching
 // the booth-numeral typography system from session 75 (project-wide rule:
@@ -31,18 +47,23 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home } from "lucide-react";
+import { Home, Store } from "lucide-react";
 import FlagGlyph from "./FlagGlyph";
 import { FONT_NUMERAL } from "@/lib/tokens";
-import { getSession } from "@/lib/auth";
-import type { User } from "@supabase/supabase-js";
+import { getSession, onAuthChange, detectUserRole, type UserRole } from "@/lib/auth";
 
 // "login" was a valid value in sessions 107+108 when Profile occupied a
 // nav slot. Session 109 retires the Profile tab in favor of the masthead
 // left-slot affordance, but the type member is preserved so any external
 // consumer that still passes active="login" type-checks; the tab itself
 // no longer renders.
-export type NavTab = "home" | "map" | "flagged" | "login" | null;
+//
+// "booth" added session 113 for the role-conditional Booth tab (vendors
+// + admins only). active="booth" should be passed by /my-shelf consumers
+// when this layout extends to that surface; today /my-shelf isn't inside
+// app/(tabs)/ so the active state on the BottomNav rendered there would
+// require routing changes outside this commit's scope.
+export type NavTab = "home" | "map" | "flagged" | "booth" | "login" | null;
 
 interface BottomNavProps {
   active?: NavTab;
@@ -59,18 +80,31 @@ const C = {
 
 export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNavProps) {
   const router = useRouter();
-  const [, setUser]  = useState<User | null>(null);
+  const [role, setRole] = useState<UserRole>("none");
   const [ready, setReady] = useState(false);
 
-  // Auth state read kept for parity with prior sessions and future role
-  // surfacing (e.g. badge for unread items on Profile when authed). The
-  // visible nav itself is role-flat now.
+  // Role detection drives the role-conditional Booth tab. detectUserRole
+  // queries shoppers + vendors in parallel after isAdmin check; reactive
+  // via onAuthChange so sign-in / sign-out flips the tab live without
+  // requiring a navigation. Hold a blank nav until ready to avoid a
+  // 2-tab → 3-tab flash for vendors landing on Home.
   useEffect(() => {
-    getSession().then(s => {
-      setUser(s?.user ?? null);
+    let cancelled = false;
+    getSession().then(async s => {
+      const r = await detectUserRole(s?.user ?? null);
+      if (cancelled) return;
+      setRole(r);
       setReady(true);
     });
+    const unsub = onAuthChange(async user => {
+      const r = await detectUserRole(user);
+      if (cancelled) return;
+      setRole(r);
+    });
+    return () => { cancelled = true; unsub(); };
   }, []);
+
+  const showBoothTab = role === "vendor" || role === "admin";
 
   const badgeLabel = (n: number) => n > 99 ? "99+" : n > 9 ? "9+" : String(n);
 
@@ -82,14 +116,19 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     badge?: boolean;
   };
 
-  // Map tab retired session 110 — /map is now an interaction surface,
-  // not a destination. Reached via the postcard mall card on Home/Saved.
-  // 2 tabs flat: Home · Saved.
+  // Tab order: Home → [Booth, role-conditional] → Saved.
+  // Booth slots between Home (browse) and Saved (private collection):
+  // for vendors it's the central "manage my work" destination, which
+  // reads as a peer of browse rather than a sibling of Saved.
   const tabs: TabDef[] = [
     {
       key: "home", label: "Home", href: "/",
       icon: <Home size={21} strokeWidth={2.0} />,
     },
+    ...(showBoothTab ? [{
+      key: "booth" as NavTab, label: "Booth", href: "/my-shelf",
+      icon: <Store size={21} strokeWidth={2.0} />,
+    }] : []),
     {
       key: "flagged", label: "Saved", href: "/flagged",
       icon: <FlagGlyph size={21} strokeWidth={2.0} />, badge: true,
