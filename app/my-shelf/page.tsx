@@ -70,7 +70,7 @@ import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { compressImage as compressForAdd } from "@/lib/imageUpload";
 import { postStore } from "@/lib/postStore";
-import { loadFollowedIds } from "@/lib/utils";
+import { useShopperSaves } from "@/lib/useShopperSaves";
 import { track } from "@/lib/clientEvents";
 import {
   resolveActiveBooth,
@@ -377,11 +377,12 @@ function MyBoothInner() {
   const cameraInputRef  = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Q-003 (session 36): Find Map saved-count badge passthrough. Mirrors the
-  // Home reference implementation in app/page.tsx. safeStorage-backed count,
-  // refreshed on focus and visibilitychange so bookmarks toggled elsewhere
-  // propagate back to the badge when the user returns to this tab.
-  const [bookmarkCount, setBookmarkCount] = useState(0);
+  // Q-003 (session 36): Saved-count badge passthrough for BottomNav.
+  // R1 Arc 4 — sourced from useShopperSaves so the count tracks both
+  // localStorage (guest path) and shopper_saves (authed path). Hook owns
+  // its own auth + cross-instance event listeners.
+  const saves = useShopperSaves();
+  const bookmarkCount = saves.ids.size;
 
   // ── Auth gate ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -395,27 +396,6 @@ function MyBoothInner() {
 
   // R3 — page_viewed analytics event.
   useEffect(() => { track("page_viewed", { path: "/my-shelf" }); }, []);
-
-  // ── Q-003 (session 36): bookmark count sync ───────────────────────────
-  // Mirror of app/page.tsx pattern — same sync fn, same event set. We also
-  // listen to visibilitychange because My Booth is a frequent return surface
-  // after a vendor saves/unsaves a find on another page in the same tab.
-  useEffect(() => {
-    function syncBookmarkCount() {
-      try { setBookmarkCount(loadFollowedIds().size); } catch {}
-    }
-    syncBookmarkCount();
-    function onFocus() { syncBookmarkCount(); }
-    function onVisibilityChange() {
-      if (document.visibilityState === "visible") syncBookmarkCount();
-    }
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-    };
-  }, []);
 
   // ── Vendor resolution ──────────────────────────────────────────────────
   // Session 35 resolver (post-fix):

@@ -41,8 +41,8 @@ import MastheadProfileButton from "@/components/MastheadProfileButton";
 import MastheadShareButton from "@/components/MastheadShareButton";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { useShopperAuth } from "@/lib/useShopperAuth";
+import { useShopperSaves } from "@/lib/useShopperSaves";
 import { getActiveMalls, getPostsByIds } from "@/lib/posts";
-import { loadFollowedIds } from "@/lib/utils";
 import { track } from "@/lib/clientEvents";
 import { v1 } from "@/lib/tokens";
 import type { Mall, Post } from "@/types/treehouse";
@@ -52,6 +52,7 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
   const router   = useRouter();
   const [mallId, setMallId] = useSavedMallId();
   const shopperAuth         = useShopperAuth();
+  const saves               = useShopperSaves();
   const [malls, setMalls]   = useState<Mall[]>([]);
   // Bookmarked posts (with mall_id) drive the BottomNav Saved badge.
   // Need full posts (not just IDs) so the badge can filter by mall when
@@ -61,24 +62,23 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     getActiveMalls().then(setMalls);
-
-    const refreshBookmarks = async () => {
-      const ids = Array.from(loadFollowedIds());
-      if (ids.length === 0) {
-        setBookmarkedPosts([]);
-        return;
-      }
-      const posts = await getPostsByIds(ids);
-      setBookmarkedPosts(posts);
-    };
-    refreshBookmarks();
-
-    // Refresh on return from a detail page (unsaved finds need the badge
-    // to drop). Same pattern as /flagged page's own focus handler.
-    const onFocus = () => { refreshBookmarks(); };
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
   }, []);
+
+  // Re-fetch posts whenever the save set changes — covers cross-page
+  // toggles via useShopperSaves's custom-event broadcast and auth-state
+  // transitions (sign-in switching the source from localStorage to DB).
+  useEffect(() => {
+    let cancelled = false;
+    const ids = Array.from(saves.ids);
+    if (ids.length === 0) {
+      setBookmarkedPosts([]);
+      return;
+    }
+    getPostsByIds(ids).then((posts) => {
+      if (!cancelled) setBookmarkedPosts(posts);
+    });
+    return () => { cancelled = true; };
+  }, [saves.ids]);
 
   // Scope-filtered badge count. When a mall is selected, badge counts
   // only finds saved at that mall. All-Kentucky scope counts everything.

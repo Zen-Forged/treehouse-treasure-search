@@ -11,16 +11,17 @@
 // and the destination affordance is the footer "Explore the booth →" CTA.
 //
 // Preserved:
-//   - localStorage bookmark scanning + stale pruning (BOOKMARK_PREFIX)
 //   - Grouping by vendor, sorted by booth number
 //   - Per-find unsave gesture (now via 18px leaf bubble on polaroid thumbnail)
-//   - Focus event refresh, BottomNav passthrough, skeleton loader
+//   - BottomNav passthrough, skeleton loader
 //   - Scroll-restore (SCROLL_KEY)
 //   - Track D preview-cache on tap (treehouse_find_preview:${id})
 //   - R3 events: page_viewed, post_unsaved, filter_applied
-//
-// New:
 //   - flagged_booth_explored R3 event on CTA tap
+//
+// R1 Arc 4: save state via useShopperSaves hook (DB if authed,
+// localStorage if guest). Stale-prune still runs for both branches —
+// hook.toggle handles both writes idempotently.
 
 "use client";
 
@@ -33,9 +34,9 @@ import { useRouter } from "next/navigation";
 // in app/(tabs)/layout.tsx as of session 109 — flicker-eliminating shared
 // layout. This page renders only the page body (banner + find groups).
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
-import { BOOKMARK_PREFIX, loadBookmarkCount } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { useShopperAuth } from "@/lib/useShopperAuth";
+import { useShopperSaves } from "@/lib/useShopperSaves";
 import {
   v1,
   FONT_LORA,
@@ -56,32 +57,6 @@ import type { Post, Mall } from "@/types/treehouse";
 // boundary.
 const SCROLL_KEY = "treehouse_flagged_scroll";
 let cachedFlaggedPosts: Post[] | null = null;
-
-// ── Bookmark helpers ───────────────────────────────────────────────────────────
-
-function loadFlaggedIds(): string[] {
-  const ids: string[] = [];
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith(BOOKMARK_PREFIX) && localStorage.getItem(key) === "1") {
-        ids.push(key.slice(BOOKMARK_PREFIX.length));
-      }
-    }
-  } catch {}
-  return ids;
-}
-
-function removeBookmark(postId: string) {
-  try { localStorage.removeItem(`${BOOKMARK_PREFIX}${postId}`); } catch {}
-}
-
-function pruneStaleBookmarks(savedIds: string[], returnedIds: string[]) {
-  const returnedSet = new Set(returnedIds);
-  for (const id of savedIds) {
-    if (!returnedSet.has(id)) removeBookmark(id);
-  }
-}
 
 // ── Grouping ───────────────────────────────────────────────────────────────────
 
@@ -377,39 +352,14 @@ export default function FlaggedPage() {
   const [posts,           setPosts]           = useState<Post[]>(cachedFlaggedPosts ?? []);
   const [malls,           setMalls]           = useState<Mall[]>([]);
   const [loading,         setLoading]         = useState<boolean>(cachedFlaggedPosts === null);
-  const [bookmarkCount,   setBookmarkCount]   = useState(0);
   const [bannerImageUrl,  setBannerImageUrl]  = useState<string | null>(null);
   const [savedMallId]                         = useSavedMallId();
   const shopperAuth                            = useShopperAuth();
+  const saves                                  = useShopperSaves();
   // setSavedMallId + mallSheetOpen retired (R10 session 107) — scope change
   // moved to /map.
   const pendingScrollY = useRef<number | null>(null);
   const scrollRestored = useRef(false);
-
-  function syncCount() { setBookmarkCount(loadBookmarkCount()); }
-
-  async function loadPosts() {
-    const ids = loadFlaggedIds();
-    if (ids.length === 0) {
-      setPosts([]);
-      cachedFlaggedPosts = [];
-      setLoading(false);
-      return;
-    }
-    const data = await getPostsByIds(ids);
-    if (data.length < ids.length) {
-      pruneStaleBookmarks(ids, data.map(p => p.id));
-      setBookmarkCount(loadBookmarkCount());
-    }
-    setPosts(data);
-    cachedFlaggedPosts = data;
-    // Phase C — populate the shared post cache for instant tap-to-detail
-    // metadata paint when the user steps into any saved find. Mirrors
-    // Home loadFeed's setPostCache loop. The cache is shared across the
-    // detail page's swipe-nav handoff via lib/findContext.
-    for (const p of data) setPostCache(p);
-    setLoading(false);
-  }
 
   useEffect(() => {
     getSiteSettingUrl("find_map_banner_image_url").then(setBannerImageUrl);
@@ -419,16 +369,46 @@ export default function FlaggedPage() {
     getActiveMalls().then(setMalls);
   }, []);
 
-  useEffect(() => { syncCount(); loadPosts(); }, []);
+  // Re-fetch posts whenever the save set changes — auth-state transitions
+  // (sign-in flips the hook from localStorage to DB) and cross-page
+  // toggles broadcast through useShopperSaves's custom event.
+  useEffect(() => {
+    if (saves.isLoading) return;
+    let cancelled = false;
+    const ids = Array.from(saves.ids);
+    if (ids.length === 0) {
+      setPosts([]);
+      cachedFlaggedPosts = [];
+      setLoading(false);
+      return;
+    }
+    getPostsByIds(ids).then((data) => {
+      if (cancelled) return;
+      // Stale-prune: a save references a post that no longer exists.
+      // toggle handles localStorage + DB correctly (DB FK cascade is
+      // usually one step ahead, making this a no-op for authed; for
+      // guests this clears the dead localStorage key).
+      if (data.length < ids.length) {
+        const returned = new Set(data.map((p) => p.id));
+        for (const id of ids) {
+          if (!returned.has(id)) saves.toggle(id, false);
+        }
+      }
+      setPosts(data);
+      cachedFlaggedPosts = data;
+      // Phase C — populate the shared post cache for instant tap-to-detail
+      // metadata paint when the user steps into any saved find. Mirrors
+      // Home loadFeed's setPostCache loop. The cache is shared across the
+      // detail page's swipe-nav handoff via lib/findContext.
+      for (const p of data) setPostCache(p);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [saves.ids, saves.isLoading]);
 
   useEffect(() => {
-    track("page_viewed", { path: "/flagged", saved_count: loadBookmarkCount() });
-  }, []);
-
-  useEffect(() => {
-    function onFocus() { syncCount(); loadPosts(); }
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
+    track("page_viewed", { path: "/flagged", saved_count: saves.ids.size });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -577,7 +557,7 @@ export default function FlaggedPage() {
         {/* R1 — sync footer per design record D6. Visible only to guests
             with localStorage saves. Routes to /login (which forwards to
             /login/email?role=shopper through the 3rd triage card). */}
-        {!shopperAuth.isLoading && !shopperAuth.isAuthed && posts.length > 0 && (
+        {!shopperAuth.isLoading && !shopperAuth.isAuthed && saves.ids.size > 0 && (
           <div
             style={{
               textAlign:  "center",

@@ -70,7 +70,7 @@ import { motion, type PanInfo } from "framer-motion";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getPost, getVendorPosts } from "@/lib/posts";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
-import { safeStorage } from "@/lib/safeStorage";
+import { useShopperSaves } from "@/lib/useShopperSaves";
 import { getCachedUserId, getSession, isAdmin, onAuthChange } from "@/lib/auth";
 import {
   v1,
@@ -79,7 +79,7 @@ import {
   FONT_NUMERAL,
 } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
-import { flagKey, mapsUrl, boothNumeralSize, loadFollowedIds } from "@/lib/utils";
+import { mapsUrl, boothNumeralSize } from "@/lib/utils";
 import { track } from "@/lib/clientEvents";
 import { readFindContext, getPostCache, setPostCache, writeFindContext, getVendorPostsCache, setVendorPostsCache, type FindRef } from "@/lib/findContext";
 import BottomNav from "@/components/BottomNav";
@@ -683,7 +683,10 @@ export default function FindDetailPage() {
   // height and lands above the user's saved Y. shelfReady = true once
   // the carousel's fetch has resolved (regardless of result count).
   const [shelfReady,    setShelfReady]    = useState(false);
-  const [isSaved,       setIsSaved]       = useState(false);
+  // R1 Arc 4 — single source of truth for save state across guest +
+  // authed paths. Hook owns the localStorage/DB branching internally.
+  const saves = useShopperSaves();
+  const isSaved = !!id && saves.isSaved(id);
 
   // Preview image URL written by the source surface (Home tile / /flagged
   // / /shelf, eventually) into sessionStorage on tap. Loaded by the
@@ -830,12 +833,12 @@ export default function FindDetailPage() {
     prefetchNeighbor(resolvedNext);
   }, [id]);
 
-  // Q-003 addendum (session 36): bookmark count for BottomNav badge on this
-  // page. Unlike Home / My Booth, Find Detail can toggle the count via the
-  // heart bubble, so we also resync inside handleToggleSave — not just on
-  // mount / focus / visibilitychange.
-  const [bookmarkCount, setBookmarkCount] = useState(0);
-  const [lightboxOpen,  setLightboxOpen]  = useState(false);
+  // R1 Arc 4 — bookmark count for BottomNav badge sourced from the hook.
+  // Q-003 addendum (session 36) is now satisfied by useShopperSaves's
+  // optimistic toggle: setIds fires before the DB roundtrip, so the
+  // BottomNav badge reflects the change on the same tick the heart flips.
+  const bookmarkCount = saves.ids.size;
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   // Session 88 — page vertical scroll-restore for back-nav from peer finds
   // (taps on the "More from this booth" strip → /find/[id-B] → back). Same
@@ -845,22 +848,8 @@ export default function FindDetailPage() {
   const pendingScrollY = useRef<number | null>(null);
   const scrollRestored = useRef(false);
 
-  useEffect(() => {
-    function sync() {
-      try { setBookmarkCount(loadFollowedIds().size); } catch {}
-    }
-    sync();
-    function onFocus() { sync(); }
-    function onVisibilityChange() {
-      if (document.visibilityState === "visible") sync();
-    }
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-    };
-  }, []);
+  // R1 Arc 4 — useShopperSaves has its own auth-change + cross-instance
+  // event listeners; the page no longer maintains a local sync loop.
 
   // Save scrollY on every scroll event so back-nav lands exactly where the
   // user tapped a "More from this booth" thumb. Branch on lastNavWasPopstate:
@@ -977,7 +966,6 @@ export default function FindDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    try { setIsSaved(safeStorage.getItem(flagKey(id)) === "1"); } catch {}
     // R3 — page_viewed analytics event. Fires once per `id` (re-fires on
     // navigation between distinct finds in-app).
     track("page_viewed", { path: "/find/[id]", post_id: id });
@@ -1020,14 +1008,7 @@ export default function FindDetailPage() {
   function handleToggleSave() {
     if (!id) return;
     const next = !isSaved;
-    setIsSaved(next);
-    try {
-      if (next) safeStorage.setItem(flagKey(id), "1");
-      else      safeStorage.removeItem(flagKey(id));
-    } catch {}
-    // Q-003 addendum (session 36): resync badge count after in-page toggle so
-    // the BottomNav heart badge reflects the save immediately.
-    try { setBookmarkCount(loadFollowedIds().size); } catch {}
+    saves.toggle(id, next);
     // R3 — emit save / unsave event. Heart icon is the only engagement
     // mechanic on a find (terminology section in design record).
     track(next ? "post_saved" : "post_unsaved", { post_id: id });

@@ -51,9 +51,9 @@ import {
   MOTION_STAGGER,
   MOTION_STAGGER_MAX,
 } from "@/lib/tokens";
-import { flagKey, loadFollowedIds, formatTimeAgo } from "@/lib/utils";
+import { formatTimeAgo } from "@/lib/utils";
 import { useSavedMallId } from "@/lib/useSavedMallId";
-import { safeStorage } from "@/lib/safeStorage";
+import { useShopperSaves } from "@/lib/useShopperSaves";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
 // Chrome (TabPageMasthead + PostcardMallCard + BottomNav + MallSheet) lives
@@ -424,8 +424,8 @@ function DiscoveryFeedInner() {
   const [mallId, setMallId]                       = useSavedMallId();
   // setMallId retained ONLY for stale-mall recovery (effect at ~line 580).
   // User-initiated scope change happens on /map. R10 session 107.
-  const [followedIds,       setFollowedIds]       = useState<Set<string>>(new Set());
-  const [bookmarkCount,     setBookmarkCount]     = useState(0);
+  const saves = useShopperSaves();
+  const followedIds = saves.ids;
   const [lastViewedId,      setLastViewedId]      = useState<string | null>(null);
   const [featuredImageUrl,  setFeaturedImageUrl]  = useState<string | null>(null);
   const wasHidden        = useRef(false);
@@ -438,19 +438,9 @@ function DiscoveryFeedInner() {
   // from frame 1 on every visit (cold start, back-nav, foreground).
   const skipTileEntrance = true;
 
-  // ── Bookmarks ────────────────────────────────────────────────────────────────
-  function syncBookmarks() {
-    const ids = loadFollowedIds();
-    setFollowedIds(ids);
-    setBookmarkCount(ids.size);
-  }
-
-  useEffect(() => {
-    syncBookmarks();
-    function onFocus() { syncBookmarks(); }
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, []);
+  // Bookmarks: useShopperSaves hook is the single source of truth (R1
+  // Arc 4). The hook subscribes to its own auth-change + cross-instance
+  // events, so this page doesn't manage local bookmark state directly.
 
   // R3 — page_viewed analytics event (fire-and-forget; runs once on mount).
   useEffect(() => { track("page_viewed", { path: "/" }); }, []);
@@ -538,14 +528,14 @@ function DiscoveryFeedInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Visibility change: reload feed + sync bookmarks when tab comes back ──
+  // ── Visibility change: reload feed when tab comes back ──
+  // Bookmark sync is handled by useShopperSaves's own listeners.
   useEffect(() => {
     function onVisibilityChange() {
       if (document.visibilityState === "hidden") {
         wasHidden.current = true;
       } else if (document.visibilityState === "visible" && wasHidden.current) {
         wasHidden.current = false;
-        syncBookmarks();
         loadPosts();
       }
     }
@@ -555,26 +545,12 @@ function DiscoveryFeedInner() {
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   function handleToggleSave(postId: string) {
-    let nextSavedState: "saved" | "unsaved" = "saved";
-    setFollowedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(postId)) {
-        try { safeStorage.removeItem(flagKey(postId)); } catch {}
-        next.delete(postId);
-        setBookmarkCount((c) => Math.max(0, c - 1));
-        nextSavedState = "unsaved";
-      } else {
-        try { safeStorage.setItem(flagKey(postId), "1"); } catch {}
-        next.add(postId);
-        setBookmarkCount((c) => c + 1);
-        nextSavedState = "saved";
-      }
-      return next;
-    });
+    const next = !saves.isSaved(postId);
+    saves.toggle(postId, next);
     // R3 — emit save / unsave event from the feed-card heart toggle. Mirror
     // of the /find/[id] handler; the heart icon is the only engagement
     // mechanic on a find (terminology section in design record).
-    track(nextSavedState === "saved" ? "post_saved" : "post_unsaved", { post_id: postId });
+    track(next ? "post_saved" : "post_unsaved", { post_id: postId });
   }
 
   // R16 — SearchBar fires onChange (debounced 200ms inside the primitive).
