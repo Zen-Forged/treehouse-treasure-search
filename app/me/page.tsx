@@ -1,6 +1,9 @@
 // app/me/page.tsx
 // R1 Arc 2 — Shopper profile destination per design record D4 / D9 / D10 /
 // D11 / D15 / D17 (docs/r1-shopper-accounts-design.md).
+// R1 Arc 4 (this revision) — wired to real auth + DB-backed counts via
+// useShopperAuth + useShopperSaves + useShopperBoothBookmarks. Sign-out
+// calls supabase.auth.signOut() and returns the user to the feed.
 //
 // Frame B (Glass-shape reflective destination) ships:
 //   - back-button masthead (matches /find/[id] + /shelf/[slug] family)
@@ -11,39 +14,106 @@
 //     FONT_NUMERAL numerals + FONT_SYS labels. Stats are PRIVATE per D2.
 //   - Sign-out italic-Lora link in v1.green (D15)
 //
-// Arc 2 mocks the shopper data via constants below; Arc 3 replaces them
-// with real auth + DB query (auth.uid() → shoppers row → aggregate counts).
-// The sign-out button is wired to a no-op for now; Arc 3 calls
-// supabase.auth.signOut() and routes to /.
+// Auth-state branching:
+//   - shopper auth still loading → blank surface (no flash)
+//   - guest                       → redirect to /login
+//   - authed but no shopper row   → redirect to /login/email/handle (claim flow)
+//   - authed + shopper row        → render the Frame B layout
 //
-// /me deliberately lives OUTSIDE app/(tabs)/ per D17 — it's not a tab,
-// it's a destination behind the masthead profile bubble. BottomNav
-// renders normally so the user lands back on a tab via either the
-// browser back button or a tab tap.
+// /me deliberately lives OUTSIDE app/(tabs)/ per D17 — it's a destination
+// behind the masthead profile bubble, not a tab.
 
 "use client";
 
 export const dynamic = "force-dynamic";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import StickyMasthead from "@/components/StickyMasthead";
 import BottomNav     from "@/components/BottomNav";
 import { v1, FONT_LORA, FONT_SYS, FONT_NUMERAL } from "@/lib/tokens";
+import { supabase }  from "@/lib/supabase";
+import { useShopperAuth }          from "@/lib/useShopperAuth";
+import { useShopperSaves }         from "@/lib/useShopperSaves";
+import { useShopperBoothBookmarks } from "@/lib/useShopperBoothBookmarks";
+import { getPostsByIds }           from "@/lib/posts";
 
-// ── Arc 2 mock data ─────────────────────────────────────────────────────────
-// Arc 3 replaces with: auth state lookup → shoppers row fetch → aggregate
-// count queries. Arc 4's useShopperSaves() hook supplies the live counts.
-const MOCK_HANDLE          = "treehouse-scout";
-const MOCK_INITIALS        = "TS";
-const MOCK_SCOUTING_SINCE  = "MAY 2026";
-const MOCK_FINDS_SAVED     = 12;
-const MOCK_BOOTHS          = 4;
-const MOCK_LOCATIONS       = 3;
+/**
+ * Format ISO timestamp as "MAY 2026" (uppercase month + year). Used for
+ * the "SCOUTING SINCE …" eyebrow per D10. Falls back to empty string on
+ * unparseable input — the eyebrow then renders without a date suffix
+ * rather than throwing.
+ */
+function formatScoutingSince(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return d
+    .toLocaleString("en-US", { month: "long", year: "numeric" })
+    .toUpperCase();
+}
 
 export default function MePage() {
-  const router = useRouter();
+  const router          = useRouter();
+  const auth            = useShopperAuth();
+  const saves           = useShopperSaves();
+  const boothBookmarks  = useShopperBoothBookmarks();
+
+  // Locations stat = distinct mall_ids of saved finds. Booth-bookmark
+  // mall_ids could also be unioned in, but the user-visible concept
+  // ("Locations where I've been scouting") aligns more cleanly with the
+  // saves set. Refine here if user feedback suggests otherwise.
+  const [locationCount, setLocationCount] = useState<number>(0);
+
+  useEffect(() => {
+    if (saves.isLoading) return;
+    let cancelled = false;
+    const ids = Array.from(saves.ids);
+    if (ids.length === 0) {
+      setLocationCount(0);
+      return;
+    }
+    getPostsByIds(ids).then((posts) => {
+      if (cancelled) return;
+      const malls = new Set<string>();
+      for (const p of posts) {
+        if (p.mall_id) malls.add(p.mall_id);
+      }
+      setLocationCount(malls.size);
+    });
+    return () => { cancelled = true; };
+  }, [saves.ids, saves.isLoading]);
+
+  // Auth-state redirects fire after the auth check resolves. While
+  // loading we render a blank surface to avoid a flash of the form.
+  useEffect(() => {
+    if (auth.isLoading) return;
+    if (!auth.isAuthed)         router.replace("/login");
+    else if (!auth.shopper)     router.replace("/login/email/handle");
+  }, [auth.isLoading, auth.isAuthed, auth.shopper, router]);
+
+  async function handleSignOut() {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error("[me] signOut:", e);
+    }
+    router.push("/");
+  }
+
+  // Hold a blank surface during the auth resolution + redirect window.
+  // The auth-state useEffect above takes over once the state settles.
+  if (auth.isLoading || !auth.isAuthed || !auth.shopper) {
+    return (
+      <div
+        style={{
+          minHeight:  "100vh",
+          background: v1.paperCream,
+        }}
+      />
+    );
+  }
 
   return (
     <div
@@ -115,7 +185,7 @@ export default function MePage() {
               lineHeight:    1,
             }}
           >
-            {MOCK_INITIALS}
+            {auth.shopper.initials}
           </span>
         </div>
 
@@ -132,7 +202,7 @@ export default function MePage() {
             lineHeight:    1.3,
           }}
         >
-          @{MOCK_HANDLE}
+          @{auth.shopper.handle}
         </h1>
 
         {/* ─── Scouting-since eyebrow ─────────────────────────────────── */}
@@ -148,7 +218,7 @@ export default function MePage() {
             lineHeight:     1,
           }}
         >
-          Scouting since {MOCK_SCOUTING_SINCE}
+          Scouting since {formatScoutingSince(auth.shopper.scoutingSince)}
         </div>
 
         {/* ─── Stat row (private — D2 + D9) ───────────────────────────── */}
@@ -164,17 +234,15 @@ export default function MePage() {
             margin:         "0 0 22px",
           }}
         >
-          <Stat n={MOCK_FINDS_SAVED} label="Finds saved" />
-          <Stat n={MOCK_BOOTHS}      label="Booths bookmarked" />
-          <Stat n={MOCK_LOCATIONS}   label="Locations" />
+          <Stat n={saves.ids.size}          label="Finds saved" />
+          <Stat n={boothBookmarks.ids.size} label="Booths bookmarked" />
+          <Stat n={locationCount}           label="Locations" />
         </div>
 
         {/* ─── Sign-out — italic Lora link, v1.green (D15) ─────────────── */}
-        {/* Arc 3 wires supabase.auth.signOut() + router.push("/"). Arc 2
-            renders the visual contract only. */}
         <button
           type="button"
-          onClick={() => { /* TODO Arc 3 — supabase.auth.signOut() */ }}
+          onClick={handleSignOut}
           style={{
             display:    "block",
             margin:     "24px auto 0",
@@ -193,7 +261,7 @@ export default function MePage() {
         </button>
       </main>
 
-      <BottomNav active={null} flaggedCount={0} />
+      <BottomNav active={null} flaggedCount={saves.ids.size} />
     </div>
   );
 }
