@@ -87,9 +87,13 @@ export default function MePage() {
 
   // Auth-state redirects fire after the auth check resolves. While
   // loading we render a blank surface to avoid a flash of the form.
+  // !isAuthed → / so handleSignOut's router.push("/") agrees with this
+  // useEffect's race-fired router.replace; deep-linked guests also bounce
+  // home (where the masthead bubble + tab chrome surface their sign-in
+  // path) rather than into a vendor-tinted /login form.
   useEffect(() => {
     if (auth.isLoading) return;
-    if (!auth.isAuthed)         router.replace("/login");
+    if (!auth.isAuthed)         router.replace("/");
     else if (!auth.shopper)     router.replace("/login/email/handle");
   }, [auth.isLoading, auth.isAuthed, auth.shopper, router]);
 
