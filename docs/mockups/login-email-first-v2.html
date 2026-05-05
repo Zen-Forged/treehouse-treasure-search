@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Login Email-First V2 (Frame A + Frame C locked)</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --paper-cream:  #e8ddc7;
+    --postit:       #fbf3df;
+    --postit-soft:  #f7eed5;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --green:        #1e4d2b;
+    --green-light:  rgba(30, 77, 43, 0.08);
+    --icon-bubble:  rgba(42, 26, 10, 0.06);
+
+    --lora: "Lora", Georgia, serif;
+    --sys:  -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1480px; margin: 0 auto; padding: 30px 20px 60px; }
+
+  h1.title {
+    font-family: var(--lora);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 920px;
+  }
+  .subtitle code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .decisions {
+    max-width: 1120px;
+    margin: 0 auto 30px;
+    padding: 22px 28px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--lora);
+    font-size: 19px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 12px;
+  }
+  .decisions h4 {
+    font-family: var(--lora);
+    font-size: 15px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 18px 0 6px;
+  }
+  .decisions ul { margin: 6px 0 0; padding-left: 18px; }
+  .decisions li { margin-bottom: 6px; }
+  .decisions code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .decisions strong { color: #fff9e8; }
+  .decisions table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12.5px; }
+  .decisions th, .decisions td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid rgba(232, 221, 199, 0.12);
+    vertical-align: top;
+  }
+  .decisions th {
+    color: #fff9e8;
+    font-weight: 500;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .locked-pill {
+    display: inline-block;
+    padding: 1px 8px;
+    background: rgba(120, 200, 130, 0.18);
+    border: 1px solid rgba(120, 200, 130, 0.30);
+    border-radius: 999px;
+    color: #d8f0d0;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-right: 6px;
+  }
+  .open-pill {
+    display: inline-block;
+    padding: 1px 8px;
+    background: rgba(255, 200, 120, 0.14);
+    border: 1px solid rgba(255, 200, 120, 0.30);
+    border-radius: 999px;
+    color: #ffe6c3;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-right: 6px;
+  }
+
+  .frames {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    max-width: 1480px;
+    margin: 0 auto;
+  }
+  .frame { display: flex; flex-direction: column; align-items: center; }
+  .frame-label {
+    font-family: var(--lora);
+    color: #fff9e8;
+    font-size: 17px;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+  .frame-route {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    color: rgba(232, 221, 199, 0.50);
+    margin-bottom: 12px;
+  }
+  .frame-note {
+    color: rgba(232, 221, 199, 0.62);
+    font-size: 12px;
+    margin: 14px auto 0;
+    max-width: 360px;
+    text-align: left;
+    line-height: 1.55;
+  }
+  .frame-note .nb {
+    color: #fff9e8;
+    font-weight: 500;
+    font-style: normal;
+  }
+
+  .phone {
+    width: 390px;
+    background: var(--paper-cream);
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    position: relative;
+    height: 760px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .phone-header {
+    flex-shrink: 0;
+    padding: 18px 16px 14px;
+  }
+  .back-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--icon-bubble);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-primary);
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .phone-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 24px 8px;
+    min-height: 0;
+  }
+
+  .wordmark-wrap {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .wordmark-fake {
+    display: inline-block;
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 30px;
+    color: var(--ink-primary);
+    letter-spacing: -0.01em;
+    line-height: 1;
+    padding: 8px 0 6px;
+  }
+  .wordmark-fake .ampersand {
+    color: var(--green);
+    font-style: italic;
+  }
+  .lede {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-muted);
+    line-height: 1.55;
+    margin: 6px auto 0;
+    max-width: 290px;
+    text-align: center;
+  }
+
+  .field-card {
+    background: var(--postit);
+    border-radius: 14px;
+    border: 1px solid var(--ink-hairline);
+    padding: 18px 16px 16px;
+    margin-bottom: 18px;
+  }
+  .field-label {
+    font-family: var(--lora);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink-primary);
+    margin: 0 0 8px;
+  }
+  .field-input {
+    display: block;
+    width: 100%;
+    background: #fff;
+    border: 1px solid var(--ink-hairline);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-family: var(--sys);
+    font-size: 16px;
+    color: var(--ink-primary);
+    margin-bottom: 12px;
+    -webkit-appearance: none;
+  }
+  .field-input.placeholder {
+    color: rgba(42, 26, 10, 0.40);
+  }
+  .field-helper {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-muted);
+    line-height: 1.45;
+    margin: -4px 0 12px;
+  }
+  .cta-filled {
+    width: 100%;
+    padding: 13px 14px;
+    background: var(--green);
+    color: #fff;
+    border-radius: 12px;
+    font-family: var(--sys);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(30, 77, 43, 0.20);
+    border: none;
+  }
+
+  /* Frame A two-line vendor footer */
+  .vendor-footer {
+    text-align: center;
+    margin-top: 8px;
+    padding: 0 4px;
+  }
+  .vendor-footer .vf-q {
+    display: block;
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    line-height: 1.5;
+    margin-bottom: 4px;
+  }
+  .vendor-footer .vf-a {
+    display: inline-block;
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 13.5px;
+    color: var(--ink-primary);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--ink-faint);
+    text-underline-offset: 3px;
+  }
+
+  .help-footer {
+    flex-shrink: 0;
+    padding: 22px 0 26px;
+    text-align: center;
+    font-family: var(--lora);
+    font-size: 13px;
+    color: var(--ink-primary);
+  }
+  .help-footer .help-glyph {
+    display: inline-block;
+    margin-right: 6px;
+    color: var(--ink-muted);
+    vertical-align: middle;
+    font-size: 14px;
+  }
+  .help-footer .help-text {
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--ink-faint);
+    text-underline-offset: 3px;
+  }
+
+  /* Frame C — none-state landing */
+  .welcome-card {
+    background: var(--postit);
+    border-radius: 14px;
+    border: 1px solid var(--ink-hairline);
+    padding: 24px 18px 18px;
+  }
+  .welcome-eyebrow {
+    font-family: var(--sys);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--green);
+    text-align: center;
+    margin: 0 0 6px;
+  }
+  .welcome-h {
+    font-family: var(--lora);
+    font-size: 22px;
+    color: var(--ink-primary);
+    margin: 0 0 8px;
+    text-align: center;
+    line-height: 1.25;
+  }
+  .welcome-sub {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    text-align: center;
+    line-height: 1.5;
+    margin: 0 auto 18px;
+    max-width: 280px;
+  }
+  .welcome-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .welcome-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.45);
+    border-radius: 10px;
+    border: 1px solid var(--ink-hairline);
+  }
+  .welcome-row.terminal {
+    background: rgba(42, 26, 10, 0.03);
+  }
+  .welcome-row .wr-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--green-light);
+    color: var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+  }
+  .welcome-row .wr-text { flex: 1; min-width: 0; }
+  .welcome-row .wr-title {
+    font-family: var(--lora);
+    font-size: 14px;
+    color: var(--ink-primary);
+    line-height: 1.25;
+  }
+  .welcome-row .wr-sub {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 11.5px;
+    color: var(--ink-muted);
+    line-height: 1.4;
+    margin-top: 1px;
+  }
+  .welcome-row .wr-chev {
+    color: var(--ink-faint);
+    font-size: 22px;
+    line-height: 1;
+    font-family: var(--lora);
+    flex-shrink: 0;
+  }
+
+  .picks {
+    margin-top: 28px;
+    max-width: 1120px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 22px 28px;
+    background: rgba(120, 200, 130, 0.06);
+    border: 1px solid rgba(120, 200, 130, 0.22);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.92);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .picks h3 {
+    font-family: var(--lora);
+    font-size: 18px;
+    font-weight: 400;
+    color: #d8f0d0;
+    margin: 0 0 10px;
+  }
+  .picks ol { margin: 0; padding-left: 22px; }
+  .picks li { margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <h1 class="title">Login email-first — V2 (all decisions locked)</h1>
+  <p class="subtitle">
+    All 12 decisions locked or deferred. Two phones below = the actual surfaces shipping.
+    Frame A is <code>/login</code>. Frame C is <code>/welcome</code> — first-sign-in only; subsequent sign-ins skip it via <code>detectUserRole</code>.
+  </p>
+
+  <div class="decisions">
+    <h3>Decision matrix — what's locked, what's open</h3>
+    <table>
+      <tr>
+        <th style="width: 50px;">ID</th>
+        <th>Decision</th>
+        <th>Status</th>
+        <th>Resolution</th>
+      </tr>
+      <tr>
+        <td>D1</td>
+        <td>Vendor-signup discoverability on <code>/login</code></td>
+        <td><span class="locked-pill">Locked</span></td>
+        <td>Frame A — quiet two-line italic footer below the email card. Question + dotted-underline link.</td>
+      </tr>
+      <tr>
+        <td>D2</td>
+        <td>"None" state landing (authed, no rows)</td>
+        <td><span class="locked-pill">Locked</span></td>
+        <td>Frame C welcome card. Three rows; chevron on the two routing rows, no chevron on the terminal "Just exploring".</td>
+      </tr>
+      <tr>
+        <td>D3</td>
+        <td>Apple/Google SSO inclusion</td>
+        <td><span class="open-pill">Deferred</span></td>
+        <td>Magic-link only for V2 ship. Flag if you want an explicit "no, push to a future R-row" decision recorded.</td>
+      </tr>
+      <tr>
+        <td>D4</td>
+        <td>Detection layer (post-magic-link routing)</td>
+        <td><span class="locked-pill">Locked</span></td>
+        <td><code>detectUserRole(user)</code> from <code>lib/auth.ts</code>. Add <code>none → /welcome</code> branch.</td>
+      </tr>
+      <tr>
+        <td>D5</td>
+        <td><code>/vendor-request</code> direct access (no sign-in)</td>
+        <td><span class="locked-pill">Locked</span></td>
+        <td>Preserved. Two paths converge — Frame A footer link + Frame C "I have a booth" row both route to <code>/vendor-request</code>.</td>
+      </tr>
+      <tr>
+        <td>D6</td>
+        <td><code>/login/email</code> route migration</td>
+        <td><span class="open-pill">Open</span></td>
+        <td>Recommend: keep as redirect alias to <code>/login</code> for ~30 days, then retire. Existing magic-link emails in the wild stay valid.</td>
+      </tr>
+      <tr>
+        <td>D7</td>
+        <td>Lede copy under wordmark on <code>/login</code></td>
+        <td><span class="locked-pill">Locked</span></td>
+        <td><em>"Enter your email to continue on Treehouse Finds."</em> Directional + simple; trusts the email field to do the lifting.</td>
+      </tr>
+      <tr>
+        <td>D8</td>
+        <td>Email field CTA copy</td>
+        <td><span class="locked-pill">Locked</span></td>
+        <td><em>"Continue"</em>.</td>
+      </tr>
+      <tr>
+        <td>D9</td>
+        <td>Field helper text below input</td>
+        <td><span class="locked-pill">Locked</span></td>
+        <td><em>"We'll email you a sign-in link — no password needed."</em> Adds the passwordless reassurance.</td>
+      </tr>
+      <tr>
+        <td>D10</td>
+        <td>Frame C welcome card vs sticky banner</td>
+        <td><span class="locked-pill">Locked</span></td>
+        <td>Welcome card. (Minimalistic-magic memory was satisfied — banner alternative dropped.)</td>
+      </tr>
+      <tr>
+        <td>D11</td>
+        <td>Lexicon — <em>"booth"</em> vs <em>"digital storefront"</em></td>
+        <td><span class="locked-pill">Locked</span></td>
+        <td>Use <em>"booth"</em> throughout. Frame A footer reads <em>"Request a digital booth on Treehouse Finds →"</em>. Single canonical term across the project.</td>
+      </tr>
+      <tr>
+        <td>D12</td>
+        <td>Frame C terminal "Just exploring" row — keep or drop</td>
+        <td><span class="locked-pill">Locked</span></td>
+        <td>Drop the third terminal row. <em>"I'm planning a visit"</em> renamed to <em>"Just exploring"</em> (subtitle <em>"Save your finds and come back to them."</em> unchanged). Welcome card now binary: vendor or shopper. <code>/welcome</code> shows on first sign-in only — subsequent sign-ins skip via <code>detectUserRole</code> since a row will exist.</td>
+      </tr>
+    </table>
+
+    <h4>Routing matrix change</h4>
+    <p style="margin-top: 6px;">
+      <code>pickDest(user)</code> in <code>app/login/page.tsx</code> + <code>app/login/email/page.tsx</code> — current shape vs Shape A:
+    </p>
+    <ul>
+      <li><strong>admin</strong> → <code>/</code> &nbsp;<em>(unchanged)</em></li>
+      <li><strong>vendor</strong> → <code>/my-shelf</code> &nbsp;<em>(unchanged)</em></li>
+      <li><strong>shopper</strong> → <code>/me</code> &nbsp;<em>(unchanged)</em></li>
+      <li><strong>none</strong> → <code>/welcome</code> &nbsp;<em>(NEW — replaces today's "/my-shelf fall-through" which strands users on "No booth assigned")</em></li>
+    </ul>
+  </div>
+
+  <div class="frames">
+
+    <!-- ============ FRAME A — locked, vendor footer copy in place ============ -->
+    <div class="frame">
+      <div class="frame-label">Frame A — /login (email-first)</div>
+      <div class="frame-route">/login</div>
+      <div class="phone">
+        <div class="phone-header">
+          <div class="back-btn">‹</div>
+        </div>
+        <div class="phone-body">
+          <div class="wordmark-wrap">
+            <div class="wordmark-fake">Treehouse <span class="ampersand">&amp;</span> Finds</div>
+            <p class="lede">Enter your email to continue on Treehouse Finds.</p>
+          </div>
+
+          <div class="field-card">
+            <div class="field-label">Email</div>
+            <input type="email" class="field-input placeholder" value="you@example.com" readonly>
+            <div class="field-helper">We'll email you a sign-in link — no password needed.</div>
+            <div class="cta-filled">Continue</div>
+          </div>
+
+          <div class="vendor-footer">
+            <span class="vf-q">Do you have a booth?</span>
+            <a class="vf-a" href="#">Request a digital booth on Treehouse Finds →</a>
+          </div>
+        </div>
+        <div class="help-footer">
+          <span class="help-glyph">?</span>
+          <span class="help-text">Need help? Contact us</span>
+        </div>
+      </div>
+      <div class="frame-note">
+        <span class="nb">Locked direction.</span> One email field; server detects who you are. Vendor signup is a quiet two-line italic
+        footer — discoverable for first-time vendors with intent, but not competing with the primary CTA. <em>"Request digital storefront"</em>
+        framing matches the existing approval-required mechanic.
+      </div>
+    </div>
+
+    <!-- ============ FRAME C — locked, David's copy ============ -->
+    <div class="frame">
+      <div class="frame-label">Frame C — /welcome (none-state landing)</div>
+      <div class="frame-route">/welcome (post-magic-link, no rows)</div>
+      <div class="phone">
+        <div class="phone-header">
+          <div class="back-btn">‹</div>
+        </div>
+        <div class="phone-body">
+          <div class="welcome-card">
+            <p class="welcome-eyebrow">Welcome</p>
+            <h2 class="welcome-h">Start your search</h2>
+            <p class="welcome-sub">Choose a path — you can switch anytime.</p>
+
+            <div class="welcome-options">
+              <div class="welcome-row">
+                <div class="wr-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M5 9v11h14V9"/></svg>
+                </div>
+                <div class="wr-text">
+                  <div class="wr-title">I have a booth</div>
+                  <div class="wr-sub">Share what's on your shelves.</div>
+                </div>
+                <div class="wr-chev">›</div>
+              </div>
+
+              <div class="welcome-row">
+                <div class="wr-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <div class="wr-text">
+                  <div class="wr-title">Just exploring</div>
+                  <div class="wr-sub">Save your finds and come back to them.</div>
+                </div>
+                <div class="wr-chev">›</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="help-footer">
+          <span class="help-glyph">?</span>
+          <span class="help-text">Need help? Contact us</span>
+        </div>
+      </div>
+      <div class="frame-note">
+        <span class="nb">First sign-in only.</span> Shown when an authed user has neither <code>vendors</code> nor <code>shoppers</code> row.
+        Subsequent sign-ins skip via <code>detectUserRole</code> since one of the two rows will exist.
+        <em>"I have a booth"</em> → <code>/vendor-request</code> (auth email pre-filled).
+        <em>"Just exploring"</em> → <code>/login/email/handle</code> → <code>/me</code> (creates <code>shoppers</code> row).
+      </div>
+    </div>
+
+  </div>
+
+  <div class="picks">
+    <h3>Implementation surface area</h3>
+    <ol>
+      <li><strong>1 file restructured:</strong> <code>app/login/page.tsx</code> — triage cards retire, email field replaces them, <code>pickDest</code> gains <code>none → /welcome</code> branch.</li>
+      <li><strong>1 new route:</strong> <code>app/welcome/page.tsx</code> — Frame C disambiguation card.</li>
+      <li><strong>1 small extension:</strong> <code>/vendor-request</code> form gains optional email pre-fill from authed user (saves a re-type for the most likely Frame-C tap).</li>
+      <li><strong>3 inbound callsites unchanged:</strong> Profile bubble, sync footer on <code>/flagged</code>, <code>/admin/login</code> redirect — all keep working since <code>/login</code> still routes by detection.</li>
+      <li><strong>1 alias preserved (D6):</strong> <code>/login/email</code> stays as a redirect to <code>/login</code> for ~30 days; existing magic-link emails in the wild remain valid until then.</li>
+      <li><strong>0 schema changes.</strong> Migration 020's <code>shoppers</code> + composite-PK + RLS all stay; this is a UI/routing refactor.</li>
+    </ol>
+  </div>
+
+</div>
+</body>
+</html>

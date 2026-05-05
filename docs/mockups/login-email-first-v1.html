@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Login Email-First V1 (Shape A)</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #e8ddc7;
+    --paper-cream:  #e8ddc7;
+    --postit:       #fbf3df;
+    --postit-soft:  #f7eed5;
+    --ink-primary:  #2a1a0a;
+    --ink-mid:      #4a3520;
+    --ink-muted:    #6b5538;
+    --ink-faint:    rgba(42, 26, 10, 0.28);
+    --ink-hairline: rgba(42, 26, 10, 0.18);
+    --green:        #1e4d2b;
+    --green-light:  rgba(30, 77, 43, 0.08);
+    --icon-bubble:  rgba(42, 26, 10, 0.06);
+
+    --lora: "Lora", Georgia, serif;
+    --sys:  -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1480px; margin: 0 auto; padding: 30px 20px 60px; }
+
+  h1.title {
+    font-family: var(--lora);
+    font-weight: 400;
+    color: #e8ddc7;
+    font-size: 30px;
+    margin: 0 0 8px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 14px;
+    margin: 0 auto 22px;
+    line-height: 1.6;
+    max-width: 920px;
+  }
+  .subtitle code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .decisions {
+    max-width: 1120px;
+    margin: 0 auto 30px;
+    padding: 22px 28px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--lora);
+    font-size: 19px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 0 0 12px;
+  }
+  .decisions h4 {
+    font-family: var(--lora);
+    font-size: 15px;
+    font-weight: 400;
+    color: #fff9e8;
+    margin: 16px 0 6px;
+  }
+  .decisions ul { margin: 6px 0 0; padding-left: 18px; }
+  .decisions li { margin-bottom: 6px; }
+  .decisions code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    background: rgba(232, 221, 199, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  .decisions strong { color: #fff9e8; }
+  .decisions table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12.5px; }
+  .decisions th, .decisions td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid rgba(232, 221, 199, 0.12);
+    vertical-align: top;
+  }
+  .decisions th {
+    color: #fff9e8;
+    font-weight: 500;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .frames {
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    max-width: 1480px;
+    margin: 0 auto;
+  }
+  .frame { display: flex; flex-direction: column; align-items: center; }
+  .frame-label {
+    font-family: var(--lora);
+    color: #fff9e8;
+    font-size: 17px;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+  .frame-route {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    color: rgba(232, 221, 199, 0.50);
+    margin-bottom: 12px;
+  }
+  .frame-note {
+    color: rgba(232, 221, 199, 0.55);
+    font-size: 11.5px;
+    margin: 10px auto 0;
+    max-width: 360px;
+    text-align: center;
+    line-height: 1.5;
+    font-style: italic;
+  }
+  .frame-note .picks {
+    display: block;
+    margin-top: 6px;
+    font-style: normal;
+    color: rgba(232, 221, 199, 0.78);
+    font-size: 11px;
+  }
+
+  .phone {
+    width: 390px;
+    background: var(--paper-cream);
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    position: relative;
+    height: 720px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .phone-header {
+    flex-shrink: 0;
+    padding: 18px 16px 14px;
+  }
+  .back-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--icon-bubble);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-primary);
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .phone-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 24px 8px;
+    min-height: 0;
+  }
+
+  .wordmark-wrap {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .wordmark-fake {
+    display: inline-block;
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 30px;
+    color: var(--ink-primary);
+    letter-spacing: -0.01em;
+    line-height: 1;
+    padding: 8px 0 6px;
+  }
+  .wordmark-fake .ampersand {
+    color: var(--green);
+    font-style: italic;
+  }
+  .lede {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink-muted);
+    line-height: 1.55;
+    margin: 6px auto 0;
+    max-width: 290px;
+    text-align: center;
+  }
+
+  .field-card {
+    background: var(--postit);
+    border-radius: 14px;
+    border: 1px solid var(--ink-hairline);
+    padding: 18px 16px 16px;
+    margin-bottom: 12px;
+  }
+  .field-label {
+    font-family: var(--lora);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink-primary);
+    margin: 0 0 8px;
+  }
+  .field-input {
+    display: block;
+    width: 100%;
+    background: #fff;
+    border: 1px solid var(--ink-hairline);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-family: var(--sys);
+    font-size: 16px;
+    color: var(--ink-primary);
+    margin-bottom: 12px;
+    -webkit-appearance: none;
+  }
+  .field-input.placeholder {
+    color: rgba(42, 26, 10, 0.40);
+  }
+  .field-helper {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-muted);
+    line-height: 1.45;
+    margin: -4px 0 12px;
+  }
+  .cta-filled {
+    width: 100%;
+    padding: 13px 14px;
+    background: var(--green);
+    color: #fff;
+    border-radius: 12px;
+    font-family: var(--sys);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(30, 77, 43, 0.20);
+    border: none;
+  }
+  .cta-outline {
+    width: 100%;
+    padding: 13px 14px;
+    background: transparent;
+    color: var(--ink-primary);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 12px;
+    font-family: var(--sys);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+  }
+
+  .vendor-card {
+    background: var(--postit);
+    border: 1px solid var(--ink-hairline);
+    border-radius: 14px;
+    padding: 16px;
+    margin-top: 14px;
+  }
+  .vendor-card .vc-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .vendor-card .vc-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--green-light);
+    color: var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .vendor-card .vc-text { flex: 1; min-width: 0; }
+  .vendor-card .vc-title {
+    font-family: var(--lora);
+    font-size: 15px;
+    color: var(--ink-primary);
+    line-height: 1.25;
+    margin-bottom: 2px;
+  }
+  .vendor-card .vc-sub {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-muted);
+    line-height: 1.45;
+  }
+  .vendor-card .vc-chevron {
+    color: var(--ink-faint);
+    font-size: 22px;
+    line-height: 1;
+    font-family: var(--lora);
+    flex-shrink: 0;
+  }
+
+  .footer-link {
+    display: block;
+    text-align: center;
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-primary);
+    padding: 10px 0;
+    margin-top: 6px;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--ink-faint);
+    text-underline-offset: 3px;
+  }
+  .help-footer {
+    flex-shrink: 0;
+    padding: 22px 0 26px;
+    text-align: center;
+    font-family: var(--lora);
+    font-size: 13px;
+    color: var(--ink-primary);
+  }
+  .help-footer .help-glyph {
+    display: inline-block;
+    margin-right: 6px;
+    color: var(--ink-muted);
+    vertical-align: middle;
+    font-size: 14px;
+  }
+  .help-footer .help-text {
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: var(--ink-faint);
+    text-underline-offset: 3px;
+  }
+
+  /* Frame C — none-state landing */
+  .welcome-card {
+    background: var(--postit);
+    border-radius: 14px;
+    border: 1px solid var(--ink-hairline);
+    padding: 22px 18px 18px;
+  }
+  .welcome-eyebrow {
+    font-family: var(--sys);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--green);
+    text-align: center;
+    margin: 0 0 6px;
+  }
+  .welcome-h {
+    font-family: var(--lora);
+    font-size: 22px;
+    color: var(--ink-primary);
+    margin: 0 0 8px;
+    text-align: center;
+    line-height: 1.25;
+  }
+  .welcome-sub {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-muted);
+    text-align: center;
+    line-height: 1.5;
+    margin: 0 auto 18px;
+    max-width: 280px;
+  }
+  .welcome-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .welcome-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.45);
+    border-radius: 10px;
+    border: 1px solid var(--ink-hairline);
+  }
+  .welcome-row .wr-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--green-light);
+    color: var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+  }
+  .welcome-row .wr-text { flex: 1; min-width: 0; }
+  .welcome-row .wr-title {
+    font-family: var(--lora);
+    font-size: 14px;
+    color: var(--ink-primary);
+    line-height: 1.25;
+  }
+  .welcome-row .wr-sub {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 11.5px;
+    color: var(--ink-muted);
+    line-height: 1.4;
+    margin-top: 1px;
+  }
+  .welcome-row .wr-chev {
+    color: var(--ink-faint);
+    font-size: 22px;
+    line-height: 1;
+    font-family: var(--lora);
+    flex-shrink: 0;
+  }
+
+  .picks {
+    margin-top: 28px;
+    max-width: 1120px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 22px 28px;
+    background: rgba(120, 200, 130, 0.06);
+    border: 1px solid rgba(120, 200, 130, 0.22);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.92);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .picks h3 {
+    font-family: var(--lora);
+    font-size: 18px;
+    font-weight: 400;
+    color: #d8f0d0;
+    margin: 0 0 10px;
+  }
+  .picks ol { margin: 0; padding-left: 22px; }
+  .picks li { margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <h1 class="title">Login email-first — V1</h1>
+  <p class="subtitle">
+    Shape A from session 115 product exploration. Email is the question; server detects who you are. Three frames span the
+    structural axes within Shape A — vendor-signup discoverability (Frame A vs B) + the new "none" landing state (Frame C).
+    Routing target: <code>/login</code> becomes the form; <code>/login/email</code> retires (or becomes a redirect alias).
+  </p>
+
+  <div class="decisions">
+    <h3>What this V1 is asking you to lock</h3>
+    <table>
+      <tr>
+        <th>Decision</th>
+        <th>Frame A picks</th>
+        <th>Frame B picks</th>
+      </tr>
+      <tr>
+        <td><strong>D1.</strong> Vendor-signup discoverability on <code>/login</code></td>
+        <td>Quiet footer link only</td>
+        <td>Visible peer card below email field</td>
+      </tr>
+      <tr>
+        <td><strong>D2.</strong> "None" state landing (authed but no <code>vendors</code> + no <code>shoppers</code> row)</td>
+        <td colspan="2" style="text-align: center;">Frame C — disambiguation card with three options. Same screen for both frames.</td>
+      </tr>
+      <tr>
+        <td><strong>D3.</strong> Apple/Google SSO inclusion</td>
+        <td colspan="2" style="text-align: center;">Deferred — magic-link only for V1. Flag if you want it explored.</td>
+      </tr>
+      <tr>
+        <td><strong>D4.</strong> Detection layer (post-magic-link)</td>
+        <td colspan="2" style="text-align: center;"><code>detectUserRole(user)</code> from <code>lib/auth.ts</code> — already canonical post-session-113.</td>
+      </tr>
+      <tr>
+        <td><strong>D5.</strong> <code>/vendor-request</code> direct access (no sign-in)</td>
+        <td colspan="2" style="text-align: center;">Preserved. Two paths converge on the booth-setup form regardless of entry.</td>
+      </tr>
+    </table>
+
+    <h4>Open follow-on questions (lock after frame pick)</h4>
+    <ul>
+      <li><strong>D6.</strong> Does <code>/login/email</code> route retire entirely, or stay as an alias for backwards-compatibility on existing magic-link emails in the wild? (Probably alias for safety — Supabase emails sent before the cutover would 404 otherwise.)</li>
+      <li><strong>D7.</strong> Lede copy under wordmark — current draft *"Manage your booth or sync your finds across devices."* still reads. Worth a copy pass once frame is picked.</li>
+      <li><strong>D8.</strong> CTA copy — *"Continue"* vs *"Send sign-in link"* vs *"Sign in"*. (Slack/Notion default to *"Continue"*; Vercel uses *"Send code"*.)</li>
+      <li><strong>D9.</strong> Field helper — *"We'll email you a sign-in link or 6-digit code"* below the input, or skip entirely?</li>
+      <li><strong>D10.</strong> Welcome-card copy on the "none" landing — *"What brings you here?"* (Frame C draft) vs *"Welcome to Treehouse Finds"* + below-question. Single-firing question per <code>feedback_minimalistic_magic_no_destination_for_one_input</code> — could even argue the welcome card is over-engineered if we just route fresh-auth to <code>/</code> with a sticky banner.</li>
+    </ul>
+  </div>
+
+  <div class="frames">
+
+    <!-- ============ FRAME A — Notion-pure email-first ============ -->
+    <div class="frame">
+      <div class="frame-label">Frame A — Notion-pure</div>
+      <div class="frame-route">/login (email-first, vendor as footer link)</div>
+      <div class="phone">
+        <div class="phone-header">
+          <div class="back-btn">‹</div>
+        </div>
+        <div class="phone-body">
+          <div class="wordmark-wrap">
+            <div class="wordmark-fake">Treehouse <span class="ampersand">&amp;</span> Finds</div>
+            <p class="lede">Sign in to your booth or sync your saved finds across devices.</p>
+          </div>
+
+          <div class="field-card">
+            <div class="field-label">Email</div>
+            <input type="email" class="field-input placeholder" value="you@example.com" readonly>
+            <div class="field-helper">We'll email you a sign-in link.</div>
+            <div class="cta-filled">Continue</div>
+          </div>
+
+          <a class="footer-link" href="#">Want to set up a booth? Sell on Treehouse Finds →</a>
+        </div>
+        <div class="help-footer">
+          <span class="help-glyph">?</span>
+          <span class="help-text">Need help? Contact us</span>
+        </div>
+      </div>
+      <div class="frame-note">
+        Returning users (vendor / shopper / admin) just type email and continue. Vendor signup is a quiet footer link
+        — discoverable without competing with the primary CTA.
+        <span class="picks">Picks: D1 = quiet footer link.</span>
+      </div>
+    </div>
+
+    <!-- ============ FRAME B — Email + visible vendor card ============ -->
+    <div class="frame">
+      <div class="frame-label">Frame B — Email + visible vendor card</div>
+      <div class="frame-route">/login (email-first, vendor as peer card)</div>
+      <div class="phone">
+        <div class="phone-header">
+          <div class="back-btn">‹</div>
+        </div>
+        <div class="phone-body">
+          <div class="wordmark-wrap">
+            <div class="wordmark-fake">Treehouse <span class="ampersand">&amp;</span> Finds</div>
+            <p class="lede">Sign in to your booth or sync your saved finds across devices.</p>
+          </div>
+
+          <div class="field-card">
+            <div class="field-label">Email</div>
+            <input type="email" class="field-input placeholder" value="you@example.com" readonly>
+            <div class="cta-filled">Continue</div>
+          </div>
+
+          <div class="vendor-card">
+            <div class="vc-row">
+              <div class="vc-icon">
+                <!-- store glyph -->
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M5 9v11h14V9"/><path d="M9 14h6"/></svg>
+              </div>
+              <div class="vc-text">
+                <div class="vc-title">Sell on Treehouse Finds</div>
+                <div class="vc-sub">Set up your digital booth.</div>
+              </div>
+              <div class="vc-chevron">›</div>
+            </div>
+          </div>
+        </div>
+        <div class="help-footer">
+          <span class="help-glyph">?</span>
+          <span class="help-text">Need help? Contact us</span>
+        </div>
+      </div>
+      <div class="frame-note">
+        Same email-first model, but vendor signup is a visible peer card. First-time vendors with intent get a one-tap path
+        to <code>/vendor-request</code> without verifying email first.
+        <span class="picks">Picks: D1 = peer card.</span>
+      </div>
+    </div>
+
+    <!-- ============ FRAME C — None-state welcome ============ -->
+    <div class="frame">
+      <div class="frame-label">Frame C — "None" state landing</div>
+      <div class="frame-route">/me (post-magic-link, no rows yet)</div>
+      <div class="phone">
+        <div class="phone-header">
+          <div class="back-btn">‹</div>
+        </div>
+        <div class="phone-body">
+          <div class="welcome-card">
+            <p class="welcome-eyebrow">Welcome</p>
+            <h2 class="welcome-h">What brings you here?</h2>
+            <p class="welcome-sub">Pick the path that fits — you can always switch later.</p>
+
+            <div class="welcome-options">
+              <div class="welcome-row">
+                <div class="wr-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M5 9v11h14V9"/></svg>
+                </div>
+                <div class="wr-text">
+                  <div class="wr-title">I run a booth</div>
+                  <div class="wr-sub">Set up your digital booth.</div>
+                </div>
+                <div class="wr-chev">›</div>
+              </div>
+
+              <div class="welcome-row">
+                <div class="wr-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <div class="wr-text">
+                  <div class="wr-title">I'm here to shop</div>
+                  <div class="wr-sub">Save finds across devices.</div>
+                </div>
+                <div class="wr-chev">›</div>
+              </div>
+
+              <div class="welcome-row">
+                <div class="wr-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/><path d="M3 6h18"/><path d="M3 18h18"/></svg>
+                </div>
+                <div class="wr-text">
+                  <div class="wr-title">Just exploring</div>
+                  <div class="wr-sub">Browse the feed — decide later.</div>
+                </div>
+                <div class="wr-chev">›</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="help-footer">
+          <span class="help-glyph">?</span>
+          <span class="help-text">Need help? Contact us</span>
+        </div>
+      </div>
+      <div class="frame-note">
+        Shown only when an authed user has neither a <code>vendors</code> nor <code>shoppers</code> row. Routes:
+        <em>"I run a booth"</em> → <code>/vendor-request</code> (auth email pre-filled),
+        <em>"I'm here to shop"</em> → silent shopper-row create + <code>/me</code>,
+        <em>"Just exploring"</em> → <code>/</code> (no row created; lazy-claim continues).
+        <span class="picks">Routing implication: D9 in <code>detectUserRole</code> matrix becomes <code>"none" → "/welcome"</code>.</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="picks">
+    <h3>What ships if you pick Frame A + Frame C</h3>
+    <ol>
+      <li><strong>1 file changes structurally:</strong> <code>app/login/page.tsx</code> — triage cards retire, email field replaces them.</li>
+      <li><strong>1 new route:</strong> <code>app/welcome/page.tsx</code> — Frame C disambiguation. Or co-locate in <code>/login/welcome</code>.</li>
+      <li><strong><code>pickDest</code> matrix gains one branch:</strong> <code>none → /welcome</code> (replaces today's "/my-shelf fall-through").</li>
+      <li><strong>3 inbound callsites still route through <code>/login</code></strong> — Profile bubble, sync footer, /admin/login redirect — and all keep working since /login still routes by detection.</li>
+      <li><strong><code>/vendor-request</code> form gains optional email pre-fill</strong> — when arriving via Frame C "I run a booth" path, the user is already authed; their email skips the field. Saves a re-type for the most likely Frame-C tap.</li>
+      <li><strong>Migration safety:</strong> existing magic-link emails in the wild keep working if <code>/login/email</code> stays as a redirect alias to <code>/login</code> for ~30 days, then retires.</li>
+    </ol>
+  </div>
+
+</div>
+</body>
+</html>
