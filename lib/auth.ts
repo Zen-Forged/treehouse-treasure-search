@@ -114,6 +114,42 @@ export function isAdmin(user: User | null): boolean {
   return user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 }
 
+// ── Role detection ───────────────────────────────────────────────────────────
+
+export type UserRole = "admin" | "vendor" | "shopper" | "none";
+
+/**
+ * Resolve the user's primary role for post-sign-in routing decisions.
+ *
+ * Precedence: admin → vendor → shopper → none. Admin precedence wins because
+ * admins manage the platform regardless of their own booth/account state.
+ * Vendor precedence over shopper because vendors who also shop expect to
+ * land on /my-shelf after sign-in (existing muscle memory); the shopper
+ * destination /me is reachable via the masthead bubble afterward.
+ *
+ * Returns "none" if both DB queries fail (or user is null) so the caller's
+ * fall-through path can preserve existing first-time-signup behavior
+ * (typically /my-shelf) rather than leaving the user on the form.
+ *
+ * Single round trip: vendors + shoppers queried in parallel. Both are
+ * indexed on user_id (UNIQUE on shoppers, UNIQUE on vendors) so each is a
+ * single-row fetch. RLS allows authed user to read their own row in both
+ * tables; the migration-020 partial-paste fix shipped session 113 sealed
+ * shoppers' SELECT policy.
+ */
+export async function detectUserRole(user: User | null): Promise<UserRole> {
+  if (!user) return "none";
+  if (isAdmin(user)) return "admin";
+
+  const [vendorRes, shopperRes] = await Promise.all([
+    supabase.from("vendors") .select("id").eq("user_id", user.id).maybeSingle(),
+    supabase.from("shoppers").select("id").eq("user_id", user.id).maybeSingle(),
+  ]);
+  if (vendorRes.data)  return "vendor";
+  if (shopperRes.data) return "shopper";
+  return "none";
+}
+
 // ── Sync helpers (for owner detection without async) ─────────────────────────
 
 /**

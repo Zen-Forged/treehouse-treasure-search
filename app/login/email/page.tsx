@@ -37,7 +37,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, ArrowLeft, Loader, Clipboard, CircleUser, Store, KeyRound } from "lucide-react";
-import { sendMagicLink, getSession, signOut, onAuthChange, isAdmin } from "@/lib/auth";
+import { sendMagicLink, getSession, signOut, onAuthChange, isAdmin, detectUserRole } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import FormField, { formInputStyle } from "@/components/FormField";
@@ -81,27 +81,39 @@ function LoginEmailInner() {
   const [canPaste,      setCanPaste]      = useState(false);
   const codeInputRef                     = useRef<HTMLInputElement>(null);
 
-  function pickDest(user: User | null): string {
+  // Async — queries shoppers + vendors via detectUserRole() so a shopper
+  // signing in via "I already have an account" doesn't fall through to
+  // /my-shelf (which renders "No booth assigned"). Surfaced by R1 Arc 5
+  // QA walk: shopper email + same auth row → previously /my-shelf, now /.
+  async function pickDest(user: User | null): Promise<string> {
     const explicit = searchParams.get("redirect") ?? searchParams.get("next");
     if (explicit) return safeRedirect(explicit);
     // R1 — shopper claim flow. After in-app OTP code success, route to
     // the handle picker instead of /my-shelf when role=shopper. The
     // handle page idempotently bounces returning shoppers to /me.
     if (searchParams.get("role") === "shopper") return "/login/email/handle";
-    return user && isAdmin(user) ? "/" : "/my-shelf";
+
+    const role = await detectUserRole(user);
+    if (role === "admin")   return "/";
+    if (role === "vendor")  return "/my-shelf";
+    if (role === "shopper") return "/";
+    // First-time vendor signup: no rows yet, treat as vendor flow per
+    // existing fall-through. A first-time shopper would have role=shopper
+    // set on the URL and be caught above.
+    return "/my-shelf";
   }
 
   useEffect(() => {
     const explicitRedirect = searchParams.get("redirect") ?? searchParams.get("next");
-    getSession().then(s => {
+    getSession().then(async s => {
       if (!s?.user) return;
-      if (explicitRedirect) router.replace(pickDest(s.user));
+      if (explicitRedirect) router.replace(await pickDest(s.user));
       else setAuthedUser(s.user);
     });
 
-    const unsub = onAuthChange(user => {
+    const unsub = onAuthChange(async user => {
       if (user) {
-        if (explicitRedirect) router.replace(pickDest(user));
+        if (explicitRedirect) router.replace(await pickDest(user));
         else setAuthedUser(user);
       } else {
         setAuthedUser(null);
@@ -113,7 +125,7 @@ function LoginEmailInner() {
       bc = new BroadcastChannel(AUTH_CHANNEL);
       bc.onmessage = (e) => {
         if (e.data?.type === "signed_in") {
-          getSession().then(s => { if (s?.user) router.replace(pickDest(s.user)); });
+          getSession().then(async s => { if (s?.user) router.replace(await pickDest(s.user)); });
         }
       };
     } catch {}
@@ -221,7 +233,7 @@ function LoginEmailInner() {
       bc.postMessage({ type: "signed_in" });
       bc.close();
     } catch {}
-    router.replace(pickDest(verifyData?.user ?? null));
+    router.replace(await pickDest(verifyData?.user ?? null));
   }
 
   async function handleSignOut() {

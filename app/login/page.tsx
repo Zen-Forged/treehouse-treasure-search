@@ -46,7 +46,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Loader, CircleUser, Store, HelpCircle, Bookmark } from "lucide-react";
-import { getSession, onAuthChange, isAdmin } from "@/lib/auth";
+import { getSession, onAuthChange, isAdmin, detectUserRole } from "@/lib/auth";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import type { User } from "@supabase/supabase-js";
 import type { ReadonlyURLSearchParams } from "next/navigation";
@@ -62,14 +62,23 @@ function safeRedirect(next: string | null, fallback = "/my-shelf"): string {
   return next;
 }
 
-function pickDest(user: User | null, searchParams: ReadonlyURLSearchParams): string {
+// Async — see app/login/email/page.tsx pickDest for the full reasoning;
+// this triage-side variant mirrors the form-side variant so post-magic-link
+// routing through /login?confirmed=1 + post-sign-in BroadcastChannel
+// callbacks land on the right surface for shoppers.
+async function pickDest(user: User | null, searchParams: ReadonlyURLSearchParams): Promise<string> {
   const explicit = searchParams.get("redirect") ?? searchParams.get("next");
   if (explicit) return safeRedirect(explicit);
   // R1 — shopper claim flow. The magic-link round-trip carries the
   // /login/email/handle target via `next`; this `role` branch covers the
   // edge case where /login is reached directly with role=shopper.
   if (searchParams.get("role") === "shopper") return "/login/email/handle";
-  return user && isAdmin(user) ? "/" : "/my-shelf";
+
+  const role = await detectUserRole(user);
+  if (role === "admin")   return "/";
+  if (role === "vendor")  return "/my-shelf";
+  if (role === "shopper") return "/";
+  return "/my-shelf";
 }
 
 function LoginTriageInner() {
@@ -105,7 +114,7 @@ function LoginTriageInner() {
             bc.postMessage({ type: "signed_in", userId: session.user.id });
             bc.close();
           } catch {}
-          router.replace(pickDest(session.user, searchParams));
+          router.replace(await pickDest(session.user, searchParams));
         } else if (attempts > 20) {
           clearInterval(interval);
           // Fall through to triage rather than throwing an error page —
@@ -145,7 +154,7 @@ function LoginTriageInner() {
       bc = new BroadcastChannel(AUTH_CHANNEL);
       bc.onmessage = (e) => {
         if (e.data?.type === "signed_in") {
-          getSession().then(s => { if (s?.user) router.replace(pickDest(s.user, searchParams)); });
+          getSession().then(async s => { if (s?.user) router.replace(await pickDest(s.user, searchParams)); });
         }
       };
     } catch {}
