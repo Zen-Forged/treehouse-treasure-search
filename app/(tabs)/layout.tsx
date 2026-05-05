@@ -40,29 +40,58 @@ import BottomNav from "@/components/BottomNav";
 import MastheadProfileButton from "@/components/MastheadProfileButton";
 import MastheadShareButton from "@/components/MastheadShareButton";
 import { useSavedMallId } from "@/lib/useSavedMallId";
-import { getActiveMalls } from "@/lib/posts";
-import { loadBookmarkCount } from "@/lib/utils";
+import { getActiveMalls, getPostsByIds } from "@/lib/posts";
+import { loadFollowedIds } from "@/lib/utils";
 import { track } from "@/lib/clientEvents";
 import { v1 } from "@/lib/tokens";
-import type { Mall } from "@/types/treehouse";
+import type { Mall, Post } from "@/types/treehouse";
 
 export default function TabsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router   = useRouter();
   const [mallId, setMallId] = useSavedMallId();
   const [malls, setMalls]   = useState<Mall[]>([]);
-  const [bookmarkCount, setBookmarkCount] = useState(0);
+  // Bookmarked posts (with mall_id) drive the BottomNav Saved badge.
+  // Need full posts (not just IDs) so the badge can filter by mall when
+  // a scope is set — David's session-110 iPhone QA: "The notification
+  // badge should match the filtered saves by location."
+  const [bookmarkedPosts, setBookmarkedPosts] = useState<Post[]>([]);
 
   useEffect(() => {
     getActiveMalls().then(setMalls);
-    setBookmarkCount(loadBookmarkCount());
 
-    // Refresh bookmark count when the user returns from a detail page (the
-    // detail page may have unsaved a find).
-    const onFocus = () => setBookmarkCount(loadBookmarkCount());
+    const refreshBookmarks = async () => {
+      const ids = Array.from(loadFollowedIds());
+      if (ids.length === 0) {
+        setBookmarkedPosts([]);
+        return;
+      }
+      const posts = await getPostsByIds(ids);
+      setBookmarkedPosts(posts);
+    };
+    refreshBookmarks();
+
+    // Refresh on return from a detail page (unsaved finds need the badge
+    // to drop). Same pattern as /flagged page's own focus handler.
+    const onFocus = () => { refreshBookmarks(); };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, []);
+
+  // Scope-filtered badge count. When a mall is selected, badge counts
+  // only finds saved at that mall. All-Kentucky scope counts everything.
+  // Recomputes reactively when mallId changes (no fetch needed — posts
+  // are already loaded).
+  const bookmarkCount = mallId
+    ? bookmarkedPosts.filter((p) => p.mall_id === mallId).length
+    : bookmarkedPosts.length;
+
+  // totalBookmarkCount drives the postcard-card-hide-on-empty condition
+  // below. Distinct from scope-filtered bookmarkCount: a user with saves
+  // at other malls but ZERO at the current scope should still see the
+  // card (so they can tap to change scope), but a user with NO saves
+  // anywhere shouldn't see the card on /flagged at all.
+  const totalBookmarkCount = bookmarkedPosts.length;
 
   // Session 109 — receive shared mall scope from URL.
   // When a recipient taps a shared link with `?mall=<slug>`, intake the
@@ -143,7 +172,7 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
   // pre-layout behavior at app/flagged/page.tsx — no card on the empty
   // state). The empty-state EmptyState primitive owns the page when
   // bookmarks are zero.
-  const showPostcardCard = !(pathname === "/flagged" && bookmarkCount === 0);
+  const showPostcardCard = !(pathname === "/flagged" && totalBookmarkCount === 0);
 
   return (
     <div
