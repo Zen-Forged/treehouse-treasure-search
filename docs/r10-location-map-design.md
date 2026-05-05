@@ -1,6 +1,6 @@
 # R10 — Location map nav + persistent postcard mall card — Design record
 
-> **Status:** ✅ **Shipped** as of session 108 (2026-05-05). Map integration end-to-end on production PWA. Session 109 added a chrome-refinement pass (shared layout + wordmark size dial + profile to masthead-left + share button + URL state). Session 110 added a nav-refinement pass (Map dropped from BottomNav; /map becomes interaction surface; contextual pill replaces card-opens-MallSheet). Design-record reversals across two post-ship refinement passes: D1 (twice — 107 lock → 109 → 110), D6, D19 (twice — 107 partial → 110 full), D26 (extended). See [Implementation status (session 108)](#implementation-status-session-108), [Session 109 chrome refinement](#session-109-chrome-refinement), and [Session 110 nav refinement](#session-110-nav-refinement) below.
+> **Status:** ✅ **Shipped** as of session 108 (2026-05-05). Map integration end-to-end on production PWA. Session 109 added a chrome-refinement pass (shared layout + wordmark size dial + profile to masthead-left + share button + URL state). Session 110 added a nav-refinement pass (Map dropped from BottomNav; /map becomes interaction surface; contextual pill replaces card-opens-MallSheet) + a 4-issue iPhone-QA bug-fix bundle (cross-instance state sync + D13 reversal + address dedup + profile button geometry drift). Design-record reversals across two post-ship refinement passes: D1 (twice — 107 lock → 109 → 110), D6, D13, D19 (twice — 107 partial → 110 full), D26 (extended). See [Implementation status (session 108)](#implementation-status-session-108), [Session 109 chrome refinement](#session-109-chrome-refinement), and [Session 110 nav refinement](#session-110-nav-refinement) below.
 > **Status history:** 🟡 Captured (55) → 🟢 Ready (106) → ✅ Shipped (108) → chrome refinement (109) → nav refinement (110).
 > **Roadmap entry:** [`docs/roadmap-beta-plus.md`](roadmap-beta-plus.md#r10--location-map-nav-icon-) — R10.
 > **Mockups:**
@@ -65,7 +65,7 @@ It does **not** ship:
 | D10 | Mall name typography | **Lora 22 / 500 / inkPrimary / line-height 1.3** with `WebkitLineClamp: 2`. Up to 2 lines for long names. *Session 107 iPhone-QA dial: 26 → 22 + lineHeight 1.15 → 1.3 to stop Lora descender clipping under `-webkit-box` clamp. Generalizes the session-83 `feedback_lora_lineheight_minimum_for_clamp` rule beyond ≤14px text — applies to any clamped Lora.* | V4 + session-107 dial. |
 | D11 | Address row | **Lucide MapPin 12 (inkMid) + system-sans 12 (inkMid).** Single line, ellipsis. Composes from `address + city + state + zip_code`. *Session 107 iPhone-QA dial: 13 → 12 to land paired with the name dial; reads visually weighted under the bigger Lora.* | V4 + session-107 dial. |
 | D12 | Stamp shape — full-height rectangle or square? | **Square 52×52, vertically centered.** V3 went full-height; David: *"the stamp to remain square."* Smaller footprint, more recognizable as a postage stamp. | David, session 106 V3 → V4 redirect. |
-| D13 | Stamp glyph — fixed leaf or page-contextual? | **Page-contextual.** Each tab renders its BottomNav-active glyph in the stamp: Home = Lucide Home; Map = Lucide MapPin; Profile = Lucide CircleUser; Saved = brand leaf. Same Lucide shapes / 2.0 stroke as the BottomNav so the stamp glyph and active tab glyph match. | David, session 106: *"the inside of the stamp would change based on the page and carry the same icon styles as the nav bar."* |
+| D13 | Stamp glyph — fixed leaf or page-contextual? | ~~**Page-contextual.** Each tab renders its BottomNav-active glyph in the stamp: Home = Lucide Home; Map = Lucide MapPin; Profile = Lucide CircleUser; Saved = brand leaf. Same Lucide shapes / 2.0 stroke as the BottomNav so the stamp glyph and active tab glyph match.~~ **REVERSED session 110** → always Lucide MapPin across every surface. Reasoning: D13 mirrored the active BottomNav tab; with Profile retired from nav (session 109) and Map retired from nav (session 110), the mirroring rule no longer maps cleanly. The card's primary role is now navigation TO /map (from Home/Saved); the map pin glyph reads as "tap here to change/view location" universally. Per David: *"The stamp icon should always show the Map Pin icon now, since it's no longer specific to the page and acts as the navigation."* | David, session 106 + David's session-110 iPhone refinement. |
 | D14 | Stamp rim — perforated edge, dashed border, or plain? | **1.5px dashed greenBorder rim.** Renders identically across browsers. Reads as "stamp perforation" without per-pixel pseudo-element hacks. V2's radial-gradient perforation retired. | V3 → V4. |
 | D15 | Stamp inner | **Solid green fill, 2px radius, glyph centered, glyph color `greenOn`.** | V2 → V4. |
 | D16 | Cancellation marks — present at all? | **Yes, kept.** Reads as postal cancellation, reinforces the postcard vocabulary. | David, session 106: *"I like the stamp and cancellation mark concept."* |
@@ -454,10 +454,19 @@ David's session-110 ask reframed /map from a primary destination into an interac
 
 ### Session 110 cumulative reversal count
 
-R10's design record now carries **seven reversal events** across three refinement passes (with D1 reversed twice + D19 reversed twice — the partial reversal in 107 and the full reversal in 110 each count):
+R10's design record now carries **eight reversal events** across three refinement passes (D1 reversed twice + D19 reversed twice each count):
 
 - **Session 107:** D19 partial, D20, D27.
 - **Session 109:** D1, D6.
-- **Session 110:** D1 (second reversal), D19 (full reversal), D26 (extension).
+- **Session 110:** D1 (second reversal), D13, D19 (full reversal), D26 (extension).
 
 The reversal pattern memory continues to fire constructively — each surfaced explicitly with David's verbatim quotes before the code change. The fact that R10's locked record has now been refined twice post-ship (sessions 109 and 110) is itself a validation of the design discipline: the reversal-surface rule turned what could have been silent regressions into traceable evolution.
+
+### Session 110 iPhone QA bug-fix bundle (D13 reversal + 3 bug fixes)
+
+David's session-110 walk surfaced four issues — one missed design-record reversal (D13) plus three structural bugs from the chrome refactor. Captured here because each fix has implications for future sessions:
+
+1. **`useSavedMallId` cross-instance sync.** Layout's hook instance went stale when /map called `setMallId` then `router.push('/')` — the layout doesn't remount on (tabs) navigation per session 109, so its `useState` never re-read localStorage. Fix: hook now broadcasts a `treehouse:saved_mall_change` custom window event on update; all live instances listen + re-sync. The D9 "mount-time read only" assumption from `docs/mall-filter-persistence-design.md` is invalidated by the shared layout — comment block in `lib/useSavedMallId.ts` documents the new shape. Also added a `storage` event listener for cross-tab sync (multiple PWA windows).
+2. **D13 reversal — always map pin.** See D13 row above.
+3. **PostcardMallCard address duplication.** Seed pipeline (`supabase/seeds/001_mall_locations.sql` + `scripts/add-mall.ts`) stores the FULL address — street + city + state + zip — in `mall.address`. Card was composing `address, city, state, zip` and getting "6541 KY-22, Crestwood, KY 40014, Crestwood, KY, 40014" which ellipsis-clipped. Fix: subtitle uses `mall.address` directly.
+4. **MastheadProfileButton geometry drift.** Earlier draft used inline `rgba(42,26,10,0.06)` literal vs back button's `v1.iconBubble` token, plus `strokeWidth: 1.8` vs back button's `1.6`. Visual drift inside identical 44×44 bubbles. Fix: match `IconBubble` from `app/find/[id]/page.tsx` exactly (same token, same strokeWidth, transition added).
