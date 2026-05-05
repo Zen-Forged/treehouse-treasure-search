@@ -44,7 +44,7 @@ David reviews and can override any of these.
 
 | ID | Title | Category | Effort | Depends on | Status | Notes |
 |----|-------|----------|--------|-----------|--------|-------|
-| R1 | Guest/shopper profiles | User/Auth | M–L | — (but compounds with R3, R9) | 🟢 Ready (session 111) | **Lazy claim · Quiet identity · Saves only at MVP.** 3rd `/login` triage card + `/login/email/handle` pick + `/me` reflective page (avatar + handle + scout-since + private 3-stat row) + masthead bubble swap to v1.green initials when authed + silent localStorage→DB migration on first claim. Booth-following + scout history + notifications deferred to R1.5. Design record: [`docs/r1-shopper-accounts-design.md`](r1-shopper-accounts-design.md). Mockup: [`docs/mockups/r1-shopper-accounts-v1.html`](mockups/r1-shopper-accounts-v1.html). 17 decisions D1–D17 frozen. |
+| R1 | Guest/shopper profiles | User/Auth | M–L | — (but compounds with R3, R9) | ✅ Shipped session 114 | **Lazy claim · Quiet identity · Saves only at MVP.** Sessions 111 (design + Arcs 1–3) → 112 (Arc 4 hybrid hooks) → 113 (Arc 5 walk + RLS partial-paste fix + 3-commit fix bundle) → 114 (Arc 5 re-walk + BottomNav rightmost role-tab + Admin variant). 3rd `/login` triage card + `/login/email/handle` pick + `/me` reflective page (avatar + handle + scout-since + private 3-stat row) + masthead bubble swap to v1.green initials when authed + silent localStorage→DB migration on first claim. Booth-following + scout history + notifications deferred to R1.5. Design record: [`docs/r1-shopper-accounts-design.md`](r1-shopper-accounts-design.md). |
 | R2 | Stripe vendor subscriptions | Monetization | L | R5b (tier definition) | 🟡 Captured | Without tiers, Stripe is checkout-theater. Scope R2 + R5b together. |
 | R3 | Analytics event capture | Data | M | — | 🟢 Ready (session 58) | Foundational. Tunes R5a, R5b, future feed ranking. Instrument early for compounding data. Design record: [`docs/r3-analytics-design.md`](r3-analytics-design.md). Mockup: [`docs/mockups/r3-admin-analytics-v1.html`](mockups/r3-admin-analytics-v1.html). All six decisions D1–D6 frozen; implementation session can run as a straight sprint. |
 | R4a | Admin: delete booth | Admin tooling | S | — | ✅ Shipped session 45+74 | Functionally complete via `/shelves` admin chrome (Pencil + Trash bubbles, EditBoothSheet, DeleteBoothSheet). Single-pane-of-glass `/admin` Vendors tab captured separately as `Q-015` in `docs/queued-sessions.md`. |
@@ -127,9 +127,18 @@ Waves 1 + 2 + 3 together are realistically ~9–14 sessions (mix of S + M). That
 
 ## Detailed entries
 
-### R1 — Guest / shopper profiles 🟢
+### R1 — Guest / shopper profiles ✅ Shipped session 114
 
-**Status:** 🟡 Captured (55) → 🟢 **Ready** (session 111, 2026-05-06). Design + claim mechanic + schema locked across 1 reference scan + 1 mockup pick. Implementation arc follows in a later session (~sessions 112–114).
+**Status:** 🟡 Captured (55) → 🟢 **Ready** (session 111, 2026-05-06) → ✅ **Shipped session 114, 2026-05-05**. Design + Arcs 1–5 closed across 4 sessions (111 design + Arcs 1–3 / 112 Arc 4 hybrid hooks / 113 Arc 5 walk + RLS partial-paste fix + 3-commit fix bundle / 114 Arc 5 re-walk passed 5/5 with BottomNav rightmost role-tab + Admin variant on Step 5 redirect).
+
+**Shipped surface:**
+- Schema: migration 020 (shoppers + shopper_saves + shopper_booth_bookmarks with RLS, composite PKs, CHECK constraint on handle).
+- API: `/api/shopper-claim` POST (idempotent on user_id, 23505 → 409 HANDLE_TAKEN, pre-validates IDs to filter stale localStorage, caps 500 saves + 100 bookmarks).
+- Pages: `/me` (Frame B reflective destination), `/login/email/handle` (handle pick + idempotent re-entry), 3rd triage card on `/login` ("I'm shopping").
+- Hooks: `useShopperAuth`, `useShopperSaves`, `useShopperBoothBookmarks` (single source of truth for save/bookmark state across guest + authed paths; cross-instance sync via custom events; rebroadcast on rollback).
+- Auth chrome: masthead bubble swaps to v1.green initials when authed; sync footer on `/flagged` when guest with saves.
+- Routing primitive: `detectUserRole(user)` in `lib/auth.ts` (admin → / / vendor → /my-shelf / shopper → / / none → /my-shelf); 7 callsites await it across `/login` + `/login/email`.
+- Nav chrome: BottomNav 6th iteration of R10 D1 — Home → Saved → [Booth | Admin] role-conditional, Saved holds stable 2nd position for muscle memory across role transitions.
 
 **Design record:** [`docs/r1-shopper-accounts-design.md`](r1-shopper-accounts-design.md) — 17 frozen decisions (D1–D17).
 
