@@ -39,7 +39,8 @@ import {
   MOTION_STAGGER_MAX,
   MOTION_EMPTY_DURATION,
 } from "@/lib/tokens";
-import { loadBookmarkCount, loadBookmarkedBoothIds, boothBookmarkKey } from "@/lib/utils";
+import { useShopperSaves } from "@/lib/useShopperSaves";
+import { useShopperBoothBookmarks } from "@/lib/useShopperBoothBookmarks";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { track } from "@/lib/clientEvents";
 import AdminOnly from "@/components/AdminOnly";
@@ -364,8 +365,6 @@ export default function BoothsPage() {
   const [malls,          setMalls]          = useState<Mall[]>([]);
   const [loading,        setLoading]        = useState(true);
   const [user,           setUser]           = useState<User | null>(null);
-  const [bookmarkCount,  setBookmarkCount]  = useState(0);
-  const [bookmarkedIds,  setBookmarkedIds]  = useState<Set<string>>(new Set());
   const [filter,         setFilter]         = useState<"all" | "bookmarked">("all");
   const [deleteTarget,   setDeleteTarget]   = useState<Vendor | null>(null);
   const [editTarget,     setEditTarget]     = useState<Vendor | null>(null);
@@ -373,9 +372,15 @@ export default function BoothsPage() {
   const [savedMallId,    setSavedMallId]    = useSavedMallId();
   const [mallSheetOpen,  setMallSheetOpen]  = useState(false);
 
+  // R1 Arc 4 — both hooks own their own auth-change + cross-instance event
+  // listeners. Saves drives the BottomNav badge count; booth-bookmarks
+  // drives the per-vendor glyph + the "Bookmarked" filter chip.
+  const saves           = useShopperSaves();
+  const boothBookmarks  = useShopperBoothBookmarks();
+  const bookmarkCount   = saves.ids.size;
+  const bookmarkedIds   = boothBookmarks.ids;
+
   useEffect(() => {
-    setBookmarkCount(loadBookmarkCount());
-    setBookmarkedIds(loadBookmarkedBoothIds());
     Promise.all([getSession(), getAllVendors(), getAllMalls()]).then(([session, vendorList, mallList]) => {
       setUser(session?.user ?? null);
       setVendors(vendorList);
@@ -384,24 +389,13 @@ export default function BoothsPage() {
     });
   }, []);
 
-  // Toggle a booth bookmark in localStorage and the in-memory set.
   function handleToggleBookmark(vendorId: string) {
     const vendorSlug = vendors.find(v => v.id === vendorId)?.slug ?? null;
-    setBookmarkedIds(prev => {
-      const next = new Set(prev);
-      const wasBookmarked = next.has(vendorId);
-      if (wasBookmarked) {
-        next.delete(vendorId);
-        try { localStorage.removeItem(boothBookmarkKey(vendorId)); } catch {}
-      } else {
-        next.add(vendorId);
-        try { localStorage.setItem(boothBookmarkKey(vendorId), "1"); } catch {}
-      }
-      // R3 v1.1 — emit booth_bookmarked / booth_unbookmarked.
-      track(wasBookmarked ? "booth_unbookmarked" : "booth_bookmarked", {
-        vendor_slug: vendorSlug,
-      });
-      return next;
+    const next = !boothBookmarks.isBookmarked(vendorId);
+    boothBookmarks.toggle(vendorId, next);
+    // R3 v1.1 — emit booth_bookmarked / booth_unbookmarked.
+    track(next ? "booth_bookmarked" : "booth_unbookmarked", {
+      vendor_slug: vendorSlug,
     });
   }
 

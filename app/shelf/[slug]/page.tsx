@@ -48,7 +48,8 @@ import { ArrowLeft, Heart } from "lucide-react";
 import { getVendorBySlug, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { setPostCache } from "@/lib/findContext";
 import { getSession, isAdmin } from "@/lib/auth";
-import { loadBookmarkCount, loadBookmarkedBoothIds, boothBookmarkKey } from "@/lib/utils";
+import { useShopperSaves } from "@/lib/useShopperSaves";
+import { useShopperBoothBookmarks } from "@/lib/useShopperBoothBookmarks";
 import { track } from "@/lib/clientEvents";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
@@ -294,37 +295,23 @@ export default function PublicShelfPage() {
   const pendingScrollY = useRef<number | null>(null);
   const scrollRestored = useRef(false);
   const [view,           setView]           = useState<BoothView>("window");
-  const [bookmarkCount,  setBookmarkCount]  = useState(0);
-  const [boothBookmarked, setBoothBookmarked] = useState(false);
 
   // Session 45 — admin Window share state.
   const [user,           setUser]           = useState<User | null>(null);
   const [shareOpen,      setShareOpen]      = useState(false);
 
-
-  useEffect(() => { setBookmarkCount(loadBookmarkCount()); }, []);
-
-  // Session 67 — booth-bookmark state for the masthead glyph. Initialized
-  // after vendor loads; toggle persists to localStorage.
-  useEffect(() => {
-    if (!vendor) return;
-    setBoothBookmarked(loadBookmarkedBoothIds().has(vendor.id));
-  }, [vendor]);
+  // R1 Arc 4 — saves drives the BottomNav saved-finds badge; booth-bookmarks
+  // drives the masthead bookmark glyph. Both hooks own their auth + sync.
+  const saves           = useShopperSaves();
+  const boothBookmarks  = useShopperBoothBookmarks();
+  const bookmarkCount   = saves.ids.size;
+  const boothBookmarked = !!vendor && boothBookmarks.isBookmarked(vendor.id);
 
   function handleToggleBoothBookmark() {
     if (!vendor) return;
-    const key = boothBookmarkKey(vendor.id);
-    if (boothBookmarked) {
-      try { localStorage.removeItem(key); } catch {}
-      setBoothBookmarked(false);
-    } else {
-      try { localStorage.setItem(key, "1"); } catch {}
-      setBoothBookmarked(true);
-    }
-    // R3 v1.1 — emit booth_bookmarked / booth_unbookmarked. `boothBookmarked`
-    // here is the PRE-toggle value (state hasn't flushed yet) so the polarity
-    // is the reverse of the local-state branch above.
-    track(boothBookmarked ? "booth_unbookmarked" : "booth_bookmarked", {
+    const next = !boothBookmarked;
+    boothBookmarks.toggle(vendor.id, next);
+    track(next ? "booth_bookmarked" : "booth_unbookmarked", {
       vendor_slug: vendor.slug,
     });
   }
