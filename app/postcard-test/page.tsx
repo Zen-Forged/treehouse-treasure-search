@@ -54,6 +54,8 @@ const SAMPLE_PIN_MALL = {
   slug:           SAMPLE_MALL.slug,
   name:           SAMPLE_MALL.name,
   hero_image_url: null,
+  latitude:       null,
+  longitude:      null,
 };
 
 const SectionTitle = ({ children }: { children: React.ReactNode }) => (

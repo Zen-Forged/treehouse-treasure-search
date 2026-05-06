@@ -25,6 +25,8 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { PiLeaf } from "react-icons/pi";
 import { v1 } from "@/lib/tokens";
 import PinCallout from "@/components/PinCallout";
+import { milesFromUser } from "@/lib/distance";
+import { useUserLocation } from "@/lib/useUserLocation";
 import type { Mall } from "@/types/treehouse";
 
 import type { MallStats } from "@/lib/posts";
@@ -194,6 +196,11 @@ export default function TreehouseMap({
   const styleLoadedRef = React.useRef(false);
   const [error, setError] = React.useState<string | null>(null);
   const [peekAnchor, setPeekAnchor] = React.useState<{ x: number; y: number } | null>(null);
+  // R17 Arc 2 — silent first-mount geolocation prompt. Hook is idempotent
+  // across surfaces (D3 + D20). When granted, PinCallout's pill + Go CTA
+  // get hydrated; when not, the original whole-callout-as-button + chevron
+  // path stays in place (PinCallout's own coords-fallback branch).
+  const userLoc = useUserLocation();
 
   // Refs for handlers passed into long-lived DOM event listeners (marker
   // click + map click). Reading via ref avoids stale-closure bugs without
@@ -437,6 +444,11 @@ export default function TreehouseMap({
         const mall = malls.find((m) => m.id === peekedMallId);
         if (!mall) return null;
         const stats = mallStats?.[peekedMallId];
+        const miles = milesFromUser(
+          { lat: userLoc.lat, lng: userLoc.lng },
+          mall.latitude ?? null,
+          mall.longitude ?? null,
+        );
         return (
           <PinCallout
             mall={mall}
@@ -444,6 +456,7 @@ export default function TreehouseMap({
             findCount={stats?.findCount ?? 0}
             anchor={peekAnchor}
             onCommit={() => onCommit?.(peekedMallId)}
+            miles={miles}
           />
         );
       })()}
