@@ -38,6 +38,7 @@ import StickyMasthead from "@/components/StickyMasthead";
 import PostcardMallCard from "@/components/PostcardMallCard";
 import BottomNav from "@/components/BottomNav";
 import MastheadProfileButton from "@/components/MastheadProfileButton";
+import MastheadBackButton from "@/components/MastheadBackButton";
 import MastheadShareButton from "@/components/MastheadShareButton";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { useShopperAuth } from "@/lib/useShopperAuth";
@@ -195,18 +196,24 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
         flexDirection:  "column",
       }}
     >
-      {/* Profile-left mirrors the back-button geometry of detail pages.
-          Right slot:
-          - Home + Map + Saved → MastheadShareButton with scope-encoding URL
-            builder. The shared URL only encodes ?mall=<slug> (the mall
-            scope), never which finds the user has saved — the privacy
-            concern that gated /flagged session 109 ("saved finds are
-            private") is preserved by keeping the payload to mall scope only.
-            Saved was added session 116 in prep for guest user accounts
-            (R1, shipped session 114) so a signed-in shopper can share the
-            same location-scope link from their Saved view as from Home/Map. */}
+      {/* LEFT slot — Profile entry on Home, back button on every other tab.
+          Session 120 reversal: previously profile was on every tab (session
+          109 design). David's iPhone QA call: profile icon only stays on
+          Home; Saved/Map should show the back button so the user can
+          return to where they came from. Geometry matches across the two
+          components so the slot doesn't shift dimensions on tab switch.
+
+          RIGHT slot — Home + Map + Saved → MastheadShareButton with
+          scope-encoding URL builder. The shared URL only encodes
+          ?mall=<slug> (the mall scope), never which finds the user has
+          saved. Saved was added session 116 in prep for guest user
+          accounts (R1, shipped session 114). */}
       <StickyMasthead
-        left={<MastheadProfileButton authedInitials={shopperAuth.shopper?.initials} />}
+        left={
+          pathname === "/"
+            ? <MastheadProfileButton authedInitials={shopperAuth.shopper?.initials} />
+            : <MastheadBackButton fallback="/" />
+        }
         right={
           (pathname === "/" || pathname === "/map" || pathname === "/flagged") ? (
             <MastheadShareButton
