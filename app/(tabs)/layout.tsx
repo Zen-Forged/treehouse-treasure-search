@@ -190,15 +190,18 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
     >
       {/* Profile-left mirrors the back-button geometry of detail pages.
           Right slot:
-          - Home + Map → MastheadShareButton with scope-encoding URL builder
-            (per David's session-109 ask: "share the location with selected
-            mall filters applied")
-          - Saved     → null (saved finds are private; sharing them publicly
-            is semantically wrong) */}
+          - Home + Map + Saved → MastheadShareButton with scope-encoding URL
+            builder. The shared URL only encodes ?mall=<slug> (the mall
+            scope), never which finds the user has saved — the privacy
+            concern that gated /flagged session 109 ("saved finds are
+            private") is preserved by keeping the payload to mall scope only.
+            Saved was added session 116 in prep for guest user accounts
+            (R1, shipped session 114) so a signed-in shopper can share the
+            same location-scope link from their Saved view as from Home/Map. */}
       <StickyMasthead
         left={<MastheadProfileButton authedInitials={shopperAuth.shopper?.initials} />}
         right={
-          (pathname === "/" || pathname === "/map") ? (
+          (pathname === "/" || pathname === "/map" || pathname === "/flagged") ? (
             <MastheadShareButton
               urlBuilder={() => {
                 const slug = mallId
