@@ -170,11 +170,18 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
     ? undefined
     : () => router.push("/map");
 
+  // Session 120 — Home (`/`) renders its own <RichPostcardMallCard> inline
+  // (folds mall hero photo + SearchBar into the postcard). Suppress the slim
+  // mount here so the rich card is the only postcard on Home; the slim card
+  // continues to render unchanged on /map and /flagged.
+  //
   // /flagged hides the postcard card entirely until bookmarks load (matches
   // pre-layout behavior at app/flagged/page.tsx — no card on the empty
   // state). The empty-state EmptyState primitive owns the page when
   // bookmarks are zero.
-  const showPostcardCard = !(pathname === "/flagged" && totalBookmarkCount === 0);
+  const showPostcardCard =
+    pathname !== "/" &&
+    !(pathname === "/flagged" && totalBookmarkCount === 0);
 
   return (
     <div

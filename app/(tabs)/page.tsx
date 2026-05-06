@@ -63,7 +63,7 @@ import { track } from "@/lib/clientEvents";
 import FeaturedBanner from "@/components/FeaturedBanner";
 import PolaroidTile from "@/components/PolaroidTile";
 import EmptyState from "@/components/EmptyState";
-import SearchBar from "@/components/SearchBar";
+import RichPostcardMallCard from "@/components/RichPostcardMallCard";
 import { writeFindContext, setPostCache, type FindRef } from "@/lib/findContext";
 import type { Post, Mall } from "@/types/treehouse";
 
@@ -594,29 +594,28 @@ function DiscoveryFeedInner() {
 
   return (
     <>
-      {/* Mall hero photo banner — sits below the postcard card (in layout)
-          and reflects the SELECTED MALL's hero image (mall_id-scoped).
-          Distinct from the admin-set site-wide banner below. */}
-      <FeaturedBanner
-        variant="eyebrow"
-        imageUrl={selectedMall?.hero_image_url ?? null}
-      />
+      {/* Session 120 — <RichPostcardMallCard> folds the mall hero photo + the
+          R16 SearchBar pill INTO the postcard card. Replaces what used to be
+          two stacked primitives between the (suppressed-on-Home) slim
+          postcard and the masonry grid: a separate <FeaturedBanner
+          imageUrl={selectedMall.hero_image_url}> + a separate <SearchBar />.
+          See components/RichPostcardMallCard.tsx for full design intent.
 
-      {/* ── 1.75 SearchBar (R16) ─────────────────────────────────────────
-          Slotted BELOW the mall scope per session-105 iPhone QA reversal of
-          design record D2. Reasoning: the mall picker is the primary "where
-          am I shopping" choice; search is the secondary "what am I looking
-          for here" affordance. Subordinate visual position matches the
-          conceptual subordination. Search inherits whatever mall is picked
-          (single mall OR all-Kentucky scope) — no widen CTA on empty state
-          (D12 reversed same session).
+          Slim <PostcardMallCard> is hidden on / by app/(tabs)/layout.tsx so
+          this rich card is the only postcard on Home. The slim card stays on
+          Map + Saved unchanged.
 
-          Vertical rhythm: paddingTop 6 + MallScopeHeader paddingBottom 6 = 12,
-          paddingBottom 12 + masonry paddingTop 0 = 12. Both gaps match the
-          masonry's stacked-thumbnail gap (12px) so the SearchBar sits in the
-          same rhythm as the find grid below it. */}
-      <div style={{ padding: "6px 22px 12px" }}>
-        <SearchBar initialQuery={initialQ} onChange={handleSearchChange} />
+          Tap target inside the card routes to /map (scope-change surface).
+          SearchBar passthrough preserves R16 ?q= URL state + 200ms debounce
+          via the existing handleSearchChange callback. */}
+      <div style={{ padding: "12px 16px 0" }}>
+        <RichPostcardMallCard
+          mall={selectedMall ?? "all-kentucky"}
+          allKentuckySubtitle={`${malls.length} active locations · Kentucky`}
+          onTap={() => router.push("/map")}
+          searchInitialQuery={initialQ}
+          onSearchChange={handleSearchChange}
+        />
       </div>
 
       {/* ── 2. FeaturedBanner (eyebrow variant) — admin-editable. Only
