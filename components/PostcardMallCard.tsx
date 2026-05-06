@@ -259,7 +259,11 @@ export default function PostcardMallCard({
       {/* Cancellation ink — overlaps the stamp's left edge per D18. */}
       <CancellationInk />
 
-      {/* Square 52×52 stamp — vertically centered as a flex item (D12). */}
+      {/* Square 52×52 stamp — vertically centered as a flex item (D12).
+          Session 116 — interactive cards render a "SELECT LOCATION" eyebrow
+          above the stamp so users discover the tap affordance. Absolutely
+          positioned so the stamp's vertical placement (and the cancellation
+          overlap with its left edge per D18) doesn't shift. */}
       <div
         style={{
           width:         52,
@@ -275,6 +279,27 @@ export default function PostcardMallCard({
           position:      "relative",
         }}
       >
+        {interactive && (
+          <div
+            aria-hidden
+            style={{
+              position:       "absolute",
+              bottom:         "calc(100% + 4px)",
+              left:           "50%",
+              transform:      "translateX(-50%)",
+              fontFamily:     FONT_SYS,
+              fontSize:       9,
+              fontWeight:     700,
+              letterSpacing:  "0.12em",
+              textTransform:  "uppercase",
+              color:          v1.inkMuted,
+              whiteSpace:     "nowrap",
+              pointerEvents:  "none",
+            }}
+          >
+            Select location
+          </div>
+        )}
         <div
           style={{
             flex:           1,
