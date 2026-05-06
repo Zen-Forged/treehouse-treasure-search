@@ -287,11 +287,9 @@ export default function MallSheet({
                 const isActive = activeMallId === mall.id;
                 const count    = findCounts?.[mall.id];
                 const countLabel =
-                  typeof count === "number"
-                    ? count > 0
-                      ? `${count} ${count === 1 ? countUnit.singular : countUnit.plural}`
-                      : "—"
-                    : "—";
+                  typeof count === "number" && count > 0
+                    ? `${count} ${count === 1 ? countUnit.singular : countUnit.plural}`
+                    : null;
                 const cityState = [mall.city, mall.state]
                   .filter(Boolean)
                   .join(", ");
