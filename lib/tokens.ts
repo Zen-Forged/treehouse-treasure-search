@@ -253,12 +253,20 @@ export const fonts = {
   // macOS, and Windows. Project-wide rule: letters → FONT_LORA or FONT_SYS;
   // numbers → FONT_NUMERAL. See docs/booth-numeral-font-design.md.
   numeral: '"Times New Roman", Times, serif',
+  // Session 120 — Dancing Script. Hand-drawn cursive used sparingly + intentionally
+  // for personal-touch labels only. First consumer: <RichPostcardMallCard> "select
+  // location" stamp label. Loaded in app/layout.tsx via next/font/google. Do not
+  // let this font sprawl onto body copy / form labels / any high-density surface;
+  // it's expensive on legibility at small sizes and the script vocabulary loses
+  // meaning when overused.
+  script: 'var(--font-dancing-script), "Lora", cursive',
 } as const;
 
 // Convenience named exports.
 export const FONT_LORA    = fonts.lora;
 export const FONT_SYS     = fonts.sys;
 export const FONT_NUMERAL = fonts.numeral;
+export const FONT_SCRIPT  = fonts.script;
 
 // Motion tokens — session 76 Track E (animation consistency).
 // docs/animation-consistency-design.md. Use these on Booths VendorCard,

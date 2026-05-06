@@ -1,6 +1,6 @@
 // app/layout.tsx
 import type { Metadata, Viewport } from "next";
-import { Caveat, Lora } from "next/font/google";
+import { Dancing_Script, Lora } from "next/font/google";
 import * as Sentry from "@sentry/nextjs";
 import "./globals.css";
 import { FindSessionProvider } from "@/hooks/useSession";
@@ -26,10 +26,14 @@ const lora = Lora({
   display: "swap",
 });
 
-const caveat = Caveat({
+// Session 120 — Dancing Script for the rich PostcardMallCard "select
+// location" hand-drawn label. Used sparingly + intentionally for
+// personal-touch labels only — do not let this font sprawl across the app.
+// Replaced a vestigial Caveat preload that was never referenced anywhere.
+const dancingScript = Dancing_Script({
   weight: ["500"],
   subsets: ["latin"],
-  variable: "--font-caveat",
+  variable: "--font-dancing-script",
   display: "swap",
 });
 
@@ -62,7 +66,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${lora.variable} ${caveat.variable}`}>
+    <html lang="en" className={`${lora.variable} ${dancingScript.variable}`}>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
