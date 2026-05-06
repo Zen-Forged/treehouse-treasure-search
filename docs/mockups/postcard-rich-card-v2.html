@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Treehouse — Rich PostcardMallCard v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Dancing+Script:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper-cream:    #e8ddc7;
+    --paper-warm:     #faf2e0;
+    --postcard-bg:    #f4ecd8;
+    --postcard-border:rgba(42,26,10,0.10);
+    --ink-primary:    #2a1a0a;
+    --ink-mid:        #4a3520;
+    --ink-muted:      #6b5538;
+    --ink-hairline:   rgba(42, 26, 10, 0.14);
+    --green:          #1e4d2b;
+    --on-green:       #faf2e0;
+
+    --lora:    "Lora", Georgia, serif;
+    --script:  "Dancing Script", "Lora", cursive;
+    --sys:     -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #2a2520; font-family: var(--sys); color: var(--ink-primary); }
+  .page-wrap { max-width: 1400px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  h1.title {
+    font-family: var(--lora);
+    font-weight: 500;
+    color: #e8ddc7;
+    font-size: 28px;
+    margin: 0 0 6px;
+    text-align: center;
+    letter-spacing: -0.005em;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(232, 221, 199, 0.65);
+    font-size: 13px;
+    margin: 0 auto 26px;
+    line-height: 1.6;
+    max-width: 880px;
+  }
+
+  .decisions {
+    max-width: 1080px;
+    margin: 0 auto 36px;
+    padding: 18px 24px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.18);
+    border-radius: 10px;
+    color: rgba(232, 221, 199, 0.88);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .decisions h3 {
+    font-family: var(--lora);
+    font-size: 17px;
+    font-weight: 500;
+    color: #fff9e8;
+    margin: 0 0 10px;
+    letter-spacing: -0.005em;
+  }
+  .decisions h4 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(232, 221, 199, 0.6);
+    margin: 14px 0 6px;
+  }
+  .decisions ul, .decisions ol { margin: 6px 0 0; padding: 0 0 0 20px; }
+  .decisions li { margin-bottom: 4px; }
+  .decisions strong { color: #fff9e8; font-weight: 500; }
+  .decisions .delta {
+    margin-top: 14px;
+    padding: 10px 14px;
+    background: rgba(30, 77, 43, 0.18);
+    border: 1px solid rgba(30, 77, 43, 0.4);
+    border-radius: 8px;
+    font-size: 12px;
+    color: rgba(232, 221, 199, 0.92);
+    line-height: 1.6;
+  }
+  .decisions .delta strong { color: #c9e8c0; }
+  .decisions .q-block {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(232, 221, 199, 0.14);
+  }
+  .decisions .q-block ol li { margin-bottom: 12px; }
+
+  .frames {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 1180px) {
+    .frames { grid-template-columns: 1fr; gap: 36px; }
+  }
+
+  .frame { display: flex; flex-direction: column; align-items: center; }
+  .frame-label {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 18px;
+    color: #fff9e8;
+    margin-bottom: 4px;
+  }
+  .frame-tag {
+    font-family: var(--sys);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(232, 221, 199, 0.55);
+    margin-bottom: 14px;
+    text-align: center;
+  }
+
+  /* phone shell */
+  .phone {
+    width: 390px;
+    max-width: 100%;
+    background: var(--paper-cream);
+    border-radius: 28px;
+    padding: 12px 0 90px;
+    box-shadow: 0 18px 36px rgba(0,0,0,0.4);
+    overflow: hidden;
+    position: relative;
+  }
+  .status-bar {
+    height: 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 22px;
+    font-size: 11px;
+    color: var(--ink-primary);
+    margin-bottom: 6px;
+  }
+  .masthead {
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-bottom: 12px;
+  }
+  .masthead .profile, .masthead .share {
+    position: absolute;
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .masthead .profile { left: 14px; background: rgba(42,26,10,0.06); }
+  .masthead .share   { right: 14px; background: rgba(30,77,43,0.08); }
+  .masthead .profile svg { width: 20px; height: 20px; stroke: var(--ink-mid); fill: none; stroke-width: 1.8; }
+  .masthead .share svg { width: 18px; height: 18px; fill: var(--green); }
+  .wordmark {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 24px;
+    color: var(--ink-mid);
+    letter-spacing: -0.01em;
+  }
+  .wordmark .leaf { display: inline-block; transform: translateY(-10px); margin-right: 2px; opacity: 0.85; }
+  .wordmark small { font-family: var(--sys); font-style: normal; font-size: 11px; letter-spacing: 0.18em; text-transform: lowercase; display: block; text-align: center; color: var(--ink-muted); margin-top: -4px; }
+
+  /* THE RICH CARD — Frame A locked from V1 */
+  .card {
+    margin: 0 16px;
+    background: var(--postcard-bg);
+    border: 1px solid var(--postcard-border);
+    border-radius: 12px;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.10), 0 1.5px 3px rgba(0,0,0,0.06);
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse at 18% 25%, rgba(255,255,255,0.18) 0%, transparent 40%),
+      radial-gradient(ellipse at 82% 75%, rgba(42,26,10,0.05) 0%, transparent 50%);
+    border-radius: 12px;
+  }
+
+  .top-row {
+    display: flex; align-items: flex-start;
+    padding: 14px 14px 0;
+    position: relative;
+    z-index: 1;
+  }
+  .text-block { flex: 1; min-width: 0; padding-right: 8px; }
+  .eyebrow-text {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 17px;
+    color: var(--ink-muted);
+    line-height: 1;
+    margin: 0 0 6px;
+  }
+  .name {
+    font-family: var(--lora);
+    font-weight: 500;
+    font-size: 22px;
+    color: var(--ink-primary);
+    line-height: 1.25;
+    letter-spacing: -0.005em;
+    margin: 0 0 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-bottom: 2px;
+  }
+  .address-row {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--ink-mid);
+    font-family: var(--sys);
+    font-size: 12px;
+    line-height: 1.3;
+    min-width: 0;
+  }
+  .address-row svg { flex-shrink: 0; stroke: var(--ink-mid); fill: none; stroke-width: 2; }
+  .address-row span {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* HERO PHOTO — locked from V1.1 */
+  .photo {
+    position: relative;
+    height: 180px;
+    margin: 14px 14px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #6b8a4f 0%, #4a6a3a 35%, #2c4a26 100%);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .photo .sky {
+    position: absolute; left: 0; right: 0; top: 0; height: 30%;
+    background: linear-gradient(180deg, #b8d0e0 0%, #d8e5e8 60%, transparent 100%);
+  }
+  .photo .sign {
+    position: absolute; left: 8%; right: 8%; top: 38%;
+    height: 70px;
+    background: #1a1a1a;
+    border: 4px solid #f5e9c8;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    color: #f5e9c8;
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 19px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.35);
+  }
+  .photo .sign-sub {
+    position: absolute; left: 8%; right: 8%; top: calc(38% + 70px - 4px);
+    background: #1a1a1a;
+    color: #f5e9c8;
+    font-family: var(--sys);
+    font-size: 9px;
+    text-align: center;
+    padding: 3px 0 4px;
+    letter-spacing: 0.06em;
+    border: 4px solid #f5e9c8;
+    border-top: none;
+  }
+  .photo .stones {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 26%;
+    background:
+      radial-gradient(ellipse at 20% 50%, #8a7a5a 0%, transparent 14%),
+      radial-gradient(ellipse at 50% 60%, #9a8a6a 0%, transparent 16%),
+      radial-gradient(ellipse at 80% 50%, #7a6a4a 0%, transparent 14%),
+      linear-gradient(180deg, #6b5a40 0%, #5a4a35 100%);
+  }
+
+  /* SEARCH BAR PILL — locked from V1.1 */
+  .search-row { padding: 12px 14px 14px; position: relative; z-index: 1; }
+  .search-pill {
+    background: #fbf3df;
+    border: 1px solid var(--ink-hairline);
+    border-radius: 999px;
+    padding: 9px 16px;
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--sys);
+    font-size: 14px;
+    color: rgba(42, 26, 10, 0.45);
+  }
+  .search-pill svg { stroke: rgba(42, 26, 10, 0.55); fill: none; stroke-width: 2; flex-shrink: 0; }
+
+  /* STAMP AREA — V2 redesign of the script label + arrow.
+     The label, arrow, and stamp are now a tight cluster.
+     Label rotation varies per frame (alpha/beta/gamma column override).
+     Arrow flows: tail near "s" of "select" (upper-left) → arrowhead
+     pointing into the stamp (lower-right, just left of the stamp body). */
+  .stamp-area {
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    width: 124px;             /* wide enough for "select location" + arrow span */
+    padding-top: 4px;
+  }
+  .stamp-caveat {
+    font-family: var(--script);
+    font-weight: 500;
+    font-size: 18px;
+    color: var(--ink-muted);
+    line-height: 1.0;
+    transform-origin: right center;
+    /* per-frame rotation set on the .frame wrapper below */
+    margin: 0 6px 0 0;
+    white-space: nowrap;
+  }
+  .stamp-row {
+    display: flex; align-items: flex-start; justify-content: flex-end;
+    width: 100%;
+    position: relative;
+  }
+  .stamp-arrow {
+    position: absolute;
+    /* Tail nuzzles directly under the "s" of "select" so the script label
+       and the arrow read as one continuous hand-drawn mark. Arc bows DOWN
+       (curve dips below the line connecting tail and head); arrowhead
+       points right into the stamp's left edge. */
+    right: 54px;
+    top: -4px;
+    width: 76px;
+    height: 26px;
+    pointer-events: none;
+  }
+  .stamp-arrow svg {
+    width: 100%; height: 100%;
+    stroke: var(--ink-muted);
+    fill: none;
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .stamp {
+    width: 52px; height: 52px;
+    padding: 4px;
+    background: var(--paper-warm);
+    border: 1.5px dashed rgba(30,77,43,0.40);
+    border-radius: 4px;
+    display: flex;
+    position: relative;
+    margin-left: auto;
+  }
+  .stamp .inner {
+    flex: 1;
+    background: var(--green);
+    border-radius: 2px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--on-green);
+  }
+  .stamp .inner svg { width: 26px; height: 26px; stroke: var(--on-green); fill: none; stroke-width: 2; }
+
+  .cancellation {
+    position: absolute;
+    width: 64px; height: 30px;
+    pointer-events: none;
+    opacity: 0.10;
+    transform: rotate(-6deg);
+    left: -50px; top: 10px;
+  }
+  .cancellation svg { width: 100%; height: 100%; }
+  .cancellation path { fill: none; stroke: var(--ink-primary); stroke-width: 1.4; stroke-linecap: round; }
+
+  /* Per-frame label rotation overrides */
+  .frame-alpha .stamp-caveat { transform: rotate(-4deg); }
+  .frame-beta  .stamp-caveat { transform: rotate(-6deg); }
+  .frame-gamma .stamp-caveat { transform: rotate(-8deg); }
+
+  /* below-card body sketch */
+  .body-sketch {
+    margin: 16px 22px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .body-sketch .tile {
+    aspect-ratio: 3/4;
+    background: #fbf3df;
+    border-radius: 4px;
+    border: 1px solid var(--ink-hairline);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  }
+  .body-sketch .tile.tall { aspect-ratio: 3/5; }
+
+  /* zoomed close-up of stamp area for arrow detail */
+  .closeup-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+    margin-top: 36px;
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(232, 221, 199, 0.16);
+    border-radius: 10px;
+  }
+  .closeup-row .closeup {
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .closeup-row .closeup-label {
+    font-family: var(--lora);
+    font-style: italic;
+    font-size: 14px;
+    color: rgba(232, 221, 199, 0.85);
+    margin-bottom: 12px;
+  }
+  .closeup-row .closeup-zoom {
+    background: var(--postcard-bg);
+    padding: 18px 18px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--postcard-border);
+    transform: scale(2);
+    transform-origin: center;
+    margin: 32px 0;
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <h1 class="title">Rich PostcardMallCard — V2 (Frame A · Fill-Refinement)</h1>
+  <p class="subtitle">Frame A locked from V1. V2 refines the script-label rotation + the arrow shape so it reads as flowing from the "s" of "select" down to the stamp/pin. Three frames span only the rotation amount; arrow shape is the same across all three.</p>
+
+  <div class="decisions">
+    <h3>What V2 is asking you to judge</h3>
+    <p>Pick the rotation amount for the "select location" Dancing Script label. Arrow shape + position are the same across all three frames; only the label tilt varies.</p>
+
+    <h4>Locked from V1</h4>
+    <ul>
+      <li><strong>Frame A</strong> structure — photo banner above text+stamp row, search bar pill at bottom of card.</li>
+      <li><strong>Photo</strong> — inset 14px from card sides + bottom, 8px corner radius, ~180px tall.</li>
+      <li><strong>Mall name</strong> — Lora 22px (production: fluid 22→16 measure-and-shrink), single row.</li>
+      <li><strong>Address</strong> — full street + city + state + zip.</li>
+      <li><strong>Empty state</strong> — drop photo region, keep search bar inside card.</li>
+      <li><strong>Surface scope</strong> — Home only. Slim card stays in shared layout for Map+Saved.</li>
+      <li><strong>Script font</strong> — Dancing Script (new addition to font library, used sparingly).</li>
+    </ul>
+
+    <div class="delta">
+      <strong>V2 deltas from V1.1:</strong>
+      <ul style="margin-top: 4px;">
+        <li><strong>New arrow shape</strong> — shorter, with the <strong>arc at the bottom</strong> (curve bows down, not up). Tail starts under the middle of the label, sweeps down and back up to point right at the stamp. Reads as a casual hand-drawn mark, not a long swooping curve.</li>
+        <li><strong>Label rotation</strong> — three options: −4° (subtle), −6° (clearly tilted, my pick), −8° (more dramatic).</li>
+      </ul>
+    </div>
+
+    <div class="q-block">
+      <h4>Questions for V2 → ship</h4>
+      <ol>
+        <li><strong>Rotation pick</strong> — α (−4°), β (−6°), or γ (−8°)?</li>
+        <li><strong>Arrow shape</strong> — does the new sweep land? If it reads too long / too curvy / too straight, easy to dial in V2.1.</li>
+        <li><strong>Anything else to dial</strong> before I write production code? Photo height (180px), search-pill copy, eyebrow size (Lora 17px), padding values — all up for refinement now while it's still cheap.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="frames">
+
+    <!-- ═══════════════ FRAME α — −4° ═══════════════ -->
+    <div class="frame frame-alpha">
+      <div class="frame-label">Frame α</div>
+      <div class="frame-tag">Label rotation −4° (subtle)</div>
+
+      <div class="phone">
+        <div class="status-bar"><span>10:19</span><span>5G · 77</span></div>
+        <div class="masthead">
+          <div class="profile"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></div>
+          <div class="wordmark">tree<span class="leaf">🍃</span>house<small>finds</small></div>
+          <div class="share"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg></div>
+        </div>
+
+        <div class="card">
+          <div class="top-row">
+            <div class="text-block">
+              <div class="eyebrow-text">Discover finds from:</div>
+              <h2 class="name">Copper Awning Flea Market</h2>
+              <div class="address-row">
+                <svg width="13" height="13" viewBox="0 0 24 24"><path d="M12 2a8 8 0 0 0-8 8c0 5.5 8 12 8 12s8-6.5 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>2423 South Highway 53, Anywhere, KY 42345</span>
+              </div>
+            </div>
+            <div class="stamp-area">
+              <div class="stamp-caveat">select location</div>
+              <div class="stamp-row">
+                <div class="stamp-arrow">
+                  <svg viewBox="0 0 76 26">
+                    <!-- Tail at top-left (under "s" of select), arc bows
+                         DOWN through the middle, arrowhead points right
+                         at the stamp's left edge. -->
+                    <path d="M 4 4 Q 36 26, 68 14"/>
+                    <path d="M 68 14 L 62 17"/>
+                    <path d="M 68 14 L 63 10"/>
+                  </svg>
+                </div>
+                <div class="stamp">
+                  <div class="cancellation"><svg viewBox="0 0 64 30">
+                    <path d="M 2 4 Q 10 0 18 4 T 34 4 T 50 4 T 62 4"/>
+                    <path d="M 1 11 Q 9 7 17 11 T 33 11 T 49 11 T 63 11"/>
+                    <path d="M 2 18 Q 10 14 18 18 T 34 18 T 50 18 T 62 18"/>
+                    <path d="M 1 25 Q 9 21 17 25 T 33 25 T 49 25 T 63 25"/>
+                  </svg></div>
+                  <div class="inner"><svg viewBox="0 0 24 24"><path d="M12 2a8 8 0 0 0-8 8c0 5.5 8 12 8 12s8-6.5 8-12a8 8 0 0 0-8-8z" fill="none"/><circle cx="12" cy="10" r="3" fill="none"/></svg></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="photo">
+            <div class="sky"></div>
+            <div class="sign">Flea Market</div>
+            <div class="sign-sub">ANTIQUES · COLLECTIBLES · FURNITURE</div>
+            <div class="stones"></div>
+          </div>
+
+          <div class="search-row">
+            <div class="search-pill">
+              <svg width="16" height="16" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <span>Search to discover local finds</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="body-sketch">
+          <div class="tile tall"></div><div class="tile"></div>
+          <div class="tile"></div><div class="tile tall"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ FRAME β — −6° (Claude's pick) ═══════════════ -->
+    <div class="frame frame-beta">
+      <div class="frame-label">Frame β</div>
+      <div class="frame-tag">Label rotation −6° · Claude's pick</div>
+
+      <div class="phone">
+        <div class="status-bar"><span>10:19</span><span>5G · 77</span></div>
+        <div class="masthead">
+          <div class="profile"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></div>
+          <div class="wordmark">tree<span class="leaf">🍃</span>house<small>finds</small></div>
+          <div class="share"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg></div>
+        </div>
+
+        <div class="card">
+          <div class="top-row">
+            <div class="text-block">
+              <div class="eyebrow-text">Discover finds from:</div>
+              <h2 class="name">Copper Awning Flea Market</h2>
+              <div class="address-row">
+                <svg width="13" height="13" viewBox="0 0 24 24"><path d="M12 2a8 8 0 0 0-8 8c0 5.5 8 12 8 12s8-6.5 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>2423 South Highway 53, Anywhere, KY 42345</span>
+              </div>
+            </div>
+            <div class="stamp-area">
+              <div class="stamp-caveat">select location</div>
+              <div class="stamp-row">
+                <div class="stamp-arrow">
+                  <svg viewBox="0 0 70 30">
+                    <path d="M 4 6 Q 38 4 56 22"/>
+                    <path d="M 56 22 L 50 22"/>
+                    <path d="M 56 22 L 53 17"/>
+                  </svg>
+                </div>
+                <div class="stamp">
+                  <div class="cancellation"><svg viewBox="0 0 64 30">
+                    <path d="M 2 4 Q 10 0 18 4 T 34 4 T 50 4 T 62 4"/>
+                    <path d="M 1 11 Q 9 7 17 11 T 33 11 T 49 11 T 63 11"/>
+                    <path d="M 2 18 Q 10 14 18 18 T 34 18 T 50 18 T 62 18"/>
+                    <path d="M 1 25 Q 9 21 17 25 T 33 25 T 49 25 T 63 25"/>
+                  </svg></div>
+                  <div class="inner"><svg viewBox="0 0 24 24"><path d="M12 2a8 8 0 0 0-8 8c0 5.5 8 12 8 12s8-6.5 8-12a8 8 0 0 0-8-8z" fill="none"/><circle cx="12" cy="10" r="3" fill="none"/></svg></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="photo">
+            <div class="sky"></div>
+            <div class="sign">Flea Market</div>
+            <div class="sign-sub">ANTIQUES · COLLECTIBLES · FURNITURE</div>
+            <div class="stones"></div>
+          </div>
+
+          <div class="search-row">
+            <div class="search-pill">
+              <svg width="16" height="16" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <span>Search to discover local finds</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="body-sketch">
+          <div class="tile tall"></div><div class="tile"></div>
+          <div class="tile"></div><div class="tile tall"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ FRAME γ — −8° ═══════════════ -->
+    <div class="frame frame-gamma">
+      <div class="frame-label">Frame γ</div>
+      <div class="frame-tag">Label rotation −8° (more dramatic)</div>
+
+      <div class="phone">
+        <div class="status-bar"><span>10:19</span><span>5G · 77</span></div>
+        <div class="masthead">
+          <div class="profile"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></div>
+          <div class="wordmark">tree<span class="leaf">🍃</span>house<small>finds</small></div>
+          <div class="share"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg></div>
+        </div>
+
+        <div class="card">
+          <div class="top-row">
+            <div class="text-block">
+              <div class="eyebrow-text">Discover finds from:</div>
+              <h2 class="name">Copper Awning Flea Market</h2>
+              <div class="address-row">
+                <svg width="13" height="13" viewBox="0 0 24 24"><path d="M12 2a8 8 0 0 0-8 8c0 5.5 8 12 8 12s8-6.5 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>2423 South Highway 53, Anywhere, KY 42345</span>
+              </div>
+            </div>
+            <div class="stamp-area">
+              <div class="stamp-caveat">select location</div>
+              <div class="stamp-row">
+                <div class="stamp-arrow">
+                  <svg viewBox="0 0 70 30">
+                    <path d="M 4 6 Q 38 4 56 22"/>
+                    <path d="M 56 22 L 50 22"/>
+                    <path d="M 56 22 L 53 17"/>
+                  </svg>
+                </div>
+                <div class="stamp">
+                  <div class="cancellation"><svg viewBox="0 0 64 30">
+                    <path d="M 2 4 Q 10 0 18 4 T 34 4 T 50 4 T 62 4"/>
+                    <path d="M 1 11 Q 9 7 17 11 T 33 11 T 49 11 T 63 11"/>
+                    <path d="M 2 18 Q 10 14 18 18 T 34 18 T 50 18 T 62 18"/>
+                    <path d="M 1 25 Q 9 21 17 25 T 33 25 T 49 25 T 63 25"/>
+                  </svg></div>
+                  <div class="inner"><svg viewBox="0 0 24 24"><path d="M12 2a8 8 0 0 0-8 8c0 5.5 8 12 8 12s8-6.5 8-12a8 8 0 0 0-8-8z" fill="none"/><circle cx="12" cy="10" r="3" fill="none"/></svg></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="photo">
+            <div class="sky"></div>
+            <div class="sign">Flea Market</div>
+            <div class="sign-sub">ANTIQUES · COLLECTIBLES · FURNITURE</div>
+            <div class="stones"></div>
+          </div>
+
+          <div class="search-row">
+            <div class="search-pill">
+              <svg width="16" height="16" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <span>Search to discover local finds</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="body-sketch">
+          <div class="tile tall"></div><div class="tile"></div>
+          <div class="tile"></div><div class="tile tall"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
