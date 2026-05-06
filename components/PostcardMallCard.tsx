@@ -18,6 +18,7 @@
 "use client";
 
 import * as React from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Home as HomeIcon, MapPin, CircleUser } from "lucide-react";
 import FlagGlyph from "./FlagGlyph";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
@@ -89,6 +90,11 @@ function CancellationInk() {
   );
 }
 
+// Fluid font-size bounds for the mall name. Long names step down 1px at
+// a time until they fit in one line, locking the card to a constant height.
+const NAME_FONT_MAX = 22;
+const NAME_FONT_MIN = 16;
+
 export default function PostcardMallCard({
   mall,
   stampGlyph,
@@ -98,6 +104,24 @@ export default function PostcardMallCard({
   const isAllKentucky = mall === "all-kentucky";
 
   const name = isAllKentucky ? "All Kentucky Locations" : mall.name;
+
+  // Measure-and-shrink: render at NAME_FONT_MAX, step down by 1px until the
+  // text fits on one line within the available width. Falls back to ellipsis
+  // at NAME_FONT_MIN if even the smallest size overflows. Recomputes when
+  // `name` changes (mall scope swap).
+  const nameRef = useRef<HTMLDivElement>(null);
+  const [nameFontSize, setNameFontSize] = useState(NAME_FONT_MAX);
+  useLayoutEffect(() => {
+    const el = nameRef.current;
+    if (!el) return;
+    let size = NAME_FONT_MAX;
+    el.style.fontSize = `${size}px`;
+    while (el.scrollWidth > el.clientWidth && size > NAME_FONT_MIN) {
+      size -= 1;
+      el.style.fontSize = `${size}px`;
+    }
+    setNameFontSize(size);
+  }, [name]);
   // Session 110 fix — mall.address in the seed/add-mall.ts pipeline already
   // contains the full street + city + state + zip ("6541 KY-22, Crestwood,
   // KY 40014"). The previous join over [address, city, state, zip] then
@@ -182,29 +206,28 @@ export default function PostcardMallCard({
           from:
         </div>
         <div
+          ref={nameRef}
           style={{
             fontFamily:    FONT_LORA,
             fontWeight:    500,
-            fontSize:      22,
+            fontSize:      nameFontSize,
             color:         v1.inkPrimary,
-            // Session 107 dial — name 26 → 22 + lineHeight 1.15 → 1.3 (was
-            // clipping Lora descenders/ligatures on iPhone with -webkit-box +
-            // WebkitLineClamp:2). 3rd firing of the pattern memorialized at
-            // feedback_lora_lineheight_minimum_for_clamp; rule generalizes
-            // beyond ≤14px to ANY clamped Lora.
+            // Session 116 — fluid font-size + 1-line clamp locks card to a
+            // constant height; long names step down NAME_FONT_MAX → MIN
+            // until they fit. lineHeight 1.3 still required for Lora
+            // descender clearance per feedback_lora_lineheight_minimum_for_clamp.
             lineHeight:    1.3,
             letterSpacing: "-0.005em",
             margin:        "0 0 6px",
-            display:               "-webkit-box",
-            WebkitLineClamp:       2,
-            WebkitBoxOrient:       "vertical",
-            overflow:              "hidden",
-            paddingBottom:         2,    // descender breathing room under the clamp
+            whiteSpace:    "nowrap",
+            overflow:      "hidden",
+            textOverflow:  "ellipsis",
+            paddingBottom: 2,
             // Cancellation ink clearance — only the name row needs this since
             // the ink sits centered vertically in the card and overlaps the
             // mall name's right edge. Session 116 dial 28 → 14 to match the
             // halved cancellation width.
-            paddingRight:          14,
+            paddingRight:  14,
           }}
         >
           {name}
