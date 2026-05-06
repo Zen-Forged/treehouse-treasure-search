@@ -51,19 +51,19 @@ function StampGlyphIcon({ glyph }: { glyph: StampGlyph }) {
 }
 
 function CancellationInk() {
-  // Five wavy quadratic Bézier paths — Q + T smooth-quad chains. Coordinates
-  // verbatim from V4 mockup so a side-by-side compare against the locked
-  // mockup catches any drift. 84×38 viewBox; positioning + rotation are
-  // applied on the wrapper SVG.
+  // Five wavy quadratic Bézier paths — Q + T smooth-quad chains. Session 116
+  // halved width 84 → 42 (paths rewritten with x-coords halved). Stroke
+  // weight + wave amplitude preserved; wave density doubles. `right: 54`
+  // unchanged so the overlap with the stamp's left edge (~14px, D18) holds.
   return (
     <svg
-      viewBox="0 0 84 38"
+      viewBox="0 0 42 38"
       style={{
         position:      "absolute",
         right:         54,    // overlaps stamp's left edge by ~14px (D18)
         top:           "50%",
         transform:     "translateY(-50%) rotate(-6deg)",
-        width:         84,
+        width:         42,
         height:        38,
         pointerEvents: "none",
         zIndex:        2,
@@ -79,11 +79,11 @@ function CancellationInk() {
         strokeWidth={1.6}
         strokeLinecap="round"
       >
-        <path d="M 4,4 Q 14,0 24,4 T 44,4 T 64,4 T 80,4" />
-        <path d="M 2,11 Q 12,7 22,11 T 42,11 T 62,11 T 82,11" />
-        <path d="M 4,18 Q 14,14 24,18 T 44,18 T 64,18 T 80,18" />
-        <path d="M 2,25 Q 12,21 22,25 T 42,25 T 62,25 T 82,25" />
-        <path d="M 4,32 Q 14,28 24,32 T 44,32 T 64,32 T 80,32" />
+        <path d="M 2,4 Q 7,0 12,4 T 22,4 T 32,4 T 40,4" />
+        <path d="M 1,11 Q 6,7 11,11 T 21,11 T 31,11 T 41,11" />
+        <path d="M 2,18 Q 7,14 12,18 T 22,18 T 32,18 T 40,18" />
+        <path d="M 1,25 Q 6,21 11,25 T 21,25 T 31,25 T 41,25" />
+        <path d="M 2,32 Q 7,28 12,32 T 22,32 T 32,32 T 40,32" />
       </g>
     </svg>
   );
@@ -202,8 +202,9 @@ export default function PostcardMallCard({
             paddingBottom:         2,    // descender breathing room under the clamp
             // Cancellation ink clearance — only the name row needs this since
             // the ink sits centered vertically in the card and overlaps the
-            // mall name's right edge.
-            paddingRight:          28,
+            // mall name's right edge. Session 116 dial 28 → 14 to match the
+            // halved cancellation width.
+            paddingRight:          14,
           }}
         >
           {name}
