@@ -55,6 +55,10 @@ import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import ShareBoothSheet from "@/components/ShareBoothSheet";
 import EmptyState from "@/components/EmptyState";
+import DistancePill from "@/components/DistancePill";
+import LocationActions from "@/components/LocationActions";
+import { milesFromUser } from "@/lib/distance";
+import { useUserLocation } from "@/lib/useUserLocation";
 import {
   BoothHero,
   BoothTitleBlock,
@@ -304,6 +308,10 @@ export default function PublicShelfPage() {
   // drives the masthead bookmark glyph. Both hooks own their auth + sync.
   const saves           = useShopperSaves();
   const boothBookmarks  = useShopperBoothBookmarks();
+  // R17 Arc 2 — silent first-mount geolocation prompt. Hook is idempotent
+  // across surfaces (D3 + D20). Pill + CTAs hide on guest / denied / no
+  // mall coords per their internal null-passthrough.
+  const userLoc         = useUserLocation();
   const bookmarkCount   = saves.ids.size;
   const boothBookmarked = !!vendor && boothBookmarks.isBookmarked(vendor.id);
 
@@ -457,6 +465,43 @@ export default function PublicShelfPage() {
               saved={showBookmark ? boothBookmarked : undefined}
               onToggleBookmark={showBookmark ? handleToggleBoothBookmark : undefined}
             />
+
+            {/* R17 Arc 2 D18 — pill row below the BoothHero photograph,
+                right-aligned. Pairs visually with the rotated post-it stamp
+                inside the photo via shared small-caps postal vocabulary.
+                Renders nothing for guest / denied / mall coords missing. */}
+            {(() => {
+              const miles = milesFromUser(
+                { lat: userLoc.lat, lng: userLoc.lng },
+                mall?.latitude ?? null,
+                mall?.longitude ?? null,
+              );
+              if (miles == null) return null;
+              return (
+                <div
+                  style={{
+                    display:        "flex",
+                    justifyContent: "flex-end",
+                    padding:        "12px 22px 0",
+                  }}
+                >
+                  <DistancePill miles={miles} />
+                </div>
+              );
+            })()}
+
+            {/* R17 Arc 2 D19 — twin-button row below the BoothHero. */}
+            {mall && (
+              <div style={{ padding: "10px 22px 0" }}>
+                <LocationActions
+                  mallSlug={mall.slug}
+                  mallLat={mall.latitude ?? null}
+                  mallLng={mall.longitude ?? null}
+                  surface="booth"
+                  vendorId={vendor?.id ?? null}
+                />
+              </div>
+            )}
 
             <BoothTitleBlock displayName={displayName} />
             <MallBlock mallName={mallName} mallCity={mallCity} address={address} />
