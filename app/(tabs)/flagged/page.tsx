@@ -6,8 +6,8 @@
 // 3-col grid layout.
 //
 // Behavior change: booth-bookmark glyph (session 82) is no longer surfaced on
-// /flagged. Booth-bookmarking remains accessible from /shelves where it's the
-// primary interaction. /flagged is now scoped to "places I saved finds at,"
+// /flagged. Booth-bookmarking remains accessible from /shelf/[slug] where it's
+// the primary interaction. /flagged is now scoped to "places I saved finds at,"
 // and the destination affordance is the footer "Explore the booth →" CTA.
 //
 // Preserved:
