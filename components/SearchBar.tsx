@@ -82,7 +82,7 @@ const DEBOUNCE_MS = 200;
 
 export default function SearchBar({
   initialQuery = "",
-  placeholder = "Search finds, booths, or styles",
+  placeholder = "Search to discover local finds",
   onChange,
   onSubmit,
 }: Props) {
