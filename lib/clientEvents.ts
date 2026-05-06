@@ -27,7 +27,13 @@ export type ClientEventType =
   // ── Session 99 — /flagged destination redesign ────────────────────────
   | "flagged_booth_explored"
   // ── Session 100 — /find/[id] swipe-between-finds nav ─────────────────
-  | "find_swiped";
+  | "find_swiped"
+  // ── R17 (session 117 design / 118+ impl) — geolocation-aware discovery
+  | "location_prompted"
+  | "location_granted"
+  | "location_denied"
+  | "find_navigate_tapped"
+  | "find_view_on_map_tapped";
 
 function getSessionId(): string {
   if (typeof window === "undefined") return "";
