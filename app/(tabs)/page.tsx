@@ -608,7 +608,7 @@ function DiscoveryFeedInner() {
           Tap target inside the card routes to /map (scope-change surface).
           SearchBar passthrough preserves R16 ?q= URL state + 200ms debounce
           via the existing handleSearchChange callback. */}
-      <div style={{ padding: "12px 16px 0" }}>
+      <div style={{ padding: "12px 16px 14px" }}>
         <RichPostcardMallCard
           mall={selectedMall ?? "all-kentucky"}
           allKentuckySubtitle={`${malls.length} active locations · Kentucky`}

@@ -263,7 +263,9 @@ export default function RichPostcardMallCard({
                 color:         v1.inkPrimary,
                 lineHeight:    1.25,
                 letterSpacing: "-0.005em",
-                margin:        "0 0 6px",
+                // margin-bottom 6 → 0 so name + address read as one grouped
+                // component (David's iPhone QA call).
+                margin:        0,
                 whiteSpace:    "nowrap",
                 overflow:      "hidden",
                 textOverflow:  "ellipsis",
