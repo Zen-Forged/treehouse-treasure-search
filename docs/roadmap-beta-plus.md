@@ -23,7 +23,7 @@ Each entry carries:
   - ✅ **Shipped** — absorbed by a merged PR (cross-ref the session).
 - **What / Why / Open questions** — the scoping substance.
 
-**Status snapshot (as of session 111):** 16 items total (R1–R16). **9 ✅ Shipped:** R4a/R4b/R4c, R5a, R7, R10, R11, R12, R16 (sessions 45–108). **2 🟢 Ready:** R1 (shopper accounts — graduated session 111), R3 (analytics). **5 🟡 Captured:** R2, R5b, R6, R8, R9, R13, R14, R15.
+**Status snapshot (as of session 117):** 17 items total (R1–R17). **10 ✅ Shipped:** R1, R4a/R4b/R4c, R5a, R7, R10, R11, R12, R16 (sessions 45–114). **2 🟢 Ready:** R3 (analytics), **R17 (geolocation-aware discovery — graduated session 117)**. **5 🟡 Captured:** R2, R5b, R6, R8, R9, R13, R14, R15.
 
 ---
 
@@ -63,6 +63,7 @@ David reviews and can override any of these.
 | R14 | Vendor profile enrichment + vendor social graph | User/Auth + Feed quality | M | — (compounds with R1, R3) | 🟡 Captured | Vendor-side counterpart to R1. Richer vendor profiles, vendor-to-vendor follow, future social surfaces. |
 | R15 | App store launch (iOS + Google Play) | Engagement + Reach | L+ | R6 (hard gate); compounds heavily with R9, R1, R12; absorbs Q-006 Universal Links | 🟡 Captured | Three possible technical paths (Capacitor wrapper / Expo rebuild / native). **Path decision is the load-bearing scoping moment.** |
 | R16 | Discovery: search bar on Home | Navigation/Discovery + Data | M | — (compounds with R3, R5b, R10) | ✅ Shipped session 105 | Glass search bar on Home backed by AI-extracted tags written at post-publish time. Tasks 1–7 sprint + custom-caret bug-class kill + backfill polish. Design record: [`docs/r16-discovery-search-design.md`](r16-discovery-search-design.md). |
+| R17 | Geolocation-aware discovery | Navigation/Discovery | M | R10 (mall coords + `/map?mall=<slug>` infra) | 🟢 Ready (session 117) | System-wide distance pill + twin "View on Find Map" + "Navigate" CTAs across `/find/[id]`, `/shelf/[slug]`, `/flagged`, `/shelves`, `/map`. `useUserLocation()` hook with silent first-mount prompt + 30-min TTL cache. Frame α `"2.7 MI"` minimal pill copy locked. Permission-denied = silent failure (hide affordance entirely). Design record: [`docs/r17-geolocation-design.md`](r17-geolocation-design.md). Mockups: V1 (3 structural frames) → V2 (Frame A CTAs + Frame B pill anchor; α/β/γ distance copy) — Frame α picked. All 21 decisions D1–D21 frozen. |
 
 ---
 
