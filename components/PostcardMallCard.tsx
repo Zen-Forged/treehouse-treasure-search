@@ -75,7 +75,7 @@ function CancellationInk() {
     >
       <g
         fill="none"
-        stroke={v1.inkPrimary}
+        stroke={v1.inkMid}
         strokeWidth={1.6}
         strokeLinecap="round"
       >
