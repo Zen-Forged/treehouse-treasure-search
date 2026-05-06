@@ -286,19 +286,17 @@ export default function PostcardMallCard({
             style={{
               position:       "absolute",
               bottom:         "calc(100% + 4px)",
-              left:           "50%",
-              transform:      "translateX(-50%)",
-              fontFamily:     FONT_SYS,
-              fontSize:       9,
-              fontWeight:     700,
-              letterSpacing:  "0.12em",
-              textTransform:  "uppercase",
+              right:          0,
+              fontFamily:     FONT_LORA,
+              fontStyle:      "italic",
+              fontSize:       11,
               color:          v1.inkMuted,
+              lineHeight:     1,
               whiteSpace:     "nowrap",
               pointerEvents:  "none",
             }}
           >
-            Select location
+            Location
           </div>
         )}
         <div
