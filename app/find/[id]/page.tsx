@@ -85,6 +85,10 @@ import { readFindContext, getPostCache, setPostCache, writeFindContext, getVendo
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import PhotoLightbox from "@/components/PhotoLightbox";
+import DistancePill from "@/components/DistancePill";
+import LocationActions from "@/components/LocationActions";
+import { milesFromUser } from "@/lib/distance";
+import { useUserLocation } from "@/lib/useUserLocation";
 import type { Post } from "@/types/treehouse";
 
 // v1.1 tokens imported from lib/tokens.ts (canonical since session 19A). v1 palette +
@@ -687,6 +691,10 @@ export default function FindDetailPage() {
   // authed paths. Hook owns the localStorage/DB branching internally.
   const saves = useShopperSaves();
   const isSaved = !!id && saves.isSaved(id);
+  // R17 Arc 2 — silent first-mount geolocation. Hook is idempotent across
+  // surfaces (D3 + D20); this surface fires the prompt if the user hasn't
+  // landed on /map / /flagged / /shelf first. Result hydrates pill + CTAs.
+  const userLoc = useUserLocation();
 
   // Preview image URL written by the source surface (Home tile / /flagged
   // / /shelf, eventually) into sessionStorage on tap. Loaded by the
@@ -1077,6 +1085,9 @@ export default function FindDetailPage() {
   const mallName    = post?.mall?.name ?? null;
   const mallCity    = post?.mall?.city ?? null;
   const mallState   = post?.mall?.state ?? null;
+  const mallSlug    = post?.mall?.slug ?? null;
+  const mallLat     = post?.mall?.latitude ?? null;
+  const mallLng     = post?.mall?.longitude ?? null;
   const price       = post?.price_asking;
   const showSoldBody   = !!post && isSold && !isMyPost;
   const showNormalBody = !!post && !showSoldBody;
@@ -1524,18 +1535,39 @@ export default function FindDetailPage() {
             marginBottom: 32,
           }}
         >
+          {/* R17 Arc 2 D18 — eyebrow row holds the existing italic Lora
+              eyebrow on the left + <DistancePill> right-aligned. The pill
+              renders nothing on guest / denied / mall coords missing per
+              the primitive's internal null-passthrough. */}
           <div
             style={{
-              fontFamily: FONT_LORA,
-              fontStyle: "italic",
-              fontSize: 14,
-              color: v1.inkMid,
-              lineHeight: 1.4,
-              marginBottom: 8,
-              paddingLeft: 2,
+              display:        "flex",
+              alignItems:     "baseline",
+              justifyContent: "space-between",
+              gap:            8,
+              marginBottom:   8,
+              paddingLeft:    2,
+              paddingRight:   2,
             }}
           >
-            Find this item at
+            <div
+              style={{
+                fontFamily: FONT_LORA,
+                fontStyle:  "italic",
+                fontSize:   14,
+                color:      v1.inkMid,
+                lineHeight: 1.4,
+              }}
+            >
+              Find this item at
+            </div>
+            <DistancePill
+              miles={milesFromUser(
+                { lat: userLoc.lat, lng: userLoc.lng },
+                mallLat,
+                mallLng,
+              )}
+            />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
             {(vendorName || boothNumber) && (() => {
@@ -1676,6 +1708,17 @@ export default function FindDetailPage() {
                 cardInner
               );
             })()}
+            {/* R17 Arc 2 D19 — twin-button row below the cartographic card.
+                Renders nothing for guest / denied / mall-coords-missing
+                per <LocationActions> internal null-passthrough. */}
+            <LocationActions
+              mallSlug={mallSlug}
+              mallLat={mallLat}
+              mallLng={mallLng}
+              surface="find"
+              postId={post?.id ?? null}
+              vendorId={post?.vendor_id ?? null}
+            />
           </div>
         </div>
       )}
