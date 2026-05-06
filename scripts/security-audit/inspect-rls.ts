@@ -87,6 +87,24 @@ const TABLES: TableExpectation[] = [
     expectAnonWrite: false,
     notes: "RLS on (migration 014, no policies → default-deny). GRANT-level REVOKE (migration 011) blocks anon at an even earlier layer. Writes via service-role API only.",
   },
+  {
+    table: "shoppers",
+    expectAnonRead: false,
+    expectAnonWrite: false,
+    notes: "RLS on (migration 020). Shopper-self read; service-role write via /api/shopper-claim. Policy count verified 1 via audit_rls_state() session 113.",
+  },
+  {
+    table: "shopper_saves",
+    expectAnonRead: false,
+    expectAnonWrite: false,
+    notes: "RLS on (migration 020). Shopper-self read+write only; composite PK (shopper_id, post_id). Policy count verified 3 via audit_rls_state() session 113.",
+  },
+  {
+    table: "shopper_booth_bookmarks",
+    expectAnonRead: false,
+    expectAnonWrite: false,
+    notes: "RLS on (migration 020). Shopper-self read+write only; composite PK (shopper_id, vendor_id). Policy count verified 3 via audit_rls_state() session 113.",
+  },
 ];
 
 // ─── Env loader ─────────────────────────────────────────────────────────────
