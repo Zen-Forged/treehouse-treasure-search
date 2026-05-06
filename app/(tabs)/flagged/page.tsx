@@ -49,6 +49,9 @@ import FeaturedBanner from "@/components/FeaturedBanner";
 import PolaroidTile from "@/components/PolaroidTile";
 import EmptyStatePrimitive from "@/components/EmptyState";
 import FormButton from "@/components/FormButton";
+import DistancePill from "@/components/DistancePill";
+import { milesFromUser } from "@/lib/distance";
+import { useUserLocation } from "@/lib/useUserLocation";
 import type { Post, Mall } from "@/types/treehouse";
 
 // Session 85 — back-nav scroll anchoring. Module-scope cache survives
@@ -67,6 +70,8 @@ type BoothGroup = {
   vendorSlug?: string;
   mallId:      string | null;
   mallName:    string | null;
+  mallLat:     number | null;
+  mallLng:     number | null;
   posts:       Post[];
 };
 
@@ -79,8 +84,10 @@ function groupByBooth(posts: Post[]): BoothGroup[] {
     const vendorSlug = post.vendor?.slug;
     const mallId     = post.mall_id ?? null;
     const mallName   = post.mall?.name ?? null;
+    const mallLat    = post.mall?.latitude ?? null;
+    const mallLng    = post.mall?.longitude ?? null;
     const key        = vendorId ?? `__orphan__${post.id}`;
-    if (!map.has(key)) map.set(key, { vendorId, boothNumber: booth, vendorName, vendorSlug, mallId, mallName, posts: [] });
+    if (!map.has(key)) map.set(key, { vendorId, boothNumber: booth, vendorName, vendorSlug, mallId, mallName, mallLat, mallLng, posts: [] });
     map.get(key)!.posts.push(post);
   }
 
@@ -356,6 +363,7 @@ export default function FlaggedPage() {
   const [savedMallId]                         = useSavedMallId();
   const shopperAuth                            = useShopperAuth();
   const saves                                  = useShopperSaves();
+  const userLoc                                = useUserLocation();
   // setSavedMallId + mallSheetOpen retired (R10 session 107) — scope change
   // moved to /map.
   const pendingScrollY = useRef<number | null>(null);
@@ -542,14 +550,33 @@ export default function FlaggedPage() {
                 gap: 14,
               }}
             >
-              {groups.map((group) => (
-                <BoothDestinationContainer
-                  key={(group.boothNumber ?? "nb") + "·" + group.vendorName}
-                  group={group}
-                  scopeIsAllMalls={savedMallId === null}
-                  flatFindRefs={flatFindRefs}
-                />
-              ))}
+              {groups.map((group) => {
+                const miles = milesFromUser(
+                  { lat: userLoc.lat, lng: userLoc.lng },
+                  group.mallLat,
+                  group.mallLng,
+                );
+                return (
+                  <div
+                    key={(group.boothNumber ?? "nb") + "·" + group.vendorName}
+                    style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                  >
+                    {/* R17 D18 — pill right-aligned above each booth container.
+                        Renders nothing on guest / denied / mall coords missing
+                        per <DistancePill> internal null-passthrough. */}
+                    {miles != null && (
+                      <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 2px" }}>
+                        <DistancePill miles={miles} />
+                      </div>
+                    )}
+                    <BoothDestinationContainer
+                      group={group}
+                      scopeIsAllMalls={savedMallId === null}
+                      flatFindRefs={flatFindRefs}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </>
         )}
