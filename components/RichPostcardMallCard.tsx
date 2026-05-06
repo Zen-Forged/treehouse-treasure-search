@@ -1,11 +1,15 @@
 // components/RichPostcardMallCard.tsx
-// Session 120 — Home-only rich variant of <PostcardMallCard>. Folds the mall
-// hero photo + search bar primitives INTO the postcard card so the top of
-// Home reads as one card-stock unit instead of three stacked rectangles.
+// Session 120 — rich variant of <PostcardMallCard> used on Home + Saved.
+// Folds the mall hero photo + search bar primitives INTO the postcard
+// card so the top of each surface reads as one card-stock unit instead
+// of three stacked rectangles.
 //
-// Slim <PostcardMallCard> stays alive in app/(tabs)/layout.tsx for Map +
-// Saved (option b2 — separate mounts per surface). Layout suppresses its
-// slim mount on Home so this rich card is the only postcard on the page.
+// Slim <PostcardMallCard> stays alive in app/(tabs)/layout.tsx for /map
+// only. Layout suppresses its slim mount on / and /flagged; both pages
+// mount this rich card inline (Home in app/(tabs)/page.tsx, Saved in
+// app/(tabs)/flagged/page.tsx) so each surface owns its own search-state
+// wiring. Saved's search bar filters its saved finds client-side; Home's
+// search bar runs through R16's tsvector/GIN search.
 //
 // Design intent (final state):
 //   - V1 mockup (docs/mockups/postcard-rich-card-v1.html) locked the

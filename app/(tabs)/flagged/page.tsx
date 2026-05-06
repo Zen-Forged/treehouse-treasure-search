@@ -27,9 +27,9 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 // Chrome (TabPageMasthead + PostcardMallCard + BottomNav + MallSheet) lives
 // in app/(tabs)/layout.tsx as of session 109 — flicker-eliminating shared
 // layout. This page renders only the page body (banner + find groups).
@@ -48,6 +48,7 @@ import { writeFindContext, setPostCache, type FindRef } from "@/lib/findContext"
 import FeaturedBanner from "@/components/FeaturedBanner";
 import PolaroidTile from "@/components/PolaroidTile";
 import EmptyStatePrimitive from "@/components/EmptyState";
+import RichPostcardMallCard from "@/components/RichPostcardMallCard";
 import FormButton from "@/components/FormButton";
 import DistancePill from "@/components/DistancePill";
 import { milesFromUser } from "@/lib/distance";
@@ -354,8 +355,18 @@ function BoothDestinationContainer({
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-export default function FlaggedPage() {
-  const router                                = useRouter();
+function FlaggedPageInner() {
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+
+  // Session 120 — q state for rich-card search bar. Mirrors Home's R16
+  // pattern: initial value pulled from URL so /flagged?q=brass deep-links
+  // restore a search context, debounced through SearchBar (200ms), and
+  // written back to ?q= via router.replace so browser-back works cleanly.
+  // Filtering is CLIENT-side here (saved sets are typically <200 items;
+  // server-side searchPosts isn't worth the round trip).
+  const initialQ                              = searchParams.get("q") ?? "";
+  const [q,               setQ]               = useState<string>(initialQ);
   const [posts,           setPosts]           = useState<Post[]>(cachedFlaggedPosts ?? []);
   const [malls,           setMalls]           = useState<Mall[]>([]);
   const [loading,         setLoading]         = useState<boolean>(cachedFlaggedPosts === null);
@@ -452,7 +463,35 @@ export default function FlaggedPage() {
   const filteredPosts = savedMallId
     ? posts.filter(p => p.mall_id === savedMallId)
     : posts;
-  const groups = groupByBooth(filteredPosts);
+
+  // Session 120 — apply search query against title + tags + caption.
+  // Case-insensitive contains-match. R16's tsvector/GIN search lives on
+  // /api/search via searchPosts; for the saved set we have everything in
+  // memory already so client-side is faster than a round trip.
+  const trimmedQ = q.trim().toLowerCase();
+  const searchedPosts = trimmedQ === ""
+    ? filteredPosts
+    : filteredPosts.filter((p) => {
+        const haystack = [
+          p.title?.toLowerCase() ?? "",
+          p.caption?.toLowerCase() ?? "",
+          ...(p.tags ?? []).map((t) => t.toLowerCase()),
+        ].join(" ");
+        return haystack.includes(trimmedQ);
+      });
+  const groups = groupByBooth(searchedPosts);
+
+  // Session 120 — handleSearchChange writes through to ?q= URL state,
+  // mirrors Home's debounced replace pattern so browser-back works.
+  // SearchBar internally debounces 200ms before firing this callback.
+  const handleSearchChange = (next: string) => {
+    setQ(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next.trim().length > 0) params.set("q", next);
+    else                        params.delete("q");
+    const qs = params.toString();
+    router.replace(qs ? `/flagged?${qs}` : "/flagged", { scroll: false });
+  };
 
   // Phase C — flat ordered ref list passed to each BoothDestinationContainer
   // so a tap on any find row writes the swipe-nav context with the full
@@ -473,9 +512,36 @@ export default function FlaggedPage() {
   const selectedMall = malls.find(m => m.id === savedMallId) ?? null;
 
   const filterHidesAllSaves = savedMallId !== null && posts.length > 0 && filteredPosts.length === 0;
+  // Session 120 — search-only empty: user has matches in scope, query
+  // hides them all. Distinct from filterHidesAllSaves so the empty-state
+  // copy can name the query, not the mall.
+  const searchHidesAllSaves = trimmedQ !== "" && filteredPosts.length > 0 && searchedPosts.length === 0;
 
   return (
     <>
+      {/* Session 120 — rich PostcardMallCard mounted only when the user
+          has saves to scope. Zero saves anywhere → no card (no scope
+          choice to make); empty state owns the page. The card composes
+          mall scope identifier + photo + search bar (filters saved finds
+          client-side). All-Kentucky subtitle is bespoke for Saved:
+          "X saved finds · Kentucky" instead of Home's "X active locations
+          · Kentucky" — tells the shopper something useful about their
+          collection. */}
+      {!loading && posts.length > 0 && (
+        <div style={{ padding: "12px 16px 14px" }}>
+          <RichPostcardMallCard
+            mall={selectedMall ?? "all-kentucky"}
+            locationCount={malls.length}
+            allKentuckySubtitle={
+              `${posts.length} saved ${posts.length === 1 ? "find" : "finds"} · Kentucky`
+            }
+            onTap={() => router.push("/map")}
+            searchInitialQuery={initialQ}
+            onSearchChange={handleSearchChange}
+          />
+        </div>
+      )}
+
       <FeaturedBanner
         variant="overlay"
         imageUrl={bannerImageUrl}
@@ -521,6 +587,13 @@ export default function FlaggedPage() {
                   Change location →
                 </FormButton>
               }
+            />
+          </div>
+        ) : searchHidesAllSaves ? (
+          <div style={{ padding: "0 22px" }}>
+            <EmptyStatePrimitive
+              title={`No saved finds match "${q}".`}
+              subtitle="Try a different word — or clear the search to see everything you've saved."
             />
           </div>
         ) : (
@@ -609,5 +682,16 @@ export default function FlaggedPage() {
       </main>
 
     </>
+  );
+}
+
+// Suspense wrapper required for useSearchParams in App Router client
+// components — mirrors app/(tabs)/page.tsx (Home) since session 120 wired
+// ?q= URL state on /flagged via the rich card's search bar.
+export default function FlaggedPage() {
+  return (
+    <Suspense>
+      <FlaggedPageInner />
+    </Suspense>
   );
 }
