@@ -611,6 +611,7 @@ function DiscoveryFeedInner() {
       <div style={{ padding: "12px 16px 14px" }}>
         <RichPostcardMallCard
           mall={selectedMall ?? "all-kentucky"}
+          locationCount={malls.length}
           allKentuckySubtitle={`${malls.length} active locations · Kentucky`}
           onTap={() => router.push("/map")}
           searchInitialQuery={initialQ}

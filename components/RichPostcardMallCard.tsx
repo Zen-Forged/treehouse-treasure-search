@@ -4,49 +4,49 @@
 // Home reads as one card-stock unit instead of three stacked rectangles.
 //
 // Slim <PostcardMallCard> stays alive in app/(tabs)/layout.tsx for Map +
-// Saved (option b2 from the design conversation — separate mounts per
-// surface). Layout suppresses its slim mount on Home so this rich card is
-// the only postcard on the page.
+// Saved (option b2 — separate mounts per surface). Layout suppresses its
+// slim mount on Home so this rich card is the only postcard on the page.
 //
-// Design intent (V2 mockup at docs/mockups/postcard-rich-card-v2.html,
-// Frame α / −4° rotation locked):
-//   - Photo banner on top, inset 14px from card sides + bottom with 8px
-//     corner radius (NOT bleeding to the card edge).
-//   - Mall name in Lora 22px with measure-and-shrink to 16px so any current
-//     mall name fits one row at our card width. Mirrors the slim card's
-//     fluid pattern.
-//   - "select location" stamp label in Dancing Script (FONT_SCRIPT, new
-//     addition session 120), rotated −4° so it reads as a casual hand-drawn
-//     mark. Used sparingly + intentionally — see lib/tokens.ts comment.
-//   - Hand-drawn arrow with arc at the BOTTOM (curve bows down, not up).
-//     Tail nuzzles directly under the "s" of "select" so the label + arrow
-//     read as one continuous mark, not two components. Arrowhead points
-//     into the stamp's left edge.
-//   - Cancellation ink (5 wavy lines) at 0.10 opacity overlapping the
-//     stamp's left edge — same primitive as the slim card.
+// Design intent (final state):
+//   - V1 mockup (docs/mockups/postcard-rich-card-v1.html) locked the
+//     structural shape: photo banner above text+affordance row, search bar
+//     pill at the bottom. Photo inset 14px from card sides + bottom with
+//     8px corner radius (NOT bleeding to the card edge).
+//   - V2 mockup (docs/mockups/postcard-rich-card-v2.html) explored a
+//     "select location" Dancing Script label + hand-drawn arrow + dashed-
+//     border green stamp as the change-location affordance. iPhone QA call:
+//     "just isn't landing." Retired in V3.
+//   - V3 mockup (docs/mockups/postcard-rich-card-v3.html, Frame β picked):
+//     replaces the script + arrow + stamp constellation with a single
+//     compact pill in the upper-right of the top row. Pill borrows the
+//     DistancePill (R17) visual vocabulary verbatim — paper-warm bg,
+//     1px ink-hairline border, 999px radius, FONT_SYS 10/700/0.12em
+//     letter-spacing/uppercase, ink-muted color — with a chevron after
+//     the count to read as button-not-info.
+//   - Mall name in Lora 22px with measure-and-shrink to 16px (same primitive
+//     as slim card) so any current mall name fits one row.
+//   - Pill copy: "X Locations ›" (count + chevron). Same copy whether a
+//     specific mall is picked or all-Kentucky scope is active — the action
+//     is the same (tap → /map to change scope).
 //   - Search bar embedded at the bottom of the card. R16 SearchBar
 //     primitive untouched; the card just composes it.
 //
-// Empty state (no photo): when `mall === "all-kentucky"` OR a specific mall
-// has no hero_image_url, drop the photo region entirely. Eyebrow + name +
-// address + stamp + search bar all stay. The card collapses to ~slim-plus-
-// search-bar height instead of the full ~360px when a photo is present.
+// Empty state: when `mall === "all-kentucky"` OR a specific mall has no
+// hero_image_url, drop the photo region entirely. Eyebrow + name + address
+// + pill + search bar all stay.
 //
-// Tap target: the entire non-search region (top row + photo) is the
-// scope-change affordance, routing to /map. Search bar is a sibling, so
-// taps on the search input never bubble to the change-location button.
-//
-// What this REPLACES on Home (app/(tabs)/page.tsx): the standalone
-// <FeaturedBanner imageUrl={selectedMall?.hero_image_url}> mall-hero mount
-// + the standalone <SearchBar> mount that previously stacked between the
-// slim postcard card and the masonry grid. Both come out when this lands.
+// Tap target: the entire non-search region (top row + photo) is wrapped in
+// a single <button> routing to /map. The pill is a child <span> inside the
+// button — its visual treatment communicates affordance, not its own click
+// handler. Search bar is a sibling of the button so input clicks don't
+// bubble to the change-location handler.
 
 "use client";
 
 import * as React from "react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
-import { v1, FONT_LORA, FONT_SYS, FONT_SCRIPT } from "@/lib/tokens";
+import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import SearchBar from "./SearchBar";
 import type { Mall } from "@/types/treehouse";
 
@@ -56,6 +56,8 @@ type MallScope =
 
 interface RichPostcardMallCardProps {
   mall:                 MallScope;
+  /** Total active locations — drives the pill copy "X Locations ›". */
+  locationCount:        number;
   /** Override for the all-kentucky subtitle. Defaults to a generic count. */
   allKentuckySubtitle?: string;
   /** Routes to /map on tap (entire non-search region). */
@@ -73,76 +75,9 @@ const ALL_KENTUCKY_DEFAULT = "Kentucky";
 const NAME_FONT_MAX = 22;
 const NAME_FONT_MIN = 16;
 
-function CancellationInk() {
-  // 5 wavy quadratic Bézier paths over the stamp's left edge. Same SVG
-  // primitive as PostcardMallCard.tsx — 84×38 viewBox, opacity 0.08, rotate
-  // −6°. Repeated rather than extracted to keep the slim card a leaf.
-  return (
-    <svg
-      viewBox="0 0 84 38"
-      style={{
-        position:      "absolute",
-        right:         14,
-        top:           "50%",
-        transform:     "translateY(-50%) rotate(-6deg)",
-        width:         84,
-        height:        38,
-        pointerEvents: "none",
-        zIndex:        2,
-        opacity:       0.08,
-      }}
-      aria-hidden="true"
-    >
-      <g
-        fill="none"
-        stroke={v1.inkPrimary}
-        strokeWidth={1.6}
-        strokeLinecap="round"
-      >
-        <path d="M 4,4 Q 14,0 24,4 T 44,4 T 64,4 T 80,4" />
-        <path d="M 2,11 Q 12,7 22,11 T 42,11 T 62,11 T 82,11" />
-        <path d="M 4,18 Q 14,14 24,18 T 44,18 T 64,18 T 80,18" />
-        <path d="M 2,25 Q 12,21 22,25 T 42,25 T 62,25 T 82,25" />
-        <path d="M 4,32 Q 14,28 24,32 T 44,32 T 64,32 T 80,32" />
-      </g>
-    </svg>
-  );
-}
-
-function StampArrow() {
-  // V2 final — 76×26 viewBox. Tail at (4, 4) under the "s" of "select"
-  // (label is right-aligned with the stamp area, so the "s" sits at the
-  // left end of the visible label text). Curve bows DOWN (control point
-  // 36, 26 below both endpoints) into a deep dip, then sweeps up-right to
-  // the arrowhead at (68, 14) just left of the stamp body.
-  return (
-    <svg
-      viewBox="0 0 76 26"
-      style={{
-        position:      "absolute",
-        right:         54,
-        top:           -4,
-        width:         76,
-        height:        26,
-        pointerEvents: "none",
-        overflow:      "visible",
-      }}
-      fill="none"
-      stroke={v1.inkMuted}
-      strokeWidth={1.4}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M 4 4 Q 36 26, 68 14" />
-      <path d="M 68 14 L 62 17" />
-      <path d="M 68 14 L 63 10" />
-    </svg>
-  );
-}
-
 export default function RichPostcardMallCard({
   mall,
+  locationCount,
   allKentuckySubtitle,
   onTap,
   searchInitialQuery,
@@ -180,7 +115,8 @@ export default function RichPostcardMallCard({
     setNameFontSize(size);
   }, [name]);
 
-  const interactive = typeof onTap === "function";
+  const interactive   = typeof onTap === "function";
+  const pillLabel     = `${locationCount} ${locationCount === 1 ? "Location" : "Locations"}`;
 
   return (
     <div
@@ -211,7 +147,7 @@ export default function RichPostcardMallCard({
       />
 
       {/* Tap target — covers everything ABOVE the search bar. Top row
-          (text + stamp) and the photo banner are both inside this button
+          (text + pill) and the photo banner are both inside this button
           so taps anywhere except on the search input route to /map. */}
       <button
         type="button"
@@ -231,17 +167,17 @@ export default function RichPostcardMallCard({
           zIndex:                   1,
         }}
       >
-        {/* TOP ROW — text-block (left, flex 1) + stamp-area (right) */}
+        {/* TOP ROW — text-block (left, flex 1) + change-location pill (right) */}
         <div
           style={{
             display:    "flex",
             alignItems: "flex-start",
             padding:    "14px 14px 0",
-            gap:        8,
+            gap:        10,
           }}
         >
           {/* Text block */}
-          <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+          <div style={{ flex: 1, minWidth: 0, paddingRight: 4 }}>
             <div
               style={{
                 fontFamily: FONT_LORA,
@@ -263,8 +199,8 @@ export default function RichPostcardMallCard({
                 color:         v1.inkPrimary,
                 lineHeight:    1.25,
                 letterSpacing: "-0.005em",
-                // margin-bottom 6 → 0 so name + address read as one grouped
-                // component (David's iPhone QA call).
+                // margin-bottom 0 so name + address read as one grouped
+                // component (David's iPhone QA dial).
                 margin:        0,
                 whiteSpace:    "nowrap",
                 overflow:      "hidden",
@@ -300,72 +236,53 @@ export default function RichPostcardMallCard({
             </div>
           </div>
 
-          {/* STAMP AREA — script label, arrow, dashed-border stamp */}
-          <div
+          {/* CHANGE-LOCATION PILL — DistancePill (R17) vocabulary applied as
+              a tap affordance. Renders as a <span> not <button> because it
+              sits inside the parent <button> that owns the click handler;
+              nested buttons would be invalid HTML. The pill's job is purely
+              visual — communicate "this is tappable, take me to a list of
+              locations." */}
+          <span
             style={{
-              position:      "relative",
-              flexShrink:    0,
-              display:       "flex",
-              flexDirection: "column",
-              alignItems:    "flex-end",
-              paddingTop:    4,
+              flexShrink:     0,
+              alignSelf:      "flex-start",
+              display:        "inline-flex",
+              alignItems:     "center",
+              gap:            5,
+              background:     "#ede6d5",
+              border:         `1px solid ${v1.inkHairline}`,
+              borderRadius:   999,
+              padding:        "5px 10px 5px 12px",
+              fontFamily:     FONT_SYS,
+              fontSize:       10,
+              fontWeight:     700,
+              letterSpacing:  "0.12em",
+              textTransform:  "uppercase",
+              color:          v1.inkMuted,
+              whiteSpace:     "nowrap",
+              lineHeight:     1.2,
             }}
           >
-            <div
-              style={{
-                fontFamily:     FONT_SCRIPT,
-                fontWeight:     500,
-                fontSize:       18,
-                color:          v1.inkMuted,
-                lineHeight:     1.0,
-                transform:      "rotate(-4deg)",
-                transformOrigin: "right center",
-                margin:         "0 6px 0 0",
-                whiteSpace:     "nowrap",
-              }}
+            {pillLabel}
+            <svg
+              width={9}
+              height={9}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.4}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
             >
-              select location
-            </div>
-
-            <div style={{ position: "relative", display: "flex", justifyContent: "flex-end", width: "100%" }}>
-              <StampArrow />
-
-              {/* Dashed-border green stamp */}
-              <div
-                style={{
-                  width:        52,
-                  height:       52,
-                  flexShrink:   0,
-                  padding:      4,
-                  background:   v1.paperWarm,
-                  border:       `1.5px dashed rgba(30,77,43,0.40)`,
-                  borderRadius: 4,
-                  display:      "flex",
-                  position:     "relative",
-                }}
-              >
-                <CancellationInk />
-                <div
-                  style={{
-                    flex:           1,
-                    background:     v1.green,
-                    borderRadius:   2,
-                    display:        "flex",
-                    alignItems:     "center",
-                    justifyContent: "center",
-                    color:          v1.onGreen,
-                  }}
-                >
-                  <MapPin size={26} strokeWidth={2.0} />
-                </div>
-              </div>
-            </div>
-          </div>
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </span>
         </div>
 
         {/* PHOTO BANNER — only when we have a real mall hero. All-kentucky
             scope and malls without hero_image_url drop this region; the
-            card collapses to text + stamp + search. */}
+            card collapses to text + pill + search. */}
         {showPhoto && (
           <div
             style={{
