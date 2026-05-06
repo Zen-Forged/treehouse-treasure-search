@@ -167,17 +167,29 @@ export default function RichPostcardMallCard({
           zIndex:                   1,
         }}
       >
-        {/* TOP ROW — text-block (left, flex 1) + change-location pill (right) */}
-        <div
-          style={{
-            display:    "flex",
-            alignItems: "flex-start",
-            padding:    "14px 14px 0",
-            gap:        10,
-          }}
-        >
-          {/* Text block */}
-          <div style={{ flex: 1, minWidth: 0, paddingRight: 4 }}>
+        {/* TOP BLOCK — V3.1 dial. Layout was a single flex row [text-block |
+            pill] which let the pill constrain the text-block's column width
+            for ALL three rows (eyebrow + name + address). Mall names like
+            "Copper Awning Flea Market" lost ~20% of available width to the
+            pill column and the fluid font shrunk 22 → 16 just to fit.
+            Now the pill sits ONLY in the eyebrow row (flex space-between);
+            the mall name + address are siblings BELOW that row and span
+            the full card content width. Mall names that fit at 22px stay
+            at 22px; only genuinely-long names hit measure-and-shrink. */}
+        <div style={{ padding: "14px 14px 0" }}>
+          {/* Eyebrow row — short eyebrow text on the left, change-location
+              pill on the right. Eyebrow trimmed to "from:" per David's
+              call ("just too much text competing"); matches the slim card
+              vocabulary verbatim. */}
+          <div
+            style={{
+              display:        "flex",
+              alignItems:     "center",
+              justifyContent: "space-between",
+              gap:            10,
+              marginBottom:   4,
+            }}
+          >
             <div
               style={{
                 fontFamily: FONT_LORA,
@@ -185,99 +197,97 @@ export default function RichPostcardMallCard({
                 fontSize:   17,
                 color:      v1.inkMuted,
                 lineHeight: 1,
-                margin:     "0 0 6px",
               }}
             >
-              Discover finds from:
+              from:
             </div>
-            <div
-              ref={nameRef}
+
+            {/* CHANGE-LOCATION PILL — DistancePill (R17) vocabulary as a
+                tap affordance. Renders as a <span> inside the parent
+                <button>; nested buttons invalid HTML. */}
+            <span
               style={{
-                fontFamily:    FONT_LORA,
-                fontWeight:    500,
-                fontSize:      nameFontSize,
-                color:         v1.inkPrimary,
-                lineHeight:    1.25,
-                letterSpacing: "-0.005em",
-                // margin-bottom 0 so name + address read as one grouped
-                // component (David's iPhone QA dial).
-                margin:        0,
-                whiteSpace:    "nowrap",
-                overflow:      "hidden",
-                textOverflow:  "ellipsis",
-                paddingBottom: 2,
+                flexShrink:     0,
+                display:        "inline-flex",
+                alignItems:     "center",
+                gap:            5,
+                background:     "#ede6d5",
+                border:         `1px solid ${v1.inkHairline}`,
+                borderRadius:   999,
+                padding:        "5px 10px 5px 12px",
+                fontFamily:     FONT_SYS,
+                fontSize:       10,
+                fontWeight:     700,
+                letterSpacing:  "0.12em",
+                textTransform:  "uppercase",
+                color:          v1.inkMuted,
+                whiteSpace:     "nowrap",
+                lineHeight:     1.2,
               }}
             >
-              {name}
-            </div>
-            <div
-              style={{
-                display:    "flex",
-                alignItems: "center",
-                gap:        6,
-                color:      v1.inkMid,
-                fontFamily: FONT_SYS,
-                fontSize:   12,
-                lineHeight: 1.3,
-                minWidth:   0,
-              }}
-            >
-              <MapPin size={12} strokeWidth={2.0} style={{ flexShrink: 0 }} />
-              <span
-                style={{
-                  overflow:     "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace:   "nowrap",
-                  minWidth:     0,
-                }}
+              {pillLabel}
+              <svg
+                width={9}
+                height={9}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
               >
-                {subtitle}
-              </span>
-            </div>
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </span>
           </div>
 
-          {/* CHANGE-LOCATION PILL — DistancePill (R17) vocabulary applied as
-              a tap affordance. Renders as a <span> not <button> because it
-              sits inside the parent <button> that owns the click handler;
-              nested buttons would be invalid HTML. The pill's job is purely
-              visual — communicate "this is tappable, take me to a list of
-              locations." */}
-          <span
+          {/* Mall name — full card content width. Fluid font measure-and-
+              shrink stays as the safety net for unusually-long names. */}
+          <div
+            ref={nameRef}
             style={{
-              flexShrink:     0,
-              alignSelf:      "flex-start",
-              display:        "inline-flex",
-              alignItems:     "center",
-              gap:            5,
-              background:     "#ede6d5",
-              border:         `1px solid ${v1.inkHairline}`,
-              borderRadius:   999,
-              padding:        "5px 10px 5px 12px",
-              fontFamily:     FONT_SYS,
-              fontSize:       10,
-              fontWeight:     700,
-              letterSpacing:  "0.12em",
-              textTransform:  "uppercase",
-              color:          v1.inkMuted,
-              whiteSpace:     "nowrap",
-              lineHeight:     1.2,
+              fontFamily:    FONT_LORA,
+              fontWeight:    500,
+              fontSize:      nameFontSize,
+              color:         v1.inkPrimary,
+              lineHeight:    1.25,
+              letterSpacing: "-0.005em",
+              margin:        0,
+              whiteSpace:    "nowrap",
+              overflow:      "hidden",
+              textOverflow:  "ellipsis",
+              paddingBottom: 2,
             }}
           >
-            {pillLabel}
-            <svg
-              width={9}
-              height={9}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.4}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+            {name}
+          </div>
+
+          {/* Address — full card content width. Pin icon + truncate. */}
+          <div
+            style={{
+              display:    "flex",
+              alignItems: "center",
+              gap:        6,
+              color:      v1.inkMid,
+              fontFamily: FONT_SYS,
+              fontSize:   12,
+              lineHeight: 1.3,
+              minWidth:   0,
+            }}
+          >
+            <MapPin size={12} strokeWidth={2.0} style={{ flexShrink: 0 }} />
+            <span
+              style={{
+                overflow:     "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace:   "nowrap",
+                minWidth:     0,
+              }}
             >
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </span>
+              {subtitle}
+            </span>
+          </div>
         </div>
 
         {/* PHOTO BANNER — only when we have a real mall hero. All-kentucky
