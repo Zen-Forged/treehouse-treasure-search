@@ -259,7 +259,7 @@ export default function PinCallout({
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            Browse
+            Explore
           </button>
           <button
             type="button"
@@ -285,7 +285,7 @@ export default function PinCallout({
             }}
           >
             <Navigation size={11} strokeWidth={2.2} aria-hidden />
-            Go
+            Navigate
           </button>
         </div>
 

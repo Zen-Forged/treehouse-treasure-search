@@ -104,7 +104,7 @@ export default function PostcardMallCard({
 }: PostcardMallCardProps) {
   const isAllKentucky = mall === "all-kentucky";
 
-  const name = isAllKentucky ? "All Kentucky Locations" : mall.name;
+  const name = isAllKentucky ? "Kentucky locations" : mall.name;
 
   // Measure-and-shrink: render at NAME_FONT_MAX, step down by 1px until the
   // text fits on one line within the available width. Falls back to ellipsis
@@ -204,7 +204,7 @@ export default function PostcardMallCard({
             margin:     "0 0 4px",
           }}
         >
-          from:
+          Viewing map of
         </div>
         <div
           ref={nameRef}

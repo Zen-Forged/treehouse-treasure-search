@@ -29,7 +29,7 @@ import type { Mall } from "@/types/treehouse";
 // Contextual pill — single state-aware affordance (per David's session-110
 // pick). Top-right of the map container. Two states:
 //   - scope set     → "Clear" + X-glyph;     tap = setMallId(null) (stays on /map)
-//   - all-Kentucky  → "Browse list" + List;  tap = open MallSheet (stays on /map)
+//   - all-Kentucky  → "List view" + List;    tap = open MallSheet (stays on /map)
 function MapContextualPill({
   scopeSet,
   onClear,
@@ -40,7 +40,7 @@ function MapContextualPill({
   onOpenList: () => void;
 }) {
   const Icon  = scopeSet ? X    : List;
-  const label = scopeSet ? "Clear" : "Browse list";
+  const label = scopeSet ? "Clear" : "List view";
   const onTap = scopeSet ? onClear : onOpenList;
   return (
     <button
