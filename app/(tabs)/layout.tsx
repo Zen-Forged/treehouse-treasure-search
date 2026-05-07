@@ -43,10 +43,10 @@ import MastheadShareButton from "@/components/MastheadShareButton";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { useShopperAuth } from "@/lib/useShopperAuth";
 import { useShopperSaves } from "@/lib/useShopperSaves";
-import { getActiveMalls, getPostsByIds } from "@/lib/posts";
+import { getActiveMalls } from "@/lib/posts";
 import { track } from "@/lib/clientEvents";
 import { v1 } from "@/lib/tokens";
-import type { Mall, Post } from "@/types/treehouse";
+import type { Mall } from "@/types/treehouse";
 
 export default function TabsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -55,46 +55,18 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
   const shopperAuth         = useShopperAuth();
   const saves               = useShopperSaves();
   const [malls, setMalls]   = useState<Mall[]>([]);
-  // Bookmarked posts (with mall_id) drive the BottomNav Saved badge.
-  // Need full posts (not just IDs) so the badge can filter by mall when
-  // a scope is set — David's session-110 iPhone QA: "The notification
-  // badge should match the filtered saves by location."
-  const [bookmarkedPosts, setBookmarkedPosts] = useState<Post[]>([]);
 
   useEffect(() => {
     getActiveMalls().then(setMalls);
   }, []);
 
-  // Re-fetch posts whenever the save set changes — covers cross-page
-  // toggles via useShopperSaves's custom-event broadcast and auth-state
-  // transitions (sign-in switching the source from localStorage to DB).
-  useEffect(() => {
-    let cancelled = false;
-    const ids = Array.from(saves.ids);
-    if (ids.length === 0) {
-      setBookmarkedPosts([]);
-      return;
-    }
-    getPostsByIds(ids).then((posts) => {
-      if (!cancelled) setBookmarkedPosts(posts);
-    });
-    return () => { cancelled = true; };
-  }, [saves.ids]);
-
-  // Scope-filtered badge count. When a mall is selected, badge counts
-  // only finds saved at that mall. All-Kentucky scope counts everything.
-  // Recomputes reactively when mallId changes (no fetch needed — posts
-  // are already loaded).
-  const bookmarkCount = mallId
-    ? bookmarkedPosts.filter((p) => p.mall_id === mallId).length
-    : bookmarkedPosts.length;
-
-  // totalBookmarkCount drives the postcard-card-hide-on-empty condition
-  // below. Distinct from scope-filtered bookmarkCount: a user with saves
-  // at other malls but ZERO at the current scope should still see the
-  // card (so they can tap to change scope), but a user with NO saves
-  // anywhere shouldn't see the card on /flagged at all.
-  const totalBookmarkCount = bookmarkedPosts.length;
+  // Saved-badge count = total saves across all malls. Session 122
+  // reverses session-110's "badge filters by mall scope" rule: R18
+  // (session 121) restructured /flagged to show all saves regardless of
+  // scope, and the badge should mirror what the page shows. Sourcing
+  // from saves.ids.size — the hook is reactive and avoids the post-
+  // fetch round trip that the mall-filter version needed.
+  const bookmarkCount = saves.ids.size;
 
   // Session 109 — receive shared mall scope from URL.
   // When a recipient taps a shared link with `?mall=<slug>`, intake the
@@ -148,15 +120,13 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
     pathname === "/flagged" ? "flagged" :
                               "home";
 
-  // All-Kentucky subtitle varies by surface:
-  //   - Home + Map identify the location count    ("4 active locations · Kentucky")
-  //   - Saved identifies the saved-find count     ("12 saved finds · Kentucky")
-  // Specific-mall scope ignores this prop (PostcardMallCard renders the
-  // mall's address row instead).
-  const allKentuckySubtitle =
-    pathname === "/flagged"
-      ? `${bookmarkCount} saved ${bookmarkCount === 1 ? "find" : "finds"} · Kentucky`
-      : `${malls.length} active locations · Kentucky`;
+  // All-Kentucky subtitle for the slim PostcardMallCard. Slim card now
+  // mounts only on /map (showPostcardCard), so the subtitle is purely a
+  // /map concern: "X active locations · Kentucky". Session-120 had a
+  // /flagged branch here, but the slim card never rendered on /flagged
+  // even then; the branch retired with R18 (session 121) once Saved
+  // dropped its rich-card chrome too.
+  const allKentuckySubtitle = `${malls.length} active locations · Kentucky`;
 
   // PostcardMallCard tap:
   //   - Home + Saved   → routes to /map (the unified scope-change surface)
