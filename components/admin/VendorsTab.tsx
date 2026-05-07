@@ -22,6 +22,7 @@ import type { Mall, Vendor } from "@/types/treehouse";
 import EditBoothSheet from "@/components/EditBoothSheet";
 import ForceUnlinkConfirm from "@/components/admin/ForceUnlinkConfirm";
 import ForceDeleteConfirm from "@/components/admin/ForceDeleteConfirm";
+import RelinkSheet from "@/components/admin/RelinkSheet";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -132,9 +133,10 @@ export function VendorsTab() {
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
   // Arc 2.3 — action modals (one open at a time).
-  const [editingVendor,   setEditingVendor]   = useState<VendorRow | null>(null);
-  const [unlinkingVendor, setUnlinkingVendor] = useState<VendorRow | null>(null);
-  const [deletingVendor,  setDeletingVendor]  = useState<VendorRow | null>(null);
+  const [editingVendor,    setEditingVendor]   = useState<VendorRow | null>(null);
+  const [unlinkingVendor,  setUnlinkingVendor] = useState<VendorRow | null>(null);
+  const [deletingVendor,   setDeletingVendor]  = useState<VendorRow | null>(null);
+  const [relinkingVendor,  setRelinkingVendor] = useState<VendorRow | null>(null);
 
   // Arc 2.3 — toast (success/error). Auto-dismiss 4s success, 6s error.
   const [toast, setToast] = useState<{ kind: "success" | "error"; text: string } | null>(null);
@@ -271,7 +273,7 @@ export function VendorsTab() {
               onEdit={()        => setEditingVendor(v)}
               onForceUnlink={() => setUnlinkingVendor(v)}
               onDelete={()      => setDeletingVendor(v)}
-              onRelink={()      => setToast({ kind: "error", text: "Relink wires in Arc 2.4." })}
+              onRelink={()      => setRelinkingVendor(v)}
             />
           ))}
         </div>
@@ -322,6 +324,22 @@ export function VendorsTab() {
             setDeletingVendor(null);
             setExpandedRowId(null);
             setToast({ kind: "success", text: `Deleted ${name}.` });
+            void fetchVendors();
+          }}
+        />
+      )}
+
+      {relinkingVendor && (
+        <RelinkSheet
+          vendorId={relinkingVendor.id}
+          vendorMallId={relinkingVendor.mall_id}
+          vendorBoothNumber={relinkingVendor.booth_number}
+          vendorDisplayName={relinkingVendor.display_name}
+          onClose={() => setRelinkingVendor(null)}
+          onRelinked={(newDisplayName) => {
+            setRelinkingVendor(null);
+            setExpandedRowId(null);
+            setToast({ kind: "success", text: `Relinked to ${newDisplayName}.` });
             void fetchVendors();
           }}
         />
