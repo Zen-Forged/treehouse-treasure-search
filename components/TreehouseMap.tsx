@@ -296,10 +296,17 @@ export default function TreehouseMap({
       if (!entry) {
         const el = document.createElement("div");
         el.style.willChange = "transform";
-        // Pin tap → fire onPinTap, stop the click before it bubbles to
-        // the map's empty-tap handler (which would dismiss any peek).
+        // Pin tap → recenter map on the pin, fire onPinTap, stop the click
+        // before it bubbles to the map's empty-tap handler (which would
+        // dismiss any peek). Recenter solves the "callout clipped on edge
+        // pins" case from iPhone QA — without it, tapping a pin near the
+        // viewport edge anchors the callout off-screen. With it, the pin
+        // moves to the viewport center and the callout (anchored above
+        // the pin) sits in the upper portion of the visible map.
         el.addEventListener("click", (e) => {
           e.stopPropagation();
+          const m = mapRef.current;
+          if (m) m.easeTo({ center: [lng, lat], duration: 320 });
           onPinTapRef.current?.(mall.id);
         });
         const root = createRoot(el);
