@@ -197,11 +197,16 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
           return to where they came from. Geometry matches across the two
           components so the slot doesn't shift dimensions on tab switch.
 
-          RIGHT slot — Home + Map + Saved → MastheadShareButton with
-          scope-encoding URL builder. The shared URL only encodes
-          ?mall=<slug> (the mall scope), never which finds the user has
-          saved. Saved was added session 116 in prep for guest user
-          accounts (R1, shipped session 114). */}
+          RIGHT slot — Home + Map → MastheadShareButton with scope-encoding
+          URL builder. The shared URL only encodes ?mall=<slug> (the mall
+          scope), never which finds the user has saved.
+
+          Saved was added to this slot in session 116 in prep for guest user
+          accounts (R1, shipped session 114). R18 (session 121) retires the
+          share button from /flagged: Saved no longer participates in mall
+          scope, so there is no payload to encode and a shared `/flagged`
+          URL would be misleading (recipient sees their own saves, not the
+          sender's). */}
       <StickyMasthead
         left={
           pathname === "/"
@@ -209,7 +214,7 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
             : <MastheadBackButton fallback="/" />
         }
         right={
-          (pathname === "/" || pathname === "/map" || pathname === "/flagged") ? (
+          (pathname === "/" || pathname === "/map") ? (
             <MastheadShareButton
               urlBuilder={() => {
                 const slug = mallId

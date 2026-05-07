@@ -33,7 +33,9 @@ export type ClientEventType =
   | "location_granted"
   | "location_denied"
   | "find_navigate_tapped"
-  | "find_view_on_map_tapped";
+  | "find_view_on_map_tapped"
+  // ── R18 (session 121) — Saved per-mall restructure ───────────────────
+  | "flagged_directions_tapped";
 
 function getSessionId(): string {
   if (typeof window === "undefined") return "";
