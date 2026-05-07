@@ -190,13 +190,18 @@ export async function tryAutoClaimVendorRows(): Promise<boolean> {
  * approved-but-unclaimed vendor lands on /my-shelf instead of /welcome.
  * Pure `detectUserRole` (used by chrome like BottomNav) stays side-effect
  * free — it fires on every mount and shouldn't trigger network claims.
+ *
+ * Auto-claim fires for both "none" AND "shopper" — a user who picked a
+ * handle at /login/email/handle in a prior session and was later approved
+ * as a vendor must still get linked. Vendor precedence over shopper is
+ * already encoded in detectUserRole's contract.
  */
 export async function detectUserRoleWithAutoClaim(user: User | null): Promise<UserRole> {
   if (!user) return "none";
   const role = await detectUserRole(user);
-  if (role !== "none") return role;
+  if (role === "admin" || role === "vendor") return role;
   const claimed = await tryAutoClaimVendorRows();
-  if (!claimed) return "none";
+  if (!claimed) return role;
   return await detectUserRole(user);
 }
 

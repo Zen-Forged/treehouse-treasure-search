@@ -176,13 +176,15 @@ function LoginInner() {
       const shopperRow = !!shopperRes.data;
       const adminUser  = isAdmin(user);
 
-      // Auto-claim path — fires only when nothing was found. Approved
-      // vendors get inserted with user_id=NULL; this links the unlinked
-      // row to the auth account on first sign-in via composite-key match
-      // against vendor_requests. Idempotent, so safe even though we gate
-      // on the negative branch — same gate avoids the round trip for
-      // already-linked users.
-      if (!vendorRow && !shopperRow && !adminUser) {
+      // Auto-claim path — fires whenever no vendor row exists yet.
+      // Approved vendors get inserted with user_id=NULL; this links the
+      // unlinked row to the auth account on first sign-in via composite-
+      // key match against vendor_requests. Idempotent, so safe even
+      // though we gate on the negative branch — same gate avoids the
+      // round trip for already-linked vendors. The !shopperRow guard
+      // is dropped: a user who picked a handle as a shopper before
+      // being approved as a vendor must still claim.
+      if (!vendorRow && !adminUser) {
         const claimed = await tryAutoClaimVendorRows();
         if (cancelled) return;
         if (claimed) {
