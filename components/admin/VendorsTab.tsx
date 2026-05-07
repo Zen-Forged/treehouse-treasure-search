@@ -17,6 +17,11 @@
 import { useEffect, useState } from "react";
 import { authFetch } from "@/lib/authFetch";
 import { v1 } from "@/lib/tokens";
+import { getAllMalls } from "@/lib/posts";
+import type { Mall, Vendor } from "@/types/treehouse";
+import EditBoothSheet from "@/components/EditBoothSheet";
+import ForceUnlinkConfirm from "@/components/admin/ForceUnlinkConfirm";
+import ForceDeleteConfirm from "@/components/admin/ForceDeleteConfirm";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -115,6 +120,7 @@ function rowStatus(v: VendorRow): "linked" | "unlinked" | "collision" {
 export function VendorsTab() {
   const [vendors,  setVendors]  = useState<VendorRow[]>([]);
   const [counts,   setCounts]   = useState<Counts | null>(null);
+  const [malls,    setMalls]    = useState<Mall[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState<string | null>(null);
 
@@ -125,28 +131,56 @@ export function VendorsTab() {
   // D7 — accordion: only one row expanded at a time. null = all collapsed.
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
+  // Arc 2.3 — action modals (one open at a time).
+  const [editingVendor,   setEditingVendor]   = useState<VendorRow | null>(null);
+  const [unlinkingVendor, setUnlinkingVendor] = useState<VendorRow | null>(null);
+  const [deletingVendor,  setDeletingVendor]  = useState<VendorRow | null>(null);
+
+  // Arc 2.3 — toast (success/error). Auto-dismiss 4s success, 6s error.
+  const [toast, setToast] = useState<{ kind: "success" | "error"; text: string } | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const ms = toast.kind === "error" ? 6000 : 4000;
+    const t = setTimeout(() => setToast(null), ms);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  // ── Fetch helpers ──
+  // D19 — re-fetch on tab activation, after every successful mutation, and
+  // on filter chip toggle. fetchVendors is idempotent.
+  async function fetchVendors() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await authFetch("/api/admin/vendors");
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json?.error ?? "Failed to load vendors.");
+        return;
+      }
+      setVendors(json.vendors ?? []);
+      setCounts(json.counts ?? null);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await authFetch("/api/admin/vendors");
-        const json = await res.json();
-        if (cancelled) return;
-        if (!res.ok) {
-          setError(json?.error ?? "Failed to load vendors.");
-          return;
-        }
-        setVendors(json.vendors ?? []);
-        setCounts(json.counts ?? null);
-      } catch (e) {
-        if (!cancelled) setError((e as Error).message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+      // Fetch malls + vendors in parallel on mount. Malls feeds the
+      // EditBoothSheet relocation select.
+      const [_, mallsRows] = await Promise.all([
+        fetchVendors(),
+        getAllMalls(),
+      ]);
+      if (cancelled) return;
+      setMalls(mallsRows);
     })();
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filtered = applyFilters(vendors, scope, statusFilter);
@@ -234,10 +268,130 @@ export function VendorsTab() {
               vendor={v}
               expanded={expandedRowId === v.id}
               onToggle={() => setExpandedRowId(expandedRowId === v.id ? null : v.id)}
+              onEdit={()        => setEditingVendor(v)}
+              onForceUnlink={() => setUnlinkingVendor(v)}
+              onDelete={()      => setDeletingVendor(v)}
+              onRelink={()      => setToast({ kind: "error", text: "Relink wires in Arc 2.4." })}
             />
           ))}
         </div>
       )}
+
+      {/* Modals — only one active at a time. Each closes via its onClose
+          handler; success handlers close + refetch + toast. */}
+      {editingVendor && (
+        <EditBoothSheet
+          vendor={vendorRowToVendor(editingVendor)}
+          malls={malls}
+          mode="admin"
+          onClose={() => setEditingVendor(null)}
+          onUpdated={() => {
+            setEditingVendor(null);
+            setExpandedRowId(null);
+            setToast({ kind: "success", text: "Booth updated." });
+            void fetchVendors();
+          }}
+        />
+      )}
+
+      {unlinkingVendor && (
+        <ForceUnlinkConfirm
+          vendorId={unlinkingVendor.id}
+          displayName={unlinkingVendor.display_name}
+          linked_user_email={unlinkingVendor.linked_user_email}
+          onClose={() => setUnlinkingVendor(null)}
+          onUnlinked={() => {
+            const name = unlinkingVendor.display_name;
+            setUnlinkingVendor(null);
+            setExpandedRowId(null);
+            setToast({ kind: "success", text: `Unlinked ${name}.` });
+            void fetchVendors();
+          }}
+        />
+      )}
+
+      {deletingVendor && (
+        <ForceDeleteConfirm
+          vendorId={deletingVendor.id}
+          displayName={deletingVendor.display_name}
+          postsCount={deletingVendor.posts_count}
+          linked_user_email={deletingVendor.linked_user_email}
+          onClose={() => setDeletingVendor(null)}
+          onDeleted={() => {
+            const name = deletingVendor.display_name;
+            setDeletingVendor(null);
+            setExpandedRowId(null);
+            setToast({ kind: "success", text: `Deleted ${name}.` });
+            void fetchVendors();
+          }}
+        />
+      )}
+
+      {toast && <Toast kind={toast.kind} text={toast.text} />}
+    </div>
+  );
+}
+
+// ─── VendorRow → Vendor adapter for EditBoothSheet ──────────────────────────
+//
+// EditBoothSheet expects the full Vendor type. VendorRow has a superset for
+// admin-display purposes (posts_count, linked_user_email, diagnosis) but
+// is missing the rarely-read fields (bio, avatar_url, facebook_url,
+// updated_at). Construct a Vendor-shaped object from what we have; default
+// the missing fields. EditBoothSheet only reads display_name + booth_number
+// + mall_id + hero_image_url for the form, so the defaults are harmless.
+
+function vendorRowToVendor(v: VendorRow): Vendor {
+  // Drop the partial mall join — EditBoothSheet pulls full Mall rows from
+  // the malls prop using mall_id, so the joined field on the vendor isn't
+  // load-bearing for the form. Adding the missing Mall fields (created_at,
+  // updated_at, activated_at) for the joined object would be ceremony.
+  return {
+    id:             v.id,
+    created_at:     v.created_at,
+    updated_at:     v.created_at,
+    user_id:        v.user_id,
+    mall_id:        v.mall_id,
+    display_name:   v.display_name,
+    booth_number:   v.booth_number,
+    bio:            null,
+    avatar_url:     null,
+    slug:           v.slug,
+    facebook_url:   null,
+    hero_image_url: v.hero_image_url,
+  };
+}
+
+// ─── Toast ──────────────────────────────────────────────────────────────────
+//
+// Simple bottom-anchored toast within the smoke-route layout. When the
+// component mounts inside the /admin tab (Arc 3.1), this can be replaced
+// with the existing /admin toast pattern; for now the component owns its
+// own visual.
+
+function Toast({ kind, text }: { kind: "success" | "error"; text: string }) {
+  const isError = kind === "error";
+  return (
+    <div
+      style={{
+        position: "fixed",
+        left: "50%",
+        bottom: 24,
+        transform: "translateX(-50%)",
+        maxWidth: "calc(100vw - 32px)",
+        padding: "10px 16px",
+        borderRadius: 999,
+        background: isError ? PILL.collision.bg : PILL.linked.bg,
+        color:      isError ? PILL.collision.fg : PILL.linked.fg,
+        border: `1px solid ${isError ? PILL.collision.bd : PILL.linked.bd}`,
+        fontSize: 13,
+        fontWeight: 500,
+        fontFamily: "Lora, Georgia, serif",
+        zIndex: 200,
+        boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+      }}
+    >
+      {text}
     </div>
   );
 }
@@ -304,10 +458,18 @@ function VendorRowAccordion({
   vendor,
   expanded,
   onToggle,
+  onEdit,
+  onForceUnlink,
+  onDelete,
+  onRelink,
 }: {
-  vendor:   VendorRow;
-  expanded: boolean;
-  onToggle: () => void;
+  vendor:        VendorRow;
+  expanded:      boolean;
+  onToggle:      () => void;
+  onEdit:        () => void;
+  onForceUnlink: () => void;
+  onDelete:      () => void;
+  onRelink:      () => void;
 }) {
   const status   = rowStatus(vendor);
   const pill     = PILL[status];
@@ -437,6 +599,10 @@ function VendorRowAccordion({
           <ActionRow
             showRelink={showRelink}
             showForceUnlink={showForceUnlink}
+            onEdit={onEdit}
+            onForceUnlink={onForceUnlink}
+            onDelete={onDelete}
+            onRelink={onRelink}
           />
         </div>
       )}
@@ -549,9 +715,17 @@ function Val({
 function ActionRow({
   showRelink,
   showForceUnlink,
+  onEdit,
+  onForceUnlink,
+  onDelete,
+  onRelink,
 }: {
   showRelink:      boolean;
   showForceUnlink: boolean;
+  onEdit:          () => void;
+  onForceUnlink:   () => void;
+  onDelete:        () => void;
+  onRelink:        () => void;
 }) {
   return (
     <div
@@ -563,10 +737,10 @@ function ActionRow({
         paddingRight: 12,
       }}
     >
-      {showRelink && <ActionButton tone="primary" disabled>Relink to request</ActionButton>}
-      <ActionButton disabled>Edit</ActionButton>
-      {showForceUnlink && <ActionButton disabled>Force-unlink</ActionButton>}
-      <ActionButton tone="danger" disabled>Delete</ActionButton>
+      {showRelink && <ActionButton tone="primary" onClick={onRelink}>Relink to request</ActionButton>}
+      <ActionButton onClick={onEdit}>Edit</ActionButton>
+      {showForceUnlink && <ActionButton onClick={onForceUnlink}>Force-unlink</ActionButton>}
+      <ActionButton tone="danger" onClick={onDelete}>Delete</ActionButton>
     </div>
   );
 }
