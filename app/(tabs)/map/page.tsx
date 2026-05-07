@@ -103,6 +103,16 @@ export default function MapPage() {
     getMallStatsByMallId().then(setMallStats);
   }, []);
 
+  // Session 122 — force scroll-to-top on mount. Next App Router doesn't
+  // auto-reset scroll between sibling pages under a shared layout, so
+  // without this /map inherits the previous tab's scrollY (e.g. user
+  // scrolled Home, tapped Map → map renders behind the fold). /map has
+  // no scroll-state worth preserving (the map element fills the
+  // viewport), so unconditional reset is correct.
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <main
       style={{

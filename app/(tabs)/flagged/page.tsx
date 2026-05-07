@@ -515,13 +515,24 @@ export default function FlaggedPage() {
   }, []);
 
   useEffect(() => {
+    let restoreY: number | null = null;
     try {
       const saved = sessionStorage.getItem(SCROLL_KEY);
       if (saved) {
         const y = parseInt(saved, 10);
-        if (!isNaN(y) && y > 0) pendingScrollY.current = y;
+        if (!isNaN(y) && y > 0) restoreY = y;
       }
     } catch {}
+    if (restoreY !== null) {
+      pendingScrollY.current = restoreY;
+    } else {
+      // Session 122 — no saved scroll for this surface (first visit, or
+      // user landed here from another tab). Force top. Next App Router
+      // doesn't auto-reset scroll between sibling pages under a shared
+      // layout, so without this the page inherits the previous tab's
+      // scrollY. Synchronous on mount — fires before content paints.
+      window.scrollTo(0, 0);
+    }
 
     function onScroll() {
       try { sessionStorage.setItem(SCROLL_KEY, String(Math.round(window.scrollY))); } catch {}
