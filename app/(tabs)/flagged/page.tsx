@@ -1,14 +1,31 @@
 // app/flagged/page.tsx
 // R18 (session 121) — per-mall card stack restructure.
+// Session 122 — iPhone-QA refinement pass on the per-mall card chrome
+// + page-level header. Frame C (session-121 split-header-strip) retires;
+// see "Session 122 refinement" block below for the reversal.
 //
 // Replaces the session-99 booth-destination-container + scope-filter
 // architecture with a flat stack of per-mall cards. Each mall card carries
-// its own DistancePill, photo, and Get Directions CTA. Booth groupings
-// nest inside the mall card with a dashed-top divider per booth section.
+// its own DistancePill and Get Directions CTA. Booth groupings nest inside
+// the mall card with a dashed-top divider per booth section.
 //
-// Frame C — split header strip (110×88 photo on left + chrome on right
-// with eyebrow + name + address + DistancePill stacked). Picked from
-// docs/mockups/saved-per-mall-card-v1.html.
+// Session 122 refinement (reverses session-121 D5/D6/D7/D9):
+//   - Frame C retires. The 110×88 mall-hero photo on the left of the card
+//     header drops entirely. Card chrome stacks at full card width.
+//   - Eyebrow "Saved finds from:" deletes — the page-level header carries
+//     the "saved" identity; per-card eyebrow was redundant.
+//   - Mall name allowed to wrap up to 2 lines (was 1-line ellipsis) so
+//     long mall names don't truncate to "...".
+//   - DistancePill moves below the address in its own row, left-aligned
+//     (was top-right of the chrome stack).
+//   - MapPin icon retires from the address line (Saved-only — Home rich
+//     card keeps it). Saves are personal; reduce location-identity chrome.
+//   - Page-level header inserted above the per-mall card stack:
+//     "{count} Saved find{s} waiting to be found" in 22px FONT_LORA
+//     weight 500 — matches the Home rich-card mall-name typography.
+//   - MallSection.mallHeroUrl retires (dead after photo drops); the
+//     mallsById fetch stays in place for canonical name/address/coords
+//     resolution per session-121 design.
 //
 // What changed from the session-120 baseline:
 //   - Search bar removed (it was an implicit feature-parity decision in
@@ -22,7 +39,7 @@
 //   - <RichPostcardMallCard> retires from this surface; this page owns
 //     its own per-mall card primitive.
 //   - R17 Arc 2's DistancePill-above-each-booth-container (session 119)
-//     reverses; pill now lives top-right of each mall card header strip.
+//     reverses; pill now lives in each mall card header.
 //   - The save leaf bubble returns to every find tile (session-99 hit-area
 //     concern is moot at the new 3-col grid scale).
 //
@@ -52,7 +69,6 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { MapPin } from "lucide-react";
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
 import { useShopperAuth } from "@/lib/useShopperAuth";
 import { useShopperSaves } from "@/lib/useShopperSaves";
@@ -95,7 +111,6 @@ type MallSection = {
   mallId:       string;
   mallName:     string;
   mallAddress:  string | null;
-  mallHeroUrl:  string | null;
   mallLat:      number | null;
   mallLng:      number | null;
   booths:       BoothSection[];
@@ -147,9 +162,8 @@ function groupByMallAndBooth(
   }
 
   // Roll booths up into mall sections, resolving mall metadata from the
-  // mallsById map (carries hero_image_url which getPostsByIds does NOT
-  // currently SELECT). Defensive fallback to post.mall.* if the mall isn't
-  // in the active set (e.g. a save references a mall that was later
+  // mallsById map. Defensive fallback to post.mall.* if the mall isn't in
+  // the active set (e.g. a save references a mall that was later
   // deactivated — show what we know).
   const mallMap = new Map<string, MallSection>();
   for (const booth of allBooths) {
@@ -162,7 +176,6 @@ function groupByMallAndBooth(
         mallId,
         mallName:    mall?.name        ?? sample.mall?.name        ?? "Unknown Location",
         mallAddress: mall?.address     ?? sample.mall?.address     ?? null,
-        mallHeroUrl: mall?.hero_image_url ?? null,
         mallLat:     mall?.latitude    ?? sample.mall?.latitude    ?? null,
         mallLng:     mall?.longitude   ?? sample.mall?.longitude   ?? null,
         booths:      [],
@@ -185,7 +198,8 @@ function groupByMallAndBooth(
 }
 
 // ── Per-mall card (inline; single callsite) ───────────────────────────────────
-// Frame C — split header strip from docs/mockups/saved-per-mall-card-v1.html.
+// Session 122 refinement: Frame C (110×88 photo + right-chrome) retires.
+// Card chrome stacks at full card width: name → address → DistancePill.
 
 function SavedMallCard({
   mall,
@@ -223,147 +237,49 @@ function SavedMallCard({
         boxShadow:    "0 1px 3px rgba(42, 26, 10, 0.05)",
       }}
     >
-      {/* Header strip — Frame C: 110×88 photo on left, chrome on right.
-          Photo is decorative-only (visual reference for the mall) — not a
-          tap target. The whole mall card is the unit; Get Directions is
-          the only CTA. */}
-      <div
-        style={{
-          display:    "flex",
-          gap:        12,
-          padding:    "12px 14px",
-          alignItems: "stretch",
-        }}
-      >
+      {/* Header — full-width chrome stack: name (up to 2 lines) → address
+          → DistancePill (left, own row). */}
+      <div style={{ padding: "14px 14px 12px" }}>
         <div
           style={{
-            width:        110,
-            height:       88,
-            flexShrink:   0,
-            borderRadius: 8,
-            overflow:     "hidden",
-            background:   v1.postit,
-            boxShadow:    "0 1px 3px rgba(0,0,0,0.08)",
-            position:     "relative",
+            fontFamily:      FONT_LORA,
+            fontWeight:      500,
+            fontSize:        19,
+            color:           v1.inkPrimary,
+            lineHeight:      1.25,
+            letterSpacing:   "-0.005em",
+            display:         "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow:        "hidden",
+            wordBreak:       "break-word",
           }}
         >
-          {mall.mallHeroUrl ? (
-            <img
-              src={mall.mallHeroUrl}
-              alt=""
-              style={{
-                position:       "absolute",
-                inset:          0,
-                width:          "100%",
-                height:         "100%",
-                objectFit:      "cover",
-                objectPosition: "center",
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                position:       "absolute",
-                inset:          0,
-                display:        "flex",
-                alignItems:     "center",
-                justifyContent: "center",
-                fontFamily:     FONT_LORA,
-                fontStyle:      "italic",
-                fontSize:       10,
-                color:          v1.inkFaint,
-                textAlign:      "center",
-                padding:        "0 6px",
-                lineHeight:     1.3,
-              }}
-            >
-              no photograph
-            </div>
-          )}
+          {mall.mallName}
         </div>
 
-        <div
-          style={{
-            flex:           1,
-            minWidth:       0,
-            display:        "flex",
-            flexDirection:  "column",
-            justifyContent: "space-between",
-          }}
-        >
-          {/* Top row: eyebrow on the left, distance pill on the right. */}
+        {mall.mallAddress && (
           <div
             style={{
-              display:        "flex",
-              justifyContent: "space-between",
-              alignItems:     "flex-start",
-              gap:            8,
+              marginTop:  4,
+              color:      v1.inkMuted,
+              fontFamily: FONT_SYS,
+              fontSize:   12,
+              lineHeight: 1.3,
             }}
           >
-            <div
-              style={{
-                fontFamily: FONT_LORA,
-                fontStyle:  "italic",
-                fontSize:   11,
-                color:      v1.inkMuted,
-                lineHeight: 1,
-                paddingTop: 2,
-              }}
-            >
-              Saved finds from:
-            </div>
-            {/* Renders nothing on guest / denied / mall coords missing per
-                <DistancePill> internal null-passthrough. */}
+            {mall.mallAddress}
+          </div>
+        )}
+
+        {/* DistancePill renders null on guest / denied / mall coords missing.
+            Wrapper is conditional so the empty-pill case doesn't leave an
+            8px margin gap. */}
+        {miles != null && (
+          <div style={{ marginTop: 8 }}>
             <DistancePill miles={miles} />
           </div>
-
-          {/* Bottom: mall name + address. Truncate on overflow — long mall
-              names handled elsewhere via the standard CSS ellipsis. */}
-          <div style={{ minWidth: 0 }}>
-            <div
-              style={{
-                fontFamily:    FONT_LORA,
-                fontWeight:    500,
-                fontSize:      19,
-                color:         v1.inkPrimary,
-                lineHeight:    1.15,
-                letterSpacing: "-0.005em",
-                whiteSpace:    "nowrap",
-                overflow:      "hidden",
-                textOverflow:  "ellipsis",
-              }}
-            >
-              {mall.mallName}
-            </div>
-            {mall.mallAddress && (
-              <div
-                style={{
-                  display:    "flex",
-                  alignItems: "center",
-                  gap:        4,
-                  marginTop:  3,
-                  color:      v1.inkMuted,
-                  fontFamily: FONT_SYS,
-                  fontSize:   12,
-                  lineHeight: 1.3,
-                  minWidth:   0,
-                }}
-              >
-                <MapPin size={11} strokeWidth={2.0} style={{ flexShrink: 0 }} />
-                <span
-                  style={{
-                    overflow:     "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace:   "nowrap",
-                    minWidth:     0,
-                  }}
-                >
-                  {mall.mallAddress}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Booth subgroups — flat list of finds per booth, separated by
@@ -717,6 +633,25 @@ export default function FlaggedPage() {
               gap:           14,
             }}
           >
+            {/* Page header — count + "saved finds waiting to be found".
+                22px FONT_LORA weight 500 mirrors the Home rich-card mall-
+                name typography (NAME_FONT_MAX in RichPostcardMallCard.tsx).
+                Only renders in the populated branch; loading + empty
+                branches keep their existing chrome. */}
+            <h1
+              style={{
+                margin:        0,
+                fontFamily:    FONT_LORA,
+                fontWeight:    500,
+                fontSize:      22,
+                color:         v1.inkPrimary,
+                lineHeight:    1.25,
+                letterSpacing: "-0.005em",
+              }}
+            >
+              {posts.length} {posts.length === 1 ? "Saved find" : "Saved finds"} waiting to be found
+            </h1>
+
             {sortedMallsWithMiles.map(({ mall, miles }) => (
               <SavedMallCard
                 key={mall.mallId}
