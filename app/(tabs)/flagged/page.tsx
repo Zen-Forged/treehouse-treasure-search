@@ -531,11 +531,9 @@ function FlaggedPageInner() {
         <div style={{ padding: "12px 16px 14px" }}>
           <RichPostcardMallCard
             mall={selectedMall ?? "all-kentucky"}
-            locationCount={malls.length}
             allKentuckySubtitle={
               `${posts.length} saved ${posts.length === 1 ? "find" : "finds"} · Kentucky`
             }
-            onTap={() => router.push("/map")}
             searchInitialQuery={initialQ}
             onSearchChange={handleSearchChange}
           />

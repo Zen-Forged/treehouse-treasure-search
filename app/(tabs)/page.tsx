@@ -595,25 +595,21 @@ function DiscoveryFeedInner() {
   return (
     <>
       {/* Session 120 — <RichPostcardMallCard> folds the mall hero photo + the
-          R16 SearchBar pill INTO the postcard card. Replaces what used to be
-          two stacked primitives between the (suppressed-on-Home) slim
-          postcard and the masonry grid: a separate <FeaturedBanner
-          imageUrl={selectedMall.hero_image_url}> + a separate <SearchBar />.
-          See components/RichPostcardMallCard.tsx for full design intent.
+          R16 SearchBar pill INTO the postcard card. Session 121 (R18) makes
+          the card display-only: the change-location pill retires + the
+          outer wrapper drops to <div>; the Map BottomNav tab is now the
+          canonical change-scope path. Eyebrow reads "Finds from:" (reverses
+          session-120 V3.1 trim).
 
-          Slim <PostcardMallCard> is hidden on / by app/(tabs)/layout.tsx so
-          this rich card is the only postcard on Home. The slim card stays on
-          Map + Saved unchanged.
+          Slim <PostcardMallCard> stays on /map only; Home + Saved each own
+          their own chrome (Saved restructures to per-mall cards in R18).
 
-          Tap target inside the card routes to /map (scope-change surface).
           SearchBar passthrough preserves R16 ?q= URL state + 200ms debounce
           via the existing handleSearchChange callback. */}
       <div style={{ padding: "12px 16px 14px" }}>
         <RichPostcardMallCard
           mall={selectedMall ?? "all-kentucky"}
-          locationCount={malls.length}
           allKentuckySubtitle={`${malls.length} active locations · Kentucky`}
-          onTap={() => router.push("/map")}
           searchInitialQuery={initialQ}
           onSearchChange={handleSearchChange}
         />
