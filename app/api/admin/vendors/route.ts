@@ -142,6 +142,13 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: "vendorId is required." }, { status: 400 });
   }
 
+  // Arc 4 D12 — `?force=1` query flag bypasses the user_id != null safety
+  // gate. Set by the new admin Vendors tab `<ForceDeleteConfirm>` modal
+  // (which always runs the typed-name confirmation step regardless of
+  // claim state). The /shelves Trash bubble continues to call without
+  // the flag and inherits the existing safety gate.
+  const force = new URL(req.url).searchParams.get("force") === "1";
+
   // ── 1. Fetch vendor ──
   const { data: vendor, error: fetchErr } = await auth.service
     .from("vendors")
@@ -157,8 +164,8 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: "Booth not found." }, { status: 404 });
   }
 
-  // ── 2. Safety gate — refuse to delete a claimed booth ──
-  if (vendor.user_id !== null) {
+  // ── 2. Safety gate — refuse to delete a claimed booth (unless ?force=1) ──
+  if (!force && vendor.user_id !== null) {
     return NextResponse.json(
       {
         error:
@@ -259,17 +266,36 @@ export async function DELETE(req: Request) {
     display_name: vendor.display_name,
     postsDeleted: posts?.length ?? 0,
     imagesDeleted,
+    force,
   });
 
-  await recordEvent("booth_deleted_by_admin", {
-    user_id: auth.user.id,
-    payload: {
-      vendor_id:     vendorId,
-      display_name:  vendor.display_name,
-      posts_deleted: posts?.length ?? 0,
-      images_deleted: imagesDeleted,
-    },
-  });
+  // Arc 4 D12 — when called with ?force=1, fire the new event with the
+  // expanded audit payload (had_user_id + prev_user_id) regardless of
+  // whether vendor.user_id was null. The flag captures admin intent
+  // ("explicit force-delete from Vendors tab"), not just outcome.
+  if (force) {
+    await recordEvent("vendor_force_deleted_by_admin", {
+      user_id: auth.user.id,
+      payload: {
+        vendor_id:          vendorId,
+        prev_display_name:  vendor.display_name,
+        had_user_id:        vendor.user_id !== null,
+        prev_user_id:       vendor.user_id ?? null,
+        posts_deleted:      posts?.length ?? 0,
+        images_deleted:     imagesDeleted,
+      },
+    });
+  } else {
+    await recordEvent("booth_deleted_by_admin", {
+      user_id: auth.user.id,
+      payload: {
+        vendor_id:      vendorId,
+        display_name:   vendor.display_name,
+        posts_deleted:  posts?.length ?? 0,
+        images_deleted: imagesDeleted,
+      },
+    });
+  }
 
   return NextResponse.json({
     ok: true,

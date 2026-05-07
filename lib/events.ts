@@ -50,7 +50,14 @@ export type EventType =
   | "vendor_profile_edited"
   // R11 (Wave 1 Task 7, session 91) — admin uploads/removes a mall hero.
   | "mall_hero_uploaded_by_admin"
-  | "mall_hero_removed_by_admin";
+  | "mall_hero_removed_by_admin"
+  // Arc 4 of login refactor (session 124+125) — admin Vendors tab destructive
+  // actions. Distinct from existing booth_*_by_admin events because these all
+  // bypass the user_id != null safety gate (or modify linkage) — the explicit
+  // force semantics need their own audit shape per design record D12-D14.
+  | "vendor_force_unlinked_by_admin"
+  | "vendor_relinked_by_admin"
+  | "vendor_force_deleted_by_admin";
 
 export interface RecordEventOptions {
   user_id?:    string | null;
