@@ -36,6 +36,127 @@ export const dynamic = "force-dynamic";
 // because the dispatcher already gated on it.
 type AuthOk = Extract<AuthResult, { ok: true }>;
 
+// ─── GET ─────────────────────────────────────────────────────────────────────
+// Arc 4 Arc 1.1 — feeds the new admin Vendors tab. Returns every vendors row
+// with mall join + posts_count + linked_user_email + per-row diagnosis. The
+// diagnosis payload runs the diagnose-request-equivalent collision check
+// inline for unlinked rows (D5 — server-side fanout, no on-demand button).
+//
+// N+1 footprint: O(unlinked) vendor_requests queries + 1 auth.users.listUsers
+// page. At ~50 vendors with ~30 unlinked this is ~31 sequential round trips
+// — acceptable for current scale per design record §Component contracts.
+// Past 200 vendors, refactor to a single bulk-fetch with composite-key match
+// client-side.
+
+type DiagnosisRequest = {
+  id:         string;
+  name:       string;
+  email:      string;
+  status:     "pending" | "approved" | "denied";
+  created_at: string;
+};
+
+export async function GET(req: Request) {
+  const auth = await requireAdmin(req);
+  if (!auth.ok) return auth.response;
+
+  // ── 1. Fetch all vendors + mall + posts count ──
+  const { data: vendors, error: vendorsErr } = await auth.service
+    .from("vendors")
+    .select(`
+      id, display_name, slug, booth_number, mall_id, user_id,
+      hero_image_url, created_at,
+      mall:malls(id, name, slug, city, state, address, status),
+      posts:posts(count)
+    `)
+    .order("created_at", { ascending: false });
+
+  if (vendorsErr) {
+    console.error("[admin/vendors GET] fetch:", vendorsErr.message);
+    return NextResponse.json({ error: vendorsErr.message }, { status: 500 });
+  }
+
+  // ── 2. Single auth.users page → id-to-email Map ──
+  // listUsers is paginated; perPage=1000 covers current scale in one round
+  // trip. Mirrors diagnose-request:170-195 + relink at line ~365.
+  const emailById = new Map<string, string>();
+  const { data: usersPage, error: usersErr } = await auth.service.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
+  if (usersErr) {
+    console.error("[admin/vendors GET] auth.users lookup:", usersErr.message);
+    // Continue — emails will be null on linked rows but the tab still works.
+  } else {
+    for (const u of usersPage.users) {
+      if (u.email) emailById.set(u.id, u.email);
+    }
+  }
+
+  // ── 3. Per-row enrichment: linked_user_email + diagnosis ──
+  const enriched = await Promise.all(
+    (vendors ?? []).map(async (v) => {
+      const postsCount =
+        Array.isArray(v.posts) && v.posts[0]
+          ? Number((v.posts[0] as { count: number }).count)
+          : 0;
+
+      const linked_user_email =
+        v.user_id !== null ? emailById.get(v.user_id) ?? null : null;
+
+      // Diagnosis only runs for unlinked rows. Linked rows get null.
+      let diagnosis: { matchingRequest: DiagnosisRequest | null; isCollision: boolean } | null = null;
+      if (v.user_id === null) {
+        // PostgREST quirk: `.eq("col", null)` does not match null rows; null
+        // requires `.is("col", null)`. Branch the query accordingly.
+        let q = auth.service
+          .from("vendor_requests")
+          .select("id, name, email, status, created_at")
+          .eq("mall_id", v.mall_id)
+          .in("status", ["pending", "approved"])
+          .order("created_at", { ascending: false })
+          .limit(1);
+        q = v.booth_number === null
+          ? q.is("booth_number", null)
+          : q.eq("booth_number", v.booth_number);
+        const { data: requests, error: reqErr } = await q;
+
+        if (reqErr) {
+          console.error("[admin/vendors GET] diagnose lookup:", reqErr.message);
+          diagnosis = { matchingRequest: null, isCollision: false };
+        } else {
+          const matchingRequest = requests && requests[0]
+            ? (requests[0] as DiagnosisRequest)
+            : null;
+          const isCollision =
+            matchingRequest !== null &&
+            matchingRequest.name.trim() !== v.display_name.trim();
+          diagnosis = { matchingRequest, isCollision };
+        }
+      }
+
+      // Strip the raw `posts` array — return the count only on the row shape.
+      const { posts: _posts, ...rest } = v as typeof v & { posts?: unknown };
+      return {
+        ...rest,
+        posts_count: postsCount,
+        linked_user_email,
+        diagnosis,
+      };
+    }),
+  );
+
+  // ── 4. Counts for chip badges ──
+  const counts = {
+    total:     enriched.length,
+    linked:    enriched.filter((v) => v.user_id !== null).length,
+    unlinked:  enriched.filter((v) => v.user_id === null).length,
+    collision: enriched.filter((v) => v.diagnosis?.isCollision === true).length,
+  };
+
+  return NextResponse.json({ ok: true, vendors: enriched, counts });
+}
+
 // ─── PATCH ────────────────────────────────────────────────────────────────────
 // Three actions, discriminated by the `action` field on the body:
 //
