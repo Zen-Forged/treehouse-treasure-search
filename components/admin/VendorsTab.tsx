@@ -122,6 +122,9 @@ export function VendorsTab() {
   const [scope,        setScope]        = useState<Scope>("problematic");
   const [statusFilter, setStatusFilter] = useState<Set<StatusKey>>(new Set());
 
+  // D7 — accordion: only one row expanded at a time. null = all collapsed.
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -226,7 +229,12 @@ export function VendorsTab() {
       {!loading && !error && filtered.length > 0 && (
         <div>
           {filtered.map((v) => (
-            <VendorRowCollapsed key={v.id} vendor={v} />
+            <VendorRowAccordion
+              key={v.id}
+              vendor={v}
+              expanded={expandedRowId === v.id}
+              onToggle={() => setExpandedRowId(expandedRowId === v.id ? null : v.id)}
+            />
           ))}
         </div>
       )}
@@ -292,96 +300,365 @@ function Chip({
   );
 }
 
-function VendorRowCollapsed({ vendor }: { vendor: VendorRow }) {
+function VendorRowAccordion({
+  vendor,
+  expanded,
+  onToggle,
+}: {
+  vendor:   VendorRow;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
   const status   = rowStatus(vendor);
   const pill     = PILL[status];
   const isWarn   = status === "collision";
   const mallName = vendor.mall?.name ?? "—";
   const boothNo  = vendor.booth_number ?? "—";
 
+  // D10 — collision row bg shifts on expand; non-collision rows pick up
+  // a faint paperWarm tint when expanded so the open accordion reads
+  // distinct from collapsed siblings.
+  const rowBg =
+    isWarn && expanded ? "rgba(168,68,46,0.08)" :
+    isWarn             ? "rgba(168,68,46,0.04)" :
+    expanded           ? v1.paperWarm           :
+                         "transparent";
+
+  // D4 — Force-unlink only when user_id != null. Relink only when
+  // unlinked AND a matching pending/approved request exists. Edit and
+  // Delete render on every row.
+  const showForceUnlink = vendor.user_id !== null;
+  const showRelink      = vendor.user_id === null && vendor.diagnosis?.matchingRequest !== null;
+
+  return (
+    <div
+      style={{
+        borderBottom: `1px solid ${v1.inkHairline}`,
+        background: rowBg,
+        transition: "background 120ms ease",
+      }}
+    >
+      {/* Always-visible head — tap target for expand/collapse */}
+      <button
+        type="button"
+        onClick={onToggle}
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems: "stretch",
+          gap: 0,
+          padding: "12px 0",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          textAlign: "left",
+          fontFamily: "inherit",
+        }}
+      >
+        {/* Leaf accent — red on collision, transparent otherwise (D10) */}
+        <div
+          style={{
+            width: 6,
+            flexShrink: 0,
+            marginRight: 12,
+            background: isWarn ? PILL.collision.fg : "transparent",
+            borderRadius: 3,
+          }}
+        />
+        {/* Body */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontFamily: "Lora, Georgia, serif",
+              fontSize: 14,
+              fontWeight: 500,
+              color: isWarn ? PILL.collision.fg : v1.inkPrimary,
+              lineHeight: 1.4,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {vendor.display_name}
+          </div>
+          <div
+            style={{
+              fontSize: 11,
+              color: v1.inkMuted,
+              marginTop: 2,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            Booth {boothNo} · {mallName} · {vendor.posts_count} {vendor.posts_count === 1 ? "post" : "posts"}
+          </div>
+        </div>
+        {/* Status pill + chevron */}
+        <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, paddingLeft: 8 }}>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "3px 9px",
+              borderRadius: 999,
+              fontSize: 10,
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+              background: pill.bg,
+              color: pill.fg,
+              border: `1px solid ${pill.bd}`,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {status}
+          </span>
+          <span
+            style={{
+              color: v1.inkFaint,
+              fontSize: 18,
+              lineHeight: 1,
+              fontFamily: "Lora, Georgia, serif",
+              display: "inline-block",
+              transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
+              transition: "transform 160ms ease",
+            }}
+          >
+            ›
+          </span>
+        </div>
+      </button>
+
+      {/* Expanded detail */}
+      {expanded && (
+        <div style={{ padding: "0 0 14px 18px" }}>
+          <VendorRowDetail vendor={vendor} isWarn={isWarn} />
+          <ActionRow
+            showRelink={showRelink}
+            showForceUnlink={showForceUnlink}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Detail metadata grid (D7) ──────────────────────────────────────────────
+
+function VendorRowDetail({ vendor, isWarn }: { vendor: VendorRow; isWarn: boolean }) {
+  const dn   = vendor.display_name;
+  const noteName = vendor.diagnosis?.matchingRequest?.name ?? null;
+  const userIdLabel = vendor.user_id ?? "— (unlinked)";
+
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "110px 1fr",
+        rowGap: 6,
+        columnGap: 12,
+        padding: "8px 12px 12px 0",
+        marginRight: 12,
+        fontSize: 12,
+        lineHeight: 1.5,
+      }}
+    >
+      <Key>display_name</Key>
+      <Val mode={isWarn ? "warn" : "default"}>
+        {dn}
+        {isWarn && noteName && (
+          <span
+            style={{
+              color: v1.inkMuted,
+              fontSize: 10,
+              fontStyle: "italic",
+              fontFamily: "Lora, Georgia, serif",
+              marginLeft: 6,
+            }}
+          >
+            (approved request: &ldquo;{noteName}&rdquo;)
+          </span>
+        )}
+      </Val>
+
+      <Key>slug</Key>
+      <Val mode="mono">{vendor.slug}</Val>
+
+      <Key>user_id</Key>
+      <Val mode="mono">{userIdLabel}</Val>
+
+      <Key>email</Key>
+      <Val mode="mono">{vendor.linked_user_email ?? "—"}</Val>
+
+      <Key>posts</Key>
+      <Val>{vendor.posts_count}</Val>
+
+      <Key>created</Key>
+      <Val mode="mono">{formatDate(vendor.created_at)}</Val>
+    </div>
+  );
+}
+
+function Key({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        color: v1.inkMuted,
+        fontSize: 11,
+        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+        textAlign: "left",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Val({
+  children,
+  mode = "default",
+}: {
+  children: React.ReactNode;
+  mode?:    "default" | "mono" | "warn";
+}) {
+  const isWarn = mode === "warn";
+  const isMono = mode === "mono";
+  return (
+    <div
+      style={{
+        color: isWarn ? PILL.collision.fg : v1.inkPrimary,
+        fontFamily: isMono
+          ? "ui-monospace, SFMono-Regular, Menlo, monospace"
+          : "Lora, Georgia, serif",
+        fontSize: isMono ? 11 : 13,
+        wordBreak: "break-all",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ─── Action button row (D7) ─────────────────────────────────────────────────
+//
+// Visual placeholders this commit (Arc 2.2). Handlers wire in:
+//   Arc 2.3 → Edit · Force-unlink · Delete (3 modals)
+//   Arc 2.4 → Relink (RelinkSheet)
+
+function ActionRow({
+  showRelink,
+  showForceUnlink,
+}: {
+  showRelink:      boolean;
+  showForceUnlink: boolean;
+}) {
   return (
     <div
       style={{
         display: "flex",
-        alignItems: "stretch",
-        gap: 0,
-        padding: "12px 0",
-        borderBottom: `1px solid ${v1.inkHairline}`,
-        background: isWarn ? "rgba(168,68,46,0.04)" : "transparent",
+        flexWrap: "wrap",
+        gap: 6,
+        marginTop: 4,
+        paddingRight: 12,
       }}
     >
-      {/* Leaf accent — red on collision, transparent otherwise (D10) */}
-      <div
-        style={{
-          width: 6,
-          flexShrink: 0,
-          marginRight: 12,
-          background: isWarn ? PILL.collision.fg : "transparent",
-          borderRadius: 3,
-        }}
-      />
-      {/* Body */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontFamily: "Lora, Georgia, serif",
-            fontSize: 14,
-            fontWeight: 500,
-            color: isWarn ? PILL.collision.fg : v1.inkPrimary,
-            lineHeight: 1.4,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {vendor.display_name}
-        </div>
-        <div
-          style={{
-            fontSize: 11,
-            color: v1.inkMuted,
-            marginTop: 2,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          Booth {boothNo} · {mallName} · {vendor.posts_count} {vendor.posts_count === 1 ? "post" : "posts"}
-        </div>
-      </div>
-      {/* Status pill */}
-      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 6, paddingLeft: 8 }}>
-        <span
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            padding: "3px 9px",
-            borderRadius: 999,
-            fontSize: 10,
-            fontWeight: 600,
-            textTransform: "uppercase",
-            letterSpacing: "0.06em",
-            background: pill.bg,
-            color: pill.fg,
-            border: `1px solid ${pill.bd}`,
-            whiteSpace: "nowrap",
-          }}
-        >
-          {status}
-        </span>
-        <span
-          style={{
-            color: v1.inkFaint,
-            fontSize: 18,
-            lineHeight: 1,
-            fontFamily: "Lora, Georgia, serif",
-          }}
-        >
-          ›
-        </span>
-      </div>
+      {showRelink && <ActionButton tone="primary" disabled>Relink to request</ActionButton>}
+      <ActionButton disabled>Edit</ActionButton>
+      {showForceUnlink && <ActionButton disabled>Force-unlink</ActionButton>}
+      <ActionButton tone="danger" disabled>Delete</ActionButton>
     </div>
   );
+}
+
+function ActionButton({
+  children,
+  tone,
+  disabled,
+  onClick,
+}: {
+  children: React.ReactNode;
+  tone?:    "primary" | "danger";
+  disabled?: boolean;
+  onClick?: () => void;
+}) {
+  const base = {
+    padding: "6px 12px",
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: 500,
+    fontFamily: "Lora, Georgia, serif",
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.45 : 1,
+    transition: "opacity 120ms ease",
+  } as const;
+
+  if (tone === "primary") {
+    return (
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onClick}
+        style={{
+          ...base,
+          background: v1.green,
+          color: v1.onGreen,
+          border: `1px solid ${v1.green}`,
+        }}
+      >
+        {children}
+      </button>
+    );
+  }
+  if (tone === "danger") {
+    return (
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onClick}
+        style={{
+          ...base,
+          background: "transparent",
+          color: PILL.collision.fg,
+          border: `1px solid ${PILL.collision.bd}`,
+        }}
+      >
+        {children}
+      </button>
+    );
+  }
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      style={{
+        ...base,
+        background: "transparent",
+        color: v1.inkMid,
+        border: `1px solid ${v1.inkHairline}`,
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function formatDate(iso: string): string {
+  // "2026-05-07T11:42:00Z" → "May 7 · 11:42 EDT"
+  // Match V1 mockup. Fall back to raw ISO on parse failure.
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    const month = d.toLocaleString("en-US", { month: "short" });
+    const day   = d.getDate();
+    const hh    = d.getHours().toString().padStart(2, "0");
+    const mm    = d.getMinutes().toString().padStart(2, "0");
+    const tz    = d.toLocaleString("en-US", { timeZoneName: "short" }).split(" ").pop() ?? "";
+    return `${month} ${day} · ${hh}:${mm} ${tz}`;
+  } catch {
+    return iso;
+  }
 }
 
 // ─── Inline styles ──────────────────────────────────────────────────────────
