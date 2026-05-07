@@ -29,15 +29,30 @@
 //                              assigned" with no escape and no admin reachability,
 //                              so the rightmost slot becomes the role-specialty
 //                              slot regardless of which role.
+//   R18 (session 121):         Home · Saved · Map · [Booth | Admin]. Map returns
+//                              as a universal slot-3 tab; the role-specialty
+//                              slot stays rightmost when present. Guest/shopper
+//                              gets 3-tab (Home/Saved/Map); vendor + admin get
+//                              4-tab with role-tab rightmost. Reverses session
+//                              110's "Map retired from nav" — David's session-
+//                              121 thesis discussion reframed /map as a peer
+//                              destination, not just an interaction surface.
+//                              Session 114's "rightmost = role-specialty when
+//                              present" rule preserved; Map slides in between
+//                              Saved and the role-tab rather than displacing it.
+//                              The X-Locations pill on the Home rich card retires
+//                              in the same session — Map tab is now the canonical
+//                              change-scope path, so the in-card pill became
+//                              redundant chrome.
 //
-// Why drop Map (session 110): the two paths to /map (BottomNav tab + tap
-// the postcard mall card on Home/Saved) felt disjointed once /map became
-// purely a scope-picker rather than a destination. /map is now an
-// interaction surface — go to /map to change scope, then return to the
-// feed — accessed via the postcard card. The nav-tab path was redundant
-// AND created a "where do I go after picking a mall on /map?" navigation
-// dead-end. Per David: "remove the map icon and functionality from the
-// nav bar."
+// Why drop Map (session 110, REVERSED session 121): the two paths to /map
+// (BottomNav tab + tap the postcard mall card on Home/Saved) felt
+// disjointed once /map became purely a scope-picker rather than a
+// destination. Session 121 reframes /map as a peer destination (path-3
+// of David's "Home / Saved / Find Map" thesis) and reinstates the tab.
+// The redundancy concern is closed by retiring the Home rich card's
+// X-Locations pill in the same session — there is now ONE path to /map
+// (the BottomNav tab), not two.
 //
 // Why drop Profile (session 109): BottomNav's job is wayfinding between
 // primary destinations. Profile is identity, not destination — pairing it
@@ -61,7 +76,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, Store, Shield } from "lucide-react";
+import { Home, Store, Shield, MapPin } from "lucide-react";
 import FlagGlyph from "./FlagGlyph";
 import { FONT_NUMERAL } from "@/lib/tokens";
 import { getSession, onAuthChange, detectUserRole, type UserRole } from "@/lib/auth";
@@ -135,12 +150,13 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     badge?: boolean;
   };
 
-  // Tab order: Home → Saved → [Booth | Admin, role-conditional].
+  // Tab order: Home → Saved → Map → [Booth | Admin, role-conditional].
   // Saved holds the stable 2nd position so muscle memory transfers across
-  // role transitions (sign-in / sign-out flips the rightmost slot, not
-  // the middle). The role tab is the "specialty rightmost" — whichever
+  // role transitions. Map is universal in slot 3 (R18, session 121). The
+  // role tab is the "specialty rightmost" when present — whichever
   // surface the role unlocks: vendor → Booth (manage their work), admin
-  // → Admin (platform controls).
+  // → Admin (platform controls). Guest/shopper sees 3-tab; vendor + admin
+  // see 4-tab with the role-tab rightmost.
   const tabs: TabDef[] = [
     {
       key: "home", label: "Home", href: "/",
@@ -149,6 +165,10 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     {
       key: "flagged", label: "Saved", href: "/flagged",
       icon: <FlagGlyph size={21} strokeWidth={2.0} />, badge: true,
+    },
+    {
+      key: "map", label: "Map", href: "/map",
+      icon: <MapPin size={21} strokeWidth={2.0} />,
     },
     ...(showBoothTab ? [{
       key: "booth" as NavTab, label: "Booth", href: "/my-shelf",
