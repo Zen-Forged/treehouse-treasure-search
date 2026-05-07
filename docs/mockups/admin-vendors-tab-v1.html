@@ -1,0 +1,899 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Admin Vendors tab — V1 (row-shape axis)</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paperCream: #f5ecd5;
+    --paperWarm:  #ede6d5;
+    --postit:     #fbf3df;
+    --inkPrimary: #2c241c;
+    --inkMid:     #5a4d3e;
+    --inkMuted:   #8a7e6c;
+    --hairline:   rgba(44,36,28,0.18);
+    --hairline-strong: rgba(44,36,28,0.32);
+    --green:      #4a6b3a;
+    --greenSoft:  #e7ecdf;
+    --amber:      #b6843a;
+    --amberSoft:  #f4ead4;
+    --red:        #a8442e;
+    --redSoft:    #f1dad2;
+    --shadow-card: 0 2px 6px rgba(44,36,28,0.06), 0 1px 2px rgba(44,36,28,0.04);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: #1a1611;
+    color: #ddd5c4;
+    padding: 36px 16px 80px;
+  }
+
+  /* === Header / decisions pane === */
+  .doc-title {
+    font-family: "Lora", serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 22px;
+    color: #ede6d5;
+    text-align: center;
+    margin: 0 0 6px;
+  }
+  .doc-sub {
+    font-size: 13px;
+    color: #b3a995;
+    text-align: center;
+    margin: 0 0 28px;
+    letter-spacing: 0.02em;
+  }
+  .decisions {
+    max-width: 1280px;
+    margin: 0 auto 36px;
+    background: #232017;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 20px 24px 22px;
+  }
+  .decisions h3 {
+    font-family: "Lora", serif;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: #d8c896;
+    margin: 0 0 10px;
+  }
+  .decisions ul { margin: 0 0 18px; padding-left: 18px; font-size: 13px; line-height: 1.55; color: #cfc6b4; }
+  .decisions ul li { margin-bottom: 4px; }
+  .decisions ul:last-child { margin-bottom: 0; }
+  .decisions strong { color: #ede6d5; }
+
+  /* === Row of phone frames === */
+  .row {
+    display: flex;
+    gap: 28px;
+    justify-content: center;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  .frame { width: 390px; flex-shrink: 0; }
+  .frame-label {
+    font-family: "Lora", serif;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #ede6d5;
+    margin: 0 0 4px;
+    padding-left: 14px;
+  }
+  .frame-tagline {
+    font-family: "Lora", serif;
+    font-style: italic;
+    font-size: 13px;
+    color: #d8c896;
+    margin: 0 0 10px;
+    padding-left: 14px;
+  }
+  .frame-desc {
+    font-size: 12px;
+    line-height: 1.5;
+    color: #b3a995;
+    margin: 0 0 14px;
+    padding: 0 14px;
+    min-height: 72px;
+  }
+
+  /* === Phone === */
+  .phone {
+    width: 390px;
+    background: var(--paperCream);
+    border-radius: 28px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 24px 48px rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.2);
+    color: var(--inkPrimary);
+  }
+
+  /* Masthead */
+  .masthead {
+    height: 44px;
+    background: var(--paperCream);
+    border-bottom: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+  }
+  .masthead-left {
+    width: 36px; height: 36px;
+    border-radius: 18px;
+    background: var(--paperWarm);
+    border: 1px solid var(--hairline);
+  }
+  .masthead-mid {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 18px;
+    color: var(--inkPrimary);
+    letter-spacing: 0.01em;
+  }
+  .masthead-right {
+    width: 36px; height: 36px;
+    border-radius: 18px;
+    background: var(--paperWarm);
+    border: 1px solid var(--hairline);
+  }
+
+  /* Tab bar */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    padding: 12px 14px 0;
+    border-bottom: 1px solid var(--hairline);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0;
+    padding: 10px 12px 12px;
+    font-family: "Lora", serif;
+    font-size: 13px;
+    color: var(--inkMuted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tab.active {
+    color: var(--inkPrimary);
+    border-bottom-color: var(--inkPrimary);
+    font-weight: 600;
+  }
+  .tab.new {
+    color: var(--green);
+    font-weight: 600;
+  }
+  .tab.active.new {
+    border-bottom-color: var(--green);
+  }
+  .tab-new-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 3px;
+    background: var(--green);
+    margin-left: 4px;
+    transform: translateY(-6px);
+  }
+
+  /* Filter strip */
+  .filter-strip {
+    display: flex;
+    gap: 6px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .filter-strip::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    background: var(--paperWarm);
+    color: var(--inkMid);
+  }
+  .chip.on {
+    background: var(--inkPrimary);
+    color: var(--paperCream);
+    border-color: var(--inkPrimary);
+  }
+  .chip-count {
+    display: inline-block;
+    margin-left: 4px;
+    color: inherit;
+    opacity: 0.65;
+  }
+  .chip.on .chip-count { opacity: 0.75; }
+
+  .scope-divider {
+    width: 1px;
+    background: var(--hairline);
+    margin: 4px 4px;
+    flex-shrink: 0;
+  }
+
+  /* Add CTA — fold AddBoothInline here */
+  .add-cta-row {
+    padding: 10px 14px 0;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .add-cta {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--green);
+    background: transparent;
+    border: 1px dashed var(--green);
+    border-radius: 999px;
+    padding: 6px 12px;
+  }
+
+  /* === Body container === */
+  .body-pad { padding: 12px 14px 80px; }
+
+  /* Common: status pill */
+  .pill {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    padding: 3px 7px;
+    border-radius: 999px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .pill.linked   { background: var(--greenSoft); color: var(--green);  border: 1px solid rgba(74,107,58,0.3); }
+  .pill.unlinked { background: var(--amberSoft); color: var(--amber);  border: 1px solid rgba(182,132,58,0.3); }
+  .pill.collision{ background: var(--redSoft);   color: var(--red);    border: 1px solid rgba(168,68,46,0.3); }
+
+  /* === FRAME A — Compact list w/ overflow menu === */
+  .a-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 8px 11px 4px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .a-row.with-collision { background: rgba(168,68,46,0.04); }
+  .a-leaf {
+    width: 10px;
+    flex-shrink: 0;
+    align-self: stretch;
+    border-radius: 2px;
+    background: transparent;
+  }
+  .a-row.with-collision .a-leaf { background: var(--red); }
+  .a-main { flex: 1; min-width: 0; }
+  .a-name {
+    font-family: "Lora", serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--inkPrimary);
+    line-height: 1.2;
+    margin: 0 0 2px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .a-name.warn { color: var(--red); }
+  .a-meta {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 11px;
+    color: var(--inkMuted);
+    line-height: 1.3;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .a-meta-num {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 12px;
+    color: var(--inkMid);
+  }
+  .a-status {
+    flex-shrink: 0;
+  }
+  .a-overflow {
+    width: 28px; height: 28px;
+    border-radius: 14px;
+    border: 1px solid var(--hairline);
+    background: transparent;
+    color: var(--inkMid);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .a-popover {
+    position: absolute;
+    top: calc(100% - 6px);
+    right: 14px;
+    width: 190px;
+    background: var(--paperCream);
+    border: 1px solid var(--hairline-strong);
+    border-radius: 10px;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.18), 0 4px 8px rgba(0,0,0,0.08);
+    z-index: 10;
+    padding: 4px 0;
+  }
+  .a-pop-item {
+    padding: 9px 14px;
+    font-size: 13px;
+    color: var(--inkPrimary);
+    display: flex;
+    justify-content: space-between;
+  }
+  .a-pop-item.danger { color: var(--red); }
+  .a-pop-item + .a-pop-item { border-top: 1px solid var(--hairline); }
+  .a-pop-key { color: var(--inkMuted); font-size: 11px; }
+  .a-row.popover-open { position: relative; background: var(--paperWarm); }
+
+  /* === FRAME B — Expandable accordion === */
+  .b-row {
+    border-bottom: 1px solid var(--hairline);
+  }
+  .b-row.expanded { background: var(--paperWarm); }
+  .b-row.with-collision { background: rgba(168,68,46,0.04); }
+  .b-row.expanded.with-collision { background: rgba(168,68,46,0.08); }
+  .b-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 8px 12px 4px;
+  }
+  .b-leaf {
+    width: 10px;
+    flex-shrink: 0;
+    align-self: stretch;
+    border-radius: 2px;
+    background: transparent;
+  }
+  .b-row.with-collision .b-leaf { background: var(--red); }
+  .b-main { flex: 1; min-width: 0; }
+  .b-name {
+    font-family: "Lora", serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--inkPrimary);
+    margin: 0 0 2px;
+    line-height: 1.2;
+  }
+  .b-name.warn { color: var(--red); }
+  .b-meta {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 11px;
+    color: var(--inkMuted);
+  }
+  .b-status { flex-shrink: 0; }
+  .b-chev {
+    width: 16px;
+    color: var(--inkMuted);
+    font-size: 14px;
+    flex-shrink: 0;
+    transition: transform 120ms;
+  }
+  .b-row.expanded .b-chev { transform: rotate(90deg); }
+
+  .b-detail {
+    padding: 4px 14px 16px 18px;
+    border-top: 1px solid var(--hairline);
+  }
+  .b-detail-grid {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 6px 12px;
+    font-size: 12px;
+    line-height: 1.4;
+    margin-bottom: 14px;
+  }
+  .b-detail-key {
+    color: var(--inkMuted);
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.10em;
+    font-weight: 700;
+    padding-top: 2px;
+  }
+  .b-detail-val {
+    color: var(--inkPrimary);
+    font-family: "Lora", serif;
+  }
+  .b-detail-val.mono {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    color: var(--inkMid);
+  }
+  .b-detail-val.warn { color: var(--red); }
+  .b-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .b-action {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--inkPrimary);
+    background: transparent;
+    color: var(--inkPrimary);
+  }
+  .b-action.primary {
+    background: var(--green);
+    border-color: var(--green);
+    color: var(--paperCream);
+  }
+  .b-action.danger {
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  /* === FRAME C — Card-per-vendor with all actions === */
+  .c-card {
+    background: var(--postit);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 12px 12px 10px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow-card);
+  }
+  .c-card.collision {
+    border-color: rgba(168,68,46,0.45);
+    background: rgba(241,218,210,0.55);
+  }
+  .c-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .c-name {
+    font-family: "Lora", serif;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--inkPrimary);
+    line-height: 1.2;
+    flex: 1;
+    min-width: 0;
+  }
+  .c-name.warn { color: var(--red); }
+  .c-meta {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 11px;
+    color: var(--inkMuted);
+    line-height: 1.4;
+    margin-bottom: 8px;
+  }
+  .c-meta .num {
+    font-family: "Times New Roman", Times, serif;
+    color: var(--inkMid);
+    font-size: 12px;
+  }
+  .c-collision-note {
+    font-size: 11px;
+    color: var(--red);
+    background: var(--redSoft);
+    border: 1px solid rgba(168,68,46,0.25);
+    border-radius: 6px;
+    padding: 5px 8px;
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  .c-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .c-action {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 5px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline-strong);
+    background: var(--paperCream);
+    color: var(--inkMid);
+  }
+  .c-action.primary {
+    background: var(--green);
+    border-color: var(--green);
+    color: var(--paperCream);
+  }
+  .c-action.danger {
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  /* === Questions block === */
+  .questions {
+    max-width: 1100px;
+    margin: 56px auto 0;
+    background: #232017;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 22px 26px 24px;
+  }
+  .questions h3 {
+    font-family: "Lora", serif;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: #d8c896;
+    margin: 0 0 14px;
+  }
+  .questions ol { margin: 0; padding-left: 22px; font-size: 13px; line-height: 1.65; color: #cfc6b4; }
+  .questions ol li { margin-bottom: 10px; }
+  .questions ol li strong { color: #ede6d5; }
+  .questions ol li em { color: #d8c896; font-style: normal; }
+</style>
+</head>
+<body>
+
+<h1 class="doc-title">Admin Vendors tab — V1</h1>
+<p class="doc-sub">Open structural axis: row shape + how affordances surface. Status, filter chips, and proactive collision detection are constant across all three.</p>
+
+<div class="decisions">
+  <h3>Frozen by analysis (constant across V1 frames)</h3>
+  <ul>
+    <li><strong>New tab as slot 6</strong> — Requests · Posts · Banners · Malls · Events · <strong>Vendors</strong>.</li>
+    <li><strong>Default scope: Problematic only</strong> — chip toggle to All. Problematic = unlinked (orphan) + collision (display-name diff vs approved request).</li>
+    <li><strong>Status badges per row</strong> — Linked (green) · Unlinked (amber) · Collision (red).</li>
+    <li><strong>Affordances available on every row</strong> — Edit (display_name, booth#, mall) · Force-unlink (with "X loses /my-shelf access" warn) · Force-delete (warn-then-allow with N-posts cascade) · Relink (assign to different vendor_request → fixes display_name + sets user_id).</li>
+    <li><strong>Proactive collision detection</strong> — fanout <code>/api/admin/diagnose-request</code> on tab load for every unlinked row; collision badge surfaces inline, not on-demand.</li>
+    <li><strong>Add Booth folds here</strong> — retires from Requests tab; surfaced as a + CTA on this tab.</li>
+  </ul>
+  <h3>Open in V1 (the structural axes this mockup explores)</h3>
+  <ul>
+    <li><strong>Frame A — Compact list, overflow menu.</strong> Density-first; Linear/Vercel pattern. Tap ⋯ → popover (Edit / Unlink / Delete / Relink). Edit opens existing booth-edit-sheet.</li>
+    <li><strong>Frame B — Expandable accordion.</strong> Context-first; Stripe pattern. Tap row → reveal full metadata + 4 inline action buttons. No sheet for inspection.</li>
+    <li><strong>Frame C — Card-per-vendor, all actions visible.</strong> Discoverability-first. Heaviest chrome, slower scroll, but unfamiliar admin learns by seeing.</li>
+  </ul>
+</div>
+
+<div class="row">
+
+  <!-- =============================== FRAME A =============================== -->
+  <div class="frame">
+    <div class="frame-label">Frame A</div>
+    <div class="frame-tagline">Compact list · overflow menu</div>
+    <div class="frame-desc">Linear/Vercel admin pattern. Density first — many rows visible per scroll. Tap ⋯ for actions popover; Edit opens the existing booth-edit-sheet. Optimizes for daily ops where you scan many rows fast.</div>
+    <div class="phone">
+      <div class="masthead">
+        <div class="masthead-left"></div>
+        <div class="masthead-mid">Treehouse Finds</div>
+        <div class="masthead-right"></div>
+      </div>
+      <div class="tabs">
+        <span class="tab">Requests</span>
+        <span class="tab">Posts</span>
+        <span class="tab">Banners</span>
+        <span class="tab">Malls</span>
+        <span class="tab">Events</span>
+        <span class="tab active new">Vendors<span class="tab-new-dot"></span></span>
+      </div>
+      <div class="filter-strip">
+        <span class="chip on">Problematic<span class="chip-count">3</span></span>
+        <span class="chip">All<span class="chip-count">42</span></span>
+        <div class="scope-divider"></div>
+        <span class="chip">Collision<span class="chip-count">1</span></span>
+        <span class="chip">Unlinked<span class="chip-count">2</span></span>
+      </div>
+      <div class="add-cta-row"><span class="add-cta">+ Add booth</span></div>
+      <div class="body-pad">
+
+        <div class="a-row with-collision popover-open" style="position:relative;">
+          <div class="a-leaf"></div>
+          <div class="a-main">
+            <div class="a-name warn">Testing</div>
+            <div class="a-meta">Booth <span class="a-meta-num">456</span> · Phoenix Antiques · approved as "David Butler"</div>
+          </div>
+          <div class="a-status"><span class="pill collision">Collision</span></div>
+          <div class="a-overflow">⋯</div>
+          <div class="a-popover">
+            <div class="a-pop-item"><span>Edit name + booth</span><span class="a-pop-key">E</span></div>
+            <div class="a-pop-item"><span>Relink to request</span><span class="a-pop-key">R</span></div>
+            <div class="a-pop-item"><span>Force-unlink</span><span class="a-pop-key">U</span></div>
+            <div class="a-pop-item danger"><span>Delete vendor row</span><span class="a-pop-key">⌫</span></div>
+          </div>
+        </div>
+
+        <div class="a-row">
+          <div class="a-leaf"></div>
+          <div class="a-main">
+            <div class="a-name">Ella's Finds</div>
+            <div class="a-meta">Booth <span class="a-meta-num">12</span> · America's Antique Mall · no user linked</div>
+          </div>
+          <div class="a-status"><span class="pill unlinked">Unlinked</span></div>
+          <div class="a-overflow">⋯</div>
+        </div>
+
+        <div class="a-row">
+          <div class="a-leaf"></div>
+          <div class="a-main">
+            <div class="a-name">test123</div>
+            <div class="a-meta">Booth <span class="a-meta-num">99</span> · America's Antique Mall · no user linked</div>
+          </div>
+          <div class="a-status"><span class="pill unlinked">Unlinked</span></div>
+          <div class="a-overflow">⋯</div>
+        </div>
+
+        <div class="a-row">
+          <div class="a-leaf"></div>
+          <div class="a-main">
+            <div class="a-name">David Butler</div>
+            <div class="a-meta">Booth <span class="a-meta-num">7</span> · Phoenix Antiques · dbutler80020@gmail.com</div>
+          </div>
+          <div class="a-status"><span class="pill linked">Linked</span></div>
+          <div class="a-overflow">⋯</div>
+        </div>
+
+        <div class="a-row">
+          <div class="a-leaf"></div>
+          <div class="a-main">
+            <div class="a-name">Vintage Treasures</div>
+            <div class="a-meta">Booth <span class="a-meta-num">3</span> · Copper Awning · sarah@example.com</div>
+          </div>
+          <div class="a-status"><span class="pill linked">Linked</span></div>
+          <div class="a-overflow">⋯</div>
+        </div>
+
+        <div class="a-row" style="border-bottom:none;">
+          <div class="a-leaf"></div>
+          <div class="a-main">
+            <div class="a-name">The Brass Lantern</div>
+            <div class="a-meta">Booth <span class="a-meta-num">21</span> · Hartland Antiques · marcus@example.com</div>
+          </div>
+          <div class="a-status"><span class="pill linked">Linked</span></div>
+          <div class="a-overflow">⋯</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- =============================== FRAME B =============================== -->
+  <div class="frame">
+    <div class="frame-label">Frame B</div>
+    <div class="frame-tagline">Expandable accordion · inline actions</div>
+    <div class="frame-desc">Stripe-dashboard pattern. Tap row to expand → full metadata + 4 inline action buttons. No sheet needed for read-only inspection. Optimizes for clarity when you're investigating one row deeply.</div>
+    <div class="phone">
+      <div class="masthead">
+        <div class="masthead-left"></div>
+        <div class="masthead-mid">Treehouse Finds</div>
+        <div class="masthead-right"></div>
+      </div>
+      <div class="tabs">
+        <span class="tab">Requests</span>
+        <span class="tab">Posts</span>
+        <span class="tab">Banners</span>
+        <span class="tab">Malls</span>
+        <span class="tab">Events</span>
+        <span class="tab active new">Vendors<span class="tab-new-dot"></span></span>
+      </div>
+      <div class="filter-strip">
+        <span class="chip on">Problematic<span class="chip-count">3</span></span>
+        <span class="chip">All<span class="chip-count">42</span></span>
+        <div class="scope-divider"></div>
+        <span class="chip">Collision<span class="chip-count">1</span></span>
+        <span class="chip">Unlinked<span class="chip-count">2</span></span>
+      </div>
+      <div class="add-cta-row"><span class="add-cta">+ Add booth</span></div>
+      <div class="body-pad">
+
+        <div class="b-row with-collision expanded">
+          <div class="b-head">
+            <div class="b-leaf"></div>
+            <div class="b-main">
+              <div class="b-name warn">Testing</div>
+              <div class="b-meta">Booth 456 · Phoenix Antiques</div>
+            </div>
+            <div class="b-status"><span class="pill collision">Collision</span></div>
+            <div class="b-chev">›</div>
+          </div>
+          <div class="b-detail">
+            <div class="b-detail-grid">
+              <div class="b-detail-key">display_name</div>
+              <div class="b-detail-val warn">Testing  <span style="color:var(--inkMuted);font-size:10px;">(approved request: "David Butler")</span></div>
+              <div class="b-detail-key">slug</div>
+              <div class="b-detail-val mono">testing-2</div>
+              <div class="b-detail-key">user_id</div>
+              <div class="b-detail-val mono" style="color:var(--inkMuted);">— (unlinked)</div>
+              <div class="b-detail-key">posts</div>
+              <div class="b-detail-val">0</div>
+              <div class="b-detail-key">created</div>
+              <div class="b-detail-val mono">May 7 · 11:42 EDT</div>
+            </div>
+            <div class="b-actions">
+              <span class="b-action primary">Relink to request</span>
+              <span class="b-action">Edit</span>
+              <span class="b-action">Force-unlink</span>
+              <span class="b-action danger">Delete</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="b-row">
+          <div class="b-head">
+            <div class="b-leaf"></div>
+            <div class="b-main">
+              <div class="b-name">Ella's Finds</div>
+              <div class="b-meta">Booth 12 · America's Antique Mall · 4 posts</div>
+            </div>
+            <div class="b-status"><span class="pill unlinked">Unlinked</span></div>
+            <div class="b-chev">›</div>
+          </div>
+        </div>
+
+        <div class="b-row">
+          <div class="b-head">
+            <div class="b-leaf"></div>
+            <div class="b-main">
+              <div class="b-name">test123</div>
+              <div class="b-meta">Booth 99 · America's Antique Mall · 0 posts</div>
+            </div>
+            <div class="b-status"><span class="pill unlinked">Unlinked</span></div>
+            <div class="b-chev">›</div>
+          </div>
+        </div>
+
+        <div class="b-row">
+          <div class="b-head">
+            <div class="b-leaf"></div>
+            <div class="b-main">
+              <div class="b-name">David Butler</div>
+              <div class="b-meta">Booth 7 · Phoenix Antiques · 12 posts</div>
+            </div>
+            <div class="b-status"><span class="pill linked">Linked</span></div>
+            <div class="b-chev">›</div>
+          </div>
+        </div>
+
+        <div class="b-row">
+          <div class="b-head">
+            <div class="b-leaf"></div>
+            <div class="b-main">
+              <div class="b-name">Vintage Treasures</div>
+              <div class="b-meta">Booth 3 · Copper Awning · 8 posts</div>
+            </div>
+            <div class="b-status"><span class="pill linked">Linked</span></div>
+            <div class="b-chev">›</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- =============================== FRAME C =============================== -->
+  <div class="frame">
+    <div class="frame-label">Frame C</div>
+    <div class="frame-tagline">Card-per-vendor · all actions visible</div>
+    <div class="frame-desc">Discoverability-first. Every action exposed inline on every card; no overflow menus, no expand. Heaviest chrome, slowest scroll — but unfamiliar admins learn the system by seeing what's possible. Same vocabulary as the postcard mall card.</div>
+    <div class="phone">
+      <div class="masthead">
+        <div class="masthead-left"></div>
+        <div class="masthead-mid">Treehouse Finds</div>
+        <div class="masthead-right"></div>
+      </div>
+      <div class="tabs">
+        <span class="tab">Requests</span>
+        <span class="tab">Posts</span>
+        <span class="tab">Banners</span>
+        <span class="tab">Malls</span>
+        <span class="tab">Events</span>
+        <span class="tab active new">Vendors<span class="tab-new-dot"></span></span>
+      </div>
+      <div class="filter-strip">
+        <span class="chip on">Problematic<span class="chip-count">3</span></span>
+        <span class="chip">All<span class="chip-count">42</span></span>
+        <div class="scope-divider"></div>
+        <span class="chip">Collision<span class="chip-count">1</span></span>
+        <span class="chip">Unlinked<span class="chip-count">2</span></span>
+      </div>
+      <div class="add-cta-row"><span class="add-cta">+ Add booth</span></div>
+      <div class="body-pad">
+
+        <div class="c-card collision">
+          <div class="c-top">
+            <div class="c-name warn">Testing</div>
+            <span class="pill collision">Collision</span>
+          </div>
+          <div class="c-meta">Booth <span class="num">456</span> · Phoenix Antiques · slug <code style="font-family:'SF Mono',Menlo,monospace;font-size:10px;">testing-2</code></div>
+          <div class="c-collision-note">Approved request reads "David Butler" — this row's display_name is "Testing".</div>
+          <div class="c-actions">
+            <span class="c-action primary">Relink</span>
+            <span class="c-action">Edit</span>
+            <span class="c-action">Unlink</span>
+            <span class="c-action danger">Delete</span>
+          </div>
+        </div>
+
+        <div class="c-card">
+          <div class="c-top">
+            <div class="c-name">Ella's Finds</div>
+            <span class="pill unlinked">Unlinked</span>
+          </div>
+          <div class="c-meta">Booth <span class="num">12</span> · America's Antique Mall · 4 posts</div>
+          <div class="c-actions">
+            <span class="c-action primary">Relink</span>
+            <span class="c-action">Edit</span>
+            <span class="c-action danger">Delete</span>
+          </div>
+        </div>
+
+        <div class="c-card">
+          <div class="c-top">
+            <div class="c-name">test123</div>
+            <span class="pill unlinked">Unlinked</span>
+          </div>
+          <div class="c-meta">Booth <span class="num">99</span> · America's Antique Mall · 0 posts</div>
+          <div class="c-actions">
+            <span class="c-action primary">Relink</span>
+            <span class="c-action">Edit</span>
+            <span class="c-action danger">Delete</span>
+          </div>
+        </div>
+
+        <div class="c-card">
+          <div class="c-top">
+            <div class="c-name">David Butler</div>
+            <span class="pill linked">Linked</span>
+          </div>
+          <div class="c-meta">Booth <span class="num">7</span> · Phoenix Antiques · 12 posts</div>
+          <div class="c-actions">
+            <span class="c-action">Edit</span>
+            <span class="c-action">Unlink</span>
+            <span class="c-action danger">Delete</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="questions">
+  <h3>Questions for David</h3>
+  <ol>
+    <li><strong>Pick a row shape.</strong> <em>Frame A — compact list w/ overflow menu</em>, <em>Frame B — expandable accordion</em>, or <em>Frame C — card-per-vendor</em>? My lean: <strong>Frame B</strong>. Vendors-tab usage is investigative, not bulk-actiony — when you open it you usually want the full picture of one or two specific rows (the booth-456 case from session 123 is the canonical example). Accordion gives you that without a sheet hop, while keeping the list scan-friendly when collapsed. Frame A is great for daily ops with high-volume changes, but you'll spend more time investigating individual stale rows than batch-managing the whole table.</li>
+    <li><strong>Edit affordance — sheet or inline?</strong> Frame A implies "Edit opens existing booth-edit-sheet" (consistent with session 74). Frames B and C could either open the sheet OR convert their detail-row into editable fields. My lean: <strong>open the existing booth-edit-sheet for all frames</strong> — reuses session-74 work, no new edit primitive, smaller blast radius. Counterargument: editing inside the row is more "Stripe-dashboard-modern" if you pick Frame B.</li>
+    <li><strong>"Add booth" placement.</strong> Mockup shows a dashed-pill CTA top-right of the body. Alternatives: floating action button bottom-right, dedicated "+ row" at top of list, or fold AddBoothInline as a permanent expanded row. Lean: <strong>top-right dashed-pill</strong> as drawn — minimal chrome, retires AddBoothInline cleanly.</li>
+    <li><strong>Collision row visual treatment.</strong> All three frames use a red left edge + tinted row background + red collision pill. Too loud? Subtler treatment? My lean: <strong>keep as drawn</strong> — collision rows are rare (1-2 per session) and you'll want them screaming for attention.</li>
+    <li><strong>Filter strip vs segmented control.</strong> Mockup uses pill chips (Problematic / All + Collision / Unlinked). Could be a segmented control instead. Lean: <strong>chips as drawn</strong> — matches Saved page filter chip vocabulary, multi-select capable if we want stacked filters later.</li>
+    <li><strong>Anything missing.</strong> What admin task do you do today via SQL paste that this design wouldn't let you do? Stale-row scan, bulk-delete by name pattern, vendor → posts deep-link, audit trail (who approved, when), anything else?</li>
+  </ol>
+</div>
+
+</body>
+</html>
