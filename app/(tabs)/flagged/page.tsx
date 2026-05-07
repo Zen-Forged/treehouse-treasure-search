@@ -671,7 +671,7 @@ export default function FlaggedPage() {
                 style={{ color: v1.inkMuted, flexShrink: 0 }}
               />
               <span>
-                {posts.length} {posts.length === 1 ? "saved find" : "saved finds"} waiting to be found
+                {posts.length} {posts.length === 1 ? "saved find" : "saved finds"} across {sortedMallsWithMiles.length} {sortedMallsWithMiles.length === 1 ? "location" : "locations"}
               </span>
             </h1>
 
