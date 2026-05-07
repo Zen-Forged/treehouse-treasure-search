@@ -634,22 +634,21 @@ export default function FlaggedPage() {
             }}
           >
             {/* Page header — count + "saved finds waiting to be found".
-                22px FONT_LORA weight 500 mirrors the Home rich-card mall-
-                name typography (NAME_FONT_MAX in RichPostcardMallCard.tsx).
-                Only renders in the populated branch; loading + empty
-                branches keep their existing chrome. */}
+                Typography matches the Home rich-card "Finds from:" eyebrow
+                (RichPostcardMallCard.tsx): FONT_LORA italic, 17px, ink-
+                muted, lineHeight 1. Only renders in the populated branch;
+                loading + empty branches keep their existing chrome. */}
             <h1
               style={{
-                margin:        0,
-                fontFamily:    FONT_LORA,
-                fontWeight:    500,
-                fontSize:      22,
-                color:         v1.inkPrimary,
-                lineHeight:    1.25,
-                letterSpacing: "-0.005em",
+                margin:     0,
+                fontFamily: FONT_LORA,
+                fontStyle:  "italic",
+                fontSize:   17,
+                color:      v1.inkMuted,
+                lineHeight: 1,
               }}
             >
-              {posts.length} {posts.length === 1 ? "Saved find" : "Saved finds"} waiting to be found
+              {posts.length} {posts.length === 1 ? "saved find" : "saved finds"} waiting to be found
             </h1>
 
             {sortedMallsWithMiles.map(({ mall, miles }) => (
