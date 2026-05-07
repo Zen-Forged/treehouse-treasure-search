@@ -23,7 +23,7 @@ Each entry carries:
   - ✅ **Shipped** — absorbed by a merged PR (cross-ref the session).
 - **What / Why / Open questions** — the scoping substance.
 
-**Status snapshot (as of session 117):** 17 items total (R1–R17). **10 ✅ Shipped:** R1, R4a/R4b/R4c, R5a, R7, R10, R11, R12, R16 (sessions 45–114). **2 🟢 Ready:** R3 (analytics), **R17 (geolocation-aware discovery — graduated session 117)**. **5 🟡 Captured:** R2, R5b, R6, R8, R9, R13, R14, R15.
+**Status snapshot (as of session 121):** 18 items total (R1–R18). **10 ✅ Shipped:** R1, R4a/R4b/R4c, R5a, R7, R10, R11, R12, R16 (sessions 45–114). **3 🟢 Ready:** R3 (analytics), R17 (geolocation-aware discovery — session 117), **R18 (Map nav reinstatement + Saved per-mall restructure — graduated session 121)**. **5 🟡 Captured:** R2, R5b, R6, R8, R9, R13, R14, R15.
 
 ---
 
@@ -64,6 +64,7 @@ David reviews and can override any of these.
 | R15 | App store launch (iOS + Google Play) | Engagement + Reach | L+ | R6 (hard gate); compounds heavily with R9, R1, R12; absorbs Q-006 Universal Links | 🟡 Captured | Three possible technical paths (Capacitor wrapper / Expo rebuild / native). **Path decision is the load-bearing scoping moment.** |
 | R16 | Discovery: search bar on Home | Navigation/Discovery + Data | M | — (compounds with R3, R5b, R10) | ✅ Shipped session 105 | Glass search bar on Home backed by AI-extracted tags written at post-publish time. Tasks 1–7 sprint + custom-caret bug-class kill + backfill polish. Design record: [`docs/r16-discovery-search-design.md`](r16-discovery-search-design.md). |
 | R17 | Geolocation-aware discovery | Navigation/Discovery | M | R10 (mall coords + `/map?mall=<slug>` infra) | 🟢 Ready (session 117) | System-wide distance pill + twin "View on Find Map" + "Navigate" CTAs across `/find/[id]`, `/shelf/[slug]`, `/flagged`, `/shelves`, `/map`. `useUserLocation()` hook with silent first-mount prompt + 30-min TTL cache. Frame α `"2.7 MI"` minimal pill copy locked. Permission-denied = silent failure (hide affordance entirely). Design record: [`docs/r17-geolocation-design.md`](r17-geolocation-design.md). Mockups: V1 (3 structural frames) → V2 (Frame A CTAs + Frame B pill anchor; α/β/γ distance copy) — Frame α picked. All 21 decisions D1–D21 frozen. |
+| R18 | Map nav reinstatement + Saved per-mall restructure | Navigation/Discovery | M | R10 (Map page + `<PostcardMallCard>`), R17 (DistancePill + `mapsDeepLink`), R1 (saves) | 🟢 Ready (session 121) | Map returns as 3rd BottomNav tab (rightmost, MapPin); Home rich card pill retires + card becomes display-only; Saved page restructures from `BoothDestinationContainer` + scope filter to per-mall card stack with **Frame C split-header-strip** (110×88 photo on left + eyebrow/name/address/DistancePill on right + booth-grouped flat list + single `Get Directions` footer per mall card via R17 `mapsDeepLink`). Search bar removed from Saved; scope filter retired; mall stacking by distance asc when geolocation granted, save recency fallback; booth section order by save recency; cascade on unsave (booth/mall sections drop when emptied via `useShopperSaves` reactivity). Mockup: [`docs/mockups/saved-per-mall-card-v1.html`](mockups/saved-per-mall-card-v1.html) — Frame C picked. |
 
 ---
 
@@ -585,6 +586,63 @@ Waves 1 + 2 + 3 together are realistically ~9–14 sessions (mix of S + M). That
 **Compounds with:** R3 (search analytics events become natural extension), R10 (binoculars icon vocabulary extends to map), R5b (tag-extracted material/era data informs cap tuning).
 
 **Elevated from:** "Open additions" + CLAUDE.md `feed pagination + search` parked item. Beta-tester demand made the timing right; the Treehouse thesis (digital-to-physical bridge) sharpened the framing — search is "scout the landscape" (binoculars), not "query the database" (magnifying glass).
+
+---
+
+### R18 — Map nav reinstatement + Saved per-mall restructure 🟢 Ready session 121
+
+> **Status:** 🟢 Ready. Captured + scoped + design conversation locked in session 121 (2026-05-07). Mockup: [`docs/mockups/saved-per-mall-card-v1.html`](mockups/saved-per-mall-card-v1.html) — Frame C (split header strip) picked.
+
+**What:**
+- **BottomNav returns to 3 tabs** — Home / Saved / **Map** (rightmost, `MapPin` glyph). Reverses the session-109 lock on a 2-tab nav. Map tab routes to `/map` with the existing peek-then-commit pin interaction; on commit, R10 D26 routes to Home with mall scope set (unchanged).
+- **Home `<RichPostcardMallCard>` becomes display-only** — the `X Locations ›` pill retires; the outer wrapper drops from `<button>` to `<div>`; `onTap` is no longer wired. Map tab becomes the canonical change-scope path; the rich card on Home reads as pure mall identity.
+- **Home rich card eyebrow** `from:` → `Finds from:` — reverses the session-120 V3.1 trim.
+- **Saved page restructure** (the bulk):
+  - Search bar removed.
+  - Scope filter removed entirely; Saved no longer participates in mall scope.
+  - Page body becomes a stack of per-mall cards (one card per mall with saves).
+  - Per-mall card uses **Frame C split-header-strip**: 110×88 photo on left, right column stacks eyebrow `Saved finds from:` + DistancePill (top-right of strip), mall name (FONT_LORA 19px), address (FONT_SYS small).
+  - Inside each mall card: booth-grouped flat list using the existing `/flagged` booth section pattern (dashed-top divider + FONT_LORA italic booth name + FONT_LORA small-caps booth number eyebrow + 3-col polaroid grid of finds for that booth).
+  - Each find tile is the existing `<PolaroidTile>` with the save leaf bubble at top-right (tap to unsave via `useShopperSaves` hook with optimistic toggle + cross-instance broadcast).
+  - Single `Get Directions` button at the bottom of each mall card — filled green pill, FONT_SYS small-caps, opens native maps deep-link directly via R17 `mapsDeepLink(mall.lat, mall.lng)` (no /map round-trip).
+- **R17 /flagged consumer wiring rolls into R18** — DistancePill moves from "above each `BoothDestinationContainer`" (session 119) to "top-right of mall card header strip"; LocationActions twin buttons retire on /flagged in favor of the single mall-level `Get Directions`.
+
+**Why:** Two coupled UX concerns surfaced in session 120 iPhone QA + David's session 121 thesis discussion:
+1. The "X Locations" pill on the Home rich card duplicates the change-scope affordance that a Map nav tab would provide more naturally; with Map back as a tab, the pill becomes redundant chrome.
+2. Saved's scope filter forced shoppers to manage saves by mall, even though they typically save broadly while imagining a future visit. Per-mall grouping with no filter unifies the saves-then-plan-trip mental model — the natural reading of the data is "which malls do I have saves at, and how do I get to each."
+
+The Saved restructure also positions for the future "Find Map = where my saves are at, with route planning" thesis David articulated — same dataset, different lens.
+
+**All decisions locked session 121:**
+
+| ID | Decision | Choice |
+|----|----------|--------|
+| D1 | Map tab position | Rightmost slot in BottomNav |
+| D2 | Map tab icon | `MapPin` from Lucide |
+| D3 | Map tab onCommit routing | Routes to Home with mall scope (R10 D26 unchanged) |
+| D4 | Home rich card tap behavior post-pill-removal | Display-only; outer becomes `<div>`, no `onTap` |
+| D5 | Home rich card eyebrow copy | `Finds from:` (reverses session-120 V3.1 `from:` trim) |
+| D6 | Saved per-mall card photo treatment | Frame C — split header strip (110×88 photo on left, chrome on right) |
+| D7 | Saved booth grouping structural axis | Same as today's /flagged (booth name + number as section divider; one flat list per mall card) |
+| D8 | Save leaf bubble on Saved tiles | Existing `<PolaroidTile>` leaf affordance, present + clickable on every tile |
+| D9 | Get Directions CTA behavior | Direct `mapsDeepLink` deep-link (no /map round-trip) |
+| D10 | Saved empty state | Existing `emptySavedFinds` |
+| D11 | Mall card stacking order on Saved | Distance asc when geolocation granted; save recency as fallback |
+| D12 | Booth section order within mall card | Save recency (most-recently-saved booth first) |
+| D13 | Cascade on unsave | Yes — unsave last find at booth → booth section drops; unsave last find at mall → mall card drops |
+
+**6 design-record reversals surfaced + acknowledged** (per `feedback_surface_locked_design_reversals` — 22nd cumulative firing across 9+ sessions):
+
+1. Session 109 nav locked at 2-tab → 3-tab with Map reinstated.
+2. Session 120 rich-card `X Locations ›` pill → no pill.
+3. Session 120 Saved search bar (client-side filter, implicit feature parity decision flagged in close) → removed.
+4. Session 120 Saved scope filter → no filter; show all saves grouped by mall.
+5. Session 120 V3.1 eyebrow `from:` → `Finds from:`.
+6. Session 119 R17 Arc 2 /flagged DistancePill above each `BoothDestinationContainer` + no LocationActions → DistancePill at top of per-mall card + single mall-level `Get Directions` at bottom (LocationActions retires on /flagged).
+
+**Compounds with:** R10 (Map tab returns; PostcardMallCard family extends to Saved), R17 (DistancePill + mapsDeepLink already shipped; per-mall card consumes both), R1 (saves dataset is the body content of Saved per-mall cards).
+
+**Effort:** M (1 session — design conversation locked in session 121, implementation runs in same session via 5-commit smallest→largest sequence).
 
 ---
 
