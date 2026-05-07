@@ -644,14 +644,20 @@ export default function FlaggedPage() {
               gap:           14,
             }}
           >
-            {/* Page header — count + "saved finds waiting to be found".
-                Typography matches the Home rich-card "Finds from:" eyebrow
-                (RichPostcardMallCard.tsx): FONT_LORA italic, 17px, ink-
-                muted, lineHeight 1. Only renders in the populated branch;
-                loading + empty branches keep their existing chrome. */}
+            {/* Page header — outline saved-leaf glyph + count +
+                "saved finds waiting to be found". Typography matches the
+                Home rich-card "Finds from:" eyebrow (RichPostcardMallCard):
+                FONT_LORA italic, 17px, ink-muted, lineHeight 1. Glyph is
+                outline-only (no bg container) — same icon used in
+                BottomNav, sized to read with the text x-height. Only
+                renders in the populated branch; loading + empty branches
+                keep their existing chrome. */}
             <h1
               style={{
                 margin:     0,
+                display:    "flex",
+                alignItems: "center",
+                gap:        6,
                 fontFamily: FONT_LORA,
                 fontStyle:  "italic",
                 fontSize:   17,
@@ -659,7 +665,14 @@ export default function FlaggedPage() {
                 lineHeight: 1,
               }}
             >
-              {posts.length} {posts.length === 1 ? "saved find" : "saved finds"} waiting to be found
+              <FlagGlyph
+                size={18}
+                strokeWidth={1.7}
+                style={{ color: v1.inkMuted, flexShrink: 0 }}
+              />
+              <span>
+                {posts.length} {posts.length === 1 ? "saved find" : "saved finds"} waiting to be found
+              </span>
             </h1>
 
             {sortedMallsWithMiles.map(({ mall, miles }) => (
