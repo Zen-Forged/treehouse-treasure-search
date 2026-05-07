@@ -237,25 +237,48 @@ function SavedMallCard({
         boxShadow:    "0 1px 3px rgba(42, 26, 10, 0.05)",
       }}
     >
-      {/* Header — full-width chrome stack: name (up to 2 lines) → address
-          → DistancePill (left, own row). */}
+      {/* Header — name + DistancePill in top flex row (pill top-right,
+          align-start so 2-line names don't push it center); address below
+          full-width. Reverses session-122 Round 1 ask 3 (pill below address
+          left-justified): now that the photo retired and chrome stacks at
+          full card width, the right side has clear space for the pill,
+          and the more-compact 2-row layout reads cleaner per David's
+          iPhone QA. */}
       <div style={{ padding: "14px 14px 12px" }}>
         <div
           style={{
-            fontFamily:      FONT_LORA,
-            fontWeight:      500,
-            fontSize:        19,
-            color:           v1.inkPrimary,
-            lineHeight:      1.25,
-            letterSpacing:   "-0.005em",
-            display:         "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow:        "hidden",
-            wordBreak:       "break-word",
+            display:    "flex",
+            alignItems: "flex-start",
+            gap:        8,
           }}
         >
-          {mall.mallName}
+          <div
+            style={{
+              flex:            1,
+              minWidth:        0,
+              fontFamily:      FONT_LORA,
+              fontWeight:      500,
+              fontSize:        19,
+              color:           v1.inkPrimary,
+              lineHeight:      1.25,
+              letterSpacing:   "-0.005em",
+              display:         "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow:        "hidden",
+              wordBreak:       "break-word",
+            }}
+          >
+            {mall.mallName}
+          </div>
+
+          {/* DistancePill renders null on guest / denied / mall coords
+              missing — wrapper omitted entirely so flex gap stays tight. */}
+          {miles != null && (
+            <div style={{ flexShrink: 0 }}>
+              <DistancePill miles={miles} />
+            </div>
+          )}
         </div>
 
         {mall.mallAddress && (
@@ -269,15 +292,6 @@ function SavedMallCard({
             }}
           >
             {mall.mallAddress}
-          </div>
-        )}
-
-        {/* DistancePill renders null on guest / denied / mall coords missing.
-            Wrapper is conditional so the empty-pill case doesn't leave an
-            8px margin gap. */}
-        {miles != null && (
-          <div style={{ marginTop: 8 }}>
-            <DistancePill miles={miles} />
           </div>
         )}
       </div>
