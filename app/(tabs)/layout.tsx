@@ -105,15 +105,9 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
 
   const selectedMall = mallId ? (malls.find((m) => m.id === mallId) ?? null) : null;
 
-  // Stamp glyph is now ALWAYS "map" (D13 reversed session 110).
-  // Original D13 mirrored the active BottomNav tab (Home glyph on Home,
-  // Map glyph on /map, Saved glyph on /flagged). With Profile retired
-  // from nav (session 109) and Map retired from nav (session 110), the
-  // BottomNav-mirroring rule no longer maps cleanly — and the card's
-  // primary role is now navigation to /map (from Home/Saved). The map
-  // pin glyph reads as "tap here to change/view location" universally,
-  // matching the actual interaction.
-  const stampGlyph = "map" as const;
+  // Session 123 — stampGlyph plumbing retires alongside the postal stamp on
+  // PostcardMallCard. The slim card no longer renders a stamp; the prop
+  // dropped from the component interface.
 
   const activeNav: "home" | "map" | "flagged" =
     pathname === "/map"     ? "map"   :
@@ -202,7 +196,6 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
         <div style={{ padding: "12px 16px 0" }}>
           <PostcardMallCard
             mall={selectedMall ?? "all-kentucky"}
-            stampGlyph={stampGlyph}
             allKentuckySubtitle={allKentuckySubtitle}
             onTap={handlePostcardTap}
           />

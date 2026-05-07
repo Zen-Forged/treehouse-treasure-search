@@ -1,30 +1,39 @@
 // components/PostcardMallCard.tsx
 // R10 (session 107) — postcard-style mall card. Persistent header primitive
-// shipped to Home / Saved / Map. Reads as physical card stock with a
-// postal stamp + wavy ink cancellation. The stamp glyph is contextual to
-// the active BottomNav tab so the same card composes across surfaces.
+// shipped to /map (originally Home + Saved + Map; Home + Saved migrated to
+// <RichPostcardMallCard> at session 120, leaving slim card on /map only).
 //
-// See docs/r10-location-map-design.md decisions D5–D19, D21 + the V4 mockup
-// at docs/mockups/r10-location-map-v4.html. Provider-independent — no map
-// SDK touched here.
+// Session 123 — postal stamp + wavy ink cancellation retire. The card now
+// reads as plain card-stock chrome: eyebrow + mall name + address. Reverses
+// session-107 R10 D-rules (stamp identity is part of the card vocabulary)
+// and session-116 cancellation-ink David verbatim values (right:14 /
+// opacity 0.08 / stroke v1.inkPrimary). Postal-stamp identity was deeply
+// iterated through ~6 sessions of refinement; David's call: now that the
+// card is on /map only, the chrome no longer needs to carry the postcard
+// vocabulary — the map itself IS the postcard. Rich card on Home was
+// already without stamp/ink (session 120 V3 retired the cancellation +
+// dashed-stamp from rich variant); this commit closes the parallel on
+// the slim card.
 //
-// Two `mall` variants:
-//   - A `Mall` row (Pick) → renders postal address.
-//   - The literal "all-kentucky" → renders literary subtitle scope variant.
+// Side-effects of stamp retire:
+//   - StampGlyph type drops (no consumers post-retire).
+//   - StampGlyphIcon helper drops (uses retired stamp).
+//   - CancellationInk drops.
+//   - "Location" tap-affordance eyebrow drops (the stamp was the visual
+//     anchor for the eyebrow; without the stamp, the eyebrow has nothing
+//     to label).
+//   - paddingRight ink-clearance on the name row drops.
+//   - Outer wrapper drops flex-row + gap (no stamp = no second child).
 //
-// Default `onTap` is a no-op for Arc 1; MallSheet wiring lands in Arc 2
-// when the card replaces today's MallScopeHeader on Home + /flagged.
+// See docs/r10-location-map-design.md for the prior stamp design intent.
 
 "use client";
 
 import * as React from "react";
 import { useLayoutEffect, useRef, useState } from "react";
-import { Home as HomeIcon, MapPin, CircleUser } from "lucide-react";
-import FlagGlyph from "./FlagGlyph";
+import { MapPin } from "lucide-react";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import type { Mall } from "@/types/treehouse";
-
-export type StampGlyph = "home" | "map" | "profile" | "saved";
 
 type MallScope =
   | Pick<Mall, "id" | "slug" | "name" | "address" | "city" | "state" | "zip_code">
@@ -32,64 +41,12 @@ type MallScope =
 
 interface PostcardMallCardProps {
   mall:       MallScope;
-  stampGlyph: StampGlyph;
   onTap?:     () => void;
   /** Override for the all-kentucky subtitle — defaults to the literary copy. */
   allKentuckySubtitle?: string;
 }
 
 const ALL_KENTUCKY_DEFAULT = "5 active locations · Louisville to Lexington";
-
-function StampGlyphIcon({ glyph }: { glyph: StampGlyph }) {
-  // 26px / strokeWidth 2.0 to match BottomNav (D13).
-  const sz = 26;
-  switch (glyph) {
-    case "home":    return <HomeIcon size={sz} strokeWidth={2.0} />;
-    case "map":     return <MapPin   size={sz} strokeWidth={2.0} />;
-    case "profile": return <CircleUser size={sz} strokeWidth={1.8} />;
-    case "saved":   return <FlagGlyph size={sz} style={{ fill: v1.onGreen, color: v1.onGreen }} />;
-  }
-}
-
-function CancellationInk() {
-  // Five wavy quadratic Bézier paths — Q + T smooth-quad chains. Session 116
-  // iPhone-QA dial: David's verbatim values. Width restored to 84
-  // (paths back to original spans), shifted right (`right: 54` → 14) so
-  // the cancellation overlaps the stamp body more heavily, opacity dialed
-  // 0.28 → 0.08 so the heavy overlap reads as a watermark texture rather
-  // than a competing element. Stroke color back to v1.inkPrimary —
-  // opacity does the lightening work; the warm-mid color was redundant.
-  return (
-    <svg
-      viewBox="0 0 84 38"
-      style={{
-        position:      "absolute",
-        right:         14,
-        top:           "50%",
-        transform:     "translateY(-50%) rotate(-6deg)",
-        width:         84,
-        height:        38,
-        pointerEvents: "none",
-        zIndex:        2,
-        opacity:       0.08,
-      }}
-      aria-hidden="true"
-    >
-      <g
-        fill="none"
-        stroke={v1.inkPrimary}
-        strokeWidth={1.6}
-        strokeLinecap="round"
-      >
-        <path d="M 4,4 Q 14,0 24,4 T 44,4 T 64,4 T 80,4" />
-        <path d="M 2,11 Q 12,7 22,11 T 42,11 T 62,11 T 82,11" />
-        <path d="M 4,18 Q 14,14 24,18 T 44,18 T 64,18 T 80,18" />
-        <path d="M 2,25 Q 12,21 22,25 T 42,25 T 62,25 T 82,25" />
-        <path d="M 4,32 Q 14,28 24,32 T 44,32 T 64,32 T 80,32" />
-      </g>
-    </svg>
-  );
-}
 
 // Fluid font-size bounds for the mall name. Long names step down 1px at
 // a time until they fit in one line, locking the card to a constant height.
@@ -98,7 +55,6 @@ const NAME_FONT_MIN = 16;
 
 export default function PostcardMallCard({
   mall,
-  stampGlyph,
   onTap,
   allKentuckySubtitle,
 }: PostcardMallCardProps) {
@@ -150,9 +106,6 @@ export default function PostcardMallCard({
       {...wrapperProps}
       style={{
         position:        "relative",
-        display:         "flex",
-        alignItems:      "center",
-        gap:             14,
         width:           "100%",
         padding:         16,
         background:      v1.postcardBg,
@@ -179,21 +132,8 @@ export default function PostcardMallCard({
         }}
       />
 
-      {/* Text block — flex 1. Cancellation-ink clearance is applied per-row
-          rather than on the whole block: only the NAME row sits in the ink's
-          vertical band; "from:" is above the ink, address is below it, so
-          both can extend full-width. Session 107 iPhone-QA refinement. */}
-      <div
-        style={{
-          flex:           1,
-          minWidth:       0,
-          position:       "relative",
-          zIndex:         1,
-          display:        "flex",
-          flexDirection:  "column",
-          justifyContent: "center",
-        }}
-      >
+      {/* Text block — full card width post-stamp-retire. */}
+      <div style={{ position: "relative", zIndex: 1 }}>
         <div
           style={{
             fontFamily: FONT_LORA,
@@ -213,10 +153,8 @@ export default function PostcardMallCard({
             fontWeight:    500,
             fontSize:      nameFontSize,
             color:         v1.inkPrimary,
-            // Session 116 — fluid font-size + 1-line clamp locks card to a
-            // constant height; long names step down NAME_FONT_MAX → MIN
-            // until they fit. lineHeight 1.3 still required for Lora
-            // descender clearance per feedback_lora_lineheight_minimum_for_clamp.
+            // Lora descender clearance — clamp + overflow:hidden requires
+            // lineHeight 1.3+ per feedback_lora_lineheight_minimum_for_clamp.
             lineHeight:    1.3,
             letterSpacing: "-0.005em",
             margin:        "0 0 6px",
@@ -224,11 +162,6 @@ export default function PostcardMallCard({
             overflow:      "hidden",
             textOverflow:  "ellipsis",
             paddingBottom: 2,
-            // Cancellation ink clearance — only the name row needs this since
-            // the ink sits centered vertically in the card and overlaps the
-            // mall name's right edge. Session 116 dial 28 → 14 to match the
-            // halved cancellation width.
-            paddingRight:  14,
           }}
         >
           {name}
@@ -254,63 +187,6 @@ export default function PostcardMallCard({
           }}>
             {subtitle}
           </span>
-        </div>
-      </div>
-
-      {/* Cancellation ink — overlaps the stamp's left edge per D18. */}
-      <CancellationInk />
-
-      {/* Square 52×52 stamp — vertically centered as a flex item (D12).
-          Session 116 — interactive cards render a "SELECT LOCATION" eyebrow
-          above the stamp so users discover the tap affordance. Absolutely
-          positioned so the stamp's vertical placement (and the cancellation
-          overlap with its left edge per D18) doesn't shift. */}
-      <div
-        style={{
-          width:         52,
-          height:        52,
-          flexShrink:    0,
-          alignSelf:     "center",
-          padding:       4,
-          background:    v1.paperWarm,
-          border:        `1.5px dashed rgba(30,77,43,0.40)`,  // green-border per D14
-          borderRadius:  4,
-          display:       "flex",
-          zIndex:        1,
-          position:      "relative",
-        }}
-      >
-        {interactive && (
-          <div
-            aria-hidden
-            style={{
-              position:       "absolute",
-              bottom:         "calc(100% + 4px)",
-              right:          0,
-              fontFamily:     FONT_LORA,
-              fontStyle:      "italic",
-              fontSize:       11,
-              color:          v1.inkMuted,
-              lineHeight:     1,
-              whiteSpace:     "nowrap",
-              pointerEvents:  "none",
-            }}
-          >
-            Location
-          </div>
-        )}
-        <div
-          style={{
-            flex:           1,
-            background:     v1.green,
-            borderRadius:   2,
-            display:        "flex",
-            alignItems:     "center",
-            justifyContent: "center",
-            color:          v1.onGreen,
-          }}
-        >
-          <StampGlyphIcon glyph={stampGlyph} />
         </div>
       </div>
     </Wrapper>
