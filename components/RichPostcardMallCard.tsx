@@ -182,9 +182,9 @@ export default function RichPostcardMallCard({
             at 22px; only genuinely-long names hit measure-and-shrink. */}
         <div style={{ padding: "14px 14px 0" }}>
           {/* Eyebrow row — short eyebrow text on the left, change-location
-              pill on the right. Eyebrow trimmed to "from:" per David's
-              call ("just too much text competing"); matches the slim card
-              vocabulary verbatim. */}
+              pill on the right. Session 121 reverses the session-120 V3.1
+              trim ("from:" → "Finds from:") per David's call — pairs better
+              with the picture-postcard voice and reads complete on its own. */}
           <div
             style={{
               display:        "flex",
@@ -203,7 +203,7 @@ export default function RichPostcardMallCard({
                 lineHeight: 1,
               }}
             >
-              from:
+              Finds from:
             </div>
 
             {/* CHANGE-LOCATION PILL — DistancePill (R17) vocabulary as a
