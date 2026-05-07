@@ -22,7 +22,8 @@ import { X, List } from "lucide-react";
 import MallSheet from "@/components/MallSheet";
 import { MASTHEAD_HEIGHT } from "@/components/StickyMasthead";
 import { useSavedMallId } from "@/lib/useSavedMallId";
-import { getActiveMalls, getMallStatsByMallId, type MallStats } from "@/lib/posts";
+import { useShopperSaves } from "@/lib/useShopperSaves";
+import { getActiveMalls, getMallStatsByMallId, getPostsByIds, type MallStats } from "@/lib/posts";
 import { track } from "@/lib/clientEvents";
 import { v1, FONT_SYS } from "@/lib/tokens";
 import type { Mall } from "@/types/treehouse";
@@ -99,10 +100,37 @@ export default function MapPage() {
   // after D19 fully reversed.
   const [sheetOpen, setSheetOpen] = React.useState(false);
 
+  // Session 123 — saves grouped by mall_id, fed into PinCallout so the
+  // body line reads "X saved finds" when the user has saves at that mall.
+  // Falls back to mallStats.findCount when the user has 0 saves there.
+  // Re-fetches whenever saves.ids changes (cross-instance toggle, sign-in
+  // migration) so the count stays current with the rest of the app.
+  const saves = useShopperSaves();
+  const [savedByMallId, setSavedByMallId] = React.useState<Record<string, number>>({});
+
   React.useEffect(() => {
     getActiveMalls().then(setMalls);
     getMallStatsByMallId().then(setMallStats);
   }, []);
+
+  React.useEffect(() => {
+    if (saves.isLoading) return;
+    let cancelled = false;
+    const ids = Array.from(saves.ids);
+    if (ids.length === 0) {
+      setSavedByMallId({});
+      return;
+    }
+    getPostsByIds(ids).then((data) => {
+      if (cancelled) return;
+      const counts: Record<string, number> = {};
+      for (const post of data) {
+        if (post.mall_id) counts[post.mall_id] = (counts[post.mall_id] ?? 0) + 1;
+      }
+      setSavedByMallId(counts);
+    });
+    return () => { cancelled = true; };
+  }, [saves.ids, saves.isLoading]);
 
   // Session 122 — force scroll-to-top on mount. Next App Router doesn't
   // auto-reset scroll between sibling pages under a shared layout, so
@@ -166,6 +194,7 @@ export default function MapPage() {
         selectedMallId={mallId}
         peekedMallId={peekedMallId}
         mallStats={mallStats}
+        savedByMallId={savedByMallId}
         onPinTap={(id) => setPeekedMallId(id)}
         onMapTap={() => setPeekedMallId(null)}
         onCommit={(id) => {

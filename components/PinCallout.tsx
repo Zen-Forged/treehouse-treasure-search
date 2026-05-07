@@ -35,8 +35,10 @@ import type { Mall } from "@/types/treehouse";
 
 interface PinCalloutProps {
   mall:        Pick<Mall, "id" | "slug" | "name" | "hero_image_url" | "latitude" | "longitude">;
-  boothCount:  number;
   findCount:   number;
+  /** Session 123 — saves at this mall (post-R1 / R18 find→found thesis).
+   *  > 0 → "X saved finds"; 0 or null → fallback to "{findCount} finds". */
+  savedCount?: number | null;
   anchor:      { x: number; y: number };
   onCommit:    () => void;
   /** R17 Arc 2 — distance from user to mall in miles. null hides the pill. */
@@ -45,8 +47,8 @@ interface PinCalloutProps {
 
 export default function PinCallout({
   mall,
-  boothCount,
   findCount,
+  savedCount = null,
   anchor,
   onCommit,
   miles = null,
@@ -106,6 +108,15 @@ export default function PinCallout({
     </div>
   );
 
+  // Session 123 — body shifts from discovery vocabulary ("X booths · Y finds")
+  // to find→found vocabulary ("X saved finds"). When the user has saves at
+  // this mall, the callout names what's WAITING there for them. When they
+  // have none, fallback to total finds count preserves discovery affordance
+  // for first-time / new-mall scenarios per Q2(b) of the session-123 scope
+  // questions.
+  const usesSaved = savedCount != null && savedCount > 0;
+  const statCount = usesSaved ? savedCount : findCount;
+  const statLabel = usesSaved ? "saved finds" : "finds";
   const statLine = (
     <div
       style={{
@@ -117,13 +128,10 @@ export default function PinCallout({
       }}
     >
       <span style={{ fontFamily: FONT_NUMERAL, color: v1.green, fontStyle: "normal", fontWeight: 600 }}>
-        {boothCount}
+        {statCount}
       </span>
-      {" booths · "}
-      <span style={{ fontFamily: FONT_NUMERAL, color: v1.green, fontStyle: "normal", fontWeight: 600 }}>
-        {findCount}
-      </span>
-      {" finds"}
+      {" "}
+      {statLabel}
     </div>
   );
 

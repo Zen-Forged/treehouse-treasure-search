@@ -169,6 +169,9 @@ interface TreehouseMapProps {
   onMapTap?:       () => void;
   onCommit?:       (mallId: string) => void;
   mallStats?:      Record<string, MallStats>;
+  /** Session 123 — saves grouped by mall id. PinCallout renders
+   *  "X saved finds" when count > 0, falling back to total finds otherwise. */
+  savedByMallId?:  Record<string, number>;
   className?:      string;
   style?:          React.CSSProperties;
 }
@@ -187,6 +190,7 @@ export default function TreehouseMap({
   onMapTap,
   onCommit,
   mallStats,
+  savedByMallId,
   className,
   style,
 }: TreehouseMapProps) {
@@ -459,8 +463,8 @@ export default function TreehouseMap({
         return (
           <PinCallout
             mall={mall}
-            boothCount={stats?.boothCount ?? 0}
             findCount={stats?.findCount ?? 0}
+            savedCount={savedByMallId?.[peekedMallId] ?? null}
             anchor={peekAnchor}
             onCommit={() => onCommit?.(peekedMallId)}
             miles={miles}
