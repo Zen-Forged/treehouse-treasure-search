@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import nextDynamic from "next/dynamic";
 import { X, List } from "lucide-react";
 import MallSheet from "@/components/MallSheet";
+import { MASTHEAD_HEIGHT } from "@/components/StickyMasthead";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { getActiveMalls, getMallStatsByMallId, type MallStats } from "@/lib/posts";
 import { track } from "@/lib/clientEvents";
@@ -113,16 +114,34 @@ export default function MapPage() {
     window.scrollTo(0, 0);
   }, []);
 
+  // Map height fits the visible viewport (100dvh) minus chrome above + nav-
+  // clearance margin below. Previous `flex: 1, minHeight: 480` allowed the
+  // map to grow past viewport on phones where 480 > available — iPhone 15
+  // Pro available is ~445px after chrome, so the 480 floor pushed the map
+  // bottom into BottomNav territory.
+  //
+  // Subtraction:
+  //   MASTHEAD_HEIGHT      — calc(safe-area-top + 103px) from StickyMasthead.
+  //   144px                — postcard wrapper top padding (12) + slim card
+  //                          height (~132px = padding + name + address rows).
+  //   marginBottom (below) — max(110, safe-area-bottom + 100) for BottomNav.
+  //
+  // 100dvh tracks the actual visible viewport on iOS Safari (vs 100vh which
+  // on iOS includes the URL-bar area). flex:"0 0 auto" overrides the layout's
+  // implicit flex distribution since we have an explicit height.
+  const mainHeight =
+    `calc(100dvh - ${MASTHEAD_HEIGHT} - 144px - max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px)))`;
+
   return (
     <main
       style={{
-        flex:         1,
+        flex:         "0 0 auto",
         margin:       "0 16px",
         marginTop:    12,
         marginBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
         border:       `1px solid ${v1.inkHairline}`,
         borderRadius: 12,
-        minHeight:    480,
+        height:       mainHeight,
         overflow:     "hidden",
         position:     "relative",
       }}
