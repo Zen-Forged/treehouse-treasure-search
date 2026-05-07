@@ -114,6 +114,21 @@ export default function MapPage() {
     window.scrollTo(0, 0);
   }, []);
 
+  // Auto-show the PinCallout for the active mall when /map mounts with a
+  // scope already set. Two entry paths land here with mallId populated:
+  //   (a) tapping the Map BottomNav tab from Home/Saved while scope is set
+  //   (b) a shared ?mall=<slug> URL — layout intake sets mallId before
+  //       navigation reaches /map
+  // In both cases, the user already cares about that mall — the callout
+  // saves them a tap (Navigate / Explore are right there). Mount-only:
+  // doesn't re-pop on subsequent mallId changes (e.g. Clear pill, list
+  // pick) since those originate from /map and a re-pop would feel like a
+  // bug, not an affordance.
+  React.useEffect(() => {
+    if (mallId) setPeekedMallId(mallId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Map height fits the visible viewport (100dvh) minus chrome above + nav-
   // clearance margin below. Previous `flex: 1, minHeight: 480` allowed the
   // map to grow past viewport on phones where 480 > available — iPhone 15
