@@ -15,6 +15,7 @@
 //   onAuthChange(cb)          — subscribe to auth state changes
 
 import { supabase } from "./supabase";
+import { authFetch } from "./authFetch";
 import { LOCAL_VENDOR_KEY } from "@/types/treehouse";
 import type { Session, User } from "@supabase/supabase-js";
 
@@ -148,6 +149,55 @@ export async function detectUserRole(user: User | null): Promise<UserRole> {
   if (vendorRes.data)  return "vendor";
   if (shopperRes.data) return "shopper";
   return "none";
+}
+
+/**
+ * Try to claim approved-but-unlinked vendor rows for the current user.
+ *
+ * Why this exists: admin approval at /api/admin/vendor-requests inserts
+ * vendors rows with user_id=NULL. Linking happens later via
+ * /api/setup/lookup-vendor (composite-key match on mall_id + booth_number
+ * against the user's vendor_requests). Without this call, an
+ * approved-but-unclaimed vendor's first sign-in falls through detectUserRole
+ * to "none" and lands on /welcome with no path to their booth.
+ *
+ * Idempotent — the endpoint guards on `.is("user_id", null)` so repeated
+ * calls are safe. Returns true only when rows were just newly linked, so
+ * callers can decide whether to re-detect role.
+ */
+export async function tryAutoClaimVendorRows(): Promise<boolean> {
+  try {
+    const res = await authFetch("/api/setup/lookup-vendor", {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) return false;
+    const data = await res.json().catch(() => null) as
+      | { vendors?: unknown[]; alreadyLinked?: boolean }
+      | null;
+    return Array.isArray(data?.vendors)
+      && data.vendors.length > 0
+      && !data.alreadyLinked;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * detectUserRole with first-sign-in auto-claim retry.
+ *
+ * Routing surfaces (/login pickDest, /welcome mount) call this so an
+ * approved-but-unclaimed vendor lands on /my-shelf instead of /welcome.
+ * Pure `detectUserRole` (used by chrome like BottomNav) stays side-effect
+ * free — it fires on every mount and shouldn't trigger network claims.
+ */
+export async function detectUserRoleWithAutoClaim(user: User | null): Promise<UserRole> {
+  if (!user) return "none";
+  const role = await detectUserRole(user);
+  if (role !== "none") return role;
+  const claimed = await tryAutoClaimVendorRows();
+  if (!claimed) return "none";
+  return await detectUserRole(user);
 }
 
 // ── Sync helpers (for owner detection without async) ─────────────────────────

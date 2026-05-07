@@ -42,7 +42,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, ArrowLeft, Loader, Clipboard, Store, KeyRound, HelpCircle } from "lucide-react";
-import { sendMagicLink, getSession, signOut, onAuthChange, isAdmin, detectUserRole } from "@/lib/auth";
+import { sendMagicLink, getSession, signOut, onAuthChange, isAdmin, detectUserRoleWithAutoClaim, tryAutoClaimVendorRows } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import FormField, { formInputStyle } from "@/components/FormField";
@@ -80,7 +80,11 @@ async function pickDest(user: User | null, searchParams: ReadonlyURLSearchParams
   // intent. Returning shoppers are bounced to /me by /login/email/handle.
   if (searchParams.get("role") === "shopper") return "/login/email/handle";
 
-  const role = await detectUserRole(user);
+  // Auto-claim variant — repairs the approved-but-unlinked vendor case
+  // (vendors row inserted with user_id=NULL by admin approval; linked
+  // here on first sign-in via /api/setup/lookup-vendor). Falls through
+  // to "none" → /welcome only when there's nothing claimable.
+  const role = await detectUserRoleWithAutoClaim(user);
   if (role === "admin")   return "/";
   if (role === "vendor")  return "/my-shelf";
   if (role === "shopper") return "/me";
@@ -168,9 +172,29 @@ function LoginInner() {
         supabase.from("shoppers").select("id").eq("user_id", user.id).maybeSingle(),
       ]);
       if (cancelled) return;
-      const vendorRow  = !!vendorRes.data;
+      let vendorRow    = !!vendorRes.data;
       const shopperRow = !!shopperRes.data;
       const adminUser  = isAdmin(user);
+
+      // Auto-claim path — fires only when nothing was found. Approved
+      // vendors get inserted with user_id=NULL; this links the unlinked
+      // row to the auth account on first sign-in via composite-key match
+      // against vendor_requests. Idempotent, so safe even though we gate
+      // on the negative branch — same gate avoids the round trip for
+      // already-linked users.
+      if (!vendorRow && !shopperRow && !adminUser) {
+        const claimed = await tryAutoClaimVendorRows();
+        if (cancelled) return;
+        if (claimed) {
+          const { data: refetched } = await supabase
+            .from("vendors")
+            .select("id")
+            .eq("user_id", user.id)
+            .maybeSingle();
+          if (cancelled) return;
+          vendorRow = !!refetched;
+        }
+      }
 
       if (adminUser || vendorRow) {
         setAuthedUser(user);

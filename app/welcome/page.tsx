@@ -27,7 +27,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bookmark, Store, HelpCircle } from "lucide-react";
-import { getSession, detectUserRole } from "@/lib/auth";
+import { getSession, detectUserRoleWithAutoClaim } from "@/lib/auth";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 
 type RenderState = "loading" | "ready";
@@ -44,7 +44,10 @@ function WelcomeInner() {
         router.replace("/login");
         return;
       }
-      const role = await detectUserRole(session.user);
+      // Auto-claim variant — defensive against direct nav to /welcome
+      // by an approved-but-unlinked vendor (e.g. a session restored from
+      // PWA cold-start before they ever hit /login). Same self-heal.
+      const role = await detectUserRoleWithAutoClaim(session.user);
       if (cancelled) return;
       if (role === "admin")   { router.replace("/");          return; }
       if (role === "vendor")  { router.replace("/my-shelf");  return; }
