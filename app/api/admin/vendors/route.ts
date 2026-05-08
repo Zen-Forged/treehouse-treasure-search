@@ -122,30 +122,30 @@ export async function GET(req: Request) {
       //   • false → post-Relink, awaiting first sign-in (grey "pending")
       //   • true  → admin Force-unlinked an active vendor; auto-claim will
       //            re-attach on next sign-in (amber "disconnected")
+      //
+      // Session 130 — `isCollision` retired. The DB enforces (mall_id,
+      // booth_number) uniqueness on `vendors`, so true physical collisions
+      // can't exist on this table. The session-125 predicate detected
+      // "booth_name drift between request and vendor row" — informational,
+      // not a problem state. Admins still see the request's booth_name in
+      // the accordion annotation; if they want to update display_name they
+      // use Edit. Reverses session 124 D10 (collision visual treatment).
       let diagnosis: {
         matchingRequest: DiagnosisRequest | null;
-        isCollision:     boolean;
         authUserExists:  boolean;
       } | null = null;
       if (v.user_id === null) {
         // Session 130 fix: skip the diagnose query when booth_number is
-        // null/empty. Matching by (mall_id, null booth_number) collapses to
-        // mall_id alone — limit(1) then grabs whatever vendor_request is
-        // most recent in the mall, which rarely matches the actual vendor
-        // and produces spurious `isCollision=true` (display_name mismatch
-        // against an unrelated request). Pre-seeded admin booths without
-        // booth numbers are bulk-import artifacts, not vendor-request-driven.
-        // Treat as orphan (matchingRequest=null) so collision pill stays
-        // off and Invite affordance shows. D14 design-time blindspot, not
-        // a reversal.
+        // null/empty. Matching by (mall_id, null booth_number) collapses
+        // to mall_id alone, which is too lossy to be useful. Pre-seeded
+        // admin booths without booth numbers are bulk-import artifacts,
+        // not vendor-request-driven. Treat as orphan (matchingRequest=null)
+        // so the Invite affordance shows. D14 design-time blindspot.
         const hasBoothNumber =
           v.booth_number !== null && v.booth_number.trim() !== "";
         if (!hasBoothNumber) {
-          diagnosis = { matchingRequest: null, isCollision: false, authUserExists: false };
+          diagnosis = { matchingRequest: null, authUserExists: false };
         } else {
-          // PostgREST quirk: `.eq("col", null)` does not match null rows; null
-          // requires `.is("col", null)`. Branch retained for defensive safety
-          // even though hasBoothNumber gate above already excludes null.
           const q = auth.service
             .from("vendor_requests")
             .select("id, name, booth_name, email, status, created_at")
@@ -158,27 +158,14 @@ export async function GET(req: Request) {
 
           if (reqErr) {
             console.error("[admin/vendors GET] diagnose lookup:", reqErr.message);
-            diagnosis = { matchingRequest: null, isCollision: false, authUserExists: false };
+            diagnosis = { matchingRequest: null, authUserExists: false };
           } else {
             const matchingRequest = requests && requests[0]
               ? (requests[0] as DiagnosisRequest)
               : null;
-            // Session 130 fix: compare against `booth_name` (the business name
-            // axis), not `name` (which is `first_name + " " + last_name` — the
-            // requester's PERSON name kept for backwards-compat). The original
-            // session-125 implementation compared against `name` and flagged
-            // every linked request as a collision because the booth name and
-            // person name almost always differ. When the request pre-dates the
-            // booth_name column split (legacy null), treat as no-collision —
-            // we cannot determine the booth identity from the request alone.
-            const requestBoothName = matchingRequest?.booth_name?.trim() || null;
-            const isCollision =
-              matchingRequest !== null &&
-              requestBoothName !== null &&
-              requestBoothName !== v.display_name.trim();
             const authUserExists = matchingRequest !== null
               && authUserEmails.has(matchingRequest.email.toLowerCase());
-            diagnosis = { matchingRequest, isCollision, authUserExists };
+            diagnosis = { matchingRequest, authUserExists };
           }
         }
       }
@@ -204,10 +191,8 @@ export async function GET(req: Request) {
     total:     enriched.length,
     linked:    enriched.filter((v) => v.user_id !== null).length,
     unlinked:  enriched.filter((v) => v.user_id === null).length,
-    collision: enriched.filter((v) => v.diagnosis?.isCollision === true).length,
     problematic: enriched.filter((v) =>
-      v.user_id === null &&
-      (v.diagnosis?.isCollision === true || v.diagnosis?.matchingRequest === null)
+      v.user_id === null && v.diagnosis?.matchingRequest === null
     ).length,
   };
 
