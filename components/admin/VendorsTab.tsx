@@ -63,10 +63,11 @@ export type VendorRow = {
 };
 
 type Counts = {
-  total:     number;
-  linked:    number;
-  unlinked:  number;
-  collision: number;
+  total:       number;
+  linked:      number;
+  unlinked:    number;
+  collision:   number;
+  problematic: number;
 };
 
 type Scope = "problematic" | "all";
@@ -82,15 +83,29 @@ const PILL = {
   linked:    { bg: "#e7ecdf", fg: "#4a6b3a", bd: "rgba(74,107,58,0.30)" },
   unlinked:  { bg: "#f4ead4", fg: "#b6843a", bd: "rgba(182,132,58,0.30)" },
   collision: { bg: "#f1dad2", fg: "#a8442e", bd: "rgba(168,68,46,0.30)" },
+  // Pending: user_id=null but vendor_request matches by name + booth — relink
+  // succeeded, awaiting user's first sign-in. Cool muted ink so it reads as
+  // "in flight, no admin action required" — distinct signal from amber's
+  // "needs attention." Calibrated against PILL.linked/unlinked/collision.
+  pending:   { bg: "#e8e5dc", fg: "#6e6a5e", bd: "rgba(110,106,94,0.30)" },
 } as const;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function isProblematic(v: VendorRow): boolean {
-  // D2 — user_id IS NULL OR display_name diff vs approved request.
-  // diagnosis only populates for unlinked rows so isCollision implies
-  // user_id IS NULL; therefore problematic == unlinked.
-  return v.user_id === null;
+  // D2 (refined post-Arc-2.4 QA, 2026-05-08) — "problematic" means needs
+  // admin action. user_id=null is necessary but not sufficient: a successfully-
+  // relinked row whose request.email has no auth user yet stays user_id=null
+  // (session-123 auto-claim attaches on first sign-in) — that's expected
+  // pending state, not problematic. Three classes of user_id=null:
+  //   1. Collision (matching request, name diffs) → problematic
+  //   2. Orphan (no matching request) → problematic
+  //   3. Pending (matching request, name matches) → NOT problematic
+  // Server-side `counts.problematic` mirrors this predicate.
+  if (v.user_id !== null) return false;
+  if (v.diagnosis?.isCollision) return true;
+  if (v.diagnosis?.matchingRequest === null) return true;
+  return false;
 }
 
 function applyFilters(
@@ -110,10 +125,13 @@ function applyFilters(
   });
 }
 
-function rowStatus(v: VendorRow): "linked" | "unlinked" | "collision" {
+function rowStatus(v: VendorRow): "linked" | "unlinked" | "collision" | "pending" {
   if (v.diagnosis?.isCollision) return "collision";
-  if (v.user_id === null)       return "unlinked";
-  return "linked";
+  if (v.user_id !== null)       return "linked";
+  // user_id IS NULL — distinguish pending (post-relink, awaiting sign-in)
+  // from orphan (no matching request).
+  if (v.diagnosis?.matchingRequest !== null && v.diagnosis !== null) return "pending";
+  return "unlinked";
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -213,7 +231,7 @@ export function VendorsTab() {
       <div style={chipStripStyle}>
         <Chip
           label="Problematic"
-          count={counts?.unlinked ?? 0}
+          count={counts?.problematic ?? 0}
           on={scope === "problematic"}
           onClick={() => setScope("problematic")}
         />
@@ -336,10 +354,15 @@ export function VendorsTab() {
           vendorBoothNumber={relinkingVendor.booth_number}
           vendorDisplayName={relinkingVendor.display_name}
           onClose={() => setRelinkingVendor(null)}
-          onRelinked={(newDisplayName) => {
+          onRelinked={(newDisplayName, userIdResolved) => {
             setRelinkingVendor(null);
             setExpandedRowId(null);
-            setToast({ kind: "success", text: `Relinked to ${newDisplayName}.` });
+            setToast({
+              kind: "success",
+              text: userIdResolved
+                ? `Relinked to ${newDisplayName}.`
+                : `Relinked to ${newDisplayName}. Awaiting first sign-in.`,
+            });
             void fetchVendors();
           }}
         />
@@ -613,7 +636,7 @@ function VendorRowAccordion({
       {/* Expanded detail */}
       {expanded && (
         <div style={{ padding: "0 0 14px 18px" }}>
-          <VendorRowDetail vendor={vendor} isWarn={isWarn} />
+          <VendorRowDetail vendor={vendor} status={status} isWarn={isWarn} />
           <ActionRow
             showRelink={showRelink}
             showForceUnlink={showForceUnlink}
@@ -630,10 +653,19 @@ function VendorRowAccordion({
 
 // ─── Detail metadata grid (D7) ──────────────────────────────────────────────
 
-function VendorRowDetail({ vendor, isWarn }: { vendor: VendorRow; isWarn: boolean }) {
+function VendorRowDetail({
+  vendor,
+  status,
+  isWarn,
+}: {
+  vendor: VendorRow;
+  status: "linked" | "unlinked" | "collision" | "pending";
+  isWarn: boolean;
+}) {
   const dn   = vendor.display_name;
   const noteName = vendor.diagnosis?.matchingRequest?.name ?? null;
-  const userIdLabel = vendor.user_id ?? "— (unlinked)";
+  const userIdLabel =
+    vendor.user_id ?? (status === "pending" ? "— (awaiting first sign-in)" : "— (unlinked)");
 
   return (
     <div
