@@ -24,6 +24,7 @@ import ForceUnlinkConfirm from "@/components/admin/ForceUnlinkConfirm";
 import ForceDeleteConfirm from "@/components/admin/ForceDeleteConfirm";
 import RelinkSheet from "@/components/admin/RelinkSheet";
 import InviteVendorSheet from "@/components/admin/InviteVendorSheet";
+import AddBoothSheet from "@/components/AddBoothSheet";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -157,6 +158,7 @@ export function VendorsTab() {
   const [deletingVendor,   setDeletingVendor]  = useState<VendorRow | null>(null);
   const [relinkingVendor,  setRelinkingVendor] = useState<VendorRow | null>(null);
   const [invitingVendor,   setInvitingVendor]  = useState<VendorRow | null>(null);
+  const [addBoothOpen,     setAddBoothOpen]    = useState(false);
 
   // Arc 2.3 — toast (success/error). Auto-dismiss 4s success, 6s error.
   const [toast, setToast] = useState<{ kind: "success" | "error"; text: string } | null>(null);
@@ -260,13 +262,13 @@ export function VendorsTab() {
         />
       </div>
 
-      {/* + Add booth dashed-pill CTA — D6/D9. Visual-only in Arc 2.1; wired in Arc 3.2 */}
+      {/* + Add booth dashed-pill CTA — D6/D9. Wired Arc 3.2 to existing
+          AddBoothSheet primitive (same one /shelves used pre-Arc-4). */}
       <div style={{ display: "flex", justifyContent: "flex-end", margin: "10px 0 14px" }}>
         <button
           type="button"
-          disabled
-          style={addBoothPlaceholderStyle}
-          title="Wired in Arc 3.2"
+          onClick={() => setAddBoothOpen(true)}
+          style={addBoothPillStyle}
         >
           + Add booth
         </button>
@@ -365,6 +367,22 @@ export function VendorsTab() {
               text: userIdResolved
                 ? `Relinked to ${newDisplayName}.`
                 : `Relinked to ${newDisplayName}. Awaiting first sign-in.`,
+            });
+            void fetchVendors();
+          }}
+        />
+      )}
+
+      {addBoothOpen && (
+        <AddBoothSheet
+          malls={malls}
+          onClose={() => setAddBoothOpen(false)}
+          onCreated={(vendor, note) => {
+            setAddBoothOpen(false);
+            setExpandedRowId(null);
+            setToast({
+              kind: "success",
+              text: note ?? `Added ${vendor.display_name}.`,
             });
             void fetchVendors();
           }}
@@ -972,7 +990,7 @@ const scopeDividerStyle: React.CSSProperties = {
   margin: "0 4px",
 };
 
-const addBoothPlaceholderStyle: React.CSSProperties = {
+const addBoothPillStyle: React.CSSProperties = {
   padding: "6px 14px",
   borderRadius: 999,
   fontSize: 12,
@@ -981,8 +999,7 @@ const addBoothPlaceholderStyle: React.CSSProperties = {
   background: "transparent",
   color: v1.green,
   border: `1px dashed ${v1.green}`,
-  cursor: "not-allowed",
-  opacity: 0.45,
+  cursor: "pointer",
 };
 
 const messageStyle: React.CSSProperties = {
