@@ -147,11 +147,20 @@ export async function GET(req: Request) {
   );
 
   // ── 4. Counts for chip badges ──
+  // `problematic` = needs admin action. Distinct from raw `unlinked` because
+  // a successfully-relinked row whose vendor_request.email has no auth user
+  // yet stays user_id=null (session-123 auto-claim attaches on first sign-in)
+  // — that's expected pending state, NOT problematic. Predicate must match
+  // client-side isProblematic() in VendorsTab.tsx.
   const counts = {
     total:     enriched.length,
     linked:    enriched.filter((v) => v.user_id !== null).length,
     unlinked:  enriched.filter((v) => v.user_id === null).length,
     collision: enriched.filter((v) => v.diagnosis?.isCollision === true).length,
+    problematic: enriched.filter((v) =>
+      v.user_id === null &&
+      (v.diagnosis?.isCollision === true || v.diagnosis?.matchingRequest === null)
+    ).length,
   };
 
   return NextResponse.json({ ok: true, vendors: enriched, counts });

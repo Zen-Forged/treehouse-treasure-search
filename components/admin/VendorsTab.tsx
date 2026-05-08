@@ -23,6 +23,8 @@ import EditBoothSheet from "@/components/EditBoothSheet";
 import ForceUnlinkConfirm from "@/components/admin/ForceUnlinkConfirm";
 import ForceDeleteConfirm from "@/components/admin/ForceDeleteConfirm";
 import RelinkSheet from "@/components/admin/RelinkSheet";
+import InviteVendorSheet from "@/components/admin/InviteVendorSheet";
+import AddBoothSheet from "@/components/AddBoothSheet";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -63,10 +65,11 @@ export type VendorRow = {
 };
 
 type Counts = {
-  total:     number;
-  linked:    number;
-  unlinked:  number;
-  collision: number;
+  total:       number;
+  linked:      number;
+  unlinked:    number;
+  collision:   number;
+  problematic: number;
 };
 
 type Scope = "problematic" | "all";
@@ -82,15 +85,29 @@ const PILL = {
   linked:    { bg: "#e7ecdf", fg: "#4a6b3a", bd: "rgba(74,107,58,0.30)" },
   unlinked:  { bg: "#f4ead4", fg: "#b6843a", bd: "rgba(182,132,58,0.30)" },
   collision: { bg: "#f1dad2", fg: "#a8442e", bd: "rgba(168,68,46,0.30)" },
+  // Pending: user_id=null but vendor_request matches by name + booth — relink
+  // succeeded, awaiting user's first sign-in. Cool muted ink so it reads as
+  // "in flight, no admin action required" — distinct signal from amber's
+  // "needs attention." Calibrated against PILL.linked/unlinked/collision.
+  pending:   { bg: "#e8e5dc", fg: "#6e6a5e", bd: "rgba(110,106,94,0.30)" },
 } as const;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function isProblematic(v: VendorRow): boolean {
-  // D2 — user_id IS NULL OR display_name diff vs approved request.
-  // diagnosis only populates for unlinked rows so isCollision implies
-  // user_id IS NULL; therefore problematic == unlinked.
-  return v.user_id === null;
+  // D2 (refined post-Arc-2.4 QA, 2026-05-08) — "problematic" means needs
+  // admin action. user_id=null is necessary but not sufficient: a successfully-
+  // relinked row whose request.email has no auth user yet stays user_id=null
+  // (session-123 auto-claim attaches on first sign-in) — that's expected
+  // pending state, not problematic. Three classes of user_id=null:
+  //   1. Collision (matching request, name diffs) → problematic
+  //   2. Orphan (no matching request) → problematic
+  //   3. Pending (matching request, name matches) → NOT problematic
+  // Server-side `counts.problematic` mirrors this predicate.
+  if (v.user_id !== null) return false;
+  if (v.diagnosis?.isCollision) return true;
+  if (v.diagnosis?.matchingRequest === null) return true;
+  return false;
 }
 
 function applyFilters(
@@ -110,10 +127,13 @@ function applyFilters(
   });
 }
 
-function rowStatus(v: VendorRow): "linked" | "unlinked" | "collision" {
+function rowStatus(v: VendorRow): "linked" | "unlinked" | "collision" | "pending" {
   if (v.diagnosis?.isCollision) return "collision";
-  if (v.user_id === null)       return "unlinked";
-  return "linked";
+  if (v.user_id !== null)       return "linked";
+  // user_id IS NULL — distinguish pending (post-relink, awaiting sign-in)
+  // from orphan (no matching request).
+  if (v.diagnosis?.matchingRequest !== null && v.diagnosis !== null) return "pending";
+  return "unlinked";
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -137,6 +157,8 @@ export function VendorsTab() {
   const [unlinkingVendor,  setUnlinkingVendor] = useState<VendorRow | null>(null);
   const [deletingVendor,   setDeletingVendor]  = useState<VendorRow | null>(null);
   const [relinkingVendor,  setRelinkingVendor] = useState<VendorRow | null>(null);
+  const [invitingVendor,   setInvitingVendor]  = useState<VendorRow | null>(null);
+  const [addBoothOpen,     setAddBoothOpen]    = useState(false);
 
   // Arc 2.3 — toast (success/error). Auto-dismiss 4s success, 6s error.
   const [toast, setToast] = useState<{ kind: "success" | "error"; text: string } | null>(null);
@@ -213,7 +235,7 @@ export function VendorsTab() {
       <div style={chipStripStyle}>
         <Chip
           label="Problematic"
-          count={counts?.unlinked ?? 0}
+          count={counts?.problematic ?? 0}
           on={scope === "problematic"}
           onClick={() => setScope("problematic")}
         />
@@ -240,13 +262,13 @@ export function VendorsTab() {
         />
       </div>
 
-      {/* + Add booth dashed-pill CTA — D6/D9. Visual-only in Arc 2.1; wired in Arc 3.2 */}
+      {/* + Add booth dashed-pill CTA — D6/D9. Wired Arc 3.2 to existing
+          AddBoothSheet primitive (same one /shelves used pre-Arc-4). */}
       <div style={{ display: "flex", justifyContent: "flex-end", margin: "10px 0 14px" }}>
         <button
           type="button"
-          disabled
-          style={addBoothPlaceholderStyle}
-          title="Wired in Arc 3.2"
+          onClick={() => setAddBoothOpen(true)}
+          style={addBoothPillStyle}
         >
           + Add booth
         </button>
@@ -274,6 +296,7 @@ export function VendorsTab() {
               onForceUnlink={() => setUnlinkingVendor(v)}
               onDelete={()      => setDeletingVendor(v)}
               onRelink={()      => setRelinkingVendor(v)}
+              onInvite={()      => setInvitingVendor(v)}
             />
           ))}
         </div>
@@ -336,10 +359,52 @@ export function VendorsTab() {
           vendorBoothNumber={relinkingVendor.booth_number}
           vendorDisplayName={relinkingVendor.display_name}
           onClose={() => setRelinkingVendor(null)}
-          onRelinked={(newDisplayName) => {
+          onRelinked={(newDisplayName, userIdResolved) => {
             setRelinkingVendor(null);
             setExpandedRowId(null);
-            setToast({ kind: "success", text: `Relinked to ${newDisplayName}.` });
+            setToast({
+              kind: "success",
+              text: userIdResolved
+                ? `Relinked to ${newDisplayName}.`
+                : `Relinked to ${newDisplayName}. Awaiting first sign-in.`,
+            });
+            void fetchVendors();
+          }}
+        />
+      )}
+
+      {addBoothOpen && (
+        <AddBoothSheet
+          malls={malls}
+          onClose={() => setAddBoothOpen(false)}
+          onCreated={(vendor, note) => {
+            setAddBoothOpen(false);
+            setExpandedRowId(null);
+            setToast({
+              kind: "success",
+              text: note ?? `Added ${vendor.display_name}.`,
+            });
+            void fetchVendors();
+          }}
+        />
+      )}
+
+      {invitingVendor && (
+        <InviteVendorSheet
+          vendorId={invitingVendor.id}
+          displayName={invitingVendor.display_name}
+          mallName={invitingVendor.mall?.name ?? null}
+          boothNumber={invitingVendor.booth_number}
+          onClose={() => setInvitingVendor(null)}
+          onInvited={(email, emailSent) => {
+            setInvitingVendor(null);
+            setExpandedRowId(null);
+            setToast({
+              kind: emailSent ? "success" : "error",
+              text: emailSent
+                ? `Invite sent to ${email}.`
+                : `Invite saved, but email failed to send. Check Resend logs.`,
+            });
             void fetchVendors();
           }}
         />
@@ -480,6 +545,7 @@ function VendorRowAccordion({
   onForceUnlink,
   onDelete,
   onRelink,
+  onInvite,
 }: {
   vendor:        VendorRow;
   expanded:      boolean;
@@ -488,6 +554,7 @@ function VendorRowAccordion({
   onForceUnlink: () => void;
   onDelete:      () => void;
   onRelink:      () => void;
+  onInvite:      () => void;
 }) {
   const status   = rowStatus(vendor);
   const pill     = PILL[status];
@@ -505,10 +572,12 @@ function VendorRowAccordion({
                          "transparent";
 
   // D4 — Force-unlink only when user_id != null. Relink only when
-  // unlinked AND a matching pending/approved request exists. Edit and
-  // Delete render on every row.
+  // unlinked AND a matching pending/approved request exists. Invite
+  // only when unlinked AND no matching request (orphan-unlinked).
+  // Edit and Delete render on every row.
   const showForceUnlink = vendor.user_id !== null;
   const showRelink      = vendor.user_id === null && vendor.diagnosis?.matchingRequest !== null;
+  const showInvite      = vendor.user_id === null && vendor.diagnosis?.matchingRequest === null;
 
   return (
     <div
@@ -613,14 +682,16 @@ function VendorRowAccordion({
       {/* Expanded detail */}
       {expanded && (
         <div style={{ padding: "0 0 14px 18px" }}>
-          <VendorRowDetail vendor={vendor} isWarn={isWarn} />
+          <VendorRowDetail vendor={vendor} status={status} isWarn={isWarn} />
           <ActionRow
             showRelink={showRelink}
             showForceUnlink={showForceUnlink}
+            showInvite={showInvite}
             onEdit={onEdit}
             onForceUnlink={onForceUnlink}
             onDelete={onDelete}
             onRelink={onRelink}
+            onInvite={onInvite}
           />
         </div>
       )}
@@ -630,10 +701,19 @@ function VendorRowAccordion({
 
 // ─── Detail metadata grid (D7) ──────────────────────────────────────────────
 
-function VendorRowDetail({ vendor, isWarn }: { vendor: VendorRow; isWarn: boolean }) {
+function VendorRowDetail({
+  vendor,
+  status,
+  isWarn,
+}: {
+  vendor: VendorRow;
+  status: "linked" | "unlinked" | "collision" | "pending";
+  isWarn: boolean;
+}) {
   const dn   = vendor.display_name;
   const noteName = vendor.diagnosis?.matchingRequest?.name ?? null;
-  const userIdLabel = vendor.user_id ?? "— (unlinked)";
+  const userIdLabel =
+    vendor.user_id ?? (status === "pending" ? "— (awaiting first sign-in)" : "— (unlinked)");
 
   return (
     <div
@@ -680,6 +760,39 @@ function VendorRowDetail({ vendor, isWarn }: { vendor: VendorRow; isWarn: boolea
 
       <Key>created</Key>
       <Val mode="mono">{formatDate(vendor.created_at)}</Val>
+
+      {/* Jump links — review/test affordance. Public booth = what shoppers see;
+          admin view = vendor's editable shelf without sign-in dance.
+          target=_blank so admin doesn't lose place in the Vendors tab. */}
+      <Key>open</Key>
+      <div
+        style={{
+          display: "flex",
+          gap: 12,
+          alignItems: "center",
+          fontSize: 12,
+          fontFamily: "Lora, Georgia, serif",
+          flexWrap: "wrap",
+        }}
+      >
+        <a
+          href={`/shelf/${vendor.slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: v1.green, textDecoration: "none" }}
+        >
+          ↗ public booth
+        </a>
+        <span style={{ color: v1.inkFaint }}>·</span>
+        <a
+          href={`/my-shelf?vendor=${vendor.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: v1.green, textDecoration: "none" }}
+        >
+          ↗ admin view
+        </a>
+      </div>
     </div>
   );
 }
@@ -726,24 +839,29 @@ function Val({
 
 // ─── Action button row (D7) ─────────────────────────────────────────────────
 //
-// Visual placeholders this commit (Arc 2.2). Handlers wire in:
-//   Arc 2.3 → Edit · Force-unlink · Delete (3 modals)
-//   Arc 2.4 → Relink (RelinkSheet)
+// Action handlers wired across Arc 2.3 (Edit · Force-unlink · Delete) +
+// Arc 2.4 (Relink) + Arc 4 follow-up (Invite). Mutually exclusive on the
+// link path: Relink shows when matchingRequest exists, Invite shows when
+// it doesn't — never both.
 
 function ActionRow({
   showRelink,
   showForceUnlink,
+  showInvite,
   onEdit,
   onForceUnlink,
   onDelete,
   onRelink,
+  onInvite,
 }: {
   showRelink:      boolean;
   showForceUnlink: boolean;
+  showInvite:      boolean;
   onEdit:          () => void;
   onForceUnlink:   () => void;
   onDelete:        () => void;
   onRelink:        () => void;
+  onInvite:        () => void;
 }) {
   return (
     <div
@@ -756,6 +874,7 @@ function ActionRow({
       }}
     >
       {showRelink && <ActionButton tone="primary" onClick={onRelink}>Relink to request</ActionButton>}
+      {showInvite && <ActionButton tone="primary" onClick={onInvite}>Invite vendor</ActionButton>}
       <ActionButton onClick={onEdit}>Edit</ActionButton>
       {showForceUnlink && <ActionButton onClick={onForceUnlink}>Force-unlink</ActionButton>}
       <ActionButton tone="danger" onClick={onDelete}>Delete</ActionButton>
@@ -871,7 +990,7 @@ const scopeDividerStyle: React.CSSProperties = {
   margin: "0 4px",
 };
 
-const addBoothPlaceholderStyle: React.CSSProperties = {
+const addBoothPillStyle: React.CSSProperties = {
   padding: "6px 14px",
   borderRadius: 999,
   fontSize: 12,
@@ -880,8 +999,7 @@ const addBoothPlaceholderStyle: React.CSSProperties = {
   background: "transparent",
   color: v1.green,
   border: `1px dashed ${v1.green}`,
-  cursor: "not-allowed",
-  opacity: 0.45,
+  cursor: "pointer",
 };
 
 const messageStyle: React.CSSProperties = {

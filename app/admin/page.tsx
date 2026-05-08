@@ -35,14 +35,14 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, UserCheck, Users, Store, X, Stethoscope, Image as ImageIcon, Upload, Loader as LoaderIcon, MapPin, ChevronDown, BarChart3 } from "lucide-react";
+import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, UserCheck, Users, Store, X, Stethoscope, Image as ImageIcon, Upload, Loader as LoaderIcon, MapPin, ChevronDown, BarChart3, Building2 } from "lucide-react";
 import { getSession, isAdmin, signOut } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { colors, v1 } from "@/lib/tokens";
 import { compressImage } from "@/lib/imageUpload";
 import { getSiteSettingUrl, type SiteSettingKey } from "@/lib/siteSettings";
 import { getAllMalls } from "@/lib/posts";
-import AddBoothInline from "@/components/AddBoothInline";
+import { VendorsTab } from "@/components/admin/VendorsTab";
 import type { User } from "@supabase/supabase-js";
 import type { Mall, MallStatus } from "@/types/treehouse";
 
@@ -168,7 +168,7 @@ export default function AdminPage() {
   const [result,     setResult]     = useState<string | null>(null);
   const [toast,      setToast]      = useState<Toast | null>(null);
   const [confirmAll, setConfirmAll] = useState(false);
-  const [activeTab, setActiveTab] = useState<"posts" | "requests" | "banners" | "malls" | "events">("requests");
+  const [activeTab, setActiveTab] = useState<"posts" | "requests" | "banners" | "malls" | "events" | "vendors">("requests");
 
   // Diagnosis panel — per-request loading + result state
   const [diagnosisBusy,    setDiagnosisBusy]    = useState<Set<string>>(new Set());
@@ -181,7 +181,8 @@ export default function AdminPage() {
   // into /admin means malls load only when an admin actually lands here.
   const [malls,         setMalls]         = useState<Mall[]>([]);
   const [mallsLoading,  setMallsLoading]  = useState(false);
-  const [addBoothOpen,  setAddBoothOpen]  = useState(false);
+  // addBoothOpen state retired Arc 4 Arc 3.2 — AddBoothInline removed from
+  // Requests tab; pre-seed surface lives on the new Vendors tab (D6/D9).
 
   // R4c — Malls tab state
   const [expandedMallId, setExpandedMallId] = useState<string | null>(null);
@@ -587,9 +588,11 @@ export default function AdminPage() {
         <div style={{ fontSize: 12, color: colors.textPrimary }}>{user.email}</div>
       </div>
 
-      {/* Tab switcher — R3: 5 tabs (Requests / Posts / Banners / Malls / Events).
-          Layout shifted from horizontal-icon-and-label to stacked-icon-above-
-          label per design record §Admin UI to fit 5 cells in 375px. */}
+      {/* Tab switcher — Arc 4 Arc 3.1: 6 tabs (Requests / Posts / Banners /
+          Locations / Events / Vendors). Vendors = D1 new slot, vendors-table
+          management surface (force-unlink, relink, force-delete, invite, edit).
+          Stacked-icon-above-label layout (R3) keeps 6 cells fitting 375px;
+          tighter than 5 but readable. */}
       <div style={{ margin: "20px 20px 0", display: "flex", gap: 4 }}>
         <button
           onClick={() => setActiveTab("requests")}
@@ -658,35 +661,27 @@ export default function AdminPage() {
           }}>
           <BarChart3 size={13} /> Events
         </button>
+        <button
+          onClick={() => setActiveTab("vendors")}
+          style={{
+            flex: 1, padding: "8px 2px", borderRadius: 10, fontSize: 10, fontWeight: 500,
+            background: activeTab === "vendors" ? colors.green : "none",
+            color: activeTab === "vendors" ? "#fff" : colors.textMid,
+            border: `1px solid ${activeTab === "vendors" ? colors.green : colors.border}`,
+            cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3,
+          }}>
+          <Building2 size={13} /> Vendors
+        </button>
       </div>
 
       {/* Vendor Requests Tab */}
       {activeTab === "requests" && (
         <div style={{ margin: "24px 20px 0" }}>
 
-          {/* T4b (session 37) — Add Booth primitive folded in from /shelves.
-              Rendered on v1.1k chrome (paperCream + Lora + filled green CTA)
-              so that when /admin gets its eventual v1.2 pass this primitive
-              doesn't need re-chroming. It reads as a Treehouse-shaped insertion
-              inside the legacy v0.2 admin tab — intentional mismatch flagged
-              in CLAUDE.md session-37 close. */}
-          <AddBoothInline
-            malls={malls}
-            open={addBoothOpen}
-            onToggle={() => setAddBoothOpen(v => !v)}
-            onClose={() => setAddBoothOpen(false)}
-            onCreated={(vendor, note) => {
-              setAddBoothOpen(false);
-              setToast({
-                kind: "success",
-                name: vendor.display_name,
-                email: "",
-                booth: vendor.booth_number ?? null,
-                mall: malls.find(m => m.id === vendor.mall_id)?.name ?? null,
-                note: note ?? "Booth pre-seeded. Ready for vendor claim when they request access.",
-              });
-            }}
-          />
+          {/* AddBoothInline retired Arc 4 Arc 3.2 (D6/D9) — pre-seed surface
+              moved to the new Vendors tab's "+ Add booth" dashed-pill, which
+              wraps the same AddBoothSheet primitive directly. Requests tab
+              now focuses on its core job: reviewing vendor self-registrations. */}
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2px" }}>
@@ -939,6 +934,14 @@ export default function AdminPage() {
           onLoadMore={() => fetchEvents({ append: true })}
           rawProbe={rawProbe}
         />
+      )}
+
+      {/* Arc 4 Arc 3.1 — Vendors tab. Owns its own fetch + state lifecycle.
+          /vendors-test smoke route is now redundant; retire candidate. */}
+      {activeTab === "vendors" && (
+        <div style={{ marginTop: 24 }}>
+          <VendorsTab />
+        </div>
       )}
 
       {/* Action bar - only show for posts tab */}

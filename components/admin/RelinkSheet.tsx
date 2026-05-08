@@ -42,7 +42,11 @@ interface RelinkSheetProps {
   vendorBoothNumber:  string | null;
   vendorDisplayName:  string;
   onClose:    () => void;
-  onRelinked: (newDisplayName: string) => void;
+  // userIdResolved=true when server attached an auth user (claim complete);
+  // false when relink succeeded but request.email has no auth user yet
+  // (row stays user_id=null pending session-123 auto-claim on first sign-in).
+  // Parent uses this to vary toast copy + status pill semantics.
+  onRelinked: (newDisplayName: string, userIdResolved: boolean) => void;
 }
 
 export default function RelinkSheet({
@@ -139,7 +143,8 @@ export default function RelinkSheet({
         setSubmitting(false);
         return;
       }
-      onRelinked(resolvedNewName);
+      const userIdResolved = !!json?.vendor?.user_id;
+      onRelinked(resolvedNewName, userIdResolved);
     } catch (e) {
       setSubmitError((e as Error).message);
       setSubmitting(false);
