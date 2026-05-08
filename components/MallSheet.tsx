@@ -29,9 +29,10 @@
 //   8. Mall rows — pin glyph + Lora 18px name + system-ui 13px city + right-aligned find-count
 //
 // The active state (whether All or a specific mall) gets a 1px hairline
-// underline on its label in inkPrimary, matching the Booth page ViewToggle's
-// active treatment. First cross-cutting use of the text-link-with-hairline
-// active pattern beyond Booth.
+// underline on its label in inkPrimary. (Originally introduced to match the
+// Booth page ViewToggle's active treatment; ViewToggle retired session 128
+// but the hairline-underline pattern persists as a generic text-link-active
+// affordance.)
 
 "use client";
 

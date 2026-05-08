@@ -110,9 +110,9 @@ export const v1 = {
 
   // Phase 2 Session A — paperWarm is the warm-cream variant used as the
   // polaroid mat across Home masonry, /flagged FindTile, /shelf/[slug]
-  // WindowTile + ShelfTile, /post/tag Find/Tag photos, /post/preview
-  // PolaroidPreview. Adoption deferred to Session B PolaroidTile primitive
-  // extraction; declared here so the value lives in one place.
+  // WindowTile, /post/tag Find/Tag photos, /post/preview PolaroidPreview.
+  // Adoption deferred to Session B PolaroidTile primitive extraction;
+  // declared here so the value lives in one place.
   paperWarm:    "#faf2e0",
 
   // R10 (session 107) — postcard mall card surface. Slightly more saturated

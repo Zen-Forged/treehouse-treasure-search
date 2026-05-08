@@ -79,6 +79,7 @@ import {
 import PhotoLightbox from "@/components/PhotoLightbox";
 import BookmarkBoothBubble from "@/components/BookmarkBoothBubble";
 import PolaroidTile from "@/components/PolaroidTile";
+import FlagGlyph from "@/components/FlagGlyph";
 import { writeFindContext, type FindRef } from "@/lib/findContext";
 import type { Post } from "@/types/treehouse";
 
@@ -208,16 +209,18 @@ export function BoothHero({
             edit chrome consolidated on the single title affordance. */}
 
         {/* Bookmark bubble (session 80 D2: SIBLING of photograph motion.div,
-            D4: no own layoutId). Session 89 (iPhone QA #3): position moved
-            from top-right → bottom-left (12/12 offsets) so the bookmark
-            balances diagonally against the booth post-it pinned at
-            bottom-right. Old top-right slot was visually competing with
-            the photograph's own focal point. z-index 11 sits between the
-            lightbox overlay (z 5) and the post-it (z 12) so the bookmark
-            stays interactive without obstructing the post-it tap target.
-            Only mounts when caller passes both saved + onToggleBookmark. */}
+            D4: no own layoutId). Session 128 (refinement design D1): position
+            REVERSES session 89's bottom-left placement and returns to session
+            80's top-right slot for system-wide save/bookmark consistency
+            (David: 'keeps saved/bookmarked icon location consistent'). The
+            session-89 diagonal-balance-with-post-it framing is overridden by
+            the consistency rule — Home heart, /flagged unsave, /find/[id]
+            flag, and /shelf/[slug] tile saves all live in top-right slots.
+            z-index 11 sits between lightbox overlay (z 5) and post-it (z 12)
+            so the bookmark stays interactive without obstructing post-it tap
+            target. Only mounts when caller passes both saved + onToggleBookmark. */}
         {saved !== undefined && onToggleBookmark && (
-          <div style={{ position: "absolute", bottom: 12, left: 12, zIndex: 11 }}>
+          <div style={{ position: "absolute", top: 12, right: 12, zIndex: 11 }}>
             <BookmarkBoothBubble
               saved={saved}
               size="hero"
@@ -336,7 +339,12 @@ export function BoothTitleBlock({
   const hasPicker = !!onPickerOpen;
   const hasEdit   = !!onEditName;
   return (
-    <div style={{ padding: "36px 22px 6px" }}>
+    // Session 128 (refinement design D6): outer wrapper textAlign:"center"
+    // + flex row justifyContent:"center" centers the eyebrow, h1, picker
+    // chevron, and edit pencil as a group. Was left-aligned in prod; David
+    // flagged during V1 review. Affects both /shelf/[slug] and /my-shelf
+    // via this shared primitive.
+    <div style={{ padding: "36px 22px 6px", textAlign: "center" }}>
       <div
         style={{
           fontFamily: FONT_LORA,
@@ -349,7 +357,7 @@ export function BoothTitleBlock({
       >
         A curated booth from
       </div>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 10 }}>
         {hasPicker ? (
           <button
             onClick={onPickerOpen}
@@ -363,10 +371,8 @@ export function BoothTitleBlock({
               background: "transparent",
               border: "none",
               cursor: "pointer",
-              textAlign: "left",
+              textAlign: "center",
               WebkitTapHighlightColor: "transparent",
-              flex: 1,
-              minWidth: 0,
             }}
           >
             <h1
@@ -405,8 +411,6 @@ export function BoothTitleBlock({
               lineHeight: 1.1,
               letterSpacing: "-0.005em",
               margin: 0,
-              flex: 1,
-              minWidth: 0,
             }}
           >
             {displayName}
@@ -474,31 +478,32 @@ export function MallBlock({
   const href = mapsUrl(mapQuery);
 
   return (
-    <div
-      style={{
-        padding: "16px 22px 4px",
-        display: "grid",
-        gridTemplateColumns: "22px 1fr",
-        columnGap: 12,
-        alignItems: "start",
-      }}
-    >
-      <div style={{ paddingTop: 2 }}>
-        <PinGlyph size={18} />
+    // Session 128 (refinement design D6): grid layout retired in favor of
+    // centered composition. PinGlyph renders inline before mall name (size
+    // 16 to match Lora 18 baseline). Address centers below as separate
+    // block. Affects both /shelf/[slug] and /my-shelf via shared primitive.
+    // Implementation-time call: kept PinGlyph inline-before-name (vs retire)
+    // to preserve place-marker semantic; flip to retire if iPhone QA reads
+    // cluttered.
+    <div style={{ padding: "16px 22px 4px", textAlign: "center" }}>
+      <div
+        style={{
+          fontFamily: FONT_LORA,
+          fontSize: 18,
+          color: v1.inkPrimary,
+          lineHeight: 1.3,
+          letterSpacing: "-0.005em",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+        }}
+      >
+        <PinGlyph size={16} />
+        <span>{mallName}</span>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-        <div
-          style={{
-            fontFamily: FONT_LORA,
-            fontSize: 18,
-            color: v1.inkPrimary,
-            lineHeight: 1.3,
-            letterSpacing: "-0.005em",
-          }}
-        >
-          {mallName}
-        </div>
-        {address && (
+      {address && (
+        <div style={{ marginTop: 4 }}>
           <a
             href={href}
             target="_blank"
@@ -512,13 +517,12 @@ export function MallBlock({
               textDecorationStyle: "dotted",
               textDecorationColor: v1.inkFaint,
               textUnderlineOffset: 3,
-              alignSelf: "flex-start",
             }}
           >
             {address}
           </a>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -549,74 +553,6 @@ export function DiamondDivider({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// View toggle — "Window View · Shelf View" text-link pair
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type BoothView = "window" | "shelf";
-
-export function ViewToggle({
-  view,
-  onChange,
-}: {
-  view: BoothView;
-  onChange: (v: BoothView) => void;
-}) {
-  function linkStyle(active: boolean): React.CSSProperties {
-    return {
-      fontFamily: FONT_LORA,
-      fontStyle: "italic",
-      fontSize: 16,
-      color: active ? v1.inkPrimary : v1.inkMuted,
-      background: "none",
-      border: "none",
-      cursor: "pointer",
-      padding: "4px 2px 6px",
-      position: "relative",
-      WebkitTapHighlightColor: "transparent",
-      borderBottom: active ? `1px solid ${v1.inkPrimary}` : "1px solid transparent",
-      lineHeight: 1.2,
-    };
-  }
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 18,
-        padding: "4px 22px 18px",
-      }}
-    >
-      <button
-        onClick={() => onChange("window")}
-        style={linkStyle(view === "window")}
-        aria-pressed={view === "window"}
-      >
-        Window View
-      </button>
-      <span
-        aria-hidden="true"
-        style={{
-          fontFamily: FONT_LORA,
-          fontSize: 16,
-          color: v1.inkFaint,
-          lineHeight: 1,
-        }}
-      >
-        ·
-      </span>
-      <button
-        onClick={() => onChange("shelf")}
-        style={linkStyle(view === "shelf")}
-        aria-pressed={view === "shelf"}
-      >
-        Shelf View
-      </button>
-    </div>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Window View — 3-col 4:5 portrait grid with titles + prices
@@ -727,6 +663,8 @@ function WindowTile({
   index,
   findRefs,
   swipeOriginPath,
+  saved,
+  onToggleSave,
 }: {
   post: Post;
   index: number;
@@ -734,8 +672,21 @@ function WindowTile({
   // (lib/findContext) so /find/[id] can drag-swipe between adjacent finds.
   findRefs?: FindRef[];
   swipeOriginPath?: string;
+  // Session 128 (refinement design D4) — when both passed, render a save
+  // bubble in PolaroidTile.topRight (same canonical pattern as Home heart
+  // + /flagged unsave). /shelf/[slug] passes both via useShopperSaves;
+  // /my-shelf omits (vendor-self surface, no save UX).
+  saved?: boolean;
+  onToggleSave?: () => void;
 }) {
   const hasPrice = typeof post.price_asking === "number" && post.price_asking > 0;
+  const hasSaveBubble = saved !== undefined && onToggleSave !== undefined;
+
+  function handleSaveClick(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    onToggleSave?.();
+  }
 
   function handleTap() {
     if (post.image_url) {
@@ -789,6 +740,38 @@ function WindowTile({
               no photograph
             </div>
           }
+          topRight={
+            hasSaveBubble ? (
+              <button
+                onClick={handleSaveClick}
+                aria-label={saved ? "Unsave" : "Save"}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: "50%",
+                  background: "rgba(245,242,235,0.85)",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                  border: `0.5px solid rgba(42,26,10,0.12)`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 0,
+                  cursor: "pointer",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                <FlagGlyph
+                  size={17}
+                  strokeWidth={1.7}
+                  style={{
+                    color: saved ? v1.green : v1.inkPrimary,
+                    fill:  saved ? v1.green : "none",
+                  }}
+                />
+              </button>
+            ) : undefined
+          }
           below={
             <div style={{ padding: "9px 3px 4px", height: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
               <div
@@ -835,6 +818,8 @@ export function WindowView({
   showPlaceholders = false,
   onAddClick,
   swipeOriginPath,
+  savedIds,
+  onToggleSave,
 }: {
   posts: Post[];
   vendorId?: string;
@@ -846,6 +831,12 @@ export function WindowView({
   // Caller is /shelf/[slug] (originPath = `/shelf/${slug}`); /my-shelf
   // omits this for now (vendor-self surfaces don't need swipe-nav).
   swipeOriginPath?: string;
+  // Session 128 (refinement design D4) — when both passed, each tile
+  // renders a save bubble in PolaroidTile.topRight (canonical pattern
+  // from Home + /flagged). /shelf/[slug] passes both via useShopperSaves;
+  // /my-shelf omits (vendor-self surface).
+  savedIds?: Set<string>;
+  onToggleSave?: (postId: string) => void;
 }) {
   const findRefs: FindRef[] = swipeOriginPath
     ? posts.map((p) => ({ id: p.id, image_url: p.image_url ?? null, title: p.title ?? null }))
@@ -868,15 +859,20 @@ export function WindowView({
         rowGap: 18,
       }}
     >
-      {posts.map((post, i) => (
-        <WindowTile
-          key={post.id}
-          post={post}
-          index={i}
-          findRefs={swipeOriginPath ? findRefs : undefined}
-          swipeOriginPath={swipeOriginPath}
-        />
-      ))}
+      {posts.map((post, i) => {
+        const hasSaveBubble = !!savedIds && !!onToggleSave;
+        return (
+          <WindowTile
+            key={post.id}
+            post={post}
+            index={i}
+            findRefs={swipeOriginPath ? findRefs : undefined}
+            swipeOriginPath={swipeOriginPath}
+            saved={hasSaveBubble ? savedIds!.has(post.id) : undefined}
+            onToggleSave={hasSaveBubble ? () => onToggleSave!(post.id) : undefined}
+          />
+        );
+      })}
       {showAddTile && <AddFindTile vendorId={vendorId} index={posts.length} onAddClick={onAddClick} />}
       {Array.from({ length: placeholderCount }).map((_, i) => (
         <PlaceholderTile key={`ph-${i}`} index={usedCells + i} />
@@ -885,252 +881,6 @@ export function WindowView({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Shelf View — horizontal scroll, larger 4:5 tiles
-// ─────────────────────────────────────────────────────────────────────────────
-
-function ShelfTile({
-  post,
-  index,
-  isFirst,
-  findRefs,
-  swipeOriginPath,
-}: {
-  post: Post;
-  index: number;
-  isFirst: boolean;
-  findRefs?: FindRef[];
-  swipeOriginPath?: string;
-}) {
-  const hasPrice = typeof post.price_asking === "number" && post.price_asking > 0;
-
-  function handleTap() {
-    if (post.image_url) {
-      try {
-        sessionStorage.setItem(
-          `treehouse_find_preview:${post.id}`,
-          JSON.stringify({ image_url: post.image_url, title: post.title }),
-        );
-      } catch {}
-    }
-    if (findRefs && swipeOriginPath) {
-      const cursor = findRefs.findIndex((r) => r.id === post.id);
-      writeFindContext({
-        originPath:  swipeOriginPath,
-        findRefs,
-        cursorIndex: cursor >= 0 ? cursor : 0,
-      });
-    }
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.97 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.26, delay: Math.min(index * 0.035, 0.25), ease: EASE }}
-      style={{
-        flexShrink: 0,
-        width: "52vw",
-        maxWidth: 210,
-        scrollSnapAlign: "start",
-        marginLeft: isFirst ? 22 : 0,
-      }}
-    >
-      <Link
-        href={`/find/${post.id}`}
-        onClick={handleTap}
-        style={{ display: "block", textDecoration: "none", color: "inherit" }}
-      >
-        <PolaroidTile
-          src={post.image_url ?? ""}
-          alt={post.title}
-          bottomMat="outside"
-          loading="lazy"
-          fallback={
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                padding: "12px 10px",
-                display: "flex",
-                alignItems: "flex-end",
-                fontFamily: FONT_LORA,
-                fontSize: 13,
-                color: v1.inkFaint,
-              }}
-            >
-              no photograph
-            </div>
-          }
-          below={
-            <div style={{ padding: "9px 3px 4px", height: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
-              <div
-                style={{
-                  fontFamily: FONT_LORA,
-                  fontSize: 14,
-                  color: v1.inkPrimary,
-                  lineHeight: 1.4,
-                  width: "100%",
-                  overflow: "hidden",
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical" as const,
-                }}
-              >
-                {post.title}
-              </div>
-              {hasPrice && (
-                <div
-                  style={{
-                    fontFamily: FONT_LORA,
-                    fontSize: 14,
-                    color: v1.priceInk,
-                    lineHeight: 1.4,
-                    marginTop: 4,
-                    letterSpacing: "-0.005em",
-                  }}
-                >
-                  ${Math.round(post.price_asking as number)}
-                </div>
-              )}
-            </div>
-          }
-        />
-      </Link>
-    </motion.div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// Shelf variant of AddFindTile — same dimensions as ShelfTile (v1.1j)
-// ─────────────────────────────────────────────────────────────────────────
-
-function ShelfAddFindTile({
-  vendorId,
-  isFirst,
-  onAddClick,
-}: {
-  vendorId?: string;
-  isFirst: boolean;
-  onAddClick?: () => void;
-}) {
-  const href = vendorId ? `/post?vendor=${vendorId}` : "/post";
-  const tileStyle: React.CSSProperties = {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    width: "100%",
-    aspectRatio: "4/5",
-    borderRadius: v1.imageRadius,
-    border: `1px dashed ${v1.inkFaint}`,
-    background: "transparent",
-    textDecoration: "none",
-    WebkitTapHighlightColor: "transparent",
-    cursor: "pointer",
-  };
-  const inner = (
-    <>
-      <ImagePlus size={24} strokeWidth={1.5} style={{ color: v1.inkMuted }} />
-      <span
-        style={{
-          fontFamily: FONT_LORA,
-          fontStyle: "italic",
-          fontSize: 14,
-          color: v1.inkMuted,
-          lineHeight: 1,
-        }}
-      >
-        Add a find
-      </span>
-    </>
-  );
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.97 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.26, ease: EASE }}
-      style={{
-        flexShrink: 0,
-        width: "52vw",
-        maxWidth: 210,
-        scrollSnapAlign: "start",
-        marginLeft: isFirst ? 22 : 0,
-      }}
-    >
-      {onAddClick ? (
-        <button
-          type="button"
-          onClick={onAddClick}
-          aria-label="Add a find"
-          style={{ ...tileStyle, padding: 0 }}
-        >
-          {inner}
-        </button>
-      ) : (
-        <Link href={href} style={tileStyle}>
-          {inner}
-        </Link>
-      )}
-      {/* Match ShelfTile's title + price vertical rhythm so the AddFindTile
-          doesn't visually orphan against neighboring items. */}
-      <div style={{ height: 42 }} aria-hidden="true" />
-    </motion.div>
-  );
-}
-
-export function ShelfView({
-  posts,
-  vendorId,
-  showAddTile = false,
-  onAddClick,
-  swipeOriginPath,
-}: {
-  posts: Post[];
-  vendorId?: string;
-  showAddTile?: boolean;
-  onAddClick?: () => void;
-  // Phase C — see WindowView for semantics. /shelf/[slug] passes the
-  // current path; /my-shelf omits.
-  swipeOriginPath?: string;
-}) {
-  const findRefs: FindRef[] = swipeOriginPath
-    ? posts.map((p) => ({ id: p.id, image_url: p.image_url ?? null, title: p.title ?? null }))
-    : [];
-  // v1.1j — owner parity with Window View: when showAddTile is true, the
-  // first tile in the horizontal scroll is an AddFindTile (same silhouette
-  // as the Window View AddFindTile, sized to match ShelfTile). Reverses the
-  // session-18 rule that held AddFindTile exclusive to Window View.
-  return (
-    <div
-      className="hide-scrollbar"
-      style={{
-        display: "flex",
-        gap: 14,
-        overflowX: "auto",
-        overflowY: "hidden",
-        paddingBottom: 10,
-        paddingRight: 14,
-        scrollSnapType: "x mandatory",
-        WebkitOverflowScrolling: "touch",
-      }}
-    >
-      {posts.map((post, i) => (
-        <ShelfTile
-          key={post.id}
-          post={post}
-          index={i}
-          isFirst={i === 0}
-          findRefs={swipeOriginPath ? findRefs : undefined}
-          swipeOriginPath={swipeOriginPath}
-        />
-      ))}
-      {showAddTile && <ShelfAddFindTile vendorId={vendorId} isFirst={posts.length === 0} onAddClick={onAddClick} />}
-      <div style={{ flexShrink: 0, width: 8 }} aria-hidden="true" />
-    </div>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Booth closer — diamond divider + quiet Lora italic line
@@ -1154,7 +904,9 @@ export function BoothCloser() {
           textAlign: "center",
         }}
       >
-        The shelf ends here. More booths await you.
+        You&rsquo;ve seen what&rsquo;s here &mdash; more is always on the way.
+        <br />
+        Save this booth to stay updated, or visit in person to explore the rest
       </div>
     </>
   );

@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>/shelf/[slug] refinement — V1</title>
+<style>
+  :root {
+    --paperCream: #e8ddc7;
+    --postit: #fbf3df;
+    --inkPrimary: #2a1a0a;
+    --inkMid: #4a3520;
+    --inkMuted: #6b5538;
+    --inkFaint: rgba(42, 26, 10, 0.45);
+    --green: #1e4d2b;
+    --greenLight: rgba(30, 77, 43, 0.08);
+    --greenSolid: rgba(30, 77, 43, 0.90);
+    --hairline: rgba(42, 26, 10, 0.10);
+    --frostedBg: rgba(245, 242, 235, 0.85);
+    --priceInk: #b6843a;
+    --pageBg: #d4c4a8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--pageBg);
+    color: var(--inkPrimary);
+    padding: 40px 16px;
+    min-height: 100vh;
+  }
+  .doc-header {
+    max-width: 1200px;
+    margin: 0 auto 32px;
+    padding: 24px;
+    background: var(--paperCream);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+  .doc-header h1 {
+    font-family: 'Lora', Georgia, serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 26px;
+    color: var(--inkPrimary);
+    margin-bottom: 8px;
+  }
+  .doc-header .subtitle {
+    font-size: 14px;
+    color: var(--inkMuted);
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  .doc-header .reversals {
+    background: var(--postit);
+    border-left: 3px solid var(--green);
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--inkMid);
+    line-height: 1.6;
+  }
+  .doc-header .reversals strong {
+    color: var(--inkPrimary);
+    font-weight: 600;
+  }
+  .frames-row {
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    flex-wrap: wrap;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .frame {
+    background: var(--paperCream);
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.10);
+    overflow: hidden;
+    width: 390px;
+    flex-shrink: 0;
+  }
+  .frame-label {
+    background: var(--inkPrimary);
+    color: var(--paperCream);
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .frame-label .pick-hint {
+    float: right;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: rgba(232, 221, 199, 0.7);
+    font-style: italic;
+  }
+  .frame-rejected .frame-label {
+    background: #7a3a3a;
+  }
+  .phone {
+    background: var(--paperCream);
+    width: 100%;
+    overflow: hidden;
+  }
+  /* ─────── Masthead ─────── */
+  .masthead {
+    height: 56px;
+    background: var(--paperCream);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--hairline);
+    position: relative;
+  }
+  .masthead-back {
+    width: 44px;
+    height: 44px;
+    background: rgba(42, 26, 10, 0.06);
+    border-radius: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: var(--inkPrimary);
+  }
+  .wordmark {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Times New Roman', serif;
+    font-weight: 400;
+    font-size: 18px;
+    color: var(--inkPrimary);
+    letter-spacing: -0.01em;
+  }
+  /* ─────── BoothHero ─────── */
+  .booth-hero {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    background: linear-gradient(135deg, #8b6f4e 0%, #6e553a 100%);
+    overflow: hidden;
+  }
+  .booth-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(135deg, rgba(255, 230, 180, 0.2) 0%, rgba(80, 50, 30, 0.3) 100%);
+  }
+  /* Bookmark — top-right (NEW position; reverses session 89 bottom-left) */
+  .hero-bookmark {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
+    background: var(--frostedBg);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--green);
+    z-index: 3;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  }
+  /* Booth post-it — bottom-right at +6° rotation (UNCHANGED from session 80) */
+  .hero-postit {
+    position: absolute;
+    bottom: 14px;
+    right: 14px;
+    width: 96px;
+    height: 96px;
+    background: var(--postit);
+    transform: rotate(6deg);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 2;
+  }
+  .hero-postit .eyebrow {
+    font-size: 8px;
+    letter-spacing: 0.14em;
+    color: var(--inkMuted);
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .hero-postit .numeral {
+    font-family: 'Times New Roman', serif;
+    font-size: 30px;
+    color: var(--green);
+    font-weight: 400;
+  }
+  /* ─────── R17 pill row (UNCHANGED from session 119) ─────── */
+  .pill-row {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 16px 0;
+  }
+  .distance-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: var(--postit);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    font-size: 10px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--inkMid);
+    font-weight: 600;
+  }
+  /* NOTE: LocationActions row that USED to live here (session 119 D19) has moved to bottom of page */
+  .session-119-callout {
+    margin: 6px 16px 0;
+    padding: 6px 10px;
+    background: rgba(245, 158, 11, 0.10);
+    border-left: 2px solid #b87a1f;
+    font-size: 11px;
+    color: var(--inkMid);
+    font-style: italic;
+    line-height: 1.4;
+  }
+  /* ─────── BoothTitleBlock ─────── */
+  .booth-title-block {
+    text-align: center;
+    padding: 16px 16px 8px;
+  }
+  .booth-eyebrow {
+    font-family: 'Lora', Georgia, serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--inkMuted);
+    margin-bottom: 4px;
+  }
+  .booth-name {
+    font-family: 'Lora', Georgia, serif;
+    font-size: 28px;
+    color: var(--inkPrimary);
+    line-height: 1.2;
+  }
+  /* ─────── MallBlock ─────── */
+  .mall-block {
+    text-align: center;
+    padding: 0 16px 14px;
+    font-family: 'Lora', Georgia, serif;
+    font-size: 15px;
+    color: var(--inkMid);
+    line-height: 1.5;
+  }
+  .mall-block .mall-name {
+    color: var(--inkPrimary);
+    font-weight: 500;
+  }
+  .mall-block .mall-addr {
+    border-bottom: 1px dotted var(--hairline);
+    color: var(--inkMuted);
+    font-size: 13px;
+    display: inline-block;
+    padding-bottom: 1px;
+  }
+  /* ─────── Hairline divider ─────── */
+  .hairline {
+    height: 1px;
+    background: var(--hairline);
+    margin: 6px 16px;
+  }
+  /* ─────── ViewToggle RETIRED callout ─────── */
+  .retired-callout {
+    margin: 4px 16px 8px;
+    padding: 6px 10px;
+    background: rgba(122, 58, 58, 0.08);
+    border-left: 2px solid #7a3a3a;
+    font-size: 11px;
+    color: #7a3a3a;
+    font-style: italic;
+    line-height: 1.4;
+  }
+  /* ─────── Polaroid grid ─────── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding: 8px 16px 16px;
+  }
+  .polaroid {
+    background: var(--postit);
+    border-radius: 4px;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.20),
+                0 1.5px 3px rgba(0, 0, 0, 0.10);
+    padding: 7px 7px 0;
+    position: relative;
+  }
+  .polaroid-photo {
+    aspect-ratio: 4/5;
+    background: linear-gradient(135deg, #c8a878 0%, #8a6f4f 100%);
+    border-radius: 0;
+    margin-bottom: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .polaroid-photo.var2 { background: linear-gradient(135deg, #a0825c 0%, #6e5538 100%); }
+  .polaroid-photo.var3 { background: linear-gradient(135deg, #d4b48c 0%, #9e7a52 100%); }
+  .polaroid-photo.var4 { background: linear-gradient(135deg, #b89878 0%, #7e5e40 100%); }
+  .polaroid-meta {
+    text-align: center;
+    padding: 6px 4px 11px;
+    height: 56px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+  }
+  .polaroid-title {
+    font-family: 'Lora', Georgia, serif;
+    font-size: 11px;
+    color: var(--inkPrimary);
+    line-height: 1.4;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .polaroid-price {
+    font-family: 'Lora', Georgia, serif;
+    font-size: 11px;
+    color: var(--priceInk);
+    margin-top: 2px;
+  }
+
+  /* ─────── Save flag — Frame A: trailing right-of-title in metadata ─────── */
+  .frame-a .save-flag {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--green);
+  }
+  .frame-a .save-flag svg {
+    width: 14px;
+    height: 14px;
+  }
+  /* When .saved is on .polaroid for visual variety */
+  .frame-a .polaroid:not(.saved) .save-flag { color: var(--inkFaint); }
+
+  /* ─────── Save flag — Frame B: dedicated 24×24 slot at bottom-right of frame ─────── */
+  .frame-b .polaroid {
+    padding-bottom: 4px;
+  }
+  .frame-b .save-flag-slot {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--green);
+    z-index: 2;
+  }
+  .frame-b .save-flag-slot svg {
+    width: 16px;
+    height: 16px;
+  }
+  .frame-b .polaroid:not(.saved) .save-flag-slot { color: var(--inkFaint); }
+  .frame-b .polaroid-meta {
+    padding-right: 26px;
+  }
+
+  /* ─────── Save flag — REJECTED Frame C: on photo top-right (David's stated rejection reason) ─────── */
+  .frame-rejected .save-flag-on-photo {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 28px;
+    height: 28px;
+    background: var(--frostedBg);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--green);
+    z-index: 3;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  }
+  .frame-rejected .save-flag-on-photo svg { width: 14px; height: 14px; }
+  .frame-rejected .reject-banner {
+    background: #7a3a3a;
+    color: #f5e8d8;
+    padding: 8px 14px;
+    font-size: 11px;
+    text-align: center;
+    font-style: italic;
+  }
+
+  /* ─────── LocationActions footer (NEW position — reverses session 119 D19) ─────── */
+  .location-actions-footer {
+    margin: 12px 16px 0;
+    padding: 8px 0;
+    display: flex;
+    gap: 8px;
+  }
+  .location-actions-footer .btn {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--green);
+    border-radius: 22px;
+    background: var(--paperCream);
+    color: var(--green);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    letter-spacing: 0.02em;
+  }
+  .location-actions-footer .btn.primary {
+    background: var(--greenSolid);
+    color: var(--paperCream);
+  }
+  /* ─────── BoothCloser ─────── */
+  .booth-closer {
+    text-align: center;
+    padding: 14px 24px 16px;
+    font-family: 'Lora', Georgia, serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--inkMuted);
+    line-height: 1.5;
+  }
+  /* ─────── BottomNav ─────── */
+  .bottom-nav {
+    height: 56px;
+    background: var(--paperCream);
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 16px;
+  }
+  .nav-tab {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--inkMid);
+    font-size: 20px;
+    position: relative;
+  }
+  .nav-tab.active { color: var(--green); }
+  .nav-tab .badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: var(--green);
+    color: var(--paperCream);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 9px;
+  }
+
+  /* ─────── Annotation tags ─────── */
+  .annot {
+    position: absolute;
+    background: var(--green);
+    color: var(--paperCream);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 3px;
+    z-index: 10;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  }
+  .annot::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+  }
+  .annot-down::after {
+    bottom: -4px;
+    left: 8px;
+    border-top: 4px solid var(--green);
+  }
+  .annot-up::after {
+    top: -4px;
+    left: 8px;
+    border-bottom: 4px solid var(--green);
+  }
+  .annot-left::after {
+    left: -4px;
+    top: 5px;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    border-right: 4px solid var(--green);
+  }
+
+  .legend {
+    margin-top: 32px;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 24px;
+    background: var(--paperCream);
+    border-radius: 8px;
+  }
+  .legend h2 {
+    font-family: 'Lora', Georgia, serif;
+    font-style: italic;
+    font-size: 18px;
+    color: var(--inkPrimary);
+    margin-bottom: 12px;
+  }
+  .legend-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .legend-item {
+    font-size: 13px;
+    color: var(--inkMid);
+    line-height: 1.6;
+  }
+  .legend-item strong {
+    color: var(--inkPrimary);
+    display: block;
+    margin-bottom: 2px;
+  }
+  .legend-item .pro {
+    color: var(--green);
+    font-weight: 600;
+  }
+  .legend-item .con {
+    color: #7a3a3a;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<div class="doc-header">
+  <h1>/shelf/[slug] refinement — V1</h1>
+  <p class="subtitle">
+    Shopper-facing booth detail page. 5-item refinement bundle: bookmark relocation, view-toggle retire, polaroid-only finds, save flag on polaroid frame, LocationActions footer.<br>
+    V1 spans the one design call inside the bundle: <strong>save flag micro-placement on the polaroid frame</strong> (Frame A trailing-in-meta vs Frame B dedicated-slot, with rejected on-photo placement shown for contrast).
+  </p>
+  <div class="reversals">
+    <strong>Reversals surfaced explicitly</strong> per <code>feedback_surface_locked_design_reversals</code>:<br>
+    1. Hero bookmark: session 80 D2 top-right → session 89 bottom-left → <strong>this session reverses to top-right</strong>. Reason: David's "consistency with other surfaces" overrides session-89's local geometric balance (post-it stamp at +6° bottom-right).<br>
+    2. LocationActions: session 119 D19 directly below BoothHero (above BoothTitleBlock) → <strong>this session moves to bottom of page above BoothCloser</strong>. Reason: footer placement frames the "now I want to go visit" moment, not "scoping the booth."<br>
+    3. ViewToggle / ShelfView: <strong>retired entirely</strong>. Window view (polaroid evolved tile from session 83) is the only find rendering. Reason: redundant affordance; window view already canonical.
+  </div>
+</div>
+
+<div class="frames-row">
+
+  <!-- ════════════════════════════════════════════════════ -->
+  <!-- FRAME A: Save flag trailing in metadata block -->
+  <!-- ════════════════════════════════════════════════════ -->
+  <div class="frame frame-a">
+    <div class="frame-label">Frame A — Save flag trailing in metadata <span class="pick-hint">smaller footprint</span></div>
+    <div class="phone">
+      <div class="masthead">
+        <div class="masthead-back">‹</div>
+        <div class="wordmark">Treehouse Finds</div>
+      </div>
+      <div class="booth-hero">
+        <div class="hero-bookmark" title="Bookmark — top-right (reverses session 89)">♥</div>
+        <div class="hero-postit">
+          <span class="eyebrow">BOOTH</span>
+          <span class="numeral">A12</span>
+        </div>
+        <div class="annot annot-down" style="top: 4px; right: 50px;">REVERSED</div>
+      </div>
+      <div class="pill-row">
+        <span class="distance-pill">📍 2.7 MI</span>
+      </div>
+      <div class="session-119-callout">
+        ⤵ R17 LocationActions row used to render here (session 119 D19) — moved to page bottom.
+      </div>
+      <div class="booth-title-block">
+        <div class="booth-eyebrow">A curated booth from</div>
+        <div class="booth-name">Lavender &amp; Rust</div>
+      </div>
+      <div class="mall-block">
+        <div><span class="mall-name">📍 America's Antique Mall</span></div>
+        <div><span class="mall-addr">3750 Richmond Road, Lexington, KY</span></div>
+      </div>
+      <div class="hairline"></div>
+      <div class="retired-callout">
+        ⤵ ViewToggle (Window/Shelf) RETIRED — window view is the only rendering.
+      </div>
+      <div class="grid">
+        <div class="polaroid saved">
+          <div class="polaroid-photo"></div>
+          <div class="polaroid-meta">
+            <div class="polaroid-title">Brass apothecary scale</div>
+            <div class="polaroid-price">$58</div>
+            <div class="save-flag" title="Saved — leaf glyph">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 3a4 4 0 0 0-4 4c0 1.5.5 3 2 5 1 1 2 1.5 2 1.5s-2-1-3.5 0-2 3-2 3-1.5-3-3.5-2.5-1.5 4-1.5 4 .5-2 2-2.5c1.5-.5 3 1 3 1s-1.5-2-1-4 3-3 5-3 4 1.5 4 4-2 4-2 4 2 0 2.5-2c.5-2-1-7-1-7z"/></svg>
+            </div>
+          </div>
+        </div>
+        <div class="polaroid">
+          <div class="polaroid-photo var2"></div>
+          <div class="polaroid-meta">
+            <div class="polaroid-title">Cast-iron tabletop press</div>
+            <div class="polaroid-price">$42</div>
+            <div class="save-flag" title="Unsaved — outline">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17 3a4 4 0 0 0-4 4c0 1.5.5 3 2 5 1 1 2 1.5 2 1.5s-2-1-3.5 0-2 3-2 3-1.5-3-3.5-2.5-1.5 4-1.5 4 .5-2 2-2.5c1.5-.5 3 1 3 1s-1.5-2-1-4 3-3 5-3 4 1.5 4 4-2 4-2 4 2 0 2.5-2c.5-2-1-7-1-7z"/></svg>
+            </div>
+          </div>
+        </div>
+        <div class="polaroid saved">
+          <div class="polaroid-photo var3"></div>
+          <div class="polaroid-meta">
+            <div class="polaroid-title">Embossed brass key tag</div>
+            <div class="polaroid-price">$18</div>
+            <div class="save-flag">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 3a4 4 0 0 0-4 4c0 1.5.5 3 2 5 1 1 2 1.5 2 1.5s-2-1-3.5 0-2 3-2 3-1.5-3-3.5-2.5-1.5 4-1.5 4 .5-2 2-2.5c1.5-.5 3 1 3 1s-1.5-2-1-4 3-3 5-3 4 1.5 4 4-2 4-2 4 2 0 2.5-2c.5-2-1-7-1-7z"/></svg>
+            </div>
+          </div>
+        </div>
+        <div class="polaroid">
+          <div class="polaroid-photo var4"></div>
+          <div class="polaroid-meta">
+            <div class="polaroid-title">Hand-painted milk pitcher</div>
+            <div class="polaroid-price">$28</div>
+            <div class="save-flag">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17 3a4 4 0 0 0-4 4c0 1.5.5 3 2 5 1 1 2 1.5 2 1.5s-2-1-3.5 0-2 3-2 3-1.5-3-3.5-2.5-1.5 4-1.5 4 .5-2 2-2.5c1.5-.5 3 1 3 1s-1.5-2-1-4 3-3 5-3 4 1.5 4 4-2 4-2 4 2 0 2.5-2c.5-2-1-7-1-7z"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="location-actions-footer">
+        <div class="btn">View on find map</div>
+        <div class="btn primary">Get directions</div>
+      </div>
+      <div class="booth-closer">
+        That's everything we've gathered from this booth — check back as new finds arrive.
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-tab">⌂</div>
+        <div class="nav-tab"><span class="badge">3</span>♡</div>
+        <div class="nav-tab">🗺</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════ -->
+  <!-- FRAME B: Save flag in dedicated bottom-right slot -->
+  <!-- ════════════════════════════════════════════════════ -->
+  <div class="frame frame-b">
+    <div class="frame-label">Frame B — Save flag in dedicated bottom-right slot <span class="pick-hint">larger tap target</span></div>
+    <div class="phone">
+      <div class="masthead">
+        <div class="masthead-back">‹</div>
+        <div class="wordmark">Treehouse Finds</div>
+      </div>
+      <div class="booth-hero">
+        <div class="hero-bookmark">♥</div>
+        <div class="hero-postit">
+          <span class="eyebrow">BOOTH</span>
+          <span class="numeral">A12</span>
+        </div>
+      </div>
+      <div class="pill-row">
+        <span class="distance-pill">📍 2.7 MI</span>
+      </div>
+      <div class="booth-title-block">
+        <div class="booth-eyebrow">A curated booth from</div>
+        <div class="booth-name">Lavender &amp; Rust</div>
+      </div>
+      <div class="mall-block">
+        <div><span class="mall-name">📍 America's Antique Mall</span></div>
+        <div><span class="mall-addr">3750 Richmond Road, Lexington, KY</span></div>
+      </div>
+      <div class="hairline"></div>
+      <div class="grid">
+        <div class="polaroid saved">
+          <div class="polaroid-photo"></div>
+          <div class="polaroid-meta">
+            <div class="polaroid-title">Brass apothecary scale</div>
+            <div class="polaroid-price">$58</div>
+          </div>
+          <div class="save-flag-slot" title="Saved — dedicated slot at frame bottom-right">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 3a4 4 0 0 0-4 4c0 1.5.5 3 2 5 1 1 2 1.5 2 1.5s-2-1-3.5 0-2 3-2 3-1.5-3-3.5-2.5-1.5 4-1.5 4 .5-2 2-2.5c1.5-.5 3 1 3 1s-1.5-2-1-4 3-3 5-3 4 1.5 4 4-2 4-2 4 2 0 2.5-2c.5-2-1-7-1-7z"/></svg>
+          </div>
+        </div>
+        <div class="polaroid">
+          <div class="polaroid-photo var2"></div>
+          <div class="polaroid-meta">
+            <div class="polaroid-title">Cast-iron tabletop press</div>
+            <div class="polaroid-price">$42</div>
+          </div>
+          <div class="save-flag-slot">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17 3a4 4 0 0 0-4 4c0 1.5.5 3 2 5 1 1 2 1.5 2 1.5s-2-1-3.5 0-2 3-2 3-1.5-3-3.5-2.5-1.5 4-1.5 4 .5-2 2-2.5c1.5-.5 3 1 3 1s-1.5-2-1-4 3-3 5-3 4 1.5 4 4-2 4-2 4 2 0 2.5-2c.5-2-1-7-1-7z"/></svg>
+          </div>
+        </div>
+        <div class="polaroid saved">
+          <div class="polaroid-photo var3"></div>
+          <div class="polaroid-meta">
+            <div class="polaroid-title">Embossed brass key tag</div>
+            <div class="polaroid-price">$18</div>
+          </div>
+          <div class="save-flag-slot">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 3a4 4 0 0 0-4 4c0 1.5.5 3 2 5 1 1 2 1.5 2 1.5s-2-1-3.5 0-2 3-2 3-1.5-3-3.5-2.5-1.5 4-1.5 4 .5-2 2-2.5c1.5-.5 3 1 3 1s-1.5-2-1-4 3-3 5-3 4 1.5 4 4-2 4-2 4 2 0 2.5-2c.5-2-1-7-1-7z"/></svg>
+          </div>
+        </div>
+        <div class="polaroid">
+          <div class="polaroid-photo var4"></div>
+          <div class="polaroid-meta">
+            <div class="polaroid-title">Hand-painted milk pitcher</div>
+            <div class="polaroid-price">$28</div>
+          </div>
+          <div class="save-flag-slot">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17 3a4 4 0 0 0-4 4c0 1.5.5 3 2 5 1 1 2 1.5 2 1.5s-2-1-3.5 0-2 3-2 3-1.5-3-3.5-2.5-1.5 4-1.5 4 .5-2 2-2.5c1.5-.5 3 1 3 1s-1.5-2-1-4 3-3 5-3 4 1.5 4 4-2 4-2 4 2 0 2.5-2c.5-2-1-7-1-7z"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="location-actions-footer">
+        <div class="btn">View on find map</div>
+        <div class="btn primary">Get directions</div>
+      </div>
+      <div class="booth-closer">
+        That's everything we've gathered from this booth — check back as new finds arrive.
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-tab">⌂</div>
+        <div class="nav-tab"><span class="badge">3</span>♡</div>
+        <div class="nav-tab">🗺</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════ -->
+  <!-- FRAME C: REJECTED — on photo top-right -->
+  <!-- ════════════════════════════════════════════════════ -->
+  <div class="frame frame-rejected">
+    <div class="frame-label">Frame C — REJECTED on-photo placement <span class="pick-hint">why your reasoning rules this out</span></div>
+    <div class="reject-banner">
+      Shown for contrast. Your stated reasoning: "icons are in rows of 3 and adding to the image clutters it up."
+    </div>
+    <div class="phone">
+      <div class="masthead">
+        <div class="masthead-back">‹</div>
+        <div class="wordmark">Treehouse Finds</div>
+      </div>
+      <div class="booth-hero">
+        <div class="hero-bookmark">♥</div>
+        <div class="hero-postit">
+          <span class="eyebrow">BOOTH</span>
+          <span class="numeral">A12</span>
+        </div>
+      </div>
+      <div class="pill-row">
+        <span class="distance-pill">📍 2.7 MI</span>
+      </div>
+      <div class="booth-title-block">
+        <div class="booth-eyebrow">A curated booth from</div>
+        <div class="booth-name">Lavender &amp; Rust</div>
+      </div>
+      <div class="mall-block">
+        <div><span class="mall-name">📍 America's Antique Mall</span></div>
+        <div><span class="mall-addr">3750 Richmond Road, Lexington, KY</span></div>
+      </div>
+      <div class="hairline"></div>
+      <div class="grid">
+        <div class="polaroid saved">
+          <div class="polaroid-photo">
+            <div class="save-flag-on-photo">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 3a4 4 0 0 0-4 4c0 1.5.5 3 2 5 1 1 2 1.5 2 1.5s-2-1-3.5 0-2 3-2 3-1.5-3-3.5-2.5-1.5 4-1.5 4 .5-2 2-2.5c1.5-.5 3 1 3 1s-1.5-2-1-4 3-3 5-3 4 1.5 4 4-2 4-2 4 2 0 2.5-2c.5-2-1-7-1-7z"/></svg>
+            </div>
+          </div>
+          <div class="polaroid-meta">
+            <div class="polaroid-title">Brass apothecary scale</div>
+            <div class="polaroid-price">$58</div>
+          </div>
+        </div>
+        <div class="polaroid">
+          <div class="polaroid-photo var2">
+            <div class="save-flag-on-photo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17 3a4 4 0 0 0-4 4c0 1.5.5 3 2 5 1 1 2 1.5 2 1.5s-2-1-3.5 0-2 3-2 3-1.5-3-3.5-2.5-1.5 4-1.5 4 .5-2 2-2.5c1.5-.5 3 1 3 1s-1.5-2-1-4 3-3 5-3 4 1.5 4 4-2 4-2 4 2 0 2.5-2c.5-2-1-7-1-7z"/></svg>
+            </div>
+          </div>
+          <div class="polaroid-meta">
+            <div class="polaroid-title">Cast-iron tabletop press</div>
+            <div class="polaroid-price">$42</div>
+          </div>
+        </div>
+        <div class="polaroid saved">
+          <div class="polaroid-photo var3">
+            <div class="save-flag-on-photo">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 3a4 4 0 0 0-4 4c0 1.5.5 3 2 5 1 1 2 1.5 2 1.5s-2-1-3.5 0-2 3-2 3-1.5-3-3.5-2.5-1.5 4-1.5 4 .5-2 2-2.5c1.5-.5 3 1 3 1s-1.5-2-1-4 3-3 5-3 4 1.5 4 4-2 4-2 4 2 0 2.5-2c.5-2-1-7-1-7z"/></svg>
+            </div>
+          </div>
+          <div class="polaroid-meta">
+            <div class="polaroid-title">Embossed brass key tag</div>
+            <div class="polaroid-price">$18</div>
+          </div>
+        </div>
+        <div class="polaroid">
+          <div class="polaroid-photo var4">
+            <div class="save-flag-on-photo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17 3a4 4 0 0 0-4 4c0 1.5.5 3 2 5 1 1 2 1.5 2 1.5s-2-1-3.5 0-2 3-2 3-1.5-3-3.5-2.5-1.5 4-1.5 4 .5-2 2-2.5c1.5-.5 3 1 3 1s-1.5-2-1-4 3-3 5-3 4 1.5 4 4-2 4-2 4 2 0 2.5-2c.5-2-1-7-1-7z"/></svg>
+            </div>
+          </div>
+          <div class="polaroid-meta">
+            <div class="polaroid-title">Hand-painted milk pitcher</div>
+            <div class="polaroid-price">$28</div>
+          </div>
+        </div>
+      </div>
+      <div class="location-actions-footer">
+        <div class="btn">View on find map</div>
+        <div class="btn primary">Get directions</div>
+      </div>
+      <div class="booth-closer">
+        That's everything we've gathered from this booth — check back as new finds arrive.
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-tab">⌂</div>
+        <div class="nav-tab"><span class="badge">3</span>♡</div>
+        <div class="nav-tab">🗺</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="legend">
+  <h2>Frame comparison</h2>
+  <div class="legend-grid">
+    <div class="legend-item">
+      <strong>Frame A — trailing in metadata block</strong>
+      Glyph 14×14 inside the metadata strip, right-aligned bottom. Tap target: 18×18 pseudo-padded.<br>
+      <span class="pro">Pro:</span> minimal layout disturbance — metadata stays centered with glyph as decorative trailing element.<br>
+      <span class="pro">Pro:</span> reads as "this find" not as a separate affordance row.<br>
+      <span class="con">Con:</span> small tap target (18×18) — may need 32px hit-area expansion via padding to meet WCAG 44×44.<br>
+      <span class="con">Con:</span> compresses metadata vertical space slightly.
+    </div>
+    <div class="legend-item">
+      <strong>Frame B — dedicated 24×24 slot at frame bottom-right</strong>
+      Glyph 16×16 inside a 24×24 slot below the metadata block, right-aligned. Metadata gets 26px right padding so it doesn't collide with the slot.<br>
+      <span class="pro">Pro:</span> clear affordance — visually separates the save action from "this is a find" content.<br>
+      <span class="pro">Pro:</span> larger tap target (24×24, expandable to ~36×36 with hit-area padding).<br>
+      <span class="con">Con:</span> +6px page height per row (3 rows = 18px; 5 rows = 30px) — denser feed becomes longer.<br>
+      <span class="con">Con:</span> metadata block right padding shifts text-center anchor 13px left; titles may read off-balance.
+    </div>
+    <div class="legend-item">
+      <strong>Frame C — REJECTED (on-photo top-right, baseline pattern from Home + /flagged)</strong>
+      Shown for contrast. 28×28 frosted bubble overlaid on photo top-right (existing PolaroidTile.topRight slot).<br>
+      <span class="con">Your rejection:</span> "icons are in rows of 3 and adding to the image clutters it up." At /shelf/[slug] tile size (~115px wide), the bubble visually competes with photo content.<br>
+      <em>Note: this slot stays canonical for Home + /flagged where tiles are larger and a single-bubble overlay reads cleanly. /shelf/[slug] is the exception.</em>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

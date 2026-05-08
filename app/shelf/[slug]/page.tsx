@@ -55,30 +55,24 @@ import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import ShareBoothSheet from "@/components/ShareBoothSheet";
 import EmptyState from "@/components/EmptyState";
-import DistancePill from "@/components/DistancePill";
 import LocationActions from "@/components/LocationActions";
-import { milesFromUser } from "@/lib/distance";
-import { useUserLocation } from "@/lib/useUserLocation";
 import {
   BoothHero,
   BoothTitleBlock,
   MallBlock,
   DiamondDivider,
-  ViewToggle,
   WindowView,
-  ShelfView,
   BoothCloser,
   BoothPageStyles,
   v1,
   FONT_LORA,
-  type BoothView,
 } from "@/components/BoothPage";
 import type { Post, Vendor, Mall } from "@/types/treehouse";
 
 // Session 85 — back-nav scroll anchoring. Module-scope cache survives
 // /find/[id] navigation (App Router unmounts the page; module scope persists
 // for the SPA session). Hydrating state from cache on mount when the slug
-// matches lets WindowTile/ShelfTile photographs render without a skeleton
+// matches lets WindowTile photographs render without a skeleton
 // flash. Per-slug scroll key persists scroll position across the same
 // boundary so navigating between different shelves doesn't restore a
 // position from a different layout. Pure scroll behavior — no motion changes.
@@ -298,7 +292,6 @@ export default function PublicShelfPage() {
 
   const pendingScrollY = useRef<number | null>(null);
   const scrollRestored = useRef(false);
-  const [view,           setView]           = useState<BoothView>("window");
 
   // Session 45 — admin Window share state.
   const [user,           setUser]           = useState<User | null>(null);
@@ -308,10 +301,11 @@ export default function PublicShelfPage() {
   // drives the masthead bookmark glyph. Both hooks own their auth + sync.
   const saves           = useShopperSaves();
   const boothBookmarks  = useShopperBoothBookmarks();
-  // R17 Arc 2 — silent first-mount geolocation prompt. Hook is idempotent
-  // across surfaces (D3 + D20). Pill + CTAs hide on guest / denied / no
-  // mall coords per their internal null-passthrough.
-  const userLoc         = useUserLocation();
+  // R17 Arc 2 — silent first-mount geolocation handled internally by
+  // <LocationActions> at the page footer (session 128 D5 placement).
+  // DistancePill below the BoothHero retired session 128 (within-session
+  // reversal of session 119 D18); useUserLocation no longer needed at
+  // page level since LocationActions composes its own hook.
   const bookmarkCount   = saves.ids.size;
   const boothBookmarked = !!vendor && boothBookmarks.isBookmarked(vendor.id);
 
@@ -466,33 +460,49 @@ export default function PublicShelfPage() {
               onToggleBookmark={showBookmark ? handleToggleBoothBookmark : undefined}
             />
 
-            {/* R17 Arc 2 D18 — pill row below the BoothHero photograph,
-                right-aligned. Pairs visually with the rotated post-it stamp
-                inside the photo via shared small-caps postal vocabulary.
-                Renders nothing for guest / denied / mall coords missing. */}
-            {(() => {
-              const miles = milesFromUser(
-                { lat: userLoc.lat, lng: userLoc.lng },
-                mall?.latitude ?? null,
-                mall?.longitude ?? null,
-              );
-              if (miles == null) return null;
-              return (
-                <div
-                  style={{
-                    display:        "flex",
-                    justifyContent: "flex-end",
-                    padding:        "12px 22px 0",
-                  }}
-                >
-                  <DistancePill miles={miles} />
-                </div>
-              );
-            })()}
+            {/* Session 128 (within-session reversal of D5 implementation-time
+                call): DistancePill below the BoothHero photograph retired
+                entirely. Was R17 Arc 2 D18 — right-aligned distance pill
+                pairing with the rotated post-it stamp's small-caps postal
+                vocabulary. The footer-anchored LocationActions row carries
+                the place-context affordance now. */}
 
-            {/* R17 Arc 2 D19 — twin-button row below the BoothHero. */}
+            {/* Session 128 (refinement design D5): LocationActions twin-button
+                row relocated from here (R17 Arc 2 D19, directly below BoothHero)
+                to page-bottom above BoothCloser. Footer placement frames the
+                'now I want to visit' moment, not 'scoping the booth.' */}
+
+            <BoothTitleBlock displayName={displayName} />
+            <MallBlock mallName={mallName} mallCity={mallCity} address={address} />
+            <DiamondDivider topPad={22} bottomPad={12} horizontalPad={44} />
+
+            {/* Session 128 (refinement design D2 + D3): ViewToggle + ShelfView
+                retired. WindowView is the only find-rendering path.
+                Session 128 (refinement design D4): per-tile save bubble wired
+                via canonical PolaroidTile.topRight slot. Saves drives the
+                bubble state via useShopperSaves; toggling fires the same
+                R3 events as Home heart + /flagged unsave. */}
+            {available.length > 0 ? (
+              <WindowView
+                posts={available}
+                showAddTile={false}
+                swipeOriginPath={`/shelf/${slug}`}
+                savedIds={saves.ids}
+                onToggleSave={(postId) => saves.toggle(postId, !saves.isSaved(postId))}
+              />
+            ) : (
+              <EmptyState
+                subtitle="Nothing on the shelf yet — check back soon."
+                clearance={48}
+              />
+            )}
+
+            {/* Session 128 (refinement design D5): LocationActions footer
+                placement — frames the 'now I want to visit' moment after
+                the shopper has scouted the booth's finds. Reverses session
+                119 D19 (was directly below BoothHero, above BoothTitleBlock). */}
             {mall && (
-              <div style={{ padding: "10px 22px 0" }}>
+              <div style={{ padding: "20px 22px 0" }}>
                 <LocationActions
                   mallSlug={mall.slug}
                   mallLat={mall.latitude ?? null}
@@ -501,38 +511,6 @@ export default function PublicShelfPage() {
                   vendorId={vendor?.id ?? null}
                 />
               </div>
-            )}
-
-            <BoothTitleBlock displayName={displayName} />
-            <MallBlock mallName={mallName} mallCity={mallCity} address={address} />
-            <DiamondDivider topPad={22} bottomPad={12} horizontalPad={44} />
-            <ViewToggle view={view} onChange={setView} />
-
-            {view === "window" ? (
-              available.length > 0 ? (
-                <WindowView
-                  posts={available}
-                  showAddTile={false}
-                  swipeOriginPath={`/shelf/${slug}`}
-                />
-              ) : (
-                <EmptyState
-                  subtitle="Nothing on the shelf yet — check back soon."
-                  clearance={48}
-                />
-              )
-            ) : (
-              available.length > 0 ? (
-                <ShelfView
-                  posts={available}
-                  swipeOriginPath={`/shelf/${slug}`}
-                />
-              ) : (
-                <EmptyState
-                  subtitle="Nothing on the shelf yet — check back soon."
-                  clearance={48}
-                />
-              )
             )}
 
             <BoothCloser />
