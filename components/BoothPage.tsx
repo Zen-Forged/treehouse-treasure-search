@@ -344,7 +344,7 @@ export function BoothTitleBlock({
     // chevron, and edit pencil as a group. Was left-aligned in prod; David
     // flagged during V1 review. Affects both /shelf/[slug] and /my-shelf
     // via this shared primitive.
-    <div style={{ padding: "36px 22px 6px", textAlign: "center" }}>
+    <div style={{ padding: "36px 22px 4px", textAlign: "center" }}>
       <div
         style={{
           fontFamily: FONT_LORA,
@@ -485,7 +485,7 @@ export function MallBlock({
     // Implementation-time call: kept PinGlyph inline-before-name (vs retire)
     // to preserve place-marker semantic; flip to retire if iPhone QA reads
     // cluttered.
-    <div style={{ padding: "16px 22px 4px", textAlign: "center" }}>
+    <div style={{ padding: "8px 22px 4px", textAlign: "center" }}>
       <div
         style={{
           fontFamily: FONT_LORA,
@@ -904,9 +904,7 @@ export function BoothCloser() {
           textAlign: "center",
         }}
       >
-        You&rsquo;ve seen what&rsquo;s here &mdash; more is always on the way.
-        <br />
-        Save this booth to stay updated, or visit in person to explore the rest
+        Save this booth to stay updated, or visit in person to make a purchase.
       </div>
     </>
   );

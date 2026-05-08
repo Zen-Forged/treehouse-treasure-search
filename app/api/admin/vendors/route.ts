@@ -51,6 +51,7 @@ type AuthOk = Extract<AuthResult, { ok: true }>;
 type DiagnosisRequest = {
   id:         string;
   name:       string;
+  booth_name: string | null;
   email:      string;
   status:     "pending" | "approved" | "denied";
   created_at: string;
@@ -121,39 +122,51 @@ export async function GET(req: Request) {
       //   • false → post-Relink, awaiting first sign-in (grey "pending")
       //   • true  → admin Force-unlinked an active vendor; auto-claim will
       //            re-attach on next sign-in (amber "disconnected")
+      //
+      // Session 130 — `isCollision` retired. The DB enforces (mall_id,
+      // booth_number) uniqueness on `vendors`, so true physical collisions
+      // can't exist on this table. The session-125 predicate detected
+      // "booth_name drift between request and vendor row" — informational,
+      // not a problem state. Admins still see the request's booth_name in
+      // the accordion annotation; if they want to update display_name they
+      // use Edit. Reverses session 124 D10 (collision visual treatment).
       let diagnosis: {
         matchingRequest: DiagnosisRequest | null;
-        isCollision:     boolean;
         authUserExists:  boolean;
       } | null = null;
       if (v.user_id === null) {
-        // PostgREST quirk: `.eq("col", null)` does not match null rows; null
-        // requires `.is("col", null)`. Branch the query accordingly.
-        let q = auth.service
-          .from("vendor_requests")
-          .select("id, name, email, status, created_at")
-          .eq("mall_id", v.mall_id)
-          .in("status", ["pending", "approved"])
-          .order("created_at", { ascending: false })
-          .limit(1);
-        q = v.booth_number === null
-          ? q.is("booth_number", null)
-          : q.eq("booth_number", v.booth_number);
-        const { data: requests, error: reqErr } = await q;
-
-        if (reqErr) {
-          console.error("[admin/vendors GET] diagnose lookup:", reqErr.message);
-          diagnosis = { matchingRequest: null, isCollision: false, authUserExists: false };
+        // Session 130 fix: skip the diagnose query when booth_number is
+        // null/empty. Matching by (mall_id, null booth_number) collapses
+        // to mall_id alone, which is too lossy to be useful. Pre-seeded
+        // admin booths without booth numbers are bulk-import artifacts,
+        // not vendor-request-driven. Treat as orphan (matchingRequest=null)
+        // so the Invite affordance shows. D14 design-time blindspot.
+        const hasBoothNumber =
+          v.booth_number !== null && v.booth_number.trim() !== "";
+        if (!hasBoothNumber) {
+          diagnosis = { matchingRequest: null, authUserExists: false };
         } else {
-          const matchingRequest = requests && requests[0]
-            ? (requests[0] as DiagnosisRequest)
-            : null;
-          const isCollision =
-            matchingRequest !== null &&
-            matchingRequest.name.trim() !== v.display_name.trim();
-          const authUserExists = matchingRequest !== null
-            && authUserEmails.has(matchingRequest.email.toLowerCase());
-          diagnosis = { matchingRequest, isCollision, authUserExists };
+          const q = auth.service
+            .from("vendor_requests")
+            .select("id, name, booth_name, email, status, created_at")
+            .eq("mall_id", v.mall_id)
+            .eq("booth_number", v.booth_number!)
+            .in("status", ["pending", "approved"])
+            .order("created_at", { ascending: false })
+            .limit(1);
+          const { data: requests, error: reqErr } = await q;
+
+          if (reqErr) {
+            console.error("[admin/vendors GET] diagnose lookup:", reqErr.message);
+            diagnosis = { matchingRequest: null, authUserExists: false };
+          } else {
+            const matchingRequest = requests && requests[0]
+              ? (requests[0] as DiagnosisRequest)
+              : null;
+            const authUserExists = matchingRequest !== null
+              && authUserEmails.has(matchingRequest.email.toLowerCase());
+            diagnosis = { matchingRequest, authUserExists };
+          }
         }
       }
 
@@ -178,10 +191,8 @@ export async function GET(req: Request) {
     total:     enriched.length,
     linked:    enriched.filter((v) => v.user_id !== null).length,
     unlinked:  enriched.filter((v) => v.user_id === null).length,
-    collision: enriched.filter((v) => v.diagnosis?.isCollision === true).length,
     problematic: enriched.filter((v) =>
-      v.user_id === null &&
-      (v.diagnosis?.isCollision === true || v.diagnosis?.matchingRequest === null)
+      v.user_id === null && v.diagnosis?.matchingRequest === null
     ).length,
   };
 
