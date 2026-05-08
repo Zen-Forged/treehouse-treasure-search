@@ -61,6 +61,7 @@ export type VendorRow = {
   diagnosis: {
     matchingRequest: DiagnosisRequest | null;
     isCollision:     boolean;
+    authUserExists:  boolean;
   } | null;
 };
 
@@ -90,6 +91,14 @@ const PILL = {
   // "in flight, no admin action required" — distinct signal from amber's
   // "needs attention." Calibrated against PILL.linked/unlinked/collision.
   pending:   { bg: "#e8e5dc", fg: "#6e6a5e", bd: "rgba(110,106,94,0.30)" },
+  // Disconnected: user_id=null + vendor_request matches by name + booth +
+  // auth.users entry exists for the request email. Admin force-unlinked an
+  // active vendor; auto-claim will re-attach on next sign-in (per session-127
+  // Path A decision — force-unlink is a soft reset, not a hard sever).
+  // Intentional amber-token reuse from PILL.unlinked (Path A + Option 1):
+  // the "needs to know auto-relink is incoming" semantic still belongs in
+  // amber's "be aware" register; the pill copy carries the disambiguation.
+  disconnected: { bg: "#f4ead4", fg: "#b6843a", bd: "rgba(182,132,58,0.30)" },
 } as const;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -127,12 +136,20 @@ function applyFilters(
   });
 }
 
-function rowStatus(v: VendorRow): "linked" | "unlinked" | "collision" | "pending" {
+type RowStatus = "linked" | "unlinked" | "collision" | "pending" | "disconnected";
+
+function rowStatus(v: VendorRow): RowStatus {
   if (v.diagnosis?.isCollision) return "collision";
   if (v.user_id !== null)       return "linked";
-  // user_id IS NULL — distinguish pending (post-relink, awaiting sign-in)
-  // from orphan (no matching request).
-  if (v.diagnosis?.matchingRequest !== null && v.diagnosis !== null) return "pending";
+  // user_id IS NULL — three sub-cases:
+  //   • orphan (no matching request) → "unlinked"
+  //   • matching request + no auth user → "pending" (post-relink wait)
+  //   • matching request + auth user exists → "disconnected" (Path A:
+  //     admin force-unlinked an active vendor; auto-claim re-attaches on
+  //     next sign-in via still-approved vendor_request)
+  if (v.diagnosis?.matchingRequest !== null && v.diagnosis !== null) {
+    return v.diagnosis.authUserExists ? "disconnected" : "pending";
+  }
   return "unlinked";
 }
 
@@ -707,13 +724,17 @@ function VendorRowDetail({
   isWarn,
 }: {
   vendor: VendorRow;
-  status: "linked" | "unlinked" | "collision" | "pending";
+  status: RowStatus;
   isWarn: boolean;
 }) {
   const dn   = vendor.display_name;
   const noteName = vendor.diagnosis?.matchingRequest?.name ?? null;
   const userIdLabel =
-    vendor.user_id ?? (status === "pending" ? "— (awaiting first sign-in)" : "— (unlinked)");
+    vendor.user_id ?? (
+      status === "pending"      ? "— (awaiting first sign-in)" :
+      status === "disconnected" ? "— (will auto-relink on next sign-in)" :
+                                  "— (unlinked)"
+    );
 
   return (
     <div

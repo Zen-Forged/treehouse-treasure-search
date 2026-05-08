@@ -76,10 +76,17 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: vendorsErr.message }, { status: 500 });
   }
 
-  // ── 2. Single auth.users page → id-to-email Map ──
+  // ── 2. Single auth.users page → id-to-email Map + reverse email Set ──
   // listUsers is paginated; perPage=1000 covers current scale in one round
   // trip. Mirrors diagnose-request:170-195 + relink at line ~365.
+  //
+  // Session 129 — Path A predicate fix. The reverse `authUserEmails` Set
+  // (lowercased) lets the diagnosis branch ask "does an auth.users entry
+  // exist for this matching vendor_request's email?" without an extra round
+  // trip. Drives the pending-vs-disconnected split on user_id IS NULL rows
+  // — see step 3 below.
   const emailById = new Map<string, string>();
+  const authUserEmails = new Set<string>();
   const { data: usersPage, error: usersErr } = await auth.service.auth.admin.listUsers({
     page: 1,
     perPage: 1000,
@@ -89,7 +96,10 @@ export async function GET(req: Request) {
     // Continue — emails will be null on linked rows but the tab still works.
   } else {
     for (const u of usersPage.users) {
-      if (u.email) emailById.set(u.id, u.email);
+      if (u.email) {
+        emailById.set(u.id, u.email);
+        authUserEmails.add(u.email.toLowerCase());
+      }
     }
   }
 
@@ -105,7 +115,17 @@ export async function GET(req: Request) {
         v.user_id !== null ? emailById.get(v.user_id) ?? null : null;
 
       // Diagnosis only runs for unlinked rows. Linked rows get null.
-      let diagnosis: { matchingRequest: DiagnosisRequest | null; isCollision: boolean } | null = null;
+      //
+      // Session 129 — Path A. `authUserExists` distinguishes two semantically
+      // distinct user_id=null states that share the same SQL shape:
+      //   • false → post-Relink, awaiting first sign-in (grey "pending")
+      //   • true  → admin Force-unlinked an active vendor; auto-claim will
+      //            re-attach on next sign-in (amber "disconnected")
+      let diagnosis: {
+        matchingRequest: DiagnosisRequest | null;
+        isCollision:     boolean;
+        authUserExists:  boolean;
+      } | null = null;
       if (v.user_id === null) {
         // PostgREST quirk: `.eq("col", null)` does not match null rows; null
         // requires `.is("col", null)`. Branch the query accordingly.
@@ -123,7 +143,7 @@ export async function GET(req: Request) {
 
         if (reqErr) {
           console.error("[admin/vendors GET] diagnose lookup:", reqErr.message);
-          diagnosis = { matchingRequest: null, isCollision: false };
+          diagnosis = { matchingRequest: null, isCollision: false, authUserExists: false };
         } else {
           const matchingRequest = requests && requests[0]
             ? (requests[0] as DiagnosisRequest)
@@ -131,7 +151,9 @@ export async function GET(req: Request) {
           const isCollision =
             matchingRequest !== null &&
             matchingRequest.name.trim() !== v.display_name.trim();
-          diagnosis = { matchingRequest, isCollision };
+          const authUserExists = matchingRequest !== null
+            && authUserEmails.has(matchingRequest.email.toLowerCase());
+          diagnosis = { matchingRequest, isCollision, authUserExists };
         }
       }
 
