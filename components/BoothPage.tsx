@@ -1154,7 +1154,7 @@ export function BoothCloser() {
           textAlign: "center",
         }}
       >
-        The shelf ends here. More booths await you.
+        That&rsquo;s everything we&rsquo;ve gathered from this booth today &mdash; check back as new finds arrive.
       </div>
     </>
   );
