@@ -730,6 +730,12 @@ function VendorRowDetail({
 }) {
   const dn   = vendor.display_name;
   const noteName = vendor.diagnosis?.matchingRequest?.name ?? null;
+  // Session 130 fix: surface booth_name from the request alongside the
+  // person name so admins can self-diagnose collision causes (booth_name
+  // empty / mismatched / matching). Empty-string treated as null since the
+  // form's optional field may store "" instead of NULL.
+  const noteBoothName =
+    vendor.diagnosis?.matchingRequest?.booth_name?.trim() || null;
   const userIdLabel =
     vendor.user_id ?? (
       status === "pending"      ? "— (awaiting first sign-in)" :
@@ -763,7 +769,9 @@ function VendorRowDetail({
               marginLeft: 6,
             }}
           >
-            (approved request: &ldquo;{noteName}&rdquo;)
+            {noteBoothName
+              ? <>(approved request booth: &ldquo;{noteBoothName}&rdquo; — {noteName})</>
+              : <>(approved request: &ldquo;{noteName}&rdquo;)</>}
           </span>
         )}
       </Val>

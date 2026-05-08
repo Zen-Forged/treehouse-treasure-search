@@ -171,7 +171,7 @@ export async function GET(req: Request) {
             // person name almost always differ. When the request pre-dates the
             // booth_name column split (legacy null), treat as no-collision —
             // we cannot determine the booth identity from the request alone.
-            const requestBoothName = matchingRequest?.booth_name?.trim() ?? null;
+            const requestBoothName = matchingRequest?.booth_name?.trim() || null;
             const isCollision =
               matchingRequest !== null &&
               requestBoothName !== null &&
