@@ -302,7 +302,8 @@ export default function PublicShelfPage() {
   const saves           = useShopperSaves();
   const boothBookmarks  = useShopperBoothBookmarks();
   // R17 Arc 2 — silent first-mount geolocation handled internally by
-  // <LocationActions> at the page footer (session 128 D5 placement).
+  // <LocationActions> at the page footer (below BoothCloser as of session
+  // 130 refinement; was above BoothCloser per session 128 D5).
   // DistancePill below the BoothHero retired session 128 (within-session
   // reversal of session 119 D18); useUserLocation no longer needed at
   // page level since LocationActions composes its own hook.
@@ -497,10 +498,14 @@ export default function PublicShelfPage() {
               />
             )}
 
-            {/* Session 128 (refinement design D5): LocationActions footer
-                placement — frames the 'now I want to visit' moment after
-                the shopper has scouted the booth's finds. Reverses session
-                119 D19 (was directly below BoothHero, above BoothTitleBlock). */}
+            <BoothCloser />
+
+            {/* Session 130 refinement: LocationActions moves BELOW the closer
+                — closer text becomes the copy-CTA ("...visit in person to
+                make a purchase."), LocationActions buttons become the literal
+                action-CTA at page-end. Reverses session 128 D5 (was above
+                BoothCloser); composes with the session-130 closer copy
+                refinement. Page-end CTA pattern. */}
             {mall && (
               <div style={{ padding: "20px 22px 0" }}>
                 <LocationActions
@@ -512,8 +517,6 @@ export default function PublicShelfPage() {
                 />
               </div>
             )}
-
-            <BoothCloser />
           </>
         )}
 
