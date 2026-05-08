@@ -904,9 +904,7 @@ export function BoothCloser() {
           textAlign: "center",
         }}
       >
-        You&rsquo;ve seen what&rsquo;s here &mdash; more is always on the way.
-        <br />
-        Save this booth to stay updated, or visit in person to explore the rest
+        Save this booth to stay updated, or visit in person to make a purchase.
       </div>
     </>
   );
