@@ -496,12 +496,18 @@ export default function PublicShelfPage() {
             <DiamondDivider topPad={22} bottomPad={12} horizontalPad={44} />
 
             {/* Session 128 (refinement design D2 + D3): ViewToggle + ShelfView
-                retired. WindowView is the only find-rendering path. */}
+                retired. WindowView is the only find-rendering path.
+                Session 128 (refinement design D4): per-tile save bubble wired
+                via canonical PolaroidTile.topRight slot. Saves drives the
+                bubble state via useShopperSaves; toggling fires the same
+                R3 events as Home heart + /flagged unsave. */}
             {available.length > 0 ? (
               <WindowView
                 posts={available}
                 showAddTile={false}
                 swipeOriginPath={`/shelf/${slug}`}
+                savedIds={saves.ids}
+                onToggleSave={(postId) => saves.toggle(postId, !saves.isSaved(postId))}
               />
             ) : (
               <EmptyState

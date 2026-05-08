@@ -79,6 +79,7 @@ import {
 import PhotoLightbox from "@/components/PhotoLightbox";
 import BookmarkBoothBubble from "@/components/BookmarkBoothBubble";
 import PolaroidTile from "@/components/PolaroidTile";
+import FlagGlyph from "@/components/FlagGlyph";
 import { writeFindContext, type FindRef } from "@/lib/findContext";
 import type { Post } from "@/types/treehouse";
 
@@ -662,6 +663,8 @@ function WindowTile({
   index,
   findRefs,
   swipeOriginPath,
+  saved,
+  onToggleSave,
 }: {
   post: Post;
   index: number;
@@ -669,8 +672,21 @@ function WindowTile({
   // (lib/findContext) so /find/[id] can drag-swipe between adjacent finds.
   findRefs?: FindRef[];
   swipeOriginPath?: string;
+  // Session 128 (refinement design D4) — when both passed, render a save
+  // bubble in PolaroidTile.topRight (same canonical pattern as Home heart
+  // + /flagged unsave). /shelf/[slug] passes both via useShopperSaves;
+  // /my-shelf omits (vendor-self surface, no save UX).
+  saved?: boolean;
+  onToggleSave?: () => void;
 }) {
   const hasPrice = typeof post.price_asking === "number" && post.price_asking > 0;
+  const hasSaveBubble = saved !== undefined && onToggleSave !== undefined;
+
+  function handleSaveClick(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    onToggleSave?.();
+  }
 
   function handleTap() {
     if (post.image_url) {
@@ -724,6 +740,38 @@ function WindowTile({
               no photograph
             </div>
           }
+          topRight={
+            hasSaveBubble ? (
+              <button
+                onClick={handleSaveClick}
+                aria-label={saved ? "Unsave" : "Save"}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: "50%",
+                  background: "rgba(245,242,235,0.85)",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                  border: `0.5px solid rgba(42,26,10,0.12)`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 0,
+                  cursor: "pointer",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                <FlagGlyph
+                  size={17}
+                  strokeWidth={1.7}
+                  style={{
+                    color: saved ? v1.green : v1.inkPrimary,
+                    fill:  saved ? v1.green : "none",
+                  }}
+                />
+              </button>
+            ) : undefined
+          }
           below={
             <div style={{ padding: "9px 3px 4px", height: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
               <div
@@ -770,6 +818,8 @@ export function WindowView({
   showPlaceholders = false,
   onAddClick,
   swipeOriginPath,
+  savedIds,
+  onToggleSave,
 }: {
   posts: Post[];
   vendorId?: string;
@@ -781,6 +831,12 @@ export function WindowView({
   // Caller is /shelf/[slug] (originPath = `/shelf/${slug}`); /my-shelf
   // omits this for now (vendor-self surfaces don't need swipe-nav).
   swipeOriginPath?: string;
+  // Session 128 (refinement design D4) — when both passed, each tile
+  // renders a save bubble in PolaroidTile.topRight (canonical pattern
+  // from Home + /flagged). /shelf/[slug] passes both via useShopperSaves;
+  // /my-shelf omits (vendor-self surface).
+  savedIds?: Set<string>;
+  onToggleSave?: (postId: string) => void;
 }) {
   const findRefs: FindRef[] = swipeOriginPath
     ? posts.map((p) => ({ id: p.id, image_url: p.image_url ?? null, title: p.title ?? null }))
@@ -803,15 +859,20 @@ export function WindowView({
         rowGap: 18,
       }}
     >
-      {posts.map((post, i) => (
-        <WindowTile
-          key={post.id}
-          post={post}
-          index={i}
-          findRefs={swipeOriginPath ? findRefs : undefined}
-          swipeOriginPath={swipeOriginPath}
-        />
-      ))}
+      {posts.map((post, i) => {
+        const hasSaveBubble = !!savedIds && !!onToggleSave;
+        return (
+          <WindowTile
+            key={post.id}
+            post={post}
+            index={i}
+            findRefs={swipeOriginPath ? findRefs : undefined}
+            swipeOriginPath={swipeOriginPath}
+            saved={hasSaveBubble ? savedIds!.has(post.id) : undefined}
+            onToggleSave={hasSaveBubble ? () => onToggleSave!(post.id) : undefined}
+          />
+        );
+      })}
       {showAddTile && <AddFindTile vendorId={vendorId} index={posts.length} onAddClick={onAddClick} />}
       {Array.from({ length: placeholderCount }).map((_, i) => (
         <PlaceholderTile key={`ph-${i}`} index={usedCells + i} />
