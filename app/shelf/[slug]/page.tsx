@@ -486,18 +486,10 @@ export default function PublicShelfPage() {
               );
             })()}
 
-            {/* R17 Arc 2 D19 — twin-button row below the BoothHero. */}
-            {mall && (
-              <div style={{ padding: "10px 22px 0" }}>
-                <LocationActions
-                  mallSlug={mall.slug}
-                  mallLat={mall.latitude ?? null}
-                  mallLng={mall.longitude ?? null}
-                  surface="booth"
-                  vendorId={vendor?.id ?? null}
-                />
-              </div>
-            )}
+            {/* Session 128 (refinement design D5): LocationActions twin-button
+                row relocated from here (R17 Arc 2 D19, directly below BoothHero)
+                to page-bottom above BoothCloser. Footer placement frames the
+                'now I want to visit' moment, not 'scoping the booth.' */}
 
             <BoothTitleBlock displayName={displayName} />
             <MallBlock mallName={mallName} mallCity={mallCity} address={address} />
@@ -516,6 +508,22 @@ export default function PublicShelfPage() {
                 subtitle="Nothing on the shelf yet — check back soon."
                 clearance={48}
               />
+            )}
+
+            {/* Session 128 (refinement design D5): LocationActions footer
+                placement — frames the 'now I want to visit' moment after
+                the shopper has scouted the booth's finds. Reverses session
+                119 D19 (was directly below BoothHero, above BoothTitleBlock). */}
+            {mall && (
+              <div style={{ padding: "20px 22px 0" }}>
+                <LocationActions
+                  mallSlug={mall.slug}
+                  mallLat={mall.latitude ?? null}
+                  mallLng={mall.longitude ?? null}
+                  surface="booth"
+                  vendorId={vendor?.id ?? null}
+                />
+              </div>
             )}
 
             <BoothCloser />
