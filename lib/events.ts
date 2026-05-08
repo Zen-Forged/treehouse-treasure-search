@@ -57,7 +57,13 @@ export type EventType =
   // force semantics need their own audit shape per design record D12-D14.
   | "vendor_force_unlinked_by_admin"
   | "vendor_relinked_by_admin"
-  | "vendor_force_deleted_by_admin";
+  | "vendor_force_deleted_by_admin"
+  // Arc 4 follow-up (post-Arc-2.4) — admin invites a vendor to claim a
+  // pre-seeded booth row. Synthesizes a vendor_request row marked approved
+  // + fires the existing approval email; auto-claim attaches user_id when
+  // vendor signs in. Distinct from vendor_request_approved (which fires on
+  // the self-registration approve path).
+  | "vendor_invited_by_admin";
 
 export interface RecordEventOptions {
   user_id?:    string | null;

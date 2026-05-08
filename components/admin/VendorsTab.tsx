@@ -23,6 +23,7 @@ import EditBoothSheet from "@/components/EditBoothSheet";
 import ForceUnlinkConfirm from "@/components/admin/ForceUnlinkConfirm";
 import ForceDeleteConfirm from "@/components/admin/ForceDeleteConfirm";
 import RelinkSheet from "@/components/admin/RelinkSheet";
+import InviteVendorSheet from "@/components/admin/InviteVendorSheet";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -155,6 +156,7 @@ export function VendorsTab() {
   const [unlinkingVendor,  setUnlinkingVendor] = useState<VendorRow | null>(null);
   const [deletingVendor,   setDeletingVendor]  = useState<VendorRow | null>(null);
   const [relinkingVendor,  setRelinkingVendor] = useState<VendorRow | null>(null);
+  const [invitingVendor,   setInvitingVendor]  = useState<VendorRow | null>(null);
 
   // Arc 2.3 — toast (success/error). Auto-dismiss 4s success, 6s error.
   const [toast, setToast] = useState<{ kind: "success" | "error"; text: string } | null>(null);
@@ -292,6 +294,7 @@ export function VendorsTab() {
               onForceUnlink={() => setUnlinkingVendor(v)}
               onDelete={()      => setDeletingVendor(v)}
               onRelink={()      => setRelinkingVendor(v)}
+              onInvite={()      => setInvitingVendor(v)}
             />
           ))}
         </div>
@@ -362,6 +365,27 @@ export function VendorsTab() {
               text: userIdResolved
                 ? `Relinked to ${newDisplayName}.`
                 : `Relinked to ${newDisplayName}. Awaiting first sign-in.`,
+            });
+            void fetchVendors();
+          }}
+        />
+      )}
+
+      {invitingVendor && (
+        <InviteVendorSheet
+          vendorId={invitingVendor.id}
+          displayName={invitingVendor.display_name}
+          mallName={invitingVendor.mall?.name ?? null}
+          boothNumber={invitingVendor.booth_number}
+          onClose={() => setInvitingVendor(null)}
+          onInvited={(email, emailSent) => {
+            setInvitingVendor(null);
+            setExpandedRowId(null);
+            setToast({
+              kind: emailSent ? "success" : "error",
+              text: emailSent
+                ? `Invite sent to ${email}.`
+                : `Invite saved, but email failed to send. Check Resend logs.`,
             });
             void fetchVendors();
           }}
@@ -503,6 +527,7 @@ function VendorRowAccordion({
   onForceUnlink,
   onDelete,
   onRelink,
+  onInvite,
 }: {
   vendor:        VendorRow;
   expanded:      boolean;
@@ -511,6 +536,7 @@ function VendorRowAccordion({
   onForceUnlink: () => void;
   onDelete:      () => void;
   onRelink:      () => void;
+  onInvite:      () => void;
 }) {
   const status   = rowStatus(vendor);
   const pill     = PILL[status];
@@ -528,10 +554,12 @@ function VendorRowAccordion({
                          "transparent";
 
   // D4 — Force-unlink only when user_id != null. Relink only when
-  // unlinked AND a matching pending/approved request exists. Edit and
-  // Delete render on every row.
+  // unlinked AND a matching pending/approved request exists. Invite
+  // only when unlinked AND no matching request (orphan-unlinked).
+  // Edit and Delete render on every row.
   const showForceUnlink = vendor.user_id !== null;
   const showRelink      = vendor.user_id === null && vendor.diagnosis?.matchingRequest !== null;
+  const showInvite      = vendor.user_id === null && vendor.diagnosis?.matchingRequest === null;
 
   return (
     <div
@@ -640,10 +668,12 @@ function VendorRowAccordion({
           <ActionRow
             showRelink={showRelink}
             showForceUnlink={showForceUnlink}
+            showInvite={showInvite}
             onEdit={onEdit}
             onForceUnlink={onForceUnlink}
             onDelete={onDelete}
             onRelink={onRelink}
+            onInvite={onInvite}
           />
         </div>
       )}
@@ -791,24 +821,29 @@ function Val({
 
 // ─── Action button row (D7) ─────────────────────────────────────────────────
 //
-// Visual placeholders this commit (Arc 2.2). Handlers wire in:
-//   Arc 2.3 → Edit · Force-unlink · Delete (3 modals)
-//   Arc 2.4 → Relink (RelinkSheet)
+// Action handlers wired across Arc 2.3 (Edit · Force-unlink · Delete) +
+// Arc 2.4 (Relink) + Arc 4 follow-up (Invite). Mutually exclusive on the
+// link path: Relink shows when matchingRequest exists, Invite shows when
+// it doesn't — never both.
 
 function ActionRow({
   showRelink,
   showForceUnlink,
+  showInvite,
   onEdit,
   onForceUnlink,
   onDelete,
   onRelink,
+  onInvite,
 }: {
   showRelink:      boolean;
   showForceUnlink: boolean;
+  showInvite:      boolean;
   onEdit:          () => void;
   onForceUnlink:   () => void;
   onDelete:        () => void;
   onRelink:        () => void;
+  onInvite:        () => void;
 }) {
   return (
     <div
@@ -821,6 +856,7 @@ function ActionRow({
       }}
     >
       {showRelink && <ActionButton tone="primary" onClick={onRelink}>Relink to request</ActionButton>}
+      {showInvite && <ActionButton tone="primary" onClick={onInvite}>Invite vendor</ActionButton>}
       <ActionButton onClick={onEdit}>Edit</ActionButton>
       {showForceUnlink && <ActionButton onClick={onForceUnlink}>Force-unlink</ActionButton>}
       <ActionButton tone="danger" onClick={onDelete}>Delete</ActionButton>
