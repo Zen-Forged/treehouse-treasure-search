@@ -712,6 +712,39 @@ function VendorRowDetail({
 
       <Key>created</Key>
       <Val mode="mono">{formatDate(vendor.created_at)}</Val>
+
+      {/* Jump links — review/test affordance. Public booth = what shoppers see;
+          admin view = vendor's editable shelf without sign-in dance.
+          target=_blank so admin doesn't lose place in the Vendors tab. */}
+      <Key>open</Key>
+      <div
+        style={{
+          display: "flex",
+          gap: 12,
+          alignItems: "center",
+          fontSize: 12,
+          fontFamily: "Lora, Georgia, serif",
+          flexWrap: "wrap",
+        }}
+      >
+        <a
+          href={`/shelf/${vendor.slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: v1.green, textDecoration: "none" }}
+        >
+          ↗ public booth
+        </a>
+        <span style={{ color: v1.inkFaint }}>·</span>
+        <a
+          href={`/my-shelf?vendor=${vendor.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: v1.green, textDecoration: "none" }}
+        >
+          ↗ admin view
+        </a>
+      </div>
     </div>
   );
 }
