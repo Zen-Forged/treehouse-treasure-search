@@ -51,6 +51,7 @@ type AuthOk = Extract<AuthResult, { ok: true }>;
 type DiagnosisRequest = {
   id:         string;
   name:       string;
+  booth_name: string | null;
   email:      string;
   status:     "pending" | "approved" | "denied";
   created_at: string;
@@ -147,7 +148,7 @@ export async function GET(req: Request) {
           // even though hasBoothNumber gate above already excludes null.
           const q = auth.service
             .from("vendor_requests")
-            .select("id, name, email, status, created_at")
+            .select("id, name, booth_name, email, status, created_at")
             .eq("mall_id", v.mall_id)
             .eq("booth_number", v.booth_number!)
             .in("status", ["pending", "approved"])
@@ -162,9 +163,19 @@ export async function GET(req: Request) {
             const matchingRequest = requests && requests[0]
               ? (requests[0] as DiagnosisRequest)
               : null;
+            // Session 130 fix: compare against `booth_name` (the business name
+            // axis), not `name` (which is `first_name + " " + last_name` — the
+            // requester's PERSON name kept for backwards-compat). The original
+            // session-125 implementation compared against `name` and flagged
+            // every linked request as a collision because the booth name and
+            // person name almost always differ. When the request pre-dates the
+            // booth_name column split (legacy null), treat as no-collision —
+            // we cannot determine the booth identity from the request alone.
+            const requestBoothName = matchingRequest?.booth_name?.trim() ?? null;
             const isCollision =
               matchingRequest !== null &&
-              matchingRequest.name.trim() !== v.display_name.trim();
+              requestBoothName !== null &&
+              requestBoothName !== v.display_name.trim();
             const authUserExists = matchingRequest !== null
               && authUserEmails.has(matchingRequest.email.toLowerCase());
             diagnosis = { matchingRequest, isCollision, authUserExists };

@@ -41,6 +41,7 @@ type VendorMall = {
 type DiagnosisRequest = {
   id:         string;
   name:       string;
+  booth_name: string | null;
   email:      string;
   status:     "pending" | "approved" | "denied";
   created_at: string;
