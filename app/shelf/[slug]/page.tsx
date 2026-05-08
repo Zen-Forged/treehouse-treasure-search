@@ -55,10 +55,7 @@ import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import ShareBoothSheet from "@/components/ShareBoothSheet";
 import EmptyState from "@/components/EmptyState";
-import DistancePill from "@/components/DistancePill";
 import LocationActions from "@/components/LocationActions";
-import { milesFromUser } from "@/lib/distance";
-import { useUserLocation } from "@/lib/useUserLocation";
 import {
   BoothHero,
   BoothTitleBlock,
@@ -304,10 +301,11 @@ export default function PublicShelfPage() {
   // drives the masthead bookmark glyph. Both hooks own their auth + sync.
   const saves           = useShopperSaves();
   const boothBookmarks  = useShopperBoothBookmarks();
-  // R17 Arc 2 — silent first-mount geolocation prompt. Hook is idempotent
-  // across surfaces (D3 + D20). Pill + CTAs hide on guest / denied / no
-  // mall coords per their internal null-passthrough.
-  const userLoc         = useUserLocation();
+  // R17 Arc 2 — silent first-mount geolocation handled internally by
+  // <LocationActions> at the page footer (session 128 D5 placement).
+  // DistancePill below the BoothHero retired session 128 (within-session
+  // reversal of session 119 D18); useUserLocation no longer needed at
+  // page level since LocationActions composes its own hook.
   const bookmarkCount   = saves.ids.size;
   const boothBookmarked = !!vendor && boothBookmarks.isBookmarked(vendor.id);
 
@@ -462,29 +460,12 @@ export default function PublicShelfPage() {
               onToggleBookmark={showBookmark ? handleToggleBoothBookmark : undefined}
             />
 
-            {/* R17 Arc 2 D18 — pill row below the BoothHero photograph,
-                right-aligned. Pairs visually with the rotated post-it stamp
-                inside the photo via shared small-caps postal vocabulary.
-                Renders nothing for guest / denied / mall coords missing. */}
-            {(() => {
-              const miles = milesFromUser(
-                { lat: userLoc.lat, lng: userLoc.lng },
-                mall?.latitude ?? null,
-                mall?.longitude ?? null,
-              );
-              if (miles == null) return null;
-              return (
-                <div
-                  style={{
-                    display:        "flex",
-                    justifyContent: "flex-end",
-                    padding:        "12px 22px 0",
-                  }}
-                >
-                  <DistancePill miles={miles} />
-                </div>
-              );
-            })()}
+            {/* Session 128 (within-session reversal of D5 implementation-time
+                call): DistancePill below the BoothHero photograph retired
+                entirely. Was R17 Arc 2 D18 — right-aligned distance pill
+                pairing with the rotated post-it stamp's small-caps postal
+                vocabulary. The footer-anchored LocationActions row carries
+                the place-context affordance now. */}
 
             {/* Session 128 (refinement design D5): LocationActions twin-button
                 row relocated from here (R17 Arc 2 D19, directly below BoothHero)
