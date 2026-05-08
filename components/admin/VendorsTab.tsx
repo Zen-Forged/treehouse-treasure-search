@@ -3,14 +3,12 @@
 // every vendors row with chip-filter scope + status sub-filters. Owns its
 // own fetch + state lifecycle.
 //
-// Status: Arc 2.1 (read-only scaffold) — fetches GET /api/admin/vendors,
-// renders collapsed rows + chip filters + counts. Accordion expand,
-// status pills' visual treatment for collision (D10), and action wiring
-// land in Arc 2.2–2.4. AddBoothSheet trigger lands in Arc 3.2.
-//
-// Mounted today only on /vendors-test smoke route per
-// feedback_testbed_first_for_ai_unknowns.md. Integration into
-// app/admin/page.tsx happens in Arc 3.1; smoke route retires post-Arc-3.
+// Mounted on /admin (6th tab, session 126 Arc 3.1) and /vendors-test
+// smoke route. Session 130 retired the `isCollision` predicate +
+// "Collision" chip + leaf-accent visual (was D3/D10) — DB enforces
+// (mall_id, booth_number) uniqueness on `vendors`, so true collisions
+// can't exist there; the predicate was detecting booth_name drift,
+// which is informational rather than a problem state.
 
 "use client";
 
@@ -61,7 +59,6 @@ export type VendorRow = {
   linked_user_email: string | null;
   diagnosis: {
     matchingRequest: DiagnosisRequest | null;
-    isCollision:     boolean;
     authUserExists:  boolean;
   } | null;
 };
@@ -70,18 +67,21 @@ type Counts = {
   total:       number;
   linked:      number;
   unlinked:    number;
-  collision:   number;
   problematic: number;
 };
 
 type Scope = "problematic" | "all";
-type StatusKey = "collision" | "unlinked";
+type StatusKey = "unlinked";
 
-// ─── Visual tokens — locked at design record D3 + D10 ───────────────────────
+// ─── Visual tokens — locked at design record D3 ────────────────────────────
 //
 // Distinct from v1.{green,red,amber} because design record D3 specifies
 // warmer/softer values calibrated for the Vendors-tab status pills. Locked
-// per the V1 mockup at docs/mockups/admin-vendors-tab-v1.html — match 1:1.
+// per the V1 mockup at docs/mockups/admin-vendors-tab-v1.html.
+//
+// Session 130 — `collision` token retained but no longer drives a status
+// pill (predicate retired). Now used as the destructive/error tone for
+// delete-confirm modals + error toasts.
 
 const PILL = {
   linked:    { bg: "#e7ecdf", fg: "#4a6b3a", bd: "rgba(74,107,58,0.30)" },
@@ -109,13 +109,14 @@ function isProblematic(v: VendorRow): boolean {
   // admin action. user_id=null is necessary but not sufficient: a successfully-
   // relinked row whose request.email has no auth user yet stays user_id=null
   // (session-123 auto-claim attaches on first sign-in) — that's expected
-  // pending state, not problematic. Three classes of user_id=null:
-  //   1. Collision (matching request, name diffs) → problematic
-  //   2. Orphan (no matching request) → problematic
-  //   3. Pending (matching request, name matches) → NOT problematic
+  // pending state, not problematic. Two classes of user_id=null surface
+  // here after session 130's collision retire:
+  //   1. Orphan (no matching request) → problematic (admin must Invite)
+  //   2. Pending/Disconnected (matching request) → NOT problematic
+  //      (auto-claim attaches on first/next sign-in via still-approved
+  //      vendor_request)
   // Server-side `counts.problematic` mirrors this predicate.
   if (v.user_id !== null) return false;
-  if (v.diagnosis?.isCollision) return true;
   if (v.diagnosis?.matchingRequest === null) return true;
   return false;
 }
@@ -131,16 +132,14 @@ function applyFilters(
   // Then status sub-filters (multi-select union).
   if (statusFilter.size === 0) return rows;
   return rows.filter((v) => {
-    if (statusFilter.has("collision") && v.diagnosis?.isCollision) return true;
-    if (statusFilter.has("unlinked")  && v.user_id === null)        return true;
+    if (statusFilter.has("unlinked") && v.user_id === null) return true;
     return false;
   });
 }
 
-type RowStatus = "linked" | "unlinked" | "collision" | "pending" | "disconnected";
+type RowStatus = "linked" | "unlinked" | "pending" | "disconnected";
 
 function rowStatus(v: VendorRow): RowStatus {
-  if (v.diagnosis?.isCollision) return "collision";
   if (v.user_id !== null)       return "linked";
   // user_id IS NULL — three sub-cases:
   //   • orphan (no matching request) → "unlinked"
@@ -264,13 +263,6 @@ export function VendorsTab() {
           onClick={() => setScope("all")}
         />
         <div style={scopeDividerStyle} />
-        <Chip
-          label="Collision"
-          count={counts?.collision ?? 0}
-          on={statusFilter.has("collision")}
-          onClick={() => toggleStatus("collision")}
-          tone="collision"
-        />
         <Chip
           label="Unlinked"
           count={counts?.unlinked ?? 0}
@@ -510,15 +502,13 @@ function Chip({
   count:    number;
   on:       boolean;
   onClick:  () => void;
-  tone?:    "collision" | "unlinked";
+  tone?:    "unlinked";
 }) {
   // Default chip = green-on-paperCream when on, paperWarm-on-inkPrimary when off.
   // Tone variant = colored chip when on (matches status pill color so the
   // chip reads as "filtering by THIS status").
   const onBg =
-    tone === "collision" ? PILL.collision.fg :
-    tone === "unlinked"  ? PILL.unlinked.fg  :
-    v1.green;
+    tone === "unlinked" ? PILL.unlinked.fg : v1.green;
   const onFg = v1.paperCream;
 
   return (
@@ -576,18 +566,12 @@ function VendorRowAccordion({
 }) {
   const status   = rowStatus(vendor);
   const pill     = PILL[status];
-  const isWarn   = status === "collision";
   const mallName = vendor.mall?.name ?? "—";
   const boothNo  = vendor.booth_number ?? "—";
 
-  // D10 — collision row bg shifts on expand; non-collision rows pick up
-  // a faint paperWarm tint when expanded so the open accordion reads
-  // distinct from collapsed siblings.
-  const rowBg =
-    isWarn && expanded ? "rgba(168,68,46,0.08)" :
-    isWarn             ? "rgba(168,68,46,0.04)" :
-    expanded           ? v1.paperWarm           :
-                         "transparent";
+  // Expanded rows pick up a faint paperWarm tint so an open accordion
+  // reads distinct from collapsed siblings.
+  const rowBg = expanded ? v1.paperWarm : "transparent";
 
   // D4 — Force-unlink only when user_id != null. Relink only when
   // unlinked AND a matching pending/approved request exists. Invite
@@ -622,16 +606,9 @@ function VendorRowAccordion({
           fontFamily: "inherit",
         }}
       >
-        {/* Leaf accent — red on collision, transparent otherwise (D10) */}
-        <div
-          style={{
-            width: 6,
-            flexShrink: 0,
-            marginRight: 12,
-            background: isWarn ? PILL.collision.fg : "transparent",
-            borderRadius: 3,
-          }}
-        />
+        {/* Left padding gap — replaces the session-124 D10 leaf accent
+            retired alongside isCollision in session 130. */}
+        <div style={{ width: 6, flexShrink: 0, marginRight: 12 }} />
         {/* Body */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
@@ -639,7 +616,7 @@ function VendorRowAccordion({
               fontFamily: "Lora, Georgia, serif",
               fontSize: 14,
               fontWeight: 500,
-              color: isWarn ? PILL.collision.fg : v1.inkPrimary,
+              color: v1.inkPrimary,
               lineHeight: 1.4,
               whiteSpace: "nowrap",
               overflow: "hidden",
@@ -700,7 +677,7 @@ function VendorRowAccordion({
       {/* Expanded detail */}
       {expanded && (
         <div style={{ padding: "0 0 14px 18px" }}>
-          <VendorRowDetail vendor={vendor} status={status} isWarn={isWarn} />
+          <VendorRowDetail vendor={vendor} status={status} />
           <ActionRow
             showRelink={showRelink}
             showForceUnlink={showForceUnlink}
@@ -722,18 +699,15 @@ function VendorRowAccordion({
 function VendorRowDetail({
   vendor,
   status,
-  isWarn,
 }: {
   vendor: VendorRow;
   status: RowStatus;
-  isWarn: boolean;
 }) {
   const dn   = vendor.display_name;
   const noteName = vendor.diagnosis?.matchingRequest?.name ?? null;
-  // Session 130 fix: surface booth_name from the request alongside the
-  // person name so admins can self-diagnose collision causes (booth_name
-  // empty / mismatched / matching). Empty-string treated as null since the
-  // form's optional field may store "" instead of NULL.
+  // Session 130 — surface booth_name from the request alongside the
+  // person name as informational context. Empty-string treated as null
+  // since the form's optional field may store "" instead of NULL.
   const noteBoothName =
     vendor.diagnosis?.matchingRequest?.booth_name?.trim() || null;
   const userIdLabel =
@@ -757,9 +731,9 @@ function VendorRowDetail({
       }}
     >
       <Key>display_name</Key>
-      <Val mode={isWarn ? "warn" : "default"}>
+      <Val mode="default">
         {dn}
-        {isWarn && noteName && (
+        {noteName && (
           <span
             style={{
               color: v1.inkMuted,
