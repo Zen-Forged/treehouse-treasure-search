@@ -208,16 +208,18 @@ export function BoothHero({
             edit chrome consolidated on the single title affordance. */}
 
         {/* Bookmark bubble (session 80 D2: SIBLING of photograph motion.div,
-            D4: no own layoutId). Session 89 (iPhone QA #3): position moved
-            from top-right → bottom-left (12/12 offsets) so the bookmark
-            balances diagonally against the booth post-it pinned at
-            bottom-right. Old top-right slot was visually competing with
-            the photograph's own focal point. z-index 11 sits between the
-            lightbox overlay (z 5) and the post-it (z 12) so the bookmark
-            stays interactive without obstructing the post-it tap target.
-            Only mounts when caller passes both saved + onToggleBookmark. */}
+            D4: no own layoutId). Session 128 (refinement design D1): position
+            REVERSES session 89's bottom-left placement and returns to session
+            80's top-right slot for system-wide save/bookmark consistency
+            (David: 'keeps saved/bookmarked icon location consistent'). The
+            session-89 diagonal-balance-with-post-it framing is overridden by
+            the consistency rule — Home heart, /flagged unsave, /find/[id]
+            flag, and /shelf/[slug] tile saves all live in top-right slots.
+            z-index 11 sits between lightbox overlay (z 5) and post-it (z 12)
+            so the bookmark stays interactive without obstructing post-it tap
+            target. Only mounts when caller passes both saved + onToggleBookmark. */}
         {saved !== undefined && onToggleBookmark && (
-          <div style={{ position: "absolute", bottom: 12, left: 12, zIndex: 11 }}>
+          <div style={{ position: "absolute", top: 12, right: 12, zIndex: 11 }}>
             <BookmarkBoothBubble
               saved={saved}
               size="hero"
