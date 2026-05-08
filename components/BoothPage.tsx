@@ -338,7 +338,12 @@ export function BoothTitleBlock({
   const hasPicker = !!onPickerOpen;
   const hasEdit   = !!onEditName;
   return (
-    <div style={{ padding: "36px 22px 6px" }}>
+    // Session 128 (refinement design D6): outer wrapper textAlign:"center"
+    // + flex row justifyContent:"center" centers the eyebrow, h1, picker
+    // chevron, and edit pencil as a group. Was left-aligned in prod; David
+    // flagged during V1 review. Affects both /shelf/[slug] and /my-shelf
+    // via this shared primitive.
+    <div style={{ padding: "36px 22px 6px", textAlign: "center" }}>
       <div
         style={{
           fontFamily: FONT_LORA,
@@ -351,7 +356,7 @@ export function BoothTitleBlock({
       >
         A curated booth from
       </div>
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 10 }}>
         {hasPicker ? (
           <button
             onClick={onPickerOpen}
@@ -365,10 +370,8 @@ export function BoothTitleBlock({
               background: "transparent",
               border: "none",
               cursor: "pointer",
-              textAlign: "left",
+              textAlign: "center",
               WebkitTapHighlightColor: "transparent",
-              flex: 1,
-              minWidth: 0,
             }}
           >
             <h1
@@ -407,8 +410,6 @@ export function BoothTitleBlock({
               lineHeight: 1.1,
               letterSpacing: "-0.005em",
               margin: 0,
-              flex: 1,
-              minWidth: 0,
             }}
           >
             {displayName}
@@ -476,31 +477,32 @@ export function MallBlock({
   const href = mapsUrl(mapQuery);
 
   return (
-    <div
-      style={{
-        padding: "16px 22px 4px",
-        display: "grid",
-        gridTemplateColumns: "22px 1fr",
-        columnGap: 12,
-        alignItems: "start",
-      }}
-    >
-      <div style={{ paddingTop: 2 }}>
-        <PinGlyph size={18} />
+    // Session 128 (refinement design D6): grid layout retired in favor of
+    // centered composition. PinGlyph renders inline before mall name (size
+    // 16 to match Lora 18 baseline). Address centers below as separate
+    // block. Affects both /shelf/[slug] and /my-shelf via shared primitive.
+    // Implementation-time call: kept PinGlyph inline-before-name (vs retire)
+    // to preserve place-marker semantic; flip to retire if iPhone QA reads
+    // cluttered.
+    <div style={{ padding: "16px 22px 4px", textAlign: "center" }}>
+      <div
+        style={{
+          fontFamily: FONT_LORA,
+          fontSize: 18,
+          color: v1.inkPrimary,
+          lineHeight: 1.3,
+          letterSpacing: "-0.005em",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+        }}
+      >
+        <PinGlyph size={16} />
+        <span>{mallName}</span>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-        <div
-          style={{
-            fontFamily: FONT_LORA,
-            fontSize: 18,
-            color: v1.inkPrimary,
-            lineHeight: 1.3,
-            letterSpacing: "-0.005em",
-          }}
-        >
-          {mallName}
-        </div>
-        {address && (
+      {address && (
+        <div style={{ marginTop: 4 }}>
           <a
             href={href}
             target="_blank"
@@ -514,13 +516,12 @@ export function MallBlock({
               textDecorationStyle: "dotted",
               textDecorationColor: v1.inkFaint,
               textUnderlineOffset: 3,
-              alignSelf: "flex-start",
             }}
           >
             {address}
           </a>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
