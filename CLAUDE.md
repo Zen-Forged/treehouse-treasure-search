@@ -220,7 +220,7 @@ _(Session 123 tombstone rotated off at session 128 close — see git history at 
 
 **Working tree:** clean (after close commit). **Build:** green (tsc + npm run build clean). **Beta gate:** unblocked. **Net change this session:** 9 runtime commits — design pass + Arc 1 (3 commits) + Arc 2 (1 commit) + Arc 3 (2 commits) + iPhone-QA refinement (2 commits). **Commits (on worktree branch `claude/frosty-bartik-589d4a`):** `2dc160f` design pass · `6687b3c` D7 closer text (initial) · `aad45d2` D1 hero bookmark top-right · `096c53e` D6 centering · `4d247cb` D2+D3 ViewToggle/ShelfView retire (−351 net lines) · `99a380b` D5 LocationActions footer · `a03d677` D4 save bubble · `e8face6` D7 closer copy revision (within-session reversal) · `7e7d94a` DistancePill retire (within-session reversal) · close commit.
 
-Roadmap: **18 R-rows total. 10 ✅ Shipped (R1, R4a/b/c, R5a, R7, R10, R11, R12, R16), 3 🟢 Ready (R3, R17 — Arc 1+Arc 2 shipped pending QA, R18 — shipped pending QA), 5 🟡 Captured.** Arc 4 production QA: Phase 1+2 ✅; Phase 3 Force-unlink blocked pending session-129 decision; Phases 3 (Edit, Force-delete, Relink, Invite) + 4 (jump links, Add booth, AddBoothInline retire) still TODO.
+Roadmap: **18 R-rows total. 11 ✅ Shipped (R1, R3, R4a/b/c, R5a, R7, R10, R11, R12, R16), 2 🟢 Ready (R17 — Arc 1+Arc 2 shipped pending QA, R18 — shipped pending QA), 5 🟡 Captured.** **R3 reconciled session 129** — was carrying as 🟢 Ready in the snapshot despite being live + actively-written-to since session 73 (events table + capture helpers + admin Events tab + 18 server-side `recordEvent` types + 10 client-side `track()` types). Admin tab is transitional pending Q-014 Metabase migration. Arc 4 production QA: Phase 1+2 ✅; **force-unlink predicate fix (Path A + Option 1) shipped session 129 commit `0eba9d3`** (pending production QA after merge); Phases 3 (Edit, Force-delete, Relink, Invite — including re-walked Force-unlink) + 4 (jump links, Add booth, AddBoothInline retire) still TODO.
 
 ### 🚧 Recommended next session — Force-unlink semantics decision → Arc 4 production QA continuation
 
@@ -249,7 +249,7 @@ Two gates before Arc 4 closes ✅ end-to-end (carrying from session 127):
 
 After Arc 4 + /shelf/[slug] QA closes:
 - **`/vendors-test` smoke route retirement** — once Arc 4 production QA clean, smoke route redundant.
-- **Combined R17 + R18 iPhone QA walk** — 10 sessions deep on R17 carry; if clean → 12/18 R-items + investor update.
+- **Combined R17 + R18 iPhone QA walk** — 10 sessions deep on R17 carry; if clean → 13/18 R-items + investor update.
 
 ### 🚧 Operational follow-ups carrying
 
@@ -263,7 +263,7 @@ After Arc 4 + /shelf/[slug] QA closes:
 - **CARRY (119→129): R17 iPhone QA** — still pending. **10 sessions deep.** Surface coverage shifted by session-128 ship: /shelf/[slug] LocationActions footer move + DistancePill retire on this surface — carry walk now covers /find/[id] + /flagged + /map (DistancePill-bearing surfaces) + LocationActions footer on /shelf/[slug].
 - **CARRY (121→129): R18 iPhone QA** — first formal walk owed.
 - **CARRY (122→129): Validate session-122 scroll fix + FlagGlyph header** on real seeded content.
-- **CARRY (NEW 116→129): Tier C polish** — heart + badge flicker. **14 sessions deep on heart/badge.**
+- ~~**CARRY (NEW 116→129): Tier C polish** — heart + badge flicker.~~ **RETIRED session 129** — David: "Tier C doesn't appear to be an issue currently we can remove this from the work. I'll identify if it resurfaces."
 - **CARRY (110→129): Home masonry right-column animation regression** — needs reproduction.
 - **CARRY (115→129): `/login/email` alias retirement** — D6-locked at ~30-day window post-2026-06-04. Trigger date approaches.
 - **CARRY (108→129): Italic-Lora label face on Mapbox basemap via Studio** (~half-day).
@@ -274,11 +274,11 @@ After Arc 4 + /shelf/[slug] QA closes:
 
 ### Alternative next moves (top 5)
 
-1. **Combined R17 + R18 iPhone QA** — 10 sessions deep on R17 carry. If clean → 12/18 + investor update fires.
-2. **Tier C polish (heart + badge flicker)** — `useShopperSaves` async-hydration race. **14 sessions deep.**
-3. **R3 implementation** — only other 🟢 Ready row with no dependencies. Foundational for R5b tuning + future feed ranking.
-4. **Strategic restructure design pass** — promote David's "find to found" thesis from carry to scoped design conversation.
-5. **Promote one of the 🟡 Captured rows to design phase** — R8 onboarding / R6 legal / R14 vendor enrichment / R5b tier shape / R13 mall-operator accounts.
+1. **Combined R17 + R18 iPhone QA** — 10 sessions deep on R17 carry. If clean → 13/18 + investor update fires.
+2. **Strategic restructure design pass** — promote David's "find to found" thesis from carry to scoped design conversation.
+3. **Promote one of the 🟡 Captured rows to design phase** — R8 onboarding / R6 legal / R14 vendor enrichment / R5b tier shape / R13 mall-operator accounts.
+4. **`/login/email` alias retirement** — D6-locked at ~30-day window post-2026-06-04. Trigger date approaches.
+5. **Reconcile 8 undocumented post-122 commits** — Saved + Map polish without close ceremony. Either retro-document or absorb.
 
 Full alternatives + operational backlog in [`docs/queued-sessions.md`](docs/queued-sessions.md).
 

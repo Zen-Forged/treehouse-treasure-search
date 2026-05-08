@@ -23,7 +23,7 @@ Each entry carries:
   - ✅ **Shipped** — absorbed by a merged PR (cross-ref the session).
 - **What / Why / Open questions** — the scoping substance.
 
-**Status snapshot (as of session 121):** 18 items total (R1–R18). **10 ✅ Shipped:** R1, R4a/R4b/R4c, R5a, R7, R10, R11, R12, R16 (sessions 45–114). **3 🟢 Ready:** R3 (analytics), R17 (geolocation-aware discovery — session 117), **R18 (Map nav reinstatement + Saved per-mall restructure — graduated session 121)**. **5 🟡 Captured:** R2, R5b, R6, R8, R9, R13, R14, R15.
+**Status snapshot (as of session 129):** 18 items total (R1–R18). **11 ✅ Shipped:** R1, R3, R4a/R4b/R4c, R5a, R7, R10, R11, R12, R16 (sessions 45–114). **2 🟢 Ready:** R17 (geolocation-aware discovery — session 117, Arc 1+Arc 2 shipped pending QA), **R18 (Map nav reinstatement + Saved per-mall restructure — graduated session 121, shipped pending QA)**. **5 🟡 Captured:** R2, R5b, R6, R8, R9, R13, R14, R15.
 
 ---
 
@@ -46,7 +46,7 @@ David reviews and can override any of these.
 |----|-------|----------|--------|-----------|--------|-------|
 | R1 | Guest/shopper profiles | User/Auth | M–L | — (but compounds with R3, R9) | ✅ Shipped session 114 | **Lazy claim · Quiet identity · Saves only at MVP.** Sessions 111 (design + Arcs 1–3) → 112 (Arc 4 hybrid hooks) → 113 (Arc 5 walk + RLS partial-paste fix + 3-commit fix bundle) → 114 (Arc 5 re-walk + BottomNav rightmost role-tab + Admin variant). 3rd `/login` triage card + `/login/email/handle` pick + `/me` reflective page (avatar + handle + scout-since + private 3-stat row) + masthead bubble swap to v1.green initials when authed + silent localStorage→DB migration on first claim. Booth-following + scout history + notifications deferred to R1.5. Design record: [`docs/r1-shopper-accounts-design.md`](r1-shopper-accounts-design.md). |
 | R2 | Stripe vendor subscriptions | Monetization | L | R5b (tier definition) | 🟡 Captured | Without tiers, Stripe is checkout-theater. Scope R2 + R5b together. |
-| R3 | Analytics event capture | Data | M | — | 🟢 Ready (session 58) | Foundational. Tunes R5a, R5b, future feed ranking. Instrument early for compounding data. Design record: [`docs/r3-analytics-design.md`](r3-analytics-design.md). Mockup: [`docs/mockups/r3-admin-analytics-v1.html`](mockups/r3-admin-analytics-v1.html). All six decisions D1–D6 frozen; implementation session can run as a straight sprint. |
+| R3 | Analytics event capture | Data | M | — | ✅ Shipped sessions 58–73 | `events` table + `recordEvent()` server helper + client `track()` wrapper + `<EventsTab>` on `/admin` (counter strip + filter chips + paginated stream + session-73 stale-data fix via `global.fetch` wrapper in `lib/adminAuth.ts`). 18+ event types instrumented across the app — well beyond the v1 design's 8-event scope. **Reconciled session 129** — design record [`docs/r3-analytics-design.md`](r3-analytics-design.md) + mockup [`docs/mockups/r3-admin-analytics-v1.html`](mockups/r3-admin-analytics-v1.html) preserved as historical reference. Admin tab is treated as transitional pending Q-014 Metabase migration. |
 | R4a | Admin: delete booth | Admin tooling | S | — | ✅ Shipped session 45+74 | Functionally complete via `/shelves` admin chrome (Pencil + Trash bubbles, EditBoothSheet, DeleteBoothSheet). Single-pane-of-glass `/admin` Vendors tab captured separately as `Q-015` in `docs/queued-sessions.md`. |
 | R4b | Admin: delete/replace hero image | Admin tooling | S | — | ✅ Shipped session 91 | `Trash2` bubble on `BoothHero` (top:54 left:12) + `DELETE /api/vendor-hero` + `vendor_hero_removed` audit event. Auth on the route is still v0 unauthed — hardening lands in Wave 1.5. |
 | R4c | Mall active/inactive toggle | Admin tooling + Feed UX | M | — | ✅ Shipped (session 57) | **First roadmap item shipped end-to-end.** Design-to-Ready session 56 (`daca2a5`) → implementation + on-device QA PASSED 4/4 on prod session 57 (`ff87047`). Unblocks R10 map. Design record: [`docs/r4c-mall-active-design.md`](r4c-mall-active-design.md). Mockup: [`docs/mockups/r4c-admin-v1.html`](mockups/r4c-admin-v1.html). |
@@ -98,10 +98,10 @@ The soft dependencies (compounds, but doesn't block):
 
 Claude's recommendation, to be reviewed and overridden by David.
 
-### Wave 1 — Infra unlocks (enables everything downstream)
-1. **R3** — Analytics capture. Foundational.
-2. **R12** — Error monitoring. Pairs naturally with R3 (same instrumentation mindset, adjacent surfaces).
-3. **R4c** — Mall active/inactive. Highest-leverage admin item. Cleans pickers immediately and unlocks R10 + R13.
+### Wave 1 — Infra unlocks (enables everything downstream) ✅ Complete
+1. **R3** — Analytics capture. ✅ Shipped sessions 58–73.
+2. **R12** — Error monitoring. ✅ Shipped session 65.
+3. **R4c** — Mall active/inactive. ✅ Shipped session 57.
 
 ### Wave 2 — S-effort clean-up sweeps (ship fast, visible wins)
 4. **R4a** — Admin: delete booth.
@@ -199,33 +199,29 @@ Waves 1 + 2 + 3 together are realistically ~9–14 sessions (mix of S + M). That
 
 ---
 
-### R3 — Analytics event capture 🟢 Ready session 58
+### R3 — Analytics event capture ✅ Shipped sessions 58–73
 
-> **Status:** 🟢 Ready. Design-to-Ready landed session 58. Full design record: [`docs/r3-analytics-design.md`](r3-analytics-design.md). Admin mockup: [`docs/mockups/r3-admin-analytics-v1.html`](mockups/r3-admin-analytics-v1.html). Second roadmap item to graduate after R4c.
+> **Status:** ✅ Shipped. Design-to-Ready landed session 58 (all six decisions D1–D6 frozen). Implementation rolled out across sessions 58–73 — events table + capture helpers + admin Events tab + session-73 stale-data fix. Reconciled to ✅ Shipped session 129 — was carrying as 🟢 Ready in the roadmap snapshot despite being live + actively-written-to for ~50 sessions.
 
-**What:** Supabase-backed `events` table — single wide schema with a `jsonb` payload column. Eight event types in v1: `page_viewed`, `post_saved`, `post_unsaved`, `filter_applied`, `share_sent`, `vendor_request_submitted`, `vendor_request_approved`, `mall_activated`/`mall_deactivated`. New `/admin` 5th tab `Events` shows a 24h/7d/all counter strip + filter chips + most-recent-first stream with 50/page pagination. No charts in v1 — stream-first.
+**What shipped:** Supabase-backed `events` table (single wide schema with `jsonb` payload column) + server `recordEvent(type, payload)` helper in [`lib/events.ts`](../lib/events.ts) + client `track()` fire-and-forget wrapper + `<EventsTab>` on `/admin` (24h/7d/all counter strip + filter chips + most-recent-first stream + 50/page pagination, no charts — stream-first per D5). Session-73 stale-data fix in [`lib/adminAuth.ts`](../lib/adminAuth.ts) wraps `global.fetch` to bypass Next.js HTTP-level data cache that was intercepting `@supabase/supabase-js` internals.
 
-**Why:** Every product decision downstream — how aggressive R5a's 30-day cutoff should be, what R5b's free-tier cap is, which surfaces drive engagement — improves with data. Shipping R3 early is a compounding bet that R5b, R9, and feed-ranking decisions all depend on later.
+**18+ event types instrumented across the app** — far beyond v1's 8-event scope. Server-side: `vendor_request_submitted` / `vendor_request_approved` / `mall_activated` / `mall_deactivated` / `share_sent` / `vendor_hero_removed` / `booth_edited_by_admin` / `booth_deleted_by_admin` / `vendor_force_unlinked_by_admin` / `vendor_force_deleted_by_admin` / `vendor_relinked_by_admin` / `vendor_invited_by_admin` / `vendor_profile_edited` / `mall_hero_uploaded_by_admin` / `mall_hero_removed_by_admin` / `featured_image_uploaded_by_admin` / `featured_image_removed_by_admin` / `post_deleted_by_admin`. Client-side: `post_saved` / `post_unsaved` / `page_viewed` / `filter_applied` / `booth_bookmarked` / `booth_unbookmarked` / `tag_extracted` / `tag_skipped` / `find_shared` / `flagged_directions_tapped`.
 
-**All six decisions frozen session 58** (see design record for full detail):
+**Why it mattered:** Every product decision downstream — how aggressive R5a's 30-day cutoff should be, what R5b's free-tier cap is, which surfaces drive engagement — improves with data. Shipping R3 early was a compounding bet that R5b, R9, and feed-ranking decisions all depend on later.
+
+**Six decisions frozen session 58** (see design record for full detail):
 - D1 — single wide `events` table with `jsonb` payload, not typed tables per event ✅
 - D2 — hybrid capture: server-side inline-writes for handler-flowing events, client-side fire-and-forget for UI events ✅
 - D3 — pre-R1 PII handling: `user_id` nullable + `session_id` in sessionStorage; no IP/email/UA capture ✅
 - D4 — indefinite retention through beta; revisit at 90 days or 1M rows ✅
 - D5 — admin surfacing is stream-first (filter chips + paginated list), not dashboard-first ✅
-- D6 — narrow v1 event list (8 types); excludes `post_liked`, `share_opened`, `booth_visited` ✅
+- D6 — narrow v1 event list (8 types); excludes `post_liked`, `share_opened`, `booth_visited` (v1 scope was deliberately small; the live event-type count grew organically as new admin/vendor surfaces shipped) ✅
 
-**Terminology locked at session 58:** the heart icon = save = bookmark = flagged. There is exactly one engagement mechanic on a find. Canonical event name is `post_saved` / `post_unsaved`. No separate `post_liked` event in v1.
+**Terminology locked at session 58:** the heart icon = save = bookmark = flagged. There is exactly one engagement mechanic on a find. Canonical event name is `post_saved` / `post_unsaved`. No separate `post_liked` event.
 
-**Remaining open questions (deferred to implementation / downstream):**
-- Exact rate-limit bucket window for `/api/events` (60 vs. 120/min — implementation-session call).
-- Whether to extract summary-strip / filter-chip / event-row into reusable primitives or keep inline.
-- Layout-level page-view auto-capture — explicit per-page calls in v1; layout primitive later.
-- Realtime subscription on the events table — considered, excluded for v1; revisit if "live monitoring" admin workflow ever exists.
+**Admin tab is transitional.** Per session-73 carry: diag strip + raw probe in `<EventsTab>` stay as durable visibility tooling until **Q-014 Metabase migration** retires the in-app tab in favor of a dedicated BI surface. Q-014 captured in [`docs/queued-sessions.md`](queued-sessions.md). R3's events table itself is firmly shipped infrastructure — Q-014 is a downstream surfacing migration, not a re-implementation.
 
-**Design prereq:** ✅ Complete. Mockup + scoping doc landed session 58.
-
-**Compounds with:** R12 (error monitoring — same instrumentation mindset), R5b (cap tuning needs R3 data), R9 (notifications need event signal).
+**Compounds with:** R12 (error monitoring — same instrumentation mindset, both shipped), R5b (cap tuning now has R3 data available), R9 (notifications now have event signal available).
 
 ---
 
