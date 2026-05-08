@@ -1,0 +1,1004 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Admin Requests tab — V1 (deny-action surface axis)</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paperCream: #f5ecd5;
+    --paperWarm:  #ede6d5;
+    --postit:     #fbf3df;
+    --inkPrimary: #2c241c;
+    --inkMid:     #5a4d3e;
+    --inkMuted:   #8a7e6c;
+    --hairline:   rgba(44,36,28,0.18);
+    --hairline-strong: rgba(44,36,28,0.32);
+    --green:      #4a6b3a;
+    --greenSoft:  #e7ecdf;
+    --amber:      #b6843a;
+    --amberSoft:  #f4ead4;
+    --red:        #a8442e;
+    --redSoft:    #f1dad2;
+    --shadow-card: 0 2px 6px rgba(44,36,28,0.06), 0 1px 2px rgba(44,36,28,0.04);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: #1a1611;
+    color: #ddd5c4;
+    padding: 36px 16px 80px;
+  }
+
+  /* === Header / decisions pane === */
+  .doc-title {
+    font-family: "Lora", serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 22px;
+    color: #ede6d5;
+    text-align: center;
+    margin: 0 0 6px;
+  }
+  .doc-sub {
+    font-size: 13px;
+    color: #b3a995;
+    text-align: center;
+    margin: 0 0 28px;
+    letter-spacing: 0.02em;
+  }
+  .decisions {
+    max-width: 1280px;
+    margin: 0 auto 36px;
+    background: #232017;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 20px 24px 22px;
+  }
+  .decisions h3 {
+    font-family: "Lora", serif;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: #d8c896;
+    margin: 0 0 10px;
+  }
+  .decisions ul { margin: 0 0 18px; padding-left: 18px; font-size: 13px; line-height: 1.55; color: #cfc6b4; }
+  .decisions ul li { margin-bottom: 4px; }
+  .decisions ul:last-child { margin-bottom: 0; }
+  .decisions strong { color: #ede6d5; }
+  .decisions em { color: #d8c896; font-style: italic; }
+
+  /* === Row of phone frames === */
+  .row {
+    display: flex;
+    gap: 28px;
+    justify-content: center;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  .frame { width: 390px; flex-shrink: 0; }
+  .frame-label {
+    font-family: "Lora", serif;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #ede6d5;
+    margin: 0 0 4px;
+    padding-left: 14px;
+  }
+  .frame-tagline {
+    font-family: "Lora", serif;
+    font-style: italic;
+    font-size: 13px;
+    color: #d8c896;
+    margin: 0 0 10px;
+    padding-left: 14px;
+  }
+  .frame-desc {
+    font-size: 12px;
+    line-height: 1.5;
+    color: #b3a995;
+    margin: 0 0 14px;
+    padding: 0 14px;
+    min-height: 96px;
+  }
+
+  /* === Phone === */
+  .phone {
+    width: 390px;
+    background: var(--paperCream);
+    border-radius: 28px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 24px 48px rgba(0,0,0,0.4), 0 8px 16px rgba(0,0,0,0.2);
+    color: var(--inkPrimary);
+    position: relative;
+  }
+
+  /* Masthead */
+  .masthead {
+    height: 44px;
+    background: var(--paperCream);
+    border-bottom: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+  }
+  .masthead-left {
+    width: 36px; height: 36px;
+    border-radius: 18px;
+    background: var(--paperWarm);
+    border: 1px solid var(--hairline);
+  }
+  .masthead-mid {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 18px;
+    color: var(--inkPrimary);
+    letter-spacing: 0.01em;
+  }
+  .masthead-right {
+    width: 36px; height: 36px;
+    border-radius: 18px;
+    background: var(--paperWarm);
+    border: 1px solid var(--hairline);
+  }
+
+  /* Tab bar */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    padding: 12px 14px 0;
+    border-bottom: 1px solid var(--hairline);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0;
+    padding: 10px 12px 12px;
+    font-family: "Lora", serif;
+    font-size: 13px;
+    color: var(--inkMuted);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tab.active {
+    color: var(--inkPrimary);
+    border-bottom-color: var(--inkPrimary);
+    font-weight: 600;
+  }
+
+  /* Filter strip */
+  .filter-strip {
+    display: flex;
+    gap: 6px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .filter-strip::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    background: var(--paperWarm);
+    color: var(--inkMid);
+  }
+  .chip.on {
+    background: var(--inkPrimary);
+    color: var(--paperCream);
+    border-color: var(--inkPrimary);
+  }
+  .chip-count {
+    display: inline-block;
+    margin-left: 4px;
+    color: inherit;
+    opacity: 0.65;
+  }
+  .chip.on .chip-count { opacity: 0.75; }
+
+  /* === Body container === */
+  .body-pad { padding: 0; }
+
+  /* Status pill */
+  .pill {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    padding: 3px 7px;
+    border-radius: 999px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .pill.pending  { background: #e8e5dc; color: #6e6a5e; border: 1px solid rgba(110,106,94,0.3); }
+  .pill.approved { background: var(--greenSoft); color: var(--green);  border: 1px solid rgba(74,107,58,0.3); }
+  .pill.denied   { background: var(--amberSoft); color: var(--amber);  border: 1px solid rgba(182,132,58,0.3); }
+
+  /* Photo thumb (proof_image_url placeholder) */
+  .thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    border: 1px solid var(--hairline);
+    background-size: cover;
+    background-position: center;
+  }
+  .thumb.t1 { background: linear-gradient(135deg, #c9a374 0%, #8b6f4f 100%); }
+  .thumb.t2 { background: linear-gradient(135deg, #6b8a5a 0%, #3e5436 100%); }
+  .thumb.t3 { background: linear-gradient(135deg, #b87a6a 0%, #6a3a2c 100%); }
+
+  /* === FRAME A — Inline two-button row === */
+  .a-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .a-main { flex: 1; min-width: 0; }
+  .a-name {
+    font-family: "Lora", serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--inkPrimary);
+    line-height: 1.2;
+    margin: 0 0 2px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .a-meta {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 11px;
+    color: var(--inkMuted);
+    line-height: 1.3;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .a-meta-num { font-family: "Times New Roman", Times, serif; font-size: 12px; color: var(--inkMid); }
+  .a-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .a-btn {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid;
+    background: transparent;
+  }
+  .a-btn.approve { color: var(--green); border-color: rgba(74,107,58,0.45); }
+  .a-btn.deny    { color: var(--amber); border-color: rgba(182,132,58,0.45); }
+
+  /* === FRAME B — Expand-on-tap accordion === */
+  .b-row {
+    border-bottom: 1px solid var(--hairline);
+  }
+  .b-row.expanded { background: var(--paperWarm); }
+  .b-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 12px;
+  }
+  .b-main { flex: 1; min-width: 0; }
+  .b-name {
+    font-family: "Lora", serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--inkPrimary);
+    margin: 0 0 2px;
+    line-height: 1.2;
+  }
+  .b-meta {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 11px;
+    color: var(--inkMuted);
+  }
+  .b-chev {
+    width: 16px;
+    color: var(--inkMuted);
+    font-size: 14px;
+    flex-shrink: 0;
+    transition: transform 120ms;
+  }
+  .b-row.expanded .b-chev { transform: rotate(90deg); }
+
+  .b-detail {
+    padding: 4px 14px 16px 14px;
+    border-top: 1px solid var(--hairline);
+  }
+  .b-meta-grid {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    gap: 6px 12px;
+    font-size: 11px;
+    line-height: 1.4;
+    margin-bottom: 12px;
+    margin-top: 8px;
+  }
+  .b-meta-key {
+    color: var(--inkMuted);
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    padding-top: 1px;
+  }
+  .b-meta-val { color: var(--inkPrimary); font-family: "Lora", serif; font-size: 12px; }
+  .b-meta-val.mono { font-family: "SF Mono", Menlo, monospace; font-size: 11px; color: var(--inkMid); }
+
+  .b-textarea-label {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--inkMuted);
+    margin-bottom: 6px;
+  }
+  .b-textarea-label .req {
+    color: var(--amber);
+    font-weight: 700;
+    margin-left: 4px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .b-textarea {
+    width: 100%;
+    min-height: 64px;
+    background: var(--paperCream);
+    border: 1px solid var(--hairline-strong);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: "Lora", serif;
+    font-size: 13px;
+    color: var(--inkPrimary);
+    resize: none;
+    margin-bottom: 12px;
+    line-height: 1.4;
+  }
+  .b-textarea-helper {
+    font-size: 10px;
+    color: var(--inkMuted);
+    font-style: italic;
+    margin: -6px 0 12px;
+    line-height: 1.4;
+  }
+
+  .b-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .b-btn {
+    flex: 1;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 9px 0;
+    border-radius: 6px;
+    border: 1px solid;
+    background: transparent;
+  }
+  .b-btn.approve { color: var(--paperCream); background: var(--green); border-color: var(--green); }
+  .b-btn.deny    { color: var(--amber); border-color: rgba(182,132,58,0.55); }
+
+  /* === FRAME C — Single Review CTA → modal === */
+  .c-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .c-main { flex: 1; min-width: 0; }
+  .c-name {
+    font-family: "Lora", serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--inkPrimary);
+    line-height: 1.2;
+    margin: 0 0 2px;
+  }
+  .c-meta {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 11px;
+    color: var(--inkMuted);
+  }
+  .c-cta {
+    flex-shrink: 0;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--inkPrimary);
+    background: transparent;
+    border: 1px solid var(--inkPrimary);
+    border-radius: 999px;
+    padding: 6px 12px;
+  }
+
+  /* === Confirm modal (Frame A + Frame C share shape) === */
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(20,16,11,0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+  }
+  .modal {
+    width: 320px;
+    background: var(--paperCream);
+    border-radius: 14px;
+    padding: 18px 16px 14px;
+    box-shadow: 0 18px 36px rgba(0,0,0,0.32), 0 6px 12px rgba(0,0,0,0.18);
+  }
+  .modal-icon {
+    width: 38px; height: 38px;
+    border-radius: 19px;
+    background: var(--amberSoft);
+    color: var(--amber);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 auto 10px;
+  }
+  .modal-title {
+    font-family: "Lora", serif;
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--inkPrimary);
+    text-align: center;
+    margin: 0 0 6px;
+  }
+  .modal-vendor {
+    font-family: "Lora", serif;
+    font-size: 13px;
+    color: var(--inkMid);
+    text-align: center;
+    margin: 0 0 12px;
+  }
+  .modal-vendor strong { color: var(--inkPrimary); font-weight: 600; }
+
+  /* Modal proof image (Frame C) */
+  .modal-proof {
+    width: 100%;
+    height: 130px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, #c9a374 0%, #8b6f4f 100%);
+    border: 1px solid var(--hairline);
+    position: relative;
+  }
+  .modal-proof::after {
+    content: "PROOF IMAGE";
+    position: absolute;
+    bottom: 6px; right: 8px;
+    font-size: 9px;
+    color: rgba(255,255,255,0.85);
+    letter-spacing: 0.10em;
+    font-weight: 700;
+  }
+  .modal-meta-grid {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 4px 10px;
+    font-size: 11px;
+    margin-bottom: 12px;
+    line-height: 1.4;
+  }
+  .modal-meta-key { color: var(--inkMuted); text-transform: uppercase; font-size: 9px; letter-spacing: 0.08em; font-weight: 700; padding-top: 1px; }
+  .modal-meta-val { color: var(--inkPrimary); font-family: "Lora", serif; font-size: 12px; }
+
+  .modal-textarea-label {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--inkMuted);
+    margin-bottom: 6px;
+  }
+  .modal-textarea-label .req { color: var(--amber); font-weight: 700; margin-left: 4px; text-transform: none; letter-spacing: 0; }
+
+  .modal-textarea {
+    width: 100%;
+    min-height: 62px;
+    background: #fff;
+    border: 1px solid var(--hairline-strong);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: "Lora", serif;
+    font-size: 13px;
+    color: var(--inkPrimary);
+    resize: none;
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+  .modal-email-preview {
+    background: var(--postit);
+    border: 1px solid rgba(44,36,28,0.12);
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 14px;
+  }
+  .modal-email-label {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--inkMuted);
+    margin-bottom: 4px;
+  }
+  .modal-email-body {
+    font-family: "Lora", serif;
+    font-size: 11px;
+    color: var(--inkMid);
+    font-style: italic;
+    line-height: 1.45;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .modal-btn {
+    flex: 1;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 9px 0;
+    border-radius: 6px;
+    border: 1px solid;
+  }
+  .modal-btn.cancel  { color: var(--inkMid); border-color: var(--hairline-strong); background: transparent; }
+  .modal-btn.confirm { color: var(--paperCream); background: var(--amber); border-color: var(--amber); }
+  .modal-btn.confirm.green { background: var(--green); border-color: var(--green); }
+
+  /* Frame C two-button decision panel */
+  .c-decision-panel {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .c-decide-btn {
+    flex: 1;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 9px 0;
+    border-radius: 6px;
+    border: 1px solid;
+    background: transparent;
+  }
+  .c-decide-btn.approve { color: var(--green); border-color: rgba(74,107,58,0.55); }
+  .c-decide-btn.deny    { color: var(--amber); border-color: rgba(182,132,58,0.55); background: var(--amberSoft); }
+  .c-decide-btn.deny.selected {
+    background: var(--amber);
+    color: var(--paperCream);
+  }
+
+</style>
+</head>
+<body>
+
+<h1 class="doc-title">Admin Requests tab — V1</h1>
+<p class="doc-sub">Deny-action surface placement axis · 3 frames · realistic data</p>
+
+<div class="decisions">
+  <h3>Locked Product Axes (session 131 scoping)</h3>
+  <ul>
+    <li><strong>Q1 = A</strong> — Deny only (no Hold, no Needs-more-info). Pending → Approved or Denied.</li>
+    <li><strong>Q2 = B</strong> — Soft email on deny; <em>"couldn't approve, reach out if you want to discuss"</em>; reason internal-only.</li>
+    <li><strong>Q3 = B</strong> — Soft-archive (<code>status: "denied"</code>); chip filter surfaces past denials.</li>
+    <li><strong>Q4 = A</strong> — Required reason textarea on Deny; stored in new <code>vendor_requests.denial_reason</code> column.</li>
+  </ul>
+  <h3>Pre-decided from Audit (no V1 axes)</h3>
+  <ul>
+    <li>Chip filter strip — <strong>Pending · Approved · Denied · All</strong>, default <strong>Pending</strong> (Linear/VendorsTab pattern).</li>
+    <li>Toast — parent-owned, success/error variants (existing AdminPage pattern, lines 975–1137).</li>
+    <li>Approve email — existing <code>sendApprovalInstructions()</code>, untouched.</li>
+    <li>Deny email — new <code>sendDenialNotice(email, name)</code>, soft copy, no reason exposed.</li>
+    <li>R3 events — new <code>vendor_request_denied</code> with payload <code>{denial_reason_length, mall_id, booth_number}</code> (length not text — internal audit only).</li>
+  </ul>
+  <h3>The One Open Axis This V1 Spans</h3>
+  <ul>
+    <li><strong>Where does the Deny + required-reason textarea live?</strong></li>
+    <li><strong>Frame A</strong> — Inline two-button row + confirm modal with textarea (Substack/GitHub-inspired).</li>
+    <li><strong>Frame B</strong> — Expand-on-tap accordion + inline textarea (Notion-inspired; mirrors VendorsTab D7).</li>
+    <li><strong>Frame C</strong> — Single Review CTA → modal-driven decision with proof image + textarea (Stripe-inspired).</li>
+  </ul>
+</div>
+
+<div class="row">
+
+<!-- ============ FRAME A ============ -->
+<div class="frame">
+  <p class="frame-label">Frame A</p>
+  <p class="frame-tagline">Inline buttons. Confirm modal. Co-equal Approve/Deny.</p>
+  <p class="frame-desc">
+    Each row carries two pill buttons right-aligned. Approve = 1 tap (existing).
+    Deny = tap → confirm modal with required textarea + soft-email preview → confirm.
+    Reason textarea lives in modal only. Denied rows still appear (when Denied chip on).
+  </p>
+  <div class="phone">
+    <div class="masthead">
+      <div class="masthead-left"></div>
+      <div class="masthead-mid">Treehouse</div>
+      <div class="masthead-right"></div>
+    </div>
+    <div class="tabs">
+      <div class="tab">Posts</div>
+      <div class="tab">Banners</div>
+      <div class="tab active">Requests</div>
+      <div class="tab">Locations</div>
+      <div class="tab">Vendors</div>
+      <div class="tab">Events</div>
+    </div>
+    <div class="filter-strip">
+      <div class="chip on">Pending<span class="chip-count">3</span></div>
+      <div class="chip">Approved<span class="chip-count">12</span></div>
+      <div class="chip">Denied<span class="chip-count">2</span></div>
+      <div class="chip">All<span class="chip-count">17</span></div>
+    </div>
+    <div class="body-pad">
+
+      <!-- Pending row 1 -->
+      <div class="a-row">
+        <div class="thumb t1"></div>
+        <div class="a-main">
+          <div class="a-name">Sarah Mitchell</div>
+          <div class="a-meta">
+            America's Antique Mall · <span class="a-meta-num">B 142</span> · 2d ago
+          </div>
+        </div>
+        <div class="a-actions">
+          <button class="a-btn approve">Approve</button>
+          <button class="a-btn deny">Deny</button>
+        </div>
+      </div>
+
+      <!-- Pending row 2 (no booth #) -->
+      <div class="a-row">
+        <div class="thumb t2"></div>
+        <div class="a-main">
+          <div class="a-name">James O'Brien</div>
+          <div class="a-meta">
+            Copper Awning Flea · no booth # · 5h ago
+          </div>
+        </div>
+        <div class="a-actions">
+          <button class="a-btn approve">Approve</button>
+          <button class="a-btn deny">Deny</button>
+        </div>
+      </div>
+
+      <!-- Pending row 3 -->
+      <div class="a-row">
+        <div class="thumb t3"></div>
+        <div class="a-main">
+          <div class="a-name">Maya Patel</div>
+          <div class="a-meta">
+            Kentucky Treehouse · <span class="a-meta-num">B 87</span> · 1d ago
+          </div>
+        </div>
+        <div class="a-actions">
+          <button class="a-btn approve">Approve</button>
+          <button class="a-btn deny">Deny</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Confirm modal overlaid (showing Deny tap on Sarah's row) -->
+    <div class="modal-backdrop">
+      <div class="modal">
+        <div class="modal-icon">!</div>
+        <h3 class="modal-title">Deny request?</h3>
+        <p class="modal-vendor"><strong>Sarah Mitchell</strong> · Booth 142 · America's Antique Mall</p>
+        <div class="modal-textarea-label">Reason <span class="req">(required, internal only)</span></div>
+        <textarea class="modal-textarea" placeholder="Why are you denying this request?">Couldn't verify booth claim — mall confirmed booth 142 belongs to another vendor.</textarea>
+        <div class="modal-email-preview">
+          <div class="modal-email-label">Vendor will receive</div>
+          <div class="modal-email-body">"We weren't able to approve your Treehouse booth request at this time. If you'd like to discuss, please reach out to dbutler80020@gmail.com."</div>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-btn cancel">Cancel</button>
+          <button class="modal-btn confirm">Deny &amp; Email</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME B ============ -->
+<div class="frame">
+  <p class="frame-label">Frame B</p>
+  <p class="frame-tagline">Expand row. Reason inline. Decide in place.</p>
+  <p class="frame-desc">
+    Tap row chevron → row expands inline. Reveals proof_image preview line + meta grid +
+    required reason textarea + Approve/Deny buttons inline. No modal. Mirrors VendorsTab
+    D7 accordion vocabulary. Approve = 2 taps (expand + approve); Deny = 2 taps + textarea.
+  </p>
+  <div class="phone">
+    <div class="masthead">
+      <div class="masthead-left"></div>
+      <div class="masthead-mid">Treehouse</div>
+      <div class="masthead-right"></div>
+    </div>
+    <div class="tabs">
+      <div class="tab">Posts</div>
+      <div class="tab">Banners</div>
+      <div class="tab active">Requests</div>
+      <div class="tab">Locations</div>
+      <div class="tab">Vendors</div>
+      <div class="tab">Events</div>
+    </div>
+    <div class="filter-strip">
+      <div class="chip on">Pending<span class="chip-count">3</span></div>
+      <div class="chip">Approved<span class="chip-count">12</span></div>
+      <div class="chip">Denied<span class="chip-count">2</span></div>
+      <div class="chip">All<span class="chip-count">17</span></div>
+    </div>
+    <div class="body-pad">
+
+      <!-- Row 1 collapsed -->
+      <div class="b-row">
+        <div class="b-head">
+          <div class="thumb t1"></div>
+          <div class="b-main">
+            <div class="b-name">Sarah Mitchell</div>
+            <div class="b-meta">America's Antique Mall · Booth 142 · 2d ago</div>
+          </div>
+          <span class="pill pending">Pending</span>
+          <span class="b-chev">›</span>
+        </div>
+      </div>
+
+      <!-- Row 2 expanded with reason textarea visible -->
+      <div class="b-row expanded">
+        <div class="b-head">
+          <div class="thumb t2"></div>
+          <div class="b-main">
+            <div class="b-name">James O'Brien</div>
+            <div class="b-meta">Copper Awning Flea · no booth # · 5h ago</div>
+          </div>
+          <span class="pill pending">Pending</span>
+          <span class="b-chev">›</span>
+        </div>
+        <div class="b-detail">
+          <div class="b-meta-grid">
+            <div class="b-meta-key">Email</div>
+            <div class="b-meta-val mono">jobrien@aol.com</div>
+            <div class="b-meta-key">Booth name</div>
+            <div class="b-meta-val">O'Brien Vintage</div>
+            <div class="b-meta-key">Submitted</div>
+            <div class="b-meta-val mono">2026-05-08 09:42</div>
+          </div>
+          <div class="b-textarea-label">Reason if denying <span class="req">(required to deny)</span></div>
+          <textarea class="b-textarea" placeholder="Optional unless denying — admin audit only"></textarea>
+          <div class="b-textarea-helper">Vendor receives a soft email if denied. Reason stays internal.</div>
+          <div class="b-actions">
+            <button class="b-btn approve">Approve</button>
+            <button class="b-btn deny">Deny</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3 collapsed -->
+      <div class="b-row">
+        <div class="b-head">
+          <div class="thumb t3"></div>
+          <div class="b-main">
+            <div class="b-name">Maya Patel</div>
+            <div class="b-meta">Kentucky Treehouse · Booth 87 · 1d ago</div>
+          </div>
+          <span class="pill pending">Pending</span>
+          <span class="b-chev">›</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME C ============ -->
+<div class="frame">
+  <p class="frame-label">Frame C</p>
+  <p class="frame-tagline">Review → modal. Full proof image. Decide inside.</p>
+  <p class="frame-desc">
+    Each row has a single Review CTA → modal opens with proof image + full meta + decision panel
+    (Approve/Deny toggle reveals reason textarea when Deny picked). Separates list-browse from
+    decide-act. Heavier modal but full context per decision. Approve = 2 taps; Deny = 3 taps.
+  </p>
+  <div class="phone">
+    <div class="masthead">
+      <div class="masthead-left"></div>
+      <div class="masthead-mid">Treehouse</div>
+      <div class="masthead-right"></div>
+    </div>
+    <div class="tabs">
+      <div class="tab">Posts</div>
+      <div class="tab">Banners</div>
+      <div class="tab active">Requests</div>
+      <div class="tab">Locations</div>
+      <div class="tab">Vendors</div>
+      <div class="tab">Events</div>
+    </div>
+    <div class="filter-strip">
+      <div class="chip on">Pending<span class="chip-count">3</span></div>
+      <div class="chip">Approved<span class="chip-count">12</span></div>
+      <div class="chip">Denied<span class="chip-count">2</span></div>
+      <div class="chip">All<span class="chip-count">17</span></div>
+    </div>
+    <div class="body-pad">
+
+      <!-- Row 1 -->
+      <div class="c-row">
+        <div class="thumb t1"></div>
+        <div class="c-main">
+          <div class="c-name">Sarah Mitchell</div>
+          <div class="c-meta">America's Antique Mall · Booth 142 · 2d ago</div>
+        </div>
+        <button class="c-cta">Review →</button>
+      </div>
+
+      <!-- Row 2 -->
+      <div class="c-row">
+        <div class="thumb t2"></div>
+        <div class="c-main">
+          <div class="c-name">James O'Brien</div>
+          <div class="c-meta">Copper Awning Flea · no booth # · 5h ago</div>
+        </div>
+        <button class="c-cta">Review →</button>
+      </div>
+
+      <!-- Row 3 -->
+      <div class="c-row">
+        <div class="thumb t3"></div>
+        <div class="c-main">
+          <div class="c-name">Maya Patel</div>
+          <div class="c-meta">Kentucky Treehouse · Booth 87 · 1d ago</div>
+        </div>
+        <button class="c-cta">Review →</button>
+      </div>
+
+    </div>
+
+    <!-- Review modal overlaid -->
+    <div class="modal-backdrop">
+      <div class="modal">
+        <h3 class="modal-title">Sarah Mitchell</h3>
+        <p class="modal-vendor">Booth 142 · America's Antique Mall</p>
+        <div class="modal-proof"></div>
+        <div class="modal-meta-grid">
+          <div class="modal-meta-key">Email</div>
+          <div class="modal-meta-val">smitch@gmail.com</div>
+          <div class="modal-meta-key">Booth name</div>
+          <div class="modal-meta-val">Sarah's Curios</div>
+          <div class="modal-meta-key">Submitted</div>
+          <div class="modal-meta-val">2026-05-06 14:18</div>
+        </div>
+        <div class="c-decision-panel">
+          <button class="c-decide-btn approve">Approve</button>
+          <button class="c-decide-btn deny selected">Deny</button>
+        </div>
+        <div class="modal-textarea-label">Reason <span class="req">(required, internal only)</span></div>
+        <textarea class="modal-textarea" placeholder="Why are you denying this request?">Couldn't verify booth claim — mall confirmed booth 142 belongs to another vendor.</textarea>
+        <div class="modal-email-preview">
+          <div class="modal-email-label">Vendor will receive</div>
+          <div class="modal-email-body">"We weren't able to approve your Treehouse booth request at this time. If you'd like to discuss, please reach out to dbutler80020@gmail.com."</div>
+        </div>
+        <div class="modal-actions">
+          <button class="modal-btn cancel">Cancel</button>
+          <button class="modal-btn confirm">Submit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div style="max-width: 1280px; margin: 36px auto 0; padding: 18px 24px; background: #232017; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; font-size: 12px; color: #cfc6b4; line-height: 1.6;">
+  <h3 style="font-family: 'Lora', serif; font-size: 12px; letter-spacing: 0.10em; text-transform: uppercase; color: #d8c896; margin: 0 0 8px;">Tradeoff matrix</h3>
+  <table style="width: 100%; border-collapse: collapse;">
+    <thead>
+      <tr style="text-align: left; color: #ede6d5; border-bottom: 1px solid rgba(255,255,255,0.12);">
+        <th style="padding: 8px 12px 8px 0; font-weight: 600;">Axis</th>
+        <th style="padding: 8px 12px; font-weight: 600;">Frame A</th>
+        <th style="padding: 8px 12px; font-weight: 600;">Frame B</th>
+        <th style="padding: 8px 12px; font-weight: 600;">Frame C</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+        <td style="padding: 8px 12px 8px 0;">Approve clicks</td>
+        <td style="padding: 8px 12px;">1</td>
+        <td style="padding: 8px 12px;">2 (expand + approve)</td>
+        <td style="padding: 8px 12px;">2 (review + approve)</td>
+      </tr>
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+        <td style="padding: 8px 12px 8px 0;">Deny clicks</td>
+        <td style="padding: 8px 12px;">2 + textarea + confirm</td>
+        <td style="padding: 8px 12px;">2 + textarea + deny</td>
+        <td style="padding: 8px 12px;">3 (review + deny + textarea + submit)</td>
+      </tr>
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+        <td style="padding: 8px 12px 8px 0;">Reason textarea surface</td>
+        <td style="padding: 8px 12px;">Modal (deny only)</td>
+        <td style="padding: 8px 12px;">Inline (always visible when expanded)</td>
+        <td style="padding: 8px 12px;">Modal (after deny picked)</td>
+      </tr>
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+        <td style="padding: 8px 12px 8px 0;">Proof image visible</td>
+        <td style="padding: 8px 12px;">Thumb only (44px)</td>
+        <td style="padding: 8px 12px;">Thumb only (could add inline)</td>
+        <td style="padding: 8px 12px;">Full size in modal (130px)</td>
+      </tr>
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+        <td style="padding: 8px 12px 8px 0;">Accidental-deny risk</td>
+        <td style="padding: 8px 12px; color: #d8a374;">Higher (Deny is co-equal in scan)</td>
+        <td style="padding: 8px 12px;">Lower (gated behind expand)</td>
+        <td style="padding: 8px 12px;">Lowest (gated behind modal + selection)</td>
+      </tr>
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+        <td style="padding: 8px 12px 8px 0;">Bulk-approve speed</td>
+        <td style="padding: 8px 12px; color: #a8c39a;">Fastest</td>
+        <td style="padding: 8px 12px;">Medium</td>
+        <td style="padding: 8px 12px;">Slowest</td>
+      </tr>
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+        <td style="padding: 8px 12px 8px 0;">Reuses existing patterns</td>
+        <td style="padding: 8px 12px;">ForceUnlinkConfirm modal shape</td>
+        <td style="padding: 8px 12px; color: #a8c39a;">VendorsTab D7 accordion verbatim</td>
+        <td style="padding: 8px 12px;">New modal shape (heavier)</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 12px 8px 0;">Implementation cost</td>
+        <td style="padding: 8px 12px;">Medium (new confirm modal)</td>
+        <td style="padding: 8px 12px; color: #a8c39a;">Low (port accordion)</td>
+        <td style="padding: 8px 12px;">High (new modal + state machine)</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>
