@@ -127,33 +127,48 @@ export async function GET(req: Request) {
         authUserExists:  boolean;
       } | null = null;
       if (v.user_id === null) {
-        // PostgREST quirk: `.eq("col", null)` does not match null rows; null
-        // requires `.is("col", null)`. Branch the query accordingly.
-        let q = auth.service
-          .from("vendor_requests")
-          .select("id, name, email, status, created_at")
-          .eq("mall_id", v.mall_id)
-          .in("status", ["pending", "approved"])
-          .order("created_at", { ascending: false })
-          .limit(1);
-        q = v.booth_number === null
-          ? q.is("booth_number", null)
-          : q.eq("booth_number", v.booth_number);
-        const { data: requests, error: reqErr } = await q;
-
-        if (reqErr) {
-          console.error("[admin/vendors GET] diagnose lookup:", reqErr.message);
+        // Session 130 fix: skip the diagnose query when booth_number is
+        // null/empty. Matching by (mall_id, null booth_number) collapses to
+        // mall_id alone — limit(1) then grabs whatever vendor_request is
+        // most recent in the mall, which rarely matches the actual vendor
+        // and produces spurious `isCollision=true` (display_name mismatch
+        // against an unrelated request). Pre-seeded admin booths without
+        // booth numbers are bulk-import artifacts, not vendor-request-driven.
+        // Treat as orphan (matchingRequest=null) so collision pill stays
+        // off and Invite affordance shows. D14 design-time blindspot, not
+        // a reversal.
+        const hasBoothNumber =
+          v.booth_number !== null && v.booth_number.trim() !== "";
+        if (!hasBoothNumber) {
           diagnosis = { matchingRequest: null, isCollision: false, authUserExists: false };
         } else {
-          const matchingRequest = requests && requests[0]
-            ? (requests[0] as DiagnosisRequest)
-            : null;
-          const isCollision =
-            matchingRequest !== null &&
-            matchingRequest.name.trim() !== v.display_name.trim();
-          const authUserExists = matchingRequest !== null
-            && authUserEmails.has(matchingRequest.email.toLowerCase());
-          diagnosis = { matchingRequest, isCollision, authUserExists };
+          // PostgREST quirk: `.eq("col", null)` does not match null rows; null
+          // requires `.is("col", null)`. Branch retained for defensive safety
+          // even though hasBoothNumber gate above already excludes null.
+          const q = auth.service
+            .from("vendor_requests")
+            .select("id, name, email, status, created_at")
+            .eq("mall_id", v.mall_id)
+            .eq("booth_number", v.booth_number!)
+            .in("status", ["pending", "approved"])
+            .order("created_at", { ascending: false })
+            .limit(1);
+          const { data: requests, error: reqErr } = await q;
+
+          if (reqErr) {
+            console.error("[admin/vendors GET] diagnose lookup:", reqErr.message);
+            diagnosis = { matchingRequest: null, isCollision: false, authUserExists: false };
+          } else {
+            const matchingRequest = requests && requests[0]
+              ? (requests[0] as DiagnosisRequest)
+              : null;
+            const isCollision =
+              matchingRequest !== null &&
+              matchingRequest.name.trim() !== v.display_name.trim();
+            const authUserExists = matchingRequest !== null
+              && authUserEmails.has(matchingRequest.email.toLowerCase());
+            diagnosis = { matchingRequest, isCollision, authUserExists };
+          }
         }
       }
 
