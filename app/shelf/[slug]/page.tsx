@@ -64,21 +64,18 @@ import {
   BoothTitleBlock,
   MallBlock,
   DiamondDivider,
-  ViewToggle,
   WindowView,
-  ShelfView,
   BoothCloser,
   BoothPageStyles,
   v1,
   FONT_LORA,
-  type BoothView,
 } from "@/components/BoothPage";
 import type { Post, Vendor, Mall } from "@/types/treehouse";
 
 // Session 85 — back-nav scroll anchoring. Module-scope cache survives
 // /find/[id] navigation (App Router unmounts the page; module scope persists
 // for the SPA session). Hydrating state from cache on mount when the slug
-// matches lets WindowTile/ShelfTile photographs render without a skeleton
+// matches lets WindowTile photographs render without a skeleton
 // flash. Per-slug scroll key persists scroll position across the same
 // boundary so navigating between different shelves doesn't restore a
 // position from a different layout. Pure scroll behavior — no motion changes.
@@ -298,7 +295,6 @@ export default function PublicShelfPage() {
 
   const pendingScrollY = useRef<number | null>(null);
   const scrollRestored = useRef(false);
-  const [view,           setView]           = useState<BoothView>("window");
 
   // Session 45 — admin Window share state.
   const [user,           setUser]           = useState<User | null>(null);
@@ -506,33 +502,20 @@ export default function PublicShelfPage() {
             <BoothTitleBlock displayName={displayName} />
             <MallBlock mallName={mallName} mallCity={mallCity} address={address} />
             <DiamondDivider topPad={22} bottomPad={12} horizontalPad={44} />
-            <ViewToggle view={view} onChange={setView} />
 
-            {view === "window" ? (
-              available.length > 0 ? (
-                <WindowView
-                  posts={available}
-                  showAddTile={false}
-                  swipeOriginPath={`/shelf/${slug}`}
-                />
-              ) : (
-                <EmptyState
-                  subtitle="Nothing on the shelf yet — check back soon."
-                  clearance={48}
-                />
-              )
+            {/* Session 128 (refinement design D2 + D3): ViewToggle + ShelfView
+                retired. WindowView is the only find-rendering path. */}
+            {available.length > 0 ? (
+              <WindowView
+                posts={available}
+                showAddTile={false}
+                swipeOriginPath={`/shelf/${slug}`}
+              />
             ) : (
-              available.length > 0 ? (
-                <ShelfView
-                  posts={available}
-                  swipeOriginPath={`/shelf/${slug}`}
-                />
-              ) : (
-                <EmptyState
-                  subtitle="Nothing on the shelf yet — check back soon."
-                  clearance={48}
-                />
-              )
+              <EmptyState
+                subtitle="Nothing on the shelf yet — check back soon."
+                clearance={48}
+              />
             )}
 
             <BoothCloser />

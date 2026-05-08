@@ -88,14 +88,11 @@ import {
   BoothTitleBlock,
   MallBlock,
   DiamondDivider,
-  ViewToggle,
   WindowView,
-  ShelfView,
   BoothCloser,
   BoothPageStyles,
   v1,
   FONT_LORA,
-  type BoothView,
 } from "@/components/BoothPage";
 import { MOTION_EASE_OUT, MOTION_EMPTY_DURATION } from "@/lib/tokens";
 import type { User } from "@supabase/supabase-js";
@@ -104,8 +101,8 @@ const ADMIN_DEFAULT_VENDOR_ID = "5619b4bf-3d05-4843-8ee1-e8b747fc2d81";
 
 // Session 85 — back-nav scroll anchoring. Module-scope cache survives
 // /find/[id] navigation (App Router unmounts the page; module scope persists
-// for the SPA session). Hydrating posts from cache on mount lets WindowTile/
-// ShelfTile photographs render without a skeleton flash. Cache is keyed by
+// for the SPA session). Hydrating posts from cache on mount lets WindowTile
+// photographs render without a skeleton flash. Cache is keyed by
 // vendorId so multi-booth picker switching never restores stale posts to the
 // wrong booth. Pure scroll behavior — no motion changes.
 let cachedMyShelf: { vendorId: string; posts: Post[] } | null = null;
@@ -366,7 +363,6 @@ function MyBoothInner() {
   const scrollRestored = useRef(false);
 
   const [mall,          setMall]          = useState<Mall | null>(null);
-  const [view,          setView]          = useState<BoothView>("window");
   const [heroImageUrl,  setHeroImageUrl]  = useState<string | null>(null);
   const [heroKey,       setHeroKey]       = useState(0);
 
@@ -820,32 +816,15 @@ function MyBoothInner() {
             />
             <MallBlock mallName={mallName} mallCity={mallCity} address={address} />
             <DiamondDivider topPad={22} bottomPad={12} horizontalPad={44} />
-            <ViewToggle view={view} onChange={setView} />
 
-            {view === "window" ? (
-              <WindowView
-                posts={available}
-                vendorId={activeVendor.id}
-                showAddTile={true}
-                onAddClick={openAddSheet}
-              />
-            ) : (
-              available.length > 0 ? (
-                <ShelfView
-                  posts={available}
-                  vendorId={activeVendor.id}
-                  showAddTile={true}
-                  onAddClick={openAddSheet}
-                />
-              ) : (
-                <ShelfView
-                  posts={[]}
-                  vendorId={activeVendor.id}
-                  showAddTile={true}
-                  onAddClick={openAddSheet}
-                />
-              )
-            )}
+            {/* Session 128 (refinement design D2 + D3): ViewToggle + ShelfView
+                retired. WindowView is the only find-rendering path. */}
+            <WindowView
+              posts={available}
+              vendorId={activeVendor.id}
+              showAddTile={true}
+              onAddClick={openAddSheet}
+            />
 
             <BoothCloser />
           </>
