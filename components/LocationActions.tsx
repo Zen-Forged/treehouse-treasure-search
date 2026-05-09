@@ -10,7 +10,13 @@
 // CTA shape (D9 + D10):
 //   - Twin buttons, equal width (flex: 1), 10px gap, 44px height, 8px radius
 //   - Outline left:  "View on Find Map" + Lucide <Map> 16px → /map?mall=<slug>
-//   - Filled right:  "Navigate"         + Lucide <Navigation> 16px → deep-link
+//   - Filled right:  "Take Trip"        + Lucide <Navigation> 16px → deep-link
+//
+// Session 134 — copy "Navigate" → "Take Trip". The verb shifts from a
+// descriptor of the affordance ("press this and you'll be navigated") to
+// an invitation framed in the user's posture ("press this and you're
+// taking the trip to go see this in person"). Pairs with the digital-to-
+// physical thesis sharpening this session.
 //
 // Analytics fired on tap (D21):
 //   - "find_view_on_map_tapped" → { surface, mall_slug, vendor_id, post_id }
@@ -129,7 +135,7 @@ export default function LocationActions({
         }}
       >
         <Navigation size={16} strokeWidth={2} aria-hidden />
-        Navigate
+        Take Trip
       </button>
     </div>
   );

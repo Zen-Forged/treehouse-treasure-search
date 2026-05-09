@@ -1559,7 +1559,7 @@ export default function FindDetailPage() {
                 lineHeight: 1.4,
               }}
             >
-              Find this item at
+              Purchase this item at
             </div>
             <DistancePill
               miles={milesFromUser(
