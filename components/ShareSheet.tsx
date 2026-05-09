@@ -104,7 +104,9 @@ export default function ShareSheet({
   entity,
   mode = "vendor",
 }: ShareSheetProps) {
-  if (entity.kind === "find") return null; // commit 4 wires find body
+  if (entity.kind === "find") {
+    return <FindShareBody open={open} onClose={onClose} entity={entity} />;
+  }
   if (entity.kind === "mall") {
     return <MallShareBody open={open} onClose={onClose} mall={entity.mall} />;
   }
@@ -891,6 +893,455 @@ function CopyLinkTile({
         {copied ? "Copied" : "Copy Link"}
       </span>
     </button>
+  );
+}
+
+// ─── FindShareBody ───────────────────────────────────────────────────────
+// Session 137 — find share path. Channel set: SMS + QR + Copy Link
+// (matches mall path shape; Email stays Booth-only). Replaces the
+// /find/[id] OS-native navigator.share() with the in-app sheet so the
+// share moment carries Treehouse identity (slim header repeats the
+// "this find is at this place" context across screens).
+//
+// Sheet chrome inlined here too — third duplication of the chrome
+// across the file. If the project pattern needs another share entity
+// after find, factor a shared <SheetChrome> primitive at that point.
+type FindEntity = Extract<ShareSheetEntity, { kind: "find" }>;
+type FindScreen = "grid" | "qr";
+
+function FindShareBody({
+  open,
+  onClose,
+  entity,
+}: {
+  open:    boolean;
+  onClose: () => void;
+  entity:  FindEntity;
+}) {
+  const [screen, setScreen] = useState<FindScreen>("grid");
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    setScreen("grid");
+  }, [open]);
+
+  // ── Find data derivation (D3 of session 137 design) ────────────────────
+  const post       = entity.post;
+  const vendor     = entity.vendor;
+  const mall       = entity.mall;
+  const findTitle  = post.title ?? "Untitled find";
+  const vendorName = vendor.display_name;
+  const boothNo    = vendor.booth_number ?? null;
+  const mallName   = mall?.name ?? null;
+  const mallCity   = mall?.city ?? null;
+  // Mall + city composed as one short context string for the slim header
+  // bottom row; mirrors how /find/[id] cartographic eyebrow surfaces this
+  // pair (mall name above, city beneath it after session 134's swap).
+  const mallContext = [mallName, mallCity].filter(Boolean).join(", ");
+  const origin     = typeof window !== "undefined" ? window.location.origin : "";
+  const findUrl    = `${origin}/find/${post.id}`;
+  const trackPayload = { post_id: post.id, vendor_slug: vendor.slug };
+
+  // ── Channel handlers ────────────────────────────────────────────────────
+  function handleSmsTap() {
+    track("share_find_channel_tapped", { ...trackPayload, channel: "sms" });
+    const body = `Found this on Treehouse Finds: ${findTitle} · ${findUrl}`;
+    track("share_find_sms_initiated", trackPayload);
+    window.location.href = `sms:?body=${encodeURIComponent(body)}`;
+    onClose();
+  }
+
+  function handleQrTap() {
+    track("share_find_channel_tapped", { ...trackPayload, channel: "qr_code" });
+    setScreen("qr");
+  }
+
+  function handleCopyLinkTap() {
+    track("share_find_channel_tapped", { ...trackPayload, channel: "copy_link" });
+  }
+
+  function handleCopyLinkSuccess() {
+    track("share_find_copy_link_completed", trackPayload);
+  }
+
+  function handleBack() {
+    setScreen("grid");
+  }
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22, ease: EASE }}
+            onClick={onClose}
+            style={{ position: "fixed", inset: 0, background: "rgba(30,20,10,0.38)", zIndex: 100 }}
+            aria-hidden="true"
+          />
+
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Share this find"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ duration: 0.34, ease: EASE }}
+            style={{
+              position: "fixed",
+              left: 0, right: 0, bottom: 0,
+              margin: "0 auto",
+              width: "100%",
+              maxWidth: 430,
+              maxHeight: "92vh",
+              background: v1.paperCream,
+              borderRadius: "20px 20px 0 0",
+              boxShadow: "0 -8px 30px rgba(30,20,10,0.28)",
+              zIndex: 101,
+              display: "flex",
+              flexDirection: "column",
+              paddingBottom: "env(safe-area-inset-bottom, 0px)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "center", paddingTop: 12, paddingBottom: 4, flexShrink: 0 }}>
+              <div aria-hidden="true" style={{ width: 44, height: 4, borderRadius: 999, background: v1.inkFaint }} />
+            </div>
+
+            <TopBar
+              showBack={screen !== "grid"}
+              onBack={handleBack}
+              onClose={onClose}
+              closeDisabled={false}
+            />
+
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                overflowX: "hidden",
+                WebkitOverflowScrolling: "touch",
+                padding: "6px 22px 22px",
+              }}
+            >
+              {screen === "grid" && (
+                <FindGridScreen
+                  findTitle={findTitle}
+                  boothNo={boothNo}
+                  vendorName={vendorName}
+                  mallContext={mallContext}
+                  findUrl={findUrl}
+                  onSmsTap={handleSmsTap}
+                  onQrTap={handleQrTap}
+                  onCopyLinkTap={handleCopyLinkTap}
+                  onCopyLinkSuccess={handleCopyLinkSuccess}
+                />
+              )}
+
+              {screen === "qr" && (
+                <FindQrScreen
+                  findTitle={findTitle}
+                  boothNo={boothNo}
+                  vendorName={vendorName}
+                  mallContext={mallContext}
+                  findUrl={findUrl}
+                  trackPayload={trackPayload}
+                />
+              )}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ─── FindSlimHeader ──────────────────────────────────────────────────────
+// Frame C header for find entity (D3 of session 137 design):
+//   [Find Title 28px Lora, 2-line clamp, lineHeight 1.3+]
+//   [BOOTH N pill] (centered, omitted when booth_number is null)
+//   [PiMapPin] [Vendor name] (centered, Lora 16)
+//   [Mall name, City]        (centered, sys 12)
+//
+// Stack mirrors the session 135 booth slim header (4 rows max) so the
+// visual rhythm reads consistently across entity tiers. Title clamp uses
+// lineHeight 1.4 per feedback_lora_lineheight_minimum_for_clamp to keep
+// descenders inside the line-box.
+function FindSlimHeader({
+  findTitle,
+  boothNo,
+  vendorName,
+  mallContext,
+}: {
+  findTitle:   string;
+  boothNo:     string | null;
+  vendorName:  string;
+  mallContext: string;
+}) {
+  return (
+    <div style={{ paddingTop: 12, flexShrink: 0 }}>
+      <div
+        style={{
+          fontFamily: FONT_LORA,
+          fontWeight: 500,
+          fontSize: 28,
+          color: v1.inkPrimary,
+          textAlign: "center",
+          lineHeight: 1.15,
+          letterSpacing: "-0.015em",
+          padding: "0 8px",
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+        }}
+      >
+        {findTitle}
+      </div>
+
+      {boothNo && (
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
+          <div
+            style={{
+              padding: "7px 22px",
+              border: `1px solid ${v1.inkHairline}`,
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.4)",
+              fontFamily: FONT_SYS,
+              fontSize: 12,
+              fontWeight: 600,
+              letterSpacing: "0.18em",
+              color: v1.inkMid,
+              textTransform: "uppercase",
+            }}
+          >
+            BOOTH {boothNo}
+          </div>
+        </div>
+      )}
+
+      {vendorName && (
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 6, marginTop: 14 }}>
+          <PiMapPin
+            size={14}
+            color={v1.inkMid}
+            style={{ marginTop: 3, flexShrink: 0 }}
+            aria-hidden="true"
+          />
+          <span
+            style={{
+              fontFamily: FONT_LORA,
+              fontWeight: 500,
+              fontSize: 16,
+              color: v1.inkPrimary,
+              lineHeight: 1.3,
+            }}
+          >
+            {vendorName}
+          </span>
+        </div>
+      )}
+
+      {mallContext && (
+        <div
+          style={{
+            fontFamily: FONT_SYS,
+            fontSize: 12,
+            color: v1.inkMid,
+            textAlign: "center",
+            lineHeight: 1.4,
+            marginTop: 4,
+            padding: "0 12px",
+          }}
+        >
+          {mallContext}
+        </div>
+      )}
+
+      <div style={{ height: 1, background: v1.inkHairline, marginTop: 18 }} />
+    </div>
+  );
+}
+
+// ─── FindGridScreen ──────────────────────────────────────────────────────
+function FindGridScreen({
+  findTitle,
+  boothNo,
+  vendorName,
+  mallContext,
+  findUrl,
+  onSmsTap,
+  onQrTap,
+  onCopyLinkTap,
+  onCopyLinkSuccess,
+}: {
+  findTitle:         string;
+  boothNo:           string | null;
+  vendorName:        string;
+  mallContext:       string;
+  findUrl:           string;
+  onSmsTap:          () => void;
+  onQrTap:           () => void;
+  onCopyLinkTap:     () => void;
+  onCopyLinkSuccess: () => void;
+}) {
+  return (
+    <>
+      <FindSlimHeader
+        findTitle={findTitle}
+        boothNo={boothNo}
+        vendorName={vendorName}
+        mallContext={mallContext}
+      />
+
+      <div
+        style={{
+          fontFamily: FONT_SYS,
+          fontSize: 10,
+          fontWeight: 600,
+          letterSpacing: "0.16em",
+          textTransform: "uppercase",
+          color: v1.inkMuted,
+          textAlign: "center",
+          marginTop: 16,
+          marginBottom: 12,
+        }}
+      >
+        Share via
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+        <ChannelTile icon={<PiChatCircleText size={22} color={v1.inkPrimary} />} label="SMS"      onClick={onSmsTap} />
+        <ChannelTile icon={<PiQrCode        size={22} color={v1.inkPrimary} />} label="QR Code"  onClick={onQrTap} />
+        <CopyLinkTile url={findUrl} onTap={onCopyLinkTap} onCopySuccess={onCopyLinkSuccess} />
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "center",
+          gap: 8,
+          marginTop: 18,
+          paddingTop: 14,
+          borderTop: `1px solid ${v1.inkHairline}`,
+        }}
+      >
+        <PiLeaf
+          size={14}
+          color={v1.inkMuted}
+          style={{ marginTop: 2, flexShrink: 0 }}
+          aria-hidden="true"
+        />
+        <div
+          style={{
+            fontFamily: FONT_SYS,
+            fontSize: 11,
+            color: v1.inkMuted,
+            lineHeight: 1.45,
+            maxWidth: 260,
+          }}
+        >
+          Anyone with this link can view this find in Treehouse Finds.
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── FindQrScreen ────────────────────────────────────────────────────────
+function FindQrScreen({
+  findTitle,
+  boothNo,
+  vendorName,
+  mallContext,
+  findUrl,
+  trackPayload,
+}: {
+  findTitle:    string;
+  boothNo:      string | null;
+  vendorName:   string;
+  mallContext:  string;
+  findUrl:      string;
+  trackPayload: { post_id: string; vendor_slug: string };
+}) {
+  useEffect(() => {
+    track("share_find_qr_viewed", trackPayload);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <>
+      <FindSlimHeader
+        findTitle={findTitle}
+        boothNo={boothNo}
+        vendorName={vendorName}
+        mallContext={mallContext}
+      />
+
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 22 }}>
+        <div
+          style={{
+            padding: 12,
+            background: v1.postit,
+            borderRadius: 10,
+            border: `1px solid ${v1.inkHairline}`,
+            position: "relative",
+            display: "inline-block",
+          }}
+        >
+          <QRCode
+            value={findUrl}
+            size={200}
+            level="H"
+            fgColor="#000000"
+            bgColor="#ffffff"
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: 44,
+              height: 44,
+              background: "#ffffff",
+              borderRadius: "50%",
+              boxShadow: "0 0 0 4px #ffffff",
+              overflow: "hidden",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icon.png" alt="" width={44} height={44} style={{ display: "block" }} />
+          </div>
+        </div>
+
+        <div
+          style={{
+            fontFamily: FONT_LORA,
+            fontStyle: "italic",
+            fontSize: 12,
+            color: v1.inkMuted,
+            marginTop: 10,
+            textAlign: "center",
+          }}
+        >
+          Scan to view this find
+        </div>
+      </div>
+    </>
   );
 }
 
