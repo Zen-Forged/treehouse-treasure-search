@@ -65,7 +65,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useLayoutEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Send, Pencil, ChevronRight } from "lucide-react";
+import { ArrowLeft, Pencil, ChevronRight } from "lucide-react";
 import { PiStorefront } from "react-icons/pi";
 import { motion, type PanInfo } from "framer-motion";
 import FlagGlyph from "@/components/FlagGlyph";
@@ -87,6 +87,7 @@ import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import PhotoLightbox from "@/components/PhotoLightbox";
 import LocationActions from "@/components/LocationActions";
+import MastheadPaperAirplane from "@/components/MastheadPaperAirplane";
 import ShareSheet from "@/components/ShareSheet";
 import type { Post } from "@/types/treehouse";
 
@@ -1122,7 +1123,7 @@ export default function FindDetailPage() {
           // window before data loads.
           post ? (
             <IconBubble onClick={handleShare} ariaLabel="Share this find">
-              <Send size={22} strokeWidth={1.7} style={{ color: v1.green }} />
+              <MastheadPaperAirplane />
             </IconBubble>
           ) : null
         }

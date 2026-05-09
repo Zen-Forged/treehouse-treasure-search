@@ -39,6 +39,7 @@ import PostcardMallCard from "@/components/PostcardMallCard";
 import BottomNav from "@/components/BottomNav";
 import MastheadProfileButton from "@/components/MastheadProfileButton";
 import MastheadBackButton from "@/components/MastheadBackButton";
+import MastheadPaperAirplane from "@/components/MastheadPaperAirplane";
 import ShareSheet from "@/components/ShareSheet";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { useShopperAuth } from "@/lib/useShopperAuth";
@@ -210,20 +211,7 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
                 WebkitTapHighlightColor: "transparent",
               }}
             >
-              <svg
-                width={22}
-                height={22}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke={v1.green}
-                strokeWidth={1.7}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M21 3 10.5 13.5" />
-                <path d="M21 3 14.5 21l-4-7.5L3 9.5 21 3Z" />
-              </svg>
+              <MastheadPaperAirplane />
             </button>
           ) : null
         }
