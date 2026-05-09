@@ -69,7 +69,21 @@ export type EventType =
   // (status flips to 'denied') + fires sendDenialNotice email + persists
   // free-text denial_reason in the row (admin-internal; never exposed).
   // Payload logs reason LENGTH only (not content) per D12.
-  | "vendor_request_denied";
+  | "vendor_request_denied"
+  // Session 137 — Share Sheet generalization (Mall + Find entities) ─────
+  // Mirrors session 135's share_booth_* shape across the new entity tiers
+  // per the 3-tier engagement+share lattice (memory: project_layered_*).
+  // Mall + Find use SMS + QR + Copy Link (no Email — booth-only). These
+  // events ride the client → /api/events ingest path; the route's
+  // CLIENT_EVENT_TYPES whitelist must mirror this list.
+  | "share_mall_channel_tapped"
+  | "share_mall_qr_viewed"
+  | "share_mall_sms_initiated"
+  | "share_mall_copy_link_completed"
+  | "share_find_channel_tapped"
+  | "share_find_qr_viewed"
+  | "share_find_sms_initiated"
+  | "share_find_copy_link_completed";
 
 export interface RecordEventOptions {
   user_id?:    string | null;

@@ -38,6 +38,23 @@ const CLIENT_EVENT_TYPES = [
   "find_shared",
   "tag_extracted",
   "tag_skipped",
+  // Session 137 — Share Sheet generalization (Mall + Find entities). Mall
+  // + Find use SMS + QR + Copy Link channels (no Email). Per-entity events
+  // mirror session 135's share_booth_* shape. NOTE: this whitelist has a
+  // pre-existing drift gap — 11 events added since session 99
+  // (flagged_booth_explored, find_swiped, location_*, find_*_tapped,
+  // flagged_directions_tapped, share_booth_*) live in lib/clientEvents.ts
+  // ClientEventType but were never added here, so they 400 silently. That
+  // drift is captured as a follow-up task; this commit only adds the new
+  // session-137 types to keep scope clean.
+  "share_mall_channel_tapped",
+  "share_mall_qr_viewed",
+  "share_mall_sms_initiated",
+  "share_mall_copy_link_completed",
+  "share_find_channel_tapped",
+  "share_find_qr_viewed",
+  "share_find_sms_initiated",
+  "share_find_copy_link_completed",
 ] as const;
 type ClientEventType = (typeof CLIENT_EVENT_TYPES)[number];
 
