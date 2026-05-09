@@ -290,6 +290,7 @@ function VendorRequestInner() {
             <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
           </button>
         }
+        right={null}
       />
 
       <main
