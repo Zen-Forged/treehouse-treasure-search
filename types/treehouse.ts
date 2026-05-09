@@ -84,3 +84,72 @@ export interface LocalVendorProfile {
 
 export const LOCAL_VENDOR_KEY = "th_vendor_profile";
 export const POST_IMAGE_KEY   = "th_post_image";
+
+// ─── Admin Requests tab types (relocated from app/admin/page.tsx, session 136
+// Arc 2 commit 5 per docs/admin-requests-tab-design.md D15). VendorRequest
+// gained `denial_reason` in Arc 1 (commit 4). Shared by app/admin/page.tsx
+// and the extracted components/admin/RequestsTab.tsx. ───────────────────────
+
+export interface VendorRequest {
+  id:              string;
+  name:            string;
+  first_name:      string | null;
+  last_name:       string | null;
+  booth_name:      string | null;
+  email:           string;
+  booth_number:    string | null;
+  mall_id:         string | null;
+  mall_name:       string | null;
+  status:          string;
+  created_at:      string;
+  proof_image_url: string | null;
+  // Arc 1 (D5+D14) — admin-internal denial reason. NULL for pending +
+  // approved rows. Required at API layer when status flips to denied.
+  // Never exposed to vendors.
+  denial_reason:   string | null;
+}
+
+export interface DiagnosisConflict {
+  display_name: string;
+  booth_number: string | null;
+  user_id:      string | null;
+  slug:         string;
+}
+
+export interface DiagnosisVendorSnapshot {
+  id:           string;
+  display_name: string;
+  booth_number: string | null;
+  slug:         string;
+  user_id:      string | null;
+  mall_id:      string;
+  created_at:   string;
+}
+
+export interface DiagnosisAuthUser {
+  id:                 string;
+  email:              string;
+  email_confirmed_at: string | null;
+  last_sign_in_at:    string | null;
+  created_at:         string;
+}
+
+export interface DiagnosisReport {
+  request: {
+    id:           string;
+    name:         string;
+    email:        string;
+    booth_number: string | null;
+    mall_id:      string | null;
+    mall_name:    string | null;
+    status:       string;
+    created_at:   string;
+  };
+  conflicts: {
+    booth_collision: DiagnosisVendorSnapshot[];
+    name_collision:  DiagnosisVendorSnapshot[];
+    auth_user:       DiagnosisAuthUser | null;
+  };
+  diagnosis:        string;
+  suggested_action: string;
+}
