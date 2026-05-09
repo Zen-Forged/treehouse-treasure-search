@@ -71,6 +71,7 @@ interface AdminPost {
 
 type Toast =
   | { kind: "success"; name: string; email: string; booth: string | null; mall: string | null; warning?: string; note?: string }
+  | { kind: "deny-success"; name: string; warning?: "email_failed" }  // session 136 D11 — soft email sent, optional email_failed warning if Resend hiccuped post-flip
   | { kind: "error"; message: string; requestId?: string; diagnosis?: string; conflict?: DiagnosisConflict }
   | { kind: "mall-status"; name: string; status: MallStatus; firstActivation: boolean };
 
@@ -459,6 +460,55 @@ export default function AdminPage() {
     setRequestBusy(prev => { const next = new Set(prev); next.delete(request.id); return next; });
   }
 
+  async function denyVendorRequest(request: VendorRequest, denialReason: string) {
+    if (requestBusy.has(request.id)) return;
+    setRequestBusy(prev => { const next = new Set(prev); next.add(request.id); return next; });
+
+    try {
+      const res = await authFetch("/api/admin/vendor-requests", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "deny",
+          requestId: request.id,
+          denial_reason: denialReason,
+        }),
+      });
+      const json = await res.json();
+
+      if (!res.ok || !json.ok) {
+        setToast({
+          kind: "error",
+          message: `Couldn't deny ${request.name}: ${json.error || "unknown error"}`,
+          requestId: request.id,
+          diagnosis: json.diagnosis,
+        });
+        setRequestBusy(prev => { const next = new Set(prev); next.delete(request.id); return next; });
+        return;
+      }
+
+      // D11 — success toast variant. `warning: "email_failed"` triggers
+      // the amber email-fail-after-status-flip variant (status was saved
+      // but Resend didn't send; vendor not notified).
+      const firstName =
+        (request.first_name?.trim()) ||
+        request.name.split(/\s+/)[0] ||
+        request.name;
+
+      setToast({
+        kind: "deny-success",
+        name: firstName,
+        warning: json.warning === "email_failed" ? "email_failed" : undefined,
+      });
+
+      await fetchVendorRequests();
+    } catch (err) {
+      console.error("Vendor deny error:", err);
+      setToast({ kind: "error", message: err instanceof Error ? err.message : "Unknown error", requestId: request.id });
+    }
+
+    setRequestBusy(prev => { const next = new Set(prev); next.delete(request.id); return next; });
+  }
+
   async function diagnoseRequest(requestId: string) {
     if (diagnosisBusy.has(requestId)) return;
     setDiagnosisBusy(prev => { const next = new Set(prev); next.add(requestId); return next; });
@@ -643,6 +693,7 @@ export default function AdminPage() {
           diagnosisReports={diagnosisReports}
           diagnosisErrors={diagnosisErrors}
           onApprove={approveVendorRequest}
+          onDeny={denyVendorRequest}
           onDiagnose={diagnoseRequest}
           onDismissDiagnosis={dismissDiagnosis}
           onRefresh={fetchVendorRequests}
@@ -878,6 +929,33 @@ export default function AdminPage() {
                       fontStyle: "italic"
                     }}>
                       ⚠️ {toast.warning}
+                    </div>
+                  )}
+                </>
+              ) : toast.kind === "deny-success" ? (
+                <>
+                  <div style={{
+                    fontSize: 9,
+                    color: toast.warning === "email_failed" ? "#b6843a" : colors.green,
+                    textTransform: "uppercase",
+                    letterSpacing: "1.8px", marginBottom: 4, fontWeight: 600
+                  }}>
+                    {toast.warning === "email_failed"
+                      ? "⚠️ Denied · email failed"
+                      : "✓ Denied · soft email sent"}
+                  </div>
+                  <div style={{
+                    fontFamily: "Georgia, serif", fontSize: 14, fontWeight: 600,
+                    color: colors.textPrimary, marginBottom: 2
+                  }}>
+                    {toast.name}
+                  </div>
+                  {toast.warning === "email_failed" && (
+                    <div style={{
+                      fontSize: 11, color: colors.textMid, marginTop: 4,
+                      fontStyle: "italic", lineHeight: 1.5,
+                    }}>
+                      Status saved but email didn't send. Vendor not notified.
                     </div>
                   )}
                 </>

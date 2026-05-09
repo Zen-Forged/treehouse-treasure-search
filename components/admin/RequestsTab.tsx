@@ -39,7 +39,8 @@ export interface RequestsTabProps {
   diagnosisBusy:     Set<string>;
   diagnosisReports:  Record<string, DiagnosisReport>;
   diagnosisErrors:   Record<string, string>;
-  onApprove:         (request: VendorRequest) => void;
+  onApprove:         (request: VendorRequest) => Promise<void> | void;
+  onDeny:            (request: VendorRequest, denialReason: string) => Promise<void> | void;
   onDiagnose:        (requestId: string) => void;
   onDismissDiagnosis: (requestId: string) => void;
   onRefresh:         () => void;
@@ -61,6 +62,7 @@ export default function RequestsTab(props: RequestsTabProps) {
     diagnosisReports,
     diagnosisErrors,
     onApprove,
+    onDeny,
     onDiagnose,
     onDismissDiagnosis,
     onRefresh,
@@ -82,17 +84,25 @@ export default function RequestsTab(props: RequestsTabProps) {
   const reviewMode: "decide" | "readonly" =
     reviewing?.status === "pending" ? "decide" : "readonly";
 
-  // Placeholder onSubmit — Arc 3 commit 8 wires this to the parent's
-  // approve/deny action handlers with optimistic UI. For Arc 2 commit 7
-  // we just log + close so the flow is observable mid-transition. Inline
-  // Approve button on per-row remains the actual approve path during
-  // this commit.
+  // Arc 3 commit 8 wires the modal's onSubmit through to the parent's
+  // approve/deny action handlers. Each handler manages its own toast +
+  // refetch lifecycle (parent already does that for approve; the new
+  // denyVendorRequest mirrors the shape). Modal closes immediately on
+  // submit; the row drops from the pending list once fetchVendorRequests
+  // returns. requestBusy on the parent prevents double-submit on either
+  // path.
   async function handleReviewSubmit(
     action: "approve" | "deny",
     denialReason?: string,
   ) {
-    console.log("[RequestsTab] placeholder review submit:", action, "reason:", denialReason, "request:", reviewing?.id);
+    if (!reviewing) return;
+    const target = reviewing;
     setReviewing(null);
+    if (action === "approve") {
+      await onApprove(target);
+    } else {
+      await onDeny(target, denialReason ?? "");
+    }
   }
 
   const counts = useMemo(() => {
