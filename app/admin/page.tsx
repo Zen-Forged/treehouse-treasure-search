@@ -688,7 +688,6 @@ export default function AdminPage() {
         <RequestsTab
           requests={requests}
           requestsLoading={requestsLoading}
-          requestBusy={requestBusy}
           diagnosisBusy={diagnosisBusy}
           diagnosisReports={diagnosisReports}
           diagnosisErrors={diagnosisErrors}

@@ -20,7 +20,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { RefreshCw, UserCheck, Stethoscope, ChevronRight } from "lucide-react";
+import { RefreshCw, Stethoscope, ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 import { colors } from "@/lib/tokens";
 import type { VendorRequest, DiagnosisReport } from "@/types/treehouse";
@@ -35,10 +35,13 @@ type StatusFilter = "pending" | "approved" | "denied" | "all";
 export interface RequestsTabProps {
   requests:          VendorRequest[];
   requestsLoading:   boolean;
-  requestBusy:       Set<string>;
   diagnosisBusy:     Set<string>;
   diagnosisReports:  Record<string, DiagnosisReport>;
   diagnosisErrors:   Record<string, string>;
+  // Modal closes immediately on submit; the parent's approve/deny handlers
+  // own their own busy + toast + refetch lifecycle. RequestsTab no longer
+  // tracks per-row busy state directly (the inline Approve button retired
+  // in Arc 3 commit 10 was the only consumer).
   onApprove:         (request: VendorRequest) => Promise<void> | void;
   onDeny:            (request: VendorRequest, denialReason: string) => Promise<void> | void;
   onDiagnose:        (requestId: string) => void;
@@ -57,7 +60,6 @@ export default function RequestsTab(props: RequestsTabProps) {
   const {
     requests,
     requestsLoading,
-    requestBusy,
     diagnosisBusy,
     diagnosisReports,
     diagnosisErrors,
@@ -89,8 +91,7 @@ export default function RequestsTab(props: RequestsTabProps) {
   // refetch lifecycle (parent already does that for approve; the new
   // denyVendorRequest mirrors the shape). Modal closes immediately on
   // submit; the row drops from the pending list once fetchVendorRequests
-  // returns. requestBusy on the parent prevents double-submit on either
-  // path.
+  // returns.
   async function handleReviewSubmit(
     action: "approve" | "deny",
     denialReason?: string,
@@ -185,16 +186,17 @@ export default function RequestsTab(props: RequestsTabProps) {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {filtered.map(request => {
-            const isPending = request.status === "pending";
-            const isBusy = requestBusy.has(request.id);
+            const isPending  = request.status === "pending";
+            const isDenied   = request.status === "denied";
+            const isApproved = request.status === "approved";
             const isDiagnosing = diagnosisBusy.has(request.id);
             const report = diagnosisReports[request.id];
             const diagErr = diagnosisErrors[request.id];
             return (
               <div
                 key={request.id}
-                // D10 — non-pending rows are whole-row tappable to open
-                // the readonly review modal. Inner anchors + buttons stop
+                // D10 — non-pending rows are whole-row tappable to open the
+                // readonly review modal. Inner anchors + buttons stop
                 // propagation so they keep their own tap behavior. Pending
                 // rows use the explicit Review → CTA per D1.
                 onClick={isPending ? undefined : () => setReviewing(request)}
@@ -211,10 +213,13 @@ export default function RequestsTab(props: RequestsTabProps) {
                       }
                 }
                 style={{
+                  // D9 — non-pending rows get explicit visual treatment per
+                  // status (status pill in right slot, name in ink-mid),
+                  // not a blanket opacity 0.6 dim. Pending rows pop the
+                  // surface bg as the active-work color.
                   background: isPending ? colors.surface : colors.bg,
                   border: `1px solid ${isPending ? colors.border : colors.textFaint}`,
                   borderRadius: 12, padding: "16px 18px",
-                  opacity: isPending ? 1 : 0.6,
                   cursor: isPending ? "default" : "pointer",
                 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -237,12 +242,24 @@ export default function RequestsTab(props: RequestsTabProps) {
                           objectFit: "cover",
                           border: `1px solid ${colors.border}`,
                           display: "block",
+                          // D9 — denied/approved photo thumbs dim to 0.7 so
+                          // the row reads as "settled" at a glance.
+                          opacity: isPending ? 1 : 0.7,
                         }}
                       />
                     </a>
                   )}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: colors.textPrimary, marginBottom: 4 }}>
+                    <div
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 600,
+                        // D9 — non-pending vendor names render in ink-mid
+                        // so the active-work pending rows visually lead.
+                        color: isPending ? colors.textPrimary : colors.textMid,
+                        marginBottom: 4,
+                      }}
+                    >
                       {request.booth_name || request.name}
                     </div>
                     {request.booth_name && (
@@ -261,34 +278,44 @@ export default function RequestsTab(props: RequestsTabProps) {
                     </div>
                   </div>
 
+                  {/* D1 — Review → CTA on pending rows. Inline Approve
+                      fallback retired in Arc 3 commit 10 — Approve now
+                      flows through the modal Submit button only. */}
                   {isPending && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
-                      {/* Review → CTA — Arc 2 commit 7 (D1 Frame C structural
-                          shape). Opens <ReviewRequestModal> placeholder.
-                          Arc 3 commit 10 retires the inline Approve button
-                          below once the full decide-mode flow is wired. */}
-                      <button
-                        onClick={() => setReviewing(request)}
-                        style={{
-                          padding: "8px 12px", borderRadius: 10, fontSize: 12, fontWeight: 500,
-                          background: colors.surface, color: colors.textPrimary,
-                          border: `1px solid ${colors.border}`, cursor: "pointer",
-                          display: "flex", alignItems: "center", gap: 4,
-                          minHeight: 36, whiteSpace: "nowrap"
-                        }}>
-                        Review <ChevronRight size={13} />
-                      </button>
-                      <button
-                        onClick={() => onApprove(request)}
-                        disabled={isBusy}
-                        style={{
-                          padding: "8px 14px", borderRadius: 10, fontSize: 12, fontWeight: 600,
-                          background: colors.green, color: "#fff", border: "none", cursor: "pointer",
-                          opacity: isBusy ? 0.5 : 1, display: "flex", alignItems: "center", gap: 6,
-                          minHeight: 36, whiteSpace: "nowrap"
-                        }}>
-                        <UserCheck size={13} /> {isBusy ? "…" : "Approve"}
-                      </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setReviewing(request); }}
+                      style={{
+                        flexShrink: 0,
+                        padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 500,
+                        background: colors.surface, color: colors.textPrimary,
+                        border: `1px solid ${colors.border}`, cursor: "pointer",
+                        display: "flex", alignItems: "center", gap: 4,
+                        minHeight: 44, whiteSpace: "nowrap"
+                      }}>
+                      Review <ChevronRight size={14} />
+                    </button>
+                  )}
+
+                  {/* D9 — non-pending status pill replaces the Review CTA
+                      in the right slot. Approved = green, Denied = amber.
+                      Whole-row tap (above) opens the readonly modal. */}
+                  {!isPending && (
+                    <div
+                      style={{
+                        flexShrink: 0,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: "1.4px",
+                        textTransform: "uppercase",
+                        padding: "5px 10px",
+                        borderRadius: 999,
+                        background: isApproved ? "#e7ecdf" : isDenied ? "#f4ead4" : colors.surface,
+                        color:      isApproved ? "#4a6b3a" : isDenied ? "#b6843a" : colors.textMid,
+                        border: `1px solid ${isApproved ? "#4a6b3a" : isDenied ? "#b6843a" : colors.border}`,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {request.status}
                     </div>
                   )}
                 </div>
