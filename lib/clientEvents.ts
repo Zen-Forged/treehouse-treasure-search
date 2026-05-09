@@ -35,7 +35,15 @@ export type ClientEventType =
   | "find_navigate_tapped"
   | "find_view_on_map_tapped"
   // ── R18 (session 121) — Saved per-mall restructure ───────────────────
-  | "flagged_directions_tapped";
+  | "flagged_directions_tapped"
+  // ── Session 135 — Share Booth redesign (Frame C, 3-channel grid) ─────
+  // docs/share-booth-redesign-design.md D13. Existing `find_shared` event
+  // covers /find/[id] navigator.share() — these three are sheet-channel
+  // signals from ShareBoothSheet. share_booth_email_sent stays server-side
+  // via /api/share-booth (unchanged by this redesign).
+  | "share_booth_channel_tapped"
+  | "share_booth_qr_viewed"
+  | "share_booth_sms_initiated";
 
 function getSessionId(): string {
   if (typeof window === "undefined") return "";
