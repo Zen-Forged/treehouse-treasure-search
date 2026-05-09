@@ -35,7 +35,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, UserCheck, Users, Store, X, Stethoscope, Image as ImageIcon, Upload, Loader as LoaderIcon, MapPin, ChevronDown, BarChart3, Building2 } from "lucide-react";
+import { Trash2, RefreshCw, CheckSquare, Square, AlertTriangle, LogOut, Users, Store, X, Stethoscope, Image as ImageIcon, Upload, Loader as LoaderIcon, MapPin, ChevronDown, BarChart3, Building2 } from "lucide-react";
 import { getSession, isAdmin, signOut } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { colors, v1 } from "@/lib/tokens";
@@ -43,8 +43,17 @@ import { compressImage } from "@/lib/imageUpload";
 import { getSiteSettingUrl, type SiteSettingKey } from "@/lib/siteSettings";
 import { getAllMalls } from "@/lib/posts";
 import { VendorsTab } from "@/components/admin/VendorsTab";
+import RequestsTab from "@/components/admin/RequestsTab";
 import type { User } from "@supabase/supabase-js";
-import type { Mall, MallStatus } from "@/types/treehouse";
+import type {
+  Mall,
+  MallStatus,
+  VendorRequest,
+  DiagnosisConflict,
+  DiagnosisVendorSnapshot,
+  DiagnosisAuthUser,
+  DiagnosisReport,
+} from "@/types/treehouse";
 
 interface AdminPost {
   id:         string;
@@ -56,71 +65,9 @@ interface AdminPost {
   vendor?: { id: string; display_name: string; booth_number: string | null };
 }
 
-interface VendorRequest {
-  id:              string;
-  name:            string;
-  first_name:      string | null;
-  last_name:       string | null;
-  booth_name:      string | null;
-  email:           string;
-  booth_number:    string | null;
-  mall_id:         string | null;
-  mall_name:       string | null;
-  status:          string;
-  created_at:      string;
-  proof_image_url: string | null;
-  // Session 136 — Requests tab redesign Arc 1 (D5+D14). Free-text admin
-  // reason populated when status flips to 'denied'. NULL for pending +
-  // approved rows. Never exposed to vendors. Type intentionally stays
-  // `string | null` here (relocated to types/treehouse.ts in Arc 2 when
-  // <RequestsTab> is extracted from inline).
-  denial_reason:   string | null;
-}
-
-interface DiagnosisConflict {
-  display_name: string;
-  booth_number: string | null;
-  user_id:      string | null;
-  slug:         string;
-}
-
-interface DiagnosisVendorSnapshot {
-  id:           string;
-  display_name: string;
-  booth_number: string | null;
-  slug:         string;
-  user_id:      string | null;
-  mall_id:      string;
-  created_at:   string;
-}
-
-interface DiagnosisAuthUser {
-  id:                 string;
-  email:              string;
-  email_confirmed_at: string | null;
-  last_sign_in_at:    string | null;
-  created_at:         string;
-}
-
-interface DiagnosisReport {
-  request: {
-    id:           string;
-    name:         string;
-    email:        string;
-    booth_number: string | null;
-    mall_id:      string | null;
-    mall_name:    string | null;
-    status:       string;
-    created_at:   string;
-  };
-  conflicts: {
-    booth_collision: DiagnosisVendorSnapshot[];
-    name_collision:  DiagnosisVendorSnapshot[];
-    auth_user:       DiagnosisAuthUser | null;
-  };
-  diagnosis:        string;
-  suggested_action: string;
-}
+// VendorRequest + DiagnosisReport interfaces relocated to @/types/treehouse
+// in session 136 Arc 2 commit 5 (per docs/admin-requests-tab-design.md D15)
+// so the extracted <RequestsTab> can share them. Imports added at top of file.
 
 type Toast =
   | { kind: "success"; name: string; email: string; booth: string | null; mall: string | null; warning?: string; note?: string }
@@ -680,149 +627,22 @@ export default function AdminPage() {
         </button>
       </div>
 
-      {/* Vendor Requests Tab */}
+      {/* Vendor Requests Tab — extracted to <RequestsTab> in session 136
+          Arc 2 commit 5. Pure refactor; all state + handlers stay here. */}
       {activeTab === "requests" && (
-        <div style={{ margin: "24px 20px 0" }}>
-
-          {/* AddBoothInline retired Arc 4 Arc 3.2 (D6/D9) — pre-seed surface
-              moved to the new Vendors tab's "+ Add booth" dashed-pill, which
-              wraps the same AddBoothSheet primitive directly. Requests tab
-              now focuses on its core job: reviewing vendor self-registrations. */}
-
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2px" }}>
-              Vendor requests ({requests.length})
-            </div>
-            <button onClick={fetchVendorRequests} disabled={requestsLoading}
-              style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: colors.textMuted }}>
-              <RefreshCw size={11} style={{ opacity: requestsLoading ? 0.4 : 1 }} /> Refresh
-            </button>
-          </div>
-
-          {requestsLoading ? (
-            <div style={{ fontSize: 13, color: colors.textFaint, padding: "20px 0", textAlign: "center" }}>Loading requests…</div>
-          ) : requests.length === 0 ? (
-            <div style={{ fontSize: 13, color: colors.textFaint, padding: "20px 0", textAlign: "center", fontStyle: "italic", fontFamily: "Georgia, serif" }}>No vendor requests yet.</div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {requests.map(request => {
-                const isPending = request.status === "pending";
-                const isBusy = requestBusy.has(request.id);
-                const isDiagnosing = diagnosisBusy.has(request.id);
-                const report = diagnosisReports[request.id];
-                const diagErr = diagnosisErrors[request.id];
-                return (
-                  <div key={request.id}
-                    style={{
-                      background: isPending ? colors.surface : colors.bg,
-                      border: `1px solid ${isPending ? colors.border : colors.textFaint}`,
-                      borderRadius: 12, padding: "16px 18px",
-                      opacity: isPending ? 1 : 0.6
-                    }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                      {request.proof_image_url && (
-                        <a
-                          href={request.proof_image_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ flexShrink: 0, display: "block" }}
-                          aria-label="Open booth photo in new tab"
-                        >
-                          <img
-                            src={request.proof_image_url}
-                            alt="Booth proof"
-                            style={{
-                              width: 56,
-                              height: 56,
-                              borderRadius: 8,
-                              objectFit: "cover",
-                              border: `1px solid ${colors.border}`,
-                              display: "block",
-                            }}
-                          />
-                        </a>
-                      )}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: colors.textPrimary, marginBottom: 4 }}>
-                          {request.booth_name || request.name}
-                        </div>
-                        {request.booth_name && (
-                          <div style={{ fontSize: 11, color: colors.textMuted, marginBottom: 2, fontStyle: "italic" }}>
-                            {request.first_name && request.last_name ? `${request.first_name} ${request.last_name}` : request.name}
-                          </div>
-                        )}
-                        <div style={{ fontSize: 12, color: colors.textMid, marginBottom: 2 }}>
-                          {request.email}
-                        </div>
-                        <div style={{ fontSize: 11, color: colors.textMuted }}>
-                          {request.booth_number ? `Booth ${request.booth_number}` : "No booth specified"} • {request.mall_name || "No location specified"}
-                        </div>
-                        <div style={{ fontSize: 10, color: colors.textFaint, fontFamily: "monospace", marginTop: 4 }}>
-                          {new Date(request.created_at).toLocaleDateString()} • {request.status}
-                        </div>
-                      </div>
-
-                      {isPending && (
-                        <button
-                          onClick={() => approveVendorRequest(request)}
-                          disabled={isBusy}
-                          style={{
-                            padding: "10px 18px", borderRadius: 10, fontSize: 13, fontWeight: 600,
-                            background: colors.green, color: "#fff", border: "none", cursor: "pointer",
-                            opacity: isBusy ? 0.5 : 1, display: "flex", alignItems: "center", gap: 6,
-                            minHeight: 44, flexShrink: 0, whiteSpace: "nowrap"
-                          }}>
-                          <UserCheck size={14} /> {isBusy ? "…" : "Approve"}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Diagnose control — always available for every request */}
-                    <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                      {!report && !diagErr && (
-                        <button
-                          onClick={() => diagnoseRequest(request.id)}
-                          disabled={isDiagnosing}
-                          style={{
-                            display: "flex", alignItems: "center", gap: 5,
-                            background: "none", border: "none", cursor: "pointer",
-                            fontSize: 11, color: colors.textMid, padding: 0,
-                            opacity: isDiagnosing ? 0.5 : 1,
-                          }}>
-                          <Stethoscope size={12} />
-                          {isDiagnosing ? "Diagnosing…" : "Diagnose"}
-                        </button>
-                      )}
-                      {(report || diagErr) && (
-                        <button
-                          onClick={() => dismissDiagnosis(request.id)}
-                          style={{
-                            display: "flex", alignItems: "center", gap: 5,
-                            background: "none", border: "none", cursor: "pointer",
-                            fontSize: 11, color: colors.textFaint, padding: 0,
-                          }}>
-                          Hide diagnosis
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Inline diagnosis panel */}
-                    {diagErr && (
-                      <div style={{
-                        marginTop: 10, padding: "10px 12px", borderRadius: 8,
-                        background: colors.redBg, border: `1px solid ${colors.redBorder}`,
-                        fontSize: 11, color: colors.red, lineHeight: 1.5,
-                      }}>
-                        {diagErr}
-                      </div>
-                    )}
-                    {report && <DiagnosisPanel report={report} />}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <RequestsTab
+          requests={requests}
+          requestsLoading={requestsLoading}
+          requestBusy={requestBusy}
+          diagnosisBusy={diagnosisBusy}
+          diagnosisReports={diagnosisReports}
+          diagnosisErrors={diagnosisErrors}
+          onApprove={approveVendorRequest}
+          onDiagnose={diagnoseRequest}
+          onDismissDiagnosis={dismissDiagnosis}
+          onRefresh={fetchVendorRequests}
+          renderDiagnosisPanel={(report) => <DiagnosisPanel report={report} />}
+        />
       )}
 
       {/* Posts Tab */}
