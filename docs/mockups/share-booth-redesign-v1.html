@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Share Booth redesign — V1 (4th-tile slot + tile-shape + header-verbosity axes)</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paperCream: #f2ecd8;
+    --paperWarm:  #fefae6;
+    --postit:     #fefae8;
+    --inkPrimary: #2c241c;
+    --inkMid:     #5a4d3e;
+    --inkMuted:   #8a7e6c;
+    --inkFaint:   #b3a995;
+    --hairline:   rgba(44,36,28,0.18);
+    --hairline-strong: rgba(44,36,28,0.32);
+    --green:      #4a6b3a;
+    --greenSoft:  #e7ecdf;
+    --shadow-card: 0 2px 6px rgba(44,36,28,0.06), 0 1px 2px rgba(44,36,28,0.04);
+    --shadow-tile: 0 1px 2px rgba(44,36,28,0.05);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: #1a1611;
+    color: #ddd5c4;
+    padding: 36px 16px 80px;
+  }
+
+  /* === Header / decisions pane === */
+  .doc-title {
+    font-family: "Lora", serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 22px;
+    color: #ede6d5;
+    text-align: center;
+    margin: 0 0 6px;
+  }
+  .doc-sub {
+    font-size: 13px;
+    color: #b3a995;
+    text-align: center;
+    margin: 0 0 28px;
+    letter-spacing: 0.02em;
+  }
+  .decisions {
+    max-width: 1300px;
+    margin: 0 auto 36px;
+    background: #232017;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 20px 24px 22px;
+  }
+  .decisions h3 {
+    font-family: "Lora", serif;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: #d8c896;
+    margin: 0 0 10px;
+  }
+  .decisions ul { margin: 0 0 18px; padding-left: 18px; font-size: 13px; line-height: 1.55; color: #cfc6b4; }
+  .decisions ul li { margin-bottom: 4px; }
+  .decisions ul:last-child { margin-bottom: 0; }
+  .decisions strong { color: #ede6d5; }
+  .decisions em { color: #d8c896; font-style: italic; }
+  .axis-row {
+    display: grid;
+    grid-template-columns: 130px 1fr 1fr 1fr;
+    gap: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .axis-row:last-child { border-bottom: none; }
+  .axis-label { color: #d8c896; font-weight: 600; }
+  .axis-cell { color: #cfc6b4; }
+  .axis-frame-label { color: #ede6d5; font-weight: 600; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 2px; }
+
+  /* === Row of phone frames === */
+  .row {
+    display: flex;
+    gap: 28px;
+    justify-content: center;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    max-width: 1300px;
+    margin: 0 auto;
+  }
+  .frame { width: 390px; flex-shrink: 0; }
+  .frame-label {
+    font-family: "Lora", serif;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #ede6d5;
+    margin: 0 0 4px;
+    padding-left: 14px;
+  }
+  .frame-tagline {
+    font-family: "Lora", serif;
+    font-style: italic;
+    font-size: 13px;
+    color: #d8c896;
+    margin: 0 0 10px;
+    padding-left: 14px;
+  }
+  .frame-desc {
+    font-size: 12px;
+    line-height: 1.5;
+    color: #b3a995;
+    margin: 0 0 14px;
+    padding: 0 14px;
+    min-height: 76px;
+  }
+
+  /* === Phone (rendering bottom-sheet open at peak) === */
+  .phone {
+    width: 390px;
+    height: 760px;
+    background: rgba(30,20,10,0.38);
+    border-radius: 28px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.5);
+  }
+  /* Backdrop simulates the dimmed page beneath the sheet */
+  .backdrop-page {
+    position: absolute; inset: 0;
+    background: var(--paperCream);
+    opacity: 0.18;
+    filter: blur(2px);
+  }
+  .sheet {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    background: var(--paperCream);
+    border-radius: 20px 20px 0 0;
+    padding: 12px 22px 28px;
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.18);
+  }
+  .handle {
+    width: 44px; height: 4px;
+    background: var(--inkFaint);
+    border-radius: 2px;
+    margin: 0 auto 10px;
+  }
+
+  /* === Sheet header pieces === */
+  .sheet-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .topbar-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--hairline);
+    background: rgba(255,255,255,0.5);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--inkMid);
+    font-size: 18px;
+  }
+  .wordmark {
+    font-family: "Lora", serif;
+    font-style: italic;
+    font-size: 18px;
+    color: var(--inkPrimary);
+    letter-spacing: -0.01em;
+  }
+  .wordmark .leaf {
+    display: inline-block;
+    width: 12px; height: 12px;
+    background: var(--green);
+    border-radius: 50% 0;
+    margin-right: 4px;
+    transform: rotate(-30deg);
+  }
+  .eyebrow {
+    font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--inkMuted);
+    text-align: center;
+    margin: 8px 0 6px;
+  }
+  .booth-name {
+    font-family: "Lora", serif;
+    font-weight: 500;
+    color: var(--inkPrimary);
+    text-align: center;
+    line-height: 1.05;
+    letter-spacing: -0.015em;
+  }
+  .booth-name.large { font-size: 36px; padding: 0 8px; }
+  .booth-name.medium { font-size: 28px; padding: 0 8px; }
+  .booth-name.small { font-size: 22px; padding: 0; }
+  .leaf-divider {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin: 12px 0 10px;
+  }
+  .leaf-divider .line {
+    width: 28px; height: 1px;
+    background: var(--hairline);
+  }
+  .leaf-glyph {
+    width: 14px; height: 14px;
+    background: transparent;
+    border: 1.5px solid var(--green);
+    border-radius: 50% 0;
+    transform: rotate(-30deg);
+  }
+  .booth-pill {
+    margin: 0 auto;
+    display: inline-block;
+    padding: 7px 22px;
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.4);
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    color: var(--inkMid);
+  }
+  .booth-pill-wrap { display: flex; justify-content: center; margin-bottom: 14px; }
+  .mall-row {
+    display: flex; align-items: flex-start; justify-content: center; gap: 6px;
+    margin-bottom: 4px;
+  }
+  .pin-icon {
+    color: var(--inkMid);
+    font-size: 14px;
+    margin-top: 1px;
+  }
+  .mall-name {
+    font-family: "Lora", serif;
+    font-weight: 500;
+    font-size: 16px;
+    color: var(--inkPrimary);
+  }
+  .mall-address {
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 12px;
+    color: var(--inkMid);
+    text-align: center;
+    margin-bottom: 16px;
+    line-height: 1.4;
+  }
+  .section-divider {
+    height: 1px;
+    background: var(--hairline);
+    margin: 0 0 14px;
+  }
+  .section-eyebrow {
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--inkMuted);
+    text-align: center;
+    margin-bottom: 12px;
+  }
+
+  /* === Tile grids === */
+  .tile-grid-2x2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .tile-grid-1x3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .tile-square {
+    background: rgba(255,255,255,0.4);
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    padding: 18px 8px 14px;
+    text-align: center;
+    box-shadow: var(--shadow-tile);
+  }
+  .tile-square.disabled {
+    opacity: 0.45;
+    background: rgba(255,255,255,0.22);
+  }
+  .tile-icon {
+    font-size: 24px;
+    color: var(--inkPrimary);
+    margin-bottom: 8px;
+    line-height: 1;
+  }
+  .tile-icon-small {
+    font-size: 22px;
+    color: var(--inkPrimary);
+    margin-bottom: 6px;
+    line-height: 1;
+  }
+  .tile-label {
+    font-family: "Lora", serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--inkPrimary);
+    margin-bottom: 2px;
+  }
+  .tile-label-small {
+    font-family: "Lora", serif;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--inkPrimary);
+    margin-bottom: 2px;
+  }
+  .tile-sublabel {
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 10px;
+    color: var(--inkMuted);
+    line-height: 1.3;
+  }
+  .tile-bar {
+    background: rgba(255,255,255,0.4);
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: var(--shadow-tile);
+  }
+  .tile-bar + .tile-bar { margin-top: 8px; }
+  .tile-bar .tile-icon-bar {
+    font-size: 22px;
+    color: var(--inkPrimary);
+    line-height: 1;
+    width: 28px;
+    text-align: center;
+  }
+  .tile-bar .tile-text {
+    flex: 1;
+  }
+  .tile-bar .tile-bar-label {
+    font-family: "Lora", serif;
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--inkPrimary);
+  }
+  .tile-bar .tile-bar-sublabel {
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 11px;
+    color: var(--inkMuted);
+    margin-top: 1px;
+  }
+  .tile-bar .chevron {
+    color: var(--inkMuted);
+    font-size: 16px;
+  }
+
+  .footer-disclaimer {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--hairline);
+  }
+  .footer-disclaimer .leaf-glyph {
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  .footer-disclaimer-text {
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 11px;
+    color: var(--inkMuted);
+    line-height: 1.45;
+    max-width: 240px;
+  }
+
+  /* === Question pane === */
+  .question {
+    max-width: 1300px;
+    margin: 36px auto 0;
+    background: #232017;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 20px 24px 22px;
+  }
+  .question h3 {
+    font-family: "Lora", serif;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: #d8c896;
+    margin: 0 0 12px;
+  }
+  .question p { font-size: 13px; line-height: 1.6; color: #cfc6b4; margin: 0 0 8px; }
+  .question .pick {
+    font-family: "Lora", serif;
+    font-style: italic;
+    font-size: 14px;
+    color: #ede6d5;
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+
+<h1 class="doc-title">Share Booth — V1</h1>
+<p class="doc-sub">Three structural frames against your concept mockup. Booth-only scope (Q5). Bottom-sheet primitive preserved (Q3=B). Messenger deferred (Q2). Email replaces Copy Link tile (Q1). QR sub-screen reveal locked (Q4=A) — not shown here.</p>
+
+<div class="decisions">
+  <h3>Open axes V1 spans</h3>
+  <div class="axis-row">
+    <div class="axis-label">Axis</div>
+    <div class="axis-cell"><div class="axis-frame-label">Frame A</div>Concept-faithful</div>
+    <div class="axis-cell"><div class="axis-frame-label">Frame B</div>Channel stack</div>
+    <div class="axis-cell"><div class="axis-frame-label">Frame C</div>Compact</div>
+  </div>
+  <div class="axis-row">
+    <div class="axis-label">4th-tile slot</div>
+    <div class="axis-cell">2×2 grid w/ <strong>Messenger "Coming soon"</strong> placeholder. Visual symmetry; signals roadmap.</div>
+    <div class="axis-cell"><strong>3 horizontal bars</strong>, no 4th. Each bar fills the full sheet width.</div>
+    <div class="axis-cell"><strong>3 square tiles in a row</strong>, no 4th. No coming-soon signal.</div>
+  </div>
+  <div class="axis-row">
+    <div class="axis-label">Tile shape</div>
+    <div class="axis-cell">Square (icon stacked over label). Matches concept.</div>
+    <div class="axis-cell">Horizontal bar (icon + label + sub-label + chevron).</div>
+    <div class="axis-cell">Square but smaller (icon + label only, no sub-label).</div>
+  </div>
+  <div class="axis-row">
+    <div class="axis-label">Header verbosity</div>
+    <div class="axis-cell"><strong>Full</strong>: wordmark + eyebrow + name (large) + leaf-divider + booth pill + mall + address.</div>
+    <div class="axis-cell"><strong>Full</strong>: same as A.</div>
+    <div class="axis-cell"><strong>Slim</strong>: name (medium) + booth pill + mall (1 line). No wordmark, no eyebrow, no address line.</div>
+  </div>
+  <div class="axis-row">
+    <div class="axis-label">Vertical room</div>
+    <div class="axis-cell">Tightest. Header eats ~55% of sheet.</div>
+    <div class="axis-cell">Tighter still. 3 bars ~210px tall.</div>
+    <div class="axis-cell">Most generous. Header ~28%, room to breathe.</div>
+  </div>
+  <div class="axis-row">
+    <div class="axis-label">Best when</div>
+    <div class="axis-cell">Brand presence on share is the priority + Messenger roadmap visibility matters.</div>
+    <div class="axis-cell">Sub-labels carry weight ("Send a text", "Scan to open booth") + future channels likely.</div>
+    <div class="axis-cell">Speed-to-share is the priority + chrome should disappear.</div>
+  </div>
+</div>
+
+<div class="row">
+
+  <!-- ============== FRAME A ============== -->
+  <div class="frame">
+    <p class="frame-label">Frame A</p>
+    <p class="frame-tagline">Concept-faithful — 2×2 with placeholder</p>
+    <p class="frame-desc">Mirrors your reference exactly. 2×2 channel grid with Messenger as a "Coming soon" disabled tile in the 4th slot. Full header (wordmark + eyebrow + large booth name + leaf-divider + booth pill + mall + address). Footer disclaimer with leaf glyph.</p>
+    <div class="phone">
+      <div class="backdrop-page"></div>
+      <div class="sheet">
+        <div class="handle"></div>
+        <div class="sheet-topbar">
+          <div class="topbar-btn">←</div>
+          <div class="wordmark"><span class="leaf"></span>treehouse <em>finds</em></div>
+          <div class="topbar-btn">×</div>
+        </div>
+        <div class="eyebrow">Share this booth</div>
+        <div class="booth-name large">Moorehouse Mercantile</div>
+        <div class="leaf-divider">
+          <div class="line"></div>
+          <div class="leaf-glyph"></div>
+          <div class="line"></div>
+        </div>
+        <div class="booth-pill-wrap">
+          <div class="booth-pill">BOOTH D19</div>
+        </div>
+        <div class="mall-row">
+          <span class="pin-icon">📍</span>
+          <span class="mall-name">America's Antique Mall</span>
+        </div>
+        <div class="mall-address">5252 Bardstown Rd, Louisville, KY 40291</div>
+        <div class="section-divider"></div>
+        <div class="section-eyebrow">Share via</div>
+        <div class="tile-grid-2x2">
+          <div class="tile-square">
+            <div class="tile-icon">✉️</div>
+            <div class="tile-label">Email</div>
+            <div class="tile-sublabel">Send a link</div>
+          </div>
+          <div class="tile-square">
+            <div class="tile-icon">💬</div>
+            <div class="tile-label">SMS</div>
+            <div class="tile-sublabel">Send a text</div>
+          </div>
+          <div class="tile-square">
+            <div class="tile-icon">▦</div>
+            <div class="tile-label">QR Code</div>
+            <div class="tile-sublabel">Scan to open</div>
+          </div>
+          <div class="tile-square disabled">
+            <div class="tile-icon">⊙</div>
+            <div class="tile-label">Messenger</div>
+            <div class="tile-sublabel">Coming soon</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== FRAME B ============== -->
+  <div class="frame">
+    <p class="frame-label">Frame B</p>
+    <p class="frame-tagline">Channel stack — 3 horizontal bars</p>
+    <p class="frame-desc">Three full-width horizontal bars. Each bar carries an icon, a serif label, a sub-label, and a chevron. Same full header as A. No 4th tile, no placeholder — adding Messenger later means appending one bar. Sub-labels read more clearly than in 2×2 squares.</p>
+    <div class="phone">
+      <div class="backdrop-page"></div>
+      <div class="sheet">
+        <div class="handle"></div>
+        <div class="sheet-topbar">
+          <div class="topbar-btn">←</div>
+          <div class="wordmark"><span class="leaf"></span>treehouse <em>finds</em></div>
+          <div class="topbar-btn">×</div>
+        </div>
+        <div class="eyebrow">Share this booth</div>
+        <div class="booth-name large">Moorehouse Mercantile</div>
+        <div class="leaf-divider">
+          <div class="line"></div>
+          <div class="leaf-glyph"></div>
+          <div class="line"></div>
+        </div>
+        <div class="booth-pill-wrap">
+          <div class="booth-pill">BOOTH D19</div>
+        </div>
+        <div class="mall-row">
+          <span class="pin-icon">📍</span>
+          <span class="mall-name">America's Antique Mall</span>
+        </div>
+        <div class="mall-address">5252 Bardstown Rd, Louisville, KY 40291</div>
+        <div class="section-divider"></div>
+        <div class="section-eyebrow">Share via</div>
+        <div>
+          <div class="tile-bar">
+            <div class="tile-icon-bar">✉️</div>
+            <div class="tile-text">
+              <div class="tile-bar-label">Email</div>
+              <div class="tile-bar-sublabel">Send a link to someone's inbox</div>
+            </div>
+            <div class="chevron">›</div>
+          </div>
+          <div class="tile-bar">
+            <div class="tile-icon-bar">💬</div>
+            <div class="tile-text">
+              <div class="tile-bar-label">SMS</div>
+              <div class="tile-bar-sublabel">Send a text message</div>
+            </div>
+            <div class="chevron">›</div>
+          </div>
+          <div class="tile-bar">
+            <div class="tile-icon-bar">▦</div>
+            <div class="tile-text">
+              <div class="tile-bar-label">QR Code</div>
+              <div class="tile-bar-sublabel">Scan to open this booth</div>
+            </div>
+            <div class="chevron">›</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== FRAME C ============== -->
+  <div class="frame">
+    <p class="frame-label">Frame C</p>
+    <p class="frame-tagline">Compact — 3 squares, slim header</p>
+    <p class="frame-desc">Header trimmed: no wordmark, no eyebrow, no separate address line. Booth name medium-sized, booth pill below it, mall name + address combined into one line. 3 square tiles in a single row. Most vertical room of the three; chrome disappears, channels foreground.</p>
+    <div class="phone">
+      <div class="backdrop-page"></div>
+      <div class="sheet">
+        <div class="handle"></div>
+        <div class="sheet-topbar">
+          <div class="topbar-btn">←</div>
+          <div></div>
+          <div class="topbar-btn">×</div>
+        </div>
+        <div class="booth-name medium" style="margin-top:18px;">Moorehouse Mercantile</div>
+        <div class="booth-pill-wrap" style="margin-top:12px;">
+          <div class="booth-pill">BOOTH D19</div>
+        </div>
+        <div class="mall-address" style="margin-bottom:20px;">
+          <span style="display:inline-flex;align-items:center;gap:4px;">
+            <span style="font-size:11px;">📍</span> America's Antique Mall · Louisville, KY
+          </span>
+        </div>
+        <div class="section-divider"></div>
+        <div class="section-eyebrow">Share via</div>
+        <div class="tile-grid-1x3">
+          <div class="tile-square" style="padding:16px 6px 12px;">
+            <div class="tile-icon-small">✉️</div>
+            <div class="tile-label-small">Email</div>
+          </div>
+          <div class="tile-square" style="padding:16px 6px 12px;">
+            <div class="tile-icon-small">💬</div>
+            <div class="tile-label-small">SMS</div>
+          </div>
+          <div class="tile-square" style="padding:16px 6px 12px;">
+            <div class="tile-icon-small">▦</div>
+            <div class="tile-label-small">QR Code</div>
+          </div>
+        </div>
+        <div class="footer-disclaimer">
+          <div class="leaf-glyph"></div>
+          <div class="footer-disclaimer-text">Anyone with this link can view this booth in Treehouse Finds.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="question">
+  <h3>Pick a frame</h3>
+  <p><strong>A — Concept-faithful 2×2.</strong> Faithfully renders your reference. Trade-off: a "Coming soon" tile is a tile that doesn't do anything (dead pixels until Messenger ships).</p>
+  <p><strong>B — Channel stack.</strong> Sub-labels carry the why-this-channel weight. Each row is its own unit; future Messenger appends cleanly. Trade-off: less brand-y; reads more like a system list.</p>
+  <p><strong>C — Compact 3 squares.</strong> Header retreats; channels are the hero. Visual quietness. Trade-off: loses the wordmark presence; "treehouse-ness" of the share moment is thinner.</p>
+  <p class="pick">Pick A, B, or C — or a hybrid (e.g., "B but with C's slim header"). Once you pick, V1.5 dial-pass + locked decisions, then ship.</p>
+</div>
+
+</body>
+</html>
