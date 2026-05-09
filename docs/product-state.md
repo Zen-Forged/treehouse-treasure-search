@@ -57,7 +57,7 @@ Future personas: **mall-operator** (R13), **claimed-booth vendor** (parked).
 - **Booth name self-edit** — display_name editable from `/my-shelf` chrome (Wave 1 Task 4)
 - **Booth hero photo** — upload / replace / delete via `EditBoothSheet`
 - **Multi-booth model** — same email can own multiple booths; switch via `BoothPickerSheet`
-- **Window-share email** — curate up to 6 finds + send a post-it-styled booth snapshot to a customer's email (`ShareBoothSheet` + `/api/share-booth`)
+- **Window-share email** — curate up to 6 finds + send a post-it-styled booth snapshot to a customer's email (booth path of `ShareSheet` + `/api/share-booth`; session 137 generalized the sheet to also handle Mall + Find entities via SMS + QR + Copy Link channels)
 - **Vendor request** — prospective-vendor application form, admin-approved (`/vendor-request`)
 
 ### Admin
