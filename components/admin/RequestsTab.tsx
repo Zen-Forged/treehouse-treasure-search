@@ -19,10 +19,17 @@
 
 "use client";
 
+import { useMemo, useState } from "react";
 import { RefreshCw, UserCheck, Stethoscope } from "lucide-react";
 import type { ReactNode } from "react";
 import { colors } from "@/lib/tokens";
 import type { VendorRequest, DiagnosisReport } from "@/types/treehouse";
+
+// Chip filter values per D3 (single-select, default "pending"). Mirrors the
+// API's ?status= contract from D14 — the server param exists but the UI
+// fetches `?status=all` and filters client-side so all four count badges
+// stay live without re-fetching on every chip change.
+type StatusFilter = "pending" | "approved" | "denied" | "all";
 
 export interface RequestsTabProps {
   requests:          VendorRequest[];
@@ -59,6 +66,35 @@ export default function RequestsTab(props: RequestsTabProps) {
     renderDiagnosisPanel,
   } = props;
 
+  // D3 — single-select filter, default "pending" closes the pre-design bug
+  // where approved rows lingered in the default view at 0.6 opacity.
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("pending");
+
+  const counts = useMemo(() => {
+    let pending  = 0;
+    let approved = 0;
+    let denied   = 0;
+    for (const r of requests) {
+      if      (r.status === "pending")  pending++;
+      else if (r.status === "approved") approved++;
+      else if (r.status === "denied")   denied++;
+    }
+    return { pending, approved, denied, total: requests.length };
+  }, [requests]);
+
+  const filtered = useMemo(() => {
+    if (statusFilter === "all") return requests;
+    return requests.filter(r => r.status === statusFilter);
+  }, [requests, statusFilter]);
+
+  // Empty-state copy adapts to filter — distinguishes "no requests at all"
+  // from "no requests match this chip" so the admin doesn't think the
+  // fetch broke when they click Denied on a fresh deployment.
+  const emptyCopy =
+    requests.length === 0
+      ? "No vendor requests yet."
+      : `No ${statusFilter === "all" ? "" : statusFilter + " "}requests.`;
+
   return (
     <div style={{ margin: "24px 20px 0" }}>
 
@@ -69,7 +105,7 @@ export default function RequestsTab(props: RequestsTabProps) {
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <div style={{ fontSize: 9, color: colors.textFaint, textTransform: "uppercase", letterSpacing: "2px" }}>
-          Vendor requests ({requests.length})
+          Vendor requests
         </div>
         <button onClick={onRefresh} disabled={requestsLoading}
           style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: colors.textMuted }}>
@@ -77,13 +113,43 @@ export default function RequestsTab(props: RequestsTabProps) {
         </button>
       </div>
 
+      {/* D3 — chip filter strip. Single-select; default Pending. Counts
+          always render regardless of which chip is on. Mirrors VendorsTab
+          chip primitive shape. */}
+      <div style={{ display: "flex", gap: 6, alignItems: "center", overflowX: "auto", marginBottom: 14, paddingBottom: 2 }}>
+        <FilterChip
+          label="Pending"
+          count={counts.pending}
+          on={statusFilter === "pending"}
+          onClick={() => setStatusFilter("pending")}
+        />
+        <FilterChip
+          label="Approved"
+          count={counts.approved}
+          on={statusFilter === "approved"}
+          onClick={() => setStatusFilter("approved")}
+        />
+        <FilterChip
+          label="Denied"
+          count={counts.denied}
+          on={statusFilter === "denied"}
+          onClick={() => setStatusFilter("denied")}
+        />
+        <FilterChip
+          label="All"
+          count={counts.total}
+          on={statusFilter === "all"}
+          onClick={() => setStatusFilter("all")}
+        />
+      </div>
+
       {requestsLoading ? (
         <div style={{ fontSize: 13, color: colors.textFaint, padding: "20px 0", textAlign: "center" }}>Loading requests…</div>
-      ) : requests.length === 0 ? (
-        <div style={{ fontSize: 13, color: colors.textFaint, padding: "20px 0", textAlign: "center", fontStyle: "italic", fontFamily: "Georgia, serif" }}>No vendor requests yet.</div>
+      ) : filtered.length === 0 ? (
+        <div style={{ fontSize: 13, color: colors.textFaint, padding: "20px 0", textAlign: "center", fontStyle: "italic", fontFamily: "Georgia, serif" }}>{emptyCopy}</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {requests.map(request => {
+          {filtered.map(request => {
             const isPending = request.status === "pending";
             const isBusy = requestBusy.has(request.id);
             const isDiagnosing = diagnosisBusy.has(request.id);
@@ -201,5 +267,58 @@ export default function RequestsTab(props: RequestsTabProps) {
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Subcomponents ──────────────────────────────────────────────────────────
+
+/**
+ * Filter chip primitive — mirrors VendorsTab's <Chip> token shape but uses
+ * `colors` tokens (admin-page-local theme) instead of v1 since RequestsTab
+ * still uses `colors` throughout. Single-select context: `on` highlights
+ * green; off renders quiet paper-warm.
+ */
+function FilterChip({
+  label,
+  count,
+  on,
+  onClick,
+}: {
+  label:   string;
+  count:   number;
+  on:      boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        flexShrink: 0,
+        padding: "6px 12px",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 500,
+        background: on ? colors.green : colors.surface,
+        color:      on ? "#fff"        : colors.textMid,
+        border: `1px solid ${on ? colors.green : colors.border}`,
+        cursor: "pointer",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {label}
+      <span
+        style={{
+          fontSize: 11,
+          opacity: on ? 0.85 : 0.6,
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        {count}
+      </span>
+    </button>
   );
 }

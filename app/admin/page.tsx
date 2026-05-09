@@ -357,7 +357,12 @@ export default function AdminPage() {
   async function fetchVendorRequests() {
     setRequestsLoading(true);
     try {
-      const res  = await authFetch("/api/admin/vendor-requests");
+      // Session 136 Arc 2 commit 6 — fetch ?status=all so the chip strip in
+      // <RequestsTab> can render counts for every status (pending / approved
+      // / denied / all). RequestsTab filters client-side per D3 single-select.
+      // Server-side ?status= filter remains supported for future/external
+      // consumers; admin UI just doesn't use it (one fetch, four chips).
+      const res  = await authFetch("/api/admin/vendor-requests?status=all");
       const json = await res.json();
       if (!res.ok) {
         setToast({ kind: "error", message: json.error || "Failed to load vendor requests" });
