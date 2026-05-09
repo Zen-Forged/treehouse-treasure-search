@@ -191,12 +191,31 @@ export default function RequestsTab(props: RequestsTabProps) {
             const report = diagnosisReports[request.id];
             const diagErr = diagnosisErrors[request.id];
             return (
-              <div key={request.id}
+              <div
+                key={request.id}
+                // D10 — non-pending rows are whole-row tappable to open
+                // the readonly review modal. Inner anchors + buttons stop
+                // propagation so they keep their own tap behavior. Pending
+                // rows use the explicit Review → CTA per D1.
+                onClick={isPending ? undefined : () => setReviewing(request)}
+                role={isPending ? undefined : "button"}
+                tabIndex={isPending ? undefined : 0}
+                onKeyDown={
+                  isPending
+                    ? undefined
+                    : (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setReviewing(request);
+                        }
+                      }
+                }
                 style={{
                   background: isPending ? colors.surface : colors.bg,
                   border: `1px solid ${isPending ? colors.border : colors.textFaint}`,
                   borderRadius: 12, padding: "16px 18px",
-                  opacity: isPending ? 1 : 0.6
+                  opacity: isPending ? 1 : 0.6,
+                  cursor: isPending ? "default" : "pointer",
                 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                   {request.proof_image_url && (
@@ -204,6 +223,7 @@ export default function RequestsTab(props: RequestsTabProps) {
                       href={request.proof_image_url}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
                       style={{ flexShrink: 0, display: "block" }}
                       aria-label="Open booth photo in new tab"
                     >
@@ -273,11 +293,16 @@ export default function RequestsTab(props: RequestsTabProps) {
                   )}
                 </div>
 
-                {/* Diagnose control — always available for every request */}
-                <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                {/* Diagnose control — always available for every request.
+                    onClick stops propagation so non-pending rows don't fire
+                    the whole-row tap → readonly modal handler (D10). */}
+                <div
+                  style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {!report && !diagErr && (
                     <button
-                      onClick={() => onDiagnose(request.id)}
+                      onClick={(e) => { e.stopPropagation(); onDiagnose(request.id); }}
                       disabled={isDiagnosing}
                       style={{
                         display: "flex", alignItems: "center", gap: 5,
@@ -291,7 +316,7 @@ export default function RequestsTab(props: RequestsTabProps) {
                   )}
                   {(report || diagErr) && (
                     <button
-                      onClick={() => onDismissDiagnosis(request.id)}
+                      onClick={(e) => { e.stopPropagation(); onDismissDiagnosis(request.id); }}
                       style={{
                         display: "flex", alignItems: "center", gap: 5,
                         background: "none", border: "none", cursor: "pointer",

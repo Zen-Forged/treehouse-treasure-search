@@ -111,15 +111,161 @@ export default function ReviewRequestModal({
 
   if (!open) return null;
 
-  // Readonly mode (D10) lands in Arc 3 commit 9. Until that ships the modal
-  // renders only in decide-mode — RequestsTab gates the open state to
-  // pending rows, so this branch is unreachable today but defensive.
+  // ── Readonly mode (D10) — denied/approved rows tap to open. Same shell as
+  // decide-mode but: status pill below header, no decision panel, no
+  // textarea/preview interactivity (denial_reason rendered in read-only
+  // style for denied rows), single Close button.
   if (mode === "readonly") {
+    const isDenied   = request.status === "denied";
+    const isApproved = request.status === "approved";
+
     return (
       <Backdrop onDismiss={onDismiss}>
-        <div style={{ fontSize: 12, color: v1.inkMid, textAlign: "center", padding: "8px 0", fontStyle: "italic", lineHeight: 1.5 }}>
-          Read-only review (denied/approved rows) — Arc 3 commit 9.
+        {/* Header — same shape as decide-mode */}
+        <div
+          id="review-request-title"
+          style={{ fontSize: 16, fontWeight: 600, color: v1.inkPrimary, textAlign: "center", marginBottom: 4, fontFamily: "Lora, Georgia, serif" }}
+        >
+          {headerName}
         </div>
+        <div style={{ fontSize: 13, color: v1.inkMid, textAlign: "center", marginBottom: 10, fontFamily: "Lora, Georgia, serif" }}>
+          {meta}
+        </div>
+
+        {/* Status pill — D10. Centered below header. */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "1.4px",
+              textTransform: "uppercase",
+              padding: "4px 10px",
+              borderRadius: 999,
+              background: isApproved ? "#e7ecdf" : isDenied ? "#f4ead4" : v1.paperWarm,
+              color:      isApproved ? "#4a6b3a" : isDenied ? "#b6843a" : v1.inkMid,
+              border: `1px solid ${isApproved ? "#4a6b3a" : isDenied ? "#b6843a" : v1.inkHairline}`,
+            }}
+          >
+            {request.status}
+          </span>
+        </div>
+
+        {/* Proof image — same shape as decide-mode */}
+        {request.proof_image_url && (
+          <a
+            href={request.proof_image_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open booth photo in new tab"
+            style={{
+              display: "block",
+              marginBottom: 14,
+              borderRadius: 6,
+              overflow: "hidden",
+              border: `1px solid ${v1.inkHairline}`,
+            }}
+          >
+            <img
+              src={request.proof_image_url}
+              alt="Booth proof"
+              style={{
+                display: "block",
+                width: "100%",
+                height: 130,
+                objectFit: "cover",
+              }}
+            />
+          </a>
+        )}
+
+        {/* Meta grid — same as decide-mode */}
+        <div style={{ display: "grid", gridTemplateColumns: "80px 1fr", rowGap: 6, columnGap: 12, marginBottom: 16 }}>
+          <MetaKey>Email</MetaKey>
+          <MetaValue>{request.email}</MetaValue>
+
+          <MetaKey>Booth</MetaKey>
+          <MetaValue>
+            {request.booth_number ? `${request.booth_number}` : "—"}
+          </MetaValue>
+
+          <MetaKey>Submitted</MetaKey>
+          <MetaValue>{submittedDate}</MetaValue>
+
+          {personName !== headerName && (
+            <>
+              <MetaKey>Person</MetaKey>
+              <MetaValue>{personName}</MetaValue>
+            </>
+          )}
+        </div>
+
+        {/* Denied: show denial_reason in read-only style (D10).
+            "Internal only" reminder reinforces D5 contract. */}
+        {isDenied && (
+          <div
+            style={{
+              background: v1.paperWarm,
+              border: `1px solid ${v1.inkHairline}`,
+              borderRadius: 8,
+              padding: "10px 12px",
+              marginBottom: 16,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 9,
+                color: v1.inkMid,
+                textTransform: "uppercase",
+                letterSpacing: "1.6px",
+                marginBottom: 6,
+                fontWeight: 600,
+              }}
+            >
+              Admin reason — internal only
+            </div>
+            <div
+              style={{
+                fontSize: 13,
+                color: v1.inkPrimary,
+                fontFamily: "Lora, Georgia, serif",
+                fontStyle: "italic",
+                lineHeight: 1.55,
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {request.denial_reason?.trim() || "—"}
+            </div>
+          </div>
+        )}
+
+        {/* Approved: D10 specified a vendor_slug jump-link, but
+            `vendor_requests` doesn't carry the resulting vendor's slug
+            (slug is generated at approve time on `vendors`, never written
+            back to the request row). Schema-forced deviation per
+            feedback_design_record_as_execution_spec — surfaced here +
+            in the commit body. Tier B headroom: enrich GET endpoint to
+            return the matched vendor for approved rows so the jump-link
+            can ship cleanly. For now, point admin to the Vendors tab. */}
+        {isApproved && (
+          <div
+            style={{
+              background: v1.paperWarm,
+              border: `1px solid ${v1.inkHairline}`,
+              borderRadius: 8,
+              padding: "10px 12px",
+              marginBottom: 16,
+              fontSize: 12,
+              color: v1.inkMid,
+              fontFamily: "Lora, Georgia, serif",
+              lineHeight: 1.55,
+              fontStyle: "italic",
+            }}
+          >
+            Vendor row created on approve. Find the booth in the Vendors tab to edit, force-unlink, or relink.
+          </div>
+        )}
+
         <ActionRow>
           <CancelButton onClick={onDismiss} disabled={false} label="Close" />
         </ActionRow>
