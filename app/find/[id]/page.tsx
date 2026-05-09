@@ -170,7 +170,7 @@ function ShelfCard({
     >
       <div
         style={{
-          background: "#faf2e0",
+          background: "#fefae6",
           borderRadius: 4,
           overflow: "hidden",
           boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
