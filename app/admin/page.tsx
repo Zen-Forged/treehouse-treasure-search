@@ -69,6 +69,12 @@ interface VendorRequest {
   status:          string;
   created_at:      string;
   proof_image_url: string | null;
+  // Session 136 — Requests tab redesign Arc 1 (D5+D14). Free-text admin
+  // reason populated when status flips to 'denied'. NULL for pending +
+  // approved rows. Never exposed to vendors. Type intentionally stays
+  // `string | null` here (relocated to types/treehouse.ts in Arc 2 when
+  // <RequestsTab> is extracted from inline).
+  denial_reason:   string | null;
 }
 
 interface DiagnosisConflict {

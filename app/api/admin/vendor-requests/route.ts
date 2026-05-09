@@ -1,9 +1,22 @@
 // app/api/admin/vendor-requests/route.ts
 // Admin-gated server API for vendor_requests table operations.
 //
-// GET   → list all vendor_requests (newest first, limit 50)
-// POST  → { action: "approve", requestId } → creates vendor + marks request
-//         approved + sends EMAIL #2 "Your booth is ready" to vendor via Resend
+// GET   → list vendor_requests (newest first, limit 50). Optional ?status=
+//         filter (pending|approved|denied|all, default pending) per session 136
+//         Requests tab redesign D14.
+// POST  → { action: "approve" | "deny", requestId, ...args } → terminal status
+//         flip. Approve creates vendor + sends sendApprovalInstructions.
+//         Deny soft-archives row with denial_reason + sends sendDenialNotice
+//         (D6 — never exposes the reason).
+//
+// Session 136 — Requests tab redesign Arc 1 (data layer):
+//  - GET extends with ?status= filter (default pending closes the
+//    "approved lingers at 0.6 opacity" pre-design bug — D3).
+//  - POST gains deny branch: validates non-whitespace denial_reason,
+//    updates row to status='denied' + denial_reason=<reason>, sends
+//    sendDenialNotice (best-effort), records vendor_request_denied event
+//    with denial_reason_length only (text never logged — D12).
+//  - VendorRequest response shape gains denial_reason: string | null.
 //
 // Session 32 (2026-04-20) — v1.2 onboarding refresh:
 //  - Approval now honors `vendor_requests.booth_name` if set. If null/empty,
@@ -27,24 +40,49 @@
 
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
-import { sendApprovalInstructions } from "@/lib/email";
+import { sendApprovalInstructions, sendDenialNotice } from "@/lib/email";
 import { recordEvent } from "@/lib/events";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
+
+type AdminAuthOk = { ok: true; user: User; service: SupabaseClient };
 
 export const dynamic = "force-dynamic";
 
 const MAX_SLUG_SUFFIX_ATTEMPTS = 20;
+
+// Status filter values accepted on GET. "all" returns every row regardless of
+// status; the other three filter to the matching status. Default is "pending"
+// per D3 (closes pre-design bug where approved lingered at 0.6 opacity).
+type StatusFilter = "pending" | "approved" | "denied" | "all";
+const VALID_STATUS_FILTERS: ReadonlySet<string> = new Set([
+  "pending",
+  "approved",
+  "denied",
+  "all",
+]);
 
 // ── GET: list vendor requests ─────────────────────────────────────────────────
 export async function GET(req: Request) {
   const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
-  const { data, error } = await auth.service
+  const url    = new URL(req.url);
+  const raw    = url.searchParams.get("status") ?? "pending";
+  const status: StatusFilter = VALID_STATUS_FILTERS.has(raw)
+    ? (raw as StatusFilter)
+    : "pending";
+
+  let query = auth.service
     .from("vendor_requests")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(50);
+
+  if (status !== "all") {
+    query = query.eq("status", status);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("[admin/vendor-requests] GET error:", error.message);
@@ -57,28 +95,40 @@ export async function GET(req: Request) {
   return NextResponse.json({ requests: data ?? [] });
 }
 
-// ── POST: approve a vendor request ────────────────────────────────────────────
+// ── POST: approve or deny a vendor request ────────────────────────────────────
 interface ApproveBody {
   action: "approve";
   requestId: string;
 }
 
+interface DenyBody {
+  action: "deny";
+  requestId: string;
+  denial_reason: string;
+}
+
+type RequestActionBody = ApproveBody | DenyBody;
+
 export async function POST(req: Request) {
   const auth = await requireAdmin(req);
   if (!auth.ok) return auth.response;
 
-  let body: ApproveBody;
+  let body: RequestActionBody;
   try {
-    body = (await req.json()) as ApproveBody;
+    body = (await req.json()) as RequestActionBody;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  if (body.action !== "approve" || !body.requestId) {
+  if (!body.requestId || (body.action !== "approve" && body.action !== "deny")) {
     return NextResponse.json(
       { error: "Missing action or requestId." },
       { status: 400 }
     );
+  }
+
+  if (body.action === "deny") {
+    return handleDeny(auth, body);
   }
 
   // 1. Fetch the request
@@ -220,6 +270,124 @@ export async function POST(req: Request) {
     vendor: vendorRow,
     ...(createResult.note ? { note: createResult.note } : {}),
     ...(warnings.length > 0 ? { warning: warnings.join(" ") } : {}),
+  });
+}
+
+// ── deny: soft-archive request + send denial notice ─────────────────────────
+//
+// D9 — denied requests stay in the table with status='denied' + denial_reason
+// populated. D5 — denial_reason required (non-whitespace). D6 — sendDenialNotice
+// is best-effort; if it fails after the DB update succeeds we return ok with
+// a `warning: "email_failed"` flag so the toast can show the email-fail-after-
+// status-flip variant (D11). D12 — vendor_request_denied event payload logs
+// reason LENGTH only, never the text.
+async function handleDeny(
+  auth: AdminAuthOk,
+  body: DenyBody,
+): Promise<NextResponse> {
+  const denialReason = (body.denial_reason ?? "").trim();
+  if (denialReason.length === 0) {
+    return NextResponse.json(
+      { error: "denial_reason required.", diagnosis: "missing_denial_reason" },
+      { status: 400 }
+    );
+  }
+
+  // 1. Fetch the request — same shape as approve branch fetch
+  const { data: request, error: fetchErr } = await auth.service
+    .from("vendor_requests")
+    .select("*")
+    .eq("id", body.requestId)
+    .maybeSingle();
+
+  if (fetchErr) {
+    console.error("[admin/vendor-requests] deny fetch:", fetchErr.message);
+    return NextResponse.json(
+      { error: "Failed to fetch vendor request." },
+      { status: 500 }
+    );
+  }
+
+  if (!request) {
+    return NextResponse.json(
+      { error: "Vendor request not found.", diagnosis: "not_found" },
+      { status: 404 }
+    );
+  }
+
+  // Idempotency guards: deny is terminal. Reopening is Tier B headroom.
+  if (request.status === "approved") {
+    return NextResponse.json(
+      { error: "Request already approved.", diagnosis: "already_approved" },
+      { status: 409 }
+    );
+  }
+  if (request.status === "denied") {
+    return NextResponse.json(
+      { error: "Request already denied.", diagnosis: "already_denied" },
+      { status: 409 }
+    );
+  }
+
+  // 2. Update status + persist denial_reason. Return updated row so the client
+  // can swap the row optimistically without re-fetching.
+  const { data: updated, error: updateErr } = await auth.service
+    .from("vendor_requests")
+    .update({ status: "denied", denial_reason: denialReason })
+    .eq("id", body.requestId)
+    .select()
+    .maybeSingle();
+
+  if (updateErr || !updated) {
+    console.error(
+      "[admin/vendor-requests] deny update failed:",
+      updateErr?.message ?? "no row returned"
+    );
+    return NextResponse.json(
+      { error: "Failed to deny vendor request.", diagnosis: "deny_update_failed" },
+      { status: 500 }
+    );
+  }
+
+  // 3. Email — best-effort. If it fails AFTER status flip, the row is still
+  // denied; surface a warning so the toast can show the email-fail variant.
+  // Salutation prefers first_name (v1.2 split) and falls back to first token
+  // of legacy name, mirroring the approve branch.
+  const firstName   = (request.first_name as string | null)?.trim() ?? "";
+  const legacyName  = (request.name       as string | null)?.trim() ?? "";
+  const salutationFirstName =
+    firstName ||
+    legacyName.split(/\s+/)[0] ||
+    "there";
+
+  const emailResult = await sendDenialNotice({
+    firstName: salutationFirstName,
+    email:     request.email,
+  });
+
+  if (!emailResult.ok) {
+    console.error(
+      "[admin/vendor-requests] denial email failed:",
+      emailResult.error,
+    );
+  }
+
+  // 4. R3 event — D12 payload. Reason length only; text never logged.
+  await recordEvent("vendor_request_denied", {
+    user_id: auth.user.id,
+    payload: {
+      request_id:           body.requestId,
+      mall_id:              request.mall_id,
+      booth_number:         request.booth_number,
+      denial_reason_length: denialReason.length,
+      actor_email:          auth.user.email ?? null,
+    },
+  });
+
+  return NextResponse.json({
+    ok: true,
+    request: updated,
+    ...(emailResult.ok ? {} : { warning: "email_failed" }),
   });
 }
 
