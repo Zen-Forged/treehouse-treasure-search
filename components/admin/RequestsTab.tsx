@@ -20,10 +20,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { RefreshCw, UserCheck, Stethoscope } from "lucide-react";
+import { RefreshCw, UserCheck, Stethoscope, ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 import { colors } from "@/lib/tokens";
 import type { VendorRequest, DiagnosisReport } from "@/types/treehouse";
+import ReviewRequestModal from "@/components/admin/ReviewRequestModal";
 
 // Chip filter values per D3 (single-select, default "pending"). Mirrors the
 // API's ?status= contract from D14 — the server param exists but the UI
@@ -69,6 +70,30 @@ export default function RequestsTab(props: RequestsTabProps) {
   // D3 — single-select filter, default "pending" closes the pre-design bug
   // where approved rows lingered in the default view at 0.6 opacity.
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("pending");
+
+  // Modal state — request currently under review (null = closed). Arc 2
+  // commit 7 placeholder; Arc 3 commits 8+9 fill in the decide + readonly
+  // mode bodies.
+  const [reviewing, setReviewing] = useState<VendorRequest | null>(null);
+
+  // Mode is determined by the row's status when admin opens the modal.
+  // Pending rows → decide; approved/denied rows → readonly (Arc 3 commit 9
+  // implements the readonly tap target on non-pending rows).
+  const reviewMode: "decide" | "readonly" =
+    reviewing?.status === "pending" ? "decide" : "readonly";
+
+  // Placeholder onSubmit — Arc 3 commit 8 wires this to the parent's
+  // approve/deny action handlers with optimistic UI. For Arc 2 commit 7
+  // we just log + close so the flow is observable mid-transition. Inline
+  // Approve button on per-row remains the actual approve path during
+  // this commit.
+  async function handleReviewSubmit(
+    action: "approve" | "deny",
+    denialReason?: string,
+  ) {
+    console.log("[RequestsTab] placeholder review submit:", action, "reason:", denialReason, "request:", reviewing?.id);
+    setReviewing(null);
+  }
 
   const counts = useMemo(() => {
     let pending  = 0;
@@ -207,17 +232,34 @@ export default function RequestsTab(props: RequestsTabProps) {
                   </div>
 
                   {isPending && (
-                    <button
-                      onClick={() => onApprove(request)}
-                      disabled={isBusy}
-                      style={{
-                        padding: "10px 18px", borderRadius: 10, fontSize: 13, fontWeight: 600,
-                        background: colors.green, color: "#fff", border: "none", cursor: "pointer",
-                        opacity: isBusy ? 0.5 : 1, display: "flex", alignItems: "center", gap: 6,
-                        minHeight: 44, flexShrink: 0, whiteSpace: "nowrap"
-                      }}>
-                      <UserCheck size={14} /> {isBusy ? "…" : "Approve"}
-                    </button>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
+                      {/* Review → CTA — Arc 2 commit 7 (D1 Frame C structural
+                          shape). Opens <ReviewRequestModal> placeholder.
+                          Arc 3 commit 10 retires the inline Approve button
+                          below once the full decide-mode flow is wired. */}
+                      <button
+                        onClick={() => setReviewing(request)}
+                        style={{
+                          padding: "8px 12px", borderRadius: 10, fontSize: 12, fontWeight: 500,
+                          background: colors.surface, color: colors.textPrimary,
+                          border: `1px solid ${colors.border}`, cursor: "pointer",
+                          display: "flex", alignItems: "center", gap: 4,
+                          minHeight: 36, whiteSpace: "nowrap"
+                        }}>
+                        Review <ChevronRight size={13} />
+                      </button>
+                      <button
+                        onClick={() => onApprove(request)}
+                        disabled={isBusy}
+                        style={{
+                          padding: "8px 14px", borderRadius: 10, fontSize: 12, fontWeight: 600,
+                          background: colors.green, color: "#fff", border: "none", cursor: "pointer",
+                          opacity: isBusy ? 0.5 : 1, display: "flex", alignItems: "center", gap: 6,
+                          minHeight: 36, whiteSpace: "nowrap"
+                        }}>
+                        <UserCheck size={13} /> {isBusy ? "…" : "Approve"}
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -265,6 +307,19 @@ export default function RequestsTab(props: RequestsTabProps) {
             );
           })}
         </div>
+      )}
+
+      {/* Review modal — Arc 2 commit 7 placeholder mount. Arc 3 commit 8
+          (decide-mode body) + commit 9 (readonly-mode body) replace the
+          stub copy with the full D7 layout. */}
+      {reviewing && (
+        <ReviewRequestModal
+          request={reviewing}
+          open={true}
+          mode={reviewMode}
+          onSubmit={handleReviewSubmit}
+          onDismiss={() => setReviewing(null)}
+        />
       )}
     </div>
   );
