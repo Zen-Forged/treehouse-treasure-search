@@ -63,7 +63,13 @@ export type EventType =
   // + fires the existing approval email; auto-claim attaches user_id when
   // vendor signs in. Distinct from vendor_request_approved (which fires on
   // the self-registration approve path).
-  | "vendor_invited_by_admin";
+  | "vendor_invited_by_admin"
+  // Requests tab redesign Arc 1 (session 136) — admin denies a vendor
+  // request. Counterpart to vendor_request_approved; soft-archives the row
+  // (status flips to 'denied') + fires sendDenialNotice email + persists
+  // free-text denial_reason in the row (admin-internal; never exposed).
+  // Payload logs reason LENGTH only (not content) per D12.
+  | "vendor_request_denied";
 
 export interface RecordEventOptions {
   user_id?:    string | null;
