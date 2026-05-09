@@ -463,12 +463,12 @@ function ShelfSection({
           paddingBottom: 18,
           scrollSnapType: "x mandatory",
           WebkitOverflowScrolling: "touch",
-          // Session 100 (Phase B) — declare horizontal-scroll intent so the
-          // page-level swipe-between-finds drag (touch-action: pan-y on the
-          // motion.div parent) doesn't capture pointer events here.
-          // Browser handles X-axis pans natively for this region (carousel
-          // scrolls); page swipe still works above + below.
-          touchAction: "pan-x",
+          // Session 100 (Phase B) — claim X-axis pans natively so the
+          // page-level swipe-between-finds drag (touch-action: pan-y on
+          // the motion.div parent) doesn't capture them. pan-y also
+          // permits vertical scroll to pass through to the page within
+          // carousel bounds.
+          touchAction: "pan-x pan-y",
         }}
       >
         {items.map((item, idx) => (
@@ -1141,7 +1141,7 @@ export default function FindDetailPage() {
           viewport, no stale-content flash). Drag is auto-disabled when
           there's no neighbor on either side. touchAction: pan-y lets
           vertical scroll pass through; the More-from-this-booth carousel
-          below sets its own touch-action: pan-x. */}
+          below sets its own touch-action: pan-x pan-y. */}
       <motion.div
         drag={prevId || nextId ? "x" : false}
         dragConstraints={{ left: 0, right: 0 }}
