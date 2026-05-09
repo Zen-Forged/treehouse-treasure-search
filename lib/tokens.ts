@@ -83,7 +83,10 @@ export const spacing = {
 // Base palette promoted from inline `v1` objects session 19A. Matches
 // docs/design-system.md v1.1h commitments:
 //
-//   Paper:        paperCream (#e8ddc7) — committed globally session 17
+//   Paper:        paperCream (#f2ecd8) — committed session 17 as #e8ddc7;
+//                 lightened session 132 (Shape A bg dial — see CLAUDE.md
+//                 session 132 cost-shape triage). paperWarm + postit +
+//                 postcardBg bumped in step to preserve lift relationships.
 //   Post-it:      #fffaea (brighter cream, v1.1b calibration)
 //   Ink scale:    inkPrimary → inkFaint (warm brown, v1.1b/c calibrated for
 //                 WCAG AA on paperCream)
@@ -105,20 +108,24 @@ export const spacing = {
 
 export const v1 = {
   // Paper + post-it
-  paperCream:   "#e8ddc7",
-  postit:       "#fbf3df",
+  // Session 132 (Shape A bg dial): paperCream lightened from #e8ddc7 →
+  // #f2ecd8 to test "fresher, less dated" feel while keeping warm-paper
+  // identity. postit + paperWarm + postcardBg bumped in step below to
+  // preserve their lift over the new bg.
+  paperCream:   "#f2ecd8",
+  postit:       "#fefae8",
 
   // Phase 2 Session A — paperWarm is the warm-cream variant used as the
   // polaroid mat across Home masonry, /flagged FindTile, /shelf/[slug]
   // WindowTile, /post/tag Find/Tag photos, /post/preview PolaroidPreview.
   // Adoption deferred to Session B PolaroidTile primitive extraction;
   // declared here so the value lives in one place.
-  paperWarm:    "#faf2e0",
+  paperWarm:    "#fefae6",
 
   // R10 (session 107) — postcard mall card surface. Slightly more saturated
   // than paperWarm; reads as "card stock" rather than "off-white." Used by
   // <PostcardMallCard>. See docs/r10-location-map-design.md D7 + D8.
-  postcardBg:     "#f4ecd8",
+  postcardBg:     "#fbf3dd",
   postcardBorder: "rgba(42,26,10,0.10)",
 
   // Ink scale
