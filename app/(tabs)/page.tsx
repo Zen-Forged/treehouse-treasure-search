@@ -38,7 +38,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState, useRef, useMemo, useCallback, Suspense } from "react";
+import { useEffect, useLayoutEffect, useState, useRef, useMemo, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import FlagGlyph from "@/components/FlagGlyph";
@@ -348,7 +348,21 @@ function MasonryGrid({
   const firstTileRef = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState(SKELETON_OFFSET);
 
-  useEffect(() => {
+  // Session 134 — useLayoutEffect (was useEffect) for the initial column-2
+  // offset measurement. The skeleton-to-real-tile handoff was producing a
+  // visible "slide down" on the right column: column-2 marginTop initialized
+  // at SKELETON_OFFSET (70) — a guess that was correct for the skeleton's
+  // 4:5 photo-only tile but ~30–50px short of the real tile's height (real
+  // tile = 4:5 photo + relative-timestamp "below" row ~17px + polaroid mat
+  // padding). useEffect runs AFTER the browser paints, so the first paint
+  // had col-2 at 70px and the second paint had col-2 at ~100–120px — the
+  // browser's snap between the two paints read as a slide-down animation.
+  // useLayoutEffect runs synchronously after DOM mutation but BEFORE paint,
+  // so the measurement lands in the first paint. ResizeObserver continues
+  // to keep the offset honest if the first tile's height changes
+  // post-mount (e.g. image lazy-load shifting layout, future caption
+  // additions). Closes the session-110 carry.
+  useLayoutEffect(() => {
     const el = firstTileRef.current;
     if (!el) return;
     function measure() { setOffset(Math.round(el!.offsetHeight * 0.5)); }

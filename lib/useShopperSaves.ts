@@ -27,16 +27,68 @@
 // out (we never wipe them). Whatever they had before sign-in comes back.
 // Saves made WHILE authed are DB-only and stay there — invisible to the
 // signed-out device, visible from the next device that signs in.
+//
+// Session 134 — authed-path snapshot eliminates the heart-icon flicker on
+// logged-in mounts. The bug class: hook's initial state was empty Set;
+// authed-path DB fetch resolves async; first paint = unfilled hearts,
+// second paint = filled hearts after DB fetch. Resurfaced Tier C carry
+// (session 116 → retired session 129 with fingerprint preserved → real
+// resurfacing here). Resurfacing-fingerprint canonical repair: mirror DB
+// writes to localStorage snapshot + read snapshot synchronously in
+// useLayoutEffect on mount. First paint now reads from the snapshot
+// (correct for the common case of same-account re-mount). The DB fetch
+// continues to run in useEffect and overwrites with authoritative state.
+// Cross-device divergence reads as a one-tick correction (snapshot →
+// DB-fresh) instead of a full empty-to-populated transition.
+//
+// Snapshot is keyed under `treehouse_authed_saves_snapshot` separate from
+// the per-find BOOKMARK_PREFIX flags used by guest path — the contract
+// of "guest localStorage flags persist across sign-out" stays intact;
+// the snapshot is a separate authed-cache that clearSnapshot on sign-out
+// handles. Cross-account edge: if two accounts share a device, the
+// snapshot can briefly leak from account A → first paint of account B's
+// session before B's DB fetch resolves. Bounded harm (~200ms);
+// acceptable trade for eliminating the every-mount flicker.
 
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { supabase }                 from "./supabase";
 import { onAuthChange }             from "./auth";
 import { safeStorage }              from "./safeStorage";
 import { BOOKMARK_PREFIX, flagKey, loadFollowedIds } from "./utils";
 
 const SAVES_CHANGE_EVENT = "treehouse:saves_change";
+
+// Authed-path snapshot — see file-top "Session 134" block for rationale.
+const SAVES_SNAPSHOT_KEY = "treehouse_authed_saves_snapshot";
+
+function readSnapshot(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(SAVES_SNAPSHOT_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return new Set(parsed.filter((x): x is string => typeof x === "string"));
+    }
+  } catch {}
+  return new Set();
+}
+
+function writeSnapshot(ids: Set<string>) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SAVES_SNAPSHOT_KEY, JSON.stringify(Array.from(ids)));
+  } catch {}
+}
+
+function clearSnapshot() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(SAVES_SNAPSHOT_KEY);
+  } catch {}
+}
 
 interface SavesChangeDetail {
   id:   string;
@@ -75,14 +127,42 @@ export function useShopperSaves(): ShopperSavesState {
   // re-render of the load effect; the ref is just for the callback.
   const shopperIdRef = useRef<string | null>(null);
 
+  // Session 134 — synchronous snapshot read on first mount, BEFORE the
+  // browser paints. Eliminates the every-mount empty-to-populated flicker
+  // on the authed path. useLayoutEffect runs once after DOM commit but
+  // before paint; setIds with the snapshot triggers a synchronous
+  // re-render inside the layout effect, so the first visible paint already
+  // shows the saved state. The async useEffect below still runs the DB
+  // fetch and overwrites with authoritative state — cross-device divergence
+  // reads as a one-tick correction, not a full empty-to-populated flash.
+  useLayoutEffect(() => {
+    const snapshot = readSnapshot();
+    if (snapshot.size === 0) return;
+    setIds(snapshot);
+  }, []);
+
+  // Mirror authed-path ids to the snapshot whenever they change. Skips on
+  // the guest path (shopperIdRef.current null) so the snapshot stays
+  // authed-only — guest path uses BOOKMARK_PREFIX flag keys per find,
+  // unchanged. The snapshot-restore useLayoutEffect above triggers this
+  // effect on mount, but at that point shopperIdRef.current is null
+  // (loadFor hasn't run yet), so the no-op skip handles it cleanly.
+  useEffect(() => {
+    if (!shopperIdRef.current) return;
+    writeSnapshot(ids);
+  }, [ids]);
+
   useEffect(() => {
     let cancelled = false;
 
     async function loadFor(userId: string | null) {
       if (cancelled) return;
       if (!userId) {
-        // Guest path — read localStorage.
+        // Guest path — read localStorage. clearSnapshot to avoid leaking
+        // a previous authed account's saves into the next sign-in's
+        // first paint.
         shopperIdRef.current = null;
+        clearSnapshot();
         setIds(loadFollowedIds());
         setIsLoading(false);
         return;
@@ -93,7 +173,9 @@ export function useShopperSaves(): ShopperSavesState {
       shopperIdRef.current = shopperId;
 
       if (!shopperId) {
-        // Authed but pre-claim — treat as guest.
+        // Authed but pre-claim — treat as guest. clearSnapshot for the
+        // same reason as the no-userId branch above.
+        clearSnapshot();
         setIds(loadFollowedIds());
         setIsLoading(false);
         return;

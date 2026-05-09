@@ -11,14 +11,22 @@
 // chrome. Eyebrow copy reverses session-120 V3.1 trim back to "Finds
 // from:" per David's call.
 //
+// Session 134 — eyebrow copy "Finds from:" → "Explore local finds from".
+// The verb pairs with the BottomNav rename ("Home" → "Explore", same
+// session) and sharpens the digital-to-physical thesis: shoppers
+// explore a network of local finds, they don't browse a database. "local"
+// also doubles as a soft promise about the network's character — every
+// find on the platform is from a physical mall the shopper can visit.
+//
 // Slim <PostcardMallCard> stays alive in app/(tabs)/layout.tsx for /map
 // only. Saved (app/(tabs)/flagged/page.tsx) no longer mounts this rich
 // card — R18 restructures Saved to a per-mall card stack with Frame C
 // split-header-strip layout (see docs/mockups/saved-per-mall-card-v1.html).
 // This primitive's only consumer post-R18 is Home.
 //
-// Design intent (final state, post-R18):
-//   - Eyebrow "Finds from:" (FONT_LORA italic) above mall name + address.
+// Design intent (final state, post-session-134):
+//   - Eyebrow "Explore local finds from" (FONT_LORA italic) above mall
+//     name + address.
 //   - Mall name in Lora 22px with measure-and-shrink to 16px (same primitive
 //     as slim card) so any current mall name fits one row.
 //   - Photo banner below chrome; collapses to no-photo when all-kentucky
@@ -159,7 +167,7 @@ export default function RichPostcardMallCard({
               marginBottom: 4,
             }}
           >
-            Finds from:
+            Explore local finds from
           </div>
 
           {/* Mall name — full card content width. Fluid font measure-and-

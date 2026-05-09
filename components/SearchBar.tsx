@@ -82,7 +82,13 @@ const DEBOUNCE_MS = 200;
 
 export default function SearchBar({
   initialQuery = "",
-  placeholder = "Search to discover local finds",
+  // Session 134 — placeholder copy "Search to discover local finds" →
+  // "What are you searching for today?" Pairs with the Home eyebrow rename
+  // ("Explore local finds from") + BottomNav "Home" → "Explore" — the
+  // first three pieces of chrome a shopper sees on cold start now ask
+  // a single question in three voices: where are you exploring, what's
+  // here today, what are you looking for?
+  placeholder = "What are you searching for today?",
   onChange,
   onSubmit,
 }: Props) {
