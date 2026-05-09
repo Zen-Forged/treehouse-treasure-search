@@ -39,7 +39,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import QRCode from "react-qr-code";
-import { PiEnvelopeSimple, PiChatCircleText, PiQrCode, PiMapPin, PiLeaf } from "react-icons/pi";
+import { PiEnvelopeSimple, PiChatCircleText, PiQrCode, PiLinkSimple, PiCheck, PiMapPin, PiLeaf } from "react-icons/pi";
 import { authFetch } from "@/lib/authFetch";
 import { track } from "@/lib/clientEvents";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
@@ -91,18 +91,44 @@ export interface ShareSheetProps {
   mode?: "vendor" | "shopper";
 }
 
+/**
+ * Session 137 — thin dispatcher. Each entity kind owns its own state
+ * machine (different channels, different screen sets) so we extract per-
+ * entity body components instead of branching deep inside one render.
+ *
+ * Find body lands in commit 4; until then it early-returns null.
+ */
 export default function ShareSheet({
   open,
   onClose,
   entity,
   mode = "vendor",
 }: ShareSheetProps) {
-  // Session 137 — booth path is wired verbatim from session 135. Mall +
-  // find paths land in commits 3 + 4 of this session; until then they
-  // early-return null so the sheet is a no-op for those entity kinds.
-  // This keeps commit 2 a pure refactor (booth callsites unchanged in
-  // behavior; mall + find consumers don't exist yet).
-  if (entity.kind !== "booth") return null;
+  if (entity.kind === "find") return null; // commit 4 wires find body
+  if (entity.kind === "mall") {
+    return <MallShareBody open={open} onClose={onClose} mall={entity.mall} />;
+  }
+  return <BoothShareBody open={open} onClose={onClose} entity={entity} mode={mode} />;
+}
+
+// ─── BoothShareBody ──────────────────────────────────────────────────────
+// Session 135 booth path. Body is preserved verbatim from the pre-session-
+// 137 ShareBoothSheet — only the function header changed (extracted from
+// the main export into a dedicated body so each entity owns its own hook
+// lifecycle).
+type BoothEntity = Extract<ShareSheetEntity, { kind: "booth" }>;
+
+function BoothShareBody({
+  open,
+  onClose,
+  entity,
+  mode,
+}: {
+  open:    boolean;
+  onClose: () => void;
+  entity:  BoothEntity;
+  mode:    "vendor" | "shopper";
+}) {
   const vendor = entity.vendor;
   const mall   = entity.mall;
   const [screen, setScreen]           = useState<Screen>("grid");
@@ -366,6 +392,505 @@ export default function ShareSheet({
         }
       `}</style>
     </AnimatePresence>
+  );
+}
+
+// ─── MallShareBody ───────────────────────────────────────────────────────
+// Session 137 — mall share path. Channel set: SMS + QR + Copy Link (no
+// Email — that channel stays Booth-only because the booth window email is
+// the load-bearing curated experience, Q-011 4-client-audited template).
+//
+// "all-kentucky" mall scope is the literal string the renderer detects to
+// surface Kentucky-network header copy with the bare `/` URL — used when
+// the user is on Home/Explore with no specific mall picked (D5 of session
+// 137 design). No synthetic Mall row is created.
+//
+// Sheet chrome (backdrop + sheet + handle + topbar + scrollable body) is
+// inlined rather than extracted to a shared <SheetChrome> primitive — if
+// commit 4 (find) duplicates the chrome a third time, factor it then.
+type MallScreen = "grid" | "qr";
+
+function MallShareBody({
+  open,
+  onClose,
+  mall,
+}: {
+  open:    boolean;
+  onClose: () => void;
+  mall:    Mall | "all-kentucky";
+}) {
+  const [screen, setScreen] = useState<MallScreen>("grid");
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    setScreen("grid");
+  }, [open]);
+
+  // ── Mall data derivation ────────────────────────────────────────────────
+  const isKentucky   = mall === "all-kentucky";
+  const mallName     = isKentucky ? "Treehouse Finds Kentucky" : mall.name;
+  const mallSubtitle = isKentucky
+    ? "Kentucky's antique mall network"
+    : [mall.city, mall.state].filter(Boolean).join(", ");
+  const mallAddress  = isKentucky ? null : (mall.address ?? null);
+  const origin       = typeof window !== "undefined" ? window.location.origin : "";
+  const mallUrl      = isKentucky ? `${origin}/` : `${origin}/?mall=${mall.slug}`;
+  const trackPayload = { mall_slug: isKentucky ? "all-kentucky" : mall.slug };
+
+  // ── Channel handlers ────────────────────────────────────────────────────
+  function handleSmsTap() {
+    track("share_mall_channel_tapped", { ...trackPayload, channel: "sms" });
+    const body = `Found this mall on Treehouse Finds: ${mallName} · ${mallUrl}`;
+    track("share_mall_sms_initiated", trackPayload);
+    window.location.href = `sms:?body=${encodeURIComponent(body)}`;
+    onClose();
+  }
+
+  function handleQrTap() {
+    track("share_mall_channel_tapped", { ...trackPayload, channel: "qr_code" });
+    setScreen("qr");
+  }
+
+  function handleCopyLinkTap() {
+    track("share_mall_channel_tapped", { ...trackPayload, channel: "copy_link" });
+  }
+
+  function handleCopyLinkSuccess() {
+    track("share_mall_copy_link_completed", trackPayload);
+  }
+
+  function handleBack() {
+    setScreen("grid");
+  }
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22, ease: EASE }}
+            onClick={onClose}
+            style={{ position: "fixed", inset: 0, background: "rgba(30,20,10,0.38)", zIndex: 100 }}
+            aria-hidden="true"
+          />
+
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Share this mall"
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ duration: 0.34, ease: EASE }}
+            style={{
+              position: "fixed",
+              left: 0, right: 0, bottom: 0,
+              margin: "0 auto",
+              width: "100%",
+              maxWidth: 430,
+              maxHeight: "92vh",
+              background: v1.paperCream,
+              borderRadius: "20px 20px 0 0",
+              boxShadow: "0 -8px 30px rgba(30,20,10,0.28)",
+              zIndex: 101,
+              display: "flex",
+              flexDirection: "column",
+              paddingBottom: "env(safe-area-inset-bottom, 0px)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "center", paddingTop: 12, paddingBottom: 4, flexShrink: 0 }}>
+              <div aria-hidden="true" style={{ width: 44, height: 4, borderRadius: 999, background: v1.inkFaint }} />
+            </div>
+
+            <TopBar
+              showBack={screen !== "grid"}
+              onBack={handleBack}
+              onClose={onClose}
+              closeDisabled={false}
+            />
+
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                overflowX: "hidden",
+                WebkitOverflowScrolling: "touch",
+                padding: "6px 22px 22px",
+              }}
+            >
+              {screen === "grid" && (
+                <MallGridScreen
+                  mallName={mallName}
+                  mallSubtitle={mallSubtitle}
+                  mallAddress={mallAddress}
+                  mallUrl={mallUrl}
+                  isKentucky={isKentucky}
+                  onSmsTap={handleSmsTap}
+                  onQrTap={handleQrTap}
+                  onCopyLinkTap={handleCopyLinkTap}
+                  onCopyLinkSuccess={handleCopyLinkSuccess}
+                />
+              )}
+
+              {screen === "qr" && (
+                <MallQrScreen
+                  mallName={mallName}
+                  mallSubtitle={mallSubtitle}
+                  mallAddress={mallAddress}
+                  mallUrl={mallUrl}
+                  isKentucky={isKentucky}
+                  trackPayload={trackPayload}
+                />
+              )}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ─── MallSlimHeader ──────────────────────────────────────────────────────
+// Frame C header for mall entity. Mall name (28px Lora) + city/state row
+// + full address. Repeats verbatim across grid + qr screens (mirrors the
+// session 135 booth slim header pattern). No booth pill — mall doesn't
+// have a per-booth context. all-Kentucky variant subs the city/state row
+// for "Kentucky's antique mall network" and hides the address line.
+function MallSlimHeader({
+  mallName,
+  mallSubtitle,
+  mallAddress,
+}: {
+  mallName:     string;
+  mallSubtitle: string;
+  mallAddress:  string | null;
+}) {
+  return (
+    <div style={{ paddingTop: 12, flexShrink: 0 }}>
+      <div
+        style={{
+          fontFamily: FONT_LORA,
+          fontWeight: 500,
+          fontSize: 28,
+          color: v1.inkPrimary,
+          textAlign: "center",
+          lineHeight: 1.05,
+          letterSpacing: "-0.015em",
+          padding: "0 8px",
+        }}
+      >
+        {mallName}
+      </div>
+
+      {mallSubtitle && (
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 6, marginTop: 14 }}>
+          <PiMapPin
+            size={14}
+            color={v1.inkMid}
+            style={{ marginTop: 3, flexShrink: 0 }}
+            aria-hidden="true"
+          />
+          <span
+            style={{
+              fontFamily: FONT_LORA,
+              fontWeight: 500,
+              fontSize: 16,
+              color: v1.inkPrimary,
+              lineHeight: 1.3,
+            }}
+          >
+            {mallSubtitle}
+          </span>
+        </div>
+      )}
+
+      {mallAddress && (
+        <div
+          style={{
+            fontFamily: FONT_SYS,
+            fontSize: 12,
+            color: v1.inkMid,
+            textAlign: "center",
+            lineHeight: 1.4,
+            marginTop: 4,
+            padding: "0 12px",
+          }}
+        >
+          {mallAddress}
+        </div>
+      )}
+
+      <div style={{ height: 1, background: v1.inkHairline, marginTop: 18 }} />
+    </div>
+  );
+}
+
+// ─── MallGridScreen ──────────────────────────────────────────────────────
+// Frame C grid for mall entity — 3 tiles (SMS + QR + Copy Link) + footer
+// disclaimer. "Share via" eyebrow above the grid (D5).
+function MallGridScreen({
+  mallName,
+  mallSubtitle,
+  mallAddress,
+  mallUrl,
+  isKentucky,
+  onSmsTap,
+  onQrTap,
+  onCopyLinkTap,
+  onCopyLinkSuccess,
+}: {
+  mallName:          string;
+  mallSubtitle:      string;
+  mallAddress:       string | null;
+  mallUrl:           string;
+  isKentucky:        boolean;
+  onSmsTap:          () => void;
+  onQrTap:           () => void;
+  onCopyLinkTap:     () => void;
+  onCopyLinkSuccess: () => void;
+}) {
+  return (
+    <>
+      <MallSlimHeader
+        mallName={mallName}
+        mallSubtitle={mallSubtitle}
+        mallAddress={mallAddress}
+      />
+
+      <div
+        style={{
+          fontFamily: FONT_SYS,
+          fontSize: 10,
+          fontWeight: 600,
+          letterSpacing: "0.16em",
+          textTransform: "uppercase",
+          color: v1.inkMuted,
+          textAlign: "center",
+          marginTop: 16,
+          marginBottom: 12,
+        }}
+      >
+        Share via
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+        <ChannelTile icon={<PiChatCircleText size={22} color={v1.inkPrimary} />} label="SMS"      onClick={onSmsTap} />
+        <ChannelTile icon={<PiQrCode        size={22} color={v1.inkPrimary} />} label="QR Code"  onClick={onQrTap} />
+        <CopyLinkTile url={mallUrl} onTap={onCopyLinkTap} onCopySuccess={onCopyLinkSuccess} />
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "center",
+          gap: 8,
+          marginTop: 18,
+          paddingTop: 14,
+          borderTop: `1px solid ${v1.inkHairline}`,
+        }}
+      >
+        <PiLeaf
+          size={14}
+          color={v1.inkMuted}
+          style={{ marginTop: 2, flexShrink: 0 }}
+          aria-hidden="true"
+        />
+        <div
+          style={{
+            fontFamily: FONT_SYS,
+            fontSize: 11,
+            color: v1.inkMuted,
+            lineHeight: 1.45,
+            maxWidth: 260,
+          }}
+        >
+          {isKentucky
+            ? "Anyone with this link can browse Treehouse Finds."
+            : "Anyone with this link can view this mall in Treehouse Finds."}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── MallQrScreen ────────────────────────────────────────────────────────
+// Slim header repeat + section divider + 200px QR + caption. Fires
+// share_mall_qr_viewed once on mount (mirrors booth's QrScreen).
+function MallQrScreen({
+  mallName,
+  mallSubtitle,
+  mallAddress,
+  mallUrl,
+  isKentucky,
+  trackPayload,
+}: {
+  mallName:     string;
+  mallSubtitle: string;
+  mallAddress:  string | null;
+  mallUrl:      string;
+  isKentucky:   boolean;
+  trackPayload: { mall_slug: string };
+}) {
+  useEffect(() => {
+    track("share_mall_qr_viewed", trackPayload);
+    // Empty deps + mount-only fire is intentional — re-mount on each
+    // grid → qr navigation is the right signal for another view count.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <>
+      <MallSlimHeader
+        mallName={mallName}
+        mallSubtitle={mallSubtitle}
+        mallAddress={mallAddress}
+      />
+
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 22 }}>
+        <div
+          style={{
+            padding: 12,
+            background: v1.postit,
+            borderRadius: 10,
+            border: `1px solid ${v1.inkHairline}`,
+            position: "relative",
+            display: "inline-block",
+          }}
+        >
+          <QRCode
+            value={mallUrl}
+            size={200}
+            level="H"
+            fgColor="#000000"
+            bgColor="#ffffff"
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: 44,
+              height: 44,
+              background: "#ffffff",
+              borderRadius: "50%",
+              boxShadow: "0 0 0 4px #ffffff",
+              overflow: "hidden",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icon.png" alt="" width={44} height={44} style={{ display: "block" }} />
+          </div>
+        </div>
+
+        <div
+          style={{
+            fontFamily: FONT_LORA,
+            fontStyle: "italic",
+            fontSize: 12,
+            color: v1.inkMuted,
+            marginTop: 10,
+            textAlign: "center",
+          }}
+        >
+          {isKentucky ? "Scan to browse Treehouse Finds" : "Scan to visit this mall"}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── CopyLinkTile ────────────────────────────────────────────────────────
+// Channel tile that owns its own clipboard + visual feedback state. Tap →
+// (1) onTap fires immediately so parent can record the channel_tapped
+// analytics regardless of clipboard outcome; (2) clipboard.writeText
+// runs; (3) on success, onCopySuccess fires + the icon swaps to a
+// checkmark for 1600ms + label changes to "Copied" + sheet stays open
+// (D4 of session 137 — matches MastheadShareButton's existing 1600ms
+// feedback pattern). Clipboard failure surfaces nothing visually for
+// now; the share_*_copy_link_completed event is the success-only signal.
+function CopyLinkTile({
+  url,
+  onTap,
+  onCopySuccess,
+}: {
+  url:           string;
+  onTap:         () => void;
+  onCopySuccess: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const timeoutRef          = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  async function handleClick() {
+    onTap();
+    try {
+      await navigator.clipboard.writeText(url);
+      onCopySuccess();
+      setCopied(true);
+      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // Clipboard blocked / unavailable — surface nothing for now. Future
+      // dial: fall back to selecting the URL text or showing an inline
+      // failure state if clipboard reliability surfaces as a real issue.
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      style={{
+        background: "rgba(255,255,255,0.4)",
+        border: `1px solid ${v1.inkHairline}`,
+        borderRadius: 10,
+        padding: "16px 6px 12px",
+        textAlign: "center",
+        boxShadow: "0 1px 2px rgba(44,36,28,0.05)",
+        cursor: "pointer",
+        WebkitTapHighlightColor: "transparent",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 6,
+      }}
+    >
+      <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
+        {copied
+          ? <PiCheck       size={22} color={v1.green} />
+          : <PiLinkSimple  size={22} color={v1.inkPrimary} />}
+      </span>
+      <span
+        style={{
+          fontFamily: FONT_LORA,
+          fontWeight: 600,
+          fontSize: 13,
+          color: copied ? v1.green : v1.inkPrimary,
+        }}
+      >
+        {copied ? "Copied" : "Copy Link"}
+      </span>
+    </button>
   );
 }
 
