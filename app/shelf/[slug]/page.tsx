@@ -53,7 +53,7 @@ import { useShopperBoothBookmarks } from "@/lib/useShopperBoothBookmarks";
 import { track } from "@/lib/clientEvents";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
-import ShareBoothSheet from "@/components/ShareBoothSheet";
+import ShareSheet from "@/components/ShareSheet";
 import EmptyState from "@/components/EmptyState";
 import LocationActions from "@/components/LocationActions";
 import {
@@ -527,12 +527,10 @@ export default function PublicShelfPage() {
           send authenticated (sender voice preserved); shoppers + anon send
           anonymously (no sender attribution). */}
       {vendor && (
-        <ShareBoothSheet
+        <ShareSheet
           open={shareOpen}
           onClose={() => setShareOpen(false)}
-          vendor={vendor}
-          mall={mall}
-          previewPosts={available}
+          entity={{ kind: "booth", vendor, mall }}
           mode={shareMode}
         />
       )}

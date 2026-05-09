@@ -1,23 +1,35 @@
-// components/ShareBoothSheet.tsx
-// ShareBoothSheet — Frame C 3-channel grid (Email + SMS + QR Code) with
-// sub-screens for Email + QR. Bottom-sheet primitive preserved from session 41.
+// components/ShareSheet.tsx
+// ShareSheet — Frame C 3-channel grid with sub-screens for Email + QR.
+// Bottom-sheet primitive preserved from session 41.
 //
-// Session 135 redesign — full record at docs/share-booth-redesign-design.md.
-// Reverses 3 frozen decisions from Q-007 session 41:
-//   - Email-as-primary-affordance → email is one of three equal channels
-//   - 160px always-visible QR → 200px QR demoted to a sub-screen
-//   - 3-tile preview strip embedded in sheet → preview tiles retired entirely
+// Session 135 — original Frame C / 14-decision design record at
+// docs/share-booth-redesign-design.md (booth path).
 //
-// Preserved verbatim:
+// Session 137 — entity-discriminated generalization. The sheet now serves
+// 3 tiers of the engagement+share lattice (memory:
+// project_layered_engagement_share_hierarchy):
+//
+//   entity.kind === "booth"   → Email + SMS + QR        (Q-011 email; existing path)
+//   entity.kind === "mall"    → SMS + QR + Copy Link    (wired in commit 3)
+//   entity.kind === "find"    → SMS + QR + Copy Link    (wired in commit 4)
+//
+// Email channel is intentionally Booth-only — the booth window email is the
+// load-bearing curated experience (Q-011 4-client-audited template, sessions
+// 51–53). Mall + Find use the lighter SMS + QR + Copy Link trio.
+//
+// Preserved verbatim from session 135 (booth path):
 //   - Bottom-sheet chrome (backdrop + paperCream sheet + handle pill)
 //   - /api/share-booth backend + Gmail/Outlook-audited HTML email template
-//     (Q-011 sessions 51–53)
 //   - Q-008 vendor/admin/shopper auth modes (session 50)
 //   - QR component + Treehouse logo overlay (react-qr-code + /icon.png)
+//   - Screen state machine: "grid" | "email" | "qr"; React state, not router
 //
-// Screen state machine (D14): "grid" | "email" | "qr".
-// Internal navigation is React state, not router history. Closing the sheet
-// from any screen resets to "grid" on next open.
+// Reversal log (Q-007 session 41 → 135 → 137 retained):
+//   - Email-as-primary-affordance → email is one of three equal channels (135)
+//   - 160px always-visible QR → 200px QR demoted to a sub-screen (135)
+//   - 3-tile preview strip → preview tiles retired entirely (135)
+//   - `previewPosts` deprecated prop → dropped from signature (137; was
+//     unused at render layer since 135, kept for callsite quiet)
 //
 // EMAIL_REGEX is inlined (matches /api/share-booth/route.ts +
 // /api/vendor-request). DO NOT import a shared regex.
@@ -46,36 +58,53 @@ type EmailStatus =
   | { kind: "sent"; email: string }
   | { kind: "error"; message: string };
 
-export interface ShareBoothSheetProps {
+/**
+ * Session 137 — entity-discriminated input. Replaces the prior
+ * vendor + mall + previewPosts trio. Each kind drives:
+ *   - Slim header content (which entity's identity is shown)
+ *   - Channel set (booth = Email/SMS/QR; mall + find = SMS/QR/CopyLink)
+ *   - Channel handlers (entity-specific URLs, SMS body templates, analytics)
+ *
+ * "all-kentucky" mall scope is a string literal (not a synthetic Mall row)
+ * because no Mall row has those identity facts; the renderer detects the
+ * string and renders Kentucky-network-level header copy + uses the bare
+ * `/` URL.
+ */
+export type ShareSheetEntity =
+  | { kind: "booth"; vendor: Vendor; mall: Mall | null }
+  | { kind: "mall";  mall: Mall | "all-kentucky" }
+  | { kind: "find";  post: Post; vendor: Vendor; mall: Mall | null };
+
+export interface ShareSheetProps {
   open:    boolean;
   onClose: () => void;
-  vendor:  Vendor;
-  mall:    Mall | null;
+  entity:  ShareSheetEntity;
   /**
    * Session 50 (Q-008) — call-site declares whether this is a vendor/admin
    * share (authenticated POST, bearer token attached) or a shopper share
    * (anonymous POST, no bearer). Default "vendor" preserves behavior for any
    * caller that hasn't opted in (Q-009 admin surface, /my-shelf). Parents
    * that expose the sheet to unauthenticated or non-owner viewers must pass
-   * "shopper" explicitly.
+   * "shopper" explicitly. Only consulted when entity.kind === "booth"
+   * (Email channel uses authenticated POST to /api/share-booth).
    */
   mode?: "vendor" | "shopper";
-  /**
-   * @deprecated Session 135 — preview tiles retired in Frame C redesign
-   * (D5). Kept in prop signature to avoid touching 3 callsites; unused at
-   * the rendering layer. Safe to drop in a follow-up cleanup commit if
-   * grep confirms no callsite still passes meaningful data.
-   */
-  previewPosts?: Post[];
 }
 
-export default function ShareBoothSheet({
+export default function ShareSheet({
   open,
   onClose,
-  vendor,
-  mall,
+  entity,
   mode = "vendor",
-}: ShareBoothSheetProps) {
+}: ShareSheetProps) {
+  // Session 137 — booth path is wired verbatim from session 135. Mall +
+  // find paths land in commits 3 + 4 of this session; until then they
+  // early-return null so the sheet is a no-op for those entity kinds.
+  // This keeps commit 2 a pure refactor (booth callsites unchanged in
+  // behavior; mall + find consumers don't exist yet).
+  if (entity.kind !== "booth") return null;
+  const vendor = entity.vendor;
+  const mall   = entity.mall;
   const [screen, setScreen]           = useState<Screen>("grid");
   const [email, setEmail]             = useState("");
   const [emailStatus, setEmailStatus] = useState<EmailStatus>({ kind: "compose" });
