@@ -100,7 +100,7 @@ interface BottomNavProps {
 }
 
 const C = {
-  bg:         "rgba(242,236,216,0.96)", // v1.1d — paperCream translucent (session 132 lightened from rgba(232,221,199,0.96) to match new bg)
+  bg:         "#f2ecd8", // session 132 — paperCream opaque (was rgba(242,236,216,0.96) translucent + backdrop-blur; frosted-glass primitive retired Shape C — content bleed-through during scroll was producing perceived flicker)
   border:     "rgba(42,26,10,0.18)",     // v1.1d — inkHairline for visible separation
   textMuted:  "#6b5538",                 // v1.inkMuted
   green:      "#1e4d2b",
@@ -183,7 +183,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
   const navStyle: React.CSSProperties = {
     position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
     width: "100%", maxWidth: 430, zIndex: 100,
-    background: C.bg, backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)",
+    background: C.bg,
     borderTop: `1px solid ${C.border}`,
     display: "flex", alignItems: "stretch",
     paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)",
