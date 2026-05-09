@@ -65,7 +65,8 @@ export const dynamic = "force-dynamic";
 import { useEffect, useLayoutEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Send, Pencil } from "lucide-react";
+import { ArrowLeft, Send, Pencil, ChevronRight } from "lucide-react";
+import { PiStorefront } from "react-icons/pi";
 import { motion, type PanInfo } from "framer-motion";
 import FlagGlyph from "@/components/FlagGlyph";
 import { getPost, getVendorPosts } from "@/lib/posts";
@@ -85,10 +86,7 @@ import { readFindContext, getPostCache, setPostCache, writeFindContext, getVendo
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import PhotoLightbox from "@/components/PhotoLightbox";
-import DistancePill from "@/components/DistancePill";
 import LocationActions from "@/components/LocationActions";
-import { milesFromUser } from "@/lib/distance";
-import { useUserLocation } from "@/lib/useUserLocation";
 import type { Post } from "@/types/treehouse";
 
 // v1.1 tokens imported from lib/tokens.ts (canonical since session 19A). v1 palette +
@@ -691,10 +689,13 @@ export default function FindDetailPage() {
   // authed paths. Hook owns the localStorage/DB branching internally.
   const saves = useShopperSaves();
   const isSaved = !!id && saves.isSaved(id);
-  // R17 Arc 2 — silent first-mount geolocation. Hook is idempotent across
-  // surfaces (D3 + D20); this surface fires the prompt if the user hasn't
-  // landed on /map / /flagged / /shelf first. Result hydrates pill + CTAs.
-  const userLoc = useUserLocation();
+  // Session 134 — page-level useUserLocation() retired alongside DistancePill.
+  // The eyebrow row's right slot now ships an "Enter Booth →" link to
+  // /shelf/[vendorSlug]; distance display retired on this surface (R17 Arc 2
+  // D18 reversed — see eyebrow row below for context). LocationActions
+  // (rendered below the cartographic card) keeps its own internal
+  // useUserLocation() call gated on geolocation permission, so the
+  // page-level hook call had no remaining consumer.
 
   // Preview image URL written by the source surface (Home tile / /flagged
   // / /shelf, eventually) into sessionStorage on tap. Loaded by the
@@ -1535,14 +1536,30 @@ export default function FindDetailPage() {
             marginBottom: 32,
           }}
         >
-          {/* R17 Arc 2 D18 — eyebrow row holds the existing italic Lora
-              eyebrow on the left + <DistancePill> right-aligned. The pill
-              renders nothing on guest / denied / mall coords missing per
-              the primitive's internal null-passthrough. */}
+          {/* Session 134 — eyebrow row carries the italic Lora eyebrow with
+              a leading <PiStorefront> glyph + an italic Lora "Enter Booth →"
+              link in green, right-aligned. Reverses R17 Arc 2 D18 (session
+              117 + session 119): DistancePill retired from this surface. The
+              card BELOW this row (vendor + booth + mall block) now exists
+              to be entered, not measured — the explicit affordance lives in
+              the eyebrow as a visual sibling of the descriptor on the left.
+              Distance + native-maps deep-link both stay reachable via the
+              full-width <LocationActions> "Take Trip" CTA below the card.
+
+              alignItems: center (was baseline, when both children were
+              text-only) — both children now carry icons that need vertical
+              centering rather than baseline alignment.
+
+              Link renders only when vendorSlug exists (otherwise there is
+              no booth to enter). The cardInner Link wrapper below keeps
+              card-tap routing to /shelf/[slug] in parallel; "Enter Booth"
+              eyebrow is the explicit affordance, the card-tap is a wider
+              hit target. iPhone QA will reveal whether the dual affordance
+              feels redundant. */}
           <div
             style={{
               display:        "flex",
-              alignItems:     "baseline",
+              alignItems:     "center",
               justifyContent: "space-between",
               gap:            8,
               marginBottom:   8,
@@ -1552,6 +1569,9 @@ export default function FindDetailPage() {
           >
             <div
               style={{
+                display:    "inline-flex",
+                alignItems: "center",
+                gap:        6,
                 fontFamily: FONT_LORA,
                 fontStyle:  "italic",
                 fontSize:   14,
@@ -1559,15 +1579,30 @@ export default function FindDetailPage() {
                 lineHeight: 1.4,
               }}
             >
+              <PiStorefront size={14} aria-hidden style={{ flexShrink: 0 }} />
               Purchase this item at
             </div>
-            <DistancePill
-              miles={milesFromUser(
-                { lat: userLoc.lat, lng: userLoc.lng },
-                mallLat,
-                mallLng,
-              )}
-            />
+            {vendorSlug && (
+              <Link
+                href={`/shelf/${vendorSlug}`}
+                style={{
+                  display:        "inline-flex",
+                  alignItems:     "center",
+                  gap:            2,
+                  fontFamily:     FONT_LORA,
+                  fontStyle:      "italic",
+                  fontSize:       14,
+                  color:          v1.green,
+                  lineHeight:     1.4,
+                  textDecoration: "none",
+                  whiteSpace:     "nowrap",
+                  WebkitTapHighlightColor: "transparent",
+                }}
+              >
+                Enter Booth
+                <ChevronRight size={14} strokeWidth={2} aria-hidden />
+              </Link>
+            )}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
             {(vendorName || boothNumber) && (() => {
@@ -1597,25 +1632,16 @@ export default function FindDetailPage() {
                     }}
                   >
                     <div style={{ minWidth: 0 }}>
-                      {vendorName && (
-                        <div
-                          style={{
-                            fontFamily: FONT_LORA,
-                            fontSize: 18,
-                            color: v1.inkPrimary,
-                            // Session 82 — lineHeight 1.4 (was 1.25) for
-                            // descender clearance under overflow:hidden
-                            // (matches BoothLockupCard primitive).
-                            lineHeight: 1.4,
-                            letterSpacing: "-0.005em",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {vendorName}
-                        </div>
-                      )}
+                      {/* Session 134 — mall location now sits ABOVE the
+                          vendor (booth) name. Postal-address shape: city
+                          first, building second. Font sizes + colors held
+                          per David's "keep the existing font size and
+                          styles as they are" call. The reordering matters
+                          because the booth/mall card identifies a physical
+                          place to visit; the natural read is "where" before
+                          "which" — like writing an address on an envelope.
+                          marginTop drift moves with the swap (was on the
+                          mall subtitle, now on the vendor name). */}
                       {mallSubtitle && (
                         mapLink ? (
                           <a
@@ -1632,7 +1658,6 @@ export default function FindDetailPage() {
                               textDecorationStyle: "dotted",
                               textDecorationColor: v1.inkFaint,
                               textUnderlineOffset: 3,
-                              marginTop: 2,
                               lineHeight: 1.4,
                             }}
                           >
@@ -1644,13 +1669,32 @@ export default function FindDetailPage() {
                               fontFamily: FONT_SYS,
                               fontSize: 11.5,
                               color: v1.inkMuted,
-                              marginTop: 2,
                               lineHeight: 1.4,
                             }}
                           >
                             {mallSubtitle}
                           </div>
                         )
+                      )}
+                      {vendorName && (
+                        <div
+                          style={{
+                            fontFamily: FONT_LORA,
+                            fontSize: 18,
+                            color: v1.inkPrimary,
+                            // Session 82 — lineHeight 1.4 (was 1.25) for
+                            // descender clearance under overflow:hidden
+                            // (matches BoothLockupCard primitive).
+                            lineHeight: 1.4,
+                            letterSpacing: "-0.005em",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            marginTop: 2,
+                          }}
+                        >
+                          {vendorName}
+                        </div>
                       )}
                     </div>
                     {boothNumber && (
