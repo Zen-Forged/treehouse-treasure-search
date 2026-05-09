@@ -53,7 +53,8 @@ import { useShopperBoothBookmarks } from "@/lib/useShopperBoothBookmarks";
 import { track } from "@/lib/clientEvents";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
-import ShareBoothSheet from "@/components/ShareBoothSheet";
+import MastheadPaperAirplane from "@/components/MastheadPaperAirplane";
+import ShareSheet from "@/components/ShareSheet";
 import EmptyState from "@/components/EmptyState";
 import LocationActions from "@/components/LocationActions";
 import {
@@ -101,25 +102,6 @@ import type { User } from "@supabase/supabase-js";
 // retired from this Masthead's API. Mirrors session 78 /find/[id] convention
 // where masthead carries share only and the save affordance lives on the
 // photograph.
-
-function MastheadPaperAirplane() {
-  return (
-    <svg
-      width={22}
-      height={22}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={v1.green}
-      strokeWidth={1.7}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M21 3 10.5 13.5" />
-      <path d="M21 3 14.5 21l-4-7.5L3 9.5 21 3Z" />
-    </svg>
-  );
-}
 
 function Masthead({
   onBack,
@@ -527,12 +509,10 @@ export default function PublicShelfPage() {
           send authenticated (sender voice preserved); shoppers + anon send
           anonymously (no sender attribution). */}
       {vendor && (
-        <ShareBoothSheet
+        <ShareSheet
           open={shareOpen}
           onClose={() => setShareOpen(false)}
-          vendor={vendor}
-          mall={mall}
-          previewPosts={available}
+          entity={{ kind: "booth", vendor, mall }}
           mode={shareMode}
         />
       )}

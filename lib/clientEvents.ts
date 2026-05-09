@@ -43,7 +43,22 @@ export type ClientEventType =
   // via /api/share-booth (unchanged by this redesign).
   | "share_booth_channel_tapped"
   | "share_booth_qr_viewed"
-  | "share_booth_sms_initiated";
+  | "share_booth_sms_initiated"
+  // ── Session 137 — Share Sheet generalization (Mall + Find entities) ──
+  // 3-tier engagement+share lattice (memory: project_layered_engagement_share_hierarchy).
+  // Mall + Find entities use SMS + QR + Copy Link channels (no Email — kept
+  // booth-only because the booth window email is the load-bearing curated
+  // experience). Per-entity events mirror session 135's share_booth_* shape;
+  // copy_link_completed is the success signal for the new clipboard channel
+  // (the channel_tapped event fires on tap regardless of clipboard outcome).
+  | "share_mall_channel_tapped"
+  | "share_mall_qr_viewed"
+  | "share_mall_sms_initiated"
+  | "share_mall_copy_link_completed"
+  | "share_find_channel_tapped"
+  | "share_find_qr_viewed"
+  | "share_find_sms_initiated"
+  | "share_find_copy_link_completed";
 
 function getSessionId(): string {
   if (typeof window === "undefined") return "";

@@ -81,7 +81,7 @@ import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import AddFindSheet from "@/components/AddFindSheet";
 import BoothPickerSheet from "@/components/BoothPickerSheet";
-import ShareBoothSheet from "@/components/ShareBoothSheet";
+import ShareSheet from "@/components/ShareSheet";
 import EditBoothSheet from "@/components/EditBoothSheet";
 import {
   BoothHero,
@@ -901,12 +901,10 @@ function MyBoothInner() {
           Visibility of the entry point (masthead icon) is gated separately
           above via `canShare`. */}
       {activeVendor && (
-        <ShareBoothSheet
+        <ShareSheet
           open={shareOpen}
           onClose={() => setShareOpen(false)}
-          vendor={activeVendor}
-          mall={mall}
-          previewPosts={available}
+          entity={{ kind: "booth", vendor: activeVendor, mall }}
         />
       )}
 

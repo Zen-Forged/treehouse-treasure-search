@@ -39,7 +39,8 @@ import PostcardMallCard from "@/components/PostcardMallCard";
 import BottomNav from "@/components/BottomNav";
 import MastheadProfileButton from "@/components/MastheadProfileButton";
 import MastheadBackButton from "@/components/MastheadBackButton";
-import MastheadShareButton from "@/components/MastheadShareButton";
+import MastheadPaperAirplane from "@/components/MastheadPaperAirplane";
+import ShareSheet from "@/components/ShareSheet";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { useShopperAuth } from "@/lib/useShopperAuth";
 import { useShopperSaves } from "@/lib/useShopperSaves";
@@ -55,6 +56,10 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
   const shopperAuth         = useShopperAuth();
   const saves               = useShopperSaves();
   const [malls, setMalls]   = useState<Mall[]>([]);
+  // Session 137 — mall-entity ShareSheet state. Mounted only on Home
+  // (/); /map drops its airplane affordance entirely per Q3 of session
+  // 137 (share isn't a /map concern; the map's job is scope-pick + visit).
+  const [shareOpen, setShareOpen] = useState(false);
 
   useEffect(() => {
     getActiveMalls().then(setMalls);
@@ -161,9 +166,19 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
           return to where they came from. Geometry matches across the two
           components so the slot doesn't shift dimensions on tab switch.
 
-          RIGHT slot — Home + Map → MastheadShareButton with scope-encoding
-          URL builder. The shared URL only encodes ?mall=<slug> (the mall
-          scope), never which finds the user has saved.
+          RIGHT slot — Home → airplane that opens <ShareSheet> with mall
+          entity (session 137). The sheet's 3-channel grid (SMS + QR +
+          Copy Link) shares the active mall scope (or all-Kentucky when
+          no mall picked); the mall-share URL goes through the same
+          ?mall=<slug> intake as the prior MastheadShareButton handled.
+
+          /map → null right slot. Session 137 retires the airplane on
+          /map entirely per Q3 — share isn't a /map affordance; the
+          map's job is scope-pick + visit. The 3-tier engagement+share
+          lattice (memory: project_layered_engagement_share_hierarchy)
+          puts share-mall on the surface where mall identity is
+          presented as content, not on the surface where the user
+          interacts with the map.
 
           Saved was added to this slot in session 116 in prep for guest user
           accounts (R1, shipped session 114). R18 (session 121) retires the
@@ -178,16 +193,26 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
             : <MastheadBackButton fallback="/" />
         }
         right={
-          (pathname === "/" || pathname === "/map") ? (
-            <MastheadShareButton
-              urlBuilder={() => {
-                const slug = mallId
-                  ? (malls.find((m) => m.id === mallId)?.slug ?? null)
-                  : null;
-                const base = `${window.location.origin}${pathname}`;
-                return slug ? `${base}?mall=${slug}` : base;
+          pathname === "/" ? (
+            <button
+              onClick={() => setShareOpen(true)}
+              aria-label="Share this mall"
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: "50%",
+                background: v1.iconBubble,
+                border: "none",
+                padding: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                WebkitTapHighlightColor: "transparent",
               }}
-            />
+            >
+              <MastheadPaperAirplane />
+            </button>
           ) : null
         }
       />
@@ -205,6 +230,18 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
       {children}
 
       <BottomNav active={activeNav} flaggedCount={bookmarkCount} />
+
+      {/* Session 137 — mall ShareSheet, mounted only on Home. Entity
+          handles the all-Kentucky scope inline (string literal); when
+          a specific mall is picked the entity carries the Mall row and
+          the sheet shares /?mall=<slug>. */}
+      {pathname === "/" && (
+        <ShareSheet
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          entity={{ kind: "mall", mall: selectedMall ?? "all-kentucky" }}
+        />
+      )}
     </div>
   );
 }

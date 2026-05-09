@@ -39,7 +39,6 @@
 
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import { v1 } from "@/lib/tokens";
-import MastheadShareButton from "./MastheadShareButton";
 
 interface StickyMastheadProps {
   /**
@@ -59,11 +58,15 @@ interface StickyMastheadProps {
    * Right-slot content. Variable: bookmark, custom share bubbles, etc.
    * Renders right-aligned within the locked `min-width: 80px` column.
    *
-   * Session 90 — when omitted, defaults to <MastheadShareButton /> so every
-   * page in the app carries a share-this-page affordance for sign-up
-   * acquisition. Pass `right={null}` to render an empty slot. Pages with
-   * context-specific share treatments (/find/[id], /shelf/[slug],
-   * /my-shelf) pass their own `right` and opt out of the default.
+   * Session 137 — defaults to null when omitted. Previously (session 90)
+   * defaulted to <MastheadShareButton /> as a "share this page" sign-up
+   * acquisition affordance, but the 3-tier engagement+share lattice
+   * (memory: project_layered_engagement_share_hierarchy) replaces the
+   * generic page-share with entity-specific Share Mall / Share Booth /
+   * Share Find via <ShareSheet>. Pages that want a share affordance
+   * pass an explicit `right={...}` opening the appropriate ShareSheet
+   * for their entity. Pages with no share entity (e.g. /vendor-request,
+   * /me, /contact) pass `right={null}` to be explicit.
    */
   right?: ReactNode;
   /**
@@ -207,7 +210,7 @@ export default function StickyMasthead({
               minWidth: 80,
             }}
           >
-            {right === undefined ? <MastheadShareButton /> : right}
+            {right ?? null}
           </div>
         </div>
       </div>

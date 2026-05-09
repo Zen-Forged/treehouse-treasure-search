@@ -65,7 +65,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useLayoutEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Send, Pencil, ChevronRight } from "lucide-react";
+import { ArrowLeft, Pencil, ChevronRight } from "lucide-react";
 import { PiStorefront } from "react-icons/pi";
 import { motion, type PanInfo } from "framer-motion";
 import FlagGlyph from "@/components/FlagGlyph";
@@ -87,6 +87,8 @@ import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import PhotoLightbox from "@/components/PhotoLightbox";
 import LocationActions from "@/components/LocationActions";
+import MastheadPaperAirplane from "@/components/MastheadPaperAirplane";
+import ShareSheet from "@/components/ShareSheet";
 import type { Post } from "@/types/treehouse";
 
 // v1.1 tokens imported from lib/tokens.ts (canonical since session 19A). v1 palette +
@@ -674,7 +676,12 @@ export default function FindDetailPage() {
 
   const [post,          setPost]          = useState<Post | null>(null);
   const [loading,       setLoading]       = useState(true);
-  const [copied,        setCopied]        = useState(false);
+  // Session 137 — share airplane now opens <ShareSheet entity="find">
+  // (3-channel grid: SMS + QR + Copy Link). Replaces the OS-native
+  // navigator.share() handler + clipboard-fallback `copied` state that
+  // lived on this surface since session 73. Sheet owns its own copy
+  // feedback; no per-page color-tint state needed anymore.
+  const [shareOpen,     setShareOpen]     = useState(false);
   const [isMyPost,      setIsMyPost]      = useState(false);
   const [, setShelfHasItems]              = useState(false);
   // Phase C QA fix #2 (session 100) — readiness signal for scroll-restore.
@@ -1023,28 +1030,20 @@ export default function FindDetailPage() {
     track(next ? "post_saved" : "post_unsaved", { post_id: id });
   }
 
-  async function handleShare() {
-    const url = window.location.href;
-    // R3 v1.1 — intent-capture semantic: fire find_shared when the user taps
-    // the share affordance, regardless of whether they complete the OS share
-    // sheet. The native share() Promise rejects on dismiss with no reliable
-    // way to distinguish dismiss from error, so the most truthful signal is
-    // "the user attempted to share." Closes session-59 carry-forward gap.
-    if (navigator.share) {
-      track("find_shared", { post_id: id, share_method: "native" });
-      try {
-        await navigator.share({
-          title: post?.title ?? "A Treehouse find",
-          text:  post?.caption ?? "",
-          url,
-        });
-      } catch {}
-    } else {
-      track("find_shared", { post_id: id, share_method: "clipboard" });
-      await navigator.clipboard.writeText(url).catch(() => {});
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+  function handleShare() {
+    // Session 73 R3 v1.1 — intent-capture semantic preserved verbatim.
+    // The find_shared event still fires when the user taps the share
+    // affordance, regardless of whether they complete the share through
+    // any channel — that's the truthful "user attempted to share" signal
+    // the analytics dashboard has been counting since session 73.
+    //
+    // Session 137 — share_method shifts from "native"/"clipboard" to
+    // "sheet" because the sheet primitive has replaced the OS-native
+    // navigator.share() / clipboard fallback path. The new share_find_*
+    // events fire from inside <ShareSheet> for granular per-channel
+    // analytics (SMS / QR / Copy Link) on top of this intent-capture.
+    track("find_shared", { post_id: id, share_method: "sheet" });
+    setShareOpen(true);
   }
 
   const handleShelfReady = useCallback((hasItems: boolean) => {
@@ -1117,15 +1116,14 @@ export default function FindDetailPage() {
           // Session 78 — share airplane lifted off the photograph onto the
           // masthead, mirroring /shelf/[slug] + /my-shelf. Cross-page
           // consistency: top-right airplane shares the current entity (find
-          // here, booth there). Gated on `post` so it doesn't flash during
-          // the cached-preview window before data loads.
+          // here, booth there). Session 137 — tap opens <ShareSheet
+          // entity="find"> instead of the OS-native share sheet; sheet
+          // owns its own visual feedback so the icon color stays static.
+          // Gated on `post` so it doesn't flash during the cached-preview
+          // window before data loads.
           post ? (
             <IconBubble onClick={handleShare} ariaLabel="Share this find">
-              <Send
-                size={22}
-                strokeWidth={1.7}
-                style={{ color: copied ? "#1e4d2b" : v1.green }}
-              />
+              <MastheadPaperAirplane />
             </IconBubble>
           ) : null
         }
@@ -1807,6 +1805,23 @@ export default function FindDetailPage() {
         alt={post?.title ?? ""}
         onClose={() => setLightboxOpen(false)}
       />
+
+      {/* Session 137 — find-entity ShareSheet. Replaces the OS-native
+          navigator.share() handler. Gated on post + post.vendor — both
+          are required for the slim header to render the find's
+          identity ("this find at this booth in this mall"). */}
+      {post && post.vendor && (
+        <ShareSheet
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          entity={{
+            kind:   "find",
+            post,
+            vendor: post.vendor,
+            mall:   post.mall ?? null,
+          }}
+        />
+      )}
     </div>
   );
 }
