@@ -346,6 +346,60 @@ export async function sendApprovalInstructions(
   });
 }
 
+// ── Email #2.5 — Denial notice (session 136, Requests tab Arc 1) ────────────
+
+export interface DenialNoticePayload {
+  /** First name for salutation. Falls back to "there" when empty. */
+  firstName: string;
+  email:     string;
+}
+
+/**
+ * Sends the soft denial notice to a vendor whose request was denied.
+ *
+ * Triggered by: POST /api/admin/vendor-requests { action: "deny" }
+ *
+ * Per D6 of docs/admin-requests-tab-design.md: copy is locked to "we weren't
+ * able to approve at this time + reach out to discuss" — denial_reason is
+ * NEVER exposed (admin-internal only). Same shell + Resend infrastructure
+ * as sendApprovalInstructions; replyTo routes to info@kentuckytreehouse.com
+ * so vendor replies land in the canonical inbox.
+ */
+export async function sendDenialNotice(
+  payload: DenialNoticePayload,
+): Promise<{ ok: boolean; error?: string }> {
+  const firstName = payload.firstName.trim() || "there";
+  const subject   = `Your Treehouse Finds booth request`;
+
+  const html = renderEmailShell({
+    preheader: "An update on your Treehouse Finds booth request.",
+    bodyHtml: `
+      <p style="${pStyle}">Hi ${escapeHtml(firstName)},</p>
+      <p style="${pStyle}">We weren't able to approve your Treehouse Finds booth request at this time.</p>
+      <p style="${pStyle}">If you'd like to discuss, please reach out to <a href="mailto:dbutler80020@gmail.com" style="color:${INK};text-decoration:underline;text-underline-offset:2px;">dbutler80020@gmail.com</a>.</p>
+      <p style="${signStyle}">&mdash; Treehouse Finds</p>
+    `,
+  });
+
+  const text = [
+    `Hi ${firstName},`,
+    ``,
+    `We weren't able to approve your Treehouse Finds booth request at this time.`,
+    ``,
+    `If you'd like to discuss, please reach out to dbutler80020@gmail.com.`,
+    ``,
+    `— Treehouse Finds`,
+  ].join("\n");
+
+  return sendEmail({
+    to:      payload.email,
+    replyTo: "info@kentuckytreehouse.com",
+    subject,
+    html,
+    text,
+  });
+}
+
 // ── Email #3 — Window share (Q-007, session 39) ─────────────────────────
 
 /**
