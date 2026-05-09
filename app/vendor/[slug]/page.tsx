@@ -24,7 +24,7 @@ const C = {
   textFaint:   v1.inkFaint,
   green:       v1.green,
   greenBorder: "rgba(30,77,43,0.18)",
-  header:      "rgba(232,221,199,0.96)",
+  header:      "rgba(242,236,216,0.96)",
 };
 
 function VendorPostCard({ post, index }: { post: Post; index: number }) {

@@ -165,7 +165,7 @@ export default function StickyMasthead({
           width: "100%",
           maxWidth: 430,
           zIndex: 40,
-          background: "rgba(232,221,199,0.96)",
+          background: "rgba(242,236,216,0.96)",
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
           borderBottom: `1px solid ${scrolled ? v1.inkHairline : "transparent"}`,

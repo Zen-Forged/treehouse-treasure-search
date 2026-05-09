@@ -100,7 +100,7 @@ interface BottomNavProps {
 }
 
 const C = {
-  bg:         "rgba(232,221,199,0.96)", // v1.1d — paperCream translucent to match Find Detail
+  bg:         "rgba(242,236,216,0.96)", // v1.1d — paperCream translucent (session 132 lightened from rgba(232,221,199,0.96) to match new bg)
   border:     "rgba(42,26,10,0.18)",     // v1.1d — inkHairline for visible separation
   textMuted:  "#6b5538",                 // v1.inkMuted
   green:      "#1e4d2b",

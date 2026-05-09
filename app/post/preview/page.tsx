@@ -803,7 +803,7 @@ function PostPreviewInner() {
           margin: "0 auto",
           padding: "12px 22px",
           paddingBottom: "max(18px, env(safe-area-inset-bottom, 18px))",
-          background: "rgba(232,221,199,0.96)",
+          background: "rgba(242,236,216,0.96)",
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
           borderTop: `1px solid ${v1.inkHairline}`,
