@@ -44,6 +44,19 @@
 //                              in the same session — Map tab is now the canonical
 //                              change-scope path, so the in-card pill became
 //                              redundant chrome.
+//   Session 134:               "Home" → "Explore" + Lucide Home → MdOutlineExplore.
+//                              The leftmost tab's job is the same (entry point
+//                              to the find feed) but the verb sharpens the
+//                              digital-to-physical thesis: shoppers don't go
+//                              "home" in this app, they "explore" — the
+//                              landscape of finds across the active mall
+//                              network. /shelf/[slug]'s in-tile "Enter Booth"
+//                              link in the same session reuses the same
+//                              vocabulary. Icon shifts from a literal house
+//                              glyph to a compass (MdOutlineExplore) for the
+//                              same reason. Tab key remains "home" + href "/"
+//                              (NavTab type unchanged) — the rename is
+//                              user-facing only, no callsite churn.
 //
 // Why drop Map (session 110, REVERSED session 121): the two paths to /map
 // (BottomNav tab + tap the postcard mall card on Home/Saved) felt
@@ -76,7 +89,8 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Home, Store, Shield, MapPin } from "lucide-react";
+import { Store, Shield, MapPin } from "lucide-react";
+import { MdOutlineExplore } from "react-icons/md";
 import FlagGlyph from "./FlagGlyph";
 import { FONT_NUMERAL } from "@/lib/tokens";
 import { getSession, onAuthChange, detectUserRole, type UserRole } from "@/lib/auth";
@@ -159,8 +173,8 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
   // see 4-tab with the role-tab rightmost.
   const tabs: TabDef[] = [
     {
-      key: "home", label: "Home", href: "/",
-      icon: <Home size={21} strokeWidth={2.0} />,
+      key: "home", label: "Explore", href: "/",
+      icon: <MdOutlineExplore size={22} />,
     },
     {
       key: "flagged", label: "Saved", href: "/flagged",
