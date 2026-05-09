@@ -1,88 +1,72 @@
 // components/ShareBoothSheet.tsx
-// ShareBoothSheet — bottom-sheet compose UI for the Window email share feature.
-// Session 40 (2026-04-21), per docs/share-booth-build-spec.md §3.
-// Mockup: docs/mockups/share-booth-email-v1.html is the email output.
-// No dedicated sheet mockup — chrome mirrors <BoothPickerSheet> per spec.
+// ShareBoothSheet — Frame C 3-channel grid (Email + SMS + QR Code) with
+// sub-screens for Email + QR. Bottom-sheet primitive preserved from session 41.
 //
-// Four states (build-spec §3):
-//   - compose: email input + RFC-valid-gated CTA. Entry state.
-//   - sending: CTA shows spinner, disabled. authFetch in flight.
-//   - sent:    paper-wash success bubble + echoed email + "Share with
-//              someone else" loop-back link (clears input, returns to compose).
-//   - error:   inline error message above the CTA, CTA re-enabled.
-//              Different copy per server status (429 / 403 / 409 / 502 / network).
+// Session 135 redesign — full record at docs/share-booth-redesign-design.md.
+// Reverses 3 frozen decisions from Q-007 session 41:
+//   - Email-as-primary-affordance → email is one of three equal channels
+//   - 160px always-visible QR → 200px QR demoted to a sub-screen
+//   - 3-tile preview strip embedded in sheet → preview tiles retired entirely
 //
-// Chrome mirrors BoothPickerSheet exactly:
-//   - Backdrop rgba(30,20,10,0.38), fade 220ms
-//   - Sheet paperCream bg, 20px top radius, y-slide 340ms
-//   - Transform-free centering (left:0, right:0, margin:0 auto)
-//     — never combine a centering transform with Framer y animation on the
-//       same element (session-21A rule, docs/DECISION_GATE.md Tech Rules).
-//   - Handle 44×4 pill, inkFaint
-//   - Body scroll locked while open
-//   - 22px horizontal padding throughout
+// Preserved verbatim:
+//   - Bottom-sheet chrome (backdrop + paperCream sheet + handle pill)
+//   - /api/share-booth backend + Gmail/Outlook-audited HTML email template
+//     (Q-011 sessions 51–53)
+//   - Q-008 vendor/admin/shopper auth modes (session 50)
+//   - QR component + Treehouse logo overlay (react-qr-code + /icon.png)
 //
-// EMAIL_REGEX is inlined (matches /api/share-booth/route.ts + /api/vendor-request).
-// DO NOT import a shared regex — the two server routes inline it; this stays
-// consistent with that convention.
+// Screen state machine (D14): "grid" | "email" | "qr".
+// Internal navigation is React state, not router history. Closing the sheet
+// from any screen resets to "grid" on next open.
 //
-// Post.image_url is `string | null` (types/treehouse.ts). PreviewTile renders a
-// paperCream-wash fallback when the URL is null instead of a broken <img>.
-//
-// Sending-state spinner uses a plain <style> tag — styled-jsx is not part of
-// this repo's setup and adding it for one keyframe would be overkill.
-//
-// Session 40 build-gate fix:
-//   ComposeBody's `inputRef` prop is typed `React.Ref<HTMLInputElement>` —
-//   the broader union type that accepts both `RefObject<HTMLInputElement>`
-//   and `RefObject<HTMLInputElement | null>`. TypeScript's `LegacyRef` check
-//   on the <input ref={}> prop expects a non-null-generic ref, and React 19's
-//   `useRef<T | null>(null)` returns `RefObject<T | null>` by default.
-//   Using `React.Ref<T>` at the prop boundary lets us keep the nullable
-//   useRef declaration (correct for DOM refs) while satisfying the <input>
-//   ref slot. Same pattern applies to any future ref-forwarding component.
+// EMAIL_REGEX is inlined (matches /api/share-booth/route.ts +
+// /api/vendor-request). DO NOT import a shared regex.
 
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import QRCode from "react-qr-code";
+import { PiEnvelopeSimple, PiChatCircleText, PiQrCode, PiMapPin, PiLeaf } from "react-icons/pi";
 import { authFetch } from "@/lib/authFetch";
+import { track } from "@/lib/clientEvents";
 import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
 import type { Mall, Post, Vendor } from "@/types/treehouse";
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
 
 // Same shape as the two server routes (/api/share-booth, /api/vendor-request).
-// Keep the literal in sync if either changes.
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type SheetState =
+type Screen = "grid" | "email" | "qr";
+
+type EmailStatus =
   | { kind: "compose" }
   | { kind: "sending" }
   | { kind: "sent"; email: string }
   | { kind: "error"; message: string };
 
 export interface ShareBoothSheetProps {
-  open:          boolean;
-  onClose:       () => void;
-  vendor:        Vendor;
-  mall:          Mall | null;
-  /** Pre-loaded from /my-shelf parent to avoid a double-fetch. Used for the
-   *  preview strip inside the sheet (first 3 thumbnails). */
-  previewPosts:  Post[];
+  open:    boolean;
+  onClose: () => void;
+  vendor:  Vendor;
+  mall:    Mall | null;
   /**
    * Session 50 (Q-008) — call-site declares whether this is a vendor/admin
    * share (authenticated POST, bearer token attached) or a shopper share
-   * (anonymous POST, no bearer). Vendor mode keeps the existing behavior
-   * exactly; shopper mode sends through the anon branch of /api/share-booth
-   * which has a tighter rate limit and no ownership check.
-   *
-   * Default "vendor" preserves behavior for any caller that hasn't opted in
-   * (Q-009 admin surface, /my-shelf). Parents that expose the sheet to
-   * unauthenticated or non-owner viewers must pass "shopper" explicitly.
+   * (anonymous POST, no bearer). Default "vendor" preserves behavior for any
+   * caller that hasn't opted in (Q-009 admin surface, /my-shelf). Parents
+   * that expose the sheet to unauthenticated or non-owner viewers must pass
+   * "shopper" explicitly.
    */
-  mode?:         "vendor" | "shopper";
+  mode?: "vendor" | "shopper";
+  /**
+   * @deprecated Session 135 — preview tiles retired in Frame C redesign
+   * (D5). Kept in prop signature to avoid touching 3 callsites; unused at
+   * the rendering layer. Safe to drop in a follow-up cleanup commit if
+   * grep confirms no callsite still passes meaningful data.
+   */
+  previewPosts?: Post[];
 }
 
 export default function ShareBoothSheet({
@@ -90,12 +74,12 @@ export default function ShareBoothSheet({
   onClose,
   vendor,
   mall,
-  previewPosts,
   mode = "vendor",
 }: ShareBoothSheetProps) {
-  const [email, setEmail]   = useState("");
-  const [status, setStatus] = useState<SheetState>({ kind: "compose" });
-  const inputRef            = useRef<HTMLInputElement | null>(null);
+  const [screen, setScreen]           = useState<Screen>("grid");
+  const [email, setEmail]             = useState("");
+  const [emailStatus, setEmailStatus] = useState<EmailStatus>({ kind: "compose" });
+  const inputRef                      = useRef<HTMLInputElement | null>(null);
 
   const trimmed = email.trim();
   const valid   = useMemo(() => EMAIL_REGEX.test(trimmed), [trimmed]);
@@ -108,21 +92,26 @@ export default function ShareBoothSheet({
     return () => { document.body.style.overflow = prev; };
   }, [open]);
 
-  // ── Reset on open (fresh compose each time the user taps the airplane) ──
+  // ── Reset on open: every fresh open starts at the grid screen ───────────
   useEffect(() => {
     if (!open) return;
+    setScreen("grid");
     setEmail("");
-    setStatus({ kind: "compose" });
-    // Focus input on next tick so the slide-in animation has started.
-    const t = window.setTimeout(() => inputRef.current?.focus(), 280);
-    return () => window.clearTimeout(t);
+    setEmailStatus({ kind: "compose" });
   }, [open]);
 
-  // ── Submit ───────────────────────────────────────────────────────────────
-  async function handleSubmit() {
-    if (!valid || status.kind === "sending") return;
+  // ── Focus email input when transitioning to email screen ────────────────
+  useEffect(() => {
+    if (screen !== "email") return;
+    const t = window.setTimeout(() => inputRef.current?.focus(), 60);
+    return () => window.clearTimeout(t);
+  }, [screen]);
+
+  // ── Email submit (preserved verbatim from session 41 + Q-008) ───────────
+  async function handleEmailSubmit() {
+    if (!valid || emailStatus.kind === "sending") return;
     const recipientEmail = trimmed;
-    setStatus({ kind: "sending" });
+    setEmailStatus({ kind: "sending" });
 
     try {
       // Session 50 (Q-008) — shopper mode uses plain fetch so the server
@@ -137,77 +126,102 @@ export default function ShareBoothSheet({
             headers: { "Content-Type": "application/json", ...(init.headers ?? {}) },
           })
         : authFetch;
+
       const res = await doFetch("/api/share-booth", {
         method: "POST",
-        body:   JSON.stringify({
-          recipientEmail,
-          activeVendorId: vendor.id,
-        }),
+        body:   JSON.stringify({ recipientEmail, activeVendorId: vendor.id }),
       });
 
       let payload: { ok?: boolean; error?: string } = {};
-      try { payload = await res.json(); } catch { /* non-JSON body is handled below */ }
+      try { payload = await res.json(); } catch { /* non-JSON body handled below */ }
 
       if (res.ok && payload.ok) {
-        setStatus({ kind: "sent", email: recipientEmail });
+        setEmailStatus({ kind: "sent", email: recipientEmail });
         return;
       }
-
-      // Per-status copy per build-spec §3. We distinguish the two 429 modes
-      // by the error string the server returns rather than the status code
-      // alone — the IP rate limiter and the per-recipient dedup both use 429
-      // but carry different messages.
-      setStatus({ kind: "error", message: errorCopyFor(res.status, payload.error) });
+      setEmailStatus({ kind: "error", message: errorCopyFor(res.status, payload.error) });
     } catch {
-      setStatus({
+      setEmailStatus({
         kind: "error",
         message: "Couldn't reach the server. Check your connection and try again.",
       });
     }
   }
 
-  function handleShareAgain() {
+  function handleEmailShareAgain() {
     setEmail("");
-    setStatus({ kind: "compose" });
+    setEmailStatus({ kind: "compose" });
     window.setTimeout(() => inputRef.current?.focus(), 40);
   }
 
-  // Enter submits only when compose state + valid.
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" && status.kind === "compose" && valid) {
+  function handleEmailKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" && emailStatus.kind === "compose" && valid) {
       e.preventDefault();
-      handleSubmit();
+      handleEmailSubmit();
     }
   }
 
-  // Derived vendor + mall strings (null-safe for MVP).
+  // ── Derived strings + URL ───────────────────────────────────────────────
   const boothName = vendor.display_name;
-  const mallName  = mall?.name ?? (vendor.mall?.name ?? "");
+  const mallName  = mall?.name ?? vendor.mall?.name ?? "";
   const boothNo   = vendor.booth_number;
-  const subtitle  = [mallName, boothNo ? `Booth ${boothNo}` : null].filter(Boolean).join(" · ");
 
-  // Public booth URL for QR code — uses window.location.origin so it works
-  // in dev (localhost) and production (app.kentuckytreehouse.com) without
-  // hardcoding. Safe here because this is a "use client" component and the
-  // sheet only mounts after hydration.
-  const boothUrl = (typeof window !== "undefined" ? window.location.origin : "") + `/shelf/${vendor.slug}`;
+  // mall.address holds the full "street, city, state zip" string from the
+  // seed/add-mall.ts pipeline. Fallback to derived string if null.
+  const mallAddress = mall?.address ?? [mall?.city, mall?.state].filter(Boolean).join(", ");
 
-  // Preview: first 3 available posts (build-spec doesn't require a specific
-  // count, but 3 fits the sheet aesthetic and gives the recipient-email
-  // compose surface a light "here's what will go out" cue).
-  const previewSlice = previewPosts.slice(0, 3);
+  // Public booth URL — uses window.location.origin so it works in dev
+  // (localhost) and production (app.kentuckytreehouse.com) without
+  // hardcoding. Safe here because this is a "use client" component and
+  // the sheet only mounts after hydration.
+  const boothUrl = (typeof window !== "undefined" ? window.location.origin : "")
+    + `/shelf/${vendor.slug}`;
+
+  // ── Tile tap handlers ───────────────────────────────────────────────────
+  const trackPayload = {
+    vendor_slug: vendor.slug,
+    mall_id:     mall?.id ?? vendor.mall?.id ?? null,
+  };
+
+  function handleEmailTap() {
+    track("share_booth_channel_tapped", { ...trackPayload, channel: "email" });
+    setScreen("email");
+  }
+
+  function handleSmsTap() {
+    track("share_booth_channel_tapped", { ...trackPayload, channel: "sms" });
+    // D9 — SMS body template. encodeURIComponent so any special chars in
+    // boothName survive the URL trip without breaking the sms: scheme.
+    const body = `Found this booth on Treehouse Finds: ${boothName} · ${boothUrl}`;
+    track("share_booth_sms_initiated", trackPayload);
+    window.location.href = `sms:?body=${encodeURIComponent(body)}`;
+    // Close after firing — iOS/Android handle the URL and the sheet close
+    // matches the SMS hand-off mental model. If the user cancels in
+    // Messages, they return to Treehouse Finds with the sheet closed
+    // (intentional — they can re-open from the share affordance).
+    onClose();
+  }
+
+  function handleQrTap() {
+    track("share_booth_channel_tapped", { ...trackPayload, channel: "qr_code" });
+    setScreen("qr");
+  }
+
+  function handleBack() {
+    setScreen("grid");
+  }
 
   return (
     <AnimatePresence>
       {open && (
         <>
-          {/* ── Backdrop ───────────────────────────────────────────────── */}
+          {/* ── Backdrop ────────────────────────────────────────────────── */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.22, ease: EASE }}
-            onClick={status.kind === "sending" ? undefined : onClose}
+            onClick={emailStatus.kind === "sending" ? undefined : onClose}
             style={{
               position: "fixed",
               inset: 0,
@@ -217,7 +231,7 @@ export default function ShareBoothSheet({
             aria-hidden="true"
           />
 
-          {/* ── Sheet container ───────────────────────────────────────── */}
+          {/* ── Sheet ──────────────────────────────────────────────────── */}
           <motion.div
             role="dialog"
             aria-modal="true"
@@ -228,9 +242,7 @@ export default function ShareBoothSheet({
             transition={{ duration: 0.34, ease: EASE }}
             style={{
               position: "fixed",
-              left: 0,
-              right: 0,
-              bottom: 0,
+              left: 0, right: 0, bottom: 0,
               margin: "0 auto",
               width: "100%",
               maxWidth: 430,
@@ -245,59 +257,70 @@ export default function ShareBoothSheet({
             }}
           >
             {/* Handle */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                paddingTop: 12,
-                paddingBottom: 4,
-                flexShrink: 0,
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "center", paddingTop: 12, paddingBottom: 4, flexShrink: 0 }}>
               <div
-                style={{
-                  width: 44,
-                  height: 4,
-                  borderRadius: 999,
-                  background: v1.inkFaint,
-                }}
                 aria-hidden="true"
+                style={{ width: 44, height: 4, borderRadius: 999, background: v1.inkFaint }}
               />
             </div>
 
-            {/* Scrollable body — all four states render inside the same frame
-                so the backdrop + handle + radius stay stable as state flips. */}
+            {/* Top bar — × always; ← only on sub-screens. Fixed 36px slot
+                so screen swaps don't cause vertical flicker (D11). */}
+            <TopBar
+              showBack={screen !== "grid"}
+              onBack={handleBack}
+              onClose={onClose}
+              closeDisabled={emailStatus.kind === "sending"}
+            />
+
+            {/* Scrollable body */}
             <div
               style={{
                 flex: 1,
                 overflowY: "auto",
                 overflowX: "hidden",
                 WebkitOverflowScrolling: "touch",
-                padding: "10px 22px 22px",
+                padding: "6px 22px 22px",
               }}
             >
-              {status.kind === "sent" ? (
-                <SentState
-                  email={status.email}
+              {screen === "grid" && (
+                <GridScreen
                   boothName={boothName}
-                  onShareAgain={handleShareAgain}
-                  onDone={onClose}
+                  boothNo={boothNo}
+                  mallName={mallName}
+                  mallAddress={mallAddress}
+                  onEmailTap={handleEmailTap}
+                  onSmsTap={handleSmsTap}
+                  onQrTap={handleQrTap}
                 />
-              ) : (
-                <ComposeBody
+              )}
+
+              {screen === "email" && (
+                <EmailScreen
                   boothName={boothName}
-                  subtitle={subtitle}
-                  boothUrl={boothUrl}
-                  previewPosts={previewSlice}
+                  boothNo={boothNo}
+                  mallName={mallName}
+                  mallAddress={mallAddress}
                   email={email}
                   onEmailChange={setEmail}
                   inputRef={inputRef}
-                  onKeyDown={handleKeyDown}
+                  onKeyDown={handleEmailKeyDown}
+                  status={emailStatus}
                   valid={valid}
-                  sending={status.kind === "sending"}
-                  errorMessage={status.kind === "error" ? status.message : null}
-                  onSubmit={handleSubmit}
-                  onCancel={onClose}
+                  onSubmit={handleEmailSubmit}
+                  onShareAgain={handleEmailShareAgain}
+                  onDone={onClose}
+                />
+              )}
+
+              {screen === "qr" && (
+                <QrScreen
+                  boothName={boothName}
+                  boothNo={boothNo}
+                  mallName={mallName}
+                  mallAddress={mallAddress}
+                  boothUrl={boothUrl}
+                  trackPayload={trackPayload}
                 />
               )}
             </div>
@@ -305,8 +328,8 @@ export default function ShareBoothSheet({
         </>
       )}
 
-      {/* Keyframes for the sending-state spinner. Plain <style>, not styled-
-          jsx — this repo uses inline styles + Tailwind, not styled-jsx. */}
+      {/* Keyframes for the sending-state spinner. Plain <style>, not styled-jsx
+          — this repo uses inline styles + Tailwind, not styled-jsx. */}
       <style>{`
         @keyframes sharebooth-spin {
           from { transform: rotate(0deg); }
@@ -317,158 +340,348 @@ export default function ShareBoothSheet({
   );
 }
 
-// ─── ComposeBody ───────────────────────────────────────────────────────────
-// Covers compose, sending, and error. The `sending` and `error` states are
-// subtle modifications of compose: spinner in the CTA, inline error copy
-// above the CTA. Keeping them in one component means the preview + input
-// stay mounted across state flips so the user's typed email survives errors.
-//
-// `inputRef` is typed React.Ref<HTMLInputElement> (NOT
-// React.RefObject<HTMLInputElement | null>) so it satisfies the <input>
-// element's LegacyRef slot. React 19's useRef<T | null>(null) returns a
-// RefObject<T | null>, which TypeScript rejects when forwarded directly
-// to an HTML element's ref. React.Ref<T> is the union type that accepts
-// both RefObject<T> and RefObject<T | null> and matches the HTML element
-// ref contract.
-function ComposeBody({
+// ─── TopBar ───────────────────────────────────────────────────────────────
+// Fixed-height row with back arrow on the left (only when showBack=true) and
+// close × on the right (always). Per D11, both buttons sit in the same slot
+// so the slot height is fixed at 36px and screen swaps don't flicker.
+function TopBar({
+  showBack,
+  onBack,
+  onClose,
+  closeDisabled,
+}: {
+  showBack:      boolean;
+  onBack:        () => void;
+  onClose:       () => void;
+  closeDisabled: boolean;
+}) {
+  const button: React.CSSProperties = {
+    width: 36, height: 36,
+    borderRadius: "50%",
+    border: `1px solid ${v1.inkHairline}`,
+    background: "rgba(255,255,255,0.5)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    color: v1.inkMid,
+    padding: 0,
+    cursor: "pointer",
+    WebkitTapHighlightColor: "transparent",
+  };
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 22px", height: 36, flexShrink: 0 }}>
+      {showBack ? (
+        <button type="button" onClick={onBack} aria-label="Back" style={button}>
+          <ArrowLeftGlyph />
+        </button>
+      ) : (
+        <div style={{ width: 36, height: 36 }} aria-hidden="true" />
+      )}
+      <button
+        type="button"
+        onClick={onClose}
+        disabled={closeDisabled}
+        aria-label="Close"
+        style={{ ...button, opacity: closeDisabled ? 0.5 : 1, cursor: closeDisabled ? "default" : "pointer" }}
+      >
+        <CloseGlyph />
+      </button>
+    </div>
+  );
+}
+
+// ─── SlimHeader ───────────────────────────────────────────────────────────
+// Frame C header — booth name medium + booth pill + mall row + full address.
+// Repeats verbatim across all three screens (D8 + D10) so context is
+// preserved as the user navigates.
+function SlimHeader({
   boothName,
-  subtitle,
-  boothUrl,
-  previewPosts,
+  boothNo,
+  mallName,
+  mallAddress,
+}: {
+  boothName:   string;
+  boothNo:     string | null;
+  mallName:    string;
+  mallAddress: string;
+}) {
+  return (
+    <div style={{ paddingTop: 12, flexShrink: 0 }}>
+      <div
+        style={{
+          fontFamily: FONT_LORA,
+          fontWeight: 500,
+          fontSize: 28,
+          color: v1.inkPrimary,
+          textAlign: "center",
+          lineHeight: 1.05,
+          letterSpacing: "-0.015em",
+          padding: "0 8px",
+        }}
+      >
+        {boothName}
+      </div>
+
+      {boothNo && (
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
+          <div
+            style={{
+              padding: "7px 22px",
+              border: `1px solid ${v1.inkHairline}`,
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.4)",
+              fontFamily: FONT_SYS,
+              fontSize: 12,
+              fontWeight: 600,
+              letterSpacing: "0.18em",
+              color: v1.inkMid,
+              textTransform: "uppercase",
+            }}
+          >
+            BOOTH {boothNo}
+          </div>
+        </div>
+      )}
+
+      {mallName && (
+        <>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 6, marginTop: 14 }}>
+            <PiMapPin
+              size={14}
+              color={v1.inkMid}
+              style={{ marginTop: 3, flexShrink: 0 }}
+              aria-hidden="true"
+            />
+            <span
+              style={{
+                fontFamily: FONT_LORA,
+                fontWeight: 500,
+                fontSize: 16,
+                color: v1.inkPrimary,
+                lineHeight: 1.3,
+              }}
+            >
+              {mallName}
+            </span>
+          </div>
+
+          {mallAddress && (
+            <div
+              style={{
+                fontFamily: FONT_SYS,
+                fontSize: 12,
+                color: v1.inkMid,
+                textAlign: "center",
+                lineHeight: 1.4,
+                marginTop: 4,
+                padding: "0 12px",
+              }}
+            >
+              {mallAddress}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Section divider */}
+      <div style={{ height: 1, background: v1.inkHairline, marginTop: 18 }} />
+    </div>
+  );
+}
+
+// ─── GridScreen ───────────────────────────────────────────────────────────
+// Frame C grid — 3 square tiles (Email + SMS + QR) + footer disclaimer.
+// "Share via" eyebrow above the grid (D5). No sub-labels (Frame C drops
+// them — icons + label carry the channel meaning).
+function GridScreen({
+  boothName,
+  boothNo,
+  mallName,
+  mallAddress,
+  onEmailTap,
+  onSmsTap,
+  onQrTap,
+}: {
+  boothName:   string;
+  boothNo:     string | null;
+  mallName:    string;
+  mallAddress: string;
+  onEmailTap:  () => void;
+  onSmsTap:    () => void;
+  onQrTap:     () => void;
+}) {
+  return (
+    <>
+      <SlimHeader
+        boothName={boothName}
+        boothNo={boothNo}
+        mallName={mallName}
+        mallAddress={mallAddress}
+      />
+
+      <div
+        style={{
+          fontFamily: FONT_SYS,
+          fontSize: 10,
+          fontWeight: 600,
+          letterSpacing: "0.16em",
+          textTransform: "uppercase",
+          color: v1.inkMuted,
+          textAlign: "center",
+          marginTop: 16,
+          marginBottom: 12,
+        }}
+      >
+        Share via
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+        <ChannelTile icon={<PiEnvelopeSimple size={22} color={v1.inkPrimary} />} label="Email" onClick={onEmailTap} />
+        <ChannelTile icon={<PiChatCircleText size={22} color={v1.inkPrimary} />} label="SMS"   onClick={onSmsTap} />
+        <ChannelTile icon={<PiQrCode size={22} color={v1.inkPrimary} />}        label="QR Code" onClick={onQrTap} />
+      </div>
+
+      {/* Footer disclaimer (D12) — grid screen only */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "center",
+          gap: 8,
+          marginTop: 18,
+          paddingTop: 14,
+          borderTop: `1px solid ${v1.inkHairline}`,
+        }}
+      >
+        <PiLeaf
+          size={14}
+          color={v1.inkMuted}
+          style={{ marginTop: 2, flexShrink: 0 }}
+          aria-hidden="true"
+        />
+        <div
+          style={{
+            fontFamily: FONT_SYS,
+            fontSize: 11,
+            color: v1.inkMuted,
+            lineHeight: 1.45,
+            maxWidth: 260,
+          }}
+        >
+          Anyone with this link can view this booth in Treehouse Finds.
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── ChannelTile ──────────────────────────────────────────────────────────
+function ChannelTile({
+  icon,
+  label,
+  onClick,
+}: {
+  icon:    React.ReactNode;
+  label:   string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        background: "rgba(255,255,255,0.4)",
+        border: `1px solid ${v1.inkHairline}`,
+        borderRadius: 10,
+        padding: "16px 6px 12px",
+        textAlign: "center",
+        boxShadow: "0 1px 2px rgba(44,36,28,0.05)",
+        cursor: "pointer",
+        WebkitTapHighlightColor: "transparent",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 6,
+      }}
+    >
+      <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
+        {icon}
+      </span>
+      <span
+        style={{
+          fontFamily: FONT_LORA,
+          fontWeight: 600,
+          fontSize: 13,
+          color: v1.inkPrimary,
+        }}
+      >
+        {label}
+      </span>
+    </button>
+  );
+}
+
+// ─── EmailScreen ──────────────────────────────────────────────────────────
+// Slim header repeat (D8) + section divider + (compose form OR sent state).
+// All four states (compose / sending / sent / error) preserved verbatim from
+// session 41 + Q-008 + Q-011 — backend unchanged, UX moves behind a tile tap.
+function EmailScreen({
+  boothName,
+  boothNo,
+  mallName,
+  mallAddress,
   email,
   onEmailChange,
   inputRef,
   onKeyDown,
+  status,
   valid,
-  sending,
-  errorMessage,
   onSubmit,
-  onCancel,
+  onShareAgain,
+  onDone,
 }: {
   boothName:     string;
-  subtitle:      string;
-  boothUrl:      string;
-  previewPosts:  Post[];
+  boothNo:       string | null;
+  mallName:      string;
+  mallAddress:   string;
   email:         string;
   onEmailChange: (v: string) => void;
   inputRef:      React.Ref<HTMLInputElement>;
   onKeyDown:     (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  status:        EmailStatus;
   valid:         boolean;
-  sending:       boolean;
-  errorMessage:  string | null;
   onSubmit:      () => void;
-  onCancel:      () => void;
+  onShareAgain:  () => void;
+  onDone:        () => void;
 }) {
+  const sending      = status.kind === "sending";
+  const errorMessage = status.kind === "error" ? status.message : null;
+
+  if (status.kind === "sent") {
+    return (
+      <>
+        <SlimHeader
+          boothName={boothName}
+          boothNo={boothNo}
+          mallName={mallName}
+          mallAddress={mallAddress}
+        />
+        <SentBody
+          email={status.email}
+          boothName={boothName}
+          onShareAgain={onShareAgain}
+          onDone={onDone}
+        />
+      </>
+    );
+  }
+
   return (
     <>
-      {/* Eyebrow + title — matches BoothPickerSheet's centered Lora heading */}
-      <div style={{ padding: "0 0 2px", flexShrink: 0, textAlign: "center" }}>
-        <div
-          style={{
-            fontFamily: FONT_LORA,
-            fontStyle: "italic",
-            fontSize: 13,
-            color: v1.inkMuted,
-            lineHeight: 1.2,
-            marginBottom: 2,
-          }}
-        >
-          Invite someone in to
-        </div>
-        <div
-          style={{
-            fontFamily: FONT_LORA,
-            fontSize: 21,
-            color: v1.inkPrimary,
-            letterSpacing: "-0.005em",
-            lineHeight: 1.2,
-          }}
-        >
-          {boothName}
-        </div>
-        {subtitle && (
-          <div
-            style={{
-              fontFamily: FONT_SYS,
-              fontSize: 12,
-              color: v1.inkMuted,
-              lineHeight: 1.4,
-              marginTop: 4,
-            }}
-          >
-            {subtitle}
-          </div>
-        )}
-      </div>
-
-      {/* Hairline divider */}
-      <div style={{ padding: "14px 0 16px", flexShrink: 0 }}>
-        <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
-      </div>
-
-      {/* QR code — Treehouse logo centered over the code (Option B). The logo
-          sits on a postit-wash cutout; QR error-correction (level M, default)
-          tolerates up to ~15% module loss so a ~22px logo at 148px total is
-          well within the recoverable range. */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 18 }}>
-        <div style={{ padding: 12, background: v1.postit, borderRadius: 10, border: `1px solid ${v1.inkHairline}`, position: "relative", display: "inline-block" }}>
-          <QRCode
-            value={boothUrl}
-            size={160}
-            level="H"
-            fgColor="#000000"
-            bgColor="#ffffff"
-          />
-          {/* Logo overlay — circular icon + halo clears surrounding modules.
-              boxShadow follows the borderRadius so the halo is also circular.
-              icon.png (cream-on-leaf brand mark) fills the circle; overflow:
-              hidden crops the square source to a circle. */}
-          <div style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: 36,
-            height: 36,
-            background: "#ffffff",
-            borderRadius: "50%",
-            boxShadow: "0 0 0 4px #ffffff",
-            overflow: "hidden",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icon.png" alt="" width={36} height={36} style={{ display: "block" }} />
-          </div>
-        </div>
-        <div style={{ fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 12, color: v1.inkMuted, marginTop: 8, textAlign: "center" }}>
-          Scan to visit this booth
-        </div>
-      </div>
-
-      {/* Hairline divider before email section */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
-      </div>
-
-      {/* Preview strip — 3 thumbnails of current available finds. Skipped
-          entirely when previewPosts is empty (parent already hides the
-          share entry in that case, but the component renders defensively). */}
-      {previewPosts.length > 0 && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 8,
-            marginBottom: 18,
-          }}
-        >
-          {previewPosts.map(post => (
-            <PreviewTile key={post.id} imageUrl={post.image_url} title={post.title} />
-          ))}
-        </div>
-      )}
+      <SlimHeader
+        boothName={boothName}
+        boothNo={boothNo}
+        mallName={mallName}
+        mallAddress={mallAddress}
+      />
 
       {/* Email input — v1.2 form input primitive (inkWash bg on paperCream,
           ink-primary text, system-ui). Matches /vendor-request + /setup. */}
@@ -481,6 +694,7 @@ function ComposeBody({
           textTransform: "uppercase",
           letterSpacing: "0.08em",
           color: v1.inkMuted,
+          marginTop: 18,
           marginBottom: 6,
         }}
       >
@@ -517,8 +731,6 @@ function ComposeBody({
         }}
       />
 
-      {/* Inline error copy — above the CTA so it reads in flow rather than
-          as an afterthought. Only renders in the error state. */}
       {errorMessage && (
         <div
           role="alert"
@@ -538,8 +750,6 @@ function ComposeBody({
         </div>
       )}
 
-      {/* CTA — filled green pill (v1.1k commit-action rule). Disabled
-          until RFC-valid + not sending. Shows inline spinner in sending. */}
       <button
         type="button"
         onClick={onSubmit}
@@ -578,41 +788,14 @@ function ComposeBody({
           </>
         )}
       </button>
-
-      {/* Cancel — ghost text link. Matches BoothPickerSheet's "Add another
-          booth" dashed affordance as a secondary action, minus the dashed
-          border (this one is a close, not a navigate). */}
-      <button
-        type="button"
-        onClick={onCancel}
-        disabled={sending}
-        style={{
-          display: "block",
-          width: "100%",
-          marginTop: 10,
-          padding: "10px 12px",
-          background: "transparent",
-          border: "none",
-          fontFamily: FONT_LORA,
-          fontStyle: "italic",
-          fontSize: 13,
-          color: v1.inkMuted,
-          cursor: sending ? "default" : "pointer",
-          opacity: sending ? 0.55 : 1,
-          WebkitTapHighlightColor: "transparent",
-        }}
-      >
-        Not now
-      </button>
     </>
   );
 }
 
-// ─── SentState ─────────────────────────────────────────────────────────────
+// ─── SentBody ─────────────────────────────────────────────────────────────
 // Paper-wash success bubble + echoed email + "Share with someone else"
-// loop-back + "Done" close. Matches the v1.1k paper-wash success pattern
-// used by /vendor-request done-screen (subtle inkWash bubble, centered).
-function SentState({
+// loop-back + "Done" close. Preserved verbatim from session 41.
+function SentBody({
   email,
   boothName,
   onShareAgain,
@@ -630,19 +813,15 @@ function SentState({
         flexDirection: "column",
         alignItems: "center",
         textAlign: "center",
-        padding: "28px 8px 8px",
+        paddingTop: 20,
       }}
     >
-      {/* Check bubble */}
       <div
         style={{
-          width: 56,
-          height: 56,
+          width: 56, height: 56,
           borderRadius: "50%",
           background: "rgba(30,77,43,0.10)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          display: "flex", alignItems: "center", justifyContent: "center",
           marginBottom: 18,
         }}
         aria-hidden="true"
@@ -677,8 +856,6 @@ function SentState({
         A Window into {boothName} is heading to
       </p>
 
-      {/* Email echo — system-ui, inkWash pill-ish background so it reads as
-          "here is the exact string that was sent" rather than body prose. */}
       <div
         style={{
           fontFamily: FONT_SYS,
@@ -698,7 +875,6 @@ function SentState({
         {email}
       </div>
 
-      {/* Share again — dashed ghost button loops back to compose */}
       <button
         type="button"
         onClick={onShareAgain}
@@ -724,7 +900,6 @@ function SentState({
         Share with someone else
       </button>
 
-      {/* Done — text link close */}
       <button
         type="button"
         onClick={onDone}
@@ -749,77 +924,123 @@ function SentState({
   );
 }
 
-// ─── PreviewTile ───────────────────────────────────────────────────────────
-// 4:5 aspect preview. Null-image fallback renders a muted wash so the grid
-// stays structurally complete even if a post is missing an image_url (which
-// shouldn't happen in practice — available posts always have images — but
-// types/treehouse.ts declares the column nullable, and we honor the type).
-function PreviewTile({ imageUrl, title }: { imageUrl: string | null; title: string }) {
+// ─── QrScreen ─────────────────────────────────────────────────────────────
+// Slim header repeat (D10) + section divider + 200px QR code with Treehouse
+// logo overlay + caption. Fires share_booth_qr_viewed once on mount per D13.
+function QrScreen({
+  boothName,
+  boothNo,
+  mallName,
+  mallAddress,
+  boothUrl,
+  trackPayload,
+}: {
+  boothName:    string;
+  boothNo:      string | null;
+  mallName:     string;
+  mallAddress:  string;
+  boothUrl:     string;
+  trackPayload: { vendor_slug: string; mall_id: string | null };
+}) {
+  // Fire share_booth_qr_viewed once per QR-screen mount (D13). Mounting is
+  // the right signal — the user has expressed intent to surface the QR.
+  useEffect(() => {
+    track("share_booth_qr_viewed", trackPayload);
+    // Empty deps + mount-only fire is intentional. The QR is re-mounted
+    // when the user navigates back to grid + taps QR again, which is
+    // exactly when we want to count another view.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <div
-      style={{
-        position: "relative",
-        width: "100%",
-        aspectRatio: "4 / 5",
-        overflow: "hidden",
-        borderRadius: 6,
-        background: "rgba(42,26,10,0.08)",
-      }}
-      aria-hidden="true"
-    >
-      {imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={imageUrl}
-          alt={title}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-          }}
-        />
-      ) : (
+    <>
+      <SlimHeader
+        boothName={boothName}
+        boothNo={boothNo}
+        mallName={mallName}
+        mallAddress={mallAddress}
+      />
+
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 22 }}>
         <div
           style={{
-            position: "absolute",
-            inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background:
-              "linear-gradient(135deg, rgba(42,26,10,0.06) 0%, rgba(42,26,10,0.12) 100%)",
-            color: v1.inkFaint,
-            fontFamily: FONT_LORA,
-            fontStyle: "italic",
-            fontSize: 11,
+            padding: 12,
+            background: v1.postit,
+            borderRadius: 10,
+            border: `1px solid ${v1.inkHairline}`,
+            position: "relative",
+            display: "inline-block",
           }}
         >
-          no photo
+          <QRCode
+            value={boothUrl}
+            size={200}
+            level="H"
+            fgColor="#000000"
+            bgColor="#ffffff"
+          />
+          {/* Logo overlay — circular icon + halo clears surrounding modules. */}
+          <div
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: 44,
+              height: 44,
+              background: "#ffffff",
+              borderRadius: "50%",
+              boxShadow: "0 0 0 4px #ffffff",
+              overflow: "hidden",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icon.png" alt="" width={44} height={44} style={{ display: "block" }} />
+          </div>
         </div>
-      )}
-    </div>
+
+        <div
+          style={{
+            fontFamily: FONT_LORA,
+            fontStyle: "italic",
+            fontSize: 12,
+            color: v1.inkMuted,
+            marginTop: 10,
+            textAlign: "center",
+          }}
+        >
+          Scan to visit this booth
+        </div>
+      </div>
+    </>
   );
 }
 
-// ─── Icons ─────────────────────────────────────────────────────────────────
-function PaperAirplaneIcon({ size = 16, color = "currentColor" }: { size?: number; color?: string }) {
-  // Minimal paper-airplane glyph — outlined, not filled, to match the
-  // editorial Treehouse aesthetic. Uses currentColor by default so callers
-  // can paint it via CSS color.
+// ─── Icons ────────────────────────────────────────────────────────────────
+function ArrowLeftGlyph() {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth={1.6}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M19 12H5" />
+      <path d="m12 19-7-7 7-7" />
+    </svg>
+  );
+}
+
+function CloseGlyph() {
+  return (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+
+function PaperAirplaneIcon({ size = 16, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M21 3 10.5 13.5" />
       <path d="M21 3 14.5 21l-4-7.5L3 9.5 21 3Z" />
     </svg>
@@ -828,17 +1049,7 @@ function PaperAirplaneIcon({ size = 16, color = "currentColor" }: { size?: numbe
 
 function CheckGlyph() {
   return (
-    <svg
-      width={24}
-      height={24}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={v1.green}
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke={v1.green} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <polyline points="20 6 9 17 4 12" />
     </svg>
   );
@@ -861,49 +1072,14 @@ function Spinner() {
   );
 }
 
-// ─── Error copy ────────────────────────────────────────────────────────────
-// Per build-spec §3, distinguish the server's status codes. The server uses
-// 429 for BOTH IP rate-limit AND per-recipient dedup — we distinguish those
-// two on the error string the server returns rather than the status alone.
+// ─── Error copy ───────────────────────────────────────────────────────────
+// Per session-41 build-spec §3 — preserved verbatim.
 function errorCopyFor(status: number, serverError?: string): string {
-  // 403 — ownership check failed. Shouldn't happen in practice because the
-  // sheet only opens for a vendor's own booth, but copy is defensive.
-  if (status === 403) {
-    return "You can only share booths you own.";
-  }
-
-  // 409 — empty-window guard. Shouldn't happen (icon is hidden when empty),
-  // but defense in depth.
-  if (status === 409) {
-    return "This booth has no finds to share yet. Add something to the Window first.";
-  }
-
-  // 429 — two sub-cases. The server returns a specific string on dedup
-  // ("Already sent to that address a moment ago — give it a minute.") vs.
-  // the IP rate limit ("Too many sends — try again in a few minutes.").
-  // Prefer the server's copy when present; fall back to a generic.
-  if (status === 429) {
-    if (serverError) return serverError;
-    return "Too many sends — try again in a few minutes.";
-  }
-
-  // 400 — bad email or bad vendor id. Shouldn't hit with client validation,
-  // but surfacing the server's copy here helps during debugging and
-  // accidental direct POSTs.
-  if (status === 400) {
-    return serverError ?? "Please check the email and try again.";
-  }
-
-  // 502 — Resend failure, server-side send failed.
-  if (status === 502) {
-    return "Couldn't send right now — please try again in a minute.";
-  }
-
-  // 500 — unexpected server error (ownership lookup failed, mall missing).
-  if (status === 500) {
-    return serverError ?? "Something went wrong on our end. Please try again.";
-  }
-
-  // Catch-all for any unhandled status.
+  if (status === 403) return "You can only share booths you own.";
+  if (status === 409) return "This booth has no finds to share yet. Add something to the Window first.";
+  if (status === 429) return serverError ?? "Too many sends — try again in a few minutes.";
+  if (status === 400) return serverError ?? "Please check the email and try again.";
+  if (status === 502) return "Couldn't send right now — please try again in a minute.";
+  if (status === 500) return serverError ?? "Something went wrong on our end. Please try again.";
   return serverError ?? "Couldn't send right now. Please try again.";
 }
