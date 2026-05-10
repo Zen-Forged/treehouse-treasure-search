@@ -117,6 +117,7 @@ export default function SavedMallCardV2({
             gridRow: 2,
             fontFamily: FONT_INTER,
             fontSize: 11.5,
+            letterSpacing: "0.02em",
             color: v2.text.secondary,
             lineHeight: 1.4,
           }}
