@@ -65,7 +65,14 @@ export default function SavedMallCardV2({
         overflow: "hidden",
       }}
     >
-      {/* head-δ — CSS grid: name + DistancePill on row 1; address spans row 2 */}
+      {/* head-δ — CSS grid: name + DistancePill on row 1; address spans row 2.
+          Session 144 iPhone QA: alignItems "center" → "start" so the
+          DistancePill anchors to the top of row 1 (= top of head-δ content
+          box, 16px below container top) instead of vertically centering
+          against the title cell. Pill renders with consistent
+          16px-above / 20px-right padding regardless of title height — David's
+          "fixed in the corner of the component with equal padding above and
+          to the right" call. */}
       <div
         style={{
           padding: "16px 20px 12px",
@@ -73,7 +80,7 @@ export default function SavedMallCardV2({
           gridTemplateColumns: hasDistance ? "1fr auto" : "1fr",
           columnGap: hasDistance ? 12 : 0,
           rowGap: 2,
-          alignItems: "center",
+          alignItems: "start",
         }}
       >
         <h2
