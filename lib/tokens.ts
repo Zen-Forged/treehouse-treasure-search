@@ -1,18 +1,23 @@
 // lib/tokens.ts
 // Single source of truth for Treehouse ecosystem design tokens.
 //
-// Two coexisting token sets:
+// Three coexisting token sets:
 //   - `colors` / `radius` / `spacing` — v0.2 ecosystem tokens (feed, post flow,
 //     vendor profile, mall page, admin, BottomNav, etc.). Used by surfaces that
 //     have NOT yet migrated to v1.1h. Do not touch until each surface migrates.
 //   - `v1` / `fonts` — v1.1h+ journal-vocabulary tokens. Used by Find Detail,
 //     Find Map, Booth page, and (v1.2) the post-flow trilogy.
 //     Matches docs/design-system.md v1.1h → v1.1l + v1.2 build spec.
+//   - `v2` — session 138 field-guide migration tokens (Cormorant + warm-paper
+//     palette + row pattern). Used by Saved page Arc 1; propagates to Home /
+//     Find / /shelf / /map in subsequent v2 arcs. v1 retires once all surfaces
+//     migrate (v2 Arc 7 cleanup). See docs/v2-visual-migration.md.
 //
-// The v0.2 and v1.x sets are intentionally separate because the palettes
-// differ (v0.2 `#f5f2eb` cream vs v1.x `#e8ddc7` paperCream, v0.2 black-brown
-// inks vs v1.x warmer brown inks). They live side-by-side during migration
-// and the v0.2 set retires when the last consumer migrates.
+// The v0.2 + v1.x + v2 sets are intentionally separate because the palettes
+// differ (v0.2 `#f5f2eb` cream vs v1.x `#f2ecd8` paperCream vs v2 `#F7F3E8`
+// bg-main; warm brown inks shift across the three layers). They live
+// side-by-side during migration and each prior set retires when the last
+// consumer migrates.
 //
 // Dark reseller layer (#050f05) has its own inline tokens — do not merge here.
 
@@ -244,12 +249,84 @@ export const v1 = {
   },
 } as const;
 
+// ═══════════════════════════════════════════════════════════════════════════
+// v2 — field-guide migration tokens (session 138)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Cormorant Garamond + Inter typography pairing + warm-paper palette + row
+// tile pattern + accordion grouping. Field-guide / National Parks Passport /
+// Goodreads-shelf voice replacing v1's exploration-warmth identity.
+//
+// Locked decisions (system-level): see docs/v2-visual-migration.md
+//   Q1  (a) Cormorant Garamond replaces Lora project-wide
+//   Q1.1     Inter replaces FONT_SYS as canonical sans companion
+//   Q2  (a) v2 palette replaces v1 paper-family entirely
+//   Q3  (a) Polaroid retires system-wide; row pattern is new shared primitive
+//
+// Migration arcs:
+//   Arc 1: Saved page (this Arc 1.1 commit lands the additive token layer)
+//   Arc 2-5: Home / Find / /shelf / /map (consumers migrate per surface)
+//   Arc 6: Decorative leaf chrome universal (sub-Q-A deferred from Arc 1)
+//   Arc 7: Cleanup — retire v1.* tokens once no consumers remain
+//
+// First consumer: components/v2/SavedMallCardV2.tsx + siblings (Arc 1.2).
+
+export const v2 = {
+  // Background scale — page-level + card surfaces. bg.main is the page
+  // canvas; bg.paper is the bright card surface; bg.soft is the page bg
+  // soft variant. surface.card mirrors bg.paper for card chrome
+  // semantics; surface.warm is the warm-cream pill + thumbnail bg.
+  bg: {
+    main:  "#F7F3E8",
+    paper: "#FFFCF5",
+    soft:  "#F1EBDD",
+  },
+  surface: {
+    card: "#FFFCF5",
+    warm: "#FBF6EA",
+  },
+
+  // Text scale — primary body / secondary metadata-and-addresses /
+  // muted decorative-and-tertiary. Calibrated for WCAG AA on bg.main.
+  text: {
+    primary:   "#2B211A",
+    secondary: "#756A5E",
+    muted:     "#A39686",
+  },
+
+  // Brand green — accent.green is the canonical CTA + active-state fill.
+  // accent.greenDark is the hover/active variant. accent.greenSoft is the
+  // active-state bg for ★ favorited bubble + future engagement-on states.
+  accent: {
+    green:     "#285C3C",
+    greenDark: "#1F4A31",
+    greenSoft: "#E8EEE6",
+  },
+
+  // Brand brown — wordmark + secondary brand color. brown is the upright
+  // wordmark + nav default; brownSoft is the decorative botanical chrome
+  // stroke (used by deferred v2 Arc 6 leaf SVG).
+  brown:     "#6A513E",
+  brownSoft: "#B8A996",
+
+  // Hairline borders — light is the canonical 1px hairline (cards + rows
+  // + dividers). medium is the stronger hairline (dashed flankers around
+  // "X finds waiting" eyebrow + ✓ Found checkbox unchecked-state border).
+  border: {
+    light:  "#E5DED2",
+    medium: "#D6CCBC",
+  },
+} as const;
+
 export const fonts = {
   // Session 82 — Lora is the project-wide literary serif (replaced IM Fell).
   // Modern editorial serif by Cyreal (Google Fonts), variable font with a
   // strong italic. IM Fell's letterpress glyph variability hurt readability
   // at body sizes (form labels, find-tile captions). Loaded in app/layout.tsx
   // via next/font/google. See docs/mockups/vendor-request-typography-v2.html.
+  // Session 138 (v2 migration) — slated for retirement; Cormorant Garamond
+  // replaces project-wide. Stays alive until v2 Arc 7 cleanup confirms zero
+  // consumers remain. See docs/v2-visual-migration.md.
   lora: 'var(--font-lora), Georgia, serif',
   sys:  '-apple-system, "Segoe UI", Roboto, system-ui, sans-serif',
   // Session 75 — booth-numeral font. Times New Roman across every booth-
@@ -259,6 +336,7 @@ export const fonts = {
   // on mixed booth IDs like D19). No webfont load — TNR ships with iOS,
   // macOS, and Windows. Project-wide rule: letters → FONT_LORA or FONT_SYS;
   // numbers → FONT_NUMERAL. See docs/booth-numeral-font-design.md.
+  // Session 138 (v2 migration) — preserved; v2 doesn't touch numerals.
   numeral: '"Times New Roman", Times, serif',
   // Session 120 — Dancing Script. Hand-drawn cursive used sparingly + intentionally
   // for personal-touch labels only. First consumer: <RichPostcardMallCard> "select
@@ -267,13 +345,28 @@ export const fonts = {
   // it's expensive on legibility at small sizes and the script vocabulary loses
   // meaning when overused.
   script: 'var(--font-dancing-script), "Lora", cursive',
+  // Session 138 (v2 Arc 1.1) — Cormorant Garamond replaces Lora project-wide
+  // per Q1 (a). Single editorial serif family for upright + italic across all
+  // v2 surfaces (mall names 28/600, find names 17/500, booth names italic
+  // 17/500, narrative italic). Loaded in app/layout.tsx via next/font/google.
+  // Migration: v2 consumers reference FONT_CORMORANT; v1 consumers stay on
+  // FONT_LORA until their surface migrates. v2 Arc 7 cleanup retires
+  // FONT_LORA. See docs/v2-visual-migration.md + docs/saved-v2-redesign-design.md.
+  cormorant: 'var(--font-cormorant), Georgia, serif',
+  // Session 138 (v2 Arc 1.1) — Inter replaces FONT_SYS as the canonical sans
+  // companion per Q1.1 (lock-by-inheritance from mockup spec). Used for
+  // metadata / prices / buttons / navigation across all v2 surfaces. Loaded
+  // in app/layout.tsx via next/font/google. Migration shape mirrors Cormorant.
+  inter: 'var(--font-inter), -apple-system, "Segoe UI", Roboto, system-ui, sans-serif',
 } as const;
 
 // Convenience named exports.
-export const FONT_LORA    = fonts.lora;
-export const FONT_SYS     = fonts.sys;
-export const FONT_NUMERAL = fonts.numeral;
-export const FONT_SCRIPT  = fonts.script;
+export const FONT_LORA      = fonts.lora;
+export const FONT_SYS       = fonts.sys;
+export const FONT_NUMERAL   = fonts.numeral;
+export const FONT_SCRIPT    = fonts.script;
+export const FONT_CORMORANT = fonts.cormorant;
+export const FONT_INTER     = fonts.inter;
 
 // Motion tokens — session 76 Track E (animation consistency).
 // docs/animation-consistency-design.md. Use these on Booths VendorCard,

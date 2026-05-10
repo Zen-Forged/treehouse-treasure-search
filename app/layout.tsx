@@ -1,6 +1,6 @@
 // app/layout.tsx
 import type { Metadata, Viewport } from "next";
-import { Dancing_Script, Lora } from "next/font/google";
+import { Cormorant_Garamond, Dancing_Script, Inter, Lora } from "next/font/google";
 import * as Sentry from "@sentry/nextjs";
 import "./globals.css";
 import { FindSessionProvider } from "@/hooks/useSession";
@@ -37,6 +37,30 @@ const dancingScript = Dancing_Script({
   display: "swap",
 });
 
+// Session 138 (v2 Arc 1.1) — Cormorant Garamond replaces Lora project-wide
+// per Q1 (a) of the v2 visual migration. Single editorial serif family for
+// upright + italic across all v2 surfaces. First consumer: Saved page
+// (`/flagged`) primitives in v2 Arc 1.2. v1 Lora stays loaded alongside
+// until v2 Arc 7 cleanup confirms zero consumers remain.
+// See docs/v2-visual-migration.md + docs/saved-v2-redesign-design.md.
+const cormorant = Cormorant_Garamond({
+  weight: ["400", "500", "600", "700"],
+  style:  ["normal", "italic"],
+  subsets: ["latin"],
+  variable: "--font-cormorant",
+  display: "swap",
+});
+
+// Session 138 (v2 Arc 1.1) — Inter replaces FONT_SYS as the canonical sans
+// companion per Q1.1 (lock-by-inheritance from mockup spec). Used for
+// metadata / prices / buttons / navigation across all v2 surfaces.
+const inter = Inter({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
 export function generateMetadata(): Metadata {
   return {
     title: "Treehouse Finds",
@@ -66,7 +90,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${lora.variable} ${dancingScript.variable}`}>
+    <html lang="en" className={`${lora.variable} ${dancingScript.variable} ${cormorant.variable} ${inter.variable}`}>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
