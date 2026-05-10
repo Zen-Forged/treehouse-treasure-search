@@ -15,17 +15,19 @@
 //     to test pill-hidden-when-null behavior per session-139 Q2 (a))
 //   - 2 booths per mall; D2 (a) defaults all expanded
 //   - 3 finds in expanded booth + 0 finds in collapsed-on-tap state
-//   - 1 find pre-marked ✓ Found to demo filled-circle visual
 //
-// Local React state for found-marks + saves — Arc 1.3 wires the real
-// localStorage hooks. ★ Favorite Mall retired on Saved per session-139
-// Q1 (a) reversal of session-138 Q6 (a); ★ moves to Home + Map's
-// RichPostcardMallCard in v2 Arc 5. Empty-state preview toggle at top.
+// ✓ Found state now wired through useShopperFindsFound (Arc 1.3 hook,
+// localStorage-backed) — state persists across page reloads + cross-tab.
+// Saved state still local React state (Arc 1.4 wires useShopperSaves on
+// /flagged production wiring). ★ Favorite Mall retired on Saved per
+// session-139 Q1 (a) reversal of session-138 Q6 (a); ★ moves to Home +
+// Map's RichPostcardMallCard in v2 Arc 5. Empty-state preview toggle.
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
+import { useShopperFindsFound } from "@/lib/useShopperFindsFound";
 import SavedMallCardV2 from "@/components/v2/SavedMallCardV2";
 import AccordionBoothSection from "@/components/v2/AccordionBoothSection";
 import SavedFindRow from "@/components/v2/SavedFindRow";
@@ -179,11 +181,12 @@ const MALLS: MockMall[] = [
 // ─────────────────────────────────────────────────────────────────────────
 
 export default function SavedV2TestPage() {
-  // Pre-mark "Brass Vase" as ✓ Found to demo filled-circle visual
-  const [foundIds, setFoundIds] = useState<Set<string>>(
-    () => new Set(["brass-vase"]),
-  );
-  // All finds start as saved (this IS the Saved page)
+  // ✓ Found state via Arc 1.3 hook — localStorage-backed; persists across
+  // page reloads + cross-tab.
+  const findsFound = useShopperFindsFound();
+
+  // All finds start as saved (this IS the Saved page). Smoke route stays
+  // on local React state for saves; Arc 1.4 wires useShopperSaves.
   const [savedIds, setSavedIds] = useState<Set<string>>(
     () =>
       new Set(
@@ -191,15 +194,6 @@ export default function SavedV2TestPage() {
       ),
   );
   const [showEmptyState, setShowEmptyState] = useState(false);
-
-  function toggleFound(id: string) {
-    setFoundIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
 
   function toggleSaved(id: string) {
     setSavedIds((prev) => {
@@ -284,10 +278,11 @@ export default function SavedV2TestPage() {
             marginBottom: 12,
           }}
         >
-          Mocked data + local React state. Saves count: {totalSavedCount}.
-          Toggle ✓ on Brass Vase to test ✓ Found state. Tap accordion
-          headers to test expand/collapse. Tap leaf bubble to remove a
-          find from saves. Lexington has no distance — pill should hide.
+          Saves: {totalSavedCount} (local) · ✓ Found: {findsFound.ids.size} (localStorage).
+          Tap any ✓ to mark a find as found in store — state persists
+          across page reloads + cross-tab. Tap accordion headers to
+          test expand/collapse. Tap leaf bubble to remove a find from
+          saves. Lexington has no distance — pill should hide.
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button
@@ -331,6 +326,30 @@ export default function SavedV2TestPage() {
             }}
           >
             Restore All Saves
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              // Clear all ✓ Found state — for QA convenience between rounds.
+              // Iterate hook ids + toggle each off (writes through hook so
+              // localStorage + cross-instance/cross-tab listeners stay in sync).
+              Array.from(findsFound.ids).forEach((id) =>
+                findsFound.toggle(id, false),
+              );
+            }}
+            style={{
+              fontFamily: FONT_INTER,
+              fontSize: 11,
+              fontWeight: 600,
+              padding: "6px 12px",
+              background: v2.surface.warm,
+              color: v2.text.primary,
+              border: `1px solid ${v2.border.light}`,
+              borderRadius: 6,
+              cursor: "pointer",
+            }}
+          >
+            Clear ✓ Found
           </button>
           <Link
             href="/"
@@ -380,24 +399,29 @@ export default function SavedV2TestPage() {
                     boothName={booth.name}
                     defaultExpanded
                   >
-                    {booth.finds.map((find) => (
-                      <SavedFindRow
-                        key={find.id}
-                        postId={find.id}
-                        imageGradient={find.imageGradient}
-                        title={find.title}
-                        priceCents={find.priceCents}
-                        isFound={foundIds.has(find.id)}
-                        isSaved={savedIds.has(find.id)}
-                        onToggleFound={() => toggleFound(find.id)}
-                        onToggleSaved={() => toggleSaved(find.id)}
-                        onTapDetail={() => {
-                          // smoke route — no-op; production navigates to /find/[id]
-                          // eslint-disable-next-line no-console
-                          console.log("[smoke] Tap detail", find.title);
-                        }}
-                      />
-                    ))}
+                    {booth.finds.map((find) => {
+                      const isFoundNow = findsFound.isFound(find.id);
+                      return (
+                        <SavedFindRow
+                          key={find.id}
+                          postId={find.id}
+                          imageGradient={find.imageGradient}
+                          title={find.title}
+                          priceCents={find.priceCents}
+                          isFound={isFoundNow}
+                          isSaved={savedIds.has(find.id)}
+                          onToggleFound={() =>
+                            findsFound.toggle(find.id, !isFoundNow)
+                          }
+                          onToggleSaved={() => toggleSaved(find.id)}
+                          onTapDetail={() => {
+                            // smoke route — no-op; production navigates to /find/[id]
+                            // eslint-disable-next-line no-console
+                            console.log("[smoke] Tap detail", find.title);
+                          }}
+                        />
+                      );
+                    })}
                   </AccordionBoothSection>
                 ))}
               </SavedMallCardV2>
