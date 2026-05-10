@@ -75,9 +75,12 @@ import { useShopperSaves } from "@/lib/useShopperSaves";
 import { getCachedUserId, getSession, isAdmin, onAuthChange } from "@/lib/auth";
 import {
   v1,
+  v2,
   FONT_LORA,
   FONT_SYS,
   FONT_NUMERAL,
+  FONT_CORMORANT,
+  FONT_INTER,
 } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { mapsUrl, boothNumeralSize } from "@/lib/utils";
@@ -1570,10 +1573,10 @@ export default function FindDetailPage() {
                 display:    "inline-flex",
                 alignItems: "center",
                 gap:        6,
-                fontFamily: FONT_LORA,
+                fontFamily: FONT_CORMORANT,
                 fontStyle:  "italic",
                 fontSize:   14,
-                color:      v1.inkMid,
+                color:      v2.text.secondary,
                 lineHeight: 1.4,
               }}
             >
@@ -1587,10 +1590,10 @@ export default function FindDetailPage() {
                   display:        "inline-flex",
                   alignItems:     "center",
                   gap:            2,
-                  fontFamily:     FONT_LORA,
+                  fontFamily:     FONT_CORMORANT,
                   fontStyle:      "italic",
                   fontSize:       14,
-                  color:          v1.green,
+                  color:          v2.accent.green,
                   lineHeight:     1.4,
                   textDecoration: "none",
                   whiteSpace:     "nowrap",
