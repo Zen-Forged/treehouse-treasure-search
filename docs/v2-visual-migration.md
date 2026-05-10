@@ -1,6 +1,6 @@
 # v2 Visual Migration — Project-level migration plan
 
-> **Status:** Arc 1 ✅ Shipped sessions 138 + 139 (12 commits cumulative). Arc 2 (Home) 🟢 Ready — design pass complete session 140.
+> **Status:** Arc 1 ✅ Shipped sessions 138 + 139 (12 commits cumulative). Arc 2 (Home) ✅ Shipped session 140 (9 commits — design + 2 implementation arcs + chrome migration + Phosphor icon restoration + masonry alignment + shadow dial + iOS auto-link). Arc 3 (Find/[id]) next.
 > **Authored:** Session 138 (2026-05-09)
 > **Scope:** Project-wide visual system migration from v1 (Lora + paper-family + polaroid tiles) to v2 (Cormorant Garamond + warm-paper palette + row pattern).
 > **Companion docs:** [`saved-v2-redesign-design.md`](./saved-v2-redesign-design.md) — Arc 1 design record · [`home-v2-redesign-design.md`](./home-v2-redesign-design.md) — Arc 2 design record.
