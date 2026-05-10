@@ -223,7 +223,6 @@ export function BoothHero({
           <div style={{ position: "absolute", top: 12, right: 12, zIndex: 11 }}>
             <BookmarkBoothBubble
               saved={saved}
-              size="hero"
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleBookmark();
