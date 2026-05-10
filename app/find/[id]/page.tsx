@@ -442,22 +442,38 @@ function ShelfSection({
                     </div>
                   }
                   below={
+                    // Session-83 height-locking pattern: outer fixed-height
+                    // flex container vertically centers the inner clamped
+                    // title. 2-line worst case fits exactly (Cormorant 14
+                    // × 1.4 lineHeight × 2 = 39.2 + 8 vertical padding +
+                    // breathing room = 56). 1-line titles render centered
+                    // between photo bottom and card bottom — uniform tile
+                    // height across the carousel regardless of title length.
                     <div
                       style={{
-                        padding: "8px 4px 2px",
-                        fontFamily: FONT_CORMORANT,
-                        fontSize: 14,
-                        color: v2.text.primary,
-                        lineHeight: 1.4,
-                        textAlign: "center",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical" as const,
+                        height: 56,
+                        padding: "0 10px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
-                      {item.title}
+                      <div
+                        style={{
+                          fontFamily: FONT_CORMORANT,
+                          fontSize: 14,
+                          color: v2.text.primary,
+                          lineHeight: 1.4,
+                          textAlign: "center",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical" as const,
+                        }}
+                      >
+                        {item.title}
+                      </div>
                     </div>
                   }
                 />
