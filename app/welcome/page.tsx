@@ -1,6 +1,11 @@
 // app/welcome/page.tsx
 // Welcome — first-sign-in disambiguation card. Shape A from session 115.
 //
+// Session 143 — v2 visual migration Arc 6.1: typography (FONT_LORA →
+// FONT_CORMORANT + FONT_SYS → FONT_INTER) + palette (v1.* → v2.*) + page
+// bg → v2.bg.main + WelcomeRow translucent surfaces → solid v2 surfaces.
+// Card structure + flow preserved verbatim from session 115 Shape A.
+//
 // Shown when an authed user has neither a vendors row nor a shoppers row
 // (detectUserRole returns "none"). Two paths:
 //   "I have a booth"   → /vendor-request (auth email pre-filled — see Arc 3)
@@ -28,7 +33,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bookmark, Store, HelpCircle } from "lucide-react";
 import { getSession, detectUserRoleWithAutoClaim } from "@/lib/auth";
-import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 
 type RenderState = "loading" | "ready";
 
@@ -62,7 +67,7 @@ function WelcomeInner() {
       <div
         style={{
           minHeight: "100dvh",
-          background: v1.paperCream,
+          background: v2.bg.main,
           maxWidth: 430,
           margin: "0 auto",
         }}
@@ -74,7 +79,7 @@ function WelcomeInner() {
     <div
       style={{
         minHeight: "100dvh",
-        background: v1.paperCream,
+        background: v2.bg.main,
         maxWidth: 430,
         margin: "0 auto",
         display: "flex",
@@ -92,13 +97,13 @@ function WelcomeInner() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: v1.iconBubble,
-            border: "none",
+            background: v2.surface.warm,
+            border: `1px solid ${v2.border.light}`,
             cursor: "pointer",
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
         </button>
       </header>
 
@@ -114,20 +119,20 @@ function WelcomeInner() {
       >
         <div
           style={{
-            background: v1.postit,
+            background: v2.surface.card,
             borderRadius: 14,
-            border: `1px solid ${v1.inkHairline}`,
+            border: `1px solid ${v2.border.light}`,
             padding: "24px 18px 18px",
           }}
         >
           <p
             style={{
-              fontFamily: FONT_SYS,
+              fontFamily: FONT_INTER,
               fontSize: 10,
               fontWeight: 700,
               letterSpacing: "0.12em",
               textTransform: "uppercase",
-              color: v1.green,
+              color: v2.accent.green,
               textAlign: "center",
               margin: "0 0 6px",
             }}
@@ -136,9 +141,9 @@ function WelcomeInner() {
           </p>
           <h1
             style={{
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_CORMORANT,
               fontSize: 22,
-              color: v1.inkPrimary,
+              color: v2.text.primary,
               margin: "0 0 8px",
               textAlign: "center",
               lineHeight: 1.25,
@@ -149,10 +154,10 @@ function WelcomeInner() {
           </h1>
           <p
             style={{
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 13,
-              color: v1.inkMuted,
+              color: v2.text.secondary,
               textAlign: "center",
               lineHeight: 1.5,
               margin: "0 auto 18px",
@@ -183,21 +188,21 @@ function WelcomeInner() {
         <Link
           href="/contact"
           style={{
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
             fontSize: 13,
-            color: v1.inkPrimary,
+            color: v2.text.primary,
             textDecoration: "none",
             display: "inline-flex",
             alignItems: "center",
             gap: 6,
           }}
         >
-          <HelpCircle size={16} strokeWidth={1.6} style={{ color: v1.inkMuted }} />
+          <HelpCircle size={16} strokeWidth={1.6} style={{ color: v2.text.muted }} />
           <span
             style={{
               textDecoration: "underline",
               textDecorationStyle: "dotted",
-              textDecorationColor: v1.inkFaint,
+              textDecorationColor: v2.text.muted,
               textUnderlineOffset: 3,
             }}
           >
@@ -228,9 +233,9 @@ function WelcomeRow({
         alignItems: "center",
         gap: 12,
         padding: "12px 14px",
-        background: "rgba(255,255,255,0.45)",
+        background: v2.bg.paper,
         borderRadius: 10,
-        border: `1px solid ${v1.inkHairline}`,
+        border: `1px solid ${v2.border.light}`,
         cursor: "pointer",
         WebkitTapHighlightColor: "transparent",
         textAlign: "left",
@@ -242,8 +247,8 @@ function WelcomeRow({
           width: 34,
           height: 34,
           borderRadius: "50%",
-          background: "rgba(30,77,43,0.08)",
-          color: v1.green,
+          background: v2.accent.greenSoft,
+          color: v2.accent.green,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -255,9 +260,9 @@ function WelcomeRow({
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
             fontSize: 14,
-            color: v1.inkPrimary,
+            color: v2.text.primary,
             lineHeight: 1.25,
           }}
         >
@@ -265,10 +270,10 @@ function WelcomeRow({
         </div>
         <div
           style={{
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
             fontSize: 11.5,
-            color: v1.inkMuted,
+            color: v2.text.secondary,
             lineHeight: 1.4,
             marginTop: 1,
           }}
@@ -278,10 +283,10 @@ function WelcomeRow({
       </div>
       <span
         style={{
-          color: v1.inkFaint,
+          color: v2.text.muted,
           fontSize: 22,
           lineHeight: 1,
-          fontFamily: FONT_LORA,
+          fontFamily: FONT_CORMORANT,
           flexShrink: 0,
         }}
       >
