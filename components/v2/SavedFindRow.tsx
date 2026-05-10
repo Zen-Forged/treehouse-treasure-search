@@ -31,6 +31,10 @@ interface SavedFindRowProps {
   price: number | null;
   isFound: boolean;
   isSaved: boolean;
+  /** Sold-state dim — whole row drops to 0.55 opacity. Matches PolaroidTile
+   *  dim contract verbatim; preserves the session-83 sold-find visual when
+   *  /flagged migrates to v2 row primitive. */
+  dim?: boolean;
   onToggleFound: () => void;
   onToggleSaved: () => void;
   onTapDetail: () => void;
@@ -43,6 +47,7 @@ export default function SavedFindRow({
   price,
   isFound,
   isSaved,
+  dim = false,
   onToggleFound,
   onToggleSaved,
   onTapDetail,
@@ -68,6 +73,7 @@ export default function SavedFindRow({
         borderTop: `1px solid ${v2.border.light}`,
         background: v2.surface.card,
         cursor: "pointer",
+        opacity: dim ? 0.55 : 1,
       }}
     >
       <FoundCheckCircle isFound={isFound} onToggle={onToggleFound} />
