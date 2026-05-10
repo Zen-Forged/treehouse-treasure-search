@@ -133,9 +133,10 @@ export default function SavedMallCardV2({
           onClick={onGetDirections}
           style={{
             width: "100%",
-            // QA-derived mid-green per session-139 iPhone QA round 2 —
-            // lighter than v2.accent.green #285C3C; David specified hex.
-            background: "#3e694f",
+            // Session 141 — promoted to v2.accent.greenMid token when
+            // LocationActions Take Trip joined as second button consumer.
+            // Was an inline literal (#3e694f) at session 139.
+            background: v2.accent.greenMid,
             color: "#fff",
             border: "none",
             borderRadius: 10,
