@@ -1,10 +1,10 @@
 # v2 Visual Migration — Project-level migration plan
 
-> **Status:** 🟢 Ready · Arc 1 (Saved page) design pass complete + ready to implement.
+> **Status:** Arc 1 ✅ Shipped sessions 138 + 139 (12 commits cumulative). Arc 2 (Home) 🟢 Ready — design pass complete session 140.
 > **Authored:** Session 138 (2026-05-09)
 > **Scope:** Project-wide visual system migration from v1 (Lora + paper-family + polaroid tiles) to v2 (Cormorant Garamond + warm-paper palette + row pattern).
-> **Companion doc:** [`saved-v2-redesign-design.md`](./saved-v2-redesign-design.md) — Arc 1 design record.
-> **Mockup:** [`docs/mockups/saved-v2-redesign-v1.html`](./mockups/saved-v2-redesign-v1.html)
+> **Companion docs:** [`saved-v2-redesign-design.md`](./saved-v2-redesign-design.md) — Arc 1 design record · [`home-v2-redesign-design.md`](./home-v2-redesign-design.md) — Arc 2 design record.
+> **Mockups:** [`docs/mockups/saved-v2-redesign-v1.html`](./mockups/saved-v2-redesign-v1.html) (Arc 1) · [`docs/mockups/home-v2-redesign-v1.html`](./mockups/home-v2-redesign-v1.html) (Arc 2)
 
 ---
 

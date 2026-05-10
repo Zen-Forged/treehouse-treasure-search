@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Home v2 — Discovery Feed Redesign — V1 Frames</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  /* v2 tokens — authoritative source from v2-visual-migration.md */
+  :root {
+    --bg-main: #F7F3E8;
+    --bg-paper: #FFFCF5;
+    --bg-soft: #F1EBDD;
+    --card-surface: #FFFCF5;
+    --card-surface-warm: #FBF6EA;
+    --text-primary: #2B211A;
+    --text-secondary: #756A5E;
+    --text-muted: #A39686;
+    --accent-green: #285C3C;
+    --accent-green-dark: #1F4A31;
+    --accent-green-soft: #E8EEE6;
+    --brown: #6A513E;
+    --brown-soft: #B8A996;
+    --border-light: #E5DED2;
+    --border-medium: #D6CCBC;
+    --serif: 'Cormorant Garamond', Georgia, serif;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg-soft);
+    font-family: var(--sans);
+    color: var(--text-primary);
+    padding: 32px 24px 64px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  .page-header {
+    max-width: 1320px;
+    margin: 0 auto 32px;
+    text-align: center;
+  }
+  .page-title {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 32px;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+  .page-sub {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+  .page-meta {
+    font-family: var(--sans);
+    font-size: 11.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+  }
+
+  .frames {
+    display: grid;
+    grid-template-columns: repeat(4, 320px);
+    gap: 36px 28px;
+    justify-content: center;
+    max-width: 1320px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1320px) {
+    .frames { grid-template-columns: repeat(2, 320px); }
+  }
+  @media (max-width: 720px) {
+    .frames { grid-template-columns: 320px; }
+  }
+
+  .frame {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .frame-label {
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .frame-tag {
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent-green);
+    margin-bottom: 4px;
+  }
+  .frame-name {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 18px;
+    color: var(--text-primary);
+  }
+  .frame-rationale {
+    font-family: var(--sans);
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-top: 6px;
+    padding: 0 6px;
+  }
+
+  /* The phone-stage replicates Home's actual surface */
+  .stage {
+    background: var(--bg-main);
+    padding: 16px 14px 24px;
+    border-radius: 12px;
+    border: 1px solid var(--border-light);
+  }
+
+  /* Eyebrow that mirrors Home's "Finds from:" line above the masonry */
+  .eyebrow-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 14px;
+    padding: 0 4px;
+  }
+  .eyebrow-label {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .eyebrow-mall {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+
+  /* 2-col masonry — col-2 offset by ~50% of col-1 first tile height */
+  .masonry {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: start;
+  }
+  .col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .col-2 {
+    margin-top: 64px; /* simulate live ~50% offset */
+  }
+
+  /* Photo placeholder swatches — same 4 swatches across all frames */
+  .photo {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    position: relative;
+    overflow: hidden;
+  }
+  .swatch-1 { background: linear-gradient(135deg, #c08a52 0%, #6f4426 100%); }
+  .swatch-2 { background: linear-gradient(135deg, #6e9b87 0%, #2e4d44 100%); }
+  .swatch-3 { background: linear-gradient(135deg, #d8b8a0 0%, #b07f5a 100%); }
+  .swatch-4 { background: linear-gradient(135deg, #5b6772 0%, #2a3036 100%); }
+
+  /* Heart bubble (locked Q3a — v2.surface.warm solid 36×36; leaf SVG green stroke) */
+  .heart-bubble {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 36px;
+    height: 36px;
+    border-radius: 18px;
+    background: var(--card-surface-warm);
+    border: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-green);
+    z-index: 3;
+  }
+  .heart-bubble svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  /* Relative timestamp (locked Q4a — Inter italic; under-photo position) */
+  .timestamp {
+    font-family: var(--sans);
+    font-style: italic;
+    font-size: 11.5px;
+    color: var(--text-muted);
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+    text-align: left;
+  }
+
+  /* ─────────────────────────────────────────────────────────────────
+   * Frame A — Polaroid retire (flat photo grid)
+   * ───────────────────────────────────────────────────────────────── */
+  .frame-a .tile { display: flex; flex-direction: column; gap: 6px; }
+  .frame-a .photo {
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+  }
+  .frame-a .timestamp {
+    padding: 0 2px;
+  }
+
+  /* ─────────────────────────────────────────────────────────────────
+   * Frame B — v2 card (clean editorial)
+   * ───────────────────────────────────────────────────────────────── */
+  .frame-b .tile {
+    background: var(--card-surface);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 8px 8px 10px;
+    box-shadow: 0 1px 3px rgba(43, 33, 26, 0.06);
+  }
+  .frame-b .photo {
+    border-radius: 6px;
+  }
+  .frame-b .timestamp {
+    margin-top: 6px;
+    padding: 0 2px;
+  }
+
+  /* ─────────────────────────────────────────────────────────────────
+   * Frame C — Hybrid (lighter polaroid)
+   * ───────────────────────────────────────────────────────────────── */
+  .frame-c .tile {
+    background: var(--card-surface-warm);
+    border-radius: 6px;
+    padding: 6px 6px 7px;
+    box-shadow:
+      0 3px 8px rgba(43, 33, 26, 0.08),
+      0 1px 2px rgba(43, 33, 26, 0.05);
+  }
+  .frame-c .photo {
+    border-radius: 5px;
+    border: 1px solid var(--border-light);
+  }
+  .frame-c .timestamp {
+    margin-top: 5px;
+    padding: 0 2px;
+  }
+
+  /* ─────────────────────────────────────────────────────────────────
+   * Frame D — Polaroid preserved (token-only migration)
+   * Session-83 polaroid vocabulary preserved verbatim; only tokens migrate.
+   * ───────────────────────────────────────────────────────────────── */
+  .frame-d .tile {
+    background: var(--card-surface-warm);
+    border-radius: 4px;
+    padding: 7px 7px 8px;
+    box-shadow:
+      0 6px 14px rgba(42, 26, 10, 0.20),
+      0 1.5px 3px rgba(42, 26, 10, 0.10);
+  }
+  .frame-d .photo {
+    border-radius: 6px;
+    border: 1px solid rgba(42, 26, 10, 0.12);
+    box-shadow:
+      0 2px 8px rgba(42, 26, 10, 0.08),
+      0 1px 3px rgba(42, 26, 10, 0.05);
+  }
+  .frame-d .timestamp {
+    margin-top: 4px;
+    padding: 0 2px;
+  }
+
+  /* Reference notes column at the bottom */
+  .references {
+    max-width: 1100px;
+    margin: 64px auto 0;
+    background: var(--card-surface);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 24px 28px;
+  }
+  .references h2 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 22px;
+    margin-bottom: 14px;
+    color: var(--text-primary);
+  }
+  .references ul {
+    list-style: none;
+    display: grid;
+    gap: 10px;
+  }
+  .references li {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
+  .references li strong {
+    color: var(--text-primary);
+    font-weight: 600;
+    margin-right: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="page-title">Home v2 — Discovery Feed</div>
+  <div class="page-sub">Wrapper-chrome axis: zero chrome → preserved polaroid</div>
+  <div class="page-meta">Photograph-only contract locked (Q1a) · ♥-only (Q2b) · v2.surface.warm heart (Q3a) · Inter italic timestamp (Q4a) · Lens preserved (Q5a)</div>
+</div>
+
+<div class="frames">
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Frame A — Polaroid retire (flat photo grid)
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="frame frame-a">
+    <div class="frame-label">
+      <div class="frame-tag">FRAME A</div>
+      <div class="frame-name">Photo grid</div>
+    </div>
+    <div class="stage">
+      <div class="eyebrow-row">
+        <span class="eyebrow-label">Finds from:</span>
+        <span class="eyebrow-mall">America's Antique Mall</span>
+      </div>
+      <div class="masonry">
+        <div class="col">
+          <div class="tile">
+            <div class="photo swatch-1">
+              <div class="heart-bubble">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              </div>
+            </div>
+            <div class="timestamp">3 hours ago</div>
+          </div>
+          <div class="tile">
+            <div class="photo swatch-3">
+              <div class="heart-bubble">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              </div>
+            </div>
+            <div class="timestamp">yesterday</div>
+          </div>
+        </div>
+        <div class="col col-2">
+          <div class="tile">
+            <div class="photo swatch-2">
+              <div class="heart-bubble">
+                <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              </div>
+            </div>
+            <div class="timestamp">8 hours ago</div>
+          </div>
+          <div class="tile">
+            <div class="photo swatch-4">
+              <div class="heart-bubble">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              </div>
+            </div>
+            <div class="timestamp">2 days ago</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="frame-rationale">
+      Photo-first energy. No card chrome — every pixel of the tile is the photograph. Modern feed feel (Pinterest / Instagram). Loses the dimensional craft of session-83 polaroid; what remains is the photo and the recency signal.
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Frame B — v2 card (clean editorial)
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="frame frame-b">
+    <div class="frame-label">
+      <div class="frame-tag">FRAME B</div>
+      <div class="frame-name">Editorial card</div>
+    </div>
+    <div class="stage">
+      <div class="eyebrow-row">
+        <span class="eyebrow-label">Finds from:</span>
+        <span class="eyebrow-mall">America's Antique Mall</span>
+      </div>
+      <div class="masonry">
+        <div class="col">
+          <div class="tile">
+            <div class="photo swatch-1">
+              <div class="heart-bubble">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              </div>
+            </div>
+            <div class="timestamp">3 hours ago</div>
+          </div>
+          <div class="tile">
+            <div class="photo swatch-3">
+              <div class="heart-bubble">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              </div>
+            </div>
+            <div class="timestamp">yesterday</div>
+          </div>
+        </div>
+        <div class="col col-2">
+          <div class="tile">
+            <div class="photo swatch-2">
+              <div class="heart-bubble">
+                <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              </div>
+            </div>
+            <div class="timestamp">8 hours ago</div>
+          </div>
+          <div class="tile">
+            <div class="photo swatch-4">
+              <div class="heart-bubble">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              </div>
+            </div>
+            <div class="timestamp">2 days ago</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="frame-rationale">
+      Clean card with hairline border + soft shadow on bright paper bg (matches SavedMallCardV2 surface vocabulary). Editorial v2 voice. Risk: card chrome on a discovery feed can feel "list-y" — closer to a planned-list surface than a browse surface.
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Frame C — Hybrid (lighter polaroid)
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="frame frame-c">
+    <div class="frame-label">
+      <div class="frame-tag">FRAME C</div>
+      <div class="frame-name">Lighter polaroid</div>
+    </div>
+    <div class="stage">
+      <div class="eyebrow-row">
+        <span class="eyebrow-label">Finds from:</span>
+        <span class="eyebrow-mall">America's Antique Mall</span>
+      </div>
+      <div class="masonry">
+        <div class="col">
+          <div class="tile">
+            <div class="photo swatch-1">
+              <div class="heart-bubble">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              </div>
+            </div>
+            <div class="timestamp">3 hours ago</div>
+          </div>
+          <div class="tile">
+            <div class="photo swatch-3">
+              <div class="heart-bubble">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              </div>
+            </div>
+            <div class="timestamp">yesterday</div>
+          </div>
+        </div>
+        <div class="col col-2">
+          <div class="tile">
+            <div class="photo swatch-2">
+              <div class="heart-bubble">
+                <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              </div>
+            </div>
+            <div class="timestamp">8 hours ago</div>
+          </div>
+          <div class="tile">
+            <div class="photo swatch-4">
+              <div class="heart-bubble">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              </div>
+            </div>
+            <div class="timestamp">2 days ago</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="frame-rationale">
+      Keeps dimensional lift but lighter v2 voice. Warm-paper mat retained but thinner (6/6/7 vs v1's 7/7/8); shadow softened (3+1 stack vs v1's 6+1.5). Splits the difference between session-83 craft and v2 cleanness.
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Frame D — Polaroid preserved (token-only migration)
+       ═══════════════════════════════════════════════════════════════ -->
+  <div class="frame frame-d">
+    <div class="frame-label">
+      <div class="frame-tag">FRAME D</div>
+      <div class="frame-name">Polaroid preserved</div>
+    </div>
+    <div class="stage">
+      <div class="eyebrow-row">
+        <span class="eyebrow-label">Finds from:</span>
+        <span class="eyebrow-mall">America's Antique Mall</span>
+      </div>
+      <div class="masonry">
+        <div class="col">
+          <div class="tile">
+            <div class="photo swatch-1">
+              <div class="heart-bubble">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              </div>
+            </div>
+            <div class="timestamp">3 hours ago</div>
+          </div>
+          <div class="tile">
+            <div class="photo swatch-3">
+              <div class="heart-bubble">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              </div>
+            </div>
+            <div class="timestamp">yesterday</div>
+          </div>
+        </div>
+        <div class="col col-2">
+          <div class="tile">
+            <div class="photo swatch-2">
+              <div class="heart-bubble">
+                <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              </div>
+            </div>
+            <div class="timestamp">8 hours ago</div>
+          </div>
+          <div class="tile">
+            <div class="photo swatch-4">
+              <div class="heart-bubble">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6"/></svg>
+              </div>
+            </div>
+            <div class="timestamp">2 days ago</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="frame-rationale">
+      Session-83 polaroid vocabulary preserved verbatim — same warm mat, same dimensional shadow. v2 affects only tokens (paper-warm + ink colors swap to v2 equivalents) + typography (Inter italic timestamp). <strong>Partial reversal of v2 plan Q3 (a)</strong> "polaroid retires system-wide" — Home keeps polaroid as deliberate continuity for its discovery surface; Saved + Find + /shelf still retire polaroid per the plan.
+    </div>
+  </div>
+
+</div>
+
+<div class="references">
+  <h2>Reference grounding</h2>
+  <ul>
+    <li><strong>Pinterest masonry feed</strong> — Frame A precedent. Photo-first; no card chrome around tiles. Heart bubble overlay on photo. Recency signal de-emphasized.</li>
+    <li><strong>Etsy Editor's Picks / Faire wholesale grid</strong> — Frame B precedent. Editorial card with hairline border + soft shadow on bright paper. Composes well next to row-list surfaces.</li>
+    <li><strong>Field Mag · Kinfolk · The Cool Hunter</strong> — Frame C precedent. Lifted but restrained card chrome; warm cream paper background; soft shadow signals craft without dominating.</li>
+    <li><strong>Polaroid Originals app feed · Lomography community</strong> — Frame D precedent. Full polaroid mat + dimensional shadow; nostalgic photographic identity at the cost of "modern app" signaling.</li>
+  </ul>
+</div>
+
+</body>
+</html>
