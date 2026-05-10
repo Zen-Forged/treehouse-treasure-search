@@ -22,6 +22,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { PiLeaf, PiLeafFill } from "react-icons/pi";
 import { v2 } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 
@@ -188,19 +189,11 @@ export default function HomeFeedTile({
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <svg
-            width={17}
-            height={17}
-            viewBox="0 0 24 24"
-            fill={isFollowed ? "currentColor" : "none"}
-            stroke="currentColor"
-            strokeWidth={1.7}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6" />
-          </svg>
+          {isFollowed ? (
+            <PiLeafFill size={17} aria-hidden />
+          ) : (
+            <PiLeaf size={17} aria-hidden />
+          )}
         </button>
       </div>
 

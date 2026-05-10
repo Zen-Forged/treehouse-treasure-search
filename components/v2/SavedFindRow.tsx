@@ -19,6 +19,7 @@
 // descenders than Lora; bumping by 0.1 keeps clamp safe.
 "use client";
 
+import { PiLeaf, PiLeafFill } from "react-icons/pi";
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
 import FoundCheckCircle from "./FoundCheckCircle";
 
@@ -145,19 +146,11 @@ export default function SavedFindRow({
           flexShrink: 0,
         }}
       >
-        <svg
-          width={18}
-          height={18}
-          viewBox="0 0 24 24"
-          fill={isSaved ? "currentColor" : "none"}
-          stroke="currentColor"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden
-        >
-          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6" />
-        </svg>
+        {isSaved ? (
+          <PiLeafFill size={18} aria-hidden />
+        ) : (
+          <PiLeaf size={18} aria-hidden />
+        )}
       </button>
     </div>
   );
