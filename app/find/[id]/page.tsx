@@ -1618,8 +1618,8 @@ export default function FindDetailPage() {
               const cardInner = (
                 <div
                   style={{
-                    background: v1.postit,
-                    border: `1px solid ${v1.inkHairline}`,
+                    background: v2.surface.card,
+                    border: `1px solid ${v2.border.light}`,
                     borderRadius: 10,
                     padding: "12px 14px",
                   }}
@@ -1652,9 +1652,9 @@ export default function FindDetailPage() {
                             onClick={(e) => e.stopPropagation()}
                             style={{
                               display: "inline-block",
-                              fontFamily: FONT_SYS,
+                              fontFamily: FONT_INTER,
                               fontSize: 11.5,
-                              color: v1.inkMuted,
+                              color: v2.text.muted,
                               textDecoration: "underline",
                               textDecorationStyle: "dotted",
                               textDecorationColor: v1.inkFaint,
@@ -1667,9 +1667,9 @@ export default function FindDetailPage() {
                         ) : (
                           <div
                             style={{
-                              fontFamily: FONT_SYS,
+                              fontFamily: FONT_INTER,
                               fontSize: 11.5,
-                              color: v1.inkMuted,
+                              color: v2.text.muted,
                               lineHeight: 1.4,
                             }}
                           >
@@ -1680,12 +1680,13 @@ export default function FindDetailPage() {
                       {vendorName && (
                         <div
                           style={{
-                            fontFamily: FONT_LORA,
+                            fontFamily: FONT_CORMORANT,
                             fontSize: 18,
-                            color: v1.inkPrimary,
+                            color: v2.text.primary,
                             // Session 82 — lineHeight 1.4 (was 1.25) for
                             // descender clearance under overflow:hidden
-                            // (matches BoothLockupCard primitive).
+                            // (matches BoothLockupCard primitive). Preserved
+                            // for Cormorant under the same constraint.
                             lineHeight: 1.4,
                             letterSpacing: "-0.005em",
                             overflow: "hidden",
@@ -1709,10 +1710,10 @@ export default function FindDetailPage() {
                       >
                         <div
                           style={{
-                            fontFamily: FONT_SYS,
+                            fontFamily: FONT_INTER,
                             fontSize: 9,
                             fontWeight: 700,
-                            color: v1.green,
+                            color: v2.accent.green,
                             letterSpacing: "0.12em",
                             textTransform: "uppercase",
                             lineHeight: 1,
@@ -1726,7 +1727,7 @@ export default function FindDetailPage() {
                             fontFamily: FONT_NUMERAL,
                             fontSize: 26,
                             fontWeight: 500,
-                            color: v1.green,
+                            color: v2.accent.green,
                             lineHeight: 1,
                             letterSpacing: "-0.01em",
                           }}
