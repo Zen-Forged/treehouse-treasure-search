@@ -452,15 +452,18 @@ export function BoothTitleBlock({
 // ─────────────────────────────────────────────────────────────────────────────
 
 function PinGlyph({ size = 18 }: { size?: number }) {
+  // v2 Arc 4.3 — stroke + fill migrate v1.inkPrimary → v2.text.primary.
+  // Path geometry preserved as-is; Phosphor PiMapPin migration is a
+  // separate icon-vocabulary decision outside Q1 (a) token-swap scope.
   return (
     <svg width={size} height={size * (22 / 18)} viewBox="0 0 18 22" fill="none" aria-hidden="true">
       <path
         d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z"
-        stroke={v1.inkPrimary}
+        stroke={v2.text.primary}
         strokeWidth="1.3"
         fill="none"
       />
-      <circle cx="9" cy="8.3" r="2" fill={v1.inkPrimary} />
+      <circle cx="9" cy="8.3" r="2" fill={v2.text.primary} />
     </svg>
   );
 }
@@ -487,12 +490,19 @@ export function MallBlock({
     // Implementation-time call: kept PinGlyph inline-before-name (vs retire)
     // to preserve place-marker semantic; flip to retire if iPhone QA reads
     // cluttered.
+    // v2 Arc 4.3 — typography + colors migrate per Q1 (a) "stay centered
+    // text shape, token-swap only" (NOT SavedMallCardV2 chrome adoption):
+    //   FONT_LORA name → FONT_CORMORANT (matches BoothTitleBlock 4.4 voice)
+    //   FONT_SYS address → FONT_INTER (matches Saved address 11.5/0.02em)
+    //   v1.inkPrimary → v2.text.primary (name)
+    //   v1.inkMuted → v2.text.secondary (address; matches SavedMallCardV2)
+    //   v1.inkFaint → v2.text.muted (decorative dotted underline stroke)
     <div style={{ padding: "8px 22px 4px", textAlign: "center" }}>
       <div
         style={{
-          fontFamily: FONT_LORA,
+          fontFamily: FONT_CORMORANT,
           fontSize: 18,
-          color: v1.inkPrimary,
+          color: v2.text.primary,
           lineHeight: 1.3,
           letterSpacing: "-0.005em",
           display: "flex",
@@ -511,13 +521,13 @@ export function MallBlock({
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              fontFamily: FONT_SYS,
+              fontFamily: FONT_INTER,
               fontSize: 14,
-              color: v1.inkMuted,
+              color: v2.text.secondary,
               lineHeight: 1.55,
               textDecoration: "underline",
               textDecorationStyle: "dotted",
-              textDecorationColor: v1.inkFaint,
+              textDecorationColor: v2.text.muted,
               textUnderlineOffset: 3,
             }}
           >
