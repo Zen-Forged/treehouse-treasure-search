@@ -276,8 +276,13 @@ export const v2 = {
   // canvas; bg.paper is the bright card surface; bg.soft is the page bg
   // soft variant. surface.card mirrors bg.paper for card chrome
   // semantics; surface.warm is the warm-cream pill + thumbnail bg.
+  //
+  // Session 139 Arc 1.2.5 dial — bg.main shifted #F7F3E8 → #FBF6EA per
+  // David's mockup pass. Page canvas now matches surface.warm; the
+  // distinction is semantic (page bg vs pill/thumbnail bg). Cards still
+  // pop via surface.card #FFFCF5 against the warmer canvas.
   bg: {
-    main:  "#F7F3E8",
+    main:  "#FBF6EA",
     paper: "#FFFCF5",
     soft:  "#F1EBDD",
   },

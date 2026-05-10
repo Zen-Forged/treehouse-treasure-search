@@ -1,91 +1,56 @@
 // app/flagged/page.tsx
 // R18 (session 121) — per-mall card stack restructure.
-// Session 122 — iPhone-QA refinement pass on the per-mall card chrome
-// + page-level header. Frame C (session-121 split-header-strip) retires;
-// see "Session 122 refinement" block below for the reversal.
+// Session 122 — iPhone-QA refinement pass on per-mall card chrome.
+// Session 139 Arc 1.4 — wire to v2 primitives:
+//   - Inline <SavedMallCard> retires (was 200+ lines below the grouping
+//     util); <SavedMallCardV2> + <AccordionBoothSection> + <SavedFindRow>
+//     now own per-mall + per-booth + per-find render.
+//   - Session-122 page header h1 ("X saved finds across Y locations" with
+//     FlagGlyph) retires; each mall card now carries its own "X finds
+//     waiting to be found" line.
+//   - <PolaroidTile> 3-col grid retires; row primitive owns the find list.
+//   - <SavedEmptyState> v2 primitive replaces <EmptyStatePrimitive> in
+//     the no-saves branch.
+//   - useShopperFindsFound hook (Arc 1.3) wires ✓ Found Find-tier
+//     engagement state; localStorage-only.
+//   - Tap-target shape changes Link → router.push (SavedFindRow is
+//     role=button; Link wrapping invalid HTML).
 //
-// Replaces the session-99 booth-destination-container + scope-filter
-// architecture with a flat stack of per-mall cards. Each mall card carries
-// its own DistancePill and Get Directions CTA. Booth groupings nest inside
-// the mall card with a dashed-top divider per booth section.
-//
-// Session 122 refinement (reverses session-121 D5/D6/D7/D9):
-//   - Frame C retires. The 110×88 mall-hero photo on the left of the card
-//     header drops entirely. Card chrome stacks at full card width.
-//   - Eyebrow "Saved finds from:" deletes — the page-level header carries
-//     the "saved" identity; per-card eyebrow was redundant.
-//   - Mall name allowed to wrap up to 2 lines (was 1-line ellipsis) so
-//     long mall names don't truncate to "...".
-//   - DistancePill moves below the address in its own row, left-aligned
-//     (was top-right of the chrome stack).
-//   - MapPin icon retires from the address line (Saved-only — Home rich
-//     card keeps it). Saves are personal; reduce location-identity chrome.
-//   - Page-level header inserted above the per-mall card stack:
-//     "{count} Saved find{s} waiting to be found" in 22px FONT_LORA
-//     weight 500 — matches the Home rich-card mall-name typography.
-//   - MallSection.mallHeroUrl retires (dead after photo drops); the
-//     mallsById fetch stays in place for canonical name/address/coords
-//     resolution per session-121 design.
-//
-// What changed from the session-120 baseline:
-//   - Search bar removed (it was an implicit feature-parity decision in
-//     session 120; David's session-121 spec retired it).
-//   - Mall scope filter removed entirely; Saved no longer participates in
-//     mall scope. Show all saves grouped by mall.
-//   - <BoothDestinationContainer> retires; booth grouping nests inside
-//     the new <SavedMallCard> with dashed-top section dividers.
-//   - Per-booth "Explore the booth →" CTA retires; one mall-level
-//     `Get Directions` CTA per mall card.
-//   - <RichPostcardMallCard> retires from this surface; this page owns
-//     its own per-mall card primitive.
-//   - R17 Arc 2's DistancePill-above-each-booth-container (session 119)
-//     reverses; pill now lives in each mall card header.
-//   - The save leaf bubble returns to every find tile (session-99 hit-area
-//     concern is moot at the new 3-col grid scale).
-//
-// Mall stacking order: distance asc when geolocation granted; save recency
-// (most recent post created_at across the mall's saves) as fallback.
-//
-// Booth section order within a mall: save recency.
-//
-// Cascade on unsave: useShopperSaves hook is reactive; when ids changes,
-// posts re-fetch, group rebuilds. Last find at booth → booth section drops;
-// last find at mall → mall card drops.
-//
-// Preserved from session 99/120:
+// Preserved verbatim:
 //   - useShopperSaves hook (DB if authed, localStorage if guest)
-//   - Scroll-restore (SCROLL_KEY)
+//   - Scroll-restore (SCROLL_KEY) + force-top fallback for first-visit /
+//     cross-tab scrollY inheritance under shared layout
+//   - Phase C swipe-nav handoff (writeFindContext + flatFindRefs)
 //   - Track D preview-cache on tap (treehouse_find_preview:${id})
-//   - Phase C swipe-nav handoff via lib/findContext (flatFindRefs across
-//     all malls + booths)
-//   - R3 events: page_viewed, post_unsaved (via useShopperSaves toggle)
-//   - flagged_directions_tapped event on Get Directions (renames + shifts
-//     scope from per-booth flagged_booth_explored to per-mall directions)
-//   - Sync-footer for unauthed shoppers with localStorage saves
+//   - R3 events: page_viewed, post_unsaved (via useShopperSaves toggle),
+//     flagged_directions_tapped (per-mall Get Directions)
+//   - Sync-footer for unauthed shoppers with localStorage saves (R1 D6)
 //   - FeaturedBanner site-setting overlay
+//   - Stale-prune unwinding dead localStorage keys
+//   - Per-mall sort: distance asc when granted, save-recency desc fallback
+//   - Per-booth sort within mall: save-recency desc
+//   - Per-find sort within booth: active-first then sold; created_at desc
+//     within each band
 "use client";
 
 export const dynamic = "force-dynamic";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getPostsByIds, getActiveMalls } from "@/lib/posts";
 import { useShopperAuth } from "@/lib/useShopperAuth";
 import { useShopperSaves } from "@/lib/useShopperSaves";
-import {
-  v1,
-  FONT_LORA,
-  FONT_NUMERAL,
-  FONT_SYS,
-} from "@/lib/tokens";
+import { useShopperFindsFound } from "@/lib/useShopperFindsFound";
+import { v1, FONT_LORA } from "@/lib/tokens";
 import { getSiteSettingUrl } from "@/lib/siteSettings";
 import { track } from "@/lib/clientEvents";
 import { writeFindContext, setPostCache, type FindRef } from "@/lib/findContext";
 import FeaturedBanner from "@/components/FeaturedBanner";
-import PolaroidTile from "@/components/PolaroidTile";
-import EmptyStatePrimitive from "@/components/EmptyState";
-import FlagGlyph from "@/components/FlagGlyph";
-import DistancePill from "@/components/DistancePill";
+import SavedMallCardV2 from "@/components/v2/SavedMallCardV2";
+import AccordionBoothSection from "@/components/v2/AccordionBoothSection";
+import SavedFindRow from "@/components/v2/SavedFindRow";
+import SavedEmptyState from "@/components/v2/SavedEmptyState";
 import { milesFromUser } from "@/lib/distance";
 import { useUserLocation } from "@/lib/useUserLocation";
 import { navigateUrl } from "@/lib/mapsDeepLink";
@@ -197,280 +162,6 @@ function groupByMallAndBooth(
   return allMalls;
 }
 
-// ── Per-mall card (inline; single callsite) ───────────────────────────────────
-// Session 122 refinement: Frame C (110×88 photo + right-chrome) retires.
-// Card chrome stacks at full card width: name → address → DistancePill.
-
-function SavedMallCard({
-  mall,
-  miles,
-  onTilePress,
-  flatFindRefs,
-  saves,
-}: {
-  mall:         MallSection;
-  miles:        number | null;
-  onTilePress:  (post: Post, cursorIndex: number) => void;
-  flatFindRefs: FindRef[];
-  saves:        ReturnType<typeof useShopperSaves>;
-}) {
-  function handleGetDirections() {
-    track("flagged_directions_tapped", {
-      mall_id:     mall.mallId,
-      saved_count: mall.totalSaves,
-    });
-    if (mall.mallLat != null && mall.mallLng != null) {
-      // window.location.href, not router.push — native maps deep-links use
-      // the maps:// scheme (iOS) which Next router can't handle. R17 Arc 1
-      // pattern (lib/LocationActions.tsx).
-      window.location.href = navigateUrl(mall.mallLat, mall.mallLng);
-    }
-  }
-
-  return (
-    <article
-      style={{
-        background:   v1.paperWarm,
-        border:       `1px solid ${v1.inkHairline}`,
-        borderRadius: 12,
-        overflow:     "hidden",
-        boxShadow:    "0 1px 3px rgba(42, 26, 10, 0.05)",
-      }}
-    >
-      {/* Header — name + DistancePill in top flex row (pill top-right,
-          align-start so 2-line names don't push it center); address below
-          full-width. Reverses session-122 Round 1 ask 3 (pill below address
-          left-justified): now that the photo retired and chrome stacks at
-          full card width, the right side has clear space for the pill,
-          and the more-compact 2-row layout reads cleaner per David's
-          iPhone QA. */}
-      <div style={{ padding: "14px 14px 12px" }}>
-        <div
-          style={{
-            display:    "flex",
-            alignItems: "flex-start",
-            gap:        8,
-          }}
-        >
-          <div
-            style={{
-              flex:            1,
-              minWidth:        0,
-              fontFamily:      FONT_LORA,
-              fontWeight:      500,
-              fontSize:        19,
-              color:           v1.inkPrimary,
-              lineHeight:      1.25,
-              letterSpacing:   "-0.005em",
-              display:         "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow:        "hidden",
-              wordBreak:       "break-word",
-            }}
-          >
-            {mall.mallName}
-          </div>
-
-          {/* DistancePill renders null on guest / denied / mall coords
-              missing — wrapper omitted entirely so flex gap stays tight. */}
-          {miles != null && (
-            <div style={{ flexShrink: 0 }}>
-              <DistancePill miles={miles} />
-            </div>
-          )}
-        </div>
-
-        {mall.mallAddress && (
-          <div
-            style={{
-              marginTop:  4,
-              color:      v1.inkMuted,
-              fontFamily: FONT_SYS,
-              fontSize:   12,
-              lineHeight: 1.3,
-            }}
-          >
-            {mall.mallAddress}
-          </div>
-        )}
-      </div>
-
-      {/* Booth subgroups — flat list of finds per booth, separated by
-          dashed-top divider with booth name + number eyebrow. */}
-      <div style={{ padding: "0 14px" }}>
-        {mall.booths.map((booth) => (
-          <div
-            key={(booth.boothNumber ?? "nb") + "·" + booth.vendorName}
-            style={{ borderTop: `1px dashed ${v1.inkHairline}` }}
-          >
-            <div
-              style={{
-                paddingTop:    10,
-                paddingBottom: 8,
-                display:       "flex",
-                alignItems:    "baseline",
-                gap:           6,
-                flexWrap:      "wrap",
-              }}
-            >
-              {booth.boothNumber && (
-                <div
-                  style={{
-                    fontFamily:     FONT_NUMERAL,
-                    fontWeight:     700,
-                    fontSize:       11,
-                    letterSpacing:  "0.1em",
-                    textTransform:  "uppercase",
-                    color:          v1.inkMuted,
-                  }}
-                >
-                  Booth {booth.boothNumber}
-                </div>
-              )}
-              <div
-                style={{
-                  fontFamily: FONT_LORA,
-                  fontStyle:  "italic",
-                  fontSize:   13,
-                  color:      v1.inkMid,
-                }}
-              >
-                {booth.boothNumber ? `· ${booth.vendorName}` : booth.vendorName}
-              </div>
-            </div>
-
-            <div
-              style={{
-                display:             "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap:                 8,
-                paddingBottom:       12,
-              }}
-            >
-              {booth.posts.map((post) => {
-                const cursor = flatFindRefs.findIndex((r) => r.id === post.id);
-                return (
-                  <Link
-                    key={post.id}
-                    href={`/find/${post.id}`}
-                    onClick={() => onTilePress(post, cursor >= 0 ? cursor : 0)}
-                    style={{
-                      textDecoration:          "none",
-                      color:                   "inherit",
-                      WebkitTapHighlightColor: "transparent",
-                    }}
-                  >
-                    <PolaroidTile
-                      src={post.image_url ?? ""}
-                      alt={post.title}
-                      bottomMat="inside"
-                      loading="lazy"
-                      dim={post.status === "sold"}
-                      fallback={
-                        <div
-                          style={{
-                            width:          "100%",
-                            height:         "100%",
-                            display:        "flex",
-                            alignItems:     "center",
-                            justifyContent: "center",
-                            fontFamily:     FONT_LORA,
-                            fontStyle:      "italic",
-                            fontSize:       9,
-                            color:          v1.inkFaint,
-                            textAlign:      "center",
-                            padding:        "0 4px",
-                            lineHeight:     1.3,
-                          }}
-                        >
-                          no photograph
-                        </div>
-                      }
-                      topRight={
-                        // R18 D8 — save leaf bubble returns to every saved-
-                        // find tile. Reverses session-99's "leaf retired —
-                        // hit area too small + redundant" call: at the new
-                        // 3-col grid scale the bubble is well-sized, and
-                        // single-tap unsave is the canonical interaction
-                        // for the Saved page.
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            saves.toggle(post.id, false);
-                          }}
-                          aria-label="Unsave"
-                          style={{
-                            width:                   "100%",
-                            height:                  "100%",
-                            borderRadius:            "50%",
-                            background:              "rgba(245,242,235,0.85)",
-                            backdropFilter:          "blur(8px)",
-                            WebkitBackdropFilter:    "blur(8px)",
-                            border:                  `0.5px solid rgba(42,26,10,0.12)`,
-                            display:                 "flex",
-                            alignItems:              "center",
-                            justifyContent:          "center",
-                            padding:                 0,
-                            cursor:                  "pointer",
-                            WebkitTapHighlightColor: "transparent",
-                          }}
-                        >
-                          <FlagGlyph
-                            size={14}
-                            strokeWidth={1.7}
-                            style={{ color: v1.green, fill: v1.green }}
-                          />
-                        </button>
-                      }
-                    />
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Get Directions footer — only when mall has lat/lng coords (every
-          active mall has them per session-103 add-mall.ts pipeline; defensive
-          gate for malls predating that pipeline). */}
-      {mall.mallLat != null && mall.mallLng != null && (
-        <div style={{ padding: "0 14px 14px" }}>
-          <button
-            type="button"
-            onClick={handleGetDirections}
-            style={{
-              width:                   "100%",
-              background:              v1.green,
-              color:                   "#f5ecd5",
-              border:                  "none",
-              borderRadius:            999,
-              padding:                 "10px 18px",
-              fontFamily:              FONT_SYS,
-              fontSize:                11,
-              fontWeight:              700,
-              letterSpacing:           "0.14em",
-              textTransform:           "uppercase",
-              cursor:                  "pointer",
-              display:                 "flex",
-              alignItems:              "center",
-              justifyContent:          "center",
-              gap:                     6,
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            Get Directions
-            <span aria-hidden style={{ fontSize: 13, lineHeight: 1 }}>↗</span>
-          </button>
-        </div>
-      )}
-    </article>
-  );
-}
-
 // ──────────────────────────────────────────────────────────────────────────────
 export default function FlaggedPage() {
   const [posts,           setPosts]           = useState<Post[]>(cachedFlaggedPosts ?? []);
@@ -479,7 +170,9 @@ export default function FlaggedPage() {
   const [bannerImageUrl,  setBannerImageUrl]  = useState<string | null>(null);
   const shopperAuth                            = useShopperAuth();
   const saves                                  = useShopperSaves();
+  const findsFound                             = useShopperFindsFound();
   const userLoc                                = useUserLocation();
+  const router                                 = useRouter();
   const pendingScrollY = useRef<number | null>(null);
   const scrollRestored = useRef(false);
 
@@ -564,8 +257,8 @@ export default function FlaggedPage() {
     requestAnimationFrame(() => { window.scrollTo({ top: y, behavior: "instant" }); });
   }, [loading]);
 
-  // Build the malls lookup so we can resolve hero_image_url (not in
-  // getPostsByIds SELECT). Active-mall metadata wins; fallback to
+  // Build the malls lookup so we can resolve mall metadata (latitude /
+  // longitude / address). Active-mall metadata wins; fallback to
   // post.mall.* values inside groupByMallAndBooth covers deactivated malls.
   const mallsById = new Map<string, Mall>();
   for (const m of malls) mallsById.set(m.id, m);
@@ -619,6 +312,19 @@ export default function FlaggedPage() {
       findRefs:    flatFindRefs,
       cursorIndex,
     });
+    router.push(`/find/${post.id}`);
+  }
+
+  function handleGetDirections(mall: MallSection) {
+    track("flagged_directions_tapped", {
+      mall_id:     mall.mallId,
+      saved_count: mall.totalSaves,
+    });
+    if (mall.mallLat != null && mall.mallLng != null) {
+      // window.location.href, not router.push — native maps deep-links use
+      // the maps:// scheme (iOS) which Next router can't handle.
+      window.location.href = navigateUrl(mall.mallLat, mall.mallLng);
+    }
   }
 
   return (
@@ -643,12 +349,7 @@ export default function FlaggedPage() {
             ))}
           </div>
         ) : posts.length === 0 ? (
-          <div style={{ padding: "0 22px" }}>
-            <EmptyStatePrimitive
-              title="No finds saved yet"
-              subtitle="Tap the leaf on any find to save it here."
-            />
-          </div>
+          <SavedEmptyState exploreHref="/" />
         ) : (
           <div
             style={{
@@ -658,46 +359,44 @@ export default function FlaggedPage() {
               gap:           14,
             }}
           >
-            {/* Page header — outline saved-leaf glyph + count +
-                "saved finds waiting to be found". Typography matches the
-                Home rich-card "Finds from:" eyebrow (RichPostcardMallCard):
-                FONT_LORA italic, 17px, ink-muted, lineHeight 1. Glyph is
-                outline-only (no bg container) — same icon used in
-                BottomNav, sized to read with the text x-height. Only
-                renders in the populated branch; loading + empty branches
-                keep their existing chrome. */}
-            <h1
-              style={{
-                margin:     0,
-                display:    "flex",
-                alignItems: "center",
-                gap:        6,
-                fontFamily: FONT_LORA,
-                fontStyle:  "italic",
-                fontSize:   17,
-                color:      v1.inkMuted,
-                lineHeight: 1,
-              }}
-            >
-              <FlagGlyph
-                size={18}
-                strokeWidth={1.7}
-                style={{ color: v1.inkMuted, flexShrink: 0 }}
-              />
-              <span>
-                {posts.length} {posts.length === 1 ? "saved find" : "saved finds"} across {sortedMallsWithMiles.length} {sortedMallsWithMiles.length === 1 ? "location" : "locations"}
-              </span>
-            </h1>
-
             {sortedMallsWithMiles.map(({ mall, miles }) => (
-              <SavedMallCard
+              <SavedMallCardV2
                 key={mall.mallId}
-                mall={mall}
-                miles={miles}
-                onTilePress={handleTilePress}
-                flatFindRefs={flatFindRefs}
-                saves={saves}
-              />
+                mallName={mall.mallName}
+                mallAddress={mall.mallAddress ?? ""}
+                distanceMi={miles}
+                findsCount={mall.totalSaves}
+                onGetDirections={() => handleGetDirections(mall)}
+              >
+                {mall.booths.map((booth) => (
+                  <AccordionBoothSection
+                    key={(booth.boothNumber ?? "nb") + "·" + booth.vendorName}
+                    boothNumber={booth.boothNumber}
+                    boothName={booth.vendorName}
+                    defaultExpanded
+                  >
+                    {booth.posts.map((post) => {
+                      const cursor = flatFindRefs.findIndex((r) => r.id === post.id);
+                      const isFoundNow = findsFound.isFound(post.id);
+                      return (
+                        <SavedFindRow
+                          key={post.id}
+                          postId={post.id}
+                          imageUrl={post.image_url ?? undefined}
+                          title={post.title}
+                          price={post.price_asking}
+                          isFound={isFoundNow}
+                          isSaved={saves.isSaved(post.id)}
+                          dim={post.status === "sold"}
+                          onToggleFound={() => findsFound.toggle(post.id, !isFoundNow)}
+                          onToggleSaved={() => saves.toggle(post.id, false)}
+                          onTapDetail={() => handleTilePress(post, cursor >= 0 ? cursor : 0)}
+                        />
+                      );
+                    })}
+                  </AccordionBoothSection>
+                ))}
+              </SavedMallCardV2>
             ))}
           </div>
         )}

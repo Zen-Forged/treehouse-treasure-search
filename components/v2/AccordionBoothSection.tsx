@@ -25,7 +25,10 @@ import { useState } from "react";
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
 
 interface AccordionBoothSectionProps {
-  boothNumber: string;
+  /** Null for orphan booths (vendor with no booth_number assigned).
+   *  When null, BOOTH N eyebrow + diamond separator both retire; booth
+   *  name claims the row alone. */
+  boothNumber: string | null;
   boothName: string;
   defaultExpanded?: boolean;
   children: React.ReactNode;
@@ -38,6 +41,7 @@ export default function AccordionBoothSection({
   children,
 }: AccordionBoothSectionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
+  const sectionId = `booth-section-${boothNumber ?? `orphan-${boothName}`}`;
 
   return (
     <div
@@ -49,7 +53,7 @@ export default function AccordionBoothSection({
         type="button"
         onClick={() => setExpanded((prev) => !prev)}
         aria-expanded={expanded}
-        aria-controls={`booth-section-${boothNumber}`}
+        aria-controls={sectionId}
         style={{
           width: "100%",
           padding: "14px 20px",
@@ -78,34 +82,38 @@ export default function AccordionBoothSection({
           <path d="M5 9v11a1 1 0 001 1h12a1 1 0 001-1V9" />
           <path d="M9 21v-6h6v6" />
         </svg>
-        <span
-          style={{
-            fontFamily: FONT_INTER,
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: "0.14em",
-            textTransform: "uppercase",
-            color: v2.accent.green,
-            flexShrink: 0,
-          }}
-        >
-          Booth {boothNumber}
-        </span>
-        <span
-          aria-hidden
-          style={{
-            width: 3,
-            height: 3,
-            borderRadius: 2,
-            background: v2.text.muted,
-            flexShrink: 0,
-          }}
-        />
+        {boothNumber && (
+          <>
+            <span
+              style={{
+                fontFamily: FONT_INTER,
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: v2.accent.green,
+                flexShrink: 0,
+              }}
+            >
+              Booth {boothNumber}
+            </span>
+            <span
+              aria-hidden
+              style={{
+                width: 4,
+                height: 4,
+                background: v2.text.muted,
+                transform: "rotate(45deg)",
+                flexShrink: 0,
+              }}
+            />
+          </>
+        )}
         <span
           style={{
             fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
-            fontWeight: 500,
+            fontWeight: 600,
             fontSize: 17,
             color: v2.text.primary,
             lineHeight: 1.3,
@@ -123,7 +131,7 @@ export default function AccordionBoothSection({
           height={20}
           viewBox="0 0 24 24"
           fill="none"
-          stroke={v2.text.muted}
+          stroke={v2.accent.green}
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -139,7 +147,7 @@ export default function AccordionBoothSection({
       </button>
       {expanded && (
         <div
-          id={`booth-section-${boothNumber}`}
+          id={sectionId}
           style={{ background: v2.surface.card }}
         >
           {children}

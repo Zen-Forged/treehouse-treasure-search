@@ -27,29 +27,32 @@ interface SavedFindRowProps {
   imageUrl?: string;
   imageGradient?: string; // CSS gradient fallback for smoke route mocks
   title: string;
-  priceCents: number;
+  /** Asking price in dollars (matches Post.price_asking shape; null hides). */
+  price: number | null;
   isFound: boolean;
   isSaved: boolean;
+  /** Sold-state dim — whole row drops to 0.55 opacity. Matches PolaroidTile
+   *  dim contract verbatim; preserves the session-83 sold-find visual when
+   *  /flagged migrates to v2 row primitive. */
+  dim?: boolean;
   onToggleFound: () => void;
   onToggleSaved: () => void;
   onTapDetail: () => void;
-}
-
-function formatPrice(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
 }
 
 export default function SavedFindRow({
   imageUrl,
   imageGradient,
   title,
-  priceCents,
+  price,
   isFound,
   isSaved,
+  dim = false,
   onToggleFound,
   onToggleSaved,
   onTapDetail,
 }: SavedFindRowProps) {
+  const showPrice = typeof price === "number" && price > 0;
   return (
     <div
       role="button"
@@ -70,6 +73,7 @@ export default function SavedFindRow({
         borderTop: `1px solid ${v2.border.light}`,
         background: v2.surface.card,
         cursor: "pointer",
+        opacity: dim ? 0.55 : 1,
       }}
     >
       <FoundCheckCircle isFound={isFound} onToggle={onToggleFound} />
@@ -92,7 +96,7 @@ export default function SavedFindRow({
         <div
           style={{
             fontFamily: FONT_CORMORANT,
-            fontWeight: 500,
+            fontWeight: 600,
             fontSize: 17,
             color: v2.text.primary,
             lineHeight: 1.3,
@@ -104,16 +108,18 @@ export default function SavedFindRow({
         >
           {title}
         </div>
-        <div
-          style={{
-            fontFamily: FONT_INTER,
-            fontSize: 14,
-            fontWeight: 500,
-            color: v2.text.primary,
-          }}
-        >
-          {formatPrice(priceCents)}
-        </div>
+        {showPrice && (
+          <div
+            style={{
+              fontFamily: FONT_INTER,
+              fontSize: 14,
+              fontWeight: 400,
+              color: v2.accent.green,
+            }}
+          >
+            ${Math.round(price as number)}
+          </div>
+        )}
       </div>
 
       <button

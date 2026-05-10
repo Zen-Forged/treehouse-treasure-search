@@ -2,12 +2,16 @@
 //
 // v2 Arc 1.2 — Mall-tier engagement affordance per the 3-tier engagement+share
 // lattice (session 137 project memory + extended in v2 migration session 138).
-// 44×44 bubble in the top-right corner of <SavedMallCardV2>; mirrors
-// <BookmarkBoothBubble> shape so save-bubble and favorite-bubble feel like
-// siblings across the lattice.
+// 44×44 bubble; mirrors <BookmarkBoothBubble> shape so save-bubble and
+// favorite-bubble feel like siblings across the lattice.
 //
-// localStorage-only persistence (D5 (a)) — wiring lands in Arc 1.3 via
-// useShopperFavoriteMalls hook. This component is presentational only.
+// Currently dormant — no consumer as of session 139 Arc 1.2.5. ★ Favorite
+// Mall retired on Saved page per Q1 (a) reversal of session-138 Q6 (a);
+// next consumer is Home + Map's RichPostcardMallCard in v2 Arc 5
+// (/map migration). Kept in tree because Arc 5 will wire it verbatim.
+//
+// localStorage-only persistence (D5 (a)) — hook wiring lands in Arc 1.3
+// via useShopperFavoriteMalls. This component is presentational only.
 "use client";
 
 import { v2 } from "@/lib/tokens";

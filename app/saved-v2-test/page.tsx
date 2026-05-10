@@ -11,19 +11,23 @@
 // post-ship; retirement-not-urgent.
 //
 // Mock data shape mirrors the production data contract:
-//   - 2 malls (Middletown favorited + with distance; Lexington unfavorited +
-//     without distance to test fallback chrome)
+//   - 2 malls (Middletown with distance 2.9 MI; Lexington without distance
+//     to test pill-hidden-when-null behavior per session-139 Q2 (a))
 //   - 2 booths per mall; D2 (a) defaults all expanded
 //   - 3 finds in expanded booth + 0 finds in collapsed-on-tap state
-//   - 1 find pre-marked ✓ Found to demo filled-circle visual
 //
-// Local React state for favorites + found-marks + saves — Arc 1.3 wires the
-// real localStorage hooks. Empty-state preview toggle at top of page.
+// ✓ Found state now wired through useShopperFindsFound (Arc 1.3 hook,
+// localStorage-backed) — state persists across page reloads + cross-tab.
+// Saved state still local React state (Arc 1.4 wires useShopperSaves on
+// /flagged production wiring). ★ Favorite Mall retired on Saved per
+// session-139 Q1 (a) reversal of session-138 Q6 (a); ★ moves to Home +
+// Map's RichPostcardMallCard in v2 Arc 5. Empty-state preview toggle.
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
+import { useShopperFindsFound } from "@/lib/useShopperFindsFound";
 import SavedMallCardV2 from "@/components/v2/SavedMallCardV2";
 import AccordionBoothSection from "@/components/v2/AccordionBoothSection";
 import SavedFindRow from "@/components/v2/SavedFindRow";
@@ -36,7 +40,7 @@ import SavedEmptyState from "@/components/v2/SavedEmptyState";
 interface MockFind {
   id: string;
   title: string;
-  priceCents: number;
+  price: number;
   imageGradient: string;
 }
 
@@ -70,21 +74,21 @@ const MALLS: MockMall[] = [
           {
             id: "copper-kettle",
             title: "Copper Kettle",
-            priceCents: 2800,
+            price: 28,
             imageGradient:
               "linear-gradient(135deg, #c9a96e 0%, #8a6a3e 100%)",
           },
           {
             id: "brass-vase",
             title: "Brass Vase",
-            priceCents: 3500,
+            price: 35,
             imageGradient:
               "linear-gradient(135deg, #b89968 0%, #7a5a3a 100%)",
           },
           {
             id: "vintage-camera",
             title: "Vintage Camera",
-            priceCents: 2200,
+            price: 22,
             imageGradient:
               "linear-gradient(135deg, #5a4838 0%, #2c2218 100%)",
           },
@@ -98,21 +102,21 @@ const MALLS: MockMall[] = [
           {
             id: "landscape-painting",
             title: "Landscape Painting",
-            priceCents: 4200,
+            price: 42,
             imageGradient:
               "linear-gradient(135deg, #8a9a72 0%, #4a5a3a 100%)",
           },
           {
             id: "violin",
             title: "Violin",
-            priceCents: 6500,
+            price: 65,
             imageGradient:
               "linear-gradient(135deg, #6a4530 0%, #3a2818 100%)",
           },
           {
             id: "ceramic-bowl",
             title: "Ceramic Bowl",
-            priceCents: 1800,
+            price: 18,
             imageGradient:
               "linear-gradient(135deg, #e0d5c0 0%, #a89880 100%)",
           },
@@ -134,14 +138,14 @@ const MALLS: MockMall[] = [
           {
             id: "oak-chair",
             title: "Oak Side Chair",
-            priceCents: 8500,
+            price: 85,
             imageGradient:
               "linear-gradient(135deg, #8a6a4a 0%, #4a3a2a 100%)",
           },
           {
             id: "porcelain-figurine",
             title: "Porcelain Figurine",
-            priceCents: 4400,
+            price: 44,
             imageGradient:
               "linear-gradient(135deg, #f0e8d8 0%, #c0b8a0 100%)",
           },
@@ -155,14 +159,14 @@ const MALLS: MockMall[] = [
           {
             id: "pocket-watch",
             title: "Pocket Watch on Chain",
-            priceCents: 12000,
+            price: 120,
             imageGradient:
               "linear-gradient(135deg, #d4a86c 0%, #8a6438 100%)",
           },
           {
             id: "wool-blanket",
             title: "Hand-woven Wool Blanket",
-            priceCents: 9000,
+            price: 90,
             imageGradient:
               "linear-gradient(135deg, #a86848 0%, #683828 100%)",
           },
@@ -177,15 +181,12 @@ const MALLS: MockMall[] = [
 // ─────────────────────────────────────────────────────────────────────────
 
 export default function SavedV2TestPage() {
-  // Pre-mark "Brass Vase" as ✓ Found to demo filled-circle visual
-  const [foundIds, setFoundIds] = useState<Set<string>>(
-    () => new Set(["brass-vase"]),
-  );
-  // Middletown starts favorited; Lexington starts unfavorited
-  const [favoriteMallIds, setFavoriteMallIds] = useState<Set<string>>(
-    () => new Set(["middletown"]),
-  );
-  // All finds start as saved (this IS the Saved page)
+  // ✓ Found state via Arc 1.3 hook — localStorage-backed; persists across
+  // page reloads + cross-tab.
+  const findsFound = useShopperFindsFound();
+
+  // All finds start as saved (this IS the Saved page). Smoke route stays
+  // on local React state for saves; Arc 1.4 wires useShopperSaves.
   const [savedIds, setSavedIds] = useState<Set<string>>(
     () =>
       new Set(
@@ -193,24 +194,6 @@ export default function SavedV2TestPage() {
       ),
   );
   const [showEmptyState, setShowEmptyState] = useState(false);
-
-  function toggleFound(id: string) {
-    setFoundIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  function toggleFavoriteMall(id: string) {
-    setFavoriteMallIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
 
   function toggleSaved(id: string) {
     setSavedIds((prev) => {
@@ -221,11 +204,9 @@ export default function SavedV2TestPage() {
     });
   }
 
-  // D1 + D4 — favorited-first then distance-asc; null distance ranks below
+  // Sort by distance-asc; null distance ranks below (session-139 reversal —
+  // favorited-first axis retired alongside ★ retire on Saved per Q1 (a))
   const sortedMalls = [...MALLS].sort((a, b) => {
-    const aFav = favoriteMallIds.has(a.id);
-    const bFav = favoriteMallIds.has(b.id);
-    if (aFav !== bFav) return aFav ? -1 : 1;
     if (a.distanceMi !== null && b.distanceMi !== null)
       return a.distanceMi - b.distanceMi;
     if (a.distanceMi !== null) return -1;
@@ -297,10 +278,11 @@ export default function SavedV2TestPage() {
             marginBottom: 12,
           }}
         >
-          Mocked data + local React state. Saves count: {totalSavedCount}.
-          Toggle ★ to test favorited-first sort. Toggle ✓ on Brass Vase to
-          test ✓ Found state. Tap accordion headers to test expand/collapse.
-          Tap leaf bubble to remove a find from saves.
+          Saves: {totalSavedCount} (local) · ✓ Found: {findsFound.ids.size} (localStorage).
+          Tap any ✓ to mark a find as found in store — state persists
+          across page reloads + cross-tab. Tap accordion headers to
+          test expand/collapse. Tap leaf bubble to remove a find from
+          saves. Lexington has no distance — pill should hide.
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button
@@ -345,6 +327,30 @@ export default function SavedV2TestPage() {
           >
             Restore All Saves
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              // Clear all ✓ Found state — for QA convenience between rounds.
+              // Iterate hook ids + toggle each off (writes through hook so
+              // localStorage + cross-instance/cross-tab listeners stay in sync).
+              Array.from(findsFound.ids).forEach((id) =>
+                findsFound.toggle(id, false),
+              );
+            }}
+            style={{
+              fontFamily: FONT_INTER,
+              fontSize: 11,
+              fontWeight: 600,
+              padding: "6px 12px",
+              background: v2.surface.warm,
+              color: v2.text.primary,
+              border: `1px solid ${v2.border.light}`,
+              borderRadius: 6,
+              cursor: "pointer",
+            }}
+          >
+            Clear ✓ Found
+          </button>
           <Link
             href="/"
             style={{
@@ -380,8 +386,6 @@ export default function SavedV2TestPage() {
                 mallAddress={mall.address}
                 distanceMi={mall.distanceMi}
                 findsCount={findsInThisMall}
-                isFavorite={favoriteMallIds.has(mall.id)}
-                onToggleFavorite={() => toggleFavoriteMall(mall.id)}
                 onGetDirections={() => {
                   // smoke route — no-op; production wires to lib/mapsDeepLink
                   // eslint-disable-next-line no-console
@@ -395,24 +399,29 @@ export default function SavedV2TestPage() {
                     boothName={booth.name}
                     defaultExpanded
                   >
-                    {booth.finds.map((find) => (
-                      <SavedFindRow
-                        key={find.id}
-                        postId={find.id}
-                        imageGradient={find.imageGradient}
-                        title={find.title}
-                        priceCents={find.priceCents}
-                        isFound={foundIds.has(find.id)}
-                        isSaved={savedIds.has(find.id)}
-                        onToggleFound={() => toggleFound(find.id)}
-                        onToggleSaved={() => toggleSaved(find.id)}
-                        onTapDetail={() => {
-                          // smoke route — no-op; production navigates to /find/[id]
-                          // eslint-disable-next-line no-console
-                          console.log("[smoke] Tap detail", find.title);
-                        }}
-                      />
-                    ))}
+                    {booth.finds.map((find) => {
+                      const isFoundNow = findsFound.isFound(find.id);
+                      return (
+                        <SavedFindRow
+                          key={find.id}
+                          postId={find.id}
+                          imageGradient={find.imageGradient}
+                          title={find.title}
+                          price={find.price}
+                          isFound={isFoundNow}
+                          isSaved={savedIds.has(find.id)}
+                          onToggleFound={() =>
+                            findsFound.toggle(find.id, !isFoundNow)
+                          }
+                          onToggleSaved={() => toggleSaved(find.id)}
+                          onTapDetail={() => {
+                            // smoke route — no-op; production navigates to /find/[id]
+                            // eslint-disable-next-line no-console
+                            console.log("[smoke] Tap detail", find.title);
+                          }}
+                        />
+                      );
+                    })}
                   </AccordionBoothSection>
                 ))}
               </SavedMallCardV2>

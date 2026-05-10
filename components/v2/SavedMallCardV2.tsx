@@ -1,42 +1,45 @@
 // components/v2/SavedMallCardV2.tsx
 //
-// v2 Arc 1.2 — Saved page mall card per Frame δ structural lock. Replaces
-// session-121 inline <SavedMallCard> on /flagged (wired in Arc 1.4).
+// v2 Arc 1.2 (+ session-139 Arc 1.2.5 dial pass) — Saved page mall card.
+// Replaces session-121 inline <SavedMallCard> on /flagged (wired in Arc 1.4).
 //
-// Layout (Frame δ, post-pick refined):
-//   head-δ — CSS grid 1fr/42px columns × auto/auto rows
-//     row 1: mall name (Cormorant 28/600)         | ★ bubble (42×42)
-//     row 2: mall address (Inter 13)              | ────── spans both ──────
-//   distance eyebrow row (centered pill above CTA): "X.X MI AWAY"
-//   action row: full-width green GET DIRECTIONS button + ↗
-//   finds-waiting row: italic Cormorant 13 + 🍃 + dashed flankers
+// Layout (Frame δ + session-139 reversal of session-138 Q6 (a)):
+//   head-δ — CSS grid 1fr/auto columns × auto/auto rows
+//     row 1: mall name (Cormorant 24/600)         | DistancePill (when distance)
+//     row 2: mall address (Inter 11.5)            | ────── spans both ──────
+//   action row: thinner full-width green GET DIRECTIONS button + ↗
+//   finds-waiting row: italic Cormorant 15/500 + 🍃 + dashed flankers
 //   accordion sections (children)
 //
-// Open questions resolved per design record:
-//   - Distance fallback: if distanceMi === null, render "DISTANCE UNAVAILABLE"
-//     with shorter letter-spacing to fit the same pill chrome. Tap-to-prompt
-//     is a Tier B item; for Arc 1.2 + 1.4 we render the static fallback.
+// Reversals from session-138 design record (surfaced in commit body):
+//   - ★ Favorite Mall retired on Saved page; lives on Home + Map's
+//     RichPostcardMallCard in v2 Arc 5 per session-139 Q1 (a). isFavorite
+//     + onToggleFavorite props removed.
+//   - DistancePill moved to head-δ top-right (was: standalone eyebrow row
+//     above GET DIRECTIONS).
+//   - Distance format X.X MI AWAY → X MI (rounded integer, no decimal,
+//     no AWAY suffix) per session-139 notes 3 + 5.
+//   - DistancePill hidden entirely when no distance (was:
+//     "DISTANCE UNAVAILABLE" fallback chrome) per session-139 Q2 (a).
+//   - Pill bg #FBF6EA + green text + no outline per session-139 notes 6 + 11.
+//   - Sort axis loses favorited-first; mall cards now sort distance-asc
+//     (smoke route + Arc 1.4 production wiring).
 "use client";
 
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
-import StarFavoriteBubble from "./StarFavoriteBubble";
 
 interface SavedMallCardV2Props {
   mallName: string;
   mallAddress: string;
   distanceMi: number | null;
   findsCount: number;
-  isFavorite: boolean;
-  onToggleFavorite: () => void;
   onGetDirections: () => void;
   children: React.ReactNode; // accordion sections
 }
 
-function formatDistanceLabel(distanceMi: number | null): string {
-  if (distanceMi === null) return "DISTANCE UNAVAILABLE";
-  if (distanceMi < 0.1) return "< 0.1 MI AWAY";
-  if (distanceMi < 10) return `${distanceMi.toFixed(1)} MI AWAY`;
-  return `${Math.round(distanceMi)} MI AWAY`;
+function formatDistanceLabel(distanceMi: number | null): string | null {
+  if (distanceMi === null) return null;
+  return `${Math.round(distanceMi)} MI`;
 }
 
 export default function SavedMallCardV2({
@@ -44,13 +47,11 @@ export default function SavedMallCardV2({
   mallAddress,
   distanceMi,
   findsCount,
-  isFavorite,
-  onToggleFavorite,
   onGetDirections,
   children,
 }: SavedMallCardV2Props) {
   const distanceLabel = formatDistanceLabel(distanceMi);
-  const hasDistance = distanceMi !== null;
+  const hasDistance = distanceLabel !== null;
 
   return (
     <article
@@ -63,14 +64,14 @@ export default function SavedMallCardV2({
         overflow: "hidden",
       }}
     >
-      {/* head-δ — CSS grid: name + ★ on row 1; address spans row 2 */}
+      {/* head-δ — CSS grid: name + DistancePill on row 1; address spans row 2 */}
       <div
         style={{
-          padding: "18px 20px 14px",
+          padding: "16px 20px 12px",
           display: "grid",
-          gridTemplateColumns: "1fr 42px",
-          columnGap: 14,
-          rowGap: 6,
+          gridTemplateColumns: hasDistance ? "1fr auto" : "1fr",
+          columnGap: hasDistance ? 12 : 0,
+          rowGap: 2,
           alignItems: "center",
         }}
       >
@@ -80,7 +81,7 @@ export default function SavedMallCardV2({
             gridRow: 1,
             fontFamily: FONT_CORMORANT,
             fontWeight: 600,
-            fontSize: 28,
+            fontSize: 25,
             lineHeight: 1.1,
             color: v2.text.primary,
             margin: 0,
@@ -88,18 +89,35 @@ export default function SavedMallCardV2({
         >
           {mallName}
         </h2>
-        <div style={{ gridColumn: 2, gridRow: 1, justifySelf: "end" }}>
-          <StarFavoriteBubble
-            isFavorite={isFavorite}
-            onToggle={onToggleFavorite}
-          />
-        </div>
+        {hasDistance && (
+          <span
+            style={{
+              gridColumn: 2,
+              gridRow: 1,
+              // QA-derived soft mint-green per session-139 iPhone QA round 2;
+              // ~1 unit off v2.accent.greenSoft #E8EEE6 — David specified hex.
+              background: "#e8ede6",
+              color: v2.accent.green,
+              fontFamily: FONT_INTER,
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              padding: "4px 10px",
+              borderRadius: 14,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {distanceLabel}
+          </span>
+        )}
         <div
           style={{
-            gridColumn: "1 / span 2",
+            gridColumn: "1 / -1",
             gridRow: 2,
             fontFamily: FONT_INTER,
-            fontSize: 13,
+            fontSize: 11.5,
+            letterSpacing: "0.02em",
             color: v2.text.secondary,
             lineHeight: 1.4,
           }}
@@ -108,47 +126,22 @@ export default function SavedMallCardV2({
         </div>
       </div>
 
-      {/* Distance eyebrow centered above GET DIRECTIONS */}
-      <div
-        style={{
-          padding: "0 20px 8px",
-          display: "flex",
-          justifyContent: "center",
-        }}
-      >
-        <span
-          style={{
-            background: v2.surface.warm,
-            border: `1px solid ${v2.border.light}`,
-            borderRadius: 14,
-            padding: "4px 12px",
-            fontFamily: FONT_INTER,
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: hasDistance ? "0.14em" : "0.10em",
-            textTransform: "uppercase",
-            color: v2.text.primary,
-            whiteSpace: "nowrap",
-          }}
-        >
-          {distanceLabel}
-        </span>
-      </div>
-
-      {/* GET DIRECTIONS full-width green CTA */}
+      {/* GET DIRECTIONS thinner full-width green CTA */}
       <div style={{ padding: "0 20px 12px" }}>
         <button
           type="button"
           onClick={onGetDirections}
           style={{
             width: "100%",
-            background: v2.accent.green,
+            // QA-derived mid-green per session-139 iPhone QA round 2 —
+            // lighter than v2.accent.green #285C3C; David specified hex.
+            background: "#3e694f",
             color: "#fff",
             border: "none",
-            borderRadius: 8,
-            padding: "14px 16px",
+            borderRadius: 10,
+            padding: 10,
             fontFamily: FONT_INTER,
-            fontSize: 13,
+            fontSize: 11,
             fontWeight: 600,
             letterSpacing: "0.12em",
             textTransform: "uppercase",
@@ -161,8 +154,8 @@ export default function SavedMallCardV2({
         >
           Get Directions
           <svg
-            width={14}
-            height={14}
+            width={12}
+            height={12}
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -200,8 +193,11 @@ export default function SavedMallCardV2({
           style={{
             fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
-            fontSize: 13,
-            color: v2.text.secondary,
+            fontWeight: 500,
+            fontSize: 16,
+            // QA-derived warm-grey-brown per session-139 iPhone QA round 2 —
+            // deeper than round 1's #a1917f. David specified hex.
+            color: "#857769",
             display: "inline-flex",
             alignItems: "center",
             gap: 6,
@@ -209,8 +205,8 @@ export default function SavedMallCardV2({
           }}
         >
           <svg
-            width={13}
-            height={13}
+            width={16}
+            height={16}
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -221,7 +217,7 @@ export default function SavedMallCardV2({
           >
             <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6" />
           </svg>
-          {findsCount} {findsCount === 1 ? "find" : "finds"} waiting to be discovered
+          {findsCount} {findsCount === 1 ? "find" : "finds"} waiting to be found
         </span>
         <span
           aria-hidden
