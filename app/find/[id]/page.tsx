@@ -1059,7 +1059,7 @@ export default function FindDetailPage() {
     <div
       style={{
         minHeight: "100vh",
-        background: v1.paperCream,
+        background: v2.bg.main,
         maxWidth: 430,
         margin: "0 auto",
         display: "flex",
