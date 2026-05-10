@@ -111,7 +111,15 @@ export default function RootLayout({
             "Take Trip" CTA, etc.) so iOS's heuristic adds noise. */}
         <meta name="format-detection" content="telephone=no, address=no, email=no" />
       </head>
-      <body style={{ margin: 0, padding: 0, minHeight: "100vh", background: "#f2ecd8" }}>
+      {/* Session 143 — body bg migrates to v2.bg.main #F7F3EB (was v1.paperCream
+          #f2ecd8). Structural fix kills per-page page-bg dial bug class: dial
+          fired on /find/[id] session 141 + /shelf/[slug] session 142 + /me +
+          /welcome session 143. Visible on desktop where viewport > max-width
+          430px exposes body chrome around content. v1 surfaces that still set
+          v1.paperCream explicitly (vendor-flow, /admin, /post/*, etc.) will
+          read as visually-distinct from body chrome — which doubles as a
+          "pending v2 migration" signal until those Arcs ship. */}
+      <body style={{ margin: 0, padding: 0, minHeight: "100vh", background: "#F7F3EB" }}>
         <FindSessionProvider>
           {children}
           <DevAuthPanel />

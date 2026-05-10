@@ -14,7 +14,10 @@
   }
 
   body {
-    background-color: #f2ecd8;
+    /* Session 143 — body bg migrates to v2.bg.main (was v1.paperCream
+       #f2ecd8). Pairs with app/layout.tsx inline style. Structural fix
+       at the body layer kills the per-page page-bg dial bug class. */
+    background-color: #F7F3EB;
     color: #1a1a18;
   }
 
