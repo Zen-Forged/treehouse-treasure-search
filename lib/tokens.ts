@@ -278,11 +278,19 @@ export const v2 = {
   // semantics; surface.warm is the warm-cream pill + thumbnail bg.
   //
   // Session 139 Arc 1.2.5 dial — bg.main shifted #F7F3E8 → #FBF6EA per
-  // David's mockup pass. Page canvas now matches surface.warm; the
-  // distinction is semantic (page bg vs pill/thumbnail bg). Cards still
+  // David's mockup pass. Page canvas matched surface.warm; the
+  // distinction was semantic (page bg vs pill/thumbnail bg). Cards still
   // pop via surface.card #FFFCF5 against the warmer canvas.
+  //
+  // Session 140 Arc 2 chrome dial — bg.main shifted #FBF6EA → #F7F3EB
+  // alongside chrome migration (tabs layout + StickyMasthead + BottomNav
+  // all become v2.bg.main consumers). Splits page canvas back from
+  // surface.warm — cooler page chrome under warmer card surfaces creates
+  // subtle visual hierarchy. v1 surfaces using v1.paperCream directly
+  // (vendor pages, /post/preview, /find/[id] cartographic chrome) stay
+  // on v1.paperCream #f2ecd8 — only tab chrome migrates.
   bg: {
-    main:  "#FBF6EA",
+    main:  "#F7F3EB",
     paper: "#FFFCF5",
     soft:  "#F1EBDD",
   },

@@ -101,6 +101,15 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Treehouse Finds" />
+        {/* Session 140 — suppress iOS Safari auto-link detection on
+            addresses + phone numbers + emails. Without this, mall
+            addresses on cards (e.g. "1234 Main St, Lexington, KY") get
+            auto-decorated with blue underlines + tappable map deep-links
+            we don't want — interferes with the v2 SavedMallCardV2 +
+            RichPostcardMallCard typography vocabulary. We surface our
+            own deliberate map/address affordances (LocationActions
+            "Take Trip" CTA, etc.) so iOS's heuristic adds noise. */}
+        <meta name="format-detection" content="telephone=no, address=no, email=no" />
       </head>
       <body style={{ margin: 0, padding: 0, minHeight: "100vh", background: "#f2ecd8" }}>
         <FindSessionProvider>

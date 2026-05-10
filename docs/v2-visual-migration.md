@@ -1,10 +1,10 @@
 # v2 Visual Migration — Project-level migration plan
 
-> **Status:** 🟢 Ready · Arc 1 (Saved page) design pass complete + ready to implement.
+> **Status:** Arc 1 ✅ Shipped sessions 138 + 139 (12 commits cumulative). Arc 2 (Home) ✅ Shipped session 140 (9 commits — design + 2 implementation arcs + chrome migration + Phosphor icon restoration + masonry alignment + shadow dial + iOS auto-link). Arc 3 (Find/[id]) next.
 > **Authored:** Session 138 (2026-05-09)
 > **Scope:** Project-wide visual system migration from v1 (Lora + paper-family + polaroid tiles) to v2 (Cormorant Garamond + warm-paper palette + row pattern).
-> **Companion doc:** [`saved-v2-redesign-design.md`](./saved-v2-redesign-design.md) — Arc 1 design record.
-> **Mockup:** [`docs/mockups/saved-v2-redesign-v1.html`](./mockups/saved-v2-redesign-v1.html)
+> **Companion docs:** [`saved-v2-redesign-design.md`](./saved-v2-redesign-design.md) — Arc 1 design record · [`home-v2-redesign-design.md`](./home-v2-redesign-design.md) — Arc 2 design record.
+> **Mockups:** [`docs/mockups/saved-v2-redesign-v1.html`](./mockups/saved-v2-redesign-v1.html) (Arc 1) · [`docs/mockups/home-v2-redesign-v1.html`](./mockups/home-v2-redesign-v1.html) (Arc 2)
 
 ---
 
@@ -49,7 +49,7 @@ Composes cleanly onto the **3-tier engagement+share lattice** (session 137 [`pro
 
 | v1 token | v2 token | Hex | Usage |
 |---|---|---|---|
-| `v1.paperCream` (#f2ecd8 post-session-132) | `v2.bg.main` | `#F7F3E8` | Page background |
+| `v1.paperCream` (#f2ecd8 post-session-132) | `v2.bg.main` | `#F7F3EB` | Page background + tab chrome (StickyMasthead + BottomNav). Session-140 chrome dial — was #FBF6EA at session 139 (matched surface.warm); split back at session 140 to create cooler chrome under warmer card surfaces. v1 chrome surfaces (vendor pages, /post/preview, /find/[id] cartographic) stay on `v1.paperCream` #f2ecd8 — only tab chrome migrates. |
 | (new) | `v2.bg.paper` | `#FFFCF5` | Card surface bright |
 | (new) | `v2.bg.soft` | `#F1EBDD` | Page background soft variant |
 | `v1.postit` (#fbf3df) | `v2.surface.card` | `#FFFCF5` | Mall card surface (paper bright) |

@@ -22,6 +22,7 @@
 "use client";
 
 import { useState } from "react";
+import { PiStorefront } from "react-icons/pi";
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
 
 interface AccordionBoothSectionProps {
@@ -66,22 +67,12 @@ export default function AccordionBoothSection({
           textAlign: "left",
         }}
       >
-        <svg
-          width={22}
-          height={22}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke={v2.accent.green}
-          strokeWidth={1.6}
-          strokeLinecap="round"
-          strokeLinejoin="round"
+        <PiStorefront
+          size={22}
+          color={v2.accent.green}
           style={{ flexShrink: 0 }}
           aria-hidden
-        >
-          <path d="M3 9l1-5h16l1 5" />
-          <path d="M5 9v11a1 1 0 001 1h12a1 1 0 001-1V9" />
-          <path d="M9 21v-6h6v6" />
-        </svg>
+        />
         {boothNumber && (
           <>
             <span
