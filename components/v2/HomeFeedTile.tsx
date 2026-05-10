@@ -89,7 +89,12 @@ export default function HomeFeedTile({
         background: v2.surface.warm,
         padding: "5px 5px 6px",
         borderRadius: 4,
-        boxShadow: "0 3px 8px rgba(43,33,26,0.08), 0 1px 2px rgba(43,33,26,0.05)",
+        // Session 140 dial — D3b mid shadow → v1 verbatim weight per
+        // David's iPhone QA: "let's go more aggressive on the drop
+        // shadow similar to what we had on v1." Restores the v1
+        // shadow.polaroid value (0 6px 14px / 0 1.5px 3px) David has
+        // muscle memory of from session-83 polaroid pattern.
+        boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
         width: "100%",
       }}
     >
