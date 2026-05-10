@@ -310,10 +310,15 @@ export const v2 = {
   // Brand green — accent.green is the canonical CTA + active-state fill.
   // accent.greenDark is the hover/active variant. accent.greenSoft is the
   // active-state bg for ★ favorited bubble + future engagement-on states.
+  // accent.greenMid is the standardized button background (lighter than
+  // canonical brand green — QA-derived at session 139 for the SavedMallCardV2
+  // GET DIRECTIONS button + adopted as the v2 button-fill standard at
+  // session 141 when LocationActions Take Trip joined as second consumer).
   accent: {
     green:     "#285C3C",
     greenDark: "#1F4A31",
     greenSoft: "#E8EEE6",
+    greenMid:  "#3E694F",
   },
 
   // Brand brown — wordmark + secondary brand color. brown is the upright

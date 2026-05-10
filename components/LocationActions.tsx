@@ -47,7 +47,7 @@ import { Navigation } from "lucide-react";
 import { useUserLocation } from "@/lib/useUserLocation";
 import { navigateUrl }     from "@/lib/mapsDeepLink";
 import { track }           from "@/lib/clientEvents";
-import { v1, FONT_SYS }    from "@/lib/tokens";
+import { v2, FONT_INTER }  from "@/lib/tokens";
 
 export interface LocationActionsProps {
   mallSlug: string | null;
@@ -88,25 +88,24 @@ export default function LocationActions({
       onClick={onTakeTrip}
       style={{
         width:          "100%",
-        height:         44,
-        borderRadius:   8,
-        background:     v1.green,
-        border:         `1px solid ${v1.green}`,
-        color:          v1.onGreen,
-        fontFamily:     FONT_SYS,
-        fontSize:       13,
+        background:     v2.accent.greenMid,
+        color:          "#fff",
+        border:         "none",
+        borderRadius:   10,
+        padding:        10,
+        fontFamily:     FONT_INTER,
+        fontSize:       11,
         fontWeight:     600,
-        letterSpacing:  "0.01em",
-        display:        "inline-flex",
+        letterSpacing:  "0.12em",
+        textTransform:  "uppercase",
+        display:        "flex",
         alignItems:     "center",
         justifyContent: "center",
-        gap:            6,
+        gap:            8,
         cursor:         "pointer",
-        padding:        0,
-        boxShadow:      v1.shadow.ctaGreenCompact,
       }}
     >
-      <Navigation size={16} strokeWidth={2} aria-hidden />
+      <Navigation size={14} strokeWidth={2.2} aria-hidden />
       Take Trip
     </button>
   );

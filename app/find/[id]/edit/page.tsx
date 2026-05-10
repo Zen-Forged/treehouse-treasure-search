@@ -37,7 +37,7 @@ import { getPost, deletePost } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { clearPostCache, clearVendorPostsCache } from "@/lib/findContext";
-import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import { v1, v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import AmberNotice from "@/components/AmberNotice";
 import FormButton from "@/components/FormButton";
 import type { Post } from "@/types/treehouse";
@@ -219,7 +219,7 @@ export default function EditFindPage() {
       <div
         style={{
           minHeight: "100dvh",
-          background: v1.paperCream,
+          background: v2.bg.main,
           maxWidth: 430,
           margin: "0 auto",
           display: "flex",
@@ -229,9 +229,9 @@ export default function EditFindPage() {
       >
         <div
           style={{
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
-            color: v1.inkMuted,
+            color: v2.text.muted,
             fontSize: 15,
           }}
         >
@@ -249,7 +249,7 @@ export default function EditFindPage() {
     <div
       style={{
         minHeight: "100dvh",
-        background: v1.paperCream,
+        background: v2.bg.main,
         maxWidth: 430,
         margin: "0 auto",
         display: "flex",
@@ -274,7 +274,7 @@ export default function EditFindPage() {
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
         </button>
       </header>
 
@@ -289,9 +289,9 @@ export default function EditFindPage() {
         <div style={{ textAlign: "center", padding: "2px 22px 14px" }}>
           <div
             style={{
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_CORMORANT,
               fontSize: 24,
-              color: v1.inkPrimary,
+              color: v2.text.primary,
               letterSpacing: "-0.005em",
               lineHeight: 1.15,
               marginBottom: 4,
@@ -301,10 +301,10 @@ export default function EditFindPage() {
           </div>
           <div
             style={{
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 14,
-              color: v1.inkMuted,
+              color: v2.text.muted,
               lineHeight: 1.5,
               maxWidth: 290,
               margin: "0 auto",
@@ -340,9 +340,9 @@ export default function EditFindPage() {
                   left: 14,
                   top: "50%",
                   transform: "translateY(-50%)",
-                  fontFamily: FONT_SYS,
+                  fontFamily: FONT_INTER,
                   fontSize: 16,
-                  color: v1.inkMuted,
+                  color: v2.text.muted,
                   pointerEvents: "none",
                 }}
               >
@@ -380,9 +380,9 @@ export default function EditFindPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label
               style={{
-                fontFamily: FONT_LORA,
+                fontFamily: FONT_CORMORANT,
                 fontSize: 15,
-                color: v1.inkMid,
+                color: v2.text.secondary,
                 lineHeight: 1.25,
               }}
             >
@@ -424,7 +424,7 @@ export default function EditFindPage() {
               onClick={() => setShowRemoveConfirm(true)}
               disabled={removing}
               style={{
-                fontFamily: FONT_LORA,
+                fontFamily: FONT_CORMORANT,
                 fontStyle: "italic",
                 fontSize: 14,
                 color: v1.red,
@@ -456,9 +456,9 @@ export default function EditFindPage() {
             >
               <div
                 style={{
-                  fontFamily: FONT_LORA,
+                  fontFamily: FONT_CORMORANT,
                   fontSize: 16,
-                  color: v1.inkPrimary,
+                  color: v2.text.primary,
                   marginBottom: 8,
                 }}
               >
@@ -466,10 +466,10 @@ export default function EditFindPage() {
               </div>
               <div
                 style={{
-                  fontFamily: FONT_LORA,
+                  fontFamily: FONT_CORMORANT,
                   fontStyle: "italic",
                   fontSize: 13,
-                  color: v1.inkMuted,
+                  color: v2.text.muted,
                   marginBottom: 14,
                   lineHeight: 1.5,
                 }}
@@ -481,7 +481,7 @@ export default function EditFindPage() {
                   onClick={handleRemove}
                   disabled={removing}
                   style={{
-                    fontFamily: FONT_LORA,
+                    fontFamily: FONT_CORMORANT,
                     fontStyle: "italic",
                     fontSize: 14,
                     color: v1.red,
@@ -502,10 +502,10 @@ export default function EditFindPage() {
                   onClick={() => setShowRemoveConfirm(false)}
                   disabled={removing}
                   style={{
-                    fontFamily: FONT_LORA,
+                    fontFamily: FONT_CORMORANT,
                     fontStyle: "italic",
                     fontSize: 14,
-                    color: v1.inkMuted,
+                    color: v2.text.muted,
                     background: "none",
                     border: "none",
                     cursor: removing ? "default" : "pointer",
@@ -535,7 +535,7 @@ export default function EditFindPage() {
           margin: "0 auto",
           padding: "12px 22px",
           paddingBottom: "max(18px, env(safe-area-inset-bottom, 18px))",
-          background: "#f2ecd8",
+          background: v2.bg.main,
           borderTop: `1px solid ${v1.inkHairline}`,
           zIndex: 40,
           display: "flex",
@@ -559,7 +559,7 @@ export default function EditFindPage() {
             <motion.span
               animate={{ opacity: [1, 0.5, 1] }}
               transition={{ duration: 1.2, repeat: Infinity }}
-              style={{ fontFamily: FONT_LORA, fontStyle: "italic" }}
+              style={{ fontFamily: FONT_CORMORANT, fontStyle: "italic" }}
             >
               Saving…
             </motion.span>
@@ -587,9 +587,9 @@ function FieldGroup({
     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
       <label
         style={{
-          fontFamily: FONT_LORA,
+          fontFamily: FONT_CORMORANT,
           fontSize: 15,
-          color: v1.inkMid,
+          color: v2.text.secondary,
           lineHeight: 1.25,
         }}
       >
@@ -629,12 +629,12 @@ function StatusPill({
       style={{
         padding: "12px 14px",
         borderRadius: 999,
-        fontFamily: FONT_LORA,
+        fontFamily: FONT_CORMORANT,
         fontSize: 16,
-        color: active ? v1.inkPrimary : v1.inkMuted,
+        color: active ? v2.text.primary : v2.text.muted,
         fontWeight: active ? 500 : 400,
         background: v1.inkWash,
-        border: active ? `1.5px solid ${v1.inkPrimary}` : "1.5px solid transparent",
+        border: active ? `1.5px solid ${v2.text.primary}` : "1.5px solid transparent",
         textAlign: "center",
         lineHeight: 1.2,
         cursor: "pointer",
@@ -648,10 +648,10 @@ function StatusPill({
 }
 
 const inputStyle: React.CSSProperties = {
-  fontFamily: FONT_SYS,
+  fontFamily: FONT_INTER,
   fontSize: 16,
-  color: v1.inkPrimary,
-  background: v1.postit,
+  color: v2.text.primary,
+  background: v2.surface.card,
   border: `1px solid ${v1.inkHairline}`,
   borderRadius: 14,
   padding: 14,

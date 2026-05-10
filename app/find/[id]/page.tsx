@@ -75,9 +75,12 @@ import { useShopperSaves } from "@/lib/useShopperSaves";
 import { getCachedUserId, getSession, isAdmin, onAuthChange } from "@/lib/auth";
 import {
   v1,
+  v2,
   FONT_LORA,
   FONT_SYS,
   FONT_NUMERAL,
+  FONT_CORMORANT,
+  FONT_INTER,
 } from "@/lib/tokens";
 import { TREEHOUSE_LENS_FILTER } from "@/lib/treehouseLens";
 import { mapsUrl, boothNumeralSize } from "@/lib/utils";
@@ -89,6 +92,7 @@ import PhotoLightbox from "@/components/PhotoLightbox";
 import LocationActions from "@/components/LocationActions";
 import MastheadPaperAirplane from "@/components/MastheadPaperAirplane";
 import ShareSheet from "@/components/ShareSheet";
+import HomeFeedTile from "@/components/v2/HomeFeedTile";
 import type { Post } from "@/types/treehouse";
 
 // v1.1 tokens imported from lib/tokens.ts (canonical since session 19A). v1 palette +
@@ -118,132 +122,6 @@ async function detectOwnershipAsync(post: Post): Promise<boolean> {
     }
   } catch {}
   return false;
-}
-
-// Shelf card (v1.1; session 89 iPhone QA #6 — polaroid treatment to match
-// the rest of the find-tile family: warm cream paper bg, 4px radius, dual
-// dimensional shadow, 7px photo mat top+sides. The "browse vs navigate"
-// rule from session 83 that previously kept this card chrome-light is
-// retired — David's call for cross-page consistency wins here since this
-// strip IS a browse surface, just embedded inside a detail page.
-function ShelfCard({
-  post,
-  findRefs,
-  swipeOriginPath,
-}: {
-  post: Post;
-  // Phase C — when both are provided, tapping this card writes the
-  // swipe-nav context with the booth's posts (the user is "stepping
-  // into" a different find within the same booth — context re-scopes
-  // from feed/saved to this booth's catalog).
-  findRefs?: FindRef[];
-  swipeOriginPath?: string;
-}) {
-  const [imgErr, setImgErr] = useState(false);
-  const isSold = post.status === "sold";
-  const hasImg = !!post.image_url && !imgErr;
-
-  function handleTap() {
-    if (post.image_url) {
-      try {
-        sessionStorage.setItem(
-          `treehouse_find_preview:${post.id}`,
-          JSON.stringify({ image_url: post.image_url, title: post.title }),
-        );
-      } catch {}
-    }
-    if (findRefs && swipeOriginPath) {
-      const cursor = findRefs.findIndex((r) => r.id === post.id);
-      writeFindContext({
-        originPath:  swipeOriginPath,
-        findRefs,
-        cursorIndex: cursor >= 0 ? cursor : 0,
-      });
-    }
-  }
-
-  return (
-    <Link
-      href={`/find/${post.id}`}
-      onClick={handleTap}
-      style={{ display: "block", textDecoration: "none", flexShrink: 0, width: "42vw", maxWidth: 170 }}
-    >
-      <div
-        style={{
-          background: "#fefae6",
-          borderRadius: 4,
-          overflow: "hidden",
-          boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
-          padding: "7px 7px 0",
-        }}
-      >
-        <div
-          style={{
-            position: "relative",
-            width: "100%",
-            aspectRatio: "4/5",
-            background: v1.postit,
-            opacity: isSold ? 0.62 : 1,
-            transition: "opacity 0.2s",
-          }}
-        >
-          {hasImg ? (
-            <img
-              src={post.image_url!}
-              alt={post.title}
-              loading="lazy"
-              onError={() => setImgErr(true)}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                display: "block",
-                filter: isSold
-                  ? `${TREEHOUSE_LENS_FILTER} grayscale(0.5) brightness(0.88)`
-                  : TREEHOUSE_LENS_FILTER,
-                WebkitFilter: isSold
-                  ? `${TREEHOUSE_LENS_FILTER} grayscale(0.5) brightness(0.88)`
-                  : TREEHOUSE_LENS_FILTER,
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                padding: "12px 10px",
-                display: "flex",
-                alignItems: "flex-end",
-                background: v1.postit,
-              }}
-            >
-              <div style={{ fontFamily: FONT_LORA, fontSize: 13, color: v1.inkMuted, lineHeight: 1.25 }}>
-                {post.title}
-              </div>
-            </div>
-          )}
-        </div>
-        <div style={{ padding: "9px 10px 4px", height: 56, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
-          <div
-            style={{
-              fontFamily: FONT_LORA,
-              fontSize: 14,
-              color: v1.inkPrimary,
-              lineHeight: 1.4,
-              width: "100%",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical" as const,
-            }}
-          >
-            {post.title}
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
 }
 
 // Session 88 — peer-nav scroll-restore primitive. Two storage keys, both
@@ -328,6 +206,12 @@ function ShelfSection({
   // back to the previously-viewed find.
   const [allItems, setAllItems] = useState<Post[]>([]);
   const [ready, setReady] = useState(false);
+
+  // v2 Arc 3.4 — saves wiring for per-tile leaf bubble. Hook is the single
+  // source of truth across instances (R1 Arc 4); FindDetailPage already
+  // calls it for the masthead heart. Cross-instance custom-event broadcast
+  // keeps both reads in sync without coordination.
+  const saves = useShopperSaves();
 
   // Session 88 — horizontal scroll-restore on the carousel. Refs survive
   // re-renders; state would force unnecessary re-paints. Same shape as the
@@ -430,6 +314,29 @@ function ShelfSection({
 
   if (!ready || items.length === 0) return null;
 
+  // Per-tile tap handler — preserves the session-100 preview-cache write +
+  // session-100 Phase C swipe-context handoff that ShelfCard owned before
+  // v2 Arc 3.4 retired it. The page-level scroll snapshot stays on the
+  // wrapper div's onClickCapture below (capture phase fires first).
+  function handleCarouselTap(item: Post) {
+    if (item.image_url) {
+      try {
+        sessionStorage.setItem(
+          `treehouse_find_preview:${item.id}`,
+          JSON.stringify({ image_url: item.image_url, title: item.title }),
+        );
+      } catch {}
+    }
+    if (vendorSlug && swipeOriginPath) {
+      const cursor = findRefs.findIndex((r) => r.id === item.id);
+      writeFindContext({
+        originPath:  swipeOriginPath,
+        findRefs,
+        cursorIndex: cursor >= 0 ? cursor : 0,
+      });
+    }
+  }
+
   return (
     <div style={{ marginBottom: 32 }}>
       <div
@@ -437,10 +344,10 @@ function ShelfSection({
           paddingLeft: 22,
           paddingRight: 22,
           marginBottom: 14,
-          fontFamily: FONT_LORA,
+          fontFamily: FONT_CORMORANT,
           fontStyle: "italic",
           fontSize: 16,
-          color: v1.inkMuted,
+          color: v2.text.muted,
         }}
       >
         More from this booth…
@@ -471,37 +378,109 @@ function ShelfSection({
           touchAction: "pan-x pan-y",
         }}
       >
-        {items.map((item, idx) => (
-          <div
-            key={item.id}
-            // Session 88 — capture-phase click snapshot. Fires before the
-            // child Link's bubble-phase click handler, so we record the
-            // user's true scroll position synchronously before any
-            // route-transition events (scroll-to-top, document auto-clamp)
-            // can clobber the listener's saved value. Pairs with
-            // findScrollWriteBlocked (module scope) which the page-level
-            // listener checks before writing.
-            onClickCapture={() => {
-              try {
-                const y = Math.round(window.scrollY);
-                if (y > 0) {
-                  sessionStorage.setItem(findScrollKey(currentPostId), String(y));
-                }
-              } catch {}
-              findScrollWriteBlocked = true;
-            }}
-            style={{
-              scrollSnapAlign: "start",
-              flexShrink: 0,
-            }}
-          >
-            <ShelfCard
-              post={item}
-              findRefs={swipeOriginPath ? findRefs : undefined}
-              swipeOriginPath={swipeOriginPath}
-            />
-          </div>
-        ))}
+        {items.map((item) => {
+          const isSold = item.status === "sold";
+          return (
+            <div
+              key={item.id}
+              // Session 88 — capture-phase click snapshot. Fires before the
+              // child Link's bubble-phase click handler, so we record the
+              // user's true scroll position synchronously before any
+              // route-transition events (scroll-to-top, document auto-clamp)
+              // can clobber the listener's saved value. Pairs with
+              // findScrollWriteBlocked (module scope) which the page-level
+              // listener checks before writing.
+              onClickCapture={() => {
+                try {
+                  const y = Math.round(window.scrollY);
+                  if (y > 0) {
+                    sessionStorage.setItem(findScrollKey(currentPostId), String(y));
+                  }
+                } catch {}
+                findScrollWriteBlocked = true;
+              }}
+              style={{
+                scrollSnapAlign: "start",
+                flexShrink: 0,
+                width: "42vw",
+                maxWidth: 170,
+              }}
+            >
+              <Link
+                href={`/find/${item.id}`}
+                onClick={() => handleCarouselTap(item)}
+                style={{ display: "block", textDecoration: "none" }}
+              >
+                <HomeFeedTile
+                  src={item.image_url ?? ""}
+                  alt={item.title}
+                  loading="lazy"
+                  tap
+                  dim={isSold}
+                  isFollowed={saves.isSaved(item.id)}
+                  onToggleFollow={() => {
+                    const next = !saves.isSaved(item.id);
+                    saves.toggle(item.id, next);
+                    track(next ? "post_saved" : "post_unsaved", { post_id: item.id });
+                  }}
+                  fallback={
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        padding: "12px 10px",
+                        display: "flex",
+                        alignItems: "flex-end",
+                        fontFamily: FONT_CORMORANT,
+                        fontStyle: "italic",
+                        fontSize: 13,
+                        color: v2.text.muted,
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      {item.title}
+                    </div>
+                  }
+                  below={
+                    // Session-83 height-locking pattern: outer fixed-height
+                    // flex container vertically centers the inner clamped
+                    // title. 2-line worst case fits exactly (Cormorant 14
+                    // × 1.4 lineHeight × 2 = 39.2 + 8 vertical padding +
+                    // breathing room = 56). 1-line titles render centered
+                    // between photo bottom and card bottom — uniform tile
+                    // height across the carousel regardless of title length.
+                    <div
+                      style={{
+                        height: 56,
+                        padding: "0 10px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontFamily: FONT_CORMORANT,
+                          fontSize: 14,
+                          color: v2.text.primary,
+                          lineHeight: 1.4,
+                          textAlign: "center",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical" as const,
+                        }}
+                      >
+                        {item.title}
+                      </div>
+                    </div>
+                  }
+                />
+              </Link>
+            </div>
+          );
+        })}
         <div style={{ flexShrink: 0, width: 10 }} />
       </div>
     </div>
@@ -1096,7 +1075,7 @@ export default function FindDetailPage() {
     <div
       style={{
         minHeight: "100vh",
-        background: v1.paperCream,
+        background: v2.bg.main,
         maxWidth: 430,
         margin: "0 auto",
         display: "flex",
@@ -1436,10 +1415,10 @@ export default function FindDetailPage() {
         {typeof price === "number" && price > 0 && (
           <div
             style={{
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_INTER,
               fontSize: 32,
               fontWeight: 400,
-              color: v1.priceInk,
+              color: v2.accent.green,
               lineHeight: 1.18,
               letterSpacing: "-0.005em",
               marginTop: 2,
@@ -1570,10 +1549,10 @@ export default function FindDetailPage() {
                 display:    "inline-flex",
                 alignItems: "center",
                 gap:        6,
-                fontFamily: FONT_LORA,
+                fontFamily: FONT_CORMORANT,
                 fontStyle:  "italic",
                 fontSize:   14,
-                color:      v1.inkMid,
+                color:      v2.text.secondary,
                 lineHeight: 1.4,
               }}
             >
@@ -1587,10 +1566,10 @@ export default function FindDetailPage() {
                   display:        "inline-flex",
                   alignItems:     "center",
                   gap:            2,
-                  fontFamily:     FONT_LORA,
+                  fontFamily:     FONT_CORMORANT,
                   fontStyle:      "italic",
                   fontSize:       14,
-                  color:          v1.green,
+                  color:          v2.accent.green,
                   lineHeight:     1.4,
                   textDecoration: "none",
                   whiteSpace:     "nowrap",
@@ -1615,8 +1594,8 @@ export default function FindDetailPage() {
               const cardInner = (
                 <div
                   style={{
-                    background: v1.postit,
-                    border: `1px solid ${v1.inkHairline}`,
+                    background: v2.surface.card,
+                    border: `1px solid ${v2.border.light}`,
                     borderRadius: 10,
                     padding: "12px 14px",
                   }}
@@ -1649,9 +1628,9 @@ export default function FindDetailPage() {
                             onClick={(e) => e.stopPropagation()}
                             style={{
                               display: "inline-block",
-                              fontFamily: FONT_SYS,
+                              fontFamily: FONT_INTER,
                               fontSize: 11.5,
-                              color: v1.inkMuted,
+                              color: v2.text.muted,
                               textDecoration: "underline",
                               textDecorationStyle: "dotted",
                               textDecorationColor: v1.inkFaint,
@@ -1664,9 +1643,9 @@ export default function FindDetailPage() {
                         ) : (
                           <div
                             style={{
-                              fontFamily: FONT_SYS,
+                              fontFamily: FONT_INTER,
                               fontSize: 11.5,
-                              color: v1.inkMuted,
+                              color: v2.text.muted,
                               lineHeight: 1.4,
                             }}
                           >
@@ -1677,12 +1656,13 @@ export default function FindDetailPage() {
                       {vendorName && (
                         <div
                           style={{
-                            fontFamily: FONT_LORA,
+                            fontFamily: FONT_CORMORANT,
                             fontSize: 18,
-                            color: v1.inkPrimary,
+                            color: v2.text.primary,
                             // Session 82 — lineHeight 1.4 (was 1.25) for
                             // descender clearance under overflow:hidden
-                            // (matches BoothLockupCard primitive).
+                            // (matches BoothLockupCard primitive). Preserved
+                            // for Cormorant under the same constraint.
                             lineHeight: 1.4,
                             letterSpacing: "-0.005em",
                             overflow: "hidden",
@@ -1706,10 +1686,10 @@ export default function FindDetailPage() {
                       >
                         <div
                           style={{
-                            fontFamily: FONT_SYS,
+                            fontFamily: FONT_INTER,
                             fontSize: 9,
                             fontWeight: 700,
-                            color: v1.green,
+                            color: v2.accent.green,
                             letterSpacing: "0.12em",
                             textTransform: "uppercase",
                             lineHeight: 1,
@@ -1723,7 +1703,7 @@ export default function FindDetailPage() {
                             fontFamily: FONT_NUMERAL,
                             fontSize: 26,
                             fontWeight: 500,
-                            color: v1.green,
+                            color: v2.accent.green,
                             lineHeight: 1,
                             letterSpacing: "-0.01em",
                           }}
