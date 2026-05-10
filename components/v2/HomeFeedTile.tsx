@@ -46,6 +46,8 @@ interface HomeFeedTileProps {
   loading?: "eager" | "lazy";
   /** Optional callback fired when img onError handler runs. */
   onImageError?: () => void;
+  /** Sold-state dim — opacity 0.62 + grayscale on photo. Mirrors v2 SavedFindRow.dim. */
+  dim?: boolean;
 }
 
 export default function HomeFeedTile({
@@ -59,6 +61,7 @@ export default function HomeFeedTile({
   below,
   loading,
   onImageError,
+  dim = false,
 }: HomeFeedTileProps) {
   const [imgErr, setImgErr] = useState(false);
   const [tapped, setTapped] = useState(false);
@@ -137,8 +140,14 @@ export default function HomeFeedTile({
                 height: "100%",
                 objectFit: "cover",
                 display: "block",
-                filter: TREEHOUSE_LENS_FILTER,
-                WebkitFilter: TREEHOUSE_LENS_FILTER,
+                opacity: dim ? 0.62 : 1,
+                filter: dim
+                  ? `${TREEHOUSE_LENS_FILTER} grayscale(0.5) brightness(0.88)`
+                  : TREEHOUSE_LENS_FILTER,
+                WebkitFilter: dim
+                  ? `${TREEHOUSE_LENS_FILTER} grayscale(0.5) brightness(0.88)`
+                  : TREEHOUSE_LENS_FILTER,
+                transition: "opacity 0.2s",
               }}
             />
           ) : (
