@@ -1415,10 +1415,10 @@ export default function FindDetailPage() {
         {typeof price === "number" && price > 0 && (
           <div
             style={{
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_INTER,
               fontSize: 32,
               fontWeight: 400,
-              color: v1.priceInk,
+              color: v2.accent.green,
               lineHeight: 1.18,
               letterSpacing: "-0.005em",
               marginTop: 2,
