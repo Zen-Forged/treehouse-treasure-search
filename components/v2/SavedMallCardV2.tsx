@@ -81,7 +81,7 @@ export default function SavedMallCardV2({
             gridRow: 1,
             fontFamily: FONT_CORMORANT,
             fontWeight: 600,
-            fontSize: 24,
+            fontSize: 25,
             lineHeight: 1.1,
             color: v2.text.primary,
             margin: 0,
@@ -94,10 +94,12 @@ export default function SavedMallCardV2({
             style={{
               gridColumn: 2,
               gridRow: 1,
-              background: v2.surface.warm,
+              // QA-derived soft mint-green per session-139 iPhone QA round 2;
+              // ~1 unit off v2.accent.greenSoft #E8EEE6 — David specified hex.
+              background: "#e8ede6",
               color: v2.accent.green,
               fontFamily: FONT_INTER,
-              fontSize: 8,
+              fontSize: 10,
               fontWeight: 700,
               letterSpacing: "0.14em",
               textTransform: "uppercase",
@@ -130,11 +132,13 @@ export default function SavedMallCardV2({
           onClick={onGetDirections}
           style={{
             width: "100%",
-            background: v2.accent.green,
+            // QA-derived mid-green per session-139 iPhone QA round 2 —
+            // lighter than v2.accent.green #285C3C; David specified hex.
+            background: "#3e694f",
             color: "#fff",
             border: "none",
             borderRadius: 10,
-            padding: 8,
+            padding: 10,
             fontFamily: FONT_INTER,
             fontSize: 11,
             fontWeight: 600,
@@ -189,10 +193,10 @@ export default function SavedMallCardV2({
             fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
             fontWeight: 500,
-            fontSize: 15,
-            // QA-derived warm-grey-brown per session-139 Q4 — between
-            // v2.brown #6A513E (too dark) and v2.brownSoft #B8A996 (too light).
-            color: "#a1917f",
+            fontSize: 16,
+            // QA-derived warm-grey-brown per session-139 iPhone QA round 2 —
+            // deeper than round 1's #a1917f. David specified hex.
+            color: "#857769",
             display: "inline-flex",
             alignItems: "center",
             gap: 6,
@@ -200,8 +204,8 @@ export default function SavedMallCardV2({
           }}
         >
           <svg
-            width={15}
-            height={15}
+            width={16}
+            height={16}
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -212,7 +216,7 @@ export default function SavedMallCardV2({
           >
             <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6" />
           </svg>
-          {findsCount} {findsCount === 1 ? "find" : "finds"} waiting to be discovered
+          {findsCount} {findsCount === 1 ? "find" : "finds"} waiting to be found
         </span>
         <span
           aria-hidden
