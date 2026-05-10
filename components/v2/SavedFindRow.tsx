@@ -92,7 +92,7 @@ export default function SavedFindRow({
         <div
           style={{
             fontFamily: FONT_CORMORANT,
-            fontWeight: 500,
+            fontWeight: 600,
             fontSize: 17,
             color: v2.text.primary,
             lineHeight: 1.3,
@@ -108,8 +108,8 @@ export default function SavedFindRow({
           style={{
             fontFamily: FONT_INTER,
             fontSize: 14,
-            fontWeight: 500,
-            color: v2.text.primary,
+            fontWeight: 400,
+            color: v2.accent.green,
           }}
         >
           {formatPrice(priceCents)}

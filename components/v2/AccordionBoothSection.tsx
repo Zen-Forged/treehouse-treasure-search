@@ -83,7 +83,7 @@ export default function AccordionBoothSection({
             fontFamily: FONT_INTER,
             fontSize: 11,
             fontWeight: 700,
-            letterSpacing: "0.14em",
+            letterSpacing: "0.08em",
             textTransform: "uppercase",
             color: v2.accent.green,
             flexShrink: 0,
@@ -94,10 +94,10 @@ export default function AccordionBoothSection({
         <span
           aria-hidden
           style={{
-            width: 3,
-            height: 3,
-            borderRadius: 2,
+            width: 4,
+            height: 4,
             background: v2.text.muted,
+            transform: "rotate(45deg)",
             flexShrink: 0,
           }}
         />
@@ -105,7 +105,7 @@ export default function AccordionBoothSection({
           style={{
             fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
-            fontWeight: 500,
+            fontWeight: 600,
             fontSize: 17,
             color: v2.text.primary,
             lineHeight: 1.3,
@@ -123,7 +123,7 @@ export default function AccordionBoothSection({
           height={20}
           viewBox="0 0 24 24"
           fill="none"
-          stroke={v2.text.muted}
+          stroke={v2.accent.green}
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
