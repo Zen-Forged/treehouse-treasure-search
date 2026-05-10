@@ -81,8 +81,7 @@ import {
 } from "@/lib/tokens";
 import PhotoLightbox from "@/components/PhotoLightbox";
 import BookmarkBoothBubble from "@/components/BookmarkBoothBubble";
-import PolaroidTile from "@/components/PolaroidTile";
-import FlagGlyph from "@/components/FlagGlyph";
+import HomeFeedTile from "@/components/v2/HomeFeedTile";
 import { writeFindContext, type FindRef } from "@/lib/findContext";
 import type { Post } from "@/types/treehouse";
 
@@ -597,12 +596,20 @@ export function AddFindTile({
   // onAddClick. If no handler is passed (public /shelf/[slug] has no add
   // context), we fall back to the v1.1 /post link. When /post is fully
   // retired post-beta, that fallback can be removed.
+  // v2 Arc 4.6b — sibling grid cell tokens migrate alongside WindowTile
+  // retire so the dashed Add/Placeholder cells read cohesively with the
+  // HomeFeedTile photographs in the same 3-col grid.
+  //   borderRadius: 6 → 4 (matches HomeFeedTile photo radius)
+  //   border dashed: v1.inkFaint → v2.border.medium (canonical v2 dashed)
+  //   ImagePlus icon: v1.inkMuted → v2.text.muted
+  //   "Add a find" label: FONT_LORA italic → FONT_CORMORANT italic,
+  //     v1.inkMuted → v2.text.muted
   const href = vendorId ? `/post?vendor=${vendorId}` : "/post";
   const tileStyle: React.CSSProperties = {
     width: "100%",
     aspectRatio: "4/5",
-    borderRadius: v1.imageRadius,
-    border: `1px dashed ${v1.inkFaint}`,
+    borderRadius: 4,
+    border: `1px dashed ${v2.border.medium}`,
     background: "transparent",
     display: "flex",
     flexDirection: "column",
@@ -615,13 +622,13 @@ export function AddFindTile({
   };
   const inner = (
     <>
-      <ImagePlus size={22} strokeWidth={1.5} style={{ color: v1.inkMuted }} />
+      <ImagePlus size={22} strokeWidth={1.5} style={{ color: v2.text.muted }} />
       <span
         style={{
-          fontFamily: FONT_LORA,
+          fontFamily: FONT_CORMORANT,
           fontStyle: "italic",
           fontSize: 13,
-          color: v1.inkMuted,
+          color: v2.text.muted,
           lineHeight: 1,
         }}
       >
@@ -673,8 +680,8 @@ export function PlaceholderTile({ index }: { index: number }) {
         style={{
           width: "100%",
           aspectRatio: "4/5",
-          borderRadius: v1.imageRadius,
-          border: `1px dashed ${v1.inkFaint}`,
+          borderRadius: 4,
+          border: `1px dashed ${v2.border.medium}`,
           background: "transparent",
         }}
       />
@@ -684,6 +691,17 @@ export function PlaceholderTile({ index }: { index: number }) {
   );
 }
 
+// v2 Arc 4.6b — WindowTile retires its PolaroidTile + FlagGlyph wiring and
+// renders via the v2 HomeFeedTile primitive. Mirrors session 141 Arc 3.4b
+// /find/[id] "More from this booth" carousel migration shape; cohesion
+// compounds across Home masonry + Find carousel + /shelf grid (all share
+// the HomeFeedTile primitive). Caption zone height-locked at 76 (worst
+// case: 2-line title + price); session-83 row-consistency rule still in
+// force. Caption typography lifts session-141 standard: FONT_CORMORANT
+// title + FONT_INTER price + v2.accent.green price (matches Saved page).
+// Sold-state dim via HomeFeedTile.dim. Heart bubble wires to useShopperSaves
+// when consumer passes saved+onToggleSave; /my-shelf omits → bubble hidden
+// via Arc 4.6a primitive opt-in shape.
 function WindowTile({
   post,
   index,
@@ -699,20 +717,14 @@ function WindowTile({
   findRefs?: FindRef[];
   swipeOriginPath?: string;
   // Session 128 (refinement design D4) — when both passed, render a save
-  // bubble in PolaroidTile.topRight (same canonical pattern as Home heart
-  // + /flagged unsave). /shelf/[slug] passes both via useShopperSaves;
-  // /my-shelf omits (vendor-self surface, no save UX).
+  // bubble inside HomeFeedTile (canonical Home heart + /find/[id] carousel
+  // pattern). /shelf/[slug] passes both via useShopperSaves; /my-shelf
+  // omits (vendor-self surface, no save UX).
   saved?: boolean;
   onToggleSave?: () => void;
 }) {
   const hasPrice = typeof post.price_asking === "number" && post.price_asking > 0;
-  const hasSaveBubble = saved !== undefined && onToggleSave !== undefined;
-
-  function handleSaveClick(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    onToggleSave?.();
-  }
+  const isSold = post.status === "sold";
 
   function handleTap() {
     if (post.image_url) {
@@ -745,11 +757,13 @@ function WindowTile({
         onClick={handleTap}
         style={{ display: "block", textDecoration: "none", color: "inherit", minWidth: 0 }}
       >
-        <PolaroidTile
+        <HomeFeedTile
           src={post.image_url ?? ""}
           alt={post.title}
-          bottomMat="outside"
           loading="lazy"
+          isFollowed={saved}
+          onToggleFollow={onToggleSave}
+          dim={isSold}
           fallback={
             <div
               style={{
@@ -758,53 +772,31 @@ function WindowTile({
                 padding: "12px 10px",
                 display: "flex",
                 alignItems: "flex-end",
-                fontFamily: FONT_LORA,
+                fontFamily: FONT_CORMORANT,
                 fontSize: 12,
-                color: v1.inkFaint,
+                color: v2.text.muted,
               }}
             >
               no photograph
             </div>
           }
-          topRight={
-            hasSaveBubble ? (
-              <button
-                onClick={handleSaveClick}
-                aria-label={saved ? "Unsave" : "Save"}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  borderRadius: "50%",
-                  background: "rgba(245,242,235,0.85)",
-                  backdropFilter: "blur(8px)",
-                  WebkitBackdropFilter: "blur(8px)",
-                  border: `0.5px solid rgba(42,26,10,0.12)`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: 0,
-                  cursor: "pointer",
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                <FlagGlyph
-                  size={17}
-                  strokeWidth={1.7}
-                  style={{
-                    color: saved ? v1.green : v1.inkPrimary,
-                    fill:  saved ? v1.green : "none",
-                  }}
-                />
-              </button>
-            ) : undefined
-          }
           below={
-            <div style={{ padding: "9px 3px 4px", height: 76, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
+            <div
+              style={{
+                padding: "9px 3px 4px",
+                height: 76,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                alignItems: "center",
+                textAlign: "center",
+              }}
+            >
               <div
                 style={{
-                  fontFamily: FONT_LORA,
+                  fontFamily: FONT_CORMORANT,
                   fontSize: 14,
-                  color: v1.inkPrimary,
+                  color: v2.text.primary,
                   lineHeight: 1.4,
                   width: "100%",
                   overflow: "hidden",
@@ -818,9 +810,9 @@ function WindowTile({
               {hasPrice && (
                 <div
                   style={{
-                    fontFamily: FONT_LORA,
+                    fontFamily: FONT_INTER,
                     fontSize: 14,
-                    color: v1.priceInk,
+                    color: v2.accent.green,
                     lineHeight: 1.4,
                     marginTop: 4,
                     letterSpacing: "-0.005em",
