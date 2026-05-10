@@ -49,7 +49,7 @@ Composes cleanly onto the **3-tier engagement+share lattice** (session 137 [`pro
 
 | v1 token | v2 token | Hex | Usage |
 |---|---|---|---|
-| `v1.paperCream` (#f2ecd8 post-session-132) | `v2.bg.main` | `#F7F3E8` | Page background |
+| `v1.paperCream` (#f2ecd8 post-session-132) | `v2.bg.main` | `#F7F3EB` | Page background + tab chrome (StickyMasthead + BottomNav). Session-140 chrome dial — was #FBF6EA at session 139 (matched surface.warm); split back at session 140 to create cooler chrome under warmer card surfaces. v1 chrome surfaces (vendor pages, /post/preview, /find/[id] cartographic) stay on `v1.paperCream` #f2ecd8 — only tab chrome migrates. |
 | (new) | `v2.bg.paper` | `#FFFCF5` | Card surface bright |
 | (new) | `v2.bg.soft` | `#F1EBDD` | Page background soft variant |
 | `v1.postit` (#fbf3df) | `v2.surface.card` | `#FFFCF5` | Mall card surface (paper bright) |

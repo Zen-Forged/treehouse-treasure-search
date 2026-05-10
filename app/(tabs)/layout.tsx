@@ -46,7 +46,7 @@ import { useShopperAuth } from "@/lib/useShopperAuth";
 import { useShopperSaves } from "@/lib/useShopperSaves";
 import { getActiveMalls } from "@/lib/posts";
 import { track } from "@/lib/clientEvents";
-import { v1 } from "@/lib/tokens";
+import { v1, v2 } from "@/lib/tokens";
 import type { Mall } from "@/types/treehouse";
 
 export default function TabsLayout({ children }: { children: React.ReactNode }) {
@@ -151,7 +151,10 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
     <div
       style={{
         minHeight:      "100vh",
-        background:     v1.paperCream,
+        // Session 140 — tab chrome migrates to v2.bg.main (#F7F3EB).
+        // v1 surfaces still consume v1.paperCream directly; only the
+        // shared tab layout migrates so chrome unifies across Home/Saved/Map.
+        background:     v2.bg.main,
         maxWidth:       430,
         margin:         "0 auto",
         position:       "relative",

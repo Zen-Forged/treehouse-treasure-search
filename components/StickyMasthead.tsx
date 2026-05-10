@@ -38,7 +38,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
-import { v1 } from "@/lib/tokens";
+import { v1, v2 } from "@/lib/tokens";
 
 interface StickyMastheadProps {
   /**
@@ -168,7 +168,9 @@ export default function StickyMasthead({
           width: "100%",
           maxWidth: 430,
           zIndex: 40,
-          background: "#f2ecd8",
+          // Session 140 — chrome migrates to v2.bg.main (#F7F3EB).
+          // Was hardcoded #f2ecd8 since session 132 frosted-glass retire.
+          background: v2.bg.main,
           borderBottom: `1px solid ${scrolled ? v1.inkHairline : "transparent"}`,
           transition: "border-color 0.2s ease",
           paddingTop: "max(14px, env(safe-area-inset-top, 14px))",

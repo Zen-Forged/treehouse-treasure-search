@@ -92,7 +92,7 @@ import { useEffect, useState } from "react";
 import { Store, Shield, MapPin } from "lucide-react";
 import { MdOutlineExplore } from "react-icons/md";
 import FlagGlyph from "./FlagGlyph";
-import { FONT_NUMERAL } from "@/lib/tokens";
+import { FONT_NUMERAL, v2 } from "@/lib/tokens";
 import { getSession, onAuthChange, detectUserRole, type UserRole } from "@/lib/auth";
 
 // "login" was a valid value in sessions 107+108 when Profile occupied a
@@ -114,7 +114,11 @@ interface BottomNavProps {
 }
 
 const C = {
-  bg:         "#f2ecd8", // session 132 — paperCream opaque (was rgba(242,236,216,0.96) translucent + backdrop-blur; frosted-glass primitive retired Shape C — content bleed-through during scroll was producing perceived flicker)
+  // Session 140 — bg migrates to v2.bg.main (#F7F3EB) alongside tab chrome
+  // unification (StickyMasthead + tabs layout also migrate). Was hardcoded
+  // #f2ecd8 since session 132 frosted-glass retire (Shape C — content
+  // bleed-through during scroll was producing perceived flicker).
+  bg:         v2.bg.main,
   border:     "rgba(42,26,10,0.18)",     // v1.1d — inkHairline for visible separation
   textMuted:  "#6b5538",                 // v1.inkMuted
   green:      "#1e4d2b",
