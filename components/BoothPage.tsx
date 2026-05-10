@@ -70,9 +70,12 @@ import { Pencil, ImagePlus } from "lucide-react";
 import { vendorHueBg, mapsUrl, boothNumeralSize } from "@/lib/utils";
 import {
   v1,
+  v2,
   FONT_LORA,
   FONT_SYS,
   FONT_NUMERAL,
+  FONT_CORMORANT,
+  FONT_INTER,
   MOTION_SHARED_ELEMENT_EASE,
   MOTION_SHARED_ELEMENT_FORWARD,
 } from "@/lib/tokens";
@@ -887,17 +890,20 @@ export function WindowView({
 
 export function BoothCloser() {
   // v1.1j — hairline rule replaces diamond-flanked divider (diamond retired)
+  // v2 Arc 4.2 — typography + colors migrate: FONT_LORA → FONT_CORMORANT,
+  // v1.inkMid → v2.text.secondary, v1.inkHairline → v2.border.light. Copy
+  // preserved verbatim per session 130 D7 ("make a purchase" closer).
   return (
     <>
       <div style={{ padding: "28px 22px 20px" }}>
-        <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
+        <div style={{ width: "100%", height: 1, background: v2.border.light }} />
       </div>
       <div
         style={{
-          fontFamily: FONT_LORA,
+          fontFamily: FONT_CORMORANT,
           fontStyle: "italic",
           fontSize: 16,
-          color: v1.inkMid,
+          color: v2.text.secondary,
           lineHeight: 1.5,
           padding: "0 28px",
           textAlign: "center",
