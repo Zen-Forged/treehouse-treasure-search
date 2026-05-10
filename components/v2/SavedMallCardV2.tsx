@@ -26,8 +26,16 @@
 //     (smoke route + Arc 1.4 production wiring).
 "use client";
 
+import { useLayoutEffect, useRef, useState } from "react";
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
 import { PiLeaf } from "react-icons/pi";
+
+// Session 144 iPhone QA: long mall names ("Copper Awning Flea Market") wrapped
+// to 2 lines at fontSize 25 on iPhone widths. Mirrors PostcardMallCard's
+// session-116 measure-and-shrink pattern: render at MAX, step down 1px until
+// the single-line layout fits, ellipsis at MIN as last-resort.
+const NAME_FONT_MAX = 25;
+const NAME_FONT_MIN = 17;
 
 interface SavedMallCardV2Props {
   mallName: string;
@@ -53,6 +61,23 @@ export default function SavedMallCardV2({
 }: SavedMallCardV2Props) {
   const distanceLabel = formatDistanceLabel(distanceMi);
   const hasDistance = distanceLabel !== null;
+
+  // Measure-and-shrink: drive fontSize down from MAX to MIN until the title
+  // fits on one line. Recomputes when mallName changes or hasDistance toggles
+  // (pill presence affects available column width).
+  const nameRef = useRef<HTMLHeadingElement>(null);
+  const [nameFontSize, setNameFontSize] = useState(NAME_FONT_MAX);
+  useLayoutEffect(() => {
+    const el = nameRef.current;
+    if (!el) return;
+    let size = NAME_FONT_MAX;
+    el.style.fontSize = `${size}px`;
+    while (el.scrollWidth > el.clientWidth && size > NAME_FONT_MIN) {
+      size -= 1;
+      el.style.fontSize = `${size}px`;
+    }
+    setNameFontSize(size);
+  }, [mallName, hasDistance]);
 
   return (
     <article
@@ -84,15 +109,23 @@ export default function SavedMallCardV2({
         }}
       >
         <h2
+          ref={nameRef}
           style={{
             gridColumn: 1,
             gridRow: 1,
             fontFamily: FONT_CORMORANT,
             fontWeight: 600,
-            fontSize: 25,
+            fontSize: nameFontSize,
             lineHeight: 1.1,
             color: v2.text.primary,
             margin: 0,
+            // Single-line clamp drives the measure-and-shrink loop above.
+            // Ellipsis applies only when even NAME_FONT_MIN can't fit
+            // (extremely long names; rare in practice).
+            minWidth: 0,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
           }}
         >
           {mallName}
