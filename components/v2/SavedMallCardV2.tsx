@@ -116,7 +116,13 @@ export default function SavedMallCardV2({
             fontFamily: FONT_CORMORANT,
             fontWeight: 600,
             fontSize: nameFontSize,
-            lineHeight: 1.1,
+            // Session 144 iPhone QA: lineHeight 1.1 → 1.3 per
+            // feedback_lora_lineheight_minimum_for_clamp.md canonical floor
+            // (promoted-via-memory at session 107, extended to Cormorant at
+            // session 143's /me handle h1). The overflow:hidden added below
+            // for the measure-and-shrink loop turned the existing line-box
+            // into a clipping box; 'g'/'y'/'p' descenders need 1.3+ to clear.
+            lineHeight: 1.3,
             color: v2.text.primary,
             margin: 0,
             // Single-line clamp drives the measure-and-shrink loop above.
