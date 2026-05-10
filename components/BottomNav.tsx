@@ -91,7 +91,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Store, Shield, MapPin } from "lucide-react";
 import { MdOutlineExplore } from "react-icons/md";
-import FlagGlyph from "./FlagGlyph";
+import { PiLeaf } from "react-icons/pi";
 import { FONT_NUMERAL, v2 } from "@/lib/tokens";
 import { getSession, onAuthChange, detectUserRole, type UserRole } from "@/lib/auth";
 
@@ -182,7 +182,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     },
     {
       key: "flagged", label: "Saved", href: "/flagged",
-      icon: <FlagGlyph size={21} strokeWidth={2.0} />, badge: true,
+      icon: <PiLeaf size={21} />, badge: true,
     },
     {
       key: "map", label: "Map", href: "/map",
