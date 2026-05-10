@@ -41,12 +41,13 @@ export const dynamic = "force-dynamic";
 import { useEffect, useLayoutEffect, useState, useRef, useMemo, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import FlagGlyph from "@/components/FlagGlyph";
 import { getFeedPosts, getActiveMalls, searchPosts } from "@/lib/posts";
 import {
   v1,
+  v2,
   FONT_LORA,
-  FONT_SYS,
+  FONT_CORMORANT,
+  FONT_INTER,
   MOTION_EASE_OUT,
   MOTION_STAGGER,
   MOTION_STAGGER_MAX,
@@ -61,7 +62,7 @@ import { track } from "@/lib/clientEvents";
 // layout. This page renders only the Home body (SearchBar + featured banner
 // + masonry).
 import FeaturedBanner from "@/components/FeaturedBanner";
-import PolaroidTile from "@/components/PolaroidTile";
+import HomeFeedTile from "@/components/v2/HomeFeedTile";
 import EmptyState from "@/components/EmptyState";
 import RichPostcardMallCard from "@/components/RichPostcardMallCard";
 import { writeFindContext, setPostCache, type FindRef } from "@/lib/findContext";
@@ -194,9 +195,10 @@ function MasonryTile({
     return () => clearTimeout(t);
   }, [isLastViewed]);
 
-  function handleHeartClick(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+  function handleHeartToggle() {
+    // v2 Arc 2.2 — preventDefault + stopPropagation moved into HomeFeedTile's
+    // button onClick (primitive owns Link-cohabitation contract); page
+    // consumer just receives the toggle intent.
     onToggleSave(post.id);
   }
 
@@ -246,16 +248,17 @@ function MasonryTile({
         onClick={handleTileClick}
         style={{ display: "block", textDecoration: "none" }}
       >
-        <PolaroidTile
+        <HomeFeedTile
           src={post.image_url ?? ""}
           alt={post.title}
           tap
           highlighted={highlighted}
-          innerBorder
-          photoRadius={v1.imageRadius}
+          isFollowed={isFollowed}
+          onToggleFollow={handleHeartToggle}
           fallback={
-            // Photograph-only contract; no-image is rare but we degrade quietly
-            // with an italic title in the photo slot.
+            // Photograph-only contract preserved (Q1a); no-image is rare but
+            // we degrade quietly with an italic title in the photo slot.
+            // FONT_LORA → FONT_CORMORANT, v1.inkMuted → v2.text.muted.
             <div
               style={{
                 width: "100%",
@@ -263,56 +266,29 @@ function MasonryTile({
                 padding: "14px 12px",
                 display: "flex",
                 alignItems: "flex-end",
-                fontFamily: FONT_LORA,
+                fontFamily: FONT_CORMORANT,
                 fontStyle: "italic",
                 fontSize: 14,
-                color: v1.inkMuted,
+                color: v2.text.muted,
                 lineHeight: 1.35,
               }}
             >
               {post.title}
             </div>
           }
-          topRight={
-            <button
-              onClick={handleHeartClick}
-              aria-label={isFollowed ? "Unsave" : "Save"}
-              style={{
-                width: "100%",
-                height: "100%",
-                borderRadius: "50%",
-                background: "rgba(245,242,235,0.85)",
-                backdropFilter: "blur(8px)",
-                WebkitBackdropFilter: "blur(8px)",
-                border: `0.5px solid rgba(42,26,10,0.12)`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: 0,
-                cursor: "pointer",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <FlagGlyph
-                size={17}
-                strokeWidth={1.7}
-                style={{
-                  color: isFollowed ? v1.green : v1.inkPrimary,
-                  fill:  isFollowed ? v1.green : "none",
-                }}
-              />
-            </button>
-          }
           below={
-            // Relative timestamp — Variant D from feed-timestamp-v1.html mockup,
-            // italicized session 69 to nod toward IM Fell italic vocabulary.
+            // Relative timestamp — Variant D from feed-timestamp-v1.html
+            // mockup, italicized session 69. v2 Arc 2 (Q4a) — FONT_SYS →
+            // FONT_INTER + v1.inkMuted → v2.text.muted; recency signal +
+            // sizing + spacing preserved verbatim. Margin-top moved from
+            // padding "4px 0 0" → "5px 0 0" per D6b dial.
             <div
               style={{
-                padding: "4px 0 0",
-                fontFamily: FONT_SYS,
+                padding: "5px 0 0",
+                fontFamily: FONT_INTER,
                 fontStyle: "italic",
                 fontSize: 11.5,
-                color: v1.inkMuted,
+                color: v2.text.muted,
                 letterSpacing: "0.01em",
                 lineHeight: 1.2,
                 textAlign: "left",

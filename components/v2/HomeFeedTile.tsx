@@ -156,6 +156,14 @@ export default function HomeFeedTile({
         <button
           type="button"
           onClick={(e) => {
+            // Both preventDefault + stopPropagation owned by the primitive.
+            // When wrapped in <Link> (Home masonry), stopPropagation alone
+            // doesn't block default <a> navigation — Link's internal onClick
+            // never fires (so it never calls preventDefault), and the
+            // browser falls through to anchor navigation. preventDefault
+            // here is a no-op when the parent isn't navigable, but blocks
+            // the bug class when it is.
+            e.preventDefault();
             e.stopPropagation();
             onToggleFollow();
           }}
