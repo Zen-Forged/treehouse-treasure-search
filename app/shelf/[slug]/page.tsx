@@ -68,6 +68,7 @@ import {
   v1,
   FONT_LORA,
 } from "@/components/BoothPage";
+import { v2 } from "@/lib/tokens";
 import type { Post, Vendor, Mall } from "@/types/treehouse";
 
 // Session 85 — back-nav scroll anchoring. Module-scope cache survives
@@ -372,7 +373,7 @@ export default function PublicShelfPage() {
       <div
         style={{
           minHeight: "100dvh",
-          background: v1.paperCream,
+          background: v2.bg.main,
           maxWidth: 430,
           margin: "0 auto",
           display: "flex",
@@ -418,7 +419,7 @@ export default function PublicShelfPage() {
     <div
       style={{
         minHeight: "100dvh",
-        background: v1.paperCream,
+        background: v2.bg.main,
         maxWidth: 430,
         margin: "0 auto",
         paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
