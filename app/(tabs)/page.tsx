@@ -129,7 +129,7 @@ function SkeletonMasonry() {
       style={{
         display: "grid",
         gridTemplateColumns: "1fr 1fr",
-        gap: 12,
+        gap: 16,
         alignItems: "start",
       }}
     >
@@ -139,7 +139,7 @@ function SkeletonMasonry() {
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: 12,
+            gap: 16,
             marginTop: ci === 1 ? SKELETON_OFFSET : 0,
           }}
         >
@@ -353,11 +353,11 @@ function MasonryGrid({
       style={{
         display: "grid",
         gridTemplateColumns: "1fr 1fr",
-        gap: 12,
+        gap: 16,
         alignItems: "start",
       }}
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {col1.map((post, i) => (
           <div key={post.id} ref={i === 0 ? firstTileRef : undefined}>
             <MasonryTile
@@ -372,7 +372,7 @@ function MasonryGrid({
           </div>
         ))}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: offset }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: offset }}>
         {col2.map((post, i) => (
           <MasonryTile
             key={post.id}
@@ -621,7 +621,11 @@ function DiscoveryFeedInner() {
       {/* ── 4. Paper masonry ───────────────────────────────────────────── */}
       <main
         style={{
-          padding: "0 22px",
+          // Session 140 — page-side padding 22 → 16 to align col-1 left
+          // edge + col-2 right edge to the mall card wrapper's 16px
+          // (line 599 padding "12px 16px 14px"). Combined with grid gap
+          // → 16 below, equal spacing left/middle/right at 16px.
+          padding: "0 16px",
           paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
         }}
       >
