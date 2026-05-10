@@ -40,7 +40,7 @@ import SavedEmptyState from "@/components/v2/SavedEmptyState";
 interface MockFind {
   id: string;
   title: string;
-  priceCents: number;
+  price: number;
   imageGradient: string;
 }
 
@@ -74,21 +74,21 @@ const MALLS: MockMall[] = [
           {
             id: "copper-kettle",
             title: "Copper Kettle",
-            priceCents: 2800,
+            price: 28,
             imageGradient:
               "linear-gradient(135deg, #c9a96e 0%, #8a6a3e 100%)",
           },
           {
             id: "brass-vase",
             title: "Brass Vase",
-            priceCents: 3500,
+            price: 35,
             imageGradient:
               "linear-gradient(135deg, #b89968 0%, #7a5a3a 100%)",
           },
           {
             id: "vintage-camera",
             title: "Vintage Camera",
-            priceCents: 2200,
+            price: 22,
             imageGradient:
               "linear-gradient(135deg, #5a4838 0%, #2c2218 100%)",
           },
@@ -102,21 +102,21 @@ const MALLS: MockMall[] = [
           {
             id: "landscape-painting",
             title: "Landscape Painting",
-            priceCents: 4200,
+            price: 42,
             imageGradient:
               "linear-gradient(135deg, #8a9a72 0%, #4a5a3a 100%)",
           },
           {
             id: "violin",
             title: "Violin",
-            priceCents: 6500,
+            price: 65,
             imageGradient:
               "linear-gradient(135deg, #6a4530 0%, #3a2818 100%)",
           },
           {
             id: "ceramic-bowl",
             title: "Ceramic Bowl",
-            priceCents: 1800,
+            price: 18,
             imageGradient:
               "linear-gradient(135deg, #e0d5c0 0%, #a89880 100%)",
           },
@@ -138,14 +138,14 @@ const MALLS: MockMall[] = [
           {
             id: "oak-chair",
             title: "Oak Side Chair",
-            priceCents: 8500,
+            price: 85,
             imageGradient:
               "linear-gradient(135deg, #8a6a4a 0%, #4a3a2a 100%)",
           },
           {
             id: "porcelain-figurine",
             title: "Porcelain Figurine",
-            priceCents: 4400,
+            price: 44,
             imageGradient:
               "linear-gradient(135deg, #f0e8d8 0%, #c0b8a0 100%)",
           },
@@ -159,14 +159,14 @@ const MALLS: MockMall[] = [
           {
             id: "pocket-watch",
             title: "Pocket Watch on Chain",
-            priceCents: 12000,
+            price: 120,
             imageGradient:
               "linear-gradient(135deg, #d4a86c 0%, #8a6438 100%)",
           },
           {
             id: "wool-blanket",
             title: "Hand-woven Wool Blanket",
-            priceCents: 9000,
+            price: 90,
             imageGradient:
               "linear-gradient(135deg, #a86848 0%, #683828 100%)",
           },
@@ -407,7 +407,7 @@ export default function SavedV2TestPage() {
                           postId={find.id}
                           imageGradient={find.imageGradient}
                           title={find.title}
-                          priceCents={find.priceCents}
+                          price={find.price}
                           isFound={isFoundNow}
                           isSaved={savedIds.has(find.id)}
                           onToggleFound={() =>

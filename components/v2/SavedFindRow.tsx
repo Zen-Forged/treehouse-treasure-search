@@ -27,7 +27,8 @@ interface SavedFindRowProps {
   imageUrl?: string;
   imageGradient?: string; // CSS gradient fallback for smoke route mocks
   title: string;
-  priceCents: number;
+  /** Asking price in dollars (matches Post.price_asking shape; null hides). */
+  price: number | null;
   isFound: boolean;
   isSaved: boolean;
   onToggleFound: () => void;
@@ -35,21 +36,18 @@ interface SavedFindRowProps {
   onTapDetail: () => void;
 }
 
-function formatPrice(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
-
 export default function SavedFindRow({
   imageUrl,
   imageGradient,
   title,
-  priceCents,
+  price,
   isFound,
   isSaved,
   onToggleFound,
   onToggleSaved,
   onTapDetail,
 }: SavedFindRowProps) {
+  const showPrice = typeof price === "number" && price > 0;
   return (
     <div
       role="button"
@@ -104,16 +102,18 @@ export default function SavedFindRow({
         >
           {title}
         </div>
-        <div
-          style={{
-            fontFamily: FONT_INTER,
-            fontSize: 14,
-            fontWeight: 400,
-            color: v2.accent.green,
-          }}
-        >
-          {formatPrice(priceCents)}
-        </div>
+        {showPrice && (
+          <div
+            style={{
+              fontFamily: FONT_INTER,
+              fontSize: 14,
+              fontWeight: 400,
+              color: v2.accent.green,
+            }}
+          >
+            ${Math.round(price as number)}
+          </div>
+        )}
       </div>
 
       <button
