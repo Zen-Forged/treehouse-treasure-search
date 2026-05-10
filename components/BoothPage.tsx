@@ -364,13 +364,13 @@ export function BoothTitleBlock({
         style={{
           fontFamily: FONT_CORMORANT,
           fontStyle: "italic",
-          fontSize: 13,
+          fontSize: 16,
           color: v2.text.secondary,
           lineHeight: 1.3,
           margin: "0 0 4px",
         }}
       >
-        A curated booth from
+        A curated booth by
       </div>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", gap: 10 }}>
         {hasPicker ? (
