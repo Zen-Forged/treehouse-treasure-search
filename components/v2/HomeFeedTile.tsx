@@ -32,10 +32,19 @@ interface HomeFeedTileProps {
   alt: string;
   /** Rendered inside the photo slot when src is falsy or img onError fires. */
   fallback?: ReactNode;
-  /** Save-state for heart bubble (filled green leaf vs outline ink leaf). */
-  isFollowed: boolean;
+  /**
+   * Save-state for heart bubble (filled green leaf vs outline ink leaf).
+   * v2 Arc 4.6a — optional. Heart button only renders when BOTH isFollowed
+   * AND onToggleFollow are passed. Vendor-context surfaces (/my-shelf
+   * via WindowView) omit both to render the photograph without save UX
+   * since vendors don't save their own finds. Schema-forced deviation per
+   * feedback_schema_forced_deviation_not_design_reversal — not a reversal
+   * of session 140 Q5a "♥-only on Home" because that lock applied to
+   * Home masonry shopper context; vendor surfaces are a different layer.
+   */
+  isFollowed?: boolean;
   /** Heart bubble tap handler. e.stopPropagation() owned by tile to prevent Link nav. */
-  onToggleFollow: () => void;
+  onToggleFollow?: () => void;
   /** Last-viewed highlight — Home parent times out + unsets; primitive renders 1.5px green border + halo. */
   highlighted?: boolean;
   /** Tap-flash overlay + scale animation on touchstart (Home masonry-only behavior). */
@@ -168,47 +177,53 @@ export default function HomeFeedTile({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={(e) => {
-            // Both preventDefault + stopPropagation owned by the primitive.
-            // When wrapped in <Link> (Home masonry), stopPropagation alone
-            // doesn't block default <a> navigation — Link's internal onClick
-            // never fires (so it never calls preventDefault), and the
-            // browser falls through to anchor navigation. preventDefault
-            // here is a no-op when the parent isn't navigable, but blocks
-            // the bug class when it is.
-            e.preventDefault();
-            e.stopPropagation();
-            onToggleFollow();
-          }}
-          aria-pressed={isFollowed}
-          aria-label={isFollowed ? "Unsave" : "Save"}
-          style={{
-            position: "absolute",
-            top: 8,
-            right: 8,
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            background: v2.surface.warm,
-            border: `1px solid ${v2.border.light}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: v2.accent.green,
-            padding: 0,
-            cursor: "pointer",
-            zIndex: 3,
-            WebkitTapHighlightColor: "transparent",
-          }}
-        >
-          {isFollowed ? (
-            <PiLeafFill size={17} aria-hidden />
-          ) : (
-            <PiLeaf size={17} aria-hidden />
-          )}
-        </button>
+        {/* v2 Arc 4.6a — heart button only renders when BOTH isFollowed
+            AND onToggleFollow are passed. Vendor-context surfaces (e.g.
+            /my-shelf via WindowView) omit both to render the photograph
+            without save UX. */}
+        {isFollowed !== undefined && onToggleFollow !== undefined && (
+          <button
+            type="button"
+            onClick={(e) => {
+              // Both preventDefault + stopPropagation owned by the primitive.
+              // When wrapped in <Link> (Home masonry), stopPropagation alone
+              // doesn't block default <a> navigation — Link's internal onClick
+              // never fires (so it never calls preventDefault), and the
+              // browser falls through to anchor navigation. preventDefault
+              // here is a no-op when the parent isn't navigable, but blocks
+              // the bug class when it is.
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleFollow();
+            }}
+            aria-pressed={isFollowed}
+            aria-label={isFollowed ? "Unsave" : "Save"}
+            style={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              background: v2.surface.warm,
+              border: `1px solid ${v2.border.light}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: v2.accent.green,
+              padding: 0,
+              cursor: "pointer",
+              zIndex: 3,
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            {isFollowed ? (
+              <PiLeafFill size={17} aria-hidden />
+            ) : (
+              <PiLeaf size={17} aria-hidden />
+            )}
+          </button>
+        )}
       </div>
 
       {below}
