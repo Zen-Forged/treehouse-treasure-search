@@ -346,13 +346,19 @@ export function BoothTitleBlock({
     // chevron, and edit pencil as a group. Was left-aligned in prod; David
     // flagged during V1 review. Affects both /shelf/[slug] and /my-shelf
     // via this shared primitive.
+    // v2 Arc 4.4 — typography + colors migrate. Eyebrow + vendor name +
+    // picker chevron all become FONT_CORMORANT (single editorial serif
+    // family per system-level Q1 (a) lock). Edit Pencil bubble adopts
+    // v2 chrome vocabulary (v2.surface.warm + v2.border.light + green
+    // glyph; mirrors HomeFeedTile/StarFavoriteBubble/BookmarkBoothBubble
+    // affordance-bubble shape at the smaller 32×32 self-edit size).
     <div style={{ padding: "36px 22px 4px", textAlign: "center" }}>
       <div
         style={{
-          fontFamily: FONT_LORA,
+          fontFamily: FONT_CORMORANT,
           fontStyle: "italic",
           fontSize: 13,
-          color: v1.inkMuted,
+          color: v2.text.secondary,
           lineHeight: 1.3,
           margin: "0 0 4px",
         }}
@@ -379,10 +385,10 @@ export function BoothTitleBlock({
           >
             <h1
               style={{
-                fontFamily: FONT_LORA,
+                fontFamily: FONT_CORMORANT,
                 fontSize: 32,
                 fontWeight: 400,
-                color: v1.inkPrimary,
+                color: v2.text.primary,
                 lineHeight: 1.1,
                 letterSpacing: "-0.005em",
                 margin: 0,
@@ -393,9 +399,9 @@ export function BoothTitleBlock({
             <span
               aria-hidden="true"
               style={{
-                fontFamily: FONT_LORA,
+                fontFamily: FONT_CORMORANT,
                 fontSize: 20,
-                color: v1.inkMuted,
+                color: v2.text.muted,
                 lineHeight: 1,
                 marginTop: 4,
               }}
@@ -406,10 +412,10 @@ export function BoothTitleBlock({
         ) : (
           <h1
             style={{
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_CORMORANT,
               fontSize: 32,
               fontWeight: 400,
-              color: v1.inkPrimary,
+              color: v2.text.primary,
               lineHeight: 1.1,
               letterSpacing: "-0.005em",
               margin: 0,
@@ -428,8 +434,8 @@ export function BoothTitleBlock({
               width: 32,
               height: 32,
               borderRadius: "50%",
-              background: "rgba(42,26,10,0.04)",
-              border: `1px solid ${v1.inkHairline}`,
+              background: v2.surface.warm,
+              border: `1px solid ${v2.border.light}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -439,7 +445,7 @@ export function BoothTitleBlock({
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            <Pencil size={13} style={{ color: v1.green }} strokeWidth={1.8} />
+            <Pencil size={13} style={{ color: v2.accent.green }} strokeWidth={1.8} />
           </button>
         )}
       </div>
