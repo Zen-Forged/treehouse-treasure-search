@@ -1,18 +1,24 @@
 // app/me/page.tsx
 // R1 Arc 2 — Shopper profile destination per design record D4 / D9 / D10 /
 // D11 / D15 / D17 (docs/r1-shopper-accounts-design.md).
-// R1 Arc 4 (this revision) — wired to real auth + DB-backed counts via
+// R1 Arc 4 (session 112) — wired to real auth + DB-backed counts via
 // useShopperAuth + useShopperSaves + useShopperBoothBookmarks. Sign-out
 // calls supabase.auth.signOut() and returns the user to the feed.
 //
+// Session 143 — v2 visual migration Arc 6.1: typography (FONT_LORA →
+// FONT_CORMORANT + FONT_SYS → FONT_INTER; FONT_NUMERAL preserved per
+// project canonical) + palette (v1.* → v2.*) + page bg → v2.bg.main +
+// back button bubble → v2.surface.warm + v2.border.light. Structure +
+// auth-state branching + redirect flow preserved verbatim from R1 Arc 2.
+//
 // Frame B (Glass-shape reflective destination) ships:
 //   - back-button masthead (matches /find/[id] + /shelf/[slug] family)
-//   - 84px avatar with 2-char initials in v1.green circle (D11)
-//   - handle in Lora 22 / 500 / inkPrimary (D4)
-//   - "SCOUTING SINCE [MONTH YYYY]" eyebrow in FONT_SYS small-caps (D10)
+//   - 84px avatar with 2-char initials in v2.accent.green circle (D11)
+//   - handle in Cormorant 22 / 500 / v2.text.primary (D4)
+//   - "SCOUTING SINCE [MONTH YYYY]" eyebrow in FONT_INTER small-caps (D10)
 //   - 3-stat row — Finds saved · Booths bookmarked · Locations (D9).
-//     FONT_NUMERAL numerals + FONT_SYS labels. Stats are PRIVATE per D2.
-//   - Sign-out italic-Lora link in v1.green (D15)
+//     FONT_NUMERAL numerals + FONT_INTER labels. Stats are PRIVATE per D2.
+//   - Sign-out italic-Cormorant link in v2.accent.green (D15)
 //
 // Auth-state branching:
 //   - shopper auth still loading → blank surface (no flash)
@@ -33,7 +39,7 @@ import { ArrowLeft } from "lucide-react";
 
 import StickyMasthead from "@/components/StickyMasthead";
 import BottomNav     from "@/components/BottomNav";
-import { v1, FONT_LORA, FONT_SYS, FONT_NUMERAL } from "@/lib/tokens";
+import { v2, FONT_CORMORANT, FONT_INTER, FONT_NUMERAL } from "@/lib/tokens";
 import { supabase }  from "@/lib/supabase";
 import { useShopperAuth }          from "@/lib/useShopperAuth";
 import { useShopperSaves }         from "@/lib/useShopperSaves";
@@ -113,7 +119,7 @@ export default function MePage() {
       <div
         style={{
           minHeight:  "100vh",
-          background: v1.paperCream,
+          background: v2.bg.main,
         }}
       />
     );
@@ -123,7 +129,7 @@ export default function MePage() {
     <div
       style={{
         minHeight:    "100vh",
-        background:   v1.paperCream,
+        background:   v2.bg.main,
         display:      "flex",
         flexDirection:"column",
       }}
@@ -138,18 +144,18 @@ export default function MePage() {
               width:           44,
               height:          44,
               borderRadius:    "50%",
-              background:      v1.iconBubble,
+              background:      v2.surface.warm,
               display:         "flex",
               alignItems:      "center",
               justifyContent:  "center",
-              border:          "none",
+              border:          `1px solid ${v2.border.light}`,
               cursor:          "pointer",
               padding:         0,
               WebkitTapHighlightColor: "transparent",
               transition:      "background 0.18s ease",
             }}
           >
-            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
           </button>
         }
         right={null}
@@ -171,7 +177,7 @@ export default function MePage() {
             width:           84,
             height:          84,
             borderRadius:    42,
-            background:      v1.green,
+            background:      v2.accent.green,
             display:         "flex",
             alignItems:      "center",
             justifyContent:  "center",
@@ -181,11 +187,11 @@ export default function MePage() {
         >
           <span
             style={{
-              fontFamily:    FONT_SYS,
+              fontFamily:    FONT_INTER,
               fontWeight:    600,
               fontSize:      28,
               letterSpacing: "0.02em",
-              color:         v1.onGreen,
+              color:         v2.surface.card,
               lineHeight:    1,
             }}
           >
@@ -197,10 +203,10 @@ export default function MePage() {
         <h1
           style={{
             textAlign:     "center",
-            fontFamily:    FONT_LORA,
+            fontFamily:    FONT_CORMORANT,
             fontWeight:    500,
             fontSize:      22,
-            color:         v1.inkPrimary,
+            color:         v2.text.primary,
             margin:        "0 0 4px",
             letterSpacing: "-0.005em",
             lineHeight:    1.3,
@@ -213,11 +219,11 @@ export default function MePage() {
         <div
           style={{
             textAlign:      "center",
-            fontFamily:     FONT_SYS,
+            fontFamily:     FONT_INTER,
             fontSize:       10,
             letterSpacing:  "0.16em",
             textTransform:  "uppercase",
-            color:          v1.inkFaint,
+            color:          v2.text.muted,
             margin:         "0 0 22px",
             lineHeight:     1,
           }}
@@ -233,8 +239,8 @@ export default function MePage() {
             alignItems:     "center",
             gap:            22,
             padding:        "14px 0",
-            borderTop:      `1px solid ${v1.inkHairline}`,
-            borderBottom:   `1px solid ${v1.inkHairline}`,
+            borderTop:      `1px solid ${v2.border.light}`,
+            borderBottom:   `1px solid ${v2.border.light}`,
             margin:         "0 0 22px",
           }}
         >
@@ -243,7 +249,7 @@ export default function MePage() {
           <Stat n={locationCount}           label="Locations" />
         </div>
 
-        {/* ─── Sign-out — italic Lora link, v1.green (D15) ─────────────── */}
+        {/* ─── Sign-out — italic Cormorant link, v2.accent.green (D15) ── */}
         <button
           type="button"
           onClick={handleSignOut}
@@ -253,10 +259,10 @@ export default function MePage() {
             background: "none",
             border:     "none",
             padding:    "8px 16px",
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
             fontStyle:  "italic",
             fontSize:   14,
-            color:      v1.green,
+            color:      v2.accent.green,
             cursor:     "pointer",
             WebkitTapHighlightColor: "transparent",
           }}
@@ -277,7 +283,7 @@ function Stat({ n, label }: { n: number; label: string }) {
         style={{
           fontFamily: FONT_NUMERAL,
           fontSize:   24,
-          color:      v1.inkPrimary,
+          color:      v2.text.primary,
           display:    "block",
           lineHeight: 1,
         }}
@@ -286,11 +292,11 @@ function Stat({ n, label }: { n: number; label: string }) {
       </span>
       <span
         style={{
-          fontFamily:     FONT_SYS,
+          fontFamily:     FONT_INTER,
           fontSize:       10,
           letterSpacing:  "0.10em",
           textTransform:  "uppercase",
-          color:          v1.inkMuted,
+          color:          v2.text.muted,
           marginTop:      4,
           display:        "block",
         }}
