@@ -11,14 +11,16 @@
 // post-ship; retirement-not-urgent.
 //
 // Mock data shape mirrors the production data contract:
-//   - 2 malls (Middletown favorited + with distance; Lexington unfavorited +
-//     without distance to test fallback chrome)
+//   - 2 malls (Middletown with distance 2.9 MI; Lexington without distance
+//     to test pill-hidden-when-null behavior per session-139 Q2 (a))
 //   - 2 booths per mall; D2 (a) defaults all expanded
 //   - 3 finds in expanded booth + 0 finds in collapsed-on-tap state
 //   - 1 find pre-marked ✓ Found to demo filled-circle visual
 //
-// Local React state for favorites + found-marks + saves — Arc 1.3 wires the
-// real localStorage hooks. Empty-state preview toggle at top of page.
+// Local React state for found-marks + saves — Arc 1.3 wires the real
+// localStorage hooks. ★ Favorite Mall retired on Saved per session-139
+// Q1 (a) reversal of session-138 Q6 (a); ★ moves to Home + Map's
+// RichPostcardMallCard in v2 Arc 5. Empty-state preview toggle at top.
 "use client";
 
 import { useState } from "react";
@@ -181,10 +183,6 @@ export default function SavedV2TestPage() {
   const [foundIds, setFoundIds] = useState<Set<string>>(
     () => new Set(["brass-vase"]),
   );
-  // Middletown starts favorited; Lexington starts unfavorited
-  const [favoriteMallIds, setFavoriteMallIds] = useState<Set<string>>(
-    () => new Set(["middletown"]),
-  );
   // All finds start as saved (this IS the Saved page)
   const [savedIds, setSavedIds] = useState<Set<string>>(
     () =>
@@ -203,15 +201,6 @@ export default function SavedV2TestPage() {
     });
   }
 
-  function toggleFavoriteMall(id: string) {
-    setFavoriteMallIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
   function toggleSaved(id: string) {
     setSavedIds((prev) => {
       const next = new Set(prev);
@@ -221,11 +210,9 @@ export default function SavedV2TestPage() {
     });
   }
 
-  // D1 + D4 — favorited-first then distance-asc; null distance ranks below
+  // Sort by distance-asc; null distance ranks below (session-139 reversal —
+  // favorited-first axis retired alongside ★ retire on Saved per Q1 (a))
   const sortedMalls = [...MALLS].sort((a, b) => {
-    const aFav = favoriteMallIds.has(a.id);
-    const bFav = favoriteMallIds.has(b.id);
-    if (aFav !== bFav) return aFav ? -1 : 1;
     if (a.distanceMi !== null && b.distanceMi !== null)
       return a.distanceMi - b.distanceMi;
     if (a.distanceMi !== null) return -1;
@@ -298,9 +285,9 @@ export default function SavedV2TestPage() {
           }}
         >
           Mocked data + local React state. Saves count: {totalSavedCount}.
-          Toggle ★ to test favorited-first sort. Toggle ✓ on Brass Vase to
-          test ✓ Found state. Tap accordion headers to test expand/collapse.
-          Tap leaf bubble to remove a find from saves.
+          Toggle ✓ on Brass Vase to test ✓ Found state. Tap accordion
+          headers to test expand/collapse. Tap leaf bubble to remove a
+          find from saves. Lexington has no distance — pill should hide.
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button
@@ -380,8 +367,6 @@ export default function SavedV2TestPage() {
                 mallAddress={mall.address}
                 distanceMi={mall.distanceMi}
                 findsCount={findsInThisMall}
-                isFavorite={favoriteMallIds.has(mall.id)}
-                onToggleFavorite={() => toggleFavoriteMall(mall.id)}
                 onGetDirections={() => {
                   // smoke route — no-op; production wires to lib/mapsDeepLink
                   // eslint-disable-next-line no-console
