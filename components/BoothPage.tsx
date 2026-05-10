@@ -234,7 +234,15 @@ export function BoothHero({
           </div>
         )}
 
-        {/* Booth post-it — bottom-right, pinned; same primitive as Find Detail */}
+        {/* Booth post-it — bottom-right, pinned; same primitive as Find Detail.
+            v2 Arc 4.5 — bg + label + numeral colors migrate to v2:
+              v1.postit (#fbf3df) → v2.surface.card (#FFFCF5; brighter card stock)
+              FONT_SYS "Booth" label → FONT_INTER (matches v2 small-caps voice)
+              v1.green label/numeral → v2.accent.green (canonical v2 brand green)
+            FONT_NUMERAL preserved per project canonical (session 75 rule:
+            letters → editorial serif or sans; numbers → FONT_NUMERAL).
+            Pin shadow + push-pin rgba textures preserved — physical-stamp
+            character is intentionally outside the v2 palette migration. */}
         {boothNumber && (
           <div
             style={{
@@ -243,7 +251,7 @@ export function BoothHero({
               right: 14,
               width: 96,
               minHeight: 96,
-              background: v1.postit,
+              background: v2.surface.card,
               transform: "rotate(6deg)",
               transformOrigin: "bottom right",
               boxShadow: `0 6px 14px rgba(42,26,10,0.32), 0 0 0 0.5px rgba(42,26,10,0.16)`,
@@ -272,10 +280,10 @@ export function BoothHero({
             />
             <div
               style={{
-                fontFamily: FONT_SYS,
+                fontFamily: FONT_INTER,
                 fontSize: 9,
                 fontWeight: 700,
-                color: v1.green,
+                color: v2.accent.green,
                 letterSpacing: "0.12em",
                 textTransform: "uppercase",
                 lineHeight: 1,
@@ -290,7 +298,7 @@ export function BoothHero({
                 fontFamily: FONT_NUMERAL,
                 fontSize: boothNumeralSize(boothNumber),
                 fontWeight: 500,
-                color: v1.green,
+                color: v2.accent.green,
                 letterSpacing: "-0.01em",
                 lineHeight: 1,
               }}
