@@ -1011,11 +1011,11 @@ function ErrorBanner({ message }: { message: string }) {
       style={{
         padding: "11px 14px",
         borderRadius: 10,
-        background: v1.redBg,
-        border: `1px solid ${v1.redBorder}`,
-        fontFamily: FONT_SYS,
+        background: v2.surface.error,
+        border: `1px solid ${v2.border.error}`,
+        fontFamily: FONT_INTER,
         fontSize: 13,
-        color: v1.red,
+        color: v2.accent.red,
         lineHeight: 1.5,
       }}
     >
