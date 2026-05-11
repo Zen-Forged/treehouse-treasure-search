@@ -89,9 +89,9 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Store, Shield, MapPin } from "lucide-react";
+import { Shield } from "lucide-react";
 import { MdOutlineExplore } from "react-icons/md";
-import { PiLeaf } from "react-icons/pi";
+import { PiLeaf, PiMapPin, PiStorefront } from "react-icons/pi";
 import { FONT_NUMERAL, v2 } from "@/lib/tokens";
 import { getSession, onAuthChange, detectUserRole, type UserRole } from "@/lib/auth";
 
@@ -186,11 +186,11 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     },
     {
       key: "map", label: "Map", href: "/map",
-      icon: <MapPin size={21} strokeWidth={2.0} />,
+      icon: <PiMapPin size={21} />,
     },
     ...(showBoothTab ? [{
       key: "booth" as NavTab, label: "Booth", href: "/my-shelf",
-      icon: <Store size={21} strokeWidth={2.0} />,
+      icon: <PiStorefront size={21} />,
     }] : []),
     ...(showAdminTab ? [{
       key: "admin" as NavTab, label: "Admin", href: "/admin",
