@@ -57,7 +57,7 @@
 import * as React from "react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
-import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import SearchBar from "./SearchBar";
 import type { Mall } from "@/types/treehouse";
 
@@ -124,10 +124,10 @@ export default function RichPostcardMallCard({
     <div
       style={{
         position:        "relative",
-        background:      v1.postcardBg,
-        border:          `1px solid ${v1.postcardBorder}`,
+        background:      v2.surface.card,
+        border:          `1px solid ${v2.border.light}`,
         borderRadius:    12,
-        boxShadow:       v1.shadow.postcard,
+        boxShadow:       "0 1px 2px rgba(43,33,26,0.04)",
         overflow:        "hidden",
       }}
     >
@@ -159,10 +159,10 @@ export default function RichPostcardMallCard({
               stretches full-width on its own. */}
           <div
             style={{
-              fontFamily:   FONT_LORA,
+              fontFamily:   FONT_CORMORANT,
               fontStyle:    "italic",
               fontSize:     17,
-              color:        v1.inkMuted,
+              color:        v2.text.secondary,
               lineHeight:   1,
               marginBottom: 4,
             }}
@@ -175,11 +175,11 @@ export default function RichPostcardMallCard({
           <div
             ref={nameRef}
             style={{
-              fontFamily:    FONT_LORA,
+              fontFamily:    FONT_CORMORANT,
               fontWeight:    500,
               fontSize:      nameFontSize,
-              color:         v1.inkPrimary,
-              lineHeight:    1.25,
+              color:         v2.text.primary,
+              lineHeight:    1.3,
               letterSpacing: "-0.005em",
               margin:        0,
               whiteSpace:    "nowrap",
@@ -197,8 +197,8 @@ export default function RichPostcardMallCard({
               display:    "flex",
               alignItems: "center",
               gap:        6,
-              color:      v1.inkMid,
-              fontFamily: FONT_SYS,
+              color:      v2.text.secondary,
+              fontFamily: FONT_INTER,
               fontSize:   12,
               lineHeight: 1.3,
               minWidth:   0,
@@ -229,7 +229,7 @@ export default function RichPostcardMallCard({
               margin:       "14px 14px 0",
               borderRadius: 8,
               overflow:     "hidden",
-              background:   v1.postit,
+              background:   v2.surface.warm,
               boxShadow:    "0 1px 3px rgba(0,0,0,0.08)",
             }}
           >
