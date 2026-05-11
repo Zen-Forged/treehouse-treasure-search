@@ -20,7 +20,7 @@ import { motion } from "framer-motion";
 import { Pencil, X, Loader as LoaderIcon, AlertTriangle, ImagePlus, Trash2 } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 import { compressImage } from "@/lib/imageUpload";
-import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import { vendorHueBg } from "@/lib/utils";
 import BoothFormFields from "@/components/BoothFormFields";
 import FormButton from "@/components/FormButton";
@@ -200,8 +200,8 @@ export default function EditBoothSheet({
     }
   }
 
-  const sheetBg = v1.paperCream;
-  const borderC = v1.inkHairline;
+  const sheetBg = v2.bg.main;
+  const borderC = v2.border.light;
 
   return (
     <>
@@ -235,29 +235,29 @@ export default function EditBoothSheet({
             maxHeight: "85vh", overflowY: "auto",
           }}
         >
-          <div style={{ width: 44, height: 4, borderRadius: 4, background: "rgba(42,26,10,0.22)", margin: "0 auto 18px" }} />
+          <div style={{ width: 44, height: 4, borderRadius: 4, background: v2.text.muted, margin: "0 auto 18px" }} />
 
           {/* Head */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
             <div
               style={{
                 width: 32, height: 32, borderRadius: "50%",
-                background: "rgba(42,26,10,0.04)",
+                background: v2.surface.warm,
                 border: `1px solid ${borderC}`,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 flexShrink: 0,
               }}
             >
-              <Pencil size={14} style={{ color: v1.green }} strokeWidth={1.8} />
+              <Pencil size={14} style={{ color: v2.accent.green }} strokeWidth={1.8} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: FONT_LORA, fontSize: 16, color: v1.inkPrimary, lineHeight: 1.3 }}>
+              <div style={{ fontFamily: FONT_CORMORANT, fontSize: 16, color: v2.text.primary, lineHeight: 1.3 }}>
                 {mode === "vendor" ? "Edit booth name" : "Edit booth"}
               </div>
               <div
                 style={{
-                  fontFamily: FONT_LORA, fontStyle: "italic", fontSize: 11,
-                  color: v1.inkMuted, lineHeight: 1.4, marginTop: 1,
+                  fontFamily: FONT_CORMORANT, fontStyle: "italic", fontSize: 11,
+                  color: v2.text.muted, lineHeight: 1.4, marginTop: 1,
                   whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                 }}
               >
@@ -270,12 +270,12 @@ export default function EditBoothSheet({
               disabled={submitting}
               style={{
                 width: 28, height: 28, borderRadius: "50%",
-                background: "rgba(42,26,10,0.04)", border: "none",
+                background: v2.surface.warm, border: "none",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 cursor: submitting ? "default" : "pointer", flexShrink: 0,
               }}
             >
-              <X size={14} style={{ color: v1.inkMuted }} />
+              <X size={14} style={{ color: v2.text.muted }} />
             </button>
           </div>
 
@@ -287,9 +287,9 @@ export default function EditBoothSheet({
             <label
               style={{
                 display: "block",
-                fontFamily: FONT_LORA,
+                fontFamily: FONT_INTER,
                 fontSize: 13,
-                color: v1.inkMid,
+                color: v2.text.secondary,
                 lineHeight: 1.25,
                 marginBottom: 8,
               }}
@@ -306,7 +306,7 @@ export default function EditBoothSheet({
                   overflow: "hidden",
                   position: "relative",
                   background: heroUrl ? undefined : vendorHueBg(vendor.display_name ?? ""),
-                  border: `1px solid ${v1.inkHairline}`,
+                  border: `1px solid ${v2.border.light}`,
                 }}
               >
                 {heroUrl && (
@@ -335,7 +335,7 @@ export default function EditBoothSheet({
                   >
                     <LoaderIcon
                       size={18}
-                      style={{ color: "rgba(255,255,255,0.92)", animation: "spin 0.9s linear infinite" }}
+                      style={{ color: v2.surface.card, animation: "spin 0.9s linear infinite" }}
                     />
                   </div>
                 )}
@@ -360,11 +360,11 @@ export default function EditBoothSheet({
                     flex: 1,
                     padding: "0 12px",
                     borderRadius: 8,
-                    background: v1.inkWash,
-                    border: `1px solid ${v1.inkHairline}`,
-                    fontFamily: FONT_SYS,
+                    background: v2.surface.card,
+                    border: `1px solid ${v2.border.light}`,
+                    fontFamily: FONT_INTER,
                     fontSize: 13,
-                    color: v1.inkPrimary,
+                    color: v2.text.primary,
                     cursor: heroBusy || submitting ? "default" : "pointer",
                     display: "flex",
                     alignItems: "center",
@@ -373,7 +373,7 @@ export default function EditBoothSheet({
                     WebkitTapHighlightColor: "transparent",
                   }}
                 >
-                  <ImagePlus size={14} strokeWidth={1.7} style={{ color: v1.inkMid }} />
+                  <ImagePlus size={14} strokeWidth={1.7} style={{ color: v2.text.secondary }} />
                   {heroUrl ? "Replace photo" : "Add photo"}
                 </button>
                 {heroUrl && (
@@ -386,10 +386,10 @@ export default function EditBoothSheet({
                       padding: "0 12px",
                       borderRadius: 8,
                       background: "transparent",
-                      border: `1px solid ${v1.inkHairline}`,
-                      fontFamily: FONT_SYS,
+                      border: `1px solid ${v2.border.light}`,
+                      fontFamily: FONT_INTER,
                       fontSize: 13,
-                      color: v1.inkMuted,
+                      color: v2.text.muted,
                       cursor: heroBusy || submitting ? "default" : "pointer",
                       display: "flex",
                       alignItems: "center",
@@ -398,7 +398,7 @@ export default function EditBoothSheet({
                       WebkitTapHighlightColor: "transparent",
                     }}
                   >
-                    <Trash2 size={13} strokeWidth={1.7} style={{ color: v1.inkMuted }} />
+                    <Trash2 size={13} strokeWidth={1.7} style={{ color: v2.text.muted }} />
                     Remove photo
                   </button>
                 )}
@@ -410,18 +410,18 @@ export default function EditBoothSheet({
                   marginTop: 8,
                   padding: "8px 10px",
                   borderRadius: 8,
-                  background: v1.redBg,
-                  border: `1px solid ${v1.redBorder}`,
-                  fontFamily: FONT_SYS,
+                  background: v2.surface.error,
+                  border: `1px solid ${v2.border.error}`,
+                  fontFamily: FONT_INTER,
                   fontSize: 12,
-                  color: v1.red,
+                  color: v2.accent.red,
                   lineHeight: 1.5,
                   display: "flex",
                   alignItems: "flex-start",
                   gap: 6,
                 }}
               >
-                <AlertTriangle size={12} style={{ flexShrink: 0, marginTop: 2, color: v1.red }} />
+                <AlertTriangle size={12} style={{ flexShrink: 0, marginTop: 2, color: v2.accent.red }} />
                 <span>{heroError}</span>
               </div>
             )}
@@ -434,9 +434,9 @@ export default function EditBoothSheet({
               <label
                 style={{
                   display: "block",
-                  fontFamily: FONT_LORA,
+                  fontFamily: FONT_INTER,
                   fontSize: 13,
-                  color: v1.inkMid,
+                  color: v2.text.secondary,
                   lineHeight: 1.25,
                   marginBottom: 6,
                 }}
@@ -454,22 +454,22 @@ export default function EditBoothSheet({
                   boxSizing: "border-box",
                   padding: "11px 12px",
                   borderRadius: 10,
-                  background: trimmedName !== initial.displayName.trim() ? "#fff9e8" : v1.inkWash,
-                  border: `1px solid ${trimmedName !== initial.displayName.trim() ? "#c8a55a" : v1.inkHairline}`,
-                  color: v1.inkPrimary,
+                  background: trimmedName !== initial.displayName.trim() ? v2.accent.greenSoft : v2.surface.card,
+                  border: `1px solid ${trimmedName !== initial.displayName.trim() ? v2.accent.green : v2.border.light}`,
+                  color: v2.text.primary,
                   fontSize: 14,
                   outline: "none",
-                  fontFamily: FONT_SYS,
+                  fontFamily: FONT_INTER,
                   appearance: "none",
                   WebkitAppearance: "none",
                 }}
               />
               <div
                 style={{
-                  fontFamily: FONT_LORA,
+                  fontFamily: FONT_CORMORANT,
                   fontStyle: "italic",
                   fontSize: 11,
-                  color: v1.inkFaint,
+                  color: v2.text.muted,
                   lineHeight: 1.4,
                   marginTop: 6,
                 }}
@@ -496,18 +496,18 @@ export default function EditBoothSheet({
                 marginBottom: 12,
                 padding: "10px 12px",
                 borderRadius: 9,
-                background: v1.redBg,
-                border: `1px solid ${v1.redBorder}`,
-                fontFamily: FONT_SYS,
+                background: v2.surface.error,
+                border: `1px solid ${v2.border.error}`,
+                fontFamily: FONT_INTER,
                 fontSize: 12,
-                color: v1.red,
+                color: v2.accent.red,
                 lineHeight: 1.5,
                 display: "flex",
                 alignItems: "flex-start",
                 gap: 8,
               }}
             >
-              <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1, color: v1.red }} />
+              <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1, color: v2.accent.red }} />
               <span>{error}</span>
             </div>
           )}
@@ -537,10 +537,10 @@ export default function EditBoothSheet({
               width: "100%",
               padding: "10px",
               borderRadius: 10,
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 12,
-              color: v1.inkMuted,
+              color: v2.text.muted,
               background: "transparent",
               border: "none",
               marginTop: 6,
