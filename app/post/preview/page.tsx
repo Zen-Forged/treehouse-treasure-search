@@ -53,6 +53,8 @@ import { compressImage, uploadPostImageViaServer } from "@/lib/imageUpload";
 import { postStore, type PostDraft } from "@/lib/postStore";
 import { safeStorage } from "@/lib/safeStorage";
 import { getSession, isAdmin } from "@/lib/auth";
+import { isReviewMode } from "@/lib/reviewMode";
+import { FIXTURE_VENDORS, FIXTURE_POSTS } from "@/lib/fixtures";
 import {
   LOCAL_VENDOR_KEY,
   type LocalVendorProfile,
@@ -160,6 +162,25 @@ function PostPreviewInner() {
     started.current = true;
 
     (async () => {
+      // Review Board (session 150) — fixture-substitute vendor + draft.
+      // Skips postStore.get() (which would redirect to /my-shelf with no
+      // draft) + getSession + vendor resolution; hydrates straight into
+      // the "edit" stage with FIXTURE_POSTS[0] as the draft.
+      if (isReviewMode()) {
+        const fx = FIXTURE_POSTS[0];
+        setVendor(FIXTURE_VENDORS[0]);
+        setImage(fx.image_url);
+        hydrateFields({
+          imageDataUrl:    fx.image_url ?? "",
+          extractionRan:   "success",
+          extractedTitle:  fx.title,
+          extractedPrice:  fx.price_asking,
+          captionText:     fx.caption ?? "",
+          captionTags:     fx.tags,
+        });
+        return;
+      }
+
       const draft = postStore.get();
       if (!draft) {
         router.replace("/my-shelf");

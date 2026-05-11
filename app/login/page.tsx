@@ -49,6 +49,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Loader } from "lucide-react";
 import { PiEnvelopeSimple, PiClipboard, PiStorefront, PiKey, PiQuestion } from "react-icons/pi";
 import { sendMagicLink, getSession, signOut, onAuthChange, isAdmin, detectUserRoleWithAutoClaim, tryAutoClaimVendorRows } from "@/lib/auth";
+import { isReviewMode } from "@/lib/reviewMode";
 import { supabase } from "@/lib/supabase";
 import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import FormField, { formInputStyle } from "@/components/FormField";
@@ -131,6 +132,14 @@ function LoginInner() {
 
   // ── Initial mount: auth detect + magic-link callback bridge ────────────
   useEffect(() => {
+    // Review Board (session 150) — render unauthed email-entry form
+    // directly; skip Supabase session detection + onAuthChange sub +
+    // BroadcastChannel. The audit surface shows the triage state real
+    // first-time visitors land on.
+    if (isReviewMode()) {
+      setRenderState("form");
+      return;
+    }
     if (confirmed) {
       // Magic-link round-trip — Supabase verifies the link, the session
       // appears asynchronously. Poll up to 10s, then fall through to the
