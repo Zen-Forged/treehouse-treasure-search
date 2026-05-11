@@ -16,7 +16,7 @@
 
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { v1 } from "@/lib/tokens";
+import { v2 } from "@/lib/tokens";
 
 interface MastheadBackButtonProps {
   /** Path to push when window.history is empty (deep links). Default "/". */
@@ -48,15 +48,15 @@ export default function MastheadBackButton({
         display:         "flex",
         alignItems:      "center",
         justifyContent:  "center",
-        background:      v1.iconBubble,
-        border:          "none",
+        background:      v2.surface.warm,
+        border:          `1px solid ${v2.border.light}`,
         cursor:          "pointer",
         padding:         0,
         WebkitTapHighlightColor: "transparent",
         transition:      "background 0.18s ease",
       }}
     >
-      <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+      <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
     </button>
   );
 }

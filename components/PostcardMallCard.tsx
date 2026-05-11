@@ -32,7 +32,7 @@
 import * as React from "react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
-import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import { v1, v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import type { Mall } from "@/types/treehouse";
 
 type MallScope =
@@ -108,8 +108,8 @@ export default function PostcardMallCard({
         position:        "relative",
         width:           "100%",
         padding:         16,
-        background:      v1.postcardBg,
-        border:          `1px solid ${v1.postcardBorder}`,
+        background:      v2.surface.card,
+        border:          `1px solid ${v2.border.light}`,
         borderRadius:    12,
         boxShadow:       v1.shadow.postcard,
         textAlign:       "left",
@@ -136,10 +136,10 @@ export default function PostcardMallCard({
       <div style={{ position: "relative", zIndex: 1 }}>
         <div
           style={{
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
             fontStyle:  "italic",
             fontSize:   18,
-            color:      v1.inkMuted,
+            color:      v2.text.muted,
             lineHeight: 1,
             margin:     "0 0 4px",
           }}
@@ -149,12 +149,13 @@ export default function PostcardMallCard({
         <div
           ref={nameRef}
           style={{
-            fontFamily:    FONT_LORA,
+            fontFamily:    FONT_CORMORANT,
             fontWeight:    500,
             fontSize:      nameFontSize,
-            color:         v1.inkPrimary,
-            // Lora descender clearance — clamp + overflow:hidden requires
-            // lineHeight 1.3+ per feedback_lora_lineheight_minimum_for_clamp.
+            color:         v2.text.primary,
+            // Lora/Cormorant descender clearance — clamp + overflow:hidden requires
+            // lineHeight 1.3+ per feedback_lora_lineheight_minimum_for_clamp
+            // (generalized to Cormorant at session 143; 4th cumulative firing at session 144).
             lineHeight:    1.3,
             letterSpacing: "-0.005em",
             margin:        "0 0 6px",
@@ -171,8 +172,8 @@ export default function PostcardMallCard({
             display:    "flex",
             alignItems: "center",
             gap:        6,
-            color:      v1.inkMid,
-            fontFamily: FONT_SYS,
+            color:      v2.text.secondary,
+            fontFamily: FONT_INTER,
             fontSize:   12,
             lineHeight: 1.3,
             minWidth:   0,

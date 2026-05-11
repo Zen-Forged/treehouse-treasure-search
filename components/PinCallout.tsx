@@ -27,7 +27,7 @@
 
 import * as React from "react";
 import { ChevronRight, MapPin, Navigation } from "lucide-react";
-import { v1, FONT_LORA, FONT_NUMERAL, FONT_SYS } from "@/lib/tokens";
+import { v1, v2, FONT_NUMERAL, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import { navigateUrl } from "@/lib/mapsDeepLink";
 import { track } from "@/lib/clientEvents";
 import DistancePill from "@/components/DistancePill";
@@ -90,10 +90,10 @@ export default function PinCallout({
     >
       <div
         style={{
-          fontFamily:   FONT_LORA,
+          fontFamily:   FONT_CORMORANT,
           fontWeight:   500,
           fontSize:     13.5,
-          color:        v1.inkPrimary,
+          color:        v2.text.primary,
           lineHeight:   1.2,
           minWidth:     0,
           overflow:     "hidden",
@@ -120,14 +120,14 @@ export default function PinCallout({
   const statLine = (
     <div
       style={{
-        fontFamily: FONT_LORA,
+        fontFamily: FONT_CORMORANT,
         fontStyle:  "italic",
         fontSize:   11,
-        color:      v1.inkMuted,
+        color:      v2.text.muted,
         lineHeight: 1.2,
       }}
     >
-      <span style={{ fontFamily: FONT_NUMERAL, color: v1.green, fontStyle: "normal", fontWeight: 600 }}>
+      <span style={{ fontFamily: FONT_NUMERAL, color: v2.accent.green, fontStyle: "normal", fontWeight: 600 }}>
         {statCount}
       </span>
       {" "}
@@ -143,8 +143,8 @@ export default function PinCallout({
         flexShrink:   0,
         borderRadius: 6,
         overflow:     "hidden",
-        background:   v1.paperCream,
-        border:       `1px solid ${v1.inkHairline}`,
+        background:   v2.bg.main,
+        border:       `1px solid ${v2.border.light}`,
         display:      "flex",
         alignItems:   "center",
         justifyContent: "center",
@@ -158,7 +158,7 @@ export default function PinCallout({
           style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
         />
       ) : (
-        <MapPin size={16} strokeWidth={1.8} color={v1.inkMuted} aria-hidden="true" />
+        <MapPin size={16} strokeWidth={1.8} color={v2.text.muted} aria-hidden="true" />
       )}
     </div>
   );
@@ -186,8 +186,8 @@ export default function PinCallout({
             gap:             10,
             minWidth:        200,
             padding:         "8px 12px 8px 10px",
-            background:      v1.paperWarm,
-            border:          `1px solid ${v1.inkHairline}`,
+            background:      v2.surface.warm,
+            border:          `1px solid ${v2.border.light}`,
             borderRadius:    10,
             boxShadow:       v1.shadow.callout,
             cursor:          "pointer",
@@ -201,7 +201,7 @@ export default function PinCallout({
             {headerRow}
             {statLine}
           </div>
-          <ChevronRight size={14} strokeWidth={2.0} color={v1.green} aria-hidden="true" />
+          <ChevronRight size={14} strokeWidth={2.0} color={v2.accent.green} aria-hidden="true" />
           <Tail />
         </button>
       </div>
@@ -228,8 +228,8 @@ export default function PinCallout({
           gap:           6,
           minWidth:      240,
           padding:       "8px 10px 10px",
-          background:    v1.paperWarm,
-          border:        `1px solid ${v1.inkHairline}`,
+          background:    v2.surface.warm,
+          border:        `1px solid ${v2.border.light}`,
           borderRadius:  10,
           boxShadow:     v1.shadow.callout,
           textAlign:     "left",
@@ -256,9 +256,9 @@ export default function PinCallout({
               height:         28,
               borderRadius:   6,
               background:     "transparent",
-              border:         `1px solid ${v1.green}`,
-              color:          v1.green,
-              fontFamily:     FONT_SYS,
+              border:         `1px solid ${v2.accent.green}`,
+              color:          v2.accent.green,
+              fontFamily:     FONT_INTER,
               fontSize:       11,
               fontWeight:     600,
               letterSpacing:  "0.01em",
@@ -276,10 +276,10 @@ export default function PinCallout({
               flex:           1,
               height:         28,
               borderRadius:   6,
-              background:     v1.green,
-              border:         `1px solid ${v1.green}`,
-              color:          v1.onGreen,
-              fontFamily:     FONT_SYS,
+              background:     v2.accent.green,
+              border:         `1px solid ${v2.accent.green}`,
+              color:          v2.surface.card,
+              fontFamily:     FONT_INTER,
               fontSize:       11,
               fontWeight:     600,
               letterSpacing:  "0.01em",
@@ -319,7 +319,7 @@ function Tail() {
           height:        0,
           borderLeft:    "7px solid transparent",
           borderRight:   "7px solid transparent",
-          borderTop:     `8px solid ${v1.paperWarm}`,
+          borderTop:     `8px solid ${v2.surface.warm}`,
           filter:        "drop-shadow(0 1px 1px rgba(42,26,10,0.18))",
           pointerEvents: "none",
         }}
@@ -335,7 +335,7 @@ function Tail() {
           height:        0,
           borderLeft:    "8px solid transparent",
           borderRight:   "8px solid transparent",
-          borderTop:     `9px solid ${v1.inkHairline}`,
+          borderTop:     `9px solid ${v2.border.light}`,
           zIndex:        -1,
           pointerEvents: "none",
         }}
