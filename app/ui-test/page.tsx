@@ -14,6 +14,7 @@
 
 import { useState } from "react";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import { SlimHeader } from "@/components/ui/SlimHeader";
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
 
 export default function UiTestPage() {
@@ -163,6 +164,131 @@ export default function UiTestPage() {
           </p>
         </div>
       </BottomSheet>
+
+      {/* ─── <SlimHeader> ────────────────────────────────────────────── */}
+      <section
+        style={{
+          padding: 16,
+          background: v2.surface.card,
+          border: `1px solid ${v2.border.light}`,
+          borderRadius: 12,
+          marginBottom: 16,
+        }}
+      >
+        <h2
+          style={{
+            fontFamily: FONT_CORMORANT,
+            fontSize: 20,
+            fontWeight: 500,
+            lineHeight: 1.3,
+            marginBottom: 4,
+            color: v2.text.primary,
+          }}
+        >
+          {"<SlimHeader>"}
+        </h2>
+        <p
+          style={{
+            fontSize: 13,
+            color: v2.text.secondary,
+            marginBottom: 16,
+            lineHeight: 1.4,
+          }}
+        >
+          Entity-discriminated context block — 3 variants from the same
+          primitive via optional <code>boothPill</code> /{" "}
+          <code>contextLabel</code> / <code>addressLine</code> /{" "}
+          <code>titleClamp</code> props.
+        </p>
+
+        {/* Booth variant */}
+        <div style={{ marginBottom: 16 }}>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              color: v2.text.muted,
+              marginBottom: 4,
+            }}
+          >
+            Booth variant
+          </div>
+          <SlimHeader
+            title="Ella's Finds"
+            boothPill="A12"
+            contextLabel="America's Antique Mall"
+            addressLine="3551 South Park Ave, Louisville, KY 40217"
+          />
+        </div>
+
+        {/* Mall variant */}
+        <div style={{ marginBottom: 16 }}>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              color: v2.text.muted,
+              marginBottom: 4,
+            }}
+          >
+            Mall variant
+          </div>
+          <SlimHeader
+            title="America's Antique Mall"
+            contextLabel="Louisville, KY"
+            addressLine="3551 South Park Ave, Louisville, KY 40217"
+          />
+        </div>
+
+        {/* All-Kentucky mall scope */}
+        <div style={{ marginBottom: 16 }}>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              color: v2.text.muted,
+              marginBottom: 4,
+            }}
+          >
+            All-Kentucky scope (no address)
+          </div>
+          <SlimHeader
+            title="Treehouse Finds Kentucky"
+            contextLabel="Kentucky's antique mall network"
+          />
+        </div>
+
+        {/* Find variant — title clamped to 2 lines (verify descender clearance
+            on a long title with descenders in line 2). */}
+        <div>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              color: v2.text.muted,
+              marginBottom: 4,
+            }}
+          >
+            Find variant (titleClamp=2 — descender clearance check on
+            <code> g j p y</code>)
+          </div>
+          <SlimHeader
+            title="Vintage brass paperweight with engraved geographic typography"
+            titleClamp={2}
+            boothPill="B07"
+            contextLabel="Penny's Postcards"
+            addressLine="America's Antique Mall, Louisville"
+          />
+        </div>
+      </section>
     </main>
   );
 }
