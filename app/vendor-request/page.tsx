@@ -36,11 +36,15 @@
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Check, Mail, Clock, Camera, X } from "lucide-react";
+// ArrowLeft + Check + Clock + X stay Lucide per canonical structural-icon
+// convention (Arc 6.2.6 import comment); Mail migrates to Phosphor at
+// Arc 7.1.2 (closes session-137 sweep gap). Camera follows at Arc 7.1.3.
+import { ArrowLeft, Check, Clock, Camera, X } from "lucide-react";
+import { PiEnvelopeSimple } from "react-icons/pi";
 import { getActiveMalls } from "@/lib/posts";
 import { getUser } from "@/lib/auth";
 import { compressImage } from "@/lib/imageUpload";
-import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import { v1, v2, FONT_LORA, FONT_SYS, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import StickyMasthead from "@/components/StickyMasthead";
 import FormField, { formInputStyle } from "@/components/FormField";
 import FormButton from "@/components/FormButton";
@@ -694,7 +698,7 @@ function DoneScreen({
     <div
       style={{
         minHeight: "100dvh",
-        background: v1.paperCream,
+        background: v2.bg.main,
         maxWidth: 430,
         margin: "0 auto",
         display: "flex",
@@ -718,7 +722,10 @@ function DoneScreen({
           textAlign: "center",
         }}
       >
-        {/* Glyph: check for created, clock for pending/approved */}
+        {/* Glyph: check for created, clock for pending/approved.
+            rgba(42,26,10,0.04) PaperWashBubble pattern retires to v2.surface.warm
+            solid per session-132 translucent-retire + Arc 7.1.1 /setup
+            PaperWashBubble migration precedent. */}
         <motion.div
           initial={{ scale: 0.7, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -727,8 +734,8 @@ function DoneScreen({
             width: 60,
             height: 60,
             borderRadius: "50%",
-            background: "rgba(42,26,10,0.04)",
-            border: `0.5px solid ${v1.inkHairline}`,
+            background: v2.surface.warm,
+            border: `0.5px solid ${v2.border.light}`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -736,9 +743,9 @@ function DoneScreen({
           }}
         >
           {state === "created" ? (
-            <Check size={26} style={{ color: v1.inkPrimary }} strokeWidth={1.6} />
+            <Check size={26} style={{ color: v2.text.primary }} strokeWidth={1.6} />
           ) : (
-            <Clock size={26} style={{ color: v1.inkPrimary }} strokeWidth={1.6} />
+            <Clock size={26} style={{ color: v2.text.primary }} strokeWidth={1.6} />
           )}
         </motion.div>
 
@@ -747,9 +754,9 @@ function DoneScreen({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.18, duration: 0.32, ease: EASE }}
           style={{
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
             fontSize: 30,
-            color: v1.inkPrimary,
+            color: v2.text.primary,
             lineHeight: 1.2,
             letterSpacing: "-0.005em",
             margin: "0 0 14px",
@@ -767,10 +774,10 @@ function DoneScreen({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.28, duration: 0.32, ease: EASE }}
           style={{
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
             fontSize: 16,
-            color: v1.inkMid,
+            color: v2.text.secondary,
             lineHeight: 1.65,
             maxWidth: 320,
             margin: "0 auto 24px",
@@ -797,22 +804,22 @@ function DoneScreen({
             alignItems: "center",
             gap: 8,
             padding: "12px 0",
-            borderTop: `0.5px solid ${v1.inkHairline}`,
-            borderBottom: `0.5px solid ${v1.inkHairline}`,
+            borderTop: `0.5px solid ${v2.border.light}`,
+            borderBottom: `0.5px solid ${v2.border.light}`,
             width: "100%",
             maxWidth: 320,
             marginBottom: 0,
           }}
         >
-          <Mail size={14} style={{ color: v1.inkMuted, flexShrink: 0 }} strokeWidth={1.6} />
-          <span style={{ fontFamily: FONT_SYS, fontSize: 14, color: v1.inkMuted, flexShrink: 0 }}>
+          <PiEnvelopeSimple size={14} style={{ color: v2.text.muted, flexShrink: 0 }} />
+          <span style={{ fontFamily: FONT_INTER, fontSize: 14, color: v2.text.muted, flexShrink: 0 }}>
             {state === "created" ? "Sent to\u00a0" : "On file for\u00a0"}
           </span>
           <span
             style={{
-              fontFamily: FONT_SYS,
+              fontFamily: FONT_INTER,
               fontSize: 14,
-              color: v1.inkPrimary,
+              color: v2.text.primary,
               fontWeight: 500,
               wordBreak: "break-all",
               minWidth: 0,
@@ -840,13 +847,13 @@ function DoneScreen({
               <a
                 onClick={onGoSignIn}
                 style={{
-                  fontFamily: FONT_LORA,
+                  fontFamily: FONT_CORMORANT,
                   fontStyle: "italic",
                   fontSize: 16,
-                  color: v1.inkPrimary,
+                  color: v2.text.primary,
                   textDecoration: "underline",
                   textDecorationStyle: "dotted",
-                  textDecorationColor: v1.inkFaint,
+                  textDecorationColor: v2.text.muted,
                   textUnderlineOffset: 4,
                   cursor: "pointer",
                 }}
@@ -856,13 +863,13 @@ function DoneScreen({
               <a
                 onClick={onGoHome}
                 style={{
-                  fontFamily: FONT_LORA,
+                  fontFamily: FONT_CORMORANT,
                   fontStyle: "italic",
                   fontSize: 15,
-                  color: v1.inkMuted,
+                  color: v2.text.muted,
                   textDecoration: "underline",
                   textDecorationStyle: "dotted",
-                  textDecorationColor: v1.inkFaint,
+                  textDecorationColor: v2.text.muted,
                   textUnderlineOffset: 4,
                   cursor: "pointer",
                 }}
@@ -874,13 +881,13 @@ function DoneScreen({
             <a
               onClick={onGoHome}
               style={{
-                fontFamily: FONT_LORA,
+                fontFamily: FONT_CORMORANT,
                 fontStyle: "italic",
                 fontSize: 16,
-                color: v1.inkPrimary,
+                color: v2.text.primary,
                 textDecoration: "underline",
                 textDecorationStyle: "dotted",
-                textDecorationColor: v1.inkFaint,
+                textDecorationColor: v2.text.muted,
                 textUnderlineOffset: 4,
                 cursor: "pointer",
               }}
@@ -896,10 +903,10 @@ function DoneScreen({
             animate={{ opacity: 1 }}
             transition={{ delay: 0.58, duration: 0.32 }}
             style={{
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 13,
-              color: v1.inkMuted,
+              color: v2.text.muted,
               lineHeight: 1.65,
               maxWidth: 320,
               margin: "28px auto 0",
