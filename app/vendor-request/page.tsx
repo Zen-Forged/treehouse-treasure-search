@@ -11,7 +11,7 @@
 //  - Booth name "(optional)" preserved; "Leave blank to use your name"
 //    helper copy dropped
 //  - Photo dropzone 4:3 → 3:2 aspect (saves ~70pt)
-//  - Photo dropzone copy moved IM Fell → FONT_SYS for higher contrast on
+//  - Photo dropzone copy moved IM Fell → FONT_INTER for higher contrast on
 //    paper-wash. Title: "Take a photo of your booth" (sans 14px 600).
 //    Helper: "This will be the main image on your digital booth." (sans
 //    12px ink-mid). The "confirm it's really yours" framing removed —
@@ -37,14 +37,15 @@ import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 // ArrowLeft + Check + Clock + X stay Lucide per canonical structural-icon
-// convention (Arc 6.2.6 import comment); Mail migrates to Phosphor at
-// Arc 7.1.2 (closes session-137 sweep gap). Camera follows at Arc 7.1.3.
-import { ArrowLeft, Check, Clock, Camera, X } from "lucide-react";
-import { PiEnvelopeSimple } from "react-icons/pi";
+// convention (Arc 6.2.6 import comment). Mail + Camera migrated to Phosphor
+// across Arc 7.1.2 + 7.1.3 (closes session-137 sweep gap for this file +
+// extends Phosphor cohesion to the booth-photo capture affordance).
+import { ArrowLeft, Check, Clock, X } from "lucide-react";
+import { PiEnvelopeSimple, PiCamera } from "react-icons/pi";
 import { getActiveMalls } from "@/lib/posts";
 import { getUser } from "@/lib/auth";
 import { compressImage } from "@/lib/imageUpload";
-import { v1, v2, FONT_LORA, FONT_SYS, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
+import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import StickyMasthead from "@/components/StickyMasthead";
 import FormField, { formInputStyle } from "@/components/FormField";
 import FormButton from "@/components/FormButton";
@@ -53,24 +54,26 @@ import type { Mall } from "@/types/treehouse";
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
 
 const inputErrorOverride: React.CSSProperties = {
-  border: `1.5px solid ${v1.redBorder}`,
+  border: `1.5px solid ${v2.border.error}`,
   padding: "13.5px 13.5px",
 };
 
 const selectExtra: React.CSSProperties = {
   paddingRight: 40,
+  // Chevron stroke hex %23756a5e = v2.text.secondary (URL-encoded). Was
+  // %236b5538 = v1.inkMid; migrated as part of Arc 7.1.3 token sweep.
   backgroundImage:
-    "url(\"data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b5538' stroke-width='2' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")",
+    "url(\"data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23756a5e' stroke-width='2' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")",
   backgroundRepeat: "no-repeat",
   backgroundPosition: "right 14px center",
   backgroundSize: "12px 12px",
 };
 
 const helperStyle: React.CSSProperties = {
-  fontFamily: FONT_LORA,
+  fontFamily: FONT_CORMORANT,
   fontStyle: "italic",
   fontSize: 13,
-  color: v1.inkMuted,
+  color: v2.text.muted,
   lineHeight: 1.5,
   marginTop: 6,
   marginLeft: 2,
@@ -79,7 +82,7 @@ const helperStyle: React.CSSProperties = {
 const optionalStyle: React.CSSProperties = {
   fontStyle: "italic",
   fontSize: 14,
-  color: v1.inkFaint,
+  color: v2.text.muted,
   marginLeft: 5,
   fontWeight: 400,
 };
@@ -87,7 +90,7 @@ const optionalStyle: React.CSSProperties = {
 // Required-field indicator — small red `*`.
 const requiredStyle: React.CSSProperties = {
   fontStyle: "normal",
-  color: v1.red,
+  color: v2.accent.red,
   marginLeft: 3,
   fontWeight: 700,
 };
@@ -266,7 +269,7 @@ function VendorRequestInner() {
     <div
       style={{
         minHeight: "100dvh",
-        background: v1.paperCream,
+        background: v2.bg.main,
         maxWidth: 430,
         margin: "0 auto",
         display: "flex",
@@ -285,13 +288,13 @@ function VendorRequestInner() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: v1.iconBubble,
-              border: "none",
+              background: v2.surface.warm,
+              border: `1px solid ${v2.border.light}`,
               cursor: "pointer",
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
           </button>
         }
         right={null}
@@ -316,10 +319,10 @@ function VendorRequestInner() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.32, ease: EASE }}
           style={{
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
             fontSize: 22,
             fontWeight: 400,
-            color: v1.inkPrimary,
+            color: v2.text.primary,
             lineHeight: 1.2,
             letterSpacing: "-0.005em",
             margin: "10px 0 12px",
@@ -333,11 +336,11 @@ function VendorRequestInner() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.32, delay: 0.04, ease: EASE }}
           style={{
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
             fontSize: 15.5,
             fontWeight: 400,
-            color: v1.inkMid,
+            color: v2.text.secondary,
             lineHeight: 1.55,
             margin: "0 0 20px",
           }}
@@ -401,7 +404,7 @@ function VendorRequestInner() {
                 style={{
                   ...formInputStyle("page"),
                   ...selectExtra,
-                  color: mallId ? v1.inkPrimary : v1.inkFaint,
+                  color: mallId ? v2.text.primary : v2.text.muted,
                   opacity: malls.length === 0 ? 0.55 : 1,
                   cursor: malls.length === 0 ? "default" : "pointer",
                 }}
@@ -441,7 +444,7 @@ function VendorRequestInner() {
           </FormField>
 
           {/* Booth photo — session 75. 3:2 aspect (was 4:3); copy moved
-              to FONT_SYS at higher contrast per D3 / D5. The "confirm
+              to FONT_INTER at higher contrast per D3 / D5. The "confirm
               it's really yours" framing is gone — that role lives on
               the new ownership-acknowledgement checkbox below. */}
           <FormField label={<>Booth photo<span style={requiredStyle}>*</span></>}>
@@ -461,7 +464,7 @@ function VendorRequestInner() {
                   borderRadius: 14,
                   overflow: "hidden",
                   background: "#1a1a18",
-                  border: `1px solid ${v1.inkHairline}`,
+                  border: `1px solid ${v2.border.light}`,
                 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -484,10 +487,10 @@ function VendorRequestInner() {
                     right: 8,
                     padding: "6px 12px",
                     background: "rgba(0,0,0,0.55)",
-                    color: "#fff9e8",
+                    color: v2.surface.card,
                     border: "none",
                     borderRadius: 16,
-                    fontFamily: FONT_SYS,
+                    fontFamily: FONT_INTER,
                     fontSize: 12,
                     cursor: proofBusy ? "default" : "pointer",
                     opacity: proofBusy ? 0.6 : 1,
@@ -506,7 +509,7 @@ function VendorRequestInner() {
                     height: 28,
                     borderRadius: "50%",
                     background: "rgba(0,0,0,0.55)",
-                    color: "#fff9e8",
+                    color: v2.surface.card,
                     border: "none",
                     cursor: "pointer",
                     display: "flex",
@@ -524,9 +527,9 @@ function VendorRequestInner() {
                 style={{
                   width: "100%",
                   aspectRatio: "3/2",
-                  border: `1.5px dashed ${v1.inkHairline}`,
+                  border: `1.5px dashed ${v2.border.light}`,
                   borderRadius: 14,
-                  background: v1.postit,
+                  background: v2.surface.card,
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
@@ -538,13 +541,13 @@ function VendorRequestInner() {
                   WebkitTapHighlightColor: "transparent",
                 }}
               >
-                <Camera size={28} style={{ color: v1.inkMuted, opacity: 0.75 }} strokeWidth={1.5} />
+                <PiCamera size={28} style={{ color: v2.text.muted, opacity: 0.75 }} />
                 <div
                   style={{
-                    fontFamily: FONT_LORA,
+                    fontFamily: FONT_CORMORANT,
                     fontSize: 16,
                     fontWeight: 500,
-                    color: v1.inkPrimary,
+                    color: v2.text.primary,
                     lineHeight: 1.3,
                   }}
                 >
@@ -552,10 +555,10 @@ function VendorRequestInner() {
                 </div>
                 <div
                   style={{
-                    fontFamily: FONT_LORA,
+                    fontFamily: FONT_CORMORANT,
                     fontStyle: "italic",
                     fontSize: 13,
-                    color: v1.inkMuted,
+                    color: v2.text.muted,
                     lineHeight: 1.55,
                     maxWidth: 260,
                   }}
@@ -578,8 +581,8 @@ function VendorRequestInner() {
               alignItems: "flex-start",
               gap: 9,
               padding: "11px 12px",
-              background: v1.postit,
-              border: `1px solid ${v1.inkHairline}`,
+              background: v2.surface.card,
+              border: `1px solid ${v2.border.light}`,
               borderRadius: 14,
               cursor: "pointer",
               WebkitTapHighlightColor: "transparent",
@@ -595,13 +598,18 @@ function VendorRequestInner() {
                 width: 18,
                 height: 18,
                 borderRadius: 4,
-                background: ownerAck ? v1.green : "rgba(255,253,248,0.9)",
-                border: `1.5px solid ${ownerAck ? v1.green : v1.inkMuted}`,
+                // Unchecked bg rgba(255,253,248,0.9) retires to solid
+                // v2.surface.card per session-132 translucent-retire.
+                background: ownerAck ? v2.accent.green : v2.surface.card,
+                border: `1.5px solid ${ownerAck ? v2.accent.green : v2.text.muted}`,
                 marginTop: 1,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "#fff",
+                // Check glyph color cream-on-green per Arc 6.2.4 ActionCard
+                // + Arc 5.5 PinCallout Go button + Arc 6.1.2 /me avatar
+                // canonical cream-on-saturated-color mapping.
+                color: v2.surface.card,
                 fontSize: 12,
                 fontWeight: 700,
                 lineHeight: 1,
@@ -611,10 +619,10 @@ function VendorRequestInner() {
             </div>
             <span
               style={{
-                fontFamily: FONT_LORA,
+                fontFamily: FONT_CORMORANT,
                 fontStyle: "italic",
                 fontSize: 13.5,
-                color: v1.inkMuted,
+                color: v2.text.muted,
                 lineHeight: 1.5,
               }}
             >
@@ -632,11 +640,11 @@ function VendorRequestInner() {
                 style={{
                   padding: "11px 14px",
                   borderRadius: 10,
-                  background: v1.redBg,
-                  border: `1px solid ${v1.redBorder}`,
-                  fontFamily: FONT_SYS,
+                  background: v2.surface.error,
+                  border: `1px solid ${v2.border.error}`,
+                  fontFamily: FONT_INTER,
                   fontSize: 13,
-                  color: v1.red,
+                  color: v2.accent.red,
                   lineHeight: 1.5,
                 }}
               >
@@ -662,9 +670,9 @@ function VendorRequestInner() {
 
           <p
             style={{
-              fontFamily: FONT_SYS,
+              fontFamily: FONT_INTER,
               fontSize: 12,
-              color: v1.inkFaint,
+              color: v2.text.muted,
               textAlign: "center",
               lineHeight: 1.6,
               margin: 0,
