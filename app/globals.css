@@ -128,6 +128,15 @@
   --th-v2-border-light:  #E5DED2;
   --th-v2-border-medium: #D6CCBC;
 
+  /* v2 error palette — extended at Arc 6.2 for /login ErrorBanner.
+     Solid blends (no rgba) per v2 convention; mirrors accent.green-soft's
+     "soft family surface" relationship to its accent. Deep brick value
+     preserved verbatim from v1.red so the canonical Treehouse hue carries
+     across; v2 just retires translucency. */
+  --th-v2-accent-red:    #8B2020;
+  --th-v2-surface-error: #F8E6E1;
+  --th-v2-border-error:  #D9B8B2;
+
   /* ── v0.2 — legacy ecosystem (admin, parked surfaces) ── */
   --th-c-bg:           #f5f2eb;
   --th-c-surface:      #edeae1;
