@@ -380,3 +380,14 @@ export const MOTION_EMPTY_DURATION = 0.34;
 export const MOTION_SHARED_ELEMENT_EASE     = [0.32, 0.72, 0, 1] as const;
 export const MOTION_SHARED_ELEMENT_FORWARD  = 0.34;
 export const MOTION_SHARED_ELEMENT_BACK     = 0.30;
+
+// Bottom-sheet motion — Layer 2 kickoff (session 149). Consumed by
+// components/ui/BottomSheet.tsx primitive (which currently powers
+// ShareSheet; future consumers: any modal/picker that needs the same
+// scrim + slide-up sheet shape). The ease curve happens to match
+// MOTION_EASE_OUT today, but is named separately so future bottom-sheet
+// motion can diverge from hero-grid motion without ambiguity (mirrors
+// the MOTION_SHARED_ELEMENT_EASE precedent).
+export const MOTION_BOTTOM_SHEET_EASE              = [0.25, 0.46, 0.45, 0.94] as const;
+export const MOTION_BOTTOM_SHEET_BACKDROP_DURATION = 0.22;
+export const MOTION_BOTTOM_SHEET_SHEET_DURATION    = 0.34;
