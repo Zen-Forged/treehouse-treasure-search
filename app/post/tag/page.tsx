@@ -52,10 +52,14 @@ export const dynamic = "force-dynamic";
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Camera, Check, Tag } from "lucide-react";
+// ArrowLeft + Check stay Lucide per canonical structural-icon convention
+// (Arc 6.2.6 import comment); Camera + Tag migrate to Phosphor per audit
+// recommendation + session-145 cohesion sweep precedent.
+import { ArrowLeft, Check } from "lucide-react";
+import { PiCamera, PiTag } from "react-icons/pi";
 import { compressImage } from "@/lib/imageUpload";
 import { postStore, type PostDraft } from "@/lib/postStore";
-import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import { track } from "@/lib/clientEvents";
 import AddFindSheet from "@/components/AddFindSheet";
 import PolaroidTile from "@/components/PolaroidTile";
@@ -273,7 +277,7 @@ function PostTagInner() {
     <div
       style={{
         minHeight: "100dvh",
-        background: v1.paperCream,
+        background: v2.bg.main,
         maxWidth: 430,
         margin: "0 auto",
         display: "flex",
@@ -318,15 +322,15 @@ function PostTagInner() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: v1.iconBubble,
-            border: "none",
+            background: v2.surface.warm,
+            border: `1px solid ${v2.border.light}`,
             cursor: isExtracting ? "default" : "pointer",
             opacity: isExtracting ? 0.45 : 1,
             padding: 0,
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
         </button>
       </header>
 
@@ -348,9 +352,9 @@ function PostTagInner() {
         <div style={{ textAlign: "center", padding: "2px 22px 18px" }}>
           <div
             style={{
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_CORMORANT,
               fontSize: 24,
-              color: v1.inkPrimary,
+              color: v2.text.primary,
               letterSpacing: "-0.005em",
               lineHeight: 1.15,
               marginBottom: 4,
@@ -360,10 +364,10 @@ function PostTagInner() {
           </div>
           <div
             style={{
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 14,
-              color: v1.inkMuted,
+              color: v2.text.muted,
               lineHeight: 1.5,
               maxWidth: 290,
               margin: "0 auto",
@@ -397,6 +401,11 @@ function PostTagInner() {
                   lens={false}
                   innerInsetShadow
                 />
+                {/* Frosted-glass check overlay retires per session-132
+                    system-wide retire + Arc 7 audit. bg
+                    rgba(245,242,235,0.88) + blur(6px) → solid v2.surface.warm.
+                    boxShadow preserved for elevation against varied photo
+                    backgrounds. */}
                 <div
                   aria-hidden="true"
                   style={{
@@ -406,9 +415,7 @@ function PostTagInner() {
                     width: 32,
                     height: 32,
                     borderRadius: "50%",
-                    background: "rgba(245,242,235,0.88)",
-                    backdropFilter: "blur(6px)",
-                    WebkitBackdropFilter: "blur(6px)",
+                    background: v2.surface.warm,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -416,7 +423,7 @@ function PostTagInner() {
                     zIndex: 3,
                   }}
                 >
-                  <Check size={16} strokeWidth={2.5} style={{ color: v1.green }} />
+                  <Check size={16} strokeWidth={2.5} style={{ color: v2.accent.green }} />
                 </div>
               </div>
             )}
@@ -429,13 +436,13 @@ function PostTagInner() {
                   border: "none",
                   padding: 0,
                   cursor: "pointer",
-                  fontFamily: FONT_LORA,
+                  fontFamily: FONT_CORMORANT,
                   fontStyle: "italic",
                   fontSize: 15,
-                  color: v1.inkPrimary,
+                  color: v2.text.primary,
                   textDecoration: "underline",
                   textDecorationStyle: "dotted",
-                  textDecorationColor: v1.inkFaint,
+                  textDecorationColor: v2.text.muted,
                   textUnderlineOffset: 3,
                   WebkitTapHighlightColor: "transparent",
                 }}
@@ -454,7 +461,7 @@ function PostTagInner() {
                   width: "100%",
                   aspectRatio: "4 / 5",
                   borderRadius: 4,
-                  border: `2px dashed ${v1.inkFaint}`,
+                  border: `2px dashed ${v2.text.muted}`,
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
@@ -464,13 +471,13 @@ function PostTagInner() {
                   boxSizing: "border-box",
                 }}
               >
-                <Tag size={26} strokeWidth={1.5} style={{ color: v1.inkFaint }} />
+                <PiTag size={26} style={{ color: v2.text.muted }} />
                 <div
                   style={{
-                    fontFamily: FONT_LORA,
+                    fontFamily: FONT_CORMORANT,
                     fontStyle: "italic",
                     fontSize: 14,
-                    color: v1.inkMuted,
+                    color: v2.text.muted,
                     textAlign: "center",
                     lineHeight: 1.3,
                   }}
@@ -497,10 +504,10 @@ function PostTagInner() {
             animate={{ opacity: [0.4, 1, 0.4] }}
             transition={{ duration: 1.6, repeat: Infinity }}
             style={{
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 14,
-              color: v1.inkMuted,
+              color: v2.text.muted,
               textAlign: "center",
               marginTop: 18,
               lineHeight: 1.5,
@@ -523,8 +530,11 @@ function PostTagInner() {
             margin: "0 auto",
             padding: "12px 22px",
             paddingBottom: "max(18px, env(safe-area-inset-bottom, 18px))",
-            background: "#f2ecd8",
-            borderTop: `1px solid ${v1.inkHairline}`,
+            // Bottom CTA stack bg #f2ecd8 was the pre-Arc-6.1.3 body-bg
+            // literal; now migrated to v2.bg.main #F7F3EB so the CTA stack
+            // blends seamlessly into body chrome (Arc 6.1.3 structural fix).
+            background: v2.bg.main,
+            borderTop: `1px solid ${v2.border.light}`,
             zIndex: 40,
             display: "flex",
             flexDirection: "column",
@@ -537,12 +547,14 @@ function PostTagInner() {
               width: "100%",
               padding: 15,
               borderRadius: 14,
-              fontFamily: FONT_SYS,
+              fontFamily: FONT_INTER,
               fontSize: 15,
               fontWeight: 500,
               letterSpacing: "0.2px",
-              color: "#fff",
-              background: v1.green,
+              // Cream-on-green canonical per Arc 6.2.4 ActionCard + Arc 5.5
+              // PinCallout Go button + Arc 6.1.2 /me avatar precedents.
+              color: v2.surface.card,
+              background: v2.accent.green,
               border: "none",
               cursor: "pointer",
               boxShadow: "0 2px 12px rgba(30,77,43,0.25)",
@@ -552,7 +564,7 @@ function PostTagInner() {
               gap: 10,
             }}
           >
-            <Camera size={18} strokeWidth={1.6} />
+            <PiCamera size={18} />
             Take photo of tag
           </button>
 
@@ -562,14 +574,14 @@ function PostTagInner() {
               width: "100%",
               padding: 10,
               borderRadius: 14,
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 14,
-              color: v1.inkMuted,
+              color: v2.text.muted,
               background: "transparent",
               border: "none",
               textDecoration: "underline",
-              textDecorationColor: v1.inkFaint,
+              textDecorationColor: v2.text.muted,
               textUnderlineOffset: 3,
               cursor: "pointer",
             }}
