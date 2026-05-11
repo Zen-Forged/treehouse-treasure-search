@@ -30,7 +30,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import type { Vendor } from "@/types/treehouse";
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
@@ -105,7 +105,7 @@ export default function BoothPickerSheet({
               width: "100%",
               maxWidth: 430,
               maxHeight: "78vh",
-              background: v1.paperCream,
+              background: v2.bg.main,
               borderRadius: "20px 20px 0 0",
               boxShadow: "0 -8px 30px rgba(30,20,10,0.28)",
               zIndex: 101,
@@ -129,7 +129,7 @@ export default function BoothPickerSheet({
                   width: 44,
                   height: 4,
                   borderRadius: 999,
-                  background: v1.inkFaint,
+                  background: v2.text.muted,
                 }}
                 aria-hidden="true"
               />
@@ -139,11 +139,11 @@ export default function BoothPickerSheet({
             <div style={{ padding: "10px 22px 2px", flexShrink: 0, textAlign: "center" }}>
               <div
                 style={{
-                  fontFamily: FONT_LORA,
+                  fontFamily: FONT_CORMORANT,
                   fontStyle: "italic",
                   fontSize: 13,
-                  color: v1.inkMuted,
-                  lineHeight: 1.2,
+                  color: v2.text.muted,
+                  lineHeight: 1.3,
                   marginBottom: 2,
                 }}
               >
@@ -151,11 +151,11 @@ export default function BoothPickerSheet({
               </div>
               <div
                 style={{
-                  fontFamily: FONT_LORA,
+                  fontFamily: FONT_CORMORANT,
                   fontSize: 21,
-                  color: v1.inkPrimary,
+                  color: v2.text.primary,
                   letterSpacing: "-0.005em",
-                  lineHeight: 1.2,
+                  lineHeight: 1.3,
                 }}
               >
                 Switch to
@@ -164,7 +164,7 @@ export default function BoothPickerSheet({
 
             {/* Hairline divider */}
             <div style={{ padding: "14px 22px 0", flexShrink: 0 }}>
-              <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
+              <div style={{ width: "100%", height: 1, background: v2.border.light }} />
             </div>
 
             {/* Scrollable rows */}
@@ -200,11 +200,11 @@ export default function BoothPickerSheet({
                   width: "100%",
                   marginTop: 20,
                   padding: "14px 12px",
-                  border: `1px dashed ${v1.inkFaint}`,
+                  border: `1px dashed ${v2.border.medium}`,
                   borderRadius: 10,
                   background: "transparent",
-                  color: v1.inkMid,
-                  fontFamily: FONT_LORA,
+                  color: v2.text.secondary,
+                  fontFamily: FONT_CORMORANT,
                   fontStyle: "italic",
                   fontSize: 14,
                   cursor: "pointer",
@@ -250,9 +250,9 @@ function BoothRow({
         width: "100%",
         minHeight: 60,
         padding: "12px 8px",
-        background: active ? "rgba(42,26,10,0.04)" : "transparent",
+        background: active ? v2.accent.greenSoft : "transparent",
         border: "none",
-        borderBottom: `1px solid ${v1.inkHairline}`,
+        borderBottom: `1px solid ${v2.border.light}`,
         cursor: "pointer",
         textAlign: "left",
         WebkitTapHighlightColor: "transparent",
@@ -263,9 +263,9 @@ function BoothRow({
       <span
         aria-hidden="true"
         style={{
-          fontFamily: FONT_LORA,
+          fontFamily: FONT_CORMORANT,
           fontSize: 22,
-          color: active ? v1.inkPrimary : v1.inkMuted,
+          color: active ? v2.text.primary : v2.text.muted,
           lineHeight: 1,
           textAlign: "center",
         }}
@@ -277,10 +277,10 @@ function BoothRow({
       <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
         <span
           style={{
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
             fontSize: 17,
-            color: v1.inkPrimary,
-            lineHeight: 1.2,
+            color: v2.text.primary,
+            lineHeight: 1.3,
             letterSpacing: "-0.005em",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -292,9 +292,9 @@ function BoothRow({
         {subtitle && (
           <span
             style={{
-              fontFamily: FONT_SYS,
+              fontFamily: FONT_INTER,
               fontSize: 13,
-              color: v1.inkMuted,
+              color: v2.text.muted,
               lineHeight: 1.4,
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -313,9 +313,9 @@ function BoothRow({
           alignItems: "center",
           justifyContent: "center",
           width: 20,
-          color: active ? v1.green : "transparent",
+          color: active ? v2.accent.green : "transparent",
           fontSize: 15,
-          fontFamily: FONT_SYS,
+          fontFamily: FONT_INTER,
           fontWeight: 600,
           lineHeight: 1,
         }}

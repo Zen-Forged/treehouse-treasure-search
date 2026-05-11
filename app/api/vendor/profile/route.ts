@@ -3,15 +3,19 @@
 //
 // PATCH { vendorId, display_name } → { ok: true, vendor }
 //
-// Auth model: requireAuth + ownership check (vendors.user_id === auth.user.id).
-// Distinct from /api/admin/vendors PATCH which is admin-only and can edit any
-// vendor's display_name + booth_number + mall_id. This route is the vendor's
-// path to edit ONLY their own display_name (booth_number stays the dedup key
-// + mall reassignment stays admin-only). Slug is auto-derived from
+// Auth model: requireAuth + ownership check (vendors.user_id === auth.user.id)
+// with admin bypass (Arc 7.4.5, session 148). Distinct from /api/admin/vendors
+// PATCH which is admin-only and can edit any vendor's display_name +
+// booth_number + mall_id. This route is the vendor's path to edit ONLY their
+// own display_name (booth_number stays the dedup key + mall reassignment
+// stays admin-only). Admin impersonating a vendor via /my-shelf?vendor=<id>
+// uses this same endpoint via the ownership bypass — keeps vendor + admin
+// affordances on /my-shelf at parity. Slug is auto-derived from
 // display_name to keep URLs in sync.
 
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/adminAuth";
+import { isAdmin } from "@/lib/auth";
 import { slugify } from "@/lib/posts";
 import { recordEvent } from "@/lib/events";
 
@@ -48,7 +52,8 @@ export async function PATCH(req: Request) {
   if (!existing) {
     return NextResponse.json({ error: "Booth not found." }, { status: 404 });
   }
-  if (existing.user_id !== auth.user.id) {
+  const actingAsAdmin = isAdmin(auth.user) && existing.user_id !== auth.user.id;
+  if (existing.user_id !== auth.user.id && !actingAsAdmin) {
     return NextResponse.json(
       { error: "You can only edit your own booth." },
       { status: 403 },
@@ -84,6 +89,7 @@ export async function PATCH(req: Request) {
       vendor_id:    vendorId,
       vendor_slug:  data.slug,
       display_name: displayName,
+      ...(actingAsAdmin ? { acting_as_admin: true } : {}),
     },
   });
 

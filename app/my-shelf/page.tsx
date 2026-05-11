@@ -91,10 +91,8 @@ import {
   WindowView,
   BoothCloser,
   BoothPageStyles,
-  v1,
-  FONT_LORA,
 } from "@/components/BoothPage";
-import { MOTION_EASE_OUT, MOTION_EMPTY_DURATION } from "@/lib/tokens";
+import { v2, radius, FONT_CORMORANT, MOTION_EASE_OUT, MOTION_EMPTY_DURATION } from "@/lib/tokens";
 import type { User } from "@supabase/supabase-js";
 
 const ADMIN_DEFAULT_VENDOR_ID = "5619b4bf-3d05-4843-8ee1-e8b747fc2d81";
@@ -180,17 +178,17 @@ function Masthead({
               width: 44,
               height: 44,
               borderRadius: "50%",
-              background: "rgba(42,26,10,0.06)",
+              background: v2.surface.warm,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              border: "none",
+              border: `1px solid ${v2.border.light}`,
               cursor: "pointer",
               padding: 0,
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
           </button>
         ) : null
       }
@@ -203,8 +201,8 @@ function Masthead({
               width: 44,
               height: 44,
               borderRadius: "50%",
-              background: v1.iconBubble,
-              border: "none",
+              background: v2.surface.warm,
+              border: `1px solid ${v2.border.light}`,
               padding: 0,
               display: "flex",
               alignItems: "center",
@@ -223,7 +221,7 @@ function Masthead({
 
 // Inline paper-airplane glyph for the masthead right-slot share button.
 // Drawn slightly off-axis to echo the +6° tilt used elsewhere in v1.1h/v1.2
-// (booth post-it). Uses v1.green to read as an active / commit-shaped
+// (booth post-it). Uses v2.accent.green to read as an active / commit-shaped
 // affordance at the page-header level.
 function MastheadPaperAirplane() {
   return (
@@ -232,7 +230,7 @@ function MastheadPaperAirplane() {
       height={22}
       viewBox="0 0 24 24"
       fill="none"
-      stroke={v1.green}
+      stroke={v2.accent.green}
       strokeWidth={1.7}
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -266,32 +264,32 @@ function NoBooth() {
           width: 54,
           height: 54,
           borderRadius: "50%",
-          background: "rgba(42,26,10,0.06)",
+          background: v2.surface.warm,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           marginBottom: 22,
         }}
       >
-        <PiLeaf size={22} style={{ color: v1.inkMuted }} />
+        <PiLeaf size={22} style={{ color: v2.text.muted }} />
       </div>
       <div
         style={{
-          fontFamily: FONT_LORA,
+          fontFamily: FONT_CORMORANT,
           fontSize: 24,
-          color: v1.inkPrimary,
+          color: v2.text.primary,
           marginBottom: 10,
-          lineHeight: 1.2,
+          lineHeight: 1.3,
         }}
       >
         No booth linked to this account
       </div>
       <p
         style={{
-          fontFamily: FONT_LORA,
+          fontFamily: FONT_CORMORANT,
           fontStyle: "italic",
           fontSize: 15,
-          color: v1.inkMuted,
+          color: v2.text.muted,
           lineHeight: 1.65,
           maxWidth: 280,
           margin: "0 auto",
@@ -310,7 +308,7 @@ function Skeleton() {
     <div style={{ padding: "0 10px" }}>
       <div
         className="booth-shimmer"
-        style={{ borderRadius: v1.bannerRadius, minHeight: 260, width: "100%" }}
+        style={{ borderRadius: radius.lg, minHeight: 260, width: "100%" }}
       />
       <div style={{ padding: "36px 22px 6px" }}>
         <div className="booth-shimmer" style={{ height: 14, width: 120, borderRadius: 4, marginBottom: 8 }} />
@@ -780,7 +778,7 @@ function MyBoothInner() {
     <div
       style={{
         minHeight: "100dvh",
-        background: v1.paperCream,
+        background: v2.bg.main,
         maxWidth: 430,
         margin: "0 auto",
         paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
@@ -808,11 +806,15 @@ function MyBoothInner() {
             <BoothTitleBlock
               displayName={displayName}
               onPickerOpen={showPicker ? () => setPickerOpen(true) : undefined}
-              // Wave 1 Task 4 — vendor self-edit affordance. Hidden on admin
-              // impersonation (admin uses /shelves EditBoothSheet for any
-              // booth, including impersonated ones — that route handles
-              // the full 3-field edit).
-              onEditName={!adminOverride ? () => setShowEditSheet(true) : undefined}
+              // Wave 1 Task 4 — vendor self-edit affordance. Arc 7.4.5
+              // (session 148) extends to admin impersonation for vendor-
+              // parity: admin viewing /my-shelf?vendor=<id> sees the same
+              // Pencil and uses the same vendor-mode EditBoothSheet (display
+              // _name only). /api/vendor/profile PATCH allows admin bypass
+              // on ownership check + records acting_as_admin in audit event.
+              // /shelves EditBoothSheet remains the canonical 3-field admin
+              // edit surface (mall + booth_number + display_name).
+              onEditName={() => setShowEditSheet(true)}
             />
             <MallBlock mallName={mallName} mallCity={mallCity} address={address} />
             <DiamondDivider topPad={22} bottomPad={12} horizontalPad={44} />
@@ -864,9 +866,11 @@ function MyBoothInner() {
 
       {/* Wave 1 Task 4 — vendor self-edit booth name. Vendor mode renders
           display_name only; submit hits /api/vendor/profile (requireAuth +
-          ownership). Admin impersonation hides the affordance entirely so
-          this sheet only mounts for booth owners. */}
-      {showEditSheet && activeVendor && !adminOverride && (
+          ownership). Arc 7.4.5 (session 148) — admin impersonation mounts
+          the same vendor-mode sheet for parity; /api/vendor/profile PATCH
+          ownership check now bypasses for admin acting on another vendor
+          (audit event records acting_as_admin). */}
+      {showEditSheet && activeVendor && (
         <EditBoothSheet
           vendor={activeVendor}
           mode="vendor"
