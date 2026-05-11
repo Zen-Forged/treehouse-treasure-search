@@ -248,8 +248,7 @@ function EditPostInner() {
             style={{
               pointerEvents: "auto",
               width: "min(300px, calc(100vw - 48px))",
-              background: stage === "error" ? "rgba(139,32,32,0.92)" : stage === "done" ? "rgba(18,34,20,0.92)" : "rgba(26,24,16,0.88)",
-              backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
+              background: stage === "error" ? v2.accent.red : stage === "done" ? v2.accent.greenDark : v2.text.primary,
               borderRadius: 20, padding: "22px 24px",
               display: "flex", flexDirection: "column", alignItems: "center", gap: 14,
               boxShadow: "0 8px 40px rgba(0,0,0,0.30)", textAlign: "center",
@@ -258,11 +257,11 @@ function EditPostInner() {
             {stage === "saving" && <Loader size={20} style={{ color: "rgba(255,255,255,0.80)", animation: "spin 0.9s linear infinite" }} />}
             {stage === "done" && (
               <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Check size={18} style={{ color: "#fff" }} />
+                <Check size={18} style={{ color: v2.surface.card }} />
               </div>
             )}
             <div>
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: "#fff", lineHeight: 1.3, marginBottom: 4 }}>
+              <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: v2.surface.card, lineHeight: 1.3, marginBottom: 4 }}>
                 {stage === "saving" ? "Saving changes…" : stage === "done" ? "Listing updated!" : (errorDetail ?? "Something went wrong")}
               </div>
               {stage === "saving" && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>Just a moment…</div>}
