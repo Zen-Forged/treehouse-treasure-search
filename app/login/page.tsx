@@ -44,7 +44,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Mail, ArrowLeft, Loader, Clipboard, Store, KeyRound, HelpCircle } from "lucide-react";
 import { sendMagicLink, getSession, signOut, onAuthChange, isAdmin, detectUserRoleWithAutoClaim, tryAutoClaimVendorRows } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
-import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import { v1, v2, FONT_LORA, FONT_SYS, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import FormField, { formInputStyle } from "@/components/FormField";
 import FormButton from "@/components/FormButton";
 import type { User } from "@supabase/supabase-js";
@@ -915,9 +915,11 @@ function LoginInner() {
   );
 }
 
-// Authed-state action card. Same shape as the prior /login/email cards
-// (post-it surface, paper hairline, 14px radius, icon bubble + title +
-// italic subtitle + chevron) — entire card is the action, no inner CTA pill.
+// Authed-state action card. v2 vocabulary (post-it surface → surface.card;
+// inline rgba green wash → accent.greenSoft solid; Cormorant + Inter;
+// paper hairline → v2.border.light). Same structural shape as session 115
+// (post-it surface + icon bubble + title + italic subtitle + chevron) —
+// entire card is the action, no inner CTA pill.
 function ActionCard({
   href,
   title,
@@ -936,9 +938,9 @@ function ActionCard({
         display: "block",
         textDecoration: "none",
         padding: "14px 14px",
-        background: v1.postit,
+        background: v2.surface.card,
         borderRadius: 14,
-        border: `1px solid ${v1.inkHairline}`,
+        border: `1px solid ${v2.border.light}`,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -947,12 +949,12 @@ function ActionCard({
             width: 36,
             height: 36,
             borderRadius: "50%",
-            background: "rgba(30,77,43,0.08)",
+            background: v2.accent.greenSoft,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
-            color: v1.green,
+            color: v2.accent.green,
           }}
         >
           {icon}
@@ -960,10 +962,14 @@ function ActionCard({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_CORMORANT,
               fontSize: 16,
-              color: v1.inkPrimary,
-              lineHeight: 1.25,
+              color: v2.text.primary,
+              // 1.3 per feedback_lora_lineheight_minimum_for_clamp (extended
+              // to Cormorant since session 143 Arc 6.1.2). Card titles can
+              // wrap to 2 lines on narrow phones; descender clearance
+              // matters for any vendor with g/j/p/y in the action label.
+              lineHeight: 1.3,
               margin: "0 0 2px",
             }}
           >
@@ -971,10 +977,10 @@ function ActionCard({
           </div>
           <div
             style={{
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 12,
-              color: v1.inkMuted,
+              color: v2.text.muted,
               lineHeight: 1.45,
             }}
           >
@@ -983,11 +989,11 @@ function ActionCard({
         </div>
         <span
           style={{
-            color: v1.inkFaint,
+            color: v2.text.muted,
             flexShrink: 0,
             fontSize: 22,
             lineHeight: 1,
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
           }}
         >
           ›
