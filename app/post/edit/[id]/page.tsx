@@ -23,7 +23,7 @@ import { ArrowLeft, Camera, X, Check, Loader } from "lucide-react";
 import { getPost, updatePost } from "@/lib/posts";
 import { compressImage, uploadPostImageViaServer } from "@/lib/imageUpload";
 import { getSession, isAdmin, getCachedUserId } from "@/lib/auth";
-import { v1 } from "@/lib/tokens";
+import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import FormButton from "@/components/FormButton";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
@@ -50,25 +50,23 @@ async function detectOwnership(post: Post): Promise<boolean> {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-// Phase 2 Session E — local palette migrated to v1 tokens.
 const C = {
-  bg:          v1.paperCream,
-  surface:     v1.paperWarm,
-  surfaceDeep: "rgba(42,26,10,0.08)",
-  border:      v1.inkHairline,
-  textPrimary: v1.inkPrimary,
-  textMid:     v1.inkMid,
-  textMuted:   v1.inkMuted,
-  textFaint:   v1.inkFaint,
-  green:       v1.green,
-  greenLight:  "rgba(30,77,43,0.08)",
-  greenBorder: "rgba(30,77,43,0.20)",
-  greenSolid:  "rgba(30,77,43,0.90)",
-  input:       v1.postit,
-  inputBorder: v1.inkHairline,
-  red:         v1.red,
-  redBg:       v1.redBg,
-  redBorder:   v1.redBorder,
+  bg:          v2.bg.main,
+  surface:     v2.surface.warm,
+  border:      v2.border.light,
+  textPrimary: v2.text.primary,
+  textMid:     v2.text.secondary,
+  textMuted:   v2.text.muted,
+  textFaint:   v2.text.muted,
+  green:       v2.accent.green,
+  greenLight:  v2.accent.greenSoft,
+  greenBorder: v2.accent.greenMid,
+  greenSolid:  v2.accent.green,
+  input:       v2.surface.card,
+  inputBorder: v2.border.light,
+  red:         v2.accent.red,
+  redBg:       v2.surface.error,
+  redBorder:   v2.border.error,
 };
 
 const inputStyle: React.CSSProperties = {
@@ -78,6 +76,7 @@ const inputStyle: React.CSSProperties = {
 };
 
 const labelStyle: React.CSSProperties = {
+  fontFamily: FONT_INTER,
   fontSize: 9, color: C.textMuted, textTransform: "uppercase",
   letterSpacing: "1.8px", display: "block", marginBottom: 6,
 };
@@ -250,8 +249,7 @@ function EditPostInner() {
             style={{
               pointerEvents: "auto",
               width: "min(300px, calc(100vw - 48px))",
-              background: stage === "error" ? "rgba(139,32,32,0.92)" : stage === "done" ? "rgba(18,34,20,0.92)" : "rgba(26,24,16,0.88)",
-              backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)",
+              background: stage === "error" ? v2.accent.red : stage === "done" ? v2.accent.greenDark : v2.text.primary,
               borderRadius: 20, padding: "22px 24px",
               display: "flex", flexDirection: "column", alignItems: "center", gap: 14,
               boxShadow: "0 8px 40px rgba(0,0,0,0.30)", textAlign: "center",
@@ -260,11 +258,11 @@ function EditPostInner() {
             {stage === "saving" && <Loader size={20} style={{ color: "rgba(255,255,255,0.80)", animation: "spin 0.9s linear infinite" }} />}
             {stage === "done" && (
               <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,0.18)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Check size={18} style={{ color: "#fff" }} />
+                <Check size={18} style={{ color: v2.surface.card }} />
               </div>
             )}
             <div>
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: "#fff", lineHeight: 1.3, marginBottom: 4 }}>
+              <div style={{ fontFamily: FONT_CORMORANT, fontSize: 15, fontWeight: 700, color: v2.surface.card, lineHeight: 1.3, marginBottom: 4 }}>
                 {stage === "saving" ? "Saving changes…" : stage === "done" ? "Listing updated!" : (errorDetail ?? "Something went wrong")}
               </div>
               {stage === "saving" && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>Just a moment…</div>}
@@ -286,7 +284,7 @@ function EditPostInner() {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.8, repeat: Infinity }}
-          style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: C.textMuted }}>
+          style={{ fontFamily: FONT_CORMORANT, fontStyle: "italic", fontSize: 14, color: C.textMuted }}>
           Loading…
         </motion.div>
       </div>
@@ -297,7 +295,7 @@ function EditPostInner() {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 24px" }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontFamily: "Georgia, serif", fontSize: 18, color: C.textPrimary, marginBottom: 8 }}>Not your listing</div>
+          <div style={{ fontFamily: FONT_CORMORANT, fontSize: 18, color: C.textPrimary, marginBottom: 8 }}>Not your listing</div>
           <div style={{ fontSize: 13, color: C.textMuted }}>Redirecting…</div>
         </div>
       </div>
@@ -321,7 +319,7 @@ function EditPostInner() {
             <ArrowLeft size={18} strokeWidth={1.6} style={{ color: C.textMid }} />
           </button>
           <div>
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: C.textPrimary, lineHeight: 1 }}>Edit Listing</div>
+            <div style={{ fontFamily: FONT_CORMORANT, fontSize: 16, fontWeight: 600, color: C.textPrimary, lineHeight: 1 }}>Edit Listing</div>
             {post?.vendor && (
               <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginTop: 2 }}>
                 {post.vendor.display_name}{post.vendor.booth_number ? ` · Booth ${post.vendor.booth_number}` : ""}
@@ -341,21 +339,21 @@ function EditPostInner() {
                 <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", padding: 12, gap: 8, background: "linear-gradient(to top, rgba(0,0,0,0.38) 0%, transparent 60%)" }}>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button onClick={() => cameraRef.current?.click()}
-                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: "rgba(255,255,255,0.20)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.30)", color: "#fff", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
+                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.30)", color: v2.surface.card, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
                       <Camera size={12} /> Take new photo
                     </button>
                     <button onClick={() => galleryRef.current?.click()}
-                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: "rgba(255,255,255,0.20)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.30)", color: "#fff", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
+                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.30)", color: v2.surface.card, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
                       Choose from library
                     </button>
                   </div>
                 </div>
                 {newImagePreview && (
                   <div style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ padding: "4px 10px", borderRadius: 12, background: C.green, fontSize: 10, fontWeight: 600, color: "#fff" }}>New photo</div>
+                    <div style={{ padding: "4px 10px", borderRadius: 12, background: C.green, fontSize: 10, fontWeight: 600, color: v2.surface.card }}>New photo</div>
                     <button onClick={clearNewImage}
                       style={{ width: 24, height: 24, borderRadius: "50%", background: "rgba(0,0,0,0.45)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                      <X size={12} style={{ color: "#fff" }} />
+                      <X size={12} style={{ color: v2.surface.card }} />
                     </button>
                   </div>
                 )}
@@ -363,14 +361,14 @@ function EditPostInner() {
             ) : (
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={() => cameraRef.current?.click()}
-                  style={{ flex: 1, padding: "28px 12px", borderRadius: 14, border: `1px dashed rgba(30,77,43,0.3)`, background: C.surface, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                  style={{ flex: 1, padding: "28px 12px", borderRadius: 14, border: `1px dashed ${v2.border.medium}`, background: C.surface, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
                   <Camera size={20} style={{ color: C.green }} />
-                  <span style={{ fontFamily: "Georgia, serif", fontSize: 12, color: C.textMuted }}>Take photo</span>
+                  <span style={{ fontFamily: FONT_INTER, fontSize: 12, color: C.textMuted }}>Take photo</span>
                 </button>
                 <button onClick={() => galleryRef.current?.click()}
                   style={{ flex: 1, padding: "28px 12px", borderRadius: 14, border: `1px dashed ${C.border}`, background: C.surface, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 18 }}>🖼</span>
-                  <span style={{ fontFamily: "Georgia, serif", fontSize: 12, color: C.textMuted }}>From library</span>
+                  <span style={{ fontFamily: FONT_INTER, fontSize: 12, color: C.textMuted }}>From library</span>
                 </button>
               </div>
             )}
@@ -381,7 +379,7 @@ function EditPostInner() {
             <label style={labelStyle}>Title *</label>
             <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)}
               placeholder="What is this?"
-              style={{ ...inputStyle, fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 600 }}
+              style={{ ...inputStyle, fontFamily: FONT_CORMORANT, fontSize: 15, fontWeight: 600 }}
               autoFocus={!displayImage} />
           </div>
 
@@ -390,7 +388,7 @@ function EditPostInner() {
             <label style={labelStyle}>Caption <span style={{ color: C.textFaint, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
             <textarea value={editCaption} onChange={e => setEditCaption(e.target.value)}
               placeholder="A short description or story about this piece…" rows={3}
-              style={{ ...inputStyle, fontFamily: "Georgia, serif", fontStyle: editCaption ? "italic" : "normal", lineHeight: 1.65, resize: "vertical" as const }} />
+              style={{ ...inputStyle, fontFamily: FONT_CORMORANT, fontStyle: editCaption ? "italic" : "normal", lineHeight: 1.65, resize: "vertical" as const }} />
           </div>
 
           {/* Price */}
@@ -413,7 +411,7 @@ function EditPostInner() {
             onClick={handleSave}
             disabled={!canSave}
             style={{
-              fontFamily: "Georgia, serif",
+              fontFamily: FONT_INTER,
               fontSize: 14,
               fontWeight: 600,
               transition: "all 0.2s",
