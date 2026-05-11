@@ -2,6 +2,17 @@
 
 import { supabase } from "./supabase";
 import type { Post, Vendor, Mall } from "@/types/treehouse";
+import { isReviewMode } from "./reviewMode";
+import {
+  FIXTURE_POSTS,
+  FIXTURE_VENDORS,
+  FIXTURE_MALLS,
+  getFixturePost,
+  getFixturePostsByIds,
+  getFixtureVendorBySlug,
+  getFixtureVendorPosts,
+  getFixtureMallStats,
+} from "./fixtures";
 
 // ── POSTS ─────────────────────────────────────────────────────────────────────
 
@@ -42,6 +53,23 @@ export async function searchPosts(opts: {
   limit?:   number;
 }): Promise<Post[]> {
   const { query, mallId, limit = 40 } = opts;
+  // Review Board (session 150) — fixture-substitute reads only. Simple
+  // contains-match against title + caption + tags so search visibly
+  // filters the masonry on /review-board?reviewMode=1 even though no
+  // tsvector index exists for fixtures.
+  if (isReviewMode()) {
+    const q = query.trim().toLowerCase();
+    let out = FIXTURE_POSTS.filter((p) => p.status === "available");
+    if (mallId) out = out.filter((p) => p.mall_id === mallId);
+    if (q) {
+      out = out.filter((p) =>
+        p.title.toLowerCase().includes(q) ||
+        (p.caption ?? "").toLowerCase().includes(q) ||
+        p.tags.some((t) => t.toLowerCase().includes(q))
+      );
+    }
+    return out.slice(0, limit);
+  }
   const cutoff = new Date(Date.now() - FEED_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
   let q = supabase
@@ -65,6 +93,12 @@ export async function searchPosts(opts: {
 }
 
 export async function getFeedPosts(limit = 40): Promise<Post[]> {
+  // Review Board (session 150) — fixture-substitute. Returns all
+  // available fixture posts ordered by created_at desc (the fixture
+  // POST_BASE() helper already staggers timestamps in feed order).
+  if (isReviewMode()) {
+    return FIXTURE_POSTS.filter((p) => p.status === "available").slice(0, limit);
+  }
   const cutoff = new Date(Date.now() - FEED_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
   // Phase B QA fix #2 (session 100) — SELECT extended to match getPost so
   // feed posts can be dumped directly into the /find/[id] post cache via
@@ -88,6 +122,10 @@ export async function getFeedPosts(limit = 40): Promise<Post[]> {
 }
 
 export async function getPost(id: string): Promise<Post | null> {
+  // Review Board (session 150) — fixture-substitute. Returns null when
+  // the id doesn't match a fixture post; surface components already
+  // handle null gracefully.
+  if (isReviewMode()) return getFixturePost(id);
   // Session 36 fix: `user_id` added to the vendor select.
   // Consumers that depend on it — the `/find/[id]/edit` auth gate and Find Detail's
   // `detectOwnershipAsync` path 2 — were evaluating `post.vendor.user_id` as
@@ -114,6 +152,10 @@ export async function getPost(id: string): Promise<Post | null> {
  */
 export async function getPostsByIds(ids: string[]): Promise<Post[]> {
   if (ids.length === 0) return [];
+  // Review Board (session 150) — fixture-substitute. Filters by id set
+  // against FIXTURE_POSTS without status filter (mirrors prod semantics
+  // — saved finds visible regardless of availability).
+  if (isReviewMode()) return getFixturePostsByIds(ids);
   // Phase C (session 100) — SELECT extended to match getPost so /flagged
   // can dump loaded posts directly into the post cache (lib/findContext)
   // for the swipe-nav handoff. Adds: vendor.user_id (detectOwnershipAsync
@@ -144,6 +186,9 @@ export async function getMallPosts(mallId: string, limit = 60): Promise<Post[]> 
 }
 
 export async function getVendorPosts(vendorId: string, limit = 40): Promise<Post[]> {
+  // Review Board (session 150) — fixture-substitute. Includes sold
+  // status (no filter) so the booth grid shows the sold contract.
+  if (isReviewMode()) return getFixtureVendorPosts(vendorId).slice(0, limit);
   // Phase C (session 100) — SELECT extended to match getPost so /shelf/[slug]
   // and the More-from-this-booth carousel on /find/[id] can dump loaded
   // posts directly into the post cache (lib/findContext) for the swipe-nav
@@ -260,6 +305,8 @@ export async function deletePost(id: string): Promise<boolean> {
 // ── VENDORS ───────────────────────────────────────────────────────────────────
 
 export async function getVendorBySlug(slug: string): Promise<Vendor | null> {
+  // Review Board (session 150) — fixture-substitute.
+  if (isReviewMode()) return getFixtureVendorBySlug(slug);
   const { data, error } = await supabase
     .from("vendors")
     .select(`*, mall:malls ( id, name, city, state, slug, address, latitude, longitude )`)
@@ -620,6 +667,8 @@ export async function markVendorRequestApproved(requestId: string): Promise<bool
 // ── MALLS ─────────────────────────────────────────────────────────────────────
 
 export async function getAllMalls(): Promise<Mall[]> {
+  // Review Board (session 150) — fixture-substitute.
+  if (isReviewMode()) return FIXTURE_MALLS;
   const { data, error } = await supabase
     .from("malls").select("*").order("name", { ascending: true });
   if (error) { console.error("[posts] getAllMalls:", error.message); return []; }
@@ -638,6 +687,9 @@ export async function getAllMalls(): Promise<Mall[]> {
  * know about the status enum.
  */
 export async function getActiveMalls(): Promise<Mall[]> {
+  // Review Board (session 150) — fixture-substitute. Fixture malls
+  // are all "active"; same return as getAllMalls in reviewMode.
+  if (isReviewMode()) return FIXTURE_MALLS.filter((m) => m.status === "active");
   const { data, error } = await supabase
     .from("malls")
     .select("*")
@@ -670,6 +722,8 @@ export interface MallStats {
 }
 
 export async function getMallStatsByMallId(): Promise<Record<string, MallStats>> {
+  // Review Board (session 150) — fixture-substitute.
+  if (isReviewMode()) return getFixtureMallStats();
   const [vendorsRes, postsRes] = await Promise.all([
     supabase.from("vendors").select("mall_id"),
     supabase.from("posts").select("mall_id").eq("status", "available"),

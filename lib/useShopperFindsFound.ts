@@ -30,6 +30,8 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
+import { isReviewMode }    from "./reviewMode";
+import { FIXTURE_SHOPPER } from "./fixtures";
 
 const FOUNDS_STORAGE_KEY = "treehouse:finds_found";
 const FOUNDS_CHANGE_EVENT = "treehouse:finds_found_change";
@@ -77,7 +79,14 @@ export function useShopperFindsFound(): ShopperFindsFoundState {
   // Eliminates empty-to-populated flicker on the ✓ Found state — same
   // shape as useShopperSaves's session-134 snapshot pattern, simpler
   // because there's no async DB fetch overlay.
+  //
+  // Review Board (session 150) — fixture-substitute hydrates here too.
   useLayoutEffect(() => {
+    if (isReviewMode()) {
+      setIds(new Set(FIXTURE_SHOPPER.found_ids));
+      setIsLoading(false);
+      return;
+    }
     setIds(readStorage());
     setIsLoading(false);
   }, []);
@@ -141,7 +150,9 @@ export function useShopperFindsFound(): ShopperFindsFoundState {
       return updated;
     });
     if (writeIds) {
-      writeStorage(writeIds);
+      // Review Board (session 150) — skip localStorage write; broadcast
+      // still fires so sibling components in the iframe stay in sync.
+      if (!isReviewMode()) writeStorage(writeIds);
       window.dispatchEvent(
         new CustomEvent<FoundsChangeDetail>(FOUNDS_CHANGE_EVENT, {
           detail: { id, next },

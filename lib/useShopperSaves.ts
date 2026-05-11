@@ -57,6 +57,8 @@ import { supabase }                 from "./supabase";
 import { onAuthChange }             from "./auth";
 import { safeStorage }              from "./safeStorage";
 import { BOOKMARK_PREFIX, flagKey, loadFollowedIds } from "./utils";
+import { isReviewMode }             from "./reviewMode";
+import { FIXTURE_SHOPPER }          from "./fixtures";
 
 const SAVES_CHANGE_EVENT = "treehouse:saves_change";
 
@@ -135,7 +137,14 @@ export function useShopperSaves(): ShopperSavesState {
   // shows the saved state. The async useEffect below still runs the DB
   // fetch and overwrites with authoritative state — cross-device divergence
   // reads as a one-tick correction, not a full empty-to-populated flash.
+  //
+  // Review Board (session 150) — fixture-substitute hydrates here too.
   useLayoutEffect(() => {
+    if (isReviewMode()) {
+      setIds(new Set(FIXTURE_SHOPPER.save_ids));
+      setIsLoading(false);
+      return;
+    }
     const snapshot = readSnapshot();
     if (snapshot.size === 0) return;
     setIds(snapshot);
@@ -147,12 +156,14 @@ export function useShopperSaves(): ShopperSavesState {
   // unchanged. The snapshot-restore useLayoutEffect above triggers this
   // effect on mount, but at that point shopperIdRef.current is null
   // (loadFor hasn't run yet), so the no-op skip handles it cleanly.
+  // ReviewMode also skips (ref stays null + fixtures are read-only).
   useEffect(() => {
     if (!shopperIdRef.current) return;
     writeSnapshot(ids);
   }, [ids]);
 
   useEffect(() => {
+    if (isReviewMode()) return; // fixture state populated above
     let cancelled = false;
 
     async function loadFor(userId: string | null) {
@@ -264,6 +275,11 @@ export function useShopperSaves(): ShopperSavesState {
     window.dispatchEvent(
       new CustomEvent<SavesChangeDetail>(SAVES_CHANGE_EVENT, { detail: { id, next } }),
     );
+
+    // Review Board (session 150) — skip DB + localStorage writes. The
+    // optimistic state update + broadcast above keep sibling components
+    // in the iframe consistent for the duration of the audit session.
+    if (isReviewMode()) return;
 
     const shopperId = shopperIdRef.current;
     if (shopperId) {

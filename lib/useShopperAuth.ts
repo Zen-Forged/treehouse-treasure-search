@@ -26,9 +26,11 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { supabase }      from "./supabase";
 import { onAuthChange }  from "./auth";
+import { isReviewMode }  from "./reviewMode";
+import { FIXTURE_SHOPPER } from "./fixtures";
 
 export interface ShopperIdentity {
   shopperId:     string;
@@ -64,7 +66,26 @@ const INITIAL_STATE: ShopperAuthState = {
 export function useShopperAuth(): ShopperAuthState {
   const [state, setState] = useState<ShopperAuthState>(INITIAL_STATE);
 
+  // Review Board (session 150) — fixture-substitute. Hydrate state
+  // synchronously before paint so /me + /login auth-gate redirects
+  // never fire on reviewMode iframes. Skips the Supabase session
+  // subscription below.
+  useLayoutEffect(() => {
+    if (!isReviewMode()) return;
+    setState({
+      isLoading: false,
+      isAuthed:  true,
+      shopper: {
+        shopperId:     FIXTURE_SHOPPER.user_id,
+        handle:        FIXTURE_SHOPPER.handle,
+        initials:      initialsFromHandle(FIXTURE_SHOPPER.handle),
+        scoutingSince: FIXTURE_SHOPPER.scouting_since,
+      },
+    });
+  }, []);
+
   useEffect(() => {
+    if (isReviewMode()) return; // fixture state populated above
     let cancelled = false;
 
     async function loadShopper(userId: string) {
