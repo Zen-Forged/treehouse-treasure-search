@@ -24,6 +24,8 @@
 
 import type { Metadata } from "next";
 import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
+import NotesPanel             from "./NotesPanel";
+import ExportButton, { type SurfaceMeta } from "./ExportButton";
 
 export const metadata: Metadata = {
   title:   "Review Board — Treehouse Finds",
@@ -91,6 +93,14 @@ function buildSrc(path: string): string {
   return `${path}${path.includes("?") ? "&" : "?"}reviewMode=1`;
 }
 
+// Flatten categorized tile config into the SurfaceMeta list ExportButton
+// uses to order findings in the markdown dump.
+function flatten(): SurfaceMeta[] {
+  return CATEGORIES.flatMap((cat) =>
+    cat.tiles.map((t) => ({ path: t.path, label: t.label, category: cat.name })),
+  );
+}
+
 export default function ReviewBoardPage() {
   return (
     <div
@@ -134,8 +144,11 @@ export default function ReviewBoardPage() {
           <code style={{ fontSize: 13, fontFamily: "ui-monospace, SFMono-Regular, monospace" }}>
             lib/fixtures.ts
           </code>
-          ; auth gates skip; toggles never persist.
+          ; auth gates skip; toggles never persist. Per-tile findings panel
+          captures observations + suggested changes; the export button below
+          dumps everything as a markdown block ready to paste into chat.
         </p>
+        <ExportButton surfaces={flatten()} />
       </header>
 
       <div style={{ maxWidth: 1600, margin: "0 auto" }}>
@@ -275,6 +288,8 @@ function ReviewTileFrame({ tile }: { tile: ReviewTile }) {
       >
         {tile.path}
       </div>
+
+      <NotesPanel surfacePath={tile.path} />
     </div>
   );
 }
