@@ -23,7 +23,7 @@ import { createRoot, type Root } from "react-dom/client";
 import mapboxgl, { type LngLatBoundsLike } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { PiLeaf } from "react-icons/pi";
-import { v1 } from "@/lib/tokens";
+import { v1, v2 } from "@/lib/tokens";
 import PinCallout from "@/components/PinCallout";
 import { milesFromUser } from "@/lib/distance";
 import { useUserLocation } from "@/lib/useUserLocation";
@@ -140,15 +140,15 @@ function LeafBubblePin({ selected }: { selected: boolean }) {
         width:        selected ? 36 : 32,
         height:       selected ? 36 : 32,
         borderRadius: "50%",
-        background:   selected ? v1.green : v1.paperWarm,
-        border:       `2px solid ${v1.green}`,
+        background:   selected ? v2.accent.green : v2.surface.warm,
+        border:       `2px solid ${v2.accent.green}`,
         boxShadow:    selected
           ? "0 0 0 6px rgba(30,77,43,0.18), 0 4px 10px rgba(30,77,43,0.28)"
           : "0 2px 6px rgba(42,26,10,0.18)",
         display:        "flex",
         alignItems:     "center",
         justifyContent: "center",
-        color:          selected ? v1.onGreen : v1.green,
+        color:          selected ? v2.surface.card : v2.accent.green,
         cursor:         "pointer",
         transition:     "width 160ms ease, height 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease",
       }}
@@ -440,7 +440,7 @@ export default function TreehouseMap({
             justifyContent: "center",
             padding:    24,
             textAlign:  "center",
-            color:      "#6b5538",
+            color:      v2.text.muted,
             fontStyle:  "italic",
             fontFamily: "Georgia, serif",
             fontSize:   14,
