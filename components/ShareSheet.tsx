@@ -44,20 +44,19 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "react-qr-code";
-import { PiEnvelopeSimple, PiChatCircleText, PiQrCode, PiLeaf, PiImageSquare } from "react-icons/pi";
+import { PiEnvelopeSimple, PiChatCircleText, PiQrCode, PiLeaf } from "react-icons/pi";
 import { authFetch } from "@/lib/authFetch";
 import { track } from "@/lib/clientEvents";
 import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { SlimHeader } from "@/components/ui/SlimHeader";
 import { ChannelGrid, type ChannelGridTile } from "@/components/ui/ChannelGrid";
-import { ShelfImageShareScreen } from "@/components/ShelfImageShareScreen";
 import type { Mall, Post, Vendor } from "@/types/treehouse";
 
 // Same shape as the two server routes (/api/share-booth, /api/vendor-request).
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-type Screen = "grid" | "email" | "qr" | "shelf-image";
+type Screen = "grid" | "email" | "qr";
 
 type EmailStatus =
   | { kind: "compose" }
@@ -237,14 +236,6 @@ function BoothShareBody({
     setScreen("qr");
   }
 
-  // Session 152 — Share My Shelf 4th channel. Opens the image-generator
-  // sub-screen which composes ShelfImageTemplate (off-screen 1080×1350)
-  // with html2canvas-pro capture + native-share / download / clipboard.
-  function handleShelfImageTap() {
-    track("share_booth_channel_tapped", { ...trackPayload, channel: "shelf_image" });
-    setScreen("shelf-image");
-  }
-
   function handleBack() {
     setScreen("grid");
   }
@@ -267,7 +258,6 @@ function BoothShareBody({
           onEmailTap={handleEmailTap}
           onSmsTap={handleSmsTap}
           onQrTap={handleQrTap}
-          onShelfImageTap={handleShelfImageTap}
         />
       )}
 
@@ -297,14 +287,6 @@ function BoothShareBody({
           mallAddress={mallAddress}
           boothUrl={boothUrl}
           trackPayload={trackPayload}
-        />
-      )}
-
-      {screen === "shelf-image" && (
-        <ShelfImageShareScreen
-          vendor={vendor}
-          mall={mall}
-          boothUrl={boothUrl}
         />
       )}
     </BottomSheet>
@@ -516,13 +498,6 @@ function FindShareBody({
 // ─── GridScreen (Booth) ──────────────────────────────────────────────────
 // Frame C grid for booth entity — 3 tiles (Email + SMS + QR) + footer
 // disclaimer. "Share via" eyebrow above the grid (D5).
-//
-// Session 152 — Booth tier grows from 3 → 4 tiles (Email + SMS + QR Code +
-// Shelf Image). ChannelGrid renders gridTemplateColumns: repeat(N, 1fr)
-// where N is tile count — 4 tiles fit cleanly on a 430px-max-width sheet
-// with the existing 8px gap (each tile ~ 92px wide minus padding, holds
-// the icon + 13px Cormorant label without truncation). Tested on iPhone
-// SE 375px and iPhone 14 390px viewports.
 function GridScreen({
   boothName,
   boothNo,
@@ -531,22 +506,19 @@ function GridScreen({
   onEmailTap,
   onSmsTap,
   onQrTap,
-  onShelfImageTap,
 }: {
-  boothName:       string;
-  boothNo:         string | null;
-  mallName:        string;
-  mallAddress:     string;
-  onEmailTap:      () => void;
-  onSmsTap:        () => void;
-  onQrTap:         () => void;
-  onShelfImageTap: () => void;
+  boothName:   string;
+  boothNo:     string | null;
+  mallName:    string;
+  mallAddress: string;
+  onEmailTap:  () => void;
+  onSmsTap:    () => void;
+  onQrTap:     () => void;
 }) {
   const tiles: ChannelGridTile[] = [
-    { kind: "channel", icon: <PiEnvelopeSimple size={22} color={v2.text.primary} />, label: "Email",       onClick: onEmailTap },
-    { kind: "channel", icon: <PiChatCircleText size={22} color={v2.text.primary} />, label: "SMS",         onClick: onSmsTap },
-    { kind: "channel", icon: <PiQrCode         size={22} color={v2.text.primary} />, label: "QR Code",     onClick: onQrTap },
-    { kind: "channel", icon: <PiImageSquare    size={22} color={v2.text.primary} />, label: "Shelf Image", onClick: onShelfImageTap },
+    { kind: "channel", icon: <PiEnvelopeSimple size={22} color={v2.text.primary} />, label: "Email",   onClick: onEmailTap },
+    { kind: "channel", icon: <PiChatCircleText size={22} color={v2.text.primary} />, label: "SMS",     onClick: onSmsTap },
+    { kind: "channel", icon: <PiQrCode         size={22} color={v2.text.primary} />, label: "QR Code", onClick: onQrTap },
   ];
 
   return (

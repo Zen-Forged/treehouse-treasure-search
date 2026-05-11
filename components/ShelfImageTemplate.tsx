@@ -1,4 +1,15 @@
 // components/ShelfImageTemplate.tsx
+//
+// ⚠️ PARKED — session 152 within-session retirement.
+//   Component shipped end-to-end (commits d07306f / 3066685 / 5942a0f / f786e1e)
+//   then David: "It's a good start but will definitely need refinement for a
+//   later date. For now, lets just pull it out of the UI but keep the code."
+//   Reversal commit removed only the ShareSheet 4th-tile wiring from f786e1e;
+//   component code preserved here for future refinement. To revive, restore
+//   the 4 changes to ShareSheet.tsx (PiImageSquare import + Screen union +
+//   handleShelfImageTap + GridScreen 4th tile + shelf-image render branch).
+//   Per feedback_within_session_design_record_reversal ✅ Promoted at session 128.
+//
 // Session 152 — Share My Shelf social image template.
 //
 // Fixed 1080×1350 portrait (Facebook feed + Instagram square cross-compat),

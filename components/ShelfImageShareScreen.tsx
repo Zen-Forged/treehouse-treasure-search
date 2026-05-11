@@ -1,4 +1,10 @@
 // components/ShelfImageShareScreen.tsx
+//
+// ⚠️ PARKED — session 152 within-session retirement.
+//   See ShelfImageTemplate.tsx file-top comment for full context.
+//   Wrapper preserved for future refinement; no consumer wires this today.
+//   Per feedback_within_session_design_record_reversal ✅ Promoted at session 128.
+//
 // Session 152 — Share My Shelf wrapper screen.
 //
 // Composes <ShelfImageTemplate> (off-screen 1080×1350 capture node) with
