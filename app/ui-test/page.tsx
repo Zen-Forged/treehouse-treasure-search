@@ -13,7 +13,9 @@
 "use client";
 
 import { useState } from "react";
+import { PiChatCircleText, PiEnvelopeSimple, PiQrCode } from "react-icons/pi";
 import { BottomSheet } from "@/components/ui/BottomSheet";
+import { ChannelGrid } from "@/components/ui/ChannelGrid";
 import { SlimHeader } from "@/components/ui/SlimHeader";
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
 
@@ -286,6 +288,92 @@ export default function UiTestPage() {
             boothPill="B07"
             contextLabel="Penny's Postcards"
             addressLine="America's Antique Mall, Louisville"
+          />
+        </div>
+      </section>
+
+      {/* ─── <ChannelGrid> ───────────────────────────────────────────── */}
+      <section
+        style={{
+          padding: 16,
+          background: v2.surface.card,
+          border: `1px solid ${v2.border.light}`,
+          borderRadius: 12,
+          marginBottom: 16,
+        }}
+      >
+        <h2
+          style={{
+            fontFamily: FONT_CORMORANT,
+            fontSize: 20,
+            fontWeight: 500,
+            lineHeight: 1.3,
+            marginBottom: 4,
+            color: v2.text.primary,
+          }}
+        >
+          {"<ChannelGrid>"}
+        </h2>
+        <p
+          style={{
+            fontSize: 13,
+            color: v2.text.secondary,
+            marginBottom: 16,
+            lineHeight: 1.4,
+          }}
+        >
+          3-column tile grid. Discriminated tile array — mix of stateless
+          channel tiles + stateful copy tile (1600ms checkmark feedback).
+          Copy state lives inside the primitive.
+        </p>
+
+        {/* Booth-shape: Email + SMS + QR */}
+        <div style={{ marginBottom: 16 }}>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              color: v2.text.muted,
+              marginBottom: 4,
+            }}
+          >
+            Booth-shape (Email + SMS + QR)
+          </div>
+          <ChannelGrid
+            tiles={[
+              { kind: "channel", icon: <PiEnvelopeSimple size={22} color={v2.text.primary} />, label: "Email",   onClick: () => alert("Email tapped") },
+              { kind: "channel", icon: <PiChatCircleText size={22} color={v2.text.primary} />, label: "SMS",     onClick: () => alert("SMS tapped") },
+              { kind: "channel", icon: <PiQrCode         size={22} color={v2.text.primary} />, label: "QR Code", onClick: () => alert("QR tapped") },
+            ]}
+          />
+        </div>
+
+        {/* Mall + Find shape: SMS + QR + Copy Link */}
+        <div>
+          <div
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase",
+              color: v2.text.muted,
+              marginBottom: 4,
+            }}
+          >
+            Mall + Find shape (SMS + QR + Copy Link — tap Copy to verify
+            1600ms feedback)
+          </div>
+          <ChannelGrid
+            tiles={[
+              { kind: "channel", icon: <PiChatCircleText size={22} color={v2.text.primary} />, label: "SMS",     onClick: () => alert("SMS tapped") },
+              { kind: "channel", icon: <PiQrCode         size={22} color={v2.text.primary} />, label: "QR Code", onClick: () => alert("QR tapped") },
+              { kind: "copy",
+                url: "https://app.kentuckytreehouse.com/?testbed=copy",
+                onTap: () => console.log("CopyTile onTap fired"),
+                onCopySuccess: () => console.log("CopyTile onCopySuccess fired") },
+            ]}
           />
         </div>
       </section>
