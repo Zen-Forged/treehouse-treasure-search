@@ -32,6 +32,8 @@ import { getUser } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { safeStorage } from "@/lib/safeStorage";
 import { setActiveBoothId } from "@/lib/activeBooth";
+import { isReviewMode } from "@/lib/reviewMode";
+import { FIXTURE_VENDORS } from "@/lib/fixtures";
 import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import FormButton from "@/components/FormButton";
 import type { Vendor, Mall } from "@/types/treehouse";
@@ -52,6 +54,13 @@ function SetupContent() {
   const [result, setResult] = useState<SetupResult>({});
 
   useEffect(() => {
+    // Review Board (session 150) — render success state with fixture
+    // vendor; skip auth + /api/setup/lookup-vendor + auto-redirect.
+    if (isReviewMode()) {
+      setResult({ vendors: [FIXTURE_VENDORS[0]] });
+      setState("success");
+      return;
+    }
     setupVendorAccount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

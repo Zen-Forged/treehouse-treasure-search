@@ -61,6 +61,8 @@ import { compressImage } from "@/lib/imageUpload";
 import { postStore, type PostDraft } from "@/lib/postStore";
 import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import { track } from "@/lib/clientEvents";
+import { isReviewMode } from "@/lib/reviewMode";
+import { FIXTURE_POSTS } from "@/lib/fixtures";
 import AddFindSheet from "@/components/AddFindSheet";
 import PolaroidTile from "@/components/PolaroidTile";
 
@@ -147,6 +149,13 @@ function PostTagInner() {
 
   // ── Mount: pull item photo from postStore (set by /my-shelf) ─────────────
   useEffect(() => {
+    // Review Board (session 150) — render the post-capture "ready" state
+    // with fixture photos; skip postStore read + /my-shelf redirect.
+    if (isReviewMode()) {
+      setItemImage(FIXTURE_POSTS[0].image_url);
+      setTagImage(FIXTURE_POSTS[0].image_url);
+      return;
+    }
     const draft = postStore.get();
     if (!draft?.imageDataUrl) {
       router.replace("/my-shelf");

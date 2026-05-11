@@ -23,6 +23,7 @@ import { ArrowLeft, Camera, X, Check, Loader } from "lucide-react";
 import { getPost, updatePost } from "@/lib/posts";
 import { compressImage, uploadPostImageViaServer } from "@/lib/imageUpload";
 import { getSession, isAdmin, getCachedUserId } from "@/lib/auth";
+import { isReviewMode } from "@/lib/reviewMode";
 import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import FormButton from "@/components/FormButton";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
@@ -115,7 +116,22 @@ function EditPostInner() {
     if (!postId) return;
     (async () => {
       const p = await getPost(postId);
-      if (!p) { router.replace("/"); return; }
+      if (!p) {
+        if (isReviewMode()) { setStage("forbidden"); return; }
+        router.replace("/"); return;
+      }
+
+      // Review Board (session 150) — skip ownership detect (which would
+      // fail without a session); land straight in editing stage.
+      if (isReviewMode()) {
+        setPost(p);
+        setEditTitle(p.title ?? "");
+        setEditCaption(p.caption ?? "");
+        setEditPrice(p.price_asking != null ? String(p.price_asking) : "");
+        setCurrentImageUrl(p.image_url ?? null);
+        setStage("editing");
+        return;
+      }
 
       const isOwner = await detectOwnership(p);
       if (!isOwner) {

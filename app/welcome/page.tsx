@@ -33,6 +33,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Bookmark, Store, HelpCircle } from "lucide-react";
 import { getSession, detectUserRoleWithAutoClaim } from "@/lib/auth";
+import { isReviewMode } from "@/lib/reviewMode";
 import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 
 type RenderState = "loading" | "ready";
@@ -42,6 +43,12 @@ function WelcomeInner() {
   const [renderState, setRenderState] = useState<RenderState>("loading");
 
   useEffect(() => {
+    // Review Board (session 150) — render the disambiguation card screen
+    // without auth detection or role-based redirect.
+    if (isReviewMode()) {
+      setRenderState("ready");
+      return;
+    }
     let cancelled = false;
     getSession().then(async session => {
       if (cancelled) return;

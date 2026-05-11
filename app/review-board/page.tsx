@@ -66,13 +66,21 @@ const CATEGORIES: Category[] = [
     name: "Vendor",
     hint: "Vendor flow surfaces",
     tiles: [
+      { label: "My Shelf",     description: "Vendor's own inventory + edit",   path: "/my-shelf" },
+      { label: "Setup",        description: "Vendor onboarding success state", path: "/setup" },
+      { label: "Vendor request", description: "Request booth form",            path: "/vendor-request" },
+      { label: "Post tag",     description: "Tag photo capture",               path: "/post/tag" },
       { label: "Post preview", description: "Draft preview + publish",         path: "/post/preview" },
+      { label: "Post edit",    description: "Edit existing find",              path: "/post/edit/fixture-post-1" },
     ],
   },
   {
     name: "System",
-    hint: "Reserved",
-    tiles: [],
+    hint: "Auth-bridge + first-run disambiguation",
+    tiles: [
+      { label: "Welcome",      description: "First-sign-in role disambiguation", path: "/welcome" },
+      { label: "Handle pick",  description: "Shopper claim — handle form",       path: "/login/email/handle" },
+    ],
   },
 ];
 

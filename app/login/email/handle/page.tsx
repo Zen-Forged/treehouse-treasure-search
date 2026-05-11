@@ -35,6 +35,8 @@ import { getSession }                       from "@/lib/auth";
 import { authFetch }                        from "@/lib/authFetch";
 import { supabase }                         from "@/lib/supabase";
 import { loadFollowedIds, loadBookmarkedBoothIds } from "@/lib/utils";
+import { isReviewMode }                     from "@/lib/reviewMode";
+import { FIXTURE_SHOPPER }                  from "@/lib/fixtures";
 import { v2, FONT_CORMORANT, FONT_INTER }    from "@/lib/tokens";
 import FormField, { formInputStyle }        from "@/components/FormField";
 import FormButton                           from "@/components/FormButton";
@@ -63,6 +65,13 @@ function HandlePickInner() {
   const [error,  setError]  = useState<string | null>(null);
 
   useEffect(() => {
+    // Review Board (session 150) — render the handle-picker form
+    // without auth detection or shopper-row lookup.
+    if (isReviewMode()) {
+      setHandle(suggestHandleFromEmail(FIXTURE_SHOPPER.email));
+      setScreen("form");
+      return;
+    }
     let cancelled = false;
     (async () => {
       const session = await getSession();

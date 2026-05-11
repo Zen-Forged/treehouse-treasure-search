@@ -67,6 +67,8 @@ import { PiLeaf } from "react-icons/pi";
 import { ArrowLeft } from "lucide-react";
 import { getVendorsByUserId, getVendorById, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { getSession, isAdmin } from "@/lib/auth";
+import { isReviewMode } from "@/lib/reviewMode";
+import { FIXTURE_VENDORS, FIXTURE_SHOPPER } from "@/lib/fixtures";
 import { authFetch } from "@/lib/authFetch";
 import { compressImage as compressForAdd } from "@/lib/imageUpload";
 import { postStore } from "@/lib/postStore";
@@ -380,6 +382,12 @@ function MyBoothInner() {
 
   // ── Auth gate ──────────────────────────────────────────────────────────
   useEffect(() => {
+    // Review Board (session 150) — fixture-user; skip session check.
+    if (isReviewMode()) {
+      setUser({ id: FIXTURE_SHOPPER.user_id, email: FIXTURE_SHOPPER.email } as User);
+      setAuthReady(true);
+      return;
+    }
     getSession().then(s => {
       if (!s?.user) { router.replace("/login"); return; }
       setUser(s.user);
@@ -403,6 +411,12 @@ function MyBoothInner() {
   //   (c) Admin fallback — ADMIN_DEFAULT_VENDOR_ID when no impersonation param.
   useEffect(() => {
     if (!authReady || !user) return;
+
+    // Review Board (session 150) — fixture vendor; skip API resolution.
+    if (isReviewMode()) {
+      loadVendor(FIXTURE_VENDORS[0], FIXTURE_SHOPPER.user_id);
+      return;
+    }
 
     const authedUser  = user;
     const adminUser   = isAdmin(authedUser);
@@ -530,7 +544,10 @@ function MyBoothInner() {
       slug:         vendor.slug,
       user_id:      userId,
     };
-    try { localStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(cached)); } catch {}
+    // Review Board (session 150) — skip localStorage write (fixtures are read-only).
+    if (!isReviewMode()) {
+      try { localStorage.setItem(LOCAL_VENDOR_KEY, JSON.stringify(cached)); } catch {}
+    }
     if (vendor.mall) {
       setMall(vendor.mall as Mall);
     } else {
