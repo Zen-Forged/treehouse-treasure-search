@@ -339,21 +339,21 @@ function EditPostInner() {
                 <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", padding: 12, gap: 8, background: "linear-gradient(to top, rgba(0,0,0,0.38) 0%, transparent 60%)" }}>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button onClick={() => cameraRef.current?.click()}
-                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: "rgba(255,255,255,0.20)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.30)", color: "#fff", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
+                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.30)", color: v2.surface.card, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
                       <Camera size={12} /> Take new photo
                     </button>
                     <button onClick={() => galleryRef.current?.click()}
-                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: "rgba(255,255,255,0.20)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.30)", color: "#fff", cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
+                      style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.30)", color: v2.surface.card, cursor: "pointer", WebkitTapHighlightColor: "transparent" }}>
                       Choose from library
                     </button>
                   </div>
                 </div>
                 {newImagePreview && (
                   <div style={{ position: "absolute", top: 10, left: 10, display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ padding: "4px 10px", borderRadius: 12, background: C.green, fontSize: 10, fontWeight: 600, color: "#fff" }}>New photo</div>
+                    <div style={{ padding: "4px 10px", borderRadius: 12, background: C.green, fontSize: 10, fontWeight: 600, color: v2.surface.card }}>New photo</div>
                     <button onClick={clearNewImage}
                       style={{ width: 24, height: 24, borderRadius: "50%", background: "rgba(0,0,0,0.45)", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                      <X size={12} style={{ color: "#fff" }} />
+                      <X size={12} style={{ color: v2.surface.card }} />
                     </button>
                   </div>
                 )}
