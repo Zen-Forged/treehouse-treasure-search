@@ -1262,7 +1262,11 @@ export default function FindDetailPage() {
               </div>
             )}
 
-            {/* Post-it — static, no entrance animation. */}
+            {/* Post-it — static, no entrance animation.
+                Session 144 iPhone QA: bg aligned to /shelf BoothPage post-it
+                stamp value (v2.surface.card #FFFCF5) per David's "consistency
+                let's align to the values on /shelf" call. Was v1.postit
+                #fefae8 (warmer cream) since session 81's v1.postit dial. */}
             {post && boothNumber && (
               <div
                 style={{
@@ -1271,7 +1275,7 @@ export default function FindDetailPage() {
                   right: 4,
                   width: 92,
                   minHeight: 92,
-                  background: v1.postit,
+                  background: v2.surface.card,
                   transform: "rotate(6deg)",
                   transformOrigin: "bottom right",
                   boxShadow: `0 6px 14px rgba(42,26,10,0.28), 0 0 0 0.5px rgba(42,26,10,0.16)`,

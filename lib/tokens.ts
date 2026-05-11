@@ -1,251 +1,240 @@
 // lib/tokens.ts
 // Single source of truth for Treehouse ecosystem design tokens.
 //
-// Three coexisting token sets:
-//   - `colors` / `radius` / `spacing` — v0.2 ecosystem tokens (feed, post flow,
-//     vendor profile, mall page, admin, BottomNav, etc.). Used by surfaces that
-//     have NOT yet migrated to v1.1h. Do not touch until each surface migrates.
-//   - `v1` / `fonts` — v1.1h+ journal-vocabulary tokens. Used by Find Detail,
-//     Find Map, Booth page, and (v1.2) the post-flow trilogy.
-//     Matches docs/design-system.md v1.1h → v1.1l + v1.2 build spec.
-//   - `v2` — session 138 field-guide migration tokens (Cormorant + warm-paper
-//     palette + row pattern). Used by Saved page Arc 1; propagates to Home /
-//     Find / /shelf / /map in subsequent v2 arcs. v1 retires once all surfaces
-//     migrate (v2 Arc 7 cleanup). See docs/v2-visual-migration.md.
+// Arc 6.1.4 (session 144) — Layer 1 token foundation refactor. Every token
+// value resolves to a CSS custom property defined in app/globals.css :root.
+// Updating a value requires a single :root edit; the ~200 consumer call
+// sites continue to read `v1.paperCream` / `v2.bg.main` / etc. unchanged.
 //
-// The v0.2 + v1.x + v2 sets are intentionally separate because the palettes
-// differ (v0.2 `#f5f2eb` cream vs v1.x `#f2ecd8` paperCream vs v2 `#F7F3E8`
-// bg-main; warm brown inks shift across the three layers). They live
-// side-by-side during migration and each prior set retires when the last
-// consumer migrates.
+// Three coexisting token sets (locked: v1/v2 dual namespace stays through
+// v2 Arc 10 cleanup):
+//   - `colors` / `radius` / `spacing` — v0.2 ecosystem tokens (admin,
+//     parked surfaces). Used by surfaces that have NOT yet migrated.
+//   - `v1` / `fonts` — v1.1h+ journal-vocabulary tokens. Find Detail,
+//     Find Map, Booth page, v1.2 post flow. See docs/design-system.md.
+//   - `v2` — session 138 field-guide migration tokens. Saved/Home/Find/
+//     /shelf shipped sessions 138–142; auth-bridge partial session 143.
+//     See docs/v2-visual-migration.md.
 //
-// Dark reseller layer (#050f05) has its own inline tokens — do not merge here.
+// Two new canonical scales above the layered tokens (added Arc 6.1.4):
+//   - `space` — 2/4/8/12/16/24/32/48/64 (locked session 143)
+//   - `radius` — sm/md/lg/xl/pill canonical scale
+//
+// Numeric tokens (radii, gaps) carry px units in their CSS var values, so
+// inline-style consumers continue working: `borderRadius: v1.imageRadius`
+// renders as `border-radius: var(--th-v1-image-radius)` which the browser
+// resolves to `6px`. Audit verified (Arc 1.2): zero arithmetic, zero
+// template-string interpolation, zero JSX size= usage of token numerics.
+//
+// Dark reseller layer (#050f05) keeps its own inline tokens — do not merge.
 
 // ═══════════════════════════════════════════════════════════════════════════
-// v0.2 — legacy ecosystem tokens (feed + unmigrated surfaces)
+// v0.2 — legacy ecosystem tokens (admin, ShelfGrid)
 // ═══════════════════════════════════════════════════════════════════════════
 
 export const colors = {
   // Backgrounds
-  bg:           "#f5f2eb",
-  surface:      "#edeae1",
-  surfaceDeep:  "#e4e0d6",
-  emptyTile:    "#dedad2",
+  bg:           "var(--th-c-bg)",
+  surface:      "var(--th-c-surface)",
+  surfaceDeep:  "var(--th-c-surface-deep)",
+  emptyTile:    "var(--th-c-empty-tile)",
 
   // Borders
-  border:       "rgba(26,24,16,0.09)",
-  borderLight:  "rgba(26,24,16,0.05)",
+  border:       "var(--th-c-border)",
+  borderLight:  "var(--th-c-border-light)",
 
   // Text
-  textPrimary:  "#1c1a14",
-  textMid:      "#4a4840",
-  textMuted:    "#8a8476",
-  textFaint:    "#b4ae9e",
+  textPrimary:  "var(--th-c-text-primary)",
+  textMid:      "var(--th-c-text-mid)",
+  textMuted:    "var(--th-c-text-muted)",
+  textFaint:    "var(--th-c-text-faint)",
 
   // Green (CTAs, active states, brand accent)
-  green:        "#1e4d2b",
-  greenLight:   "rgba(30,77,43,0.08)",
-  greenSolid:   "rgba(30,77,43,0.90)",
-  greenBorder:  "rgba(30,77,43,0.20)",
+  green:        "var(--th-c-green)",
+  greenLight:   "var(--th-c-green-light)",
+  greenSolid:   "var(--th-c-green-solid)",
+  greenBorder:  "var(--th-c-green-border)",
 
   // Red (destructive actions)
-  red:          "#8b2020",
-  redBg:        "rgba(139,32,32,0.07)",
-  redBorder:    "rgba(139,32,32,0.18)",
+  red:          "var(--th-c-red)",
+  redBg:        "var(--th-c-red-bg)",
+  redBorder:    "var(--th-c-red-border)",
 
   // Header / nav surfaces
-  header:       "rgba(245,242,235,0.96)",
+  header:       "var(--th-c-header)",
 
   // Cinematic banners (vendor hero, explore banner)
-  bannerFrom:   "#1e3d24",
-  bannerTo:     "#2d5435",
+  bannerFrom:   "var(--th-c-banner-from)",
+  bannerTo:     "var(--th-c-banner-to)",
 
   // Legacy — tag surface (BoothBox)
-  tag:          "#faf8f2",
-  tagBorder:    "#ccc6b4",
+  tag:          "var(--th-c-tag)",
+  tagBorder:    "var(--th-c-tag-border)",
 } as const;
 
-export const radius = {
-  sm:   8,
-  md:   12,
-  lg:   16,
-  xl:   20,
-  pill: 999,
-} as const;
-
+// v0.2 spacing — only consumer is parked components/ShelfGrid.tsx.
 export const spacing = {
-  pagePad:    16,
-  cardPad:    14,
-  sectionGap: 24,
-  contentGap: 16,
-  tileGap:    10,
+  pagePad:    "var(--th-c-page-pad)",
+  cardPad:    "var(--th-c-card-pad)",
+  sectionGap: "var(--th-c-section-gap)",
+  contentGap: "var(--th-c-content-gap)",
+  tileGap:    "var(--th-c-tile-gap)",
 } as const;
 
 // ═══════════════════════════════════════════════════════════════════════════
-// v1.1h / v1.2 — journal-vocabulary tokens
+// Canonical scales — Arc 6.1.4 (session 144)
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// Base palette promoted from inline `v1` objects session 19A. Matches
-// docs/design-system.md v1.1h commitments:
+// `space` and `radius` sit above the v1/v2/v0.2 layered tokens as the
+// project-wide rhythm scales. Use these instead of raw px literals when
+// a value isn't already pinned to a v1/v2 semantic token.
 //
-//   Paper:        paperCream (#f2ecd8) — committed session 17 as #e8ddc7;
-//                 lightened session 132 (Shape A bg dial — see CLAUDE.md
-//                 session 132 cost-shape triage). paperWarm + postit +
-//                 postcardBg bumped in step to preserve lift relationships.
-//   Post-it:      #fffaea (brighter cream, v1.1b calibration)
-//   Ink scale:    inkPrimary → inkFaint (warm brown, v1.1b/c calibrated for
-//                 WCAG AA on paperCream)
-//   Hairline:     inkHairline — used for photo borders and dividers
-//   Price ink:    priceInk (#6a4a30) — softer than primary for em-dash prices
-//   Icon bubble:  iconBubble — low-contrast wash for masthead bubbles
-//   Green:        green (#1e4d2b) — saved-state fill + active state
-//   Red:          red* — Booth page hero-upload error + v1.2 destructive links
-//   Radii:        6px for photographs, 16px for banner (the lone exception)
+// Adoption is opt-in; the lint:spacing script (Arc 1.3) warns on raw px
+// literals that don't match a scale step. Existing surfaces migrate
+// progressively as Layer 2 component primitives ship.
+
+// Canonical spacing scale — locked session 143 at denser rhythm.
+// 2  = hairline gap (e.g., between glyph + descender clearance)
+// 4  = inline tight (icon→label, badge inner)
+// 8  = inline default (most form padding, list-item spacing)
+// 12 = card padding tight, row gap medium
+// 16 = card padding default, page padding inline
+// 24 = section gap, hero margin
+// 32 = page section break
+// 48 = major gap (footer, hero offset)
+// 64 = full-page rhythm (rare)
+export const space = {
+  s2:  "var(--th-space-2)",
+  s4:  "var(--th-space-4)",
+  s8:  "var(--th-space-8)",
+  s12: "var(--th-space-12)",
+  s16: "var(--th-space-16)",
+  s24: "var(--th-space-24)",
+  s32: "var(--th-space-32)",
+  s48: "var(--th-space-48)",
+  s64: "var(--th-space-64)",
+} as const;
+
+// Canonical radius scale — preserves v0.2 keys/values (sm=8, md=12, lg=16,
+// xl=20, pill=999) since v0.2 radius had 0 active consumers per Arc 1.1
+// audit; now backs them with var() refs and elevates as the project-wide
+// canonical scale.
+export const radius = {
+  sm:   "var(--th-radius-sm)",
+  md:   "var(--th-radius-md)",
+  lg:   "var(--th-radius-lg)",
+  xl:   "var(--th-radius-xl)",
+  pill: "var(--th-radius-pill)",
+} as const;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v1 — journal-vocabulary tokens (v1.1h / v1.2)
+// ═══════════════════════════════════════════════════════════════════════════
 //
-// v1.2 additions (post-flow trilogy — see docs/design-system-v1.2-build-spec.md):
-//
-//   inkWash:      rgba(255,253,248,0.70) — form-input background on v1.2
-//                 Review / Edit pages. Warmer than pure white, sits on
-//                 paperCream without creating a card.
-//   amber:        #7a5c1e — color + stroke for the <AmberNotice> primitive
-//   amberBg:      rgba(122,92,30,0.08) — notice background wash
-//   amberBorder:  rgba(122,92,30,0.22) — notice border
+// Matches docs/design-system.md v1.1h commitments (paper/post-it/ink
+// scale/hairline/price-ink/icon-bubble/green/red/radii). v1.2 additions
+// (post-flow trilogy): inkWash form-input bg + amber notice family.
+// Session 132 paper-family lift (Shape A bg dial — see CLAUDE.md session
+// 132 cost-shape triage) reflected in :root values.
 
 export const v1 = {
   // Paper + post-it
-  // Session 132 (Shape A bg dial): paperCream lightened from #e8ddc7 →
-  // #f2ecd8 to test "fresher, less dated" feel while keeping warm-paper
-  // identity. postit + paperWarm + postcardBg bumped in step below to
-  // preserve their lift over the new bg.
-  paperCream:   "#f2ecd8",
-  postit:       "#fefae8",
+  paperCream:   "var(--th-v1-paper-cream)",
+  postit:       "var(--th-v1-postit)",
+  paperWarm:    "var(--th-v1-paper-warm)",
 
-  // Phase 2 Session A — paperWarm is the warm-cream variant used as the
-  // polaroid mat across Home masonry, /flagged FindTile, /shelf/[slug]
-  // WindowTile, /post/tag Find/Tag photos, /post/preview PolaroidPreview.
-  // Adoption deferred to Session B PolaroidTile primitive extraction;
-  // declared here so the value lives in one place.
-  paperWarm:    "#fefae6",
-
-  // R10 (session 107) — postcard mall card surface. Slightly more saturated
-  // than paperWarm; reads as "card stock" rather than "off-white." Used by
-  // <PostcardMallCard>. See docs/r10-location-map-design.md D7 + D8.
-  postcardBg:     "#fbf3dd",
-  postcardBorder: "rgba(42,26,10,0.10)",
+  // R10 (session 107) — postcard mall card surface.
+  postcardBg:     "var(--th-v1-postcard-bg)",
+  postcardBorder: "var(--th-v1-postcard-border)",
 
   // Ink scale
-  inkPrimary:   "#2a1a0a",
-  inkMid:       "#4a3520",
-  inkMuted:     "#6b5538",
-  inkFaint:     "rgba(42,26,10,0.28)",
-  inkHairline:  "rgba(42,26,10,0.18)",
+  inkPrimary:   "var(--th-v1-ink-primary)",
+  inkMid:       "var(--th-v1-ink-mid)",
+  inkMuted:     "var(--th-v1-ink-muted)",
+  inkFaint:     "var(--th-v1-ink-faint)",
+  inkHairline:  "var(--th-v1-ink-hairline)",
 
   // Price voice
-  priceInk:     "#6a4a30",
+  priceInk:     "var(--th-v1-price-ink)",
 
   // Icon bubble (paper variant — masthead back button)
-  iconBubble:   "rgba(42,26,10,0.06)",
+  iconBubble:   "var(--th-v1-icon-bubble)",
 
   // Active / destructive
-  green:        "#1e4d2b",
-  red:          "#8b2020",
-  redBg:        "rgba(139,32,32,0.07)",
-  redBorder:    "rgba(139,32,32,0.18)",
+  green:        "var(--th-v1-green)",
+  red:          "var(--th-v1-red)",
+  redBg:        "var(--th-v1-red-bg)",
+  redBorder:    "var(--th-v1-red-border)",
 
-  // Phase 2 Session A — text/icon color on filled green CTAs (28+ inline
-  // `#fff` usages). Adoption deferred to Session D <FormButton> primitive.
-  onGreen:      "#fff",
-
-  // Phase 2 Session A — disabled-state filled green button background.
-  // Replaces three close opacity variants (0.18 / 0.22 / 0.25) inlined
-  // across /post/preview, /login/email, /vendor-request. Adoption deferred
-  // to Session D <FormButton> primitive.
-  greenDisabled: "rgba(30,77,43,0.40)",
+  // Filled-CTA chrome (Phase 2 Session A — 28+ inline #fff usages)
+  onGreen:      "var(--th-v1-on-green)",
+  greenDisabled: "var(--th-v1-green-disabled)",
 
   // v1.2 — form input wash (warm off-white on paperCream)
-  inkWash:      "rgba(255,253,248,0.70)",
+  inkWash:      "var(--th-v1-ink-wash)",
 
   // v1.2 — amber notice family (graceful-collapse observable signal;
   // see docs/DECISION_GATE.md "Graceful-collapse observability" rule)
-  amber:        "#7a5c1e",
-  amberBg:      "rgba(122,92,30,0.08)",
-  amberBorder:  "rgba(122,92,30,0.22)",
+  amber:        "var(--th-v1-amber)",
+  amberBg:      "var(--th-v1-amber-bg)",
+  amberBorder:  "var(--th-v1-amber-border)",
 
   // Radii — flat values are the canonical photograph + banner radii
   // committed in v1.1h. New scales (radius.input/button/pill/sheet) live
   // under v1.radius below; image + banner stay flat for backwards-compat.
-  imageRadius:  6,
-  bannerRadius: 16,
+  imageRadius:  "var(--th-v1-image-radius)",
+  bannerRadius: "var(--th-v1-banner-radius)",
 
-  // Phase 2 Session A — shadow scale. Replaces 12+ inline boxShadow strings
-  // with five canonical stacks. Adoption rolls in across Sessions B–F as
-  // each primitive ships:
-  //   polaroid     — Session B <PolaroidTile> (8 verbatim duplicates today)
-  //   polaroidPin  — Session B (BoothPage post-it pin variant)
-  //   ctaGreen     — Session D <FormButton> (resolves 0.18/0.22/0.25 drift)
-  //   sheetRise    — Session D/F (resolves 0.25/0.28 drift on bottom sheets)
-  //   cardSubtle   — Session F (light counterpart used on /find/[id] strip)
+  // Phase 2 Session A — shadow scale.
   shadow: {
-    polaroid:        "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
-    polaroidPin:     "0 6px 14px rgba(42,26,10,0.32), 0 0 0 0.5px rgba(42,26,10,0.16)",
-    ctaGreen:        "0 2px 12px rgba(30,77,43,0.22)",
-    ctaGreenCompact: "0 2px 10px rgba(30,77,43,0.18)",
-    sheetRise:       "0 -8px 30px rgba(30,20,10,0.28)",
-    cardSubtle:      "0 3px 12px rgba(42,26,10,0.10), 0 1px 3px rgba(42,26,10,0.06)",
-    // R10 (session 107) — postcard card chrome (lighter than polaroid because
-    // it's a chrome element, not a focal-point) + callout (heavier because it
-    // floats on top of the map without a grounded context).
-    postcard:        "0 4px 14px rgba(42,26,10,0.16), 0 1px 2px rgba(42,26,10,0.08)",
-    callout:         "0 8px 20px rgba(42,26,10,0.22), 0 2px 6px rgba(42,26,10,0.10)",
+    polaroid:        "var(--th-v1-shadow-polaroid)",
+    polaroidPin:     "var(--th-v1-shadow-polaroid-pin)",
+    ctaGreen:        "var(--th-v1-shadow-cta-green)",
+    ctaGreenCompact: "var(--th-v1-shadow-cta-green-compact)",
+    sheetRise:       "var(--th-v1-shadow-sheet-rise)",
+    cardSubtle:      "var(--th-v1-shadow-card-subtle)",
+    postcard:        "var(--th-v1-shadow-postcard)",
+    callout:         "var(--th-v1-shadow-callout)",
   },
 
-  // Phase 2 Session A — spacing rhythm scale. Phase 1 audit found gap +
-  // padding values scattered across 4–28px with no clear cadence. This is
-  // the canonical step set; adoption rolls in across Sessions B–F.
+  // Phase 2 Session A — spacing rhythm scale (v1-namespaced).
+  // Layer 1 canonical `space.*` is preferred for new code.
   gap: {
-    xs: 6,
-    sm: 8,
-    md: 12,
-    lg: 16,
-    xl: 22,
+    xs: "var(--th-v1-gap-xs)",
+    sm: "var(--th-v1-gap-sm)",
+    md: "var(--th-v1-gap-md)",
+    lg: "var(--th-v1-gap-lg)",
+    xl: "var(--th-v1-gap-xl)",
   },
 
   // Phase 2 Session A — radius scale for chrome NOT covered by imageRadius
-  // / bannerRadius. Phase 1 audit found button + input radius drift across
-  // 8/9/10/12/14 with no canonical step. Adoption rolls in across Sessions
-  // B–F. Photo + banner stay on the flat tokens above.
+  // / bannerRadius. Layer 1 canonical `radius.*` is preferred for new code.
   radius: {
-    input:  14,
-    button: 14,
-    pill:   999,
-    sheet:  20,
+    input:  "var(--th-v1-radius-input)",
+    button: "var(--th-v1-radius-button)",
+    pill:   "var(--th-v1-radius-pill)",
+    sheet:  "var(--th-v1-radius-sheet)",
   },
 
-  // Phase 2 Session A — icon size scale. Phase 1 audit found 14 distinct
-  // icon sizes used; canonical ramp from BottomNav (21) + utility (18) +
-  // feature (22-24) usage clusters. Adoption rolls in across Sessions B–F.
+  // Phase 2 Session A — icon size scale.
   icon: {
-    xs:  14,
-    sm:  16,
-    md:  18,
-    nav: 21,
-    lg:  22,
-    xl:  24,
+    xs:  "var(--th-v1-icon-xs)",
+    sm:  "var(--th-v1-icon-sm)",
+    md:  "var(--th-v1-icon-md)",
+    nav: "var(--th-v1-icon-nav)",
+    lg:  "var(--th-v1-icon-lg)",
+    xl:  "var(--th-v1-icon-xl)",
   },
 
-  // R10 (session 107) — cartographic warm-cream basemap palette for D25.
-  // Custom-styled Mapbox layer values: cream landmass, tan lowland, sage
-  // water (deeper for inland water), park patches, italic-Lora region
-  // labels at low opacity. Pinned here so the map-style JSON in Arc 3
-  // composes from the same palette as the rest of the v1.x ecosystem.
+  // R10 (session 107) — cartographic warm-cream basemap palette.
   // See docs/r10-location-map-design.md D25.
   basemap: {
-    cream:  "#efe6cf",
-    cream2: "#e6d9b8",
-    water:  "#c5d6c4",
-    water2: "#aac3aa",
-    park:   "#d3dcc4",
-    label:  "rgba(42,26,10,0.55)",
+    cream:  "var(--th-v1-basemap-cream)",
+    cream2: "var(--th-v1-basemap-cream2)",
+    water:  "var(--th-v1-basemap-water)",
+    water2: "var(--th-v1-basemap-water2)",
+    park:   "var(--th-v1-basemap-park)",
+    label:  "var(--th-v1-basemap-label)",
   },
 } as const;
 
@@ -262,119 +251,88 @@ export const v1 = {
 //   Q1.1     Inter replaces FONT_SYS as canonical sans companion
 //   Q2  (a) v2 palette replaces v1 paper-family entirely
 //   Q3  (a) Polaroid retires system-wide; row pattern is new shared primitive
-//
-// Migration arcs:
-//   Arc 1: Saved page (this Arc 1.1 commit lands the additive token layer)
-//   Arc 2-5: Home / Find / /shelf / /map (consumers migrate per surface)
-//   Arc 6: Decorative leaf chrome universal (sub-Q-A deferred from Arc 1)
-//   Arc 7: Cleanup — retire v1.* tokens once no consumers remain
-//
-// First consumer: components/v2/SavedMallCardV2.tsx + siblings (Arc 1.2).
 
 export const v2 = {
-  // Background scale — page-level + card surfaces. bg.main is the page
-  // canvas; bg.paper is the bright card surface; bg.soft is the page bg
-  // soft variant. surface.card mirrors bg.paper for card chrome
-  // semantics; surface.warm is the warm-cream pill + thumbnail bg.
-  //
-  // Session 139 Arc 1.2.5 dial — bg.main shifted #F7F3E8 → #FBF6EA per
-  // David's mockup pass. Page canvas matched surface.warm; the
-  // distinction was semantic (page bg vs pill/thumbnail bg). Cards still
-  // pop via surface.card #FFFCF5 against the warmer canvas.
-  //
-  // Session 140 Arc 2 chrome dial — bg.main shifted #FBF6EA → #F7F3EB
-  // alongside chrome migration (tabs layout + StickyMasthead + BottomNav
-  // all become v2.bg.main consumers). Splits page canvas back from
+  // Background scale. Session 140 Arc 2 chrome dial — bg.main #FBF6EA
+  // → #F7F3EB alongside chrome migration (tabs layout + StickyMasthead
+  // + BottomNav now consume bg.main). Splits page canvas back from
   // surface.warm — cooler page chrome under warmer card surfaces creates
-  // subtle visual hierarchy. v1 surfaces using v1.paperCream directly
-  // (vendor pages, /post/preview, /find/[id] cartographic chrome) stay
-  // on v1.paperCream #f2ecd8 — only tab chrome migrates.
+  // subtle visual hierarchy. Session 143 — body bg also migrated to
+  // #F7F3EB at the body layer (app/layout.tsx + app/globals.css) as the
+  // structural fix for the per-page page-bg dial bug class.
   bg: {
-    main:  "#F7F3EB",
-    paper: "#FFFCF5",
-    soft:  "#F1EBDD",
+    main:  "var(--th-v2-bg-main)",
+    paper: "var(--th-v2-bg-paper)",
+    soft:  "var(--th-v2-bg-soft)",
   },
   surface: {
-    card: "#FFFCF5",
-    warm: "#FBF6EA",
+    card: "var(--th-v2-surface-card)",
+    warm: "var(--th-v2-surface-warm)",
   },
 
-  // Text scale — primary body / secondary metadata-and-addresses /
-  // muted decorative-and-tertiary. Calibrated for WCAG AA on bg.main.
+  // Text scale — calibrated for WCAG AA on bg.main.
   text: {
-    primary:   "#2B211A",
-    secondary: "#756A5E",
-    muted:     "#A39686",
+    primary:   "var(--th-v2-text-primary)",
+    secondary: "var(--th-v2-text-secondary)",
+    muted:     "var(--th-v2-text-muted)",
   },
 
-  // Brand green — accent.green is the canonical CTA + active-state fill.
-  // accent.greenDark is the hover/active variant. accent.greenSoft is the
-  // active-state bg for ★ favorited bubble + future engagement-on states.
-  // accent.greenMid is the standardized button background (lighter than
-  // canonical brand green — QA-derived at session 139 for the SavedMallCardV2
-  // GET DIRECTIONS button + adopted as the v2 button-fill standard at
+  // Brand green — accent.green canonical CTA + active-state fill;
+  // accent.greenDark hover/active variant; accent.greenSoft active-state
+  // bg for ★ favorited bubble; accent.greenMid standardized button bg
+  // (QA-derived session 139 + adopted as v2 button-fill standard at
   // session 141 when LocationActions Take Trip joined as second consumer).
   accent: {
-    green:     "#285C3C",
-    greenDark: "#1F4A31",
-    greenSoft: "#E8EEE6",
-    greenMid:  "#3E694F",
+    green:     "var(--th-v2-accent-green)",
+    greenDark: "var(--th-v2-accent-green-dark)",
+    greenSoft: "var(--th-v2-accent-green-soft)",
+    greenMid:  "var(--th-v2-accent-green-mid)",
   },
 
-  // Brand brown — wordmark + secondary brand color. brown is the upright
-  // wordmark + nav default; brownSoft is the decorative botanical chrome
-  // stroke (used by deferred v2 Arc 6 leaf SVG).
-  brown:     "#6A513E",
-  brownSoft: "#B8A996",
+  // Brand brown — wordmark + secondary brand color.
+  brown:     "var(--th-v2-brown)",
+  brownSoft: "var(--th-v2-brown-soft)",
 
-  // Hairline borders — light is the canonical 1px hairline (cards + rows
-  // + dividers). medium is the stronger hairline (dashed flankers around
-  // "X finds waiting" eyebrow + ✓ Found checkbox unchecked-state border).
+  // Hairline borders — light canonical 1px (cards/rows/dividers); medium
+  // stronger hairline (dashed flankers around eyebrow + ✓ Found unchecked).
   border: {
-    light:  "#E5DED2",
-    medium: "#D6CCBC",
+    light:  "var(--th-v2-border-light)",
+    medium: "var(--th-v2-border-medium)",
   },
 } as const;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Fonts (loaded in app/layout.tsx via next/font/google)
+// ═══════════════════════════════════════════════════════════════════════════
 
 export const fonts = {
   // Session 82 — Lora is the project-wide literary serif (replaced IM Fell).
   // Modern editorial serif by Cyreal (Google Fonts), variable font with a
-  // strong italic. IM Fell's letterpress glyph variability hurt readability
-  // at body sizes (form labels, find-tile captions). Loaded in app/layout.tsx
-  // via next/font/google. See docs/mockups/vendor-request-typography-v2.html.
+  // strong italic. Loaded in app/layout.tsx via next/font/google.
   // Session 138 (v2 migration) — slated for retirement; Cormorant Garamond
-  // replaces project-wide. Stays alive until v2 Arc 7 cleanup confirms zero
-  // consumers remain. See docs/v2-visual-migration.md.
+  // replaces project-wide. Stays alive until v2 Arc 7 cleanup confirms
+  // zero consumers remain. See docs/v2-visual-migration.md.
   lora: 'var(--font-lora), Georgia, serif',
   sys:  '-apple-system, "Segoe UI", Roboto, system-ui, sans-serif',
   // Session 75 — booth-numeral font. Times New Roman across every booth-
-  // numeral and count-chip surface: post-it 36px, Variant B booth lockup
-  // (Booths grid, find detail, /flagged), and MallScopeHeader 22px count
-  // prefix. Disambiguated `1` (vs the prior serif's `1` that read as `I`
-  // on mixed booth IDs like D19). No webfont load — TNR ships with iOS,
-  // macOS, and Windows. Project-wide rule: letters → FONT_LORA or FONT_SYS;
-  // numbers → FONT_NUMERAL. See docs/booth-numeral-font-design.md.
+  // numeral and count-chip surface. Project-wide rule: letters → FONT_LORA
+  // or FONT_SYS; numbers → FONT_NUMERAL. See docs/booth-numeral-font-design.md.
   // Session 138 (v2 migration) — preserved; v2 doesn't touch numerals.
   numeral: '"Times New Roman", Times, serif',
   // Session 120 — Dancing Script. Hand-drawn cursive used sparingly + intentionally
-  // for personal-touch labels only. First consumer: <RichPostcardMallCard> "select
-  // location" stamp label. Loaded in app/layout.tsx via next/font/google. Do not
-  // let this font sprawl onto body copy / form labels / any high-density surface;
-  // it's expensive on legibility at small sizes and the script vocabulary loses
-  // meaning when overused.
+  // for personal-touch labels only. Loaded in app/layout.tsx via next/font/google.
+  // Do not let this font sprawl onto body copy / form labels / any high-density
+  // surface; it's expensive on legibility at small sizes.
   script: 'var(--font-dancing-script), "Lora", cursive',
-  // Session 138 (v2 Arc 1.1) — Cormorant Garamond replaces Lora project-wide
-  // per Q1 (a). Single editorial serif family for upright + italic across all
-  // v2 surfaces (mall names 28/600, find names 17/500, booth names italic
-  // 17/500, narrative italic). Loaded in app/layout.tsx via next/font/google.
-  // Migration: v2 consumers reference FONT_CORMORANT; v1 consumers stay on
-  // FONT_LORA until their surface migrates. v2 Arc 7 cleanup retires
-  // FONT_LORA. See docs/v2-visual-migration.md + docs/saved-v2-redesign-design.md.
+  // Session 138 (v2 Arc 1.1) — Cormorant Garamond replaces Lora project-wide.
+  // Single editorial serif family for upright + italic across all v2 surfaces.
+  // Loaded in app/layout.tsx via next/font/google. Migration: v2 consumers
+  // reference FONT_CORMORANT; v1 consumers stay on FONT_LORA until their
+  // surface migrates. v2 Arc 7 cleanup retires FONT_LORA.
   cormorant: 'var(--font-cormorant), Georgia, serif',
   // Session 138 (v2 Arc 1.1) — Inter replaces FONT_SYS as the canonical sans
-  // companion per Q1.1 (lock-by-inheritance from mockup spec). Used for
-  // metadata / prices / buttons / navigation across all v2 surfaces. Loaded
-  // in app/layout.tsx via next/font/google. Migration shape mirrors Cormorant.
+  // companion. Used for metadata / prices / buttons / navigation across all
+  // v2 surfaces. Loaded in app/layout.tsx via next/font/google.
   inter: 'var(--font-inter), -apple-system, "Segoe UI", Roboto, system-ui, sans-serif',
 } as const;
 
@@ -385,6 +343,10 @@ export const FONT_NUMERAL   = fonts.numeral;
 export const FONT_SCRIPT    = fonts.script;
 export const FONT_CORMORANT = fonts.cormorant;
 export const FONT_INTER     = fonts.inter;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Motion tokens — JS values consumed by framer-motion, NOT migrated to vars
+// ═══════════════════════════════════════════════════════════════════════════
 
 // Motion tokens — session 76 Track E (animation consistency).
 // docs/animation-consistency-design.md. Use these on Booths VendorCard,

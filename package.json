@@ -13,7 +13,8 @@
     "inspect-banners": "npx tsx scripts/inspect-banners.ts",
     "test:filters": "npx tsx scripts/test-filters.ts",
     "test:query-builder": "npx tsx scripts/test-query-builder.ts",
-    "test:comps": "npx tsx scripts/test-comps.ts"
+    "test:comps": "npx tsx scripts/test-comps.ts",
+    "lint:spacing": "npx tsx scripts/lint-spacing.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

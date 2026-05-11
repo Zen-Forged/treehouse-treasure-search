@@ -2,6 +2,163 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ════════════════════════════════════════════════════════════════════════════
+ * Layer 1 token foundation (Arc 6.1.4, session 144)
+ *
+ * Single source of truth for design-token values. Backs lib/tokens.ts —
+ * every TS export resolves to a var() reference, so updating a value here
+ * propagates to every consumer at render time without rewriting callsites.
+ *
+ * Three coexisting layers per docs/v2-visual-migration.md:
+ *   --th-v1-*   journal vocabulary (Find Detail, Find Map, Booth, post flow)
+ *   --th-v2-*   field-guide migration (Saved/Home/Find/shelf, expanding)
+ *   --th-c-*    legacy v0.2 ecosystem (admin, parked surfaces)
+ *
+ * Two NEW canonical scales above the layered tokens:
+ *   --th-space-*   2/4/8/12/16/24/32/48/64 (locked session 143)
+ *   --th-radius-*  sm/md/lg/xl/pill
+ *
+ * v1/v2 dual namespace preserved through v2 Arc 10 cleanup.
+ * ════════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* Canonical spacing scale */
+  --th-space-2:  2px;
+  --th-space-4:  4px;
+  --th-space-8:  8px;
+  --th-space-12: 12px;
+  --th-space-16: 16px;
+  --th-space-24: 24px;
+  --th-space-32: 32px;
+  --th-space-48: 48px;
+  --th-space-64: 64px;
+
+  /* Canonical radius scale */
+  --th-radius-sm:   8px;
+  --th-radius-md:   12px;
+  --th-radius-lg:   16px;
+  --th-radius-xl:   20px;
+  --th-radius-pill: 999px;
+
+  /* ── v1 — paper + post-it ── */
+  --th-v1-paper-cream:     #f2ecd8;
+  --th-v1-paper-warm:      #fefae6;
+  --th-v1-postit:          #fefae8;
+  --th-v1-postcard-bg:     #fbf3dd;
+  --th-v1-postcard-border: rgba(42,26,10,0.10);
+
+  /* v1 ink scale */
+  --th-v1-ink-primary:  #2a1a0a;
+  --th-v1-ink-mid:      #4a3520;
+  --th-v1-ink-muted:    #6b5538;
+  --th-v1-ink-faint:    rgba(42,26,10,0.28);
+  --th-v1-ink-hairline: rgba(42,26,10,0.18);
+
+  /* v1 voice + chrome */
+  --th-v1-price-ink:      #6a4a30;
+  --th-v1-icon-bubble:    rgba(42,26,10,0.06);
+  --th-v1-green:          #1e4d2b;
+  --th-v1-red:            #8b2020;
+  --th-v1-red-bg:         rgba(139,32,32,0.07);
+  --th-v1-red-border:     rgba(139,32,32,0.18);
+  --th-v1-on-green:       #fff;
+  --th-v1-green-disabled: rgba(30,77,43,0.40);
+
+  /* v1.2 form input + amber notice */
+  --th-v1-ink-wash:     rgba(255,253,248,0.70);
+  --th-v1-amber:        #7a5c1e;
+  --th-v1-amber-bg:     rgba(122,92,30,0.08);
+  --th-v1-amber-border: rgba(122,92,30,0.22);
+
+  /* v1 numeric chrome (px-baked) */
+  --th-v1-image-radius:  6px;
+  --th-v1-banner-radius: 16px;
+  --th-v1-gap-xs:        6px;
+  --th-v1-gap-sm:        8px;
+  --th-v1-gap-md:        12px;
+  --th-v1-gap-lg:        16px;
+  --th-v1-gap-xl:        22px;
+  --th-v1-radius-input:  14px;
+  --th-v1-radius-button: 14px;
+  --th-v1-radius-pill:   999px;
+  --th-v1-radius-sheet:  20px;
+  --th-v1-icon-xs:       14px;
+  --th-v1-icon-sm:       16px;
+  --th-v1-icon-md:       18px;
+  --th-v1-icon-nav:      21px;
+  --th-v1-icon-lg:       22px;
+  --th-v1-icon-xl:       24px;
+
+  /* v1 R10 cartographic basemap */
+  --th-v1-basemap-cream:  #efe6cf;
+  --th-v1-basemap-cream2: #e6d9b8;
+  --th-v1-basemap-water:  #c5d6c4;
+  --th-v1-basemap-water2: #aac3aa;
+  --th-v1-basemap-park:   #d3dcc4;
+  --th-v1-basemap-label:  rgba(42,26,10,0.55);
+
+  /* v1 shadow stack */
+  --th-v1-shadow-polaroid:          0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10);
+  --th-v1-shadow-polaroid-pin:      0 6px 14px rgba(42,26,10,0.32), 0 0 0 0.5px rgba(42,26,10,0.16);
+  --th-v1-shadow-cta-green:         0 2px 12px rgba(30,77,43,0.22);
+  --th-v1-shadow-cta-green-compact: 0 2px 10px rgba(30,77,43,0.18);
+  --th-v1-shadow-sheet-rise:        0 -8px 30px rgba(30,20,10,0.28);
+  --th-v1-shadow-card-subtle:       0 3px 12px rgba(42,26,10,0.10), 0 1px 3px rgba(42,26,10,0.06);
+  --th-v1-shadow-postcard:          0 4px 14px rgba(42,26,10,0.16), 0 1px 2px rgba(42,26,10,0.08);
+  --th-v1-shadow-callout:           0 8px 20px rgba(42,26,10,0.22), 0 2px 6px rgba(42,26,10,0.10);
+
+  /* ── v2 — field-guide migration ── */
+  --th-v2-bg-main:       #F7F3EB;
+  --th-v2-bg-paper:      #FFFCF5;
+  --th-v2-bg-soft:       #F1EBDD;
+  --th-v2-surface-card:  #FFFCF5;
+  --th-v2-surface-warm:  #FBF6EA;
+
+  --th-v2-text-primary:   #2B211A;
+  --th-v2-text-secondary: #756A5E;
+  --th-v2-text-muted:     #A39686;
+
+  --th-v2-accent-green:      #285C3C;
+  --th-v2-accent-green-dark: #1F4A31;
+  --th-v2-accent-green-soft: #E8EEE6;
+  --th-v2-accent-green-mid:  #3E694F;
+
+  --th-v2-brown:      #6A513E;
+  --th-v2-brown-soft: #B8A996;
+
+  --th-v2-border-light:  #E5DED2;
+  --th-v2-border-medium: #D6CCBC;
+
+  /* ── v0.2 — legacy ecosystem (admin, parked surfaces) ── */
+  --th-c-bg:           #f5f2eb;
+  --th-c-surface:      #edeae1;
+  --th-c-surface-deep: #e4e0d6;
+  --th-c-empty-tile:   #dedad2;
+  --th-c-border:       rgba(26,24,16,0.09);
+  --th-c-border-light: rgba(26,24,16,0.05);
+  --th-c-text-primary: #1c1a14;
+  --th-c-text-mid:     #4a4840;
+  --th-c-text-muted:   #8a8476;
+  --th-c-text-faint:   #b4ae9e;
+  --th-c-green:        #1e4d2b;
+  --th-c-green-light:  rgba(30,77,43,0.08);
+  --th-c-green-solid:  rgba(30,77,43,0.90);
+  --th-c-green-border: rgba(30,77,43,0.20);
+  --th-c-red:          #8b2020;
+  --th-c-red-bg:       rgba(139,32,32,0.07);
+  --th-c-red-border:   rgba(139,32,32,0.18);
+  --th-c-header:       rgba(245,242,235,0.96);
+  --th-c-banner-from:  #1e3d24;
+  --th-c-banner-to:    #2d5435;
+  --th-c-tag:          #faf8f2;
+  --th-c-tag-border:   #ccc6b4;
+
+  --th-c-page-pad:    16px;
+  --th-c-card-pad:    14px;
+  --th-c-section-gap: 24px;
+  --th-c-content-gap: 16px;
+  --th-c-tile-gap:    10px;
+}
+
 @layer base {
   * {
     box-sizing: border-box;

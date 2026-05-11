@@ -26,7 +26,16 @@
 //     (smoke route + Arc 1.4 production wiring).
 "use client";
 
+import { useLayoutEffect, useRef, useState } from "react";
 import { FONT_CORMORANT, FONT_INTER, v2 } from "@/lib/tokens";
+import { PiLeaf } from "react-icons/pi";
+
+// Session 144 iPhone QA: long mall names ("Copper Awning Flea Market") wrapped
+// to 2 lines at fontSize 25 on iPhone widths. Mirrors PostcardMallCard's
+// session-116 measure-and-shrink pattern: render at MAX, step down 1px until
+// the single-line layout fits, ellipsis at MIN as last-resort.
+const NAME_FONT_MAX = 25;
+const NAME_FONT_MIN = 17;
 
 interface SavedMallCardV2Props {
   mallName: string;
@@ -53,6 +62,23 @@ export default function SavedMallCardV2({
   const distanceLabel = formatDistanceLabel(distanceMi);
   const hasDistance = distanceLabel !== null;
 
+  // Measure-and-shrink: drive fontSize down from MAX to MIN until the title
+  // fits on one line. Recomputes when mallName changes or hasDistance toggles
+  // (pill presence affects available column width).
+  const nameRef = useRef<HTMLHeadingElement>(null);
+  const [nameFontSize, setNameFontSize] = useState(NAME_FONT_MAX);
+  useLayoutEffect(() => {
+    const el = nameRef.current;
+    if (!el) return;
+    let size = NAME_FONT_MAX;
+    el.style.fontSize = `${size}px`;
+    while (el.scrollWidth > el.clientWidth && size > NAME_FONT_MIN) {
+      size -= 1;
+      el.style.fontSize = `${size}px`;
+    }
+    setNameFontSize(size);
+  }, [mallName, hasDistance]);
+
   return (
     <article
       style={{
@@ -64,7 +90,14 @@ export default function SavedMallCardV2({
         overflow: "hidden",
       }}
     >
-      {/* head-δ — CSS grid: name + DistancePill on row 1; address spans row 2 */}
+      {/* head-δ — CSS grid: name + DistancePill on row 1; address spans row 2.
+          Session 144 iPhone QA: alignItems "center" → "start" so the
+          DistancePill anchors to the top of row 1 (= top of head-δ content
+          box, 16px below container top) instead of vertically centering
+          against the title cell. Pill renders with consistent
+          16px-above / 20px-right padding regardless of title height — David's
+          "fixed in the corner of the component with equal padding above and
+          to the right" call. */}
       <div
         style={{
           padding: "16px 20px 12px",
@@ -72,19 +105,33 @@ export default function SavedMallCardV2({
           gridTemplateColumns: hasDistance ? "1fr auto" : "1fr",
           columnGap: hasDistance ? 12 : 0,
           rowGap: 2,
-          alignItems: "center",
+          alignItems: "start",
         }}
       >
         <h2
+          ref={nameRef}
           style={{
             gridColumn: 1,
             gridRow: 1,
             fontFamily: FONT_CORMORANT,
             fontWeight: 600,
-            fontSize: 25,
-            lineHeight: 1.1,
+            fontSize: nameFontSize,
+            // Session 144 iPhone QA: lineHeight 1.1 → 1.3 per
+            // feedback_lora_lineheight_minimum_for_clamp.md canonical floor
+            // (promoted-via-memory at session 107, extended to Cormorant at
+            // session 143's /me handle h1). The overflow:hidden added below
+            // for the measure-and-shrink loop turned the existing line-box
+            // into a clipping box; 'g'/'y'/'p' descenders need 1.3+ to clear.
+            lineHeight: 1.3,
             color: v2.text.primary,
             margin: 0,
+            // Single-line clamp drives the measure-and-shrink loop above.
+            // Ellipsis applies only when even NAME_FONT_MIN can't fit
+            // (extremely long names; rare in practice).
+            minWidth: 0,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
           }}
         >
           {mallName}
@@ -205,19 +252,7 @@ export default function SavedMallCardV2({
             whiteSpace: "nowrap",
           }}
         >
-          <svg
-            width={16}
-            height={16}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2c1.7 5 .67 16-8.2 18zM2 21c0-3 1.85-5.36 5.08-6" />
-          </svg>
+          <PiLeaf size={16} aria-hidden />
           {findsCount} {findsCount === 1 ? "find" : "finds"} waiting to be found
         </span>
         <span
