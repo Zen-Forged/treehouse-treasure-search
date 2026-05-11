@@ -259,7 +259,7 @@ function VendorRequestInner() {
         state={done}
         email={email}
         onGoHome={() => router.push("/")}
-        onGoSignIn={() => router.push("/login/email")}
+        onGoSignIn={() => router.push("/login")}
       />
     );
   }

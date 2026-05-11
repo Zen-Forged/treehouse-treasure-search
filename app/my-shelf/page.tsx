@@ -383,7 +383,7 @@ function MyBoothInner() {
   // ── Auth gate ──────────────────────────────────────────────────────────
   useEffect(() => {
     getSession().then(s => {
-      if (!s?.user) { router.replace("/login/email"); return; }
+      if (!s?.user) { router.replace("/login"); return; }
       setUser(s.user);
       setAuthReady(true);
     });

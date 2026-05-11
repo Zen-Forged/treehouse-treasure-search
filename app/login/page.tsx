@@ -1,11 +1,10 @@
 // app/login/page.tsx
 // Login — email-first single-form entry. Shape A from session 115.
 //
-// Routing model (post-session-115):
+// Routing model (post-session-115; /login/email alias retired session 147
+// after the D6-locked 30-day window):
 //   /login          = this page. Email entry → 6-digit OTP code OR magic-link
 //                     → routed via pickDest based on detectUserRole.
-//   /login/email    = redirect alias to /login (Arc 4) — preserves magic-link
-//                     emails in the wild that point at /login/email/?confirmed=1.
 //   /welcome        = first-sign-in disambiguation (none-state landing).
 //
 // What lives here (consolidated from prior /login + /login/email):
