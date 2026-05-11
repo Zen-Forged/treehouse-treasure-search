@@ -27,7 +27,7 @@
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, ImagePlus } from "lucide-react";
-import { v1, FONT_LORA } from "@/lib/tokens";
+import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 
 const EASE = [0.25, 0.46, 0.45, 0.94] as const;
 
@@ -102,7 +102,7 @@ export default function AddFindSheet({
               width: "100%",
               maxWidth: 430,
               maxHeight: "78vh",
-              background: v1.paperCream,
+              background: v2.bg.main,
               borderRadius: "20px 20px 0 0",
               boxShadow: "0 -8px 30px rgba(30,20,10,0.28)",
               zIndex: 101,
@@ -126,7 +126,7 @@ export default function AddFindSheet({
                   width: 44,
                   height: 4,
                   borderRadius: 999,
-                  background: v1.inkFaint,
+                  background: v2.text.muted,
                 }}
                 aria-hidden="true"
               />
@@ -136,11 +136,11 @@ export default function AddFindSheet({
             <div style={{ padding: "10px 22px 2px", flexShrink: 0 }}>
               <div
                 style={{
-                  fontFamily: FONT_LORA,
+                  fontFamily: FONT_CORMORANT,
                   fontSize: 22,
-                  color: v1.inkPrimary,
+                  color: v2.text.primary,
                   letterSpacing: "-0.005em",
-                  lineHeight: 1.2,
+                  lineHeight: 1.3,
                 }}
               >
                 {title}
@@ -149,14 +149,14 @@ export default function AddFindSheet({
 
             {/* ── 5. Divider ──────────────────────────────────────────── */}
             <div style={{ padding: "14px 22px 12px", flexShrink: 0 }}>
-              <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
+              <div style={{ width: "100%", height: 1, background: v2.border.light }} />
             </div>
 
             {/* ── 6. Rows ─────────────────────────────────────────────── */}
             <div style={{ padding: "0 22px 12px", display: "flex", flexDirection: "column" }}>
               <SheetRow
                 glyph={
-                  <Camera size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+                  <Camera size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
                 }
                 label="Take a photo"
                 onClick={onTakePhoto}
@@ -164,7 +164,7 @@ export default function AddFindSheet({
               />
               <SheetRow
                 glyph={
-                  <ImagePlus size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+                  <ImagePlus size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
                 }
                 label="Choose from library"
                 onClick={onChooseFromLibrary}
@@ -203,7 +203,7 @@ function SheetRow({
         padding: "16px 10px",
         background: "transparent",
         border: "none",
-        borderBottom: isLast ? "none" : `1px solid ${v1.inkHairline}`,
+        borderBottom: isLast ? "none" : `1px solid ${v2.border.light}`,
         cursor: "pointer",
         textAlign: "left",
         WebkitTapHighlightColor: "transparent",
@@ -220,9 +220,9 @@ function SheetRow({
       </div>
       <span
         style={{
-          fontFamily: FONT_LORA,
+          fontFamily: FONT_INTER,
           fontSize: 18,
-          color: v1.inkPrimary,
+          color: v2.text.primary,
           lineHeight: 1.25,
           letterSpacing: "-0.005em",
         }}
