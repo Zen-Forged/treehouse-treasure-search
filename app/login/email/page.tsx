@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { v1 } from "@/lib/tokens";
+import { v2 } from "@/lib/tokens";
 
 function LoginEmailRedirectInner() {
   const router       = useRouter();
@@ -30,7 +30,7 @@ function LoginEmailRedirectInner() {
     <div
       style={{
         minHeight: "100dvh",
-        background: v1.paperCream,
+        background: v2.bg.main,
         maxWidth: 430,
         margin: "0 auto",
       }}

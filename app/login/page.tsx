@@ -41,10 +41,17 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, ArrowLeft, Loader, Clipboard, Store, KeyRound, HelpCircle } from "lucide-react";
+// ArrowLeft stays Lucide per MastheadBackButton primitive convention;
+// Loader stays Lucide as canonical spinning-animation primitive (Phosphor
+// PiSpinner has a different visual character). Mail/Clipboard/Store/
+// KeyRound/HelpCircle migrate to Phosphor weight-pair vocabulary per
+// session 145 BottomNav cohesion sweep + session 137 ShareSheet
+// migrations.
+import { ArrowLeft, Loader } from "lucide-react";
+import { PiEnvelopeSimple, PiClipboard, PiStorefront, PiKey, PiQuestion } from "react-icons/pi";
 import { sendMagicLink, getSession, signOut, onAuthChange, isAdmin, detectUserRoleWithAutoClaim, tryAutoClaimVendorRows } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
-import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import FormField, { formInputStyle } from "@/components/FormField";
 import FormButton from "@/components/FormButton";
 import type { User } from "@supabase/supabase-js";
@@ -64,7 +71,7 @@ function safeRedirect(next: string | null, fallback = "/my-shelf"): string {
 }
 
 const inputErrorOverride: React.CSSProperties = {
-  border: `1.5px solid ${v1.redBorder}`,
+  border: `1.5px solid ${v2.border.error}`,
   padding: "13.5px 13.5px",
 };
 
@@ -380,7 +387,7 @@ function LoginInner() {
       <div
         style={{
           minHeight: "100dvh",
-          background: v1.paperCream,
+          background: v2.bg.main,
           maxWidth: 430,
           margin: "0 auto",
           display: "flex",
@@ -397,20 +404,20 @@ function LoginInner() {
             height: 60,
             borderRadius: "50%",
             background: "rgba(42,26,10,0.04)",
-            border: `0.5px solid ${v1.inkHairline}`,
+            border: `0.5px solid ${v2.border.light}`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             marginBottom: 22,
           }}
         >
-          <Loader size={22} style={{ color: v1.inkPrimary, animation: "spin 0.9s linear infinite" }} strokeWidth={1.8} />
+          <Loader size={22} style={{ color: v2.text.primary, animation: "spin 0.9s linear infinite" }} strokeWidth={1.8} />
         </div>
         <h1
           style={{
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
             fontSize: 28,
-            color: v1.inkPrimary,
+            color: v2.text.primary,
             lineHeight: 1.2,
             letterSpacing: "-0.005em",
             margin: "0 0 8px",
@@ -420,10 +427,10 @@ function LoginInner() {
         </h1>
         <p
           style={{
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
             fontSize: 15,
-            color: v1.inkMuted,
+            color: v2.text.muted,
             lineHeight: 1.55,
             margin: 0,
           }}
@@ -441,7 +448,7 @@ function LoginInner() {
       <div
         style={{
           minHeight: "100dvh",
-          background: v1.paperCream,
+          background: v2.bg.main,
           maxWidth: 430,
           margin: "0 auto",
         }}
@@ -454,7 +461,7 @@ function LoginInner() {
     <div
       style={{
         minHeight: "100dvh",
-        background: v1.paperCream,
+        background: v2.bg.main,
         maxWidth: 430,
         margin: "0 auto",
         display: "flex",
@@ -484,13 +491,13 @@ function LoginInner() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: v1.iconBubble,
-            border: "none",
+            background: v2.surface.warm,
+            border: `1px solid ${v2.border.light}`,
             cursor: "pointer",
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
         </button>
       </header>
 
@@ -522,10 +529,10 @@ function LoginInner() {
           />
           <p
             style={{
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 14,
-              color: v1.inkMuted,
+              color: v2.text.muted,
               lineHeight: 1.55,
               margin: "0 auto",
               maxWidth: 290,
@@ -557,7 +564,7 @@ function LoginInner() {
                     href="/my-shelf"
                     title="Manage my booth"
                     subtitle="Edit your shelf, post new finds, mark items sold."
-                    icon={<Store size={20} strokeWidth={1.6} />}
+                    icon={<PiStorefront size={20} />}
                   />
                 )}
                 {isAdmin(authedUser) && (
@@ -565,7 +572,7 @@ function LoginInner() {
                     href="/admin"
                     title="Admin tools"
                     subtitle="Locations, vendors, banners, and approvals."
-                    icon={<KeyRound size={20} strokeWidth={1.6} />}
+                    icon={<PiKey size={20} />}
                   />
                 )}
               </motion.div>
@@ -618,10 +625,10 @@ function LoginInner() {
 
                 <p
                   style={{
-                    fontFamily: FONT_LORA,
+                    fontFamily: FONT_CORMORANT,
                     fontStyle: "italic",
                     fontSize: 12,
-                    color: v1.inkMuted,
+                    color: v2.text.muted,
                     textAlign: "center",
                     lineHeight: 1.5,
                     margin: "2px 0 0",
@@ -648,20 +655,20 @@ function LoginInner() {
                     alignItems: "center",
                     gap: 8,
                     padding: "12px 0",
-                    borderTop: `0.5px solid ${v1.inkHairline}`,
-                    borderBottom: `0.5px solid ${v1.inkHairline}`,
+                    borderTop: `0.5px solid ${v2.border.light}`,
+                    borderBottom: `0.5px solid ${v2.border.light}`,
                     marginBottom: 4,
                   }}
                 >
-                  <Mail size={14} style={{ color: v1.inkMuted, flexShrink: 0 }} strokeWidth={1.6} />
-                  <span style={{ fontFamily: FONT_SYS, fontSize: 14, color: v1.inkMuted, flexShrink: 0 }}>
+                  <PiEnvelopeSimple size={14} style={{ color: v2.text.muted, flexShrink: 0 }} />
+                  <span style={{ fontFamily: FONT_INTER, fontSize: 14, color: v2.text.muted, flexShrink: 0 }}>
                     Sent to&nbsp;
                   </span>
                   <span
                     style={{
-                      fontFamily: FONT_SYS,
+                      fontFamily: FONT_INTER,
                       fontSize: 14,
-                      color: v1.inkPrimary,
+                      color: v2.text.primary,
                       fontWeight: 500,
                       wordBreak: "break-all",
                       minWidth: 0,
@@ -702,7 +709,7 @@ function LoginInner() {
                       padding: "18px 14px",
                       textAlign: "center",
                       letterSpacing: "0.4em",
-                      fontFamily: FONT_SYS,
+                      fontFamily: FONT_INTER,
                       opacity: codeBusy ? 0.6 : 1,
                       ...(codeError ? inputErrorOverride : null),
                     }}
@@ -718,13 +725,13 @@ function LoginInner() {
                       border: "none",
                       padding: 0,
                       cursor: codeBusy ? "default" : "pointer",
-                      fontFamily: FONT_LORA,
+                      fontFamily: FONT_CORMORANT,
                       fontStyle: "italic",
                       fontSize: 14,
-                      color: v1.inkMuted,
+                      color: v2.text.muted,
                       textDecoration: "underline",
                       textDecorationStyle: "dotted",
-                      textDecorationColor: v1.inkFaint,
+                      textDecorationColor: v2.text.muted,
                       textUnderlineOffset: 3,
                       textAlign: "center",
                       opacity: codeBusy ? 0.5 : 1,
@@ -735,7 +742,7 @@ function LoginInner() {
                       marginTop: 2,
                     }}
                   >
-                    <Clipboard size={13} style={{ color: v1.green }} strokeWidth={1.8} />
+                    <PiClipboard size={13} style={{ color: v2.accent.green }} />
                     Paste code from clipboard
                   </button>
                 )}
@@ -750,10 +757,10 @@ function LoginInner() {
                       padding: "9px 12px",
                       borderRadius: 9,
                       background: "rgba(42,26,10,0.03)",
-                      border: `0.5px solid ${v1.inkHairline}`,
-                      fontFamily: FONT_SYS,
+                      border: `0.5px solid ${v2.border.light}`,
+                      fontFamily: FONT_INTER,
                       fontSize: 12,
-                      color: v1.inkMid,
+                      color: v2.text.secondary,
                       textAlign: "center",
                     }}
                   >
@@ -768,10 +775,10 @@ function LoginInner() {
                       alignItems: "center",
                       justifyContent: "center",
                       gap: 7,
-                      fontFamily: FONT_LORA,
+                      fontFamily: FONT_CORMORANT,
                       fontStyle: "italic",
                       fontSize: 13,
-                      color: v1.inkMuted,
+                      color: v2.text.muted,
                     }}
                   >
                     <Loader size={12} style={{ animation: "spin 0.9s linear infinite" }} />
@@ -781,10 +788,10 @@ function LoginInner() {
 
                 <p
                   style={{
-                    fontFamily: FONT_LORA,
+                    fontFamily: FONT_CORMORANT,
                     fontStyle: "italic",
                     fontSize: 13,
-                    color: v1.inkFaint,
+                    color: v2.text.muted,
                     textAlign: "center",
                     lineHeight: 1.65,
                     margin: "10px 0 0",
@@ -800,11 +807,11 @@ function LoginInner() {
                     justifyContent: "center",
                     gap: 6,
                     marginTop: 12,
-                    fontFamily: FONT_SYS,
+                    fontFamily: FONT_INTER,
                     fontSize: 13,
                   }}
                 >
-                  <span style={{ color: v1.inkMuted }}>Didn&rsquo;t get it?</span>
+                  <span style={{ color: v2.text.muted }}>Didn&rsquo;t get it?</span>
                   <button
                     onClick={handleResend}
                     disabled={resendIn > 0 || codeBusy}
@@ -814,10 +821,10 @@ function LoginInner() {
                       padding: 0,
                       cursor: resendIn > 0 || codeBusy ? "default" : "pointer",
                       fontSize: 13,
-                      color: resendIn > 0 ? v1.inkFaint : v1.inkPrimary,
+                      color: resendIn > 0 ? v2.text.muted : v2.text.primary,
                       textDecoration: resendIn > 0 ? "none" : "underline",
                       textDecorationStyle: "dotted",
-                      textDecorationColor: v1.inkFaint,
+                      textDecorationColor: v2.text.muted,
                       textUnderlineOffset: 3,
                     }}
                   >
@@ -837,10 +844,10 @@ function LoginInner() {
             <span
               style={{
                 display: "block",
-                fontFamily: FONT_LORA,
+                fontFamily: FONT_CORMORANT,
                 fontStyle: "italic",
                 fontSize: 13,
-                color: v1.inkMuted,
+                color: v2.text.muted,
                 lineHeight: 1.5,
                 marginBottom: 4,
               }}
@@ -850,13 +857,13 @@ function LoginInner() {
             <Link
               href="/vendor-request"
               style={{
-                fontFamily: FONT_LORA,
+                fontFamily: FONT_CORMORANT,
                 fontStyle: "italic",
                 fontSize: 13.5,
-                color: v1.inkPrimary,
+                color: v2.text.primary,
                 textDecoration: "underline",
                 textDecorationStyle: "dotted",
-                textDecorationColor: v1.inkFaint,
+                textDecorationColor: v2.text.muted,
                 textUnderlineOffset: 3,
               }}
             >
@@ -885,21 +892,21 @@ function LoginInner() {
         <Link
           href="/contact"
           style={{
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
             fontSize: 13,
-            color: v1.inkPrimary,
+            color: v2.text.primary,
             textDecoration: "none",
             display: "inline-flex",
             alignItems: "center",
             gap: 6,
           }}
         >
-          <HelpCircle size={16} strokeWidth={1.6} style={{ color: v1.inkMuted }} />
+          <PiQuestion size={16} style={{ color: v2.text.muted }} />
           <span
             style={{
               textDecoration: "underline",
               textDecorationStyle: "dotted",
-              textDecorationColor: v1.inkFaint,
+              textDecorationColor: v2.text.muted,
               textUnderlineOffset: 3,
             }}
           >
@@ -915,9 +922,11 @@ function LoginInner() {
   );
 }
 
-// Authed-state action card. Same shape as the prior /login/email cards
-// (post-it surface, paper hairline, 14px radius, icon bubble + title +
-// italic subtitle + chevron) — entire card is the action, no inner CTA pill.
+// Authed-state action card. v2 vocabulary (post-it surface → surface.card;
+// inline rgba green wash → accent.greenSoft solid; Cormorant + Inter;
+// paper hairline → v2.border.light). Same structural shape as session 115
+// (post-it surface + icon bubble + title + italic subtitle + chevron) —
+// entire card is the action, no inner CTA pill.
 function ActionCard({
   href,
   title,
@@ -936,9 +945,9 @@ function ActionCard({
         display: "block",
         textDecoration: "none",
         padding: "14px 14px",
-        background: v1.postit,
+        background: v2.surface.card,
         borderRadius: 14,
-        border: `1px solid ${v1.inkHairline}`,
+        border: `1px solid ${v2.border.light}`,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -947,12 +956,12 @@ function ActionCard({
             width: 36,
             height: 36,
             borderRadius: "50%",
-            background: "rgba(30,77,43,0.08)",
+            background: v2.accent.greenSoft,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
-            color: v1.green,
+            color: v2.accent.green,
           }}
         >
           {icon}
@@ -960,10 +969,14 @@ function ActionCard({
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_CORMORANT,
               fontSize: 16,
-              color: v1.inkPrimary,
-              lineHeight: 1.25,
+              color: v2.text.primary,
+              // 1.3 per feedback_lora_lineheight_minimum_for_clamp (extended
+              // to Cormorant since session 143 Arc 6.1.2). Card titles can
+              // wrap to 2 lines on narrow phones; descender clearance
+              // matters for any vendor with g/j/p/y in the action label.
+              lineHeight: 1.3,
               margin: "0 0 2px",
             }}
           >
@@ -971,10 +984,10 @@ function ActionCard({
           </div>
           <div
             style={{
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 12,
-              color: v1.inkMuted,
+              color: v2.text.muted,
               lineHeight: 1.45,
             }}
           >
@@ -983,11 +996,11 @@ function ActionCard({
         </div>
         <span
           style={{
-            color: v1.inkFaint,
+            color: v2.text.muted,
             flexShrink: 0,
             fontSize: 22,
             lineHeight: 1,
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
           }}
         >
           ›
@@ -1005,11 +1018,11 @@ function ErrorBanner({ message }: { message: string }) {
       style={{
         padding: "11px 14px",
         borderRadius: 10,
-        background: v1.redBg,
-        border: `1px solid ${v1.redBorder}`,
-        fontFamily: FONT_SYS,
+        background: v2.surface.error,
+        border: `1px solid ${v2.border.error}`,
+        fontFamily: FONT_INTER,
         fontSize: 13,
-        color: v1.red,
+        color: v2.accent.red,
         lineHeight: 1.5,
       }}
     >

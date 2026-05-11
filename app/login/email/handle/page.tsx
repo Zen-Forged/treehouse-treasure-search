@@ -35,7 +35,7 @@ import { getSession }                       from "@/lib/auth";
 import { authFetch }                        from "@/lib/authFetch";
 import { supabase }                         from "@/lib/supabase";
 import { loadFollowedIds, loadBookmarkedBoothIds } from "@/lib/utils";
-import { v1, FONT_LORA, FONT_SYS }          from "@/lib/tokens";
+import { v2, FONT_CORMORANT, FONT_INTER }    from "@/lib/tokens";
 import FormField, { formInputStyle }        from "@/components/FormField";
 import FormButton                           from "@/components/FormButton";
 
@@ -134,7 +134,7 @@ function HandlePickInner() {
       <div
         style={{
           minHeight: "100dvh",
-          background: v1.paperCream,
+          background: v2.bg.main,
           maxWidth:   430,
           margin:     "0 auto",
         }}
@@ -146,7 +146,7 @@ function HandlePickInner() {
     <div
       style={{
         minHeight:    "100dvh",
-        background:   v1.paperCream,
+        background:   v2.bg.main,
         maxWidth:     430,
         margin:       "0 auto",
         display:      "flex",
@@ -170,14 +170,14 @@ function HandlePickInner() {
             display:      "flex",
             alignItems:   "center",
             justifyContent: "center",
-            background:   v1.iconBubble,
-            border:       "none",
+            background:   v2.surface.warm,
+            border:       `1px solid ${v2.border.light}`,
             cursor:       "pointer",
             padding:      0,
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
         </button>
       </header>
 
@@ -194,11 +194,14 @@ function HandlePickInner() {
       >
         <h1
           style={{
-            fontFamily:    FONT_LORA,
+            fontFamily:    FONT_CORMORANT,
             fontSize:      28,
-            color:         v1.inkPrimary,
+            color:         v2.text.primary,
             textAlign:     "center",
-            lineHeight:    1.2,
+            // lineHeight 1.3 per feedback_lora_lineheight_minimum_for_clamp
+            // (extended to Cormorant since session 143 Arc 6.1.2) — descender
+            // clearance for any future longer handle prompts.
+            lineHeight:    1.3,
             letterSpacing: "-0.005em",
             margin:        "0 0 8px",
           }}
@@ -207,10 +210,10 @@ function HandlePickInner() {
         </h1>
         <p
           style={{
-            fontFamily:  FONT_LORA,
+            fontFamily:  FONT_CORMORANT,
             fontStyle:   "italic",
             fontSize:    15,
-            color:       v1.inkMuted,
+            color:       v2.text.muted,
             textAlign:   "center",
             lineHeight:  1.55,
             margin:      "0 auto 28px",
@@ -242,10 +245,10 @@ function HandlePickInner() {
             <p
               role="alert"
               style={{
-                fontFamily: FONT_LORA,
+                fontFamily: FONT_CORMORANT,
                 fontStyle:  "italic",
                 fontSize:   13,
-                color:      v1.red,
+                color:      v2.accent.red,
                 lineHeight: 1.5,
                 margin:     "-4px 0 12px",
               }}
@@ -263,9 +266,11 @@ function HandlePickInner() {
 
           <p
             style={{
-              fontFamily:    FONT_SYS,
+              fontFamily:    FONT_INTER,
               fontSize:      12,
-              color:         v1.inkFaint,
+              // v1.inkFaint maps to v2.text.muted — v2 namespace has no
+              // faint-tier; muted is the lightest text color in v2.
+              color:         v2.text.muted,
               textAlign:     "center",
               lineHeight:    1.5,
               margin:        "16px auto 0",
@@ -287,7 +292,7 @@ export default function HandlePickPage() {
         <div
           style={{
             minHeight:  "100dvh",
-            background: v1.paperCream,
+            background: v2.bg.main,
             maxWidth:   430,
             margin:     "0 auto",
           }}

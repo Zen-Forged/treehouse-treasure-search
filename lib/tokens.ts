@@ -266,8 +266,13 @@ export const v2 = {
     soft:  "var(--th-v2-bg-soft)",
   },
   surface: {
-    card: "var(--th-v2-surface-card)",
-    warm: "var(--th-v2-surface-warm)",
+    card:  "var(--th-v2-surface-card)",
+    warm:  "var(--th-v2-surface-warm)",
+    // Soft pink-paper for error states (ErrorBanner card bg). Solid
+    // blend per v2 convention; parallels accent.greenSoft's relationship
+    // to its accent. Extended at Arc 6.2 (session 146) — /login ErrorBanner
+    // is first consumer.
+    error: "var(--th-v2-surface-error)",
   },
 
   // Text scale — calibrated for WCAG AA on bg.main.
@@ -287,6 +292,10 @@ export const v2 = {
     greenDark: "var(--th-v2-accent-green-dark)",
     greenSoft: "var(--th-v2-accent-green-soft)",
     greenMid:  "var(--th-v2-accent-green-mid)",
+    // Deep brick — error text + glyph color (ErrorBanner). Preserves
+    // canonical v1.red #8B2020 hue across the v2 migration; only
+    // translucency retires (rgba → solid surface.error blend).
+    red:       "var(--th-v2-accent-red)",
   },
 
   // Brand brown — wordmark + secondary brand color.
@@ -298,6 +307,9 @@ export const v2 = {
   border: {
     light:  "var(--th-v2-border-light)",
     medium: "var(--th-v2-border-medium)",
+    // Pinkish hairline — error state borders (ErrorBanner). Parallels
+    // border.light's relationship to v2 chrome.
+    error:  "var(--th-v2-border-error)",
   },
 } as const;
 

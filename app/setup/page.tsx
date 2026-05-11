@@ -12,7 +12,7 @@
 //   - Keeps LOCAL_VENDOR_KEY write for vendors[0] so legacy unauth paths on
 //     /post/preview still function. Retire once all callers audited.
 //   - Copy adapts to count: "Your booth at X is ready" for 1, "Your booths
-//     at X are ready" for N>1, with a quiet FONT_SYS list of each booth.
+//     at X are ready" for N>1, with a quiet FONT_INTER list of each booth.
 //
 // Preserved from session-23:
 //   - Mode C centered-hero chrome
@@ -27,12 +27,12 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Loader, ArrowRight, AlertCircle } from "lucide-react";
+import { Check, Loader, ArrowLeft, ArrowRight, AlertCircle } from "lucide-react";
 import { getUser } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 import { safeStorage } from "@/lib/safeStorage";
 import { setActiveBoothId } from "@/lib/activeBooth";
-import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import FormButton from "@/components/FormButton";
 import type { Vendor, Mall } from "@/types/treehouse";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
@@ -151,7 +151,7 @@ function SetupContent() {
       return (
         <>
           Your booth at{" "}
-          <span style={{ color: v1.inkPrimary, fontStyle: "normal" }}>
+          <span style={{ color: v2.text.primary, fontStyle: "normal" }}>
             {mallName}
           </span>{" "}
           is ready. The shelf is waiting to be filled.
@@ -160,7 +160,7 @@ function SetupContent() {
     }
     return (
       <>
-        We linked <span style={{ color: v1.inkPrimary, fontStyle: "normal" }}>
+        We linked <span style={{ color: v2.text.primary, fontStyle: "normal" }}>
           {vendors.length} booths
         </span>{" "}
         to your account. Switch between them on your shelf.
@@ -172,7 +172,7 @@ function SetupContent() {
     <div
       style={{
         minHeight: "100dvh",
-        background: v1.paperCream,
+        background: v2.bg.main,
         maxWidth: 430,
         margin: "0 auto",
         display: "flex",
@@ -192,15 +192,14 @@ function SetupContent() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: v1.iconBubble,
-              border: "none",
+              background: v2.surface.warm,
+              border: `1px solid ${v2.border.light}`,
               cursor: "pointer",
+              padding: 0,
+              WebkitTapHighlightColor: "transparent",
             }}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={v1.inkPrimary} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12" />
-              <polyline points="12 19 5 12 12 5" />
-            </svg>
+            <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
           </button>
         </header>
       )}
@@ -228,7 +227,7 @@ function SetupContent() {
               style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
             >
               <PaperWashBubble>
-                <Loader size={22} style={{ color: v1.inkPrimary, animation: "spin 0.9s linear infinite" }} strokeWidth={1.8} />
+                <Loader size={22} style={{ color: v2.text.primary, animation: "spin 0.9s linear infinite" }} strokeWidth={1.8} />
               </PaperWashBubble>
               <h1 style={heroTitleStyle}>Just a moment&hellip;</h1>
               <p style={heroSubheadStyle}>Checking your sign-in.</p>
@@ -245,7 +244,7 @@ function SetupContent() {
               style={{ display: "flex", flexDirection: "column", alignItems: "center" }}
             >
               <PaperWashBubble>
-                <Loader size={22} style={{ color: v1.inkPrimary, animation: "spin 0.9s linear infinite" }} strokeWidth={1.8} />
+                <Loader size={22} style={{ color: v2.text.primary, animation: "spin 0.9s linear infinite" }} strokeWidth={1.8} />
               </PaperWashBubble>
               <h1 style={heroTitleStyle}>Setting things up&hellip;</h1>
               <p style={heroSubheadStyle}>Linking your booth to your account.</p>
@@ -267,7 +266,7 @@ function SetupContent() {
                 transition={{ type: "spring", stiffness: 260, damping: 22 }}
               >
                 <PaperWashBubble>
-                  <Check size={26} style={{ color: v1.inkPrimary }} strokeWidth={1.6} />
+                  <Check size={26} style={{ color: v2.text.primary }} strokeWidth={1.6} />
                 </PaperWashBubble>
               </motion.div>
 
@@ -276,9 +275,9 @@ function SetupContent() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.18, duration: 0.32, ease: EASE }}
                 style={{
-                  fontFamily: FONT_LORA,
+                  fontFamily: FONT_CORMORANT,
                   fontSize: 30,
-                  color: v1.inkPrimary,
+                  color: v2.text.primary,
                   lineHeight: 1.2,
                   letterSpacing: "-0.005em",
                   margin: "0 0 14px",
@@ -292,10 +291,10 @@ function SetupContent() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.28, duration: 0.32, ease: EASE }}
                 style={{
-                  fontFamily: FONT_LORA,
+                  fontFamily: FONT_CORMORANT,
                   fontStyle: "italic",
                   fontSize: 16,
-                  color: v1.inkMid,
+                  color: v2.text.secondary,
                   lineHeight: 1.65,
                   maxWidth: 320,
                   margin: "0 auto 8px",
@@ -304,7 +303,7 @@ function SetupContent() {
                 {renderSuccessSubhead(result.vendors)}
               </motion.p>
 
-              {/* Booth detail line — quiet, FONT_SYS.
+              {/* Booth detail line — quiet, FONT_INTER.
                   Single-booth: "Display Name · Booth N"
                   Multi-booth: "Display1 · N1 · Display2 · N2" joined with middots */}
               <motion.p
@@ -312,9 +311,9 @@ function SetupContent() {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.38, duration: 0.32 }}
                 style={{
-                  fontFamily: FONT_SYS,
+                  fontFamily: FONT_INTER,
                   fontSize: 13,
-                  color: v1.inkMuted,
+                  color: v2.text.muted,
                   margin: "0 0 24px",
                   maxWidth: 320,
                   lineHeight: 1.55,
@@ -335,9 +334,9 @@ function SetupContent() {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.48, duration: 0.32 }}
                 style={{
-                  fontFamily: FONT_SYS,
+                  fontFamily: FONT_INTER,
                   fontSize: 12,
-                  color: v1.inkFaint,
+                  color: v2.text.muted,
                   margin: "0 0 18px",
                 }}
               >
@@ -385,15 +384,15 @@ function SetupContent() {
                   width: 60,
                   height: 60,
                   borderRadius: "50%",
-                  background: v1.redBg,
-                  border: `0.5px solid ${v1.redBorder}`,
+                  background: v2.surface.error,
+                  border: `0.5px solid ${v2.border.error}`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   marginBottom: 22,
                 }}
               >
-                <AlertCircle size={26} style={{ color: v1.red }} strokeWidth={1.6} />
+                <AlertCircle size={26} style={{ color: v2.accent.red }} strokeWidth={1.6} />
               </motion.div>
 
               <h1 style={{ ...heroTitleStyle, fontSize: 28 }}>
@@ -402,10 +401,10 @@ function SetupContent() {
 
               <p
                 style={{
-                  fontFamily: FONT_LORA,
+                  fontFamily: FONT_CORMORANT,
                   fontStyle: "italic",
                   fontSize: 16,
-                  color: v1.inkMid,
+                  color: v2.text.secondary,
                   lineHeight: 1.65,
                   maxWidth: 320,
                   margin: "0 auto 32px",
@@ -427,13 +426,13 @@ function SetupContent() {
                 <a
                   onClick={handleRetry}
                   style={{
-                    fontFamily: FONT_LORA,
+                    fontFamily: FONT_CORMORANT,
                     fontStyle: "italic",
                     fontSize: 16,
-                    color: v1.inkPrimary,
+                    color: v2.text.primary,
                     textDecoration: "underline",
                     textDecorationStyle: "dotted",
-                    textDecorationColor: v1.inkFaint,
+                    textDecorationColor: v2.text.muted,
                     textUnderlineOffset: 4,
                     cursor: "pointer",
                   }}
@@ -443,13 +442,13 @@ function SetupContent() {
                 <a
                   onClick={handleGoToLogin}
                   style={{
-                    fontFamily: FONT_LORA,
+                    fontFamily: FONT_CORMORANT,
                     fontStyle: "italic",
                     fontSize: 15,
-                    color: v1.inkMuted,
+                    color: v2.text.muted,
                     textDecoration: "underline",
                     textDecorationStyle: "dotted",
-                    textDecorationColor: v1.inkFaint,
+                    textDecorationColor: v2.text.muted,
                     textUnderlineOffset: 4,
                     cursor: "pointer",
                   }}
@@ -479,8 +478,13 @@ function PaperWashBubble({ children }: { children: React.ReactNode }) {
         width: 60,
         height: 60,
         borderRadius: "50%",
-        background: "rgba(42,26,10,0.04)",
-        border: `0.5px solid ${v1.inkHairline}`,
+        // rgba(42,26,10,0.04) translucent paper-wash retires to solid v2
+        // surface per session-132 frosted-glass/translucent-retire pattern
+        // (extended at session 143 Arc 6.1.1 to WelcomeRow translucent
+        // surfaces). v2.surface.warm preserves the subtle warmth against
+        // body bg without translucent stacking.
+        background: v2.surface.warm,
+        border: `0.5px solid ${v2.border.light}`,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -493,9 +497,9 @@ function PaperWashBubble({ children }: { children: React.ReactNode }) {
 }
 
 const heroTitleStyle: React.CSSProperties = {
-  fontFamily: FONT_LORA,
+  fontFamily: FONT_CORMORANT,
   fontSize: 28,
-  color: v1.inkPrimary,
+  color: v2.text.primary,
   textAlign: "center",
   lineHeight: 1.2,
   letterSpacing: "-0.005em",
@@ -503,10 +507,10 @@ const heroTitleStyle: React.CSSProperties = {
 };
 
 const heroSubheadStyle: React.CSSProperties = {
-  fontFamily: FONT_LORA,
+  fontFamily: FONT_CORMORANT,
   fontStyle: "italic",
   fontSize: 15,
-  color: v1.inkMuted,
+  color: v2.text.muted,
   textAlign: "center",
   lineHeight: 1.55,
   margin: "0 auto",
@@ -520,13 +524,13 @@ export default function SetupPage() {
         <div
           style={{
             minHeight: "100dvh",
-            background: v1.paperCream,
+            background: v2.bg.main,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <Loader size={22} style={{ color: v1.inkPrimary, animation: "spin 0.9s linear infinite" }} strokeWidth={1.8} />
+          <Loader size={22} style={{ color: v2.text.primary, animation: "spin 0.9s linear infinite" }} strokeWidth={1.8} />
         </div>
       }
     >

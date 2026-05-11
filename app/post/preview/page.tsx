@@ -8,7 +8,7 @@
 //   D8  <PostingAsBlock /> removed entirely; <PhotographPreview /> retired
 //       on this page (still used by /post/edit/[id]). Booth-location post-it
 //       gone with it.
-//   D9  Input field bg: v1.inkWash → v1.postit (#fbf3df) — matches the
+//   D9  Input field bg: v2.surface.card → v1.postit (#fbf3df) — matches the
 //       sign-in email input on /login/email.
 //   D10 Caption textarea = auto-grow; height tracks scrollHeight on every
 //       change. No internal scroll. Page scrolls on overflow.
@@ -58,7 +58,7 @@ import {
   type LocalVendorProfile,
   type Vendor,
 } from "@/types/treehouse";
-import { v1, FONT_LORA, FONT_SYS } from "@/lib/tokens";
+import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import { formInputStyle } from "@/components/FormField";
 import FormButton from "@/components/FormButton";
 import AmberNotice from "@/components/AmberNotice";
@@ -397,7 +397,7 @@ function PostPreviewInner() {
       <div
         style={{
           minHeight: "100dvh",
-          background: v1.paperCream,
+          background: v2.bg.main,
           maxWidth: 430,
           margin: "0 auto",
           display: "flex",
@@ -412,7 +412,7 @@ function PostPreviewInner() {
             <PolaroidTile
               src={image}
               alt="Your find"
-              photoBg={v1.paperCream}
+              photoBg={v2.bg.main}
               photoRadius={4}
               objectFit="contain"
               dim
@@ -423,10 +423,10 @@ function PostPreviewInner() {
           animate={{ opacity: [0.4, 1, 0.4] }}
           transition={{ duration: 1.8, repeat: Infinity }}
           style={{
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
             fontSize: 15,
-            color: v1.inkMuted,
+            color: v2.text.muted,
           }}
         >
           Reading your find…
@@ -441,7 +441,7 @@ function PostPreviewInner() {
       <div
         style={{
           minHeight: "100dvh",
-          background: v1.paperCream,
+          background: v2.bg.main,
           maxWidth: 430,
           margin: "0 auto",
           display: "flex",
@@ -454,9 +454,9 @@ function PostPreviewInner() {
       >
         <div
           style={{
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
             fontSize: 22,
-            color: v1.inkPrimary,
+            color: v2.text.primary,
             textAlign: "center",
           }}
         >
@@ -464,10 +464,10 @@ function PostPreviewInner() {
         </div>
         <div
           style={{
-            fontFamily: FONT_LORA,
+            fontFamily: FONT_CORMORANT,
             fontStyle: "italic",
             fontSize: 14,
-            color: v1.inkMuted,
+            color: v2.text.muted,
             textAlign: "center",
             lineHeight: 1.6,
           }}
@@ -477,15 +477,15 @@ function PostPreviewInner() {
         {errorDetail && (
           <div
             style={{
-              fontFamily: FONT_SYS,
+              fontFamily: FONT_INTER,
               fontSize: 11,
-              color: v1.inkMuted,
+              color: v2.text.muted,
               textAlign: "left",
               lineHeight: 1.7,
-              background: v1.inkWash,
+              background: v2.surface.card,
               padding: "10px 14px",
               borderRadius: 10,
-              border: `1px solid ${v1.inkHairline}`,
+              border: `1px solid ${v2.border.light}`,
               width: "100%",
               whiteSpace: "pre-wrap",
               wordBreak: "break-word",
@@ -500,11 +500,11 @@ function PostPreviewInner() {
             style={{
               padding: "13px 24px",
               borderRadius: 14,
-              fontFamily: FONT_SYS,
+              fontFamily: FONT_INTER,
               fontSize: 15,
               fontWeight: 500,
-              color: "#fff",
-              background: v1.green,
+              color: v2.surface.card,
+              background: v2.accent.green,
               border: "none",
               cursor: "pointer",
               width: "100%",
@@ -517,11 +517,11 @@ function PostPreviewInner() {
             style={{
               padding: "11px 24px",
               borderRadius: 14,
-              fontFamily: FONT_SYS,
+              fontFamily: FONT_INTER,
               fontSize: 13,
-              color: v1.inkMuted,
+              color: v2.text.muted,
               background: "transparent",
-              border: `1px solid ${v1.inkHairline}`,
+              border: `1px solid ${v2.border.light}`,
               cursor: "pointer",
               width: "100%",
             }}
@@ -543,7 +543,7 @@ function PostPreviewInner() {
     <div
       style={{
         minHeight: "100dvh",
-        background: v1.paperCream,
+        background: v2.bg.main,
         maxWidth: 430,
         margin: "0 auto",
         display: "flex",
@@ -579,14 +579,14 @@ function PostPreviewInner() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: v1.iconBubble,
-            border: "none",
+            background: v2.surface.warm,
+            border: `1px solid ${v2.border.light}`,
             cursor: "pointer",
             padding: 0,
             WebkitTapHighlightColor: "transparent",
           }}
         >
-          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
+          <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
         </button>
       </header>
 
@@ -606,9 +606,9 @@ function PostPreviewInner() {
         <div style={{ textAlign: "center", padding: "2px 22px 14px" }}>
           <div
             style={{
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_CORMORANT,
               fontSize: 24,
-              color: v1.inkPrimary,
+              color: v2.text.primary,
               letterSpacing: "-0.005em",
               lineHeight: 1.15,
               marginBottom: 4,
@@ -618,10 +618,10 @@ function PostPreviewInner() {
           </div>
           <div
             style={{
-              fontFamily: FONT_LORA,
+              fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
               fontSize: 14,
-              color: v1.inkMuted,
+              color: v2.text.muted,
               lineHeight: 1.5,
               maxWidth: 290,
               margin: "0 auto",
@@ -678,9 +678,9 @@ function PostPreviewInner() {
                   left: 14,
                   top: "50%",
                   transform: "translateY(-50%)",
-                  fontFamily: FONT_SYS,
+                  fontFamily: FONT_INTER,
                   fontSize: 16,
-                  color: v1.inkMuted,
+                  color: v2.text.muted,
                   pointerEvents: "none",
                 }}
               >
@@ -709,7 +709,7 @@ function PostPreviewInner() {
                 <PolaroidTile
                   src={image}
                   alt="Your find"
-                  photoBg={v1.paperCream}
+                  photoBg={v2.bg.main}
                   photoRadius={4}
                   objectFit="contain"
                 />
@@ -721,13 +721,13 @@ function PostPreviewInner() {
                     border: "none",
                     padding: 0,
                     cursor: "pointer",
-                    fontFamily: FONT_LORA,
+                    fontFamily: FONT_CORMORANT,
                     fontStyle: "italic",
                     fontSize: 13,
-                    color: v1.inkPrimary,
+                    color: v2.text.primary,
                     textDecoration: "underline",
                     textDecorationStyle: "dotted",
-                    textDecorationColor: v1.inkFaint,
+                    textDecorationColor: v2.text.muted,
                     textUnderlineOffset: 3,
                     WebkitTapHighlightColor: "transparent",
                   }}
@@ -762,7 +762,7 @@ function PostPreviewInner() {
               <PolaroidTile
                 src={image}
                 alt="Your find"
-                photoBg={v1.paperCream}
+                photoBg={v2.bg.main}
                 photoRadius={4}
                 objectFit="contain"
               />
@@ -775,13 +775,13 @@ function PostPreviewInner() {
                 border: "none",
                 padding: 0,
                 cursor: "pointer",
-                fontFamily: FONT_LORA,
+                fontFamily: FONT_CORMORANT,
                 fontStyle: "italic",
                 fontSize: 13,
-                color: v1.inkPrimary,
+                color: v2.text.primary,
                 textDecoration: "underline",
                 textDecorationStyle: "dotted",
-                textDecorationColor: v1.inkFaint,
+                textDecorationColor: v2.text.muted,
                 textUnderlineOffset: 3,
                 WebkitTapHighlightColor: "transparent",
               }}
@@ -803,8 +803,8 @@ function PostPreviewInner() {
           margin: "0 auto",
           padding: "12px 22px",
           paddingBottom: "max(18px, env(safe-area-inset-bottom, 18px))",
-          background: "#f2ecd8",
-          borderTop: `1px solid ${v1.inkHairline}`,
+          background: v2.bg.main,
+          borderTop: `1px solid ${v2.border.light}`,
           zIndex: 40,
         }}
       >
@@ -821,7 +821,7 @@ function PostPreviewInner() {
             <motion.span
               animate={{ opacity: [1, 0.5, 1] }}
               transition={{ duration: 1.2, repeat: Infinity }}
-              style={{ fontFamily: FONT_LORA, fontStyle: "italic" }}
+              style={{ fontFamily: FONT_CORMORANT, fontStyle: "italic" }}
             >
               Publishing…
             </motion.span>
@@ -861,10 +861,10 @@ function FieldGroup({
     <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
       <label
         style={{
-          fontFamily: FONT_LORA,
+          fontFamily: FONT_CORMORANT,
           fontStyle: "normal",
           fontSize: 15,
-          color: v1.inkMid,
+          color: v2.text.secondary,
           lineHeight: 1.25,
           display: "flex",
           alignItems: "center",
@@ -875,7 +875,7 @@ function FieldGroup({
         <span>
           {label}
           {optional && (
-            <span style={{ color: v1.inkFaint, fontStyle: "italic", fontSize: 12, marginLeft: 5 }}>
+            <span style={{ color: v2.text.muted, fontStyle: "italic", fontSize: 12, marginLeft: 5 }}>
               (optional)
             </span>
           )}
