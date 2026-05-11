@@ -23,7 +23,7 @@ import { ArrowLeft, Camera, X, Check, Loader } from "lucide-react";
 import { getPost, updatePost } from "@/lib/posts";
 import { compressImage, uploadPostImageViaServer } from "@/lib/imageUpload";
 import { getSession, isAdmin, getCachedUserId } from "@/lib/auth";
-import { v2 } from "@/lib/tokens";
+import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import FormButton from "@/components/FormButton";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
@@ -76,6 +76,7 @@ const inputStyle: React.CSSProperties = {
 };
 
 const labelStyle: React.CSSProperties = {
+  fontFamily: FONT_INTER,
   fontSize: 9, color: C.textMuted, textTransform: "uppercase",
   letterSpacing: "1.8px", display: "block", marginBottom: 6,
 };
@@ -261,7 +262,7 @@ function EditPostInner() {
               </div>
             )}
             <div>
-              <div style={{ fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 700, color: v2.surface.card, lineHeight: 1.3, marginBottom: 4 }}>
+              <div style={{ fontFamily: FONT_CORMORANT, fontSize: 15, fontWeight: 700, color: v2.surface.card, lineHeight: 1.3, marginBottom: 4 }}>
                 {stage === "saving" ? "Saving changes…" : stage === "done" ? "Listing updated!" : (errorDetail ?? "Something went wrong")}
               </div>
               {stage === "saving" && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)" }}>Just a moment…</div>}
@@ -283,7 +284,7 @@ function EditPostInner() {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.8, repeat: Infinity }}
-          style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontSize: 14, color: C.textMuted }}>
+          style={{ fontFamily: FONT_CORMORANT, fontStyle: "italic", fontSize: 14, color: C.textMuted }}>
           Loading…
         </motion.div>
       </div>
@@ -294,7 +295,7 @@ function EditPostInner() {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, maxWidth: 430, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 24px" }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontFamily: "Georgia, serif", fontSize: 18, color: C.textPrimary, marginBottom: 8 }}>Not your listing</div>
+          <div style={{ fontFamily: FONT_CORMORANT, fontSize: 18, color: C.textPrimary, marginBottom: 8 }}>Not your listing</div>
           <div style={{ fontSize: 13, color: C.textMuted }}>Redirecting…</div>
         </div>
       </div>
@@ -318,7 +319,7 @@ function EditPostInner() {
             <ArrowLeft size={18} strokeWidth={1.6} style={{ color: C.textMid }} />
           </button>
           <div>
-            <div style={{ fontFamily: "Georgia, serif", fontSize: 16, fontWeight: 600, color: C.textPrimary, lineHeight: 1 }}>Edit Listing</div>
+            <div style={{ fontFamily: FONT_CORMORANT, fontSize: 16, fontWeight: 600, color: C.textPrimary, lineHeight: 1 }}>Edit Listing</div>
             {post?.vendor && (
               <div style={{ fontSize: 9, color: C.textMuted, textTransform: "uppercase", letterSpacing: "2px", marginTop: 2 }}>
                 {post.vendor.display_name}{post.vendor.booth_number ? ` · Booth ${post.vendor.booth_number}` : ""}
@@ -360,14 +361,14 @@ function EditPostInner() {
             ) : (
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={() => cameraRef.current?.click()}
-                  style={{ flex: 1, padding: "28px 12px", borderRadius: 14, border: `1px dashed rgba(30,77,43,0.3)`, background: C.surface, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+                  style={{ flex: 1, padding: "28px 12px", borderRadius: 14, border: `1px dashed ${v2.border.medium}`, background: C.surface, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
                   <Camera size={20} style={{ color: C.green }} />
-                  <span style={{ fontFamily: "Georgia, serif", fontSize: 12, color: C.textMuted }}>Take photo</span>
+                  <span style={{ fontFamily: FONT_INTER, fontSize: 12, color: C.textMuted }}>Take photo</span>
                 </button>
                 <button onClick={() => galleryRef.current?.click()}
                   style={{ flex: 1, padding: "28px 12px", borderRadius: 14, border: `1px dashed ${C.border}`, background: C.surface, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
                   <span style={{ fontSize: 18 }}>🖼</span>
-                  <span style={{ fontFamily: "Georgia, serif", fontSize: 12, color: C.textMuted }}>From library</span>
+                  <span style={{ fontFamily: FONT_INTER, fontSize: 12, color: C.textMuted }}>From library</span>
                 </button>
               </div>
             )}
@@ -378,7 +379,7 @@ function EditPostInner() {
             <label style={labelStyle}>Title *</label>
             <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)}
               placeholder="What is this?"
-              style={{ ...inputStyle, fontFamily: "Georgia, serif", fontSize: 15, fontWeight: 600 }}
+              style={{ ...inputStyle, fontFamily: FONT_CORMORANT, fontSize: 15, fontWeight: 600 }}
               autoFocus={!displayImage} />
           </div>
 
@@ -387,7 +388,7 @@ function EditPostInner() {
             <label style={labelStyle}>Caption <span style={{ color: C.textFaint, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
             <textarea value={editCaption} onChange={e => setEditCaption(e.target.value)}
               placeholder="A short description or story about this piece…" rows={3}
-              style={{ ...inputStyle, fontFamily: "Georgia, serif", fontStyle: editCaption ? "italic" : "normal", lineHeight: 1.65, resize: "vertical" as const }} />
+              style={{ ...inputStyle, fontFamily: FONT_CORMORANT, fontStyle: editCaption ? "italic" : "normal", lineHeight: 1.65, resize: "vertical" as const }} />
           </div>
 
           {/* Price */}
@@ -410,7 +411,7 @@ function EditPostInner() {
             onClick={handleSave}
             disabled={!canSave}
             style={{
-              fontFamily: "Georgia, serif",
+              fontFamily: FONT_INTER,
               fontSize: 14,
               fontWeight: 600,
               transition: "all 0.2s",
