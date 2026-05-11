@@ -204,7 +204,7 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
                 width: 44,
                 height: 44,
                 borderRadius: "50%",
-                background: v1.iconBubble,
+                background: v2.surface.warm,
                 border: "none",
                 padding: 0,
                 display: "flex",

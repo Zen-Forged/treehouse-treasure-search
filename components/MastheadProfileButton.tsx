@@ -43,7 +43,7 @@
 
 import { useRouter } from "next/navigation";
 import { CircleUser } from "lucide-react";
-import { v1, FONT_SYS } from "@/lib/tokens";
+import { v1, v2, FONT_SYS } from "@/lib/tokens";
 
 interface MastheadProfileButtonProps {
   /**
@@ -73,7 +73,7 @@ export default function MastheadProfileButton({
         display:         "flex",
         alignItems:      "center",
         justifyContent:  "center",
-        background:      isAuthed ? v1.green : v1.iconBubble,
+        background:      isAuthed ? v1.green : v2.surface.warm,
         border:          "none",
         cursor:          "pointer",
         padding:         0,
