@@ -23,8 +23,10 @@
 
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { safeStorage } from "./safeStorage";
+import { isReviewMode }    from "./reviewMode";
+import { FIXTURE_SHOPPER } from "./fixtures";
 
 const SAVED_MALL_KEY   = "treehouse_saved_mall_id";
 const SAVED_MALL_EVENT = "treehouse:saved_mall_change";
@@ -32,7 +34,16 @@ const SAVED_MALL_EVENT = "treehouse:saved_mall_change";
 export function useSavedMallId(): [string | null, (id: string | null) => void] {
   const [id, setId] = useState<string | null>(null);
 
+  // Review Board (session 150) — fixture-substitute. Synchronous hydration
+  // before paint so the (tabs) layout's PostcardMallCard renders with
+  // FIXTURE_MALL scope on first paint rather than flashing all-Kentucky.
+  useLayoutEffect(() => {
+    if (!isReviewMode()) return;
+    setId(FIXTURE_SHOPPER.saved_mall_id);
+  }, []);
+
   useEffect(() => {
+    if (isReviewMode()) return; // fixture state populated above
     setId(safeStorage.getItem(SAVED_MALL_KEY));
 
     // Same-tab sync: any instance of this hook that calls the setter
@@ -60,8 +71,12 @@ export function useSavedMallId(): [string | null, (id: string | null) => void] {
 
   const update = useCallback((next: string | null) => {
     setId(next);
-    if (next == null) safeStorage.removeItem(SAVED_MALL_KEY);
-    else              safeStorage.setItem(SAVED_MALL_KEY, next);
+    // Review Board (session 150) — skip localStorage write; broadcast
+    // still fires so sibling instances in the iframe stay in sync.
+    if (!isReviewMode()) {
+      if (next == null) safeStorage.removeItem(SAVED_MALL_KEY);
+      else              safeStorage.setItem(SAVED_MALL_KEY, next);
+    }
     // Broadcast in-tab so sibling instances stay in sync.
     window.dispatchEvent(new CustomEvent<string | null>(SAVED_MALL_EVENT, { detail: next }));
   }, []);

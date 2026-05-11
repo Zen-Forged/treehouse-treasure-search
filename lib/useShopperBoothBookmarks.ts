@@ -11,10 +11,12 @@
 
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { supabase }                        from "./supabase";
 import { onAuthChange }                    from "./auth";
 import { BOOTH_BOOKMARK_PREFIX, boothBookmarkKey, loadBookmarkedBoothIds } from "./utils";
+import { isReviewMode }                    from "./reviewMode";
+import { FIXTURE_SHOPPER }                 from "./fixtures";
 
 const BOOKMARKS_CHANGE_EVENT = "treehouse:booth_bookmarks_change";
 
@@ -48,7 +50,16 @@ export function useShopperBoothBookmarks(): ShopperBoothBookmarksState {
   const [isLoading, setIsLoading] = useState(true);
   const shopperIdRef = useRef<string | null>(null);
 
+  // Review Board (session 150) — fixture-substitute. Synchronous hydration
+  // before paint; skips Supabase fetch + auth subscription below.
+  useLayoutEffect(() => {
+    if (!isReviewMode()) return;
+    setIds(new Set(FIXTURE_SHOPPER.bookmark_ids));
+    setIsLoading(false);
+  }, []);
+
   useEffect(() => {
+    if (isReviewMode()) return; // fixture state populated above
     let cancelled = false;
 
     async function loadFor(userId: string | null) {
@@ -148,6 +159,9 @@ export function useShopperBoothBookmarks(): ShopperBoothBookmarksState {
         detail: { vendorId, next },
       }),
     );
+
+    // Review Board (session 150) — skip DB + localStorage writes.
+    if (isReviewMode()) return;
 
     const shopperId = shopperIdRef.current;
     if (shopperId) {

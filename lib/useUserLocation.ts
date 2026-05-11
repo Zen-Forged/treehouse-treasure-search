@@ -41,9 +41,11 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { safeStorage } from "./safeStorage";
 import { track }       from "./clientEvents";
+import { isReviewMode } from "./reviewMode";
+import { FIXTURE_MALL } from "./fixtures";
 
 const CACHE_KEY            = "geo_user_loc";
 const TTL_MS               = 30 * 60 * 1000; // 30 min (D14)
@@ -114,7 +116,22 @@ function cachedToState(cached: CachedLocation): UserLocation {
 export function useUserLocation(): UserLocation {
   const [state, setState] = useState<UserLocation>(INITIAL);
 
+  // Review Board (session 150) — fixture-substitute. Hydrate "granted"
+  // state with FIXTURE_MALL coords so DistancePill renders ~0 MI on
+  // fixture surfaces; skip the real geolocation prompt entirely (no
+  // permission dialog during audit).
+  useLayoutEffect(() => {
+    if (!isReviewMode()) return;
+    setState({
+      status:     "granted",
+      lat:        FIXTURE_MALL.latitude ?? null,
+      lng:        FIXTURE_MALL.longitude ?? null,
+      capturedAt: Date.now(),
+    });
+  }, []);
+
   useEffect(() => {
+    if (isReviewMode()) return; // fixture state populated above
     let cancelled = false;
 
     // (1) Read cache. If fresh, hydrate state from it without re-prompting.
