@@ -21,7 +21,7 @@
 "use client";
 
 import * as React from "react";
-import { v1, FONT_SYS } from "@/lib/tokens";
+import { v2, FONT_INTER } from "@/lib/tokens";
 
 export interface DistancePillProps {
   /** Distance in miles (1-decimal). Renders nothing if null. */
@@ -35,16 +35,16 @@ export default function DistancePill({ miles }: DistancePillProps) {
     <span
       style={{
         display:        "inline-block",
-        background:     "#ede6d5",
-        border:         `1px solid ${v1.inkHairline}`,
+        background:     v2.surface.warm,
+        border:         `1px solid ${v2.border.light}`,
         borderRadius:   999,
         padding:        "3px 10px",
-        fontFamily:     FONT_SYS,
+        fontFamily:     FONT_INTER,
         fontSize:       10,
         fontWeight:     700,
         letterSpacing:  "0.12em",
         textTransform:  "uppercase",
-        color:          v1.inkMuted,
+        color:          v2.text.muted,
         whiteSpace:     "nowrap",
         lineHeight:     1.2,
       }}
