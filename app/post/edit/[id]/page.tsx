@@ -23,7 +23,7 @@ import { ArrowLeft, Camera, X, Check, Loader } from "lucide-react";
 import { getPost, updatePost } from "@/lib/posts";
 import { compressImage, uploadPostImageViaServer } from "@/lib/imageUpload";
 import { getSession, isAdmin, getCachedUserId } from "@/lib/auth";
-import { v1 } from "@/lib/tokens";
+import { v2 } from "@/lib/tokens";
 import FormButton from "@/components/FormButton";
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile } from "@/types/treehouse";
 import { safeStorage } from "@/lib/safeStorage";
@@ -50,25 +50,23 @@ async function detectOwnership(post: Post): Promise<boolean> {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-// Phase 2 Session E — local palette migrated to v1 tokens.
 const C = {
-  bg:          v1.paperCream,
-  surface:     v1.paperWarm,
-  surfaceDeep: "rgba(42,26,10,0.08)",
-  border:      v1.inkHairline,
-  textPrimary: v1.inkPrimary,
-  textMid:     v1.inkMid,
-  textMuted:   v1.inkMuted,
-  textFaint:   v1.inkFaint,
-  green:       v1.green,
-  greenLight:  "rgba(30,77,43,0.08)",
-  greenBorder: "rgba(30,77,43,0.20)",
-  greenSolid:  "rgba(30,77,43,0.90)",
-  input:       v1.postit,
-  inputBorder: v1.inkHairline,
-  red:         v1.red,
-  redBg:       v1.redBg,
-  redBorder:   v1.redBorder,
+  bg:          v2.bg.main,
+  surface:     v2.surface.warm,
+  border:      v2.border.light,
+  textPrimary: v2.text.primary,
+  textMid:     v2.text.secondary,
+  textMuted:   v2.text.muted,
+  textFaint:   v2.text.muted,
+  green:       v2.accent.green,
+  greenLight:  v2.accent.greenSoft,
+  greenBorder: v2.accent.greenMid,
+  greenSolid:  v2.accent.green,
+  input:       v2.surface.card,
+  inputBorder: v2.border.light,
+  red:         v2.accent.red,
+  redBg:       v2.surface.error,
+  redBorder:   v2.border.error,
 };
 
 const inputStyle: React.CSSProperties = {
