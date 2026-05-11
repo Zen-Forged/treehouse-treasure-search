@@ -806,11 +806,15 @@ function MyBoothInner() {
             <BoothTitleBlock
               displayName={displayName}
               onPickerOpen={showPicker ? () => setPickerOpen(true) : undefined}
-              // Wave 1 Task 4 — vendor self-edit affordance. Hidden on admin
-              // impersonation (admin uses /shelves EditBoothSheet for any
-              // booth, including impersonated ones — that route handles
-              // the full 3-field edit).
-              onEditName={!adminOverride ? () => setShowEditSheet(true) : undefined}
+              // Wave 1 Task 4 — vendor self-edit affordance. Arc 7.4.5
+              // (session 148) extends to admin impersonation for vendor-
+              // parity: admin viewing /my-shelf?vendor=<id> sees the same
+              // Pencil and uses the same vendor-mode EditBoothSheet (display
+              // _name only). /api/vendor/profile PATCH allows admin bypass
+              // on ownership check + records acting_as_admin in audit event.
+              // /shelves EditBoothSheet remains the canonical 3-field admin
+              // edit surface (mall + booth_number + display_name).
+              onEditName={() => setShowEditSheet(true)}
             />
             <MallBlock mallName={mallName} mallCity={mallCity} address={address} />
             <DiamondDivider topPad={22} bottomPad={12} horizontalPad={44} />
@@ -862,9 +866,11 @@ function MyBoothInner() {
 
       {/* Wave 1 Task 4 — vendor self-edit booth name. Vendor mode renders
           display_name only; submit hits /api/vendor/profile (requireAuth +
-          ownership). Admin impersonation hides the affordance entirely so
-          this sheet only mounts for booth owners. */}
-      {showEditSheet && activeVendor && !adminOverride && (
+          ownership). Arc 7.4.5 (session 148) — admin impersonation mounts
+          the same vendor-mode sheet for parity; /api/vendor/profile PATCH
+          ownership check now bypasses for admin acting on another vendor
+          (audit event records acting_as_admin). */}
+      {showEditSheet && activeVendor && (
         <EditBoothSheet
           vendor={activeVendor}
           mode="vendor"
