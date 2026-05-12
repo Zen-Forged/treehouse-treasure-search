@@ -59,6 +59,11 @@ export type ClientEventType =
   | "share_find_qr_viewed"
   | "share_find_sms_initiated"
   | "share_find_copy_link_completed"
+  // ── Session 154 — Home chrome restructure (D12 in design record) ────
+  // Tap on the persistent MallStrip below masthead opens the MallMapDrawer.
+  // Discoverability signal for the click-to-expand affordance + engagement
+  // funnel for map-driven scope picks. Payload: { mall_slug | "all-kentucky" }.
+  | "home_strip_tapped"
   // ── Session 152 — Share My Shelf image generator (booth-only) ────────
   // 4th channel tile inside BoothShareBody (Email + SMS + QR + Shelf Image).
   // share_booth_channel_tapped fires on tile tap with channel: "shelf_image".

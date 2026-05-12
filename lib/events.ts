@@ -83,7 +83,13 @@ export type EventType =
   | "share_find_channel_tapped"
   | "share_find_qr_viewed"
   | "share_find_sms_initiated"
-  | "share_find_copy_link_completed";
+  | "share_find_copy_link_completed"
+  // Session 154 — Home chrome restructure D12. Counterpart to the client
+  // ingest type in lib/clientEvents.ts + CLIENT_EVENT_TYPES whitelist in
+  // app/api/events/route.ts. Server-side recordEvent never fires it directly
+  // (UI event), but the EventType union must include it so the ingest cast
+  // type-checks.
+  | "home_strip_tapped";
 
 export interface RecordEventOptions {
   user_id?:    string | null;

@@ -55,6 +55,8 @@ const CLIENT_EVENT_TYPES = [
   "share_find_qr_viewed",
   "share_find_sms_initiated",
   "share_find_copy_link_completed",
+  // Session 154 — Home chrome restructure D12. MallStrip tap = drawer open.
+  "home_strip_tapped",
 ] as const;
 type ClientEventType = (typeof CLIENT_EVENT_TYPES)[number];
 
