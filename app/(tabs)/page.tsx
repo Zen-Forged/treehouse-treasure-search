@@ -65,7 +65,6 @@ import FeaturedBanner from "@/components/FeaturedBanner";
 import HomeFeedTile from "@/components/v2/HomeFeedTile";
 import EmptyState from "@/components/EmptyState";
 import HomeChrome from "@/components/HomeChrome";
-import { MASTHEAD_HEIGHT } from "@/components/StickyMasthead";
 import { STRIP_HEIGHT } from "@/components/MallStrip";
 import { writeFindContext, setPostCache, type FindRef } from "@/lib/findContext";
 import type { Post, Mall } from "@/types/treehouse";
@@ -606,9 +605,16 @@ function DiscoveryFeedInner() {
       <div
         style={{
           // Strip is position:fixed at top: MASTHEAD_HEIGHT and consumes
-          // STRIP_HEIGHT (40px). Reserve that space so feed content starts
-          // below it. Per D8 spec.
-          paddingTop: `calc(${MASTHEAD_HEIGHT} + ${STRIP_HEIGHT}px)`,
+          // STRIP_HEIGHT (40px) of viewport space. Reserve that 40px so
+          // SearchBar doesn't underlay the strip.
+          //
+          // Session 157 fix — was `calc(MASTHEAD_HEIGHT + STRIP_HEIGHT)`
+          // which double-counted the masthead: StickyMasthead already
+          // renders an in-flow spacer of MASTHEAD_HEIGHT in the (tabs)
+          // layout, so adding it again here pushed the SearchBar ~84px
+          // below the strip's bottom edge instead of flush. The strip
+          // is the ONLY thing this wrapper needs to compensate for.
+          paddingTop: `${STRIP_HEIGHT}px`,
         }}
       >
         <HomeChrome
