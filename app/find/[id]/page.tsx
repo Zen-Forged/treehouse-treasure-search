@@ -1559,12 +1559,15 @@ export default function FindDetailPage() {
                 gap:        6,
                 fontFamily: FONT_CORMORANT,
                 fontStyle:  "italic",
-                fontSize:   14,
+                // Session 157 Review Board Find #4 — font 14 -> 16 per
+                // David: "Change font size of 'Purchase this item at' and
+                // 'Visit Booth' to 16px font." Glyph bumped to 16 to track.
+                fontSize:   16,
                 color:      v2.text.secondary,
                 lineHeight: 1.4,
               }}
             >
-              <PiStorefront size={14} aria-hidden style={{ flexShrink: 0 }} />
+              <PiStorefront size={16} aria-hidden style={{ flexShrink: 0 }} />
               Purchase this item at
             </div>
             {vendorSlug && (
@@ -1576,7 +1579,12 @@ export default function FindDetailPage() {
                   gap:            2,
                   fontFamily:     FONT_CORMORANT,
                   fontStyle:      "italic",
-                  fontSize:       14,
+                  // Session 157 Review Board Find #4 + #5 — font 14 -> 16
+                  // (matches "Purchase this item at" sibling) + weight 400
+                  // default -> 500 per "Add a level up in weight for
+                  // 'Visit Booth' text". Chevron bumped to 16 to track.
+                  fontSize:       16,
+                  fontWeight:     500,
                   color:          v2.accent.green,
                   lineHeight:     1.4,
                   textDecoration: "none",
@@ -1585,7 +1593,7 @@ export default function FindDetailPage() {
                 }}
               >
                 Visit Booth
-                <ChevronRight size={14} strokeWidth={2} aria-hidden />
+                <ChevronRight size={16} strokeWidth={2} aria-hidden />
               </Link>
             )}
           </div>
