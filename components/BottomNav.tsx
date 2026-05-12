@@ -240,7 +240,11 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     }] : []),
     {
       key: "profile" as NavTab, label: "Profile", href: profileHref,
-      icon: <CircleUser size={22} strokeWidth={1.6} />,
+      // Session 157 dial — size 22 → 20 per iPhone QA: glyph reads visually
+      // heavier than Saved (PiLeaf 21) + Explore (MdOutlineExplore 22) at
+      // matched numerical size because Lucide's CircleUser fills more of its
+      // bounding box than the others. 20 brings perceived weight into line.
+      icon: <CircleUser size={20} strokeWidth={1.6} />,
     },
   ];
 
