@@ -3,34 +3,44 @@
 // <BottomSheet> (Layer 2 primitive, session 149) + <TreehouseMap> (session 108)
 // + migrated <MapControlPill> from app/(tabs)/map/page.tsx.
 //
-// Session 155 — D-Reversal-2: page-drawer reshape.
+// Session 155 — D-Reversal-2 (Iteration 1): page-drawer reshape.
 //   Reversed session 154 D2's BottomSheet composition (rounded top + scrim +
 //   handle pill + 65vh height + tap-outside-to-dismiss) → page-drawer inline
-//   geometry (top: MASTHEAD_HEIGHT, borderRadius: 0, fills viewport remainder,
-//   no scrim, X-button as sole dismiss affordance, custom header bar with
-//   leaf + mall name + close button).
+//   geometry with own header bar (leaf + mall name + close X).
 //
-//   David's tension (session 155): "the bar is on the top, but then drop down
-//   pulls up component from the bottom, then there is another button inside
-//   the map (list view) that then shows the list. It feels disjointed."
+// Session 155 — D-Reversal-2 (Iteration 2): chrome-less geometry.
+//   David: "Lets make is so the map component pull up doesn't have it's own
+//   heading of location. It just pull right under the location and chevron.
+//   No close button either, the chevron flips to close."
 //
-//   David's reshape: "What if the bottom-up drawer we had went all the way up
-//   to the bottom of the masthead with no rounded corners to make it feel like
-//   it's a full page? Then a close button to collapse? I think if that was
-//   implemented then everything else could stay as it is."
+//   Iteration 2 reshape:
+//   - Drawer top: MASTHEAD_HEIGHT + STRIP_HEIGHT (strip stays sticky above,
+//     no longer covered by drawer)
+//   - No header bar at all — strip IS the chrome; drawer is pure content
+//   - No close X — chevron on the strip is the toggle (open ↔ close)
+//   - Strip's onTap becomes a toggle (consumer's job; smoke route updates)
+//   - role="region" not dialog — drawer is now a content panel disclosed by
+//     the strip-as-button, not a modal dialog
+//   - z-index: 30 (below strip's z-39 so strip wins on any pixel overlap)
+//   - PiX import retained for MapControlPill's Clear state (header retired
+//     but pill's Clear glyph still uses it); FONT_LORA + PiLeaf imports
+//     retire (no header text/glyph)
 //
-//   Two tensions resolved: (1) directional disjoint dissolves when drawer
-//   fills viewport edge-to-edge — reads as page transition, not modal open;
-//   (2) MallSheet picker over the page-drawer is a clean two-layer stack
-//   (page → picker) identical to pre-session-154 /map page → MallSheet.
+//   Tensions this resolves on top of Iteration 1:
+//   - Identity duplication retired (header repeated strip's leaf + name)
+//   - Close-affordance unification: chevron-on-strip is the single open/close
+//     toggle; no separate X button to learn
+//   - Strip-as-persistent-chrome reads more like the FB Marketplace pattern
+//     David anchored on at session 154 — strip stays visible even when the
+//     map panel is expanded
 //
-// Design record: docs/home-chrome-restructure-design.md D2 + D-Reversal-2.
+// Design record: docs/home-chrome-restructure-design.md D-Reversal-2 §Iteration 2.
 //
 // Composition:
 //   - Custom page-drawer geometry  inline (no BottomSheet — page-drawer pattern
 //                                  has 1 consumer; promote to Layer 2 primitive
 //                                  only on 2nd consumer per CLAUDE.md rule)
-//   - <TreehouseMap>               Mapbox map fills below header (session 108)
+//   - <TreehouseMap>               Mapbox map fills entire drawer (no header)
 //   - <MapControlPill>             Clear / List view affordance (migrated from /map)
 //   - <MallSheet>                  all-malls picker (sibling modal; opens from List view)
 //
@@ -48,16 +58,16 @@
 import * as React from "react";
 import nextDynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
-import { PiX, PiList, PiLeaf } from "react-icons/pi";
+import { PiX, PiList } from "react-icons/pi";
 import MallSheet from "./MallSheet";
 import {
   v2,
-  FONT_LORA,
   FONT_SYS,
   MOTION_BOTTOM_SHEET_EASE,
   MOTION_BOTTOM_SHEET_SHEET_DURATION,
 } from "@/lib/tokens";
 import { MASTHEAD_HEIGHT } from "./StickyMasthead";
+import { STRIP_HEIGHT } from "./MallStrip";
 import type { Mall } from "@/types/treehouse";
 import type { MallStats } from "@/lib/posts";
 
@@ -66,11 +76,6 @@ import type { MallStats } from "@/lib/posts";
 const TreehouseMap = nextDynamic(() => import("./TreehouseMap"), {
   ssr: false,
 });
-
-// Drawer header bar height. Houses leaf + mall name (left) + close X (right).
-// 48px sits between iOS standard 44px tap target + tighter 40px strip height;
-// gives the X button breathing room without consuming too much map space.
-const HEADER_HEIGHT = 48;
 
 interface MallMapDrawerProps {
   open:           boolean;
@@ -95,7 +100,7 @@ interface MallMapDrawerProps {
 
 export default function MallMapDrawer({
   open,
-  onClose,
+  onClose: _onClose,
   malls,
   selectedMallId,
   mallStats,
@@ -103,6 +108,12 @@ export default function MallMapDrawer({
   onMallPick,
   onClear,
 }: MallMapDrawerProps) {
+  // Suppress unused-var lint while keeping prop in the contract — onClose is
+  // still called by consumers (pin-commit flow + future Esc handler) even
+  // though the drawer has no internal close button. Iteration-2 reshape
+  // deliberately moves close affordance to the strip's chevron toggle.
+  void _onClose;
+
   // Transient peek state — pin tap renders highlighted pin + PinCallout above
   // it. Tap callout → commit. Tap empty map → clear. Same pattern as /map
   // page (session 108 D26).
@@ -138,22 +149,16 @@ export default function MallMapDrawer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Header identity — mirror strip's identity: leaf + mall name. Resolve mall
-  // name via lookup on the malls array. Fallback to "All Kentucky locations"
-  // for null/unresolvable scope so transient mismatches (stale id, malls
-  // array refetch) don't crash the header.
-  const selectedMall = selectedMallId
-    ? malls.find((m) => m.id === selectedMallId) ?? null
-    : null;
-  const headerName = selectedMall ? selectedMall.name : "All Kentucky locations";
-
   return (
     <>
       <AnimatePresence>
         {open && (
           <motion.div
-            role="dialog"
-            aria-modal="true"
+            // region (not dialog) — iteration-2 reshape demotes this from a
+            // modal dialog to a content panel disclosed by the strip's
+            // aria-expanded button. Strip stays in tab order; closes via
+            // chevron-on-strip toggle.
+            role="region"
             aria-label="Active locations map"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
@@ -164,79 +169,24 @@ export default function MallMapDrawer({
             }}
             style={{
               position:      "fixed",
-              top:           MASTHEAD_HEIGHT,
+              // Slide up to the strip's bottom edge — strip stays sticky above.
+              // CSS nested calc() is well-supported; MASTHEAD_HEIGHT is itself
+              // a calc(...) string from <StickyMasthead>.
+              top:           `calc(${MASTHEAD_HEIGHT} + ${STRIP_HEIGHT}px)`,
               left:          0,
               right:         0,
               bottom:        0,
               background:    v2.bg.main,
-              // Above MallStrip (z-39) so it covers the strip while open.
-              // Below modal-tier z-100 (MallSheet's backdrop sits at 100 via
-              // BottomSheet primitive) so picker can layer cleanly above us.
-              zIndex:        50,
+              // Below strip's z-39 so strip wins on any pixel overlap at the
+              // border-bottom seam. Strip's borderBottom 1px serves as the
+              // visual separator between strip + drawer.
+              zIndex:        30,
               display:       "flex",
               flexDirection: "column",
               paddingBottom: "env(safe-area-inset-bottom, 0px)",
             }}
           >
-            {/* Header: leaf + mall name (mirrors strip identity) + close X.
-                Tap close = sole dismiss affordance (no scrim, no swipe handle —
-                page-drawer pattern per D-Reversal-2 Q-A=a). */}
-            <div
-              style={{
-                height:       HEADER_HEIGHT,
-                background:   v2.surface.warm,
-                borderBottom: `1px solid ${v2.border.light}`,
-                display:      "flex",
-                alignItems:   "center",
-                padding:      "0 18px",
-                gap:          10,
-                flexShrink:   0,
-              }}
-            >
-              <PiLeaf size={16} color={v2.text.secondary} aria-hidden="true" />
-              <span
-                style={{
-                  fontFamily:   FONT_LORA,
-                  fontSize:     16,
-                  fontWeight:   500,
-                  // 1.3 floor for descender clearance — feedback_lora_lineheight_minimum_for_clamp.
-                  lineHeight:   1.3,
-                  color:        v2.text.primary,
-                  flex:         1,
-                  minWidth:     0,
-                  whiteSpace:   "nowrap",
-                  overflow:     "hidden",
-                  textOverflow: "ellipsis",
-                  textAlign:    "left",
-                }}
-              >
-                {headerName}
-              </span>
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Close map"
-                style={{
-                  width:                   36,
-                  height:                  36,
-                  borderRadius:            "50%",
-                  border:                  `1px solid ${v2.border.light}`,
-                  background:              v2.surface.card,
-                  display:                 "flex",
-                  alignItems:              "center",
-                  justifyContent:          "center",
-                  color:                   v2.text.secondary,
-                  padding:                 0,
-                  cursor:                  "pointer",
-                  flexShrink:              0,
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                <PiX size={18} aria-hidden="true" />
-              </button>
-            </div>
-
-            {/* Map + contextual pill — fills remaining drawer height.
+            {/* Map + contextual pill — fills entire drawer (no header).
                 Positioned wrapper so MapControlPill anchors against map area. */}
             <div
               style={{
@@ -272,10 +222,9 @@ export default function MallMapDrawer({
         )}
       </AnimatePresence>
 
-      {/* MallSheet picker — sibling modal so it layers above the page-drawer
-          when "List view" tapped. Drawer stays mounted underneath. Clean
-          two-layer stack (page → picker) identical to pre-session-154's
-          /map page → MallSheet relationship. */}
+      {/* MallSheet picker — sibling modal layering above the page-drawer when
+          "List view" tapped. Clean two-layer stack (drawer-panel → picker-modal)
+          identical to pre-session-154's /map page → MallSheet relationship. */}
       <MallSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
