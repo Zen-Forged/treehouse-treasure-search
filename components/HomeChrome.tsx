@@ -33,6 +33,7 @@ import MallStrip, { type MallStripScope } from "@/components/MallStrip";
 import MallMapDrawer from "@/components/MallMapDrawer";
 import SearchBar from "@/components/SearchBar";
 import { track } from "@/lib/clientEvents";
+import { useMapDrawer } from "@/lib/useMapDrawer";
 import type { Mall } from "@/types/treehouse";
 import type { MallStats } from "@/lib/posts";
 
@@ -63,7 +64,12 @@ export default function HomeChrome({
   mallStats,
   savedByMallId,
 }: HomeChromeProps) {
-  const [drawerOpen, setDrawerOpen] = React.useState(false);
+  // Session 157 — drawer state lifted to MapDrawerProvider (app root) so
+  // (tabs) layout masthead can read drawerOpen for the back-button affordance
+  // when the drawer is expanded. Local useState retires; HomeChrome is now
+  // a consumer + setter, not the owner. Drawer mount is still here (only
+  // Home shows the drawer) but state crosses the layout boundary via context.
+  const { drawerOpen, closeDrawer, toggleDrawer } = useMapDrawer();
 
   // Derive strip's identity from the malls array + current mallId. When
   // mallId is null OR doesn't resolve to an active mall (stale id, mid-fetch),
@@ -87,7 +93,7 @@ export default function HomeChrome({
           track("home_strip_tapped", {
             mall_slug: selectedMall ? selectedMall.slug : "all-kentucky",
           });
-          setDrawerOpen((prev) => !prev);
+          toggleDrawer();
         }}
       />
 
@@ -104,7 +110,7 @@ export default function HomeChrome({
 
       <MallMapDrawer
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={closeDrawer}
         malls={malls}
         selectedMallId={mallId}
         mallStats={mallStats}
@@ -112,7 +118,7 @@ export default function HomeChrome({
         onMallPick={(id) => {
           // Pin-commit: apply scope + close drawer + fire filter_applied.
           onSetMallId(id);
-          setDrawerOpen(false);
+          closeDrawer();
           const picked = malls.find((m) => m.id === id);
           track("filter_applied", {
             filter_type:  "mall",
