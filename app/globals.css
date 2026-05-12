@@ -88,8 +88,12 @@
   --th-v1-icon-lg:       22px;
   --th-v1-icon-xl:       24px;
 
-  /* v1 R10 cartographic basemap */
-  --th-v1-basemap-cream:  #efe6cf;
+  /* v1 R10 cartographic basemap. Session 155 refinement: cream realigned
+     to match v2.bg.main (#F7F3EB) so the map's land base reads continuous
+     with the masthead + strip chrome. Reverses the session-145 v1.basemap.*
+     preservation lock — when the v2.basemap.* sub-arc lands (parked carry),
+     these values will fold into a proper v2 cartographic palette. */
+  --th-v1-basemap-cream:  #F7F3EB;
   --th-v1-basemap-cream2: #e6d9b8;
   --th-v1-basemap-water:  #c5d6c4;
   --th-v1-basemap-water2: #aac3aa;
