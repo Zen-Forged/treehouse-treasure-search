@@ -62,7 +62,7 @@
 import * as React from "react";
 import { PiX } from "react-icons/pi";
 import { Search } from "lucide-react";
-import { v1, FONT_LORA } from "@/lib/tokens";
+import { v1, v2, FONT_LORA } from "@/lib/tokens";
 
 interface Props {
   initialQuery?: string;
@@ -108,12 +108,13 @@ export default function SearchBar({
   // after the first keystroke).
   const showCustomCaret = focused && value === "";
 
-  // Session 107 — bg color now matches form inputs (v1.postit + inkHairline
-  // border) per David's "match the color of the other text input fields"
-  // call. Glass-morphism dropped (white-translucent + backdrop blur
-  // retired). Pill shape preserved — search vocabulary remains distinct
-  // from rectangular form fields. Focused state still gets a green ring
-  // shadow for clear active-input signal.
+  // Review Board Finding 6C (session 153) — bg migrates v1.postit →
+  // v2.surface.input (#F0EBE0). Cooler recessed-well feel pairs better
+  // with the lighter mall-card bg (v2.surface.card #FFFCF5) that
+  // RichPostcardMallCard renders directly above. Canonical input bg
+  // system-wide; sweep applies to ShareSheet email + form primitives
+  // in the same commit. Border also migrates v1.inkHairline →
+  // v2.border.light for v2 vocabulary consistency.
   const wrapperStyle: React.CSSProperties = {
     display:      "flex",
     alignItems:   "center",
@@ -121,8 +122,8 @@ export default function SearchBar({
     width:        "100%",
     padding:      "10px 18px",
     borderRadius: 999,
-    background:   v1.postit,
-    border:       `1px solid ${focused ? "rgba(30,77,43,0.30)" : v1.inkHairline}`,
+    background:   v2.surface.input,
+    border:       `1px solid ${focused ? "rgba(30,77,43,0.30)" : v2.border.light}`,
     boxShadow:    focused ? "0 0 0 3px rgba(30,77,43,0.08)" : "none",
     transition:   "border-color 180ms ease, box-shadow 180ms ease",
   };

@@ -730,7 +730,10 @@ function EmailScreen({
           fontFamily: FONT_INTER,
           fontSize: 16,          // 16px prevents iOS zoom-on-focus
           color: v2.text.primary,
-          background: v2.surface.card,
+          // Review Board Finding 6C (session 153) — input bg cooler
+          // recessed-well; matches formInputStyle migration in FormField.tsx
+          // for cohesion across all input surfaces.
+          background: v2.surface.input,
           border: `1px solid ${errorMessage ? v2.border.error : v2.border.light}`,
           borderRadius: 8,
           outline: "none",
