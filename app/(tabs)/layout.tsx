@@ -32,13 +32,14 @@
 "use client";
 
 import * as React from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import StickyMasthead from "@/components/StickyMasthead";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import StickyMasthead, { MASTHEAD_HEIGHT } from "@/components/StickyMasthead";
 import BottomNav from "@/components/BottomNav";
 import MastheadBackButton from "@/components/MastheadBackButton";
 import MastheadPaperAirplane from "@/components/MastheadPaperAirplane";
 import ShareSheet from "@/components/ShareSheet";
+import SearchBar from "@/components/SearchBar";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { useShopperSaves } from "@/lib/useShopperSaves";
 import { useMapDrawer } from "@/lib/useMapDrawer";
@@ -48,12 +49,29 @@ import { v1, v2 } from "@/lib/tokens";
 import type { Mall } from "@/types/treehouse";
 
 export default function TabsLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const router   = useRouter();
+  const pathname     = usePathname();
+  const router       = useRouter();
+  const searchParams = useSearchParams();
   const [mallId, setMallId] = useSavedMallId();
   const saves               = useShopperSaves();
   const { drawerOpen, closeDrawer } = useMapDrawer();
   const [malls, setMalls]   = useState<Mall[]>([]);
+
+  // Session 157 — SearchBar lifted from in-page-flow into the layout's
+  // fixed chrome stack. Layout owns the URL plumbing (single source of
+  // truth via ?q= URL param); Home page reads the same param via
+  // useSearchParams for filtering. Reactive — typing here re-renders Home
+  // automatically without prop drilling.
+  const q = searchParams.get("q") ?? "";
+  const handleSearchChange = useCallback((next: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next.trim().length > 0) params.set("q", next);
+    else                        params.delete("q");
+    const qs = params.toString();
+    // Always replace to "/" — SearchBar only mounts on pathname === "/",
+    // so URL stays on the same route.
+    router.replace(qs ? `/?${qs}` : "/", { scroll: false });
+  }, [router, searchParams]);
   // Session 137 — mall-entity ShareSheet state. Mounted only on Home
   // (/); /map drops its airplane affordance entirely per Q3 of session
   // 137 (share isn't a /map concern; the map's job is scope-pick + visit).
@@ -158,6 +176,35 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
           participates in mall scope, so there is no payload to encode and
           a shared `/flagged` URL would be misleading (recipient sees their
           own saves, not the sender's). */}
+      {/* Session 157 — fixed SearchBar row, Home-only. Sits between the
+          masthead and MallStrip in the sticky chrome stack. Variant A +
+          T3 spec: bg v2.surface.input (cooler well, session-153 canonical),
+          wrap padding 6/6 (T1 trim from baseline 8/8). Total wrap height
+          56px — exported as SEARCH_BAR_WRAP_HEIGHT from MallStrip so
+          consumers (MallStrip, MallMapDrawer) compute top: positions
+          correctly. z-index 39 matches MallStrip — both sit below masthead
+          z-40 so the wordmark stays on top during any pixel overlap. */}
+      {pathname === "/" && (
+        <div
+          style={{
+            position:    "fixed",
+            top:         MASTHEAD_HEIGHT,
+            left:        "50%",
+            transform:   "translateX(-50%)",
+            width:       "100%",
+            maxWidth:    430,
+            background:  v2.bg.main,
+            padding:     "6px 16px",
+            zIndex:      39,
+          }}
+        >
+          <SearchBar
+            initialQuery={q}
+            onChange={handleSearchChange}
+          />
+        </div>
+      )}
+
       <StickyMasthead
         left={
           // Session 157 — slot ranks: drawer-open back-button (closes drawer,

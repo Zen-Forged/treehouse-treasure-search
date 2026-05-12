@@ -65,7 +65,7 @@ import FeaturedBanner from "@/components/FeaturedBanner";
 import HomeFeedTile from "@/components/v2/HomeFeedTile";
 import EmptyState from "@/components/EmptyState";
 import HomeChrome from "@/components/HomeChrome";
-import { STRIP_HEIGHT } from "@/components/MallStrip";
+import { STRIP_HEIGHT, SEARCH_BAR_WRAP_HEIGHT } from "@/components/MallStrip";
 import { writeFindContext, setPostCache, type FindRef } from "@/lib/findContext";
 import type { Post, Mall } from "@/types/treehouse";
 
@@ -402,12 +402,14 @@ function DiscoveryFeedInner() {
   const router       = useRouter();
   const searchParams = useSearchParams();
 
-  // R16 — discovery query mirrored to ?q= URL state. Initial value pulled
-  // from URL so deep-links (?q=brass) restore search context. Cleared by
-  // SearchBar's × button → empty string → URL ?q= param dropped.
-  const initialQ = searchParams.get("q") ?? "";
-  const [q,      setQ]      = useState<string>(initialQ);
-  const searching           = q.trim().length > 0;
+  // R16 — discovery query mirrored to ?q= URL state. Session 157 — local
+  // q state retires; query reads directly from the reactive useSearchParams
+  // since the SearchBar primitive now lives in the (tabs) layout (fixed
+  // chrome stack above MallStrip). Layout owns the router.replace on type;
+  // Home re-renders automatically when the URL changes thanks to App
+  // Router's reactive useSearchParams.
+  const q         = searchParams.get("q") ?? "";
+  const searching = q.trim().length > 0;
 
   // Hydrate from module-scope cache so back-nav from /find/[id] mounts
   // tiles synchronously — the destination motion.div for the shared-element
@@ -550,18 +552,10 @@ function DiscoveryFeedInner() {
     track(next ? "post_saved" : "post_unsaved", { post_id: postId });
   }
 
-  // R16 — SearchBar fires onChange (debounced 200ms inside the primitive).
-  // Update local q state + write through to ?q= URL so deep-linking and
-  // browser back work cleanly. router.replace (not push) keeps the
-  // browser history compact during typing.
-  const handleSearchChange = useCallback((next: string) => {
-    setQ(next);
-    const params = new URLSearchParams(searchParams.toString());
-    if (next.trim().length > 0) params.set("q", next);
-    else                        params.delete("q");
-    const qs = params.toString();
-    router.replace(qs ? `/?${qs}` : "/", { scroll: false });
-  }, [router, searchParams]);
+  // handleSearchChange retired on Home (session 157) — the SearchBar
+  // primitive lifted out of HomeChrome into the (tabs) layout, which now
+  // owns the URL plumbing. Home reads q from useSearchParams reactively;
+  // no callback needed back here.
 
   // handleMallSelect retired on Home (R10 session 107) — scope change moved
   // to /map. The `filter_applied` analytics event now fires from /map's
@@ -604,25 +598,19 @@ function DiscoveryFeedInner() {
           event broadcast (session 109 pattern). */}
       <div
         style={{
-          // Strip is position:fixed at top: MASTHEAD_HEIGHT and consumes
-          // STRIP_HEIGHT (40px) of viewport space. Reserve that 40px so
-          // SearchBar doesn't underlay the strip.
-          //
-          // Session 157 fix — was `calc(MASTHEAD_HEIGHT + STRIP_HEIGHT)`
-          // which double-counted the masthead: StickyMasthead already
-          // renders an in-flow spacer of MASTHEAD_HEIGHT in the (tabs)
-          // layout, so adding it again here pushed the SearchBar ~84px
-          // below the strip's bottom edge instead of flush. The strip
-          // is the ONLY thing this wrapper needs to compensate for.
-          paddingTop: `${STRIP_HEIGHT}px`,
+          // Session 157 — SearchBar lifted from in-page-flow to fixed
+          // chrome in the (tabs) layout (Variant A + T3 ship). The fixed
+          // chrome stack below the masthead is now SearchBar wrap +
+          // MallStrip. Reserve both heights here so feed content starts
+          // below the entire stack. Masthead is already accounted for by
+          // StickyMasthead's own in-flow spacer in the layout.
+          paddingTop: `calc(${SEARCH_BAR_WRAP_HEIGHT}px + ${STRIP_HEIGHT}px)`,
         }}
       >
         <HomeChrome
           malls={malls}
           mallId={mallId}
           onSetMallId={setMallId}
-          searchInitialQuery={initialQ}
-          onSearchChange={handleSearchChange}
         />
       </div>
 

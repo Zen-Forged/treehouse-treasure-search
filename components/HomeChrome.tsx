@@ -31,7 +31,6 @@
 import * as React from "react";
 import MallStrip, { type MallStripScope } from "@/components/MallStrip";
 import MallMapDrawer from "@/components/MallMapDrawer";
-import SearchBar from "@/components/SearchBar";
 import { track } from "@/lib/clientEvents";
 import { useMapDrawer } from "@/lib/useMapDrawer";
 import type { Mall } from "@/types/treehouse";
@@ -41,16 +40,6 @@ interface HomeChromeProps {
   malls:          Mall[];
   mallId:         string | null;
   onSetMallId:    (id: string | null) => void;
-  /**
-   * Initial value for the SearchBar (deep-linked ?q= URL state). Mirrors
-   * the prior <RichPostcardMallCard searchInitialQuery=...> contract.
-   */
-  searchInitialQuery: string;
-  /**
-   * Debounced (200ms inside SearchBar) onChange callback. Parent owns
-   * ?q= URL state + posts filter — same contract as the prior wiring.
-   */
-  onSearchChange: (next: string) => void;
   mallStats?:     Record<string, MallStats>;
   savedByMallId?: Record<string, number>;
 }
@@ -59,8 +48,6 @@ export default function HomeChrome({
   malls,
   mallId,
   onSetMallId,
-  searchInitialQuery,
-  onSearchChange,
   mallStats,
   savedByMallId,
 }: HomeChromeProps) {
@@ -97,16 +84,10 @@ export default function HomeChrome({
         }}
       />
 
-      {/* Standalone SearchBar row — pulled out of RichPostcardMallCard.
-          Sits inside page body (NOT sticky), scrolls away normally per D5.
-          Padding 12px top / 16px L+R / 4px bottom matches the existing
-          page padding rhythm. */}
-      <div style={{ padding: "12px 16px 4px" }}>
-        <SearchBar
-          initialQuery={searchInitialQuery}
-          onChange={onSearchChange}
-        />
-      </div>
+      {/* Session 157 — SearchBar render lifted out of HomeChrome into the
+          (tabs) layout. It now sits as fixed chrome between masthead and
+          MallStrip (always visible during scroll). Layout owns the URL
+          plumbing; Home page reads q from URL via useSearchParams. */}
 
       <MallMapDrawer
         open={drawerOpen}

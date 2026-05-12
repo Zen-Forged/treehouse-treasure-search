@@ -67,7 +67,7 @@ import {
   MOTION_BOTTOM_SHEET_SHEET_DURATION,
 } from "@/lib/tokens";
 import { MASTHEAD_HEIGHT } from "./StickyMasthead";
-import { STRIP_HEIGHT } from "./MallStrip";
+import { STRIP_HEIGHT, SEARCH_BAR_WRAP_HEIGHT } from "./MallStrip";
 import type { Mall } from "@/types/treehouse";
 import type { MallStats } from "@/lib/posts";
 
@@ -175,8 +175,10 @@ export default function MallMapDrawer({
               position:      "fixed",
               // Slide up to the strip's bottom edge — strip stays sticky above.
               // CSS nested calc() is well-supported; MASTHEAD_HEIGHT is itself
-              // a calc(...) string from <StickyMasthead>.
-              top:           `calc(${MASTHEAD_HEIGHT} + ${STRIP_HEIGHT}px)`,
+              // a calc(...) string from <StickyMasthead>. Session 157 — chrome
+              // stack now masthead + SearchBar wrap + strip, so drawer top
+              // includes SEARCH_BAR_WRAP_HEIGHT.
+              top:           `calc(${MASTHEAD_HEIGHT} + ${SEARCH_BAR_WRAP_HEIGHT}px + ${STRIP_HEIGHT}px)`,
               // Mobile-column containment — mirrors StickyMasthead +
               // MallStrip + BottomNav fixed-chrome pattern. Without this,
               // the drawer (and its full-bleed Mapbox canvas) extends to
