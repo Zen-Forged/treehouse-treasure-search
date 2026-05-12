@@ -82,6 +82,7 @@ import {
 import PhotoLightbox from "@/components/PhotoLightbox";
 import BookmarkBoothBubble from "@/components/BookmarkBoothBubble";
 import HomeFeedTile from "@/components/v2/HomeFeedTile";
+import PinGlyph from "@/components/PinGlyph";
 import { writeFindContext, type FindRef } from "@/lib/findContext";
 import type { Post } from "@/types/treehouse";
 
@@ -466,22 +467,10 @@ export function BoothTitleBlock({
 // Mall block — small pin + mall name + dotted-underline address
 // ─────────────────────────────────────────────────────────────────────────────
 
-function PinGlyph({ size = 18 }: { size?: number }) {
-  // v2 Arc 4.3 — stroke + fill migrate v1.inkPrimary → v2.text.primary.
-  // Path geometry preserved as-is; Phosphor PiMapPin migration is a
-  // separate icon-vocabulary decision outside Q1 (a) token-swap scope.
-  return (
-    <svg width={size} height={size * (22 / 18)} viewBox="0 0 18 22" fill="none" aria-hidden="true">
-      <path
-        d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z"
-        stroke={v2.text.primary}
-        strokeWidth="1.3"
-        fill="none"
-      />
-      <circle cx="9" cy="8.3" r="2" fill={v2.text.primary} />
-    </svg>
-  );
-}
+// PinGlyph extracted to components/PinGlyph.tsx at session 157 on its 2nd
+// consumer surface (MallStrip eyebrow). See PinGlyph.tsx for the extraction
+// rationale and the optional color prop that MallStrip uses to render in
+// the strip's muted v2.text.secondary tone.
 
 export function MallBlock({
   mallName,

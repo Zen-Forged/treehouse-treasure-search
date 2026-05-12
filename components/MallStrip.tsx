@@ -37,9 +37,10 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { PiLeaf, PiCaretDown } from "react-icons/pi";
+import { PiCaretDown } from "react-icons/pi";
 import { v2, FONT_LORA } from "@/lib/tokens";
 import { MASTHEAD_HEIGHT } from "./StickyMasthead";
+import PinGlyph from "./PinGlyph";
 import type { Mall } from "@/types/treehouse";
 
 // Same shape as RichPostcardMallCard's MallScope but trimmed to the fields
@@ -144,7 +145,7 @@ export default function MallStrip({ mall, isOpen, onTap }: MallStripProps) {
           minWidth:   0, // Lets the name truncate inside flex
         }}
       >
-        <PiLeaf size={16} color={v2.text.secondary} aria-hidden="true" />
+        <PinGlyph size={14} color={v2.text.secondary} />
         <span
           ref={nameRef}
           style={{
