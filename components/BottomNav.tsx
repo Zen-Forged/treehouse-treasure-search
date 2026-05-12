@@ -311,7 +311,12 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
             <div
               style={{
                 display: "flex", flexDirection: "column", alignItems: "center",
-                gap: 4,
+                // Session 157 Review Board #1 — gap 4 → 5 per David's
+                // dial after the height: 22 anchor (commit 7a691bd) closed
+                // the icon-baseline mismatch. With baselines aligned across
+                // tabs, the slightly wider icon→label gap reads as
+                // intentional breathing room rather than chrome density.
+                gap: 5,
                 padding: isActive ? "5px 12px" : "0",
                 borderRadius: 14,
                 background: isActive ? C.greenLight : "transparent",
