@@ -36,12 +36,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import StickyMasthead from "@/components/StickyMasthead";
 import BottomNav from "@/components/BottomNav";
-import MastheadProfileButton from "@/components/MastheadProfileButton";
 import MastheadBackButton from "@/components/MastheadBackButton";
 import MastheadPaperAirplane from "@/components/MastheadPaperAirplane";
 import ShareSheet from "@/components/ShareSheet";
 import { useSavedMallId } from "@/lib/useSavedMallId";
-import { useShopperAuth } from "@/lib/useShopperAuth";
 import { useShopperSaves } from "@/lib/useShopperSaves";
 import { useMapDrawer } from "@/lib/useMapDrawer";
 import { getActiveMalls } from "@/lib/posts";
@@ -53,7 +51,6 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   const router   = useRouter();
   const [mallId, setMallId] = useSavedMallId();
-  const shopperAuth         = useShopperAuth();
   const saves               = useShopperSaves();
   const { drawerOpen, closeDrawer } = useMapDrawer();
   const [malls, setMalls]   = useState<Mall[]>([]);
@@ -138,12 +135,18 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
         flexDirection:  "column",
       }}
     >
-      {/* LEFT slot — Profile entry on Home, back button on every other tab.
-          Session 120 reversal: previously profile was on every tab (session
-          109 design). David's iPhone QA call: profile icon only stays on
-          Home; Saved/Map should show the back button so the user can
-          return to where they came from. Geometry matches across the two
-          components so the slot doesn't shift dimensions on tab switch.
+      {/* LEFT slot — session 157 cleanup. Profile retired from masthead-left
+          (moved to BottomNav far right per Item 2). Slot is now empty on
+          Home by default; becomes a back button when the map drawer is
+          expanded (Item 3 — closes drawer instead of navigating back) or
+          when the user is on a non-Home tab (existing detail-page back-
+          button affordance, geometry matches the drawer back button so
+          the slot doesn't shift dimensions on transition).
+
+          Auth chrome relocation lineage: ≤87 right → 90 BottomNav Profile
+          tab → 109 masthead-left → 120 masthead-left Home-only → 157
+          BottomNav far right. See components/BottomNav.tsx header for the
+          full reversal record.
 
           RIGHT slot — Home → airplane that opens <ShareSheet> with mall
           entity (session 137). The sheet's 3-channel grid (SMS + QR +
@@ -151,33 +154,20 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
           no mall picked); the mall-share URL goes through the same
           ?mall=<slug> intake as the prior MastheadShareButton handled.
 
-          /map → null right slot. Session 137 retires the airplane on
-          /map entirely per Q3 — share isn't a /map affordance; the
-          map's job is scope-pick + visit. The 3-tier engagement+share
-          lattice (memory: project_layered_engagement_share_hierarchy)
-          puts share-mall on the surface where mall identity is
-          presented as content, not on the surface where the user
-          interacts with the map.
-
-          Saved was added to this slot in session 116 in prep for guest user
-          accounts (R1, shipped session 114). R18 (session 121) retires the
-          share button from /flagged: Saved no longer participates in mall
-          scope, so there is no payload to encode and a shared `/flagged`
-          URL would be misleading (recipient sees their own saves, not the
-          sender's). */}
+          Saved → null right slot per R18 (session 121): Saved no longer
+          participates in mall scope, so there is no payload to encode and
+          a shared `/flagged` URL would be misleading (recipient sees their
+          own saves, not the sender's). */}
       <StickyMasthead
         left={
-          // Session 157 Item 3 — when the map drawer is expanded, the masthead
-          // left slot becomes a back button that closes the drawer. The drawer
-          // is a content overlay (not a routed page) so router.back() wouldn't
-          // do the right thing; pass onClick=closeDrawer to override the
-          // default history-back behavior. Drawer state lives in
-          // useMapDrawer context (session 157 commit 1).
+          // Session 157 — slot ranks: drawer-open back-button (closes drawer,
+          // overlay not history) → non-Home back-button (routes history /
+          // fallback to "/") → null on Home (Profile moved to nav).
           drawerOpen
             ? <MastheadBackButton onClick={closeDrawer} />
-            : pathname === "/"
-              ? <MastheadProfileButton authedInitials={shopperAuth.shopper?.initials} />
-              : <MastheadBackButton fallback="/" />
+            : pathname !== "/"
+              ? <MastheadBackButton fallback="/" />
+              : null
         }
         right={
           pathname === "/" ? (
