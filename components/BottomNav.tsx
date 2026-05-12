@@ -84,6 +84,12 @@
 // Saved tab badge (D4) — Times-New-Roman numeral on the green pill, matching
 // the booth-numeral typography system from session 75 (project-wide rule:
 // letters → FONT_LORA / FONT_SYS; numbers → FONT_NUMERAL).
+//
+// Session 154 — pill bumped 20→24 minWidth + 20→22 height + 10→11 radius +
+// font 12→13 per David's "increase size + allow full number to show" ask.
+// 9+ cap retired (Interpretation 1 — Shape A): "47" / "85" now read
+// literally; 99+ ceiling preserved as defensive cap for theoretical
+// 3-digit save counts. Power users crossing 99 dials cap to 999+ if needed.
 
 "use client";
 
@@ -158,7 +164,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
   const showAdminTab = role === "admin";
   const showBoothTab = role === "vendor";
 
-  const badgeLabel = (n: number) => n > 99 ? "99+" : n > 9 ? "9+" : String(n);
+  const badgeLabel = (n: number) => n > 99 ? "99+" : String(n);
 
   type TabDef = {
     key: NavTab;
@@ -240,15 +246,18 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
               {tab.icon}
               {showBadge && (
                 // R10 session 107 — TNR numeral on the green pill per D4.
-                // Pill geometry inherited from session 89 (20×20+, 10px radius,
-                // green bg, paper-cream stroke retired).
+                // Pill geometry: session 89 baseline (20×20+, 10px radius);
+                // session 154 bumped to 24×22+, 11px radius + font 12 → 13 so
+                // 2-digit save counts ("47", "85") read literally instead of
+                // clipping to "9+" (David's session-154 chrome ask, item 3).
+                // Green bg, paper-cream stroke retired.
                 <div style={{
                   position: "absolute", top: -6, right: -6,
-                  minWidth: 20, height: 20, paddingLeft: 5, paddingRight: 5,
-                  borderRadius: 10, background: C.green,
+                  minWidth: 24, height: 22, paddingLeft: 5, paddingRight: 5,
+                  borderRadius: 11, background: C.green,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontFamily: FONT_NUMERAL,
-                  fontSize: 12, fontWeight: 600, color: "#fff",
+                  fontSize: 13, fontWeight: 600, color: "#fff",
                   lineHeight: 1, letterSpacing: "-0.01em",
                   boxSizing: "border-box", whiteSpace: "nowrap",
                 }}>

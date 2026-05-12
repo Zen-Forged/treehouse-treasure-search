@@ -84,10 +84,10 @@ interface StickyMastheadProps {
 
 // Session 95 — wordmark height 90 → 72 (-20%) per David's call. Session 94
 // bumped to 90 for "heavier brand anchor"; iPhone QA found it heavier than
-// intended. Inner-grid minHeight + MASTHEAD_HEIGHT calc both stay at session
-// 94 values (90 + 103) — wordmark now centers within the 90px grid with ~9px
-// of breathing room above and below. If the chrome ends up reading too tall
-// around the smaller wordmark, drop minHeight 90 → 72 + calc 103 → 85.
+// intended. Session 154 — inner-grid minHeight 90 → 72 + MASTHEAD_HEIGHT
+// calc 103 → 85 per David's session-154 chrome-reduction ask (closes the
+// session-95 pre-specified canonical dial). Wordmark centers within the
+// 72px grid with minimal breathing room above + below.
 // Width auto-sizes from the 1500×800 aspect ratio (~135px at 72px height).
 const WORDMARK_DEFAULT = (
   <img
@@ -103,12 +103,13 @@ const WORDMARK_DEFAULT = (
 
 // Total masthead height = paddingTop + inner grid minHeight + paddingBottom
 // + bottom border. paddingTop is max(14px, safe-area-inset-top); the rest
-// is fixed. Session 94: inner grid 50 → 90, so calc 63 → 103. Spacer matches.
+// is fixed. Session 94: inner grid 50 → 90, so calc 63 → 103. Session 154:
+// inner grid 90 → 72, so calc 103 → 85. Spacer matches.
 // Exported as the canonical SSOT for any future surface that needs to compute
 // layout against the masthead footprint (fixed overlays, scroll-snap targets,
 // etc.). The spacer inside this component already reserves the height for
 // content rendered after <StickyMasthead /> in the React tree.
-export const MASTHEAD_HEIGHT = "calc(max(14px, env(safe-area-inset-top, 14px)) + 103px)";
+export const MASTHEAD_HEIGHT = "calc(max(14px, env(safe-area-inset-top, 14px)) + 85px)";
 
 export default function StickyMasthead({
   left,
@@ -184,7 +185,7 @@ export default function StickyMasthead({
             display: "grid",
             gridTemplateColumns: "1fr auto 1fr",
             alignItems: "center",
-            minHeight: 90,
+            minHeight: 72,
             gap: 8,
           }}
         >
