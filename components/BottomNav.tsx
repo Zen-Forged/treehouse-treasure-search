@@ -57,6 +57,29 @@
 //                              same reason. Tab key remains "home" + href "/"
 //                              (NavTab type unchanged) — the rename is
 //                              user-facing only, no callsite churn.
+//   Session 157:               Home · Saved · [Booth | Admin] · Profile
+//                              (3-4 tabs, role-conditional middle slot).
+//                              Profile relocates from masthead-left (session
+//                              109 + 120) to BottomNav far-right per David's
+//                              "we've been refining and I think this makes
+//                              sense now" ask. Auth chrome relocation #4
+//                              across project history (≤87 right slot → 90
+//                              Profile tab → 109 masthead-left → 120 masthead-
+//                              left Home-only → 157 BottomNav far-right).
+//                              The reason this time is different from session
+//                              90's: Map is no longer a tab (drawer chrome +
+//                              strip toggle replaced it session 155); Variant
+//                              Z floating pill exists (session 155 D6);
+//                              Profile makes sense as a peer of Home / Saved /
+//                              role-tab. Saved still holds the stable 2nd
+//                              position; role-specialty slot (Booth/Admin)
+//                              moves to second-from-rightmost when present,
+//                              Profile takes far-right. Profile uses Lucide
+//                              CircleUser (same icon previously in masthead-
+//                              left bubble) so the visual identity carries.
+//                              Routes to /me when authed (role !== "none"),
+//                              /login when guest — same routing logic as the
+//                              retired MastheadProfileButton.
 //
 // Why drop Map (session 110, REVERSED session 121): the two paths to /map
 // (BottomNav tab + tap the postcard mall card on Home/Saved) felt
@@ -95,7 +118,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Shield } from "lucide-react";
+import { CircleUser, Shield } from "lucide-react";
 import { MdOutlineExplore } from "react-icons/md";
 import { PiLeaf, PiStorefront } from "react-icons/pi";
 import { FONT_NUMERAL, v2 } from "@/lib/tokens";
@@ -112,7 +135,11 @@ import { getSession, onAuthChange, detectUserRole, type UserRole } from "@/lib/a
 // "admin" added session 114 for the role-conditional Admin tab (admins
 // only). active="admin" should be passed by /admin consumers if BottomNav
 // is ever rendered there; today /admin doesn't render BottomNav.
-export type NavTab = "home" | "map" | "flagged" | "booth" | "admin" | "login" | null;
+// "profile" added session 157 — Profile tab at BottomNav far right (auth
+// chrome relocation #4). active="profile" passed by /me or /login consumers
+// if BottomNav is ever rendered there; today neither mounts BottomNav so
+// active state is decorative-only for the Profile tab.
+export type NavTab = "home" | "map" | "flagged" | "booth" | "admin" | "login" | "profile" | null;
 
 interface BottomNavProps {
   active?: NavTab;
@@ -174,17 +201,26 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     badge?: boolean;
   };
 
-  // Tab order: Explore → Saved → [Booth | Admin, role-conditional].
+  // Tab order: Explore → Saved → [Booth | Admin, role-conditional] → Profile.
   // Saved holds the stable 2nd position so muscle memory transfers across
-  // role transitions. The role tab is the "specialty rightmost" when present
-  // — whichever surface the role unlocks: vendor → Booth (manage their work),
-  // admin → Admin (platform controls). Guest/shopper sees 2-tab pill;
-  // vendor + admin see 3-tab pill with the role-tab rightmost.
+  // role transitions. The role tab is the "specialty" slot when present —
+  // whichever surface the role unlocks: vendor → Booth (manage their work),
+  // admin → Admin (platform controls). Session 157 — Profile takes the far-
+  // right slot universally; role-tab when present sits at second-from-
+  // rightmost (between Saved and Profile). Guest/shopper sees 3-tab pill;
+  // vendor + admin see 4-tab pill with the role-tab in the middle.
   //
   // Session 155 — Map tab retires (D6 lock). The map drawer is now a Home
   // chrome affordance disclosed by <MallStrip>'s chevron, not a destination.
   // Reverses R18 (session 121) Map tab reinstatement. PiMapPin import retires
   // alongside.
+
+  // Session 157 — Profile routes to /me when the user is authed (any role
+  // including shopper), /login when guest. Mirrors the routing logic of the
+  // retired MastheadProfileButton.
+  const isAuthed = role !== "none";
+  const profileHref = isAuthed ? "/me" : "/login";
+
   const tabs: TabDef[] = [
     {
       key: "home", label: "Explore", href: "/",
@@ -202,6 +238,10 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
       key: "admin" as NavTab, label: "Admin", href: "/admin",
       icon: <Shield size={21} strokeWidth={2.0} />,
     }] : []),
+    {
+      key: "profile" as NavTab, label: "Profile", href: profileHref,
+      icon: <CircleUser size={22} strokeWidth={1.6} />,
+    },
   ];
 
   // Session 155 — Variant Z: compact center-floating pill (D6 lock).
