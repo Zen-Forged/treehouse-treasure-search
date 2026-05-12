@@ -320,6 +320,14 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
             >
               <div style={{
                 position: "relative", display: "flex", alignItems: "center", justifyContent: "center",
+                // Session 157 Review Board #1 — anchor row height at 22 (max
+                // icon size in the row: MdOutlineExplore 22). Without this,
+                // each tab's column height varied by ±1-2px depending on icon
+                // (CircleUser 20 vs PiLeaf 21 vs MdOutlineExplore 22), shifting
+                // the label below by the same delta. Fixed height 22 means
+                // all labels sit at the exact same y position. David —
+                // "'Profile' text is not aligned with 'Saved'."
+                height: 22,
                 color: iconColor,
                 transition: "color 0.15s",
               }}>
