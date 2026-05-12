@@ -58,7 +58,17 @@ export type ClientEventType =
   | "share_find_channel_tapped"
   | "share_find_qr_viewed"
   | "share_find_sms_initiated"
-  | "share_find_copy_link_completed";
+  | "share_find_copy_link_completed"
+  // ── Session 152 — Share My Shelf image generator (booth-only) ────────
+  // 4th channel tile inside BoothShareBody (Email + SMS + QR + Shelf Image).
+  // share_booth_channel_tapped fires on tile tap with channel: "shelf_image".
+  // share_shelf_image_viewed fires on sub-screen mount (parallel to
+  // share_booth_qr_viewed pattern from session 135).
+  // share_shelf_image_downloaded fires on successful download OR successful
+  // navigator.share() resolution (covers both mobile native-share flow and
+  // desktop direct-download flow). Method field disambiguates.
+  | "share_shelf_image_viewed"
+  | "share_shelf_image_downloaded";
 
 function getSessionId(): string {
   if (typeof window === "undefined") return "";
