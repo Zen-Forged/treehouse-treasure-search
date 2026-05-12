@@ -345,9 +345,19 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
                   // clipping to "9+" (David's session-154 chrome ask, item 3).
                   // Green bg, paper-cream stroke retired.
                   <div style={{
-                    position: "absolute", top: -6, right: -6,
+                    // Session 157 Review Board Profile #1 — David supplied
+                    // exact style spec verbatim: "position: absolute;
+                    // top: -0px; right: -2px; ... border-radius: 20px;".
+                    // Shipped as-given per feedback_user_provided_verbatim_values_ship_as_is.
+                    // Visual effect: badge centers more over the leaf icon
+                    // instead of floating off the top-right corner. Note —
+                    // borderRadius 20 caps at height/2 = 11 since the badge
+                    // height is 22, so the rendered curve is identical to
+                    // borderRadius 11; David's 20 captured verbatim
+                    // anyway for spec-fidelity.
+                    position: "absolute", top: 0, right: -2,
                     minWidth: 24, height: 22, paddingLeft: 5, paddingRight: 5,
-                    borderRadius: 11, background: C.green,
+                    borderRadius: 20, background: C.green,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     fontFamily: FONT_NUMERAL,
                     fontSize: 13, fontWeight: 600, color: "#fff",
