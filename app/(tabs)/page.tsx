@@ -64,7 +64,9 @@ import { track } from "@/lib/clientEvents";
 import FeaturedBanner from "@/components/FeaturedBanner";
 import HomeFeedTile from "@/components/v2/HomeFeedTile";
 import EmptyState from "@/components/EmptyState";
-import RichPostcardMallCard from "@/components/RichPostcardMallCard";
+import HomeChrome from "@/components/HomeChrome";
+import { MASTHEAD_HEIGHT } from "@/components/StickyMasthead";
+import { STRIP_HEIGHT } from "@/components/MallStrip";
 import { writeFindContext, setPostCache, type FindRef } from "@/lib/findContext";
 import type { Post, Mall } from "@/types/treehouse";
 
@@ -590,22 +592,29 @@ function DiscoveryFeedInner() {
 
   return (
     <>
-      {/* Session 120 — <RichPostcardMallCard> folds the mall hero photo + the
-          R16 SearchBar pill INTO the postcard card. Session 121 (R18) makes
-          the card display-only: the change-location pill retires + the
-          outer wrapper drops to <div>; the Map BottomNav tab is now the
-          canonical change-scope path. Eyebrow reads "Finds from:" (reverses
-          session-120 V3.1 trim).
+      {/* Session 155 — Arc 2.2 retires the chunky <RichPostcardMallCard>
+          mount in favor of <HomeChrome>: persistent <MallStrip> below the
+          masthead + on-demand <MallMapDrawer> + standalone SearchBar row.
+          Strip + drawer + search are now distinct chrome pieces with
+          clean separation of identity / wayfinding / discovery (D7 + D-Reversal-2).
 
-          Slim <PostcardMallCard> stays on /map only; Home + Saved each own
-          their own chrome (Saved restructures to per-mall cards in R18).
-
-          SearchBar passthrough preserves R16 ?q= URL state + 200ms debounce
-          via the existing handleSearchChange callback. */}
-      <div style={{ padding: "12px 16px 14px" }}>
-        <RichPostcardMallCard
-          mall={selectedMall ?? "all-kentucky"}
-          allKentuckySubtitle={`${malls.length} active locations · Kentucky`}
+          HomeChrome owns drawer-open transient state internally; mall
+          scope (mallId + setMallId) threads through props so a single
+          useSavedMallId hook instance (this page) writes the canonical scope.
+          Layout's own useSavedMallId reads cross-instance via the hook's
+          event broadcast (session 109 pattern). */}
+      <div
+        style={{
+          // Strip is position:fixed at top: MASTHEAD_HEIGHT and consumes
+          // STRIP_HEIGHT (40px). Reserve that space so feed content starts
+          // below it. Per D8 spec.
+          paddingTop: `calc(${MASTHEAD_HEIGHT} + ${STRIP_HEIGHT}px)`,
+        }}
+      >
+        <HomeChrome
+          malls={malls}
+          mallId={mallId}
+          onSetMallId={setMallId}
           searchInitialQuery={initialQ}
           onSearchChange={handleSearchChange}
         />
