@@ -21,14 +21,27 @@ import { v2 } from "@/lib/tokens";
 interface MastheadBackButtonProps {
   /** Path to push when window.history is empty (deep links). Default "/". */
   fallback?: string;
+  /**
+   * Session 157 — when present, overrides the router.back() default.
+   * Used by the (tabs) layout to close the map drawer (state lives in
+   * useMapDrawer context) instead of navigating browser history when the
+   * drawer is open on Home. Same visual contract — only the click handler
+   * changes. fallback is ignored when onClick is provided.
+   */
+  onClick?: () => void;
 }
 
 export default function MastheadBackButton({
   fallback = "/",
+  onClick,
 }: MastheadBackButtonProps = {}) {
   const router = useRouter();
 
   const handleClick = () => {
+    if (onClick) {
+      onClick();
+      return;
+    }
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {

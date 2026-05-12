@@ -43,6 +43,7 @@ import ShareSheet from "@/components/ShareSheet";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { useShopperAuth } from "@/lib/useShopperAuth";
 import { useShopperSaves } from "@/lib/useShopperSaves";
+import { useMapDrawer } from "@/lib/useMapDrawer";
 import { getActiveMalls } from "@/lib/posts";
 import { track } from "@/lib/clientEvents";
 import { v1, v2 } from "@/lib/tokens";
@@ -54,6 +55,7 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
   const [mallId, setMallId] = useSavedMallId();
   const shopperAuth         = useShopperAuth();
   const saves               = useShopperSaves();
+  const { drawerOpen, closeDrawer } = useMapDrawer();
   const [malls, setMalls]   = useState<Mall[]>([]);
   // Session 137 — mall-entity ShareSheet state. Mounted only on Home
   // (/); /map drops its airplane affordance entirely per Q3 of session
@@ -165,9 +167,17 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
           sender's). */}
       <StickyMasthead
         left={
-          pathname === "/"
-            ? <MastheadProfileButton authedInitials={shopperAuth.shopper?.initials} />
-            : <MastheadBackButton fallback="/" />
+          // Session 157 Item 3 — when the map drawer is expanded, the masthead
+          // left slot becomes a back button that closes the drawer. The drawer
+          // is a content overlay (not a routed page) so router.back() wouldn't
+          // do the right thing; pass onClick=closeDrawer to override the
+          // default history-back behavior. Drawer state lives in
+          // useMapDrawer context (session 157 commit 1).
+          drawerOpen
+            ? <MastheadBackButton onClick={closeDrawer} />
+            : pathname === "/"
+              ? <MastheadProfileButton authedInitials={shopperAuth.shopper?.initials} />
+              : <MastheadBackButton fallback="/" />
         }
         right={
           pathname === "/" ? (
