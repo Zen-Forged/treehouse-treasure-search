@@ -394,7 +394,8 @@ export function BoothTitleBlock({
               style={{
                 fontFamily: FONT_CORMORANT,
                 fontSize: 32,
-                fontWeight: 400,
+                // Review Board Finding 8A (session 153) — fontWeight 400 → 600.
+                fontWeight: 600,
                 color: v2.text.primary,
                 lineHeight: 1.1,
                 letterSpacing: "-0.005em",
@@ -421,7 +422,8 @@ export function BoothTitleBlock({
             style={{
               fontFamily: FONT_CORMORANT,
               fontSize: 32,
-              fontWeight: 400,
+              // Review Board Finding 8A (session 153) — fontWeight 400 → 600.
+              fontWeight: 600,
               color: v2.text.primary,
               lineHeight: 1.1,
               letterSpacing: "-0.005em",
@@ -510,7 +512,10 @@ export function MallBlock({
     //   v1.inkPrimary → v2.text.primary (name)
     //   v1.inkMuted → v2.text.secondary (address; matches SavedMallCardV2)
     //   v1.inkFaint → v2.text.muted (decorative dotted underline stroke)
-    <div style={{ padding: "8px 22px 4px", textAlign: "center" }}>
+    // Review Board Finding 10A (session 153) — wrapper padding bottom
+    // 4 → 0 so the mall + address read as one lockup. Tightening
+    // continues on the address marginTop below (4 → 0).
+    <div style={{ padding: "8px 22px 0", textAlign: "center" }}>
       <div
         style={{
           fontFamily: FONT_CORMORANT,
@@ -528,14 +533,21 @@ export function MallBlock({
         <span>{mallName}</span>
       </div>
       {address && (
-        <div style={{ marginTop: 4 }}>
+        // Review Board Finding 10A (session 153) — marginTop 4 → 0 so
+        // the address sits flush below the mall name as one lockup.
+        // Combined with the wrapper-padding-bottom 4 → 0 above, the
+        // composition tightens noticeably without losing scan order.
+        <div style={{ marginTop: 0 }}>
           <a
             href={href}
             target="_blank"
             rel="noopener noreferrer"
             style={{
               fontFamily: FONT_INTER,
-              fontSize: 14,
+              // Review Board Finding 9A (session 153) — fontSize 14 → 13
+              // for visual hierarchy. Address de-emphasizes against mall
+              // name (18px Cormorant) without losing legibility.
+              fontSize: 13,
               color: v2.text.secondary,
               lineHeight: 1.55,
               textDecoration: "underline",
