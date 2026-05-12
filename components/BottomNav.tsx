@@ -247,49 +247,68 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
               // flex: 1 retires — pill is intrinsic width; each tab sizes to
               // its icon + label. gap on parent nav handles spacing.
               display: "flex", flexDirection: "column", alignItems: "center",
-              justifyContent: "center", gap: 4, padding: 0,
+              justifyContent: "center", gap: 0, padding: 0,
               background: "none", border: "none", cursor: "pointer",
               color: labelColor,
               position: "relative", transition: "color 0.15s",
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            <div style={{
-              position: "relative", display: "flex", alignItems: "center", justifyContent: "center",
-              width: 44, height: 28, borderRadius: 14,
-              background: isActive ? C.greenLight : "transparent",
-              color: iconColor,
-              transition: "background 0.18s, color 0.15s",
-            }}>
-              {tab.icon}
-              {showBadge && (
-                // R10 session 107 — TNR numeral on the green pill per D4.
-                // Pill geometry: session 89 baseline (20×20+, 10px radius);
-                // session 154 bumped to 24×22+, 11px radius + font 12 → 13 so
-                // 2-digit save counts ("47", "85") read literally instead of
-                // clipping to "9+" (David's session-154 chrome ask, item 3).
-                // Green bg, paper-cream stroke retired.
-                <div style={{
-                  position: "absolute", top: -6, right: -6,
-                  minWidth: 24, height: 22, paddingLeft: 5, paddingRight: 5,
-                  borderRadius: 11, background: C.green,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontFamily: FONT_NUMERAL,
-                  fontSize: 13, fontWeight: 600, color: "#fff",
-                  lineHeight: 1, letterSpacing: "-0.01em",
-                  boxSizing: "border-box", whiteSpace: "nowrap",
-                }}>
-                  {badgeLabel(flaggedCount)}
-                </div>
-              )}
+            {/* Session 157 — active state wraps BOTH icon AND label in a
+                single inner pill (David's Item 1 confirm). Previously only
+                the icon container carried the green-light bg at 44×28; the
+                label sat unboxed beneath. New shape: single column-flex
+                wrapper that gains horizontal+vertical padding + bg + radius
+                on active. Both icon AND label flip to C.green via the
+                button's color cascade. Inactive tab footprint is intrinsic
+                (no padding, no bg) so the only visual change for inactive
+                tabs is the icon's bg-pill retiring — same vocabulary, just
+                relocated to the wrapping pill on active. */}
+            <div
+              style={{
+                display: "flex", flexDirection: "column", alignItems: "center",
+                gap: 4,
+                padding: isActive ? "5px 12px" : "0",
+                borderRadius: 14,
+                background: isActive ? C.greenLight : "transparent",
+                transition: "background 0.18s ease, padding 0.18s ease",
+              }}
+            >
+              <div style={{
+                position: "relative", display: "flex", alignItems: "center", justifyContent: "center",
+                color: iconColor,
+                transition: "color 0.15s",
+              }}>
+                {tab.icon}
+                {showBadge && (
+                  // R10 session 107 — TNR numeral on the green pill per D4.
+                  // Pill geometry: session 89 baseline (20×20+, 10px radius);
+                  // session 154 bumped to 24×22+, 11px radius + font 12 → 13 so
+                  // 2-digit save counts ("47", "85") read literally instead of
+                  // clipping to "9+" (David's session-154 chrome ask, item 3).
+                  // Green bg, paper-cream stroke retired.
+                  <div style={{
+                    position: "absolute", top: -6, right: -6,
+                    minWidth: 24, height: 22, paddingLeft: 5, paddingRight: 5,
+                    borderRadius: 11, background: C.green,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontFamily: FONT_NUMERAL,
+                    fontSize: 13, fontWeight: 600, color: "#fff",
+                    lineHeight: 1, letterSpacing: "-0.01em",
+                    boxSizing: "border-box", whiteSpace: "nowrap",
+                  }}>
+                    {badgeLabel(flaggedCount)}
+                  </div>
+                )}
+              </div>
+              <span style={{
+                fontFamily: "system-ui, sans-serif",
+                fontSize: 10, fontWeight: isActive ? 600 : 400,
+                letterSpacing: "0.2px", lineHeight: 1, color: "inherit",
+              }}>
+                {tab.label}
+              </span>
             </div>
-            <span style={{
-              fontFamily: "system-ui, sans-serif",
-              fontSize: 10, fontWeight: isActive ? 600 : 400,
-              letterSpacing: "0.2px", lineHeight: 1, color: "inherit",
-            }}>
-              {tab.label}
-            </span>
           </button>
         );
       })}
