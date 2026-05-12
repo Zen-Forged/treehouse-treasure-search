@@ -29,7 +29,7 @@ interface Props {
 }
 
 export default function FlagGlyph({
-  size = 17,
+  size = 20,
   style,
 }: Props) {
   const fillProp  = style?.fill;

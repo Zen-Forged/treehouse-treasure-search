@@ -218,9 +218,9 @@ export default function HomeFeedTile({
             }}
           >
             {isFollowed ? (
-              <PiLeafFill size={17} aria-hidden />
+              <PiLeafFill size={20} aria-hidden />
             ) : (
-              <PiLeaf size={17} aria-hidden />
+              <PiLeaf size={20} aria-hidden />
             )}
           </button>
         )}
