@@ -28,7 +28,7 @@
 // See docs/form-chrome-primitive-design.md for the full design record.
 
 import type { CSSProperties, ReactNode } from "react";
-import { FONT_LORA, fonts, v1 } from "../lib/tokens";
+import { FONT_LORA, fonts, v1, v2 } from "../lib/tokens";
 
 type FormFieldSize = "page" | "compact";
 
@@ -39,13 +39,19 @@ type FormFieldProps = {
   children: ReactNode;
 };
 
+// Review Board Finding 6C (session 153) — canonical form-input style.
+// Background migrates v1.postit → v2.surface.input (#F0EBE0 cooler
+// recessed-well). Border migrates v1.inkHairline → v2.border.light.
+// Single-edit ripple: ALL FormField consumers (/login email + code,
+// /vendor-request form, /post/edit, /post/preview, /post/tag, /setup,
+// etc.) pick up the cooler bg in one shot.
 export function formInputStyle(size: FormFieldSize = "page"): CSSProperties {
   const isPage = size === "page";
   return {
     width: "100%",
     boxSizing: "border-box",
-    background: v1.postit,
-    border: `1px solid ${v1.inkHairline}`,
+    background: v2.surface.input,
+    border: `1px solid ${v2.border.light}`,
     borderRadius: isPage ? v1.radius.input : 10,
     padding: isPage ? 14 : "11px 12px",
     fontFamily: fonts.sys,

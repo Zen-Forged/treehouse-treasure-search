@@ -82,23 +82,39 @@ export function mapsUrl(query: string): string {
 }
 
 // ── Relative time ─────────────────────────────────────────────────────────────
-// Calendar-day comparison (not 24-hour rolling) so a post made at 11:59pm is
-// "Yesterday" — not "Today" — when viewed at 12:01am. Same-day posts and any
-// future-dated input collapse to "Today" rather than throwing.
+// Review Board Finding 1B (session 153) — full-word format via
+// Intl.RelativeTimeFormat. Sub-hour resolution added (minutes/hour).
+// Browser-native i18n primitive; "auto" numeric style yields:
+//   "just now" / "5 minutes ago" / "1 hour ago" / "1 day ago" /
+//   "1 week ago" / "3 weeks ago" / "2 months ago" / "1 year ago".
+// Future-dated input is clamped to "just now" rather than emitting
+// "in 5 minutes" since post timestamps should never lead the wall clock.
 export function formatTimeAgo(iso: string | null | undefined): string {
   if (!iso) return "";
   const then = new Date(iso);
   if (isNaN(then.getTime())) return "";
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const startOfThen  = new Date(then.getFullYear(), then.getMonth(), then.getDate()).getTime();
-  const days = Math.round((startOfToday - startOfThen) / 86_400_000);
-  if (days <= 0)  return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 7)   return `${days}d ago`;
-  if (days < 30)  return `${Math.floor(days / 7)}w ago`;
-  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
-  return `${Math.floor(days / 365)}y ago`;
+  const now      = new Date();
+  const diffMs   = then.getTime() - now.getTime(); // negative = past
+  const diffSec  = Math.round(diffMs / 1000);
+  const diffMin  = Math.round(diffSec / 60);
+  const diffHour = Math.round(diffMin / 60);
+  const diffDay  = Math.round(diffHour / 24);
+  const diffWeek = Math.round(diffDay / 7);
+  const diffMon  = Math.round(diffDay / 30);
+  const diffYear = Math.round(diffDay / 365);
+
+  // Future or sub-minute → "just now". Avoids the awkward "in N seconds"
+  // output and the just-posted edge case where clock skew can flip sign.
+  if (diffSec > -60) return "just now";
+
+  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto", style: "long" });
+
+  if (diffMin > -60)  return rtf.format(diffMin,  "minute");
+  if (diffHour > -24) return rtf.format(diffHour, "hour");
+  if (diffDay > -7)   return rtf.format(diffDay,  "day");
+  if (diffWeek > -5)  return rtf.format(diffWeek, "week");
+  if (diffMon > -12)  return rtf.format(diffMon,  "month");
+  return rtf.format(diffYear, "year");
 }
 
 // ── Booth numeral sizing ──────────────────────────────────────────────────────

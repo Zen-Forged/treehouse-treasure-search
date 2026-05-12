@@ -176,7 +176,8 @@ export default function RichPostcardMallCard({
             ref={nameRef}
             style={{
               fontFamily:    FONT_CORMORANT,
-              fontWeight:    500,
+              // Review Board Finding 4A (session 153) — fontWeight 500 → 600.
+              fontWeight:    600,
               fontSize:      nameFontSize,
               color:         v2.text.primary,
               lineHeight:    1.3,

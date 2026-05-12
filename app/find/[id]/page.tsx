@@ -1425,7 +1425,11 @@ export default function FindDetailPage() {
               color: v2.accent.green,
               lineHeight: 1.18,
               letterSpacing: "-0.005em",
-              marginTop: 2,
+              // Review Board Finding 7A (session 153) — marginTop 2 → 4 for
+              // more separation between title and price. Title-and-price
+              // pairing rhythm on /find/[id]. Canonical for this pairing
+              // pattern (Home tiles already use marginTop 4).
+              marginTop: 4,
             }}
           >
             ${Math.round(price)}

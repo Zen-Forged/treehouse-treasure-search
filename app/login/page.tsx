@@ -539,7 +539,9 @@ function LoginInner() {
             style={{
               fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
-              fontSize: 14,
+              // Review Board Finding 11B (session 153) — sub-text 14 → 16
+              // for legibility under the 96px wordmark. Was getting lost.
+              fontSize: 16,
               color: v2.text.muted,
               lineHeight: 1.55,
               margin: "0 auto",
@@ -845,37 +847,28 @@ function LoginInner() {
           </AnimatePresence>
         </div>
 
-        {/* Vendor signup footer — quiet two-line italic block.
-            Shows only on the email-entry screen of unauthed users. */}
+        {/* Review Board Finding 11B (session 153) — retire prominent
+            "Do you have a booth?" + Cormorant "Request a digital booth"
+            CTA. The /welcome screen handles new-vendor disambiguation
+            post-first-sign-in, so the prominent CTA on /login is
+            redundant. A minimal footer link remains for discoverability —
+            tiny Inter 11px italic v2.text.muted. */}
         {renderState === "form" && screen === "enter-email" && (
-          <div style={{ textAlign: "center", marginTop: 18, padding: "0 4px" }}>
-            <span
-              style={{
-                display: "block",
-                fontFamily: FONT_CORMORANT,
-                fontStyle: "italic",
-                fontSize: 13,
-                color: v2.text.muted,
-                lineHeight: 1.5,
-                marginBottom: 4,
-              }}
-            >
-              Do you have a booth?
-            </span>
+          <div style={{ textAlign: "center", marginTop: 22, padding: "0 4px" }}>
             <Link
               href="/vendor-request"
               style={{
-                fontFamily: FONT_CORMORANT,
+                fontFamily: FONT_INTER,
                 fontStyle: "italic",
-                fontSize: 13.5,
-                color: v2.text.primary,
+                fontSize: 11,
+                color: v2.text.muted,
                 textDecoration: "underline",
                 textDecorationStyle: "dotted",
                 textDecorationColor: v2.text.muted,
                 textUnderlineOffset: 3,
               }}
             >
-              Request a digital booth on Treehouse Finds &rarr;
+              New here? Request a digital booth &rarr;
             </Link>
           </div>
         )}
@@ -994,7 +987,10 @@ function ActionCard({
             style={{
               fontFamily: FONT_CORMORANT,
               fontStyle: "italic",
-              fontSize: 12,
+              // Review Board Finding 11B (session 153) — sub-text 12 → 14
+              // on ActionCard. Matches the wordmark sub-text bump for
+              // legibility consistency across all sub-text on /login.
+              fontSize: 14,
               color: v2.text.muted,
               lineHeight: 1.45,
             }}
