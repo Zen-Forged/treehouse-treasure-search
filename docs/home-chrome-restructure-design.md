@@ -69,6 +69,39 @@ The reframe: **drawer-as-page rather than drawer-as-overlay**. Both tensions res
 
 Per `feedback_within_session_design_record_reversal` ✅ Promoted-via-memory (session 128) — 3rd cumulative firing post-promotion (1st heart-flicker carry session 134; 2nd Share My Shelf retire session 152; 3rd this).
 
+### D-Reversal-2 — Iteration 2 (further within-session refinement)
+
+Iteration 1 (above) shipped a header bar (leaf + mall name + close X) inside the drawer + drawer slides up to MASTHEAD_HEIGHT covering the strip. After visual review David surfaced a tighter shape:
+
+**David's iteration-2 ask:** *"Lets make is so the map component pull up doesn't have it's own heading of location. It just pull right under the location and chevron. No close button either, the chevron flips to close."*
+
+**The reshape strips the drawer's chrome entirely and promotes the strip to permanent chrome:**
+- Drawer top: `MASTHEAD_HEIGHT + STRIP_HEIGHT` (strip stays sticky-visible above the drawer; no longer covered)
+- Drawer header bar **retires** — no leaf, no mall name, no close X
+- Map fills the entire drawer (`100vh − MASTHEAD_HEIGHT − STRIP_HEIGHT`)
+- **Chevron-on-strip is the sole open/close toggle** — tap strip when closed opens drawer + rotates chevron 0° → 180°; tap strip when open closes drawer + rotates chevron back
+- Strip's existing chevron-rotation logic now load-bearing (was transition-polish in Iteration 1)
+- `role="dialog"` + `aria-modal="true"` → `role="region"` + `aria-label` — drawer is a content panel disclosed by the strip-as-button, not a modal dialog. Strip stays in tab order; closes via the same button that opened it.
+- z-index: 50 → 30 (below strip's z-39 so strip wins on any pixel overlap at the bottom-border seam)
+
+**Tensions resolved on top of Iteration 1:**
+1. **Identity duplication retired** — header was repeating leaf + mall name already shown on the strip 40px above.
+2. **Close-affordance unification** — strip-tap is the single open/close gesture; no separate X button to learn or hunt.
+3. **Strip-as-persistent-chrome** reads more faithfully like the FB Marketplace pattern David anchored on at session 154 — strip stays visible even when the map panel is expanded; the place identity persists across the open/close cycle.
+
+**Q-A iteration-1 (a) → REVERSED iteration-2** (drawer header bar retires; no leaf + mall name + close X).
+**Q-B iteration-1 (a) → REVERSED to (b) iteration-2** (strip stays sticky above drawer; was "strip fully covered").
+
+**Preserves verbatim from Iteration 1:**
+- Inline page-drawer geometry (no `<BottomSheet>` composition; no `variant` prop on primitive)
+- `borderRadius: 0`, no scrim, slide-up animation, body scroll lock
+- TreehouseMap mount, MapControlPill behavior, MallSheet picker on List view tap
+- Pin commit closes drawer + updates strip (no API change to MallMapDrawer's props)
+
+**Smoke route adjustment:** `/home-chrome-test` strip-tap handler changes from `setDrawerOpen(true)` to `setDrawerOpen((prev) => !prev)` so closing-via-strip works in the testbed. Production consumer (`<HomeChrome>` in Arc 2) inherits the same toggle pattern.
+
+4th cumulative firing of `feedback_within_session_design_record_reversal` post-promotion (Iteration 2 reverses Iteration 1's Q-A + Q-B picks within the same session — sub-pattern: "refinement-of-just-shipped at design-pass layer iterates again on visual review").
+
 ---
 
 ## Locked decisions
