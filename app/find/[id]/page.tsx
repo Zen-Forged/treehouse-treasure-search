@@ -1584,7 +1584,7 @@ export default function FindDetailPage() {
                   WebkitTapHighlightColor: "transparent",
                 }}
               >
-                Enter Booth
+                Visit Booth
                 <ChevronRight size={14} strokeWidth={2} aria-hidden />
               </Link>
             )}
