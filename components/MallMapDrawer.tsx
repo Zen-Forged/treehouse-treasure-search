@@ -244,10 +244,19 @@ export default function MallMapDrawer({
 }
 
 // ─── MapControlPill ────────────────────────────────────────────────────────
-// Migrated verbatim from app/(tabs)/map/page.tsx session-108 implementation.
-// Floats top-right inside the map container; two states (Clear / List view)
-// determined by scopeSet prop. PiX + PiList glyphs match v2-pure Phosphor
-// vocabulary (session 145 BottomNav D1 sweep canonical).
+// Migrated from app/(tabs)/map/page.tsx session-108 implementation; session 155
+// refinement restyles from primary (saturated v2.accent.green + cream text) to
+// secondary/utility pill style — pill is utility chrome (Reset / List view),
+// not a primary action, and shouldn't compete visually with map content.
+//
+// Secondary pill spec (mirrors <BottomSheet> TopBar button canonical):
+//   bg     v2.surface.card  (#FFFCF5 — lifts subtly off the map cream land)
+//   border 1px v2.border.light
+//   text   v2.text.secondary
+//   shadow project-canonical subtle "0 1px 2px rgba(43,33,26,0.04)"
+//          (session 151 pattern; extracted as v2.shadow.card on 3rd consumer)
+//
+// PiX + PiList glyphs match v2-pure Phosphor vocabulary (session 145 sweep).
 function MapControlPill({
   scopeSet,
   onClear,
@@ -258,7 +267,9 @@ function MapControlPill({
   onOpenList: () => void;
 }) {
   const Icon  = scopeSet ? PiX : PiList;
-  const label = scopeSet ? "Clear" : "List view";
+  // "Reset" reads more accurately than "Clear" — tap returns scope from a
+  // specific mall to all-Kentucky (the default), not a destructive clear.
+  const label = scopeSet ? "Reset" : "List view";
   const onTap = scopeSet ? onClear : onOpenList;
   return (
     <button
@@ -274,15 +285,15 @@ function MapControlPill({
         gap:             6,
         padding:         "8px 14px 8px 12px",
         borderRadius:    999,
-        background:      v2.accent.green,
-        color:           "#f5ecd8",
-        border:          "none",
+        background:      v2.surface.card,
+        color:           v2.text.secondary,
+        border:          `1px solid ${v2.border.light}`,
         cursor:          "pointer",
         fontFamily:      FONT_SYS,
         fontSize:        13,
         fontWeight:      600,
         letterSpacing:   "0.01em",
-        boxShadow:       "0 4px 12px rgba(43,33,26,0.18)",
+        boxShadow:       "0 1px 2px rgba(43,33,26,0.04)",
         WebkitTapHighlightColor: "transparent",
       }}
     >
