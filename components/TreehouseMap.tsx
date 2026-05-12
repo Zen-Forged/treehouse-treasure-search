@@ -23,7 +23,7 @@ import { createRoot, type Root } from "react-dom/client";
 import mapboxgl, { type LngLatBoundsLike } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { PiLeaf } from "react-icons/pi";
-import { v1, v2 } from "@/lib/tokens";
+import { v1, v2, FONT_SYS } from "@/lib/tokens";
 import PinCallout from "@/components/PinCallout";
 import { milesFromUser } from "@/lib/distance";
 import { useUserLocation } from "@/lib/useUserLocation";
@@ -32,6 +32,23 @@ import type { Mall } from "@/types/treehouse";
 import type { MallStats } from "@/lib/posts";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
+
+// Mapbox setPaintProperty expects literal color strings (hex/rgb/rgba) — it
+// doesn't resolve CSS variables, which the v1.basemap.* tokens reference since
+// the session 144 Layer 1 token refactor moved tokens from literal hex to
+// CSS var references for theme-able runtime resolution. Bridge here: walk
+// var() references back to their computed :root value before handing to
+// Mapbox. Pass-through for any already-literal value.
+function resolveCssVar(value: string): string {
+  if (typeof window === "undefined") return value;
+  const match = value.match(/^var\((--[^)]+)\)$/);
+  if (!match) return value;
+  return (
+    getComputedStyle(document.documentElement)
+      .getPropertyValue(match[1])
+      .trim() || value
+  );
+}
 
 // D25 cartographic warm-cream palette. Walks the loaded light-v11 style
 // layers and overrides paint properties to swap Mapbox's grayscale defaults
@@ -44,12 +61,22 @@ function applyCartographicPalette(map: mapboxgl.Map): void {
   const style = map.getStyle();
   if (!style?.layers) return;
 
+  // Pre-resolve CSS vars once — Mapbox setPaintProperty needs literal values.
+  const palette = {
+    cream:  resolveCssVar(v1.basemap.cream),
+    cream2: resolveCssVar(v1.basemap.cream2),
+    water:  resolveCssVar(v1.basemap.water),
+    water2: resolveCssVar(v1.basemap.water2),
+    park:   resolveCssVar(v1.basemap.park),
+    label:  resolveCssVar(v1.basemap.label),
+  };
+
   for (const layer of style.layers) {
     const id = layer.id;
     try {
       // Background fill = cream landmass.
       if (layer.type === "background") {
-        map.setPaintProperty(id, "background-color", v1.basemap.cream);
+        map.setPaintProperty(id, "background-color", palette.cream);
         continue;
       }
 
@@ -57,23 +84,23 @@ function applyCartographicPalette(map: mapboxgl.Map): void {
       // everything else gets cream2 (slightly warmer landcover).
       if (layer.type === "fill") {
         if (id === "land") {
-          map.setPaintProperty(id, "fill-color", v1.basemap.cream);
+          map.setPaintProperty(id, "fill-color", palette.cream);
         } else if (
           id.includes("national-park") ||
           id.includes("park") ||
           id.includes("pitch") ||
           id.includes("golf")
         ) {
-          map.setPaintProperty(id, "fill-color", v1.basemap.park);
+          map.setPaintProperty(id, "fill-color", palette.park);
           map.setPaintProperty(id, "fill-opacity", 0.7);
         } else if (
           id === "water" ||
           id === "water-shadow" ||
           id.startsWith("water-")
         ) {
-          map.setPaintProperty(id, "fill-color", v1.basemap.water);
+          map.setPaintProperty(id, "fill-color", palette.water);
         } else if (id.includes("landcover") || id.includes("landuse")) {
-          map.setPaintProperty(id, "fill-color", v1.basemap.cream2);
+          map.setPaintProperty(id, "fill-color", palette.cream2);
           map.setPaintProperty(id, "fill-opacity", 0.55);
         } else if (id.includes("hillshade")) {
           // Soften terrain shading so it doesn't overwhelm the cream.
@@ -84,7 +111,7 @@ function applyCartographicPalette(map: mapboxgl.Map): void {
 
       // Waterways (rivers, streams) — line layer in deeper sage.
       if (layer.type === "line" && (id === "waterway" || id.startsWith("waterway-"))) {
-        map.setPaintProperty(id, "line-color", v1.basemap.water2);
+        map.setPaintProperty(id, "line-color", palette.water2);
         continue;
       }
 
@@ -107,7 +134,7 @@ function applyCartographicPalette(map: mapboxgl.Map): void {
       // cartographic ink with a paper-cream halo so they read against
       // both cream landmass and sage water.
       if (layer.type === "symbol") {
-        map.setPaintProperty(id, "text-color", v1.basemap.label);
+        map.setPaintProperty(id, "text-color", palette.label);
         map.setPaintProperty(id, "text-halo-color", "rgba(245,242,235,0.85)");
         map.setPaintProperty(id, "text-halo-width", 1.2);
         continue;
@@ -200,6 +227,15 @@ export default function TreehouseMap({
   const styleLoadedRef = React.useRef(false);
   const [error, setError] = React.useState<string | null>(null);
   const [peekAnchor, setPeekAnchor] = React.useState<{ x: number; y: number } | null>(null);
+  // Session 156 — initKey increments on retry tap, retriggering the map-init
+  // effect so it tears down the broken instance and creates a fresh one.
+  // Default 0; retry handler bumps it.
+  const [initKey, setInitKey] = React.useState(0);
+  const retry = React.useCallback(() => {
+    setError(null);
+    styleLoadedRef.current = false;
+    setInitKey((k) => k + 1);
+  }, []);
   // R17 Arc 2 — silent first-mount geolocation prompt. Hook is idempotent
   // across surfaces (D3 + D20). When granted, PinCallout's pill + Go CTA
   // get hydrated; when not, the original whole-callout-as-button + chevron
@@ -238,9 +274,28 @@ export default function TreehouseMap({
 
     mapRef.current = map;
 
+    // Watchdog — if style.load doesn't fire in 7s, the load almost certainly
+    // failed silently (token URL restriction rejecting tile fetches, network
+    // timeout, mapbox-gl bundle issue). Surface a visible retry affordance so
+    // the failure is self-diagnosing without Safari Web Inspector. 7s is the
+    // cliff: real failures resolve faster (~1-3s on cell, faster on wifi); a
+    // legit slow load past 7s is so degraded retry is the right reflex anyway.
+    const watchdog = setTimeout(() => {
+      if (!styleLoadedRef.current) {
+        setError("Map didn't load. Tap to retry.");
+        console.error("[TreehouseMap] style.load watchdog timeout (7s)");
+      }
+    }, 7000);
+
     map.on("style.load", () => {
       applyCartographicPalette(map);
       styleLoadedRef.current = true;
+      // Resize after style.load — handles the container-size race when the
+      // map was initialized inside an animating container (drawer slide-up
+      // from y:100%). Without this, the canvas's gl viewport can stay sized
+      // to the off-screen state and tile fetches target a stale viewport.
+      map.resize();
+      clearTimeout(watchdog);
     });
 
     // Empty-map tap dismisses peek (D26). Marker clicks stopPropagation()
@@ -260,13 +315,26 @@ export default function TreehouseMap({
       // Only surface user-relevant errors; mapbox-gl emits noisy non-fatal
       // events during normal pan/zoom (e.g. tile retries) — skip those.
       if (/unauthor|forbid|denied|invalid|not allowed|access/i.test(msg)) {
-        setError(`Map error: ${msg}`);
+        setError(`Map error: ${msg}. Tap to retry.`);
+        clearTimeout(watchdog);
       }
       // Always log so we have a console trail in the iOS Safari Inspector.
       console.error("[TreehouseMap]", msg, ev);
     });
 
+    // ResizeObserver — handles container size changes AFTER init. Drawer
+    // geometry can shift (e.g. iOS Safari URL bar collapse/expand changing
+    // viewport height), and the strip-toggle drawer animation can complete
+    // after init. Without resize, Mapbox keeps its gl viewport at the init
+    // size and tiles render misaligned or blank in the newly-visible area.
+    const ro = new ResizeObserver(() => {
+      mapRef.current?.resize();
+    });
+    ro.observe(containerRef.current);
+
     return () => {
+      clearTimeout(watchdog);
+      ro.disconnect();
       // Unmount React roots before removing the map.
       Array.from(markersRef.current.values()).forEach((entry) => {
         try { entry.root.unmount(); } catch {}
@@ -276,7 +344,7 @@ export default function TreehouseMap({
       mapRef.current = null;
       styleLoadedRef.current = false;
     };
-  }, []);
+  }, [initKey]);
 
   // ── Marker sync ───────────────────────────────────────────────────────
   // Keeps the marker collection in sync with `malls` + selected/peeked
@@ -431,23 +499,49 @@ export default function TreehouseMap({
       }}
     >
       {error && (
-        <div
+        <button
+          type="button"
+          onClick={retry}
           style={{
-            position:   "absolute",
-            inset:      0,
-            display:    "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding:    24,
-            textAlign:  "center",
-            color:      v2.text.muted,
-            fontStyle:  "italic",
-            fontFamily: "Georgia, serif",
-            fontSize:   14,
+            position:        "absolute",
+            inset:           0,
+            display:         "flex",
+            flexDirection:   "column",
+            alignItems:      "center",
+            justifyContent:  "center",
+            padding:         24,
+            gap:             12,
+            textAlign:       "center",
+            color:           v2.text.muted,
+            fontStyle:       "italic",
+            fontFamily:      "Georgia, serif",
+            fontSize:        14,
+            background:      resolveCssVar(v1.basemap.cream),
+            border:          "none",
+            cursor:          "pointer",
+            WebkitTapHighlightColor: "transparent",
           }}
         >
-          {error}
-        </div>
+          <span>{error}</span>
+          <span
+            style={{
+              display:       "inline-block",
+              padding:       "8px 18px",
+              borderRadius:  999,
+              background:    v2.surface.card,
+              border:        `1px solid ${v2.border.light}`,
+              color:         v2.text.secondary,
+              fontFamily:    FONT_SYS,
+              fontStyle:     "normal",
+              fontSize:      13,
+              fontWeight:    600,
+              letterSpacing: "0.01em",
+              boxShadow:     "0 1px 2px rgba(43,33,26,0.04)",
+            }}
+          >
+            Retry
+          </span>
+        </button>
       )}
       {/* D26 — peek callout. Anchored in the map container's coordinate
           space using map.project(lngLat) so it tracks pan + zoom. */}

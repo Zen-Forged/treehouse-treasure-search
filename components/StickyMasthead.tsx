@@ -31,14 +31,19 @@
 //     right={<><FlagBubble /><ShareBubble /></>}
 //   />
 //
-// scrollTarget is preserved as a backwards-compat prop for any caller that
-// still passes one. With fixed positioning the prop only affects the
-// hairline-on-scroll signal, not the masthead's own positioning.
+// Session 156 — David iPhone QA: "remove the thin line under the masthead
+// on scroll. No longer needed with this setup as the masthead and the
+// location selector read as one component." The hairline-on-scroll signal
+// breaks the masthead + strip continuous-chrome reading from session 155.
+// Retire the borderBottom plus the entire supporting state machine (scrolled
+// state, useEffect scroll listener, threshold prop, scrollTarget prop) per
+// feedback_dead_code_cleanup_as_byproduct — when the consumer of state is
+// retired, retire the state in the same commit.
 
 "use client";
 
-import { useEffect, useState, type ReactNode, type RefObject } from "react";
-import { v1, v2 } from "@/lib/tokens";
+import { type ReactNode } from "react";
+import { v2 } from "@/lib/tokens";
 
 interface StickyMastheadProps {
   /**
@@ -69,17 +74,6 @@ interface StickyMastheadProps {
    * /me, /contact) pass `right={null}` to be explicit.
    */
   right?: ReactNode;
-  /**
-   * Optional scroll-target ref. When provided, the scroll-linked hairline
-   * tracks this element instead of window. Session-70 D17 flattens the
-   * booth-page internal scroll containers, so the prop is preserved for
-   * backwards-compat but most callsites no longer need it.
-   */
-  scrollTarget?: RefObject<HTMLElement | null>;
-  /**
-   * Threshold in px at which the hairline becomes fully opaque. Default 4.
-   */
-  threshold?: number;
 }
 
 // Session 95 — wordmark height 90 → 72 (-20%) per David's call. Session 94
@@ -101,10 +95,12 @@ const WORDMARK_DEFAULT = (
   />
 );
 
-// Total masthead height = paddingTop + inner grid minHeight + paddingBottom
-// + bottom border. paddingTop is max(14px, safe-area-inset-top); the rest
-// is fixed. Session 94: inner grid 50 → 90, so calc 63 → 103. Session 154:
-// inner grid 90 → 72, so calc 103 → 85. Spacer matches.
+// Total masthead height = paddingTop + inner grid minHeight + paddingBottom.
+// paddingTop is max(14px, safe-area-inset-top); the rest is fixed. Session 94:
+// inner grid 50 → 90, so calc 63 → 103. Session 154: inner grid 90 → 72, so
+// calc 103 → 85. Session 156: hairline-on-scroll borderBottom retired (chrome
+// + strip read as one continuous component) — calc unchanged since the
+// retired border was 1px transparent at rest. Spacer matches.
 // Exported as the canonical SSOT for any future surface that needs to compute
 // layout against the masthead footprint (fixed overlays, scroll-snap targets,
 // etc.). The spacer inside this component already reserves the height for
@@ -115,35 +111,7 @@ export default function StickyMasthead({
   left,
   wordmark,
   right,
-  scrollTarget,
-  threshold = 4,
 }: StickyMastheadProps) {
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const target: HTMLElement | Window =
-      (scrollTarget?.current as HTMLElement | null) ?? window;
-
-    function readScrollY(): number {
-      if (target === window) return window.scrollY;
-      return (target as HTMLElement).scrollTop;
-    }
-
-    let lastState = false;
-    function handleScroll() {
-      const next = readScrollY() > threshold;
-      if (next !== lastState) {
-        lastState = next;
-        setScrolled(next);
-      }
-    }
-
-    handleScroll();
-
-    (target as Window).addEventListener("scroll", handleScroll, { passive: true });
-    return () => (target as Window).removeEventListener("scroll", handleScroll);
-  }, [scrollTarget, threshold]);
-
   return (
     <>
       {/* Layout spacer — reserves the same vertical space the sticky masthead
@@ -172,8 +140,6 @@ export default function StickyMasthead({
           // Session 140 — chrome migrates to v2.bg.main (#F7F3EB).
           // Was hardcoded #f2ecd8 since session 132 frosted-glass retire.
           background: v2.bg.main,
-          borderBottom: `1px solid ${scrolled ? v1.inkHairline : "transparent"}`,
-          transition: "border-color 0.2s ease",
           paddingTop: "max(14px, env(safe-area-inset-top, 14px))",
           paddingBottom: 12,
           paddingLeft: 18,

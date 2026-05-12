@@ -249,8 +249,14 @@ export default function MallMapDrawer({
 // secondary/utility pill style — pill is utility chrome (Reset / List view),
 // not a primary action, and shouldn't compete visually with map content.
 //
+// Session 156 — pill bg v2.surface.card -> v2.bg.main per David iPhone QA:
+// "Change list view bg to match the rest of the UI, currently the warm color."
+// Pill now matches masthead + strip + drawer + map land continuity exactly.
+// Border + subtle shadow + Phosphor glyph still differentiate it from the
+// surrounding cream surface.
+//
 // Secondary pill spec (mirrors <BottomSheet> TopBar button canonical):
-//   bg     v2.surface.card  (#FFFCF5 — lifts subtly off the map cream land)
+//   bg     v2.bg.main       (#F7F3EB — system canonical, matches all chrome)
 //   border 1px v2.border.light
 //   text   v2.text.secondary
 //   shadow project-canonical subtle "0 1px 2px rgba(43,33,26,0.04)"
@@ -285,7 +291,7 @@ function MapControlPill({
         gap:             6,
         padding:         "8px 14px 8px 12px",
         borderRadius:    999,
-        background:      v2.surface.card,
+        background:      v2.bg.main,
         color:           v2.text.secondary,
         border:          `1px solid ${v2.border.light}`,
         cursor:          "pointer",

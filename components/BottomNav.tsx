@@ -214,7 +214,10 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
   // bar.
   const navStyle: React.CSSProperties = {
     position: "fixed",
-    bottom: "max(14px, calc(env(safe-area-inset-bottom, 0px) + 14px))",
+    // Session 156 — David iPhone QA: "add more padding under the nav bar so
+    // it's not so close to the bottom of the screen." Bumped 14 -> 22 so the
+    // floating pill breathes above the bottom edge instead of crowding it.
+    bottom: "max(22px, calc(env(safe-area-inset-bottom, 0px) + 22px))",
     left: "50%", transform: "translateX(-50%)",
     zIndex: 100,
     background: "rgba(247,243,235,0.92)",
