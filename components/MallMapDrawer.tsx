@@ -160,9 +160,13 @@ export default function MallMapDrawer({
             // chevron-on-strip toggle.
             role="region"
             aria-label="Active locations map"
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
+            // Session 157 desktop containment — x: "-50%" pairs with left:
+            // "50%" + maxWidth: 430 to center the drawer in the mobile
+            // column on wider viewports. Framer-motion composes x + y into
+            // one transform so the slide-up animation still works.
+            initial={{ y: "100%", x: "-50%" }}
+            animate={{ y: 0,      x: "-50%" }}
+            exit={{    y: "100%", x: "-50%" }}
             transition={{
               duration: MOTION_BOTTOM_SHEET_SHEET_DURATION,
               ease: MOTION_BOTTOM_SHEET_EASE,
@@ -173,8 +177,14 @@ export default function MallMapDrawer({
               // CSS nested calc() is well-supported; MASTHEAD_HEIGHT is itself
               // a calc(...) string from <StickyMasthead>.
               top:           `calc(${MASTHEAD_HEIGHT} + ${STRIP_HEIGHT}px)`,
-              left:          0,
-              right:         0,
+              // Mobile-column containment — mirrors StickyMasthead +
+              // MallStrip + BottomNav fixed-chrome pattern. Without this,
+              // the drawer (and its full-bleed Mapbox canvas) extends to
+              // the entire viewport on desktop instead of staying inside
+              // the 430px column with the rest of the app chrome.
+              left:          "50%",
+              width:         "100%",
+              maxWidth:      430,
               bottom:        0,
               background:    v2.bg.main,
               // Below strip's z-39 so strip wins on any pixel overlap at the
