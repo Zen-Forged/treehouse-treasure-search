@@ -1582,11 +1582,23 @@ export default function FindDetailPage() {
             aria-label={isSaved ? "Unsave this find" : "Save this find"}
             style={{
               width:          "100%",
-              background:     v2.accent.greenMid,
-              color:          "#fff",
-              border:         "none",
+              // Session 157 Review Board Find #1 — invert color pattern on
+              // saved state. Unsaved: solid green bg + white text/icon
+              // (primary CTA voice). Saved: white bg (matches nav bar bg =
+              // v2.surface.input #FFFCF5) + green text + filled green icon
+              // + 1px green border so the button retains visual weight
+              // against the surrounding paper-cream body. David —
+              // "BG/Text: Green/White to White/Green. The 'white I'm
+              // referring to should be the same color as the bg of the
+              // nav bar."
+              background:     isSaved ? v2.surface.input : v2.accent.greenMid,
+              color:          isSaved ? v2.accent.greenMid : "#fff",
+              border:         isSaved ? `1px solid ${v2.accent.greenMid}` : "none",
               borderRadius:   10,
-              padding:        10,
+              // 1px border on saved subtracts from total height; subtract
+              // 1px of padding so total button footprint stays consistent
+              // across the two states.
+              padding:        isSaved ? 9 : 10,
               fontFamily:     FONT_INTER,
               fontSize:       11,
               fontWeight:     600,
@@ -1598,12 +1610,16 @@ export default function FindDetailPage() {
               gap:            8,
               cursor:         "pointer",
               WebkitTapHighlightColor: "transparent",
+              transition:     "background 0.15s ease, color 0.15s ease",
             }}
           >
             <FlagGlyph
               size={14}
               strokeWidth={2.0}
-              style={{ color: "#fff", fill: isSaved ? "#fff" : "none" }}
+              style={{
+                color: isSaved ? v2.accent.greenMid : "#fff",
+                fill:  isSaved ? v2.accent.greenMid : "none",
+              }}
             />
             {isSaved ? "Saved" : "Save the Find"}
           </button>
