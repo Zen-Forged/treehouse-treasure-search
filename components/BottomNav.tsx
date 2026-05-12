@@ -97,7 +97,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Shield } from "lucide-react";
 import { MdOutlineExplore } from "react-icons/md";
-import { PiLeaf, PiMapPin, PiStorefront } from "react-icons/pi";
+import { PiLeaf, PiStorefront } from "react-icons/pi";
 import { FONT_NUMERAL, v2 } from "@/lib/tokens";
 import { getSession, onAuthChange, detectUserRole, type UserRole } from "@/lib/auth";
 
@@ -174,13 +174,17 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     badge?: boolean;
   };
 
-  // Tab order: Home → Saved → Map → [Booth | Admin, role-conditional].
+  // Tab order: Explore → Saved → [Booth | Admin, role-conditional].
   // Saved holds the stable 2nd position so muscle memory transfers across
-  // role transitions. Map is universal in slot 3 (R18, session 121). The
-  // role tab is the "specialty rightmost" when present — whichever
-  // surface the role unlocks: vendor → Booth (manage their work), admin
-  // → Admin (platform controls). Guest/shopper sees 3-tab; vendor + admin
-  // see 4-tab with the role-tab rightmost.
+  // role transitions. The role tab is the "specialty rightmost" when present
+  // — whichever surface the role unlocks: vendor → Booth (manage their work),
+  // admin → Admin (platform controls). Guest/shopper sees 2-tab pill;
+  // vendor + admin see 3-tab pill with the role-tab rightmost.
+  //
+  // Session 155 — Map tab retires (D6 lock). The map drawer is now a Home
+  // chrome affordance disclosed by <MallStrip>'s chevron, not a destination.
+  // Reverses R18 (session 121) Map tab reinstatement. PiMapPin import retires
+  // alongside.
   const tabs: TabDef[] = [
     {
       key: "home", label: "Explore", href: "/",
@@ -189,10 +193,6 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     {
       key: "flagged", label: "Saved", href: "/flagged",
       icon: <PiLeaf size={21} />, badge: true,
-    },
-    {
-      key: "map", label: "Map", href: "/map",
-      icon: <PiMapPin size={21} />,
     },
     ...(showBoothTab ? [{
       key: "booth" as NavTab, label: "Booth", href: "/my-shelf",
@@ -204,17 +204,30 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     }] : []),
   ];
 
+  // Session 155 — Variant Z: compact center-floating pill (D6 lock).
+  // Bg rgba + backdrop-blur reverses the session-132 frosted-glass retire
+  // for THIS surface specifically because (a) the pill no longer spans
+  // viewport width so content scrolling beneath only crosses behind the
+  // pill's narrow footprint, not the entire bottom of the page; (b) the
+  // pill needs to float above content (not seal the bottom) so light
+  // translucence helps it read as floating chrome, not as a sealed bottom
+  // bar.
   const navStyle: React.CSSProperties = {
-    position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
-    width: "100%", maxWidth: 430, zIndex: 100,
-    background: C.bg,
-    borderTop: `1px solid ${C.border}`,
-    display: "flex", alignItems: "stretch",
-    paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 10px)",
-    minHeight: 60,
+    position: "fixed",
+    bottom: "max(14px, calc(env(safe-area-inset-bottom, 0px) + 14px))",
+    left: "50%", transform: "translateX(-50%)",
+    zIndex: 100,
+    background: "rgba(247,243,235,0.92)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
+    border: "1px solid rgba(42,26,10,0.10)",
+    borderRadius: 24,
+    boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
+    padding: "9px 22px",
+    display: "flex", alignItems: "center", gap: 24,
   };
 
-  if (!ready) return <nav style={navStyle} />;
+  if (!ready) return <nav style={navStyle} aria-hidden="true" />;
 
   return (
     <nav style={navStyle}>
@@ -228,8 +241,10 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
             key={tab.key}
             onClick={() => router.push(tab.href)}
             style={{
-              flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-              justifyContent: "center", gap: 4, padding: "12px 0 10px",
+              // flex: 1 retires — pill is intrinsic width; each tab sizes to
+              // its icon + label. gap on parent nav handles spacing.
+              display: "flex", flexDirection: "column", alignItems: "center",
+              justifyContent: "center", gap: 4, padding: 0,
               background: "none", border: "none", cursor: "pointer",
               color: labelColor,
               position: "relative", transition: "color 0.15s",
