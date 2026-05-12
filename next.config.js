@@ -4,16 +4,24 @@ const { withSentryConfig } = require("@sentry/nextjs");
 const nextConfig = {
   reactStrictMode: true,
 
-  // R10 Arc 4 (session 108) — /shelves disposition. The Booths tab retired
-  // session 107 + cross-mall booth management lives on /admin Vendors tab
-  // already; /shelves no longer has a callsite. 301 redirects preserve any
-  // cached browser bookmarks, vendor onboarding emails, or admin deep-links
-  // that were minted before the tab retired. Reversible — removing the
-  // redirect block restores /shelves wholesale.
+  // /shelves disposition (R10 Arc 4, session 108) — Booths tab retired
+  // session 107, cross-mall booth management lives on /admin Vendors tab,
+  // /shelves has no callsite. 301 preserves cached bookmarks + vendor
+  // onboarding emails + admin deep-links. Destination retargets from /map
+  // → / at session 155 because /map itself retires same session (below).
+  //
+  // /map disposition (session 155, design record D4) — /map page retires.
+  // The map drawer is now a Home chrome affordance on <MallStrip>'s chevron
+  // toggle, not a destination page. 301 preserves email templates, shared
+  // URLs, browser bookmarks. No ?mall=<slug> param preservation (per Q1=a
+  // lock) — direct deep-links to /map?mall=... lose the scope (acceptable
+  // tradeoff; the strip + drawer let the user pick again in 2 taps).
   async redirects() {
     return [
-      { source: "/shelves",        destination: "/map", permanent: true },
-      { source: "/shelves/:path*", destination: "/map", permanent: true },
+      { source: "/shelves",        destination: "/", permanent: true },
+      { source: "/shelves/:path*", destination: "/", permanent: true },
+      { source: "/map",            destination: "/", permanent: true },
+      { source: "/map/:path*",     destination: "/", permanent: true },
     ];
   },
 };
