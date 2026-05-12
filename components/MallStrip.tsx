@@ -73,7 +73,11 @@ const NAME_FONT_MIN = 13;
 // Exported for <MallMapDrawer>'s top: MASTHEAD_HEIGHT + STRIP_HEIGHT calc
 // (session 155 D-Reversal-2 iteration 2 — drawer slides up to strip's bottom
 // edge, not masthead's bottom edge; strip stays sticky-visible above).
-export const STRIP_HEIGHT = 40;
+//
+// Session 157 — height 40 → 36 (T2 trim) per David's "Ship A + T3" call to
+// reclaim 4px of fixed-chrome real estate. Strip content (PinGlyph 14 + Lora
+// 16 + PiCaretDown 14) fits comfortably at 36px with vertical centering.
+export const STRIP_HEIGHT = 36;
 const STRIP_PADDING = 18;
 const STRIP_GAP     = 10;
 
