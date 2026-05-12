@@ -339,18 +339,58 @@ function ShelfSection({
 
   return (
     <div style={{ marginBottom: 32 }}>
+      {/* Session 157 Review Board Find #6 — header row becomes flex
+          space-between: "More from this booth…" eyebrow on left,
+          right-aligned "Visit Booth →" link relocated here from the
+          cartographic eyebrow above per David: "Move Visit Booth section
+          to the same line as 'More from this booth…'". Link inherits the
+          16px Cormorant italic from the header (matches sibling on left)
+          + weight 500 + v2.accent.green to read as the deliberate
+          affordance. Gated on vendorSlug — null vendor means no booth
+          to visit so the right slot collapses. */}
       <div
         style={{
           paddingLeft: 22,
           paddingRight: 22,
           marginBottom: 14,
-          fontFamily: FONT_CORMORANT,
-          fontStyle: "italic",
-          fontSize: 16,
-          color: v2.text.muted,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
         }}
       >
-        More from this booth…
+        <div
+          style={{
+            fontFamily: FONT_CORMORANT,
+            fontStyle: "italic",
+            fontSize: 16,
+            color: v2.text.muted,
+          }}
+        >
+          More from this booth…
+        </div>
+        {vendorSlug && (
+          <Link
+            href={`/shelf/${vendorSlug}`}
+            style={{
+              display:        "inline-flex",
+              alignItems:     "center",
+              gap:            2,
+              fontFamily:     FONT_CORMORANT,
+              fontStyle:      "italic",
+              fontSize:       16,
+              fontWeight:     500,
+              color:          v2.accent.green,
+              lineHeight:     1.4,
+              textDecoration: "none",
+              whiteSpace:     "nowrap",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            Visit Booth
+            <ChevronRight size={16} strokeWidth={2} aria-hidden />
+          </Link>
+        )}
       </div>
       <div
         ref={stripRef}
@@ -1521,81 +1561,32 @@ export default function FindDetailPage() {
             marginBottom: 32,
           }}
         >
-          {/* Session 134 — eyebrow row carries the italic Lora eyebrow with
-              a leading <PiStorefront> glyph + an italic Lora "Enter Booth →"
-              link in green, right-aligned. Reverses R17 Arc 2 D18 (session
-              117 + session 119): DistancePill retired from this surface. The
-              card BELOW this row (vendor + booth + mall block) now exists
-              to be entered, not measured — the explicit affordance lives in
-              the eyebrow as a visual sibling of the descriptor on the left.
-              Distance + native-maps deep-link both stay reachable via the
-              full-width <LocationActions> "Take Trip" CTA below the card.
-
-              alignItems: center (was baseline, when both children were
-              text-only) — both children now carry icons that need vertical
-              centering rather than baseline alignment.
-
-              Link renders only when vendorSlug exists (otherwise there is
-              no booth to enter). The cardInner Link wrapper below keeps
-              card-tap routing to /shelf/[slug] in parallel; "Enter Booth"
-              eyebrow is the explicit affordance, the card-tap is a wider
-              hit target. iPhone QA will reveal whether the dual affordance
-              feels redundant. */}
+          {/* Session 157 Review Board Find #6 — eyebrow row simplifies to
+              the left-side descriptor only. "Visit Booth →" link relocated
+              to the "More from this booth…" carousel section header below
+              (ShelfSection). The cartographic block above the card now
+              just identifies the place; the affordance to enter the booth
+              sits where the user is browsing the booth's other finds —
+              semantically closer to the action. The cardInner Link wrapper
+              below still keeps card-tap routing to /shelf/[slug] as a
+              wider hit target. */}
           <div
             style={{
-              display:        "flex",
+              display:        "inline-flex",
               alignItems:     "center",
-              justifyContent: "space-between",
-              gap:            8,
+              gap:            6,
               marginBottom:   8,
               paddingLeft:    2,
               paddingRight:   2,
+              fontFamily:     FONT_CORMORANT,
+              fontStyle:      "italic",
+              fontSize:       16,
+              color:          v2.text.secondary,
+              lineHeight:     1.4,
             }}
           >
-            <div
-              style={{
-                display:    "inline-flex",
-                alignItems: "center",
-                gap:        6,
-                fontFamily: FONT_CORMORANT,
-                fontStyle:  "italic",
-                // Session 157 Review Board Find #4 — font 14 -> 16 per
-                // David: "Change font size of 'Purchase this item at' and
-                // 'Visit Booth' to 16px font." Glyph bumped to 16 to track.
-                fontSize:   16,
-                color:      v2.text.secondary,
-                lineHeight: 1.4,
-              }}
-            >
-              <PiStorefront size={16} aria-hidden style={{ flexShrink: 0 }} />
-              Purchase this item at
-            </div>
-            {vendorSlug && (
-              <Link
-                href={`/shelf/${vendorSlug}`}
-                style={{
-                  display:        "inline-flex",
-                  alignItems:     "center",
-                  gap:            2,
-                  fontFamily:     FONT_CORMORANT,
-                  fontStyle:      "italic",
-                  // Session 157 Review Board Find #4 + #5 — font 14 -> 16
-                  // (matches "Purchase this item at" sibling) + weight 400
-                  // default -> 500 per "Add a level up in weight for
-                  // 'Visit Booth' text". Chevron bumped to 16 to track.
-                  fontSize:       16,
-                  fontWeight:     500,
-                  color:          v2.accent.green,
-                  lineHeight:     1.4,
-                  textDecoration: "none",
-                  whiteSpace:     "nowrap",
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                Visit Booth
-                <ChevronRight size={16} strokeWidth={2} aria-hidden />
-              </Link>
-            )}
+            <PiStorefront size={16} aria-hidden style={{ flexShrink: 0 }} />
+            Purchase this item at
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
             {(vendorName || boothNumber) && (() => {
