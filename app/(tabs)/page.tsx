@@ -288,7 +288,13 @@ function MasonryTile({
                 fontFamily: FONT_INTER,
                 fontStyle: "italic",
                 fontSize: 11.5,
-                color: v2.text.muted,
+                // Review Board Finding 3B (session 153) — darker color +
+                // heavier weight for the "posted X ago" eyebrow. Color from
+                // v2.text.muted → v2.text.secondary (which itself darkens
+                // this session via Finding 5A token edit), and fontWeight
+                // 400 → 500 to add the additional contrast David asked for.
+                color: v2.text.secondary,
+                fontWeight: 500,
                 letterSpacing: "0.01em",
                 lineHeight: 1.2,
                 textAlign: "left",
