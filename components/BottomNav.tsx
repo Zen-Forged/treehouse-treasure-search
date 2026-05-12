@@ -249,13 +249,16 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
   ];
 
   // Session 155 — Variant Z: compact center-floating pill (D6 lock).
-  // Bg rgba + backdrop-blur reverses the session-132 frosted-glass retire
-  // for THIS surface specifically because (a) the pill no longer spans
-  // viewport width so content scrolling beneath only crosses behind the
-  // pill's narrow footprint, not the entire bottom of the page; (b) the
-  // pill needs to float above content (not seal the bottom) so light
-  // translucence helps it read as floating chrome, not as a sealed bottom
-  // bar.
+  //
+  // Session 157 Review Board Saved #1 — bg color migrates from
+  // rgba(247,243,235,0.92) (translucent v2.bg.main) to the v2.surface.input
+  // variable (#FFFCF5 as of Review Board #2 token swap). David —
+  // "change bg color of nav bar to match the field input variable #FFFCF5."
+  // Effect: nav bar now reads as the same surface tier as input fields +
+  // card surfaces — visual unity across discoverable surfaces. Solid value
+  // retires the prior translucent + backdrop-blur "floating glass" effect;
+  // floating identity now carried by the pill's elevated shadow + radius
+  // + bottom offset alone, not surface translucence.
   const navStyle: React.CSSProperties = {
     position: "fixed",
     // Session 156 — David iPhone QA: "add more padding under the nav bar so
@@ -264,9 +267,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     bottom: "max(22px, calc(env(safe-area-inset-bottom, 0px) + 22px))",
     left: "50%", transform: "translateX(-50%)",
     zIndex: 100,
-    background: "rgba(247,243,235,0.92)",
-    backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
+    background: v2.surface.input,
     border: "1px solid rgba(42,26,10,0.10)",
     borderRadius: 24,
     boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
