@@ -35,7 +35,6 @@ import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import StickyMasthead from "@/components/StickyMasthead";
-import PostcardMallCard from "@/components/PostcardMallCard";
 import BottomNav from "@/components/BottomNav";
 import MastheadProfileButton from "@/components/MastheadProfileButton";
 import MastheadBackButton from "@/components/MastheadBackButton";
@@ -110,42 +109,17 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
 
   const selectedMall = mallId ? (malls.find((m) => m.id === mallId) ?? null) : null;
 
-  // Session 123 — stampGlyph plumbing retires alongside the postal stamp on
-  // PostcardMallCard. The slim card no longer renders a stamp; the prop
-  // dropped from the component interface.
-
-  const activeNav: "home" | "map" | "flagged" =
-    pathname === "/map"     ? "map"   :
-    pathname === "/flagged" ? "flagged" :
-                              "home";
-
-  // All-Kentucky subtitle for the slim PostcardMallCard. Slim card now
-  // mounts only on /map (showPostcardCard), so the subtitle is purely a
-  // /map concern: "X active locations · Kentucky". Session-120 had a
-  // /flagged branch here, but the slim card never rendered on /flagged
-  // even then; the branch retired with R18 (session 121) once Saved
-  // dropped its rich-card chrome too.
-  const allKentuckySubtitle = `${malls.length} active locations · Kentucky`;
-
-  // PostcardMallCard tap:
-  //   - Home + Saved   → routes to /map (the unified scope-change surface)
-  //   - /map           → no-op (card is informational on /map; the new
-  //                      contextual pill on the map handles clear/list
-  //                      affordances per session-110 design)
+  // Session 155 — Arc 3.2 retires the slim <PostcardMallCard> mount entirely
+  // (was conditional on pathname === "/map"). /map is being retired alongside
+  // (Arc 3.3); the map drawer is now a Home chrome affordance on the strip's
+  // chevron toggle, not a destination page. Layout no longer mounts any
+  // mall-card chrome — chrome is split between universal (masthead + nav)
+  // and page-owned (<HomeChrome> on Home; SavedMallCardV2 on Saved).
   //
-  // D19 is now fully reversed: session 107 partial reversal kept the
-  // /map → MallSheet behavior; session 110 drops it. The card's "from:
-  // <mall>" identifier role stays universal across surfaces.
-  const handlePostcardTap = pathname === "/map"
-    ? undefined
-    : () => router.push("/map");
+  // allKentuckySubtitle + handlePostcardTap + showPostcardCard all retire.
 
-  // Session 120 — Home (`/`) AND Saved (`/flagged`) both render their own
-  // <RichPostcardMallCard> inline (folds mall hero photo + SearchBar into
-  // the postcard). The slim card now only appears on /map. Saved suppresses
-  // the rich card itself on the empty-bookmarks state — that's owned by
-  // the page, not the layout.
-  const showPostcardCard = pathname === "/map";
+  const activeNav: "home" | "flagged" =
+    pathname === "/flagged" ? "flagged" : "home";
 
   return (
     <div
@@ -219,16 +193,6 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
           ) : null
         }
       />
-
-      {showPostcardCard && (
-        <div style={{ padding: "12px 16px 0" }}>
-          <PostcardMallCard
-            mall={selectedMall ?? "all-kentucky"}
-            allKentuckySubtitle={allKentuckySubtitle}
-            onTap={handlePostcardTap}
-          />
-        </div>
-      )}
 
       {children}
 

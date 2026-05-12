@@ -1,7 +1,7 @@
 # Home Chrome Restructure — Design Record
 
-> Frozen design decisions. Session 154 (2026-05-12). Status: 🟢 Ready for implementation.
-> Companion mockup: [`docs/mockups/home-chrome-restructure-v1.html`](mockups/home-chrome-restructure-v1.html) — V1 frame A picked then **REVERSED** post-pick (see D-Reversal-1 below); V2 mockup skipped per `feedback_v2_options_before_drafting`.
+> Frozen design decisions. Session 154 (2026-05-12) + Session 155 D-Reversal-2 (2026-05-12). Status: 🟢 Ready for Arc 2-4 implementation.
+> Companion mockup: [`docs/mockups/home-chrome-restructure-v1.html`](mockups/home-chrome-restructure-v1.html) — V1 frame A picked then **REVERSED** post-pick (see D-Reversal-1 below); V2 mockup skipped per `feedback_v2_options_before_drafting`. Session 155: D2 drawer-geometry reshaped to page-drawer (see D-Reversal-2).
 
 ---
 
@@ -33,6 +33,77 @@ Per `feedback_surface_locked_design_reversals` (~56th cumulative firing) — cap
 
 ---
 
+## D-Reversal-2 — Session 154 D2 REVERSED (within-session 155)
+
+**Reversed:** Session 154 D2 locked `<MallMapDrawer>` as a bottom-sheet overlay composing `<BottomSheet>` (Layer 2 primitive) — drawer slides up to ~65vh, rounded top corners, scrim backdrop, handle pill, "Active locations" title row, MapControlPill inside map opening `<MallSheet>` picker on "List view" tap.
+
+**Reversal reasoning (session 155, David):** *"the bar is on the top, but then drop down pulls up component from the bottom, then there is another button inside the map (list view) that then shows the list. It feels disjointed."*
+
+Two distinct tensions surfaced post-Arc-1 ship:
+1. **Directional disjoint** — strip lives at top below masthead; drawer slides up from bottom. Tap-up / content-comes-up reads as inconsistent gesture direction.
+2. **Nested modal layer** — "List view" button inside the map opens `<MallSheet>` picker which stacks ON TOP of an already-open drawer (modal-on-modal layering).
+
+**David's reshape (Shape E):** *"What if the bottom-up drawer we had went all the way up to the bottom of the masthead with no rounded corners to make it feel like it's a full page? Then a close button to collapse? I think if that was implemented then everything else could stay as it is."*
+
+The reframe: **drawer-as-page rather than drawer-as-overlay**. Both tensions resolve cleanly:
+1. **Directional disjoint dissolves** — when the drawer fills viewport edge-to-edge with no rounded corners + no scrim, the brain stops parsing it as "thing coming from below" and starts parsing it as "this is now the map page." Strip-tap reads as route change, not modal open.
+2. **Nested modal stops feeling nested** — page-drawer + `<MallSheet>` over it is a clean two-layer stack (page → picker), identical to pre-session-154's `/map page → MallSheet` relationship. No worse than the standalone /map page that we're retiring.
+
+**Locks (Q-A + Q-B both picked (a)):**
+- Drawer geometry: `top: MASTHEAD_HEIGHT`, `borderRadius: 0`, fills `100vh − MASTHEAD_HEIGHT`, no scrim
+- Drawer header bar (~48px, `v2.surface.warm` bg): `🍃 [mall name]` on left mirroring strip identity verbatim + close (X) button on right
+- Strip is fully covered by drawer while open (drawer's top edge sits below masthead; strip is in the covered region)
+- Strip chevron rotation logic retires (strip not visible when drawer open); `aria-expanded` retained on strip for screen readers
+- Slide-up animation preserved (`y: 100% → 0` framer-motion) — page-transition feel
+- Body scroll lock preserved (inline `useEffect` pattern from `<BottomSheet>`)
+- Map fills below header (`100vh − MASTHEAD_HEIGHT − 48px`) — significantly more map area vs prior 60vh
+- MapControlPill unchanged (top-right of map area)
+- `<MallSheet>` picker behavior unchanged — opens via "List view" pill as a clean overlay layer above the page-drawer
+- Pin commit closes drawer + updates strip identity
+
+**Implementation approach:** inline page-drawer geometry directly in `<MallMapDrawer>`; do **NOT** extend `<BottomSheet>` with a `variant` prop. Per CLAUDE.md (no abstractions beyond what task requires) + the 1-consumer rule — page-drawer pattern has zero other consumers right now; promote to primitive only on 2nd consumer surface.
+
+**D2 supersession:** strikes "composed from `<BottomSheet>`" + "65vh height" + "handle pill" + "TopBar slot" + "tap dimmed area outside drawer to dismiss" lines. All other D2 details (TreehouseMap mount, MapControlPill behavior, pin-commit flow, MallSheet picker on List view tap) preserve verbatim.
+
+**D3 partial supersession:** local React state inside `<HomeChrome>` for drawer open/closed is unchanged. Tap-outside-to-dismiss retires (no outside to tap on a page-drawer); X button is the sole collapse affordance.
+
+Per `feedback_within_session_design_record_reversal` ✅ Promoted-via-memory (session 128) — 3rd cumulative firing post-promotion (1st heart-flicker carry session 134; 2nd Share My Shelf retire session 152; 3rd this).
+
+### D-Reversal-2 — Iteration 2 (further within-session refinement)
+
+Iteration 1 (above) shipped a header bar (leaf + mall name + close X) inside the drawer + drawer slides up to MASTHEAD_HEIGHT covering the strip. After visual review David surfaced a tighter shape:
+
+**David's iteration-2 ask:** *"Lets make is so the map component pull up doesn't have it's own heading of location. It just pull right under the location and chevron. No close button either, the chevron flips to close."*
+
+**The reshape strips the drawer's chrome entirely and promotes the strip to permanent chrome:**
+- Drawer top: `MASTHEAD_HEIGHT + STRIP_HEIGHT` (strip stays sticky-visible above the drawer; no longer covered)
+- Drawer header bar **retires** — no leaf, no mall name, no close X
+- Map fills the entire drawer (`100vh − MASTHEAD_HEIGHT − STRIP_HEIGHT`)
+- **Chevron-on-strip is the sole open/close toggle** — tap strip when closed opens drawer + rotates chevron 0° → 180°; tap strip when open closes drawer + rotates chevron back
+- Strip's existing chevron-rotation logic now load-bearing (was transition-polish in Iteration 1)
+- `role="dialog"` + `aria-modal="true"` → `role="region"` + `aria-label` — drawer is a content panel disclosed by the strip-as-button, not a modal dialog. Strip stays in tab order; closes via the same button that opened it.
+- z-index: 50 → 30 (below strip's z-39 so strip wins on any pixel overlap at the bottom-border seam)
+
+**Tensions resolved on top of Iteration 1:**
+1. **Identity duplication retired** — header was repeating leaf + mall name already shown on the strip 40px above.
+2. **Close-affordance unification** — strip-tap is the single open/close gesture; no separate X button to learn or hunt.
+3. **Strip-as-persistent-chrome** reads more faithfully like the FB Marketplace pattern David anchored on at session 154 — strip stays visible even when the map panel is expanded; the place identity persists across the open/close cycle.
+
+**Q-A iteration-1 (a) → REVERSED iteration-2** (drawer header bar retires; no leaf + mall name + close X).
+**Q-B iteration-1 (a) → REVERSED to (b) iteration-2** (strip stays sticky above drawer; was "strip fully covered").
+
+**Preserves verbatim from Iteration 1:**
+- Inline page-drawer geometry (no `<BottomSheet>` composition; no `variant` prop on primitive)
+- `borderRadius: 0`, no scrim, slide-up animation, body scroll lock
+- TreehouseMap mount, MapControlPill behavior, MallSheet picker on List view tap
+- Pin commit closes drawer + updates strip (no API change to MallMapDrawer's props)
+
+**Smoke route adjustment:** `/home-chrome-test` strip-tap handler changes from `setDrawerOpen(true)` to `setDrawerOpen((prev) => !prev)` so closing-via-strip works in the testbed. Production consumer (`<HomeChrome>` in Arc 2) inherits the same toggle pattern.
+
+4th cumulative firing of `feedback_within_session_design_record_reversal` post-promotion (Iteration 2 reverses Iteration 1's Q-A + Q-B picks within the same session — sub-pattern: "refinement-of-just-shipped at design-pass layer iterates again on visual review").
+
+---
+
 ## Locked decisions
 
 ### D1 — Persistent location strip replaces chunky postcard mall card
@@ -53,9 +124,11 @@ A new **`<MallStrip>`** primitive becomes top-of-page chrome on Home. The chunky
 
 **All-Kentucky scope handling:** When scope is all-Kentucky (no specific mall picked), strip reads `🌿 All Kentucky locations` with same chevron. Tapping still opens the map drawer (which fits-bounds all active malls).
 
-### D2 — Mall map drawer composed from existing primitives
+### D2 — Mall map drawer composed from existing primitives ⚠️ partially superseded by D-Reversal-2
 
-New **`<MallMapDrawer>`** composing `<BottomSheet>` (Layer 2 primitive, session 149) + `<TreehouseMap>` (session 108) + migrated map-control pill from `app/(tabs)/map/page.tsx`.
+New **`<MallMapDrawer>`** composing `<BottomSheet>` (Layer 2 primitive, session 149) ~~~~ + `<TreehouseMap>` (session 108) + migrated map-control pill from `app/(tabs)/map/page.tsx`.
+
+> **D-Reversal-2 (session 155):** `<BottomSheet>` composition + handle pill + TopBar slot + 65vh height + tap-outside-to-dismiss all retire in favor of page-drawer inline geometry. See D-Reversal-2 above. TreehouseMap mount + MapControlPill behavior + pin-commit flow preserve verbatim.
 
 **Drawer specs:**
 - **Trigger**: tap anywhere on `<MallStrip>` opens drawer

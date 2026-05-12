@@ -62,11 +62,13 @@ export default function HomeChromeTestPage() {
         onTap={() => {
           // Fire the canonical analytics event per design record D12 so the
           // smoke route exercises the full track() path before production
-          // consumer wires the same shape.
+          // consumer wires the same shape. Fires on every tap (open + close)
+          // — D-Reversal-2 iteration 2 made strip's tap a toggle since the
+          // drawer's close button retired.
           track("home_strip_tapped", {
             mall_slug: scopeKey === "all-kentucky" ? "all-kentucky" : FIXTURE_MALL.slug,
           });
-          setDrawerOpen(true);
+          setDrawerOpen((prev) => !prev);
         }}
       />
 

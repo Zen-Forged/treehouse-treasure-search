@@ -69,7 +69,10 @@ interface MallStripProps {
 const NAME_FONT_MAX = 16;
 const NAME_FONT_MIN = 13;
 
-const STRIP_HEIGHT  = 40;
+// Exported for <MallMapDrawer>'s top: MASTHEAD_HEIGHT + STRIP_HEIGHT calc
+// (session 155 D-Reversal-2 iteration 2 — drawer slides up to strip's bottom
+// edge, not masthead's bottom edge; strip stays sticky-visible above).
+export const STRIP_HEIGHT = 40;
 const STRIP_PADDING = 18;
 const STRIP_GAP     = 10;
 
@@ -114,7 +117,11 @@ export default function MallStrip({ mall, isOpen, onTap }: MallStripProps) {
         maxWidth:    430,
         height:      STRIP_HEIGHT,
         zIndex:      39, // Just below masthead z-40 so it doesn't overlay the wordmark
-        background:  v2.surface.warm,
+        // Strip bg matches masthead bg per session-155 refinement — visual
+        // separation comes from the bottom hairline alone, not a bg contrast.
+        // Reverses session-154 D11's "v2.surface.warm for 2-row chrome
+        // separation" pick.
+        background:  v2.bg.main,
         borderTop:   "none",
         borderBottom: `1px solid ${v2.border.light}`,
         borderLeft:  "none",
