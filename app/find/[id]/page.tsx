@@ -89,7 +89,10 @@ import { readFindContext, getPostCache, setPostCache, writeFindContext, getVendo
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import PhotoLightbox from "@/components/PhotoLightbox";
-import LocationActions from "@/components/LocationActions";
+// LocationActions retired from /find/[id] in session 157 Review Board Find #1
+// ("Take Trip" CTA replaced by "Save the Find" button). Component still
+// shipped + consumed by /shelf/[slug] and /map's PinCallout — import line
+// retires only here.
 import MastheadPaperAirplane from "@/components/MastheadPaperAirplane";
 import ShareSheet from "@/components/ShareSheet";
 import HomeFeedTile from "@/components/v2/HomeFeedTile";
@@ -1104,9 +1107,11 @@ export default function FindDetailPage() {
   const mallName    = post?.mall?.name ?? null;
   const mallCity    = post?.mall?.city ?? null;
   const mallState   = post?.mall?.state ?? null;
-  const mallSlug    = post?.mall?.slug ?? null;
-  const mallLat     = post?.mall?.latitude ?? null;
-  const mallLng     = post?.mall?.longitude ?? null;
+  // Session 157 — mallSlug / mallLat / mallLng vars retired alongside the
+  // LocationActions render (Review Board Find #1). They were only consumed
+  // as that component's props. SELECT-side enrichment of mall.latitude /
+  // mall.longitude on lib/posts.ts stays as substrate for other surfaces
+  // that still consume LocationActions; only this page stopped reading them.
   const price       = post?.price_asking;
   const showSoldBody   = !!post && isSold && !isMyPost;
   const showNormalBody = !!post && !showSoldBody;
@@ -1538,15 +1543,70 @@ export default function FindDetailPage() {
         </div>
       )}
 
-      {/* Divider (v1.1j plain hairline, diamond retired) */}
+      {/* Session 157 Review Board Find #1 + #2 — David: "I want each page
+          to have a specific action to take. So on the find page I want
+          to change the 'Take Trip' to 'Save the Find'. Button should
+          change saved state (moved to saved and icon filled)" +
+          "replace the hairline divider under quotes with the 'Save the
+          Find' button."
+
+          The plain v1.1j hairline divider retires. In its slot — the
+          page's primary action CTA. Find detail's job is to deliver the
+          find; the canonical action is to capture it. "Take Trip" CTA
+          (R17 LocationActions) retires from this surface — its job moves
+          out of Find detail entirely (still rendered on /shelf and /map
+          via their LocationActions consumers, which are unchanged).
+
+          Visual contract mirrors LocationActions Take Trip exactly:
+          full-width, v2.accent.greenMid bg, 10px radius, FONT_INTER 11px
+          uppercase 0.12em letterSpacing weight 600 — primary CTA voice
+          already established on the project. Saved state flips icon
+          fill (outline → filled, both white against the green bg) +
+          label ("Save the Find" → "Saved"). Same handleToggleSave
+          callback as the corner FlagGlyph bubble, so both affordances
+          stay in sync via useShopperSaves.
+
+          Conditional render preserves the hairline's gate (vendor or
+          booth number must exist for the find to belong to something
+          saveable). */}
       {(vendorName || boothNumber) && (
         <div
           style={{
-            padding: "0 44px",
+            padding: "0 22px",
             marginBottom: 22,
           }}
         >
-          <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
+          <button
+            type="button"
+            onClick={handleToggleSave}
+            aria-label={isSaved ? "Unsave this find" : "Save this find"}
+            style={{
+              width:          "100%",
+              background:     v2.accent.greenMid,
+              color:          "#fff",
+              border:         "none",
+              borderRadius:   10,
+              padding:        10,
+              fontFamily:     FONT_INTER,
+              fontSize:       11,
+              fontWeight:     600,
+              letterSpacing:  "0.12em",
+              textTransform:  "uppercase",
+              display:        "flex",
+              alignItems:     "center",
+              justifyContent: "center",
+              gap:            8,
+              cursor:         "pointer",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            <FlagGlyph
+              size={14}
+              strokeWidth={2.0}
+              style={{ color: "#fff", fill: isSaved ? "#fff" : "none" }}
+            />
+            {isSaved ? "Saved" : "Save the Find"}
+          </button>
         </div>
       )}
 
@@ -1737,17 +1797,17 @@ export default function FindDetailPage() {
                 cardInner
               );
             })()}
-            {/* R17 Arc 2 D19 — twin-button row below the cartographic card.
-                Renders nothing for guest / denied / mall-coords-missing
-                per <LocationActions> internal null-passthrough. */}
-            <LocationActions
-              mallSlug={mallSlug}
-              mallLat={mallLat}
-              mallLng={mallLng}
-              surface="find"
-              postId={post?.id ?? null}
-              vendorId={post?.vendor_id ?? null}
-            />
+            {/* Session 157 Review Board Find #1 — LocationActions
+                "Take Trip" CTA retires from /find/[id]. David's call:
+                "I want each page to have a specific action to take. So
+                on the find page I want to change the 'Take Trip' to
+                'Save the Find'." The Save the Find button now lives in
+                the slot where the hairline divider used to be (above
+                the cartographic block). LocationActions component stays
+                shipped for /shelf/[slug] + /map's PinCallout consumers
+                — only this page's render retires. Reverses R17 Arc 2
+                D19 + the session-134 Take-Trip-as-primary-CTA dial,
+                surfaced per feedback_surface_locked_design_reversals. */}
           </div>
         </div>
       )}
