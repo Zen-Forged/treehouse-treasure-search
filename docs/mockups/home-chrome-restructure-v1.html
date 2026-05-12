@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Home Chrome Restructure — V1 — Session 154</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #1a1815; color: #e8e5dc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 24px; }
+  .header { max-width: 1400px; margin: 0 auto 32px; }
+  .header h1 { font-family: Georgia, serif; font-size: 22px; font-weight: 500; margin-bottom: 8px; color: #f5f2eb; }
+  .header .meta { font-size: 12px; color: #8e8a82; margin-bottom: 24px; letter-spacing: 0.5px; }
+  .decisions { background: #252220; padding: 20px 24px; border-radius: 12px; border: 1px solid #3a3631; font-size: 13px; line-height: 1.6; }
+  .decisions h2 { font-size: 14px; font-weight: 600; color: #d4cfc1; margin-bottom: 12px; letter-spacing: 0.3px; }
+  .decisions ul { padding-left: 18px; }
+  .decisions li { margin-bottom: 6px; color: #b8b3a8; }
+  .decisions .locked { color: #8ab280; }
+  .decisions .open { color: #d4b569; }
+  .section { max-width: 1400px; margin: 32px auto; }
+  .section h2 { font-size: 16px; font-weight: 600; color: #d4cfc1; margin-bottom: 8px; letter-spacing: 0.3px; }
+  .section .sub { font-size: 12px; color: #8e8a82; margin-bottom: 20px; line-height: 1.6; }
+  .frames { display: flex; gap: 28px; flex-wrap: wrap; justify-content: center; }
+  .frame { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .frame-label { font-size: 12px; font-weight: 600; color: #d4b569; letter-spacing: 0.5px; text-transform: uppercase; }
+  .frame-desc { font-size: 11px; color: #8e8a82; max-width: 280px; text-align: center; line-height: 1.5; }
+  .phone {
+    width: 320px; height: 600px; background: #F7F3EB; border-radius: 32px;
+    border: 8px solid #0a0a0a; overflow: hidden; position: relative;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  }
+  .phone-inner { width: 100%; height: 100%; overflow: hidden; position: relative; }
+
+  /* Masthead — session 154 reduced height */
+  .masthead {
+    position: absolute; top: 0; left: 0; right: 0;
+    background: #F7F3EB; padding: 8px 16px 8px;
+    display: flex; justify-content: center; align-items: center;
+    z-index: 40; border-bottom: 1px solid rgba(42,26,10,0.08);
+    height: 70px;
+  }
+  .masthead .wordmark {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 22px; font-weight: 500; color: #2a1a0a; letter-spacing: -0.3px;
+  }
+
+  /* Mall card collapsed state (display-only chrome at top of Home) */
+  .mall-card {
+    background: #FFFCF5; margin: 88px 16px 0; border-radius: 12px;
+    border: 1px solid rgba(43,33,26,0.08); box-shadow: 0 1px 2px rgba(43,33,26,0.04);
+    padding: 14px 16px 16px;
+  }
+  .mall-card .eyebrow {
+    font-family: Georgia, serif; font-style: italic; font-size: 11px;
+    color: #5C5246; margin-bottom: 4px;
+  }
+  .mall-card .name {
+    font-family: Georgia, serif; font-size: 20px; font-weight: 600;
+    color: #2a1a0a; line-height: 1.3; margin-bottom: 4px;
+  }
+  .mall-card .address {
+    font-size: 11px; color: #5C5246; display: flex; align-items: center; gap: 6px;
+  }
+  .mall-card .address-icon { font-size: 14px; }
+
+  /* The expand affordance — chevron + "View Map" or similar */
+  .mall-card-expand {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(43,33,26,0.18);
+  }
+  .mall-card-expand-label {
+    font-family: Georgia, serif; font-style: italic; font-size: 11px;
+    color: #1e4d2b;
+  }
+  .mall-card-expand-icon { color: #1e4d2b; font-size: 12px; }
+
+  /* Mall card EXPANDED — embedded map (in-place embed Frame A) */
+  .mall-card-expanded { padding-bottom: 0; }
+  .mall-card-map {
+    height: 220px; margin: 14px -16px 0; background: linear-gradient(135deg, #d4e8d9 0%, #c8d8c4 100%);
+    position: relative; overflow: hidden; border-bottom-left-radius: 11px; border-bottom-right-radius: 11px;
+  }
+  .mall-card-map::before {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      radial-gradient(circle at 30% 40%, rgba(255,255,255,0.4) 0%, transparent 60%),
+      radial-gradient(circle at 70% 60%, rgba(255,255,255,0.3) 0%, transparent 50%);
+  }
+  .mall-card-map-pin {
+    position: absolute; width: 28px; height: 28px;
+    background: rgba(245,242,235,0.85); border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15); font-size: 14px;
+  }
+  .mall-card-map-pin.p1 { top: 40px; left: 60px; }
+  .mall-card-map-pin.p2 { top: 100px; left: 140px; }
+  .mall-card-map-pin.p3 { top: 70px; left: 220px; color: #1e4d2b; }
+  .mall-card-map-pill {
+    position: absolute; top: 12px; right: 12px;
+    background: rgba(30,77,43,0.92); color: #f5ecd8;
+    padding: 7px 12px; border-radius: 18px;
+    font-size: 11px; font-weight: 500;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .mall-card-map-pill::after { content: "✕"; font-size: 11px; }
+
+  /* Drawer below pattern (Frame B) */
+  .drawer {
+    margin: 8px 16px 0; background: #FFFCF5; border-radius: 12px;
+    border: 1px solid rgba(43,33,26,0.08); box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+    padding: 12px 16px;
+  }
+  .drawer-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .drawer-handle {
+    width: 36px; height: 4px; background: rgba(43,33,26,0.2); border-radius: 2px;
+    margin: 0 auto 12px;
+  }
+  .drawer-title {
+    font-family: Georgia, serif; font-size: 13px; font-weight: 600; color: #2a1a0a;
+  }
+  .drawer-close { color: #8e8a82; font-size: 16px; }
+  .drawer-map {
+    height: 200px; margin: 0 -16px -12px; background: linear-gradient(135deg, #d4e8d9 0%, #c8d8c4 100%);
+    position: relative; overflow: hidden; border-bottom-left-radius: 11px; border-bottom-right-radius: 11px;
+  }
+
+  /* Search bar primitives */
+  .search-bar {
+    background: #F0EBE0; border: 1px solid rgba(43,33,26,0.10);
+    margin: 12px 16px 0; padding: 10px 14px; border-radius: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .search-bar .search-icon { color: #1e4d2b; font-size: 13px; }
+  .search-bar .placeholder { font-style: italic; font-size: 13px; color: #8e8a82; font-family: Georgia, serif; }
+
+  /* Feed tile placeholder */
+  .feed { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 16px 0; }
+  .feed-tile {
+    aspect-ratio: 4/5; background: #FFFCF5; border-radius: 4px;
+    box-shadow: 0 6px 14px rgba(43,33,26,0.20), 0 1.5px 3px rgba(43,33,26,0.10);
+    padding: 7px 7px 4px;
+  }
+  .feed-tile-photo { width: 100%; height: 70%; background: #d8d2c4; border-radius: 2px; }
+  .feed-tile-title { font-family: Georgia, serif; font-size: 11px; margin-top: 6px; color: #2a1a0a; text-align: center; }
+
+  /* Floating BottomNav variants */
+  .nav-floating {
+    position: absolute; bottom: 14px; left: 16px; right: 16px;
+    background: rgba(247,243,235,0.88); backdrop-filter: blur(12px);
+    border: 1px solid rgba(42,26,10,0.10);
+    border-radius: 18px; padding: 10px 16px;
+    display: flex; justify-content: space-around; align-items: center;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    z-index: 50;
+  }
+  .nav-tab { display: flex; flex-direction: column; align-items: center; gap: 3px; color: #6b5538; }
+  .nav-tab .icon { font-size: 18px; }
+  .nav-tab .label { font-size: 9px; letter-spacing: 0.3px; }
+  .nav-tab.active { color: #1e4d2b; font-weight: 600; }
+
+  /* Overlay map (Frame C) */
+  .overlay-bg { position: absolute; inset: 0; background: rgba(0,0,0,0.35); z-index: 60; }
+  .overlay-sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; top: 80px;
+    background: #F7F3EB; border-top-left-radius: 22px; border-top-right-radius: 22px;
+    z-index: 65; overflow: hidden;
+  }
+  .overlay-handle {
+    width: 36px; height: 4px; background: rgba(43,33,26,0.2); border-radius: 2px;
+    margin: 12px auto 0;
+  }
+  .overlay-title {
+    font-family: Georgia, serif; font-size: 16px; font-weight: 600; color: #2a1a0a;
+    text-align: center; padding: 14px 16px 0;
+  }
+  .overlay-map {
+    margin: 14px 16px 0; height: 380px; background: linear-gradient(135deg, #d4e8d9 0%, #c8d8c4 100%);
+    border-radius: 12px; position: relative; overflow: hidden;
+  }
+  .overlay-pill {
+    position: absolute; top: 12px; right: 12px;
+    background: rgba(30,77,43,0.92); color: #f5ecd8;
+    padding: 7px 12px; border-radius: 18px;
+    font-size: 11px; font-weight: 500;
+  }
+
+  /* Nav variants panel */
+  .nav-variants {
+    display: flex; gap: 28px; justify-content: center; margin-top: 24px;
+    flex-wrap: wrap;
+  }
+  .nav-variant {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .nav-variant-label { font-size: 11px; font-weight: 600; color: #d4b569; letter-spacing: 0.5px; text-transform: uppercase; }
+  .nav-variant-mockup {
+    width: 320px; height: 110px; background: #F7F3EB; border-radius: 16px; position: relative;
+    border: 4px solid #0a0a0a;
+  }
+
+  /* Variant X — capsule pill */
+  .nav-x {
+    position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+    background: rgba(247,243,235,0.88); backdrop-filter: blur(12px);
+    border: 1px solid rgba(42,26,10,0.10);
+    border-radius: 999px; padding: 8px 14px;
+    display: flex; gap: 18px; align-items: center;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  }
+
+  /* Variant Y — rounded rect, full width with margins */
+  .nav-y {
+    position: absolute; bottom: 12px; left: 14px; right: 14px;
+    background: rgba(247,243,235,0.88); backdrop-filter: blur(12px);
+    border: 1px solid rgba(42,26,10,0.10);
+    border-radius: 16px; padding: 10px 16px;
+    display: flex; justify-content: space-around; align-items: center;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  }
+
+  /* Variant Z — compact center pill, no role tab fill */
+  .nav-z {
+    position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+    background: rgba(247,243,235,0.92); backdrop-filter: blur(12px);
+    border: 1px solid rgba(42,26,10,0.10);
+    border-radius: 24px; padding: 9px 22px;
+    display: flex; gap: 24px; align-items: center;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  }
+
+  .picks {
+    max-width: 1400px; margin: 40px auto; background: #252220;
+    padding: 24px; border-radius: 12px; border: 1px solid #3a3631;
+  }
+  .picks h2 { color: #d4cfc1; font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+  .picks .row { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 16px; }
+  .picks .row strong { color: #f5ecd8; }
+  .picks .pick-group { background: #1a1815; padding: 12px 16px; border-radius: 8px; flex: 1; min-width: 280px; }
+  .picks .pick-group h3 { font-size: 12px; color: #d4b569; margin-bottom: 8px; font-weight: 600; }
+  .picks .pick-group p { font-size: 12px; color: #b8b3a8; line-height: 1.6; }
+  .picks .pick-format {
+    margin-top: 20px; padding: 14px 16px; background: #1a1815; border-radius: 8px;
+    font-family: "SF Mono", Monaco, monospace; font-size: 13px; color: #8ab280;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Home Chrome Restructure — V1 — Session 154</h1>
+  <div class="meta">3 frames spanning card-expanded-shape axis + 3 floating-nav variants. Decisions pane locks scoping; picks at bottom.</div>
+
+  <div class="decisions">
+    <h2>Decisions</h2>
+    <ul>
+      <li><span class="locked">✓ LOCKED (Q1):</span> /map tab retires from BottomNav (reverses session-121 R18 Map reinstatement). /map route stays as redirect → /.</li>
+      <li><span class="locked">✓ LOCKED (Q2):</span> Saved page (/flagged) stays as-is per session 121-122 R18 per-mall stack. Only Home/Explore gets the new mall+map pattern.</li>
+      <li><span class="locked">✓ LOCKED (audit):</span> RichPostcardMallCard + SearchBar move from layout-level to new &lt;HomeChrome&gt; page-level component. Map state lives where it's used.</li>
+      <li><span class="locked">✓ LOCKED (session 154 item 1):</span> Masthead reduced -18px (inner grid 90 → 72; calc 103 → 85). Wordmark stays 72px.</li>
+      <li><span class="locked">✓ LOCKED (audit):</span> SearchBar shape pulls from pill (radius 999, 42px) → rounded button (radius 10-12, 44px). Debounce/caret/clear all move with the primitive.</li>
+      <li><span class="open">○ OPEN (this mockup A1):</span> Card expanded shape — A in-place embed inside card / B drawer panel below card / C full-screen overlay sheet.</li>
+      <li><span class="open">○ OPEN (this mockup A2):</span> Floating BottomNav shape — X capsule pill (center) / Y rounded rect (full-width margined) / Z compact center pill.</li>
+      <li><span class="open">○ OPEN (inline sub-axis):</span> Search bar landing — search ABOVE mall card OR search BELOW mall card (currently sketched: mall card on top, search-bar between card and feed — matches digital-to-physical thesis "you're here, now find a thing").</li>
+      <li><span class="open">○ OPEN (deferred to V2 or design record):</span> Mall-card-collapsed expand affordance — chevron / "View Map" link / leaf icon / something else. Sketched as italic "Tap to view map →" in green.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Card-expanded-shape axis (A1) — pick one</h2>
+  <div class="sub">Three structural options for what happens when user taps the mall card to expand the map. Each frame shows the COLLAPSED top of page (left/baseline) and the EXPANDED state with map visible. Search bar position is sketched the same across all 3 (between mall card and feed) but is a sub-axis you can flip.</div>
+
+  <div class="frames">
+    <!-- FRAME A — IN-PLACE EMBED -->
+    <div class="frame">
+      <div class="frame-label">FRAME A — In-place embed</div>
+      <div class="phone">
+        <div class="phone-inner">
+          <div class="masthead">
+            <div class="wordmark">Treehouse Finds</div>
+          </div>
+          <div class="mall-card mall-card-expanded">
+            <div class="eyebrow">Explore local finds from</div>
+            <div class="name">America's Antique Mall</div>
+            <div class="address">📍 5577 Bardstown Rd · Louisville</div>
+            <div class="mall-card-map">
+              <div class="mall-card-map-pin p1">🌿</div>
+              <div class="mall-card-map-pin p2">🌿</div>
+              <div class="mall-card-map-pin p3">🌿</div>
+              <div class="mall-card-map-pill">Clear</div>
+            </div>
+          </div>
+          <div class="search-bar">
+            <span class="search-icon">🔭</span>
+            <span class="placeholder">What are you searching for today?</span>
+          </div>
+          <div class="feed">
+            <div class="feed-tile"><div class="feed-tile-photo"></div><div class="feed-tile-title">Brass lamp</div></div>
+            <div class="feed-tile"><div class="feed-tile-photo"></div><div class="feed-tile-title">Vintage chair</div></div>
+          </div>
+          <div class="nav-floating">
+            <div class="nav-tab active"><div class="icon">🧭</div><div class="label">Explore</div></div>
+            <div class="nav-tab"><div class="icon">🌿</div><div class="label">Saved</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-desc">Map mounts INSIDE the card. Tap expand → photo banner pushes up, map fills the bottom of the card. Card grows downward; rest of page reflows. Map control pill (Clear / List view) anchors top-right INSIDE the map.</div>
+    </div>
+
+    <!-- FRAME B — DRAWER PANEL BELOW -->
+    <div class="frame">
+      <div class="frame-label">FRAME B — Drawer below</div>
+      <div class="phone">
+        <div class="phone-inner">
+          <div class="masthead">
+            <div class="wordmark">Treehouse Finds</div>
+          </div>
+          <div class="mall-card">
+            <div class="eyebrow">Explore local finds from</div>
+            <div class="name">America's Antique Mall</div>
+            <div class="address">📍 5577 Bardstown Rd · Louisville</div>
+            <div class="mall-card-expand">
+              <div class="mall-card-expand-label">View map ↓</div>
+              <div class="mall-card-expand-icon">⌃</div>
+            </div>
+          </div>
+          <div class="drawer">
+            <div class="drawer-handle"></div>
+            <div class="drawer-header">
+              <div class="drawer-title">Active locations near you</div>
+              <div class="drawer-close">✕</div>
+            </div>
+            <div class="drawer-map">
+              <div class="mall-card-map-pin p1">🌿</div>
+              <div class="mall-card-map-pin p2">🌿</div>
+              <div class="mall-card-map-pin p3">🌿</div>
+            </div>
+          </div>
+          <div class="nav-floating">
+            <div class="nav-tab active"><div class="icon">🧭</div><div class="label">Explore</div></div>
+            <div class="nav-tab"><div class="icon">🌿</div><div class="label">Saved</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-desc">Card stays static identity strip. Tap expand → drawer panel slides DOWN below the card (not above feed — drawer takes feed's place temporarily). Map control pill could live in drawer header next to ✕.</div>
+    </div>
+
+    <!-- FRAME C — FULL-SCREEN OVERLAY -->
+    <div class="frame">
+      <div class="frame-label">FRAME C — Overlay sheet</div>
+      <div class="phone">
+        <div class="phone-inner">
+          <div class="masthead">
+            <div class="wordmark">Treehouse Finds</div>
+          </div>
+          <div class="mall-card">
+            <div class="eyebrow">Explore local finds from</div>
+            <div class="name">America's Antique Mall</div>
+            <div class="address">📍 5577 Bardstown Rd · Louisville</div>
+            <div class="mall-card-expand">
+              <div class="mall-card-expand-label">View map</div>
+              <div class="mall-card-expand-icon">↗</div>
+            </div>
+          </div>
+          <div class="search-bar">
+            <span class="search-icon">🔭</span>
+            <span class="placeholder">What are you searching for today?</span>
+          </div>
+          <div class="feed">
+            <div class="feed-tile"><div class="feed-tile-photo"></div><div class="feed-tile-title">Brass lamp</div></div>
+            <div class="feed-tile"><div class="feed-tile-photo"></div><div class="feed-tile-title">Vintage chair</div></div>
+          </div>
+          <div class="overlay-bg"></div>
+          <div class="overlay-sheet">
+            <div class="overlay-handle"></div>
+            <div class="overlay-title">Active locations</div>
+            <div class="overlay-map">
+              <div class="mall-card-map-pin p1">🌿</div>
+              <div class="mall-card-map-pin p2">🌿</div>
+              <div class="mall-card-map-pin p3">🌿</div>
+              <div class="overlay-pill">Clear ✕</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-desc">Card stays compact. Tap expand → overlay sheet slides UP from bottom covering most of page. Same /map experience but accessed via card not nav tab. Dismiss by swipe-down or tap dimmed area.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>Floating-nav-shape axis (A2) — pick one</h2>
+  <div class="sub">Three variants for the floating BottomNav. All use semi-transparent paper-cream bg with backdrop-blur + paper hairline + soft shadow. Tab content shown as 2-tab (Home + Saved); role-conditional 3rd appears to right when present (vendor → Booth, admin → Admin).</div>
+
+  <div class="nav-variants">
+    <div class="nav-variant">
+      <div class="nav-variant-label">VARIANT X — Capsule</div>
+      <div class="nav-variant-mockup">
+        <div class="nav-x">
+          <div class="nav-tab active"><div class="icon">🧭</div><div class="label">Explore</div></div>
+          <div class="nav-tab"><div class="icon">🌿</div><div class="label">Saved</div></div>
+        </div>
+      </div>
+      <div class="frame-desc">Pill-shaped, center-aligned, fits content + small horizontal padding. Doesn't span full width. Feels lighter / less anchored. Role-conditional tab extends pill width to right.</div>
+    </div>
+
+    <div class="nav-variant">
+      <div class="nav-variant-label">VARIANT Y — Rounded rect</div>
+      <div class="nav-variant-mockup">
+        <div class="nav-y">
+          <div class="nav-tab active"><div class="icon">🧭</div><div class="label">Explore</div></div>
+          <div class="nav-tab"><div class="icon">🌿</div><div class="label">Saved</div></div>
+        </div>
+      </div>
+      <div class="frame-desc">Spans width with 14px margin on each side. Rounded corners (16px). Feels more anchored / closer to current BottomNav shape. Tabs distribute evenly via space-around.</div>
+    </div>
+
+    <div class="nav-variant">
+      <div class="nav-variant-label">VARIANT Z — Compact pill</div>
+      <div class="nav-variant-mockup">
+        <div class="nav-z">
+          <div class="nav-tab active"><div class="icon">🧭</div><div class="label">Explore</div></div>
+          <div class="nav-tab"><div class="icon">🌿</div><div class="label">Saved</div></div>
+        </div>
+      </div>
+      <div class="frame-desc">Like X but with more generous internal padding + larger radius (24px). Reads as "destination shortcut" not "primary chrome." Larger tap targets than X.</div>
+    </div>
+  </div>
+</div>
+
+<div class="picks">
+  <h2>Picks</h2>
+  <div class="row">
+    <div class="pick-group">
+      <h3>A1 — Card expanded shape</h3>
+      <p>Pick one: A (in-place embed) / B (drawer below) / C (overlay sheet)</p>
+    </div>
+    <div class="pick-group">
+      <h3>A2 — Floating nav shape</h3>
+      <p>Pick one: X (capsule) / Y (rounded rect) / Z (compact pill)</p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="pick-group">
+      <h3>Sub-axis: search bar position</h3>
+      <p>Above mall card (search-first) / Below mall card (place-first, sketched in V1) / Inside mall card body (current shape, just buttoned)</p>
+    </div>
+    <div class="pick-group">
+      <h3>Sub-axis: expand affordance copy</h3>
+      <p>"View map ↓" italic Lora / "View locations" / leaf chevron only / chevron + numeric "5 nearby" — any preference, or defer to V2 / design record?</p>
+    </div>
+  </div>
+  <div class="pick-format">Pick format: A1[A/B/C] · A2[X/Y/Z] · search[above/below/inside] · expand[copy preference or "defer"]</div>
+</div>
+
+</body>
+</html>
