@@ -33,6 +33,23 @@ import type { MallStats } from "@/lib/posts";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
+// Mapbox setPaintProperty expects literal color strings (hex/rgb/rgba) — it
+// doesn't resolve CSS variables, which the v1.basemap.* tokens reference since
+// the session 144 Layer 1 token refactor moved tokens from literal hex to
+// CSS var references for theme-able runtime resolution. Bridge here: walk
+// var() references back to their computed :root value before handing to
+// Mapbox. Pass-through for any already-literal value.
+function resolveCssVar(value: string): string {
+  if (typeof window === "undefined") return value;
+  const match = value.match(/^var\((--[^)]+)\)$/);
+  if (!match) return value;
+  return (
+    getComputedStyle(document.documentElement)
+      .getPropertyValue(match[1])
+      .trim() || value
+  );
+}
+
 // D25 cartographic warm-cream palette. Walks the loaded light-v11 style
 // layers and overrides paint properties to swap Mapbox's grayscale defaults
 // for our v1.basemap.* tokens. Italic-Lora label font is deferred — custom
@@ -44,12 +61,22 @@ function applyCartographicPalette(map: mapboxgl.Map): void {
   const style = map.getStyle();
   if (!style?.layers) return;
 
+  // Pre-resolve CSS vars once — Mapbox setPaintProperty needs literal values.
+  const palette = {
+    cream:  resolveCssVar(v1.basemap.cream),
+    cream2: resolveCssVar(v1.basemap.cream2),
+    water:  resolveCssVar(v1.basemap.water),
+    water2: resolveCssVar(v1.basemap.water2),
+    park:   resolveCssVar(v1.basemap.park),
+    label:  resolveCssVar(v1.basemap.label),
+  };
+
   for (const layer of style.layers) {
     const id = layer.id;
     try {
       // Background fill = cream landmass.
       if (layer.type === "background") {
-        map.setPaintProperty(id, "background-color", v1.basemap.cream);
+        map.setPaintProperty(id, "background-color", palette.cream);
         continue;
       }
 
@@ -57,23 +84,23 @@ function applyCartographicPalette(map: mapboxgl.Map): void {
       // everything else gets cream2 (slightly warmer landcover).
       if (layer.type === "fill") {
         if (id === "land") {
-          map.setPaintProperty(id, "fill-color", v1.basemap.cream);
+          map.setPaintProperty(id, "fill-color", palette.cream);
         } else if (
           id.includes("national-park") ||
           id.includes("park") ||
           id.includes("pitch") ||
           id.includes("golf")
         ) {
-          map.setPaintProperty(id, "fill-color", v1.basemap.park);
+          map.setPaintProperty(id, "fill-color", palette.park);
           map.setPaintProperty(id, "fill-opacity", 0.7);
         } else if (
           id === "water" ||
           id === "water-shadow" ||
           id.startsWith("water-")
         ) {
-          map.setPaintProperty(id, "fill-color", v1.basemap.water);
+          map.setPaintProperty(id, "fill-color", palette.water);
         } else if (id.includes("landcover") || id.includes("landuse")) {
-          map.setPaintProperty(id, "fill-color", v1.basemap.cream2);
+          map.setPaintProperty(id, "fill-color", palette.cream2);
           map.setPaintProperty(id, "fill-opacity", 0.55);
         } else if (id.includes("hillshade")) {
           // Soften terrain shading so it doesn't overwhelm the cream.
@@ -84,7 +111,7 @@ function applyCartographicPalette(map: mapboxgl.Map): void {
 
       // Waterways (rivers, streams) — line layer in deeper sage.
       if (layer.type === "line" && (id === "waterway" || id.startsWith("waterway-"))) {
-        map.setPaintProperty(id, "line-color", v1.basemap.water2);
+        map.setPaintProperty(id, "line-color", palette.water2);
         continue;
       }
 
@@ -107,7 +134,7 @@ function applyCartographicPalette(map: mapboxgl.Map): void {
       // cartographic ink with a paper-cream halo so they read against
       // both cream landmass and sage water.
       if (layer.type === "symbol") {
-        map.setPaintProperty(id, "text-color", v1.basemap.label);
+        map.setPaintProperty(id, "text-color", palette.label);
         map.setPaintProperty(id, "text-halo-color", "rgba(245,242,235,0.85)");
         map.setPaintProperty(id, "text-halo-width", 1.2);
         continue;
