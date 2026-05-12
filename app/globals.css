@@ -112,9 +112,22 @@
   --th-v2-bg-soft:       #F1EBDD;
   --th-v2-surface-card:  #FFFCF5;
   --th-v2-surface-warm:  #FBF6EA;
+  /* Review Board Finding 6C (session 153) — cooler recessed-well surface
+     for input fields system-wide. Distinct from surface.card (so SearchBar
+     reads as a clear input not a sibling card when stacked inside
+     RichPostcardMallCard) and from bg.main (subtle inset versus the
+     surrounding page chrome). Applied to <input>, <textarea>, and
+     form-field <button> bg across SearchBar + ShareSheet email + form
+     primitives. */
+  --th-v2-surface-input: #F0EBE0;
 
   --th-v2-text-primary:   #2B211A;
-  --th-v2-text-secondary: #756A5E;
+  /* Review Board Finding 5A (session 153) — secondary text darken
+     #756A5E → #5C5246 to lift contrast against bg.main (#F7F3EB) from
+     ~4.5:1 (borderline AA) to ~6.5:1 (comfortable AA+). 24 consumer
+     files inherit via this CSS var (eyebrows, metadata, address labels,
+     timestamp italic, dialog/form helper copy). */
+  --th-v2-text-secondary: #5C5246;
   --th-v2-text-muted:     #A39686;
 
   --th-v2-accent-green:      #285C3C;

@@ -268,6 +268,11 @@ export const v2 = {
   surface: {
     card:  "var(--th-v2-surface-card)",
     warm:  "var(--th-v2-surface-warm)",
+    // Review Board Finding 6C (session 153) — cooler recessed-well bg
+    // for input fields system-wide. Distinct from surface.card (so an
+    // input inside a card-bg context reads as recessed) and from bg.main
+    // (subtle inset). Sweep: SearchBar + ShareSheet email + form primitives.
+    input: "var(--th-v2-surface-input)",
     // Soft pink-paper for error states (ErrorBanner card bg). Solid
     // blend per v2 convention; parallels accent.greenSoft's relationship
     // to its accent. Extended at Arc 6.2 (session 146) — /login ErrorBanner
