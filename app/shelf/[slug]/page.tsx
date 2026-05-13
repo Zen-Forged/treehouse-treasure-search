@@ -45,6 +45,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, Heart } from "lucide-react";
+import { PiBookmarkSimple, PiBookmarkSimpleFill } from "react-icons/pi";
 import { getVendorBySlug, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { setPostCache } from "@/lib/findContext";
 import { getSession, isAdmin } from "@/lib/auth";
@@ -56,7 +57,9 @@ import StickyMasthead from "@/components/StickyMasthead";
 import MastheadPaperAirplane from "@/components/MastheadPaperAirplane";
 import ShareSheet from "@/components/ShareSheet";
 import EmptyState from "@/components/EmptyState";
-import LocationActions from "@/components/LocationActions";
+// LocationActions retired from /shelf in session 157 Review Board Booth #1
+// (Take Trip CTA replaced by Bookmark Booth toggle). Component still
+// shipped + consumed by /map's PinCallout — import line retires only here.
 import {
   BoothHero,
   BoothTitleBlock,
@@ -68,7 +71,7 @@ import {
   v1,
   FONT_LORA,
 } from "@/components/BoothPage";
-import { v2 } from "@/lib/tokens";
+import { v2, FONT_INTER } from "@/lib/tokens";
 import type { Post, Vendor, Mall } from "@/types/treehouse";
 
 // Session 85 — back-nav scroll anchoring. Module-scope cache survives
@@ -483,21 +486,62 @@ export default function PublicShelfPage() {
 
             <BoothCloser />
 
-            {/* Session 130 refinement: LocationActions moves BELOW the closer
-                — closer text becomes the copy-CTA ("...visit in person to
-                make a purchase."), LocationActions buttons become the literal
-                action-CTA at page-end. Reverses session 128 D5 (was above
-                BoothCloser); composes with the session-130 closer copy
-                refinement. Page-end CTA pattern. */}
-            {mall && (
+            {/* Session 157 Review Board Booth #1 — LocationActions Take Trip
+                CTA retires from /shelf, replaced by the Bookmark Booth button.
+                David: "Change 'Take Trip' to 'Bookmark Booth'. Should
+                bookmark the booth status. (Bookmark Booth - Remove Bookmark
+                on clicked and unclick. Follow the same color reversal pattern
+                as described previously."
+
+                Mirror of the /find Save the Find button (session 157 commit
+                4eb1181) — same primary-CTA voice, same color-reversal
+                pattern, same hook-driven toggle. Booth-tier engagement
+                affordance per the 3-tier lattice (project memory:
+                project_layered_engagement_share_hierarchy) — mall★ /
+                booth🔖 / find♥; Booth = bookmark via Phosphor
+                PiBookmarkSimple weight pair (matches BookmarkBoothBubble
+                corner glyph on the photo above for cohesion).
+
+                Hides when vendor is missing (no bookmark target). Owners
+                viewing their own booth don't see the affordance — same
+                gate as the corner bubble via the existing showBookmark
+                check up the tree wouldn't apply here at this scope; for
+                /shelf this is always a non-owner shopper view because
+                /shelf is the public shopper-facing route (owners
+                manage from /my-shelf). LocationActions component itself
+                stays consumed by /map's PinCallout (unaffected). */}
+            {vendor && (
               <div style={{ padding: "20px 22px 0" }}>
-                <LocationActions
-                  mallSlug={mall.slug}
-                  mallLat={mall.latitude ?? null}
-                  mallLng={mall.longitude ?? null}
-                  surface="booth"
-                  vendorId={vendor?.id ?? null}
-                />
+                <button
+                  type="button"
+                  onClick={handleToggleBoothBookmark}
+                  aria-label={boothBookmarked ? "Remove booth bookmark" : "Bookmark this booth"}
+                  style={{
+                    width:          "100%",
+                    background:     boothBookmarked ? v2.surface.input : v2.accent.greenMid,
+                    color:          boothBookmarked ? v2.accent.greenMid : "#fff",
+                    border:         boothBookmarked ? `1px solid ${v2.accent.greenMid}` : "none",
+                    borderRadius:   10,
+                    padding:        boothBookmarked ? 9 : 10,
+                    fontFamily:     FONT_INTER,
+                    fontSize:       11,
+                    fontWeight:     600,
+                    letterSpacing:  "0.12em",
+                    textTransform:  "uppercase",
+                    display:        "flex",
+                    alignItems:     "center",
+                    justifyContent: "center",
+                    gap:            8,
+                    cursor:         "pointer",
+                    WebkitTapHighlightColor: "transparent",
+                    transition:     "background 0.15s ease, color 0.15s ease",
+                  }}
+                >
+                  {boothBookmarked
+                    ? <PiBookmarkSimpleFill size={14} aria-hidden />
+                    : <PiBookmarkSimple size={14} aria-hidden />}
+                  {boothBookmarked ? "Remove Bookmark" : "Bookmark Booth"}
+                </button>
               </div>
             )}
           </>
