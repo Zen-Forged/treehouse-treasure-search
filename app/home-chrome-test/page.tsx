@@ -25,7 +25,6 @@ import * as React from "react";
 import { track } from "@/lib/clientEvents";
 import MallStrip, { type MallStripScope } from "@/components/MallStrip";
 import MallMapDrawer from "@/components/MallMapDrawer";
-import MapCarousel from "@/components/MapCarousel";
 import StickyMasthead from "@/components/StickyMasthead";
 import { v2, FONT_INTER } from "@/lib/tokens";
 import { FIXTURE_MALL, FIXTURE_MALLS } from "@/lib/fixtures";
@@ -106,12 +105,9 @@ type ScopeKey = "all-kentucky" | "fixture-mall";
 export default function HomeChromeTestPage() {
   const [scopeKey, setScopeKey] = React.useState<ScopeKey>("fixture-mall");
   const [drawerOpen, setDrawerOpen] = React.useState(false);
-  // Session 158 — Arc 2.1 carousel-isolated peek state. Distinct from the
-  // drawer's internal peekedMallId; Arc 2.2 will wire them together inside
-  // MallMapDrawer. For this smoke route, taps on the carousel just update
-  // the local state so the selected-state visual + auto-scroll-to-card
-  // behaviors are testable in isolation.
-  const [carouselPeekId, setCarouselPeekId] = React.useState<string | null>(null);
+  // Session 158 Arc 2.2 — drawer now owns the carousel internally; smoke
+  // route no longer needs a standalone carouselPeekId. Pin tap / card tap
+  // both write to MallMapDrawer's internal peekedMallId state.
 
   const stripScope: MallStripScope =
     scopeKey === "all-kentucky"
@@ -242,22 +238,15 @@ export default function HomeChromeTestPage() {
         </div>
       </div>
 
-      {/* Arc 2.1 carousel — mounted alongside the drawer for isolated validation.
-          When drawerOpen flips true, both the drawer AND carousel slide up.
-          Arc 2.2 will move the carousel inside MallMapDrawer so production
-          consumers don't need to mount it separately. */}
-      <MapCarousel
-        open={drawerOpen}
-        malls={CAROUSEL_FIXTURE_MALLS}
-        selectedMallId={selectedMallId}
-        peekedMallId={carouselPeekId}
-        onCardTap={(id) => setCarouselPeekId(id)}
-      />
-
+      {/* Arc 2.2 — MallMapDrawer now mounts MapCarousel internally as a sibling
+          of its own motion.div. Smoke route passes the carousel fixtures as
+          the drawer's malls so both pins + carousel cards render against the
+          richer 7-mall dataset (FIXTURE_MALLS alone is 2 entries, kept stable
+          for Review Board's fixture surface). */}
       <MallMapDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        malls={FIXTURE_MALLS}
+        malls={CAROUSEL_FIXTURE_MALLS}
         selectedMallId={selectedMallId}
         onMallPick={(id) => {
           // Production consumer would setMallId(id) via useSavedMallId hook +

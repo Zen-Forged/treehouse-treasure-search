@@ -60,6 +60,7 @@ import nextDynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { PiX, PiList } from "react-icons/pi";
 import MallSheet from "./MallSheet";
+import MapCarousel from "./MapCarousel";
 import {
   v2,
   FONT_SYS,
@@ -233,6 +234,19 @@ export default function MallMapDrawer({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Session 158 — MapCarousel sibling. Fixed chrome layer between drawer
+          (z-30) and BottomNav (z-50). Has its own AnimatePresence tied to the
+          same `open` prop so it slides up alongside the drawer. peekedMallId
+          is the single source of truth for "which mall is currently focused"
+          — pin tap, card tap, and arrow tap (Arc 3) all write to it. */}
+      <MapCarousel
+        open={open}
+        malls={malls}
+        selectedMallId={selectedMallId}
+        peekedMallId={peekedMallId}
+        onCardTap={(id) => setPeekedMallId(id)}
+      />
 
       {/* MallSheet picker — sibling modal layering above the page-drawer when
           "List view" tapped. Clean two-layer stack (drawer-panel → picker-modal)
