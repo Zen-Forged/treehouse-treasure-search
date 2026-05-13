@@ -281,29 +281,11 @@ export default function PinCallout({
           </div>
         </div>
 
-        {/* Mini CTA row — Browse (outline, scope-change) + Go (filled, native maps). */}
+        {/* Mini CTA row — Directions (outline, native maps deep-link) + Explore
+            (filled green, scope-commit). Dial G reversed the original order +
+            swapped styles so Explore reads as the primary action (filled +
+            rightmost), matching the canonical primary-CTA position. */}
         <div style={{ display: "flex", gap: 6 }}>
-          <button
-            type="button"
-            onClick={onBrowse}
-            style={{
-              flex:           1,
-              height:         28,
-              borderRadius:   6,
-              background:     "transparent",
-              border:         `1px solid ${v2.accent.green}`,
-              color:          v2.accent.green,
-              fontFamily:     FONT_INTER,
-              fontSize:       11,
-              fontWeight:     600,
-              letterSpacing:  "0.01em",
-              cursor:         "pointer",
-              padding:        0,
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            Explore
-          </button>
           <button
             type="button"
             onClick={onGo}
@@ -311,9 +293,9 @@ export default function PinCallout({
               flex:           1,
               height:         28,
               borderRadius:   6,
-              background:     v2.accent.green,
+              background:     "transparent",
               border:         `1px solid ${v2.accent.green}`,
-              color:          v2.surface.card,
+              color:          v2.accent.green,
               fontFamily:     FONT_INTER,
               fontSize:       11,
               fontWeight:     600,
@@ -328,7 +310,28 @@ export default function PinCallout({
             }}
           >
             <Navigation size={11} strokeWidth={2.2} aria-hidden />
-            Navigate
+            Directions
+          </button>
+          <button
+            type="button"
+            onClick={onBrowse}
+            style={{
+              flex:           1,
+              height:         28,
+              borderRadius:   6,
+              background:     v2.accent.green,
+              border:         `1px solid ${v2.accent.green}`,
+              color:          v2.surface.card,
+              fontFamily:     FONT_INTER,
+              fontSize:       11,
+              fontWeight:     600,
+              letterSpacing:  "0.01em",
+              cursor:         "pointer",
+              padding:        0,
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            Explore
           </button>
         </div>
 
