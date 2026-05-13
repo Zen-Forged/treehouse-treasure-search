@@ -120,7 +120,7 @@ function HandlePickInner() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         if (data?.code === "HANDLE_TAKEN") {
-          setError("That handle is taken — please pick another.");
+          setError("That username is taken — please pick another.");
         } else {
           setError(data?.error ?? "Something went wrong. Try again.");
         }
@@ -215,7 +215,7 @@ function HandlePickInner() {
             margin:        "0 0 8px",
           }}
         >
-          Pick your handle
+          Pick your username
         </h1>
         <p
           style={{
@@ -233,7 +233,7 @@ function HandlePickInner() {
         </p>
 
         <div style={{ width: "100%", maxWidth: 340 }}>
-          <FormField label="Handle" size="page" htmlFor="r1-handle">
+          <FormField label="Username" size="page" htmlFor="r1-handle">
             <input
               id="r1-handle"
               type="text"
