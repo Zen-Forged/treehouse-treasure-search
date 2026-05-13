@@ -48,10 +48,14 @@ Locked per session 158 V1 pick. Matches the family vocabulary of v2 mall cards (
 
 | `useUserLocation().status` | Sort order | Secondary row content |
 |---|---|---|
-| `granted`, all-Kentucky scope | distance asc from user | distance label (e.g. "2.7 MI") |
-| `granted`, specific-mall scope | selected mall at index 0, rest sorted distance asc **from selected mall's lat/lng** | distance label from selected mall |
+| `granted`, all-Kentucky scope | distance asc from user | distance label from user (e.g. "2.7 MI") |
+| `granted`, specific-mall scope | selected mall at index 0, rest sorted distance asc **from selected mall's lat/lng** (spatial neighbors of the anchor) | distance label **from user** for every card |
 | `denied` / `unavailable` | alphabetical by `mall.name` | empty (no distance label per Q2=C) |
 | `prompting` / `idle` | alphabetical (transient — re-sort once resolved) | empty until resolved |
+
+**Within-session clarification (Arc 2.1 ship):** distance LABEL on each card is always user-centric when granted, regardless of sort anchor. The sort anchor varies (user when all-Kentucky / selected mall when scoped) so the carousel reads as spatial-neighbors-of-anchor, but the displayed distance stays "from where I am right now" — matching `<PinCallout>`'s `<DistancePill>` vocabulary (always user-centric per R17 design). The mental model: sort tells you spatial proximity to the focus; label tells you commute distance from you.
+
+Per `feedback_within_session_design_record_reversal` — original D3 said "distance label from selected mall" when scoped; clarified to "distance label from user" during Arc 2.1 implementation review for consistency with the DistancePill semantic shipped by R17.
 
 Permission-denied state uses alphabetical instead of arbitrary order; "no distance labels" per Q2=C is preserved.
 

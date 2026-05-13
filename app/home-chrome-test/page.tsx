@@ -25,9 +25,79 @@ import * as React from "react";
 import { track } from "@/lib/clientEvents";
 import MallStrip, { type MallStripScope } from "@/components/MallStrip";
 import MallMapDrawer from "@/components/MallMapDrawer";
+import MapCarousel from "@/components/MapCarousel";
 import StickyMasthead from "@/components/StickyMasthead";
 import { v2, FONT_INTER } from "@/lib/tokens";
 import { FIXTURE_MALL, FIXTURE_MALLS } from "@/lib/fixtures";
+import type { Mall } from "@/types/treehouse";
+
+// Session 158 — Arc 2.1 carousel smoke fixtures. Synthesizes additional malls
+// at varied Kentucky coordinates so the horizontal-scroll + distance-sort
+// behavior reads against realistic data. Fixtures.ts FIXTURE_MALLS only has 2
+// entries (shared with Review Board surface — don't expand globally).
+const CAROUSEL_FIXTURE_MALLS: Mall[] = [
+  ...FIXTURE_MALLS,
+  {
+    id:              "smoke-louisville-1",
+    slug:            "smoke-louisville-1",
+    name:            "Joe Ley Antiques",
+    address:         "615 E Market St, Louisville, KY 40202",
+    status:          "active",
+    hero_image_url:  null,
+    latitude:        38.2542,
+    longitude:       -85.7400,
+  } as Mall,
+  {
+    id:              "smoke-lexington",
+    slug:            "smoke-lexington",
+    name:            "Lexington Antique Co.",
+    address:         "1200 Manchester St, Lexington, KY 40504",
+    status:          "active",
+    hero_image_url:  null,
+    latitude:        38.0406,
+    longitude:       -84.5037,
+  } as Mall,
+  {
+    id:              "smoke-bowling-green",
+    slug:            "smoke-bowling-green",
+    name:            "Bowling Green Mercantile",
+    address:         "Bowling Green, KY 42101",
+    status:          "active",
+    hero_image_url:  null,
+    latitude:        36.9685,
+    longitude:       -86.4808,
+  } as Mall,
+  {
+    id:              "smoke-frankfort",
+    slug:            "smoke-frankfort",
+    name:            "Frankfort Trading Post",
+    address:         "Frankfort, KY 40601",
+    status:          "active",
+    hero_image_url:  null,
+    latitude:        38.2009,
+    longitude:       -84.8733,
+  } as Mall,
+  {
+    id:              "smoke-owensboro",
+    slug:            "smoke-owensboro",
+    name:            "Owensboro Antique Mall",
+    address:         "Owensboro, KY 42301",
+    status:          "active",
+    hero_image_url:  null,
+    latitude:        37.7742,
+    longitude:       -87.1133,
+  } as Mall,
+  {
+    id:              "smoke-paducah",
+    slug:            "smoke-paducah",
+    name:            "Paducah River Antiques",
+    address:         "Paducah, KY 42001",
+    status:          "active",
+    hero_image_url:  null,
+    latitude:        37.0834,
+    longitude:       -88.6000,
+  } as Mall,
+];
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +106,12 @@ type ScopeKey = "all-kentucky" | "fixture-mall";
 export default function HomeChromeTestPage() {
   const [scopeKey, setScopeKey] = React.useState<ScopeKey>("fixture-mall");
   const [drawerOpen, setDrawerOpen] = React.useState(false);
+  // Session 158 — Arc 2.1 carousel-isolated peek state. Distinct from the
+  // drawer's internal peekedMallId; Arc 2.2 will wire them together inside
+  // MallMapDrawer. For this smoke route, taps on the carousel just update
+  // the local state so the selected-state visual + auto-scroll-to-card
+  // behaviors are testable in isolation.
+  const [carouselPeekId, setCarouselPeekId] = React.useState<string | null>(null);
 
   const stripScope: MallStripScope =
     scopeKey === "all-kentucky"
@@ -165,6 +241,18 @@ export default function HomeChromeTestPage() {
           ))}
         </div>
       </div>
+
+      {/* Arc 2.1 carousel — mounted alongside the drawer for isolated validation.
+          When drawerOpen flips true, both the drawer AND carousel slide up.
+          Arc 2.2 will move the carousel inside MallMapDrawer so production
+          consumers don't need to mount it separately. */}
+      <MapCarousel
+        open={drawerOpen}
+        malls={CAROUSEL_FIXTURE_MALLS}
+        selectedMallId={selectedMallId}
+        peekedMallId={carouselPeekId}
+        onCardTap={(id) => setCarouselPeekId(id)}
+      />
 
       <MallMapDrawer
         open={drawerOpen}
