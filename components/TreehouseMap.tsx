@@ -22,7 +22,7 @@ import * as React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import mapboxgl, { type LngLatBoundsLike } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { PiLeaf } from "react-icons/pi";
+import { PiLeaf, PiLeafFill } from "react-icons/pi";
 import { v1, v2, FONT_SYS } from "@/lib/tokens";
 import PinCallout from "@/components/PinCallout";
 import { milesFromUser } from "@/lib/distance";
@@ -145,6 +145,21 @@ function applyCartographicPalette(map: mapboxgl.Map): void {
   }
 }
 
+// Session 158 — Map enrichment D7. Pulse animation keyframes for the user
+// location pin's outer ring. Injected once at module scope (this module is
+// "use client" + ssr:false dynamic-imported, so evaluation only ever runs
+// in browser). The animation lives in a stylesheet rather than a per-render
+// React style block because Mapbox markers mount via createRoot into a DOM
+// node outside React's normal tree — global keyframes are the simplest way.
+const USER_PULSE_KEYFRAMES_ID = "treehouse-user-pulse-keyframes";
+if (typeof document !== "undefined" && !document.getElementById(USER_PULSE_KEYFRAMES_ID)) {
+  const style = document.createElement("style");
+  style.id = USER_PULSE_KEYFRAMES_ID;
+  style.textContent =
+    "@keyframes treehouse-user-pulse { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.5); opacity: 0; } }";
+  document.head.appendChild(style);
+}
+
 // Kentucky bounding box — slight padding around the actual state extents
 // so pins near the borders aren't clipped at maxBounds.
 const KY_BOUNDS: LngLatBoundsLike = [
@@ -156,6 +171,47 @@ const KY_BOUNDS: LngLatBoundsLike = [
 // container. Tuned for a 430px max-width column with ~480px map height.
 const KY_CENTER: [number, number] = [-85.3, 37.8];
 const KY_FIT_ZOOM = 6.4;
+
+// Session 158 — Map enrichment D7+D8. Branded "you are here" pin variant (A):
+// filled green leaf inside a soft cream-tinted halo + pulsing outer ring.
+// Visually inverted from LeafBubblePin (mall pins are outline green-on-cream;
+// user pin is filled green-on-cream-halo) so the brand vocabulary (leaf
+// glyph + green) stays consistent while the user-vs-place distinction is
+// clear at a glance. Informational only — no click handler; pointerEvents
+// set to "none" on the marker element so taps fall through to the map.
+function UserLocationPin() {
+  return (
+    <div
+      style={{
+        position:       "relative",
+        width:          28,
+        height:         28,
+        borderRadius:   "50%",
+        background:     v2.accent.green,
+        boxShadow:
+          "0 0 0 6px rgba(46,86,57,0.22), 0 0 0 14px rgba(46,86,57,0.10), 0 2px 8px rgba(42,26,10,0.20)",
+        display:        "flex",
+        alignItems:     "center",
+        justifyContent: "center",
+        color:          v2.surface.warm,
+        pointerEvents:  "none",
+      }}
+    >
+      <PiLeafFill size={16} aria-hidden="true" />
+      <span
+        aria-hidden="true"
+        style={{
+          position:      "absolute",
+          inset:         -4,
+          borderRadius:  "50%",
+          border:        "1.5px solid rgba(46,86,57,0.32)",
+          animation:     "treehouse-user-pulse 2.2s ease-in-out infinite",
+          pointerEvents: "none",
+        }}
+      />
+    </div>
+  );
+}
 
 // D24 — leaf-bubble pin. Paper-warm circle outlined green by default;
 // selected = green fill, white glyph, scale +15%, soft halo. Pure
@@ -224,6 +280,10 @@ export default function TreehouseMap({
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const mapRef       = React.useRef<mapboxgl.Map | null>(null);
   const markersRef   = React.useRef<Map<string, MarkerEntry>>(new Map());
+  // Session 158 — separate ref for user-pin marker (D7+D8). Lives outside the
+  // mall markersRef because its lifecycle is driven by useUserLocation status,
+  // not the malls array, and it has no click handler / no role in selection.
+  const userMarkerRef = React.useRef<{ marker: mapboxgl.Marker; root: Root; el: HTMLDivElement } | null>(null);
   const styleLoadedRef = React.useRef(false);
   const [error, setError] = React.useState<string | null>(null);
   const [peekAnchor, setPeekAnchor] = React.useState<{ x: number; y: number } | null>(null);
@@ -340,6 +400,12 @@ export default function TreehouseMap({
         try { entry.root.unmount(); } catch {}
       });
       markersRef.current.clear();
+      // Session 158 — clean up user-pin marker alongside mall markers.
+      if (userMarkerRef.current) {
+        try { userMarkerRef.current.root.unmount(); } catch {}
+        userMarkerRef.current.marker.remove();
+        userMarkerRef.current = null;
+      }
       map.remove();
       mapRef.current = null;
       styleLoadedRef.current = false;
@@ -404,6 +470,47 @@ export default function TreehouseMap({
       }
     });
   }, [malls, selectedMallId, peekedMallId]);
+
+  // ── User-pin sync (D7+D8) ─────────────────────────────────────────────
+  // Mounts the branded "you are here" pin when useUserLocation resolves to
+  // "granted" + valid coords; unmounts otherwise. Marker is informational
+  // only (pointerEvents:none on the wrapper el so map below receives taps).
+  // initKey included in deps so the pin re-attaches to the fresh map after
+  // a retry — without it, the pin marker would reference a torn-down map.
+  React.useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const granted =
+      userLoc.status === "granted" &&
+      userLoc.lat !== null &&
+      userLoc.lng !== null;
+
+    if (granted) {
+      let entry = userMarkerRef.current;
+      const lngLat: [number, number] = [userLoc.lng as number, userLoc.lat as number];
+      if (!entry) {
+        const el = document.createElement("div");
+        el.style.pointerEvents = "none";
+        el.style.willChange    = "transform";
+        const root = createRoot(el);
+        const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
+          .setLngLat(lngLat)
+          .addTo(map);
+        entry = { marker, root, el };
+        userMarkerRef.current = entry;
+      } else {
+        entry.marker.setLngLat(lngLat);
+      }
+      entry.root.render(<UserLocationPin />);
+    } else if (userMarkerRef.current) {
+      // Status changed away from granted (e.g. denied on re-prompt, or the
+      // hook reset for any reason) — clean up the existing marker.
+      try { userMarkerRef.current.root.unmount(); } catch {}
+      userMarkerRef.current.marker.remove();
+      userMarkerRef.current = null;
+    }
+  }, [userLoc.status, userLoc.lat, userLoc.lng, initKey]);
 
   // ── Peek anchor projection ────────────────────────────────────────────
   // Resolves the screen-space coordinates for the peeked pin and keeps
