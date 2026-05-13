@@ -93,7 +93,8 @@ import PhotoLightbox from "@/components/PhotoLightbox";
 // ("Take Trip" CTA replaced by "Save the Find" button). Component still
 // shipped + consumed by /shelf/[slug] and /map's PinCallout — import line
 // retires only here.
-import MastheadPaperAirplane from "@/components/MastheadPaperAirplane";
+import MastheadProfileButton from "@/components/MastheadProfileButton";
+import ShareBubble from "@/components/ShareBubble";
 import ShareSheet from "@/components/ShareSheet";
 import HomeFeedTile from "@/components/v2/HomeFeedTile";
 import type { Post } from "@/types/treehouse";
@@ -1137,19 +1138,16 @@ export default function FindDetailPage() {
           </IconBubble>
         }
         right={
-          // Session 78 — share airplane lifted off the photograph onto the
-          // masthead, mirroring /shelf/[slug] + /my-shelf. Cross-page
-          // consistency: top-right airplane shares the current entity (find
-          // here, booth there). Session 137 — tap opens <ShareSheet
-          // entity="find"> instead of the OS-native share sheet; sheet
-          // owns its own visual feedback so the icon color stays static.
-          // Gated on `post` so it doesn't flash during the cached-preview
-          // window before data loads.
-          post ? (
-            <IconBubble onClick={handleShare} ariaLabel="Share this find">
-              <MastheadPaperAirplane />
-            </IconBubble>
-          ) : null
+          // Session 159 — share airplane retires from /find masthead, relocates
+          // to the photo overlay (ShareBubble stacked under the heart save
+          // bubble; see Phase B wrapper below). Reverses session 78's
+          // "share airplane lifted off the photograph onto the masthead"
+          // call — surfaced per feedback_surface_locked_design_reversals.
+          // Right slot universally renders <MastheadProfileButton /> per
+          // David Q3 (session-159 opener); self-derives auth state via
+          // useShopperAuth so this consumer doesn't need to thread auth
+          // through.
+          <MastheadProfileButton />
         }
       />
 
@@ -1304,6 +1302,41 @@ export default function FindDetailPage() {
                     style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
                   />
                 </button>
+              </div>
+            )}
+
+            {/* Session 159 — share airplane relocated from masthead to photo
+                overlay, stacked vertically under the heart save bubble. David
+                Q4 + Q6 (session-159 opener) — "Stacked under the saved/leaf
+                icon vertically ... Change the color of the share (airplane)
+                icon to match the color of the Save leaf icon with the same
+                bg color for the circle." ShareBubble variant="frosted"
+                matches the heart's frosted-paper vocabulary exactly.
+
+                Position logic: top:64 when heart is rendered (10 top + 44
+                bubble + 10 gap = stacked sibling). Top:10 when heart is
+                absent (owner case, !isMyPost is false) so the share bubble
+                occupies the canonical top-right slot solo rather than
+                floating mid-photo. */}
+            {post && (post?.image_url || previewImageUrl) && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: !isMyPost ? 64 : 10,
+                  right: 10,
+                  width: 44,
+                  height: 44,
+                  zIndex: 3,
+                }}
+              >
+                <ShareBubble
+                  variant="frosted"
+                  ariaLabel="Share this find"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleShare();
+                  }}
+                />
               </div>
             )}
 
