@@ -27,6 +27,8 @@ import { v1, v2, FONT_SYS } from "@/lib/tokens";
 import PinCallout from "@/components/PinCallout";
 import { milesFromUser } from "@/lib/distance";
 import { useUserLocation } from "@/lib/useUserLocation";
+import { computeSortedMalls } from "@/lib/mallSort";
+import { track } from "@/lib/clientEvents";
 import type { Mall } from "@/types/treehouse";
 
 import type { MallStats } from "@/lib/posts";
@@ -661,6 +663,44 @@ export default function TreehouseMap({
           mall.latitude ?? null,
           mall.longitude ?? null,
         );
+
+        // Session 158 Arc 3 — compute prev/next neighbors via the shared
+        // lib/mallSort helper so the carousel + arrows step through the same
+        // order. peekedIdx is -1 when peeked mall isn't in the sorted list
+        // (degenerate case — e.g. malls array mutated between effects); both
+        // hasPrev + hasNext then resolve false and the bubbles disable.
+        const sorted   = computeSortedMalls(malls, selectedMallId, userLoc);
+        const peekedIdx = sorted.findIndex((entry) => entry.mall.id === peekedMallId);
+        const prevMall = peekedIdx > 0
+          ? sorted[peekedIdx - 1].mall
+          : null;
+        const nextMall = peekedIdx >= 0 && peekedIdx < sorted.length - 1
+          ? sorted[peekedIdx + 1].mall
+          : null;
+
+        const stepTo = (neighbor: typeof mall, direction: "prev" | "next") => {
+          track("map_callout_neighbor_stepped", {
+            from_mall_slug: mall.slug,
+            to_mall_slug:   neighbor.slug,
+            direction,
+          });
+          // Ease map to neighbor's pin (matches marker-click recenter behavior
+          // at session 108 D26). onPinTap drives the consumer to update
+          // peekedMallId, which re-anchors the callout + carousel.
+          const m = mapRef.current;
+          if (
+            m &&
+            neighbor.latitude !== null && neighbor.latitude !== undefined &&
+            neighbor.longitude !== null && neighbor.longitude !== undefined
+          ) {
+            m.easeTo({
+              center:   [Number(neighbor.longitude), Number(neighbor.latitude)],
+              duration: 320,
+            });
+          }
+          onPinTapRef.current?.(neighbor.id);
+        };
+
         return (
           <PinCallout
             mall={mall}
@@ -669,6 +709,10 @@ export default function TreehouseMap({
             anchor={peekAnchor}
             onCommit={() => onCommit?.(peekedMallId)}
             miles={miles}
+            onPrev={prevMall ? () => stepTo(prevMall, "prev") : undefined}
+            onNext={nextMall ? () => stepTo(nextMall, "next") : undefined}
+            hasPrev={prevMall !== null}
+            hasNext={nextMall !== null}
           />
         );
       })()}

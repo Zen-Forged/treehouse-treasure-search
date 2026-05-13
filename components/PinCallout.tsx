@@ -27,6 +27,7 @@
 
 import * as React from "react";
 import { ChevronRight, MapPin, Navigation } from "lucide-react";
+import { PiCaretLeft, PiCaretRight } from "react-icons/pi";
 import { v1, v2, FONT_NUMERAL, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import { navigateUrl } from "@/lib/mapsDeepLink";
 import { track } from "@/lib/clientEvents";
@@ -43,6 +44,14 @@ interface PinCalloutProps {
   onCommit:    () => void;
   /** R17 Arc 2 — distance from user to mall in miles. null hides the pill. */
   miles?:      number | null;
+  /** Session 158 Arc 3 — neighbor-stepping arrows. When onPrev/onNext defined,
+   *  renders 30×30 flanking chevron bubbles. hasPrev/hasNext gate the disabled
+   *  visual at first/last position. When both undefined → arrows don't render
+   *  at all (defensive fallback to pre-Arc-3 callout shape). */
+  onPrev?:     () => void;
+  onNext?:     () => void;
+  hasPrev?:    boolean;
+  hasNext?:    boolean;
 }
 
 export default function PinCallout({
@@ -52,7 +61,15 @@ export default function PinCallout({
   anchor,
   onCommit,
   miles = null,
+  onPrev,
+  onNext,
+  hasPrev  = false,
+  hasNext  = false,
 }: PinCalloutProps) {
+  // Session 158 Arc 3 — arrows render only when at least one of the handlers
+  // is wired AND we're rendering the R17 Arc-2 callout shape (the no-coords
+  // fallback branch below stays arrow-less for defensive coverage).
+  const arrowsEnabled = onPrev !== undefined || onNext !== undefined;
   // Show CTA row when we have mall coords. Otherwise fall back to the
   // original whole-callout-as-button + chevron pattern.
   const hasCoords = mall.latitude != null && mall.longitude != null;
@@ -209,6 +226,9 @@ export default function PinCallout({
   }
 
   // ── R17 Arc 2 shape — header + stat + Browse/Go CTA row. ──
+  // Session 158 Arc 3 — outer wrapper now hosts a horizontal flex row so the
+  // optional prev/next chevron bubbles can flank the callout (D9). Total
+  // width centers on the pin via translate(-50%) regardless of arrows.
   return (
     <div
       style={{
@@ -220,6 +240,16 @@ export default function PinCallout({
         pointerEvents: "none",
       }}
     >
+      <div
+        style={{
+          display:    "flex",
+          alignItems: "center",
+          gap:        6,
+        }}
+      >
+      {arrowsEnabled && (
+        <ArrowBubble direction="prev" disabled={!hasPrev} onTap={onPrev} />
+      )}
       <div
         style={{
           position:      "relative",
@@ -299,7 +329,61 @@ export default function PinCallout({
 
         <Tail />
       </div>
+      {arrowsEnabled && (
+        <ArrowBubble direction="next" disabled={!hasNext} onTap={onNext} />
+      )}
+      </div>
     </div>
+  );
+}
+
+// Session 158 Arc 3 — flanking chevron bubble for neighbor-stepping.
+// 30×30 round bubble; stopPropagation on click so the tap doesn't bubble to
+// the map's empty-tap dismiss handler. Disabled state at first/last position
+// dims the bubble + removes pointer events while keeping the layout slot
+// reserved (no width jump when stepping near the ends).
+function ArrowBubble({
+  direction,
+  disabled,
+  onTap,
+}: {
+  direction: "prev" | "next";
+  disabled:  boolean;
+  onTap?:    () => void;
+}) {
+  const Icon = direction === "prev" ? PiCaretLeft : PiCaretRight;
+  return (
+    <button
+      type="button"
+      aria-label={direction === "prev" ? "Previous location" : "Next location"}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (disabled) return;
+        onTap?.();
+      }}
+      disabled={disabled}
+      style={{
+        width:           30,
+        height:          30,
+        borderRadius:    "50%",
+        background:      v2.surface.warm,
+        border:          `1px solid ${v2.border.light}`,
+        boxShadow:       v1.shadow.callout,
+        display:         "flex",
+        alignItems:      "center",
+        justifyContent:  "center",
+        color:           v2.text.secondary,
+        flexShrink:      0,
+        cursor:          disabled ? "default" : "pointer",
+        opacity:         disabled ? 0.35 : 1,
+        pointerEvents:   disabled ? "none" : "auto",
+        padding:         0,
+        transition:      "opacity 200ms ease",
+        WebkitTapHighlightColor: "transparent",
+      }}
+    >
+      <Icon size={16} aria-hidden="true" />
+    </button>
   );
 }
 

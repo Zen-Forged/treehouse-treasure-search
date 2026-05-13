@@ -36,7 +36,7 @@ import {
   MOTION_BOTTOM_SHEET_SHEET_DURATION,
 } from "@/lib/tokens";
 import { useUserLocation } from "@/lib/useUserLocation";
-import { milesFromUser } from "@/lib/distance";
+import { computeSortedMalls, type SortedMallEntry } from "@/lib/mallSort";
 import { track } from "@/lib/clientEvents";
 import type { Mall } from "@/types/treehouse";
 
@@ -51,14 +51,6 @@ export interface MapCarouselProps {
   onCardTap:      (mallId: string) => void;
 }
 
-interface SortedEntry {
-  mall:         Mall;
-  /** Distance from user in miles, rounded to 1 decimal. null when denied or coords missing. */
-  milesFromMe:  number | null;
-  /** 0-indexed position in the sorted carousel — used in analytics payload. */
-  position:     number;
-}
-
 export default function MapCarousel({
   open,
   malls,
@@ -68,10 +60,11 @@ export default function MapCarousel({
 }: MapCarouselProps) {
   const userLoc = useUserLocation();
 
-  // D3 sort computation. Recomputed on malls / selectedMallId / location change.
-  const sorted = React.useMemo<SortedEntry[]>(() => {
+  // D3 sort computation via shared lib/mallSort helper (extracted so the
+  // PinCallout arrows step through the same order — single source of truth).
+  const sorted = React.useMemo<SortedMallEntry[]>(() => {
     return computeSortedMalls(malls, selectedMallId, userLoc);
-  }, [malls, selectedMallId, userLoc.status, userLoc.lat, userLoc.lng]);
+  }, [malls, selectedMallId, userLoc]);
 
   // Refs to each card DOM node, keyed by mall.id, for auto-scroll-to-selected.
   const cardRefs = React.useRef<Record<string, HTMLButtonElement | null>>({});
@@ -233,78 +226,5 @@ export default function MapCarousel({
   );
 }
 
-// ── Sort helper ───────────────────────────────────────────────────────────
-// Pure function — no React. Returns sorted entries with the user-centric
-// distance pre-computed so the consumer doesn't recompute per-card.
-
-function computeSortedMalls(
-  malls:          Mall[],
-  selectedMallId: string | null,
-  userLoc:        ReturnType<typeof useUserLocation>,
-): SortedEntry[] {
-  const isGranted =
-    userLoc.status === "granted" &&
-    userLoc.lat !== null &&
-    userLoc.lng !== null;
-
-  // Pre-compute milesFromUser for every mall — used both as the displayed label
-  // AND as the sort key when scope is all-Kentucky.
-  const annotated = malls.map((mall) => ({
-    mall,
-    milesFromMe: isGranted
-      ? milesFromUser(
-          { lat: userLoc.lat, lng: userLoc.lng },
-          mall.latitude == null ? null : Number(mall.latitude),
-          mall.longitude == null ? null : Number(mall.longitude),
-        )
-      : null,
-  }));
-
-  if (!isGranted) {
-    // Denied / unavailable / idle / prompting → alphabetical by name.
-    annotated.sort((a, b) => a.mall.name.localeCompare(b.mall.name));
-    return annotated.map((entry, position) => ({ ...entry, position }));
-  }
-
-  const selectedMall = selectedMallId
-    ? malls.find((m) => m.id === selectedMallId) ?? null
-    : null;
-
-  if (selectedMall) {
-    // Granted + specific-mall scope — anchor selected at index 0, rest sorted
-    // by distance FROM SELECTED MALL (spatial-neighbors order). Distance label
-    // on the cards remains user-centric per the design-record clarification.
-    const anchorLat = selectedMall.latitude == null ? null : Number(selectedMall.latitude);
-    const anchorLng = selectedMall.longitude == null ? null : Number(selectedMall.longitude);
-    const others = annotated.filter((entry) => entry.mall.id !== selectedMall.id);
-    others.sort((a, b) => {
-      const da = milesFromUser(
-        { lat: anchorLat, lng: anchorLng },
-        a.mall.latitude == null ? null : Number(a.mall.latitude),
-        a.mall.longitude == null ? null : Number(a.mall.longitude),
-      );
-      const db = milesFromUser(
-        { lat: anchorLat, lng: anchorLng },
-        b.mall.latitude == null ? null : Number(b.mall.latitude),
-        b.mall.longitude == null ? null : Number(b.mall.longitude),
-      );
-      // Nulls sort last (malls without coords).
-      if (da === null && db === null) return 0;
-      if (da === null) return  1;
-      if (db === null) return -1;
-      return da - db;
-    });
-    const selectedEntry = annotated.find((entry) => entry.mall.id === selectedMall.id);
-    const head = selectedEntry ? [selectedEntry] : [];
-    return [...head, ...others].map((entry, position) => ({ ...entry, position }));
-  }
-
-  // Granted + all-Kentucky scope — sort distance asc from user.
-  annotated.sort((a, b) => {
-    if (a.milesFromMe === null && b.milesFromMe === null) return 0;
-    if (a.milesFromMe === null) return  1;
-    if (b.milesFromMe === null) return -1;
-    return a.milesFromMe - b.milesFromMe;
-  });
-  return annotated.map((entry, position) => ({ ...entry, position }));
-}
+// Sort helper extracted to lib/mallSort.ts (Arc 3.1) — shared with TreehouseMap's
+// neighbor-stepping arrows so the carousel order and arrow order stay in lockstep.
