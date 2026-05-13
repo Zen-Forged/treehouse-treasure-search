@@ -366,7 +366,7 @@ function ArrowBubble({
         width:           30,
         height:          30,
         borderRadius:    "50%",
-        background:      v2.surface.warm,
+        background:      v2.surface.card,
         border:          `1px solid ${v2.border.light}`,
         boxShadow:       v1.shadow.callout,
         display:         "flex",

@@ -149,7 +149,7 @@ export default function MapCarousel({
                     width:         142,
                     height:        108,
                     padding:       0,
-                    background:    v2.surface.warm,
+                    background:    v2.surface.card,
                     border:        isPeeked
                       ? `1.5px solid ${v2.accent.green}`
                       : `1px solid ${v2.border.light}`,
