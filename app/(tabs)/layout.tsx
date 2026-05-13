@@ -37,15 +37,14 @@ import { usePathname, useRouter } from "next/navigation";
 import StickyMasthead from "@/components/StickyMasthead";
 import BottomNav from "@/components/BottomNav";
 import MastheadBackButton from "@/components/MastheadBackButton";
-import MastheadPaperAirplane from "@/components/MastheadPaperAirplane";
-import ShareSheet from "@/components/ShareSheet";
+import MastheadProfileButton from "@/components/MastheadProfileButton";
 import SearchBarRow from "@/components/SearchBarRow";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { useShopperSaves } from "@/lib/useShopperSaves";
 import { useMapDrawer } from "@/lib/useMapDrawer";
 import { getActiveMalls } from "@/lib/posts";
 import { track } from "@/lib/clientEvents";
-import { v1, v2 } from "@/lib/tokens";
+import { v2 } from "@/lib/tokens";
 import type { Mall } from "@/types/treehouse";
 
 export default function TabsLayout({ children }: { children: React.ReactNode }) {
@@ -61,10 +60,14 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
   // call inside a <Suspense> boundary below. Keeps the layout itself
   // statically prerenderable for non-Home pages (/flagged etc.) that
   // don't need ?q= state.
-  // Session 137 — mall-entity ShareSheet state. Mounted only on Home
-  // (/); /map drops its airplane affordance entirely per Q3 of session
-  // 137 (share isn't a /map concern; the map's job is scope-pick + visit).
-  const [shareOpen, setShareOpen] = useState(false);
+  //
+  // Session 159 — Share Mall affordance retires entirely. Per David Q2 (a):
+  // 3-tier engagement+share lattice (project_layered_engagement_share_hierarchy)
+  // drops the Mall outbound tier. Share Booth + Share Find remain. The
+  // Home masthead-right slot is reclaimed for the Profile button (Q3,
+  // universal across all pages). Retires alongside: shareOpen useState,
+  // MastheadPaperAirplane + ShareSheet imports, the inline mall-share
+  // button, the conditional ShareSheet mount.
 
   useEffect(() => {
     getActiveMalls().then(setMalls);
@@ -113,16 +116,10 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [malls, pathname]);
 
-  const selectedMall = mallId ? (malls.find((m) => m.id === mallId) ?? null) : null;
-
-  // Session 155 — Arc 3.2 retires the slim <PostcardMallCard> mount entirely
-  // (was conditional on pathname === "/map"). /map is being retired alongside
-  // (Arc 3.3); the map drawer is now a Home chrome affordance on the strip's
-  // chevron toggle, not a destination page. Layout no longer mounts any
-  // mall-card chrome — chrome is split between universal (masthead + nav)
-  // and page-owned (<HomeChrome> on Home; SavedMallCardV2 on Saved).
-  //
-  // allKentuckySubtitle + handlePostcardTap + showPostcardCard all retire.
+  // Session 159 — selectedMall derived value retires alongside the Share
+  // Mall airplane (the only consumer). mallId state remains, written by
+  // the ?mall=<slug> intake effect above for Home + Saved chrome that
+  // composes against the shopper's current scope (HomeChrome, etc.).
 
   const activeNav: "home" | "flagged" =
     pathname === "/flagged" ? "flagged" : "home";
@@ -142,36 +139,16 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
         flexDirection:  "column",
       }}
     >
-      {/* LEFT slot — session 157 cleanup. Profile retired from masthead-left
-          (moved to BottomNav far right per Item 2). Slot is now empty on
-          Home by default; becomes a back button when the map drawer is
-          expanded (Item 3 — closes drawer instead of navigating back) or
-          when the user is on a non-Home tab (existing detail-page back-
-          button affordance, geometry matches the drawer back button so
-          the slot doesn't shift dimensions on transition).
-
-          Auth chrome relocation lineage: ≤87 right → 90 BottomNav Profile
-          tab → 109 masthead-left → 120 masthead-left Home-only → 157
-          BottomNav far right. See components/BottomNav.tsx header for the
-          full reversal record.
-
-          RIGHT slot — Home → airplane that opens <ShareSheet> with mall
-          entity (session 137). The sheet's 3-channel grid (SMS + QR +
-          Copy Link) shares the active mall scope (or all-Kentucky when
-          no mall picked); the mall-share URL goes through the same
-          ?mall=<slug> intake as the prior MastheadShareButton handled.
-
-          Saved → null right slot per R18 (session 121): Saved no longer
-          participates in mall scope, so there is no payload to encode and
-          a shared `/flagged` URL would be misleading (recipient sees their
-          own saves, not the sender's). */}
-      {/* Session 157 — fixed SearchBar row, Home-only. Sits between the
-          masthead and MallStrip in the sticky chrome stack. Component
-          owns its own useSearchParams call so the <Suspense> boundary
-          here is what unblocks Next.js 14's static-prerender bailout for
-          sibling pages (/flagged etc.) that DON'T use ?q= state. The
-          fallback={null} matches the empty visual state of an
-          unhydrated search bar — no layout shift on hydrate. */}
+      {/* Session 159 — masthead slots (David Q2 + Q3):
+          LEFT slot — drawer-open back-button (closes drawer) → non-Home
+          back-button → null on Home.
+          RIGHT slot — <MastheadProfileButton /> universally (Q3:
+          "Relocate the profile icon to where the Share icon use to
+          reside in the masthead. Propogates on all pages."). Profile
+          self-derives auth state via useShopperAuth, routes to /me when
+          authed, /login when guest. Share Mall affordance retires
+          entirely (Q2 a): the 3-tier engagement+share lattice drops the
+          Mall outbound tier. */}
       {pathname === "/" && (
         <Suspense fallback={null}>
           <SearchBarRow />
@@ -180,55 +157,18 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
 
       <StickyMasthead
         left={
-          // Session 157 — slot ranks: drawer-open back-button (closes drawer,
-          // overlay not history) → non-Home back-button (routes history /
-          // fallback to "/") → null on Home (Profile moved to nav).
           drawerOpen
             ? <MastheadBackButton onClick={closeDrawer} />
             : pathname !== "/"
               ? <MastheadBackButton fallback="/" />
               : null
         }
-        right={
-          pathname === "/" ? (
-            <button
-              onClick={() => setShareOpen(true)}
-              aria-label="Share this mall"
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: "50%",
-                background: v2.surface.warm,
-                border: "none",
-                padding: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                WebkitTapHighlightColor: "transparent",
-              }}
-            >
-              <MastheadPaperAirplane />
-            </button>
-          ) : null
-        }
+        right={<MastheadProfileButton />}
       />
 
       {children}
 
       <BottomNav active={activeNav} flaggedCount={bookmarkCount} />
-
-      {/* Session 137 — mall ShareSheet, mounted only on Home. Entity
-          handles the all-Kentucky scope inline (string literal); when
-          a specific mall is picked the entity carries the Mall row and
-          the sheet shares /?mall=<slug>. */}
-      {pathname === "/" && (
-        <ShareSheet
-          open={shareOpen}
-          onClose={() => setShareOpen(false)}
-          entity={{ kind: "mall", mall: selectedMall ?? "all-kentucky" }}
-        />
-      )}
     </div>
   );
 }

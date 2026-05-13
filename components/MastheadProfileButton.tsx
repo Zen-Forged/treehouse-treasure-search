@@ -44,13 +44,27 @@
 import { useRouter } from "next/navigation";
 import { CircleUser } from "lucide-react";
 import { v1, v2, FONT_SYS } from "@/lib/tokens";
+import { useShopperAuth } from "@/lib/useShopperAuth";
 
 interface MastheadProfileButtonProps {
   /**
    * R1 — when present, renders 2-char initials in v1.green circle and
    * routes to /me instead of /login. Caller is responsible for passing
-   * the correct casing (uppercase) and length (2 chars). When absent,
-   * renders the guest CircleUser glyph + routes to /login (default).
+   * the correct casing (uppercase) and length (2 chars).
+   *
+   * Session 159 — when ABSENT, MastheadProfileButton self-derives auth
+   * state via useShopperAuth (David Q3 — Profile universal across all
+   * pages without requiring each masthead consumer to thread auth
+   * through). Behavior:
+   *   - authed shopper → render initials, route to /me
+   *   - authed non-shopper (vendor/admin without shoppers row) → render
+   *     CircleUser glyph, route to /me (so /me's role-aware links pick
+   *     up the next destination — /my-shelf for vendors, /admin for
+   *     admins). Initials only render when a shoppers row exists.
+   *   - guest → render CircleUser glyph, route to /login
+   *
+   * Explicit prop still wins when supplied — useful for Review Board
+   * fixture renders where the auth hook should be bypassed.
    */
   authedInitials?: string;
 }
@@ -58,8 +72,14 @@ interface MastheadProfileButtonProps {
 export default function MastheadProfileButton({
   authedInitials,
 }: MastheadProfileButtonProps = {}) {
-  const router  = useRouter();
-  const isAuthed = !!authedInitials;
+  const router       = useRouter();
+  const auth         = useShopperAuth();
+  // Explicit prop wins (Review Board fixture support); otherwise derive
+  // from useShopperAuth. Initials only render when a shoppers row exists;
+  // a signed-in vendor/admin with no shoppers row sees the glyph variant
+  // but still routes to /me (auth-state branch below).
+  const effectiveInitials = authedInitials ?? auth.shopper?.initials ?? null;
+  const isAuthed   = !!authedInitials || auth.isAuthed;
 
   return (
     <button
@@ -73,7 +93,12 @@ export default function MastheadProfileButton({
         display:         "flex",
         alignItems:      "center",
         justifyContent:  "center",
-        background:      isAuthed ? v1.green : v2.surface.warm,
+        // Session 159 — bg only swaps to v1.green when initials render
+        // (authed shopper). Authed-without-shoppers-row + guest both show
+        // the v2.surface.warm bubble with CircleUser glyph — geometry
+        // unchanged across states so the masthead slot doesn't pulse on
+        // auth-state hydration.
+        background:      effectiveInitials ? v1.green : v2.surface.warm,
         border:          "none",
         cursor:          "pointer",
         padding:         0,
@@ -81,7 +106,7 @@ export default function MastheadProfileButton({
         transition:      "background 0.18s ease",
       }}
     >
-      {isAuthed ? (
+      {effectiveInitials ? (
         <span
           style={{
             fontFamily:    FONT_SYS,
@@ -92,7 +117,7 @@ export default function MastheadProfileButton({
             lineHeight:    1,
           }}
         >
-          {authedInitials}
+          {effectiveInitials}
         </span>
       ) : (
         <CircleUser size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />

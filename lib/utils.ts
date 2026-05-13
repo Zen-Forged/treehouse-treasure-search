@@ -82,11 +82,14 @@ export function mapsUrl(query: string): string {
 }
 
 // ── Relative time ─────────────────────────────────────────────────────────────
-// Review Board Finding 1B (session 153) — full-word format via
-// Intl.RelativeTimeFormat. Sub-hour resolution added (minutes/hour).
+// Session 159 Q1 — granularity locked to: just now / minutes / hours / days.
+// Weeks, months, years all retired per David's ask ("only in minutes or days
+// (no weeks)" + clarified to include hours). Anything older than 1 day reads
+// as "N days ago" indefinitely ("45 days ago", "365 days ago"). Reverses
+// session 153 Review Board Finding 1B's full week/month/year ladder.
+//
 // Browser-native i18n primitive; "auto" numeric style yields:
-//   "just now" / "5 minutes ago" / "1 hour ago" / "1 day ago" /
-//   "1 week ago" / "3 weeks ago" / "2 months ago" / "1 year ago".
+//   "just now" / "5 minutes ago" / "1 hour ago" / "yesterday" / "3 days ago".
 // Future-dated input is clamped to "just now" rather than emitting
 // "in 5 minutes" since post timestamps should never lead the wall clock.
 export function formatTimeAgo(iso: string | null | undefined): string {
@@ -99,9 +102,6 @@ export function formatTimeAgo(iso: string | null | undefined): string {
   const diffMin  = Math.round(diffSec / 60);
   const diffHour = Math.round(diffMin / 60);
   const diffDay  = Math.round(diffHour / 24);
-  const diffWeek = Math.round(diffDay / 7);
-  const diffMon  = Math.round(diffDay / 30);
-  const diffYear = Math.round(diffDay / 365);
 
   // Future or sub-minute → "just now". Avoids the awkward "in N seconds"
   // output and the just-posted edge case where clock skew can flip sign.
@@ -111,10 +111,7 @@ export function formatTimeAgo(iso: string | null | undefined): string {
 
   if (diffMin > -60)  return rtf.format(diffMin,  "minute");
   if (diffHour > -24) return rtf.format(diffHour, "hour");
-  if (diffDay > -7)   return rtf.format(diffDay,  "day");
-  if (diffWeek > -5)  return rtf.format(diffWeek, "week");
-  if (diffMon > -12)  return rtf.format(diffMon,  "month");
-  return rtf.format(diffYear, "year");
+  return rtf.format(diffDay, "day");
 }
 
 // ── Booth numeral sizing ──────────────────────────────────────────────────────

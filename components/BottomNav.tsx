@@ -117,28 +117,22 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { CircleUser, Shield } from "lucide-react";
+import { motion } from "framer-motion";
 import { MdOutlineExplore } from "react-icons/md";
-import { PiLeaf, PiStorefront } from "react-icons/pi";
+import { PiLeaf } from "react-icons/pi";
 import { FONT_NUMERAL, v2 } from "@/lib/tokens";
-import { getSession, onAuthChange, detectUserRole, type UserRole } from "@/lib/auth";
 
-// "login" was a valid value in sessions 107+108 when Profile occupied a
-// nav slot. Session 109 retires the Profile tab in favor of the masthead
-// left-slot affordance, but the type member is preserved so any external
-// consumer that still passes active="login" type-checks; the tab itself
-// no longer renders.
+// Session 159 — Profile tab + role-conditional Booth/Admin tabs all retire.
+// David Q3 (session-159 opener): "Relocate the profile icon to where the
+// Share icon use to reside in the masthead. Propogates on all pages.
+// Retire admin as you mentioned via profile link when logged in."
+// BottomNav collapses to fixed 2 tabs (Explore + Saved) for all viewers.
+// Vendor and admin reach their specialty surfaces (/my-shelf, /admin) via
+// the masthead-right Profile affordance → /me, which links onward.
 //
-// "booth" added session 113 for the role-conditional Booth tab (vendors
-// only as of session 114). active="booth" passed by /my-shelf.
-// "admin" added session 114 for the role-conditional Admin tab (admins
-// only). active="admin" should be passed by /admin consumers if BottomNav
-// is ever rendered there; today /admin doesn't render BottomNav.
-// "profile" added session 157 — Profile tab at BottomNav far right (auth
-// chrome relocation #4). active="profile" passed by /me or /login consumers
-// if BottomNav is ever rendered there; today neither mounts BottomNav so
-// active state is decorative-only for the Profile tab.
+// History note: "login" / "booth" / "admin" / "profile" members preserved
+// in NavTab type so external consumers that still pass them type-check;
+// the corresponding tabs no longer render here.
 export type NavTab = "home" | "map" | "flagged" | "booth" | "admin" | "login" | "profile" | null;
 
 interface BottomNavProps {
@@ -160,36 +154,6 @@ const C = {
 
 export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNavProps) {
   const router = useRouter();
-  const [role, setRole] = useState<UserRole>("none");
-  const [ready, setReady] = useState(false);
-
-  // Role detection drives the role-conditional Booth tab. detectUserRole
-  // queries shoppers + vendors in parallel after isAdmin check; reactive
-  // via onAuthChange so sign-in / sign-out flips the tab live without
-  // requiring a navigation. Hold a blank nav until ready to avoid a
-  // 2-tab → 3-tab flash for vendors landing on Home.
-  useEffect(() => {
-    let cancelled = false;
-    getSession().then(async s => {
-      const r = await detectUserRole(s?.user ?? null);
-      if (cancelled) return;
-      setRole(r);
-      setReady(true);
-    });
-    const unsub = onAuthChange(async user => {
-      const r = await detectUserRole(user);
-      if (cancelled) return;
-      setRole(r);
-    });
-    return () => { cancelled = true; unsub(); };
-  }, []);
-
-  // Admin precedence wins over vendor (Option A — admins who also have a
-  // vendor row see Admin tab, not Booth). detectUserRole returns "admin"
-  // before "vendor" already, so showAdminTab + showBoothTab are naturally
-  // mutually exclusive; the conditionals are written that way for clarity.
-  const showAdminTab = role === "admin";
-  const showBoothTab = role === "vendor";
 
   const badgeLabel = (n: number) => n > 99 ? "99+" : String(n);
 
@@ -201,26 +165,12 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     badge?: boolean;
   };
 
-  // Tab order: Explore → Saved → [Booth | Admin, role-conditional] → Profile.
-  // Saved holds the stable 2nd position so muscle memory transfers across
-  // role transitions. The role tab is the "specialty" slot when present —
-  // whichever surface the role unlocks: vendor → Booth (manage their work),
-  // admin → Admin (platform controls). Session 157 — Profile takes the far-
-  // right slot universally; role-tab when present sits at second-from-
-  // rightmost (between Saved and Profile). Guest/shopper sees 3-tab pill;
-  // vendor + admin see 4-tab pill with the role-tab in the middle.
-  //
-  // Session 155 — Map tab retires (D6 lock). The map drawer is now a Home
-  // chrome affordance disclosed by <MallStrip>'s chevron, not a destination.
-  // Reverses R18 (session 121) Map tab reinstatement. PiMapPin import retires
-  // alongside.
-
-  // Session 157 — Profile routes to /me when the user is authed (any role
-  // including shopper), /login when guest. Mirrors the routing logic of the
-  // retired MastheadProfileButton.
-  const isAuthed = role !== "none";
-  const profileHref = isAuthed ? "/me" : "/login";
-
+  // Session 159 — fixed 2-tab nav (Explore + Saved). Profile + role-conditional
+  // Booth/Admin tabs all retire per David Q3. Vendors + admins reach
+  // /my-shelf and /admin through the masthead-right Profile button → /me
+  // page → role-aware links onward. Role detection state machine retires
+  // with this commit (useState role + useEffect Supabase subscription +
+  // showAdminTab/showBoothTab/isAuthed/profileHref + ready gate).
   const tabs: TabDef[] = [
     {
       key: "home", label: "Explore", href: "/",
@@ -229,22 +179,6 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     {
       key: "flagged", label: "Saved", href: "/flagged",
       icon: <PiLeaf size={21} />, badge: true,
-    },
-    ...(showBoothTab ? [{
-      key: "booth" as NavTab, label: "Booth", href: "/my-shelf",
-      icon: <PiStorefront size={21} />,
-    }] : []),
-    ...(showAdminTab ? [{
-      key: "admin" as NavTab, label: "Admin", href: "/admin",
-      icon: <Shield size={21} strokeWidth={2.0} />,
-    }] : []),
-    {
-      key: "profile" as NavTab, label: "Profile", href: profileHref,
-      // Session 157 dial — size 22 → 20 per iPhone QA: glyph reads visually
-      // heavier than Saved (PiLeaf 21) + Explore (MdOutlineExplore 22) at
-      // matched numerical size because Lucide's CircleUser fills more of its
-      // bounding box than the others. 20 brings perceived weight into line.
-      icon: <CircleUser size={20} strokeWidth={1.6} />,
     },
   ];
 
@@ -268,14 +202,29 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     left: "50%", transform: "translateX(-50%)",
     zIndex: 100,
     background: v2.surface.input,
-    border: "1px solid rgba(42,26,10,0.10)",
-    borderRadius: 24,
-    boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
-    padding: "9px 22px",
+    // Session 159 — David verbatim: "3px padding (top, right, left, bottom)
+    // with the outermost container radius matching at 18 ... thin stroke
+    // around the navbar component and increase the intensity of the drop
+    // shadow, more like what we have on the thumbnails on the explore page."
+    // Pre-session-159: padding "9px 22px" / radius 24 / border alpha 0.10 /
+    // boxShadow "0 6px 18px rgba(0,0,0,0.08)" — the floating-pill weight
+    // sat too quiet against v2.bg.main page bg + the rich polaroid shadow
+    // on Home tiles dominated visual hierarchy.
+    // Now: padding 3 hugs the inner pills tight; radius 18 matches the
+    // outer-container geometry David sketched; border alpha 0.18 (same as
+    // legacy C.border value already in this file) reads as a deliberate
+    // stroke instead of a tonal blur; boxShadow inlines the same value as
+    // v1.shadow.polaroid (`--th-v1-shadow-polaroid` in globals.css) — the
+    // explore-tile shadow vocabulary David referenced. Inlined rather than
+    // imported because the polaroid token currently lives in v1 namespace +
+    // this is the second consumer; primitive extraction trigger if a 3rd
+    // consumer surfaces.
+    border: "1px solid rgba(42,26,10,0.18)",
+    borderRadius: 18,
+    boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
+    padding: 3,
     display: "flex", alignItems: "center", gap: 24,
   };
-
-  if (!ready) return <nav style={navStyle} aria-hidden="true" />;
 
   return (
     <nav style={navStyle}>
@@ -295,47 +244,71 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
               justifyContent: "center", gap: 0, padding: 0,
               background: "none", border: "none", cursor: "pointer",
               color: labelColor,
-              position: "relative", transition: "color 0.15s",
+              position: "relative",
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            {/* Session 157 — active state wraps BOTH icon AND label in a
-                single inner pill (David's Item 1 confirm). Previously only
-                the icon container carried the green-light bg at 44×28; the
-                label sat unboxed beneath. New shape: single column-flex
-                wrapper that gains horizontal+vertical padding + bg + radius
-                on active. Both icon AND label flip to C.green via the
-                button's color cascade. Inactive tab footprint is intrinsic
-                (no padding, no bg) so the only visual change for inactive
-                tabs is the icon's bg-pill retiring — same vocabulary, just
-                relocated to the wrapping pill on active. */}
+            {/* Session 159 — David verbatim: "No scaling of selected items
+                or animations needed other than the highlight box sliding
+                left or right." Pre-session-159 the active inner pill bg +
+                padding crossfaded with `transition: "background 0.18s ease,
+                padding 0.18s ease"` — two pills appeared/disappeared at
+                their tab positions, not a single highlight box sliding
+                between them. New shape: padding is CONSTANT 5px/12px on
+                every tab (geometry unified so the highlight doesn't change
+                shape mid-slide), and the green-tinted bg is rendered via a
+                single `<motion.div layoutId="bottomnav-active-pill">` that
+                framer-motion morphs from the old active tab's wrapper into
+                the new active tab's wrapper on tab change. Spring transition
+                (stiffness 500 / damping 40) gives a crisp snap without
+                under-damped overshoot.
+
+                Tradeoff: inactive tabs now reserve 5/12 of padding each, so
+                each tab's intrinsic width grows by ~34px vs the pre-159
+                inactive shape. The compact-padding-3 outer container from
+                Commit 2 absorbs this; the overall pill still reads
+                "compact" because the outer container hugs the inner pills
+                at 3px breathing room.
+
+                Layout note — `<motion.div layoutId>` requires both possible
+                positions to be mounted in the same React tree on each
+                render. They are: every tab button always renders, only
+                one carries the motion.div at any given time. Framer-motion
+                handles the cross-button morph automatically. */}
             <div
               style={{
                 display: "flex", flexDirection: "column", alignItems: "center",
                 // Session 157 Review Board #1 — gap 4 → 5 per David's
                 // dial after the height: 22 anchor (commit 7a691bd) closed
-                // the icon-baseline mismatch. With baselines aligned across
-                // tabs, the slightly wider icon→label gap reads as
-                // intentional breathing room rather than chrome density.
+                // the icon-baseline mismatch.
                 gap: 5,
-                padding: isActive ? "5px 12px" : "0",
+                // Session 159 — padding CONSTANT (was conditional on isActive).
+                // See Commit 3 commentary above for layoutId-slide rationale.
+                padding: "5px 12px",
                 borderRadius: 14,
-                background: isActive ? C.greenLight : "transparent",
-                transition: "background 0.18s ease, padding 0.18s ease",
+                position: "relative",
               }}
             >
+              {isActive && (
+                <motion.div
+                  layoutId="bottomnav-active-pill"
+                  transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: C.greenLight,
+                    borderRadius: 14,
+                    zIndex: 0,
+                  }}
+                />
+              )}
               <div style={{
                 position: "relative", display: "flex", alignItems: "center", justifyContent: "center",
                 // Session 157 Review Board #1 — anchor row height at 22 (max
-                // icon size in the row: MdOutlineExplore 22). Without this,
-                // each tab's column height varied by ±1-2px depending on icon
-                // (CircleUser 20 vs PiLeaf 21 vs MdOutlineExplore 22), shifting
-                // the label below by the same delta. Fixed height 22 means
-                // all labels sit at the exact same y position. David —
-                // "'Profile' text is not aligned with 'Saved'."
+                // icon size in the row).
                 height: 22,
                 color: iconColor,
-                transition: "color 0.15s",
+                zIndex: 1,
               }}>
                 {tab.icon}
                 {showBadge && (
@@ -373,6 +346,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
                 fontFamily: "system-ui, sans-serif",
                 fontSize: 10, fontWeight: isActive ? 600 : 400,
                 letterSpacing: "0.2px", lineHeight: 1, color: "inherit",
+                position: "relative", zIndex: 1,
               }}>
                 {tab.label}
               </span>

@@ -81,6 +81,7 @@ import {
 } from "@/lib/tokens";
 import PhotoLightbox from "@/components/PhotoLightbox";
 import BookmarkBoothBubble from "@/components/BookmarkBoothBubble";
+import ShareBubble from "@/components/ShareBubble";
 import HomeFeedTile from "@/components/v2/HomeFeedTile";
 import PinGlyph from "@/components/PinGlyph";
 import { writeFindContext, type FindRef } from "@/lib/findContext";
@@ -111,6 +112,7 @@ export function BoothHero({
   layoutId,
   saved,
   onToggleBookmark,
+  onShare,
 }: {
   displayName: string;
   boothNumber: string | null;
@@ -134,6 +136,15 @@ export function BoothHero({
    */
   saved?: boolean;
   onToggleBookmark?: () => void;
+  /**
+   * Session 159 — share airplane relocated from masthead to BoothHero
+   * photo overlay (David Q4 + Q6). When supplied, renders a <ShareBubble
+   * variant='v2'> stacked vertically under the bookmark bubble (top:64
+   * right:12 when bookmark renders; top:12 right:12 when bookmark absent
+   * — owner case on /shelf and all /my-shelf views). Mirrors /find/[id]'s
+   * share+heart photo-overlay stack from Commit 6.
+   */
+  onShare?: () => void;
 }) {
   // Session 75 — tap hero photo to open lightbox (matches /find/[id] pattern).
   // Only mounts when heroImageUrl is present; the vendorHueBg fallback has
@@ -229,6 +240,39 @@ export function BoothHero({
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleBookmark();
+              }}
+            />
+          </div>
+        )}
+
+        {/* Session 159 — share bubble stacked under bookmark (or solo at
+            bookmark's canonical slot when bookmark is absent on owner
+            views). David Q4 + Q6: relocated from masthead to BoothHero
+            photo, matching /find/[id]'s share+heart photo-overlay stack.
+            variant='v2' matches the BookmarkBoothBubble vocabulary
+            (v2.surface.warm bg + v2.border.light border + v2.accent.green
+            glyph). Position logic: top:64 when bookmark renders
+            (12 + 44 + 8 = stacked sibling, slightly tighter than
+            /find's 10-gap because BoothHero's banner geometry is more
+            generous; uses 8 gap for tighter visual rhythm with the
+            rotated post-it stamp at bottom-right); top:12 when bookmark
+            is absent (owner viewing own booth on /shelf/[slug] OR all
+            /my-shelf views — bookmark hidden per session 67 D10). */}
+        {onShare && (
+          <div
+            style={{
+              position: "absolute",
+              top: (saved !== undefined && onToggleBookmark) ? 64 : 12,
+              right: 12,
+              zIndex: 11,
+            }}
+          >
+            <ShareBubble
+              variant="v2"
+              ariaLabel="Share this booth"
+              onClick={(e) => {
+                e.stopPropagation();
+                onShare();
               }}
             />
           </div>

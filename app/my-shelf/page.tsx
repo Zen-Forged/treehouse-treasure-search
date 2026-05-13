@@ -81,6 +81,7 @@ import {
 import { LOCAL_VENDOR_KEY, type LocalVendorProfile, type Post, type Vendor, type Mall } from "@/types/treehouse";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
+import MastheadProfileButton from "@/components/MastheadProfileButton";
 import AddFindSheet from "@/components/AddFindSheet";
 import BoothPickerSheet from "@/components/BoothPickerSheet";
 import ShareSheet from "@/components/ShareSheet";
@@ -144,25 +145,19 @@ function writeScrollY(y: number) {
 }
 
 // ─── Masthead ─────────────────────────────────────────────────────────────────
-// Center slot is the app brand lockup — always "Treehouse Finds" regardless
-// of single- vs. multi-booth state. Q-002 (session 57) moved the multi-booth
-// picker affordance OUT of the masthead and INLINE with the 32px booth name
-// under the hero banner (see BoothTitleBlock's onPickerOpen prop).
+// Center slot is the app brand lockup — always "Treehouse Finds".
 //
-// Right slot: paper-airplane share affordance when `canShare` is true; 38px
-// spacer otherwise so the "38px 1fr 38px" grid stays centered.
-//
-// Scroll target remains the page's overflow-auto container (passed by parent)
-// per v1.1l's internal-scroll-safe pattern.
+// Session 159 — masthead right slot: airplane → MastheadProfileButton
+// universal (David Q3). Share affordance moves to BoothHero photo overlay
+// per Q4; see <BoothHero onShare={...} /> wiring below. canShare +
+// onShareOpen props retire from the local <Masthead> wrapper; the
+// privately-defined <MastheadPaperAirplane> glyph also retires (was the
+// only consumer).
 
 function Masthead({
-  canShare,
-  onShareOpen,
   onBack,
 }: {
-  canShare:     boolean;
-  onShareOpen:  () => void;
-  onBack?:      () => void;
+  onBack?: () => void;
 }) {
   // Session 70 — locked-grid slot API. Inner grid + safe-area padding now
   // owned by StickyMasthead itself.
@@ -194,53 +189,8 @@ function Masthead({
           </button>
         ) : null
       }
-      right={
-        canShare ? (
-          <button
-            onClick={onShareOpen}
-            aria-label="Share this booth by email"
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: "50%",
-              background: v2.surface.warm,
-              border: `1px solid ${v2.border.light}`,
-              padding: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            <MastheadPaperAirplane />
-          </button>
-        ) : null
-      }
+      right={<MastheadProfileButton />}
     />
-  );
-}
-
-// Inline paper-airplane glyph for the masthead right-slot share button.
-// Drawn slightly off-axis to echo the +6° tilt used elsewhere in v1.1h/v1.2
-// (booth post-it). Uses v2.accent.green to read as an active / commit-shaped
-// affordance at the page-header level.
-function MastheadPaperAirplane() {
-  return (
-    <svg
-      width={22}
-      height={22}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={v2.accent.green}
-      strokeWidth={1.7}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M21 3 10.5 13.5" />
-      <path d="M21 3 14.5 21l-4-7.5L3 9.5 21 3Z" />
-    </svg>
   );
 }
 
@@ -801,11 +751,7 @@ function MyBoothInner() {
         paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
       }}
     >
-      <Masthead
-        canShare={canShare}
-        onShareOpen={() => setShareOpen(true)}
-        onBack={adminOverride ? () => router.back() : undefined}
-      />
+      <Masthead onBack={adminOverride ? () => router.back() : undefined} />
 
         {loading ? (
           <Skeleton />
@@ -818,6 +764,7 @@ function MyBoothInner() {
               boothNumber={boothNumber}
               heroImageUrl={heroImageUrl}
               heroKey={heroKey}
+              onShare={canShare ? () => setShareOpen(true) : undefined}
             />
 
             <BoothTitleBlock
