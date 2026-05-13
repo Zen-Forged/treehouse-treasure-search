@@ -252,3 +252,57 @@ Per `feedback_testbed_first_for_ai_unknowns` extended to "any structurally-novel
 - R17 design record `docs/r17-geolocation-design.md` — `useUserLocation` hook + DistancePill + LocationActions (sessions 117–119)
 - Home chrome restructure `docs/home-chrome-restructure-design.md` — MallMapDrawer + MallStrip (sessions 154–155)
 - Session 156 close — Mapbox `resolveCssVar` bridge + defensive load-reliability primitive (CSS-var-to-non-CSS-API context)
+
+---
+
+## Within-session dial bundle (post-iPhone-QA — same session)
+
+After Arc 1–3 shipped, iPhone QA surfaced 7 dial findings (4 design + 3 structural). All shipped within the same session per the post-promotion `feedback_within_session_design_record_reversal` pattern (~6th cumulative firing). Sequenced smallest→largest in 4 commits + this amendment. The original D-decisions are preserved above for design-history traceability; the dial overrides live here.
+
+### Dial A — Carousel cards + flanking arrow bubbles → `v2.surface.card`
+
+**Original** (D2 card spec + D9 arrow bubble spec): `background: v2.surface.warm` (#FBF6EA, slightly warmer).
+**Override**: `background: v2.surface.card` (#FFFCF5, matches BottomNav per session 157).
+
+Reason: David's QA: *"Change card bg color of the mall thumbnails to the lighter 'white' (as I'm calling it) we have on the nav bar. Apply this to the bg of the selected card as well and back and forth nav buttons."* PinCallout main box bg stays `v2.surface.warm` — keeps the callout visually warmer than its flanking arrows so the callout reads as the focal entity and arrows read as navigation chrome.
+
+### Dial B — PinCallout typography bump
+
+**Original** (D9 callout typography — implicit, not enumerated as decision): mall name 13.5px Cormorant weight 500 lineHeight 1.2; stat line 11px italic Cormorant lineHeight 1.2.
+**Override**:
+- Mall name: 18px / weight 600 / lineHeight 1.3
+- Stat line: 14px / italic / lineHeight 1.3
+- Non-saved copy: `"X finds"` → `"X fresh finds"`
+- Saved-state copy: stays `"X saved finds"` (lattice semantic preserved — saved = user's accumulation; fresh = mall inventory currently in stock)
+
+Reason: David's QA: *"Increase font size on the selected pin to 18pt font and 600 weight. Change subtext on pinned card 'x finds' to 14pt font and change to 'x fresh finds'."* Lora-class lineHeight 1.3 floor applies to Cormorant for the same descender-clearance reason (`feedback_lora_lineheight_minimum_for_clamp`).
+
+### Dial C — Peek-state map fly with offset (NEW: card tap also recenters)
+
+**Original** (no D — implementation detail): marker click + arrow tap each call `map.easeTo({ center, duration: 320 })` inline; card tap from carousel does NOT trigger any `easeTo`.
+**Override**:
+- New module-scope const `MAP_PEEK_OFFSET_Y = -60` (Mapbox easeTo offset shifts target lng/lat 60px above visual container center)
+- Single source of truth: new `useEffect` on `peekedMallId` change handles `easeTo` with offset for ALL three peek paths (direct pin tap / carousel card tap / callout arrow tap)
+- Marker click handler + `stepTo` helper simplified to `stopPropagation` + `onPinTap` only
+
+Reason: David's QA combined #3 + #6 + #7: pin too close to carousel; card tap should auto-recenter the map. The previous card-tap behavior was a latent bug — `onCardTap` only updated `peekedMallId` so tapping a card with a mall outside the current viewport would leave the callout positioned off-screen. With offset −60: on iPhone SE, callout-to-carousel gap grows from ~86px to ~272px (plenty of breath).
+
+### Dial D — Retire List view affordance + dead-code byproduct
+
+**Original** (D-MapControlPill — implicit): pill dual-state — `scope set → "Reset"`, `all-Kentucky → "List view"` opens `<MallSheet>` picker modal.
+**Override**: pill single-state Reset only; renders only when `selectedMallId !== null`. List view branch + `<MallSheet>` render + `sheetOpen` state + `MallSheet` import + `PiList` import all retire.
+
+Reason: David's QA: *"remove list view filter. I don't think we need it anymore."* The `<MapCarousel>` shipped in Arc 2 surfaces the same browse-the-locations affordance more discoverably (photos + distance labels visible directly, not gated behind a tap). `components/MallSheet.tsx` file kept dormant — could be revived as a future list-view primitive on another surface (matches session-152 inverse dead-code-cleanup pattern).
+
+### Tier B headroom items added this dial bundle
+
+- **Saved-state stat copy** — David didn't flag `"X saved finds"`; if "fresh" wording reads aspirational and the user expects to see saved count when applicable, could unify to `"X fresh finds · X saved"` two-line stat.
+- **Carousel + callout color hierarchy** — cards/bubbles at `v2.surface.card` (#FFFCF5), callout at `v2.surface.warm` (#FBF6EA). If the brightness difference reads uneven, easy flip to all-three at `v2.surface.card`.
+- **`MAP_PEEK_OFFSET_Y` tunable** — currently `-60`. If carousel feels TOO empty above on iPhone 14+ (larger viewport), reduce to `-40` or `-50`. If iPhone SE still feels tight, bump to `-80`.
+
+### Memory firings cumulative through dial bundle
+
+- `feedback_within_session_design_record_reversal` ✅ Promoted — ~6th cumulative firing across project, with 4 distinct reversals captured this dial bundle (Dial A token swap, Dial B typography, Dial C card-tap auto-recenter, Dial D list-view retire).
+- `feedback_smallest_to_largest_commit_sequencing` — 4 dial commits sequenced smallest→largest (token swap → typography → map offset → list-view retire).
+- `feedback_dead_code_cleanup_as_byproduct` — Dial D retired 4 imports + 1 state + 1 sibling render in the same commit as the feature change.
+- `feedback_lora_lineheight_minimum_for_clamp` — Cormorant 1.3 floor applied at 18px name + 14px stat per the post-promotion canonical rule.
