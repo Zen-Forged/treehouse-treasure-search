@@ -1311,69 +1311,94 @@ export default function FindDetailPage() {
                 Session 144 iPhone QA: bg aligned to /shelf BoothPage post-it
                 stamp value (v2.surface.card #FFFCF5) per David's "consistency
                 let's align to the values on /shelf" call. Was v1.postit
-                #fefae8 (warmer cream) since session 81's v1.postit dial. */}
-            {post && boothNumber && (
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: -14,
-                  right: 4,
-                  width: 92,
-                  minHeight: 92,
-                  background: v2.surface.card,
-                  transform: "rotate(6deg)",
-                  transformOrigin: "bottom right",
-                  boxShadow: `0 6px 14px rgba(42,26,10,0.28), 0 0 0 0.5px rgba(42,26,10,0.16)`,
-                  padding: "14px 8px 10px",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <div
-                  aria-hidden="true"
-                  style={{
-                    position: "absolute",
-                    top: -4,
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: "rgba(42,26,10,0.72)",
-                    boxShadow: `inset 0 0 0 2px rgba(42,26,10,0.55), 0 1px 2px rgba(42,26,10,0.35)`,
-                  }}
-                />
-                <div
-                  style={{
-                    fontFamily: FONT_SYS,
-                    fontSize: 9,
-                    fontWeight: 700,
-                    color: v1.green,
-                    letterSpacing: "0.12em",
-                    textTransform: "uppercase",
-                    lineHeight: 1,
-                    marginBottom: 6,
-                    textAlign: "center",
-                  }}
+                #fefae8 (warmer cream) since session 81's v1.postit dial.
+                Session 157 Review Board Booth #2 — post-it tap routes to
+                /shelf/[vendorSlug] when vendorSlug exists. David: "If
+                someone clicks on the Post-it note it should go to the
+                booth /shelf of the vendor." Wraps in Next.js Link when
+                we have a slug; falls back to plain div otherwise (no
+                navigation target). The cardInner Link wrapper below
+                the cartographic block still keeps card-tap routing in
+                parallel — post-it just adds a more visible affordance
+                anchored on the booth-identity stamp itself. */}
+            {post && boothNumber && (() => {
+              const postItStyle: React.CSSProperties = {
+                position: "absolute",
+                bottom: -14,
+                right: 4,
+                width: 92,
+                minHeight: 92,
+                background: v2.surface.card,
+                transform: "rotate(6deg)",
+                transformOrigin: "bottom right",
+                boxShadow: `0 6px 14px rgba(42,26,10,0.28), 0 0 0 0.5px rgba(42,26,10,0.16)`,
+                padding: "14px 8px 10px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: vendorSlug ? "pointer" : "default",
+                textDecoration: "none",
+                color: "inherit",
+                WebkitTapHighlightColor: "transparent",
+              };
+              const postItInner = (
+                <>
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      top: -4,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background: "rgba(42,26,10,0.72)",
+                      boxShadow: `inset 0 0 0 2px rgba(42,26,10,0.55), 0 1px 2px rgba(42,26,10,0.35)`,
+                    }}
+                  />
+                  <div
+                    style={{
+                      fontFamily: FONT_SYS,
+                      fontSize: 9,
+                      fontWeight: 700,
+                      color: v1.green,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      lineHeight: 1,
+                      marginBottom: 6,
+                      textAlign: "center",
+                    }}
+                  >
+                    Booth
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: FONT_NUMERAL,
+                      fontSize: boothNumeralSize(boothNumber),
+                      fontWeight: 500,
+                      color: v1.green,
+                      letterSpacing: "-0.01em",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {boothNumber}
+                  </div>
+                </>
+              );
+              return vendorSlug ? (
+                <Link
+                  href={`/shelf/${vendorSlug}`}
+                  aria-label={`Visit booth shelf for ${vendorName ?? "this vendor"}`}
+                  style={postItStyle}
                 >
-                  Booth
-                </div>
-                <div
-                  style={{
-                    fontFamily: FONT_NUMERAL,
-                    fontSize: boothNumeralSize(boothNumber),
-                    fontWeight: 500,
-                    color: v1.green,
-                    letterSpacing: "-0.01em",
-                    lineHeight: 1,
-                  }}
-                >
-                  {boothNumber}
-                </div>
-              </div>
-            )}
+                  {postItInner}
+                </Link>
+              ) : (
+                <div style={postItStyle}>{postItInner}</div>
+              );
+            })()}
           </div>
         </div>
       )}
