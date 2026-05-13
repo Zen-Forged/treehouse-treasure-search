@@ -54,7 +54,7 @@ import { useShopperBoothBookmarks } from "@/lib/useShopperBoothBookmarks";
 import { track } from "@/lib/clientEvents";
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
-import MastheadPaperAirplane from "@/components/MastheadPaperAirplane";
+import MastheadProfileButton from "@/components/MastheadProfileButton";
 import ShareSheet from "@/components/ShareSheet";
 import EmptyState from "@/components/EmptyState";
 // LocationActions retired from /shelf in session 157 Review Board Booth #1
@@ -109,16 +109,13 @@ import type { User } from "@supabase/supabase-js";
 
 function Masthead({
   onBack,
-  canShare,
-  onShareOpen,
 }: {
   onBack: () => void;
-  canShare: boolean;
-  onShareOpen: () => void;
 }) {
-  // Session 70 — locked-grid slot API. Inner grid + safe-area padding now
-  // owned by StickyMasthead itself. Page just provides slot content; the
-  // wordmark X-coordinate is locked across all callsites.
+  // Session 70 — locked-grid slot API.
+  // Session 159 — masthead right slot: airplane → MastheadProfileButton
+  // universal (David Q3). Share moved to BoothHero photo overlay; see the
+  // <BoothHero onShare={...} /> wiring below.
   return (
     <StickyMasthead
       left={
@@ -142,29 +139,7 @@ function Masthead({
           <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v1.inkPrimary }} />
         </button>
       }
-      right={
-        canShare ? (
-          <button
-            onClick={onShareOpen}
-            aria-label="Share this booth by email"
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: "50%",
-              background: v1.iconBubble,
-              border: "none",
-              padding: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              WebkitTapHighlightColor: "transparent",
-            }}
-          >
-            <MastheadPaperAirplane />
-          </button>
-        ) : null
-      }
+      right={<MastheadProfileButton />}
     />
   );
 }
@@ -383,11 +358,7 @@ export default function PublicShelfPage() {
           flexDirection: "column",
         }}
       >
-        <Masthead
-          onBack={() => router.back()}
-          canShare={false}
-          onShareOpen={() => {}}
-        />
+        <Masthead onBack={() => router.back()} />
         <NotFound />
         <BottomNav active={null} flaggedCount={bookmarkCount} />
         <BoothPageStyles />
@@ -428,11 +399,7 @@ export default function PublicShelfPage() {
         paddingBottom: "max(110px, calc(env(safe-area-inset-bottom, 0px) + 100px))",
       }}
     >
-      <Masthead
-        onBack={() => router.back()}
-        canShare={canShare}
-        onShareOpen={() => setShareOpen(true)}
-      />
+      <Masthead onBack={() => router.back()} />
         {loading ? (
           <Skeleton />
         ) : (
@@ -445,6 +412,7 @@ export default function PublicShelfPage() {
               layoutId={vendor ? `booth-${vendor.id}` : undefined}
               saved={showBookmark ? boothBookmarked : undefined}
               onToggleBookmark={showBookmark ? handleToggleBoothBookmark : undefined}
+              onShare={canShare ? () => setShareOpen(true) : undefined}
             />
 
             {/* Session 128 (within-session reversal of D5 implementation-time
