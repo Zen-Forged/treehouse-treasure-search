@@ -53,6 +53,7 @@ import { isReviewMode } from "@/lib/reviewMode";
 import { supabase } from "@/lib/supabase";
 import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import FormField, { formInputStyle } from "@/components/FormField";
+import BottomNav from "@/components/BottomNav";
 import FormButton from "@/components/FormButton";
 import type { User } from "@supabase/supabase-js";
 import type { ReadonlyURLSearchParams } from "next/navigation";
@@ -476,7 +477,22 @@ function LoginInner() {
         flexDirection: "column",
       }}
     >
-      <header style={{ padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px", flexShrink: 0 }}>
+      {/* Session 157 Review Board Login #1 — header gains flex space-between
+          layout so the help affordance (Contact link) can sit at top-right
+          when BottomNav now floats at the bottom of /login. David: "Nav bar
+          needs to be added to this page. We'll need to move 'Need help?
+          Contact us' link." Bottom help link retires (was line 880-917);
+          help moves to a small PiQuestion icon in the masthead-right slot,
+          out of BottomNav's way and visible from any /login state. */}
+      <header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px",
+          flexShrink: 0,
+        }}
+      >
         <button
           onClick={() => {
             if (screen === "enter-code") {
@@ -507,6 +523,30 @@ function LoginInner() {
         >
           <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
         </button>
+
+        {/* Help affordance — moved here from the bottom of the page in
+            session 157 Review Board Login #1. Icon-only PiQuestion link
+            (44×44 hit target, matching the back button geometry) so
+            the slot doesn't shift dimensions when /login transitions
+            between rendered states. */}
+        <Link
+          href="/contact"
+          aria-label="Need help? Contact us"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: v2.surface.warm,
+            border: `1px solid ${v2.border.light}`,
+            textDecoration: "none",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <PiQuestion size={22} style={{ color: v2.text.primary }} />
+        </Link>
       </header>
 
       <div
@@ -877,33 +917,18 @@ function LoginInner() {
         </div>
       )}
 
-      {/* Help footer — present on all rendered states (form / cards) */}
-      <div style={{ flexShrink: 0, padding: "10px 0 26px", textAlign: "center" }}>
-        <Link
-          href="/contact"
-          style={{
-            fontFamily: FONT_CORMORANT,
-            fontSize: 13,
-            color: v2.text.primary,
-            textDecoration: "none",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          <PiQuestion size={16} style={{ color: v2.text.muted }} />
-          <span
-            style={{
-              textDecoration: "underline",
-              textDecorationStyle: "dotted",
-              textDecorationColor: v2.text.muted,
-              textUnderlineOffset: 3,
-            }}
-          >
-            Need help? Contact us
-          </span>
-        </Link>
-      </div>
+      {/* Session 157 Review Board Login #1 — bottom Help footer retires;
+          contact affordance moved to masthead-right PiQuestion icon
+          (line above). BottomNav takes the bottom slot. */}
+
+      {/* BottomNav — added to /login per Review Board Login #1. active=
+          "profile" matches the Profile tab (which routes guests TO /login
+          and authed users TO /me), so the highlight reflects where the
+          user is in the BottomNav semantic flow. Padding-bottom on the
+          form body wrapper above (centered flex column with flex:1) means
+          BottomNav floats over content without overlapping inputs at
+          typical viewport heights. */}
+      <BottomNav active="profile" flaggedCount={0} />
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
