@@ -268,10 +268,27 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     left: "50%", transform: "translateX(-50%)",
     zIndex: 100,
     background: v2.surface.input,
-    border: "1px solid rgba(42,26,10,0.10)",
-    borderRadius: 24,
-    boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
-    padding: "9px 22px",
+    // Session 159 — David verbatim: "3px padding (top, right, left, bottom)
+    // with the outermost container radius matching at 18 ... thin stroke
+    // around the navbar component and increase the intensity of the drop
+    // shadow, more like what we have on the thumbnails on the explore page."
+    // Pre-session-159: padding "9px 22px" / radius 24 / border alpha 0.10 /
+    // boxShadow "0 6px 18px rgba(0,0,0,0.08)" — the floating-pill weight
+    // sat too quiet against v2.bg.main page bg + the rich polaroid shadow
+    // on Home tiles dominated visual hierarchy.
+    // Now: padding 3 hugs the inner pills tight; radius 18 matches the
+    // outer-container geometry David sketched; border alpha 0.18 (same as
+    // legacy C.border value already in this file) reads as a deliberate
+    // stroke instead of a tonal blur; boxShadow inlines the same value as
+    // v1.shadow.polaroid (`--th-v1-shadow-polaroid` in globals.css) — the
+    // explore-tile shadow vocabulary David referenced. Inlined rather than
+    // imported because the polaroid token currently lives in v1 namespace +
+    // this is the second consumer; primitive extraction trigger if a 3rd
+    // consumer surfaces.
+    border: "1px solid rgba(42,26,10,0.18)",
+    borderRadius: 18,
+    boxShadow: "0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10)",
+    padding: 3,
     display: "flex", alignItems: "center", gap: 24,
   };
 
