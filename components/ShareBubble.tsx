@@ -18,9 +18,17 @@
 //                          + /my-shelf BoothHero (v2.surface.warm solid +
 //                          1px v2.border.light + v2.accent.green glyph).
 //
-// Geometry is 44×44 with a 22px airplane glyph (uses MastheadPaperAirplane
-// at size=28 to compensate for its 18×18 bounding-box-in-24×24-viewBox
-// shape — see MastheadPaperAirplane header for the bounding-box math).
+// Geometry is 44×44 with a 22px airplane glyph.
+//
+// Session 160 — David iPhone QA Finding 5: airplane intrinsic size 28 → 22
+// (literal SVG width/height verbatim per `feedback_user_provided_verbatim_
+// values_ship_as_is`) + visual-centering offset `translate(-1px, 1px)` so
+// the glyph reads optically centered in the 44×44 bubble (the airplane SVG
+// paths sit toward the top-right of the 24×24 viewBox; small offset
+// re-anchors the visual centroid). Pre-session-160 the size=28 was set to
+// compensate for the airplane's 18×18-in-24×24 bounding-box shape (see
+// MastheadPaperAirplane header), but iPhone QA read it as oversized
+// relative to the heart save bubble's 22px glyph.
 //
 // State semantics: stateless. Parent owns share-sheet open state + opens
 // it via onClick. Mirrors BookmarkBoothBubble's pure-render contract so
@@ -64,10 +72,21 @@ export default function ShareBubble({
         WebkitTapHighlightColor: "transparent",
       }}
     >
-      <MastheadPaperAirplane
-        size={28}
-        color={isFrosted ? v1.inkPrimary : v2.accent.green}
-      />
+      <span
+        style={{
+          display: "inline-flex",
+          // Session 160 — David verbatim: "move down by 1 pixel and left by
+          // one pixel (to make it visual centered)." Glyph paths in the
+          // 24×24 viewBox sit toward the top-right corner; this offset
+          // re-anchors the visual centroid inside the 44×44 bubble.
+          transform: "translate(-1px, 1px)",
+        }}
+      >
+        <MastheadPaperAirplane
+          size={22}
+          color={isFrosted ? v1.inkPrimary : v2.accent.green}
+        />
+      </span>
     </button>
   );
 }
