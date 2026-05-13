@@ -118,6 +118,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { CircleUser, Shield } from "lucide-react";
 import { MdOutlineExplore } from "react-icons/md";
 import { PiLeaf, PiStorefront } from "react-icons/pi";
@@ -312,47 +313,71 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
               justifyContent: "center", gap: 0, padding: 0,
               background: "none", border: "none", cursor: "pointer",
               color: labelColor,
-              position: "relative", transition: "color 0.15s",
+              position: "relative",
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            {/* Session 157 — active state wraps BOTH icon AND label in a
-                single inner pill (David's Item 1 confirm). Previously only
-                the icon container carried the green-light bg at 44×28; the
-                label sat unboxed beneath. New shape: single column-flex
-                wrapper that gains horizontal+vertical padding + bg + radius
-                on active. Both icon AND label flip to C.green via the
-                button's color cascade. Inactive tab footprint is intrinsic
-                (no padding, no bg) so the only visual change for inactive
-                tabs is the icon's bg-pill retiring — same vocabulary, just
-                relocated to the wrapping pill on active. */}
+            {/* Session 159 — David verbatim: "No scaling of selected items
+                or animations needed other than the highlight box sliding
+                left or right." Pre-session-159 the active inner pill bg +
+                padding crossfaded with `transition: "background 0.18s ease,
+                padding 0.18s ease"` — two pills appeared/disappeared at
+                their tab positions, not a single highlight box sliding
+                between them. New shape: padding is CONSTANT 5px/12px on
+                every tab (geometry unified so the highlight doesn't change
+                shape mid-slide), and the green-tinted bg is rendered via a
+                single `<motion.div layoutId="bottomnav-active-pill">` that
+                framer-motion morphs from the old active tab's wrapper into
+                the new active tab's wrapper on tab change. Spring transition
+                (stiffness 500 / damping 40) gives a crisp snap without
+                under-damped overshoot.
+
+                Tradeoff: inactive tabs now reserve 5/12 of padding each, so
+                each tab's intrinsic width grows by ~34px vs the pre-159
+                inactive shape. The compact-padding-3 outer container from
+                Commit 2 absorbs this; the overall pill still reads
+                "compact" because the outer container hugs the inner pills
+                at 3px breathing room.
+
+                Layout note — `<motion.div layoutId>` requires both possible
+                positions to be mounted in the same React tree on each
+                render. They are: every tab button always renders, only
+                one carries the motion.div at any given time. Framer-motion
+                handles the cross-button morph automatically. */}
             <div
               style={{
                 display: "flex", flexDirection: "column", alignItems: "center",
                 // Session 157 Review Board #1 — gap 4 → 5 per David's
                 // dial after the height: 22 anchor (commit 7a691bd) closed
-                // the icon-baseline mismatch. With baselines aligned across
-                // tabs, the slightly wider icon→label gap reads as
-                // intentional breathing room rather than chrome density.
+                // the icon-baseline mismatch.
                 gap: 5,
-                padding: isActive ? "5px 12px" : "0",
+                // Session 159 — padding CONSTANT (was conditional on isActive).
+                // See Commit 3 commentary above for layoutId-slide rationale.
+                padding: "5px 12px",
                 borderRadius: 14,
-                background: isActive ? C.greenLight : "transparent",
-                transition: "background 0.18s ease, padding 0.18s ease",
+                position: "relative",
               }}
             >
+              {isActive && (
+                <motion.div
+                  layoutId="bottomnav-active-pill"
+                  transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: C.greenLight,
+                    borderRadius: 14,
+                    zIndex: 0,
+                  }}
+                />
+              )}
               <div style={{
                 position: "relative", display: "flex", alignItems: "center", justifyContent: "center",
                 // Session 157 Review Board #1 — anchor row height at 22 (max
-                // icon size in the row: MdOutlineExplore 22). Without this,
-                // each tab's column height varied by ±1-2px depending on icon
-                // (CircleUser 20 vs PiLeaf 21 vs MdOutlineExplore 22), shifting
-                // the label below by the same delta. Fixed height 22 means
-                // all labels sit at the exact same y position. David —
-                // "'Profile' text is not aligned with 'Saved'."
+                // icon size in the row).
                 height: 22,
                 color: iconColor,
-                transition: "color 0.15s",
+                zIndex: 1,
               }}>
                 {tab.icon}
                 {showBadge && (
@@ -390,6 +415,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
                 fontFamily: "system-ui, sans-serif",
                 fontSize: 10, fontWeight: isActive ? 600 : 400,
                 letterSpacing: "0.2px", lineHeight: 1, color: "inherit",
+                position: "relative", zIndex: 1,
               }}>
                 {tab.label}
               </span>
