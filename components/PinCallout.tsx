@@ -108,10 +108,10 @@ export default function PinCallout({
       <div
         style={{
           fontFamily:   FONT_CORMORANT,
-          fontWeight:   500,
-          fontSize:     13.5,
+          fontWeight:   600,
+          fontSize:     18,
           color:        v2.text.primary,
-          lineHeight:   1.2,
+          lineHeight:   1.3,
           minWidth:     0,
           overflow:     "hidden",
           textOverflow: "ellipsis",
@@ -133,15 +133,18 @@ export default function PinCallout({
   // questions.
   const usesSaved = savedCount != null && savedCount > 0;
   const statCount = usesSaved ? savedCount : findCount;
-  const statLabel = usesSaved ? "saved finds" : "finds";
+  // Session 158 dial B — non-saved copy "X finds" → "X fresh finds" per QA.
+  // Saved-state copy unchanged ("X saved finds") since David didn't flag it
+  // and the lattice semantic (saved = user's, fresh = mall inventory) holds.
+  const statLabel = usesSaved ? "saved finds" : "fresh finds";
   const statLine = (
     <div
       style={{
         fontFamily: FONT_CORMORANT,
         fontStyle:  "italic",
-        fontSize:   11,
+        fontSize:   14,
         color:      v2.text.muted,
-        lineHeight: 1.2,
+        lineHeight: 1.3,
       }}
     >
       <span style={{ fontFamily: FONT_NUMERAL, color: v2.accent.green, fontStyle: "normal", fontWeight: 600 }}>
