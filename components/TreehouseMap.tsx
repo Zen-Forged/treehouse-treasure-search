@@ -162,6 +162,15 @@ if (typeof document !== "undefined" && !document.getElementById(USER_PULSE_KEYFR
   document.head.appendChild(style);
 }
 
+// Session 158 dial C — Y offset for peek-state easeTo. Negative value
+// shifts the centered (lng,lat) UP on the visual map, leaving room below
+// for the bottom carousel. Without this, on iPhone SE the callout-above-
+// pin could sit only ~40px above the carousel; with offset -60 the gap
+// grows to ~140-180px. Mapbox offset convention: target center lands at
+// (container_center.x + x, container_center.y + y), so negative Y =
+// upward on screen.
+const MAP_PEEK_OFFSET_Y = -60;
+
 // Kentucky bounding box — slight padding around the actual state extents
 // so pins near the borders aren't clipped at maxBounds.
 const KY_BOUNDS: LngLatBoundsLike = [
@@ -436,17 +445,13 @@ export default function TreehouseMap({
       if (!entry) {
         const el = document.createElement("div");
         el.style.willChange = "transform";
-        // Pin tap → recenter map on the pin, fire onPinTap, stop the click
-        // before it bubbles to the map's empty-tap handler (which would
-        // dismiss any peek). Recenter solves the "callout clipped on edge
-        // pins" case from iPhone QA — without it, tapping a pin near the
-        // viewport edge anchors the callout off-screen. With it, the pin
-        // moves to the viewport center and the callout (anchored above
-        // the pin) sits in the upper portion of the visible map.
+        // Pin tap → fire onPinTap; the peek-state useEffect (added at session
+        // 158 dial C) handles the easeTo + offset for all three peek paths
+        // (direct pin tap / carousel card tap / callout arrow tap). Single
+        // source of truth keeps the offset behavior consistent. stopPropagation
+        // prevents the click from bubbling to the map's empty-tap dismiss.
         el.addEventListener("click", (e) => {
           e.stopPropagation();
-          const m = mapRef.current;
-          if (m) m.easeTo({ center: [lng, lat], duration: 320 });
           onPinTapRef.current?.(mall.id);
         });
         const root = createRoot(el);
@@ -513,6 +518,25 @@ export default function TreehouseMap({
       userMarkerRef.current = null;
     }
   }, [userLoc.status, userLoc.lat, userLoc.lng, initKey]);
+
+  // ── Peek-state easeTo with offset (session 158 dial C) ───────────────
+  // Single source of truth for the fly behavior across all three peek
+  // paths (direct pin tap, carousel card tap, callout arrow tap). All
+  // three converge by writing to peekedMallId; this effect ease-flies the
+  // map to the peeked mall with MAP_PEEK_OFFSET_Y so the pin lands in
+  // the upper portion of the visible map area and the callout-above-pin
+  // has breathing room above the bottom carousel.
+  React.useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !peekedMallId) return;
+    const mall = malls.find((m) => m.id === peekedMallId);
+    if (!mall || mall.latitude == null || mall.longitude == null) return;
+    map.easeTo({
+      center:   [Number(mall.longitude), Number(mall.latitude)],
+      duration: 320,
+      offset:   [0, MAP_PEEK_OFFSET_Y],
+    });
+  }, [peekedMallId, malls]);
 
   // ── Peek anchor projection ────────────────────────────────────────────
   // Resolves the screen-space coordinates for the peeked pin and keeps
@@ -684,20 +708,10 @@ export default function TreehouseMap({
             to_mall_slug:   neighbor.slug,
             direction,
           });
-          // Ease map to neighbor's pin (matches marker-click recenter behavior
-          // at session 108 D26). onPinTap drives the consumer to update
-          // peekedMallId, which re-anchors the callout + carousel.
-          const m = mapRef.current;
-          if (
-            m &&
-            neighbor.latitude !== null && neighbor.latitude !== undefined &&
-            neighbor.longitude !== null && neighbor.longitude !== undefined
-          ) {
-            m.easeTo({
-              center:   [Number(neighbor.longitude), Number(neighbor.latitude)],
-              duration: 320,
-            });
-          }
+          // Session 158 dial C — easeTo moves into the peek-state useEffect
+          // (single source of truth across pin/carousel/arrow paths). This
+          // handler just propagates the peek; the effect handles the fly +
+          // offset.
           onPinTapRef.current?.(neighbor.id);
         };
 
