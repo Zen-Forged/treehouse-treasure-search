@@ -38,6 +38,27 @@
 // /login. Geometry preserved exactly (44×44, same border-radius, same
 // transition). Auth-state pickup itself is wired in R1 Arc 3 — Arc 2
 // only ships the prop contract + visual treatment.
+//
+// Session 160 — David iPhone QA Finding 2 partial reversal of session 159
+// Q3: admin reaches /admin DIRECTLY via the Profile button instead of
+// bouncing through /me. Routing matrix:
+//   - guest                  → /login   (CircleUser glyph)
+//   - authed admin           → /admin   (CircleUser glyph OR initials if
+//                                        admin also has shoppers row)
+//   - authed vendor/shopper  → /me      (initials when shoppers row exists,
+//                                        CircleUser glyph otherwise)
+// Session 159 Q3 routed all-authed users to /me; admin reached /admin via
+// a second tap in /me's role-aware links. David's call after iPhone QA:
+// admins ARE the admin destination's primary occupant — direct routing
+// preserves session 114's "rightmost = role-specialty when present" rule
+// in spirit, just demotes admin's role-specialty from a BottomNav tab
+// slot to the Profile-button destination instead.
+//
+// Initials rendering UNCHANGED — initials still render only when shoppers
+// row exists (admin who claimed a handle still shows initials + green bg
+// + tap routes /admin; admin without shoppers row shows CircleUser glyph
+// + tap routes /admin). Geometry pulses on auth state are preserved
+// per session 159's existing protection.
 
 "use client";
 
@@ -45,6 +66,7 @@ import { useRouter } from "next/navigation";
 import { CircleUser } from "lucide-react";
 import { v1, v2, FONT_SYS } from "@/lib/tokens";
 import { useShopperAuth } from "@/lib/useShopperAuth";
+import { useUserRole } from "@/lib/useUserRole";
 
 interface MastheadProfileButtonProps {
   /**
@@ -74,18 +96,35 @@ export default function MastheadProfileButton({
 }: MastheadProfileButtonProps = {}) {
   const router       = useRouter();
   const auth         = useShopperAuth();
+  const roleState    = useUserRole();
   // Explicit prop wins (Review Board fixture support); otherwise derive
   // from useShopperAuth. Initials only render when a shoppers row exists;
   // a signed-in vendor/admin with no shoppers row sees the glyph variant
-  // but still routes to /me (auth-state branch below).
+  // but still routes to the role-appropriate destination via the branch
+  // below.
   const effectiveInitials = authedInitials ?? auth.shopper?.initials ?? null;
   const isAuthed   = !!authedInitials || auth.isAuthed;
+  // Session 160 — admin destination wins for authed admins; non-admin
+  // authed users route /me unchanged; guests route /login unchanged.
+  // roleState.isLoading races during initial mount; falling back to /me
+  // for the brief loading window is safe because /me itself role-routes
+  // forward (admins reach /admin via the in-page link). Final URL after
+  // role resolves is /admin.
+  const isAdmin    = roleState.role === "admin";
+  const destination =
+    !isAuthed    ? "/login"
+    : isAdmin    ? "/admin"
+    :              "/me";
+  const ariaLabel  =
+    !isAuthed    ? "Open profile"
+    : isAdmin    ? "Open admin"
+    :              "Open my account";
 
   return (
     <button
       type="button"
-      onClick={() => router.push(isAuthed ? "/me" : "/login")}
-      aria-label={isAuthed ? "Open my account" : "Open profile"}
+      onClick={() => router.push(destination)}
+      aria-label={ariaLabel}
       style={{
         width:           44,
         height:          44,
