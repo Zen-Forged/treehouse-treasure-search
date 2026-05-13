@@ -1,16 +1,17 @@
 // components/DistancePill.tsx
 // R17 Arc 1 — distance pill primitive (pure presentational).
 //
-// Reads as a postmark stamp paired with the postal eyebrow vocabulary
-// already in use on the cartographic find card + post-it booth eyebrow.
-// Visual locked at D6:
-//   - Background: paper-warm  (#ede6d5)
-//   - 1px ink-hairline border
+// Visual locked at D6, revised session 158 dial F to green-on-green
+// treatment matching the V1 mockup. Reads as a "distance is a brand
+// affordance" pill — soft green tint bg + saturated green text — rather
+// than a neutral postmark stamp.
+//   - Background: rgba(46,86,57,0.10) — translucent v2.accent.green
+//   - No border — solid color is the only signal
 //   - 999px radius (full pill)
 //   - 3px × 10px padding
-//   - sys-font 10px / 700 weight / 0.12em letter-spacing
+//   - Inter 10px / 700 weight / 0.12em letter-spacing
 //   - text-transform: uppercase
-//   - color: ink-muted
+//   - color: v2.accent.green
 //
 // Copy locked at D7: `"X.Y MI"` minimal — Frame α. One decimal, "MI"
 // suffix in small-caps. No glyph (D6) — pill stays decorative (D8).
@@ -35,8 +36,7 @@ export default function DistancePill({ miles }: DistancePillProps) {
     <span
       style={{
         display:        "inline-block",
-        background:     v2.surface.warm,
-        border:         `1px solid ${v2.border.light}`,
+        background:     "rgba(46,86,57,0.10)",
         borderRadius:   999,
         padding:        "3px 10px",
         fontFamily:     FONT_INTER,
@@ -44,7 +44,7 @@ export default function DistancePill({ miles }: DistancePillProps) {
         fontWeight:     700,
         letterSpacing:  "0.12em",
         textTransform:  "uppercase",
-        color:          v2.text.muted,
+        color:          v2.accent.green,
         whiteSpace:     "nowrap",
         lineHeight:     1.2,
       }}

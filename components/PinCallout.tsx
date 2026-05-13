@@ -136,6 +136,8 @@ export default function PinCallout({
   // Session 158 dial B — non-saved copy "X finds" → "X fresh finds" per QA.
   // Saved-state copy unchanged ("X saved finds") since David didn't flag it
   // and the lattice semantic (saved = user's, fresh = mall inventory) holds.
+  // Dial F — stat label color v2.text.muted → v2.accent.green so the entire
+  // statline reads in the brand green (number + label visually unified).
   const statLabel = usesSaved ? "saved finds" : "fresh finds";
   const statLine = (
     <div
@@ -143,7 +145,7 @@ export default function PinCallout({
         fontFamily: FONT_CORMORANT,
         fontStyle:  "italic",
         fontSize:   14,
-        color:      v2.text.muted,
+        color:      v2.accent.green,
         lineHeight: 1.3,
       }}
     >
