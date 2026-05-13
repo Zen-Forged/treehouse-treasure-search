@@ -89,7 +89,10 @@ import { readFindContext, getPostCache, setPostCache, writeFindContext, getVendo
 import BottomNav from "@/components/BottomNav";
 import StickyMasthead from "@/components/StickyMasthead";
 import PhotoLightbox from "@/components/PhotoLightbox";
-import LocationActions from "@/components/LocationActions";
+// LocationActions retired from /find/[id] in session 157 Review Board Find #1
+// ("Take Trip" CTA replaced by "Save the Find" button). Component still
+// shipped + consumed by /shelf/[slug] and /map's PinCallout — import line
+// retires only here.
 import MastheadPaperAirplane from "@/components/MastheadPaperAirplane";
 import ShareSheet from "@/components/ShareSheet";
 import HomeFeedTile from "@/components/v2/HomeFeedTile";
@@ -339,18 +342,58 @@ function ShelfSection({
 
   return (
     <div style={{ marginBottom: 32 }}>
+      {/* Session 157 Review Board Find #6 — header row becomes flex
+          space-between: "More from this booth…" eyebrow on left,
+          right-aligned "Visit Booth →" link relocated here from the
+          cartographic eyebrow above per David: "Move Visit Booth section
+          to the same line as 'More from this booth…'". Link inherits the
+          16px Cormorant italic from the header (matches sibling on left)
+          + weight 500 + v2.accent.green to read as the deliberate
+          affordance. Gated on vendorSlug — null vendor means no booth
+          to visit so the right slot collapses. */}
       <div
         style={{
           paddingLeft: 22,
           paddingRight: 22,
           marginBottom: 14,
-          fontFamily: FONT_CORMORANT,
-          fontStyle: "italic",
-          fontSize: 16,
-          color: v2.text.muted,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
         }}
       >
-        More from this booth…
+        <div
+          style={{
+            fontFamily: FONT_CORMORANT,
+            fontStyle: "italic",
+            fontSize: 16,
+            color: v2.text.muted,
+          }}
+        >
+          More from this booth…
+        </div>
+        {vendorSlug && (
+          <Link
+            href={`/shelf/${vendorSlug}`}
+            style={{
+              display:        "inline-flex",
+              alignItems:     "center",
+              gap:            2,
+              fontFamily:     FONT_CORMORANT,
+              fontStyle:      "italic",
+              fontSize:       16,
+              fontWeight:     500,
+              color:          v2.accent.green,
+              lineHeight:     1.4,
+              textDecoration: "none",
+              whiteSpace:     "nowrap",
+              WebkitTapHighlightColor: "transparent",
+            }}
+          >
+            Visit Booth
+            <ChevronRight size={16} strokeWidth={2} aria-hidden />
+          </Link>
+        )}
       </div>
       <div
         ref={stripRef}
@@ -1064,9 +1107,11 @@ export default function FindDetailPage() {
   const mallName    = post?.mall?.name ?? null;
   const mallCity    = post?.mall?.city ?? null;
   const mallState   = post?.mall?.state ?? null;
-  const mallSlug    = post?.mall?.slug ?? null;
-  const mallLat     = post?.mall?.latitude ?? null;
-  const mallLng     = post?.mall?.longitude ?? null;
+  // Session 157 — mallSlug / mallLat / mallLng vars retired alongside the
+  // LocationActions render (Review Board Find #1). They were only consumed
+  // as that component's props. SELECT-side enrichment of mall.latitude /
+  // mall.longitude on lib/posts.ts stays as substrate for other surfaces
+  // that still consume LocationActions; only this page stopped reading them.
   const price       = post?.price_asking;
   const showSoldBody   = !!post && isSold && !isMyPost;
   const showNormalBody = !!post && !showSoldBody;
@@ -1266,69 +1311,94 @@ export default function FindDetailPage() {
                 Session 144 iPhone QA: bg aligned to /shelf BoothPage post-it
                 stamp value (v2.surface.card #FFFCF5) per David's "consistency
                 let's align to the values on /shelf" call. Was v1.postit
-                #fefae8 (warmer cream) since session 81's v1.postit dial. */}
-            {post && boothNumber && (
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: -14,
-                  right: 4,
-                  width: 92,
-                  minHeight: 92,
-                  background: v2.surface.card,
-                  transform: "rotate(6deg)",
-                  transformOrigin: "bottom right",
-                  boxShadow: `0 6px 14px rgba(42,26,10,0.28), 0 0 0 0.5px rgba(42,26,10,0.16)`,
-                  padding: "14px 8px 10px",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <div
-                  aria-hidden="true"
-                  style={{
-                    position: "absolute",
-                    top: -4,
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: "rgba(42,26,10,0.72)",
-                    boxShadow: `inset 0 0 0 2px rgba(42,26,10,0.55), 0 1px 2px rgba(42,26,10,0.35)`,
-                  }}
-                />
-                <div
-                  style={{
-                    fontFamily: FONT_SYS,
-                    fontSize: 9,
-                    fontWeight: 700,
-                    color: v1.green,
-                    letterSpacing: "0.12em",
-                    textTransform: "uppercase",
-                    lineHeight: 1,
-                    marginBottom: 6,
-                    textAlign: "center",
-                  }}
+                #fefae8 (warmer cream) since session 81's v1.postit dial.
+                Session 157 Review Board Booth #2 — post-it tap routes to
+                /shelf/[vendorSlug] when vendorSlug exists. David: "If
+                someone clicks on the Post-it note it should go to the
+                booth /shelf of the vendor." Wraps in Next.js Link when
+                we have a slug; falls back to plain div otherwise (no
+                navigation target). The cardInner Link wrapper below
+                the cartographic block still keeps card-tap routing in
+                parallel — post-it just adds a more visible affordance
+                anchored on the booth-identity stamp itself. */}
+            {post && boothNumber && (() => {
+              const postItStyle: React.CSSProperties = {
+                position: "absolute",
+                bottom: -14,
+                right: 4,
+                width: 92,
+                minHeight: 92,
+                background: v2.surface.card,
+                transform: "rotate(6deg)",
+                transformOrigin: "bottom right",
+                boxShadow: `0 6px 14px rgba(42,26,10,0.28), 0 0 0 0.5px rgba(42,26,10,0.16)`,
+                padding: "14px 8px 10px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: vendorSlug ? "pointer" : "default",
+                textDecoration: "none",
+                color: "inherit",
+                WebkitTapHighlightColor: "transparent",
+              };
+              const postItInner = (
+                <>
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      top: -4,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background: "rgba(42,26,10,0.72)",
+                      boxShadow: `inset 0 0 0 2px rgba(42,26,10,0.55), 0 1px 2px rgba(42,26,10,0.35)`,
+                    }}
+                  />
+                  <div
+                    style={{
+                      fontFamily: FONT_SYS,
+                      fontSize: 9,
+                      fontWeight: 700,
+                      color: v1.green,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      lineHeight: 1,
+                      marginBottom: 6,
+                      textAlign: "center",
+                    }}
+                  >
+                    Booth
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: FONT_NUMERAL,
+                      fontSize: boothNumeralSize(boothNumber),
+                      fontWeight: 500,
+                      color: v1.green,
+                      letterSpacing: "-0.01em",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {boothNumber}
+                  </div>
+                </>
+              );
+              return vendorSlug ? (
+                <Link
+                  href={`/shelf/${vendorSlug}`}
+                  aria-label={`Visit booth shelf for ${vendorName ?? "this vendor"}`}
+                  style={postItStyle}
                 >
-                  Booth
-                </div>
-                <div
-                  style={{
-                    fontFamily: FONT_NUMERAL,
-                    fontSize: boothNumeralSize(boothNumber),
-                    fontWeight: 500,
-                    color: v1.green,
-                    letterSpacing: "-0.01em",
-                    lineHeight: 1,
-                  }}
-                >
-                  {boothNumber}
-                </div>
-              </div>
-            )}
+                  {postItInner}
+                </Link>
+              ) : (
+                <div style={postItStyle}>{postItInner}</div>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -1498,15 +1568,86 @@ export default function FindDetailPage() {
         </div>
       )}
 
-      {/* Divider (v1.1j plain hairline, diamond retired) */}
+      {/* Session 157 Review Board Find #1 + #2 — David: "I want each page
+          to have a specific action to take. So on the find page I want
+          to change the 'Take Trip' to 'Save the Find'. Button should
+          change saved state (moved to saved and icon filled)" +
+          "replace the hairline divider under quotes with the 'Save the
+          Find' button."
+
+          The plain v1.1j hairline divider retires. In its slot — the
+          page's primary action CTA. Find detail's job is to deliver the
+          find; the canonical action is to capture it. "Take Trip" CTA
+          (R17 LocationActions) retires from this surface — its job moves
+          out of Find detail entirely (still rendered on /shelf and /map
+          via their LocationActions consumers, which are unchanged).
+
+          Visual contract mirrors LocationActions Take Trip exactly:
+          full-width, v2.accent.greenMid bg, 10px radius, FONT_INTER 11px
+          uppercase 0.12em letterSpacing weight 600 — primary CTA voice
+          already established on the project. Saved state flips icon
+          fill (outline → filled, both white against the green bg) +
+          label ("Save the Find" → "Saved"). Same handleToggleSave
+          callback as the corner FlagGlyph bubble, so both affordances
+          stay in sync via useShopperSaves.
+
+          Conditional render preserves the hairline's gate (vendor or
+          booth number must exist for the find to belong to something
+          saveable). */}
       {(vendorName || boothNumber) && (
         <div
           style={{
-            padding: "0 44px",
+            padding: "0 22px",
             marginBottom: 22,
           }}
         >
-          <div style={{ width: "100%", height: 1, background: v1.inkHairline }} />
+          <button
+            type="button"
+            onClick={handleToggleSave}
+            aria-label={isSaved ? "Unsave this find" : "Save this find"}
+            style={{
+              width:          "100%",
+              // Session 157 Review Board Find #1 — invert color pattern on
+              // saved state. Unsaved: solid green bg + white text/icon
+              // (primary CTA voice). Saved: white bg (matches nav bar bg =
+              // v2.surface.input #FFFCF5) + green text + filled green icon
+              // + 1px green border so the button retains visual weight
+              // against the surrounding paper-cream body. David —
+              // "BG/Text: Green/White to White/Green. The 'white I'm
+              // referring to should be the same color as the bg of the
+              // nav bar."
+              background:     isSaved ? v2.surface.input : v2.accent.greenMid,
+              color:          isSaved ? v2.accent.greenMid : "#fff",
+              border:         isSaved ? `1px solid ${v2.accent.greenMid}` : "none",
+              borderRadius:   10,
+              // 1px border on saved subtracts from total height; subtract
+              // 1px of padding so total button footprint stays consistent
+              // across the two states.
+              padding:        isSaved ? 9 : 10,
+              fontFamily:     FONT_INTER,
+              fontSize:       11,
+              fontWeight:     600,
+              letterSpacing:  "0.12em",
+              textTransform:  "uppercase",
+              display:        "flex",
+              alignItems:     "center",
+              justifyContent: "center",
+              gap:            8,
+              cursor:         "pointer",
+              WebkitTapHighlightColor: "transparent",
+              transition:     "background 0.15s ease, color 0.15s ease",
+            }}
+          >
+            <FlagGlyph
+              size={14}
+              strokeWidth={2.0}
+              style={{
+                color: isSaved ? v2.accent.greenMid : "#fff",
+                fill:  isSaved ? v2.accent.greenMid : "none",
+              }}
+            />
+            {isSaved ? "Saved" : "Save the Find"}
+          </button>
         </div>
       )}
 
@@ -1521,73 +1662,32 @@ export default function FindDetailPage() {
             marginBottom: 32,
           }}
         >
-          {/* Session 134 — eyebrow row carries the italic Lora eyebrow with
-              a leading <PiStorefront> glyph + an italic Lora "Enter Booth →"
-              link in green, right-aligned. Reverses R17 Arc 2 D18 (session
-              117 + session 119): DistancePill retired from this surface. The
-              card BELOW this row (vendor + booth + mall block) now exists
-              to be entered, not measured — the explicit affordance lives in
-              the eyebrow as a visual sibling of the descriptor on the left.
-              Distance + native-maps deep-link both stay reachable via the
-              full-width <LocationActions> "Take Trip" CTA below the card.
-
-              alignItems: center (was baseline, when both children were
-              text-only) — both children now carry icons that need vertical
-              centering rather than baseline alignment.
-
-              Link renders only when vendorSlug exists (otherwise there is
-              no booth to enter). The cardInner Link wrapper below keeps
-              card-tap routing to /shelf/[slug] in parallel; "Enter Booth"
-              eyebrow is the explicit affordance, the card-tap is a wider
-              hit target. iPhone QA will reveal whether the dual affordance
-              feels redundant. */}
+          {/* Session 157 Review Board Find #6 — eyebrow row simplifies to
+              the left-side descriptor only. "Visit Booth →" link relocated
+              to the "More from this booth…" carousel section header below
+              (ShelfSection). The cartographic block above the card now
+              just identifies the place; the affordance to enter the booth
+              sits where the user is browsing the booth's other finds —
+              semantically closer to the action. The cardInner Link wrapper
+              below still keeps card-tap routing to /shelf/[slug] as a
+              wider hit target. */}
           <div
             style={{
-              display:        "flex",
+              display:        "inline-flex",
               alignItems:     "center",
-              justifyContent: "space-between",
-              gap:            8,
+              gap:            6,
               marginBottom:   8,
               paddingLeft:    2,
               paddingRight:   2,
+              fontFamily:     FONT_CORMORANT,
+              fontStyle:      "italic",
+              fontSize:       16,
+              color:          v2.text.secondary,
+              lineHeight:     1.4,
             }}
           >
-            <div
-              style={{
-                display:    "inline-flex",
-                alignItems: "center",
-                gap:        6,
-                fontFamily: FONT_CORMORANT,
-                fontStyle:  "italic",
-                fontSize:   14,
-                color:      v2.text.secondary,
-                lineHeight: 1.4,
-              }}
-            >
-              <PiStorefront size={14} aria-hidden style={{ flexShrink: 0 }} />
-              Purchase this item at
-            </div>
-            {vendorSlug && (
-              <Link
-                href={`/shelf/${vendorSlug}`}
-                style={{
-                  display:        "inline-flex",
-                  alignItems:     "center",
-                  gap:            2,
-                  fontFamily:     FONT_CORMORANT,
-                  fontStyle:      "italic",
-                  fontSize:       14,
-                  color:          v2.accent.green,
-                  lineHeight:     1.4,
-                  textDecoration: "none",
-                  whiteSpace:     "nowrap",
-                  WebkitTapHighlightColor: "transparent",
-                }}
-              >
-                Enter Booth
-                <ChevronRight size={14} strokeWidth={2} aria-hidden />
-              </Link>
-            )}
+            <PiStorefront size={16} aria-hidden style={{ flexShrink: 0 }} />
+            Purchase this item at
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
             {(vendorName || boothNumber) && (() => {
@@ -1738,17 +1838,17 @@ export default function FindDetailPage() {
                 cardInner
               );
             })()}
-            {/* R17 Arc 2 D19 — twin-button row below the cartographic card.
-                Renders nothing for guest / denied / mall-coords-missing
-                per <LocationActions> internal null-passthrough. */}
-            <LocationActions
-              mallSlug={mallSlug}
-              mallLat={mallLat}
-              mallLng={mallLng}
-              surface="find"
-              postId={post?.id ?? null}
-              vendorId={post?.vendor_id ?? null}
-            />
+            {/* Session 157 Review Board Find #1 — LocationActions
+                "Take Trip" CTA retires from /find/[id]. David's call:
+                "I want each page to have a specific action to take. So
+                on the find page I want to change the 'Take Trip' to
+                'Save the Find'." The Save the Find button now lives in
+                the slot where the hairline divider used to be (above
+                the cartographic block). LocationActions component stays
+                shipped for /shelf/[slug] + /map's PinCallout consumers
+                — only this page's render retires. Reverses R17 Arc 2
+                D19 + the session-134 Take-Trip-as-primary-CTA dial,
+                surfaced per feedback_surface_locked_design_reversals. */}
           </div>
         </div>
       )}

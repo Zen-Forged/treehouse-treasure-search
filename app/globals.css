@@ -116,14 +116,19 @@
   --th-v2-bg-soft:       #F1EBDD;
   --th-v2-surface-card:  #FFFCF5;
   --th-v2-surface-warm:  #FBF6EA;
-  /* Review Board Finding 6C (session 153) — cooler recessed-well surface
-     for input fields system-wide. Distinct from surface.card (so SearchBar
-     reads as a clear input not a sibling card when stacked inside
-     RichPostcardMallCard) and from bg.main (subtle inset versus the
-     surrounding page chrome). Applied to <input>, <textarea>, and
-     form-field <button> bg across SearchBar + ShareSheet email + form
-     primitives. */
-  --th-v2-surface-input: #F0EBE0;
+  /* Session 153 Review Board Finding 6C introduced this at #F0EBE0 as a
+     cooler "recessed well" bg to distinguish input fields from card
+     surfaces — specifically so SearchBar inside the (then-mounted)
+     RichPostcardMallCard read as a clear input not a sibling card.
+     Session 155 retired RichPostcardMallCard; that distinction-rationale
+     no longer holds.
+     Session 157 Review Board #2 — David: "Change input text-fields all
+     to #FFFCF5 (this changes the variable)." Value flips from #F0EBE0
+     to #FFFCF5 (same as v2.surface.card). All input consumers update
+     via the CSS var without per-callsite edits — SearchBar + ShareSheet
+     email + every FormField primitive (login, vendor-request, post/edit
+     fields, setup) inherit the lighter paper bg in a single token edit. */
+  --th-v2-surface-input: #FFFCF5;
 
   --th-v2-text-primary:   #2B211A;
   /* Review Board Finding 5A (session 153) — secondary text darken

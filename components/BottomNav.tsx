@@ -57,6 +57,29 @@
 //                              same reason. Tab key remains "home" + href "/"
 //                              (NavTab type unchanged) — the rename is
 //                              user-facing only, no callsite churn.
+//   Session 157:               Home · Saved · [Booth | Admin] · Profile
+//                              (3-4 tabs, role-conditional middle slot).
+//                              Profile relocates from masthead-left (session
+//                              109 + 120) to BottomNav far-right per David's
+//                              "we've been refining and I think this makes
+//                              sense now" ask. Auth chrome relocation #4
+//                              across project history (≤87 right slot → 90
+//                              Profile tab → 109 masthead-left → 120 masthead-
+//                              left Home-only → 157 BottomNav far-right).
+//                              The reason this time is different from session
+//                              90's: Map is no longer a tab (drawer chrome +
+//                              strip toggle replaced it session 155); Variant
+//                              Z floating pill exists (session 155 D6);
+//                              Profile makes sense as a peer of Home / Saved /
+//                              role-tab. Saved still holds the stable 2nd
+//                              position; role-specialty slot (Booth/Admin)
+//                              moves to second-from-rightmost when present,
+//                              Profile takes far-right. Profile uses Lucide
+//                              CircleUser (same icon previously in masthead-
+//                              left bubble) so the visual identity carries.
+//                              Routes to /me when authed (role !== "none"),
+//                              /login when guest — same routing logic as the
+//                              retired MastheadProfileButton.
 //
 // Why drop Map (session 110, REVERSED session 121): the two paths to /map
 // (BottomNav tab + tap the postcard mall card on Home/Saved) felt
@@ -95,7 +118,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Shield } from "lucide-react";
+import { CircleUser, Shield } from "lucide-react";
 import { MdOutlineExplore } from "react-icons/md";
 import { PiLeaf, PiStorefront } from "react-icons/pi";
 import { FONT_NUMERAL, v2 } from "@/lib/tokens";
@@ -112,7 +135,11 @@ import { getSession, onAuthChange, detectUserRole, type UserRole } from "@/lib/a
 // "admin" added session 114 for the role-conditional Admin tab (admins
 // only). active="admin" should be passed by /admin consumers if BottomNav
 // is ever rendered there; today /admin doesn't render BottomNav.
-export type NavTab = "home" | "map" | "flagged" | "booth" | "admin" | "login" | null;
+// "profile" added session 157 — Profile tab at BottomNav far right (auth
+// chrome relocation #4). active="profile" passed by /me or /login consumers
+// if BottomNav is ever rendered there; today neither mounts BottomNav so
+// active state is decorative-only for the Profile tab.
+export type NavTab = "home" | "map" | "flagged" | "booth" | "admin" | "login" | "profile" | null;
 
 interface BottomNavProps {
   active?: NavTab;
@@ -174,17 +201,26 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     badge?: boolean;
   };
 
-  // Tab order: Explore → Saved → [Booth | Admin, role-conditional].
+  // Tab order: Explore → Saved → [Booth | Admin, role-conditional] → Profile.
   // Saved holds the stable 2nd position so muscle memory transfers across
-  // role transitions. The role tab is the "specialty rightmost" when present
-  // — whichever surface the role unlocks: vendor → Booth (manage their work),
-  // admin → Admin (platform controls). Guest/shopper sees 2-tab pill;
-  // vendor + admin see 3-tab pill with the role-tab rightmost.
+  // role transitions. The role tab is the "specialty" slot when present —
+  // whichever surface the role unlocks: vendor → Booth (manage their work),
+  // admin → Admin (platform controls). Session 157 — Profile takes the far-
+  // right slot universally; role-tab when present sits at second-from-
+  // rightmost (between Saved and Profile). Guest/shopper sees 3-tab pill;
+  // vendor + admin see 4-tab pill with the role-tab in the middle.
   //
   // Session 155 — Map tab retires (D6 lock). The map drawer is now a Home
   // chrome affordance disclosed by <MallStrip>'s chevron, not a destination.
   // Reverses R18 (session 121) Map tab reinstatement. PiMapPin import retires
   // alongside.
+
+  // Session 157 — Profile routes to /me when the user is authed (any role
+  // including shopper), /login when guest. Mirrors the routing logic of the
+  // retired MastheadProfileButton.
+  const isAuthed = role !== "none";
+  const profileHref = isAuthed ? "/me" : "/login";
+
   const tabs: TabDef[] = [
     {
       key: "home", label: "Explore", href: "/",
@@ -202,16 +238,27 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
       key: "admin" as NavTab, label: "Admin", href: "/admin",
       icon: <Shield size={21} strokeWidth={2.0} />,
     }] : []),
+    {
+      key: "profile" as NavTab, label: "Profile", href: profileHref,
+      // Session 157 dial — size 22 → 20 per iPhone QA: glyph reads visually
+      // heavier than Saved (PiLeaf 21) + Explore (MdOutlineExplore 22) at
+      // matched numerical size because Lucide's CircleUser fills more of its
+      // bounding box than the others. 20 brings perceived weight into line.
+      icon: <CircleUser size={20} strokeWidth={1.6} />,
+    },
   ];
 
   // Session 155 — Variant Z: compact center-floating pill (D6 lock).
-  // Bg rgba + backdrop-blur reverses the session-132 frosted-glass retire
-  // for THIS surface specifically because (a) the pill no longer spans
-  // viewport width so content scrolling beneath only crosses behind the
-  // pill's narrow footprint, not the entire bottom of the page; (b) the
-  // pill needs to float above content (not seal the bottom) so light
-  // translucence helps it read as floating chrome, not as a sealed bottom
-  // bar.
+  //
+  // Session 157 Review Board Saved #1 — bg color migrates from
+  // rgba(247,243,235,0.92) (translucent v2.bg.main) to the v2.surface.input
+  // variable (#FFFCF5 as of Review Board #2 token swap). David —
+  // "change bg color of nav bar to match the field input variable #FFFCF5."
+  // Effect: nav bar now reads as the same surface tier as input fields +
+  // card surfaces — visual unity across discoverable surfaces. Solid value
+  // retires the prior translucent + backdrop-blur "floating glass" effect;
+  // floating identity now carried by the pill's elevated shadow + radius
+  // + bottom offset alone, not surface translucence.
   const navStyle: React.CSSProperties = {
     position: "fixed",
     // Session 156 — David iPhone QA: "add more padding under the nav bar so
@@ -220,9 +267,7 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     bottom: "max(22px, calc(env(safe-area-inset-bottom, 0px) + 22px))",
     left: "50%", transform: "translateX(-50%)",
     zIndex: 100,
-    background: "rgba(247,243,235,0.92)",
-    backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
+    background: v2.surface.input,
     border: "1px solid rgba(42,26,10,0.10)",
     borderRadius: 24,
     boxShadow: "0 6px 18px rgba(0,0,0,0.08)",
@@ -247,49 +292,91 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
               // flex: 1 retires — pill is intrinsic width; each tab sizes to
               // its icon + label. gap on parent nav handles spacing.
               display: "flex", flexDirection: "column", alignItems: "center",
-              justifyContent: "center", gap: 4, padding: 0,
+              justifyContent: "center", gap: 0, padding: 0,
               background: "none", border: "none", cursor: "pointer",
               color: labelColor,
               position: "relative", transition: "color 0.15s",
               WebkitTapHighlightColor: "transparent",
             }}
           >
-            <div style={{
-              position: "relative", display: "flex", alignItems: "center", justifyContent: "center",
-              width: 44, height: 28, borderRadius: 14,
-              background: isActive ? C.greenLight : "transparent",
-              color: iconColor,
-              transition: "background 0.18s, color 0.15s",
-            }}>
-              {tab.icon}
-              {showBadge && (
-                // R10 session 107 — TNR numeral on the green pill per D4.
-                // Pill geometry: session 89 baseline (20×20+, 10px radius);
-                // session 154 bumped to 24×22+, 11px radius + font 12 → 13 so
-                // 2-digit save counts ("47", "85") read literally instead of
-                // clipping to "9+" (David's session-154 chrome ask, item 3).
-                // Green bg, paper-cream stroke retired.
-                <div style={{
-                  position: "absolute", top: -6, right: -6,
-                  minWidth: 24, height: 22, paddingLeft: 5, paddingRight: 5,
-                  borderRadius: 11, background: C.green,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontFamily: FONT_NUMERAL,
-                  fontSize: 13, fontWeight: 600, color: "#fff",
-                  lineHeight: 1, letterSpacing: "-0.01em",
-                  boxSizing: "border-box", whiteSpace: "nowrap",
-                }}>
-                  {badgeLabel(flaggedCount)}
-                </div>
-              )}
+            {/* Session 157 — active state wraps BOTH icon AND label in a
+                single inner pill (David's Item 1 confirm). Previously only
+                the icon container carried the green-light bg at 44×28; the
+                label sat unboxed beneath. New shape: single column-flex
+                wrapper that gains horizontal+vertical padding + bg + radius
+                on active. Both icon AND label flip to C.green via the
+                button's color cascade. Inactive tab footprint is intrinsic
+                (no padding, no bg) so the only visual change for inactive
+                tabs is the icon's bg-pill retiring — same vocabulary, just
+                relocated to the wrapping pill on active. */}
+            <div
+              style={{
+                display: "flex", flexDirection: "column", alignItems: "center",
+                // Session 157 Review Board #1 — gap 4 → 5 per David's
+                // dial after the height: 22 anchor (commit 7a691bd) closed
+                // the icon-baseline mismatch. With baselines aligned across
+                // tabs, the slightly wider icon→label gap reads as
+                // intentional breathing room rather than chrome density.
+                gap: 5,
+                padding: isActive ? "5px 12px" : "0",
+                borderRadius: 14,
+                background: isActive ? C.greenLight : "transparent",
+                transition: "background 0.18s ease, padding 0.18s ease",
+              }}
+            >
+              <div style={{
+                position: "relative", display: "flex", alignItems: "center", justifyContent: "center",
+                // Session 157 Review Board #1 — anchor row height at 22 (max
+                // icon size in the row: MdOutlineExplore 22). Without this,
+                // each tab's column height varied by ±1-2px depending on icon
+                // (CircleUser 20 vs PiLeaf 21 vs MdOutlineExplore 22), shifting
+                // the label below by the same delta. Fixed height 22 means
+                // all labels sit at the exact same y position. David —
+                // "'Profile' text is not aligned with 'Saved'."
+                height: 22,
+                color: iconColor,
+                transition: "color 0.15s",
+              }}>
+                {tab.icon}
+                {showBadge && (
+                  // R10 session 107 — TNR numeral on the green pill per D4.
+                  // Pill geometry: session 89 baseline (20×20+, 10px radius);
+                  // session 154 bumped to 24×22+, 11px radius + font 12 → 13 so
+                  // 2-digit save counts ("47", "85") read literally instead of
+                  // clipping to "9+" (David's session-154 chrome ask, item 3).
+                  // Green bg, paper-cream stroke retired.
+                  <div style={{
+                    // Session 157 Review Board Profile #1 — David supplied
+                    // exact style spec verbatim: "position: absolute;
+                    // top: -0px; right: -2px; ... border-radius: 20px;".
+                    // Shipped as-given per feedback_user_provided_verbatim_values_ship_as_is.
+                    // Visual effect: badge centers more over the leaf icon
+                    // instead of floating off the top-right corner. Note —
+                    // borderRadius 20 caps at height/2 = 11 since the badge
+                    // height is 22, so the rendered curve is identical to
+                    // borderRadius 11; David's 20 captured verbatim
+                    // anyway for spec-fidelity.
+                    position: "absolute", top: 0, right: -2,
+                    minWidth: 24, height: 22, paddingLeft: 5, paddingRight: 5,
+                    borderRadius: 20, background: C.green,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontFamily: FONT_NUMERAL,
+                    fontSize: 13, fontWeight: 600, color: "#fff",
+                    lineHeight: 1, letterSpacing: "-0.01em",
+                    boxSizing: "border-box", whiteSpace: "nowrap",
+                  }}>
+                    {badgeLabel(flaggedCount)}
+                  </div>
+                )}
+              </div>
+              <span style={{
+                fontFamily: "system-ui, sans-serif",
+                fontSize: 10, fontWeight: isActive ? 600 : 400,
+                letterSpacing: "0.2px", lineHeight: 1, color: "inherit",
+              }}>
+                {tab.label}
+              </span>
             </div>
-            <span style={{
-              fontFamily: "system-ui, sans-serif",
-              fontSize: 10, fontWeight: isActive ? 600 : 400,
-              letterSpacing: "0.2px", lineHeight: 1, color: "inherit",
-            }}>
-              {tab.label}
-            </span>
           </button>
         );
       })}

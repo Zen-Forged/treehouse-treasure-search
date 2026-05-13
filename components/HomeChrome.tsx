@@ -31,8 +31,8 @@
 import * as React from "react";
 import MallStrip, { type MallStripScope } from "@/components/MallStrip";
 import MallMapDrawer from "@/components/MallMapDrawer";
-import SearchBar from "@/components/SearchBar";
 import { track } from "@/lib/clientEvents";
+import { useMapDrawer } from "@/lib/useMapDrawer";
 import type { Mall } from "@/types/treehouse";
 import type { MallStats } from "@/lib/posts";
 
@@ -40,16 +40,6 @@ interface HomeChromeProps {
   malls:          Mall[];
   mallId:         string | null;
   onSetMallId:    (id: string | null) => void;
-  /**
-   * Initial value for the SearchBar (deep-linked ?q= URL state). Mirrors
-   * the prior <RichPostcardMallCard searchInitialQuery=...> contract.
-   */
-  searchInitialQuery: string;
-  /**
-   * Debounced (200ms inside SearchBar) onChange callback. Parent owns
-   * ?q= URL state + posts filter — same contract as the prior wiring.
-   */
-  onSearchChange: (next: string) => void;
   mallStats?:     Record<string, MallStats>;
   savedByMallId?: Record<string, number>;
 }
@@ -58,12 +48,15 @@ export default function HomeChrome({
   malls,
   mallId,
   onSetMallId,
-  searchInitialQuery,
-  onSearchChange,
   mallStats,
   savedByMallId,
 }: HomeChromeProps) {
-  const [drawerOpen, setDrawerOpen] = React.useState(false);
+  // Session 157 — drawer state lifted to MapDrawerProvider (app root) so
+  // (tabs) layout masthead can read drawerOpen for the back-button affordance
+  // when the drawer is expanded. Local useState retires; HomeChrome is now
+  // a consumer + setter, not the owner. Drawer mount is still here (only
+  // Home shows the drawer) but state crosses the layout boundary via context.
+  const { drawerOpen, closeDrawer, toggleDrawer } = useMapDrawer();
 
   // Derive strip's identity from the malls array + current mallId. When
   // mallId is null OR doesn't resolve to an active mall (stale id, mid-fetch),
@@ -87,24 +80,18 @@ export default function HomeChrome({
           track("home_strip_tapped", {
             mall_slug: selectedMall ? selectedMall.slug : "all-kentucky",
           });
-          setDrawerOpen((prev) => !prev);
+          toggleDrawer();
         }}
       />
 
-      {/* Standalone SearchBar row — pulled out of RichPostcardMallCard.
-          Sits inside page body (NOT sticky), scrolls away normally per D5.
-          Padding 12px top / 16px L+R / 4px bottom matches the existing
-          page padding rhythm. */}
-      <div style={{ padding: "12px 16px 4px" }}>
-        <SearchBar
-          initialQuery={searchInitialQuery}
-          onChange={onSearchChange}
-        />
-      </div>
+      {/* Session 157 — SearchBar render lifted out of HomeChrome into the
+          (tabs) layout. It now sits as fixed chrome between masthead and
+          MallStrip (always visible during scroll). Layout owns the URL
+          plumbing; Home page reads q from URL via useSearchParams. */}
 
       <MallMapDrawer
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={closeDrawer}
         malls={malls}
         selectedMallId={mallId}
         mallStats={mallStats}
@@ -112,7 +99,7 @@ export default function HomeChrome({
         onMallPick={(id) => {
           // Pin-commit: apply scope + close drawer + fire filter_applied.
           onSetMallId(id);
-          setDrawerOpen(false);
+          closeDrawer();
           const picked = malls.find((m) => m.id === id);
           track("filter_applied", {
             filter_type:  "mall",

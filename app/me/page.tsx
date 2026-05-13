@@ -114,6 +114,12 @@ export default function MePage() {
 
   // Hold a blank surface during the auth resolution + redirect window.
   // The auth-state useEffect above takes over once the state settles.
+  // Session 157 Review Board Saved #1 — BottomNav renders even during
+  // the loading/redirect window so the chrome stays consistent across
+  // /me visits regardless of auth state (David: "the nav bar should
+  // also be available on the profile page"). active="profile" pins
+  // the right-most tab highlight so muscle memory holds during the
+  // brief loading flicker.
   if (auth.isLoading || !auth.isAuthed || !auth.shopper) {
     return (
       <div
@@ -121,7 +127,9 @@ export default function MePage() {
           minHeight:  "100vh",
           background: v2.bg.main,
         }}
-      />
+      >
+        <BottomNav active="profile" flaggedCount={0} />
+      </div>
     );
   }
 
@@ -271,7 +279,11 @@ export default function MePage() {
         </button>
       </main>
 
-      <BottomNav active={null} flaggedCount={saves.ids.size} />
+      {/* Session 157 — active="profile" highlights the rightmost tab when
+          the user is on /me. The NavTab "profile" key was added when the
+          Profile tab moved from masthead-left to BottomNav far-right
+          (commit fd05bfd). */}
+      <BottomNav active="profile" flaggedCount={saves.ids.size} />
     </div>
   );
 }

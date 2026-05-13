@@ -98,14 +98,18 @@ const WORDMARK_DEFAULT = (
 // Total masthead height = paddingTop + inner grid minHeight + paddingBottom.
 // paddingTop is max(14px, safe-area-inset-top); the rest is fixed. Session 94:
 // inner grid 50 → 90, so calc 63 → 103. Session 154: inner grid 90 → 72, so
-// calc 103 → 85. Session 156: hairline-on-scroll borderBottom retired (chrome
-// + strip read as one continuous component) — calc unchanged since the
-// retired border was 1px transparent at rest. Spacer matches.
+// calc 103 → 85. Session 157: calc 85 → 84 — session 156 reasoned that
+// retiring the hairline borderBottom didn't change visible height because
+// "the border was 1px transparent at rest." Wrong: a transparent 1px border
+// still occupies 1px of layout space. With the border gone, the visible
+// masthead bottom edge sits 1px ABOVE where the spacer + strip top expect
+// (= paddingTop + 72 + 12 = paddingTop + 84). Pre-session-156 the 85 was
+// correct (paddingTop + 72 + 12 + 1px border). Now 84 closes the seam.
 // Exported as the canonical SSOT for any future surface that needs to compute
 // layout against the masthead footprint (fixed overlays, scroll-snap targets,
 // etc.). The spacer inside this component already reserves the height for
 // content rendered after <StickyMasthead /> in the React tree.
-export const MASTHEAD_HEIGHT = "calc(max(14px, env(safe-area-inset-top, 14px)) + 85px)";
+export const MASTHEAD_HEIGHT = "calc(max(14px, env(safe-area-inset-top, 14px)) + 84px)";
 
 export default function StickyMasthead({
   left,

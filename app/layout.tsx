@@ -4,6 +4,7 @@ import { Cormorant_Garamond, Dancing_Script, Inter, Lora } from "next/font/googl
 import * as Sentry from "@sentry/nextjs";
 import "./globals.css";
 import { FindSessionProvider } from "@/hooks/useSession";
+import { MapDrawerProvider } from "@/lib/useMapDrawer";
 
 // DevAuthPanel is dev-only — never rendered in production
 const DevAuthPanel = process.env.NODE_ENV === "development"
@@ -121,8 +122,10 @@ export default function RootLayout({
           "pending v2 migration" signal until those Arcs ship. */}
       <body style={{ margin: 0, padding: 0, minHeight: "100vh", background: "#F7F3EB" }}>
         <FindSessionProvider>
-          {children}
-          <DevAuthPanel />
+          <MapDrawerProvider>
+            {children}
+            <DevAuthPanel />
+          </MapDrawerProvider>
         </FindSessionProvider>
       </body>
     </html>

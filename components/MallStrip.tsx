@@ -37,9 +37,10 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { PiLeaf, PiCaretDown } from "react-icons/pi";
+import { PiCaretDown } from "react-icons/pi";
 import { v2, FONT_LORA } from "@/lib/tokens";
 import { MASTHEAD_HEIGHT } from "./StickyMasthead";
+import PinGlyph from "./PinGlyph";
 import type { Mall } from "@/types/treehouse";
 
 // Same shape as RichPostcardMallCard's MallScope but trimmed to the fields
@@ -72,7 +73,22 @@ const NAME_FONT_MIN = 13;
 // Exported for <MallMapDrawer>'s top: MASTHEAD_HEIGHT + STRIP_HEIGHT calc
 // (session 155 D-Reversal-2 iteration 2 — drawer slides up to strip's bottom
 // edge, not masthead's bottom edge; strip stays sticky-visible above).
-export const STRIP_HEIGHT = 40;
+//
+// Session 157 — height 40 → 36 (T2 trim) per David's "Ship A + T3" call to
+// reclaim 4px of fixed-chrome real estate. Strip content (PinGlyph 14 + Lora
+// 16 + PiCaretDown 14) fits comfortably at 36px with vertical centering.
+export const STRIP_HEIGHT = 36;
+
+// Session 157 — search-bar-position V1 Variant A + T3 ship.
+// SearchBar lifts from in-page-flow inside HomeChrome to fixed positioning
+// at top: MASTHEAD_HEIGHT in the (tabs) layout. Total wrap height: 6 +
+// 44 + 6 = 56px (T1 trim — wrap padding 8/8 → 6/6). SearchBar primitive
+// itself is 44px tall (10/10 padding + 22 input + 2 border per
+// components/SearchBar.tsx wrapperStyle). Exported so MallStrip (and
+// MallMapDrawer) can compute their top: positions against the masthead +
+// search-bar stack now that the strip is no longer flush against the
+// masthead bottom edge.
+export const SEARCH_BAR_WRAP_HEIGHT = 56;
 const STRIP_PADDING = 18;
 const STRIP_GAP     = 10;
 
@@ -110,7 +126,9 @@ export default function MallStrip({ mall, isOpen, onTap }: MallStripProps) {
       aria-label={`${name} — ${isOpen ? "close map" : "open map"}`}
       style={{
         position:    "fixed",
-        top:         MASTHEAD_HEIGHT,
+        // Session 157 — strip sits BELOW the SearchBar row (which lives in
+        // the (tabs) layout as fixed chrome). Top: masthead + search wrap.
+        top:         `calc(${MASTHEAD_HEIGHT} + ${SEARCH_BAR_WRAP_HEIGHT}px)`,
         left:        "50%",
         transform:   "translateX(-50%)",
         width:       "100%",
@@ -144,7 +162,7 @@ export default function MallStrip({ mall, isOpen, onTap }: MallStripProps) {
           minWidth:   0, // Lets the name truncate inside flex
         }}
       >
-        <PiLeaf size={16} color={v2.text.secondary} aria-hidden="true" />
+        <PinGlyph size={14} color={v2.text.secondary} />
         <span
           ref={nameRef}
           style={{

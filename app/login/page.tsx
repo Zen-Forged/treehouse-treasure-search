@@ -53,6 +53,7 @@ import { isReviewMode } from "@/lib/reviewMode";
 import { supabase } from "@/lib/supabase";
 import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import FormField, { formInputStyle } from "@/components/FormField";
+import BottomNav from "@/components/BottomNav";
 import FormButton from "@/components/FormButton";
 import type { User } from "@supabase/supabase-js";
 import type { ReadonlyURLSearchParams } from "next/navigation";
@@ -476,7 +477,22 @@ function LoginInner() {
         flexDirection: "column",
       }}
     >
-      <header style={{ padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px", flexShrink: 0 }}>
+      {/* Session 157 Review Board Login #1 — header gains flex space-between
+          layout so the help affordance (Contact link) can sit at top-right
+          when BottomNav now floats at the bottom of /login. David: "Nav bar
+          needs to be added to this page. We'll need to move 'Need help?
+          Contact us' link." Bottom help link retires (was line 880-917);
+          help moves to a small PiQuestion icon in the masthead-right slot,
+          out of BottomNav's way and visible from any /login state. */}
+      <header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "max(18px, env(safe-area-inset-top, 18px)) 16px 14px",
+          flexShrink: 0,
+        }}
+      >
         <button
           onClick={() => {
             if (screen === "enter-code") {
@@ -507,6 +523,30 @@ function LoginInner() {
         >
           <ArrowLeft size={22} strokeWidth={1.6} style={{ color: v2.text.primary }} />
         </button>
+
+        {/* Help affordance — moved here from the bottom of the page in
+            session 157 Review Board Login #1. Icon-only PiQuestion link
+            (44×44 hit target, matching the back button geometry) so
+            the slot doesn't shift dimensions when /login transitions
+            between rendered states. */}
+        <Link
+          href="/contact"
+          aria-label="Need help? Contact us"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: v2.surface.warm,
+            border: `1px solid ${v2.border.light}`,
+            textDecoration: "none",
+            WebkitTapHighlightColor: "transparent",
+          }}
+        >
+          <PiQuestion size={22} style={{ color: v2.text.primary }} />
+        </Link>
       </header>
 
       <div
@@ -847,31 +887,20 @@ function LoginInner() {
           </AnimatePresence>
         </div>
 
-        {/* Review Board Finding 11B (session 153) — retire prominent
-            "Do you have a booth?" + Cormorant "Request a digital booth"
-            CTA. The /welcome screen handles new-vendor disambiguation
-            post-first-sign-in, so the prominent CTA on /login is
-            redundant. A minimal footer link remains for discoverability —
-            tiny Inter 11px italic v2.text.muted. */}
-        {renderState === "form" && screen === "enter-email" && (
-          <div style={{ textAlign: "center", marginTop: 22, padding: "0 4px" }}>
-            <Link
-              href="/vendor-request"
-              style={{
-                fontFamily: FONT_INTER,
-                fontStyle: "italic",
-                fontSize: 11,
-                color: v2.text.muted,
-                textDecoration: "underline",
-                textDecorationStyle: "dotted",
-                textDecorationColor: v2.text.muted,
-                textUnderlineOffset: 3,
-              }}
-            >
-              New here? Request a digital booth &rarr;
-            </Link>
-          </div>
-        )}
+        {/* Session 157 Review Board Login #2 — David: "Remove 'New here?...'
+            text as this is already part of the triage process."
+            Session-153 minimal footer link retires. /welcome already
+            handles new-vendor + new-shopper disambiguation post-first-
+            sign-in, and the /login screen ahead routes new vendors
+            through that triage anyway — the redundant discoverability
+            footer earned its retirement.
+
+            Reverses session 153 Review Board Finding 11B's minimal-
+            footer-as-vestigial-CTA per feedback_surface_locked_design_reversals.
+            Session 153 reasoning was "preserve discoverability without
+            visual real estate cost"; David's call now: the triage
+            process below already provides discoverability, so even the
+            minimal footer is redundant chrome. */}
       </div>
 
       {/* Sign-out — bottom of authed-cards screen */}
@@ -888,33 +917,18 @@ function LoginInner() {
         </div>
       )}
 
-      {/* Help footer — present on all rendered states (form / cards) */}
-      <div style={{ flexShrink: 0, padding: "10px 0 26px", textAlign: "center" }}>
-        <Link
-          href="/contact"
-          style={{
-            fontFamily: FONT_CORMORANT,
-            fontSize: 13,
-            color: v2.text.primary,
-            textDecoration: "none",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          <PiQuestion size={16} style={{ color: v2.text.muted }} />
-          <span
-            style={{
-              textDecoration: "underline",
-              textDecorationStyle: "dotted",
-              textDecorationColor: v2.text.muted,
-              textUnderlineOffset: 3,
-            }}
-          >
-            Need help? Contact us
-          </span>
-        </Link>
-      </div>
+      {/* Session 157 Review Board Login #1 — bottom Help footer retires;
+          contact affordance moved to masthead-right PiQuestion icon
+          (line above). BottomNav takes the bottom slot. */}
+
+      {/* BottomNav — added to /login per Review Board Login #1. active=
+          "profile" matches the Profile tab (which routes guests TO /login
+          and authed users TO /me), so the highlight reflects where the
+          user is in the BottomNav semantic flow. Padding-bottom on the
+          form body wrapper above (centered flex column with flex:1) means
+          BottomNav floats over content without overlapping inputs at
+          typical viewport heights. */}
+      <BottomNav active="profile" flaggedCount={0} />
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

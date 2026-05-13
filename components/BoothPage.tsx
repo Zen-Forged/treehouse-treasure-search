@@ -82,6 +82,7 @@ import {
 import PhotoLightbox from "@/components/PhotoLightbox";
 import BookmarkBoothBubble from "@/components/BookmarkBoothBubble";
 import HomeFeedTile from "@/components/v2/HomeFeedTile";
+import PinGlyph from "@/components/PinGlyph";
 import { writeFindContext, type FindRef } from "@/lib/findContext";
 import type { Post } from "@/types/treehouse";
 
@@ -466,22 +467,10 @@ export function BoothTitleBlock({
 // Mall block — small pin + mall name + dotted-underline address
 // ─────────────────────────────────────────────────────────────────────────────
 
-function PinGlyph({ size = 18 }: { size?: number }) {
-  // v2 Arc 4.3 — stroke + fill migrate v1.inkPrimary → v2.text.primary.
-  // Path geometry preserved as-is; Phosphor PiMapPin migration is a
-  // separate icon-vocabulary decision outside Q1 (a) token-swap scope.
-  return (
-    <svg width={size} height={size * (22 / 18)} viewBox="0 0 18 22" fill="none" aria-hidden="true">
-      <path
-        d="M9 1.2c-3.98 0-7.2 3.12-7.2 6.98 0 5.22 7.2 12.62 7.2 12.62s7.2-7.4 7.2-12.62C16.2 4.32 12.98 1.2 9 1.2z"
-        stroke={v2.text.primary}
-        strokeWidth="1.3"
-        fill="none"
-      />
-      <circle cx="9" cy="8.3" r="2" fill={v2.text.primary} />
-    </svg>
-  );
-}
+// PinGlyph extracted to components/PinGlyph.tsx at session 157 on its 2nd
+// consumer surface (MallStrip eyebrow). See PinGlyph.tsx for the extraction
+// rationale and the optional color prop that MallStrip uses to render in
+// the strip's muted v2.text.secondary tone.
 
 export function MallBlock({
   mallName,
@@ -919,27 +908,30 @@ export function WindowView({
 export function BoothCloser() {
   // v1.1j — hairline rule replaces diamond-flanked divider (diamond retired)
   // v2 Arc 4.2 — typography + colors migrate: FONT_LORA → FONT_CORMORANT,
-  // v1.inkMid → v2.text.secondary, v1.inkHairline → v2.border.light. Copy
-  // preserved verbatim per session 130 D7 ("make a purchase" closer).
+  // v1.inkMid → v2.text.secondary, v1.inkHairline → v2.border.light.
+  // Session 157 Review Board Booth #2 — internal hairline div retires +
+  // copy updates. David: "Change 'Save this booth...' text to say 'Thanks
+  // for visiting my booth. Bookmark it to stay updated as new finds land
+  // on the shelf, and visit the store in person when you're ready to
+  // purchase.' and remove hairline above. This should all read as one
+  // page." The Bookmark Booth button now sits ABOVE this closer (taking
+  // the visual divider role), and the closer text reads as a personal
+  // sign-off from the vendor. Reverses session 130 D7 closer copy +
+  // v1.1j hairline structure per feedback_surface_locked_design_reversals.
   return (
-    <>
-      <div style={{ padding: "28px 22px 20px" }}>
-        <div style={{ width: "100%", height: 1, background: v2.border.light }} />
-      </div>
-      <div
-        style={{
-          fontFamily: FONT_CORMORANT,
-          fontStyle: "italic",
-          fontSize: 16,
-          color: v2.text.secondary,
-          lineHeight: 1.5,
-          padding: "0 28px",
-          textAlign: "center",
-        }}
-      >
-        Save this booth to stay updated, or visit in person to make a purchase.
-      </div>
-    </>
+    <div
+      style={{
+        fontFamily: FONT_CORMORANT,
+        fontStyle: "italic",
+        fontSize: 16,
+        color: v2.text.secondary,
+        lineHeight: 1.5,
+        padding: "28px 28px 0",
+        textAlign: "center",
+      }}
+    >
+      Thanks for visiting my booth. Bookmark it to stay updated as new finds land on the shelf, and visit the store in person when you&rsquo;re ready to purchase.
+    </div>
   );
 }
 

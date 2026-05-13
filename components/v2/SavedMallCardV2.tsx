@@ -200,7 +200,7 @@ export default function SavedMallCardV2({
             cursor: "pointer",
           }}
         >
-          Get Directions
+          Find Your Way
           <svg
             width={12}
             height={12}

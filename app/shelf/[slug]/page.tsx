@@ -45,6 +45,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, Heart } from "lucide-react";
+import { PiBookmarkSimple, PiBookmarkSimpleFill } from "react-icons/pi";
 import { getVendorBySlug, getVendorPosts, getAllMalls } from "@/lib/posts";
 import { setPostCache } from "@/lib/findContext";
 import { getSession, isAdmin } from "@/lib/auth";
@@ -56,7 +57,9 @@ import StickyMasthead from "@/components/StickyMasthead";
 import MastheadPaperAirplane from "@/components/MastheadPaperAirplane";
 import ShareSheet from "@/components/ShareSheet";
 import EmptyState from "@/components/EmptyState";
-import LocationActions from "@/components/LocationActions";
+// LocationActions retired from /shelf in session 157 Review Board Booth #1
+// (Take Trip CTA replaced by Bookmark Booth toggle). Component still
+// shipped + consumed by /map's PinCallout — import line retires only here.
 import {
   BoothHero,
   BoothTitleBlock,
@@ -68,7 +71,7 @@ import {
   v1,
   FONT_LORA,
 } from "@/components/BoothPage";
-import { v2 } from "@/lib/tokens";
+import { v2, FONT_INTER } from "@/lib/tokens";
 import type { Post, Vendor, Mall } from "@/types/treehouse";
 
 // Session 85 — back-nav scroll anchoring. Module-scope cache survives
@@ -481,25 +484,56 @@ export default function PublicShelfPage() {
               />
             )}
 
-            <BoothCloser />
-
-            {/* Session 130 refinement: LocationActions moves BELOW the closer
-                — closer text becomes the copy-CTA ("...visit in person to
-                make a purchase."), LocationActions buttons become the literal
-                action-CTA at page-end. Reverses session 128 D5 (was above
-                BoothCloser); composes with the session-130 closer copy
-                refinement. Page-end CTA pattern. */}
-            {mall && (
-              <div style={{ padding: "20px 22px 0" }}>
-                <LocationActions
-                  mallSlug={mall.slug}
-                  mallLat={mall.latitude ?? null}
-                  mallLng={mall.longitude ?? null}
-                  surface="booth"
-                  vendorId={vendor?.id ?? null}
-                />
+            {/* Session 157 Review Board Booth #1 + #2 — Bookmark Booth
+                button replaces the BoothCloser internal hairline (David:
+                "replace the hairline divider with the bookmark button").
+                Visual flow: WindowView grid → button (where hairline was)
+                → updated closer text. The button now sits ABOVE the
+                closer; BoothCloser's internal hairline retires entirely
+                (see components/BoothPage.tsx for the closer copy update +
+                hairline retire). Reverses session 157 commit a99f56e's
+                below-closer placement per feedback_surface_locked_design_reversals
+                (same-session reversal of just-shipped placement per
+                feedback_within_session_design_record_reversal). The
+                button now visually divides the booth content from the
+                closing message + plays its primary-CTA role at the same
+                slot. */}
+            {vendor && (
+              <div style={{ padding: "28px 22px 0" }}>
+                <button
+                  type="button"
+                  onClick={handleToggleBoothBookmark}
+                  aria-label={boothBookmarked ? "Remove booth bookmark" : "Bookmark this booth"}
+                  style={{
+                    width:          "100%",
+                    background:     boothBookmarked ? v2.surface.input : v2.accent.greenMid,
+                    color:          boothBookmarked ? v2.accent.greenMid : "#fff",
+                    border:         boothBookmarked ? `1px solid ${v2.accent.greenMid}` : "none",
+                    borderRadius:   10,
+                    padding:        boothBookmarked ? 9 : 10,
+                    fontFamily:     FONT_INTER,
+                    fontSize:       11,
+                    fontWeight:     600,
+                    letterSpacing:  "0.12em",
+                    textTransform:  "uppercase",
+                    display:        "flex",
+                    alignItems:     "center",
+                    justifyContent: "center",
+                    gap:            8,
+                    cursor:         "pointer",
+                    WebkitTapHighlightColor: "transparent",
+                    transition:     "background 0.15s ease, color 0.15s ease",
+                  }}
+                >
+                  {boothBookmarked
+                    ? <PiBookmarkSimpleFill size={14} aria-hidden />
+                    : <PiBookmarkSimple size={14} aria-hidden />}
+                  {boothBookmarked ? "Remove Bookmark" : "Bookmark Booth"}
+                </button>
               </div>
             )}
+
+            <BoothCloser />
           </>
         )}
 
