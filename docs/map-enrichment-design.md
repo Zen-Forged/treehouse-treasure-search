@@ -347,3 +347,14 @@ Filled-green-on-rightmost is the canonical primary-CTA position; this aligns the
 - `feedback_smallest_to_largest_commit_sequencing` — 2 dial commits sequenced smallest→largest (color treatments → CTA reorder/restyle/recopy).
 - `feedback_visibility_tools_first` — DistancePill consumer audit via grep BEFORE editing the system-wide primitive (~5+ cumulative firings).
 - `feedback_user_facing_copy_scrub_skip_db_identifiers` ✅ Promoted — analytics event name `find_navigate_tapped` preserved unchanged (DB / event identifier, not user-facing copy). Only the button label changed Navigate → Directions.
+
+### Dial I — statline weight bump to 700 (final pre-close iPhone QA dial)
+
+**Override (Dial B → final)**: PinCallout stat line `fontWeight: 700` on both the outer Cormorant italic label AND the inner FONT_NUMERAL span (was: outer default 400, inner 600). David's QA: *"Change font weight on 'x fresh finds' to 700"* — read as the entire phrase including the number. Unified 700 weight keeps "X fresh finds" reading as one tonal beat rather than mixed weights across font families.
+
+Cumulative typography spec for PinCallout stat line post-Dial-I:
+  - `fontFamily`: Cormorant Garamond italic (label) / Times New Roman (number)
+  - `fontWeight`: 700 (both)
+  - `fontSize`: 14
+  - `color`: v2.accent.green
+  - `lineHeight`: 1.3

@@ -145,11 +145,12 @@ export default function PinCallout({
         fontFamily: FONT_CORMORANT,
         fontStyle:  "italic",
         fontSize:   14,
+        fontWeight: 700,
         color:      v2.accent.green,
         lineHeight: 1.3,
       }}
     >
-      <span style={{ fontFamily: FONT_NUMERAL, color: v2.accent.green, fontStyle: "normal", fontWeight: 600 }}>
+      <span style={{ fontFamily: FONT_NUMERAL, color: v2.accent.green, fontStyle: "normal", fontWeight: 700 }}>
         {statCount}
       </span>
       {" "}
