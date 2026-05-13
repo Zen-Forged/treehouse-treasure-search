@@ -89,7 +89,13 @@ export type EventType =
   // app/api/events/route.ts. Server-side recordEvent never fires it directly
   // (UI event), but the EventType union must include it so the ingest cast
   // type-checks.
-  | "home_strip_tapped";
+  | "home_strip_tapped"
+  // Session 158 — Map enrichment (D14 in docs/map-enrichment-design.md).
+  // Client-only signals from <MapCarousel> + <PinCallout> arrows. Same UI-event
+  // semantics as home_strip_tapped — never recorded server-side directly; the
+  // union exists so the /api/events ingest cast type-checks.
+  | "map_carousel_card_tapped"
+  | "map_callout_neighbor_stepped";
 
 export interface RecordEventOptions {
   user_id?:    string | null;
