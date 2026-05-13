@@ -28,6 +28,75 @@ import MallMapDrawer from "@/components/MallMapDrawer";
 import StickyMasthead from "@/components/StickyMasthead";
 import { v2, FONT_INTER } from "@/lib/tokens";
 import { FIXTURE_MALL, FIXTURE_MALLS } from "@/lib/fixtures";
+import type { Mall } from "@/types/treehouse";
+
+// Session 158 — Arc 2.1 carousel smoke fixtures. Synthesizes additional malls
+// at varied Kentucky coordinates so the horizontal-scroll + distance-sort
+// behavior reads against realistic data. Fixtures.ts FIXTURE_MALLS only has 2
+// entries (shared with Review Board surface — don't expand globally).
+const CAROUSEL_FIXTURE_MALLS: Mall[] = [
+  ...FIXTURE_MALLS,
+  {
+    id:              "smoke-louisville-1",
+    slug:            "smoke-louisville-1",
+    name:            "Joe Ley Antiques",
+    address:         "615 E Market St, Louisville, KY 40202",
+    status:          "active",
+    hero_image_url:  null,
+    latitude:        38.2542,
+    longitude:       -85.7400,
+  } as Mall,
+  {
+    id:              "smoke-lexington",
+    slug:            "smoke-lexington",
+    name:            "Lexington Antique Co.",
+    address:         "1200 Manchester St, Lexington, KY 40504",
+    status:          "active",
+    hero_image_url:  null,
+    latitude:        38.0406,
+    longitude:       -84.5037,
+  } as Mall,
+  {
+    id:              "smoke-bowling-green",
+    slug:            "smoke-bowling-green",
+    name:            "Bowling Green Mercantile",
+    address:         "Bowling Green, KY 42101",
+    status:          "active",
+    hero_image_url:  null,
+    latitude:        36.9685,
+    longitude:       -86.4808,
+  } as Mall,
+  {
+    id:              "smoke-frankfort",
+    slug:            "smoke-frankfort",
+    name:            "Frankfort Trading Post",
+    address:         "Frankfort, KY 40601",
+    status:          "active",
+    hero_image_url:  null,
+    latitude:        38.2009,
+    longitude:       -84.8733,
+  } as Mall,
+  {
+    id:              "smoke-owensboro",
+    slug:            "smoke-owensboro",
+    name:            "Owensboro Antique Mall",
+    address:         "Owensboro, KY 42301",
+    status:          "active",
+    hero_image_url:  null,
+    latitude:        37.7742,
+    longitude:       -87.1133,
+  } as Mall,
+  {
+    id:              "smoke-paducah",
+    slug:            "smoke-paducah",
+    name:            "Paducah River Antiques",
+    address:         "Paducah, KY 42001",
+    status:          "active",
+    hero_image_url:  null,
+    latitude:        37.0834,
+    longitude:       -88.6000,
+  } as Mall,
+];
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +105,9 @@ type ScopeKey = "all-kentucky" | "fixture-mall";
 export default function HomeChromeTestPage() {
   const [scopeKey, setScopeKey] = React.useState<ScopeKey>("fixture-mall");
   const [drawerOpen, setDrawerOpen] = React.useState(false);
+  // Session 158 Arc 2.2 — drawer now owns the carousel internally; smoke
+  // route no longer needs a standalone carouselPeekId. Pin tap / card tap
+  // both write to MallMapDrawer's internal peekedMallId state.
 
   const stripScope: MallStripScope =
     scopeKey === "all-kentucky"
@@ -166,10 +238,15 @@ export default function HomeChromeTestPage() {
         </div>
       </div>
 
+      {/* Arc 2.2 — MallMapDrawer now mounts MapCarousel internally as a sibling
+          of its own motion.div. Smoke route passes the carousel fixtures as
+          the drawer's malls so both pins + carousel cards render against the
+          richer 7-mall dataset (FIXTURE_MALLS alone is 2 entries, kept stable
+          for Review Board's fixture surface). */}
       <MallMapDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        malls={FIXTURE_MALLS}
+        malls={CAROUSEL_FIXTURE_MALLS}
         selectedMallId={selectedMallId}
         onMallPick={(id) => {
           // Production consumer would setMallId(id) via useSavedMallId hook +

@@ -73,7 +73,15 @@ export type ClientEventType =
   // navigator.share() resolution (covers both mobile native-share flow and
   // desktop direct-download flow). Method field disambiguates.
   | "share_shelf_image_viewed"
-  | "share_shelf_image_downloaded";
+  | "share_shelf_image_downloaded"
+  // ── Session 158 — Map enrichment (D14 in docs/map-enrichment-design.md) ──
+  // map_carousel_card_tapped fires when a mall card is tapped in the new
+  // <MapCarousel> below MallMapDrawer; sort_position is 0-indexed within the
+  // current sort (distance-asc when granted, alphabetical when denied).
+  // map_callout_neighbor_stepped fires when the flanking chevron bubbles on
+  // PinCallout step the peeked mall to the prev/next in carousel sort order.
+  | "map_carousel_card_tapped"
+  | "map_callout_neighbor_stepped";
 
 function getSessionId(): string {
   if (typeof window === "undefined") return "";

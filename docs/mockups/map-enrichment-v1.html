@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Map enrichment V1 — Session 158</title>
+<style>
+  :root {
+    --bg-page:        #EFE9DA;
+    --bg-main:        #F7F3EB;
+    --surface-warm:   #FFFCF5;
+    --surface-card:   #FFFCF5;
+    --basemap-cream:  #F7F3EB;
+    --basemap-cream2: #EFE6D2;
+    --basemap-water:  #C4D5C7;
+    --basemap-park:   #B3CFAA;
+    --basemap-label:  #5C5246;
+    --ink-primary:    #2A1A0A;
+    --text-secondary: #5C5246;
+    --text-muted:     #8A7F70;
+    --accent-green:   #2E5639;
+    --accent-greenMid:#4F7C58;
+    --border-light:   #E5DDC8;
+    --shadow-card:    0 1px 2px rgba(43,33,26,0.06), 0 6px 18px rgba(43,33,26,0.06);
+    --shadow-pop:     0 4px 12px rgba(43,33,26,0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg-page); color: var(--ink-primary); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { padding: 32px 16px 64px; }
+
+  h1 { font-family: "Cormorant Garamond", Georgia, serif; font-weight: 500; font-size: 30px; margin: 0 0 8px; letter-spacing: -0.01em; }
+  h1 + p { color: var(--text-secondary); max-width: 760px; margin: 0 0 6px; font-size: 14px; line-height: 1.55; }
+  .meta { color: var(--text-muted); font-size: 12px; max-width: 760px; margin: 0 0 28px; line-height: 1.55; }
+
+  .anchors {
+    max-width: 760px; margin: 0 auto 36px; padding: 14px 18px;
+    background: var(--surface-warm); border: 1px solid var(--border-light); border-radius: 10px;
+  }
+  .anchors h3 { margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); }
+  .anchors ul { margin: 0; padding-left: 16px; font-size: 13px; line-height: 1.7; color: var(--text-secondary); }
+  .anchors b { color: var(--ink-primary); font-weight: 600; }
+
+  .frames {
+    display: grid; gap: 32px;
+    grid-template-columns: repeat(auto-fit, minmax(390px, 1fr));
+    max-width: 1320px; margin: 0 auto;
+  }
+  .frame { display: flex; flex-direction: column; align-items: center; }
+  .frame-label {
+    font-family: "Cormorant Garamond", Georgia, serif; font-style: italic;
+    font-size: 22px; color: var(--ink-primary); margin-bottom: 4px;
+  }
+  .frame-sub { color: var(--text-muted); font-size: 12px; margin-bottom: 14px; max-width: 360px; text-align: center; line-height: 1.5; }
+
+  /* iPhone-shaped container */
+  .phone {
+    width: 390px; height: 760px;
+    background: var(--bg-main);
+    border: 1px solid var(--border-light);
+    border-radius: 38px;
+    box-shadow: var(--shadow-pop);
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Top chrome stack: masthead + search + strip */
+  .chrome-top {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 40;
+    background: var(--bg-main);
+    border-bottom: none;
+  }
+  .masthead {
+    height: 84px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 12px;
+  }
+  .wordmark { font-family: "Times New Roman", serif; font-size: 18px; color: var(--ink-primary); font-weight: 500; }
+  .searchbar {
+    height: 56px; padding: 6px 16px;
+  }
+  .searchbar-inner {
+    background: var(--surface-warm); border: 1px solid var(--border-light); border-radius: 999px;
+    height: 44px; display: flex; align-items: center; padding: 0 16px; gap: 10px;
+    color: var(--text-muted); font-size: 14px;
+  }
+  .mall-strip {
+    height: 36px; background: var(--bg-main); display: flex; align-items: center; padding: 0 16px; gap: 8px;
+    border-top: 1px solid var(--border-light); border-bottom: 1px solid var(--border-light);
+  }
+  .strip-pin { width: 14px; height: 14px; color: var(--text-secondary); }
+  .strip-name { font-family: "Lora", Georgia, serif; font-size: 16px; color: var(--ink-primary); flex: 1; }
+  .strip-chev { color: var(--text-secondary); transform: rotate(180deg); }
+
+  /* Map area — fills below chrome + above bottom nav */
+  .map {
+    position: absolute;
+    top: 176px;       /* 84 + 56 + 36 */
+    left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(circle at 38% 28%, var(--basemap-park) 0 80px, transparent 81px),
+      radial-gradient(circle at 78% 60%, var(--basemap-park) 0 56px, transparent 57px),
+      radial-gradient(circle at 22% 78%, var(--basemap-cream2) 0 90px, transparent 91px),
+      linear-gradient(120deg, var(--basemap-water) 0%, var(--basemap-water) 6%, transparent 6.5%) no-repeat 0 62% / 100% 30px,
+      var(--basemap-cream);
+    overflow: hidden;
+  }
+  .map::before {
+    /* faint road grid for cartographic feel */
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(90deg, rgba(255,255,255,0.65) 0 1px, transparent 1px) repeat-x 0 35% / 100% 40px,
+      linear-gradient(110deg, rgba(255,255,255,0.55) 0 1px, transparent 1px) repeat 0 0 / 80px 100%;
+    opacity: 0.6;
+  }
+  .map::after {
+    /* state border ink */
+    content: "";
+    position: absolute; inset: 12px;
+    border: 1.5px dashed rgba(42,26,10,0.14);
+    border-radius: 6px;
+    pointer-events: none;
+  }
+
+  /* Map control pill */
+  .map-pill {
+    position: absolute; top: 188px; right: 24px; z-index: 35;
+    height: 34px; padding: 0 14px;
+    background: var(--bg-main); border: 1px solid var(--border-light); border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: -apple-system, system-ui, sans-serif; font-size: 13px; font-weight: 600;
+    color: var(--text-secondary);
+    box-shadow: 0 1px 2px rgba(43,33,26,0.04);
+  }
+
+  /* Mall pins (leaf bubbles) */
+  .pin {
+    position: absolute; transform: translate(-50%, -50%); z-index: 5;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--surface-warm); border: 2px solid var(--accent-green);
+    box-shadow: 0 2px 6px rgba(42,26,10,0.18);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--accent-green);
+  }
+  .pin.selected {
+    width: 36px; height: 36px; background: var(--accent-green); color: var(--surface-warm);
+    box-shadow: 0 0 0 6px rgba(30,77,43,0.18), 0 4px 10px rgba(30,77,43,0.28);
+    z-index: 8;
+  }
+
+  /* User location pin (branded leaf treatment for V1; sub-variants in prose Q after frame pick) */
+  .user-pin {
+    position: absolute; transform: translate(-50%, -50%); z-index: 6;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--accent-greenMid);
+    box-shadow:
+      0 0 0 6px rgba(79,124,88,0.22),
+      0 0 0 14px rgba(79,124,88,0.10),
+      0 2px 8px rgba(42,26,10,0.20);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+  }
+  .user-pin::after {
+    content: ""; position: absolute; inset: -4px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(79,124,88,0.32);
+    animation: pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50%      { transform: scale(1.5); opacity: 0; }
+  }
+
+  /* PinCallout — anchored above selected pin, with flanking prev/next bubbles */
+  .callout-wrap {
+    position: absolute; z-index: 9;
+    display: flex; align-items: center; gap: 6px;
+    transform: translate(-50%, calc(-100% - 14px));
+    pointer-events: none;
+  }
+  .nav-bubble {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--surface-warm); border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-card);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary);
+    pointer-events: auto;
+    flex-shrink: 0;
+  }
+  .callout {
+    background: var(--surface-warm); border: 1px solid var(--border-light); border-radius: 10px;
+    box-shadow: var(--shadow-card);
+    padding: 8px 10px 10px;
+    width: 220px;
+    pointer-events: auto;
+    position: relative;
+  }
+  .callout::after {
+    content: ""; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 8px solid transparent; border-right: 8px solid transparent;
+    border-top: 9px solid var(--surface-warm);
+    filter: drop-shadow(0 1px 1px rgba(42,26,10,0.18));
+  }
+  .callout-row { display: flex; align-items: center; gap: 8px; }
+  .callout-thumb {
+    width: 36px; height: 36px; border-radius: 6px; overflow: hidden;
+    background: var(--basemap-cream2);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .callout-meta { flex: 1; min-width: 0; }
+  .callout-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .callout-name {
+    font-family: "Cormorant Garamond", Georgia, serif; font-size: 13.5px; font-weight: 500;
+    color: var(--ink-primary); line-height: 1.2;
+    flex: 1; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .dist-pill {
+    display: inline-flex; align-items: center; gap: 3px;
+    height: 18px; padding: 0 7px; border-radius: 999px;
+    background: rgba(46,86,57,0.10);
+    font-family: -apple-system, system-ui, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.03em;
+    color: var(--accent-green);
+    text-transform: uppercase;
+  }
+  .callout-stat {
+    font-family: "Cormorant Garamond", Georgia, serif; font-style: italic; font-size: 11px;
+    color: var(--text-muted); line-height: 1.2; margin-top: 2px;
+  }
+  .callout-stat b { font-family: "Times New Roman", serif; font-style: normal; font-weight: 600; color: var(--accent-green); }
+  .callout-cta { display: flex; gap: 6px; margin-top: 6px; }
+  .cta-out {
+    flex: 1; height: 26px; border-radius: 6px;
+    background: transparent; border: 1px solid var(--accent-green); color: var(--accent-green);
+    font-family: -apple-system, system-ui, sans-serif; font-size: 10.5px; font-weight: 600; letter-spacing: 0.01em;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .cta-in {
+    flex: 1; height: 26px; border-radius: 6px;
+    background: var(--accent-green); border: 1px solid var(--accent-green); color: var(--surface-warm);
+    font-family: -apple-system, system-ui, sans-serif; font-size: 10.5px; font-weight: 600; letter-spacing: 0.01em;
+    display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  }
+
+  /* CAROUSEL — fixed, just above BottomNav */
+  .carousel-wrap {
+    position: absolute;
+    left: 0; right: 0;
+    bottom: 100px; /* above BottomNav (76 + 22 offset = ~98) */
+    z-index: 32;
+    padding: 0 12px;
+    overflow: visible;
+  }
+  .carousel {
+    display: flex; gap: 8px; overflow-x: auto;
+    padding: 4px 4px 6px;
+    scrollbar-width: none;
+  }
+  .carousel::-webkit-scrollbar { display: none; }
+
+  /* === FRAME A — Cinematic photo cards === */
+  .card-a {
+    flex-shrink: 0;
+    width: 142px; height: 96px; border-radius: 10px;
+    position: relative; overflow: hidden;
+    background-size: cover; background-position: center;
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-card);
+  }
+  .card-a.selected { box-shadow: 0 0 0 2px var(--accent-green), var(--shadow-card); transform: translateY(-3px); }
+  .card-a-grad {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.55) 100%);
+  }
+  .card-a-name {
+    position: absolute; left: 8px; right: 8px; bottom: 6px;
+    color: #fff;
+    font-family: "Cormorant Garamond", Georgia, serif; font-weight: 600; font-size: 13px;
+    line-height: 1.15;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .card-a-pill {
+    position: absolute; top: 6px; right: 6px;
+    height: 18px; padding: 0 7px; border-radius: 999px;
+    background: rgba(255,252,245,0.92);
+    font-family: -apple-system, system-ui, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.03em;
+    color: var(--accent-green);
+    display: inline-flex; align-items: center;
+    text-transform: uppercase;
+  }
+
+  /* === FRAME B — Postcard mini cards === */
+  .card-b {
+    flex-shrink: 0;
+    width: 142px; height: 108px;
+    background: var(--surface-warm); border: 1px solid var(--border-light); border-radius: 10px;
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .card-b.selected { border-color: var(--accent-green); border-width: 1.5px; transform: translateY(-3px); }
+  .card-b-photo {
+    height: 56px; background-size: cover; background-position: center;
+    background-color: var(--basemap-cream2);
+  }
+  .card-b-body { padding: 5px 10px 8px; display: flex; flex-direction: column; gap: 2px; min-height: 0; }
+  .card-b-name {
+    font-family: "Cormorant Garamond", Georgia, serif; font-weight: 600; font-size: 13px;
+    color: var(--ink-primary); line-height: 1.2;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .card-b-dist {
+    font-family: -apple-system, system-ui, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.03em;
+    color: var(--accent-green); text-transform: uppercase;
+  }
+
+  /* === FRAME C — Photo-circle thumbnails === */
+  .card-c {
+    flex-shrink: 0;
+    width: 78px; height: 102px;
+    background: transparent;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding-top: 4px;
+  }
+  .card-c-photo {
+    width: 60px; height: 60px; border-radius: 50%; overflow: hidden;
+    background-color: var(--basemap-cream2);
+    background-size: cover; background-position: center;
+    border: 2px solid var(--surface-warm);
+    box-shadow: 0 2px 6px rgba(43,33,26,0.12);
+  }
+  .card-c.selected .card-c-photo { border-color: var(--accent-green); box-shadow: 0 0 0 2px var(--accent-green), 0 2px 6px rgba(43,33,26,0.12); transform: translateY(-2px); }
+  .card-c-name {
+    font-family: "Cormorant Garamond", Georgia, serif; font-weight: 500; font-size: 11px;
+    color: var(--ink-primary); line-height: 1.1; text-align: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 74px;
+  }
+  .card-c-dist {
+    font-family: -apple-system, system-ui, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 0.03em;
+    color: var(--accent-green); text-transform: uppercase;
+  }
+
+  /* BottomNav */
+  .bottomnav {
+    position: absolute;
+    bottom: 22px; left: 50%; transform: translateX(-50%);
+    height: 56px;
+    background: var(--surface-warm);
+    border: 1px solid var(--border-light);
+    border-radius: 28px;
+    display: flex; align-items: center; gap: 24px;
+    padding: 0 22px;
+    z-index: 50;
+    box-shadow: 0 6px 18px rgba(43,33,26,0.08);
+  }
+  .nav-tab { display: flex; flex-direction: column; align-items: center; gap: 5px; color: var(--text-secondary); }
+  .nav-tab.active { color: var(--accent-green); }
+  .nav-tab .nav-icon-row { height: 22px; display: flex; align-items: center; }
+  .nav-tab .nav-label { font-family: -apple-system, system-ui, sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.02em; }
+  .nav-tab.active .nav-pill {
+    background: rgba(46,86,57,0.10); padding: 5px 12px; border-radius: 14px;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+
+  /* Selected-state ribbon below each frame card so it's obvious which is selected on the map */
+  .legend {
+    max-width: 760px; margin: 36px auto 0; padding: 14px 18px;
+    background: var(--surface-warm); border: 1px solid var(--border-light); border-radius: 10px;
+    font-size: 13px; color: var(--text-secondary); line-height: 1.6;
+  }
+  .legend h3 { margin: 0 0 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); }
+  .legend b { color: var(--ink-primary); font-weight: 600; }
+  .legend code {
+    font-family: ui-monospace, Menlo, monospace; font-size: 12px;
+    background: var(--basemap-cream2); padding: 1px 5px; border-radius: 3px;
+  }
+
+  @media (max-width: 1280px) {
+    .frames { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <h1>Map enrichment V1 — Session 158</h1>
+  <p>Three frames spanning the carousel card shape axis. User-pin treatment + arrow placement on PinCallout are held constant across all three for V1 (sub-decisions surface as prose Q&A after frame pick).</p>
+  <p class="meta">
+    <b>Locked scope:</b> Q1=B nearest-neighbor sort (selected mall anchored left when scoped). Q2=C alphabetical fallback + no distance labels when location denied. Q3=B branded leaf "you are here" pin. Q4=A arrows step through carousel order. Q5=B carousel as new chrome layer between drawer and BottomNav, drawer geometry unchanged. Q6=a carousel visible only when drawer open.
+  </p>
+
+  <div class="anchors">
+    <h3>Reference anchors</h3>
+    <ul>
+      <li><b>Apple Maps</b> — bottom-strip cards while pins visible; selected pin grows on map sync</li>
+      <li><b>Google Maps "Explore"</b> — horizontal places carousel with photo + name + distance; tap to commit</li>
+      <li><b>Airbnb</b> — map+list duality with carousel cards that hover-sync with pins (closest UX pattern to ours)</li>
+      <li><b>Uber/Lyft</b> — large pulsing user-location dot + secondary destination pins (anchor for user-pin treatment)</li>
+      <li><b>AllTrails</b> — leaf-themed trailhead pins (closest brand match to Treehouse's leaf-bubble vocabulary)</li>
+    </ul>
+  </div>
+
+  <div class="frames">
+
+    <!-- ──────────── FRAME A — Cinematic photo cards ──────────── -->
+    <div class="frame">
+      <div class="frame-label">Frame A — Cinematic photo cards</div>
+      <div class="frame-sub">Photo-dominant 142×96 cards with text + distance overlaid on photo. Highest visual identity per card. Reads as "place gallery."</div>
+      <div class="phone">
+        <div class="chrome-top">
+          <div class="masthead"><span class="wordmark">Treehouse Finds</span></div>
+          <div class="searchbar"><div class="searchbar-inner">🔍 &nbsp;What are you searching for today?</div></div>
+          <div class="mall-strip">
+            <svg class="strip-pin" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C9 4 6 6 6 11s3 7 6 11c3-4 6-6 6-11s-3-7-6-9z"/></svg>
+            <span class="strip-name">America's Antique Mall</span>
+            <svg class="strip-chev" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7 14l5-5 5 5z"/></svg>
+          </div>
+        </div>
+
+        <div class="map">
+          <div class="map-pill">⟲ &nbsp;Reset</div>
+
+          <!-- Mall pins -->
+          <div class="pin" style="left: 50%; top: 38%;"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C9 4 6 6 6 11s3 7 6 11c3-4 6-6 6-11s-3-7-6-9z"/></svg></div>
+          <div class="pin selected" style="left: 38%; top: 50%;"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2C9 4 6 6 6 11s3 7 6 11c3-4 6-6 6-11s-3-7-6-9z"/></svg></div>
+          <div class="pin" style="left: 62%; top: 56%;"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C9 4 6 6 6 11s3 7 6 11c3-4 6-6 6-11s-3-7-6-9z"/></svg></div>
+          <div class="pin" style="left: 28%; top: 68%;"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C9 4 6 6 6 11s3 7 6 11c3-4 6-6 6-11s-3-7-6-9z"/></svg></div>
+          <div class="pin" style="left: 72%; top: 30%;"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C9 4 6 6 6 11s3 7 6 11c3-4 6-6 6-11s-3-7-6-9z"/></svg></div>
+
+          <!-- User pin -->
+          <div class="user-pin" style="left: 52%; top: 60%;">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg>
+          </div>
+
+          <!-- Callout with flanking arrows -->
+          <div class="callout-wrap" style="left: 38%; top: 50%;">
+            <div class="nav-bubble">‹</div>
+            <div class="callout">
+              <div class="callout-row">
+                <div class="callout-thumb">🏛️</div>
+                <div class="callout-meta">
+                  <div class="callout-head">
+                    <div class="callout-name">America's Antique Mall</div>
+                    <span class="dist-pill">2.7 MI</span>
+                  </div>
+                  <div class="callout-stat"><b>3</b> saved finds</div>
+                </div>
+              </div>
+              <div class="callout-cta">
+                <span class="cta-out">Explore</span>
+                <span class="cta-in">↗ Navigate</span>
+              </div>
+            </div>
+            <div class="nav-bubble">›</div>
+          </div>
+        </div>
+
+        <!-- Frame A carousel: photo-dominant cards -->
+        <div class="carousel-wrap">
+          <div class="carousel">
+            <div class="card-a selected" style="background: linear-gradient(135deg,#a4b88c,#7a9870);">
+              <div class="card-a-grad"></div>
+              <span class="card-a-pill">2.7 MI</span>
+              <div class="card-a-name">America's Antique Mall</div>
+            </div>
+            <div class="card-a" style="background: linear-gradient(135deg,#c9a878,#a48555);">
+              <div class="card-a-grad"></div>
+              <span class="card-a-pill">4.1 MI</span>
+              <div class="card-a-name">Joe Ley Antiques</div>
+            </div>
+            <div class="card-a" style="background: linear-gradient(135deg,#7a98a8,#557885);">
+              <div class="card-a-grad"></div>
+              <span class="card-a-pill">6.3 MI</span>
+              <div class="card-a-name">St. Matthews Mall</div>
+            </div>
+            <div class="card-a" style="background: linear-gradient(135deg,#b0926d,#8a7050);">
+              <div class="card-a-grad"></div>
+              <span class="card-a-pill">7.8 MI</span>
+              <div class="card-a-name">Architectural Salvage</div>
+            </div>
+            <div class="card-a" style="background: linear-gradient(135deg,#9a8aa8,#766885);">
+              <div class="card-a-grad"></div>
+              <span class="card-a-pill">9.2 MI</span>
+              <div class="card-a-name">Crescent Hill Trading</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BottomNav -->
+        <div class="bottomnav">
+          <div class="nav-tab active">
+            <div class="nav-pill">
+              <div class="nav-icon-row">🏠</div>
+              <span class="nav-label">Explore</span>
+            </div>
+          </div>
+          <div class="nav-tab"><div class="nav-icon-row">🍃</div><span class="nav-label">Saved</span></div>
+          <div class="nav-tab"><div class="nav-icon-row">👤</div><span class="nav-label">Profile</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──────────── FRAME B — Postcard mini cards ──────────── -->
+    <div class="frame">
+      <div class="frame-label">Frame B — Postcard mini cards</div>
+      <div class="frame-sub">Matches existing PostcardMallCard vocabulary: photo banner top + name + distance below on cream surface. Visual cohesion with rich-postcard pattern on Home + Saved.</div>
+      <div class="phone">
+        <div class="chrome-top">
+          <div class="masthead"><span class="wordmark">Treehouse Finds</span></div>
+          <div class="searchbar"><div class="searchbar-inner">🔍 &nbsp;What are you searching for today?</div></div>
+          <div class="mall-strip">
+            <svg class="strip-pin" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C9 4 6 6 6 11s3 7 6 11c3-4 6-6 6-11s-3-7-6-9z"/></svg>
+            <span class="strip-name">America's Antique Mall</span>
+            <svg class="strip-chev" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7 14l5-5 5 5z"/></svg>
+          </div>
+        </div>
+
+        <div class="map">
+          <div class="map-pill">⟲ &nbsp;Reset</div>
+          <div class="pin" style="left: 50%; top: 38%;"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C9 4 6 6 6 11s3 7 6 11c3-4 6-6 6-11s-3-7-6-9z"/></svg></div>
+          <div class="pin selected" style="left: 38%; top: 50%;"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2C9 4 6 6 6 11s3 7 6 11c3-4 6-6 6-11s-3-7-6-9z"/></svg></div>
+          <div class="pin" style="left: 62%; top: 56%;"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C9 4 6 6 6 11s3 7 6 11c3-4 6-6 6-11s-3-7-6-9z"/></svg></div>
+          <div class="pin" style="left: 28%; top: 68%;"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C9 4 6 6 6 11s3 7 6 11c3-4 6-6 6-11s-3-7-6-9z"/></svg></div>
+          <div class="pin" style="left: 72%; top: 30%;"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C9 4 6 6 6 11s3 7 6 11c3-4 6-6 6-11s-3-7-6-9z"/></svg></div>
+
+          <div class="user-pin" style="left: 52%; top: 60%;">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg>
+          </div>
+
+          <div class="callout-wrap" style="left: 38%; top: 50%;">
+            <div class="nav-bubble">‹</div>
+            <div class="callout">
+              <div class="callout-row">
+                <div class="callout-thumb">🏛️</div>
+                <div class="callout-meta">
+                  <div class="callout-head">
+                    <div class="callout-name">America's Antique Mall</div>
+                    <span class="dist-pill">2.7 MI</span>
+                  </div>
+                  <div class="callout-stat"><b>3</b> saved finds</div>
+                </div>
+              </div>
+              <div class="callout-cta">
+                <span class="cta-out">Explore</span>
+                <span class="cta-in">↗ Navigate</span>
+              </div>
+            </div>
+            <div class="nav-bubble">›</div>
+          </div>
+        </div>
+
+        <!-- Frame B carousel: postcard mini cards -->
+        <div class="carousel-wrap">
+          <div class="carousel">
+            <div class="card-b selected">
+              <div class="card-b-photo" style="background-image: linear-gradient(135deg,#a4b88c,#7a9870);"></div>
+              <div class="card-b-body">
+                <div class="card-b-name">America's Antique Mall</div>
+                <div class="card-b-dist">2.7 MI · Louisville</div>
+              </div>
+            </div>
+            <div class="card-b">
+              <div class="card-b-photo" style="background-image: linear-gradient(135deg,#c9a878,#a48555);"></div>
+              <div class="card-b-body">
+                <div class="card-b-name">Joe Ley Antiques</div>
+                <div class="card-b-dist">4.1 MI · Louisville</div>
+              </div>
+            </div>
+            <div class="card-b">
+              <div class="card-b-photo" style="background-image: linear-gradient(135deg,#7a98a8,#557885);"></div>
+              <div class="card-b-body">
+                <div class="card-b-name">St. Matthews Antique Mall</div>
+                <div class="card-b-dist">6.3 MI · Louisville</div>
+              </div>
+            </div>
+            <div class="card-b">
+              <div class="card-b-photo" style="background-image: linear-gradient(135deg,#b0926d,#8a7050);"></div>
+              <div class="card-b-body">
+                <div class="card-b-name">Architectural Salvage</div>
+                <div class="card-b-dist">7.8 MI · Louisville</div>
+              </div>
+            </div>
+            <div class="card-b">
+              <div class="card-b-photo" style="background-image: linear-gradient(135deg,#9a8aa8,#766885);"></div>
+              <div class="card-b-body">
+                <div class="card-b-name">Crescent Hill Trading</div>
+                <div class="card-b-dist">9.2 MI · Louisville</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottomnav">
+          <div class="nav-tab active">
+            <div class="nav-pill">
+              <div class="nav-icon-row">🏠</div>
+              <span class="nav-label">Explore</span>
+            </div>
+          </div>
+          <div class="nav-tab"><div class="nav-icon-row">🍃</div><span class="nav-label">Saved</span></div>
+          <div class="nav-tab"><div class="nav-icon-row">👤</div><span class="nav-label">Profile</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ──────────── FRAME C — Photo-circle thumbnails ──────────── -->
+    <div class="frame">
+      <div class="frame-label">Frame C — Photo-circle thumbnails</div>
+      <div class="frame-sub">Compact 78×102 cards with round 60×60 photo + name + distance below. Densest layout — ~4-5 cards visible at once. Reads as spatial-utility chrome, lowest visual weight.</div>
+      <div class="phone">
+        <div class="chrome-top">
+          <div class="masthead"><span class="wordmark">Treehouse Finds</span></div>
+          <div class="searchbar"><div class="searchbar-inner">🔍 &nbsp;What are you searching for today?</div></div>
+          <div class="mall-strip">
+            <svg class="strip-pin" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C9 4 6 6 6 11s3 7 6 11c3-4 6-6 6-11s-3-7-6-9z"/></svg>
+            <span class="strip-name">America's Antique Mall</span>
+            <svg class="strip-chev" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M7 14l5-5 5 5z"/></svg>
+          </div>
+        </div>
+
+        <div class="map">
+          <div class="map-pill">⟲ &nbsp;Reset</div>
+          <div class="pin" style="left: 50%; top: 38%;"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C9 4 6 6 6 11s3 7 6 11c3-4 6-6 6-11s-3-7-6-9z"/></svg></div>
+          <div class="pin selected" style="left: 38%; top: 50%;"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2C9 4 6 6 6 11s3 7 6 11c3-4 6-6 6-11s-3-7-6-9z"/></svg></div>
+          <div class="pin" style="left: 62%; top: 56%;"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C9 4 6 6 6 11s3 7 6 11c3-4 6-6 6-11s-3-7-6-9z"/></svg></div>
+          <div class="pin" style="left: 28%; top: 68%;"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C9 4 6 6 6 11s3 7 6 11c3-4 6-6 6-11s-3-7-6-9z"/></svg></div>
+          <div class="pin" style="left: 72%; top: 30%;"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C9 4 6 6 6 11s3 7 6 11c3-4 6-6 6-11s-3-7-6-9z"/></svg></div>
+
+          <div class="user-pin" style="left: 52%; top: 60%;">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z"/></svg>
+          </div>
+
+          <div class="callout-wrap" style="left: 38%; top: 50%;">
+            <div class="nav-bubble">‹</div>
+            <div class="callout">
+              <div class="callout-row">
+                <div class="callout-thumb">🏛️</div>
+                <div class="callout-meta">
+                  <div class="callout-head">
+                    <div class="callout-name">America's Antique Mall</div>
+                    <span class="dist-pill">2.7 MI</span>
+                  </div>
+                  <div class="callout-stat"><b>3</b> saved finds</div>
+                </div>
+              </div>
+              <div class="callout-cta">
+                <span class="cta-out">Explore</span>
+                <span class="cta-in">↗ Navigate</span>
+              </div>
+            </div>
+            <div class="nav-bubble">›</div>
+          </div>
+        </div>
+
+        <!-- Frame C carousel: photo-circle thumbnails -->
+        <div class="carousel-wrap">
+          <div class="carousel">
+            <div class="card-c selected">
+              <div class="card-c-photo" style="background-image: linear-gradient(135deg,#a4b88c,#7a9870);"></div>
+              <div class="card-c-name">America's Mall</div>
+              <span class="card-c-dist">2.7 MI</span>
+            </div>
+            <div class="card-c">
+              <div class="card-c-photo" style="background-image: linear-gradient(135deg,#c9a878,#a48555);"></div>
+              <div class="card-c-name">Joe Ley</div>
+              <span class="card-c-dist">4.1 MI</span>
+            </div>
+            <div class="card-c">
+              <div class="card-c-photo" style="background-image: linear-gradient(135deg,#7a98a8,#557885);"></div>
+              <div class="card-c-name">St. Matthews</div>
+              <span class="card-c-dist">6.3 MI</span>
+            </div>
+            <div class="card-c">
+              <div class="card-c-photo" style="background-image: linear-gradient(135deg,#b0926d,#8a7050);"></div>
+              <div class="card-c-name">Salvage</div>
+              <span class="card-c-dist">7.8 MI</span>
+            </div>
+            <div class="card-c">
+              <div class="card-c-photo" style="background-image: linear-gradient(135deg,#9a8aa8,#766885);"></div>
+              <div class="card-c-name">Crescent Hill</div>
+              <span class="card-c-dist">9.2 MI</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottomnav">
+          <div class="nav-tab active">
+            <div class="nav-pill">
+              <div class="nav-icon-row">🏠</div>
+              <span class="nav-label">Explore</span>
+            </div>
+          </div>
+          <div class="nav-tab"><div class="nav-icon-row">🍃</div><span class="nav-label">Saved</span></div>
+          <div class="nav-tab"><div class="nav-icon-row">👤</div><span class="nav-label">Profile</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="legend">
+    <h3>What's held constant across A/B/C</h3>
+    <ul style="margin:0; padding-left:16px; line-height:1.7;">
+      <li><b>User-pin treatment</b> — filled green leaf inside cream halo with a soft pulsing ring (branded leaf vocabulary per Q3=B). Variants surface as prose Q after frame pick: pulsing vs static halo; leaf-in-circle vs leaf-on-stake; saturated green vs mid-green.</li>
+      <li><b>Arrow placement on PinCallout</b> — 30×30 flanking chevron bubbles outside the callout (clear spatial-navigation affordance, not entity-action). Alternate: integrated inside the callout footer next to Explore/Navigate. Surfaces as prose Q after frame pick.</li>
+      <li><b>Carousel position</b> — fixed-positioned floating above map area, bottom: 100px (above BottomNav's 22px offset + 56px height + 22px gap). Drawer geometry unchanged; carousel sits on top of the map area visually at z-index between drawer (30) and BottomNav (50).</li>
+      <li><b>Carousel ↔ pin sync</b> — tap card → pin selects + map flies; tap pin → carousel scrolls to that card; left/right arrows on callout → step through carousel order (nearest→furthest).</li>
+      <li><b>Selected-state visual</b> — Frame A: green outline + 3px lift. Frame B: green border + 3px lift. Frame C: green ring around photo + 2px lift. All three show the selected card as the leftmost / first in the scroll order.</li>
+    </ul>
+  </div>
+
+</body>
+</html>
