@@ -484,34 +484,22 @@ export default function PublicShelfPage() {
               />
             )}
 
-            <BoothCloser />
-
-            {/* Session 157 Review Board Booth #1 — LocationActions Take Trip
-                CTA retires from /shelf, replaced by the Bookmark Booth button.
-                David: "Change 'Take Trip' to 'Bookmark Booth'. Should
-                bookmark the booth status. (Bookmark Booth - Remove Bookmark
-                on clicked and unclick. Follow the same color reversal pattern
-                as described previously."
-
-                Mirror of the /find Save the Find button (session 157 commit
-                4eb1181) — same primary-CTA voice, same color-reversal
-                pattern, same hook-driven toggle. Booth-tier engagement
-                affordance per the 3-tier lattice (project memory:
-                project_layered_engagement_share_hierarchy) — mall★ /
-                booth🔖 / find♥; Booth = bookmark via Phosphor
-                PiBookmarkSimple weight pair (matches BookmarkBoothBubble
-                corner glyph on the photo above for cohesion).
-
-                Hides when vendor is missing (no bookmark target). Owners
-                viewing their own booth don't see the affordance — same
-                gate as the corner bubble via the existing showBookmark
-                check up the tree wouldn't apply here at this scope; for
-                /shelf this is always a non-owner shopper view because
-                /shelf is the public shopper-facing route (owners
-                manage from /my-shelf). LocationActions component itself
-                stays consumed by /map's PinCallout (unaffected). */}
+            {/* Session 157 Review Board Booth #1 + #2 — Bookmark Booth
+                button replaces the BoothCloser internal hairline (David:
+                "replace the hairline divider with the bookmark button").
+                Visual flow: WindowView grid → button (where hairline was)
+                → updated closer text. The button now sits ABOVE the
+                closer; BoothCloser's internal hairline retires entirely
+                (see components/BoothPage.tsx for the closer copy update +
+                hairline retire). Reverses session 157 commit a99f56e's
+                below-closer placement per feedback_surface_locked_design_reversals
+                (same-session reversal of just-shipped placement per
+                feedback_within_session_design_record_reversal). The
+                button now visually divides the booth content from the
+                closing message + plays its primary-CTA role at the same
+                slot. */}
             {vendor && (
-              <div style={{ padding: "20px 22px 0" }}>
+              <div style={{ padding: "28px 22px 0" }}>
                 <button
                   type="button"
                   onClick={handleToggleBoothBookmark}
@@ -544,6 +532,8 @@ export default function PublicShelfPage() {
                 </button>
               </div>
             )}
+
+            <BoothCloser />
           </>
         )}
 

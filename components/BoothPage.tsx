@@ -908,27 +908,30 @@ export function WindowView({
 export function BoothCloser() {
   // v1.1j — hairline rule replaces diamond-flanked divider (diamond retired)
   // v2 Arc 4.2 — typography + colors migrate: FONT_LORA → FONT_CORMORANT,
-  // v1.inkMid → v2.text.secondary, v1.inkHairline → v2.border.light. Copy
-  // preserved verbatim per session 130 D7 ("make a purchase" closer).
+  // v1.inkMid → v2.text.secondary, v1.inkHairline → v2.border.light.
+  // Session 157 Review Board Booth #2 — internal hairline div retires +
+  // copy updates. David: "Change 'Save this booth...' text to say 'Thanks
+  // for visiting my booth. Bookmark it to stay updated as new finds land
+  // on the shelf, and visit the store in person when you're ready to
+  // purchase.' and remove hairline above. This should all read as one
+  // page." The Bookmark Booth button now sits ABOVE this closer (taking
+  // the visual divider role), and the closer text reads as a personal
+  // sign-off from the vendor. Reverses session 130 D7 closer copy +
+  // v1.1j hairline structure per feedback_surface_locked_design_reversals.
   return (
-    <>
-      <div style={{ padding: "28px 22px 20px" }}>
-        <div style={{ width: "100%", height: 1, background: v2.border.light }} />
-      </div>
-      <div
-        style={{
-          fontFamily: FONT_CORMORANT,
-          fontStyle: "italic",
-          fontSize: 16,
-          color: v2.text.secondary,
-          lineHeight: 1.5,
-          padding: "0 28px",
-          textAlign: "center",
-        }}
-      >
-        Save this booth to stay updated, or visit in person to make a purchase.
-      </div>
-    </>
+    <div
+      style={{
+        fontFamily: FONT_CORMORANT,
+        fontStyle: "italic",
+        fontSize: 16,
+        color: v2.text.secondary,
+        lineHeight: 1.5,
+        padding: "28px 28px 0",
+        textAlign: "center",
+      }}
+    >
+      Thanks for visiting my booth. Bookmark it to stay updated as new finds land on the shelf, and visit the store in person when you&rsquo;re ready to purchase.
+    </div>
   );
 }
 
