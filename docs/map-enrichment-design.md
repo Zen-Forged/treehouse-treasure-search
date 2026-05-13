@@ -306,3 +306,44 @@ Reason: David's QA: *"remove list view filter. I don't think we need it anymore.
 - `feedback_smallest_to_largest_commit_sequencing` — 4 dial commits sequenced smallest→largest (token swap → typography → map offset → list-view retire).
 - `feedback_dead_code_cleanup_as_byproduct` — Dial D retired 4 imports + 1 state + 1 sibling render in the same commit as the feature change.
 - `feedback_lora_lineheight_minimum_for_clamp` — Cormorant 1.3 floor applied at 18px name + 14px stat per the post-promotion canonical rule.
+
+---
+
+## Second dial bundle (Dials F–G — post-Dial-bundle-1 iPhone QA)
+
+After Dial bundle 1 (A–E) shipped + iPhone QA on Vercel preview, David surfaced 3 more findings about color treatments + CTA hierarchy on the PinCallout. Same session ship per `feedback_within_session_design_record_reversal` (~7th cumulative firing now). 2 commits sequenced smallest→largest + this amendment.
+
+### Dial F — DistancePill green-on-green + statline label color → green
+
+**Original** (R17 Arc 1 D6): DistancePill renders as a neutral postmark stamp — `bg: v2.surface.warm`, `border: 1px v2.border.light`, `color: v2.text.muted`.
+**Override**: green-on-green treatment matching the V1 mockup that shipped in this session — `bg: rgba(46,86,57,0.10)` (translucent green), no border, `color: v2.accent.green`.
+
+**Original** (Dial B): PinCallout stat line `color: v2.text.muted` with green NUMERAL nested inside.
+**Override**: outer `color: v2.accent.green` so the entire stat line ("X fresh finds" / "X saved finds") reads in unified brand green.
+
+Reason: David's QA: *"Change the font color of 'fresh finds' to the green color. Also, your mock shows the correct green on green color for the distance pill but that's not reflected on the preview when the mall is selected pin."*
+
+DistancePill is system-wide — change cascades through 1 production consumer (PinCallout) + 1 smoke route (/geolocation-test). Verified via grep audit; SavedMallCardV2 references DistancePill in comments only (renders inline distance label, not the primitive). No collateral damage.
+
+### Dial G — CTA reorder + style swap + "Navigate" → "Directions"
+
+**Original** (R17 Arc 2 D19): `[Explore (outline transparent + green border + green text)]` + `[Navigate (filled green + green border + cream text + Navigation icon)]`.
+**Override**: `[Directions (outline)]` + `[Explore (filled green + cream text)]` — reversed order AND swapped styles.
+
+| Slot | Before | After |
+|---|---|---|
+| Left button | Explore (outline) | Directions (outline) |
+| Right button | Navigate (filled green) | Explore (filled green) |
+| Copy change | "Navigate" | "Directions" |
+| Navigation icon | On Navigate, cream-colored | On Directions, green-colored |
+
+Reason: David's QA: *"Reverse order of Explore and Navigate buttons. Explore should be the dark green color as that's really the action we want them to take here. Change 'Navigate' to 'Directions'."*
+
+Filled-green-on-rightmost is the canonical primary-CTA position; this aligns the visual hierarchy with the product hierarchy (Explore = scope-commit + see all finds at this mall = primary product action; Directions = deep-link to native maps = secondary). `onClick` handlers preserved verbatim — `onBrowse` still commits scope, `onGo` still fires the maps deep-link + analytics — just the button text/style they're attached to swapped.
+
+### Memory firings second dial bundle
+
+- `feedback_within_session_design_record_reversal` ✅ Promoted — 2 distinct reversals (Dial F DistancePill spec + Dial G CTA layout). ~7th cumulative firing across project age.
+- `feedback_smallest_to_largest_commit_sequencing` — 2 dial commits sequenced smallest→largest (color treatments → CTA reorder/restyle/recopy).
+- `feedback_visibility_tools_first` — DistancePill consumer audit via grep BEFORE editing the system-wide primitive (~5+ cumulative firings).
+- `feedback_user_facing_copy_scrub_skip_db_identifiers` ✅ Promoted — analytics event name `find_navigate_tapped` preserved unchanged (DB / event identifier, not user-facing copy). Only the button label changed Navigate → Directions.
