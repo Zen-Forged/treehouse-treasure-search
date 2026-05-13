@@ -847,31 +847,20 @@ function LoginInner() {
           </AnimatePresence>
         </div>
 
-        {/* Review Board Finding 11B (session 153) — retire prominent
-            "Do you have a booth?" + Cormorant "Request a digital booth"
-            CTA. The /welcome screen handles new-vendor disambiguation
-            post-first-sign-in, so the prominent CTA on /login is
-            redundant. A minimal footer link remains for discoverability —
-            tiny Inter 11px italic v2.text.muted. */}
-        {renderState === "form" && screen === "enter-email" && (
-          <div style={{ textAlign: "center", marginTop: 22, padding: "0 4px" }}>
-            <Link
-              href="/vendor-request"
-              style={{
-                fontFamily: FONT_INTER,
-                fontStyle: "italic",
-                fontSize: 11,
-                color: v2.text.muted,
-                textDecoration: "underline",
-                textDecorationStyle: "dotted",
-                textDecorationColor: v2.text.muted,
-                textUnderlineOffset: 3,
-              }}
-            >
-              New here? Request a digital booth &rarr;
-            </Link>
-          </div>
-        )}
+        {/* Session 157 Review Board Login #2 — David: "Remove 'New here?...'
+            text as this is already part of the triage process."
+            Session-153 minimal footer link retires. /welcome already
+            handles new-vendor + new-shopper disambiguation post-first-
+            sign-in, and the /login screen ahead routes new vendors
+            through that triage anyway — the redundant discoverability
+            footer earned its retirement.
+
+            Reverses session 153 Review Board Finding 11B's minimal-
+            footer-as-vestigial-CTA per feedback_surface_locked_design_reversals.
+            Session 153 reasoning was "preserve discoverability without
+            visual real estate cost"; David's call now: the triage
+            process below already provides discoverability, so even the
+            minimal footer is redundant chrome. */}
       </div>
 
       {/* Sign-out — bottom of authed-cards screen */}
