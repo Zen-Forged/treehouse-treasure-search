@@ -41,8 +41,12 @@
 //                                  has 1 consumer; promote to Layer 2 primitive
 //                                  only on 2nd consumer per CLAUDE.md rule)
 //   - <TreehouseMap>               Mapbox map fills entire drawer (no header)
-//   - <MapControlPill>             Clear / List view affordance (migrated from /map)
-//   - <MallSheet>                  all-malls picker (sibling modal; opens from List view)
+//   - <MapControlPill>             Reset affordance (only in specific-mall scope;
+//                                  session 158 dial D retired the all-Kentucky
+//                                  List view branch — MapCarousel now surfaces
+//                                  the browse-the-locations affordance)
+//   - <MapCarousel>                Bottom thumbnail strip — session 158 sibling
+//                                  layer between drawer + BottomNav
 //
 // Pure presentation primitive — drawer-open state lives in consumer
 // (<HomeChrome> in Arc 2). Drawer reads `open` prop and renders. Pin commit
@@ -58,8 +62,7 @@
 import * as React from "react";
 import nextDynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
-import { PiX, PiList } from "react-icons/pi";
-import MallSheet from "./MallSheet";
+import { PiX } from "react-icons/pi";
 import MapCarousel from "./MapCarousel";
 import {
   v2,
@@ -119,9 +122,6 @@ export default function MallMapDrawer({
   // it. Tap callout → commit. Tap empty map → clear. Same pattern as /map
   // page (session 108 D26).
   const [peekedMallId, setPeekedMallId] = React.useState<string | null>(null);
-
-  // MallSheet picker opens via the List view pill when scope=all-Kentucky.
-  const [sheetOpen, setSheetOpen] = React.useState(false);
 
   // Body scroll lock while drawer open — inline pattern from <BottomSheet>
   // (session 149). Without this, scrolling inside the map can bleed through
@@ -222,14 +222,11 @@ export default function MallMapDrawer({
                 }}
               />
 
-              {/* Contextual pill — scope set → "Clear"; all-Kentucky → "List view".
-                  Migrated from app/(tabs)/map/page.tsx MapContextualPill (which
-                  retires when /map page deletes in Arc 3.3). */}
-              <MapControlPill
-                scopeSet={selectedMallId !== null}
-                onClear={onClear}
-                onOpenList={() => setSheetOpen(true)}
-              />
+              {/* Contextual pill — scope set → "Reset" (clears scope to all-
+                  Kentucky). Session 158 dial D retired the all-Kentucky List
+                  view branch since the bottom MapCarousel now surfaces the
+                  same browse-the-locations affordance more discoverably. */}
+              {selectedMallId !== null && <MapControlPill onClear={onClear} />}
             </div>
           </motion.div>
         )}
@@ -247,66 +244,27 @@ export default function MallMapDrawer({
         peekedMallId={peekedMallId}
         onCardTap={(id) => setPeekedMallId(id)}
       />
-
-      {/* MallSheet picker — sibling modal layering above the page-drawer when
-          "List view" tapped. Clean two-layer stack (drawer-panel → picker-modal)
-          identical to pre-session-154's /map page → MallSheet relationship. */}
-      <MallSheet
-        open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-        malls={malls}
-        activeMallId={selectedMallId}
-        onSelect={(id) => {
-          setSheetOpen(false);
-          if (id) {
-            onMallPick(id);
-          } else {
-            onClear();
-          }
-        }}
-      />
     </>
   );
 }
 
 // ─── MapControlPill ────────────────────────────────────────────────────────
-// Migrated from app/(tabs)/map/page.tsx session-108 implementation; session 155
-// refinement restyles from primary (saturated v2.accent.green + cream text) to
-// secondary/utility pill style — pill is utility chrome (Reset / List view),
-// not a primary action, and shouldn't compete visually with map content.
-//
-// Session 156 — pill bg v2.surface.card -> v2.bg.main per David iPhone QA:
-// "Change list view bg to match the rest of the UI, currently the warm color."
-// Pill now matches masthead + strip + drawer + map land continuity exactly.
-// Border + subtle shadow + Phosphor glyph still differentiate it from the
-// surrounding cream surface.
+// Migrated from app/(tabs)/map/page.tsx session-108 implementation; restyled
+// session 155 to secondary/utility pill style (not a primary action). Session
+// 158 dial D retired the dual-state variant — list-view branch dropped since
+// the bottom MapCarousel surfaces the same browse-the-locations affordance.
+// Pill now renders only in specific-mall scope as the Reset affordance.
 //
 // Secondary pill spec (mirrors <BottomSheet> TopBar button canonical):
 //   bg     v2.bg.main       (#F7F3EB — system canonical, matches all chrome)
 //   border 1px v2.border.light
 //   text   v2.text.secondary
 //   shadow project-canonical subtle "0 1px 2px rgba(43,33,26,0.04)"
-//          (session 151 pattern; extracted as v2.shadow.card on 3rd consumer)
-//
-// PiX + PiList glyphs match v2-pure Phosphor vocabulary (session 145 sweep).
-function MapControlPill({
-  scopeSet,
-  onClear,
-  onOpenList,
-}: {
-  scopeSet:   boolean;
-  onClear:    () => void;
-  onOpenList: () => void;
-}) {
-  const Icon  = scopeSet ? PiX : PiList;
-  // "Reset" reads more accurately than "Clear" — tap returns scope from a
-  // specific mall to all-Kentucky (the default), not a destructive clear.
-  const label = scopeSet ? "Reset" : "List view";
-  const onTap = scopeSet ? onClear : onOpenList;
+function MapControlPill({ onClear }: { onClear: () => void }) {
   return (
     <button
       type="button"
-      onClick={onTap}
+      onClick={onClear}
       style={{
         position:        "absolute",
         top:             12,
@@ -329,8 +287,8 @@ function MapControlPill({
         WebkitTapHighlightColor: "transparent",
       }}
     >
-      <Icon size={15} aria-hidden="true" />
-      {label}
+      <PiX size={15} aria-hidden="true" />
+      Reset
     </button>
   );
 }
