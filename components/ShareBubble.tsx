@@ -18,17 +18,23 @@
 //                          + /my-shelf BoothHero (v2.surface.warm solid +
 //                          1px v2.border.light + v2.accent.green glyph).
 //
-// Geometry is 44×44 with a 22px airplane glyph.
+// Geometry is 44×44 with a 23px airplane glyph at strokeWidth 1.8.
 //
-// Session 160 — David iPhone QA Finding 5: airplane intrinsic size 28 → 22
-// (literal SVG width/height verbatim per `feedback_user_provided_verbatim_
-// values_ship_as_is`) + visual-centering offset `translate(-1px, 1px)` so
-// the glyph reads optically centered in the 44×44 bubble (the airplane SVG
-// paths sit toward the top-right of the 24×24 viewBox; small offset
-// re-anchors the visual centroid). Pre-session-160 the size=28 was set to
-// compensate for the airplane's 18×18-in-24×24 bounding-box shape (see
-// MastheadPaperAirplane header), but iPhone QA read it as oversized
-// relative to the heart save bubble's 22px glyph.
+// Session 160 — David iPhone QA Finding 5 + Review Board round 2: airplane
+// intrinsic size 28 → 23 + strokeWidth 1.7 → 1.8 (David verbatim SVG spec:
+// '<svg width="23" height="23" ... stroke-width="1.8" ...>') + visual-
+// centering offset `translate(-1px, 1px)` so the glyph reads optically
+// centered in the 44×44 bubble (the airplane SVG paths sit toward the
+// top-right of the 24×24 viewBox; small offset re-anchors the visual
+// centroid). Shipped per `feedback_user_provided_verbatim_values_ship_as_is`.
+//
+// Sizing evolution this session:
+//   pre-160:           size=28 (compensation for 18×18-in-24×24 bbox)
+//   commit 82cbcec:    size=22, strokeWidth default 1.7
+//   THIS:              size=23, strokeWidth=1.8 — pairs with the
+//                      FlagGlyph PiLeafBold (commit e40f6ed) on
+//                      /find/[id] photo bubble so both glyphs read
+//                      at matched stroke weight.
 //
 // State semantics: stateless. Parent owns share-sheet open state + opens
 // it via onClick. Mirrors BookmarkBoothBubble's pure-render contract so
@@ -83,7 +89,8 @@ export default function ShareBubble({
         }}
       >
         <MastheadPaperAirplane
-          size={22}
+          size={23}
+          strokeWidth={1.8}
           color={isFrosted ? v1.inkPrimary : v2.accent.green}
         />
       </span>
