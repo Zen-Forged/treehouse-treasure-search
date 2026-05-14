@@ -176,7 +176,16 @@ export default function MapCarousel({
                     width:         142,
                     height:        108,
                     padding:       0,
-                    background:    v2.surface.card,
+                    // Session 161 dial — David verbatim "Change the background
+                    // of the map carousel thumbnails and selected pin to
+                    // background: var(--th-v2-surface-input)". v2.surface.card
+                    // and v2.surface.input resolve to the same value today
+                    // (#FFFCF5 per session 157 Review Board batch 2 token
+                    // alignment) so this is a semantic-tier rename rather than
+                    // a visual change — aligns carousel cards to the same
+                    // surface tier as form inputs + nav bar so future v2.input
+                    // value flips cascade here automatically.
+                    background:    v2.surface.input,
                     // Session 161 — non-peeked border tier light → medium per David's
                     // "Add thin stroke around the mall cards so they have some separation
                     // from the bg, it can be a lighter grey color or something we've
