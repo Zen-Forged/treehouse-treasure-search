@@ -170,8 +170,20 @@ const USER_PULSE_KEYFRAMES_ID = "treehouse-user-pulse-keyframes";
 if (typeof document !== "undefined" && !document.getElementById(USER_PULSE_KEYFRAMES_ID)) {
   const style = document.createElement("style");
   style.id = USER_PULSE_KEYFRAMES_ID;
+  // Session 165 — David's iPhone QA on session 161 pulse ship: "Pulse 10mi
+  // reach animation is not attaching to the userLocationPin. Additionally,
+  // I'd like the pulse reach to be a bit darker in color not as transparent."
+  // Diagnosis: pulse WAS rendering but at peak-size moment (scale=1) opacity
+  // had decayed to ~0; peak-opacity moment (scale=0) was zero-size. Net
+  // visual presence dropped below visibility threshold against the warm-
+  // cream basemap. Pure value dial — bumps starting opacity 0.45 → 0.65 +
+  // 80% keyframe 0.05 → 0.18 + keyframe-end opacity 0 (unchanged so the
+  // pulse still fades cleanly into the next cycle). Combined with the
+  // border + bg alpha bumps below the pulse now reads visibly across the
+  // full sonar-ping cycle. Findings 1 + 2 share the same root cause +
+  // single fix.
   style.textContent =
-    "@keyframes treehouse-user-pulse { 0% { transform: translate(-50%, -50%) scale(0); opacity: 0.45; } 80% { opacity: 0.05; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 0; } }";
+    "@keyframes treehouse-user-pulse { 0% { transform: translate(-50%, -50%) scale(0); opacity: 0.65; } 80% { opacity: 0.18; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 0; } }";
   document.head.appendChild(style);
 }
 
@@ -300,8 +312,12 @@ function UserLocationPin() {
           transform:       "translate(-50%, -50%) scale(0)",
           transformOrigin: "center",
           borderRadius:    "50%",
-          border:          "1.5px solid rgba(46,86,57,0.40)",
-          background:      "rgba(46,86,57,0.08)",
+          // Session 165 — bump border + bg alphas for visibility against
+          // warm-cream basemap. Border alpha 0.40 → 0.55 + width 1.5 → 2;
+          // bg alpha 0.08 → 0.16. Combined with the keyframe opacity bump
+          // above, pulse now reads visibly across the full sonar-ping cycle.
+          border:          "2px solid rgba(46,86,57,0.55)",
+          background:      "rgba(46,86,57,0.16)",
           animation:       "treehouse-user-pulse 2.8s ease-out infinite",
           pointerEvents:   "none",
         }}
