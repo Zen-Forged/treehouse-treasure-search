@@ -83,7 +83,13 @@ export default function TabsChrome() {
     if (!drawerOpen) return;
     if (typeof window === "undefined") return;
     if (window.scrollY < 190) {
-      window.scrollTo({ top: 200, behavior: "smooth" });
+      // Session 166 dial 5 (post-dial-3 iPhone QA round 3) — target value
+      // 200 → 190 to land exactly at the sticky-engagement threshold (33vh
+      // hero - 90px visible strip = 190px). Previously 200 over-scrolled
+      // by 10px, leaving feed's top 10px hidden behind the sticky-pinned
+      // chip when drawer closes after pin commit. At exactly 190, feed's
+      // flow top lands flush with chip's pinned bottom — no clipping.
+      window.scrollTo({ top: 190, behavior: "smooth" });
     }
   }, [drawerOpen]);
 
