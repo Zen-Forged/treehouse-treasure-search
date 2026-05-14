@@ -47,11 +47,24 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import HomeHero from "@/components/HomeHero";
 import MallPickerChip from "@/components/MallPickerChip";
 import MallMapDrawer from "@/components/MallMapDrawer";
+import MastheadProfileButton from "@/components/MastheadProfileButton";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { useMapDrawer } from "@/lib/useMapDrawer";
 import { getActiveMalls } from "@/lib/posts";
 import { track } from "@/lib/clientEvents";
 import type { Mall } from "@/types/treehouse";
+
+// Session 166 Shape A — floating chrome affordances (Profile right /
+// optional Back left when drawer open) overlay the hero photo as
+// position:fixed at top of viewport. Restores access lost when Arc 3.1.3
+// retired StickyMasthead from (tabs)/ chrome.
+//
+// Offset honors safe-area-inset-top so notched iPhones push buttons
+// below the notch. The 14px additive matches old MASTHEAD_HEIGHT's
+// 14px breathing room (StickyMasthead session-77 primitive).
+const OVERLAY_TOP    = "calc(env(safe-area-inset-top, 14px) + 14px)";
+const OVERLAY_X      = 16;
+const OVERLAY_Z      = 50;
 
 export default function TabsChrome() {
   const pathname     = usePathname();
@@ -170,6 +183,27 @@ export default function TabsChrome() {
         searchQuery={isHome ? q : undefined}
         onSearchChange={isHome ? handleSearchChange : undefined}
       />
+
+      {/* Session 166 Shape A commit 1 — Profile chrome affordance restored
+          as floating overlay at top-right of viewport. Arc 3.1.3 retired
+          StickyMasthead from (tabs)/ which also retired the masthead-right
+          Profile slot (session 159 placement). Universal across Home +
+          Saved per the original session 159 Q3 lock ("Profile universal
+          across all pages"). MastheadProfileButton self-derives auth state
+          via useShopperAuth — routes guest→/login, admin→/admin,
+          shopper→/me. Floats over hero photo at top (dark woodgrain area
+          of asset; doesn't compete with centered wordmark) and stays
+          pinned at viewport top during scroll. */}
+      <div
+        style={{
+          position: "fixed",
+          top:      OVERLAY_TOP,
+          right:    OVERLAY_X,
+          zIndex:   OVERLAY_Z,
+        }}
+      >
+        <MastheadProfileButton />
+      </div>
 
       {showChipAndDrawer && (
         <MallPickerChip
