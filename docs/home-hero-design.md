@@ -1,10 +1,12 @@
 # Home Hero — design record
 
-> **Status:** 🟢 Ready for implementation
+> **Status:** 🟢 Ready for implementation · V2 sticky-header amendment applied
 > **Picked frame:** Frame C (search bar inside hero · padding below before mall picker)
-> **Mockup:** [`docs/mockups/home-hero-v1.html`](mockups/home-hero-v1.html)
-> **Asset:** [`/public/home-hero.png`](../public/home-hero.png) (1536×1024, 3.3MB pre-optimization — wordmark baked in)
-> **Last updated:** session 164 (2026-05-14)
+> **Picked sticky shape:** Shape A (single hero, `position: sticky; top: negative`) — per V2 amendment
+> **Mockup V1:** [`docs/mockups/home-hero-v1.html`](mockups/home-hero-v1.html) — frame axis
+> **Mockup V2:** [`docs/mockups/home-hero-v2.html`](mockups/home-hero-v2.html) — sticky-header behavior axis
+> **Asset:** [`/public/home-hero.png`](../public/home-hero.png) (1536×1024, 867KB post-optimization — wordmark baked in)
+> **Last updated:** session 164 (2026-05-14) — V2 amendment
 
 ---
 
@@ -23,6 +25,44 @@ Preserved (no reversal):
 - StickyMasthead primitive itself + consumers OUTSIDE (tabs)/ (e.g., /find/[id], /shelf/[slug], /my-shelf, /me, /login) — all preserved verbatim
 - SearchBar primitive (`components/SearchBar.tsx`) — relocates from sticky chrome to embedded inside HomeHero; props/behavior unchanged
 - BottomNav (2-tab pill, session 159) — sticky behavior preserved verbatim
+
+---
+
+## V2 amendment — sticky-header behavior (within-session reversal of D5)
+
+Per `feedback_within_session_design_record_reversal` ✅ Promoted-via-memory at session 128 — within-session reversals follow the same surfacing rule as cross-session reversals. After Arc 1 shipped at this session (commits `bb177e5` design + `248fbf9` asset + `398808c` primitive + `b652a84` smoke route), David's iPhone QA + reflection surfaced two refinements:
+
+1. **Search bar drops 20px** — `bottom: 52 → 32`. Pure dial.
+2. **Hero should NOT scroll away entirely** — instead collapse to a thin sticky header (~90px) that keeps the search bar visible at top while user scrolls the feed.
+
+V2 mockup `docs/mockups/home-hero-v2.html` spanned 3 implementation shapes (A sticky-negative-top / B two-stacked-elements / C scroll-driven-collapse). David picked **Shape A**.
+
+### Reversal entry
+
+| Old decision | Session | New decision | Reason |
+|---|---|---|---|
+| D5 — Hero + chrome scroll away with feed; only BottomNav remains sticky | Session 164 V1 | Hero pins to top via `position: sticky; top: calc(STICKY_THIN_HEIGHT - 33vh)` once scrolled past the offset; only the bottom 90px stays visible as a thin sticky header containing the search bar | David's iPhone QA call: *"allow a bit of scroll and then the background sticks with search bar so it's still a header but thinner not the full hero"* |
+| D7 — SearchBar position `bottom: 52` | Session 164 V1 | SearchBar position `bottom: 32` (drop 20px) | David's iPhone QA dial |
+
+### New decisions added
+
+### D16 — Sticky-header behavior (Shape A from V2)
+HomeHero uses `position: sticky; top: calc(STICKY_THIN_HEIGHT - 33vh); z-index: 10`. As user scrolls, hero rises with feed content until its top edge would reach the negative offset, then it pins. Only the bottom `STICKY_THIN_HEIGHT` (90px) stays visible at top of viewport — natural image continuity since it's the same DOM node + same image scrolled into its sticky position. Wordmark portion of the image scrolls out the top naturally. **Why:** Shape A from V2 — simplest implementation (one element, CSS-only, no JS), natural image continuity, asset's bottom wood-tone qualifies as "visually quiet" for search bar readability constraint.
+
+### D17 — `STICKY_THIN_HEIGHT` constant = 90px
+Module-scope constant in `HomeHero.tsx` controlling the visible-strip height when sticky pins. Search bar (46px height, `bottom: 32`) ends up at strip-y ~12-58 in the 90px strip — top-biased with 32px breath below. **Why:** 90px gives the search bar a generous-feeling top chrome while staying visually distinct from the full 33vh hero; dial axis for iPhone QA if 90px reads too tall (→ 72px) or too short (→ 110px).
+
+### D18 — z-index discipline
+HomeHero gets `z-index: 10` so the sticky strip stays above scrolling feed content. Tile grid + MallPickerChip render without explicit z-index (auto-stack below the sticky). MallPickerChip's pop-up MallSheet sheet primitive (which uses portal-rendered overlay) is unaffected. **Why:** prevent visual bleed-through during scroll.
+
+### D19 — Asset constraint clarified
+Hero asset's bottom ~30% (which becomes the persistent sticky strip after scroll) should be visually quiet. The attached asset's bottom wood-tone passes this constraint. **Why:** sticky strip contains the search bar; busy photographic content underneath the search would reduce input readability.
+
+### Implications
+
+- Arc 1 status: ✅ shipped (4 commits) at the original D5 (scroll-away). The V2 amendment introduces a new Arc 1 dial commit (search-bottom 52→32 + sticky-positioning).
+- Arc 3 status: the `(tabs)/layout.tsx` adoption now needs to position HomeHero as a direct sticky child of the layout (not nested inside an overflow-constrained ancestor). Verified clean against Next.js App Router default body styling.
+- Tier B7 (was "v2.shadow.* extraction" placeholder) → reassigned: **B7 = Shape C scroll-driven smooth collapse** if Shape A's sudden snap-to-sticky feels janky. Deferred unless iPhone QA flags.
 
 ---
 
