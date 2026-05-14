@@ -174,7 +174,18 @@ export default function MapCarousel({
                   style={{
                     flexShrink:    0,
                     width:         142,
-                    height:        108,
+                    // Session 161 dial — card height 108 → 114 to absorb name
+                    // lineHeight bump (1.3 → 1.5 below) without crushing the
+                    // distance label. David's iPhone QA: "The bottom ligatures
+                    // on the selected mall tile carousel is getting cut off."
+                    // Root cause: Cormorant 13px at lineHeight 1.3 sits at the
+                    // memory-file floor (feedback_lora_lineheight_minimum_for
+                    // _clamp ✅ Promoted) but the italic stress + curved
+                    // letter terminals exceed the line-box at 1.3; overflow:
+                    // hidden on the name div clips them. Bumping lineHeight
+                    // alone would crowd the distance label; +6px card height
+                    // gives the bumped line-box comfortable buffer.
+                    height:        114,
                     padding:       0,
                     // Session 161 dial — David verbatim "Change the background
                     // of the map carousel thumbnails and selected pin to
@@ -241,7 +252,15 @@ export default function MapCarousel({
                         fontSize:     13,
                         fontWeight:   600,
                         color:        v2.text.primary,
-                        lineHeight:   1.3,
+                        // Session 161 dial — lineHeight 1.3 → 1.5 to give
+                        // Cormorant's italic stress + glyph terminals
+                        // comfortable clearance inside overflow:hidden. 1.3
+                        // is the canonical Lora/Cormorant floor for clamped
+                        // text (memory feedback_lora_lineheight_minimum_for_
+                        // clamp ✅ Promoted) but borderline at 13px under
+                        // ellipsis. 1.5 lands well clear of the line-box
+                        // edge so descenders + curve-bottoms render fully.
+                        lineHeight:   1.5,
                         whiteSpace:   "nowrap",
                         overflow:     "hidden",
                         textOverflow: "ellipsis",

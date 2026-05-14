@@ -222,24 +222,26 @@ const KY_FIT_ZOOM = 6.4;
 // Session 161 — fitBounds bottom padding accounts for the MapCarousel
 // "shelf" that floats at the bottom of the viewport. Without this, the
 // southernmost pins fitted by fitBounds land underneath the shelf and
-// are visually obscured (David's iPhone QA item #2: "Make sure all
-// locations show on reset visually. right now the bottom location is
-// being covered by the mall card carousel.").
+// are visually obscured.
 //
-// Math (matches session 161 commit 3's shelf wrapper geometry):
+// Math (matches session 161 MapCarousel shelf wrapper geometry):
 //   shelf bottom in viewport = 87 + safe-area-inset-bottom (from screen bottom)
-//   shelf content height     = 10 + 108 + 12 = 130 (top pad + card + bottom pad)
-//   shelf top in viewport    = 217 + safe-area-inset-bottom (from screen bottom)
+//   shelf content height     = 10 + 114 + 12 = 136 (top pad + card + bottom pad)
+//   shelf top in viewport    = 223 + safe-area-inset-bottom (from screen bottom)
+//
+// (Card height bumped 108 → 114 in session 161 dial round 2 to absorb
+// the name lineHeight bump 1.3 → 1.5 for glyph-bottom clearance under
+// overflow:hidden; shelf top tracks the new card height directly.)
 //
 // The drawer (which contains TreehouseMap) has paddingBottom: safe-area,
 // so the map container's bottom edge sits at safe-area from screen bottom.
 // In map-container coordinates, shelf-top therefore lands at:
-//   (217 + safe-area) - safe-area = 217px above the map's bottom edge.
+//   (223 + safe-area) - safe-area = 223px above the map's bottom edge.
 //
 // The safe-area component cancels — padding constant doesn't need to vary
 // with device geometry. Horizontal + top padding preserved at 56 from the
 // pre-session-161 value to keep coastal coordinate clusters from clipping.
-const FIT_PADDING_WITH_SHELF = { top: 56, right: 56, bottom: 217, left: 56 };
+const FIT_PADDING_WITH_SHELF = { top: 56, right: 56, bottom: 223, left: 56 };
 
 // Session 161 — David's iPhone QA item #5: "Change the you are here pin to
 // something more simple, no branding other than color. it can be smaller as
