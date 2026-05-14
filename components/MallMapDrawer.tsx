@@ -153,6 +153,12 @@ export default function MallMapDrawer({
   // actually changes.
   const [resetKey, setResetKey] = React.useState(0);
   const handleReset = React.useCallback(() => {
+    // Session 165 iPhone QA: David's "reset button should hide the pinned
+    // mall card that is currently selected in addition to resetting the
+    // scope to the user (which is working as expected)." Reset is the
+    // single "back to the default Kentucky view" affordance — any open
+    // callout from the prior peek should dismiss as part of that reset.
+    setPeekedMallId(null);
     setResetKey((n) => n + 1);
     onClear();
   }, [onClear]);
@@ -348,7 +354,15 @@ function MapControlPill({ onClear }: { onClear: () => void }) {
         position:        "absolute",
         top:             12,
         right:           12,
-        zIndex:          5,
+        // Session 165 iPhone QA: David's "reset button is getting covered
+        // consistently by the expanded pinned mall card." PinCallout
+        // renders at z:10 with neighbor-stepping arrows flanking it on
+        // either side; depending on which pin is peeked, the callout +
+        // arrows can geometrically overlap the top-right Reset corner.
+        // Bumps Reset above the callout layer so it stays visible + tappable
+        // regardless of which pin is peeked. Mall pins themselves stay
+        // below at the Mapbox marker layer (no z-index management needed).
+        zIndex:          20,
         display:         "flex",
         alignItems:      "center",
         gap:             6,
