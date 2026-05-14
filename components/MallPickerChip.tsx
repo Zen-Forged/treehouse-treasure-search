@@ -30,6 +30,7 @@
 import * as React from "react";
 import { PiMapPinFill, PiCaretDown } from "react-icons/pi";
 import { v1, v2, FONT_CORMORANT } from "@/lib/tokens";
+import { STICKY_THIN_HEIGHT_PX } from "@/components/HomeHero";
 
 interface MallPickerChipProps {
   mallName: string;
@@ -45,11 +46,33 @@ const CHEVRON_SIZE      = 18;
 const CHEVRON_LEFT_GAP  = 10;
 const PIN_NAME_GAP      = 8;
 
+// Session 166 post-Arc-3.1.3 dial — chip becomes position:sticky so it
+// stays visible below hero's sticky-collapsed strip during scroll AND
+// during drawer-open state (paired with TabsChrome's auto-scroll on
+// drawer-open). MallMapDrawer's top:calc imports this constant to
+// position the drawer below the chip strip.
+//
+// Height = TOP_PADDING + max(PIN_SIZE, NAME_FONT_SIZE * 1.3, CHEVRON_SIZE)
+//        + BOTTOM_PADDING = 22 + 29 + 10 = 61px. Rounded to 62 for safe
+// integer arithmetic in downstream consumers.
+export const CHIP_VISIBLE_HEIGHT_PX = 62;
+
 export default function MallPickerChip({ mallName, onTap }: MallPickerChipProps) {
   return (
     <div
       style={{
-        padding: `${TOP_PADDING}px ${HORIZ_PADDING}px ${BOTTOM_PADDING}px`,
+        padding:    `${TOP_PADDING}px ${HORIZ_PADDING}px ${BOTTOM_PADDING}px`,
+        // Sticky-pinned below hero strip. As page scrolls past hero, chip
+        // detaches from flow and pins at top:STICKY_THIN_HEIGHT_PX (90px).
+        // bg matches v2.bg.main so feed content doesn't bleed through
+        // when chip is pinned over scrolling feed. zIndex 11 sits above
+        // hero (z:10) so chip is never covered by hero strip overlap;
+        // drawer's top:calc accounts for chip height so they don't
+        // overlap when drawer is open.
+        position:   "sticky",
+        top:        STICKY_THIN_HEIGHT_PX,
+        zIndex:     11,
+        background: v2.bg.main,
       }}
     >
       <button
