@@ -170,8 +170,29 @@ const USER_PULSE_KEYFRAMES_ID = "treehouse-user-pulse-keyframes";
 if (typeof document !== "undefined" && !document.getElementById(USER_PULSE_KEYFRAMES_ID)) {
   const style = document.createElement("style");
   style.id = USER_PULSE_KEYFRAMES_ID;
+  // Session 165 round 1 — opacity dial bumped keyframes for visibility:
+  //   0% opacity 0.45 → 0.65, 80% opacity 0.05 → 0.18 (preserves sonar
+  //   decay shape, amplifies for visibility across the full cycle).
+  //
+  // Session 165 round 2 — David's iPhone QA still reads "Sonar still not
+  // located around the user pin" (the pulse renders, but visibly offset
+  // down-right of the pin). Diagnosis: the previous keyframes used
+  // `transform: translate(-50%, -50%) scale(s)` to both center AND
+  // animate. CSS spec quirk: translate(percentage) references the
+  // element's UNTRANSFORMED border-box size; when paired with scale in
+  // the same transform property + a dynamically-sized element via CSS
+  // variable on width/height, the percentage resolution + scale composition
+  // doesn't always reliably keep the element centered as the animation
+  // progresses (especially when width/height = a fresh CSS var value).
+  //
+  // Fix: decouple positioning from animation. Positioning moves to
+  // margin-based offsets (calc(var(--pulse-diameter-px) / -2)) on the
+  // pulse element itself — stable regardless of animation frame.
+  // Keyframes carry ONLY scale + opacity — no transform-percentage to
+  // interpolate against. Pulse stays anchored on the pin center across
+  // every animation frame.
   style.textContent =
-    "@keyframes treehouse-user-pulse { 0% { transform: translate(-50%, -50%) scale(0); opacity: 0.45; } 80% { opacity: 0.05; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 0; } }";
+    "@keyframes treehouse-user-pulse { 0% { transform: scale(0); opacity: 0.65; } 80% { opacity: 0.18; } 100% { transform: scale(1); opacity: 0; } }";
   document.head.appendChild(style);
 }
 
@@ -297,11 +318,26 @@ function UserLocationPin() {
           left:            "50%",
           width:           "var(--pulse-diameter-px, 100px)",
           height:          "var(--pulse-diameter-px, 100px)",
-          transform:       "translate(-50%, -50%) scale(0)",
-          transformOrigin: "center",
+          // Session 165 round 2 — margin-based centering replaces the
+          // prior `transform: translate(-50%, -50%)` approach. Decouples
+          // positioning from animation: margin always shifts the element
+          // back by half its diameter (referencing the CSS variable
+          // directly), keeping the pulse anchored on the pin center
+          // regardless of which animation frame is rendered. Keyframes
+          // carry ONLY scale + opacity now (see keyframes above) so the
+          // transform-percentage / scale-composition browser quirk that
+          // caused the pre-fix offset can no longer trigger.
+          marginTop:       "calc(var(--pulse-diameter-px, 100px) / -2)",
+          marginLeft:      "calc(var(--pulse-diameter-px, 100px) / -2)",
+          transform:       "scale(0)",
+          transformOrigin: "center center",
           borderRadius:    "50%",
-          border:          "1.5px solid rgba(46,86,57,0.40)",
-          background:      "rgba(46,86,57,0.08)",
+          // Session 165 — bump border + bg alphas for visibility against
+          // warm-cream basemap. Border alpha 0.40 → 0.55 + width 1.5 → 2;
+          // bg alpha 0.08 → 0.16. Combined with the keyframe opacity bump
+          // above, pulse now reads visibly across the full sonar-ping cycle.
+          border:          "2px solid rgba(46,86,57,0.55)",
+          background:      "rgba(46,86,57,0.16)",
           animation:       "treehouse-user-pulse 2.8s ease-out infinite",
           pointerEvents:   "none",
         }}

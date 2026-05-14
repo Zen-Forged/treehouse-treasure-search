@@ -65,6 +65,7 @@ import FeaturedBanner from "@/components/FeaturedBanner";
 import HomeFeedTile from "@/components/v2/HomeFeedTile";
 import EmptyState from "@/components/EmptyState";
 import HomeChrome from "@/components/HomeChrome";
+import MallMatchChip from "@/components/MallMatchChip";
 import { STRIP_HEIGHT, SEARCH_BAR_WRAP_HEIGHT } from "@/components/MallStrip";
 import { writeFindContext, setPostCache, type FindRef } from "@/lib/findContext";
 import type { Post, Mall } from "@/types/treehouse";
@@ -611,6 +612,34 @@ function DiscoveryFeedInner() {
           malls={malls}
           mallId={mallId}
           onSetMallId={setMallId}
+          query={q}
+        />
+      </div>
+
+      {/* Session 165 Finding 5 (Shape A) — MallMatchChip surfaces when the
+          SearchBar query contains-matches an active mall name or city, so
+          typing "crestwood" reveals a "Switch to Crestwood Antique Mall →"
+          affordance. Tap scopes the feed to that mall + clears the query +
+          fires `filter_applied` analytics with source: "search_mall_match".
+          Chip returns null when no match — wrapping div renders only when
+          chip has content to display, avoiding a layout slot when idle.
+          Drawer-context render slot is wired separately inside MallMapDrawer
+          per Shape A dual-slot spec (visible based on drawer state). */}
+      <div style={{ padding: "0 16px", marginBottom: 8 }}>
+        <MallMatchChip
+          malls={malls}
+          query={q}
+          currentMallId={mallId}
+          onPick={(mall) => {
+            setMallId(mall.id);
+            router.replace("/", { scroll: false });
+            track("filter_applied", {
+              filter_type:  "mall",
+              filter_value: mall.slug,
+              page:         "/",
+              source:       "search_mall_match",
+            });
+          }}
         />
       </div>
 

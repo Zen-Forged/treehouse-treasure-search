@@ -29,6 +29,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import MallStrip, { type MallStripScope } from "@/components/MallStrip";
 import MallMapDrawer from "@/components/MallMapDrawer";
 import { track } from "@/lib/clientEvents";
@@ -42,6 +43,14 @@ interface HomeChromeProps {
   onSetMallId:    (id: string | null) => void;
   mallStats?:     Record<string, MallStats>;
   savedByMallId?: Record<string, number>;
+  /**
+   * Session 165 Finding 5 — current SearchBar query string, threaded down
+   * to MallMapDrawer so the drawer-context MallMatchChip can surface when
+   * the query matches an active mall. Passed via prop (rather than read
+   * via useSearchParams here) so HomeChrome stays free of router-state
+   * dependencies. Defaults to "" — chip won't render when omitted.
+   */
+  query?:         string;
 }
 
 export default function HomeChrome({
@@ -50,6 +59,7 @@ export default function HomeChrome({
   onSetMallId,
   mallStats,
   savedByMallId,
+  query = "",
 }: HomeChromeProps) {
   // Session 157 — drawer state lifted to MapDrawerProvider (app root) so
   // (tabs) layout masthead can read drawerOpen for the back-button affordance
@@ -57,6 +67,7 @@ export default function HomeChrome({
   // a consumer + setter, not the owner. Drawer mount is still here (only
   // Home shows the drawer) but state crosses the layout boundary via context.
   const { drawerOpen, closeDrawer, toggleDrawer } = useMapDrawer();
+  const router = useRouter();
 
   // Derive strip's identity from the malls array + current mallId. When
   // mallId is null OR doesn't resolve to an active mall (stale id, mid-fetch),
@@ -96,6 +107,7 @@ export default function HomeChrome({
         selectedMallId={mallId}
         mallStats={mallStats}
         savedByMallId={savedByMallId}
+        query={query}
         onMallPick={(id) => {
           // Pin-commit: apply scope + close drawer + fire filter_applied.
           onSetMallId(id);
@@ -116,6 +128,23 @@ export default function HomeChrome({
             filter_value: "all",
             page:         "/",
             source:       "map_reset",
+          });
+        }}
+        onMallSearchPick={(id) => {
+          // Session 165 Finding 5 (Shape A dual-slot) — drawer-context chip
+          // tap fires here. Same scope-change + drawer-close as pin-commit
+          // but additionally clears the URL query (the typed mall name was
+          // a navigation intent, not a tag-search refinement) and analytics
+          // source: "search_mall_match" so R3 captures the discovery path.
+          onSetMallId(id);
+          closeDrawer();
+          router.replace("/", { scroll: false });
+          const picked = malls.find((m) => m.id === id);
+          track("filter_applied", {
+            filter_type:  "mall",
+            filter_value: picked?.slug ?? id,
+            page:         "/",
+            source:       "search_mall_match",
           });
         }}
       />

@@ -143,13 +143,14 @@ export default function MapCarousel({
               display:                 "flex",
               gap:                     8,
               overflowX:               "auto",
-              // Shelf vertical breathing — 10px top above cards, 12px bottom
-              // below the card row (the "shelf surface" the cards sit on).
-              // Horizontal 12px keeps first/last card from touching shelf
-              // edges. maxWidth + auto margins center cards within the
-              // full-width shelf so the column shape from pre-session-161
-              // is preserved on wide viewports.
-              padding:                 "10px 12px 12px",
+              // Shelf vertical breathing — session 165 iPhone QA bump: top
+              // padding 10 → 22 to give the selected card visible "peek up"
+              // headroom (translateY −12 + scale 1.12 lifts the card edge
+              // up to ~16px above its normal slot; 22px top padding keeps
+              // the rise visible without clipping at the scroll container's
+              // implicit overflow-y boundary). Bottom 12 + horizontal 12
+              // preserved.
+              padding:                 "22px 12px 12px",
               maxWidth:                430,
               margin:                  "0 auto",
               pointerEvents:           "auto",
@@ -209,13 +210,40 @@ export default function MapCarousel({
                       ? `1.5px solid ${v2.accent.green}`
                       : `1px solid ${v2.border.medium}`,
                     borderRadius:  10,
-                    boxShadow:     "0 1px 2px rgba(43,33,26,0.06), 0 6px 18px rgba(43,33,26,0.06)",
                     overflow:      "hidden",
                     display:       "flex",
                     flexDirection: "column",
                     cursor:        "pointer",
-                    transform:     isPeeked ? "translateY(-3px)" : "translateY(0)",
-                    transition:    "transform 200ms ease, border-color 200ms ease",
+                    // Session 165 round 1 + round 2 — David's iPhone QA:
+                    // round 1 "make the selected carousel mall thumbnail
+                    // card slightly larger when selected to stand out as
+                    // being in focus" → shipped scale(1.05) + translateY(-3).
+                    // Round 2: "Selected mall card is a bit larger, I think,
+                    // but still not very noticable. Possibly make larger and
+                    // allow it to peak outside of the container." Shape A
+                    // dial: scale 1.05 → 1.12 + translateY −3 → −12. The
+                    // ~16px upward visual rise fits within the shelf's
+                    // newly bumped 22px top padding so the card "peeks up"
+                    // visibly within the shelf bg without escaping it.
+                    //
+                    // True peek-OUTSIDE-shelf-wrapper (Shape B) requires
+                    // restructuring the scroll container to render the
+                    // selected card as a sibling overlay outside the
+                    // overflow-x:auto bounds — Shape A first per iPhone QA
+                    // post-walk; Shape B follow-on if "still not enough."
+                    transform:     isPeeked ? "translateY(-12px) scale(1.12)" : "translateY(0) scale(1)",
+                    transformOrigin: "center center",
+                    transition:    "transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease",
+                    // Box shadow swaps by peek state — non-peeked uses the
+                    // baseline session-161 subtle resting shadow; peeked
+                    // gets a more pronounced lift shadow that combined with
+                    // the scale + translateY reads clearly as "this is in
+                    // focus" not just "this has a green border." Shadow
+                    // alpha tier 0.18/0.10 mirrors v1.shadow.callout for
+                    // vocabulary consistency with the PinCallout above.
+                    boxShadow:     isPeeked
+                      ? "0 6px 14px rgba(42,26,10,0.18), 0 2px 4px rgba(42,26,10,0.10)"
+                      : "0 1px 2px rgba(43,33,26,0.06), 0 6px 18px rgba(43,33,26,0.06)",
                     textAlign:     "left",
                     WebkitTapHighlightColor: "transparent",
                   }}
