@@ -64,6 +64,7 @@ import nextDynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { PiX } from "react-icons/pi";
 import MapCarousel from "./MapCarousel";
+import MallMatchChip from "./MallMatchChip";
 import {
   v2,
   FONT_SYS,
@@ -100,6 +101,24 @@ interface MallMapDrawerProps {
    * Drawer STAYS open per D2 — user may want to pick a different mall after clearing.
    */
   onClear:        () => void;
+  /**
+   * Session 165 Finding 5 — fires when user taps a MallMatchChip rendered
+   * above the map when SearchBar query matches a mall name/city. Optional:
+   * falls back to onMallPick if not supplied. Consumer typically performs
+   * scope-change + close-drawer + URL query clear + analytics with
+   * source: "search_mall_match" (vs. pin-tap source: "map_pin") so R3
+   * data captures the discovery path that drove the scope change.
+   */
+  onMallSearchPick?: (mallId: string) => void;
+  /**
+   * Session 165 Finding 5 — current SearchBar query string. Drawer renders
+   * MallMatchChip when query matches an active mall name/city. Optional;
+   * defaults to "" (chip won't render). Passed as prop rather than read via
+   * useSearchParams internally so the drawer stays free of router-state
+   * dependencies — keeps the /home-chrome-test smoke route + any other
+   * future direct consumer prerenderable without a Suspense wrapper.
+   */
+  query?:           string;
 }
 
 export default function MallMapDrawer({
@@ -111,6 +130,8 @@ export default function MallMapDrawer({
   savedByMallId,
   onMallPick,
   onClear,
+  onMallSearchPick,
+  query = "",
 }: MallMapDrawerProps) {
   // Suppress unused-var lint while keeping prop in the contract — onClose is
   // still called by consumers (pin-commit flow + future Esc handler) even
@@ -221,6 +242,46 @@ export default function MallMapDrawer({
                 overflow: "hidden",
               }}
             >
+              {/* Session 165 Finding 5 (Shape A dual-slot) — MallMatchChip
+                  surfaces when SearchBar query matches an active mall while
+                  drawer is open. Positioned absolute over the map (top-center)
+                  so it doesn't shrink the map render area; pointer-events stay
+                  on the chip itself (parent wrapper has pointerEvents:none so
+                  taps elsewhere fall through to the map). Tap routes through
+                  onMallPick — same handler as pin-commit, which sets scope +
+                  closes drawer + clears query downstream via HomeChrome. */}
+              <div
+                style={{
+                  position:      "absolute",
+                  top:           12,
+                  left:          "50%",
+                  transform:     "translateX(-50%)",
+                  zIndex:        20,
+                  pointerEvents: "none",
+                  display:       "flex",
+                  justifyContent: "center",
+                  width:         "100%",
+                  padding:       "0 16px",
+                  boxSizing:     "border-box",
+                }}
+              >
+                <div style={{ pointerEvents: "auto" }}>
+                  <MallMatchChip
+                    malls={malls}
+                    query={query}
+                    currentMallId={selectedMallId}
+                    onPick={(mall) => {
+                      // Prefer onMallSearchPick (chip-specific handler with
+                      // correct analytics source + query clear); fall back
+                      // to onMallPick if not supplied so the chip still
+                      // functions in any future consumer that doesn't wire
+                      // the search-specific path.
+                      (onMallSearchPick ?? onMallPick)(mall.id);
+                    }}
+                  />
+                </div>
+              </div>
+
               <TreehouseMap
                 malls={malls}
                 selectedMallId={selectedMallId}
