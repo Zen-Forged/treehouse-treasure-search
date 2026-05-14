@@ -95,25 +95,44 @@ export default function MapCarousel({
     <AnimatePresence>
       {open && (
         <motion.div
-          // Wrapper passes through pointer events so taps on the 12px padding
-          // strips at either side fall through to the map below. The inner
-          // scroll container re-enables pointerEvents for the actual cards.
-          initial={{ y: 100, opacity: 0, x: "-50%" }}
-          animate={{ y: 0,   opacity: 1, x: "-50%" }}
-          exit={{    y: 100, opacity: 0, x: "-50%" }}
+          // Session 161 — items 1 + 2 coupled. Carousel wrapper restructured
+          // as a full-width "shelf" band rather than a maxWidth-430 centered
+          // column. Solid bg matching masthead (v2.bg.main) gives the cards
+          // a shelf-like surface to sit on; thin top border + subtle upward
+          // shadow define the shelf edge against the map above. Safe-area-
+          // aware bottom math halves the pre-existing gap to the nav pill
+          // and harmonizes spacing across notched + flat-bottom devices.
+          //
+          // Pre-session-161: `bottom: 100` (no safe-area awareness) — on
+          // notched iPhones with safe-area-inset-bottom ~34, the carousel
+          // overlapped the nav's top edge by ~9px because nav top sits at
+          // (22 + safe-area) + 53 = 75 + safe-area from screen bottom.
+          //
+          // New: `bottom: max(87px, calc(safe-area + 87))` puts shelf-bottom
+          // 12px above nav-top on every device (87 - 75 = 12). Halves the
+          // 25px pre-session-161 gap on flat-bottom iPhones; eliminates the
+          // overlap on notched devices entirely.
+          //
+          // Inner scroll re-enables pointerEvents for cards; outer motion.div
+          // stays pointerEvents:none so taps anywhere on the shelf bg outside
+          // the card row fall through to the map.
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0,   opacity: 1 }}
+          exit={{    y: 100, opacity: 0 }}
           transition={{
             duration: MOTION_BOTTOM_SHEET_SHEET_DURATION,
             ease:     MOTION_BOTTOM_SHEET_EASE,
           }}
           style={{
             position:      "fixed",
-            bottom:        100,
-            left:          "50%",
-            width:         "100%",
-            maxWidth:      430,
-            padding:       "0 12px",
+            bottom:        "max(87px, calc(env(safe-area-inset-bottom, 0px) + 87px))",
+            left:          0,
+            right:         0,
             zIndex:        35,
             pointerEvents: "none",
+            background:    v2.bg.main,
+            borderTop:     `1px solid ${v2.border.medium}`,
+            boxShadow:     "0 -2px 6px rgba(42,26,10,0.06)",
           }}
         >
           <div
@@ -124,7 +143,15 @@ export default function MapCarousel({
               display:                 "flex",
               gap:                     8,
               overflowX:               "auto",
-              padding:                 "4px 4px 6px",
+              // Shelf vertical breathing — 10px top above cards, 12px bottom
+              // below the card row (the "shelf surface" the cards sit on).
+              // Horizontal 12px keeps first/last card from touching shelf
+              // edges. maxWidth + auto margins center cards within the
+              // full-width shelf so the column shape from pre-session-161
+              // is preserved on wide viewports.
+              padding:                 "10px 12px 12px",
+              maxWidth:                430,
+              margin:                  "0 auto",
               pointerEvents:           "auto",
               scrollbarWidth:          "none",
               WebkitOverflowScrolling: "touch",
