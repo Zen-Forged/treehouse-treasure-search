@@ -25,13 +25,18 @@ import SearchBar from "@/components/SearchBar";
 import { v2 } from "@/lib/tokens";
 
 interface Props {
-  searchQuery:        string;
-  onSearchChange:     (q: string) => void;
+  // Session 166 Arc 3.1.1 — search props now optional per Call 2 Option C.
+  // When omitted (e.g., on Saved per session 121 R18 D-lock), HomeHero
+  // renders the hero photo + cream-fade only, no embedded SearchBar.
+  searchQuery?:       string;
+  onSearchChange?:    (q: string) => void;
   searchPlaceholder?: string;
 }
 
 const HERO_HEIGHT_VH        = 33;
-const STICKY_THIN_HEIGHT_PX = 90;  // D17 — visible-strip height when sticky pins
+// Exported for MallMapDrawer's top:calc realignment in Arc 3.1.3 — drawer
+// opens from below the sticky-collapsed hero's visible strip.
+export const STICKY_THIN_HEIGHT_PX = 90;  // D17 — visible-strip height when sticky pins
 const SEARCH_BOTTOM_OFFSET  = 32;  // D7 V2 — was 52, dropped 20px per David's iPhone QA
 const SEARCH_HORIZ_PADDING  = 16;
 
@@ -40,6 +45,7 @@ export default function HomeHero({
   onSearchChange,
   searchPlaceholder,
 }: Props) {
+  const showSearch = searchQuery !== undefined && onSearchChange !== undefined;
   const sectionStyle: React.CSSProperties = {
     // Shape A sticky-header behavior — see file-top comment.
     position:           "sticky",
@@ -74,13 +80,15 @@ export default function HomeHero({
 
   return (
     <section style={sectionStyle} aria-label="Treehouse Finds">
-      <div style={searchWrapStyle}>
-        <SearchBar
-          initialQuery={searchQuery}
-          placeholder={searchPlaceholder}
-          onChange={onSearchChange}
-        />
-      </div>
+      {showSearch && (
+        <div style={searchWrapStyle}>
+          <SearchBar
+            initialQuery={searchQuery}
+            placeholder={searchPlaceholder}
+            onChange={onSearchChange}
+          />
+        </div>
+      )}
     </section>
   );
 }
