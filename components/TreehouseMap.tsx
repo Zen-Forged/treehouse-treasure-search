@@ -210,6 +210,28 @@ const KY_BOUNDS: LngLatBoundsLike = [
 const KY_CENTER: [number, number] = [-85.3, 37.8];
 const KY_FIT_ZOOM = 6.4;
 
+// Session 161 — fitBounds bottom padding accounts for the MapCarousel
+// "shelf" that floats at the bottom of the viewport. Without this, the
+// southernmost pins fitted by fitBounds land underneath the shelf and
+// are visually obscured (David's iPhone QA item #2: "Make sure all
+// locations show on reset visually. right now the bottom location is
+// being covered by the mall card carousel.").
+//
+// Math (matches session 161 commit 3's shelf wrapper geometry):
+//   shelf bottom in viewport = 87 + safe-area-inset-bottom (from screen bottom)
+//   shelf content height     = 10 + 108 + 12 = 130 (top pad + card + bottom pad)
+//   shelf top in viewport    = 217 + safe-area-inset-bottom (from screen bottom)
+//
+// The drawer (which contains TreehouseMap) has paddingBottom: safe-area,
+// so the map container's bottom edge sits at safe-area from screen bottom.
+// In map-container coordinates, shelf-top therefore lands at:
+//   (217 + safe-area) - safe-area = 217px above the map's bottom edge.
+//
+// The safe-area component cancels — padding constant doesn't need to vary
+// with device geometry. Horizontal + top padding preserved at 56 from the
+// pre-session-161 value to keep coastal coordinate clusters from clipping.
+const FIT_PADDING_WITH_SHELF = { top: 56, right: 56, bottom: 217, left: 56 };
+
 // Session 161 — David's iPhone QA item #5: "Change the you are here pin to
 // something more simple, no branding other than color. it can be smaller as
 // well more standard ui type feel." Pre-session-161 was a 28×28 filled green
@@ -674,7 +696,7 @@ export default function TreehouseMap({
           .filter((m) => m.latitude != null && m.longitude != null)
           .map((m) => [Number(m.longitude), Number(m.latitude)] as [number, number]);
         if (coords.length === 0) {
-          map.fitBounds(KY_BOUNDS, { padding: 32, duration: 600 });
+          map.fitBounds(KY_BOUNDS, { padding: FIT_PADDING_WITH_SHELF, duration: 600 });
           return;
         }
         const bounds = coords.reduce(
@@ -684,7 +706,9 @@ export default function TreehouseMap({
         // maxZoom 11 stops over-zoom when malls are tightly clustered or
         // there's only one — a single point would otherwise zoom to the
         // map's maxZoom (14) and look like the specific-mall scope.
-        map.fitBounds(bounds, { padding: 56, duration: 600, maxZoom: 11 });
+        // FIT_PADDING_WITH_SHELF.bottom = 217 keeps southernmost pins above
+        // the MapCarousel shelf at the bottom of the viewport.
+        map.fitBounds(bounds, { padding: FIT_PADDING_WITH_SHELF, duration: 600, maxZoom: 11 });
         return;
       }
       const mall = malls.find((m) => m.id === selectedMallId);
