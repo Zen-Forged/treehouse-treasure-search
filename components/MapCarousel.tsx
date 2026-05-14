@@ -165,20 +165,26 @@ export default function MapCarousel({
                     WebkitTapHighlightColor: "transparent",
                   }}
                 >
-                  {/* Photo banner — falls back to cream2 when hero_image_url is null. */}
+                  {/* Photo banner — falls back to cream2 when hero_image_url is null.
+                      Session 161 — height 56 → 68 per David's "include more of the image"
+                      iPhone QA dial. Card height held constant at 108 by tightening the
+                      body padding below; photo claims the recovered 12px. */}
                   <div
                     style={{
-                      height:     56,
+                      height:     68,
                       flexShrink: 0,
                       background: mall.hero_image_url
                         ? `url(${mall.hero_image_url}) center / cover no-repeat`
                         : "var(--th-v1-basemap-cream2, #EFE6D2)",
                     }}
                   />
-                  {/* Body — name + optional distance label. */}
+                  {/* Body — name + optional distance label.
+                      Session 161 — bottom padding 8 → 4 per David's "reduce some of the
+                      spacing on the bottom of the card so the distance is closer to the
+                      bottom (currently floating a bit)." Top + horizontal unchanged. */}
                   <div
                     style={{
-                      padding:       "5px 10px 8px",
+                      padding:       "5px 10px 4px",
                       display:       "flex",
                       flexDirection: "column",
                       gap:           2,
