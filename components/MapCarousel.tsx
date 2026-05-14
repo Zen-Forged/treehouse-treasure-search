@@ -150,9 +150,17 @@ export default function MapCarousel({
                     height:        108,
                     padding:       0,
                     background:    v2.surface.card,
+                    // Session 161 — non-peeked border tier light → medium per David's
+                    // "Add thin stroke around the mall cards so they have some separation
+                    // from the bg, it can be a lighter grey color or something we've
+                    // already been using elsewhere." Against the upcoming shelf bg
+                    // (v2.bg.main #F7F3EB in commit 3), the prior v2.border.light
+                    // #E5DED2 disappears into the bg; v2.border.medium #D6CCBC
+                    // (already in use elsewhere) reads as a deliberate separation
+                    // stroke. Peeked state stays 1.5px v2.accent.green unchanged.
                     border:        isPeeked
                       ? `1.5px solid ${v2.accent.green}`
-                      : `1px solid ${v2.border.light}`,
+                      : `1px solid ${v2.border.medium}`,
                     borderRadius:  10,
                     boxShadow:     "0 1px 2px rgba(43,33,26,0.06), 0 6px 18px rgba(43,33,26,0.06)",
                     overflow:      "hidden",
