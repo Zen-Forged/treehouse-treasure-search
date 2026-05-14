@@ -214,7 +214,18 @@ export default function MapCarousel({
                     display:       "flex",
                     flexDirection: "column",
                     cursor:        "pointer",
-                    transform:     isPeeked ? "translateY(-3px)" : "translateY(0)",
+                    // Session 165 Finding 4 — David's iPhone QA: "make the
+                    // selected carousel mall thumbnail card slightly larger
+                    // when selected to stand out as being in focus." Adds
+                    // scale(1.05) atop the existing translateY(-3px) lift so
+                    // the focused card pops ~5% larger (≈7px wider × ~6px
+                    // taller perceived). Scale-transform is layout-stable —
+                    // neighbor cards don't shift during peek transitions,
+                    // preserving horizontal scroll position. The 5% magnitude
+                    // matches "slightly larger" — dial in iPhone QA if needs
+                    // adjustment.
+                    transform:     isPeeked ? "translateY(-3px) scale(1.05)" : "translateY(0) scale(1)",
+                    transformOrigin: "center center",
                     transition:    "transform 200ms ease, border-color 200ms ease",
                     textAlign:     "left",
                     WebkitTapHighlightColor: "transparent",
