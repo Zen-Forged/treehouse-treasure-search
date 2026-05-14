@@ -143,13 +143,14 @@ export default function MapCarousel({
               display:                 "flex",
               gap:                     8,
               overflowX:               "auto",
-              // Shelf vertical breathing — 10px top above cards, 12px bottom
-              // below the card row (the "shelf surface" the cards sit on).
-              // Horizontal 12px keeps first/last card from touching shelf
-              // edges. maxWidth + auto margins center cards within the
-              // full-width shelf so the column shape from pre-session-161
-              // is preserved on wide viewports.
-              padding:                 "10px 12px 12px",
+              // Shelf vertical breathing — session 165 iPhone QA bump: top
+              // padding 10 → 22 to give the selected card visible "peek up"
+              // headroom (translateY −12 + scale 1.12 lifts the card edge
+              // up to ~16px above its normal slot; 22px top padding keeps
+              // the rise visible without clipping at the scroll container's
+              // implicit overflow-y boundary). Bottom 12 + horizontal 12
+              // preserved.
+              padding:                 "22px 12px 12px",
               maxWidth:                430,
               margin:                  "0 auto",
               pointerEvents:           "auto",
@@ -214,19 +215,35 @@ export default function MapCarousel({
                     display:       "flex",
                     flexDirection: "column",
                     cursor:        "pointer",
-                    // Session 165 Finding 4 — David's iPhone QA: "make the
-                    // selected carousel mall thumbnail card slightly larger
-                    // when selected to stand out as being in focus." Adds
-                    // scale(1.05) atop the existing translateY(-3px) lift so
-                    // the focused card pops ~5% larger (≈7px wider × ~6px
-                    // taller perceived). Scale-transform is layout-stable —
-                    // neighbor cards don't shift during peek transitions,
-                    // preserving horizontal scroll position. The 5% magnitude
-                    // matches "slightly larger" — dial in iPhone QA if needs
-                    // adjustment.
-                    transform:     isPeeked ? "translateY(-3px) scale(1.05)" : "translateY(0) scale(1)",
+                    // Session 165 round 1 + round 2 — David's iPhone QA:
+                    // round 1 "make the selected carousel mall thumbnail
+                    // card slightly larger when selected to stand out as
+                    // being in focus" → shipped scale(1.05) + translateY(-3).
+                    // Round 2: "Selected mall card is a bit larger, I think,
+                    // but still not very noticable. Possibly make larger and
+                    // allow it to peak outside of the container." Shape A
+                    // dial: scale 1.05 → 1.12 + translateY −3 → −12. The
+                    // ~16px upward visual rise fits within the shelf's
+                    // newly bumped 22px top padding so the card "peeks up"
+                    // visibly within the shelf bg without escaping it.
+                    //
+                    // True peek-OUTSIDE-shelf-wrapper (Shape B) requires
+                    // restructuring the scroll container to render the
+                    // selected card as a sibling overlay outside the
+                    // overflow-x:auto bounds — Shape A first per iPhone QA
+                    // post-walk; Shape B follow-on if "still not enough."
+                    transform:     isPeeked ? "translateY(-12px) scale(1.12)" : "translateY(0) scale(1)",
                     transformOrigin: "center center",
-                    transition:    "transform 200ms ease, border-color 200ms ease",
+                    transition:    "transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease",
+                    // Selected card gains a soft drop shadow for added lift
+                    // emphasis — combined with the scale + translate, the
+                    // card reads as "this is in focus" not just "this has
+                    // a green border." Shadow alpha mirrors the carousel
+                    // shelf's existing 0.06 borderTop shadow for vocabulary
+                    // consistency.
+                    boxShadow:     isPeeked
+                      ? "0 6px 14px rgba(42,26,10,0.18), 0 2px 4px rgba(42,26,10,0.10)"
+                      : "none",
                     textAlign:     "left",
                     WebkitTapHighlightColor: "transparent",
                   }}
