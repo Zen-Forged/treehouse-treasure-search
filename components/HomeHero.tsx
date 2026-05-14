@@ -60,13 +60,17 @@ export default function HomeHero({
     // Layered backgrounds: cream-fade overlay (D9) on top, hero asset
     // (D12) below. Cover-sizing + center anchor keeps the baked-in
     // wordmark visible across iPhone SE → 14 Pro Max widths.
+    //
+    // Session 166 dial 8 — gradient rgba migrates from (247,243,235) to
+    // (230,222,207) so the fade target matches v2.bg.tabs (#E6DECF) for
+    // continuous seam between hero bottom edge + (tabs)/ page bg.
     backgroundImage:
       `linear-gradient(180deg,
-        rgba(247,243,235,0) 0%,
-        rgba(247,243,235,0) 78%,
-        rgba(247,243,235,0.30) 90%,
-        rgba(247,243,235,0.78) 98%,
-        ${v2.bg.main} 100%),
+        rgba(230,222,207,0) 0%,
+        rgba(230,222,207,0) 78%,
+        rgba(230,222,207,0.30) 90%,
+        rgba(230,222,207,0.78) 98%,
+        ${v2.bg.tabs} 100%),
        url('/home-hero.png')`,
     backgroundSize:     "auto, cover",
     backgroundPosition: "center, center",

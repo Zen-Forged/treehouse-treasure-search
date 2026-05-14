@@ -78,7 +78,10 @@ export default function MallPickerChip({ mallName, onTap }: MallPickerChipProps)
         position:   "sticky",
         top:        STICKY_THIN_HEIGHT_PX,
         zIndex:     11,
-        background: v2.bg.main,
+        // Session 166 dial 8 — chip sticky bg follows (tabs)/-surfaces
+        // tier so seam between feed-scrolling-under-chip and the chip
+        // strip itself stays visually continuous.
+        background: v2.bg.tabs,
       }}
     >
       <button

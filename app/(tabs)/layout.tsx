@@ -59,10 +59,12 @@ export default function TabsLayout({ children }: { children: React.ReactNode }) 
     <div
       style={{
         minHeight:      "100vh",
-        // Session 140 — tab chrome migrates to v2.bg.main (#F7F3EB).
-        // v1 surfaces still consume v1.paperCream directly; only the
-        // shared tab layout migrates so chrome unifies across Home/Saved.
-        background:     v2.bg.main,
+        // Session 166 dial 8 — (tabs)/-surfaces bg migrates from v2.bg.main
+        // (#F7F3EB, session 140 chrome migration) to v2.bg.tabs (#E6DECF,
+        // slightly warmer cream) per David's iPhone QA round 4 finding.
+        // (tabs)/-scoped tier extraction; non-(tabs)/ surfaces remain on
+        // v2.bg.main (~37 consumers across post-flow, auth, admin, etc.).
+        background:     v2.bg.tabs,
         maxWidth:       430,
         margin:         "0 auto",
         position:       "relative",

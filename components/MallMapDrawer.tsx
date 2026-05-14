@@ -234,7 +234,8 @@ export default function MallMapDrawer({
               width:         "100%",
               maxWidth:      430,
               bottom:        0,
-              background:    v2.bg.main,
+              // Session 166 dial 8 — drawer bg migrates with (tabs)/ tier.
+              background:    v2.bg.tabs,
               // Below strip's z-39 so strip wins on any pixel overlap at the
               // border-bottom seam. Strip's borderBottom 1px serves as the
               // visual separator between strip + drawer.

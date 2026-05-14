@@ -301,6 +301,14 @@ export const v2 = {
     main:  "var(--th-v2-bg-main)",
     paper: "var(--th-v2-bg-paper)",
     soft:  "var(--th-v2-bg-soft)",
+    // Session 166 dial 8 — (tabs)/-surfaces tier. #E6DECF. Used by:
+    //   - app/(tabs)/layout.tsx page bg
+    //   - components/MallPickerChip.tsx sticky bg
+    //   - components/MallMapDrawer.tsx drawer bg
+    //   - components/HomeHero.tsx gradient end-stop
+    // MapControlPill (Reset) deliberately keeps v2.bg.main so it stands
+    // out as a chrome affordance against the new darker drawer bg.
+    tabs:  "var(--th-v2-bg-tabs)",
   },
   surface: {
     card:  "var(--th-v2-surface-card)",
