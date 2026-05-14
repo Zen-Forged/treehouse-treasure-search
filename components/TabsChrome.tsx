@@ -48,6 +48,7 @@ import HomeHero from "@/components/HomeHero";
 import MallPickerChip from "@/components/MallPickerChip";
 import MallMapDrawer from "@/components/MallMapDrawer";
 import MastheadProfileButton from "@/components/MastheadProfileButton";
+import MastheadBackButton from "@/components/MastheadBackButton";
 import { useSavedMallId } from "@/lib/useSavedMallId";
 import { useMapDrawer } from "@/lib/useMapDrawer";
 import { getActiveMalls } from "@/lib/posts";
@@ -183,6 +184,28 @@ export default function TabsChrome() {
         searchQuery={isHome ? q : undefined}
         onSearchChange={isHome ? handleSearchChange : undefined}
       />
+
+      {/* Session 166 Shape A commit 2 — Back button restored as floating
+          overlay at top-left of viewport WHEN drawer is open. Arc 3.1.3
+          retired StickyMasthead which removed the masthead-left back
+          slot (session 157 wiring closed the drawer on tap). Restores
+          that close-drawer affordance. Drawer is Home-only post-dial-7,
+          so drawerOpen===true implies isHome — no separate pathname gate
+          needed. MastheadBackButton primitive reused with onClick prop
+          (session 157 pattern) so handler runs closeDrawer instead of
+          router.back(). */}
+      {drawerOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top:      OVERLAY_TOP,
+            left:     OVERLAY_X,
+            zIndex:   OVERLAY_Z,
+          }}
+        >
+          <MastheadBackButton onClick={closeDrawer} />
+        </div>
+      )}
 
       {/* Session 166 Shape A commit 1 — Profile chrome affordance restored
           as floating overlay at top-right of viewport. Arc 3.1.3 retired
