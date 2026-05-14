@@ -119,20 +119,35 @@
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { MdOutlineExplore } from "react-icons/md";
-import { PiLeaf } from "react-icons/pi";
+import { PiLeaf, PiStorefront } from "react-icons/pi";
 import { FONT_NUMERAL, v2 } from "@/lib/tokens";
+import { useUserRole } from "@/lib/useUserRole";
 
 // Session 159 — Profile tab + role-conditional Booth/Admin tabs all retire.
 // David Q3 (session-159 opener): "Relocate the profile icon to where the
 // Share icon use to reside in the masthead. Propogates on all pages.
 // Retire admin as you mentioned via profile link when logged in."
 // BottomNav collapses to fixed 2 tabs (Explore + Saved) for all viewers.
-// Vendor and admin reach their specialty surfaces (/my-shelf, /admin) via
-// the masthead-right Profile affordance → /me, which links onward.
 //
-// History note: "login" / "booth" / "admin" / "profile" members preserved
-// in NavTab type so external consumers that still pass them type-check;
-// the corresponding tabs no longer render here.
+// Session 160 — David iPhone QA Finding 2 partial reversal of session 159:
+// vendor sees Booth tab in rightmost slot (3-tab variant). Admin still gets
+// no nav tab addition; admin reaches /admin via the masthead-right Profile
+// button directly (Commit 4 in session 160 added that routing branch).
+// Shopper + guest stay 2-tab universal.
+//
+// 7th iteration of R10 D1 history (Profile is OUT, vendor Booth IS BACK):
+//   Guest / shopper:  Explore · Saved                          (2-tab)
+//   Vendor:           Explore · Saved · Booth                  (3-tab,
+//                                            Booth rightmost per session-114
+//                                            "rightmost = role-specialty
+//                                            when present" rule)
+//   Admin:            Explore · Saved                          (2-tab;
+//                                            admin role-specialty demotes
+//                                            from nav-tab to Profile-button
+//                                            destination per Commit 4)
+//
+// History note: "login" / "admin" / "profile" members still preserved in
+// NavTab type (no consumer renders them; type stays for callsite compat).
 export type NavTab = "home" | "map" | "flagged" | "booth" | "admin" | "login" | "profile" | null;
 
 interface BottomNavProps {
@@ -153,7 +168,8 @@ const C = {
 };
 
 export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNavProps) {
-  const router = useRouter();
+  const router    = useRouter();
+  const roleState = useUserRole();
 
   const badgeLabel = (n: number) => n > 99 ? "99+" : String(n);
 
@@ -165,12 +181,20 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
     badge?: boolean;
   };
 
-  // Session 159 — fixed 2-tab nav (Explore + Saved). Profile + role-conditional
-  // Booth/Admin tabs all retire per David Q3. Vendors + admins reach
-  // /my-shelf and /admin through the masthead-right Profile button → /me
-  // page → role-aware links onward. Role detection state machine retires
-  // with this commit (useState role + useEffect Supabase subscription +
-  // showAdminTab/showBoothTab/isAuthed/profileHref + ready gate).
+  // Session 160 — vendor Booth tab restored at rightmost slot (3-tab
+  // variant for role==="vendor"). Admin + shopper + guest stay 2-tab.
+  // Partial revival of the session-159-retired role-detection state
+  // machine — scope-bounded to vendor only (admin role detection lives
+  // in useUserRole at the hook layer and feeds MastheadProfileButton
+  // routing in Commit 4, not BottomNav).
+  //
+  // Loading window — useUserRole returns role="none" + isLoading=true
+  // on first mount; vendors briefly see 2-tab before role hydrates to
+  // 3-tab. The transition fires once per session (BottomNav is mounted
+  // in the persistent (tabs)/layout.tsx so doesn't remount on tab nav).
+  // Pulse bounded; if iPhone QA flags it, gate render via isLoading.
+  const showBoothTab = roleState.role === "vendor";
+
   const tabs: TabDef[] = [
     {
       key: "home", label: "Explore", href: "/",
@@ -180,6 +204,16 @@ export default function BottomNav({ active = null, flaggedCount = 0 }: BottomNav
       key: "flagged", label: "Saved", href: "/flagged",
       icon: <PiLeaf size={21} />, badge: true,
     },
+    // Session 160 — Booth at rightmost slot per session-114 "rightmost =
+    // role-specialty when present" rule. /my-shelf already passes
+    // active="booth" (carryover from session 113); active highlight
+    // works without changes to consumer surfaces.
+    ...(showBoothTab ? [{
+      key: "booth" as NavTab,
+      label: "Booth",
+      href:  "/my-shelf",
+      icon:  <PiStorefront size={22} />,
+    }] : []),
   ];
 
   // Session 155 — Variant Z: compact center-floating pill (D6 lock).

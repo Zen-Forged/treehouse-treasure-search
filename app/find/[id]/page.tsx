@@ -1299,6 +1299,7 @@ export default function FindDetailPage() {
                   <FlagGlyph
                     size={22}
                     strokeWidth={1.7}
+                    weight="bold"
                     style={{ color: isSaved ? "#1e4d2b" : v1.inkPrimary, fill: isSaved ? "#1e4d2b" : "none" }}
                   />
                 </button>
