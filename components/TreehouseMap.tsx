@@ -277,9 +277,17 @@ function UserLocationPin() {
   );
 }
 
-// D24 — leaf-bubble pin. Paper-warm circle outlined green by default;
-// selected = green fill, white glyph, scale +15%, soft halo. Pure
-// presentation; rendered into a Mapbox marker element via createRoot.
+// D24 — leaf-bubble pin. Paper-warm circle outlined green by default.
+// Session 161 dial revision — David verbatim "Change the background of the
+// map carousel thumbnails and selected pin to background:
+// var(--th-v2-surface-input)". Selected state previously filled green-on-
+// green for emphasis; now uses v2.surface.input (#FFFCF5) bg so it matches
+// the peeked-state carousel card visually. The peeked card and peeked pin
+// now share the same cream-bg + green-border + green-leaf vocabulary —
+// visual unity between the two surfaces. Selection emphasis carries via
+// scale (+12%, 32→36), thicker green halo, and the green-leaf becoming
+// slightly larger (18→20) instead of the filled-green bg flip.
+// Pure presentation; rendered into a Mapbox marker element via createRoot.
 function LeafBubblePin({ selected }: { selected: boolean }) {
   return (
     <div
@@ -287,7 +295,9 @@ function LeafBubblePin({ selected }: { selected: boolean }) {
         width:        selected ? 36 : 32,
         height:       selected ? 36 : 32,
         borderRadius: "50%",
-        background:   selected ? v2.accent.green : v2.surface.warm,
+        // Selected → v2.surface.input (#FFFCF5, matches peeked carousel card)
+        // Unselected → v2.surface.warm (#FBF6EA, paper-warm baseline preserved)
+        background:   selected ? v2.surface.input : v2.surface.warm,
         border:       `2px solid ${v2.accent.green}`,
         boxShadow:    selected
           ? "0 0 0 6px rgba(30,77,43,0.18), 0 4px 10px rgba(30,77,43,0.28)"
@@ -295,7 +305,9 @@ function LeafBubblePin({ selected }: { selected: boolean }) {
         display:        "flex",
         alignItems:     "center",
         justifyContent: "center",
-        color:          selected ? v2.surface.card : v2.accent.green,
+        // Selected leaf color flips cream → green for visibility on cream bg
+        // (previously v2.surface.card on filled-green); unselected unchanged.
+        color:          v2.accent.green,
         cursor:         "pointer",
         transition:     "width 160ms ease, height 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease",
       }}
