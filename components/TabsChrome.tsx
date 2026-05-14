@@ -60,11 +60,18 @@ import type { Mall } from "@/types/treehouse";
 // position:fixed at top of viewport. Restores access lost when Arc 3.1.3
 // retired StickyMasthead from (tabs)/ chrome.
 //
-// Offset honors safe-area-inset-top so notched iPhones push buttons
-// below the notch. The 14px additive matches old MASTHEAD_HEIGHT's
-// 14px breathing room (StickyMasthead session-77 primitive).
-const OVERLAY_TOP    = "calc(env(safe-area-inset-top, 14px) + 14px)";
-const OVERLAY_X      = 16;
+// Session 166 round-6 dial — viewport-y + horizontal-x match
+// StickyMasthead exactly per David's "back and profile button were
+// always in the exact same location horizontally and vertically on
+// the screen … use /find and /shelf as reference." Both calls derive
+// from StickyMasthead's slot geometry:
+//   - OVERLAY_TOP: same as StickyMasthead's button viewport-y =
+//     paddingTop + (innerGrid - buttonHeight)/2 = max(14, env-safe-area)
+//     + (72 - 44)/2 = max(14, env-safe-area) + 14.
+//   - OVERLAY_X:   matches StickyMasthead paddingLeft/Right = 18.
+// Visual parity across /find + /shelf + Home + Saved chrome corners.
+const OVERLAY_TOP    = "calc(max(14px, env(safe-area-inset-top, 14px)) + 14px)";
+const OVERLAY_X      = 18;
 const OVERLAY_Z      = 50;
 
 export default function TabsChrome() {
