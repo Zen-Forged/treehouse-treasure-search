@@ -189,14 +189,23 @@ function tenMilesInPixels(zoom: number, lat: number): number {
   return (TEN_MILES_METERS * 512 * Math.pow(2, zoom)) / (40075000 * Math.cos(latRad));
 }
 
-// Session 158 dial C — Y offset for peek-state easeTo. Negative value
-// shifts the centered (lng,lat) UP on the visual map, leaving room below
-// for the bottom carousel. Without this, on iPhone SE the callout-above-
-// pin could sit only ~40px above the carousel; with offset -60 the gap
-// grows to ~140-180px. Mapbox offset convention: target center lands at
-// (container_center.x + x, container_center.y + y), so negative Y =
-// upward on screen.
-const MAP_PEEK_OFFSET_Y = -60;
+// Session 158 dial C set MAP_PEEK_OFFSET_Y = -60 to push pins 60px above
+// container center so the callout-above-pin had breathing room above the
+// then-narrower bottom carousel. Session 161's shelf wrapper (commit 3 of
+// the structural bundle) widened the bottom chrome obstruction from ~130px
+// to 217px and dropped the carousel closer to the nav — the -60 offset now
+// compounds with that visual shift and pins land too high in the effective
+// visible map area.
+//
+// Session 161 dial: -60 → -20 (a third of the original magnitude). Pin
+// lands closer to container center but still slightly above so the callout
+// rendering above the pin has comfortable breath. Empirically the pin and
+// its callout now sit ~vertically-centered in the visible-map portion
+// between strip-bottom and shelf-top.
+//
+// Mapbox offset convention: target center lands at
+// (container_center.x + x, container_center.y + y); negative Y = upward.
+const MAP_PEEK_OFFSET_Y = -20;
 
 // Kentucky bounding box — slight padding around the actual state extents
 // so pins near the borders aren't clipped at maxBounds.
