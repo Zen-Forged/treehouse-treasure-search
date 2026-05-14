@@ -71,8 +71,11 @@ import {
   MOTION_BOTTOM_SHEET_EASE,
   MOTION_BOTTOM_SHEET_SHEET_DURATION,
 } from "@/lib/tokens";
-import { MASTHEAD_HEIGHT } from "./StickyMasthead";
-import { STRIP_HEIGHT, SEARCH_BAR_WRAP_HEIGHT } from "./MallStrip";
+// Session 166 Arc 3.1.3 — drawer top realigns from the retired
+// MASTHEAD/SEARCH_BAR_WRAP/STRIP chrome stack (sessions 154-157) to the
+// new HomeHero sticky-collapsed strip. STICKY_THIN_HEIGHT_PX is the
+// hero's visible-strip height after its position:sticky pin engages.
+import { STICKY_THIN_HEIGHT_PX } from "./HomeHero";
 import type { Mall } from "@/types/treehouse";
 import type { MallStats } from "@/lib/posts";
 
@@ -214,12 +217,13 @@ export default function MallMapDrawer({
             }}
             style={{
               position:      "fixed",
-              // Slide up to the strip's bottom edge — strip stays sticky above.
-              // CSS nested calc() is well-supported; MASTHEAD_HEIGHT is itself
-              // a calc(...) string from <StickyMasthead>. Session 157 — chrome
-              // stack now masthead + SearchBar wrap + strip, so drawer top
-              // includes SEARCH_BAR_WRAP_HEIGHT.
-              top:           `calc(${MASTHEAD_HEIGHT} + ${SEARCH_BAR_WRAP_HEIGHT}px + ${STRIP_HEIGHT}px)`,
+              // Session 166 Arc 3.1.3 — drawer slides up to the bottom edge
+              // of HomeHero's sticky-collapsed strip (90px visible at top
+              // of viewport once the page has scrolled past the hero).
+              // Single constant replaces the prior masthead+search+strip
+              // calc stack since HomeHero is now the only fixed-position
+              // chrome above the drawer.
+              top:           `${STICKY_THIN_HEIGHT_PX}px`,
               // Mobile-column containment — mirrors StickyMasthead +
               // MallStrip + BottomNav fixed-chrome pattern. Without this,
               // the drawer (and its full-bleed Mapbox canvas) extends to

@@ -64,9 +64,12 @@ import { track } from "@/lib/clientEvents";
 import FeaturedBanner from "@/components/FeaturedBanner";
 import HomeFeedTile from "@/components/v2/HomeFeedTile";
 import EmptyState from "@/components/EmptyState";
-import HomeChrome from "@/components/HomeChrome";
 import MallMatchChip from "@/components/MallMatchChip";
-import { STRIP_HEIGHT, SEARCH_BAR_WRAP_HEIGHT } from "@/components/MallStrip";
+// Session 166 Arc 3.1.3 — HomeChrome wrapper retires; chrome moves to
+// layout-level TabsChrome (HomeHero + MallPickerChip + MallMapDrawer).
+// MallStrip's STRIP_HEIGHT + SEARCH_BAR_WRAP_HEIGHT constants no longer
+// referenced here — the paddingTop reservation also retires since hero
+// is in-flow (sticky-collapsing) rather than fixed-positioned.
 import { writeFindContext, setPostCache, type FindRef } from "@/lib/findContext";
 import type { Post, Mall } from "@/types/treehouse";
 
@@ -586,35 +589,12 @@ function DiscoveryFeedInner() {
 
   return (
     <>
-      {/* Session 155 — Arc 2.2 retires the chunky <RichPostcardMallCard>
-          mount in favor of <HomeChrome>: persistent <MallStrip> below the
-          masthead + on-demand <MallMapDrawer> + standalone SearchBar row.
-          Strip + drawer + search are now distinct chrome pieces with
-          clean separation of identity / wayfinding / discovery (D7 + D-Reversal-2).
-
-          HomeChrome owns drawer-open transient state internally; mall
-          scope (mallId + setMallId) threads through props so a single
-          useSavedMallId hook instance (this page) writes the canonical scope.
-          Layout's own useSavedMallId reads cross-instance via the hook's
-          event broadcast (session 109 pattern). */}
-      <div
-        style={{
-          // Session 157 — SearchBar lifted from in-page-flow to fixed
-          // chrome in the (tabs) layout (Variant A + T3 ship). The fixed
-          // chrome stack below the masthead is now SearchBar wrap +
-          // MallStrip. Reserve both heights here so feed content starts
-          // below the entire stack. Masthead is already accounted for by
-          // StickyMasthead's own in-flow spacer in the layout.
-          paddingTop: `calc(${SEARCH_BAR_WRAP_HEIGHT}px + ${STRIP_HEIGHT}px)`,
-        }}
-      >
-        <HomeChrome
-          malls={malls}
-          mallId={mallId}
-          onSetMallId={setMallId}
-          query={q}
-        />
-      </div>
+      {/* Session 166 Arc 3.1.3 — HomeChrome wrapper retires entirely.
+          Chrome (HomeHero + MallPickerChip + MallMapDrawer) is now mounted
+          at the layout level via <TabsChrome />, unified across Home + Saved.
+          HomeHero is in-flow sticky-collapsing (not fixed), so no paddingTop
+          reservation is needed — feed content begins immediately below the
+          inline MallPickerChip. */}
 
       {/* Session 165 Finding 5 (Shape A) — MallMatchChip surfaces when the
           SearchBar query contains-matches an active mall name or city, so
