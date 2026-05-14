@@ -37,7 +37,11 @@ const HERO_HEIGHT_VH        = 33;
 // Exported for MallMapDrawer's top:calc realignment in Arc 3.1.3 — drawer
 // opens from below the sticky-collapsed hero's visible strip.
 export const STICKY_THIN_HEIGHT_PX = 90;  // D17 — visible-strip height when sticky pins
-const SEARCH_BOTTOM_OFFSET  = 32;  // D7 V2 — was 52, dropped 20px per David's iPhone QA
+// Session 166 dial (post-Arc 3.1.3 iPhone QA) — search bar drops from 32 to
+// 16 per David's "drop down more so there is more headroom" call. In sticky-
+// collapsed state, this shifts search bar bottom from viewport y=58 to y=74,
+// freeing up 20px more headroom above the input within the 90px visible strip.
+const SEARCH_BOTTOM_OFFSET  = 16;
 const SEARCH_HORIZ_PADDING  = 16;
 
 export default function HomeHero({
