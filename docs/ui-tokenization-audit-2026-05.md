@@ -1,16 +1,39 @@
-# UI Tokenization Audit — 2026-05-14 (Session 162, Shape A)
+# UI Tokenization Audit — 2026-05-14 (Session 162)
 
-> **Purpose**: Inventory the current design-system state, surface tokenization gaps + consistency drift, and produce a ranked backlog so future sessions can drive toward "the UI can be updated by changing tokens, not consumer-side code." Output of Shape A (audit-only, no consumer changes). Sets the scope for Shape B (style-guide design pass) and Shape C (ship live style guide + close highest-leverage gaps).
+> **Purpose**: Inventory the current design-system state, surface tokenization gaps + consistency drift, and produce a ranked backlog so future sessions can drive toward "the UI can be updated by changing tokens, not consumer-side code." Sets the scope for Shape B (style-guide design pass) and Shape C arcs 2–4 (ship live style guide + close highest-leverage gaps).
 >
-> **Scope of this audit**: token system inventory (`lib/tokens.ts` + `app/globals.css`), component primitive inventory (`components/ui/` + `components/*.tsx`), inline hardcoded-value violation baselines (5 lint scripts), gap categories, ranked backlog. **No consumer-side changes were made.** Lint scripts added: `lint:colors` / `lint:fonts` / `lint:shadows` / `lint:radius` join the existing `lint:spacing`.
+> **Document evolution**: Shape A (audit-only) shipped commits `322a7fa` + `0b806ce` + `96bbc26`. Shape C arc 1 (lint scope cleanup + canonical type scale) shipped 6 commits adding `EXCLUDED_PREFIXES` to the lint scope, refactoring lint-spacing to share infrastructure with the 4 new linters, and adding `type.size.*` tokens to Layer 1. See "Session 162 ship log" below for the sequence.
 >
-> **Companion docs**: [`docs/spacing-scale-status.md`](spacing-scale-status.md) (session 144 spacing baseline) · [`lib/tokens.ts`](../lib/tokens.ts) (canonical token source) · [`app/globals.css`](../app/globals.css) (`:root` CSS variable definitions).
+> **Companion docs**: [`docs/spacing-scale-status.md`](spacing-scale-status.md) (session 144 spacing baseline) · [`docs/type-scale-status.md`](type-scale-status.md) (session 162 type scale baseline) · [`lib/tokens.ts`](../lib/tokens.ts) (canonical token source) · [`app/globals.css`](../app/globals.css) (`:root` CSS variable definitions).
+
+---
+
+## Session 162 ship log
+
+### Shape A — audit (3 commits)
+
+- `322a7fa` `scripts/lint-shared.ts` foundation module (walk + Violation + renderReport)
+- `0b806ce` 4 token-compliance lint scripts (`lint:colors` / `lint:fonts` / `lint:shadows` / `lint:radius`) + npm script entries
+- `96bbc26` This audit doc (Shape A synthesis deliverable)
+
+### Shape C arc 1 — lint scope cleanup + canonical type scale (6 commits)
+
+- `lint-shared.ts` extended with `EXCLUDED_PREFIXES` (per-surface allowlist for reseller-intel layer + smoke routes + parked code + dev tooling) + `collectFilesWithStats()` returning scanned + excludedCount, + report renders excluded count
+- 4 new linters (colors / fonts / shadows / radius) consume `collectFilesWithStats` + pass `filesExcluded` through
+- `lint-spacing.ts` ported to consume `lint-shared.ts` so all 5 linters share the same file walk + exclusion logic uniformly
+- `type.size.*` canonical scale added to Layer 1 — 9 steps locked density-tuned to empirical usage (9/11/13/14/16/18/22/26/32) — semantic naming (xxs/xs/sm/base/md/lg/xl/2xl/3xl). NO consumer changes.
+- `docs/type-scale-status.md` baseline doc shipped
+- This audit doc updated with post-exclusion baselines (see Section 2.5)
 
 ---
 
 ## 0. Executive Summary
 
-**Total token-compliance violations (session 162 baseline):** **2,628 across 154 scanned files** in `app/` + `components/`.
+**Total token-compliance violations (Shape A baseline, full scan):** **2,628 across 154 scanned files** in `app/` + `components/`.
+
+**Total token-compliance violations (post-Shape-C-arc-1, scoped):** **1,572 across 128 scanned files** (26 files excluded by per-surface allowlist).
+
+Drop of 1,056 violations (40%) once reseller-intel + smoke routes + dev tooling + parked code are excluded — the actionable in-scope count is now the headline number.
 
 | Category | Violations | Files | Lint command |
 |---|---:|---:|---|
@@ -226,9 +249,9 @@ Total violations: 187
 | `components/PinCallout.tsx` | 5 |
 | `components/admin/ReviewRequestModal.tsx` | 5 |
 
-> ⚠ = reseller-intel surface, intentionally off the v1/v2 system. Excluding the 8 ⚠ files (decide, discover, intent, share, enhance, enhance-text, refine, scan, finds, finds/[id]) + `OpportunityMeter` + `DecisionDial` + `AnalysisSheet` would drop the total by **~700+ violations** (roughly 27% of all noise). Recommend exclusion in Shape C arc 1.
+> ⚠ = reseller-intel surface, intentionally off the v1/v2 system. **Closed in Shape C arc 1** — all ⚠ surfaces + parked code + smoke routes + dev tooling now in `EXCLUDED_PREFIXES` allowlist. Actual drop was 1,056 violations (40% of total), more than the ~700+ estimate (smoke routes + dev tooling contributed an extra ~350).
 >
-> 🅿 = parked code (session 152 ShelfImageTemplate + ShelfImageShareScreen). Counts as noise; not active surface.
+> 🅿 = parked code (session 152 ShelfImageTemplate + ShelfImageShareScreen). Now in allowlist.
 
 ### 2.3 Cross-category hotspots (highest-leverage refactor targets)
 
@@ -251,6 +274,60 @@ After excluding ⚠ reseller-intel surfaces, the **top 5 in-scope refactor targe
 5. `app/vendor/[slug]/page.tsx` (~48)
 
 **Closing these 5 files would eliminate ~535 violations (~30% of in-scope debt).**
+
+---
+
+## 2.5 Post-Shape-C-arc-1 Baselines (session 162, current)
+
+After the per-surface allowlist landed:
+
+```
+$ npm run lint:spacing -- --quiet
+Files scanned:  128
+Files excluded: 26   (off-system allowlist)
+Files with debt: 61
+Total:          332    (was 425 — drop of 93)
+
+$ npm run lint:colors -- --quiet
+Files scanned:  128
+Files excluded: 26
+Files with debt: 65
+Total:          428    (was 1,022 — drop of 594)
+
+$ npm run lint:fonts -- --quiet
+Files scanned:  128
+Files excluded: 26
+Files with debt: 68
+Total:          633    (was 939 — drop of 306)
+
+$ npm run lint:shadows -- --quiet
+Files scanned:  128
+Files excluded: 26
+Files with debt: 29
+Total:           35    (was 55 — drop of 20)
+
+$ npm run lint:radius -- --quiet
+Files scanned:  128
+Files excluded: 26
+Files with debt: 45
+Total:          144    (was 187 — drop of 43)
+
+Grand total: 1,572  (was 2,628 — drop of 1,056 / 40%)
+```
+
+### What now-actionable looks like
+
+The single biggest cluster shifts: **`app/admin/page.tsx` remains #1** at ~265 violations across 4 of 5 categories — confirmed largest in-scope target.
+
+The top-30 leaderboards now read cleanly without `OpportunityMeter` / `DecisionDial` / `AnalysisSheet` / smoke routes / DevAuthPanel polluting them. Re-run any `lint:<thing>` without `--quiet` to see the current shape.
+
+### What the type scale unlocks
+
+The 939 → 633 font violation count has two sub-categories:
+- **535 inline fontSize numerics** — the migration target. Now backed by `type.size.*` canonical scale (9 steps locked density-tuned to existing usage). Migration is opt-in; Layer 2 component primitives will adopt the scale by default so consumer rewrites aren't required for new code.
+- **98 inline fontFamily literals** — separate concern; these should switch to `FONT_*` token refs (bare identifier imports) per existing v2 pattern.
+
+Type-scale adoption sequenced across Shape C arcs 2–4 (style guide, admin migration, primitive library completion). See [`docs/type-scale-status.md`](type-scale-status.md) for full step inventory + adoption plan.
 
 ---
 
@@ -348,13 +425,13 @@ Concrete missing pieces of the system, ordered by leverage.
 
 ### 4.1 Critical gaps (block tokenization completeness)
 
-**G1 — No canonical type scale.** 939 fontSize violations are all "would need a scale to migrate to." Type rhythm is currently a per-page judgment call. Reference scales (potential lock): 11/12/13/14/16/18/22/26/32 OR a denser modular scale. **Lands in Shape C arc 1 alongside lint scope cleanup.**
+**G1 — No canonical type scale.** ✅ **CLOSED Shape C arc 1 (session 162).** Locked `type.size.*` Layer 1 scale, 9 steps density-tuned to empirical usage (9/11/13/14/16/18/22/26/32) with semantic naming. Adoption opt-in; future Layer 2 primitives consume the scale by default. See [`docs/type-scale-status.md`](type-scale-status.md).
 
-**G2 — No v2 shadow tier.** v1.shadow.* covers 8 named shadows; v2 surfaces have inline shadows (BottomNav session 159, PinCallout, MapControlPill, etc.). **Tier B headroom captured session 159** as 2nd-consumer extraction trigger.
+**G2 — No v2 shadow tier.** v1.shadow.* covers 8 named shadows; v2 surfaces have inline shadows (BottomNav session 159, PinCallout, MapControlPill, etc.). **Tier B headroom captured session 159** as 2nd-consumer extraction trigger. **Still open** — Shape C arc 2 (style guide) will surface a v2.shadow.* tier design moment when rendering the shadow gallery.
 
-**G3 — No centered-modal primitive.** Admin confirm-dialogs (ForceUnlinkConfirm, ForceDeleteConfirm, ReviewRequestModal) each implement bespoke chrome. Layer 2 has BottomSheet for bottom-anchored; needs `<CenteredModal>` sibling.
+**G3 — No centered-modal primitive.** Admin confirm-dialogs (ForceUnlinkConfirm, ForceDeleteConfirm, ReviewRequestModal) each implement bespoke chrome. Layer 2 has BottomSheet for bottom-anchored; needs `<CenteredModal>` sibling. **Still open** — Shape C arc 3 (admin migration) is the natural trigger.
 
-**G4 — Reseller-intel surfaces pollute lint baselines.** ~700+ violations come from deliberately off-system pages (`/decide`, `/discover`, `/intent`, `/share`, `/enhance*`, `/refine`, `/scan`, `/finds*`, `OpportunityMeter`, `DecisionDial`, `AnalysisSheet`). Fix: extend `SKIP_DIRS` or add a per-surface allowlist file. **One-line change**, makes baselines actionable.
+**G4 — Reseller-intel surfaces pollute lint baselines.** ✅ **CLOSED Shape C arc 1 (session 162).** Per-surface allowlist (`EXCLUDED_PREFIXES` in `lint-shared.ts`) covers 26 files: 12 reseller-intel surfaces + 8 smoke-test routes + 1 dev tooling overlay + 2 parked-code files + 3 reseller-intel components. Drops baseline by 1,056 violations (40%).
 
 ### 4.2 Adoption gaps (token system exists; consumers haven't migrated)
 
@@ -386,11 +463,11 @@ Concrete missing pieces of the system, ordered by leverage.
 
 Ordered by leverage × confidence. Each item names the next session arc + estimated cost.
 
-### Wave 1 — Make the baselines actionable (1 session, Shape C arc 1)
+### Wave 1 — Make the baselines actionable ✅ SHIPPED session 162 (Shape C arc 1)
 
-1. **Exclude reseller-intel surfaces + ui-test from lint scope** (`scripts/lint-shared.ts` SKIP_DIRS extension or per-file allowlist). One-line change. Drops baseline by ~700+ violations → actionable count becomes ~1,900.
-2. **Add canonical type scale to Layer 1** (`type.size.{xxs,xs,sm,md,lg,xl,xxl}` or numeric `type.t11/t12/t13/t14/t16/t18/t22/t26/t32`). Add `:root` CSS vars + token exports. **NO consumer changes** in this commit — the scale exists for future migration.
-3. **Re-run baselines** after both changes. Update this audit doc with new counts.
+1. ✅ **Excluded reseller-intel surfaces + smoke routes + parked code + dev tooling from lint scope.** `EXCLUDED_PREFIXES` set in `scripts/lint-shared.ts` covers 26 files. Drops baseline by 1,056 violations (40%; estimate was ~700+, actual was higher).
+2. ✅ **Canonical type scale added to Layer 1.** `type.size.{xxs,xs,sm,base,md,lg,xl,2xl,3xl}` → 9/11/13/14/16/18/22/26/32 px. Semantic naming (matches `radius.sm/md/lg/xl/pill` pattern). NO consumer changes.
+3. ✅ **Re-ran baselines.** Section 2.5 above + audit doc Section 0 reflect new totals (1,572 in-scope from 2,628 full-scan).
 
 ### Wave 2 — Ship the master style guide (1–2 sessions, Shape B + Shape C arc 2)
 
