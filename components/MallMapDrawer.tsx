@@ -49,7 +49,7 @@
 //                                  layer between drawer + BottomNav
 //
 // Pure presentation primitive — drawer-open state lives in consumer
-// (<HomeChrome> in Arc 2). Drawer reads `open` prop and renders. Pin commit
+// (<TabsChrome> at layout level since Arc 3). Drawer reads `open` prop and renders. Pin commit
 // fires `onMallPick(id)`; consumer handles scope update + drawer close +
 // analytics fire. Clear pill fires `onClear()` (drawer stays open per D2;
 // scope clears).
@@ -118,8 +118,8 @@ interface MallMapDrawerProps {
    * MallMatchChip when query matches an active mall name/city. Optional;
    * defaults to "" (chip won't render). Passed as prop rather than read via
    * useSearchParams internally so the drawer stays free of router-state
-   * dependencies — keeps the /home-chrome-test smoke route + any other
-   * future direct consumer prerenderable without a Suspense wrapper.
+   * dependencies — keeps any future direct consumer prerenderable
+   * without forcing a Suspense wrapper on the consumer.
    */
   query?:           string;
 }
@@ -225,7 +225,7 @@ export default function MallMapDrawer({
               // chrome above the drawer.
               top:           `${STICKY_THIN_HEIGHT_PX}px`,
               // Mobile-column containment — mirrors StickyMasthead +
-              // MallStrip + BottomNav fixed-chrome pattern. Without this,
+              // BottomNav fixed-chrome pattern. Without this,
               // the drawer (and its full-bleed Mapbox canvas) extends to
               // the entire viewport on desktop instead of staying inside
               // the 430px column with the rest of the app chrome.
@@ -259,7 +259,7 @@ export default function MallMapDrawer({
                   on the chip itself (parent wrapper has pointerEvents:none so
                   taps elsewhere fall through to the map). Tap routes through
                   onMallPick — same handler as pin-commit, which sets scope +
-                  closes drawer + clears query downstream via HomeChrome. */}
+                  closes drawer + clears query downstream via TabsChrome. */}
               <div
                 style={{
                   position:      "absolute",
