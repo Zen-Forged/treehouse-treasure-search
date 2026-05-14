@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Home Hero V2 — Sticky-header behavior</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 40px 24px 80px;
+    background: #1a110a;
+    color: #faf6ec;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  h1 {
+    font-family: 'Cormorant', serif;
+    font-weight: 500;
+    text-align: center;
+    font-size: 32px;
+    margin: 0 0 8px;
+    color: #f2ecd8;
+  }
+  .subhead {
+    text-align: center;
+    color: rgba(242,236,216,0.65);
+    font-size: 13px;
+    margin: 0 auto 8px;
+    max-width: 720px;
+    line-height: 1.55;
+  }
+  .locked {
+    text-align: center;
+    color: rgba(242,236,216,0.45);
+    font-size: 11px;
+    margin: 0 auto 36px;
+    max-width: 780px;
+    letter-spacing: 0.04em;
+  }
+
+  /* Initial reference (same across A/B/C) */
+  .reference {
+    margin: 16px auto 48px;
+    max-width: 360px;
+    text-align: center;
+  }
+  .reference-label {
+    font-family: 'Cormorant', serif;
+    font-style: italic;
+    font-size: 17px;
+    color: #f2ecd8;
+    margin-bottom: 8px;
+  }
+  .reference-tag {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: rgba(242,236,216,0.55);
+    margin-bottom: 14px;
+  }
+
+  /* Frames */
+  .frames {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 0 auto;
+    max-width: 1280px;
+  }
+  .frame-wrap { width: 360px; }
+  .frame-label {
+    font-family: 'Cormorant', serif;
+    font-style: italic;
+    font-size: 22px;
+    color: #f2ecd8;
+    margin: 0 0 6px;
+    text-align: center;
+  }
+  .frame-tag {
+    text-align: center;
+    color: rgba(242,236,216,0.55);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 14px;
+    min-height: 24px;
+  }
+
+  /* Phone shell */
+  .phone {
+    width: 360px;
+    height: 720px;
+    background: #F7F3EB;
+    border-radius: 40px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 0 5px #0a0604;
+  }
+  .phone.tall { height: 760px; }
+
+  .status-bar {
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 24px 0;
+    font-family: -apple-system, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: #f5ead5;
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    z-index: 30;
+    pointer-events: none;
+  }
+  .status-bar.dark { color: #2A1E12; }
+
+  /* HERO BASE — full hero, used for reference + Shape C initial state */
+  .hero {
+    height: 240px; /* 33vh on 720 ≈ 237 */
+    position: relative;
+    background-image:
+      linear-gradient(180deg,
+        rgba(247,243,235,0) 0%,
+        rgba(247,243,235,0) 78%,
+        rgba(247,243,235,0.30) 90%,
+        rgba(247,243,235,0.78) 98%,
+        #F7F3EB 100%),
+      url('../../public/home-hero.png');
+    background-size: auto, cover;
+    background-position: center, center;
+    background-repeat: no-repeat;
+    overflow: hidden;
+  }
+
+  /* Shape A — sticky pinned: only bottom 90px of original hero visible.
+     Renders the same image with background-position aligned to show the
+     bottom slice — simulates what position:sticky;top:-150px would yield. */
+  .hero-shape-a-collapsed {
+    height: 90px;
+    position: relative;
+    background-image:
+      linear-gradient(180deg,
+        rgba(247,243,235,0) 0%,
+        rgba(247,243,235,0) 40%,
+        rgba(247,243,235,0.40) 75%,
+        rgba(247,243,235,0.85) 96%,
+        #F7F3EB 100%),
+      url('../../public/home-hero.png');
+    background-size: auto, cover;
+    background-position: center, center 92%;
+    background-repeat: no-repeat;
+    overflow: hidden;
+  }
+
+  /* Shape B — separate sticky strip with solid cream bg + drop shadow */
+  .hero-shape-b-collapsed {
+    height: 90px;
+    background: #F7F3EB;
+    box-shadow: 0 4px 10px rgba(42,26,10,0.10);
+    position: relative;
+    z-index: 5;
+  }
+
+  /* Shape C — collapsed hero via height-shrink, cover re-fits image.
+     Cover-sizing on shrunken 90px container shows the horizontal middle stripe. */
+  .hero-shape-c-collapsed {
+    height: 90px;
+    position: relative;
+    background-image:
+      linear-gradient(180deg,
+        rgba(247,243,235,0) 0%,
+        rgba(247,243,235,0.20) 60%,
+        rgba(247,243,235,0.70) 92%,
+        #F7F3EB 100%),
+      url('../../public/home-hero.png');
+    background-size: auto, cover;
+    background-position: center, center;
+    background-repeat: no-repeat;
+    overflow: hidden;
+  }
+
+  .hero-asset-note {
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px;
+    font-family: 'Inter', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgba(247,243,235,0.7);
+    background: rgba(0,0,0,0.45);
+    padding: 2px 7px;
+    border-radius: 3px;
+    z-index: 3;
+  }
+
+  /* Search bar */
+  .search-bar {
+    background: #FFFCF5;
+    border: 1px solid rgba(224,216,194,0.9);
+    border-radius: 999px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 18px;
+    box-shadow: 0 4px 10px rgba(42,26,10,0.08);
+  }
+  .search-bar svg { color: #5C5246; flex-shrink: 0; }
+  .search-placeholder {
+    color: #756A5E;
+    font-family: 'Cormorant', serif;
+    font-style: italic;
+    font-size: 15px;
+  }
+
+  /* Search positions per frame */
+  .search-in-hero {
+    /* Inside hero — bottom: 32 per David's 20px dial */
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 32px;
+    z-index: 5;
+  }
+  .search-centered-strip {
+    /* Centered in 90px sticky strip */
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    top: 22px;
+    z-index: 5;
+  }
+
+  /* Mall picker chip */
+  .picker-row {
+    padding: 22px 16px 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .picker-row .pin { color: #285C3C; }
+  .picker-row .name {
+    font-family: 'Cormorant', serif;
+    font-weight: 500;
+    font-size: 20px;
+    color: #2A1E12;
+  }
+  .picker-row .chev { color: #5C5246; margin-left: 2px; }
+
+  /* Filler content (scrolled state) */
+  .tile-grid {
+    padding: 12px 16px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .tile {
+    background: #FFFCF5;
+    border-radius: 4px;
+    padding: 6px 6px 10px;
+    box-shadow: 0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10);
+  }
+  .tile-photo {
+    aspect-ratio: 4/5;
+    border-radius: 2px;
+  }
+  .tile-photo.v1 { background: linear-gradient(135deg, #8a6c4a, #3a2818); }
+  .tile-photo.v2 { background: linear-gradient(135deg, #4a3520, #221610); }
+  .tile-photo.v3 { background: linear-gradient(135deg, #6a5840, #2a1a10); }
+  .tile-photo.v4 { background: linear-gradient(135deg, #9b8268, #4a3020); }
+  .tile-meta { text-align: center; margin-top: 5px; }
+  .tile-meta .ago {
+    font-family: 'Cormorant', serif;
+    font-style: italic;
+    font-size: 11px;
+    color: #5C5246;
+  }
+
+  /* BottomNav */
+  .nav {
+    position: absolute;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2A4536;
+    border-radius: 999px;
+    padding: 5px 7px;
+    display: flex;
+    gap: 4px;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.4);
+    z-index: 20;
+  }
+  .nav-tab {
+    padding: 8px 18px;
+    border-radius: 999px;
+    color: #c8d6cc;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .nav-tab.active { background: rgba(255,255,255,0.10); color: #f5ead5; }
+
+  /* axis-pill */
+  .axis-pill {
+    position: absolute;
+    background: rgba(40,92,60,0.95);
+    color: #f5ead5;
+    font-size: 9px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    z-index: 25;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+  }
+
+  /* matrix */
+  .matrix {
+    max-width: 1240px;
+    margin: 56px auto 0;
+    background: rgba(245,234,213,0.04);
+    border: 1px solid rgba(245,234,213,0.12);
+    border-radius: 14px;
+    padding: 28px 32px;
+  }
+  .matrix h2 {
+    font-family: 'Cormorant', serif;
+    font-weight: 500;
+    font-size: 24px;
+    margin: 0 0 18px;
+    color: #f2ecd8;
+  }
+  .matrix-head, .matrix-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 1fr 1fr;
+    gap: 20px;
+  }
+  .matrix-head {
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(245,234,213,0.15);
+    margin-bottom: 6px;
+  }
+  .matrix-head .h {
+    font-family: 'Cormorant', serif;
+    font-style: italic;
+    font-size: 16px;
+    color: #f5ead5;
+  }
+  .matrix-row {
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(245,234,213,0.08);
+  }
+  .matrix-row:last-child { border-bottom: none; }
+  .matrix-row .label {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(245,234,213,0.55);
+    padding-top: 2px;
+  }
+  .matrix-row .col {
+    font-size: 12px;
+    line-height: 1.6;
+    color: rgba(242,236,216,0.86);
+  }
+  .matrix-row .col strong { color: #f5ead5; font-weight: 600; }
+  .matrix-row .col em { color: rgba(245,234,213,0.6); font-style: italic; }
+  .matrix-row .col code {
+    background: rgba(245,234,213,0.10);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+  }
+</style>
+</head>
+<body>
+  <h1>Home Hero V2 — sticky-header behavior</h1>
+  <p class="subhead">Three implementation shapes for "hero collapses to a thin sticky header containing the search bar on scroll." <strong>Reverses D5</strong> from V1 (hero + chrome scroll away entirely) per <code>feedback_surface_locked_design_reversals</code>.</p>
+  <p class="locked">Locked from V1: D1 (3 (tabs)/ surfaces) · D2 (wordmark baked) · D3 (33vh full hero) · D4 (/public/home-hero.png) · D6 (Frame C search inside) · D7 revised (search at <strong>bottom: 32px</strong> per your 20px dial) · D10–D12 (picker chip + bg sizing). <strong>D5 reversed</strong> — new behavior: hero scrolls until thin-header-height reached, then sticks.</p>
+
+  <!-- Initial reference (identical across all shapes) -->
+  <div class="reference">
+    <div class="reference-label">Initial state (identical across all 3 shapes)</div>
+    <div class="reference-tag">Full hero 33vh · search at bottom 32px · mall picker on cream below</div>
+    <div class="phone">
+      <div class="status-bar"><span>11:23</span><span>58%</span></div>
+      <div class="hero">
+        <div class="search-in-hero">
+          <div class="search-bar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="search-placeholder">What are you searching for today?</span>
+          </div>
+        </div>
+        <div class="hero-asset-note">/public/home-hero.png · 33vh full</div>
+      </div>
+      <div class="picker-row">
+        <svg class="pin" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"/></svg>
+        <span class="name">Copper Awning Flea Market</span>
+        <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
+      <div class="tile-grid">
+        <div class="tile"><div class="tile-photo v1"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+        <div class="tile"><div class="tile-photo v2"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+        <div class="tile"><div class="tile-photo v3"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+        <div class="tile"><div class="tile-photo v4"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+      </div>
+      <div class="nav">
+        <div class="nav-tab active">Explore</div>
+        <div class="nav-tab">Saved</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scrolled-state frames -->
+  <p class="subhead" style="margin-top:16px;">Frames below show the <strong>SCROLLED state</strong> after user has scrolled ~180px (hero's top has exited viewport).</p>
+
+  <div class="frames">
+
+    <!-- Shape A — sticky with negative top -->
+    <div class="frame-wrap">
+      <div class="frame-label">Shape A — Single hero, sticky negative-top</div>
+      <div class="frame-tag">Bottom 90px of original hero pins to top</div>
+      <div class="phone">
+        <div class="status-bar"><span>11:23</span><span>58%</span></div>
+        <div class="hero-shape-a-collapsed">
+          <div class="search-centered-strip">
+            <div class="search-bar">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <span class="search-placeholder">What are you searching for today?</span>
+            </div>
+          </div>
+        </div>
+        <!-- Scrolled content below shows tiles (user scrolled past hero + picker) -->
+        <div class="tile-grid" style="padding-top: 14px;">
+          <div class="tile"><div class="tile-photo v3"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v1"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v4"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v2"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v1"></div><div class="tile-meta"><div class="ago">11 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v3"></div><div class="tile-meta"><div class="ago">12 days ago</div></div></div>
+        </div>
+        <div class="nav">
+          <div class="nav-tab active">Explore</div>
+          <div class="nav-tab">Saved</div>
+        </div>
+        <div class="axis-pill" style="top:96px;right:-4px;">A — Bottom 90px continuous</div>
+      </div>
+    </div>
+
+    <!-- Shape B — solid cream sticky strip below scroll-away hero -->
+    <div class="frame-wrap">
+      <div class="frame-label">Shape B — Two stacked elements</div>
+      <div class="frame-tag">Hero scrolls away · solid cream strip pins · drop shadow</div>
+      <div class="phone">
+        <div class="status-bar dark"><span>11:23</span><span>58%</span></div>
+        <div class="hero-shape-b-collapsed">
+          <div class="search-centered-strip">
+            <div class="search-bar">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <span class="search-placeholder">What are you searching for today?</span>
+            </div>
+          </div>
+        </div>
+        <div class="tile-grid" style="padding-top: 14px;">
+          <div class="tile"><div class="tile-photo v3"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v1"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v4"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v2"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v1"></div><div class="tile-meta"><div class="ago">11 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v3"></div><div class="tile-meta"><div class="ago">12 days ago</div></div></div>
+        </div>
+        <div class="nav">
+          <div class="nav-tab active">Explore</div>
+          <div class="nav-tab">Saved</div>
+        </div>
+        <div class="axis-pill" style="top:96px;right:-4px;">B — Solid cream + shadow</div>
+      </div>
+    </div>
+
+    <!-- Shape C — scroll-driven collapse, wordmark fades -->
+    <div class="frame-wrap">
+      <div class="frame-label">Shape C — Scroll-driven collapse</div>
+      <div class="frame-tag">Hero shrinks 278→90 · wordmark fades · search slides</div>
+      <div class="phone">
+        <div class="status-bar"><span>11:23</span><span>58%</span></div>
+        <div class="hero-shape-c-collapsed">
+          <div class="search-centered-strip">
+            <div class="search-bar">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <span class="search-placeholder">What are you searching for today?</span>
+            </div>
+          </div>
+        </div>
+        <div class="tile-grid" style="padding-top: 14px;">
+          <div class="tile"><div class="tile-photo v3"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v1"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v4"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v2"></div><div class="tile-meta"><div class="ago">10 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v1"></div><div class="tile-meta"><div class="ago">11 days ago</div></div></div>
+          <div class="tile"><div class="tile-photo v3"></div><div class="tile-meta"><div class="ago">12 days ago</div></div></div>
+        </div>
+        <div class="nav">
+          <div class="nav-tab active">Explore</div>
+          <div class="nav-tab">Saved</div>
+        </div>
+        <div class="axis-pill" style="top:96px;right:-4px;">C — Middle-stripe of image</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="matrix">
+    <h2>Trade-off matrix</h2>
+    <div class="matrix-head">
+      <div class="h">Axis</div>
+      <div class="h">Shape A — sticky negative-top</div>
+      <div class="h">Shape B — two stacked elements</div>
+      <div class="h">Shape C — scroll-driven collapse</div>
+    </div>
+    <div class="matrix-row">
+      <div class="label">Implementation</div>
+      <div class="col">One <code>&lt;section&gt;</code>. Pure CSS: <code>position: sticky; top: calc(90px - 33vh)</code>. <strong>~1 commit; no JS.</strong></div>
+      <div class="col">Two siblings: scroll-away hero (~188px) + sticky strip (~90px) with <code>position: sticky; top: 0</code>. Strip has solid cream bg + soft drop shadow. <strong>~1-2 commits; minor markup split.</strong></div>
+      <div class="col">Single hero element. Scroll listener (or <code>scroll-timeline</code> CSS) drives height + wordmark opacity. <strong>~3-4 commits; scroll-driven animation discipline.</strong></div>
+    </div>
+    <div class="matrix-row">
+      <div class="label">Image continuity</div>
+      <div class="col"><strong>+ Native continuity</strong> — same image scrolls into its sticky position; bottom 90px naturally pins. No bg-seam.</div>
+      <div class="col"><strong>−</strong> Solid cream strip is visually decoupled from the hero image. Could swap to bottom-cropped image bg for visual continuity but background-position math gets fiddly across viewport widths.</div>
+      <div class="col"><strong>+/−</strong> Cover-sized on shrunken 90px container shows the horizontal middle stripe of the image (NOT the bottom). To match Shape A's appearance, would need <code>background-position: bottom</code> dialed in during the collapse.</div>
+    </div>
+    <div class="matrix-row">
+      <div class="label">Wordmark fade</div>
+      <div class="col">Natural — wordmark scrolls out of viewport with the top of the hero. No opacity animation needed.</div>
+      <div class="col">Natural — hero scrolls away in normal flow; wordmark goes with it. Strip never had a wordmark.</div>
+      <div class="col">Animated — wordmark opacity 1→0 over scroll 0→188px. Adds polish but introduces an animation curve to tune.</div>
+    </div>
+    <div class="matrix-row">
+      <div class="label">iOS Safari risk</div>
+      <div class="col"><strong>Low.</strong> <code>position: sticky</code> with negative top is supported since iOS 11. iPhone QA validates.</div>
+      <div class="col"><strong>Very low.</strong> Plain <code>position: sticky; top: 0</code> is universally supported.</div>
+      <div class="col"><strong>Medium.</strong> CSS <code>scroll-timeline</code> only on iOS 17.4+; JS fallback adds scroll listener + RAF discipline. Risk: jank on slow iPhone PWA scroll.</div>
+    </div>
+    <div class="matrix-row">
+      <div class="label">Search position</div>
+      <div class="col">Search bar lives at hero's <code>bottom: 32</code> (per your dial). In scrolled state, search ends up at strip-y ~12-54 (top-biased in the 90px strip). 36px breath below.</div>
+      <div class="col">Search bar lives in the sticky strip independently. Always centered (top: 22, height 46, breath 22 below) regardless of scroll state.</div>
+      <div class="col">Search bar's bottom offset animates 32→14 during scroll so it stays vertically anchored inside the shrinking hero.</div>
+    </div>
+    <div class="matrix-row">
+      <div class="label">Hero asset constraint</div>
+      <div class="col">Hero asset's bottom 30% should be visually quiet so the search bar reads in the sticky state. Your attached asset's bottom is wood-tone — qualifies. <strong>Already met.</strong></div>
+      <div class="col">No constraint — sticky strip is solid cream. Hero asset only matters for the initial-state composition.</div>
+      <div class="col">Asset's middle horizontal stripe (which is what cover-sizing on shrunken container shows) needs to be visually quiet. Your asset's middle has the wordmark — would compete with the search bar in collapsed state UNLESS <code>background-position: bottom</code> dial fixes this. Worth a sub-mock to validate.</div>
+    </div>
+    <div class="matrix-row">
+      <div class="label">Recommendation</div>
+      <div class="col"><strong>Recommend Shape A.</strong> Simplest impl + natural image continuity + matches your description ("background sticks with search bar so it's still a header but thinner not the full hero"). Single Arc dial commit on existing HomeHero.</div>
+      <div class="col">Fallback if Shape A's bottom-of-image strip reads off-brand or surfaces iOS Safari issues. Solid cream is reliably consistent.</div>
+      <div class="col">Defer. Most elegant but cost is 3-4× higher and the value-add (smooth animation) is dial-cycle territory not V1 ship territory. Could promote to Tier B7 in design record if Shape A ships clean but you want smoother transition later.</div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Home Hero V1 — Treehouse Finds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 40px 24px 80px;
+    background: #1a110a;
+    color: #faf6ec;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  h1 {
+    font-family: 'Cormorant', serif;
+    font-weight: 500;
+    text-align: center;
+    font-size: 32px;
+    margin: 0 0 8px;
+    color: #f2ecd8;
+    letter-spacing: 0.005em;
+  }
+  .subhead {
+    text-align: center;
+    color: rgba(242,236,216,0.65);
+    font-size: 13px;
+    margin: 0 auto 8px;
+    max-width: 720px;
+    line-height: 1.5;
+  }
+  .locked {
+    text-align: center;
+    color: rgba(242,236,216,0.45);
+    font-size: 11px;
+    margin: 0 auto 36px;
+    max-width: 780px;
+    letter-spacing: 0.04em;
+  }
+  .frames {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 24px;
+  }
+  .frame-wrap { width: 390px; }
+  .frame-label {
+    font-family: 'Cormorant', serif;
+    font-style: italic;
+    font-size: 22px;
+    color: #f2ecd8;
+    margin: 0 0 6px;
+    text-align: center;
+  }
+  .frame-tag {
+    text-align: center;
+    color: rgba(242,236,216,0.55);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    margin-bottom: 18px;
+  }
+
+  /* Phone shell */
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: #F7F3EB;
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 0 6px #0a0604;
+  }
+
+  /* Status bar */
+  .status-bar {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 28px 0;
+    font-family: -apple-system, sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: #f5ead5;
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .status-bar .right { font-size: 13px; }
+
+  /* HERO BASE — real asset /public/home-hero.png, 33vh = ~278px */
+  .hero {
+    height: 278px;
+    position: relative;
+    background-image:
+      linear-gradient(180deg,
+        rgba(247,243,235,0) 0%,
+        rgba(247,243,235,0) 78%,
+        rgba(247,243,235,0.30) 90%,
+        rgba(247,243,235,0.78) 98%,
+        #F7F3EB 100%),
+      url('../../public/home-hero.png');
+    background-size: auto, cover;
+    background-position: center, center 30%;
+    background-repeat: no-repeat;
+    overflow: hidden;
+  }
+  .hero-asset-note {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    font-family: 'Inter', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: rgba(247,243,235,0.85);
+    background: rgba(0,0,0,0.5);
+    padding: 3px 9px;
+    border-radius: 4px;
+    z-index: 3;
+  }
+
+  /* SearchBar */
+  .search-row { padding: 0 16px; }
+  .search-bar {
+    background: #FFFCF5;
+    border: 1px solid rgba(224,216,194,0.9);
+    border-radius: 999px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 22px;
+    box-shadow: 0 4px 12px rgba(42,26,10,0.08);
+  }
+  .search-bar svg { color: #5C5246; flex-shrink: 0; }
+  .search-placeholder {
+    color: #756A5E;
+    font-family: 'Cormorant', serif;
+    font-style: italic;
+    font-size: 17px;
+  }
+
+  /* Frame A — search overlaps hero/cream boundary */
+  .search-overlap {
+    margin-top: -28px;
+    position: relative;
+    z-index: 5;
+  }
+  /* Frame B — search flush below hero on cream */
+  .search-flush {
+    margin-top: 14px;
+  }
+  /* Frame C — search fully inside hero, positioned higher per dial */
+  .search-inside {
+    position: absolute;
+    bottom: 52px;
+    left: 0;
+    right: 0;
+    z-index: 5;
+  }
+
+  /* Mall picker chip */
+  .picker-row {
+    padding: 22px 18px 8px;
+    display: flex;
+    align-items: center;
+  }
+  .picker-row.tight { padding: 16px 18px 8px; }
+
+  /* Frame A + C picker — new shape */
+  .picker-new {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .picker-new svg.pin { color: #285C3C; }
+  .picker-new .name {
+    font-family: 'Cormorant', serif;
+    font-weight: 500;
+    font-size: 22px;
+    color: #2A1E12;
+    letter-spacing: 0.002em;
+  }
+  .picker-new svg.chev { color: #5C5246; margin-left: 2px; }
+
+  /* Frame B picker — MallStrip vocab */
+  .picker-classic {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .picker-classic svg.pin { color: #5C5246; }
+  .picker-classic .stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.15;
+  }
+  .picker-classic .eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #756A5E;
+  }
+  .picker-classic .name {
+    font-family: 'Cormorant', serif;
+    font-weight: 500;
+    font-size: 18px;
+    color: #2A1E12;
+    margin-top: 2px;
+  }
+  .picker-classic svg.chev { color: #5C5246; margin-left: 2px; }
+
+  /* Polaroid tiles */
+  .tile-grid {
+    padding: 12px 16px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .tile {
+    background: #FFFCF5;
+    border-radius: 4px;
+    padding: 7px 7px 12px;
+    box-shadow: 0 6px 14px rgba(42,26,10,0.20), 0 1.5px 3px rgba(42,26,10,0.10);
+  }
+  .tile-photo {
+    aspect-ratio: 4/5;
+    border-radius: 2px;
+    position: relative;
+  }
+  .tile-photo.v1 { background: linear-gradient(135deg, #8a6c4a, #3a2818); }
+  .tile-photo.v2 { background: linear-gradient(135deg, #4a3520, #221610); }
+  .tile-photo.v3 { background: linear-gradient(135deg, #6a5840, #2a1a10); }
+  .tile-photo.v4 { background: linear-gradient(135deg, #9b8268, #4a3020); }
+  .tile-photo.v5 { background: linear-gradient(135deg, #7a5d3f, #3a2410); }
+  .tile-photo.v6 { background: linear-gradient(135deg, #5a4a35, #251812); }
+  .leaf-bubble {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(40,60,42,0.85);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #f5ead5;
+  }
+  .tile-meta { text-align: center; margin-top: 6px; }
+  .ago {
+    font-family: 'Cormorant', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: #5C5246;
+  }
+
+  /* BottomNav */
+  .nav {
+    position: absolute;
+    bottom: 26px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2A4536;
+    border-radius: 999px;
+    padding: 6px 8px;
+    display: flex;
+    gap: 4px;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.4);
+  }
+  .nav-tab {
+    padding: 10px 22px;
+    border-radius: 999px;
+    color: #c8d6cc;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+  }
+  .nav-tab.active {
+    background: rgba(255,255,255,0.10);
+    color: #f5ead5;
+  }
+  .nav-tab svg { color: currentColor; }
+
+  /* axis-pill annotations */
+  .axis-pill {
+    position: absolute;
+    background: rgba(40,92,60,0.95);
+    color: #f5ead5;
+    font-size: 9px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    z-index: 20;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+  }
+
+  /* trade-off matrix */
+  .matrix {
+    max-width: 1100px;
+    margin: 64px auto 0;
+    background: rgba(245,234,213,0.04);
+    border: 1px solid rgba(245,234,213,0.12);
+    border-radius: 14px;
+    padding: 28px 32px;
+  }
+  .matrix h2 {
+    font-family: 'Cormorant', serif;
+    font-weight: 500;
+    font-size: 24px;
+    margin: 0 0 18px;
+    color: #f2ecd8;
+  }
+  .matrix-head, .matrix-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 1fr 1fr;
+    gap: 20px;
+  }
+  .matrix-head {
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(245,234,213,0.15);
+    margin-bottom: 8px;
+  }
+  .matrix-head .h {
+    font-family: 'Cormorant', serif;
+    font-style: italic;
+    font-size: 16px;
+    color: #f5ead5;
+  }
+  .matrix-row {
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(245,234,213,0.08);
+  }
+  .matrix-row:last-child { border-bottom: none; }
+  .matrix-row .label {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: rgba(245,234,213,0.55);
+    padding-top: 2px;
+  }
+  .matrix-row .col {
+    font-size: 12px;
+    line-height: 1.6;
+    color: rgba(242,236,216,0.86);
+  }
+  .matrix-row .col strong {
+    color: #f5ead5;
+    font-weight: 600;
+  }
+  .matrix-row .col em {
+    color: rgba(245,234,213,0.6);
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+  <h1>Home Hero V1 — revised</h1>
+  <p class="subhead">Three frames spanning <strong>SearchBar position depth</strong> (inside · overlap · flush) along the hero/cream boundary. Mall picker chip aligned to your screenshot in A + C; conservative MallStrip-vocab fallback in B.</p>
+  <p class="locked">Locked: D1 surfaces = Home + Saved + Map · D2 wordmark baked into asset · <strong>D3 revised: 33vh (~278px)</strong> · D4 asset /public/home-hero.png (1536×1024, 3.3MB — optimize before ship) · D5 hero + chrome scroll away, only BottomNav remains</p>
+
+  <div class="frames">
+
+    <!-- FRAME C: search fully inside hero -->
+    <div class="frame-wrap">
+      <div class="frame-label">Frame C — search inside hero</div>
+      <div class="frame-tag">Fully integrated · new chip · breathing room below</div>
+      <div class="phone">
+        <div class="status-bar">
+          <span>11:23</span>
+          <span class="right">58%</span>
+        </div>
+        <div class="hero">
+          <div class="search-row search-inside">
+            <div class="search-bar">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+              <span class="search-placeholder">What are you searching for today?</span>
+            </div>
+          </div>
+          <div class="hero-asset-note">/public/home-hero.png · 33vh · wordmark baked in</div>
+        </div>
+        <div class="picker-row">
+          <div class="picker-new">
+            <svg class="pin" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"/></svg>
+            <span class="name">Copper Awning Flea Market</span>
+            <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+        </div>
+        <div class="tile-grid">
+          <div class="tile">
+            <div class="tile-photo v5"><div class="leaf-bubble"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 9 7 7 12 C5 17 6 22 12 22 C18 22 19 17 17 12 C15 7 12 2 12 2 Z"/></svg></div></div>
+            <div class="tile-meta"><div class="ago">10 days ago</div></div>
+          </div>
+          <div class="tile">
+            <div class="tile-photo v6"><div class="leaf-bubble"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 9 7 7 12 C5 17 6 22 12 22 C18 22 19 17 17 12 C15 7 12 2 12 2 Z"/></svg></div></div>
+            <div class="tile-meta"><div class="ago">10 days ago</div></div>
+          </div>
+          <div class="tile">
+            <div class="tile-photo v1"><div class="leaf-bubble"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 9 7 7 12 C5 17 6 22 12 22 C18 22 19 17 17 12 C15 7 12 2 12 2 Z"/></svg></div></div>
+            <div class="tile-meta"><div class="ago">10 days ago</div></div>
+          </div>
+          <div class="tile">
+            <div class="tile-photo v2"><div class="leaf-bubble"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 9 7 7 12 C5 17 6 22 12 22 C18 22 19 17 17 12 C15 7 12 2 12 2 Z"/></svg></div></div>
+            <div class="tile-meta"><div class="ago">10 days ago</div></div>
+          </div>
+        </div>
+        <div class="nav">
+          <div class="nav-tab active">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 9 7 7 12 C5 17 6 22 12 22 C18 22 19 17 17 12 C15 7 12 2 12 2 Z"/></svg>
+            Explore
+          </div>
+          <div class="nav-tab">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21 12 16 5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            Saved
+          </div>
+        </div>
+        <div class="axis-pill" style="top:185px;right:-4px;">C1 — Search INSIDE hero · 52px from bottom</div>
+        <div class="axis-pill" style="top:308px;right:-4px;">C2 — Pin + 22px serif name + chev</div>
+      </div>
+    </div>
+
+    <!-- FRAME A: search overlaps boundary -->
+    <div class="frame-wrap">
+      <div class="frame-label">Frame A — search overlaps boundary</div>
+      <div class="frame-tag">Straddles hero/cream · new chip</div>
+      <div class="phone">
+        <div class="status-bar">
+          <span>11:23</span>
+          <span class="right">58%</span>
+        </div>
+        <div class="hero">
+          <div class="hero-asset-note">/public/home-hero.png · 33vh · wordmark baked in</div>
+        </div>
+        <div class="search-row search-overlap">
+          <div class="search-bar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="search-placeholder">What are you searching for today?</span>
+          </div>
+        </div>
+        <div class="picker-row tight">
+          <div class="picker-new">
+            <svg class="pin" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"/></svg>
+            <span class="name">Copper Awning Flea Market</span>
+            <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+        </div>
+        <div class="tile-grid">
+          <div class="tile">
+            <div class="tile-photo v1"><div class="leaf-bubble"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 9 7 7 12 C5 17 6 22 12 22 C18 22 19 17 17 12 C15 7 12 2 12 2 Z"/></svg></div></div>
+            <div class="tile-meta"><div class="ago">10 days ago</div></div>
+          </div>
+          <div class="tile">
+            <div class="tile-photo v2"><div class="leaf-bubble"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 9 7 7 12 C5 17 6 22 12 22 C18 22 19 17 17 12 C15 7 12 2 12 2 Z"/></svg></div></div>
+            <div class="tile-meta"><div class="ago">10 days ago</div></div>
+          </div>
+          <div class="tile">
+            <div class="tile-photo v3"><div class="leaf-bubble"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 9 7 7 12 C5 17 6 22 12 22 C18 22 19 17 17 12 C15 7 12 2 12 2 Z"/></svg></div></div>
+            <div class="tile-meta"><div class="ago">10 days ago</div></div>
+          </div>
+          <div class="tile">
+            <div class="tile-photo v4"><div class="leaf-bubble"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 9 7 7 12 C5 17 6 22 12 22 C18 22 19 17 17 12 C15 7 12 2 12 2 Z"/></svg></div></div>
+            <div class="tile-meta"><div class="ago">10 days ago</div></div>
+          </div>
+        </div>
+        <div class="nav">
+          <div class="nav-tab active">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 9 7 7 12 C5 17 6 22 12 22 C18 22 19 17 17 12 C15 7 12 2 12 2 Z"/></svg>
+            Explore
+          </div>
+          <div class="nav-tab">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21 12 16 5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            Saved
+          </div>
+        </div>
+        <div class="axis-pill" style="top:265px;right:-4px;">A1 — Search OVERLAPS hero fade</div>
+        <div class="axis-pill" style="top:332px;right:-4px;">A2 — Pin + 22px serif name + chev</div>
+      </div>
+    </div>
+
+    <!-- FRAME B: search flush below -->
+    <div class="frame-wrap">
+      <div class="frame-label">Frame B — search flush below</div>
+      <div class="frame-tag">Clean separation · MallStrip vocab</div>
+      <div class="phone">
+        <div class="status-bar">
+          <span>11:23</span>
+          <span class="right">58%</span>
+        </div>
+        <div class="hero">
+          <div class="hero-asset-note">/public/home-hero.png · 33vh · wordmark baked in</div>
+        </div>
+        <div class="search-row search-flush">
+          <div class="search-bar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="search-placeholder">What are you searching for today?</span>
+          </div>
+        </div>
+        <div class="picker-row">
+          <div class="picker-classic">
+            <svg class="pin" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"/></svg>
+            <div class="stack">
+              <span class="eyebrow">FROM</span>
+              <span class="name">Copper Awning Flea Market</span>
+            </div>
+            <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+        </div>
+        <div class="tile-grid">
+          <div class="tile">
+            <div class="tile-photo v3"><div class="leaf-bubble"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 9 7 7 12 C5 17 6 22 12 22 C18 22 19 17 17 12 C15 7 12 2 12 2 Z"/></svg></div></div>
+            <div class="tile-meta"><div class="ago">10 days ago</div></div>
+          </div>
+          <div class="tile">
+            <div class="tile-photo v4"><div class="leaf-bubble"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 9 7 7 12 C5 17 6 22 12 22 C18 22 19 17 17 12 C15 7 12 2 12 2 Z"/></svg></div></div>
+            <div class="tile-meta"><div class="ago">10 days ago</div></div>
+          </div>
+          <div class="tile">
+            <div class="tile-photo v5"><div class="leaf-bubble"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 9 7 7 12 C5 17 6 22 12 22 C18 22 19 17 17 12 C15 7 12 2 12 2 Z"/></svg></div></div>
+            <div class="tile-meta"><div class="ago">10 days ago</div></div>
+          </div>
+          <div class="tile">
+            <div class="tile-photo v6"><div class="leaf-bubble"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 9 7 7 12 C5 17 6 22 12 22 C18 22 19 17 17 12 C15 7 12 2 12 2 Z"/></svg></div></div>
+            <div class="tile-meta"><div class="ago">10 days ago</div></div>
+          </div>
+        </div>
+        <div class="nav">
+          <div class="nav-tab active">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C12 2 9 7 7 12 C5 17 6 22 12 22 C18 22 19 17 17 12 C15 7 12 2 12 2 Z"/></svg>
+            Explore
+          </div>
+          <div class="nav-tab">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21 12 16 5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            Saved
+          </div>
+        </div>
+        <div class="axis-pill" style="top:310px;right:-4px;">B1 — Search FLUSH BELOW hero</div>
+        <div class="axis-pill" style="top:380px;right:-4px;">B2 — FROM eyebrow + 18px serif</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="matrix">
+    <h2>Trade-off matrix</h2>
+    <div class="matrix-head">
+      <div class="h">Axis</div>
+      <div class="h">Frame C — search inside</div>
+      <div class="h">Frame A — overlap boundary</div>
+      <div class="h">Frame B — flush below</div>
+    </div>
+    <div class="matrix-row">
+      <div class="label">Search position</div>
+      <div class="col">Fully inside hero, anchored 52px from hero bottom (bumped up per your dial). <strong>+ Most integrated feel</strong> — search reads as part of the hero composition with breathing room below before mall picker zone begins. <em>− Search bg is cream-on-photographic-content; needs hero asset to have its bottom zone treated quietly so the bar doesn't compete with visible objects.</em></div>
+      <div class="col">Top edge inside hero's bottom fade, bottom edge on cream. <strong>+ Cinematic half-float</strong> reads as transition between hero and feed. <em>− Mild contrast risk where fade overlaps the bar's cream bg on light asset swaps.</em></div>
+      <div class="col">Top edge sits 16px below hero edge on flat cream bg. <strong>+ Clean separation</strong>; each zone owns its space; uniform legibility across asset swaps. <em>− Less integrated; reads "chrome below photo."</em></div>
+    </div>
+    <div class="matrix-row">
+      <div class="label">Breathing room below search</div>
+      <div class="col">36px from search bottom to hero edge, then 22px from hero edge to mall picker. <strong>Two-stage breath</strong>: search settles inside hero, then content-zone begins cleanly.</div>
+      <div class="col">Search edge is the boundary itself. Mall picker 16px below. Tight rhythm.</div>
+      <div class="col">Search 16px below hero, mall picker 22px below search. Standard rhythm.</div>
+    </div>
+    <div class="matrix-row">
+      <div class="label">Mall picker</div>
+      <div class="col">PinIcon (v2.accent.green filled) + Cormorant 22px name + chev. Single inline row.</div>
+      <div class="col">Same as C — PinIcon green-filled + Cormorant 22px + chev.</div>
+      <div class="col">Small-caps "FROM" eyebrow + Cormorant 18px name stacked + chev. <strong>Reuses MallStrip vocabulary verbatim.</strong></div>
+    </div>
+    <div class="matrix-row">
+      <div class="label">Asset requirement</div>
+      <div class="col">Hero asset's bottom 30% should be visually quiet (low contrast, secondary objects) so the search bar floats cleanly. Your attached asset already qualifies — wood-tone fades, no busy objects in lower 30%.</div>
+      <div class="col">Hero asset's bottom 15-20% becomes the fade-into-cream zone. Search overlaps the soft transition.</div>
+      <div class="col">Hero asset has no constraint at its bottom — anything works because search lives on flat cream below.</div>
+    </div>
+    <div class="matrix-row">
+      <div class="label">Recommendation</div>
+      <div class="col"><strong>Recommend Frame C</strong> matches your spec — "search inside background header with padding at the bottom before the mall selector." Most cinematic / unified feel. Asset constraint is met by your attached image.</div>
+      <div class="col">Fallback if Frame C's search-on-photo reads too busy at iPhone QA. Single dial = bump bottom 36px → -28px.</div>
+      <div class="col">Most conservative; falls back to flat cream + MallStrip vocab if both A and C surface contrast issues.</div>
+    </div>
+  </div>
+
+</body>
+</html>
