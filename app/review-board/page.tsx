@@ -26,6 +26,9 @@ import type { Metadata } from "next";
 import { v2, FONT_CORMORANT, FONT_INTER } from "@/lib/tokens";
 import NotesPanel             from "./NotesPanel";
 import ExportButton, { type SurfaceMeta } from "./ExportButton";
+import StickyAnchorNav        from "./StickyAnchorNav";
+import StyleGuideFoundations  from "./StyleGuideFoundations";
+import StyleGuideComponents   from "./StyleGuideComponents";
 
 export const metadata: Metadata = {
   title:   "Review Board — Treehouse Finds",
@@ -135,12 +138,14 @@ export default function ReviewBoardPage() {
             maxWidth:  720,
           }}
         >
-          Internal visual-system audit. Each tile renders a production surface
-          inside a 375×812 iframe with{" "}
+          Style Guide above; surfaces below. Foundations + Components
+          render against live token imports + real component code so the
+          reference + the visual state share one source of truth. Each
+          surface tile renders inside a 375×812 iframe with{" "}
           <code style={{ fontSize: 13, fontFamily: "ui-monospace, SFMono-Regular, monospace" }}>
             ?reviewMode=1
           </code>{" "}
-          activated. Reads short-circuit to{" "}
+          activated — reads short-circuit to{" "}
           <code style={{ fontSize: 13, fontFamily: "ui-monospace, SFMono-Regular, monospace" }}>
             lib/fixtures.ts
           </code>
@@ -151,7 +156,46 @@ export default function ReviewBoardPage() {
         <ExportButton surfaces={flatten()} />
       </header>
 
+      <StickyAnchorNav
+        sections={[
+          { id: "foundations", label: "Foundations" },
+          { id: "components",  label: "Components"  },
+          { id: "surfaces",    label: "Surfaces ↓"  },
+        ]}
+      />
+
       <div style={{ maxWidth: 1600, margin: "0 auto" }}>
+        <StyleGuideFoundations />
+        <StyleGuideComponents />
+      </div>
+
+      <div id="surfaces" style={{ maxWidth: 1600, margin: "64px auto 0", scrollMarginTop: 96 }}>
+        <h2
+          style={{
+            fontFamily:    FONT_CORMORANT,
+            fontSize:      32,
+            fontWeight:    500,
+            color:         v2.text.primary,
+            margin:        "0 0 8px",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Surfaces
+        </h2>
+        <p
+          style={{
+            fontFamily: FONT_INTER,
+            fontSize:   14,
+            color:      v2.text.secondary,
+            margin:     "0 0 32px",
+            lineHeight: 1.5,
+            maxWidth:   720,
+          }}
+        >
+          Production surfaces in 375×812 iframes. Tap any{" "}
+          <code style={{ fontSize: 13, fontFamily: "ui-monospace, SFMono-Regular, monospace" }}>Open ↗</code>{" "}
+          to launch the surface full-screen.
+        </p>
         {CATEGORIES.map((cat) => (
           <section key={cat.name} style={{ marginBottom: 56 }}>
             <h2
