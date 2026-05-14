@@ -210,7 +210,6 @@ export default function MapCarousel({
                       ? `1.5px solid ${v2.accent.green}`
                       : `1px solid ${v2.border.medium}`,
                     borderRadius:  10,
-                    boxShadow:     "0 1px 2px rgba(43,33,26,0.06), 0 6px 18px rgba(43,33,26,0.06)",
                     overflow:      "hidden",
                     display:       "flex",
                     flexDirection: "column",
@@ -235,15 +234,16 @@ export default function MapCarousel({
                     transform:     isPeeked ? "translateY(-12px) scale(1.12)" : "translateY(0) scale(1)",
                     transformOrigin: "center center",
                     transition:    "transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease",
-                    // Selected card gains a soft drop shadow for added lift
-                    // emphasis — combined with the scale + translate, the
-                    // card reads as "this is in focus" not just "this has
-                    // a green border." Shadow alpha mirrors the carousel
-                    // shelf's existing 0.06 borderTop shadow for vocabulary
-                    // consistency.
+                    // Box shadow swaps by peek state — non-peeked uses the
+                    // baseline session-161 subtle resting shadow; peeked
+                    // gets a more pronounced lift shadow that combined with
+                    // the scale + translateY reads clearly as "this is in
+                    // focus" not just "this has a green border." Shadow
+                    // alpha tier 0.18/0.10 mirrors v1.shadow.callout for
+                    // vocabulary consistency with the PinCallout above.
                     boxShadow:     isPeeked
                       ? "0 6px 14px rgba(42,26,10,0.18), 0 2px 4px rgba(42,26,10,0.10)"
-                      : "none",
+                      : "0 1px 2px rgba(43,33,26,0.06), 0 6px 18px rgba(43,33,26,0.06)",
                     textAlign:     "left",
                     WebkitTapHighlightColor: "transparent",
                   }}
