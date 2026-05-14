@@ -66,6 +66,27 @@ export default function TabsChrome() {
     getActiveMalls().then(setMalls);
   }, []);
 
+  // Session 166 dial 3 (post-Arc-3.1.3 iPhone QA) — when drawer opens at
+  // scrollY=0, hero is still at full 33vh (no scroll engaged sticky-
+  // collapse yet), so the drawer renders BEHIND the hero from y=152 down.
+  // David's ask: "The hero and search header should collapse and move to
+  // the top as if the user had scrolled down past the hero-image."
+  //
+  // Force-scroll to a value just past the hero sticky-engagement threshold
+  // (33vh ≈ 280px - 90px sticky-visible-strip = 190px). 200px scrolls a
+  // hair past the threshold so both hero AND chip engage their sticky
+  // pins in one shot. Behavior 'smooth' so the auto-scroll reads as a
+  // natural transition not an abrupt jump. No-op when scrollY already
+  // past 190 (user scrolled before opening drawer — preserve their
+  // scroll position).
+  useEffect(() => {
+    if (!drawerOpen) return;
+    if (typeof window === "undefined") return;
+    if (window.scrollY < 190) {
+      window.scrollTo({ top: 200, behavior: "smooth" });
+    }
+  }, [drawerOpen]);
+
   const isHome = pathname === "/";
   const q      = searchParams.get("q") ?? "";
 
