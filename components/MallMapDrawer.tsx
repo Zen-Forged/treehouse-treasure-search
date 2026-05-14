@@ -357,7 +357,11 @@ function MapControlPill({ onClear }: { onClear: () => void }) {
       onClick={onClear}
       style={{
         position:        "absolute",
-        top:             12,
+        // Session 166 dial 4 (post-Arc-3.1.3 iPhone QA round 3) — top 12 → 8
+        // per David's "Move the reset button a bit higher; should be about
+        // the same spacing as there is on the far right." Tightens visual
+        // gap between Reset + drawer top edge.
+        top:             8,
         right:           12,
         // Session 165 iPhone QA: David's "reset button is getting covered
         // consistently by the expanded pinned mall card." PinCallout
