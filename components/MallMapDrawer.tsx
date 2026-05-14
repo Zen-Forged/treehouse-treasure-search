@@ -123,6 +123,19 @@ export default function MallMapDrawer({
   // page (session 108 D26).
   const [peekedMallId, setPeekedMallId] = React.useState<string | null>(null);
 
+  // Session 161 dial — Reset is now always visible per David's iPhone QA:
+  // "Show reset button on the map at all times to reset to the default
+  // kentucky view." Tapping Reset while already in all-Kentucky scope must
+  // still force a re-fit (user may have panned/zoomed manually). This
+  // counter bumps on every Reset tap and is forwarded to TreehouseMap so
+  // the fitBounds effect re-runs regardless of whether selectedMallId
+  // actually changes.
+  const [resetKey, setResetKey] = React.useState(0);
+  const handleReset = React.useCallback(() => {
+    setResetKey((n) => n + 1);
+    onClear();
+  }, [onClear]);
+
   // Body scroll lock while drawer open — inline pattern from <BottomSheet>
   // (session 149). Without this, scrolling inside the map can bleed through
   // to the page beneath when the drawer is open.
@@ -214,6 +227,7 @@ export default function MallMapDrawer({
                 peekedMallId={peekedMallId}
                 mallStats={mallStats}
                 savedByMallId={savedByMallId}
+                resetKey={resetKey}
                 onPinTap={(id) => setPeekedMallId(id)}
                 onMapTap={() => setPeekedMallId(null)}
                 onCommit={(id) => {
@@ -222,11 +236,15 @@ export default function MallMapDrawer({
                 }}
               />
 
-              {/* Contextual pill — scope set → "Reset" (clears scope to all-
-                  Kentucky). Session 158 dial D retired the all-Kentucky List
-                  view branch since the bottom MapCarousel now surfaces the
-                  same browse-the-locations affordance more discoverably. */}
-              {selectedMallId !== null && <MapControlPill onClear={onClear} />}
+              {/* Reset pill — session 161 dial: always visible per David's
+                  iPhone QA "Show reset button on the map at all times to
+                  reset to the default kentucky view." Pre-session-161 the
+                  pill was gated on `selectedMallId !== null` (session 158
+                  dial D simplified to Reset-only, gated on scope being set).
+                  Now it renders unconditionally; handler bumps resetKey
+                  alongside onClear so the fitBounds effect re-runs even
+                  when scope is already null. */}
+              <MapControlPill onClear={handleReset} />
             </div>
           </motion.div>
         )}

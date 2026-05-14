@@ -95,25 +95,44 @@ export default function MapCarousel({
     <AnimatePresence>
       {open && (
         <motion.div
-          // Wrapper passes through pointer events so taps on the 12px padding
-          // strips at either side fall through to the map below. The inner
-          // scroll container re-enables pointerEvents for the actual cards.
-          initial={{ y: 100, opacity: 0, x: "-50%" }}
-          animate={{ y: 0,   opacity: 1, x: "-50%" }}
-          exit={{    y: 100, opacity: 0, x: "-50%" }}
+          // Session 161 — items 1 + 2 coupled. Carousel wrapper restructured
+          // as a full-width "shelf" band rather than a maxWidth-430 centered
+          // column. Solid bg matching masthead (v2.bg.main) gives the cards
+          // a shelf-like surface to sit on; thin top border + subtle upward
+          // shadow define the shelf edge against the map above. Safe-area-
+          // aware bottom math halves the pre-existing gap to the nav pill
+          // and harmonizes spacing across notched + flat-bottom devices.
+          //
+          // Pre-session-161: `bottom: 100` (no safe-area awareness) — on
+          // notched iPhones with safe-area-inset-bottom ~34, the carousel
+          // overlapped the nav's top edge by ~9px because nav top sits at
+          // (22 + safe-area) + 53 = 75 + safe-area from screen bottom.
+          //
+          // New: `bottom: max(87px, calc(safe-area + 87))` puts shelf-bottom
+          // 12px above nav-top on every device (87 - 75 = 12). Halves the
+          // 25px pre-session-161 gap on flat-bottom iPhones; eliminates the
+          // overlap on notched devices entirely.
+          //
+          // Inner scroll re-enables pointerEvents for cards; outer motion.div
+          // stays pointerEvents:none so taps anywhere on the shelf bg outside
+          // the card row fall through to the map.
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0,   opacity: 1 }}
+          exit={{    y: 100, opacity: 0 }}
           transition={{
             duration: MOTION_BOTTOM_SHEET_SHEET_DURATION,
             ease:     MOTION_BOTTOM_SHEET_EASE,
           }}
           style={{
             position:      "fixed",
-            bottom:        100,
-            left:          "50%",
-            width:         "100%",
-            maxWidth:      430,
-            padding:       "0 12px",
+            bottom:        "max(87px, calc(env(safe-area-inset-bottom, 0px) + 87px))",
+            left:          0,
+            right:         0,
             zIndex:        35,
             pointerEvents: "none",
+            background:    v2.bg.main,
+            borderTop:     `1px solid ${v2.border.medium}`,
+            boxShadow:     "0 -2px 6px rgba(42,26,10,0.06)",
           }}
         >
           <div
@@ -124,7 +143,15 @@ export default function MapCarousel({
               display:                 "flex",
               gap:                     8,
               overflowX:               "auto",
-              padding:                 "4px 4px 6px",
+              // Shelf vertical breathing — 10px top above cards, 12px bottom
+              // below the card row (the "shelf surface" the cards sit on).
+              // Horizontal 12px keeps first/last card from touching shelf
+              // edges. maxWidth + auto margins center cards within the
+              // full-width shelf so the column shape from pre-session-161
+              // is preserved on wide viewports.
+              padding:                 "10px 12px 12px",
+              maxWidth:                430,
+              margin:                  "0 auto",
               pointerEvents:           "auto",
               scrollbarWidth:          "none",
               WebkitOverflowScrolling: "touch",
@@ -147,12 +174,40 @@ export default function MapCarousel({
                   style={{
                     flexShrink:    0,
                     width:         142,
-                    height:        108,
+                    // Session 161 dial — card height 108 → 114 to absorb name
+                    // lineHeight bump (1.3 → 1.5 below) without crushing the
+                    // distance label. David's iPhone QA: "The bottom ligatures
+                    // on the selected mall tile carousel is getting cut off."
+                    // Root cause: Cormorant 13px at lineHeight 1.3 sits at the
+                    // memory-file floor (feedback_lora_lineheight_minimum_for
+                    // _clamp ✅ Promoted) but the italic stress + curved
+                    // letter terminals exceed the line-box at 1.3; overflow:
+                    // hidden on the name div clips them. Bumping lineHeight
+                    // alone would crowd the distance label; +6px card height
+                    // gives the bumped line-box comfortable buffer.
+                    height:        114,
                     padding:       0,
-                    background:    v2.surface.card,
+                    // Session 161 dial — David verbatim "Change the background
+                    // of the map carousel thumbnails and selected pin to
+                    // background: var(--th-v2-surface-input)". v2.surface.card
+                    // and v2.surface.input resolve to the same value today
+                    // (#FFFCF5 per session 157 Review Board batch 2 token
+                    // alignment) so this is a semantic-tier rename rather than
+                    // a visual change — aligns carousel cards to the same
+                    // surface tier as form inputs + nav bar so future v2.input
+                    // value flips cascade here automatically.
+                    background:    v2.surface.input,
+                    // Session 161 — non-peeked border tier light → medium per David's
+                    // "Add thin stroke around the mall cards so they have some separation
+                    // from the bg, it can be a lighter grey color or something we've
+                    // already been using elsewhere." Against the upcoming shelf bg
+                    // (v2.bg.main #F7F3EB in commit 3), the prior v2.border.light
+                    // #E5DED2 disappears into the bg; v2.border.medium #D6CCBC
+                    // (already in use elsewhere) reads as a deliberate separation
+                    // stroke. Peeked state stays 1.5px v2.accent.green unchanged.
                     border:        isPeeked
                       ? `1.5px solid ${v2.accent.green}`
-                      : `1px solid ${v2.border.light}`,
+                      : `1px solid ${v2.border.medium}`,
                     borderRadius:  10,
                     boxShadow:     "0 1px 2px rgba(43,33,26,0.06), 0 6px 18px rgba(43,33,26,0.06)",
                     overflow:      "hidden",
@@ -165,20 +220,26 @@ export default function MapCarousel({
                     WebkitTapHighlightColor: "transparent",
                   }}
                 >
-                  {/* Photo banner — falls back to cream2 when hero_image_url is null. */}
+                  {/* Photo banner — falls back to cream2 when hero_image_url is null.
+                      Session 161 — height 56 → 68 per David's "include more of the image"
+                      iPhone QA dial. Card height held constant at 108 by tightening the
+                      body padding below; photo claims the recovered 12px. */}
                   <div
                     style={{
-                      height:     56,
+                      height:     68,
                       flexShrink: 0,
                       background: mall.hero_image_url
                         ? `url(${mall.hero_image_url}) center / cover no-repeat`
                         : "var(--th-v1-basemap-cream2, #EFE6D2)",
                     }}
                   />
-                  {/* Body — name + optional distance label. */}
+                  {/* Body — name + optional distance label.
+                      Session 161 — bottom padding 8 → 4 per David's "reduce some of the
+                      spacing on the bottom of the card so the distance is closer to the
+                      bottom (currently floating a bit)." Top + horizontal unchanged. */}
                   <div
                     style={{
-                      padding:       "5px 10px 8px",
+                      padding:       "5px 10px 4px",
                       display:       "flex",
                       flexDirection: "column",
                       gap:           2,
@@ -191,7 +252,15 @@ export default function MapCarousel({
                         fontSize:     13,
                         fontWeight:   600,
                         color:        v2.text.primary,
-                        lineHeight:   1.3,
+                        // Session 161 dial — lineHeight 1.3 → 1.5 to give
+                        // Cormorant's italic stress + glyph terminals
+                        // comfortable clearance inside overflow:hidden. 1.3
+                        // is the canonical Lora/Cormorant floor for clamped
+                        // text (memory feedback_lora_lineheight_minimum_for_
+                        // clamp ✅ Promoted) but borderline at 13px under
+                        // ellipsis. 1.5 lands well clear of the line-box
+                        // edge so descenders + curve-bottoms render fully.
+                        lineHeight:   1.5,
                         whiteSpace:   "nowrap",
                         overflow:     "hidden",
                         textOverflow: "ellipsis",
