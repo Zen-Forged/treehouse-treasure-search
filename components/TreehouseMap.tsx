@@ -22,7 +22,7 @@ import * as React from "react";
 import { createRoot, type Root } from "react-dom/client";
 import mapboxgl, { type LngLatBoundsLike } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { PiLeaf, PiLeafFill } from "react-icons/pi";
+import { PiLeaf } from "react-icons/pi";
 import { v1, v2, FONT_SYS } from "@/lib/tokens";
 import PinCallout from "@/components/PinCallout";
 import { milesFromUser } from "@/lib/distance";
@@ -183,32 +183,42 @@ const KY_BOUNDS: LngLatBoundsLike = [
 const KY_CENTER: [number, number] = [-85.3, 37.8];
 const KY_FIT_ZOOM = 6.4;
 
-// Session 158 — Map enrichment D7+D8. Branded "you are here" pin variant (A):
-// filled green leaf inside a soft cream-tinted halo + pulsing outer ring.
-// Visually inverted from LeafBubblePin (mall pins are outline green-on-cream;
-// user pin is filled green-on-cream-halo) so the brand vocabulary (leaf
-// glyph + green) stays consistent while the user-vs-place distinction is
-// clear at a glance. Informational only — no click handler; pointerEvents
-// set to "none" on the marker element so taps fall through to the map.
+// Session 161 — David's iPhone QA item #5: "Change the you are here pin to
+// something more simple, no branding other than color. it can be smaller as
+// well more standard ui type feel." Pre-session-161 was a 28×28 filled green
+// disc with PiLeafFill glyph inside + two-tier cream-tinted halo box-shadow.
+// Reverses session 158 D7 (branded leaf-in-halo variant) bounded scope —
+// the brand vocabulary (green) is preserved, only the leaf glyph + halo
+// retire. This brings the pin to the canonical Apple/Google Maps "you are
+// here" dot vocabulary: small solid color core + white stroke ring + soft
+// drop shadow. Pulse ring retained at session-158 scale; commit 5 of this
+// bundle overhauls the pulse to a zoom-aware 10-mile geographic reach.
+//
+// Informational only — no click handler; pointerEvents set to "none" on the
+// marker element so taps fall through to the map.
 function UserLocationPin() {
   return (
     <div
       style={{
         position:       "relative",
-        width:          28,
-        height:         28,
+        width:          16,
+        height:         16,
         borderRadius:   "50%",
         background:     v2.accent.green,
+        // Canonical "you are here" — solid color core inside a white ring.
+        // Apple Maps + Google Maps share this vocabulary; instantly readable
+        // as "the user" rather than "a place."
+        border:         "2.5px solid #FFFFFF",
+        boxSizing:      "border-box",
+        // Soft halo + drop shadow lifts the dot off the basemap for depth
+        // without competing visually with mall pins (which are 32px+ with
+        // their own halo). 0.5px green-tinted ring at zero offset doubles
+        // as a subtle outer stroke against very light basemap tiles.
         boxShadow:
-          "0 0 0 6px rgba(46,86,57,0.22), 0 0 0 14px rgba(46,86,57,0.10), 0 2px 8px rgba(42,26,10,0.20)",
-        display:        "flex",
-        alignItems:     "center",
-        justifyContent: "center",
-        color:          v2.surface.warm,
+          "0 0 0 0.5px rgba(46,86,57,0.30), 0 2px 6px rgba(42,26,10,0.30)",
         pointerEvents:  "none",
       }}
     >
-      <PiLeafFill size={16} aria-hidden="true" />
       <span
         aria-hidden="true"
         style={{
