@@ -37,25 +37,31 @@ interface MallPickerChipProps {
   onTap:    () => void;
 }
 
-const TOP_PADDING       = 22;
+// Session 166 dial 6 (post-dial-3 iPhone QA round 3) — TOP_PADDING 22 → 12,
+// BOTTOM_PADDING 10 → 6 per David's "reduce the padding on the top and the
+// bottom of the mall chip selector." Reverses session-164 design-record D11
+// values (22/18/10) within bounded scope per
+// feedback_within_session_design_record_reversal ✅ Promoted-via-memory.
+// Tightens the chip strip from 62px tall to 48px (-14px), giving the feed
+// more vertical real estate when chip is sticky-pinned.
+const TOP_PADDING       = 12;
 const HORIZ_PADDING     = 18;
-const BOTTOM_PADDING    = 10;
+const BOTTOM_PADDING    = 6;
 const PIN_SIZE          = 22;
 const NAME_FONT_SIZE    = 22;
 const CHEVRON_SIZE      = 18;
 const CHEVRON_LEFT_GAP  = 10;
 const PIN_NAME_GAP      = 8;
 
-// Session 166 post-Arc-3.1.3 dial — chip becomes position:sticky so it
-// stays visible below hero's sticky-collapsed strip during scroll AND
-// during drawer-open state (paired with TabsChrome's auto-scroll on
-// drawer-open). MallMapDrawer's top:calc imports this constant to
-// position the drawer below the chip strip.
+// Session 166 dial 2 — chip becomes position:sticky so it stays visible
+// below hero's sticky-collapsed strip during scroll AND during drawer-open
+// state (paired with TabsChrome's auto-scroll on drawer-open).
+// MallMapDrawer imports this constant for its top:calc geometry.
 //
 // Height = TOP_PADDING + max(PIN_SIZE, NAME_FONT_SIZE * 1.3, CHEVRON_SIZE)
-//        + BOTTOM_PADDING = 22 + 29 + 10 = 61px. Rounded to 62 for safe
+//        + BOTTOM_PADDING = 12 + 29 + 6 = 47px. Rounded to 48 for safe
 // integer arithmetic in downstream consumers.
-export const CHIP_VISIBLE_HEIGHT_PX = 62;
+export const CHIP_VISIBLE_HEIGHT_PX = 48;
 
 export default function MallPickerChip({ mallName, onTap }: MallPickerChipProps) {
   return (
