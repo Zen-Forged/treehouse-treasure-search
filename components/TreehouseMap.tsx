@@ -147,19 +147,46 @@ function applyCartographicPalette(map: mapboxgl.Map): void {
   }
 }
 
-// Session 158 — Map enrichment D7. Pulse animation keyframes for the user
-// location pin's outer ring. Injected once at module scope (this module is
-// "use client" + ssr:false dynamic-imported, so evaluation only ever runs
-// in browser). The animation lives in a stylesheet rather than a per-render
-// React style block because Mapbox markers mount via createRoot into a DOM
-// node outside React's normal tree — global keyframes are the simplest way.
+// Session 158 — Map enrichment D7 (revised session 161 for 10-mile reach).
+// Pulse animation keyframes for the user location pin's outer ring. Injected
+// once at module scope (this module is "use client" + ssr:false dynamic-
+// imported, so evaluation only ever runs in browser). The animation lives in
+// a stylesheet rather than a per-render React style block because Mapbox
+// markers mount via createRoot into a DOM node outside React's normal tree
+// — global keyframes are the simplest way.
+//
+// Pre-session-161: decorative scale(1)→scale(1.5) sit-and-breathe pulse on
+// a fixed-size ring. Reach was tied to the pin's CSS size — visually small
+// regardless of map zoom.
+//
+// Now (session 161 item 6 — "Expand the radius of the pulsing animation so
+// it has a 10 mile reach"): sonar-ping scale(0)→scale(1) where scale(1)
+// equals the diameter set via the `--pulse-diameter-px` CSS variable. The
+// variable is computed by tenMilesInPixels() against the live Mapbox zoom +
+// the user's latitude, then set on the marker element + re-set on every
+// map zoom event so the pulse stays anchored to 10-mile geographic reach
+// regardless of map zoom.
 const USER_PULSE_KEYFRAMES_ID = "treehouse-user-pulse-keyframes";
 if (typeof document !== "undefined" && !document.getElementById(USER_PULSE_KEYFRAMES_ID)) {
   const style = document.createElement("style");
   style.id = USER_PULSE_KEYFRAMES_ID;
   style.textContent =
-    "@keyframes treehouse-user-pulse { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.5); opacity: 0; } }";
+    "@keyframes treehouse-user-pulse { 0% { transform: translate(-50%, -50%) scale(0); opacity: 0.45; } 80% { opacity: 0.05; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 0; } }";
   document.head.appendChild(style);
+}
+
+// Session 161 — Web Mercator pixels-per-meter at a given zoom + latitude.
+// Mapbox uses 512px tile geometry; the formula is:
+//   pixels_per_meter = (512 * 2^zoom) / (40075000 * cos(lat_rad))
+// where 40075000m is the Earth's equatorial circumference and cos(lat)
+// adjusts for mercator's latitude stretching (one meter at high latitude
+// covers fewer pixels than one meter at the equator). Used by the user-pin
+// effect to size the pulse ring's CSS variable so its visual radius equals
+// 10 geographic miles regardless of the live map zoom.
+const TEN_MILES_METERS = 16093.44; // 10 × 1609.344
+function tenMilesInPixels(zoom: number, lat: number): number {
+  const latRad = (lat * Math.PI) / 180;
+  return (TEN_MILES_METERS * 512 * Math.pow(2, zoom)) / (40075000 * Math.cos(latRad));
 }
 
 // Session 158 dial C — Y offset for peek-state easeTo. Negative value
@@ -219,15 +246,31 @@ function UserLocationPin() {
         pointerEvents:  "none",
       }}
     >
+      {/* Session 161 item 6 — sonar-ping pulse with geographic 10-mile reach.
+          Sized via the --pulse-diameter-px CSS variable set on the marker
+          element by TreehouseMap's user-pin effect; recomputed on every
+          map zoom event so the visual radius stays anchored at 10 miles
+          regardless of how far the user zooms in/out. Fallback 100px diameter
+          keeps the pulse visible if the variable isn't set yet (e.g. first
+          paint before the effect runs). Positioned absolutely + centered
+          on the pin via translate(-50%, -50%); the keyframes preserve the
+          translate so scale(0)→scale(1) animates from a point to full
+          diameter while staying anchored to the pin's center. */}
       <span
         aria-hidden="true"
         style={{
-          position:      "absolute",
-          inset:         -4,
-          borderRadius:  "50%",
-          border:        "1.5px solid rgba(46,86,57,0.32)",
-          animation:     "treehouse-user-pulse 2.2s ease-in-out infinite",
-          pointerEvents: "none",
+          position:        "absolute",
+          top:             "50%",
+          left:            "50%",
+          width:           "var(--pulse-diameter-px, 100px)",
+          height:          "var(--pulse-diameter-px, 100px)",
+          transform:       "translate(-50%, -50%) scale(0)",
+          transformOrigin: "center",
+          borderRadius:    "50%",
+          border:          "1.5px solid rgba(46,86,57,0.40)",
+          background:      "rgba(46,86,57,0.08)",
+          animation:       "treehouse-user-pulse 2.8s ease-out infinite",
+          pointerEvents:   "none",
         }}
       />
     </div>
@@ -505,7 +548,9 @@ export default function TreehouseMap({
 
     if (granted) {
       let entry = userMarkerRef.current;
-      const lngLat: [number, number] = [userLoc.lng as number, userLoc.lat as number];
+      const lat = userLoc.lat as number;
+      const lng = userLoc.lng as number;
+      const lngLat: [number, number] = [lng, lat];
       if (!entry) {
         const el = document.createElement("div");
         el.style.pointerEvents = "none";
@@ -520,6 +565,24 @@ export default function TreehouseMap({
         entry.marker.setLngLat(lngLat);
       }
       entry.root.render(<UserLocationPin />);
+
+      // Session 161 item 6 — set pulse diameter CSS variable to 2× the
+      // pixel equivalent of 10 geographic miles at the current zoom +
+      // user latitude. Re-set on every map zoom event so the pulse
+      // stays anchored to 10-mile reach as the user pinch-zooms. The
+      // setter closure captures `entry` + `lat` (lat doesn't change
+      // within this effect run — re-runs reattach a fresh handler).
+      const stableEntry = entry;
+      const updatePulseDiameter = () => {
+        if (!mapRef.current) return;
+        const diameter = tenMilesInPixels(mapRef.current.getZoom(), lat) * 2;
+        stableEntry.el.style.setProperty("--pulse-diameter-px", `${diameter}px`);
+      };
+      updatePulseDiameter();
+      map.on("zoom", updatePulseDiameter);
+      return () => {
+        map.off("zoom", updatePulseDiameter);
+      };
     } else if (userMarkerRef.current) {
       // Status changed away from granted (e.g. denied on re-prompt, or the
       // hook reset for any reason) — clean up the existing marker.
