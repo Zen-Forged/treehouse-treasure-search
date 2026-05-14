@@ -96,6 +96,20 @@ export default function TabsChrome() {
   const isHome = pathname === "/";
   const q      = searchParams.get("q") ?? "";
 
+  // Session 166 dial 7 (post-dial-6 iPhone QA round 4) — chip + drawer
+  // retire on Saved per David's "We do not need the mall-chip on the saved
+  // page as it's not filtered by location and stores all finds."
+  //
+  // Within-session reversal of Call 2 Option C (resolved earlier this
+  // session as "hero universal across Home + Saved, SearchBar conditional
+  // on Home only"). Updated read: hero universal, chip + drawer also
+  // Home-only since chip has no functional purpose on Saved (R18 session
+  // 121 retired mall-scoping for Saved content; chip would be a dead
+  // affordance there). Hero stays universal as identity beat per Option C
+  // original intent. Surfaced explicitly per
+  // feedback_surface_locked_design_reversals ✅ Promoted.
+  const showChipAndDrawer = isHome;
+
   // Session 157 — search URL plumbing pattern preserved verbatim from
   // SearchBarRow.tsx. Typing in search always replaces to "/" regardless
   // of current pathname so search from Saved (if ever exposed) routes to
@@ -148,26 +162,31 @@ export default function TabsChrome() {
   return (
     <>
       <HomeHero
-        // Option C — SearchBar Home-only. On Saved, hero renders without
-        // search input; chip + drawer still mount for identity continuity.
+        // Option C as amended at dial 7 — SearchBar Home-only AND chip +
+        // drawer Home-only. On Saved, hero renders alone (no search input,
+        // no chip below it) as identity beat. R18 (session 121) retired
+        // mall-scoping for Saved content, so chip would be a dead
+        // affordance there.
         searchQuery={isHome ? q : undefined}
         onSearchChange={isHome ? handleSearchChange : undefined}
       />
 
-      <MallPickerChip
-        mallName={mallName}
-        onTap={() => {
-          // Reuses session 154 home_strip_tapped event name — same
-          // semantic ("user tapped the mall picker chrome to engage map
-          // wayfinding"); event-key stability avoids R3 schema drift.
-          track("home_strip_tapped", {
-            mall_slug: selectedMall ? selectedMall.slug : "all-kentucky",
-          });
-          toggleDrawer();
-        }}
-      />
+      {showChipAndDrawer && (
+        <MallPickerChip
+          mallName={mallName}
+          onTap={() => {
+            // Reuses session 154 home_strip_tapped event name — same
+            // semantic ("user tapped the mall picker chrome to engage map
+            // wayfinding"); event-key stability avoids R3 schema drift.
+            track("home_strip_tapped", {
+              mall_slug: selectedMall ? selectedMall.slug : "all-kentucky",
+            });
+            toggleDrawer();
+          }}
+        />
+      )}
 
-      <MallMapDrawer
+      {showChipAndDrawer && <MallMapDrawer
         open={drawerOpen}
         onClose={closeDrawer}
         malls={malls}
@@ -209,7 +228,7 @@ export default function TabsChrome() {
             source:       "search_mall_match",
           });
         }}
-      />
+      />}
     </>
   );
 }
