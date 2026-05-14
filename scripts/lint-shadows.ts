@@ -30,7 +30,7 @@
 //   npm run lint:shadows -- --quiet
 
 import {
-  collectFiles,
+  collectFilesWithStats,
   readFile,
   relativeToRoot,
   getCliFlags,
@@ -71,10 +71,10 @@ function scanFile(file: string): Violation[] {
 
 function main() {
   const flags = getCliFlags();
-  const files = collectFiles();
+  const { scanned, excludedCount } = collectFilesWithStats();
 
   const allViolations: Violation[] = [];
-  for (const file of files) {
+  for (const file of scanned) {
     allViolations.push(...scanFile(file));
   }
 
@@ -83,7 +83,8 @@ function main() {
     subtitle: "Detection: inline boxShadow string literals",
     allowedDesc: "Allowed: bare v1.shadow.* token refs, strings containing var(...)",
     flags,
-    filesScanned: files.length,
+    filesScanned: scanned.length,
+    filesExcluded: excludedCount,
     violations: allViolations,
   });
 }

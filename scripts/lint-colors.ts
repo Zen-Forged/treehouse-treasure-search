@@ -24,7 +24,7 @@
 //   npm run lint:colors -- --quiet # totals only, no per-file detail
 
 import {
-  collectFiles,
+  collectFilesWithStats,
   readFile,
   relativeToRoot,
   getCliFlags,
@@ -74,10 +74,10 @@ function scanFile(file: string): Violation[] {
 
 function main() {
   const flags = getCliFlags();
-  const files = collectFiles();
+  const { scanned, excludedCount } = collectFilesWithStats();
 
   const allViolations: Violation[] = [];
-  for (const file of files) {
+  for (const file of scanned) {
     allViolations.push(...scanFile(file));
   }
 
@@ -86,7 +86,8 @@ function main() {
     subtitle: "Detection: inline #RGB / #RRGGBB / #RRGGBBAA + rgba(...) / rgb(...)",
     allowedDesc: "Allowed: bare token refs (v1.* / v2.* / colors.*), Tailwind classes, CSS keywords",
     flags,
-    filesScanned: files.length,
+    filesScanned: scanned.length,
+    filesExcluded: excludedCount,
     violations: allViolations,
   });
 }

@@ -25,7 +25,7 @@
 //   npm run lint:fonts -- --quiet
 
 import {
-  collectFiles,
+  collectFilesWithStats,
   readFile,
   relativeToRoot,
   getCliFlags,
@@ -79,10 +79,10 @@ function scanFile(file: string): Violation[] {
 
 function main() {
   const flags = getCliFlags();
-  const files = collectFiles();
+  const { scanned, excludedCount } = collectFilesWithStats();
 
   const allViolations: Violation[] = [];
-  for (const file of files) {
+  for (const file of scanned) {
     allViolations.push(...scanFile(file));
   }
 
@@ -91,7 +91,8 @@ function main() {
     subtitle: "Detection: inline fontFamily string literals + inline fontSize numerics",
     allowedDesc: "Allowed: bare FONT_* identifier refs (lib/tokens.ts), strings containing var(...)",
     flags,
-    filesScanned: files.length,
+    filesScanned: scanned.length,
+    filesExcluded: excludedCount,
     violations: allViolations,
   });
 }

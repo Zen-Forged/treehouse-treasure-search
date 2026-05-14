@@ -30,7 +30,7 @@
 //   npm run lint:radius -- --quiet
 
 import {
-  collectFiles,
+  collectFilesWithStats,
   readFile,
   relativeToRoot,
   getCliFlags,
@@ -77,10 +77,10 @@ function scanFile(file: string): Violation[] {
 
 function main() {
   const flags = getCliFlags();
-  const files = collectFiles();
+  const { scanned, excludedCount } = collectFilesWithStats();
 
   const allViolations: Violation[] = [];
-  for (const file of files) {
+  for (const file of scanned) {
     allViolations.push(...scanFile(file));
   }
 
@@ -89,7 +89,8 @@ function main() {
     subtitle: "Canonical scale: 8 / 12 / 16 / 20 / 999 (radius.sm/md/lg/xl/pill)",
     allowedDesc: "Allowed off-scale: 0, 1 (hairlines)",
     flags,
-    filesScanned: files.length,
+    filesScanned: scanned.length,
+    filesExcluded: excludedCount,
     violations: allViolations,
     scale: Array.from(CANONICAL).sort((a, b) => a - b),
   });
